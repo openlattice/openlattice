@@ -1,7 +1,5 @@
-
-
 /*
- * Copyright (C) 2018. OpenLattice, Inc.
+ * Copyright (C) 2019. OpenLattice, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,17 +16,20 @@
  *
  * You can contact the owner of the copyright at support@openlattice.com
  *
+ *
  */
 
-package com.openlattice.hazelcast;
+package com.openlattice.graph
+
+import com.openlattice.analysis.requests.Filter
+import java.util.*
 
 /**
+ *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public enum HazelcastQueue {
-    EMAIL_SPOOL,
-    INDEXING,
-    LINKING_CANDIDATES,
-    TWILIO,
-    SIGNAL
-}
+data class AssociationFilterDefinition(
+        val entityTypeId: UUID,
+        val entitySetIds: Set<UUID>,
+        val filters: Map<UUID, Set<Filter>>
+)

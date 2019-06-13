@@ -1,4 +1,5 @@
 entity-type: "ol.audit"
+edge-entity-type: "ol.audited"
 fqns:
   ACL_KEY: "ol.key"
   DATA: "ol.details"

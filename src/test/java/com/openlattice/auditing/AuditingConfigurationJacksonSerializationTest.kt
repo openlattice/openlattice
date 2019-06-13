@@ -23,6 +23,7 @@ class AuditingConfigurationJacksonSerializationTest : AbstractJacksonYamlSeriali
         FullQualifiedNameJacksonSerializer.registerWithMapper(yaml)
         return AuditingConfiguration(
                 "ol.audit",
+                "ol.audited",
                 mapOf(AuditProperty.ID to "ol.id")
         )
     }

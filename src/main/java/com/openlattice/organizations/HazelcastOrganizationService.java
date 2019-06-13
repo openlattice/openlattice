@@ -22,14 +22,12 @@
 
 package com.openlattice.organizations;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
-
 import com.dataloom.streams.StreamUtil;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
 import com.google.common.eventbus.EventBus;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
@@ -43,34 +41,28 @@ import com.openlattice.authorization.initializers.AuthorizationInitializationTas
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.datastore.util.Util;
 import com.openlattice.hazelcast.HazelcastMap;
+import com.openlattice.hazelcast.processors.UUIDKeyToUUIDSetMerger;
 import com.openlattice.organization.Organization;
 import com.openlattice.organization.OrganizationPrincipal;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.events.*;
-import com.openlattice.organizations.processors.EmailDomainsMerger;
-import com.openlattice.organizations.processors.EmailDomainsRemover;
-import com.openlattice.hazelcast.processors.UUIDKeyToUUIDSetMerger;
-import com.openlattice.organizations.processors.OrganizationAppRemover;
-import com.openlattice.organizations.processors.OrganizationMemberMerger;
-import com.openlattice.organizations.processors.OrganizationMemberRemover;
+import com.openlattice.organizations.processors.*;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.mapstores.AppConfigMapstore;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
-import java.util.Collection;
-import java.util.EnumSet;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import javax.inject.Inject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 
 /**
  * This class manages organizations.
@@ -102,6 +94,7 @@ public class HazelcastOrganizationService {
     private final IMap<AppConfigKey, AppTypeSetting> appConfigs;
     private final List<IMap<UUID, ?>>                allMaps;
     private final Assembler                          assembler;
+    private final Map<UUID, String>                  phoneNumbers;
 
     @Inject
     private EventBus eventBus;
@@ -127,6 +120,7 @@ public class HazelcastOrganizationService {
                 apps );
         this.securePrincipalsManager = securePrincipalsManager;
         this.assembler = assembler;
+        this.phoneNumbers = Maps.newConcurrentMap();
         //        fixOrganizations();
     }
 
@@ -191,13 +185,20 @@ public class HazelcastOrganizationService {
                 DelegatedStringSet.wrap( organization.getAutoApprovedEmails() ) );
         membersOf.set( organizationId, PrincipalSet.wrap( organization.getMembers() ) );
         apps.set( organizationId, DelegatedUUIDSet.wrap( organization.getApps() ) );
+        phoneNumbers.put( organizationId, organization.getPhoneNumber() );
     }
+
+    public void setPhoneNumber( UUID organizationId, String phoneNumber ) {
+        phoneNumbers.put( organizationId, phoneNumber );
+    }
+
 
     public Organization getOrganization( UUID organizationId ) {
         Future<PrincipalSet> members = membersOf.getAsync( organizationId );
         Future<DelegatedStringSet> autoApprovedEmailDomains = autoApprovedEmailDomainsOf.getAsync( organizationId );
 
         OrganizationPrincipal principal = getOrganizationPrincipal( organizationId );
+        String phone = phoneNumbers.get( organizationId );
 
         if ( principal == null ) {
             return null;
@@ -219,7 +220,8 @@ public class HazelcastOrganizationService {
                     MoreObjects.firstNonNull( autoApprovedEmailDomains.get(), ImmutableSet.of() ),
                     MoreObjects.firstNonNull( orgMembers, ImmutableSet.of() ),
                     roles,
-                    MoreObjects.firstNonNull( apps, ImmutableSet.of() ) );
+                    MoreObjects.firstNonNull( apps, ImmutableSet.of() ),
+                    phone );
         } catch ( InterruptedException | ExecutionException e ) {
             logger.error( "Unable to load organization. {}", organizationId, e );
             return null;
@@ -235,7 +237,8 @@ public class HazelcastOrganizationService {
                         org.getMembers(),
                         //TODO: If you're an organization you can view its roles.
                         org.getRoles(),
-                        org.getApps() ) )
+                        org.getApps(),
+                        org.getPhoneNumber()) )
                 ::iterator;
     }
 

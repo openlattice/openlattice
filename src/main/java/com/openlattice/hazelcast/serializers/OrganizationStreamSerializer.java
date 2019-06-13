@@ -20,19 +20,20 @@
 
 package com.openlattice.hazelcast.serializers;
 
-import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.authorization.Principal;
+import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.openlattice.organization.Organization;
 import com.openlattice.organization.OrganizationPrincipal;
 import com.openlattice.organization.roles.Role;
+import org.springframework.stereotype.Component;
+
 import java.io.IOException;
 import java.util.Set;
 import java.util.UUID;
-import org.springframework.stereotype.Component;
 
 @Component
 public class OrganizationStreamSerializer implements SelfRegisteringStreamSerializer<Organization> {
@@ -66,6 +67,8 @@ public class OrganizationStreamSerializer implements SelfRegisteringStreamSerial
         SetStreamSerializers.serialize( out, object.getRoles(), (role) -> {
             RoleStreamSerializer.serialize( out, role );
         } );
+
+        out.writeUTF( object.getPhoneNumber() );
     }
 
     public static Organization deserialize( ObjectDataInput in ) throws IOException {
@@ -74,7 +77,8 @@ public class OrganizationStreamSerializer implements SelfRegisteringStreamSerial
         Set<UUID> apps = SetStreamSerializers.fastUUIDSetDeserialize( in );
         Set<Principal> members = SetStreamSerializers.deserialize( in, PrincipalStreamSerializer::deserialize );
         Set<Role> roles = SetStreamSerializers.deserialize( in, RoleStreamSerializer::deserialize );
+        String phoneNumber = in.readUTF();
 
-        return new Organization( securablePrincipal, autoApprovedEmails, members, roles, apps );
+        return new Organization( securablePrincipal, autoApprovedEmails, members, roles, apps, phoneNumber);
     }
 }

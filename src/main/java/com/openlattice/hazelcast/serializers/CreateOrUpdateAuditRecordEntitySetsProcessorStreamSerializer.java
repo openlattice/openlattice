@@ -24,18 +24,19 @@ import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractUUIDStreamSerializer;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
+import com.openlattice.edm.processors.CreateOrUpdateAuditRecordEntitySetsProcessor;
 import com.openlattice.edm.processors.UpdateAuditEdgeEntitySetIdProcessor;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import java.io.IOException;
 import org.springframework.stereotype.Component;
 
 @Component
-public class UpdateAuditRecordEntitySetIdProcessorStreamSerializer
-        implements SelfRegisteringStreamSerializer<UpdateAuditEdgeEntitySetIdProcessor> {
+public class CreateOrUpdateAuditRecordEntitySetsProcessorStreamSerializer
+        implements SelfRegisteringStreamSerializer<CreateOrUpdateAuditRecordEntitySetsProcessor> {
 
     @Override
     public int getTypeId() {
-        return StreamSerializerTypeIds.UPDATE_AUDIT_EDGE_ENTITY_SET_ID_PROCESSOR.ordinal();
+        return StreamSerializerTypeIds.CREATE_OR_UPDATE_AUDIT_RECORD_ENTITY_SETS_PROCESSOR.ordinal();
     }
 
     @Override
@@ -43,17 +44,20 @@ public class UpdateAuditRecordEntitySetIdProcessorStreamSerializer
     }
 
     @Override
-    public Class<UpdateAuditEdgeEntitySetIdProcessor> getClazz() {
-        return UpdateAuditEdgeEntitySetIdProcessor.class;
+    public Class<CreateOrUpdateAuditRecordEntitySetsProcessor> getClazz() {
+        return CreateOrUpdateAuditRecordEntitySetsProcessor.class;
     }
 
     @Override public void write(
-            ObjectDataOutput out, UpdateAuditEdgeEntitySetIdProcessor object ) throws IOException {
+            ObjectDataOutput out, CreateOrUpdateAuditRecordEntitySetsProcessor object ) throws IOException {
+        AbstractUUIDStreamSerializer.serialize( out, object.getAuditRecordEntitySetId() );
         AbstractUUIDStreamSerializer.serialize( out, object.getAuditEdgeEntitySetId() );
 
     }
 
-    @Override public UpdateAuditEdgeEntitySetIdProcessor read( ObjectDataInput in ) throws IOException {
-        return new UpdateAuditEdgeEntitySetIdProcessor( AbstractUUIDStreamSerializer.deserialize( in ) );
+    @Override public CreateOrUpdateAuditRecordEntitySetsProcessor read( ObjectDataInput in ) throws IOException {
+        return new CreateOrUpdateAuditRecordEntitySetsProcessor(
+                AbstractUUIDStreamSerializer.deserialize( in ),
+                AbstractUUIDStreamSerializer.deserialize( in ) );
     }
 }

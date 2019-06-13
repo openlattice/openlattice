@@ -343,7 +343,7 @@ class Assembler(
     }
 
     private fun createOrUpdateProductionViewOfEntitySet(entitySetId: UUID) {
-        logger.info("Create or update view of $entitySetId in ${AssemblerConnectionManager.PRODUCTION_VIEWS_SCHEMA}")
+        logger.debug("Create or update view of $entitySetId in ${AssemblerConnectionManager.PRODUCTION_VIEWS_SCHEMA}")
         val entitySet = entitySets.getValue(entitySetId)
         val entitySetIds = if (entitySet.isLinking) entitySet.linkedEntitySets else setOf(entitySetId)
         val authorizedPropertyTypes = propertyTypes

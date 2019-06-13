@@ -23,6 +23,7 @@ package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
+import com.kryptnostic.rhizome.hazelcast.serializers.ListStreamSerializers
 import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.auditing.AuditRecordEntitySetConfiguration
@@ -49,13 +50,27 @@ class AuditRecordEntitySetsConfigurationStreamSerializer : SelfRegisteringStream
 
     override fun write(out: ObjectDataOutput, obj: AuditRecordEntitySetConfiguration) {
         UUIDStreamSerializer.serialize(out, obj.activeAuditRecordEntitySetId)
+        val hasAuditEdgeEntitySetId = (obj.activeAuditEdgeEntitySetId != null)
+        out.writeBoolean(hasAuditEdgeEntitySetId)
+        if (hasAuditEdgeEntitySetId) {
+            UUIDStreamSerializer.serialize(out, obj.activeAuditEdgeEntitySetId)
+        }
         SetStreamSerializers.fastUUIDSetSerialize(out, obj.auditRecordEntitySetIds)
+        SetStreamSerializers.fastUUIDSetSerialize(out, obj.auditEdgeEntitySetIds)
     }
 
     override fun read(input: ObjectDataInput): AuditRecordEntitySetConfiguration {
         val activeAuditRecordEntitySetId = UUIDStreamSerializer.deserialize(input)
-        val auditRecordEntitySetIds = SetStreamSerializers.fastUUIDSetDeserialize(input)
+        val hasAuditEdgeEntitySetId = input.readBoolean()
+        val activeAuditEdgeEntitySetId = if (hasAuditEdgeEntitySetId) UUIDStreamSerializer.deserialize(input) else null
+        val auditRecordEntitySetIds = ListStreamSerializers.fastUUIDArrayDeserialize(input).toMutableList()
+        val auditEdgeEntitySetIds = ListStreamSerializers.fastUUIDArrayDeserialize(input).toMutableList()
 
-        return AuditRecordEntitySetConfiguration(activeAuditRecordEntitySetId, auditRecordEntitySetIds)
+        return AuditRecordEntitySetConfiguration(
+                activeAuditRecordEntitySetId,
+                activeAuditEdgeEntitySetId,
+                auditRecordEntitySetIds,
+                auditEdgeEntitySetIds
+        )
     }
 }
