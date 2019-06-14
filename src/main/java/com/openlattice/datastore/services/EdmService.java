@@ -63,6 +63,7 @@ import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.PostgresEdmManager;
 import com.openlattice.edm.Schema;
 import com.openlattice.edm.events.*;
+import com.openlattice.edm.processors.EntitySetsFlagFilteringAggregator;
 import com.openlattice.edm.properties.PostgresTypeManager;
 import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
@@ -1743,6 +1744,14 @@ public class EdmService implements EdmManager {
 
     @Override public Set<UUID> getEntitySetsForOrganization( UUID organizationId ) {
         return entitySets.keySet( Predicates.equal( EntitySetMapstore.ORGANIZATION_INDEX, organizationId ) );
+    }
+
+    @Override
+    @SuppressWarnings( "unchecked" )
+    public Set<UUID> getEntitySetIdsWithFlags( Set<UUID> entitySetIds, Set<EntitySetFlag> filteringFlags ) {
+        return entitySets.aggregate(
+                new EntitySetsFlagFilteringAggregator( filteringFlags ),
+                Predicates.in( "__key", entitySetIds.toArray( new UUID[]{} ) ) );
     }
 
     @Override

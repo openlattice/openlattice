@@ -195,7 +195,7 @@ open class DataGraphService(
 
     override fun clearAssociationsBatch(
             entitySetId: UUID,
-            associationsEdgeKeys: PostgresIterable<DataEdgeKey>,
+            associationsEdgeKeys: Iterable<DataEdgeKey>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
     ): List<WriteEvent> {
         var associationClearCount = 0
