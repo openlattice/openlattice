@@ -376,16 +376,16 @@ private val BLOCKS_BY_SIZE_SQL = "SELECT ${SRC_ENTITY_SET_ID.name} as entity_set
         "GROUP BY (${SRC_ENTITY_SET_ID.name},${SRC_ENTITY_KEY_ID.name}) " +
         "ORDER BY $BLOCK_SIZE_FIELD DESC"
 
-private val UPDATE_LINKED_ENTITIES_SQL = "UPDATE ${IDS.name} " +
+private val UPDATE_LINKED_ENTITIES_SQL = "UPDATE ${ENTITY_KEY_IDS.name} " +
         "SET ${LINKING_ID.name} = ?, ${LAST_LINK.name}=now() WHERE ${ENTITY_SET_ID.name} =? AND ${ID_VALUE.name}=?"
 
 private val ENTITY_KEY_IDS_NEEDING_LINKING = "SELECT ${ENTITY_SET_ID.name},${ID.name} " +
-        "FROM ${IDS.name} " +
+        "FROM ${ENTITY_KEY_IDS.name} " +
         "WHERE ${ENTITY_SET_ID.name} = ANY(?) AND ${LAST_LINK.name} < ${LAST_WRITE.name} AND ( ${LAST_INDEX.name} >= ${LAST_WRITE.name}) " +
         "AND ${VERSION.name} > 0 LIMIT ?"
 
 private val ENTITY_KEY_IDS_NOT_LINKED = "SELECT ${ENTITY_SET_ID.name},${ID.name} " +
-        "FROM ${IDS.name} " +
+        "FROM ${ENTITY_KEY_IDS.name} " +
         "WHERE ${ENTITY_SET_ID.name} = ANY(?) AND ${LAST_LINK.name} < ${LAST_WRITE.name} " +
         "AND ${VERSION.name} > 0 LIMIT ?"
 

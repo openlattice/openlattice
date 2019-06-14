@@ -25,7 +25,7 @@ import static com.openlattice.postgres.DataTables.quote;
 import static com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID;
 import static com.openlattice.postgres.PostgresColumn.ENTITY_TYPE_ID;
 import static com.openlattice.postgres.PostgresColumn.LINKING_ID;
-import static com.openlattice.postgres.PostgresTable.IDS;
+import static com.openlattice.postgres.PostgresTable.ENTITY_KEY_IDS;
 
 import com.codahale.metrics.annotation.ExceptionMetered;
 import com.codahale.metrics.annotation.Timed;
@@ -243,7 +243,7 @@ public class PostgresEdmManager implements DbEdmManager {
         String query =
                 "SELECT " + ENTITY_SET_ID.getName() + ", array_agg(" + LINKING_ID.getName() + ") AS " + LINKING_ID
                         .getName() +
-                        " FROM " + IDS.getName() +
+                        " FROM " + ENTITY_KEY_IDS.getName() +
                         " WHERE " + LINKING_ID.getName() + " IS NOT NULL AND " + ENTITY_SET_ID.getName()
                         + " = ANY( ? ) " +
                         " GROUP BY " + ENTITY_SET_ID.getName();

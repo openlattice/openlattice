@@ -21,7 +21,6 @@
 
 package com.openlattice.data.storage
 
-import com.google.common.base.Preconditions.checkState
 import com.google.common.collect.Multimaps.asMap
 import com.google.common.collect.SetMultimap
 import com.openlattice.data.WriteEvent
@@ -839,7 +838,7 @@ class PostgresEntityDataQueryService(
  * @param version The version to set
  */
 fun updateAllEntityVersions(entitySetId: UUID, version: Long): String {
-    return "UPDATE ${IDS.name} SET versions = versions || $version, version = $version " +
+    return "UPDATE ${ENTITY_KEY_IDS.name} SET versions = versions || $version, version = $version " +
             "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' "
 }
 
@@ -886,7 +885,7 @@ fun deleteEntityKeys(entitySetId: UUID): String {
 }
 
 fun deleteEntitySetEntityKeys(entitySetId: UUID): String {
-    return "DELETE FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = '$entitySetId' "
+    return "DELETE FROM ${ENTITY_KEY_IDS.name} WHERE ${ENTITY_SET_ID.name} = '$entitySetId' "
 }
 
 fun buildEntityKeyIdsClause(entityKeyIds: Set<UUID>): String {
@@ -908,23 +907,23 @@ internal fun buildLockPropertiesStatement(entitySetId: UUID, propertyTypeId: UUI
 }
 
 internal fun lockEntities(entitySetId: UUID, idsClause: String, version: Long): String {
-    return "SELECT 1 FROM ${IDS.name} " +
+    return "SELECT 1 FROM ${ENTITY_KEY_IDS.name} " +
             "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ($idsClause) " +
             "FOR UPDATE"
 }
 
 fun upsertEntities(entitySetId: UUID, idsClause: String, version: Long): String {
-    return "UPDATE ${IDS.name} SET ${VERSIONS.name} = ${VERSIONS.name} || ARRAY[$version], ${LAST_WRITE.name} = now(), " +
-            "${VERSION.name} = CASE WHEN abs(${IDS.name}.${VERSION.name}) < $version THEN $version " +
-            "ELSE ${IDS.name}.${VERSION.name} END " +
+    return "UPDATE ${ENTITY_KEY_IDS.name} SET ${VERSIONS.name} = ${VERSIONS.name} || ARRAY[$version], ${LAST_WRITE.name} = now(), " +
+            "${VERSION.name} = CASE WHEN abs(${ENTITY_KEY_IDS.name}.${VERSION.name}) < $version THEN $version " +
+            "ELSE ${ENTITY_KEY_IDS.name}.${VERSION.name} END " +
             "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${ID_VALUE.name} IN ($idsClause)"
 }
 
 fun upsertEntity(entitySetId: UUID, version: Long): String {
     //Last writer wins for entities
-    return "UPDATE ${IDS.name} SET versions = ${VERSIONS.name} || ARRAY[$version], ${LAST_WRITE.name} = now(), " +
-            "${VERSION.name} = CASE WHEN abs(${IDS.name}.${VERSION.name}) < $version THEN $version " +
-            "ELSE ${IDS.name}.${VERSION.name} END " +
+    return "UPDATE ${ENTITY_KEY_IDS.name} SET versions = ${VERSIONS.name} || ARRAY[$version], ${LAST_WRITE.name} = now(), " +
+            "${VERSION.name} = CASE WHEN abs(${ENTITY_KEY_IDS.name}.${VERSION.name}) < $version THEN $version " +
+            "ELSE ${ENTITY_KEY_IDS.name}.${VERSION.name} END " +
             "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${ID_VALUE.name} = ?"
 }
 
@@ -1069,20 +1068,20 @@ internal fun selectLinkingIdsOfEntities(entityKeyIds: Map<UUID, Optional<Set<UUI
 
     return "$withClause SELECT ${ENTITY_SET_ID.name}, array_agg(${LINKING_ID.name}) as ${LINKING_ID.name} " +
             "FROM $FILTERED_ENTITY_KEY_IDS " +
-            "INNER JOIN ${IDS.name} USING($joinColumnsSql) " +
+            "INNER JOIN ${ENTITY_KEY_IDS.name} USING($joinColumnsSql) " +
             "GROUP BY ${ENTITY_SET_ID.name} "
 }
 
 internal fun selectLinkingIdsOfEntitySet(entitySetId: UUID): String {
     return "SELECT DISTINCT ${LINKING_ID.name} " +
-            "FROM ${IDS.name} " +
+            "FROM ${ENTITY_KEY_IDS.name} " +
             "WHERE ${VERSION.name} > 0 AND ${LINKING_ID.name} IS NOT NULL AND ${ENTITY_SET_ID.name} = '$entitySetId'"
 }
 
 internal fun getLinkingEntitySetIdsOfLinkingIdQuery(linkingId: UUID): String {
     val selectEntitySetIdOfLinkingId =
             "SELECT DISTINCT ${ENTITY_SET_ID.name} " +
-                    "FROM ${IDS.name} " +
+                    "FROM ${ENTITY_KEY_IDS.name} " +
                     "WHERE ${LINKING_ID.name} = '$linkingId'"
     val wrapLocalTable = "SELECT ${ID.name}, ${LINKED_ENTITY_SETS.name} from ${ENTITY_SETS.name}"
     return "SELECT ${ID.name} " +
@@ -1098,6 +1097,6 @@ internal fun getLinkingEntitySetIdsOfEntitySetIdQuery(entitySetId: UUID): String
 }
 
 internal fun getEntityKeyIdsOfEntitySetQuery(): String {
-    return "SELECT ${ID.name} FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = ? "
+    return "SELECT ${ID.name} FROM ${ENTITY_KEY_IDS.name} WHERE ${ENTITY_SET_ID.name} = ? "
 }
 

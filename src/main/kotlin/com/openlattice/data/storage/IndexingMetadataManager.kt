@@ -5,7 +5,7 @@ import com.openlattice.postgres.DataTables.LAST_INDEX
 import com.openlattice.postgres.DataTables.LAST_LINK
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
-import com.openlattice.postgres.PostgresTable.IDS
+import com.openlattice.postgres.PostgresTable.ENTITY_KEY_IDS
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import java.time.OffsetDateTime
@@ -61,9 +61,9 @@ class IndexingMetadataManager(private val hds: HikariDataSource) {
 fun updateLastIndexSql(idsByEntitySetId: Map<UUID, Optional<Set<UUID>>>): String {
     val entitiesClause = buildEntitiesClause(idsByEntitySetId, false)
     val withClause = buildWithClause(false, entitiesClause)
-    val joinClause = joinClause(IDS.name, FILTERED_ENTITY_KEY_IDS, entityKeyIdColumnsList)
+    val joinClause = joinClause(ENTITY_KEY_IDS.name, FILTERED_ENTITY_KEY_IDS, entityKeyIdColumnsList)
 
-    return "$withClause UPDATE ${IDS.name} SET ${LAST_INDEX.name} = ? " +
+    return "$withClause UPDATE ${ENTITY_KEY_IDS.name} SET ${LAST_INDEX.name} = ? " +
             "FROM $FILTERED_ENTITY_KEY_IDS WHERE ($joinClause)"
 }
 
@@ -71,9 +71,9 @@ fun updateLastLinkIndexSql(linkingIdsByEntitySetId: Map<UUID, Optional<Set<UUID>
     val entitiesClause = buildEntitiesClause(linkingIdsByEntitySetId, true)
     val withClause = buildWithClause(true, entitiesClause)
     // rather use id than linking_id in join
-    val joinClause = joinClause(IDS.name, FILTERED_ENTITY_KEY_IDS, entityKeyIdColumnsList)
+    val joinClause = joinClause(ENTITY_KEY_IDS.name, FILTERED_ENTITY_KEY_IDS, entityKeyIdColumnsList)
 
-    return "$withClause UPDATE ${IDS.name} SET ${LAST_LINK_INDEX.name} = ? " +
+    return "$withClause UPDATE ${ENTITY_KEY_IDS.name} SET ${LAST_LINK_INDEX.name} = ? " +
             "FROM $FILTERED_ENTITY_KEY_IDS WHERE ($joinClause) "
 }
 
@@ -81,9 +81,9 @@ fun markLinkingIdsAsNeedToBeIndexedSql(): String {
     val linkingEntitiesClause = " AND ${LINKING_ID.name} IS NOT NULL AND ${LINKING_ID.name} = ANY(?) "
     val withClause = buildWithClause(true, linkingEntitiesClause)
     // rather use id than linking_id in join
-    val joinClause = joinClause(IDS.name, FILTERED_ENTITY_KEY_IDS, entityKeyIdColumnsList)
+    val joinClause = joinClause(ENTITY_KEY_IDS.name, FILTERED_ENTITY_KEY_IDS, entityKeyIdColumnsList)
 
-    return "$withClause UPDATE ${IDS.name} SET ${LAST_LINK_INDEX.name} = '-infinity()' " +
+    return "$withClause UPDATE ${ENTITY_KEY_IDS.name} SET ${LAST_LINK_INDEX.name} = '-infinity()' " +
             "FROM $FILTERED_ENTITY_KEY_IDS WHERE ($joinClause) "
 }
 
@@ -94,9 +94,9 @@ fun markAsNeedsToBeLinkedSql(entityDataKeys: Set<EntityDataKey>): String {
     val entitiesClause = buildEntitiesClause(entityKeyIds, true)
     val withClause = buildWithClause(true, entitiesClause)
     // rather use id than linking_id in join
-    val joinClause = joinClause(IDS.name, FILTERED_ENTITY_KEY_IDS, entityKeyIdColumnsList)
+    val joinClause = joinClause(ENTITY_KEY_IDS.name, FILTERED_ENTITY_KEY_IDS, entityKeyIdColumnsList)
 
-    return "$withClause UPDATE ${IDS.name} SET ${LAST_LINK.name} = '-infinity()' " +
+    return "$withClause UPDATE ${ENTITY_KEY_IDS.name} SET ${LAST_LINK.name} = '-infinity()' " +
             "FROM $FILTERED_ENTITY_KEY_IDS WHERE ($joinClause) "
 }
 
