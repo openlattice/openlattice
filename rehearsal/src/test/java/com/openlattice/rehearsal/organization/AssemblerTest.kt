@@ -47,7 +47,6 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
     }
     // todo: test for changing refresh rate
     // todo: test for automatic refresh
-    // todo test for removing prop type from entity type
 
 
     @Test
@@ -109,6 +108,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         Assert.assertFalse(organizationsApi.getOrganizationEntitySets(organizationID)[es1.id]!!
                 .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED))
 
+
         // add property type
         val pt = createPropertyType()
         edmApi.addPropertyTypeToEntityType(et.id, pt.id)
@@ -123,7 +123,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
                 val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es1))
-                Assert.assertEquals(pt.type.fullQualifiedNameAsString, rs.metaData.getColumnName(3))
+                Assert.assertEquals(pt.type.fullQualifiedNameAsString, rs.metaData.getColumnName(4))
             }
         }
 
@@ -163,6 +163,25 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                         es2,
                         setOf(edmApi.getPropertyType(propertyToChange).type.fullQualifiedNameAsString)))
                 Assert.assertEquals(newFqn.fullQualifiedNameAsString, rs.metaData.getColumnName(1))
+            }
+        }
+
+
+        // remove property type from entity type
+        edmApi.forceRemovePropertyTypeFromEntityType(et.id, pt.id)
+
+        Assert.assertTrue(organizationsApi.getOrganizationEntitySets(organizationID)[es1.id]!!
+                .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED))
+        grantMaterializePermissions(organization, es1, setOf(pt.id))
+        // sync edm changes
+        organizationsApi.synchronizeEdmChanges(organizationID, es1.id)
+        Assert.assertFalse(organizationsApi.getOrganizationEntitySets(organizationID)[es1.id]!!
+                .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED))
+        // check if old column is deleted
+        organizationDataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es1))
+                Assert.assertEquals(3, rs.metaData.columnCount)
             }
         }
     }
