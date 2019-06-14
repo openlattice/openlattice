@@ -926,6 +926,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
     @Test
     fun testDeleteEntities() {
+        /* Regular entity set */
         val es = createEntitySet(personEt)
 
         val entries = (1..numberOfEntries)
@@ -946,6 +947,40 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         dataApi.deleteEntities(es.id, newEntityIds.drop(1).toSet(), DeleteType.Hard)
         Assert.assertEquals(0, dataApi.loadEntitySetData(es.id, ess, FileType.json).toList().size)
+
+        /* Association entity set */
+        val et = createEdgeEntityType()
+        val aes = createEntitySet(et)
+        val src = createEntityType()
+        val esSrc = createEntitySet(src)
+        val dst = createEntityType()
+        val esDst = createEntitySet(dst)
+        createAssociationType(et, setOf(src), setOf(dst))
+
+        val testDataSrc = TestDataFactory.randomStringEntityData(numberOfEntries, src.properties)
+        val testDataDst = TestDataFactory.randomStringEntityData(numberOfEntries, dst.properties)
+
+        val entriesSrc = ImmutableList.copyOf(testDataSrc.values)
+        val idsSrc = dataApi.createEntities(esSrc.id, entriesSrc)
+
+        val entriesDst = ImmutableList.copyOf(testDataDst.values)
+        val idsDst = dataApi.createEntities(esDst.id, entriesDst)
+
+
+        val edgesToBeCreated: ListMultimap<UUID, DataEdge> = ArrayListMultimap.create()
+        val edgeData = createDataEdges(aes.id, et.properties, esSrc.id, idsSrc, esDst.id, idsDst)
+        edgesToBeCreated.putAll(edgeData.first, edgeData.second)
+        val createdEdges = dataApi.createAssociations(edgesToBeCreated)[aes.id]
+
+        val aess = EntitySetSelection(Optional.of(et.properties))
+        Assert.assertEquals(numberOfEntries, dataApi.loadEntitySetData(aes.id, aess, FileType.json).toList().size)
+
+        dataApi.deleteEntities(aes.id, setOf(createdEdges[0]), DeleteType.Soft)
+        val loadedAssociations = dataApi.loadEntitySetData(aes.id, aess, FileType.json).toList()
+        Assert.assertEquals(numberOfEntries - 1, loadedAssociations.size)
+
+        dataApi.deleteEntities(aes.id, createdEdges.drop(1).toSet(), DeleteType.Soft)
+        Assert.assertEquals(0, dataApi.loadEntitySetData(aes.id, aess, FileType.json).toList().size)
     }
 
     @Test
