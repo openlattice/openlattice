@@ -7,4 +7,3 @@ package com.openlattice.data.storage
 internal class PostgresDataQueries {
 }
 
-internal fun

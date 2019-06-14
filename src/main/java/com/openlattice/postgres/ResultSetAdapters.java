@@ -497,7 +497,7 @@ public final class ResultSetAdapters {
     }
 
     public static Set<UUID> entityKeyIds( ResultSet rs ) throws SQLException {
-        return Sets.newHashSet( (UUID[]) rs.getArray( ENTITY_KEY_IDS.getName() ).getArray() );
+        return Sets.newHashSet( (UUID[]) rs.getArray( ENTITY_KEY_IDS_COL.getName() ).getArray() );
     }
 
     public static UUID graphId( ResultSet rs ) throws SQLException {

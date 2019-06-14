@@ -162,20 +162,20 @@ public final class PostgresColumn {
     public static final PostgresColumnDefinition EDGE_TYPE_ID                      =
             new PostgresColumnDefinition( EDGE_TYPE_ID_FIELD, UUID );
     public static final String                   EDGE_VALUE_FIELD                  = "edge_value";
-    public static final PostgresColumnDefinition EDGE_VALUE                        =
+    public static final PostgresColumnDefinition EDGE_VALUE             =
             new PostgresColumnDefinition( EDGE_VALUE_FIELD, DECIMAL );
-    public static final String                   ENTITY_ID_FIELD                   = "entity_id";
-    public static final PostgresColumnDefinition ENTITY_ID                         =
+    public static final String                   ENTITY_ID_FIELD        = "entity_id";
+    public static final PostgresColumnDefinition ENTITY_ID              =
             new PostgresColumnDefinition( ENTITY_ID_FIELD, TEXT );
-    public static final String                   ENTITY_KEY_IDS_FIELD              = "entity_key_ids";
-    public static final PostgresColumnDefinition ENTITY_KEY_IDS                    =
+    public static final String                   ENTITY_KEY_IDS_FIELD   = "entity_key_ids";
+    public static final PostgresColumnDefinition ENTITY_KEY_IDS_COL     =
             new PostgresColumnDefinition( ENTITY_KEY_IDS_FIELD, UUID_ARRAY );
-    public static final String                   ENTITY_SET_FLAGS_FIELD            = "flags";
-    public static final PostgresColumnDefinition ENTITY_SET_FLAGS                  =
+    public static final String                   ENTITY_SET_FLAGS_FIELD = "flags";
+    public static final PostgresColumnDefinition ENTITY_SET_FLAGS       =
             new PostgresColumnDefinition( ENTITY_SET_FLAGS_FIELD, TEXT_ARRAY )
                     .withDefault( "'{}'" );
-    public static final String                   ENTITY_SET_ID_FIELD               = "entity_set_id";
-    public static final PostgresColumnDefinition ENTITY_SET_ID                     =
+    public static final String                   ENTITY_SET_ID_FIELD    = "entity_set_id";
+    public static final PostgresColumnDefinition ENTITY_SET_ID          =
             new PostgresColumnDefinition( ENTITY_SET_ID_FIELD, UUID ).notNull();
     public static final String                   ENTITY_SET_NAME_FIELD             = "entity_set_name";
     public static final PostgresColumnDefinition ENTITY_SET_Name                   =

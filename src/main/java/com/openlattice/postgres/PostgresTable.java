@@ -32,25 +32,25 @@ import static com.openlattice.postgres.PostgresColumn.*;
  */
 public final class PostgresTable {
 
-    public static final PostgresTableDefinition ACL_KEYS                    =
+    public static final PostgresTableDefinition        ACL_KEYS                     =
             new PostgresTableDefinition( "acl_keys" )
                     .addColumns( NAME, SECURABLE_OBJECTID )
                     .primaryKey( NAME );
-    public static final PostgresTableDefinition APPS                        =
+    public static final PostgresTableDefinition        APPS                         =
             new PostgresTableDefinition( "apps" )
                     .addColumns( ID, NAME, TITLE, DESCRIPTION, CONFIG_TYPE_IDS, URL );
-    public static final PostgresTableDefinition APP_CONFIGS                 =
+    public static final PostgresTableDefinition        APP_CONFIGS                  =
             new PostgresTableDefinition( "app_configs" )
                     .addColumns( APP_ID, ORGANIZATION_ID, CONFIG_TYPE_ID, PostgresColumn.PERMISSIONS, ENTITY_SET_ID )
                     .primaryKey( APP_ID, ORGANIZATION_ID, CONFIG_TYPE_ID );
     //.setUnique( NAMESPACE, NAME ); //Not allowed by postgres xl
-    public static final PostgresTableDefinition APP_TYPES                   =
+    public static final PostgresTableDefinition        APP_TYPES                    =
             new PostgresTableDefinition( "app_types" )
                     .addColumns( ID, NAMESPACE, NAME, TITLE, DESCRIPTION, ENTITY_TYPE_ID );
-    public static final PostgresTableDefinition ASSOCIATION_TYPES           =
+    public static final PostgresTableDefinition        ASSOCIATION_TYPES            =
             new PostgresTableDefinition( "association_types" )
                     .addColumns( ID, SRC, DST, BIDIRECTIONAL );
-    public static final PostgresTableDefinition AUDIT_LOG                   =
+    public static final PostgresTableDefinition        AUDIT_LOG                    =
             new PostgresTableDefinition( "audit_log" )
                     .addColumns( ACL_KEY,
                             EVENT_TYPE,
@@ -62,7 +62,7 @@ public final class PostgresTable {
                             BLOCK_ID )
                     .primaryKey( ACL_KEY, EVENT_TYPE, PRINCIPAL_TYPE, PRINCIPAL_ID, TIME_UUID )
                     .setUnique( ACL_KEY, EVENT_TYPE, PRINCIPAL_TYPE, PRINCIPAL_ID, TIME_UUID );
-    public static final PostgresTableDefinition AUDIT_RECORD_ENTITY_SET_IDS =
+    public static final PostgresTableDefinition        AUDIT_RECORD_ENTITY_SET_IDS  =
             new PostgresTableDefinition( "audit_record_entity_set_ids" )
                     .addColumns( ACL_KEY,
                             AUDIT_RECORD_ENTITY_SET_ID,
@@ -70,12 +70,15 @@ public final class PostgresTable {
                             PostgresColumn.AUDIT_RECORD_ENTITY_SET_IDS,
                             AUDIT_EDGE_ENTITY_SET_IDS )
                     .primaryKey( ACL_KEY );
-
-    public static final PostgresTableDefinition DB_CREDS = new PostgresTableDefinition( "db_creds" )
-            .addColumns( PRINCIPAL_ID, CREDENTIAL )
-            .primaryKey( PRINCIPAL_ID );
-
-    public static final PostgresTableDefinition EDGES =
+    public static final PostgresTableDefinition        DATA                         =
+            new CitusDistributedTableDefinition( "data" )
+                    .addColumns()
+                    .distributionColumn( PARTITION );
+    public static final PostgresTableDefinition        DB_CREDS                     =
+            new PostgresTableDefinition( "db_creds" )
+                    .addColumns( PRINCIPAL_ID, CREDENTIAL )
+                    .primaryKey( PRINCIPAL_ID );
+    public static final PostgresTableDefinition        EDGES                        =
             new CitusDistributedTableDefinition( "edges" )
                     .addColumns(
                             ID_VALUE,
@@ -173,7 +176,6 @@ public final class PostgresTable {
                     ENTITY_SET_ID,
                     PRINCIPAL_ID
             );
-    public static final PostgresTableDefinition DATA = new CitusDistributedTableDefinition( "DATA" )
     public static final PostgresTableDefinition        IDS                          =
             new CitusDistributedTableDefinition( "ids" )
                     .addColumns( PARTITION,
