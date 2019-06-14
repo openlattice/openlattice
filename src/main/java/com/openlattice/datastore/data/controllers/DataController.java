@@ -716,13 +716,20 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         final Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes = new HashMap<>();
 
         // collect association entity key ids
-        final Iterable<DataEdgeKey> associationsEdgeKeys = collectAssociations( entitySetId, entityKeyIds )
-                .stream()
+        final PostgresIterable<DataEdgeKey> associationsEdgeKeys = collectAssociations( entitySetId, entityKeyIds );
+
+        // collect edge entity sets
+        final var edgeEntitySetIds = associationsEdgeKeys.stream()
+                .map( edgeKey -> edgeKey.getEdge().getEntitySetId() )
+                .collect( Collectors.toSet() );
+        final var edgeEntitySets = edmService.getEntitySetsAsMap( edgeEntitySetIds );
+
+        final var filteredAssociationsEdgeKeys = associationsEdgeKeys.stream()
                 // for soft deletes, we skip clearing edge audit entities
                 // filter out audit entity sets
                 .filter( edgeKey -> !edmService.getAuditRecordEntitySetsManager().getAuditingTypes()
                         .getAuditingEdgeEntityTypeId()
-                        .equals( edmService.getEntitySet( edgeKey.getEdge().getEntitySetId() ).getEntityTypeId() )
+                        .equals( edgeEntitySets.get( edgeKey.getEdge().getEntitySetId() ).getEntityTypeId() )
                 )
                 // access checks
                 .peek( edgeKey -> {
@@ -737,7 +744,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                 .collect( Collectors.toList() );
 
         // clear associations of entity set
-        return dgm.clearAssociationsBatch( entitySetId, associationsEdgeKeys, authorizedPropertyTypes );
+        return dgm.clearAssociationsBatch( entitySetId, filteredAssociationsEdgeKeys, authorizedPropertyTypes );
     }
 
     private List<WriteEvent> deleteAssociations( UUID entitySetId, Optional<Set<UUID>> entityKeyIds ) {
