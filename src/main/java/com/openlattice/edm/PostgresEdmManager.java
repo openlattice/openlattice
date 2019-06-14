@@ -22,9 +22,7 @@ package com.openlattice.edm;
 
 import static com.openlattice.postgres.DataTables.propertyTableName;
 import static com.openlattice.postgres.DataTables.quote;
-import static com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID;
-import static com.openlattice.postgres.PostgresColumn.ENTITY_TYPE_ID;
-import static com.openlattice.postgres.PostgresColumn.LINKING_ID;
+import static com.openlattice.postgres.PostgresColumn.*;
 import static com.openlattice.postgres.PostgresTable.IDS;
 
 import com.codahale.metrics.annotation.ExceptionMetered;
@@ -224,6 +222,37 @@ public class PostgresEdmManager implements DbEdmManager {
             logger.debug( "Unable to load entity sets for entity type id {}", entityTypeId.toString(), e );
             return ImmutableList.of();
         }
+    }
+
+    public Iterable<UUID> getAllEntitySetIdsForType( UUID entityTypeId ) {
+        final var getEntitySetIdsByType = String.format( "SELECT %1$s FROM %2$s WHERE %3$s = ?",
+                ID.getName(),
+                ENTITY_SETS,
+                ENTITY_TYPE_ID_FIELD );
+        return new PostgresIterable<>(
+                () -> {
+                    try {
+                        Connection connection = hds.getConnection();
+                        PreparedStatement ps = connection.prepareStatement( getEntitySetIdsByType );
+                        ps.setObject( 1, entityTypeId );
+                        ResultSet rs = ps.executeQuery();
+                        return new StatementHolder( connection, ps, rs );
+                    } catch ( SQLException e ) {
+                        logger.error( "Unable to load entity set ids for entity type id {}",
+                                entityTypeId.toString(), e );
+                        throw new IllegalStateException( "Unable to load entity set ids for entity type id "
+                                + entityTypeId, e );
+                    }
+                },
+                rs -> {
+                    try {
+                        return ResultSetAdapters.id( rs );
+                    } catch ( SQLException e ) {
+                        logger.error( "Unable to read entity set id.", e );
+                        throw new IllegalStateException( "Unable to read entity set id.", e );
+                    }
+                }
+        );
     }
 
     /**
