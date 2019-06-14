@@ -161,7 +161,7 @@ class Assembler(
         // entity_sets and edges table in organization databases
         if (isEntitySetMaterialized(entitySetDeletedEvent.entitySetId)) {
             val droppedMaterializedEntitySets = materializedEntitySets.executeOnEntries(
-                    DropMaterializedEntitySetProcessor(),
+                    DropMaterializedEntitySetProcessor().init(acm),
                     entitySetIdPredicate(entitySetDeletedEvent.entitySetId)
             ).keys
             // also remove entries from assemblies entity sets
@@ -176,7 +176,7 @@ class Assembler(
                     }
 
             // re-materialize edges
-            assemblies.executeOnKey(entitySetDeletedEvent.entitySetId, MaterializeEdgesProcessor())
+            assemblies.executeOnKey(entitySetDeletedEvent.entitySetId, MaterializeEdgesProcessor().init(acm))
         }
         dropProductionViewOfEntitySet(entitySetDeletedEvent.entitySetId)
     }
@@ -287,7 +287,7 @@ class Assembler(
         )
 
         // materialize edges by including all the materialized entity sets in organization
-        assemblies.executeOnKey(organizationId, MaterializeEdgesProcessor())
+        assemblies.executeOnKey(organizationId, MaterializeEdgesProcessor().init(acm))
 
         return getMaterializedEntitySetIdsInOrganization(organizationId).map {
             it to (setOf(OrganizationEntitySetFlag.MATERIALIZED) + getInternalEntitySetFlag(organizationId, it))
@@ -310,7 +310,7 @@ class Assembler(
             val entitySet = entitySets.getValue(entitySetId)
             materializedEntitySets.executeOnKey(
                     EntitySetAssemblyKey(entitySetId, organizationId),
-                    SynchronizeMaterializedEntitySetProcessor(entitySet, authorizedPropertyTypes)
+                    SynchronizeMaterializedEntitySetProcessor(entitySet, authorizedPropertyTypes).init(acm)
             )
 
             // remove flag also from organization entity sets
@@ -326,7 +326,7 @@ class Assembler(
             )
 
             // re-materialize edges with by including all the materialized entity sets in organization
-            assemblies.executeOnKey(organizationId, MaterializeEdgesProcessor())
+            assemblies.executeOnKey(organizationId, MaterializeEdgesProcessor().init(acm))
         }
     }
 
@@ -348,7 +348,7 @@ class Assembler(
             val entitySet = entitySets.getValue(entitySetId)
             materializedEntitySets.executeOnKey(
                     entitySetAssemblyKey,
-                    RefreshMaterializedEntitySetProcessor(entitySet, authorizedPropertyTypes)
+                    RefreshMaterializedEntitySetProcessor(entitySet, authorizedPropertyTypes).init(acm)
             )
             // remove flag also from organization entity sets
             assemblies.executeOnKey(
@@ -359,7 +359,7 @@ class Assembler(
             )
 
             // re-materialize edges (with possible new edges)
-            assemblies.executeOnKey(organizationId, MaterializeEdgesProcessor())
+            assemblies.executeOnKey(organizationId, MaterializeEdgesProcessor().init(acm))
         }
     }
 
