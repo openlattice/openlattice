@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018. OpenLattice, Inc.
+ * Copyright (C) 2019. OpenLattice, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,16 +18,12 @@
  *
  *
  */
+package com.openlattice.analysis.requests
 
-package com.openlattice.analysis.requests;
+import com.openlattice.analysis.requests.BaseCalculationTypes.DURATION
 
-/**
- * Types of supported aggregations
- */
-public enum AggregationType {
-    SUM,
-    AVG,
-    MIN,
-    MAX,
-    COUNT
+enum class CalculationType(val basseType: BaseCalculationTypes) {
+    DURATION_YEAR(DURATION),
+    DURATION_DAY(DURATION),
+    DURATION_HOUR(DURATION)
 }
