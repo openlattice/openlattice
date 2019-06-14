@@ -808,13 +808,13 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
             Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!
-                    .contains("Object [${esDst.id}] is not accessible.", true))
+                    .contains("Object [${esEdge.id}] is not accessible.", true))
         } finally {
             loginAs("admin")
         }
 
         // add user1 as owner of edge entity set
-        val dstOwnerAcl = Acl(AclKey(esDst.id), setOf(Ace(user1, ownerPermissions, OffsetDateTime.MAX)))
+        val dstOwnerAcl = Acl(AclKey(esEdge.id), setOf(Ace(user1, ownerPermissions, OffsetDateTime.MAX)))
         permissionsApi.updateAcl(AclData(dstOwnerAcl, Action.ADD))
 
         try {
@@ -897,6 +897,28 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
             Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!
+                    .contains("You must have WRITE permission of all required entity set properties to delete entities from it.", true))
+        } finally {
+            loginAs("admin")
+        }
+
+        // add write to user1 for all property types in edge entityset
+        edge.properties.forEach {
+            val acl = Acl(AclKey(esEdge.id, it), setOf(Ace(user1, writePermissions, OffsetDateTime.MAX)))
+            permissionsApi.updateAcl(AclData(acl, Action.ADD))
+        }
+
+        try {
+            loginAs("user1")
+            dataApi.deleteEntitiesAndNeighbors(
+                    es.id,
+                    EntityNeighborsFilter(
+                            newEntityIds.toSet(),
+                            Optional.empty(), Optional.of(setOf(esDst.id)), Optional.empty()),
+                    DeleteType.Soft)
+            Assert.fail("Should have thrown Exception but did not!")
+        } catch (e: UndeclaredThrowableException) {
+            Assert.assertTrue(e.undeclaredThrowable.message!!
                     .contains("Object [${esDst.id}] is not accessible.", true))
         } finally {
             loginAs("admin")
@@ -921,7 +943,6 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         } finally {
             loginAs("admin")
         }
-
     }
 
     @Test
