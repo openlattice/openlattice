@@ -98,7 +98,7 @@ public final class PostgresColumn {
             new PostgresColumnDefinition( CONTACT_TYPE_FIELD, TEXT );
     public static final String                   CONTACT_INFO_FIELD                = "contact_info";
     public static final PostgresColumnDefinition CONTACT_INFO                      =
-            new PostgresColumnDefinition( CONTACT_INFO_FIELD, TEXT);
+            new PostgresColumnDefinition( CONTACT_INFO_FIELD, JSONB);
     public static final String                   CONTACTS_FIELD                    = "contacts";
     public static final PostgresColumnDefinition CONTACTS                          =
             new PostgresColumnDefinition( CONTACTS_FIELD, TEXT_ARRAY );

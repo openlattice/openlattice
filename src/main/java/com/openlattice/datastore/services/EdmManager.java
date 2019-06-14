@@ -206,6 +206,8 @@ public interface EdmManager {
 
     Iterable<EntityType> getAvailableAssociationTypesForEntityType( UUID entityTypeId );
 
+    boolean isAssociationEntitySet( UUID entitySetId );
+
     EntityDataModelDiff getEntityDataModelDiff( EntityDataModel edm );
 
     Map<UUID, EntitySetPropertyMetadata> getAllEntitySetPropertyMetadata( UUID entitySetId );

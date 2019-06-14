@@ -1245,6 +1245,12 @@ public class EdmService implements EdmManager {
                 .collect( Collectors.toList() );
     }
 
+    @Override
+    public boolean isAssociationEntitySet( UUID entitySetId ) {
+        final var entityTypeId = getEntitySet( entitySetId ).getEntityTypeId();
+        return associationTypes.containsKey( entityTypeId );
+    }
+
     private void createOrUpdatePropertyTypeWithFqn( PropertyType pt, FullQualifiedName fqn ) {
         PropertyType existing = getPropertyType( pt.getId() );
         if ( existing == null ) { createPropertyTypeIfNotExists( pt ); } else {

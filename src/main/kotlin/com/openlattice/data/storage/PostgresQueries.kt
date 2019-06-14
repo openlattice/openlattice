@@ -75,6 +75,7 @@ fun selectEntitySetWithCurrentVersionOfPropertyTypes(
     val joinColumns = getJoinColumns(linking, omitEntitySetId)
 
     val entitiesSubquerySql = selectEntityKeyIdsWithCurrentVersionSubquerySql(
+            entitiesClause,
             metadataOptions,
             linking,
             omitEntitySetId,
@@ -381,6 +382,7 @@ internal fun selectLinkingIdsFilteredByVersionSubquerySql(
  * ids table.
  */
 internal fun selectEntityKeyIdsWithCurrentVersionSubquerySql(
+        entitiesClause: String,
         metadataOptions: Set<MetadataOption>,
         linking: Boolean,
         omitEntitySetId: Boolean,
@@ -431,7 +433,7 @@ internal fun selectEntityKeyIdsWithCurrentVersionSubquerySql(
         }
     }
 
-    return "( SELECT $selectColumns FROM ${IDS.name} INNER JOIN $FILTERED_ENTITY_KEY_IDS USING($joinColumnsSql) $groupBy ) as $ENTITIES_TABLE_ALIAS"
+    return "( SELECT $selectColumns FROM ${IDS.name} INNER JOIN $FILTERED_ENTITY_KEY_IDS USING($joinColumnsSql) WHERE true $entitiesClause $groupBy ) as $ENTITIES_TABLE_ALIAS"
 }
 
 internal fun arrayAggSql(fqn: String): String {
@@ -449,7 +451,7 @@ internal fun buildEntitiesClause(entityKeyIds: Map<UUID, Optional<Set<UUID>>>, l
                 .filter { ids -> ids.isNotEmpty() }
                 .map { ids -> " $idsColumn IN (" + ids.joinToString(",") { id -> "'$id'" } + ") AND" }
                 .orElse("")
-        " ($idsClause ${ENTITY_SET_ID.name} = '${it.key}' )"
+        " ($idsClause ${IDS.name}.${ENTITY_SET_ID.name} = '${it.key}' )"
     } + ")"
 }
 

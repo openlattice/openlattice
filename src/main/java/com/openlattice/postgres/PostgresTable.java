@@ -303,22 +303,15 @@ public final class PostgresTable {
                     .primaryKey( ACL_KEY );
     public static final PostgresTableDefinition SUBSCRIPTIONS     =
             new PostgresTableDefinition( "subscriptions" )
-                    .addColumns( ID_VALUE,
+                    .addColumns( ENTITY_SET_ID,
+                            ID_VALUE,
                             PRINCIPAL_ID,
                             LAST_NOTIFIED,
                             SRC_SELECTS,
                             DST_SELECTS,
-                            ORGANIZATION_ID)
-                    .primaryKey( ID, PRINCIPAL_ID );
-
-    public static final PostgresTableDefinition SUBSCRIPTION_CONTACTS =
-            new PostgresTableDefinition( "subscription_contacts" )
-                    .addColumns( ID_VALUE,
-                            PRINCIPAL_ID,
                             CONTACT_TYPE,
-                            CONTACT_INFO )
+                            CONTACT_INFO)
                     .primaryKey( ID, PRINCIPAL_ID );
-
     public static final PostgresTableDefinition SYNC_IDS                 =
             new CitusDistributedTableDefinition( "sync_ids" )
                     .addColumns( ENTITY_SET_ID, ENTITY_ID, ID_VALUE )
