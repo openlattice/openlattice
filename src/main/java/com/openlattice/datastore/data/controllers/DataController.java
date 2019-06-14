@@ -38,6 +38,7 @@ import com.openlattice.data.requests.FileType;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.SyncTicketService;
 import com.openlattice.edm.EntitySet;
+import com.openlattice.edm.set.EntitySetFlag;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
@@ -712,12 +713,24 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     }
 
     private List<WriteEvent> clearAssociations( UUID entitySetId, Optional<Set<UUID>> entityKeyIds ) {
+        final Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes = new HashMap<>();
+
         // collect association entity key ids
         final PostgresIterable<DataEdgeKey> associationsEdgeKeys = collectAssociations( entitySetId, entityKeyIds );
 
-        // access checks
-        final Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes = new HashMap<>();
-        associationsEdgeKeys.forEach( edgeKey -> {
+        // collect edge entity sets
+        final var edgeEntitySetIds = associationsEdgeKeys.stream()
+                .map( edgeKey -> edgeKey.getEdge().getEntitySetId() )
+                .collect( Collectors.toSet() );
+        final var auditEdgeEntitySetIds = edmService
+                .getEntitySetIdsWithFlags( edgeEntitySetIds, Set.of( EntitySetFlag.AUDIT ) );
+
+        final var filteredAssociationsEdgeKeys = associationsEdgeKeys.stream()
+                // for soft deletes, we skip clearing edge audit entities
+                // filter out audit entity sets
+                .filter( edgeKey -> !auditEdgeEntitySetIds.contains( edgeKey.getEdge().getEntitySetId() ) )
+                // access checks
+                .peek( edgeKey -> {
                     if ( !authorizedPropertyTypes.containsKey( edgeKey.getEdge().getEntitySetId() ) ) {
                         Map<UUID, PropertyType> authorizedPropertyTypesOfAssociation =
                                 getAuthorizedPropertyTypesForDelete(
@@ -725,24 +738,40 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                         authorizedPropertyTypes.put(
                                 edgeKey.getEdge().getEntitySetId(), authorizedPropertyTypesOfAssociation );
                     }
-                }
-        );
+                } )
+                .collect( Collectors.toList() );
 
         // clear associations of entity set
-        return dgm.clearAssociationsBatch( entitySetId, associationsEdgeKeys, authorizedPropertyTypes );
+        return dgm.clearAssociationsBatch( entitySetId, filteredAssociationsEdgeKeys, authorizedPropertyTypes );
     }
 
     private List<WriteEvent> deleteAssociations( UUID entitySetId, Optional<Set<UUID>> entityKeyIds ) {
         // collect association entity key ids
         final PostgresIterable<DataEdgeKey> associationsEdgeKeys = collectAssociations( entitySetId, entityKeyIds );
+        final var edgeAuditPropertyTypes = edmService.getPropertyTypesAsMap(
+                edmService.getAuditRecordEntitySetsManager().getAuditingTypes().edgeEntityType
+                        .getAssociationEntityType().getProperties() );
+
+        // collect edge entity sets
+        final var edgeEntitySetIds = associationsEdgeKeys.stream()
+                .map( edgeKey -> edgeKey.getEdge().getEntitySetId() )
+                .collect( Collectors.toSet() );
+        final var edgeEntitySets = edmService.getEntitySetsAsMap( edgeEntitySetIds );
 
         // access checks
         final Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes = new HashMap<>();
         associationsEdgeKeys.stream().forEach( edgeKey -> {
                     if ( !authorizedPropertyTypes.containsKey( edgeKey.getEdge().getEntitySetId() ) ) {
+                        // for hard deletes, we skip permission checks for edge audit entity sets, so we can delete
+                        // those entries
+                        final var edgeEntitySet = edgeEntitySets.get( edgeKey.getEdge().getEntitySetId() );
                         Map<UUID, PropertyType> authorizedPropertyTypesOfAssociation =
-                                getAuthorizedPropertyTypesForDelete(
-                                        edgeKey.getEdge().getEntitySetId(), Optional.empty(), DeleteType.Hard );
+                                ( edgeEntitySet.getEntityTypeId().equals(
+                                        edmService.getAuditRecordEntitySetsManager().getAuditingTypes()
+                                                .auditingEdgeEntityTypeId ) )
+                                        ? edgeAuditPropertyTypes
+                                        : getAuthorizedPropertyTypesForDelete(
+                                                edgeEntitySet, Optional.empty(), DeleteType.Hard );
                         authorizedPropertyTypes.put(
                                 edgeKey.getEdge().getEntitySetId(), authorizedPropertyTypesOfAssociation );
                     }
@@ -753,8 +782,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         return dgm.deleteAssociationsBatch( entitySetId, associationsEdgeKeys, authorizedPropertyTypes );
     }
 
-    private PostgresIterable<DataEdgeKey> collectAssociations(
-            UUID entitySetId, Optional<Set<UUID>> entityKeyIds ) {
+    private PostgresIterable<DataEdgeKey> collectAssociations( UUID entitySetId, Optional<Set<UUID>> entityKeyIds ) {
         return ( entityKeyIds.isPresent() )
                 ? dgm.getEdgesConnectedToEntities( entitySetId, entityKeyIds.get() )
                 : dgm.getEdgeKeysOfEntitySet( entitySetId );
@@ -1002,6 +1030,15 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             UUID entitySetId,
             Optional<Set<UUID>> properties,
             DeleteType deleteType ) {
+        final EntitySet entitySet = edmService.getEntitySet( entitySetId );
+        return getAuthorizedPropertyTypesForDelete( entitySet, properties, deleteType );
+    }
+
+    private Map<UUID, PropertyType> getAuthorizedPropertyTypesForDelete(
+            EntitySet entitySet,
+            Optional<Set<UUID>> properties,
+            DeleteType deleteType ) {
+        final var entitySetId = entitySet.getId();
 
         EnumSet<Permission> propertyPermissionsToCheck;
         if ( deleteType == DeleteType.Hard ) {
@@ -1012,7 +1049,6 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             propertyPermissionsToCheck = EnumSet.of( Permission.WRITE );
         }
 
-        final EntitySet entitySet = edmService.getEntitySet( entitySetId );
         if ( entitySet.isLinking() ) {
             throw new IllegalArgumentException( "You cannot delete entities from a linking entity set." );
         }
