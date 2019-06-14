@@ -274,7 +274,6 @@ public class EdmService implements EdmManager {
 
         propertyTypes.delete( propertyTypeId );
         aclKeyReservations.release( propertyTypeId );
-        // TODO flag materialized entity set edm unsynch
 
         eventBus.post( new PropertyTypeDeletedEvent( propertyTypeId ) );
     }
@@ -852,6 +851,8 @@ public class EdmService implements EdmManager {
             } else {
                 eventBus.post( new AssociationTypeCreatedEvent( getAssociationType( id ) ) );
             }
+            final var entitySetIdsOfEntityType = edmManager.getAllEntitySetIdsForType( id );
+            entitySetIdsOfEntityType.forEach( this::markMaterializedEntitySetDirtyWithEdmChanges );
         } );
         childrenIds.forEach( propertyTypes::unlock );
 
