@@ -27,8 +27,8 @@ import com.openlattice.edm.set.EntitySetFlag
 import java.util.*
 import java.util.Map
 
-class EntitySetsFlagFilteringAggregator(
-        private val filteringFlags: Set<EntitySetFlag>
+data class EntitySetsFlagFilteringAggregator(
+        val filteringFlags: Set<EntitySetFlag>
 ) : Aggregator<Map.Entry<UUID, EntitySet>, Set<UUID>>() {
     private val filteredEntitySetIds = mutableSetOf<UUID>()
 
