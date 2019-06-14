@@ -8,6 +8,7 @@ import com.openlattice.graph.Neighborhood
 import com.openlattice.graph.NeighborhoodQuery
 import com.openlattice.graph.NeighborhoodSelection
 import com.openlattice.subscriptions.FeedsApi
+import com.openlattice.subscriptions.LastWriteRangeFilter
 import com.openlattice.subscriptions.SubscriptionService
 import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.RequestMapping
@@ -34,8 +35,31 @@ constructor(
     @RequestMapping(path = ["", "/"], method = [RequestMethod.GET])
     override fun getLatestFeed(): Iterator<Neighborhood> {
         return subscriptionService.getAllSubscriptions(Principals.getCurrentUser()).map { subscriptionContact ->
-            val query = subscriptionContact.subscription
-            val entitySetsById = graphQueryService.getEntitySetForIds(query.ids)
+            val query = subscriptionContact.query
+            val ids = query.ids.values.flatMap { it.orElse(emptySet()) }.toSet()
+            val entitySetsById = graphQueryService.getEntitySetForIds(ids)
+
+
+            entitySetsById.asSequence()
+                    .groupBy({ it.value }, { it.key })
+                    .mapValues { it.value.toSet() }
+                    .forEach { (entitySetId, ids) ->
+                        check(query.ids.containsKey(entitySetId)) {
+                            "Entity set id ($entitySetId) / entity key ids ($ids) mismatch."
+                        }
+                        val maybeIds = query.ids.getValue(entitySetId)
+                        check(maybeIds.isPresent) {
+                            "Entity set id ($entitySetId) expected to have entity key ids ($ids), instead found none."
+                        }
+
+                        val missing = maybeIds.get() - ids
+                        val additional = ids - maybeIds.get()
+
+                        check(missing.isEmpty() && additional.isEmpty()) {
+                            "Missing keys ($missing) and additional keys ($additional) are incorrectly specified."
+                        }
+                    }
+
             val (allEntitySetIds, _) = resolveEntitySetIdsAndRequiredAuthorizations(
                     query,
                     entitySetsById.values
@@ -50,10 +74,11 @@ constructor(
             val propertyTypes = authorizedPropertyTypes.values.flatMap { it.values }.associateBy { it.id }
 
             val submitQuery = graphQueryService.submitQuery(
-                    query, propertyTypes, authorizedPropertyTypes, Optional.of(WrittenTwoWeeksFilter())
+                    query, propertyTypes, authorizedPropertyTypes,
+                    Optional.of(LastWriteRangeFilter(subscriptionContact.lastNotify))
             )
 
-            subscriptionService.markLastNotified(query.ids, Principals.getCurrentUser());
+            subscriptionService.markLastNotified(ids, Principals.getCurrentUser())
             return@map submitQuery
         }.listIterator()
     }
