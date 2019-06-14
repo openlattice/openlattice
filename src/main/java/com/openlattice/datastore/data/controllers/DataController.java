@@ -722,15 +722,13 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         final var edgeEntitySetIds = associationsEdgeKeys.stream()
                 .map( edgeKey -> edgeKey.getEdge().getEntitySetId() )
                 .collect( Collectors.toSet() );
-        final var edgeEntitySets = edmService.getEntitySetsAsMap( edgeEntitySetIds );
+        final var auditEdgeEntitySetIds = edmService
+                .getEntitySetIdsWithFlags( edgeEntitySetIds, Set.of( EntitySetFlag.AUDIT ) );
 
         final var filteredAssociationsEdgeKeys = associationsEdgeKeys.stream()
                 // for soft deletes, we skip clearing edge audit entities
                 // filter out audit entity sets
-                .filter( edgeKey -> !edmService.getAuditRecordEntitySetsManager().getAuditingTypes()
-                        .getAuditingEdgeEntityTypeId()
-                        .equals( edgeEntitySets.get( edgeKey.getEdge().getEntitySetId() ).getEntityTypeId() )
-                )
+                .filter( edgeKey -> !auditEdgeEntitySetIds.contains( edgeKey.getEdge().getEntitySetId() ) )
                 // access checks
                 .peek( edgeKey -> {
                     if ( !authorizedPropertyTypes.containsKey( edgeKey.getEdge().getEntitySetId() ) ) {
@@ -754,13 +752,19 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                 edmService.getAuditRecordEntitySetsManager().getAuditingTypes().edgeEntityType
                         .getAssociationEntityType().getProperties() );
 
+        // collect edge entity sets
+        final var edgeEntitySetIds = associationsEdgeKeys.stream()
+                .map( edgeKey -> edgeKey.getEdge().getEntitySetId() )
+                .collect( Collectors.toSet() );
+        final var edgeEntitySets = edmService.getEntitySetsAsMap( edgeEntitySetIds );
+
         // access checks
         final Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes = new HashMap<>();
         associationsEdgeKeys.stream().forEach( edgeKey -> {
                     if ( !authorizedPropertyTypes.containsKey( edgeKey.getEdge().getEntitySetId() ) ) {
                         // for hard deletes, we skip permission checks for edge audit entity sets, so we can delete
                         // those entries
-                        final var edgeEntitySet = edmService.getEntitySet( edgeKey.getEdge().getEntitySetId() );
+                        final var edgeEntitySet = edgeEntitySets.get( edgeKey.getEdge().getEntitySetId() );
                         Map<UUID, PropertyType> authorizedPropertyTypesOfAssociation =
                                 ( edgeEntitySet.getEntityTypeId().equals(
                                         edmService.getAuditRecordEntitySetsManager().getAuditingTypes()
