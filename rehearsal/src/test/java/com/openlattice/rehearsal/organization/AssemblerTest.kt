@@ -47,6 +47,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
     }
     // todo: test for changing refresh rate
     // todo: test for automatic refresh
+    // todo test for removing prop type from entity type
 
 
     @Test
