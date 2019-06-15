@@ -1,7 +1,6 @@
 package com.openlattice.data.storage
 
 import com.openlattice.postgres.PostgresDataTables
-import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.PostgresTable.DATA
 
 /**
@@ -12,5 +11,10 @@ internal class PostgresDataQueries {
 }
 
 
-val dataTableColumnsSql = PostgresDataTables.dataTableColumns.joinToString(",")
-val insertPropertyQuery = "INSERT INTO ${DATA.name} ($dataTableColumnsSql) VALUES "
+val dataTableColumnsSql = PostgresDataTables.dataTableColumns.joinToString(",") { it.name }
+val dataTableColumnsBindSql = PostgresDataTables.dataTableColumns.joinToString(",") { "?" }
+val dataTableColumnsConflictSetSql = PostgresDataTables.dataTableColumns.joinToString(",") { "${it.name} = EXCLUDED.${it.name}" }
+val insertPropertyQuery = "INSERT INTO ${DATA.name} ($dataTableColumnsSql) VALUES ($dataTableColumnsBindSql) ON CONFLICT " +
+        "DO UPDATE SET $dataTableColumnsConflictSetSql"
+
+
