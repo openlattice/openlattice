@@ -25,37 +25,38 @@ class PostgresDataTables {
                 EdmPrimitiveTypeKind.Boolean,
                 EdmPrimitiveTypeKind.Binary
         )
+        val nonIndexedColumns = supportedEdmPrimitiveTypeKinds
+                .map(PostgresEdmTypeConverter::map)
+                .map(::nonIndexedValueColumn)
+        val btreeIndexedColumns = supportedEdmPrimitiveTypeKinds
+                .map(PostgresEdmTypeConverter::map)
+                .map(::btreeIndexedValueColumn)
+        val ginIndexedColumns = supportedEdmPrimitiveTypeKinds
+                .map(PostgresEdmTypeConverter::map)
+                .map(::ginIndexedValueColumn)
+
+        val dataTableColumns = listOf(
+                ENTITY_SET_ID,
+                ID_VALUE,
+                PARTITION,
+                PROPERTY_TYPE_ID,
+                HASH,
+                LAST_WRITE,
+                LAST_MIGRATE,
+                VERSION,
+                VERSIONS
+        ) + btreeIndexedColumns + ginIndexedColumns + nonIndexedColumns
 
         @JvmStatic
         fun buildDataTableDefinition(): PostgresTableDefinition {
-            val nonIndexedColumns = supportedEdmPrimitiveTypeKinds
-                    .map(PostgresEdmTypeConverter::map)
-                    .map(::nonIndexedValueColumn)
-            val btreeIndexedColumns = supportedEdmPrimitiveTypeKinds
-                    .map(PostgresEdmTypeConverter::map)
-                    .map(::btreeIndexedValueColumn)
-            val ginIndexedColumns = supportedEdmPrimitiveTypeKinds
-                    .map(PostgresEdmTypeConverter::map)
-                    .map(::ginIndexedValueColumn)
-            val dataTableColumns = (
-                    listOf(
-                            ENTITY_SET_ID,
-                            ID_VALUE,
-                            PARTITION,
-                            PROPERTY_TYPE_ID,
-                            HASH,
-                            LAST_WRITE,
-                            LAST_MIGRATE,
-                            VERSION,
-                            VERSIONS
-                    ) + btreeIndexedColumns + ginIndexedColumns + nonIndexedColumns + listOf(
-                            OWNERS,
-                            READERS,
-                            WRITERS
-                    )).toTypedArray()
+            val columns = (dataTableColumns + listOf(
+                    OWNERS,
+                    READERS,
+                    WRITERS
+            )).toTypedArray()
 
             val tableDefinition = CitusDistributedTableDefinition("data")
-                    .addColumns(*dataTableColumns)
+                    .addColumns(*columns)
                     .primaryKey(ID_VALUE, PARTITION, PROPERTY_TYPE_ID, HASH)
                     .distributionColumn(PARTITION)
 
