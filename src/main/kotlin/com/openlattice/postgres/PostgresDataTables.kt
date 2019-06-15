@@ -1,6 +1,7 @@
 package com.openlattice.postgres
 
 import com.openlattice.edm.PostgresEdmTypeConverter
+import com.openlattice.postgres.DataTables.*
 import com.openlattice.postgres.PostgresColumn.*
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 
@@ -42,10 +43,20 @@ class PostgresDataTables {
                             ID_VALUE,
                             PARTITION,
                             PROPERTY_TYPE_ID,
-                            HASH
-                    ) + btreeIndexedColumns + ginIndexedColumns + nonIndexedColumns).toTypedArray()
+                            HASH,
+                            LAST_WRITE,
+                            LAST_MIGRATE,
+                            VERSION,
+                            VERSIONS
+                    ) + btreeIndexedColumns + ginIndexedColumns + nonIndexedColumns + listOf(
+                            OWNERS,
+                            READERS,
+                            WRITERS
+                    )).toTypedArray()
+
             val tableDefinition = CitusDistributedTableDefinition("data")
                     .addColumns(*dataTableColumns)
+                    .primaryKey( ID_VALUE, PARTITION, PROPERTY_TYPE_ID, HASH )
                     .distributionColumn(PARTITION)
 
             tableDefinition.addIndexes(
