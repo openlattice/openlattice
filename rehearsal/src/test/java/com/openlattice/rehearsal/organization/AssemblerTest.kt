@@ -203,7 +203,9 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                 // all columns are there
                 (1..rs.metaData.columnCount).forEach {
                     val columnName = rs.metaData.getColumnName(it)
-                    if (columnName != PostgresColumn.ID.name && columnName != PostgresColumn.ENTITY_SET_ID.name) {
+                    if (columnName != PostgresColumn.ID.name && columnName != PostgresColumn.ENTITY_SET_ID.name
+                            && columnName != ResultSetAdapters
+                                    .mapMetadataOptionToPostgresColumn(MetadataOption.ENTITY_KEY_IDS)) {
                         Assert.assertTrue(propertyFqns.values.contains(columnName))
                     }
                 }
@@ -366,7 +368,11 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         // edges should contain all ids
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectEdgesOfEntitySetsSql(setOf(esSrc.id)))
+                val rs = stmt.executeQuery(
+                        TestAssemblerConnectionManager.selectEdgesOfEntitySetsSql(
+                                Optional.of(esSrc.id),
+                                Optional.of(esEdge.id),
+                                Optional.of(esDst.id)))
 
                 var index = 0
                 Assert.assertTrue(rs.next())
@@ -388,7 +394,10 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
                 val rs = stmt.executeQuery(
-                        TestAssemblerConnectionManager.selectEdgesOfEntitySetsSql(setOf(esSrc.id, esEdge.id)))
+                        TestAssemblerConnectionManager.selectEdgesOfEntitySetsSql(
+                                Optional.of(esSrc.id),
+                                Optional.of(esEdge.id),
+                                Optional.of(esDst.id)))
 
                 var index = 0
                 Assert.assertTrue(rs.next())
@@ -618,13 +627,14 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                         .selectFromEntitySetSql(es, setOf(
                                 PostgresColumn.ENTITY_SET_ID.name,
                                 PostgresColumn.ID.name,
+                                ResultSetAdapters.mapMetadataOptionToPostgresColumn(MetadataOption.ENTITY_KEY_IDS),
                                 propertyType.type.fullQualifiedNameAsString)))
                 Assert.assertEquals(PostgresColumn.ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
                 Assert.assertEquals(PostgresColumn.ID.name, rs.metaData.getColumnName(2))
                 Assert.assertEquals(
                         ResultSetAdapters.mapMetadataOptionToPostgresColumn(MetadataOption.ENTITY_KEY_IDS),
                         rs.metaData.getColumnName(3))
-                Assert.assertEquals(propertyType.type.fullQualifiedNameAsString, rs.metaData.getColumnName(3))
+                Assert.assertEquals(propertyType.type.fullQualifiedNameAsString, rs.metaData.getColumnName(4))
             }
         }
 
@@ -702,7 +712,9 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                 // all columns are there
                 (1..rs.metaData.columnCount).forEach {
                     val columnName = rs.metaData.getColumnName(it)
-                    if (columnName != PostgresColumn.ID.name && columnName != PostgresColumn.ENTITY_SET_ID.name) {
+                    if (columnName != PostgresColumn.ID.name && columnName != PostgresColumn.ENTITY_SET_ID.name
+                            && columnName != ResultSetAdapters
+                                    .mapMetadataOptionToPostgresColumn(MetadataOption.ENTITY_KEY_IDS)) {
                         Assert.assertTrue(propertyFqns.values.contains(columnName))
                     }
                 }
@@ -713,7 +725,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
 
 
         // wait until automatic refresh
-        Thread.sleep(refreshRate.toLong()*60*1000)
+        Thread.sleep(refreshRate.toLong() * 60 * 1000)
 
 
         // check if data is in org database
