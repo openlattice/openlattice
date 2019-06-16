@@ -18,9 +18,6 @@
 
 package com.openlattice.client.serialization;
 
-import com.openlattice.authorization.Principal;
-import com.openlattice.authorization.PrincipalType;
-
 public final class SerializationConstants {
 
     public static final String ACE                              = "ace";
@@ -62,8 +59,8 @@ public final class SerializationConstants {
     public static final String BASE_TYPE_FIELD                  = "baseType";
     public static final String BIDIRECTIONAL                    = "bidirectional";
     public static final String BLOCK_ID                         = "blockId";
-    public static final String CALCULATION_TYPE                 = "calculationType";
     public static final String CALCULATIONS                     = "calculations";
+    public static final String CALCULATION_TYPE                 = "calculationType";
     public static final String CATEGORY                         = "category";
     public static final String CHILD_CLAUSES                    = "childClauses";
     public static final String CHILD_QUERIES                    = "childQueries";
@@ -158,6 +155,7 @@ public final class SerializationConstants {
     public static final String MATCH                            = "match";
     public static final String MAX_HITS                         = "maxHits";
     public static final String MEMBERS_FIELD                    = "members";
+    public static final String MESSAGE_ENTITY_SET               = "messageEntitySet";
     public static final String MIN                              = "min";
     public static final String MISSING                          = "missing";
     public static final String MULTI_VALUED                     = "multiValued";
@@ -179,6 +177,7 @@ public final class SerializationConstants {
     public static final String ORIENTATION                      = "orientation";
     public static final String PAGING_TOKEN                     = "pagingToken";
     public static final String PARENT_TYPE_FIELD                = "parentType";
+    public static final String PARTITIONS                       = "partitions";
     public static final String PERMISSIONS                      = "permissions";
     public static final String PERMISSIONS_MAP                  = "permissionsMap";
     public static final String PHONE_NUMBER                     = "phoneNumber";
@@ -214,6 +213,7 @@ public final class SerializationConstants {
     public static final String SECOND                           = "second";
     public static final String SELF_AGGREGATIONS                = "selfAggregations";
     public static final String SHARDS                           = "shards";
+    public static final String SMS_ENTITY_SET_INFO              = "smsEntitySetInfo";
     public static final String SRC                              = "src";
     public static final String SRC_ENTITY_INDEX                 = "srcEntityIndex";
     public static final String SRC_ENTITY_KEY_ID                = "srcEntityKeyId";
@@ -224,6 +224,7 @@ public final class SerializationConstants {
     public static final String SYNC_ID                          = "syncId";
     public static final String SYNC_IDS                         = "syncIds";
     public static final String SYNC_TICKETS                     = "syncTickets";
+    public static final String TAGS                             = "tags";
     public static final String TARGET                           = "target";
     public static final String TIMESTAMP                        = "timestamp";
     public static final String TIME_ID                          = "timeId";
@@ -235,8 +236,8 @@ public final class SerializationConstants {
     public static final String UPPERBOUND                       = "upperbound";
     public static final String URL                              = "url";
     public static final String USER_ID                          = "userId";
-    public static final String VALUE_FIELD                      = "value";
     public static final String VALUES                           = "values";
+    public static final String VALUE_FIELD                      = "value";
     public static final String VALUE_MAPPER                     = "valueMapper";
     public static final String VERSION                          = "version";
     public static final String VERSIONS                         = "versions";
