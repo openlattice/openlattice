@@ -30,7 +30,6 @@ import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.client.serialization.SerializationConstants;
 import com.openlattice.edm.set.EntitySetFlag;
 import com.openlattice.organization.OrganizationConstants;
-import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Objects;
@@ -47,14 +46,13 @@ import org.apache.commons.lang3.StringUtils;
  * like the most explicitly safe thing to do.
  */
 public class EntitySet extends AbstractSecurableObject {
-    private static final int[]                  EMPTY_PARTITIONS = new int[ 0 ];
-    private final        UUID                   entityTypeId;
-    private final        Set<UUID>              linkedEntitySets;
-    private final        EnumSet<EntitySetFlag> flags;
-    private              String                 name;
-    private              Set<String>            contacts;
-    private              UUID                   organizationId;
-    private              int[]                  partitions;
+    private final UUID                   entityTypeId;
+    private final Set<UUID>              linkedEntitySets;
+    private final EnumSet<EntitySetFlag> flags;
+    private final Set<Integer>           partitions = new HashSet<>( 5 );
+    private       String                 name;
+    private       Set<String>            contacts;
+    private       UUID                   organizationId;
 
     /**
      * Creates an entity set with provided parameters and will automatically generate a UUID if not provided.
@@ -75,7 +73,7 @@ public class EntitySet extends AbstractSecurableObject {
             @JsonProperty( SerializationConstants.LINKED_ENTITY_SETS ) Optional<Set<UUID>> linkedEntitySets,
             @JsonProperty( SerializationConstants.ORGANIZATION_ID ) Optional<UUID> organizationId,
             @JsonProperty( SerializationConstants.FLAGS_FIELD ) Optional<EnumSet<EntitySetFlag>> flags,
-            @JsonProperty( SerializationConstants.PARTITIONS ) Optional<int[]> partitions ) {
+            @JsonProperty( SerializationConstants.PARTITIONS ) Optional<Set<Integer>> partitions ) {
         super( id, title, description );
         this.linkedEntitySets = linkedEntitySets.orElse( new HashSet<>() );
         this.flags = flags.orElse( EnumSet.of( EntitySetFlag.EXTERNAL ) );
@@ -89,7 +87,7 @@ public class EntitySet extends AbstractSecurableObject {
         this.entityTypeId = checkNotNull( entityTypeId );
         this.contacts = Sets.newHashSet( contacts );
         this.organizationId = organizationId.orElse( OrganizationConstants.GLOBAL_ORGANIZATION_ID );
-        this.partitions = partitions.orElse( EMPTY_PARTITIONS );
+        partitions.ifPresent( this.partitions::addAll );
     }
 
     public EntitySet(
@@ -138,7 +136,7 @@ public class EntitySet extends AbstractSecurableObject {
             Optional<Set<UUID>> linkedEntitySets,
             Optional<UUID> organizationId,
             Optional<EnumSet<EntitySetFlag>> flags,
-            Optional<int[]> partitions ) {
+            Optional<Set<Integer>> partitions ) {
         this( Optional.empty(),
                 entityTypeId,
                 name,
@@ -193,6 +191,16 @@ public class EntitySet extends AbstractSecurableObject {
         return flags;
     }
 
+    @JsonProperty( SerializationConstants.PARTITIONS )
+    public Set<Integer> getPartitions() {
+        return partitions;
+    }
+
+    public void setPartitions( Set<Integer> partitions ) {
+        this.partitions.clear();
+        addPartitions( partitions );
+    }
+
     public void addFlag( EntitySetFlag flag ) {
         this.flags.add( flag );
     }
@@ -201,13 +209,8 @@ public class EntitySet extends AbstractSecurableObject {
         this.flags.remove( flag );
     }
 
-    public void setPartitions( int[] partitions ) {
-        this.partitions = Arrays.copyOf(partitions, partitions.length);
-    }
-
-    public void unsafeSetPartitions( int[] partitions ) {
-        //This is intended for internal use, where we know array has been deserialized already.
-        this.partitions = partitions;
+    public void addPartitions( Set<Integer> partitions ) {
+        this.partitions.addAll( partitions );
     }
 
     @JsonIgnore
