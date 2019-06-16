@@ -46,6 +46,7 @@ import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.ids.PostgresEntityKeyIdService;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.openlattice.data.storage.*;
+import com.openlattice.data.storage.aws.AwsDataSinkService;
 import com.openlattice.datastore.apps.services.AppService;
 import com.openlattice.datastore.services.*;
 import com.openlattice.directory.UserDirectoryService;

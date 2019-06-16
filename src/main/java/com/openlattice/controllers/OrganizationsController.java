@@ -113,7 +113,8 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
                 org.getMembers(),
                 authorizedRoles,
                 org.getApps(),
-                org.getPhoneNumber());
+                org.getSmsEntitySetInfo(),
+                org.getPartitions());
     }
 
     @Timed
