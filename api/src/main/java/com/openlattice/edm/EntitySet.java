@@ -32,6 +32,7 @@ import com.openlattice.edm.set.EntitySetFlag;
 import com.openlattice.organization.OrganizationConstants;
 import java.util.EnumSet;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -49,7 +50,7 @@ public class EntitySet extends AbstractSecurableObject {
     private final UUID                   entityTypeId;
     private final Set<UUID>              linkedEntitySets;
     private final EnumSet<EntitySetFlag> flags;
-    private final Set<Integer>           partitions = new HashSet<>( 5 );
+    private final Set<Integer>           partitions = new LinkedHashSet<>( 5 );
     private       String                 name;
     private       Set<String>            contacts;
     private       UUID                   organizationId;
@@ -73,7 +74,7 @@ public class EntitySet extends AbstractSecurableObject {
             @JsonProperty( SerializationConstants.LINKED_ENTITY_SETS ) Optional<Set<UUID>> linkedEntitySets,
             @JsonProperty( SerializationConstants.ORGANIZATION_ID ) Optional<UUID> organizationId,
             @JsonProperty( SerializationConstants.FLAGS_FIELD ) Optional<EnumSet<EntitySetFlag>> flags,
-            @JsonProperty( SerializationConstants.PARTITIONS ) Optional<Set<Integer>> partitions ) {
+            @JsonProperty( SerializationConstants.PARTITIONS ) Optional<LinkedHashSet<Integer>> partitions ) {
         super( id, title, description );
         this.linkedEntitySets = linkedEntitySets.orElse( new HashSet<>() );
         this.flags = flags.orElse( EnumSet.of( EntitySetFlag.EXTERNAL ) );
@@ -136,7 +137,7 @@ public class EntitySet extends AbstractSecurableObject {
             Optional<Set<UUID>> linkedEntitySets,
             Optional<UUID> organizationId,
             Optional<EnumSet<EntitySetFlag>> flags,
-            Optional<Set<Integer>> partitions ) {
+            Optional<LinkedHashSet<Integer>> partitions ) {
         this( Optional.empty(),
                 entityTypeId,
                 name,
