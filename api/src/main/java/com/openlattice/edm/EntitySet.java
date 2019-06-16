@@ -50,6 +50,7 @@ public class EntitySet extends AbstractSecurableObject {
     private       String                 name;
     private       Set<String>            contacts;
     private       UUID                   organizationId;
+    private
 
     /**
      * Creates an entity set with provided parameters and will automatically generate a UUID if not provided.

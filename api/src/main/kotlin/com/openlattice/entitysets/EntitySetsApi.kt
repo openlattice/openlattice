@@ -19,9 +19,12 @@
 
 package com.openlattice.entitysets
 
+import com.openlattice.edm.EntitySet
+import com.openlattice.edm.requests.MetadataUpdate
+import com.openlattice.edm.set.EntitySetPropertyMetadata
+import com.openlattice.edm.type.PropertyType
 import retrofit2.http.*
-
-import java.util.UUID
+import java.util.*
 
 
 /**
@@ -35,19 +38,117 @@ interface EntitySetsApi {
         const val CONTROLLER = "/entity_sets"
         const val BASE = SERVICE + CONTROLLER
 
-        const val SET_ID = "setId"
-        const val SET_ID_PATH = "/{$SET_ID}"
-
+        const val ALL = "/all"
         const val LINKING = "/linking"
+
+        const val ID = "id"
+        const val ID_PATH = "/{$ID}"
+
+
+        const val IDS_PATH = "/ids"
+
+        const val NAME = "name"
+        const val NAME_PATH = "/{$NAME}"
+        const val PROPERTIES_PATH = "/properties"
+        const val METADATA_PATH = "/metadata"
+
+        const val PROPERTY_TYPE_ID = "propertyTypeId"
+        const val PROPERTY_TYPE_ID_PATH = "/{$PROPERTY_TYPE_ID}"
     }
+
+    /**
+     * Gets all entity sets available to the calling user.
+     *
+     * @return Iterable containing entity sets available to the calling user.
+     */
+    @GET(BASE)
+    fun getEntitySets(): Iterable<EntitySet>
+
+    /**
+     * Creates multiple entity sets if they do not exist.
+     *
+     * @param entitySets The entity sets to create.
+     * @return The entity sets created with UUIDs.
+     */
+    @POST(BASE)
+    fun createEntitySets(@Body entitySets: Set<EntitySet>): Map<String, UUID>
+
+
+    /**
+     * Get IDs for entity sets given their names.
+     *
+     * @param entitySetNames The names of the entity sets.
+     * @return Ids of entity sets.
+     */
+    @POST(BASE + IDS_PATH)
+    fun getEntitySetIds(@Body entitySetNames: Set<String>): Map<String, UUID>
+
+    /**
+     * Get ID for entity set with given name.
+     *
+     * @param entitySetName The name of the entity set.
+     * @return ID for entity set.
+     */
+    @GET(BASE + IDS_PATH + NAME_PATH)
+    fun getEntitySetId(@Path(NAME) entitySetName: String): UUID
+
+    /**
+     * Hard deletes the entity set
+     *
+     * @param entitySetId the ID for the entity set
+     * @return The number of entities deleted.
+     */
+    @DELETE(BASE + ALL + ID_PATH)
+    fun deleteEntitySet(@Path(ID) entitySetId: UUID): Int
+
+    /**
+     * Get entity set id, entity type id, name, title, description, and contacts list for a given entity set.
+     *
+     * @param entitySetId The id for the entity set.
+     * @return The details of the entity set with the specified id.
+     */
+    @GET(BASE + ALL + ID_PATH)
+    fun getEntitySet(@Path(ID) entitySetId: UUID): EntitySet
+
+    @POST(BASE + ALL + ID_PATH + METADATA_PATH)
+    fun getPropertyMetadataForEntitySets(@Body entitySetIds: Set<UUID>): Map<UUID, Map<UUID, EntitySetPropertyMetadata>>
+
+    @GET(BASE + ALL + ID_PATH + METADATA_PATH)
+    fun getAllEntitySetPropertyMetadata(@Path(ID) entitySetId: UUID): Map<UUID, EntitySetPropertyMetadata>
+
+    @GET(BASE + ALL + ID_PATH + PROPERTIES_PATH)
+    fun getPropertyTypesForEntitySet(@Path(ID) entitySetId: UUID): Map<UUID, PropertyType>
+
+    @GET(BASE + ALL + ID_PATH + PROPERTIES_PATH + PROPERTY_TYPE_ID_PATH)
+    fun getEntitySetPropertyMetadata(
+            @Path(ID) entitySetId: UUID,
+            @Path(PROPERTY_TYPE_ID) propertyTypeId: UUID
+    ): EntitySetPropertyMetadata
+
+    @POST(BASE + ALL + ID_PATH + PROPERTIES_PATH + PROPERTY_TYPE_ID_PATH)
+    fun updateEntitySetPropertyMetadata(
+            @Path(ID) entitySetId: UUID,
+            @Path(PROPERTY_TYPE_ID) propertyTypeId: UUID,
+            @Body update: MetadataUpdate
+    ): Int
+
+    /**
+     * Edit entity set metadata for a given entity set.
+     *
+     * @param entitySetId ID for entity set.
+     * @param update      Only title, description, contacts and name fields are accepted. Other fields are ignored. This is
+     * somewhat out of date.
+     */
+    @PATCH(BASE + ALL + ID_PATH + METADATA_PATH)
+    fun updateEntitySetMetadata(@Path(ID) entitySetId: UUID, @Body update: MetadataUpdate): Int
 
     /**
      * Adds the entity sets as linked entity sets to the linking entity set
      * @param linkingEntitySetId the id of the linking entity set
      * @param entitysetIds the ids of the entity sets to be linked
      */
-    @PUT(BASE + LINKING + SET_ID_PATH)
-    fun addEntitySetsToLinkingEntitySet(@Path(SET_ID) linkingEntitySetId: UUID, @Body entitySetIds: Set<UUID>): Int
+    @PUT(BASE + LINKING + ID_PATH)
+    fun addEntitySetsToLinkingEntitySet(@Path(ID) linkingEntitySetId: UUID, @Body entitySetIds: Set<UUID>): Int
 
     /**
      * Adds the entity sets as linked entity sets to the linking entity sets
@@ -61,8 +162,8 @@ interface EntitySetsApi {
      * @param linkingEntitySetId the id of the linking entity set
      * @param entitysetIds the ids of the entity sets to be removed/unlinked
      */
-    @HTTP(method = "DELETE", path = BASE + LINKING + SET_ID_PATH, hasBody = true)
-    fun removeEntitySetsFromLinkingEntitySet(@Path(SET_ID) linkingEntitySetId: UUID, @Body entitySetIds: Set<UUID>): Int
+    @HTTP(method = "DELETE", path = BASE + LINKING + ID_PATH, hasBody = true)
+    fun removeEntitySetsFromLinkingEntitySet(@Path(ID) linkingEntitySetId: UUID, @Body entitySetIds: Set<UUID>): Int
 
     /**
      * Removes/unlinks the linked entity sets as from the linking entity sets
