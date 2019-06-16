@@ -24,16 +24,19 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.client.serialization.SerializationConstants;
 import com.openlattice.edm.set.EntitySetFlag;
 import com.openlattice.organization.OrganizationConstants;
-
-import java.util.*;
-
+import java.util.Arrays;
+import java.util.EnumSet;
+import java.util.HashSet;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import org.apache.commons.lang3.StringUtils;
 
 /**
@@ -44,20 +47,21 @@ import org.apache.commons.lang3.StringUtils;
  * like the most explicitly safe thing to do.
  */
 public class EntitySet extends AbstractSecurableObject {
-    private final UUID                   entityTypeId;
-    private final Set<UUID>              linkedEntitySets;
-    private final EnumSet<EntitySetFlag> flags;
-    private       String                 name;
-    private       Set<String>            contacts;
-    private       UUID                   organizationId;
-    private
+    private static final int[]                  EMPTY_PARTITIONS = new int[ 0 ];
+    private final        UUID                   entityTypeId;
+    private final        Set<UUID>              linkedEntitySets;
+    private final        EnumSet<EntitySetFlag> flags;
+    private              String                 name;
+    private              Set<String>            contacts;
+    private              UUID                   organizationId;
+    private              int[]                  partitions;
 
     /**
      * Creates an entity set with provided parameters and will automatically generate a UUID if not provided.
      *
-     * @param id          An optional UUID for the entity set.
-     * @param name        The name of the entity set.
-     * @param title       The friendly name for the entity set.
+     * @param id An optional UUID for the entity set.
+     * @param name The name of the entity set.
+     * @param title The friendly name for the entity set.
      * @param description A description of the entity set.
      */
     @JsonCreator
@@ -70,7 +74,8 @@ public class EntitySet extends AbstractSecurableObject {
             @JsonProperty( SerializationConstants.CONTACTS ) Set<String> contacts,
             @JsonProperty( SerializationConstants.LINKED_ENTITY_SETS ) Optional<Set<UUID>> linkedEntitySets,
             @JsonProperty( SerializationConstants.ORGANIZATION_ID ) Optional<UUID> organizationId,
-            @JsonProperty( SerializationConstants.FLAGS_FIELD ) Optional<EnumSet<EntitySetFlag>> flags ) {
+            @JsonProperty( SerializationConstants.FLAGS_FIELD ) Optional<EnumSet<EntitySetFlag>> flags,
+            @JsonProperty( SerializationConstants.PARTITIONS ) Optional<int[]> partitions ) {
         super( id, title, description );
         this.linkedEntitySets = linkedEntitySets.orElse( new HashSet<>() );
         this.flags = flags.orElse( EnumSet.of( EntitySetFlag.EXTERNAL ) );
@@ -84,6 +89,7 @@ public class EntitySet extends AbstractSecurableObject {
         this.entityTypeId = checkNotNull( entityTypeId );
         this.contacts = Sets.newHashSet( contacts );
         this.organizationId = organizationId.orElse( OrganizationConstants.GLOBAL_ORGANIZATION_ID );
+        this.partitions = partitions.orElse( EMPTY_PARTITIONS );
     }
 
     public EntitySet(
@@ -101,6 +107,7 @@ public class EntitySet extends AbstractSecurableObject {
                 contacts,
                 Optional.empty(),
                 Optional.empty(),
+                Optional.empty(),
                 Optional.empty() );
     }
 
@@ -118,6 +125,7 @@ public class EntitySet extends AbstractSecurableObject {
                 contacts,
                 Optional.empty(),
                 Optional.empty(),
+                Optional.empty(),
                 Optional.empty() );
     }
 
@@ -129,7 +137,8 @@ public class EntitySet extends AbstractSecurableObject {
             Set<String> contacts,
             Optional<Set<UUID>> linkedEntitySets,
             Optional<UUID> organizationId,
-            Optional<EnumSet<EntitySetFlag>> flags ) {
+            Optional<EnumSet<EntitySetFlag>> flags,
+            Optional<int[]> partitions ) {
         this( Optional.empty(),
                 entityTypeId,
                 name,
@@ -138,12 +147,17 @@ public class EntitySet extends AbstractSecurableObject {
                 contacts,
                 linkedEntitySets,
                 organizationId,
-                flags );
+                flags,
+                partitions );
     }
 
     @JsonProperty( SerializationConstants.ORGANIZATION_ID )
     public UUID getOrganizationId() {
         return organizationId;
+    }
+
+    public void setOrganizationId( UUID organizationId ) {
+        this.organizationId = organizationId;
     }
 
     @JsonProperty( SerializationConstants.ENTITY_TYPE_ID )
@@ -169,10 +183,6 @@ public class EntitySet extends AbstractSecurableObject {
         this.contacts = contacts;
     }
 
-    public void setOrganizationId( UUID organizationId ) {
-        this.organizationId = organizationId;
-    }
-
     @JsonProperty( SerializationConstants.LINKED_ENTITY_SETS )
     public Set<UUID> getLinkedEntitySets() {
         return linkedEntitySets;
@@ -191,6 +201,15 @@ public class EntitySet extends AbstractSecurableObject {
         this.flags.remove( flag );
     }
 
+    public void setPartitions( int[] partitions ) {
+        this.partitions = Arrays.copyOf(partitions, partitions.length);
+    }
+
+    public void unsafeSetPartitions( int[] partitions ) {
+        //This is intended for internal use, where we know array has been deserialized already.
+        this.partitions = partitions;
+    }
+
     @JsonIgnore
     public boolean isExternal() {
         return flags.contains( EntitySetFlag.EXTERNAL );
@@ -202,12 +221,9 @@ public class EntitySet extends AbstractSecurableObject {
     }
 
     @Override public boolean equals( Object o ) {
-        if ( this == o )
-            return true;
-        if ( o == null || getClass() != o.getClass() )
-            return false;
-        if ( !super.equals( o ) )
-            return false;
+        if ( this == o ) { return true; }
+        if ( o == null || getClass() != o.getClass() ) { return false; }
+        if ( !super.equals( o ) ) { return false; }
         EntitySet entitySet = (EntitySet) o;
         return Objects.equals( entityTypeId, entitySet.entityTypeId ) &&
                 Objects.equals( linkedEntitySets, entitySet.linkedEntitySets ) &&
