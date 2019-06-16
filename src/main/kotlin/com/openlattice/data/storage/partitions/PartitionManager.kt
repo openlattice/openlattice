@@ -1,6 +1,9 @@
 package com.openlattice.data.storage.partitions
 
 import com.google.common.base.Preconditions.checkArgument
+import com.hazelcast.core.HazelcastInstance
+import com.openlattice.edm.EntitySet
+import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.COUNT
 import com.openlattice.postgres.PostgresColumn.PARTITION
@@ -15,8 +18,9 @@ import java.util.*
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-class PartitionManager(private val hds: HikariDataSource, partitions: Int) {
-    private var partitionList = mutableListOf<Int>()
+class PartitionManager(hazelcastInstance: HazelcastInstance, private val hds: HikariDataSource, partitions: Int) {
+    private val partitionList = mutableListOf<Int>()
+    private val entitySets = hazelcastInstance.getMap<UUID, EntitySet>( HazelcastMap.ENTITY_SETS.name )
 
     init {
         createMaterializedViewIfNotExists()
@@ -31,17 +35,29 @@ class PartitionManager(private val hds: HikariDataSource, partitions: Int) {
         partitionList.addAll(partitionList.size until partitions)
     }
 
+    fun setEntitySetPartitions( entitySetId: UUID,  partitions: List<Int> ) {
+
+    }
+    fun setDefaultPartitions( organizationId: UUID, partitions: List<Int>) {
+
+    }
+
+    fun getPartitions( organizationId: UUID ) : List<Int> {
+        TODO("Implement this")
+    }
+
     fun allocatePartitions(organizationId: UUID, partitionCount: Int) : List<Int> {
         checkArgument(
                 partitionCount < partitionList.size,
                 "Cannot request more partitions ($partitionCount) than exist (${partitionList.size}."
         )
-        = getEmptiestPartitions(partitionCount)
+
+        return getEmptiestPartitions(partitionCount).map { it.first }
     }
 
 
     fun repartition(organizationId: UUID) {
-        //TO
+        //TODO
     }
 
     private fun createMaterializedViewIfNotExists() {
@@ -62,13 +78,12 @@ class PartitionManager(private val hds: HikariDataSource, partitions: Int) {
 
     fun getPartitionInformation() : Map<Int, Long> {
         return BasePostgresIterable(
-                PreparedStatementHolderSupplier(hds, EMPTIEST_PARTITIONS) { ps ->
+                PreparedStatementHolderSupplier(hds, ALL_PARTITIONS) { ps ->
                     ps.setArray(1, PostgresArrays.createIntArray(ps.connection, partitionList))
-                    ps.setObject(2, desiredPartitions)
-                }) { it.getInt(PARTITION.name) to it.getLong(COUNT) }
+                }) { it.getInt(PARTITION.name) to it.getLong(COUNT) }.toMap()
     }
 
-    private fun getEmptiestPartitions(desiredPartitions: Int): PostgresIterable<Pair<Int, Long>> {
+    private fun getEmptiestPartitions(desiredPartitions: Int): BasePostgresIterable<Pair<Int, Long>> {
         //A quick note is that the partitions materialized view shouldn't be turned into a distributed table
         //with out addressing the interaction of the order by and limit clausees.
         return BasePostgresIterable(

@@ -22,12 +22,12 @@
 
 package com.openlattice.hazelcast.serializers;
 
-import com.openlattice.hazelcast.serializers.EntitySetStreamSerializer;
-import java.io.Serializable;
-
+import com.google.common.collect.ImmutableSet;
+import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.mapstores.TestDataFactory;
-import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest;
+import java.io.Serializable;
+import org.apache.commons.lang.math.RandomUtils;
 
 public class EntitySetStreamSerializerTest extends AbstractStreamSerializerTest<EntitySetStreamSerializer, EntitySet>
         implements Serializable {
@@ -35,7 +35,12 @@ public class EntitySetStreamSerializerTest extends AbstractStreamSerializerTest<
 
     @Override
     protected EntitySet createInput() {
-        return TestDataFactory.entitySet();
+        final var es = TestDataFactory.entitySet();
+        es.setPartitions( ImmutableSet
+                .of( RandomUtils.nextInt( 1024 ),
+                        RandomUtils.nextInt( 1024 ),
+                        RandomUtils.nextInt( 1024 ) ) );
+        return es;
     }
 
     @Override

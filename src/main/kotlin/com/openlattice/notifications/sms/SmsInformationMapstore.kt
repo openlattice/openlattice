@@ -59,6 +59,10 @@ class SmsInformationMapstore(
         var offset = bind(ps, key)
 
         ps.setArray(offset++, PostgresArrays.createUuidArray(ps.connection, value.entitySetIds))
+        ps.setArray(offset++, PostgresArrays.createTextArray(ps.connection, value.tags))
+
+        //For update clause
+        ps.setArray(offset++, PostgresArrays.createUuidArray(ps.connection, value.entitySetIds))
         ps.setArray(offset, PostgresArrays.createTextArray(ps.connection, value.tags))
     }
 

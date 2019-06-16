@@ -96,24 +96,8 @@ class AuditRecordEntitySetsManager(
                     name,
                     AclKey(auditedEntitySet.id),
                     auditedEntitySet.contacts,
-                    auditedEntitySet.organizationId
-            )
-        }
-
-    }
-
-    fun createAuditEdgeEntityForEntitySet(auditedEntitySet: EntitySet) {
-        if (auditedEntitySet.flags.contains(EntitySetFlag.AUDIT)) {
-            return
-        }
-
-        if (auditingTypes.isAuditingInitialized()) {
-            val name = auditedEntitySet.name
-            createAuditEntitySet(
-                    name,
-                    AclKey(auditedEntitySet.id),
-                    auditedEntitySet.contacts,
-                    auditedEntitySet.organizationId
+                    auditedEntitySet.organizationId,
+                    auditedEntitySet.partitions
             )
         }
 
@@ -348,7 +332,7 @@ class AuditRecordEntitySetsManager(
                 contacts,
                 Optional.empty(),
                 organizationId,
-                Optional.of(EnumSet.of(EntitySetFlag.AUDIT))
+                Optional.of(EnumSet.of(EntitySetFlag.AUDIT),)
         )
     }
 

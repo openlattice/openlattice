@@ -4,7 +4,6 @@ import com.codahale.metrics.annotation.Timed
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicates
 import com.openlattice.hazelcast.HazelcastMap
-import com.openlattice.organizations.OrganizationPhoneNumber
 import java.util.*
 
 /**
