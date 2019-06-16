@@ -28,7 +28,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.kryptnostic.rhizome.configuration.ConfigurationConstants.Profiles;
 import com.kryptnostic.rhizome.configuration.amazon.AmazonLaunchConfiguration;
 import com.openlattice.ResourceConfigurationLoader;
-import com.openlattice.data.storage.AwsBlobDataService;
+import com.openlattice.data.storage.aws.AwsBlobDataService;
 import com.openlattice.data.storage.ByteBlobDataManager;
 import com.openlattice.data.storage.LocalBlobDataService;
 import com.openlattice.datastore.configuration.DatastoreConfiguration;

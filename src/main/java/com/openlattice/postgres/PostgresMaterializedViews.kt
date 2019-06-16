@@ -8,7 +8,7 @@ package com.openlattice.postgres
 class PostgresMaterializedViews {
     data class MaterializedView( val name: String,
                                  val createSql : String,
-                                 val refresh: String = "REFRESH MATERIALIZED VIEW $name" )
+                                 val refreshSql: String = "REFRESH MATERIALIZED VIEW $name" )
 
     companion object {
         @JvmField
