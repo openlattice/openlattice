@@ -47,7 +47,7 @@ class MaterializedEntitySetStreamSerializerTest
             (0 until Random.nextInt(2, organizationEntitySetFlags.size))
                     .forEach { flags.add(organizationEntitySetFlags[it]) }
         }
-        val lastRefresh = OffsetDateTime.MIN.plus(Random.nextLong(0L, 90000000000000000L), ChronoUnit.MILLIS)
+        val lastRefresh = OffsetDateTime.now().plus(Random.nextLong(90000000000L), ChronoUnit.MILLIS)
 
         return MaterializedEntitySet(key, refreshRate, flags, lastRefresh)
     }
