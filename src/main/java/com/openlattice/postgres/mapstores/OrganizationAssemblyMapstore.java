@@ -21,7 +21,6 @@
 
 package com.openlattice.postgres.mapstores;
 
-import static com.openlattice.postgres.PostgresColumn.ORGANIZATION_ID;
 import static com.openlattice.postgres.PostgresTable.ORGANIZATION_ASSEMBLIES;
 
 import com.hazelcast.config.InMemoryFormat;
