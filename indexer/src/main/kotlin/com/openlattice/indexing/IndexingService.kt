@@ -25,14 +25,14 @@ import com.google.common.util.concurrent.ListeningExecutorService
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
 import com.openlattice.admin.indexing.IndexingState
-import com.openlattice.data.storage.IndexingMetadataManager
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.HazelcastQueue
 import com.openlattice.hazelcast.processors.UUIDKeyToUUIDSetMerger
-import com.openlattice.postgres.PostgresColumn.ENTITY_KEY_IDS
+import com.openlattice.postgres.PostgresColumn.*
+import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
@@ -47,6 +47,8 @@ import java.util.stream.Stream
 
 private val logger = LoggerFactory.getLogger(IndexingService::class.java)
 private val LB_UUID = UUID(0, 0)
+
+private const val BATCH_LIMIT = 8000
 
 /**
  *
@@ -146,24 +148,25 @@ class IndexingService(
         return entitiesForIndexing.size
     }
 
-    private fun getNextBatchQuery(entitySetId: UUID, useLowerbound: Boolean): String {
-        val lowerboundSql = if (useLowerbound) {
+    private fun getNextBatchQuery(useLowerBound: Boolean): String {
+        val lowerBoundSql = if (useLowerBound) {
             "AND id > ?"
         } else {
             ""
         }
 
-        return "SELECT id FROM ${ENTITY_KEY_IDS.name} WHERE entity_set_id = ? $lowerboundSql ORDER BY id LIMIT 8000"
+        return "SELECT ${ID.name} FROM ${PostgresTable.IDS.name} WHERE ${ENTITY_SET_ID.name} = ? $lowerBoundSql " +
+                "ORDER BY ${ID.name} LIMIT $BATCH_LIMIT"
     }
 
 
-    private fun getNextBatch(entitySetId: UUID, cursor: UUID, useLowerbound: Boolean): PostgresIterable<UUID> {
+    private fun getNextBatch(entitySetId: UUID, cursor: UUID, useLowerBound: Boolean): PostgresIterable<UUID> {
         return PostgresIterable(
                 Supplier {
                     val connection = hds.connection
-                    val ps = connection.prepareStatement(getNextBatchQuery(entitySetId, useLowerbound))
+                    val ps = connection.prepareStatement(getNextBatchQuery(useLowerBound))
                     ps.setObject(1, entitySetId)
-                    if (useLowerbound) {
+                    if (useLowerBound) {
                         ps.setObject(2, cursor)
                     }
                     StatementHolder(connection, ps, ps.executeQuery())
