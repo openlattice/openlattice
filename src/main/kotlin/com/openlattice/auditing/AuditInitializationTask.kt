@@ -8,6 +8,7 @@ import com.openlattice.authorization.Permission
 import com.openlattice.authorization.SystemRole
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetFlag
+import com.openlattice.edm.tasks.EdmSyncInitializerTask
 import com.openlattice.edm.type.EntityType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organizations.tasks.OrganizationsInitializationTask
@@ -54,7 +55,8 @@ class AuditInitializationTask(
                 PostConstructInitializerTask::class.java,
                 UsersAndRolesInitializationTask::class.java,
                 OrganizationsInitializationTask::class.java,
-                Auth0SyncInitializationTask::class.java
+                Auth0SyncInitializationTask::class.java,
+                EdmSyncInitializerTask::class.java
         )
     }
 
