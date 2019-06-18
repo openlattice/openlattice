@@ -2,6 +2,7 @@ package com.openlattice.data.storage.partitions
 
 import com.google.common.base.Preconditions.checkArgument
 import com.hazelcast.core.HazelcastInstance
+import com.openlattice.controllers.exceptions.ResourceNotFoundException
 import com.openlattice.edm.EntitySet
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.postgres.PostgresArrays
@@ -20,7 +21,7 @@ import java.util.*
  */
 class PartitionManager(hazelcastInstance: HazelcastInstance, private val hds: HikariDataSource, partitions: Int) {
     private val partitionList = mutableListOf<Int>()
-    private val entitySets = hazelcastInstance.getMap<UUID, EntitySet>( HazelcastMap.ENTITY_SETS.name )
+    private val entitySets = hazelcastInstance.getMap<UUID, Array<Int>>( HazelcastMap.ENTITY_SETS.name )
 
     init {
         createMaterializedViewIfNotExists()
@@ -42,8 +43,12 @@ class PartitionManager(hazelcastInstance: HazelcastInstance, private val hds: Hi
 
     }
 
-    fun getPartitions( organizationId: UUID ) : List<Int> {
+    fun getDefaultPartitions( organizationId: UUID ) : List<Int> {
         TODO("Implement this")
+    }
+
+    fun getEntitySetPartitions( entitySetId: UUID ) : Array<Int> {
+        return entitySets.getValue(entitySetId)
     }
 
     fun allocatePartitions(organizationId: UUID, partitionCount: Int) : List<Int> {
