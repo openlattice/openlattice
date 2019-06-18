@@ -692,8 +692,8 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
             linked: Boolean
     ): String {
         val esEntityKeyIds = edm
-                .getEntitySetsOfType(authorizedFilteredRanking.filteredNeighborsRanking.associationTypeId)
-                .map { it.id to Optional.empty<Set<UUID>>() }
+                .getEntitySetIdsOfType(authorizedFilteredRanking.filteredNeighborsRanking.associationTypeId)
+                .map { it to Optional.empty<Set<UUID>>() }
                 .toMap()
         val associationPropertyTypes = authorizedFilteredRanking.associationPropertyTypes
         //This will read all the entity sets of the same type all at once applying filters.
@@ -740,8 +740,8 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
             linked: Boolean
     ): String {
         val esEntityKeyIds = edm
-                .getEntitySetsOfType(authorizedFilteredRanking.filteredNeighborsRanking.neighborTypeId)
-                .map { it.id to Optional.empty<Set<UUID>>() }
+                .getEntitySetIdsOfType(authorizedFilteredRanking.filteredNeighborsRanking.neighborTypeId)
+                .map { it to Optional.empty<Set<UUID>>() }
                 .toMap()
         val entitySetPropertyTypes = authorizedFilteredRanking.entitySetPropertyTypes
         //This will read all the entity sets of the same type all at once applying filters.
