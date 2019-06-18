@@ -35,17 +35,19 @@ class PostgresDataTables {
                 .map(PostgresEdmTypeConverter::map)
                 .map(::ginIndexedValueColumn)
 
-        val dataTableColumns = listOf(
+        val dataTableMetadataColumns = listOf(
                 ENTITY_SET_ID,
                 ID_VALUE,
                 PARTITION,
                 PROPERTY_TYPE_ID,
                 HASH,
                 LAST_WRITE,
+                LAST_PROPAGATE,
                 LAST_MIGRATE,
                 VERSION,
                 VERSIONS
-        ) + btreeIndexedColumns + ginIndexedColumns + nonIndexedColumns
+        )
+        val dataTableColumns =  dataTableMetadataColumns + btreeIndexedColumns + ginIndexedColumns + nonIndexedColumns
 
         @JvmStatic
         fun buildDataTableDefinition(): PostgresTableDefinition {

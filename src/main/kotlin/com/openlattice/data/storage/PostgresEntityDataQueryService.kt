@@ -912,13 +912,6 @@ internal fun lockEntities(entitySetId: UUID, idsClause: String, version: Long): 
             "FOR UPDATE"
 }
 
-fun upsertEntities(entitySetId: UUID, idsClause: String, version: Long): String {
-    return "UPDATE ${ENTITY_KEY_IDS.name} SET ${VERSIONS.name} = ${VERSIONS.name} || ARRAY[$version], ${LAST_WRITE.name} = now(), " +
-            "${VERSION.name} = CASE WHEN abs(${ENTITY_KEY_IDS.name}.${VERSION.name}) < $version THEN $version " +
-            "ELSE ${ENTITY_KEY_IDS.name}.${VERSION.name} END " +
-            "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${ID_VALUE.name} IN ($idsClause)"
-}
-
 fun upsertEntity(entitySetId: UUID, version: Long): String {
     //Last writer wins for entities
     return "UPDATE ${ENTITY_KEY_IDS.name} SET versions = ${VERSIONS.name} || ARRAY[$version], ${LAST_WRITE.name} = now(), " +
