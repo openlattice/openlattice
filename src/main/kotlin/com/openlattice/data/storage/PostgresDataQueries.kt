@@ -5,6 +5,7 @@ import com.openlattice.edm.PostgresEdmTypeConverter
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.*
 import com.openlattice.postgres.DataTables.LAST_WRITE
+import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.DATA
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import java.util.*
@@ -19,7 +20,9 @@ val dataMetadataColumnsParametersSql = PostgresDataTables.dataTableMetadataColum
 val dataMetadataColumnsSql = PostgresDataTables.dataTableMetadataColumns.joinToString { "," }
 val dataTableColumnsSql = PostgresDataTables.dataTableColumns.joinToString(",") { it.name }
 val dataTableColumnsBindSql = PostgresDataTables.dataTableColumns.joinToString(",") { "?" }
-val dataTableColumnsConflictSetSql = PostgresDataTables.dataTableColumns.joinToString(",") { "${it.name} = EXCLUDED.${it.name}" }
+val dataTableColumnsConflictSetSql = PostgresDataTables.dataTableColumns.joinToString(
+        ","
+) { "${it.name} = EXCLUDED.${it.name}" }
 
 /**
  * 1 - version
@@ -28,12 +31,11 @@ val dataTableColumnsConflictSetSql = PostgresDataTables.dataTableColumns.joinToS
  * 4 - entity set id
  * 5 - entity key ids
  */
-fun upsertEntitiesSql(): String {
-    return "UPDATE ${PostgresTable.ENTITY_KEY_IDS.name} SET ${PostgresColumn.VERSIONS.name} = ${PostgresColumn.VERSIONS.name} || ARRAY[?], ${DataTables.LAST_WRITE.name} = now(), " +
-            "${PostgresColumn.VERSION.name} = CASE WHEN abs(${PostgresTable.ENTITY_KEY_IDS.name}.${PostgresColumn.VERSION.name}) < ? THEN $ " +
-            "ELSE ${PostgresTable.ENTITY_KEY_IDS.name}.${PostgresColumn.VERSION.name} END " +
-            "WHERE ${PostgresColumn.ENTITY_SET_ID.name} = ? AND ${PostgresColumn.ID_VALUE.name} = ANY(?)"
-}
+internal val upsertEntitiesSql = "UPDATE ${PostgresTable.ENTITY_KEY_IDS.name} SET ${VERSIONS.name} = ${VERSIONS.name} || ARRAY[?], ${DataTables.LAST_WRITE.name} = now(), " +
+        "${VERSION.name} = CASE WHEN abs(${PostgresTable.ENTITY_KEY_IDS.name}.${VERSION.name}) < ? THEN $ " +
+        "ELSE ${PostgresTable.ENTITY_KEY_IDS.name}.${VERSION.name} END " +
+        "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?)"
+
 
 /**
  * This function generates preparable sql with the following bind order:
@@ -41,18 +43,101 @@ fun upsertEntitiesSql(): String {
  * 2. entity key ids
  * 3. partition
  */
-fun lockEntitiesSql(): String {
-    return "SELECT 1 FROM ${PostgresTable.ENTITY_KEY_IDS.name} " +
-            "WHERE ${PostgresColumn.ENTITY_SET_ID.name} = ? AND ${PostgresColumn.ID_VALUE.name} = ANY(?) AND ${PostgresColumn.PARTITION} = ANY(?) " +
-            "FOR UPDATE"
-}
+internal val lockEntitiesSql = "SELECT 1 FROM ${PostgresTable.ENTITY_KEY_IDS.name} " +
+        "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?) AND $PARTITION = ANY(?) " +
+        "FOR UPDATE"
+
 
 fun upsertEntities(entitySetId: UUID, idsClause: String, version: Long): String {
-    return "UPDATE ${PostgresTable.ENTITY_KEY_IDS.name} SET ${PostgresColumn.VERSIONS.name} = ${PostgresColumn.VERSIONS.name} || ARRAY[$version], ${DataTables.LAST_WRITE.name} = now(), " +
-            "${PostgresColumn.VERSION.name} = CASE WHEN abs(${PostgresTable.ENTITY_KEY_IDS.name}.${PostgresColumn.VERSION.name}) < $version THEN $version " +
-            "ELSE ${PostgresTable.ENTITY_KEY_IDS.name}.${PostgresColumn.VERSION.name} END " +
-            "WHERE ${PostgresColumn.ENTITY_SET_ID.name} = '$entitySetId' AND ${PostgresColumn.ID_VALUE.name} IN ($idsClause)"
+    return "UPDATE ${PostgresTable.ENTITY_KEY_IDS.name} SET ${VERSIONS.name} = ${VERSIONS.name} || ARRAY[$version], ${DataTables.LAST_WRITE.name} = now(), " +
+            "${VERSION.name} = CASE WHEN abs(${PostgresTable.ENTITY_KEY_IDS.name}.${VERSION.name}) < $version THEN $version " +
+            "ELSE ${PostgresTable.ENTITY_KEY_IDS.name}.${VERSION.name} END " +
+            "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${ID_VALUE.name} IN ($idsClause)"
 }
+
+/**
+ * Prepared statement for that upserts a version for all entities in a given entity set in [PostgresTable.ENTITY_KEY_IDS]
+ *
+ * The following bind order is expected:
+ * 1. version
+ * 2. version
+ * 3. version
+ * 4. entity set id
+ */
+internal val updateVersionsForEntitySet = "UPDATE ${PostgresTable.ENTITY_KEY_IDS.name} SET versions = versions || ARRAY[?]::uuid[], " +
+        "${VERSION.name} = CASE WHEN abs(${PostgresTable.ENTITY_KEY_IDS.name}.${VERSION.name}) < ? THEN ? " +
+        "ELSE ${PostgresTable.ENTITY_KEY_IDS.name}.${VERSION.name} END " +
+        "WHERE ${ENTITY_SET_ID.name} = ? "
+
+/**
+ * Prepared statement for that upserts a version for all properties in a given entity set in [PostgresTable.DATA]
+ *
+ * The following bind order is expected:
+ * 1. version
+ * 2. version
+ * 3. version
+ * 4. entity set id
+ */
+internal val updateVersionsForPropertiesInEntitySet = "UPDATE ${DATA.name} SET versions = versions || ARRAY[?]::uuid[], " +
+        "${VERSION.name} = CASE WHEN abs(${PostgresTable.ENTITY_KEY_IDS.name}.${VERSION.name}) < ? THEN ? " +
+        "ELSE ${PostgresTable.ENTITY_KEY_IDS.name}.${VERSION.name} END " +
+        "WHERE ${ENTITY_SET_ID.name} = ? "
+
+
+/**
+ * Prepared statement for that upserts a version for all entities in a given entity set in [PostgresTable.ENTITY_KEY_IDS]
+ *
+ * The following bind order is expected:
+ * 1. version
+ * 2. version
+ * 3. version
+ * 4. entity set id
+ * 5. entity key ids
+ * 6. partition
+ */
+internal val updateVersionsForEntitiesInEntitySet = "$updateVersionsForEntitySet AND ${ID_VALUE.name} = ANY(?) " +
+        "AND PARTITION = ANY(?)"
+
+/**
+ * Prepared statement for that upserts a version for all properties in a given entity set in [PostgresTable.DATA]
+ *
+ * The following bind order is expected:
+ * 1. version
+ * 2. version
+ * 3. version
+ * 4. entity set id
+ * 5. property type ids
+ */
+internal val updateVersionsForPropertyTypesInEntitySet = "$updateVersionsForPropertiesInEntitySet AND ${PROPERTY_TYPE_ID.name} = ANY(?)"
+
+/**
+ * Prepared statement for that upserts a version for all properties in a given entity set in [PostgresTable.DATA]
+ *
+ * The following bind order is expected:
+ * 1. version
+ * 2. version
+ * 3. version
+ * 4. entity set id
+ * 5. entity key ids
+ * 6. partition
+ */
+internal val updateVersionsForPropertiesInEntitiesInEntitySet = "$updateVersionsForPropertiesInEntitySet AND ${ID_VALUE.name} = ANY(?) " +
+        "AND PARTITION = ANY(?)"
+/**
+ * Prepared statement for that upserts a version for all properties in a given entity set in [PostgresTable.DATA]
+ *
+ * The following bind order is expected:
+ * 1. version
+ * 2. version
+ * 3. version
+ * 4. entity set id
+ * 5. entity key ids
+ * 6. partition
+ * 7. property type ids
+ */
+internal val updateVersionsForPropertyTypesInEntitiesInEntitySet = "$updateVersionsForPropertiesInEntitiesInEntitySet AND ${PROPERTY_TYPE_ID.name} = ANY(?)"
+
+
 
 fun partitionSelectorFromId(entityKeyId: UUID): Int {
     return entityKeyId.leastSignificantBits.toInt()
@@ -79,21 +164,21 @@ fun getPartition(entityKeyId: UUID, partitions: List<Int>): Int {
 fun upsertPropertyValueSql(propertyType: PropertyType): String {
     val insertColumn = getColumnDefinition(propertyType.postgresIndexType, propertyType.datatype)
     val metadataColumns = listOf(
-            PostgresColumn.ENTITY_SET_ID,
-            PostgresColumn.ID_VALUE,
-            PostgresColumn.PARTITION,
-            PostgresColumn.PROPERTY_TYPE_ID,
-            PostgresColumn.HASH,
+            ENTITY_SET_ID,
+            ID_VALUE,
+            PARTITION,
+            PROPERTY_TYPE_ID,
+            HASH,
             LAST_WRITE,
-            PostgresColumn.VERSION,
-            PostgresColumn.VERSIONS
+            VERSION,
+            VERSIONS
     )
     return "INSERT INTO ${DATA.name} ($dataMetadataColumnsSql,${insertColumn.name}) VALUES (?,?,?,?,?,now(),?,?,?) " +
-            "ON CONFLICT (${PostgresColumn.ENTITY_SET_ID.name},${PostgresColumn.ID_VALUE.name}, ${PostgresColumn.HASH.name}) DO UPDATE " +
-            "SET ${PostgresColumn.VERSIONS.name} = ${DATA.name}.${PostgresColumn.VERSIONS.name} || EXCLUDED.${PostgresColumn.VERSIONS.name}, " +
+            "ON CONFLICT (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${HASH.name}) DO UPDATE " +
+            "SET ${VERSIONS.name} = ${DATA.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
             "${LAST_WRITE.name} = GREATEST(${LAST_WRITE.name},EXCLUDED.${LAST_WRITE.name}), " +
-            "${PostgresColumn.VERSION.name} = CASE WHEN abs(${DATA.name}.${PostgresColumn.VERSION.name}) < EXCLUDED.${PostgresColumn.VERSION.name} THEN EXCLUDED.${PostgresColumn.VERSION.name} " +
-            "ELSE ${DATA.name}.${PostgresColumn.VERSION.name} END"
+            "${VERSION.name} = CASE WHEN abs(${DATA.name}.${VERSION.name}) < EXCLUDED.${VERSION.name} THEN EXCLUDED.${VERSION.name} " +
+            "ELSE ${DATA.name}.${VERSION.name} END"
 }
 
 fun getColumnDefinition(indexType: IndexType, edmType: EdmPrimitiveTypeKind): PostgresColumnDefinition {

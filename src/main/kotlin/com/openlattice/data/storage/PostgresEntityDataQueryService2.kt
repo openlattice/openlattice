@@ -10,6 +10,7 @@ import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.slf4j.LoggerFactory
 import java.security.InvalidParameterException
+import java.sql.Connection
 import java.sql.PreparedStatement
 import java.util.*
 
@@ -24,6 +25,7 @@ class PostgresEntityDataQueryService2(
     companion object {
         private val logger = LoggerFactory.getLogger(PostgresEntityDataQueryService2::class.java)
     }
+
 
     /**
      * This function assumes no upstream parallelization as it will parallelize writes automatically.
@@ -51,14 +53,14 @@ class PostgresEntityDataQueryService2(
              */
 
             //Acquire entity key id locks
-            val rowLocks = connection.prepareStatement(lockEntitiesSql())
+            val rowLocks = connection.prepareStatement(lockEntitiesSql)
             rowLocks.setObject(1, entitySetId)
             rowLocks.setObject(2, entities.keys)
             rowLocks.setObject(3, entityKeyIdsArr)
             rowLocks.execute()
 
             //Update metadata
-            val upsertEntities = connection.prepareStatement(upsertEntitiesSql())
+            val upsertEntities = connection.prepareStatement(upsertEntitiesSql)
             upsertEntities.setObject(1, version)
             upsertEntities.setObject(2, version)
             upsertEntities.setObject(3, version)
@@ -142,7 +144,7 @@ class PostgresEntityDataQueryService2(
                         upsertPropertyValue.addBatch()
                     }
                 }
-                upsertPropertyValues.values.map{ it.executeBatch().sum() }.sum()
+                upsertPropertyValues.values.map { it.executeBatch().sum() }.sum()
             }.sum()
             connection.commit()
             updatedEntityCount to updatedPropertyCounts
@@ -152,6 +154,134 @@ class PostgresEntityDataQueryService2(
         logger.debug("Updated $updatedEntityCount entities and $updatedPropertyCounts properties")
 
         return WriteEvent(version, updatedEntityCount)
+    }
+
+    /**
+     * Tombstones all entities in an entity set.
+     */
+    private fun tombstone(conn: Connection, entitySetId: UUID): WriteEvent {
+        val connection = hds.connection
+        val tombstoneVersion = -System.currentTimeMillis()
+        val autoCommit = conn.autoCommit
+
+        conn.autoCommit = false
+
+        val numUpdated = conn.prepareStatement(updateVersionsForEntitySet).use { ps ->
+            ps.setObject(1, tombstoneVersion)
+            ps.setObject(2, tombstoneVersion)
+            ps.setObject(3, tombstoneVersion)
+            ps.setObject(4, entitySetId)
+            ps.executeUpdate()
+        }
+
+        //We don't count property type updates.
+        conn.prepareStatement(updateVersionsForPropertiesInEntitySet).use { ps ->
+            ps.setObject(1, tombstoneVersion)
+            ps.setObject(2, tombstoneVersion)
+            ps.setObject(3, tombstoneVersion)
+            ps.setObject(4, entitySetId)
+            ps.executeUpdate()
+        }
+
+        conn.commit()
+        conn.autoCommit = autoCommit
+        numUpdated
+
+
+        return WriteEvent(tombstoneVersion, numUpdated)
+    }
+
+    /**
+     * Tombstones the provided set of property types for each provided entity key.
+     *
+     * This version of tombstone only operates on the [PostgresTable.DATA] table and does not change the version of
+     * entities in the [PostgresTable.ENTITY_KEY_IDS] table
+     *
+     * @param conn A valid JDBC connection, ideally with autocommit disabled.
+     * @param entitySetId The entity set id for which to tombstone entries
+     * @param propertyTypesToTombstone A collection of property types to tombstone
+     *
+     * @return A write event object containing a summary of the operation useful for auditing purposes.
+     *
+     */
+    private fun tombstone(
+            conn: Connection,
+            entitySetId: UUID,
+            propertyTypesToTombstone: Collection<PropertyType>
+    ): WriteEvent {
+        val tombstoneVersion = -System.currentTimeMillis()
+        val propertyTypeIdsArr = PostgresArrays.createUuidArray(conn, propertyTypesToTombstone.map { it.id })
+
+        val numUpdated = conn.prepareStatement(updateVersionsForPropertyTypesInEntitySet).use { ps ->
+            ps.setObject(1, tombstoneVersion)
+            ps.setObject(2, tombstoneVersion)
+            ps.setObject(3, tombstoneVersion)
+            ps.setObject(4, entitySetId)
+            ps.setObject(5, propertyTypeIdsArr)
+            ps.executeUpdate()
+        }
+
+        return WriteEvent(tombstoneVersion, numUpdated)
+    }
+
+    /**
+     * Tombstones entities in the [PostgresTable.ENTITY_KEY_IDS] table.
+     *
+     * @param conn A valid JDBC connection, ideally with autocommit disabled.
+     * @param entitySetId The entity set id for which to tombstone entries.
+     * @param entityKeyIds The entity key ids for which to tombstone entries.
+     *
+     */
+    private fun tombstone(conn: Connection, entitySetId: UUID, entityKeyIds: Set<UUID>): WriteEvent {
+        val tombstoneVersion = -System.currentTimeMillis()
+        val entityKeyIdsArr = PostgresArrays.createUuidArray(conn, entityKeyIds)
+        val partitionsArr = PostgresArrays.createIntArray( conn,getPartitions() )
+        val numUpdated = conn.prepareStatement(updateVersionsForEntitiesInEntitySet).use { ps ->
+            ps.setObject(1, tombstoneVersion)
+            ps.setObject(2, tombstoneVersion)
+            ps.setObject(3, tombstoneVersion)
+            ps.setObject(4, entitySetId)
+            ps.setObject(5, entityKeyIdsArr)
+            ps.setObject(6, getPartition())
+            ps.executeUpdate()
+        }
+
+        return WriteEvent(tombstoneVersion, numUpdated)
+    }
+
+    /**
+     * Tombstones the provided set of property types for each provided entity key.
+     *
+     * This version of tombstone only operates on the [PostgresTable.DATA] table and does not change the version of
+     * entities in the [PostgresTable.ENTITY_KEY_IDS] table
+     *
+     * @param conn A valid JDBC connection, ideally with autocommit disabled.
+     * @param entitySetId The entity set id for which to tombstone entries
+     * @param entityKeyIds The entity key ids for which to tombstone entries.
+     * @param propertyTypesToTombstone A collection of property types to tombstone
+     *
+     * @return A write event object containing a summary of the operation useful for auditing purposes.
+     *
+     */
+    private fun tombstone(
+            conn: Connection,
+            entitySetId: UUID,
+            entityKeyIds: Set<UUID>,
+            propertyTypesToTombstone: Collection<PropertyType>
+    ): WriteEvent {
+        val tombstoneVersion = -System.currentTimeMillis()
+        val propertyTypeIdsArr = PostgresArrays.createUuidArray(conn, propertyTypesToTombstone.map { it.id })
+        val entityKeyIdsArr = PostgresArrays.createUuidArray(conn, entityKeyIds)
+        val numUpdated = conn.prepareStatement(updateVersionsForPropertyTypesInEntitiesInEntitySet).use { ps ->
+            ps.setObject(1, tombstoneVersion)
+            ps.setObject(2, tombstoneVersion)
+            ps.setObject(3, tombstoneVersion)
+            ps.setObject(4, entitySetId)
+            ps.setObject(5, propertyTypeIdsArr)
+            ps.executeUpdate()
+        }
+
+        return WriteEvent(tombstoneVersion, numUpdated)
     }
 }
 
