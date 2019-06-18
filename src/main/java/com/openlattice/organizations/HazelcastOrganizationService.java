@@ -27,7 +27,6 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
 import com.google.common.eventbus.EventBus;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
@@ -61,6 +60,7 @@ import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
@@ -94,7 +94,8 @@ public class HazelcastOrganizationService {
     private final IMap<AppConfigKey, AppTypeSetting> appConfigs;
     private final List<IMap<UUID, ?>>                allMaps;
     private final Assembler                          assembler;
-    private final Map<UUID, String>                  phoneNumbers;
+    private final IMap<UUID, String>                 phoneNumbers;
+    private final IMap<UUID, int[]> partitions;
 
     @Inject
     private EventBus eventBus;
@@ -120,7 +121,8 @@ public class HazelcastOrganizationService {
                 apps );
         this.securePrincipalsManager = securePrincipalsManager;
         this.assembler = assembler;
-        this.phoneNumbers = Maps.newConcurrentMap();
+        this.phoneNumbers =  hazelcastInstance.getMap(HazelcastMap.SMS_INFORMATION.name());
+        this.partitions =  hazelcastInstance.getMap(HazelcastMap.DEFAULT_PARTITIONS.name());
         //        fixOrganizations();
     }
 
@@ -192,7 +194,6 @@ public class HazelcastOrganizationService {
         phoneNumbers.put( organizationId, phoneNumber );
     }
 
-
     public Organization getOrganization( UUID organizationId ) {
         Future<PrincipalSet> members = membersOf.getAsync( organizationId );
         Future<DelegatedStringSet> autoApprovedEmailDomains = autoApprovedEmailDomainsOf.getAsync( organizationId );
@@ -238,7 +239,7 @@ public class HazelcastOrganizationService {
                         //TODO: If you're an organization you can view its roles.
                         org.getRoles(),
                         org.getApps(),
-                        org.getPhoneNumber()) )
+                        org.getPhoneNumber() ) )
                 ::iterator;
     }
 

@@ -25,7 +25,6 @@ import com.codahale.metrics.annotation.Timed
 import com.dataloom.mappers.ObjectMappers
 import com.google.common.collect.*
 import com.openlattice.data.DataEdge
-import com.openlattice.data.DataEdgeKey
 import com.openlattice.data.DataGraphManager
 import com.openlattice.data.EntityDataKey
 import java.util.*
@@ -63,35 +62,41 @@ interface AuditingComponent {
         return if (auditingConfiguration.isAuditingInitialized()) {
             events
                     .groupBy { ares.getActiveAuditEntitySetIds(it.aclKey, it.eventType) }
-                    .filter { (auditEntitySetConfiguration, entities) -> auditEntitySetConfiguration.auditRecordEntitySet != null }
+                    .filter { (auditEntitySetConfiguration, _) ->
+                        auditEntitySetConfiguration.auditRecordEntitySet != null
+                    }
                     .map { (auditEntitySetConfiguration, entities) ->
                         val auditEntitySet = auditEntitySetConfiguration.auditRecordEntitySet
-                        val auditEdgeEntitySet = auditEntitySetConfiguration.auditEdgeEntitySet
                         val (entityKeyIds, _) = getDataGraphService().createEntities(
                                 auditEntitySet!!,
                                 toMap(entities),
                                 auditingConfiguration.propertyTypes
                         )
 
-                        val lm = ArrayListMultimap.create<UUID, DataEdge>()
-                        entityKeyIds.asSequence().zip(entities.asSequence())
-                                .filter { it.second.entities.isPresent }
-                                .forEach { (auditEntityKeyId, ae) ->
-                                    val entitySetId = ae.aclKey[0]
-                                    val entityKeyIds = ae.entities.get()
-                                    entityKeyIds.forEach { id ->
-                                        lm.put(
-                                                auditEdgeEntitySet,
-                                                DataEdge(
-                                                        EntityDataKey(entitySetId, id),
-                                                        EntityDataKey(auditEntitySet, auditEntityKeyId),
-                                                        ImmutableMap.of()
-                                                )
-                                        )
-                                        return@forEach
+                        if (auditEntitySetConfiguration.auditEdgeEntitySet != null) {
+                            val auditEdgeEntitySet = auditEntitySetConfiguration.auditEdgeEntitySet
+
+                            val lm = ArrayListMultimap.create<UUID, DataEdge>()
+                            entityKeyIds.asSequence().zip(entities.asSequence())
+                                    .filter { it.second.entities.isPresent }
+                                    .forEach { (auditEntityKeyId, ae) ->
+                                        val aeEntitySetId = ae.aclKey[0]
+                                        val aeEntityKeyIds = ae.entities.get()
+                                        aeEntityKeyIds.forEach { id ->
+                                            lm.put(
+                                                    auditEdgeEntitySet,
+                                                    DataEdge(
+                                                            EntityDataKey(aeEntitySetId, id),
+                                                            EntityDataKey(auditEntitySet, auditEntityKeyId),
+                                                            ImmutableMap.of()
+                                                    )
+                                            )
+                                            return@forEach
+                                        }
                                     }
-                                }
-                        getDataGraphService().createAssociations(lm, ImmutableMap.of(auditEdgeEntitySet, emptyMap()))
+                            getDataGraphService()
+                                    .createAssociations(lm, ImmutableMap.of(auditEdgeEntitySet, emptyMap()))
+                        }
                         entityKeyIds.size
                     }.sum()
         } else {

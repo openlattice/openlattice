@@ -20,12 +20,119 @@
 
 package com.openlattice.postgres;
 
+import static com.openlattice.postgres.DataTables.LAST_INDEX;
+import static com.openlattice.postgres.DataTables.LAST_LINK;
+import static com.openlattice.postgres.DataTables.LAST_WRITE;
+import static com.openlattice.postgres.PostgresColumn.ACL_KEY;
+import static com.openlattice.postgres.PostgresColumn.ALERT_METADATA;
+import static com.openlattice.postgres.PostgresColumn.ALERT_TYPE;
+import static com.openlattice.postgres.PostgresColumn.ALLOWED_EMAIL_DOMAINS;
+import static com.openlattice.postgres.PostgresColumn.ANALYZER;
+import static com.openlattice.postgres.PostgresColumn.APP_ID;
+import static com.openlattice.postgres.PostgresColumn.APP_IDS;
+import static com.openlattice.postgres.PostgresColumn.AUDIT_EDGE_ENTITY_SET_ID;
+import static com.openlattice.postgres.PostgresColumn.AUDIT_EDGE_ENTITY_SET_IDS;
+import static com.openlattice.postgres.PostgresColumn.AUDIT_ID;
+import static com.openlattice.postgres.PostgresColumn.AUDIT_RECORD_ENTITY_SET_ID;
+import static com.openlattice.postgres.PostgresColumn.BASE_TYPE;
+import static com.openlattice.postgres.PostgresColumn.BIDIRECTIONAL;
+import static com.openlattice.postgres.PostgresColumn.BLOCK_ID;
+import static com.openlattice.postgres.PostgresColumn.CATEGORY;
+import static com.openlattice.postgres.PostgresColumn.CLAUSES;
+import static com.openlattice.postgres.PostgresColumn.COMPONENT_TYPES;
+import static com.openlattice.postgres.PostgresColumn.CONFIG_TYPE_ID;
+import static com.openlattice.postgres.PostgresColumn.CONFIG_TYPE_IDS;
+import static com.openlattice.postgres.PostgresColumn.CONTACTS;
+import static com.openlattice.postgres.PostgresColumn.CONTACT_INFO;
+import static com.openlattice.postgres.PostgresColumn.CONTACT_TYPE;
+import static com.openlattice.postgres.PostgresColumn.CREDENTIAL;
+import static com.openlattice.postgres.PostgresColumn.DATATYPE;
+import static com.openlattice.postgres.PostgresColumn.DATA_ID;
+import static com.openlattice.postgres.PostgresColumn.DB_NAME;
+import static com.openlattice.postgres.PostgresColumn.DESCRIPTION;
+import static com.openlattice.postgres.PostgresColumn.DST;
+import static com.openlattice.postgres.PostgresColumn.DST_ENTITY_KEY_ID;
+import static com.openlattice.postgres.PostgresColumn.DST_ENTITY_SET_ID;
+import static com.openlattice.postgres.PostgresColumn.DST_PROPERTY_TYPE_ID;
+import static com.openlattice.postgres.PostgresColumn.DST_SELECTS;
+import static com.openlattice.postgres.PostgresColumn.EDGE_COMP_1;
+import static com.openlattice.postgres.PostgresColumn.EDGE_COMP_2;
+import static com.openlattice.postgres.PostgresColumn.EDGE_ENTITY_SET_ID;
+import static com.openlattice.postgres.PostgresColumn.ENTITY_ID;
+import static com.openlattice.postgres.PostgresColumn.ENTITY_SET_FLAGS;
+import static com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID;
+import static com.openlattice.postgres.PostgresColumn.ENTITY_SET_IDS;
+import static com.openlattice.postgres.PostgresColumn.ENTITY_TYPE_ID;
+import static com.openlattice.postgres.PostgresColumn.ENUM_VALUES;
+import static com.openlattice.postgres.PostgresColumn.EVENT_TYPE;
+import static com.openlattice.postgres.PostgresColumn.EXPIRATION;
+import static com.openlattice.postgres.PostgresColumn.EXPIRATION_DATE;
+import static com.openlattice.postgres.PostgresColumn.FLAGS;
+import static com.openlattice.postgres.PostgresColumn.GRAPH_ID;
+import static com.openlattice.postgres.PostgresColumn.ID;
+import static com.openlattice.postgres.PostgresColumn.ID_VALUE;
+import static com.openlattice.postgres.PostgresColumn.INDEX_TYPE;
+import static com.openlattice.postgres.PostgresColumn.INITIALIZED;
+import static com.openlattice.postgres.PostgresColumn.KEY;
+import static com.openlattice.postgres.PostgresColumn.LAST_LINK_INDEX;
+import static com.openlattice.postgres.PostgresColumn.LAST_MIGRATE;
+import static com.openlattice.postgres.PostgresColumn.LAST_NOTIFIED;
+import static com.openlattice.postgres.PostgresColumn.LAST_PROPAGATE;
+import static com.openlattice.postgres.PostgresColumn.LAST_READ;
+import static com.openlattice.postgres.PostgresColumn.LINKED;
+import static com.openlattice.postgres.PostgresColumn.LINKED_ENTITY_SETS;
+import static com.openlattice.postgres.PostgresColumn.LINKING_ID;
+import static com.openlattice.postgres.PostgresColumn.LSB;
+import static com.openlattice.postgres.PostgresColumn.MATCH_ALL_IDS;
+import static com.openlattice.postgres.PostgresColumn.MEMBERS;
+import static com.openlattice.postgres.PostgresColumn.MSB;
+import static com.openlattice.postgres.PostgresColumn.MULTI_VALUED;
+import static com.openlattice.postgres.PostgresColumn.NAME;
+import static com.openlattice.postgres.PostgresColumn.NAMESPACE;
+import static com.openlattice.postgres.PostgresColumn.NAME_SET;
+import static com.openlattice.postgres.PostgresColumn.NEW_VERTEX_ID;
+import static com.openlattice.postgres.PostgresColumn.NULLABLE_TITLE;
+import static com.openlattice.postgres.PostgresColumn.ORGANIZATION_ID;
+import static com.openlattice.postgres.PostgresColumn.PARTITION;
+import static com.openlattice.postgres.PostgresColumn.PARTITIONS;
+import static com.openlattice.postgres.PostgresColumn.PARTITION_INDEX;
+import static com.openlattice.postgres.PostgresColumn.PHONE_NUMBER;
+import static com.openlattice.postgres.PostgresColumn.PII;
+import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_ID;
+import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_OF_ACL_KEY;
+import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_TYPE;
+import static com.openlattice.postgres.PostgresColumn.PROPERTIES;
+import static com.openlattice.postgres.PostgresColumn.PROPERTY_TAGS;
+import static com.openlattice.postgres.PostgresColumn.PROPERTY_TYPE_ID;
+import static com.openlattice.postgres.PostgresColumn.QUERY;
+import static com.openlattice.postgres.PostgresColumn.QUERY_ID;
+import static com.openlattice.postgres.PostgresColumn.REASON;
+import static com.openlattice.postgres.PostgresColumn.SCHEMAS;
+import static com.openlattice.postgres.PostgresColumn.SCORE;
+import static com.openlattice.postgres.PostgresColumn.SEARCH_CONSTRAINTS;
+import static com.openlattice.postgres.PostgresColumn.SECURABLE_OBJECTID;
+import static com.openlattice.postgres.PostgresColumn.SECURABLE_OBJECT_TYPE;
+import static com.openlattice.postgres.PostgresColumn.SHARDS;
+import static com.openlattice.postgres.PostgresColumn.SHOW;
+import static com.openlattice.postgres.PostgresColumn.SRC;
+import static com.openlattice.postgres.PostgresColumn.SRC_ENTITY_KEY_ID;
+import static com.openlattice.postgres.PostgresColumn.SRC_ENTITY_SET_ID;
+import static com.openlattice.postgres.PostgresColumn.SRC_LINKING_VERTEX_ID;
+import static com.openlattice.postgres.PostgresColumn.SRC_PROPERTY_TYPE_ID;
+import static com.openlattice.postgres.PostgresColumn.SRC_SELECTS;
+import static com.openlattice.postgres.PostgresColumn.START_TIME;
+import static com.openlattice.postgres.PostgresColumn.STATE;
+import static com.openlattice.postgres.PostgresColumn.STATUS;
+import static com.openlattice.postgres.PostgresColumn.TAGS;
+import static com.openlattice.postgres.PostgresColumn.TIME_UUID;
+import static com.openlattice.postgres.PostgresColumn.TITLE;
+import static com.openlattice.postgres.PostgresColumn.URL;
+import static com.openlattice.postgres.PostgresColumn.VERSION;
+import static com.openlattice.postgres.PostgresColumn.VERSIONS;
+import static com.openlattice.postgres.PostgresColumn.VERTEX_ID;
+
 import com.google.common.collect.ImmutableList;
-
 import java.util.List;
-
-import static com.openlattice.postgres.DataTables.*;
-import static com.openlattice.postgres.PostgresColumn.*;
 
 /**
  * Tables definitions for all tables used in the OpenLattice platform.
@@ -210,7 +317,7 @@ public final class PostgresTable {
                             DST_ENTITY_SET_ID,
                             DST_ENTITY_KEY_ID );
 
-    public static final PostgresTableDefinition MATCHED_ENTITIES =
+    public static final PostgresTableDefinition MATCHED_ENTITIES         =
             new CitusDistributedTableDefinition( "matched_entities" )
                     .addColumns( LINKING_ID,
                             SRC_ENTITY_SET_ID,
@@ -224,7 +331,6 @@ public final class PostgresTable {
                             DST_ENTITY_SET_ID,
                             DST_ENTITY_KEY_ID )
                     .distributionColumn( LINKING_ID );
-
     public static final PostgresTableDefinition MATERIALIZED_ENTITY_SETS =
             new PostgresTableDefinition( "materialized_entity_sets" )
                     .addColumns( ENTITY_SET_ID, ORGANIZATION_ID, ENTITY_SET_FLAGS )
@@ -235,15 +341,13 @@ public final class PostgresTable {
                     .primaryKey( SECURABLE_OBJECTID );
     public static final PostgresTableDefinition ORGANIZATIONS            =
             new PostgresTableDefinition( "organizations" )
-                    .addColumns( ID, NULLABLE_TITLE, DESCRIPTION, ALLOWED_EMAIL_DOMAINS, MEMBERS, APP_IDS );
-    //.setUnique( NAME );
+                    .addColumns( ID, NULLABLE_TITLE, DESCRIPTION, ALLOWED_EMAIL_DOMAINS, MEMBERS, APP_IDS, PARTITIONS );
     public static final PostgresTableDefinition ORGANIZATION_ASSEMBLIES  =
             new PostgresTableDefinition( "organization_assemblies" )
                     .addColumns( ORGANIZATION_ID, DB_NAME, INITIALIZED )
                     .primaryKey( ORGANIZATION_ID )
                     .setUnique( DB_NAME ); //We may have to delete for citus
-
-    public static final PostgresTableDefinition PERMISSIONS =
+    public static final PostgresTableDefinition PERMISSIONS              =
             new PostgresTableDefinition( "permissions" )
                     .addColumns( ACL_KEY,
                             PRINCIPAL_TYPE,
@@ -251,8 +355,7 @@ public final class PostgresTable {
                             PostgresColumn.PERMISSIONS,
                             PostgresColumn.EXPIRATION_DATE )
                     .primaryKey( ACL_KEY, PRINCIPAL_TYPE, PRINCIPAL_ID );
-
-    public static final PostgresTableDefinition PERSISTENT_SEARCHES =
+    public static final PostgresTableDefinition PERSISTENT_SEARCHES      =
             new PostgresTableDefinition( "persistent_searches" )
                     .addColumns( ID,
                             ACL_KEY,
@@ -262,27 +365,21 @@ public final class PostgresTable {
                             SEARCH_CONSTRAINTS,
                             ALERT_METADATA )
                     .setUnique( ID, ACL_KEY );
-
-    public static final PostgresTableDefinition PRINCIPALS        =
+    public static final PostgresTableDefinition PRINCIPALS               =
             new PostgresTableDefinition( "principals" )
                     .addColumns( ACL_KEY, PRINCIPAL_TYPE, PRINCIPAL_ID, NULLABLE_TITLE, DESCRIPTION )
                     .primaryKey( ACL_KEY )
                     .setUnique( PRINCIPAL_TYPE, PRINCIPAL_ID );
-    public static final PostgresTableDefinition PRINCIPAL_TREES   = new PostgresTableDefinition(
+    public static final PostgresTableDefinition PRINCIPAL_TREES          = new PostgresTableDefinition(
             "principal_trees" )
             .addColumns( ACL_KEY, PRINCIPAL_OF_ACL_KEY )
             .primaryKey( ACL_KEY, PRINCIPAL_OF_ACL_KEY );
-    public static final PostgresTableDefinition PROPAGATION_GRAPH = new PostgresTableDefinition(
+    public static final PostgresTableDefinition PROPAGATION_GRAPH        = new PostgresTableDefinition(
 
             "propagation_graph" )
             .addColumns( SRC_ENTITY_SET_ID, SRC_PROPERTY_TYPE_ID, DST_ENTITY_SET_ID, DST_PROPERTY_TYPE_ID )
             .primaryKey( SRC_ENTITY_SET_ID, SRC_PROPERTY_TYPE_ID, DST_ENTITY_SET_ID, DST_PROPERTY_TYPE_ID );
-    //    public static final PostgresTableDefinition        PROPAGATION_STATE            = new PostgresTableDefinition(
-    //            "propgation_state" )
-    //            .addColumns( ENTITY_SET_ID, ID_VALUE, PROPERTY_TYPE_ID, LAST_PROPAGATE, LAST_RECEIVED )
-    //            .primaryKey( ENTITY_SET_ID, ID_VALUE, PROPERTY_TYPE_ID );
-
-    public static final PostgresTableDefinition PROPERTY_TYPES =
+    public static final PostgresTableDefinition PROPERTY_TYPES           =
 
             new PostgresTableDefinition( "property_types" )
                     .addColumns( ID,
@@ -297,14 +394,16 @@ public final class PostgresTable {
                             ANALYZER,
                             MULTI_VALUED,
                             INDEX_TYPE );
-
-    public static final PostgresTableDefinition QUERIES =
+    //    public static final PostgresTableDefinition        PROPAGATION_STATE            = new PostgresTableDefinition(
+    //            "propgation_state" )
+    //            .addColumns( ENTITY_SET_ID, ID_VALUE, PROPERTY_TYPE_ID, LAST_PROPAGATE, LAST_RECEIVED )
+    //            .primaryKey( ENTITY_SET_ID, ID_VALUE, PROPERTY_TYPE_ID );
+    public static final PostgresTableDefinition QUERIES                  =
             new CitusDistributedTableDefinition( "queries" )
                     .addColumns( ENTITY_SET_ID, ID_VALUE, QUERY_ID, EXPIRATION, MATCH_ALL_IDS )
                     .primaryKey( ID_VALUE, QUERY_ID )
                     .distributionColumn( ID_VALUE )
                     .unlogged();
-
     public static final PostgresTableDefinition REQUESTS                 =
             new PostgresTableDefinition( "requests" )
                     .addColumns( ACL_KEY, PRINCIPAL_TYPE, PRINCIPAL_ID, PostgresColumn.PERMISSIONS, REASON, STATUS )
@@ -317,6 +416,10 @@ public final class PostgresTable {
             new PostgresTableDefinition( "securable_objects" )
                     .addColumns( ACL_KEY, SECURABLE_OBJECT_TYPE )
                     .primaryKey( ACL_KEY );
+    public static final PostgresTableDefinition SMS_INFORMATION          =
+            new PostgresTableDefinition( "sms_information" )
+                    .addColumns( PHONE_NUMBER, ORGANIZATION_ID, ENTITY_SET_IDS, TAGS )
+                    .primaryKey( PHONE_NUMBER, ORGANIZATION_ID );
     public static final PostgresTableDefinition SUBSCRIPTIONS            =
             new PostgresTableDefinition( "subscriptions" )
                     .addColumns( ENTITY_SET_ID,

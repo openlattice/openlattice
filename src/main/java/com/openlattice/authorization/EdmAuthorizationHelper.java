@@ -36,6 +36,7 @@ import com.openlattice.edm.type.PropertyType;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import javax.validation.constraints.NotNull;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -125,7 +126,7 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
      * Note: entitysets are assumed to have same entity type
      */
     @Timed
-    public Map<UUID, Map<UUID, PropertyType>> getAuthorizedPropertyTypes(
+    public @NotNull Map<UUID, Map<UUID, PropertyType>> getAuthorizedPropertyTypes(
             Set<UUID> entitySetIds,
             Set<UUID> selectedProperties,
             EnumSet<Permission> requiredPermissions ) {

@@ -36,8 +36,6 @@ class PostgresEntityDataQueryService2(
             awsPassthrough: Boolean
     ): WriteEvent {
         val version = System.currentTimeMillis()
-//        val idsClause = buildEntityKeyIdsClause(entities.keys) // we assume that entities is not empty
-//        val citusIdsClause = entities.keys.joinToString(" OR ") { " id = '$it' " }
 
         //Update the versions of all entities.
         val (updatedEntityCount, updatedPropertyCounts) = hds.connection.use { connection ->
@@ -76,7 +74,7 @@ class PostgresEntityDataQueryService2(
                 logger.debug("Entity key ids: {}", entities.keys)
             }
 
-            //Update property values.
+            //Update property values. We use multiple prepared statements in batch while re-using ARRAY[version].
             val upsertPropertyValues = mutableMapOf<UUID, PreparedStatement>()
             val updatedPropertyCounts = entities.entries.map { (entityKeyId, rawValue) ->
                 val entityData = if (awsPassthrough) {

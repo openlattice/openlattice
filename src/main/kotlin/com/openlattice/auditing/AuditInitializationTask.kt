@@ -87,8 +87,10 @@ class AuditInitializationTask(
                         ImmutableSet.of(),
                         Optional.empty(),
                         Optional.empty(),
-                        Optional.of(EnumSet.of(EntitySetFlag.AUDIT))
-                )
+                        Optional.of(EnumSet.of(EntitySetFlag.AUDIT)),
+                        Optional.empty())
+
+                //TODO: Make sure audit entity set gets distributed across all partitions.
 
                 dependencies.edmService.createEntitySet(admins.first(), edmAuditEntitySet)
             }
