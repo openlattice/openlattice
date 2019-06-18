@@ -69,7 +69,7 @@ class AuthorizingEntityQueryVisitor(
         if (query.entitySetId.isPresent) {
             addEntitySetProperties(query.entitySetId.get())
         } else {
-            edm.getEntitySetsOfType(query.entityTypeId).forEach { addEntitySetProperties(it.id) }
+            edm.getEntitySetIdsOfType(query.entityTypeId).forEach { addEntitySetProperties(it) }
         }
     }
 
