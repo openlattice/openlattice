@@ -27,6 +27,7 @@ import com.kryptnostic.rhizome.configuration.Configuration
 import com.kryptnostic.rhizome.configuration.ConfigurationKey
 import com.kryptnostic.rhizome.configuration.SimpleConfigurationKey
 import com.kryptnostic.rhizome.configuration.annotation.ReloadableConfiguration
+import com.openlattice.conductor.rpc.SearchConfiguration
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import java.util.*
 
@@ -43,6 +44,8 @@ private val DEFAULT_ENTITY_TYPES = setOf("general.person")
  */
 @ReloadableConfiguration(uri = "linking.yaml")
 data class LinkingConfiguration(
+        @JsonProperty("search") val searchConfiguration: SearchConfiguration,
+        @JsonProperty("error-reporting-email") val errorReportingEmail: String,
         @JsonProperty(BLOCK_SIZE_FIELD) val blockSize: Int = DEFAULT_BLOCK_SIZE,
         @JsonProperty(WHITELIST) val whitelist: Optional<Set<UUID>>,
         @JsonProperty(BLACKLIST) val blacklist: Set<UUID> = setOf(),

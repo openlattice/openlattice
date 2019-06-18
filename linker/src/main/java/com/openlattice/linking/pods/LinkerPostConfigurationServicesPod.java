@@ -22,10 +22,8 @@ package com.openlattice.linking.pods;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
-import com.openlattice.ResourceConfigurationLoader;
 import com.openlattice.assembler.Assembler;
 import com.openlattice.authorization.AuthorizationManager;
-import com.openlattice.conductor.rpc.ConductorConfiguration;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.EntityDatastore;
 import com.openlattice.data.EntityKeyIdService;
@@ -38,23 +36,24 @@ import com.openlattice.datastore.pods.ByteBlobServicePod;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.edm.PostgresEdmManager;
 import com.openlattice.ids.HazelcastIdGenerationService;
-import com.openlattice.linking.*;
+import com.openlattice.linking.BackgroundLinkingService;
 import com.openlattice.linking.Blocker;
 import com.openlattice.linking.DataLoader;
 import com.openlattice.linking.EdmCachingDataLoader;
 import com.openlattice.linking.LinkingConfiguration;
 import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.linking.Matcher;
-import com.openlattice.linking.BackgroundLinkingService;
+import com.openlattice.linking.PostgresLinkingFeedbackService;
 import com.openlattice.linking.blocking.ElasticsearchBlocker;
 import com.openlattice.linking.controllers.RealtimeLinkingController;
 import com.openlattice.linking.graph.PostgresLinkingQueryService;
 import com.zaxxer.hikari.HikariDataSource;
-import java.io.IOException;
-import javax.inject.Inject;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+
+import javax.inject.Inject;
+import java.io.IOException;
 
 @Configuration
 @Import( { ByteBlobServicePod.class } )
@@ -64,7 +63,7 @@ public class LinkerPostConfigurationServicesPod {
     private HazelcastInstance hazelcastInstance;
 
     @Inject
-    private ConductorConfiguration conductorConfiguration;
+    private LinkingConfiguration linkingConfiguration;
 
     @Inject
     private HikariDataSource hikariDataSource;
@@ -142,13 +141,7 @@ public class LinkerPostConfigurationServicesPod {
     }
 
     @Bean
-    public LinkingConfiguration linkingConfiguration() {
-        return ResourceConfigurationLoader.loadConfiguration( LinkingConfiguration.class );
-    }
-
-    @Bean
     public BackgroundLinkingService linkingService() throws IOException {
-        var lc = linkingConfiguration();
         return new BackgroundLinkingService( executor,
                 hazelcastInstance,
                 pgEdmManager,
@@ -158,15 +151,13 @@ public class LinkerPostConfigurationServicesPod {
                 dataLoader(),
                 lqs(),
                 postgresLinkingFeedbackQueryService(),
-                edm.getEntityTypeUuids( lc.getEntityTypes() ),
-                linkingConfiguration() );
-                
+                edm.getEntityTypeUuids( linkingConfiguration.getEntityTypes() ),
+                linkingConfiguration );
     }
 
     @Bean
     public RealtimeLinkingController realtimeLinkingController() {
-        var lc = linkingConfiguration();
-        return new RealtimeLinkingController( lc, edm );
+        return new RealtimeLinkingController( linkingConfiguration, edm );
     }
 
     @Bean
