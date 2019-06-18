@@ -50,10 +50,11 @@ public class EntitySet extends AbstractSecurableObject {
     private final UUID                   entityTypeId;
     private final Set<UUID>              linkedEntitySets;
     private final EnumSet<EntitySetFlag> flags;
-    private final Set<Integer>           partitions = new LinkedHashSet<>( 5 );
+    private final Set<Integer>           partitions          = new LinkedHashSet<>( 8 );
     private       String                 name;
     private       Set<String>            contacts;
     private       UUID                   organizationId;
+    private       int                    partitioningVersion = 0;
 
     /**
      * Creates an entity set with provided parameters and will automatically generate a UUID if not provided.
@@ -88,7 +89,38 @@ public class EntitySet extends AbstractSecurableObject {
         this.entityTypeId = checkNotNull( entityTypeId );
         this.contacts = Sets.newHashSet( contacts );
         this.organizationId = organizationId.orElse( OrganizationConstants.GLOBAL_ORGANIZATION_ID );
-        partitions.ifPresent( this.partitions::addAll );
+        partitions.ifPresent( this::setPartitions );
+    }
+
+    //Constructor for serialization
+    public EntitySet(
+            UUID id,
+            UUID entityTypeId,
+            String name,
+            String title,
+            String description,
+            Set<String> contacts,
+            Set<UUID> linkedEntitySets,
+            UUID organizationId,
+            EnumSet<EntitySetFlag> flags,
+            LinkedHashSet<Integer> partitions,
+            int partitioningVersion
+    ) {
+        super( id, title, description);
+        this.linkedEntitySets = linkedEntitySets;
+        this.flags = flags;
+        checkArgument( StringUtils.isNotBlank( name ), "Entity set name cannot be blank." );
+        checkArgument( this.linkedEntitySets.isEmpty() || isLinking(),
+                "You cannot specify linked entity sets unless this is a linking entity set." );
+
+        // Temporary
+        //        checkArgument( contacts != null && !contacts.isEmpty(), "Contacts cannot be blank." );
+        this.name = name;
+        this.entityTypeId = checkNotNull( entityTypeId );
+        this.contacts = Sets.newHashSet( contacts );
+        this.organizationId = organizationId;
+        this.partitions.addAll( partitions );
+        this.partitioningVersion = partitioningVersion;
     }
 
     public EntitySet(
@@ -202,6 +234,11 @@ public class EntitySet extends AbstractSecurableObject {
         addPartitions( partitions );
     }
 
+    @JsonIgnore
+    public int getPartitioningVersion() {
+        return partitioningVersion;
+    }
+
     public void addFlag( EntitySetFlag flag ) {
         this.flags.add( flag );
     }
@@ -212,6 +249,7 @@ public class EntitySet extends AbstractSecurableObject {
 
     public void addPartitions( Set<Integer> partitions ) {
         this.partitions.addAll( partitions );
+        partitioningVersion++;
     }
 
     @JsonIgnore

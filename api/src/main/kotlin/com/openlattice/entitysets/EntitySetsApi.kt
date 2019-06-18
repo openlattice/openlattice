@@ -125,6 +125,15 @@ interface EntitySetsApi {
             @Path(PROPERTY_TYPE_ID) propertyTypeId: UUID
     ): EntitySetPropertyMetadata
 
+    /**
+     * Update the metadata for a property type in a given entity set.
+     *
+     * @param entitySetId The id of the entity set.
+     * @param propertyTypeId The id of the property type.
+     * @param update A [MetadataUpdate] object that describe the new values for the property type metadata.
+     *
+     * @return Number of updates made.
+     */
     @POST(BASE + ALL + ID_PATH + PROPERTIES_PATH + PROPERTY_TYPE_ID_PATH)
     fun updateEntitySetPropertyMetadata(
             @Path(ID) entitySetId: UUID,
@@ -133,7 +142,7 @@ interface EntitySetsApi {
     ): Int
 
     /**
-     * Edit entity set metadata for a given entity set.
+     * Updates the metadata for a given entity set.
      *
      * @param entitySetId ID for entity set.
      * @param update      Only title, description, contacts and name fields are accepted. Other fields are ignored. This is
@@ -145,7 +154,7 @@ interface EntitySetsApi {
     /**
      * Adds the entity sets as linked entity sets to the linking entity set
      * @param linkingEntitySetId the id of the linking entity set
-     * @param entitysetIds the ids of the entity sets to be linked
+     * @param entitySetIds the ids of the entity sets to be linked
      */
     @PUT(BASE + LINKING + ID_PATH)
     fun addEntitySetsToLinkingEntitySet(@Path(ID) linkingEntitySetId: UUID, @Body entitySetIds: Set<UUID>): Int
