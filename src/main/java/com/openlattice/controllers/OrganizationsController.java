@@ -313,6 +313,15 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         return null;
     }
 
+    @Override
+    @DeleteMapping( ID_PATH + SET_ID_PATH + REFRESH_RATE )
+    public Void deleteRefreshRate( @PathVariable( ID ) UUID organizationId, @PathVariable( SET_ID ) UUID entitySetId ) {
+        ensureOwner( organizationId );
+
+        assembler.updateRefreshRate( organizationId, entitySetId, null );
+        return null;
+    }
+
     private Map<UUID, Map<UUID, PropertyType>> getAuthorizedPropertiesForMaterialization(
             UUID organizationId,
             Set<UUID> entitySetIds ) {
