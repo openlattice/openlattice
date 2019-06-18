@@ -692,7 +692,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         }
 
         // materialize with 3 min refresh rate
-        val refreshRate = 3
+        var refreshRate = 3
         organizationsApi.assembleEntitySets(organizationID, mapOf(es.id to refreshRate))
 
         // add data
@@ -723,7 +723,6 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
             }
         }
 
-
         // wait until automatic refresh
         Thread.sleep(refreshRate.toLong() * 60 * 1000)
 
@@ -749,6 +748,63 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                 } while (rs.next())
 
                 Assert.assertEquals(numberOfEntities, index)
+            }
+        }
+
+
+        // set refresh rate to 4 mins
+        refreshRate = 4
+        organizationsApi.updateRefreshRate(organizationID, es.id, refreshRate)
+
+        // delete all data
+        dataApi.deleteAllEntitiesFromEntitySet(es.id, DeleteType.Hard)
+
+        // wait until automatic refresh
+        Thread.sleep(refreshRate.toLong() * 60 * 1000)
+
+        // data is not supposed to be there, only the columns
+        organizationDataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es))
+                // all columns are there
+                (1..rs.metaData.columnCount).forEach {
+                    val columnName = rs.metaData.getColumnName(it)
+                    if (columnName != PostgresColumn.ID.name && columnName != PostgresColumn.ENTITY_SET_ID.name
+                            && columnName != ResultSetAdapters
+                                    .mapMetadataOptionToPostgresColumn(MetadataOption.ENTITY_KEY_IDS)) {
+                        Assert.assertTrue(propertyFqns.values.contains(columnName))
+                    }
+                }
+                // no data is there
+                Assert.assertFalse(rs.next())
+            }
+        }
+
+
+        // set refresh rate to null
+        organizationsApi.deleteRefreshRate(organizationID, es.id)
+
+        // add data again
+        dataApi.createEntities(es.id, testData)
+
+        // wait until last value of automatic refresh
+        Thread.sleep(refreshRate.toLong() * 60 * 1000)
+
+        // data is still not supposed to be there, only the columns
+        organizationDataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es))
+                // all columns are there
+                (1..rs.metaData.columnCount).forEach {
+                    val columnName = rs.metaData.getColumnName(it)
+                    if (columnName != PostgresColumn.ID.name && columnName != PostgresColumn.ENTITY_SET_ID.name
+                            && columnName != ResultSetAdapters
+                                    .mapMetadataOptionToPostgresColumn(MetadataOption.ENTITY_KEY_IDS)) {
+                        Assert.assertTrue(propertyFqns.values.contains(columnName))
+                    }
+                }
+                // no data is there yet
+                Assert.assertFalse(rs.next())
             }
         }
     }
