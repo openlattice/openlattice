@@ -1,16 +1,12 @@
 package com.openlattice.data.storage
 
-<<<<<<< HEAD
+
 import com.openlattice.edm.PostgresEdmTypeConverter
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.*
 import com.openlattice.postgres.DataTables.LAST_WRITE
-=======
-import com.openlattice.postgres.PostgresDataTables
->>>>>>> 8984903be337f84783b7438be89d84d816d617d7
 import com.openlattice.postgres.PostgresTable.DATA
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
-import java.lang.IllegalArgumentException
 import java.util.*
 
 /**
