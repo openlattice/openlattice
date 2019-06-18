@@ -23,9 +23,10 @@ package com.openlattice.assembler.processors
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.assembler.EntitySetAssemblyKey
 import com.openlattice.assembler.MaterializedEntitySet
+import javax.annotation.Nullable
 
 data class UpdateRefreshRateProcessor(
-        val refreshRate: Long
+        @Nullable val refreshRate: Long? = null
 ) : AbstractRhizomeEntryProcessor<EntitySetAssemblyKey, MaterializedEntitySet, Void?>() {
 
     override fun process(entry: MutableMap.MutableEntry<EntitySetAssemblyKey, MaterializedEntitySet>?): Void? {

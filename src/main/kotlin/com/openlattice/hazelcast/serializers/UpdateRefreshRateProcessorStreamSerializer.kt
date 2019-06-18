@@ -39,10 +39,19 @@ class UpdateRefreshRateProcessorStreamSerializer : SelfRegisteringStreamSerializ
     }
 
     override fun write(output: ObjectDataOutput, obj: UpdateRefreshRateProcessor) {
-        output.writeLong(obj.refreshRate)
+        val hasRefreshRate = obj.refreshRate != null
+
+        output.writeBoolean(hasRefreshRate)
+        if (hasRefreshRate) {
+            output.writeLong(obj.refreshRate!!)
+        }
     }
 
     override fun read(input: ObjectDataInput): UpdateRefreshRateProcessor {
-        return UpdateRefreshRateProcessor(input.readLong())
+        return if (input.readBoolean()) {
+            UpdateRefreshRateProcessor(input.readLong())
+        } else {
+            UpdateRefreshRateProcessor()
+        }
     }
 }

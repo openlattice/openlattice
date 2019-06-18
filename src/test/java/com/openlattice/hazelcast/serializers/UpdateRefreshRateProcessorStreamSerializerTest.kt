@@ -31,6 +31,10 @@ class UpdateRefreshRateProcessorStreamSerializerTest :
     }
 
     override fun createInput(): UpdateRefreshRateProcessor {
-        return UpdateRefreshRateProcessor(Random.nextLong())
+        return if (Random.nextBoolean()) {
+            UpdateRefreshRateProcessor(Random.nextLong())
+        } else {
+            UpdateRefreshRateProcessor()
+        }
     }
 }

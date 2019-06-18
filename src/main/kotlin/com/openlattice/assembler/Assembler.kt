@@ -143,7 +143,7 @@ class Assembler(
     /**
      * Updates the refresh rate for a materialized entity set.
      */
-    fun updateRefreshRate(organizationId: UUID, entitySetId: UUID, refreshRate: Long) {
+    fun updateRefreshRate(organizationId: UUID, entitySetId: UUID, refreshRate: Long?) {
         ensureEntitySetIsMaterialized(organizationId, entitySetId)
 
         val entitySetAssemblyKey = EntitySetAssemblyKey(entitySetId, organizationId)
