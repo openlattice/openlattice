@@ -44,8 +44,8 @@ private val DEFAULT_ENTITY_TYPES = setOf("general.person")
  */
 @ReloadableConfiguration(uri = "linking.yaml")
 data class LinkingConfiguration(
-        @JsonProperty("search") val searchConfiguration: SearchConfiguration,
-        @JsonProperty("error-reporting-email") val errorReportingEmail: String,
+        @JsonProperty("searchConfiguration") val searchConfiguration: SearchConfiguration,
+        @JsonProperty("reportEmailAddress") val errorReportingEmail: String,
         @JsonProperty(BLOCK_SIZE_FIELD) val blockSize: Int = DEFAULT_BLOCK_SIZE,
         @JsonProperty(WHITELIST) val whitelist: Optional<Set<UUID>>,
         @JsonProperty(BLACKLIST) val blacklist: Set<UUID> = setOf(),
