@@ -506,7 +506,6 @@ constructor(
 
         aresManager.getAuditRecordEntitySets(aclKey).forEach {
             dgm.deleteEntitySet(it, propertyTypes)
-            deleteAssociationsOfEntitySet(it)
             edmManager.deleteEntitySet(it)
             securableObjectTypes.deleteSecurableObjectType(AclKey(it))
         }
