@@ -157,6 +157,15 @@ public interface OrganizationsApi {
             @Path( SET_ID ) UUID entitySetId,
             @Body Integer refreshRate );
 
+    /**
+     * Disables automatic refresh of a materialized entity set in the requested organization.
+     * @param organizationId The id of the organization in which to disable automatic refresh of the materialized entity
+     *                       set.
+     * @param entitySetId The id of the entity set, which not to refresh automatically.
+     */
+    @DELETE( BASE + ID_PATH + SET_ID_PATH + REFRESH_RATE )
+    Void deleteRefreshRate( @Path( ID ) UUID organizationId, @Path( SET_ID ) UUID entitySetId );
+
     @PUT( BASE + ID_PATH + TITLE )
     Void updateTitle( @Path( ID ) UUID organziationId, @Body String title );
 
