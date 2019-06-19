@@ -19,7 +19,9 @@
 package com.openlattice.organization;
 
 import com.openlattice.directory.pojo.Auth0UserBasic;
+import com.openlattice.notifications.sms.SmsEntitySetInformation;
 import com.openlattice.organization.roles.Role;
+import java.util.List;
 import retrofit2.http.*;
 
 import java.util.EnumSet;
@@ -69,8 +71,8 @@ public interface OrganizationsApi {
     String SET_ID            = "setId";
     String SET_ID_PATH       = "/{" + SET_ID + "}";
 
-    String SET_PHONE         = "setPhone";
-    String SET_PHONE_PATH    = "/{" + SET_PHONE + "}";
+    String PHONE = "/phone" ;
+
 
 
     @GET( BASE )
@@ -85,8 +87,15 @@ public interface OrganizationsApi {
     @DELETE( BASE + ID_PATH )
     Void destroyOrganization( @Path( ID ) UUID organizationId );
 
-    @POST( BASE + ID_PATH + SET_PHONE_PATH )
-    Void setOrganizationPhoneNumber( @Path( ID ) UUID organizationId, @Path( SET_PHONE ) String phoneNumber );
+    /**
+     * Sets the organization phone number.
+     * @param organizationId The organization id to set the phone number for.
+     * @param entitySetInformationList An array of {@link SmsEntitySetInformation} containing per entity set contact info.
+     * @return The current phone number after the set operation completed. This be different from the input phone number
+     * either because it has been reformatted or someone else set the phone number simultaneously.
+     */
+    @POST( BASE + ID_PATH + PHONE )
+    String setOrganizationEntitySetInformation( @Path( ID ) UUID organizationId, @Body List<SmsEntitySetInformation> entitySetInformationList);
 
     @GET( BASE + ID_PATH + INTEGRATION )
     OrganizationIntegrationAccount getOrganizationIntegrationAccount(@Path(ID) UUID organizationId );
