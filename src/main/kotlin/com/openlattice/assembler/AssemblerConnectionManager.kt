@@ -27,7 +27,6 @@ import com.codahale.metrics.Timer
 import com.google.common.collect.Sets
 import com.google.common.eventbus.EventBus
 import com.google.common.eventbus.Subscribe
-import com.openlattice.analysis.requests.AggregationType
 import com.openlattice.assembler.PostgresDatabases.Companion.buildOrganizationDatabaseName
 import com.openlattice.assembler.PostgresRoles.Companion.buildOrganizationUserId
 import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresRoleName
@@ -430,6 +429,7 @@ class AssemblerConnectionManager(
         return connection.createStatement().use { stmt ->
             authorizedPropertiesOfPrincipal.forEach { principal, propertyTypes ->
                 val columns = (if (entitySet.isLinking) linkingEntityKeyIdColumnsList else entityKeyIdColumnsList) +
+                        ResultSetAdapters.mapMetadataOptionToPostgresColumn(MetadataOption.ENTITY_KEY_IDS) +
                         propertyTypes.map { it.type.fullQualifiedNameAsString }
                 val grantSelectSql = grantSelectSql(tableName, principal, columns)
 

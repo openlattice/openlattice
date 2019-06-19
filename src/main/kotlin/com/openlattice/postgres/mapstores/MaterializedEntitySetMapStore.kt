@@ -36,6 +36,8 @@ import com.zaxxer.hikari.HikariDataSource
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
+import java.time.OffsetDateTime
+import java.time.temporal.ChronoUnit
 import java.util.*
 import kotlin.random.Random
 
@@ -57,6 +59,12 @@ open class MaterializedEntitySetMapStore(
         @JvmStatic
         val FLAGS_INDEX = "flags[any]"
 
+        @JvmStatic
+        val LAST_REFRESH_INDEX = "lastRefresh"
+
+        @JvmStatic
+        val REFRESH_RATE_INDEX = "refreshRate"
+
         private val testKey = EntitySetAssemblyKey(UUID.randomUUID(), UUID.randomUUID())
     }
 
@@ -65,9 +73,13 @@ open class MaterializedEntitySetMapStore(
 
         bind(ps, key, 1)
         ps.setArray(3, flags)
+        ps.setObject(4, value.refreshRate)
+        ps.setObject(5, value.lastRefresh)
 
         // UPDATE
-        ps.setArray(4, flags)
+        ps.setArray(6, flags)
+        ps.setObject(7, value.refreshRate)
+        ps.setObject(8, value.lastRefresh)
     }
 
     override fun bind(ps: PreparedStatement, key: EntitySetAssemblyKey, offset: Int): Int {
@@ -89,6 +101,8 @@ open class MaterializedEntitySetMapStore(
                 .addMapIndexConfig(MapIndexConfig(ORGANIZATION_ID_INDEX, false))
                 .addMapIndexConfig(MapIndexConfig(ENTITY_SET_ID_INDEX, false))
                 .addMapIndexConfig(MapIndexConfig(FLAGS_INDEX, false))
+                .addMapIndexConfig(MapIndexConfig(LAST_REFRESH_INDEX, true))
+                .addMapIndexConfig(MapIndexConfig(REFRESH_RATE_INDEX, true))
                 .setInMemoryFormat(InMemoryFormat.OBJECT)
     }
 
@@ -117,12 +131,14 @@ open class MaterializedEntitySetMapStore(
 
     override fun generateTestValue(): MaterializedEntitySet {
         val organizationEntitySetFlags = OrganizationEntitySetFlag.values()
+        val refreshRate = Random.nextLong()
         val flags = EnumSet.noneOf(OrganizationEntitySetFlag::class.java)
         if (Random.nextBoolean()) {
             (0 until Random.nextInt(2, organizationEntitySetFlags.size))
                     .forEach { flags.add(organizationEntitySetFlags[it]) }
         }
+        val lastRefresh = OffsetDateTime.now().plus(Random.nextLong(90000000000L), ChronoUnit.MILLIS)
 
-        return MaterializedEntitySet(testKey, flags)
+        return MaterializedEntitySet(testKey, refreshRate, flags, lastRefresh)
     }
 }

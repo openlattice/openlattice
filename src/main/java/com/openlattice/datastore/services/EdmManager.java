@@ -226,6 +226,8 @@ public interface EdmManager {
 
     Collection<EntitySet> getEntitySetsOfType( UUID entityTypeId );
 
+    Collection<UUID> getEntitySetIdsOfType( UUID entityTypeId );
+
     Set<UUID> getEntitySetsForOrganization( UUID organizationId );
 
     Set<UUID> getEntitySetIdsWithFlags( Set<UUID> entitySetIds, Set<EntitySetFlag> filteringFlags );

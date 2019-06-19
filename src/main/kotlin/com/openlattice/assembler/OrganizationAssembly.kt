@@ -30,6 +30,5 @@ import java.util.*
  */
 data class OrganizationAssembly(
         val organizationId: UUID,
-        val dbname: String,
         var initialized : Boolean = false,
         val materializedEntitySets: MutableMap<UUID, EnumSet<OrganizationEntitySetFlag>> = mutableMapOf())

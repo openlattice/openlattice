@@ -29,6 +29,7 @@ import com.openlattice.assembler.EntitySetAssemblyKey
 import com.openlattice.assembler.MaterializedEntitySet
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
+import java.time.OffsetDateTime
 import java.util.*
 
 private const val NOT_INITIALIZED = "Assembler Connection Manager not initialized."
@@ -52,6 +53,9 @@ data class SynchronizeMaterializedEntitySetProcessor(
             // Clear edm and data unsync flags.
             // Note: if we will have other flags, we only need to remove these 2 and not clear all!
             materializedEntitySet.flags.clear()
+            // Update last refresh
+            materializedEntitySet.lastRefresh = OffsetDateTime.now()
+
             entry.setValue(materializedEntitySet)
         }
 
