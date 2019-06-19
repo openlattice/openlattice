@@ -22,7 +22,11 @@
 
 package com.openlattice.organizations;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
+
 import com.dataloom.streams.StreamUtil;
+import com.geekbeast.rhizome.hazelcast.DelegatedIntList;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -35,34 +39,51 @@ import com.hazelcast.query.Predicates;
 import com.openlattice.apps.AppConfigKey;
 import com.openlattice.apps.AppTypeSetting;
 import com.openlattice.assembler.Assembler;
-import com.openlattice.authorization.*;
+import com.openlattice.authorization.AclKey;
+import com.openlattice.authorization.AuthorizationManager;
+import com.openlattice.authorization.HazelcastAclKeyReservationService;
+import com.openlattice.authorization.Permission;
+import com.openlattice.authorization.Principal;
+import com.openlattice.authorization.PrincipalType;
+import com.openlattice.authorization.SecurablePrincipal;
 import com.openlattice.authorization.initializers.AuthorizationInitializationTask;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.datastore.util.Util;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.hazelcast.processors.UUIDKeyToUUIDSetMerger;
+import com.openlattice.notifications.sms.PhoneNumberService;
+import com.openlattice.notifications.sms.SmsEntitySetInformation;
 import com.openlattice.organization.Organization;
 import com.openlattice.organization.OrganizationPrincipal;
 import com.openlattice.organization.roles.Role;
-import com.openlattice.organizations.events.*;
-import com.openlattice.organizations.processors.*;
+import com.openlattice.organizations.events.MembersAddedToOrganizationEvent;
+import com.openlattice.organizations.events.MembersRemovedFromOrganizationEvent;
+import com.openlattice.organizations.events.OrganizationCreatedEvent;
+import com.openlattice.organizations.events.OrganizationDeletedEvent;
+import com.openlattice.organizations.events.OrganizationUpdatedEvent;
+import com.openlattice.organizations.processors.EmailDomainsMerger;
+import com.openlattice.organizations.processors.EmailDomainsRemover;
+import com.openlattice.organizations.processors.OrganizationAppRemover;
+import com.openlattice.organizations.processors.OrganizationMemberMerger;
+import com.openlattice.organizations.processors.OrganizationMemberRemover;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.mapstores.AppConfigMapstore;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.inject.Inject;
-import java.util.*;
+import java.util.Collection;
+import java.util.EnumSet;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
+import javax.inject.Inject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class manages organizations.
@@ -94,8 +115,9 @@ public class HazelcastOrganizationService {
     private final IMap<AppConfigKey, AppTypeSetting> appConfigs;
     private final List<IMap<UUID, ?>>                allMaps;
     private final Assembler                          assembler;
-    private final IMap<UUID, String>                 phoneNumbers;
-    private final IMap<UUID, int[]> partitions;
+    private final PhoneNumberService                 phoneNumbers;
+
+    private final IMap<UUID, DelegatedIntList> partitions;
 
     @Inject
     private EventBus eventBus;
@@ -105,6 +127,7 @@ public class HazelcastOrganizationService {
             HazelcastAclKeyReservationService reservations,
             AuthorizationManager authorizations,
             SecurePrincipalsManager securePrincipalsManager,
+            PhoneNumberService phoneNumbers,
             Assembler assembler ) {
         this.titles = hazelcastInstance.getMap( HazelcastMap.ORGANIZATIONS_TITLES.name() );
         this.descriptions = hazelcastInstance.getMap( HazelcastMap.ORGANIZATIONS_DESCRIPTIONS.name() );
@@ -121,8 +144,8 @@ public class HazelcastOrganizationService {
                 apps );
         this.securePrincipalsManager = securePrincipalsManager;
         this.assembler = assembler;
-        this.phoneNumbers =  hazelcastInstance.getMap(HazelcastMap.SMS_INFORMATION.name());
-        this.partitions =  hazelcastInstance.getMap(HazelcastMap.DEFAULT_PARTITIONS.name());
+        this.phoneNumbers = phoneNumbers;
+        this.partitions = hazelcastInstance.getMap( HazelcastMap.ORGANIZATION_DEFAULT_PARTITIONS.name() );
         //        fixOrganizations();
     }
 
@@ -187,11 +210,8 @@ public class HazelcastOrganizationService {
                 DelegatedStringSet.wrap( organization.getAutoApprovedEmails() ) );
         membersOf.set( organizationId, PrincipalSet.wrap( organization.getMembers() ) );
         apps.set( organizationId, DelegatedUUIDSet.wrap( organization.getApps() ) );
-        phoneNumbers.put( organizationId, organization.getPhoneNumber() );
-    }
+        phoneNumbers.setPhoneNumber( organizationId, organization.getSmsEntitySetInfo() );
 
-    public void setPhoneNumber( UUID organizationId, String phoneNumber ) {
-        phoneNumbers.put( organizationId, phoneNumber );
     }
 
     public Organization getOrganization( UUID organizationId ) {
@@ -199,8 +219,10 @@ public class HazelcastOrganizationService {
         Future<DelegatedStringSet> autoApprovedEmailDomains = autoApprovedEmailDomainsOf.getAsync( organizationId );
 
         OrganizationPrincipal principal = getOrganizationPrincipal( organizationId );
-        String phone = phoneNumbers.get( organizationId );
+        Collection<SmsEntitySetInformation> phone = phoneNumbers.getPhoneNumbers( organizationId );
 
+        final var partitionList = Util.getSafely( partitions, organizationId );
+        
         if ( principal == null ) {
             return null;
         }
@@ -222,7 +244,8 @@ public class HazelcastOrganizationService {
                     MoreObjects.firstNonNull( orgMembers, ImmutableSet.of() ),
                     roles,
                     MoreObjects.firstNonNull( apps, ImmutableSet.of() ),
-                    phone );
+                    ImmutableSet.copyOf( phone ),
+                    partitionList );
         } catch ( InterruptedException | ExecutionException e ) {
             logger.error( "Unable to load organization. {}", organizationId, e );
             return null;
@@ -230,6 +253,7 @@ public class HazelcastOrganizationService {
     }
 
     public Iterable<Organization> getOrganizations( Stream<UUID> organizationIds ) {
+        //TODO: Figure out why copy is here?
         return organizationIds.map( this::getOrganization )
                 .filter( com.google.common.base.Predicates.notNull()::apply )
                 .map( org -> new Organization(
@@ -239,7 +263,8 @@ public class HazelcastOrganizationService {
                         //TODO: If you're an organization you can view its roles.
                         org.getRoles(),
                         org.getApps(),
-                        org.getPhoneNumber() ) )
+                        org.getSmsEntitySetInfo(),
+                        org.getPartitions() ) )
                 ::iterator;
     }
 

@@ -2,33 +2,35 @@ package com.openlattice.data.storage.partitions
 
 import com.google.common.base.Preconditions.checkArgument
 import com.hazelcast.core.HazelcastInstance
-import com.openlattice.controllers.exceptions.ResourceNotFoundException
 import com.openlattice.edm.EntitySet
+import com.openlattice.edm.requests.MetadataUpdate
+import com.openlattice.edm.types.processors.UpdateEntitySetMetadataProcessor
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.COUNT
 import com.openlattice.postgres.PostgresColumn.PARTITION
 import com.openlattice.postgres.PostgresMaterializedViews.Companion.PARTITION_COUNTS
 import com.openlattice.postgres.streams.BasePostgresIterable
-import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.zaxxer.hikari.HikariDataSource
+import org.springframework.stereotype.Service
 import java.util.*
 
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-class PartitionManager(hazelcastInstance: HazelcastInstance, private val hds: HikariDataSource, partitions: Int) {
+@Service
+class PartitionManager(hazelcastInstance: HazelcastInstance, private val hds: HikariDataSource, partitions: Int = 257) {
     private val partitionList = mutableListOf<Int>()
-    private val entitySets = hazelcastInstance.getMap<UUID, Array<Int>>( HazelcastMap.ENTITY_SETS.name )
+    private val entitySets = hazelcastInstance.getMap<UUID, EntitySet>(HazelcastMap.ENTITY_SETS.name)
 
     init {
         createMaterializedViewIfNotExists()
         setPartitions(partitions)
     }
 
-
+    @Synchronized
     fun setPartitions(partitions: Int) {
         checkArgument(partitions > partitionList.size, "Only support increasing number of partitions.")
         //TODO: Support decreasing number of partitions, but this is unlikely to be needed, since decreasing
@@ -36,22 +38,28 @@ class PartitionManager(hazelcastInstance: HazelcastInstance, private val hds: Hi
         partitionList.addAll(partitionList.size until partitions)
     }
 
-    fun setEntitySetPartitions( entitySetId: UUID,  partitions: List<Int> ) {
+    fun setEntitySetPartitions(entitySetId: UUID, partitions: List<Int>) {
+        val update = MetadataUpdate(
+                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
+                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
+                Optional.empty(), Optional.of(LinkedHashSet(partitions))
+        )
+        entitySets.executeOnKey(entitySetId, UpdateEntitySetMetadataProcessor(update))
+    }
+
+    fun setDefaultPartitions(organizationId: UUID, partitions: List<Int>) {
 
     }
-    fun setDefaultPartitions( organizationId: UUID, partitions: List<Int>) {
 
-    }
-
-    fun getDefaultPartitions( organizationId: UUID ) : List<Int> {
+    fun getDefaultPartitions(organizationId: UUID): List<Int> {
         TODO("Implement this")
     }
 
-    fun getEntitySetPartitions( entitySetId: UUID ) : Array<Int> {
+    fun getEntitySetPartitions(entitySetId: UUID): Array<Int> {
         return entitySets.getValue(entitySetId)
     }
 
-    fun allocatePartitions(organizationId: UUID, partitionCount: Int) : List<Int> {
+    fun allocatePartitions(organizationId: UUID, partitionCount: Int): List<Int> {
         checkArgument(
                 partitionCount < partitionList.size,
                 "Cannot request more partitions ($partitionCount) than exist (${partitionList.size}."
@@ -81,7 +89,7 @@ class PartitionManager(hazelcastInstance: HazelcastInstance, private val hds: Hi
         }
     }
 
-    fun getPartitionInformation() : Map<Int, Long> {
+    fun getPartitionInformation(): Map<Int, Long> {
         return BasePostgresIterable(
                 PreparedStatementHolderSupplier(hds, ALL_PARTITIONS) { ps ->
                     ps.setArray(1, PostgresArrays.createIntArray(ps.connection, partitionList))
