@@ -95,7 +95,7 @@ public interface OrganizationsApi {
      * either because it has been reformatted or someone else set the phone number simultaneously.
      */
     @POST( BASE + ID_PATH + PHONE )
-    String setOrganizationEntitySetInformation( @Path( ID ) UUID organizationId, @Body List<SmsEntitySetInformation> entitySetInformationList);
+    Integer setOrganizationEntitySetInformation( @Path( ID ) UUID organizationId, @Body List<SmsEntitySetInformation> entitySetInformationList);
 
     @GET( BASE + ID_PATH + INTEGRATION )
     OrganizationIntegrationAccount getOrganizationIntegrationAccount(@Path(ID) UUID organizationId );
