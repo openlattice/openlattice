@@ -691,8 +691,8 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                     "Minimum refresh rate is 1 minute.", true))
         }
 
-        // materialize with 3 min refresh rate
-        var refreshRate = 3
+        // materialize with 2 min refresh rate
+        var refreshRate = 2
         organizationsApi.assembleEntitySets(organizationID, mapOf(es.id to refreshRate))
 
         // add data
@@ -752,8 +752,8 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         }
 
 
-        // set refresh rate to 4 mins
-        refreshRate = 4
+        // set refresh rate to 1 min
+        refreshRate = 1
         organizationsApi.updateRefreshRate(organizationID, es.id, refreshRate)
 
         // delete all data
