@@ -35,7 +35,6 @@ import static com.openlattice.postgres.PostgresDatatype.UUID;
 import static com.openlattice.postgres.PostgresDatatype.UUID_ARRAY;
 
 import com.openlattice.edm.type.Analyzer;
-import com.openlattice.notifications.sms.SmsInformationMapstore;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -334,22 +333,22 @@ public final class PostgresColumn {
     public static final PostgresColumnDefinition PARTITIONS                        = new PostgresColumnDefinition(
             PARTITIONS_FIELD,
             INTEGER_ARRAY ).notNull();
-    public static final String                   PARTITION_FIELD                   = "partition";
-    public static final PostgresColumnDefinition PARTITION                         = new PostgresColumnDefinition(
+    public static final String                   PARTITION_FIELD          = "partition";
+    public static final PostgresColumnDefinition PARTITION                = new PostgresColumnDefinition(
             PARTITION_FIELD,
             INTEGER ).notNull();
-    public static final String                   PARTITION_INDEX_FIELD             = "partition_index";
-    public static final PostgresColumnDefinition PARTITION_INDEX                   =
+    public static final String                   PARTITION_INDEX_FIELD    = "partition_index";
+    public static final PostgresColumnDefinition PARTITION_INDEX          =
             new PostgresColumnDefinition( PARTITION_INDEX_FIELD, BIGINT ).notNull();
-    public static final String                   PARTITION_VERSION_FIELD           = "partition_version";
-    public static final PostgresColumnDefinition PARTITION_VERSION                 = new PostgresColumnDefinition(
-            PARTITION_VERSION_FIELD,
+    public static final String                   PARTITIONS_VERSION_FIELD = "partitions_version";
+    public static final PostgresColumnDefinition PARTITIONS_VERSION       = new PostgresColumnDefinition(
+            PARTITIONS_VERSION_FIELD,
             INTEGER ).notNull();
-    public static final String                   PERMISSIONS_FIELD                 = "permissions";
-    public static final PostgresColumnDefinition PERMISSIONS                       =
+    public static final String                   PERMISSIONS_FIELD        = "permissions";
+    public static final PostgresColumnDefinition PERMISSIONS              =
             new PostgresColumnDefinition( PERMISSIONS_FIELD, TEXT_ARRAY );
-    public static final String                   PHONE_NUMBER_FIELD                = "phone_number";
-    public static final PostgresColumnDefinition PHONE_NUMBER                      =
+    public static final String                   PHONE_NUMBER_FIELD       = "phone_number";
+    public static final PostgresColumnDefinition PHONE_NUMBER             =
             new PostgresColumnDefinition( PHONE_NUMBER_FIELD, TEXT ).notNull();
     public static final String                   PII_FIELD                         = "pii";
     public static final PostgresColumnDefinition PII                               =

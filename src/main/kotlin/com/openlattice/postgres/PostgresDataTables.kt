@@ -46,7 +46,7 @@ class PostgresDataTables {
                 LAST_MIGRATE,
                 VERSION,
                 VERSIONS,
-                PARTITION_VERSION
+                PARTITIONS_VERSION
         )
         val dataTableColumns =  dataTableMetadataColumns + btreeIndexedColumns + ginIndexedColumns + nonIndexedColumns
 

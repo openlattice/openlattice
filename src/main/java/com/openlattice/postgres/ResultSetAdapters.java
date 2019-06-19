@@ -93,7 +93,9 @@ import static com.openlattice.postgres.PostgresColumn.NAMESPACE;
 import static com.openlattice.postgres.PostgresColumn.NULLABLE_TITLE;
 import static com.openlattice.postgres.PostgresColumn.ORGANIZATION_ID;
 import static com.openlattice.postgres.PostgresColumn.ORGANIZATION_ID_FIELD;
+import static com.openlattice.postgres.PostgresColumn.PARTITIONS_FIELD;
 import static com.openlattice.postgres.PostgresColumn.PARTITION_INDEX_FIELD;
+import static com.openlattice.postgres.PostgresColumn.PARTITIONS_VERSION_FIELD;
 import static com.openlattice.postgres.PostgresColumn.PERMISSIONS_FIELD;
 import static com.openlattice.postgres.PostgresColumn.PHONE_NUMBER_FIELD;
 import static com.openlattice.postgres.PostgresColumn.PII;
@@ -133,6 +135,7 @@ import static com.openlattice.postgres.PostgresColumn.VERTEX_ID;
 import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.LinkedHashMultimap;
@@ -780,16 +783,17 @@ public final class ResultSetAdapters {
     }
 
     public static EntitySet entitySet( ResultSet rs ) throws SQLException {
-        Optional<UUID> id = Optional.of( id( rs ) );
-        String name = name( rs );
-        UUID entityTypeId = entityTypeId( rs );
-        String title = title( rs );
-        Optional<String> description = Optional.ofNullable( description( rs ) );
-        Set<String> contacts = contacts( rs );
-        Optional<Set<UUID>> linkedEntitySets = Optional.of( linkedEntitySets( rs ) );
-        Optional<UUID> organization = Optional
-                .of( rs.getObject( ORGANIZATION_ID_FIELD, UUID.class ) );
-        Optional<EnumSet<EntitySetFlag>> flags = Optional.of( entitySetFlags( rs ) );
+        final var id = id( rs );
+        final var name = name( rs );
+        final var entityTypeId = entityTypeId( rs );
+        final var title = title( rs );
+        final var description = MoreObjects.firstNonNull( description( rs ) ,"" );
+        final var contacts = contacts( rs );
+        final var linkedEntitySets =  linkedEntitySets( rs ) ;
+        final var organization = rs.getObject( ORGANIZATION_ID_FIELD, UUID.class );
+        final var flags = entitySetFlags( rs );
+        final var partitions = partitions( rs );
+        final var partitionVersion = partitionVersions(rs );
         return new EntitySet( id,
                 entityTypeId,
                 name,
@@ -798,7 +802,17 @@ public final class ResultSetAdapters {
                 contacts,
                 linkedEntitySets,
                 organization,
-                flags );
+                flags,
+                new LinkedHashSet<>( Arrays.asList( partitions ) ) ,
+                partitionVersion);
+    }
+
+    public static int partitionVersions( ResultSet rs) throws SQLException {
+        return rs.getInt( PARTITIONS_VERSION_FIELD );
+    }
+
+    public static Integer[] partitions( ResultSet rs ) throws SQLException {
+        return PostgresArrays.getIntArray( rs, PARTITIONS_FIELD );
     }
 
     public static AssociationType associationType( ResultSet rs ) throws SQLException {
