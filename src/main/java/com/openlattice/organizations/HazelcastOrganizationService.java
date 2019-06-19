@@ -222,7 +222,7 @@ public class HazelcastOrganizationService {
         Collection<SmsEntitySetInformation> phone = phoneNumbers.getPhoneNumbers( organizationId );
 
         final var partitionList = Util.getSafely( partitions, organizationId );
-        
+
         if ( principal == null ) {
             return null;
         }
