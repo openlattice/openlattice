@@ -217,7 +217,7 @@ constructor(
         val entitySet = edmManager.getEntitySet(entitySetId)
 
         if (entitySet.flags.contains(EntitySetFlag.AUDIT)) {
-            throw ForbiddenException( "You cannot delete audit entity set $entitySetId")
+            throw ForbiddenException("You cannot delete audit entity set $entitySetId.")
         }
         deleteAuditEntitySetsForId(entitySetId)
 
