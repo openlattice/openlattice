@@ -30,6 +30,7 @@ import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.client.serialization.SerializationConstants;
 import com.openlattice.edm.set.EntitySetFlag;
 import com.openlattice.organization.OrganizationConstants;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -50,11 +51,11 @@ public class EntitySet extends AbstractSecurableObject {
     private final UUID                   entityTypeId;
     private final Set<UUID>              linkedEntitySets;
     private final EnumSet<EntitySetFlag> flags;
-    private final Set<Integer>           partitions          = new LinkedHashSet<>( 8 );
+    private final Set<Integer>           partitions        = new LinkedHashSet<>( 8 );
     private       String                 name;
     private       Set<String>            contacts;
     private       UUID                   organizationId;
-    private       int                    partitioningVersion = 0;
+    private       int                    partitionsVersion = 0;
 
     /**
      * Creates an entity set with provided parameters and will automatically generate a UUID if not provided.
@@ -104,7 +105,7 @@ public class EntitySet extends AbstractSecurableObject {
             UUID organizationId,
             EnumSet<EntitySetFlag> flags,
             LinkedHashSet<Integer> partitions,
-            int partitioningVersion
+            int partitionsVersion
     ) {
         super( id, title, description);
         this.linkedEntitySets = linkedEntitySets;
@@ -120,7 +121,7 @@ public class EntitySet extends AbstractSecurableObject {
         this.contacts = Sets.newHashSet( contacts );
         this.organizationId = organizationId;
         this.partitions.addAll( partitions );
-        this.partitioningVersion = partitioningVersion;
+        this.partitionsVersion = partitionsVersion;
     }
 
     public EntitySet(
@@ -229,14 +230,15 @@ public class EntitySet extends AbstractSecurableObject {
         return partitions;
     }
 
-    public void setPartitions( Set<Integer> partitions ) {
+    @JsonIgnore
+    public void setPartitions( Collection<Integer> partitions ) {
         this.partitions.clear();
         addPartitions( partitions );
     }
 
     @JsonIgnore
-    public int getPartitioningVersion() {
-        return partitioningVersion;
+    public int getPartitionsVersion() {
+        return partitionsVersion;
     }
 
     public void addFlag( EntitySetFlag flag ) {
@@ -247,9 +249,9 @@ public class EntitySet extends AbstractSecurableObject {
         this.flags.remove( flag );
     }
 
-    public void addPartitions( Set<Integer> partitions ) {
+    public void addPartitions( Collection<Integer> partitions ) {
         this.partitions.addAll( partitions );
-        partitioningVersion++;
+        partitionsVersion++;
     }
 
     @JsonIgnore
