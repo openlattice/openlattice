@@ -18,30 +18,18 @@
  *
  *
  */
+package com.openlattice.assembler
 
-package com.openlattice.tasks
+import com.hazelcast.core.IMap
+import com.openlattice.authorization.EdmAuthorizationHelper
+import com.openlattice.datastore.services.EdmManager
+import com.openlattice.organizations.HazelcastOrganizationService
+import com.openlattice.tasks.HazelcastTaskDependencies
 
-/**
- *
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
- */
-enum class Task {
-    AUDIT_INITIALIZATION,
-    AUTH0_SYNC_INITIALIZATION_TASK,
-    AUTH0_SYNC_TASK,
-    AUTHORIZATION_BOOTSTRAP,
-    CLEAN_OUT_OLDER_USERS_INITIALIZATON,
-    ENTITY_VIEWS_INITIALIZER,
-    MATERIALIZED_ENTITY_SETS_DATA_REFRESH_TASK,
-    ORGANIZATION_ASSEMBLIES_INITIALIZER,
-    ORGANIZATION_BOOTSTRAP,
-    ORGANIZATION_MEMBERS_CLEANUP,
-    PERSISTENT_SEARCH_MESSENGER_TASK,
-    PRODUCTION_VIEW_INITIALIZATON,
-    POST_INITIALIZER,
-    POSTGRES_ENTITY_SET_SIZES_INITIALIZATION,
-    POSTGRES_ENTITY_SET_SIZES_REFRESH_TASK,
-    USERS_AND_ROLES_INITIALIZATON,
-    USER_CREDENTIAL_SYNC_TASK
-
-}
+data class MaterializedEntitySetsDependencies(
+        val assembler: Assembler,
+        val materializedEntitySets: IMap<EntitySetAssemblyKey, MaterializedEntitySet>,
+        val organizations: HazelcastOrganizationService,
+        val edm: EdmManager,
+        val authzHelper: EdmAuthorizationHelper
+) : HazelcastTaskDependencies
