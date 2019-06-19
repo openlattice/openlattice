@@ -235,7 +235,7 @@ class PostgresEntityDataQueryService2(
     private fun tombstone(conn: Connection, entitySetId: UUID, entityKeyIds: Set<UUID>): WriteEvent {
         val tombstoneVersion = -System.currentTimeMillis()
         val entityKeyIdsArr = PostgresArrays.createUuidArray(conn, entityKeyIds)
-        val partitionsArr = PostgresArrays.createIntArray( conn,getPartitions() )
+        val partitionsArr = PostgresArrays.createIntArray(conn, g   etPartition())
         val numUpdated = conn.prepareStatement(updateVersionsForEntitiesInEntitySet).use { ps ->
             ps.setObject(1, tombstoneVersion)
             ps.setObject(2, tombstoneVersion)
@@ -272,11 +272,14 @@ class PostgresEntityDataQueryService2(
         val tombstoneVersion = -System.currentTimeMillis()
         val propertyTypeIdsArr = PostgresArrays.createUuidArray(conn, propertyTypesToTombstone.map { it.id })
         val entityKeyIdsArr = PostgresArrays.createUuidArray(conn, entityKeyIds)
+        val partitionsArr = PostgresArrays.createIntArray(conn, entityKeyIds.map { it.leastSignificantBits.toInt() })
         val numUpdated = conn.prepareStatement(updateVersionsForPropertyTypesInEntitiesInEntitySet).use { ps ->
             ps.setObject(1, tombstoneVersion)
             ps.setObject(2, tombstoneVersion)
             ps.setObject(3, tombstoneVersion)
             ps.setObject(4, entitySetId)
+            ps.setObject(5, entityKeyIdsArr)
+            ps.setObject(6, partitionsArr)
             ps.setObject(5, propertyTypeIdsArr)
             ps.executeUpdate()
         }

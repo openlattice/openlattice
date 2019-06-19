@@ -187,7 +187,7 @@ public final class PostgresColumn {
     public static final PostgresColumnDefinition ENTITY_SET_FLAGS                  =
             new PostgresColumnDefinition( ENTITY_SET_FLAGS_FIELD, TEXT_ARRAY )
                     .withDefault( "'{}'" );
-    public static final String                   ENTITY_SET_IDS_FIELD              = "entity_set_ids" ;
+    public static final String                   ENTITY_SET_IDS_FIELD              = "entity_set_ids";
     public static final String                   ENTITY_SET_ID_FIELD               = "entity_set_id";
     public static final PostgresColumnDefinition ENTITY_SET_ID                     =
             new PostgresColumnDefinition( ENTITY_SET_ID_FIELD, UUID ).notNull();
@@ -341,6 +341,10 @@ public final class PostgresColumn {
     public static final String                   PARTITION_INDEX_FIELD             = "partition_index";
     public static final PostgresColumnDefinition PARTITION_INDEX                   =
             new PostgresColumnDefinition( PARTITION_INDEX_FIELD, BIGINT ).notNull();
+    public static final String                   PARTITION_VERSION_FIELD           = "partition_version";
+    public static final PostgresColumnDefinition PARTITION_VERSION                 = new PostgresColumnDefinition(
+            PARTITION_VERSION_FIELD,
+            INTEGER ).notNull();
     public static final String                   PERMISSIONS_FIELD                 = "permissions";
     public static final PostgresColumnDefinition PERMISSIONS                       =
             new PostgresColumnDefinition( PERMISSIONS_FIELD, TEXT_ARRAY );
