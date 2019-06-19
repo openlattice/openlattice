@@ -987,6 +987,28 @@ public class EdmService implements EdmManager {
         }
         entitySets.executeOnKey( entitySetId, new UpdateEntitySetMetadataProcessor( update ) );
         eventBus.post( new EntitySetMetadataUpdatedEvent( getEntitySet( entitySetId ) ) );
+
+        /* If an entity set is being moved across organizations, its audit entity sets should also be moved to the new organization */
+        if ( update.getOrganizationId().isPresent() ) {
+
+            AclKey aclKey = new AclKey( entitySetId );
+
+            Set<UUID> auditEntitySetIds = Sets.union( aresManager.getAuditRecordEntitySets( aclKey ),
+                    aresManager.getAuditEdgeEntitySets( aclKey ) );
+
+            entitySets.executeOnKeys( auditEntitySetIds,
+                    new UpdateEntitySetMetadataProcessor( new MetadataUpdate( Optional.empty(),
+                            Optional.empty(),
+                            Optional.empty(),
+                            Optional.empty(),
+                            Optional.empty(),
+                            Optional.empty(),
+                            Optional.empty(),
+                            Optional.empty(),
+                            Optional.empty(),
+                            update.getOrganizationId(),
+                            Optional.empty() ) ) );
+        }
     }
 
     private void markMaterializedEntitySetDirtyWithEdmChanges( UUID entitySetId ) {
