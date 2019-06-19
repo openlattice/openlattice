@@ -244,10 +244,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
                 ( entitySetId, refreshRateInMins ) -> {
                     Long value = null;
                     if ( refreshRateInMins != null ) {
-                        if ( refreshRateInMins < 1 ) {
-                            throw new IllegalArgumentException( "Minimum refresh rate is 1 minute." );
-                        }
-                        value = refreshRateInMins.longValue() * 3600L;
+                        value = getRefreshRateMillisFromMins( refreshRateInMins );
                     }
 
                     refreshRatesInMilliSecsOfEntitySets.put( entitySetId, value );
@@ -303,12 +300,8 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             @RequestBody Integer refreshRate ) {
         ensureOwner( organizationId );
 
-        if ( refreshRate < 1 ) {
-            throw new IllegalArgumentException( "Minimum refresh rate is 1 minute." );
-        }
+        final var refreshRateInMilliSecs = getRefreshRateMillisFromMins( refreshRate );
 
-        // convert mins to millisecs
-        final var refreshRateInMilliSecs = refreshRate.longValue() * 3600L;
         assembler.updateRefreshRate( organizationId, entitySetId, refreshRateInMilliSecs );
         return null;
     }
@@ -353,6 +346,15 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         // check materialization on normal entity sets and get the intersection of their authorized property types
         return authzHelper.getAuthorizedPropertiesOnEntitySets(
                 entitySetIds, EnumSet.of( Permission.MATERIALIZE ), Set.of( organizationPrincipal.getPrincipal() ) );
+    }
+
+    private Long getRefreshRateMillisFromMins( Integer refreshRateInMins ) {
+        if ( refreshRateInMins < 1 ) {
+            throw new IllegalArgumentException( "Minimum refresh rate is 1 minute." );
+        }
+
+        // convert mins to millisecs
+        return refreshRateInMins.longValue() * 3600L;
     }
 
     @Timed
