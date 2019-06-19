@@ -477,6 +477,10 @@ public class HazelcastOrganizationService {
         return (OrganizationPrincipal) Iterables.getOnlyElement( maybeOrganizationPrincipal );
     }
 
+    public void setSmsEntitySetInformation( UUID organizationId, List<SmsEntitySetInformation> entitySetInformationList ) {
+        phoneNumbers.setPhoneNumber( organizationId, entitySetInformationList );
+    }
+
     private static Role createOrganizationAdminRole( SecurablePrincipal organization ) {
         var principaleTitle = organization.getName() + " - ADMIN";
         var principalId = organization.getId().toString() + "|" + principaleTitle;
