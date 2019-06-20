@@ -2,7 +2,6 @@ package com.openlattice.postgres
 
 import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
 import com.openlattice.postgres.PostgresColumn.PARTITION
-import com.openlattice.postgres.PostgresTable.ENTITY_KEY_IDS
 import com.openlattice.postgres.PostgresTable.IDS
 
 /**
