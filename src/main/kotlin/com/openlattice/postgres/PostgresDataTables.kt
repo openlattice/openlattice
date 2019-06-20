@@ -160,6 +160,8 @@ class PostgresDataTables {
                 columnDefinition: PostgresColumnDefinition
         ): PostgresIndexDefinition {
             return PostgresColumnsIndexDefinition(tableDefinition, columnDefinition)
+                    .name(buildIndexName(tableDefinition.name, columnDefinition.name, IndexType.BTREE))
+                    .ifNotExists()
         }
 
         @JvmStatic
@@ -168,6 +170,12 @@ class PostgresDataTables {
                 columnDefinition: PostgresColumnDefinition
         ): PostgresIndexDefinition {
             return PostgresColumnsIndexDefinition(tableDefinition, columnDefinition).method(IndexType.GIN)
+                    .name(buildIndexName(tableDefinition.name, columnDefinition.name, IndexType.GIN))
+                    .ifNotExists()
+        }
+
+        private fun buildIndexName(tableName: String, columnName: String, indexType: IndexType): String {
+            return "${tableName}_${columnName}_${indexType.name.toLowerCase()}_idx"
         }
 
         @JvmStatic
