@@ -118,6 +118,27 @@ public class Organization {
                 Optional.empty() );
     }
 
+    public Organization(
+            Optional<UUID> id,
+            Principal principal,
+            String title,
+            Optional<String> description,
+            Set<String> autoApprovedEmails,
+            Set<Principal> members,
+            Set<Role> roles,
+            List<Integer> partitions ) {
+        this( id,
+                principal,
+                title,
+                description,
+                autoApprovedEmails,
+                members,
+                roles,
+                ImmutableSet.of(),
+                Optional.empty(),
+                Optional.of( partitions ) );
+    }
+
     @JsonIgnore
     public AclKey getAclKey() {
         return securablePrincipal.getAclKey();
