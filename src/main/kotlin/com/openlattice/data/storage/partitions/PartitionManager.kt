@@ -24,7 +24,7 @@ import java.util.*
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 @Service
-class PartitionManager(hazelcastInstance: HazelcastInstance, private val hds: HikariDataSource, partitions: Int = 257) {
+class PartitionManager @JvmOverloads constructor(hazelcastInstance: HazelcastInstance, private val hds: HikariDataSource, partitions: Int = 257) {
     private val partitionList = mutableListOf<Int>()
     private val entitySets = hazelcastInstance.getMap<UUID, EntitySet>(HazelcastMap.ENTITY_SETS.name)
     private val defaultPartitions = hazelcastInstance.getMap<UUID, DelegatedIntList>(
