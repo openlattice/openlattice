@@ -52,9 +52,9 @@ class PostgresDataTables {
         )
         val dataTableColumns = dataTableMetadataColumns + btreeIndexedColumns + ginIndexedColumns + nonIndexedColumns
 
-        val columnDefinitionCache = CacheBuilder.newBuilder().build(
+        private val columnDefinitionCache = CacheBuilder.newBuilder().build(
                 object : CacheLoader<Pair<IndexType, EdmPrimitiveTypeKind>, PostgresColumnDefinition>() {
-                    override fun load (key: Pair<IndexType, EdmPrimitiveTypeKind>): PostgresColumnDefinition {
+                    override fun load(key: Pair<IndexType, EdmPrimitiveTypeKind>): PostgresColumnDefinition {
                         return buildColumnDefinition(key)
                     }
 
@@ -64,12 +64,20 @@ class PostgresDataTables {
                         return keys.associateWith { buildColumnDefinition(it) }.toMutableMap()
                     }
 
-                    private fun buildColumnDefinition( key: Pair<IndexType,EdmPrimitiveTypeKind>) : PostgresColumnDefinition {
+                    private fun buildColumnDefinition(
+                            key: Pair<IndexType, EdmPrimitiveTypeKind>
+                    ): PostgresColumnDefinition {
                         val (indexType, edmType) = key
                         return when (indexType) {
-                            IndexType.BTREE -> PostgresDataTables.btreeIndexedValueColumn(PostgresEdmTypeConverter.map(edmType))
-                            IndexType.GIN -> PostgresDataTables.ginIndexedValueColumn(PostgresEdmTypeConverter.map(edmType))
-                            IndexType.NONE -> PostgresDataTables.nonIndexedValueColumn(PostgresEdmTypeConverter.map(edmType))
+                            IndexType.BTREE -> btreeIndexedValueColumn(
+                                    PostgresEdmTypeConverter.map(edmType)
+                            )
+                            IndexType.GIN -> ginIndexedValueColumn(
+                                    PostgresEdmTypeConverter.map(edmType)
+                            )
+                            IndexType.NONE -> nonIndexedValueColumn(
+                                    PostgresEdmTypeConverter.map(edmType)
+                            )
                             else -> throw IllegalArgumentException("HASH indexes are not yet supported by openlattice.")
                         }
                     }
@@ -78,11 +86,7 @@ class PostgresDataTables {
 
         @JvmStatic
         fun buildDataTableDefinition(): PostgresTableDefinition {
-            val columns = (dataTableColumns + listOf(
-                    OWNERS,
-                    READERS,
-                    WRITERS
-            )).toTypedArray()
+            val columns = dataTableColumns.toTypedArray()
 
             val tableDefinition = CitusDistributedTableDefinition("data")
                     .addColumns(*columns)

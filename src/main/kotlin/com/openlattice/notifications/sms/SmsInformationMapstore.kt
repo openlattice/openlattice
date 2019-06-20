@@ -11,6 +11,7 @@ import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.mapstores.AbstractBasePostgresMapstore
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.commons.lang3.RandomStringUtils
+import org.springframework.stereotype.Component
 import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.util.*
@@ -19,6 +20,7 @@ import java.util.*
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
+@Component
 class SmsInformationMapstore(
         hds: HikariDataSource
 ) : AbstractBasePostgresMapstore<SmsInformationKey, SmsEntitySetInformation>(
