@@ -538,7 +538,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         val update = MetadataUpdate(
                 Optional.of(pt.title), Optional.empty(), Optional.of(es.name),
                 Optional.of(es.contacts), Optional.of(FullQualifiedName(newNameSpace, pt.type.name)), Optional.empty(),
-                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty()
+                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty()
         )
         edmApi.updatePropertyTypeMetadata(pt.id, update)
 

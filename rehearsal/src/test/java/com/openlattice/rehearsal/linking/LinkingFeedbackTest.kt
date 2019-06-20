@@ -76,10 +76,10 @@ class LinkingFeedbackTest : SetupTestData() {
             linkingEntitySet = createEntitySet(
                     personEt,
                     true,
-                    setOf(edmApi.getEntitySetId(importedEntitySetKeysIterator.next()),
-                            edmApi.getEntitySetId(importedEntitySetKeysIterator.next()),
-                            edmApi.getEntitySetId(importedEntitySetKeysIterator.next()),
-                            edmApi.getEntitySetId(importedEntitySetKeysIterator.next()))
+                    setOf(entitySetsApi.getEntitySetId(importedEntitySetKeysIterator.next()),
+                            entitySetsApi.getEntitySetId(importedEntitySetKeysIterator.next()),
+                            entitySetsApi.getEntitySetId(importedEntitySetKeysIterator.next()),
+                            entitySetsApi.getEntitySetId(importedEntitySetKeysIterator.next()))
             )
 
             waitForBackgroundServices()
@@ -91,7 +91,7 @@ class LinkingFeedbackTest : SetupTestData() {
             // delete all created entity sets
             (importedEntitySets.keys + linkingEntitySet.name).forEach {
                 try {
-                    edmApi.deleteEntitySet(edmApi.getEntitySetId(it))
+                    entitySetsApi.deleteEntitySet(entitySetsApi.getEntitySetId(it))
                 } catch (e: UndeclaredThrowableException) {
                 }
             }

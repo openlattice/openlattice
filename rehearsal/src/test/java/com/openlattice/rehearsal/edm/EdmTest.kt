@@ -60,10 +60,10 @@ class EdmTest : MultipleAuthenticatedUsersBase() {
         val es = createEntitySet(EdmTestConstants.personEt)
 
         entitySetsApi.addEntitySetsToLinkingEntitySet(linkingEs.id, setOf<UUID>(es.id))
-        Assert.assertEquals(es.id, edmApi.getEntitySet(linkingEs.id).linkedEntitySets.single())
+        Assert.assertEquals(es.id, entitySetsApi.getEntitySet(linkingEs.id).linkedEntitySets.single())
 
         entitySetsApi.removeEntitySetsFromLinkingEntitySet(linkingEs.id, setOf(es.id))
-        Assert.assertEquals(setOf<UUID>(), edmApi.getEntitySet(linkingEs.id).linkedEntitySets)
+        Assert.assertEquals(setOf<UUID>(), entitySetsApi.getEntitySet(linkingEs.id).linkedEntitySets)
     }
 
     @Test
@@ -149,24 +149,24 @@ class EdmTest : MultipleAuthenticatedUsersBase() {
         val ess = EntitySetSelection(Optional.of(EdmTestConstants.personEt.properties))
         Assert.assertEquals(numberOfEntries, dataApi.loadEntitySetData(es1.id, ess, FileType.json).toList().size)
 
-        edmApi.deleteEntitySet(es1.id)
+        entitySetsApi.deleteEntitySet(es1.id)
 
         try {
-            edmApi.getEntitySet(es1.id)
+            entitySetsApi.getEntitySet(es1.id)
             Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!
                     .contains("Object [${es1.id}] is not accessible.", true))
         }
 
-        val updatedLinkedEs = edmApi.getEntitySet(linkedEs.id)
+        val updatedLinkedEs = entitySetsApi.getEntitySet(linkedEs.id)
         Assert.assertTrue(updatedLinkedEs.linkedEntitySets.isEmpty())
     }
 
     @Test
     fun testGetEntitySetIds() {
         // test empty
-        Assert.assertEquals(mapOf<String, UUID>(), edmApi.getEntitySetIds(setOf<String>()))
+        Assert.assertEquals(mapOf<String, UUID>(), entitySetsApi.getEntitySetIds(setOf<String>()))
 
         // test multiple
         val es1 = createEntitySet()
@@ -175,7 +175,7 @@ class EdmTest : MultipleAuthenticatedUsersBase() {
 
         Assert.assertEquals(
                 mapOf(es1.name to es1.id, es2.name to es2.id, es3.name to es3.id),
-                edmApi.getEntitySetIds(setOf(es1.name, es2.name, es3.name))
+                entitySetsApi.getEntitySetIds(setOf(es1.name, es2.name, es3.name))
         )
     }
 }
