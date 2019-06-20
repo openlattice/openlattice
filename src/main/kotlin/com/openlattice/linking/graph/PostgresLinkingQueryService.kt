@@ -330,7 +330,6 @@ internal fun uuidString(id: UUID): String {
     return "'$id'::uuid"
 }
 
-
 private val COLUMNS = listOf(
         LINKING_ID,
         SRC_ENTITY_SET_ID,

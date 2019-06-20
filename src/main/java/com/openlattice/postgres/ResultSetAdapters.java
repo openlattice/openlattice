@@ -47,7 +47,6 @@ import static com.openlattice.postgres.PostgresColumn.CONTACT_INFO;
 import static com.openlattice.postgres.PostgresColumn.COUNT;
 import static com.openlattice.postgres.PostgresColumn.CURRENT_SYNC_ID;
 import static com.openlattice.postgres.PostgresColumn.DATATYPE;
-import static com.openlattice.postgres.PostgresColumn.DB_NAME;
 import static com.openlattice.postgres.PostgresColumn.DESCRIPTION;
 import static com.openlattice.postgres.PostgresColumn.DST;
 import static com.openlattice.postgres.PostgresColumn.DST_ENTITY_KEY_ID_FIELD;
@@ -79,6 +78,7 @@ import static com.openlattice.postgres.PostgresColumn.INITIALIZED;
 import static com.openlattice.postgres.PostgresColumn.KEY;
 import static com.openlattice.postgres.PostgresColumn.LAST_NOTIFIED_FIELD;
 import static com.openlattice.postgres.PostgresColumn.LAST_READ_FIELD;
+import static com.openlattice.postgres.PostgresColumn.LAST_REFRESH;
 import static com.openlattice.postgres.PostgresColumn.LINKED_ENTITY_SETS;
 import static com.openlattice.postgres.PostgresColumn.LINKED_FIELD;
 import static com.openlattice.postgres.PostgresColumn.LINKING;
@@ -94,8 +94,8 @@ import static com.openlattice.postgres.PostgresColumn.NULLABLE_TITLE;
 import static com.openlattice.postgres.PostgresColumn.ORGANIZATION_ID;
 import static com.openlattice.postgres.PostgresColumn.ORGANIZATION_ID_FIELD;
 import static com.openlattice.postgres.PostgresColumn.PARTITIONS_FIELD;
-import static com.openlattice.postgres.PostgresColumn.PARTITION_INDEX_FIELD;
 import static com.openlattice.postgres.PostgresColumn.PARTITIONS_VERSION_FIELD;
+import static com.openlattice.postgres.PostgresColumn.PARTITION_INDEX_FIELD;
 import static com.openlattice.postgres.PostgresColumn.PERMISSIONS_FIELD;
 import static com.openlattice.postgres.PostgresColumn.PHONE_NUMBER_FIELD;
 import static com.openlattice.postgres.PostgresColumn.PII;
@@ -108,6 +108,7 @@ import static com.openlattice.postgres.PostgresColumn.PROPERTY_TAGS_FIELD;
 import static com.openlattice.postgres.PostgresColumn.PROPERTY_TYPE_ID;
 import static com.openlattice.postgres.PostgresColumn.QUERY_ID;
 import static com.openlattice.postgres.PostgresColumn.REASON;
+import static com.openlattice.postgres.PostgresColumn.REFRESH_RATE;
 import static com.openlattice.postgres.PostgresColumn.ROLE_ID;
 import static com.openlattice.postgres.PostgresColumn.SCHEMAS;
 import static com.openlattice.postgres.PostgresColumn.SCORE_FIELD;
@@ -787,13 +788,13 @@ public final class ResultSetAdapters {
         final var name = name( rs );
         final var entityTypeId = entityTypeId( rs );
         final var title = title( rs );
-        final var description = MoreObjects.firstNonNull( description( rs ) ,"" );
+        final var description = MoreObjects.firstNonNull( description( rs ), "" );
         final var contacts = contacts( rs );
-        final var linkedEntitySets =  linkedEntitySets( rs ) ;
+        final var linkedEntitySets = linkedEntitySets( rs );
         final var organization = rs.getObject( ORGANIZATION_ID_FIELD, UUID.class );
         final var flags = entitySetFlags( rs );
         final var partitions = partitions( rs );
-        final var partitionVersion = partitionVersions(rs );
+        final var partitionVersion = partitionVersions( rs );
         return new EntitySet( id,
                 entityTypeId,
                 name,
@@ -803,11 +804,11 @@ public final class ResultSetAdapters {
                 linkedEntitySets,
                 organization,
                 flags,
-                new LinkedHashSet<>( Arrays.asList( partitions ) ) ,
-                partitionVersion);
+                new LinkedHashSet<>( Arrays.asList( partitions ) ),
+                partitionVersion );
     }
 
-    public static int partitionVersions( ResultSet rs) throws SQLException {
+    public static int partitionVersions( ResultSet rs ) throws SQLException {
         return rs.getInt( PARTITIONS_VERSION_FIELD );
     }
 

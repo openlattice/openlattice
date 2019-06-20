@@ -21,9 +21,9 @@ import java.util.*
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 class PostgresEntityDataQueryService2(
-        val hds: HikariDataSource,
-        val byteBlobDataManager: ByteBlobDataManager,
-        val partitionManager: PartitionManager
+        private val hds: HikariDataSource,
+        private val byteBlobDataManager: ByteBlobDataManager,
+        private val partitionManager: PartitionManager
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(PostgresEntityDataQueryService2::class.java)
@@ -31,17 +31,24 @@ class PostgresEntityDataQueryService2(
 
 
     /**
-     * This function assumes no upstream parallelization as it will parallelize writes automatically.
+     * Updates or insert entities.
+     * @param entitySetId The entity set id for which to insert entities for.
+     * @param entities The entites to update or insert.
+     * @param authorizedPropertyTypes The authorized property types for the insertion.
+     * @param awsPassthrough True if the data will be stored directly in AWS via another means and all that is being
+     * provided is the s3 prefix and key.
+     *
+     * @return A write event summarizing the results of performing this operation.
      */
     fun upsertEntities(
             entitySetId: UUID,
-            partitions: List<Int>,
             entities: Map<UUID, Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>,
             awsPassthrough: Boolean
     ): WriteEvent {
         val version = System.currentTimeMillis()
-
+        val partitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
+        val partitions = partitionsInfo.partitions.toList()
         //Update the versions of all entities.
         val (updatedEntityCount, updatedPropertyCounts) = hds.connection.use { connection ->
             connection.autoCommit = false
@@ -144,6 +151,7 @@ class PostgresEntityDataQueryService2(
                         upsertPropertyValue.setObject(6, version)
                         upsertPropertyValue.setObject(7, versionsArrays)
                         upsertPropertyValue.setObject(8, insertValue)
+                        upsertPropertyValue.setObject(9, partitionsInfo.partitionsVersion)
                         upsertPropertyValue.addBatch()
                     }
                 }
@@ -235,11 +243,12 @@ class PostgresEntityDataQueryService2(
      * @param entityKeyIds The entity key ids for which to tombstone entries.
      * @param partitionsInfo Contains the partition info for
      */
-    private fun tombstone(conn: Connection,
-                          entitySetId: UUID,
-                          entityKeyIds: Set<UUID>,
-                          partitionsInfo: PartitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
-                          ): WriteEvent {
+    private fun tombstone(
+            conn: Connection,
+            entitySetId: UUID,
+            entityKeyIds: Set<UUID>,
+            partitionsInfo: PartitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
+    ): WriteEvent {
         val tombstoneVersion = -System.currentTimeMillis()
         val entityKeyIdsArr = PostgresArrays.createUuidArray(conn, entityKeyIds)
         val partitionsArr = PostgresArrays.createIntArray(conn, partitionsInfo.partitions)

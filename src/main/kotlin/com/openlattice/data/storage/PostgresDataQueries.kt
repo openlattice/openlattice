@@ -1,13 +1,14 @@
 package com.openlattice.data.storage
 
 
-import com.openlattice.edm.PostgresEdmTypeConverter
 import com.openlattice.edm.type.PropertyType
-import com.openlattice.postgres.*
+import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.PostgresColumn.*
+import com.openlattice.postgres.PostgresDataTables
+import com.openlattice.postgres.PostgresDataTables.Companion.getColumnDefinition
+import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.PostgresTable.DATA
-import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import java.util.*
 
 /**
@@ -44,7 +45,7 @@ internal val upsertEntitiesSql = "UPDATE ${PostgresTable.ENTITY_KEY_IDS.name} SE
  * 3. partition
  */
 internal val lockEntitiesSql = "SELECT 1 FROM ${PostgresTable.ENTITY_KEY_IDS.name} " +
-        "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?) AND $PARTITION = ANY(?) " +
+        "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?) AND $PARTITION = ANY(?) AND ${PARTITIONS_VERSION.name} = ? " +
         "FOR UPDATE"
 
 
@@ -59,6 +60,7 @@ fun upsertEntities(entitySetId: UUID, idsClause: String, version: Long): String 
  * Prepared statement for that upserts a version for all entities in a given entity set in [PostgresTable.ENTITY_KEY_IDS]
  *
  * The following bind order is expected:
+ *
  * 1. version
  * 2. version
  * 3. version
@@ -73,6 +75,7 @@ internal val updateVersionsForEntitySet = "UPDATE ${PostgresTable.ENTITY_KEY_IDS
  * Prepared statement for that upserts a version for all properties in a given entity set in [PostgresTable.DATA]
  *
  * The following bind order is expected:
+ *
  * 1. version
  * 2. version
  * 3. version
@@ -88,13 +91,14 @@ internal val updateVersionsForPropertiesInEntitySet = "UPDATE ${DATA.name} SET v
  * Prepared statement for that upserts a version for all entities in a given entity set in [PostgresTable.ENTITY_KEY_IDS]
  *
  * The following bind order is expected:
+ *
  * 1. version
  * 2. version
  * 3. version
  * 4. entity set id
  * 5. entity key ids
  * 6. partition
- * 7. partition
+ * 7. partition version
  */
 internal val updateVersionsForEntitiesInEntitySet = "$updateVersionsForEntitySet AND ${ID_VALUE.name} = ANY(?) " +
         "AND ${PARTITION.name} = ANY(?) AND ${PARTITIONS_VERSION.name} = ?"
@@ -103,6 +107,7 @@ internal val updateVersionsForEntitiesInEntitySet = "$updateVersionsForEntitySet
  * Prepared statement for that upserts a version for all properties in a given entity set in [PostgresTable.DATA]
  *
  * The following bind order is expected:
+ *
  * 1. version
  * 2. version
  * 3. version
@@ -115,26 +120,30 @@ internal val updateVersionsForPropertyTypesInEntitySet = "$updateVersionsForProp
  * Prepared statement for that upserts a version for all properties in a given entity set in [PostgresTable.DATA]
  *
  * The following bind order is expected:
+ *
  * 1. version
  * 2. version
  * 3. version
  * 4. entity set id
  * 5. entity key ids
  * 6. partition
+ * 7. partition version
  */
 internal val updateVersionsForPropertiesInEntitiesInEntitySet = "$updateVersionsForPropertiesInEntitySet AND ${ID_VALUE.name} = ANY(?) " +
-        "AND PARTITION = ANY(?)"
+        "AND PARTITION = ANY(?) AND ${PARTITIONS_VERSION.name} = ? "
 /**
  * Prepared statement for that upserts a version for all properties in a given entity set in [PostgresTable.DATA]
  *
  * The following bind order is expected:
+ *
  * 1. version
  * 2. version
  * 3. version
  * 4. entity set id
  * 5. entity key ids
  * 6. partition
- * 7. property type ids
+ * 7. partition version
+ * 8. property type ids
  */
 internal val updateVersionsForPropertyTypesInEntitiesInEntitySet = "$updateVersionsForPropertiesInEntitiesInEntitySet AND ${PROPERTY_TYPE_ID.name} = ANY(?)"
 
@@ -165,24 +174,22 @@ fun getPartitionsInfo(entityKeyIds: Set<UUID>, partitions: List<Int>): List<Int>
  *
  * @return A map of entity key ids to partitions.
  */
-fun getPartitionsInfoMap(entityKeyIds: Set<UUID>, partitions: List<Int>): Map<UUID,Int> {
+fun getPartitionsInfoMap(entityKeyIds: Set<UUID>, partitions: List<Int>): Map<UUID, Int> {
     return entityKeyIds.associateWith { entityKeyId -> getPartition(entityKeyId, partitions) }
 }
 
 /**
  * This function generates preparable sql with the following bind order:
+ *
  * 1.  ENTITY_SET_ID
  * 2.  ID_VALUE
  * 3.  PARTITION
  * 4.  PROPERTY_TYPE_ID
  * 5.  HASH
- * 6.  LAST_WRITE
- * 7.  LAST_PROPAGATE,
- * 8.  LAST_MIGRATE,
- * 9.  VERSION,
- * 10. VERSIONS
- * 11. PARTITIONS_VERSION
- * 12. Value Column
+ * 6.  VERSION,
+ * 7.  VERSIONS
+ * 8.  PARTITIONS_VERSION
+ * 9. Value Column
  */
 fun upsertPropertyValueSql(propertyType: PropertyType): String {
     val insertColumn = getColumnDefinition(propertyType.postgresIndexType, propertyType.datatype)
@@ -192,7 +199,7 @@ fun upsertPropertyValueSql(propertyType: PropertyType): String {
             PARTITION,
             PROPERTY_TYPE_ID,
             HASH,
-            LAST_WRITE,
+            LAST_WRITE,  // Will get set to now()
             VERSION,
             VERSIONS,
             PARTITIONS_VERSION
@@ -206,11 +213,4 @@ fun upsertPropertyValueSql(propertyType: PropertyType): String {
             "ELSE ${DATA.name}.${VERSION.name} END"
 }
 
-fun getColumnDefinition(indexType: IndexType, edmType: EdmPrimitiveTypeKind): PostgresColumnDefinition {
-    return when (indexType) {
-        IndexType.BTREE -> PostgresDataTables.btreeIndexedValueColumn(PostgresEdmTypeConverter.map(edmType))
-        IndexType.GIN -> PostgresDataTables.ginIndexedValueColumn(PostgresEdmTypeConverter.map(edmType))
-        IndexType.NONE -> PostgresDataTables.nonIndexedValueColumn(PostgresEdmTypeConverter.map(edmType))
-        else -> throw IllegalArgumentException("HASH indexes are not yet supported by openlattice.")
-    }
-}
+

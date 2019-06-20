@@ -1,5 +1,7 @@
 package com.openlattice.postgres
 
+import com.google.common.cache.CacheBuilder
+import com.google.common.cache.CacheLoader
 import com.openlattice.edm.PostgresEdmTypeConverter
 import com.openlattice.postgres.DataTables.*
 import com.openlattice.postgres.PostgresColumn.*
@@ -48,7 +50,31 @@ class PostgresDataTables {
                 VERSIONS,
                 PARTITIONS_VERSION
         )
-        val dataTableColumns =  dataTableMetadataColumns + btreeIndexedColumns + ginIndexedColumns + nonIndexedColumns
+        val dataTableColumns = dataTableMetadataColumns + btreeIndexedColumns + ginIndexedColumns + nonIndexedColumns
+
+        val columnDefinitionCache = CacheBuilder.newBuilder().build(
+                object : CacheLoader<Pair<IndexType, EdmPrimitiveTypeKind>, PostgresColumnDefinition>() {
+                    override fun load (key: Pair<IndexType, EdmPrimitiveTypeKind>): PostgresColumnDefinition {
+                        return buildColumnDefinition(key)
+                    }
+
+                    override fun loadAll(
+                            keys: MutableIterable<Pair<IndexType, EdmPrimitiveTypeKind>>
+                    ): MutableMap<Pair<IndexType, EdmPrimitiveTypeKind>, PostgresColumnDefinition> {
+                        return keys.associateWith { buildColumnDefinition(it) }.toMutableMap()
+                    }
+
+                    private fun buildColumnDefinition( key: Pair<IndexType,EdmPrimitiveTypeKind>) : PostgresColumnDefinition {
+                        val (indexType, edmType) = key
+                        return when (indexType) {
+                            IndexType.BTREE -> PostgresDataTables.btreeIndexedValueColumn(PostgresEdmTypeConverter.map(edmType))
+                            IndexType.GIN -> PostgresDataTables.ginIndexedValueColumn(PostgresEdmTypeConverter.map(edmType))
+                            IndexType.NONE -> PostgresDataTables.nonIndexedValueColumn(PostgresEdmTypeConverter.map(edmType))
+                            else -> throw IllegalArgumentException("HASH indexes are not yet supported by openlattice.")
+                        }
+                    }
+                }
+        )
 
         @JvmStatic
         fun buildDataTableDefinition(): PostgresTableDefinition {
@@ -103,6 +129,18 @@ class PostgresDataTables {
         @JvmStatic
         fun btreeIndexedValueColumn(datatype: PostgresDatatype): PostgresColumnDefinition {
             return PostgresColumnDefinition("b_${datatype.name}", datatype)
+        }
+
+        /**
+         * Utility function for retrieving the column definition for the data table.
+         * @param indexType The index type for the column
+         * @param edmType The [EdmPrimitiveTypeKind] of the column.
+         *
+         * @return The postgres column definition for the column time.
+         */
+        @JvmStatic
+        fun getColumnDefinition(indexType: IndexType, edmType: EdmPrimitiveTypeKind): PostgresColumnDefinition {
+            return columnDefinitionCache[indexType to edmType]
         }
     }
 
