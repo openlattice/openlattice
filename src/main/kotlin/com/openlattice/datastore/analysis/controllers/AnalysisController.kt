@@ -175,14 +175,12 @@ class AnalysisController : AnalysisApi, AuthorizingComponent {
             val authorizedEntitySetPropertyTypes =
                     edm.getPropertyTypesAsMap(edm.getEntityType(filteredRanking.neighborTypeId).properties)
             val authorizedAssociations =
-                    edm.getEntitySetsOfType(filteredRanking.associationTypeId)
-                            .map(EntitySet::getId)
+                    edm.getEntitySetIdsOfType(filteredRanking.associationTypeId)
                             .filter { entitySetIsAuthorized(it) }
                             .map { accessCheckAndReturnAuthorizedPropetyTypes(filteredRanking.associationFilters, it) }
                             .toMap()
             val authorizedNeighbors =
-                    edm.getEntitySetsOfType(filteredRanking.neighborTypeId)
-                            .map(EntitySet::getId)
+                    edm.getEntitySetIdsOfType(filteredRanking.neighborTypeId)
                             .filter { entitySetIsAuthorized(it) }
                             .map { accessCheckAndReturnAuthorizedPropetyTypes(filteredRanking.neighborFilters, it) }
                             .toMap()
