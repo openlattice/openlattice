@@ -206,7 +206,6 @@ public final class PostgresTable {
             new CitusDistributedTableDefinition( "edges" )
                     .addColumns(
                             PARTITION,
-                            ID_VALUE,
                             SRC_ENTITY_SET_ID,
                             SRC_ENTITY_KEY_ID,
                             DST_ENTITY_SET_ID,
