@@ -94,9 +94,10 @@ internal val updateVersionsForPropertiesInEntitySet = "UPDATE ${DATA.name} SET v
  * 4. entity set id
  * 5. entity key ids
  * 6. partition
+ * 7. partition
  */
 internal val updateVersionsForEntitiesInEntitySet = "$updateVersionsForEntitySet AND ${ID_VALUE.name} = ANY(?) " +
-        "AND PARTITION = ANY(?)"
+        "AND ${PARTITION.name} = ANY(?) AND ${PARTITIONS_VERSION.name} = ?"
 
 /**
  * Prepared statement for that upserts a version for all properties in a given entity set in [PostgresTable.DATA]
