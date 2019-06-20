@@ -95,6 +95,7 @@ import static com.openlattice.postgres.PostgresColumn.NULLABLE_TITLE;
 import static com.openlattice.postgres.PostgresColumn.ORGANIZATION_ID;
 import static com.openlattice.postgres.PostgresColumn.PARTITION;
 import static com.openlattice.postgres.PostgresColumn.PARTITIONS;
+import static com.openlattice.postgres.PostgresColumn.PARTITIONS_VERSION;
 import static com.openlattice.postgres.PostgresColumn.PARTITION_INDEX;
 import static com.openlattice.postgres.PostgresColumn.PHONE_NUMBER;
 import static com.openlattice.postgres.PostgresColumn.PII;
@@ -230,7 +231,9 @@ public final class PostgresTable {
                             CONTACTS,
                             PostgresColumn.LINKED_ENTITY_SETS,
                             ORGANIZATION_ID,
-                            ENTITY_SET_FLAGS );
+                            ENTITY_SET_FLAGS,
+                            PARTITION,
+                            PARTITIONS_VERSION);
     public static final PostgresTableDefinition        ENTITY_SET_PROPERTY_METADATA =
             new PostgresTableDefinition( "entity_set_property_metadata" )
                     .addColumns( ENTITY_SET_ID, PROPERTY_TYPE_ID, TITLE, DESCRIPTION, TAGS, SHOW )

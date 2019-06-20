@@ -58,7 +58,7 @@ public class EntitySetMapstore extends AbstractBasePostgresMapstore<UUID, Entity
         ps.setObject( 18, value.getOrganizationId() );
         ps.setArray( 19, flags );
         ps.setArray( 20, partitions );
-        ps.setInt( 11, value.getPartitionsVersion() );
+        ps.setInt( 21, value.getPartitionsVersion() );
     }
 
     @Override protected int bind( PreparedStatement ps, UUID key, int parameterIndex ) throws SQLException {

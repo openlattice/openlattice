@@ -138,7 +138,7 @@ public class DataTables {
                 .name( quote( idxPrefix + "_entity_set_id_idx" ) )
                 .ifNotExists();
 
-        PostgresIndexDefinition versionIndex = new PostgresColumnsIndexDefinition( ptd, LAST_WRITE )
+        PostgresIndexDefinition versionIndex = new PostgresColumnsIndexDefinition( ptd, VERSION )
                 .name( quote( idxPrefix + "_version_idx" ) )
                 .ifNotExists()
                 .desc();

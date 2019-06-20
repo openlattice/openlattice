@@ -5,6 +5,7 @@ import com.google.common.cache.CacheLoader
 import com.openlattice.edm.PostgresEdmTypeConverter
 import com.openlattice.postgres.DataTables.*
 import com.openlattice.postgres.PostgresColumn.*
+import com.openlattice.postgres.PostgresTable.DATA
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 
 /**
@@ -101,6 +102,23 @@ class PostgresDataTables {
                     *ginIndexedColumns.map { buildGinIndexDefinition(tableDefinition, it) }.toTypedArray()
             )
 
+            val prefix = DATA.name
+
+            val entitySetIdIndex = PostgresColumnsIndexDefinition(tableDefinition, ENTITY_SET_ID)
+                    .name(quote(prefix + "_entity_set_id_idx"))
+                    .ifNotExists()
+
+            val versionIndex = PostgresColumnsIndexDefinition(tableDefinition, VERSION)
+                    .name(quote(prefix + "_version_idx"))
+                    .ifNotExists()
+                    .desc()
+
+            val lastWriteIndex = PostgresColumnsIndexDefinition(tableDefinition, LAST_WRITE)
+                    .name(quote(prefix + "_last_write_idx"))
+                    .ifNotExists()
+                    .desc()
+
+            tableDefinition.addIndexes(entitySetIdIndex, versionIndex, lastWriteIndex            )
             return tableDefinition
         }
 
