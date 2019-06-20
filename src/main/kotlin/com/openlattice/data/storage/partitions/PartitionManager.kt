@@ -122,7 +122,7 @@ class PartitionManager @JvmOverloads constructor(
      * Allocates default partitions for an organization based on emptiest partitions.
      */
     fun allocateDefaultPartitions(organizationId: UUID, partitionCount: Int) {
-        setDefaultPartitions(organizationId, getEmptiestPartitions(partitionCount).map { it.first })
+        setDefaultPartitions(organizationId, allocateDefaultPartitions(partitionCount))
     }
 
     fun repartition(organizationId: UUID) {
@@ -151,6 +151,10 @@ class PartitionManager @JvmOverloads constructor(
                 PreparedStatementHolderSupplier(hds, ALL_PARTITIONS) { ps ->
                     ps.setArray(1, PostgresArrays.createIntArray(ps.connection, partitionList))
                 }) { it.getInt(PARTITION.name) to it.getLong(COUNT) }.toMap()
+    }
+
+    fun allocateDefaultPartitions(partitionCount: Int): List<Int> {
+        return getEmptiestPartitions(partitionCount).map { it.first }
     }
 
     private fun getEmptiestPartitions(desiredPartitions: Int): BasePostgresIterable<Pair<Int, Long>> {

@@ -491,6 +491,9 @@ public class HazelcastOrganizationService {
         return Util.getSafely( partitions, organizationId );
     }
 
+    public List<Integer> allocateDefaultPartitions( int partitionCount ) {
+        return partitionManager.allocateDefaultPartitions( partitionCount );
+    }
     public int getNumberOfPartitions() {
         return partitionManager.getPartitionCount();
     }

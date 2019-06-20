@@ -52,7 +52,8 @@ class OrganizationsInitializationTask() : HazelcastInitializationTask<Organizati
         val organizationService = dependencies.organizationService
         val globalOrg = organizationService.maybeGetOrganization(GLOBAL_ORG_PRINCIPAL)
         val olOrg = organizationService.maybeGetOrganization(OPENLATTICE_ORG_PRINCIPAL)
-        organizationService.
+        val defaultPartitions = organizationService.allocateDefaultPartitions(organizationService.numberOfPartitions)
+
         if (globalOrg.isPresent) {
             logger.info(
                     "Expected id = {}, Actual id = {}",
@@ -61,9 +62,11 @@ class OrganizationsInitializationTask() : HazelcastInitializationTask<Organizati
             )
             checkState(GLOBAL_ORGANIZATION_ID == globalOrg.get().id)
         } else {
+            val globalOrg = createGlobalOrg()
+            globalOrg.partitions = defaultPartitions
             organizationService.createOrganization(
-                    GLOBAL_ADMIN_ROLE.getPrincipal(),
-                    createGlobalOrg()
+                    GLOBAL_ADMIN_ROLE.principal,
+                    globalOrg
             )
         }
 
@@ -75,8 +78,10 @@ class OrganizationsInitializationTask() : HazelcastInitializationTask<Organizati
             )
             checkState(OPENLATTICE_ORGANIZATION_ID == olOrg.get().id)
         } else {
+            val openlatticeOrg = createOpenLatticeOrg()
+            openlatticeOrg.partitions = defaultPartitions
             organizationService.createOrganization(
-                    OPENLATTICE_ROLE.getPrincipal(),
+                    OPENLATTICE_ROLE.principal,
                     createOpenLatticeOrg()
             )
         }
