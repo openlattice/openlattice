@@ -93,6 +93,7 @@ public class MetadataUpdate {
         this.propertyTags = propertyTags;
         this.indexType = indexType;
         this.organizationId = organizationId;
+        this.partitions = partitions;
     }
 
     public MetadataUpdate(
