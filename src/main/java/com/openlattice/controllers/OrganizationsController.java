@@ -265,10 +265,27 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             produces = MediaType.APPLICATION_JSON_VALUE )
     public Map<UUID, Set<OrganizationEntitySetFlag>> assembleEntitySets(
             @PathVariable( ID ) UUID organizationId,
-            @RequestBody Set<UUID> entitySetIds ) {
+            @RequestBody Map<UUID, Integer> refreshRatesOfEntitySets ) {
         final var authorizedPropertyTypesByEntitySet =
-                getAuthorizedPropertiesForMaterialization( organizationId, entitySetIds );
-        return assembler.materializeEntitySets( organizationId, authorizedPropertyTypesByEntitySet );
+                getAuthorizedPropertiesForMaterialization( organizationId, refreshRatesOfEntitySets.keySet() );
+
+        // convert mins to millisecs
+        final Map<UUID, Long> refreshRatesInMilliSecsOfEntitySets = new HashMap<>( refreshRatesOfEntitySets.size() );
+        refreshRatesOfEntitySets.forEach(
+                ( entitySetId, refreshRateInMins ) -> {
+                    Long value = null;
+                    if ( refreshRateInMins != null ) {
+                        value = getRefreshRateMillisFromMins( refreshRateInMins );
+                    }
+
+                    refreshRatesInMilliSecsOfEntitySets.put( entitySetId, value );
+                }
+        );
+
+        return assembler.materializeEntitySets(
+                organizationId,
+                authorizedPropertyTypesByEntitySet,
+                refreshRatesInMilliSecsOfEntitySets );
     }
 
     @Timed
@@ -306,6 +323,29 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         return null;
     }
 
+    @Override
+    @PutMapping( ID_PATH + SET_ID_PATH + REFRESH_RATE )
+    public Void updateRefreshRate(
+            @PathVariable( ID ) UUID organizationId,
+            @PathVariable( SET_ID ) UUID entitySetId,
+            @RequestBody Integer refreshRate ) {
+        ensureOwner( organizationId );
+
+        final var refreshRateInMilliSecs = getRefreshRateMillisFromMins( refreshRate );
+
+        assembler.updateRefreshRate( organizationId, entitySetId, refreshRateInMilliSecs );
+        return null;
+    }
+
+    @Override
+    @DeleteMapping( ID_PATH + SET_ID_PATH + REFRESH_RATE )
+    public Void deleteRefreshRate( @PathVariable( ID ) UUID organizationId, @PathVariable( SET_ID ) UUID entitySetId ) {
+        ensureOwner( organizationId );
+
+        assembler.updateRefreshRate( organizationId, entitySetId, null );
+        return null;
+    }
+
     private Map<UUID, Map<UUID, PropertyType>> getAuthorizedPropertiesForMaterialization(
             UUID organizationId,
             Set<UUID> entitySetIds ) {
@@ -337,6 +377,15 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         // check materialization on normal entity sets and get the intersection of their authorized property types
         return authzHelper.getAuthorizedPropertiesOnEntitySets(
                 entitySetIds, EnumSet.of( Permission.MATERIALIZE ), Set.of( organizationPrincipal.getPrincipal() ) );
+    }
+
+    private Long getRefreshRateMillisFromMins( Integer refreshRateInMins ) {
+        if ( refreshRateInMins < 1 ) {
+            throw new IllegalArgumentException( "Minimum refresh rate is 1 minute." );
+        }
+
+        // convert mins to millisecs
+        return refreshRateInMins.longValue() * 3600L;
     }
 
     @Timed
@@ -618,13 +667,11 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         return aclKey;
     }
 
-    private AclKey ensureRead( UUID organizationId ) {
-        AclKey aclKey = new AclKey( organizationId );
-        accessCheck( aclKey, EnumSet.of( Permission.READ ) );
-        return aclKey;
+    private void ensureRead( UUID organizationId ) {
+        ensureReadAccess( new AclKey( organizationId ) );
     }
 
-    private AclKey ensureMaterialize( UUID entitySetId, OrganizationPrincipal principal ) {
+    private void ensureMaterialize( UUID entitySetId, OrganizationPrincipal principal ) {
         AclKey aclKey = new AclKey( entitySetId );
 
         if ( !getAuthorizationManager().checkIfHasPermissions(
@@ -634,8 +681,6 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             throw new ForbiddenException( "EntitySet " + aclKey.toString() + " is not accessible by organization " +
                     "principal " + principal.getPrincipal().getId() + " ." );
         }
-
-        return aclKey;
     }
 
 }
