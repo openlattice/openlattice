@@ -103,7 +103,7 @@ class PostgresDataTables {
                     *ginIndexedColumns.map { buildGinIndexDefinition(tableDefinition, it) }.toTypedArray()
             )
 
-            val prefix = "data"
+            val prefix = tableDefinition.name
 
             val entitySetIdIndex = PostgresColumnsIndexDefinition(tableDefinition, ENTITY_SET_ID)
                     .name(quote(prefix + "_entity_set_id_idx"))
