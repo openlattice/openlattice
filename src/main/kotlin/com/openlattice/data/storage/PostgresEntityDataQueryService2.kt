@@ -2,6 +2,8 @@ package com.openlattice.data.storage
 
 import com.google.common.collect.Multimaps
 import com.openlattice.data.WriteEvent
+import com.openlattice.data.storage.partitions.PartitionManager
+import com.openlattice.data.storage.partitions.PartitionsInfo
 import com.openlattice.data.util.PostgresDataHasher
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.JsonDeserializer
@@ -20,7 +22,8 @@ import java.util.*
  */
 class PostgresEntityDataQueryService2(
         val hds: HikariDataSource,
-        val byteBlobDataManager: ByteBlobDataManager
+        val byteBlobDataManager: ByteBlobDataManager,
+        val partitionManager: PartitionManager
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(PostgresEntityDataQueryService2::class.java)
@@ -230,12 +233,17 @@ class PostgresEntityDataQueryService2(
      * @param conn A valid JDBC connection, ideally with autocommit disabled.
      * @param entitySetId The entity set id for which to tombstone entries.
      * @param entityKeyIds The entity key ids for which to tombstone entries.
-     *
+     * @param partitionsInfo Contains the partition info for
      */
-    private fun tombstone(conn: Connection, entitySetId: UUID, entityKeyIds: Set<UUID>): WriteEvent {
+    private fun tombstone(conn: Connection,
+                          entitySetId: UUID,
+                          entityKeyIds: Set<UUID>,
+                          partitionsInfo: PartitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
+                          ): WriteEvent {
         val tombstoneVersion = -System.currentTimeMillis()
         val entityKeyIdsArr = PostgresArrays.createUuidArray(conn, entityKeyIds)
-        val partitionsArr = PostgresArrays.createIntArray(conn, g   etPartition())
+        val partitionsArr = PostgresArrays.createIntArray(conn, getPartition())
+
         val numUpdated = conn.prepareStatement(updateVersionsForEntitiesInEntitySet).use { ps ->
             ps.setObject(1, tombstoneVersion)
             ps.setObject(2, tombstoneVersion)

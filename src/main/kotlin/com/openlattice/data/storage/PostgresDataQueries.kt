@@ -138,13 +138,34 @@ internal val updateVersionsForPropertiesInEntitiesInEntitySet = "$updateVersions
 internal val updateVersionsForPropertyTypesInEntitiesInEntitySet = "$updateVersionsForPropertiesInEntitiesInEntitySet AND ${PROPERTY_TYPE_ID.name} = ANY(?)"
 
 
-
 fun partitionSelectorFromId(entityKeyId: UUID): Int {
     return entityKeyId.leastSignificantBits.toInt()
 }
 
 fun getPartition(entityKeyId: UUID, partitions: List<Int>): Int {
     return partitions[partitionSelectorFromId(entityKeyId) % partitions.size]
+}
+
+/**
+ * Builds the list of partitions for a given set of entity key ids.
+ * @param entityKeyIds The entity key ids whose partitions will be retrieved.
+ * @param partitions The partitions to select from.
+ * @return A list of partitions.
+ */
+fun getPartitionsInfo(entityKeyIds: Set<UUID>, partitions: List<Int>): List<Int> {
+    return entityKeyIds.map { entityKeyId -> getPartition(entityKeyId, partitions) }
+}
+
+/**
+ * Builds a mapping of entity key id to partition.
+ *
+ * @param entityKeyIds The entity key ids whose partitions will be retrieved.
+ * @param partitions The partitions to select from.
+ *
+ * @return A map of entity key ids to partitions.
+ */
+fun getPartitionsInfoMap(entityKeyIds: Set<UUID>, partitions: List<Int>): Map<UUID,Int> {
+    return entityKeyIds.associateWith { entityKeyId -> getPartition(entityKeyId, partitions) }
 }
 
 /**
@@ -159,11 +180,12 @@ fun getPartition(entityKeyId: UUID, partitions: List<Int>): Int {
  * 8.  LAST_MIGRATE,
  * 9.  VERSION,
  * 10. VERSIONS
- * 11. Value Column
+ * 11. PARTITIONS_VERSION
+ * 12. Value Column
  */
 fun upsertPropertyValueSql(propertyType: PropertyType): String {
     val insertColumn = getColumnDefinition(propertyType.postgresIndexType, propertyType.datatype)
-    val metadataColumns = listOf(
+    val metadataColumnsSql = listOf(
             ENTITY_SET_ID,
             ID_VALUE,
             PARTITION,
@@ -171,12 +193,14 @@ fun upsertPropertyValueSql(propertyType: PropertyType): String {
             HASH,
             LAST_WRITE,
             VERSION,
-            VERSIONS
-    )
-    return "INSERT INTO ${DATA.name} ($dataMetadataColumnsSql,${insertColumn.name}) VALUES (?,?,?,?,?,now(),?,?,?) " +
+            VERSIONS,
+            PARTITIONS_VERSION
+    ).joinToString(",")
+    return "INSERT INTO ${DATA.name} ($metadataColumnsSql,${insertColumn.name}) VALUES (?,?,?,?,?,now(),?,?,?,?) " +
             "ON CONFLICT (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${HASH.name}) DO UPDATE " +
             "SET ${VERSIONS.name} = ${DATA.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
             "${LAST_WRITE.name} = GREATEST(${LAST_WRITE.name},EXCLUDED.${LAST_WRITE.name}), " +
+            "${PARTITIONS_VERSION.name} = EXCLUDED.${PARTITIONS_VERSION.name}, " +
             "${VERSION.name} = CASE WHEN abs(${DATA.name}.${VERSION.name}) < EXCLUDED.${VERSION.name} THEN EXCLUDED.${VERSION.name} " +
             "ELSE ${DATA.name}.${VERSION.name} END"
 }
