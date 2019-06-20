@@ -48,9 +48,8 @@ class InitializeOrganizationAssemblyProcessor : AbstractRhizomeEntryProcessor<UU
                 logger.error("Assembly for organization id {} was not initialized properly.")
             }
             assembly.initialized -> logger.info(
-                    "The database with name {} for organization {} has already been initialized",
-                    organizationId,
-                    assembly.dbname
+                    "The database for organization {} has already been initialized",
+                    organizationId
             )
             else -> {
                 acm?.createOrganizationDatabase(organizationId) ?: throw IllegalStateException(NOT_INITIALIZED)

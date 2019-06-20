@@ -104,7 +104,7 @@ class EntityQueryExecutingVisitor(
 
         val entitySetIds = query.entitySetId
                 .map { setOf(it) }
-                .orElse(edm.getEntitySetsOfType(query.entityTypeId).map { it.id }.toSet())
+                .orElse(edm.getEntitySetIdsOfType(query.entityTypeId).toSet())
                 .filter { isAuthorized(requiredPermissions).test(AclKey(it)) }.toMutableSet()
 
         if (entitySetIds.isEmpty()) {

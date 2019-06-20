@@ -666,10 +666,7 @@ class PostgresGraphQueryService(
     ): MutableMap<UUID, MutableSet<UUID>> {
         return maybeEntityTypeIds.map { entityTypeIds ->
             entityTypeIds.associateWith { entityTypeId ->
-                edm
-                        .getEntitySetsOfType(entityTypeId)
-                        .map(EntitySet::getId)
-                        .toMutableSet()
+                edm.getEntitySetIdsOfType(entityTypeId).toMutableSet()
             }.toMutableMap()
         }.orElse(mutableMapOf())
     }

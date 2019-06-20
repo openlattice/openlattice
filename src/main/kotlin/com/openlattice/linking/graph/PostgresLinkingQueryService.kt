@@ -381,7 +381,7 @@ private val UPDATE_LINKED_ENTITIES_SQL = "UPDATE ${ENTITY_KEY_IDS.name} " +
 
 private val ENTITY_KEY_IDS_NEEDING_LINKING = "SELECT ${ENTITY_SET_ID.name},${ID.name} " +
         "FROM ${ENTITY_KEY_IDS.name} " +
-        "WHERE ${ENTITY_SET_ID.name} = ANY(?) AND ${LAST_LINK.name} < ${LAST_WRITE.name} AND ( ${LAST_INDEX.name} >= ${LAST_WRITE.name}) " +
+        "WHERE ${ENTITY_SET_ID.name} = ANY(?) AND ${LAST_LINK.name} < ${LAST_WRITE.name} AND ( ${LAST_INDEX.name} >= ${LAST_WRITE.name}) AND ( ${LAST_INDEX.name} > '-infinity'::timestamptz) " +
         "AND ${VERSION.name} > 0 LIMIT ?"
 
 private val ENTITY_KEY_IDS_NOT_LINKED = "SELECT ${ENTITY_SET_ID.name},${ID.name} " +

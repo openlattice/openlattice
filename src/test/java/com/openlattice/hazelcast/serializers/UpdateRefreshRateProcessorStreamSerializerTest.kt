@@ -18,22 +18,23 @@
  *
  *
  */
+package com.openlattice.hazelcast.serializers
 
-package com.openlattice.assembler.processors
+import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest
+import com.openlattice.assembler.processors.UpdateRefreshRateProcessor
+import kotlin.random.Random
 
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
-import com.openlattice.assembler.AssemblerConnectionManager
-import com.openlattice.edm.EntitySet
-import java.util.*
-
-/**
- *
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
- */
-
-class ConfigureProductionEntitySetView : AbstractRhizomeEntryProcessor<UUID, EntitySet, Void?>() {
-    override fun process(entry: MutableMap.MutableEntry<UUID, EntitySet?>): Void? {
-        return null
+class UpdateRefreshRateProcessorStreamSerializerTest :
+        AbstractStreamSerializerTest<UpdateRefreshRateProcessorStreamSerializer, UpdateRefreshRateProcessor>() {
+    override fun createSerializer(): UpdateRefreshRateProcessorStreamSerializer {
+        return UpdateRefreshRateProcessorStreamSerializer()
     }
 
+    override fun createInput(): UpdateRefreshRateProcessor {
+        return if (Random.nextBoolean()) {
+            UpdateRefreshRateProcessor(Random.nextLong())
+        } else {
+            UpdateRefreshRateProcessor()
+        }
+    }
 }

@@ -48,7 +48,6 @@ import static com.openlattice.postgres.PostgresColumn.CONTACT_TYPE;
 import static com.openlattice.postgres.PostgresColumn.CREDENTIAL;
 import static com.openlattice.postgres.PostgresColumn.DATATYPE;
 import static com.openlattice.postgres.PostgresColumn.DATA_ID;
-import static com.openlattice.postgres.PostgresColumn.DB_NAME;
 import static com.openlattice.postgres.PostgresColumn.DESCRIPTION;
 import static com.openlattice.postgres.PostgresColumn.DST;
 import static com.openlattice.postgres.PostgresColumn.DST_ENTITY_KEY_ID;
@@ -79,6 +78,7 @@ import static com.openlattice.postgres.PostgresColumn.LAST_MIGRATE;
 import static com.openlattice.postgres.PostgresColumn.LAST_NOTIFIED;
 import static com.openlattice.postgres.PostgresColumn.LAST_PROPAGATE;
 import static com.openlattice.postgres.PostgresColumn.LAST_READ;
+import static com.openlattice.postgres.PostgresColumn.LAST_REFRESH;
 import static com.openlattice.postgres.PostgresColumn.LINKED;
 import static com.openlattice.postgres.PostgresColumn.LINKED_ENTITY_SETS;
 import static com.openlattice.postgres.PostgresColumn.LINKING_ID;
@@ -107,6 +107,7 @@ import static com.openlattice.postgres.PostgresColumn.PROPERTY_TYPE_ID;
 import static com.openlattice.postgres.PostgresColumn.QUERY;
 import static com.openlattice.postgres.PostgresColumn.QUERY_ID;
 import static com.openlattice.postgres.PostgresColumn.REASON;
+import static com.openlattice.postgres.PostgresColumn.REFRESH_RATE;
 import static com.openlattice.postgres.PostgresColumn.SCHEMAS;
 import static com.openlattice.postgres.PostgresColumn.SCORE;
 import static com.openlattice.postgres.PostgresColumn.SEARCH_CONSTRAINTS;
@@ -333,7 +334,11 @@ public final class PostgresTable {
                     .distributionColumn( LINKING_ID );
     public static final PostgresTableDefinition MATERIALIZED_ENTITY_SETS =
             new PostgresTableDefinition( "materialized_entity_sets" )
-                    .addColumns( ENTITY_SET_ID, ORGANIZATION_ID, ENTITY_SET_FLAGS )
+                    .addColumns( ENTITY_SET_ID,
+                            ORGANIZATION_ID,
+                            ENTITY_SET_FLAGS,
+                            REFRESH_RATE,
+                            LAST_REFRESH )
                     .primaryKey( ENTITY_SET_ID, ORGANIZATION_ID );
     public static final PostgresTableDefinition NAMES                    =
             new PostgresTableDefinition( "names" )
@@ -344,9 +349,10 @@ public final class PostgresTable {
                     .addColumns( ID, NULLABLE_TITLE, DESCRIPTION, ALLOWED_EMAIL_DOMAINS, MEMBERS, APP_IDS, PARTITIONS );
     public static final PostgresTableDefinition ORGANIZATION_ASSEMBLIES  =
             new PostgresTableDefinition( "organization_assemblies" )
-                    .addColumns( ORGANIZATION_ID, DB_NAME, INITIALIZED )
-                    .primaryKey( ORGANIZATION_ID )
-                    .setUnique( DB_NAME ); //We may have to delete for citus
+
+                    .addColumns( ORGANIZATION_ID, INITIALIZED )
+                    .primaryKey( ORGANIZATION_ID );
+
     public static final PostgresTableDefinition PERMISSIONS              =
             new PostgresTableDefinition( "permissions" )
                     .addColumns( ACL_KEY,
@@ -515,6 +521,7 @@ public final class PostgresTable {
                         ENTITY_SET_ID.getName()
                                 + ",(" + LAST_LINK.getName() + " < " + LAST_WRITE.getName() + ")"
                                 + ",(" + LAST_INDEX.getName() + " >= " + LAST_WRITE.getName() + ")"
+                                + ",(" + LAST_INDEX.getName() + " > '-infinity' )"
                                 + ",(" + VERSION.getName() + " > 0)" )
                         .name( "entity_key_ids_needing_linking_idx" )
                         .ifNotExists(),
@@ -591,6 +598,13 @@ public final class PostgresTable {
         MATERIALIZED_ENTITY_SETS.addIndexes(
                 new PostgresColumnsIndexDefinition( MATERIALIZED_ENTITY_SETS, ORGANIZATION_ID )
                         .name( "materialized_entity_sets_organization_id_idx" )
+                        .ifNotExists(),
+                new PostgresColumnsIndexDefinition( MATERIALIZED_ENTITY_SETS, ENTITY_SET_FLAGS )
+                        .name( "materialized_entity_sets_entity_set_flags_idx" )
+                        .method( IndexType.GIN )
+                        .ifNotExists(),
+                new PostgresColumnsIndexDefinition( MATERIALIZED_ENTITY_SETS, LAST_REFRESH )
+                        .name( "materialized_entity_sets_last_refresh_idx" )
                         .ifNotExists() );
     }
 
