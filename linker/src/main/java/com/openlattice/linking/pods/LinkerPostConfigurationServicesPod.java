@@ -64,9 +64,6 @@ public class LinkerPostConfigurationServicesPod {
     private HazelcastInstance hazelcastInstance;
 
     @Inject
-    private ConductorConfiguration conductorConfiguration;
-
-    @Inject
     private HikariDataSource hikariDataSource;
 
     @Inject
@@ -160,7 +157,7 @@ public class LinkerPostConfigurationServicesPod {
                 postgresLinkingFeedbackQueryService(),
                 edm.getEntityTypeUuids( lc.getEntityTypes() ),
                 linkingConfiguration() );
-                
+
     }
 
     @Bean
