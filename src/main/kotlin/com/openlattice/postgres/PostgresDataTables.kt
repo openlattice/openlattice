@@ -3,7 +3,8 @@ package com.openlattice.postgres
 import com.google.common.cache.CacheBuilder
 import com.google.common.cache.CacheLoader
 import com.openlattice.edm.PostgresEdmTypeConverter
-import com.openlattice.postgres.DataTables.*
+import com.openlattice.postgres.DataTables.LAST_WRITE
+import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.DATA
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
@@ -107,7 +108,10 @@ class PostgresDataTables {
             val entitySetIdIndex = PostgresColumnsIndexDefinition(tableDefinition, ENTITY_SET_ID)
                     .name(quote(prefix + "_entity_set_id_idx"))
                     .ifNotExists()
-
+            val idIndex = PostgresColumnsIndexDefinition(tableDefinition, ID_VALUE)
+                    .name(quote(prefix + "_id_idx"))
+                    .ifNotExists()
+                    .desc()
             val versionIndex = PostgresColumnsIndexDefinition(tableDefinition, VERSION)
                     .name(quote(prefix + "_version_idx"))
                     .ifNotExists()
@@ -117,8 +121,36 @@ class PostgresDataTables {
                     .name(quote(prefix + "_last_write_idx"))
                     .ifNotExists()
                     .desc()
+            val propertyTypeIdIndex = PostgresColumnsIndexDefinition(tableDefinition, PROPERTY_TYPE_ID)
+                    .name(quote(prefix + "_property_type_id_idx"))
+                    .ifNotExists()
+                    .desc()
+            val partitionsVersionIndex = PostgresColumnsIndexDefinition(tableDefinition, PARTITIONS_VERSION)
+                    .name(quote(prefix + "_partitions_version_id_idx"))
+                    .ifNotExists()
+                    .desc()
 
-            tableDefinition.addIndexes(entitySetIdIndex, versionIndex, lastWriteIndex            )
+            val currentPropertiesForEntitySetIndex = PostgresColumnsIndexDefinition(tableDefinition, ENTITY_SET_ID, VERSION)
+                    .name(quote(prefix + "entity_set_id_version_idx"))
+                    .ifNotExists()
+                    .desc()
+
+            val currentPropertiesForEntityIndex = PostgresColumnsIndexDefinition(tableDefinition, ID_VALUE, VERSION)
+                    .name(quote(prefix + "id_version_idx"))
+                    .ifNotExists()
+                    .desc()
+            
+            tableDefinition.addIndexes(
+                    idIndex,
+                    entitySetIdIndex,
+                    versionIndex,
+                    lastWriteIndex,
+                    propertyTypeIdIndex,
+                    partitionsVersionIndex,
+                    currentPropertiesForEntitySetIndex,
+                    currentPropertiesForEntityIndex
+            )
+
             return tableDefinition
         }
 
