@@ -160,8 +160,7 @@ public class DataManagerTest extends SetupEnvironment {
 
         Map<UUID, SetMultimap<UUID, Object>> secondEntities = generateData( 10, propertiesWithDataType, 1 );
         testWriteData( entitySetId, secondEntities, propertiesWithDataType );
-
-        edmApi
+        
         entitySetsApi.deleteEntitySet( entitySetId );
         //        dataService.deleteEntitySetData( entitySetId );
 
