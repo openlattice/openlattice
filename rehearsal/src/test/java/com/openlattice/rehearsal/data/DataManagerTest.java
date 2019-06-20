@@ -20,11 +20,14 @@
 
 package com.openlattice.rehearsal.data;
 
+import static com.google.common.collect.Maps.transformValues;
+
 import com.dataloom.mappers.ObjectMappers;
 import com.datastax.driver.core.utils.UUIDs;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
 import com.openlattice.conductor.rpc.Employee;
@@ -34,9 +37,13 @@ import com.openlattice.data.requests.EntitySetSelection;
 import com.openlattice.data.requests.FileType;
 import com.openlattice.edm.EdmApi;
 import com.openlattice.edm.type.PropertyType;
+import com.openlattice.entitysets.EntitySetsApi;
 import com.openlattice.rehearsal.SetupEnvironment;
-
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -65,10 +72,6 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Multimaps;
-import com.google.common.collect.SetMultimap;
-import static com.google.common.collect.Maps.transformValues; //added import statement
 
 //TODO: Make these tests useful.
 public class DataManagerTest extends SetupEnvironment {
@@ -80,9 +83,10 @@ public class DataManagerTest extends SetupEnvironment {
     private static final Random         random  = new Random();
     private static final SRID           srid    = SRID.valueOf( "4326" );
     private static final Base64.Encoder encoder = Base64.getEncoder();
-    private static ObjectMapper mapper;
-    private static DataApi      dataApi;
-    private static EdmApi       edmApi;
+    private static       ObjectMapper   mapper;
+    private static       DataApi        dataApi;
+    private static       EdmApi         edmApi;
+    private static       EntitySetsApi  entitySetsApi;
 
     static {
         edmTypesList = Arrays.asList(
@@ -152,19 +156,20 @@ public class DataManagerTest extends SetupEnvironment {
                 .collect( Collectors.toMap( e -> e.getKey(), e -> e.getValue().getDatatype() ) );
 
         Map<UUID, SetMultimap<UUID, Object>> firstEntities = generateData( 10, propertiesWithDataType, 1 );
-        testWriteData( entitySetId,  firstEntities, propertiesWithDataType );
+        testWriteData( entitySetId, firstEntities, propertiesWithDataType );
 
         Map<UUID, SetMultimap<UUID, Object>> secondEntities = generateData( 10, propertiesWithDataType, 1 );
         testWriteData( entitySetId, secondEntities, propertiesWithDataType );
 
-        edmApi.deleteEntitySet( entitySetId );
+        edmApi
+        entitySetsApi.deleteEntitySet( entitySetId );
         //        dataService.deleteEntitySetData( entitySetId );
 
         Assert.assertNull( dataApi.loadEntitySetData( entitySetId,
-                new EntitySetSelection(  Optional.of( propertyTypes.keySet() ) ),
+                new EntitySetSelection( Optional.of( propertyTypes.keySet() ) ),
                 FileType.json ) );
         Assert.assertNull( dataApi.loadEntitySetData( entitySetId,
-                new EntitySetSelection(  Optional.of( propertyTypes.keySet() ) ),
+                new EntitySetSelection( Optional.of( propertyTypes.keySet() ) ),
                 FileType.json ) );
         //        Assert.assertEquals( 0, testReadData( secondSyncId,
         //                entitySetId,
@@ -183,8 +188,8 @@ public class DataManagerTest extends SetupEnvironment {
                 .collect( Collectors.toMap( e -> e.getKey(), e -> e.getValue().getDatatype() ) );
 
         try ( InputStreamReader fr = new InputStreamReader(
-                new FileInputStream("src/test/resources/employees.csv"), StandardCharsets.UTF_8 );
-              BufferedReader br = new BufferedReader( fr ) ) {
+                new FileInputStream( "src/test/resources/employees.csv" ), StandardCharsets.UTF_8 );
+                BufferedReader br = new BufferedReader( fr ) ) {
 
             String line;
             int count = 0;
@@ -206,7 +211,9 @@ public class DataManagerTest extends SetupEnvironment {
                     entities.put( UUID.randomUUID(), entity );
                 } else {
                     //added transformValues()
-                    dataApi.updateEntitiesInEntitySet( entitySetId, transformValues(entities, Multimaps::asMap), UpdateType.Replace );
+                    dataApi.updateEntitiesInEntitySet( entitySetId,
+                            transformValues( entities, Multimaps::asMap ),
+                            UpdateType.Replace );
 
                     entities = new HashMap<>();
                     count = 0;
@@ -221,7 +228,9 @@ public class DataManagerTest extends SetupEnvironment {
             Map<UUID, SetMultimap<UUID, Object>> entities,
             Map<UUID, EdmPrimitiveTypeKind> propertiesWithDataType ) {
         System.out.println( "Writing Data..." );
-        dataApi.updateEntitiesInEntitySet( entitySetId, transformValues(entities, Multimaps::asMap), UpdateType.Replace );
+        dataApi.updateEntitiesInEntitySet( entitySetId,
+                transformValues( entities, Multimaps::asMap ),
+                UpdateType.Replace );
         System.out.println( "Writing done." );
     }
 
@@ -482,6 +491,7 @@ public class DataManagerTest extends SetupEnvironment {
         mapper = ObjectMappers.getJsonMapper();
         dataApi = retrofit.create( DataApi.class );
         edmApi = retrofit.create( EdmApi.class );
+        entitySetsApi = retrofit.create( EntitySetsApi.class );
         // }
         // initLock.readLock().unlock();
     }
