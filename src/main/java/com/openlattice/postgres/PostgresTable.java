@@ -56,6 +56,7 @@ import static com.openlattice.postgres.PostgresColumn.DST_PROPERTY_TYPE_ID;
 import static com.openlattice.postgres.PostgresColumn.DST_SELECTS;
 import static com.openlattice.postgres.PostgresColumn.EDGE_COMP_1;
 import static com.openlattice.postgres.PostgresColumn.EDGE_COMP_2;
+import static com.openlattice.postgres.PostgresColumn.EDGE_ENTITY_KEY_ID;
 import static com.openlattice.postgres.PostgresColumn.EDGE_ENTITY_SET_ID;
 import static com.openlattice.postgres.PostgresColumn.ENTITY_ID;
 import static com.openlattice.postgres.PostgresColumn.ENTITY_SET_FLAGS;
@@ -199,6 +200,22 @@ public final class PostgresTable {
                             EDGE_ENTITY_SET_ID,
                             VERSION,
                             VERSIONS )
+                    .primaryKey( ID, EDGE_COMP_1, EDGE_COMP_2, COMPONENT_TYPES )
+                    .distributionColumn( ID_VALUE );
+    public static final PostgresTableDefinition        E                        =
+            new CitusDistributedTableDefinition( "edges" )
+                    .addColumns(
+                            PARTITION,
+                            ID_VALUE,
+                            SRC_ENTITY_SET_ID,
+                            SRC_ENTITY_KEY_ID,
+                            DST_ENTITY_SET_ID,
+                            DST_ENTITY_KEY_ID,
+                            EDGE_ENTITY_SET_ID,
+                            EDGE_ENTITY_KEY_ID,
+                            VERSION,
+                            VERSIONS,
+                            PARTITIONS_VERSION)
                     .primaryKey( ID, EDGE_COMP_1, EDGE_COMP_2, COMPONENT_TYPES )
                     .distributionColumn( ID_VALUE );
     public static final PostgresTableDefinition        ENTITY_KEY_IDS               =
