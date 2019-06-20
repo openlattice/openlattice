@@ -45,13 +45,15 @@ private val logger = LoggerFactory.getLogger(OrganizationsInitializationTask::cl
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-class OrganizationsInitializationTask() : HazelcastInitializationTask<OrganizationsInitializationDependencies> {
+class OrganizationsInitializationTask : HazelcastInitializationTask<OrganizationsInitializationDependencies> {
     override fun initialize(dependencies: OrganizationsInitializationDependencies) {
         logger.info("Running bootstrap process for organizations.")
         val sw = Stopwatch.createStarted()
         val organizationService = dependencies.organizationService
         val globalOrg = organizationService.maybeGetOrganization(GLOBAL_ORG_PRINCIPAL)
         val olOrg = organizationService.maybeGetOrganization(OPENLATTICE_ORG_PRINCIPAL)
+        val partitions = (0 until dependencies.partitionManager.getPartitionCount()).toList()
+
         if (globalOrg.isPresent) {
             logger.info(
                     "Expected id = {}, Actual id = {}",
@@ -61,8 +63,8 @@ class OrganizationsInitializationTask() : HazelcastInitializationTask<Organizati
             checkState(GLOBAL_ORGANIZATION_ID == globalOrg.get().id)
         } else {
             organizationService.createOrganization(
-                    GLOBAL_ADMIN_ROLE.getPrincipal(),
-                    createGlobalOrg()
+                    GLOBAL_ADMIN_ROLE.principal,
+                    createGlobalOrg(partitions)
             )
         }
 
@@ -75,8 +77,8 @@ class OrganizationsInitializationTask() : HazelcastInitializationTask<Organizati
             checkState(OPENLATTICE_ORGANIZATION_ID == olOrg.get().id)
         } else {
             organizationService.createOrganization(
-                    OPENLATTICE_ROLE.getPrincipal(),
-                    createOpenLatticeOrg()
+                    OPENLATTICE_ROLE.principal,
+                    createOpenLatticeOrg(partitions)
             )
         }
         logger.info("Bootstrapping for organizations took {} ms", sw.elapsed(TimeUnit.MILLISECONDS))
@@ -103,7 +105,7 @@ class OrganizationsInitializationTask() : HazelcastInitializationTask<Organizati
     }
 
     companion object {
-        private fun createGlobalOrg(): Organization {
+        private fun createGlobalOrg(partitions: List<Int>): Organization {
             val id = GLOBAL_ORGANIZATION_ID
             val title = "Global Organization"
             return Organization(
@@ -113,11 +115,12 @@ class OrganizationsInitializationTask() : HazelcastInitializationTask<Organizati
                     Optional.empty(),
                     ImmutableSet.of(),
                     ImmutableSet.of(),
-                    ImmutableSet.of()
+                    ImmutableSet.of(),
+                    partitions
             )
         }
 
-        private fun createOpenLatticeOrg(): Organization {
+        private fun createOpenLatticeOrg(partitions: List<Int>): Organization {
             val id = OPENLATTICE_ORGANIZATION_ID
             val title = "OpenLattice, Inc."
             return Organization(
@@ -127,7 +130,8 @@ class OrganizationsInitializationTask() : HazelcastInitializationTask<Organizati
                     Optional.empty(),
                     ImmutableSet.of(),
                     ImmutableSet.of(),
-                    ImmutableSet.of()
+                    ImmutableSet.of(),
+                    partitions
             )
         }
     }
