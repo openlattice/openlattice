@@ -32,29 +32,34 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName
 import java.util.*
 
 
-const val DEFAULT_BLOCK_SIZE = 10000
+const val DEFAULT_BLOCK_SIZE = 10_000
+private const val CONFIG_YAML_NAME = "linking.yaml"
 private const val BLOCK_SIZE_FIELD = "block-size"
 private const val BLACKLIST = "blacklist"
 private const val ENTITY_TYPES_FIELD = "entity-types"
 private const val WHITELIST = "whitelist"
+private const val SEARCH_CONFIGURATION = "searchConfiguration"
+private const val REPORT_EMAIL_ADDRESS = "reportEmailAddress"
+private const val BATCH_SIZE = "batch-size"
+private const val LOAD_SIZE = "load-size"
 private val DEFAULT_ENTITY_TYPES = setOf("general.person")
 
 /**
  * Configuration class for linking.
  */
-@ReloadableConfiguration(uri = "linking.yaml")
+@ReloadableConfiguration(uri = CONFIG_YAML_NAME )
 data class LinkingConfiguration(
-        @JsonProperty("searchConfiguration") val searchConfiguration: SearchConfiguration,
-        @JsonProperty("reportEmailAddress") val errorReportingEmail: String,
+        @JsonProperty(SEARCH_CONFIGURATION ) val searchConfiguration: SearchConfiguration,
+        @JsonProperty(REPORT_EMAIL_ADDRESS ) val errorReportingEmail: String,
         @JsonProperty(BLOCK_SIZE_FIELD) val blockSize: Int = DEFAULT_BLOCK_SIZE,
         @JsonProperty(WHITELIST) val whitelist: Optional<Set<UUID>>,
         @JsonProperty(BLACKLIST) val blacklist: Set<UUID> = setOf(),
-        @JsonProperty("batch-size") val batchSize: Int = 10,
-        @JsonProperty("load-size") val loadSize: Int = 100,
+        @JsonProperty(BATCH_SIZE ) val batchSize: Int = 10,
+        @JsonProperty(LOAD_SIZE ) val loadSize: Int = 100,
         @JsonProperty(ENTITY_TYPES_FIELD) private val entityTypesFqns: Set<String> = DEFAULT_ENTITY_TYPES
 ) : Configuration {
     companion object {
-        private val key = SimpleConfigurationKey("linking.yaml")
+        private val key = SimpleConfigurationKey(CONFIG_YAML_NAME )
         @JvmStatic
         fun key(): ConfigurationKey {
             return key
