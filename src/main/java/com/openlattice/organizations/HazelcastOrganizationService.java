@@ -481,6 +481,10 @@ public class HazelcastOrganizationService {
         phoneNumbers.setPhoneNumber( organizationId, entitySetInformationList );
     }
 
+    public List<Integer> getDefaultPartitions( UUID organizationId ) {
+        return Util.getSafely( partitions, organizationId );
+    }
+
     private static Role createOrganizationAdminRole( SecurablePrincipal organization ) {
         var principaleTitle = organization.getName() + " - ADMIN";
         var principalId = organization.getId().toString() + "|" + principaleTitle;
