@@ -77,7 +77,7 @@ class DataControllerLinkingTest : SetupTestData() {
         fun tearDown() {
             importedEntitySets.keys.forEach {
                 try {
-                    edmApi.deleteEntitySet(edmApi.getEntitySetId(it))
+                    entitySetsApi.deleteEntitySet(entitySetsApi.getEntitySetId(it))
                 } catch (e: UndeclaredThrowableException) {
                 }
             }
@@ -86,8 +86,8 @@ class DataControllerLinkingTest : SetupTestData() {
 
     @Test
     fun testGetLinkedEntitySets() {
-        val esId1 = edmApi.getEntitySetId(importedEntitySets.keys.first())
-        val esId2 = edmApi.getEntitySetId(importedEntitySets.keys.last())
+        val esId1 = entitySetsApi.getEntitySetId(importedEntitySets.keys.first())
+        val esId2 = entitySetsApi.getEntitySetId(importedEntitySets.keys.last())
 
         dataApi.deleteAllEntitiesFromEntitySet(esId1, DeleteType.Soft)
         dataApi.deleteAllEntitiesFromEntitySet(esId2, DeleteType.Hard)
@@ -127,8 +127,8 @@ class DataControllerLinkingTest : SetupTestData() {
 
     @Test
     fun testGetLinkedEntitySetsWithLinkingIds() {
-        val esId1 = edmApi.getEntitySetId(importedEntitySets.keys.first())
-        val esId2 = edmApi.getEntitySetId(importedEntitySets.keys.last())
+        val esId1 = entitySetsApi.getEntitySetId(importedEntitySets.keys.first())
+        val esId2 = entitySetsApi.getEntitySetId(importedEntitySets.keys.last())
 
         dataApi.deleteAllEntitiesFromEntitySet(esId1, DeleteType.Soft)
         dataApi.deleteAllEntitiesFromEntitySet(esId2, DeleteType.Hard)
@@ -173,8 +173,8 @@ class DataControllerLinkingTest : SetupTestData() {
     @Test
     fun testLoadDataAuthorizations() {
         // create data with admin
-        val esId1 = edmApi.getEntitySetId(importedEntitySets.keys.first())
-        val esId2 = edmApi.getEntitySetId(importedEntitySets.keys.last())
+        val esId1 = entitySetsApi.getEntitySetId(importedEntitySets.keys.first())
+        val esId2 = entitySetsApi.getEntitySetId(importedEntitySets.keys.last())
 
         dataApi.deleteAllEntitiesFromEntitySet(esId1, DeleteType.Soft)
         dataApi.deleteAllEntitiesFromEntitySet(esId2, DeleteType.Hard)
