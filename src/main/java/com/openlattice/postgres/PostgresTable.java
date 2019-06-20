@@ -232,7 +232,7 @@ public final class PostgresTable {
                             PostgresColumn.LINKED_ENTITY_SETS,
                             ORGANIZATION_ID,
                             ENTITY_SET_FLAGS,
-                            PARTITION,
+                            PARTITIONS,
                             PARTITIONS_VERSION );
     public static final PostgresTableDefinition        ENTITY_SET_PROPERTY_METADATA =
             new PostgresTableDefinition( "entity_set_property_metadata" )
