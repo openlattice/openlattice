@@ -21,19 +21,34 @@ class SmsEntitySetInformationStreamSerializer : SelfRegisteringStreamSerializer<
     }
 
     override fun write(out: ObjectDataOutput, obj: SmsEntitySetInformation) {
-        out.writeUTF(obj.phoneNumber)
-        UUIDStreamSerializer.serialize(out, obj.organizationId)
-        SetStreamSerializers.fastUUIDSetSerialize(out, obj.entitySetIds)
-        SetStreamSerializers.fastOrderedStringSetSerializeAsArray(out, obj.tags)
+        serialize(out, obj)
     }
 
     override fun read(input: ObjectDataInput): SmsEntitySetInformation {
-        val phoneNumber = input.readUTF()
-        val organizationId = UUIDStreamSerializer.deserialize(input)
-        val entitySetIds = SetStreamSerializers.fastUUIDSetDeserialize(input)
-        val tags = SetStreamSerializers.fastOrderedStringSetDeserializeAsArray(input)
-        return SmsEntitySetInformation(
-                phoneNumber, organizationId, entitySetIds, tags
-        )
+        return deserialize(input)
+    }
+
+    companion object {
+        @JvmStatic
+        fun serialize(out: ObjectDataOutput, obj: SmsEntitySetInformation) {
+            out.writeUTF(obj.phoneNumber)
+            UUIDStreamSerializer.serialize(out, obj.organizationId)
+            SetStreamSerializers.fastUUIDSetSerialize(out, obj.entitySetIds)
+            SetStreamSerializers.fastOrderedStringSetSerializeAsArray(out, obj.tags)
+        }
+
+        @JvmStatic
+        fun deserialize(input: ObjectDataInput): SmsEntitySetInformation {
+            val phoneNumber = input.readUTF()
+            val organizationId = UUIDStreamSerializer.deserialize(input)
+            val entitySetIds = SetStreamSerializers.fastUUIDSetDeserialize(input)
+            val tags = SetStreamSerializers.fastOrderedStringSetDeserializeAsArray(input)
+            return SmsEntitySetInformation(
+                    phoneNumber,
+                    organizationId,
+                    entitySetIds,
+                    tags
+            )
+        }
     }
 }
