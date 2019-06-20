@@ -41,6 +41,7 @@ import com.openlattice.data.WriteEvent
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.requests.MetadataUpdate
+import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.edm.set.EntitySetPropertyMetadata
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.entitysets.EntitySetsApi
@@ -214,6 +215,12 @@ constructor(
         ensureOwnerAccess(AclKey(entitySetId))
         val deleted: List<WriteEvent>
         val entitySet = edmManager.getEntitySet(entitySetId)
+
+        if (entitySet.flags.contains(EntitySetFlag.AUDIT)) {
+            throw ForbiddenException("You cannot delete audit entity set $entitySetId.")
+        }
+        deleteAuditEntitySetsForId(entitySetId)
+
         val entityType = edmManager.getEntityType(entitySet.getEntityTypeId())
         val authorizedPropertyTypes = authzHelper
                 .getAuthorizedPropertyTypes(entitySetId, EnumSet.of(Permission.OWNER))
@@ -490,6 +497,26 @@ constructor(
         }
 
         return authorizedPropertyTypes
+    }
+
+    private fun deleteAuditEntitySetsForId(entitySetId: UUID) {
+        val aclKey = AclKey(entitySetId)
+
+        val propertyTypes = aresManager.auditingTypes.propertyTypes
+
+        aresManager.getAuditRecordEntitySets(aclKey).forEach {
+            dgm.deleteEntitySet(it, propertyTypes)
+            edmManager.deleteEntitySet(it)
+            securableObjectTypes.deleteSecurableObjectType(AclKey(it))
+        }
+
+        aresManager.getAuditEdgeEntitySets(aclKey).forEach {
+            dgm.deleteEntitySet(it, mapOf())
+            edmManager.deleteEntitySet(it)
+            securableObjectTypes.deleteSecurableObjectType(AclKey(it))
+        }
+
+        aresManager.removeAuditRecordEntitySetConfiguration(aclKey)
     }
 
     private fun getCurrentUserId(): UUID {
