@@ -11,6 +11,7 @@ import com.openlattice.postgres.PostgresTable.ORGANIZATIONS
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.mapstores.AbstractBasePostgresMapstore
 import com.zaxxer.hikari.HikariDataSource
+import org.springframework.stereotype.Component
 import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.sql.SQLException
@@ -20,6 +21,7 @@ import java.util.*
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
+@Component
 class OrganizationDefaultPartitionsMapstore(
         hds: HikariDataSource
 ) : AbstractBasePostgresMapstore<UUID, DelegatedIntList>(
