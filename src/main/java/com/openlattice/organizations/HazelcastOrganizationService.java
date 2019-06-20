@@ -24,6 +24,7 @@ package com.openlattice.organizations;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
+import static com.openlattice.data.storage.partitions.PartitionManagerKt.DEFAULT_PARTITION_COUNT;
 
 import com.dataloom.streams.StreamUtil;
 import com.geekbeast.rhizome.hazelcast.DelegatedIntList;
@@ -48,6 +49,7 @@ import com.openlattice.authorization.PrincipalType;
 import com.openlattice.authorization.SecurablePrincipal;
 import com.openlattice.authorization.initializers.AuthorizationInitializationTask;
 import com.openlattice.authorization.securable.SecurableObjectType;
+import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.datastore.util.Util;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.hazelcast.processors.UUIDKeyToUUIDSetMerger;
@@ -113,11 +115,11 @@ public class HazelcastOrganizationService {
     private final IMap<UUID, PrincipalSet>           membersOf;
     private final IMap<UUID, DelegatedUUIDSet>       apps;
     private final IMap<AppConfigKey, AppTypeSetting> appConfigs;
+    private final IMap<UUID, DelegatedIntList>       partitions;
     private final List<IMap<UUID, ?>>                allMaps;
     private final Assembler                          assembler;
     private final PhoneNumberService                 phoneNumbers;
-
-    private final IMap<UUID, DelegatedIntList> partitions;
+    private final PartitionManager                   partitionManager;
 
     @Inject
     private EventBus eventBus;
@@ -128,6 +130,7 @@ public class HazelcastOrganizationService {
             AuthorizationManager authorizations,
             SecurePrincipalsManager securePrincipalsManager,
             PhoneNumberService phoneNumbers,
+            PartitionManager partitionManager,
             Assembler assembler ) {
         this.titles = hazelcastInstance.getMap( HazelcastMap.ORGANIZATIONS_TITLES.name() );
         this.descriptions = hazelcastInstance.getMap( HazelcastMap.ORGANIZATIONS_DESCRIPTIONS.name() );
@@ -135,17 +138,19 @@ public class HazelcastOrganizationService {
         this.membersOf = hazelcastInstance.getMap( HazelcastMap.ORGANIZATIONS_MEMBERS.name() );
         this.apps = hazelcastInstance.getMap( HazelcastMap.ORGANIZATION_APPS.name() );
         this.appConfigs = hazelcastInstance.getMap( HazelcastMap.APP_CONFIGS.name() );
+        this.partitions = hazelcastInstance.getMap( HazelcastMap.ORGANIZATION_DEFAULT_PARTITIONS.name() );
         this.authorizations = authorizations;
         this.reservations = reservations;
         this.allMaps = ImmutableList.of( titles,
                 descriptions,
                 autoApprovedEmailDomainsOf,
                 membersOf,
-                apps );
+                apps,
+                partitions );
         this.securePrincipalsManager = securePrincipalsManager;
         this.assembler = assembler;
         this.phoneNumbers = phoneNumbers;
-        this.partitions = hazelcastInstance.getMap( HazelcastMap.ORGANIZATION_DEFAULT_PARTITIONS.name() );
+        this.partitionManager = partitionManager;
         //        fixOrganizations();
     }
 
@@ -211,7 +216,8 @@ public class HazelcastOrganizationService {
         membersOf.set( organizationId, PrincipalSet.wrap( organization.getMembers() ) );
         apps.set( organizationId, DelegatedUUIDSet.wrap( organization.getApps() ) );
         phoneNumbers.setPhoneNumber( organizationId, organization.getSmsEntitySetInfo() );
-
+        partitionManager.allocateDefaultPartitions( organizationId, DEFAULT_PARTITION_COUNT );
+        organization.setPartitions( getDefaultPartitions( organizationId ) );
     }
 
     public Organization getOrganization( UUID organizationId ) {
@@ -477,12 +483,22 @@ public class HazelcastOrganizationService {
         return (OrganizationPrincipal) Iterables.getOnlyElement( maybeOrganizationPrincipal );
     }
 
-    public void setSmsEntitySetInformation( UUID organizationId, List<SmsEntitySetInformation> entitySetInformationList ) {
+    public void setSmsEntitySetInformation(
+            UUID organizationId,
+            List<SmsEntitySetInformation> entitySetInformationList ) {
         phoneNumbers.setPhoneNumber( organizationId, entitySetInformationList );
     }
 
     public List<Integer> getDefaultPartitions( UUID organizationId ) {
         return Util.getSafely( partitions, organizationId );
+    }
+
+    public List<Integer> allocateDefaultPartitions( int partitionCount ) {
+        return partitionManager.allocateDefaultPartitions( partitionCount );
+    }
+
+    public int getNumberOfPartitions() {
+        return partitionManager.getPartitionCount();
     }
 
     private static Role createOrganizationAdminRole( SecurablePrincipal organization ) {

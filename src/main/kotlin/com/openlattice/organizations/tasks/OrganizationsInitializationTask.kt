@@ -52,7 +52,7 @@ class OrganizationsInitializationTask : HazelcastInitializationTask<Organization
         val organizationService = dependencies.organizationService
         val globalOrg = organizationService.maybeGetOrganization(GLOBAL_ORG_PRINCIPAL)
         val olOrg = organizationService.maybeGetOrganization(OPENLATTICE_ORG_PRINCIPAL)
-        val partitions = (0 until dependencies.partitionManager.getPartitionCount()).toList()
+        val defaultPartitions = organizationService.allocateDefaultPartitions(organizationService.numberOfPartitions)
 
         if (globalOrg.isPresent) {
             logger.info(
@@ -64,7 +64,7 @@ class OrganizationsInitializationTask : HazelcastInitializationTask<Organization
         } else {
             organizationService.createOrganization(
                     GLOBAL_ADMIN_ROLE.principal,
-                    createGlobalOrg(partitions)
+                    createGlobalOrg(defaultPartitions)
             )
         }
 
@@ -78,7 +78,7 @@ class OrganizationsInitializationTask : HazelcastInitializationTask<Organization
         } else {
             organizationService.createOrganization(
                     OPENLATTICE_ROLE.principal,
-                    createOpenLatticeOrg(partitions)
+                    createOpenLatticeOrg(defaultPartitions)
             )
         }
         logger.info("Bootstrapping for organizations took {} ms", sw.elapsed(TimeUnit.MILLISECONDS))

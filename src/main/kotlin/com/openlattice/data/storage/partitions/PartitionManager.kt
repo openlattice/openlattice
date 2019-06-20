@@ -19,12 +19,15 @@ import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import java.util.*
 
+const val DEFAULT_PARTITION_COUNT = 2
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 @Service
-class PartitionManager @JvmOverloads constructor(hazelcastInstance: HazelcastInstance, private val hds: HikariDataSource, partitions: Int = 257) {
+class PartitionManager @JvmOverloads constructor(
+        hazelcastInstance: HazelcastInstance, private val hds: HikariDataSource, partitions: Int = 257
+) {
     private val partitionList = mutableListOf<Int>()
     private val entitySets = hazelcastInstance.getMap<UUID, EntitySet>(HazelcastMap.ENTITY_SETS.name)
     private val defaultPartitions = hazelcastInstance.getMap<UUID, DelegatedIntList>(
@@ -120,14 +123,8 @@ class PartitionManager @JvmOverloads constructor(hazelcastInstance: HazelcastIns
      * Allocates default partitions for an organization based on emptiest partitions.
      */
     fun allocateDefaultPartitions(organizationId: UUID, partitionCount: Int) {
-        checkArgument(
-                partitionCount > partitionList.size,
-                "Cannot request more partitions ($partitionCount) than exist (${partitionList.size}."
-        )
-
-        setDefaultPartitions(organizationId, getEmptiestPartitions(partitionCount).map { it.first })
+        setDefaultPartitions(organizationId, allocateDefaultPartitions(partitionCount))
     }
-
 
     fun repartition(organizationId: UUID) {
         //TODO
@@ -157,9 +154,13 @@ class PartitionManager @JvmOverloads constructor(hazelcastInstance: HazelcastIns
                 }) { it.getInt(PARTITION.name) to it.getLong(COUNT) }.toMap()
     }
 
+    fun allocateDefaultPartitions(partitionCount: Int): List<Int> {
+        return getEmptiestPartitions(partitionCount).map { it.first }
+    }
+
     private fun getEmptiestPartitions(desiredPartitions: Int): BasePostgresIterable<Pair<Int, Long>> {
         //A quick note is that the partitions materialized view shouldn't be turned into a distributed table
-        //with out addressing the interaction of the order by and limit clausees.
+        //with out addressing the interaction of the order by and limit clauses.
         return BasePostgresIterable(
                 PreparedStatementHolderSupplier(hds, EMPTIEST_PARTITIONS) { ps ->
                     ps.setArray(1, PostgresArrays.createIntArray(ps.connection, partitionList))
@@ -177,7 +178,10 @@ class PartitionManager @JvmOverloads constructor(hazelcastInstance: HazelcastIns
      * We don't have to lock here as long as number of partitions is monotonically increasing.
      */
     private fun isValidAllocation(partitionCount: Int) {
-        checkArgument(partitionCount <= partitionList.size, "Requested more partitions than available.")
+        checkArgument(
+                partitionCount <= partitionList.size,
+                "Cannot request more partitions ($partitionCount) than exist (${partitionList.size}."
+        )
     }
 
 }

@@ -21,11 +21,9 @@
 
 package com.openlattice.organizations.tasks
 
-import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.tasks.HazelcastTaskDependencies
 
 data class OrganizationsInitializationDependencies(
-        val organizationService: HazelcastOrganizationService,
-        val partitionManager: PartitionManager
+        val organizationService: HazelcastOrganizationService
 ) : HazelcastTaskDependencies
