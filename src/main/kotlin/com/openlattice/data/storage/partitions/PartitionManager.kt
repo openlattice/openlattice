@@ -19,6 +19,7 @@ import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import java.util.*
 
+const val DEFAULT_PARTITION_COUNT = 2
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;

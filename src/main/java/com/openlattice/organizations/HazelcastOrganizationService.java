@@ -24,6 +24,7 @@ package com.openlattice.organizations;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
+import static com.openlattice.data.storage.partitions.PartitionManagerKt.DEFAULT_PARTITION_COUNT;
 
 import com.dataloom.streams.StreamUtil;
 import com.geekbeast.rhizome.hazelcast.DelegatedIntList;
@@ -215,7 +216,8 @@ public class HazelcastOrganizationService {
         membersOf.set( organizationId, PrincipalSet.wrap( organization.getMembers() ) );
         apps.set( organizationId, DelegatedUUIDSet.wrap( organization.getApps() ) );
         phoneNumbers.setPhoneNumber( organizationId, organization.getSmsEntitySetInfo() );
-        partitionManager.allocateDefaultPartitions( organizationId,2 );
+        partitionManager.allocateDefaultPartitions( organizationId,DEFAULT_PARTITION_COUNT );
+        organization.setPartitions( getDefaultPartitions( organizationId ) );
     }
 
     public Organization getOrganization( UUID organizationId ) {
