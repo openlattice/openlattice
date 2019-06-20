@@ -52,7 +52,7 @@ class SearchLinkedEntitiesTests : SetupTestData() {
         fun tearDown() {
             importedEntitySets.keys.forEach {
                 try {
-                    edmApi.deleteEntitySet(edmApi.getEntitySetId(it))
+                    entitySetsApi.deleteEntitySet(entitySetsApi.getEntitySetId(it))
                 } catch (e: UndeclaredThrowableException) {
                 }
             }
@@ -61,8 +61,8 @@ class SearchLinkedEntitiesTests : SetupTestData() {
 
     @Test
     fun testSimpleSearchOnLinkedEntities() {
-        val socratesAId = edmApi.getEntitySetId(importedEntitySets.keys.first())
-        val socratesBId = edmApi.getEntitySetId(importedEntitySets.keys.last())
+        val socratesAId = entitySetsApi.getEntitySetId(importedEntitySets.keys.first())
+        val socratesBId = entitySetsApi.getEntitySetId(importedEntitySets.keys.last())
         val esLinked = createEntitySet(personEt, true, setOf(socratesAId, socratesBId))
 
         Thread.sleep(60000L) // wait for indexing to finish
@@ -83,13 +83,13 @@ class SearchLinkedEntitiesTests : SetupTestData() {
         Assert.assertTrue(result2.numHits > 0)
         Assert.assertTrue(result2.hits.flatMap { it[EdmTestConstants.personGivenNameFqn] }.contains("Fermin"))
 
-        edmApi.deleteEntitySet(esLinked.id)
+        entitySetsApi.deleteEntitySet(esLinked.id)
     }
 
     @Test
     fun testAdvancedSearchOnLinkedEntities() {
-        val socratesAId = edmApi.getEntitySetId(importedEntitySets.keys.first())
-        val socratesBId = edmApi.getEntitySetId(importedEntitySets.keys.last())
+        val socratesAId = entitySetsApi.getEntitySetId(importedEntitySets.keys.first())
+        val socratesBId = entitySetsApi.getEntitySetId(importedEntitySets.keys.last())
         val esLinked = createEntitySet(personEt, true, setOf(socratesAId, socratesBId))
 
         Thread.sleep(60000L) // wait for indexing to finish
@@ -115,7 +115,7 @@ class SearchLinkedEntitiesTests : SetupTestData() {
         Assert.assertTrue(result2.numHits > 0)
         Assert.assertTrue(result2.hits.flatMap { it[EdmTestConstants.personSurnameFqn] }.contains("Morris"))
 
-        edmApi.deleteEntitySet(esLinked.id)
+        entitySetsApi.deleteEntitySet(esLinked.id)
     }
 
     @Test
@@ -128,12 +128,12 @@ class SearchLinkedEntitiesTests : SetupTestData() {
         val result = searchApi.searchEntitySetData(simpleSearchConstraint)
         Assert.assertEquals(DataSearchResult(0, Lists.newArrayList()), result)
 
-        edmApi.deleteEntitySet(esLinked.id)
+        entitySetsApi.deleteEntitySet(esLinked.id)
     }
 
     @Test
     fun testDeleteLinkingEntitySet() {
-        val socratesAId = edmApi.getEntitySetId(importedEntitySets.keys.first())
+        val socratesAId = entitySetsApi.getEntitySetId(importedEntitySets.keys.first())
         val esLinked = createEntitySet(personEt, true, setOf(socratesAId))
         Thread.sleep(60000L) // wait for indexing to finish
 
@@ -141,7 +141,7 @@ class SearchLinkedEntitiesTests : SetupTestData() {
                 .simpleSearchConstraints(arrayOf(esLinked.id), 0, 100, "*")
         val result = searchApi.searchEntitySetData(simpleSearchConstraint)
 
-        edmApi.deleteEntitySet(esLinked.id)
+        entitySetsApi.deleteEntitySet(esLinked.id)
         Thread.sleep(60000L) // wait for indexing to finish
 
         Assert.assertEquals(
@@ -156,7 +156,7 @@ class SearchLinkedEntitiesTests : SetupTestData() {
      */
     @Test
     fun testCreateLinkingEntitySetWithExistingLinkedEntitySet() {
-        val socratesAId = edmApi.getEntitySetId(importedEntitySets.keys.first())
+        val socratesAId = entitySetsApi.getEntitySetId(importedEntitySets.keys.first())
         val esLinked1 = createEntitySet(personEt, true, setOf(socratesAId))
         val esLinked2 = createEntitySet(personEt, true, setOf(socratesAId))
 
@@ -172,14 +172,14 @@ class SearchLinkedEntitiesTests : SetupTestData() {
         Assert.assertTrue(result1.numHits > 0)
         Assert.assertEquals(result1.numHits, result2.numHits)
 
-        edmApi.deleteEntitySet(esLinked1.id)
-        edmApi.deleteEntitySet(esLinked2.id)
+        entitySetsApi.deleteEntitySet(esLinked1.id)
+        entitySetsApi.deleteEntitySet(esLinked2.id)
     }
 
     @Test
     fun testDeleteLinkedEntitySet() {
-        val socratesAId = edmApi.getEntitySetId(importedEntitySets.keys.first())
-        val socratesBId = edmApi.getEntitySetId(importedEntitySets.keys.last())
+        val socratesAId = entitySetsApi.getEntitySetId(importedEntitySets.keys.first())
+        val socratesBId = entitySetsApi.getEntitySetId(importedEntitySets.keys.last())
         val esLinked = createEntitySet(personEt, true, setOf(socratesAId, socratesBId))
 
         Thread.sleep(60000L) // wait for indexing to finish
@@ -188,7 +188,7 @@ class SearchLinkedEntitiesTests : SetupTestData() {
                 .simpleSearchConstraints(arrayOf(esLinked.id), 0, 100, "*")
         val resultsAB = searchApi.searchEntitySetData(simpleSearchConstraint)
 
-        edmApi.deleteEntitySet(socratesBId)
+        entitySetsApi.deleteEntitySet(socratesBId)
         val resultsA = searchApi.searchEntitySetData(simpleSearchConstraint)
 
         Assert.assertTrue(resultsAB.numHits > resultsA.numHits)
@@ -202,13 +202,13 @@ class SearchLinkedEntitiesTests : SetupTestData() {
             Thread.sleep(5000L)
         }
 
-        edmApi.deleteEntitySet(esLinked.id)
+        entitySetsApi.deleteEntitySet(esLinked.id)
     }
 
     @Test
     fun testAddAndRemoveLinkedEntitySet() {
-        val socratesAId = edmApi.getEntitySetId(importedEntitySets.keys.first())
-        val socratesBId = edmApi.getEntitySetId(importedEntitySets.keys.last())
+        val socratesAId = entitySetsApi.getEntitySetId(importedEntitySets.keys.first())
+        val socratesBId = entitySetsApi.getEntitySetId(importedEntitySets.keys.last())
         val esLinked = createEntitySet(personEt, true, setOf(socratesAId))
 
         Thread.sleep(60000L) // wait for indexing to finish
@@ -231,12 +231,12 @@ class SearchLinkedEntitiesTests : SetupTestData() {
         val resultsA2 = searchApi.searchEntitySetData(simpleSearchConstraint)
         Assert.assertEquals(resultsA1, resultsA2)
 
-        edmApi.deleteEntitySet(esLinked.id)
+        entitySetsApi.deleteEntitySet(esLinked.id)
     }
 
     @Test
     fun testAddPropertyType() {
-        val socratesAId = edmApi.getEntitySetId(importedEntitySets.keys.first())
+        val socratesAId = entitySetsApi.getEntitySetId(importedEntitySets.keys.first())
         val esLinked = createEntitySet(personEt, true, setOf(socratesAId))
 
         Thread.sleep(60000L) // wait for indexing to finish
@@ -257,13 +257,13 @@ class SearchLinkedEntitiesTests : SetupTestData() {
         Assert.assertEquals(newPropertyType.title, newPropertyHit["title"])
         Assert.assertEquals(newPropertyType.description, newPropertyHit["description"])
 
-        edmApi.deleteEntitySet(esLinked.id)
+        entitySetsApi.deleteEntitySet(esLinked.id)
     }
 
     @Test
     fun testCreateUpdateDeleteEntities() {
-        val socratesAId = edmApi.getEntitySetId(importedEntitySets.keys.first())
-        val socratesBId = edmApi.getEntitySetId(importedEntitySets.keys.last())
+        val socratesAId = entitySetsApi.getEntitySetId(importedEntitySets.keys.first())
+        val socratesBId = entitySetsApi.getEntitySetId(importedEntitySets.keys.last())
         val esLinked = createEntitySet(personEt, true, setOf(socratesAId, socratesBId))
 
         Thread.sleep(60000L) // wait for indexing to finish
@@ -368,7 +368,7 @@ class SearchLinkedEntitiesTests : SetupTestData() {
         Assert.assertTrue(result6.hits.none { it[EdmTestConstants.personGivenNameFqn].contains("newtestt") })
         Assert.assertTrue(result6.hits.any { it[EdmTestConstants.personGivenNameFqn] == setOf("newtest") })
 
-        edmApi.deleteEntitySet(esLinked.id)
+        entitySetsApi.deleteEntitySet(esLinked.id)
     }
 
     @Test
@@ -376,7 +376,7 @@ class SearchLinkedEntitiesTests : SetupTestData() {
         loginAs("admin")
 
         importedEntitySets.keys.forEach {
-            edmApi.deleteEntitySet(edmApi.getEntitySetId(it))
+            entitySetsApi.deleteEntitySet(entitySetsApi.getEntitySetId(it))
         }
         Thread.sleep(5000L)
 
@@ -390,8 +390,8 @@ class SearchLinkedEntitiesTests : SetupTestData() {
         }
 
         // remove permissions on imported entity sets
-        val esId1 = edmApi.getEntitySetId(importedEntitySets.keys.first())
-        val esId2 = edmApi.getEntitySetId(importedEntitySets.keys.last())
+        val esId1 = entitySetsApi.getEntitySetId(importedEntitySets.keys.first())
+        val esId2 = entitySetsApi.getEntitySetId(importedEntitySets.keys.last())
 
         val ess = EntitySetSelection(Optional.of(personEt.properties))
         val esData1 = dataApi.loadEntitySetData(esId1, ess, FileType.json).toList()
@@ -761,7 +761,7 @@ class SearchLinkedEntitiesTests : SetupTestData() {
 
         loginAs("admin")
 
-        edmApi.deleteEntitySet(esLinking.id)
+        entitySetsApi.deleteEntitySet(esLinking.id)
     }
 
 }
