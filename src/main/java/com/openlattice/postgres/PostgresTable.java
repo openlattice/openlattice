@@ -396,6 +396,7 @@ public final class PostgresTable {
                         ENTITY_SET_ID.getName()
                                 + ",(" + LAST_LINK.getName() + " < " + LAST_WRITE.getName() + ")"
                                 + ",(" + LAST_INDEX.getName() + " >= " + LAST_WRITE.getName() + ")"
+                                + ",(" + LAST_INDEX.getName() + " > '-infinity' )"
                                 + ",(" + VERSION.getName() + " > 0)" )
                         .name( "entity_key_ids_needing_linking_idx" )
                         .ifNotExists(),
