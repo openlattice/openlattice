@@ -217,7 +217,10 @@ public class HazelcastOrganizationService {
         apps.set( organizationId, DelegatedUUIDSet.wrap( organization.getApps() ) );
         phoneNumbers.setPhoneNumber( organizationId, organization.getSmsEntitySetInfo() );
         partitionManager.allocateDefaultPartitions( organizationId, DEFAULT_PARTITION_COUNT );
-        organization.setPartitions( getDefaultPartitions( organizationId ) );
+        
+        final var defaultPartitions = getDefaultPartitions( organizationId );
+        partitions.set( organizationId, new DelegatedIntList( defaultPartitions ) );
+        organization.setPartitions( defaultPartitions );
     }
 
     public Organization getOrganization( UUID organizationId ) {
