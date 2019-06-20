@@ -6,7 +6,6 @@ import com.openlattice.edm.PostgresEdmTypeConverter
 import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresColumn.*
-import com.openlattice.postgres.PostgresTable.DATA
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 
 /**
@@ -35,9 +34,6 @@ class PostgresDataTables {
         val btreeIndexedColumns = supportedEdmPrimitiveTypeKinds
                 .map(PostgresEdmTypeConverter::map)
                 .map(::btreeIndexedValueColumn)
-        val ginIndexedColumns = supportedEdmPrimitiveTypeKinds
-                .map(PostgresEdmTypeConverter::map)
-                .map(::ginIndexedValueColumn)
 
         val dataTableMetadataColumns = listOf(
                 ENTITY_SET_ID,
@@ -52,7 +48,7 @@ class PostgresDataTables {
                 VERSIONS,
                 PARTITIONS_VERSION
         )
-        val dataTableColumns = dataTableMetadataColumns + btreeIndexedColumns + ginIndexedColumns + nonIndexedColumns
+        val dataTableColumns = dataTableMetadataColumns + btreeIndexedColumns + nonIndexedColumns
 
         private val columnDefinitionCache = CacheBuilder.newBuilder().build(
                 object : CacheLoader<Pair<IndexType, EdmPrimitiveTypeKind>, PostgresColumnDefinition>() {
@@ -72,9 +68,6 @@ class PostgresDataTables {
                         val (indexType, edmType) = key
                         return when (indexType) {
                             IndexType.BTREE -> btreeIndexedValueColumn(
-                                    PostgresEdmTypeConverter.map(edmType)
-                            )
-                            IndexType.GIN -> ginIndexedValueColumn(
                                     PostgresEdmTypeConverter.map(edmType)
                             )
                             IndexType.NONE -> nonIndexedValueColumn(
@@ -97,10 +90,6 @@ class PostgresDataTables {
 
             tableDefinition.addIndexes(
                     *btreeIndexedColumns.map { buildBtreeIndexDefinition(tableDefinition, it) }.toTypedArray()
-            )
-
-            tableDefinition.addIndexes(
-                    *ginIndexedColumns.map { buildGinIndexDefinition(tableDefinition, it) }.toTypedArray()
             )
 
             val prefix = tableDefinition.name
@@ -160,32 +149,17 @@ class PostgresDataTables {
                 columnDefinition: PostgresColumnDefinition
         ): PostgresIndexDefinition {
             return PostgresColumnsIndexDefinition(tableDefinition, columnDefinition)
-                    .name(buildIndexName(tableDefinition.name, columnDefinition.name, IndexType.BTREE))
+                    .name(buildBtreeIndexName(tableDefinition.name, columnDefinition.name))
                     .ifNotExists()
         }
 
-        @JvmStatic
-        fun buildGinIndexDefinition(
-                tableDefinition: PostgresTableDefinition,
-                columnDefinition: PostgresColumnDefinition
-        ): PostgresIndexDefinition {
-            return PostgresColumnsIndexDefinition(tableDefinition, columnDefinition).method(IndexType.GIN)
-                    .name(buildIndexName(tableDefinition.name, columnDefinition.name, IndexType.GIN))
-                    .ifNotExists()
-        }
-
-        private fun buildIndexName(tableName: String, columnName: String, indexType: IndexType): String {
-            return "${tableName}_${columnName}_${indexType.name.toLowerCase()}_idx"
+        private fun buildBtreeIndexName(tableName: String, columnName: String): String {
+            return "${tableName}_${columnName}_${IndexType.BTREE.name.toLowerCase()}_idx"
         }
 
         @JvmStatic
         fun nonIndexedValueColumn(datatype: PostgresDatatype): PostgresColumnDefinition {
             return PostgresColumnDefinition("n_${datatype.name}", datatype)
-        }
-
-        @JvmStatic
-        fun ginIndexedValueColumn(datatype: PostgresDatatype): PostgresColumnDefinition {
-            return PostgresColumnDefinition("g_${datatype.name}", datatype)
         }
 
         @JvmStatic
