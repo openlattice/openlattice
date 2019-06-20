@@ -29,15 +29,17 @@ class PostgresDataTables {
                 EdmPrimitiveTypeKind.Boolean,
                 EdmPrimitiveTypeKind.Binary
         )
+
+
         val nonIndexedColumns = supportedEdmPrimitiveTypeKinds
                 .map(PostgresEdmTypeConverter::map)
                 .map(::nonIndexedValueColumn)
         val btreeIndexedColumns = supportedEdmPrimitiveTypeKinds
                 .map(PostgresEdmTypeConverter::map)
                 .map(::btreeIndexedValueColumn)
-        val ginIndexedColumns = supportedEdmPrimitiveTypeKinds
-                .map(PostgresEdmTypeConverter::map)
-                .map(::ginIndexedValueColumn)
+//        val ginIndexedColumns = supportedEdmPrimitiveTypeKinds
+//                .map(PostgresEdmTypeConverter::map)
+//                .map(::ginIndexedValueColumn)
 
         val dataTableMetadataColumns = listOf(
                 ENTITY_SET_ID,
@@ -74,9 +76,9 @@ class PostgresDataTables {
                             IndexType.BTREE -> btreeIndexedValueColumn(
                                     PostgresEdmTypeConverter.map(edmType)
                             )
-                            IndexType.GIN -> ginIndexedValueColumn(
-                                    PostgresEdmTypeConverter.map(edmType)
-                            )
+//                            IndexType.GIN -> ginIndexedValueColumn(
+//                                    PostgresEdmTypeConverter.map(edmType)
+//                            )
                             IndexType.NONE -> nonIndexedValueColumn(
                                     PostgresEdmTypeConverter.map(edmType)
                             )
@@ -98,10 +100,10 @@ class PostgresDataTables {
             tableDefinition.addIndexes(
                     *btreeIndexedColumns.map { buildBtreeIndexDefinition(tableDefinition, it) }.toTypedArray()
             )
-
-            tableDefinition.addIndexes(
-                    *ginIndexedColumns.map { buildGinIndexDefinition(tableDefinition, it) }.toTypedArray()
-            )
+//
+//            tableDefinition.addIndexes(
+//                    *ginIndexedColumns.map { buildGinIndexDefinition(tableDefinition, it) }.toTypedArray()
+//            )
 
             val prefix = tableDefinition.name
 
