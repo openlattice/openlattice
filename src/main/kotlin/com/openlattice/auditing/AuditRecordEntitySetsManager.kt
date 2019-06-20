@@ -202,6 +202,14 @@ class AuditRecordEntitySetsManager(
         return auditRecordEntitySetConfigurations[aclKey]?.auditRecordEntitySetIds?.toSet() ?: setOf()
     }
 
+    fun getAuditEdgeEntitySets(aclKey: AclKey): Set<UUID> {
+        return auditRecordEntitySetConfigurations[aclKey]?.auditEdgeEntitySetIds?.toSet() ?: setOf()
+    }
+
+    fun removeAuditRecordEntitySetConfiguration(aclKey: AclKey) {
+        auditRecordEntitySetConfigurations.delete(aclKey)
+    }
+
     fun getActiveAuditEntitySetIds(aclKey: AclKey, eventType: AuditEventType): AuditEntitySetsConfiguration {
         val aclKeyRoot = aclKey.first() // TODO do we always only care about the base id?
 
