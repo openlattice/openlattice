@@ -28,6 +28,8 @@ class PostgresDataTables {
                 EdmPrimitiveTypeKind.Boolean,
                 EdmPrimitiveTypeKind.Binary
         )
+
+
         val nonIndexedColumns = supportedEdmPrimitiveTypeKinds
                 .map(PostgresEdmTypeConverter::map)
                 .map(::nonIndexedValueColumn)
@@ -73,7 +75,7 @@ class PostgresDataTables {
                             IndexType.NONE -> nonIndexedValueColumn(
                                     PostgresEdmTypeConverter.map(edmType)
                             )
-                            else -> throw IllegalArgumentException("HASH indexes are not yet supported by openlattice.")
+                            else -> throw IllegalArgumentException("HASH or GIN indexes are not yet supported by openlattice.")
                         }
                     }
                 }

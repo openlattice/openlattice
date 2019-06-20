@@ -253,7 +253,7 @@ public final class PostgresColumn {
             TIMESTAMPTZ )
             .withDefault( "'-infinity'" )
             .notNull();
-    public static final String                   LAST_MIGRATE_FIELD                = "last_link_index";
+    public static final String                   LAST_MIGRATE_FIELD                = "last_migrate";
     public static final PostgresColumnDefinition LAST_MIGRATE                      = new PostgresColumnDefinition(
             LAST_MIGRATE_FIELD,
             TIMESTAMPTZ )
