@@ -3,6 +3,7 @@ package com.openlattice.postgres
 import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
 import com.openlattice.postgres.PostgresColumn.PARTITION
 import com.openlattice.postgres.PostgresTable.ENTITY_KEY_IDS
+import com.openlattice.postgres.PostgresTable.IDS
 
 /**
  *
@@ -22,7 +23,7 @@ class PostgresMaterializedViews {
                 "partition_counts",
                 "CREATE MATERIALIZED VIEW IF NOT EXISTS partition_counts AS " +
                         "SELECT ${ENTITY_SET_ID.name},${PARTITION.name},COUNT(*) " +
-                        "FROM ${ENTITY_KEY_IDS.name} " +
+                        "FROM ${IDS.name} " +
                         "GROUP BY (${ENTITY_SET_ID.name},${PARTITION.name})"
         )
 

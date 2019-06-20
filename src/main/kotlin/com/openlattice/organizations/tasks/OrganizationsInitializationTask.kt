@@ -52,6 +52,7 @@ class OrganizationsInitializationTask() : HazelcastInitializationTask<Organizati
         val organizationService = dependencies.organizationService
         val globalOrg = organizationService.maybeGetOrganization(GLOBAL_ORG_PRINCIPAL)
         val olOrg = organizationService.maybeGetOrganization(OPENLATTICE_ORG_PRINCIPAL)
+        organizationService.
         if (globalOrg.isPresent) {
             logger.info(
                     "Expected id = {}, Actual id = {}",

@@ -24,7 +24,9 @@ import java.util.*
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 @Service
-class PartitionManager @JvmOverloads constructor(hazelcastInstance: HazelcastInstance, private val hds: HikariDataSource, partitions: Int = 257) {
+class PartitionManager @JvmOverloads constructor(
+        hazelcastInstance: HazelcastInstance, private val hds: HikariDataSource, partitions: Int = 257
+) {
     private val partitionList = mutableListOf<Int>()
     private val entitySets = hazelcastInstance.getMap<UUID, EntitySet>(HazelcastMap.ENTITY_SETS.name)
     private val defaultPartitions = hazelcastInstance.getMap<UUID, DelegatedIntList>(
@@ -120,14 +122,8 @@ class PartitionManager @JvmOverloads constructor(hazelcastInstance: HazelcastIns
      * Allocates default partitions for an organization based on emptiest partitions.
      */
     fun allocateDefaultPartitions(organizationId: UUID, partitionCount: Int) {
-        checkArgument(
-                partitionCount > partitionList.size,
-                "Cannot request more partitions ($partitionCount) than exist (${partitionList.size}."
-        )
-
         setDefaultPartitions(organizationId, getEmptiestPartitions(partitionCount).map { it.first })
     }
-
 
     fun repartition(organizationId: UUID) {
         //TODO
@@ -177,7 +173,10 @@ class PartitionManager @JvmOverloads constructor(hazelcastInstance: HazelcastIns
      * We don't have to lock here as long as number of partitions is monotonically increasing.
      */
     private fun isValidAllocation(partitionCount: Int) {
-        checkArgument(partitionCount <= partitionList.size, "Requested more partitions than available.")
+        checkArgument(
+                partitionCount <= partitionList.size,
+                "Cannot request more partitions ($partitionCount) than exist (${partitionList.size}."
+        )
     }
 
 }
