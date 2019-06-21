@@ -1,12 +1,17 @@
 package com.openlattice.data.storage
 
 
+import com.openlattice.analysis.SqlBindInfo
+import com.openlattice.analysis.requests.Filter
+import com.openlattice.edm.PostgresEdmTypeConverter
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.*
 import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresDataTables.Companion.getColumnDefinition
 import com.openlattice.postgres.PostgresTable.DATA
+import java.sql.Connection
+import java.sql.PreparedStatement
 import java.util.*
 
 /**
@@ -36,6 +41,114 @@ val jsonValueColumnsSql = PostgresDataTables.dataColumns.entries
                     "FILTER (WHERE ${bt.name} IS NOT NULL OR ${ni.name} IS NOT NULL ),'{}') " +
                     "as ${getDataColumnName(datatype)}"
         }
+
+/**
+ * Builds a preparable SQL query for reading filterable data.
+ *
+ * The first three columns om
+ * @return A preparable sql query to read the data to a ordered set of [SqlBinder] objects. The prepared query
+ * must be have the first three parameters bound separately from the [SqlBinder] objects. The parameters are as follows:
+ * 1. entity set ids (array)
+ * 2. entity key ids (array)
+ * 3. partition(s) (array)
+ *
+ */
+fun buildPreparableFiltersClauseForLinkedEntities(
+        propertyTypes: Map<UUID, PropertyType>,
+        propertyTypeFilters: Map<UUID, Set<Filter>>
+): Pair<String, Set<SqlBinder>> {
+    val filtersClauses = buildPreparableFiltersClause(1, propertyTypes, propertyTypeFilters)
+    val sql = "SELECT ${PostgresColumn.ENTITY_SET_ID.name}, ${PostgresColumn.ID_VALUE.name}, ${PostgresColumn.PARTITION.name}, ${PostgresColumn.PROPERTY_TYPE_ID.name}, $valuesColumnsSql " +
+            "FROM ${PostgresTable.DATA.name} WHERE ${PostgresColumn.ENTITY_SET_ID.name} = ANY(?) AND ${PostgresColumn.ID_VALUE.name} = ANY(?) AND partition = ANY(?) AND ${filtersClauses.first}" +
+            "GROUP BY (${PostgresColumn.ENTITY_SET_ID.name},${PostgresColumn.LINKING_ID.name}, ${PostgresColumn.PARTITION.name}, ${PostgresColumn.PROPERTY_TYPE_ID.name})"
+
+    return sql to filtersClauses.second
+
+}
+
+/**
+ * Builds a preparable SQL query for reading filterable data.
+ *
+ * The first three columns om
+ * @return A preparable sql query to read the data to a ordered set of [SqlBinder] objects. The prepared query
+ * must be have the first three parameters bound separately from the [SqlBinder] objects. The parameters are as follows:
+ * 1. entity set ids (array)
+ * 2. entity key ids (array)
+ * 3. partition(s) (array)
+ *
+ */
+fun buildPreparableFiltersClauseForEntities(
+        propertyTypes: Map<UUID, PropertyType>,
+        propertyTypeFilters: Map<UUID, Set<Filter>>
+): Pair<String, Set<SqlBinder>> {
+    val filtersClauses = buildPreparableFiltersClause(1, propertyTypes, propertyTypeFilters)
+    val sql = "SELECT ${PostgresColumn.ENTITY_SET_ID.name}, ${PostgresColumn.ID_VALUE.name}, ${PostgresColumn.PARTITION.name}, ${PostgresColumn.PROPERTY_TYPE_ID.name}, $valuesColumnsSql " +
+            "FROM ${PostgresTable.DATA.name} WHERE ${PostgresColumn.ENTITY_SET_ID.name} = ANY(?) AND ${PostgresColumn.ID_VALUE.name} = ANY(?) AND partition = ANY(?) AND ${filtersClauses.first}" +
+            "GROUP BY (${PostgresColumn.ENTITY_SET_ID.name},${PostgresColumn.ID_VALUE.name}, ${PostgresColumn.PARTITION.name}, ${PostgresColumn.PROPERTY_TYPE_ID.name})"
+
+    return sql to filtersClauses.second
+
+}
+
+private fun buildPreparableFiltersClause(
+        startIndex: Int,
+        propertyTypes: Map<UUID, PropertyType>,
+        propertyTypeFilters: Map<UUID, Set<Filter>>
+): Pair<String, Set<SqlBinder>> {
+    val bindList = propertyTypeFilters.entries.flatMap { (propertyTypeId, filters) ->
+        if (filters.isEmpty()) return@flatMap listOf<BindDetails>()
+        val nCol = PostgresDataTables
+                .nonIndexedValueColumn(PostgresEdmTypeConverter.map(propertyTypes.getValue(propertyTypeId).datatype))
+        val bCol = PostgresDataTables
+                .btreeIndexedValueColumn(PostgresEdmTypeConverter.map(propertyTypes.getValue(propertyTypeId).datatype))
+
+        //Generate sql preparable sql fragments
+        var currentIndex = startIndex
+        val nFilterFragments = filters.map { filter ->
+            val bindDetails = buildBindDetails(currentIndex, propertyTypeId, filter, nCol.name)
+            currentIndex = bindDetails.nextIndex
+            bindDetails
+        }
+
+        val bFilterFragments = filters
+                .map { filter ->
+                    val bindDetails = buildBindDetails(currentIndex, propertyTypeId, filter, bCol.name)
+                    currentIndex = bindDetails.nextIndex
+                    bindDetails
+                }
+
+        nFilterFragments + bFilterFragments
+    }
+
+    val sql = bindList.joinToString(" AND ") { "(${it.sql})" }
+    val bindInfo = bindList.flatMap { it.bindInfo }.toSet()
+    return sql to bindInfo
+}
+
+private fun buildBindDetails(
+        startIndex: Int,
+        propertyTypeId: UUID,
+        filter: Filter,
+        col: String
+): BindDetails {
+    val bindInfo = linkedSetOf<SqlBinder>()
+    bindInfo.add(SqlBinder(SqlBindInfo(startIndex, propertyTypeId), ::doBind))
+    bindInfo.addAll(filter.bindInfo(startIndex).map { SqlBinder(it, ::doBind) })
+    return BindDetails(startIndex + bindInfo.size, bindInfo, "${PROPERTY_TYPE_ID.name} = ? AND " + filter.asSql(col))
+}
+
+internal fun doBind(ps: PreparedStatement, info: SqlBindInfo) {
+    when (val v = info.value) {
+        is String -> ps.setString(info.bindIndex, v)
+        is Int -> ps.setInt(info.bindIndex, v)
+        is Long -> ps.setLong(info.bindIndex, v)
+        is Boolean -> ps.setBoolean(info.bindIndex, v)
+        is Short -> ps.setShort(info.bindIndex, v)
+        is java.sql.Array -> ps.setArray(info.bindIndex, v)
+        else -> ps.setObject(info.bindIndex, v)
+    }
+}
+
 
 /**
  * Preparable SQL that selects entities grouping by id and property type id from the [DATA] table with the following
@@ -204,7 +317,9 @@ internal val updateVersionsForPropertyTypesInEntitiesInEntitySet = "$updateVersi
  * 2. property type ids (array)
  *
  */
-internal val selectEntitySetTextProperties = "SELECT ${getDataColumnName(PostgresDatatype.TEXT)} FROM ${DATA.name} WHERE ${PostgresColumn.ENTITY_SET_ID.name} = ANY(?) AND $PROPERTY_TYPE_ID = ANY(?)"
+internal val selectEntitySetTextProperties = "SELECT ${getDataColumnName(
+        PostgresDatatype.TEXT
+)} FROM ${DATA.name} WHERE ${PostgresColumn.ENTITY_SET_ID.name} = ANY(?) AND $PROPERTY_TYPE_ID = ANY(?)"
 
 /**
  * Selects a text properties from specific entities with the following bind order:
@@ -244,9 +359,10 @@ fun getPartitionsInfoMap(entityKeyIds: Set<UUID>, partitions: List<Int>): Map<UU
     return entityKeyIds.associateWith { entityKeyId -> getPartition(entityKeyId, partitions) }
 }
 
-fun getDataColumnName( datatype :PostgresDatatype ) : String {
+fun getDataColumnName(datatype: PostgresDatatype): String {
     return "v_$datatype.name"
 }
+
 /**
  * This function generates preparable sql with the following bind order:
  *
@@ -281,5 +397,6 @@ fun upsertPropertyValueSql(propertyType: PropertyType): String {
             "${VERSION.name} = CASE WHEN abs(${DATA.name}.${VERSION.name}) < EXCLUDED.${VERSION.name} THEN EXCLUDED.${VERSION.name} " +
             "ELSE ${DATA.name}.${VERSION.name} END"
 }
+
 
 

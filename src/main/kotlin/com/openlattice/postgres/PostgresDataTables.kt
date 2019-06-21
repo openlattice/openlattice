@@ -39,6 +39,7 @@ class PostgresDataTables {
         val dataTableMetadataColumns = listOf(
                 ENTITY_SET_ID,
                 ID_VALUE,
+                LINKING_ID,
                 PARTITION,
                 PROPERTY_TYPE_ID,
                 HASH,
