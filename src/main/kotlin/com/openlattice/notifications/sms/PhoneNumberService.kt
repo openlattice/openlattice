@@ -26,7 +26,7 @@ open class PhoneNumberService(hazelcastInstance: HazelcastInstance) {
     }
 
     @Timed
-    fun setPhoneNumber(organizationId: UUID, entitySetInformationList: Collection<SmsEntitySetInformation>) {
+    fun setPhoneNumber(entitySetInformationList: Collection<SmsEntitySetInformation>) {
         val entitySetInformationMap = entitySetInformationList.associateBy { smsEsInfo ->
             SmsInformationKey(
                     smsEsInfo.phoneNumber,

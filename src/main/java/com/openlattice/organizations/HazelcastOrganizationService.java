@@ -220,7 +220,7 @@ public class HazelcastOrganizationService {
                 DelegatedStringSet.wrap( organization.getAutoApprovedEmails() ) );
         membersOf.set( organizationId, PrincipalSet.wrap( organization.getMembers() ) );
         apps.set( organizationId, DelegatedUUIDSet.wrap( organization.getApps() ) );
-        phoneNumbers.setPhoneNumber( organizationId, organization.getSmsEntitySetInfo() );
+        phoneNumbers.setPhoneNumber( organization.getSmsEntitySetInfo() );
 
     }
 
@@ -487,10 +487,8 @@ public class HazelcastOrganizationService {
         return (OrganizationPrincipal) Iterables.getOnlyElement( maybeOrganizationPrincipal );
     }
 
-    public void setSmsEntitySetInformation(
-            UUID organizationId,
-            List<SmsEntitySetInformation> entitySetInformationList ) {
-        phoneNumbers.setPhoneNumber( organizationId, entitySetInformationList );
+    public void setSmsEntitySetInformation( List<SmsEntitySetInformation> entitySetInformationList ) {
+        phoneNumbers.setPhoneNumber( entitySetInformationList );
     }
 
     public List<Integer> getDefaultPartitions( UUID organizationId ) {
