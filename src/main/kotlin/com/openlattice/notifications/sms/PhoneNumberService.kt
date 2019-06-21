@@ -4,13 +4,16 @@ import com.codahale.metrics.annotation.Timed
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicates
 import com.openlattice.hazelcast.HazelcastMap
+import org.springframework.stereotype.Service
 import java.util.*
 
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-open class PhoneNumberService(hazelcastInstance: HazelcastInstance) {
+@Service
+open class PhoneNumberService(val hazelcastInstance: HazelcastInstance) {
+
     private val phoneNumbers = hazelcastInstance.getMap<SmsInformationKey, SmsEntitySetInformation>(
             HazelcastMap.SMS_INFORMATION.name
     )
