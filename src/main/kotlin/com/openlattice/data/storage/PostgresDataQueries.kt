@@ -195,8 +195,6 @@ internal val selectEntitySetGroupedByIdAndPropertyTypeId =
  * 3. partition (array)
  *
  */
-// todo do we use ids or entity_key_ids???
-// todo filter on partitions too??
 // todo: filter partition on ids table or data table?
 internal val selectLinkingEntitiesGroupedByLinkingIdAndPropertyTypeId =
         "SELECT ${ENTITY_SET_ID.name}, ${LINKING_ID.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name}, $valuesColumnsSql " +
@@ -211,7 +209,6 @@ internal val selectLinkingEntitiesGroupedByLinkingIdAndPropertyTypeId =
  * 1. normal entity set ids (array)
  *
  */
-// todo do we use ids or entity_key_ids???
 // todo: filter partition on ids table or data table?
 internal val selectLinkingEntitySetGroupedByLinkingIdAndPropertyTypeId =
         "SELECT ${ENTITY_SET_ID.name}, ${LINKING_ID.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name}, $valuesColumnsSql " +
@@ -268,6 +265,7 @@ internal val selectLinkingEntitiesByNormalEntitySetIdsSql =
  * Note: It's only selecting from 1 linking entity set
  *
  */
+// todo: what if we want to select multiple linking entity sets?
 internal fun selectLinkingEntitiesByLinkingEntitySetIdSql (linkingEntitySetId: UUID): String {
     return "SELECT '$linkingEntitySetId' AS ${ENTITY_SET_ID.name},${LINKING_ID.name},$jsonValueColumnsSql FROM ($selectLinkingEntitiesGroupedByLinkingIdAndPropertyTypeId) entities " +
             "GROUP BY (${ENTITY_SET_ID.name},${LINKING_ID.name}, ${PARTITION.name})"
