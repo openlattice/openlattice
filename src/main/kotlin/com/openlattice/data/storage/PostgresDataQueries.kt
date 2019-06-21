@@ -48,7 +48,7 @@ val jsonValueColumnsSql = PostgresDataTables.dataColumns.entries
  * 3. partition (array)
  *
  */
-internal val selectEntitiesGroupedByIdAndPropertyTypeId = "SELECT ${ENTITY_SET_ID.name}, ${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name}, $valuesColumnsSql from data where entity_set_id = ? AND id = ANY(?) AND partition = ANY(?) GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
+internal val selectEntitiesGroupedByIdAndPropertyTypeId = "SELECT ${ENTITY_SET_ID.name}, ${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name}, $valuesColumnsSql from data where entity_set_id = ANY(?) AND id = ANY(?) AND partition = ANY(?) GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
 
 /**
  * Preparable SQL that selects an entire entity set grouping by id and property type id from the [DATA] table with the following
@@ -57,7 +57,7 @@ internal val selectEntitiesGroupedByIdAndPropertyTypeId = "SELECT ${ENTITY_SET_I
  * 1. entity set id
  *
  */
-internal val selectEntitySetGroupedByIdAndPropertyTypeId = "SELECT ${ENTITY_SET_ID.name}, ${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name}, $valuesColumnsSql from data where entity_set_id = ? GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
+internal val selectEntitySetGroupedByIdAndPropertyTypeId = "SELECT ${ENTITY_SET_ID.name}, ${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name}, $valuesColumnsSql from data where entity_set_id = ANY(?) GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
 /**
  * Preparable SQL that selects entities grouping by id and property type id from the [DATA] table with the following
  * bind order:
