@@ -50,7 +50,6 @@ public interface OrganizationsApi {
     String ID_PATH           = "/{" + ID + "}";
     String INTEGRATION       = "/integration";
     String MEMBERS           = "/members";
-    String PHONE = "/phone";
     String PRINCIPALS        = "/principals";
     String PRINCIPAL_ID      = "pid";
     String PRINCIPAL_ID_PATH = "/{" + PRINCIPAL_ID + "}";
@@ -85,19 +84,6 @@ public interface OrganizationsApi {
 
     @DELETE( BASE + ID_PATH )
     Void destroyOrganization( @Path( ID ) UUID organizationId );
-
-    /**
-     * Sets the organization phone number.
-     *
-     * @param organizationId The organization id to set the phone number for.
-     * @param entitySetInformationList An array of {@link SmsEntitySetInformation} containing per entity set contact info.
-     * @return The current phone number after the set operation completed. This be different from the input phone number
-     * either because it has been reformatted or someone else set the phone number simultaneously.
-     */
-    @POST( BASE + ID_PATH + PHONE )
-    Integer setOrganizationEntitySetInformation(
-            @Path( ID ) UUID organizationId,
-            @Body List<SmsEntitySetInformation> entitySetInformationList );
 
     @GET( BASE + ID_PATH + INTEGRATION )
     OrganizationIntegrationAccount getOrganizationIntegrationAccount( @Path( ID ) UUID organizationId );
