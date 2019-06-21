@@ -26,9 +26,16 @@ val dataTableColumnsConflictSetSql = PostgresDataTables.dataTableColumns.joinToS
 ) { "${it.name} = EXCLUDED.${it.name}" }
 val valuesColumnsSql = PostgresDataTables.dataTableValueColumns.joinToString(",") { it.name }
 
-internal val selectEntitiesSql = "SELECT ${ENTITY_SET_ID.name}, ${ID_VALUE.name}, jsonb_object_agg(${PROPERTY_TYPE_ID.name}, $VALUES) from () pmap group by (entity_set_id,id, partition) "
 
-internal val selectGroupedByEntitKeyIdAndPropertyTypeId = "select ${ENTITY_SET_ID.name}, ${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name}, array_agg(COALESCE) from data where entity_set_id = 'fda9b1c1-6cea-4130-8d86-057e659bb9ea' AND partition = ANY(?) group by (entity_set_id,id, partition, property_type_id)"
+internal val selectGroupedByEntitKeyIdAndPropertyTypeId = "select ${ENTITY_SET_ID.name}, ${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name}, array_agg(COALESCE) " +
+        "FROM ${DATA.name} " +
+        "WHERE ${ENTITY_SET_ID.name} = ? AND ${PARTITION.name} = ANY(?) " +
+        "GROUP BY (${ENTITY_SET_ID.name}, ${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
+
+internal val selectEntitiesSql = "SELECT ${ENTITY_SET_ID.name}, ${ID_VALUE.name}, jsonb_object_agg(${PROPERTY_TYPE_ID.name}, $VALUES) " +
+        "FROM ($selectGroupedByEntitKeyIdAndPropertyTypeId) pmap " +
+        "GROUP BY (${ENTITY_SET_ID.name}, ${ID_VALUE.name}, ${PARTITION.name}) "
+
 /**
  * 1 - version
  * 2 - version
