@@ -40,43 +40,52 @@ val jsonValueColumnsSql = PostgresDataTables.dataColumns.entries
         }
 
 /**
- * Preparable SQL that selects entities grouping by id and property type id from the [DATA] table with the following
- * bind order:
+ * Preparable SQL that selects entities across multiple entity sets grouping by id and property type id from the [DATA]
+ * table with the following bind order:
  *
  * 1. entity set ids (array)
  * 2. entity key ids (array)
  * 3. partition (array)
  *
  */
-internal val selectEntitiesGroupedByIdAndPropertyTypeId = "SELECT ${ENTITY_SET_ID.name}, ${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name}, $valuesColumnsSql from data where entity_set_id = ANY(?) AND id = ANY(?) AND partition = ANY(?) GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
+internal val selectEntitiesGroupedByIdAndPropertyTypeId =
+        "SELECT ${ENTITY_SET_ID.name}, ${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name}, $valuesColumnsSql " +
+                "FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = ANY(?) AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ANY(?) " +
+                "GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
 
 /**
- * Preparable SQL that selects an entire entity set grouping by id and property type id from the [DATA] table with the following
- * bind order:
+ * Preparable SQL that selects an entire entity sets grouping by id and property type id from the [DATA] table with the
+ * following bind order:
  *
- * 1. entity set id
+ * 1. entity set ids (array)
  *
  */
-internal val selectEntitySetGroupedByIdAndPropertyTypeId = "SELECT ${ENTITY_SET_ID.name}, ${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name}, $valuesColumnsSql from data where entity_set_id = ANY(?) GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
+internal val selectEntitySetGroupedByIdAndPropertyTypeId =
+        "SELECT ${ENTITY_SET_ID.name}, ${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name}, $valuesColumnsSql " +
+                "FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = ANY(?) " +
+                "GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
 /**
- * Preparable SQL that selects entities grouping by id and property type id from the [DATA] table with the following
- * bind order:
+ * Preparable SQL that selects entities across multiple entity sets grouping by id and property type id from the [DATA]
+ * table with the following bind order:
  *
  * 1. entity set ids (array)
  * 2. entity key ids (array)
  * 3. partition (array)
  *
  */
-internal val selectEntitiesSql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},$jsonValueColumnsSql from ($selectEntitiesGroupedByIdAndPropertyTypeId) entities group by (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name})"
+internal val selectEntitiesSql =
+        "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},$jsonValueColumnsSql FROM ($selectEntitiesGroupedByIdAndPropertyTypeId) entities " +
+                "GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name})"
 
 /**
- * Preparable SQL that selects an entire entity set grouping by id and property type id from the [DATA] table with the following
- * bind order:
+ * Preparable SQL that selects an entire entity sets grouping by id and property type id from the [DATA] table with the
+ * following bind order:
  *
- * 1. entity set id
+ * 1. entity set ids (array)
  *
  */
-internal val selectEntitySetSql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},$jsonValueColumnsSql from ($selectEntitySetGroupedByIdAndPropertyTypeId) entity_set group by (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name})"
+internal val selectEntitySetsSql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},$jsonValueColumnsSql FROM ($selectEntitySetGroupedByIdAndPropertyTypeId) entity_set " +
+        "GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name})"
 
 /**
  * 1 - version

@@ -24,7 +24,7 @@ class PostgresDataTablesTest {
 
     @Test
     fun testDataReadSql() {
-        logger.info(selectEntitySetSql)
+        logger.info(selectEntitySetsSql)
     }
 
     @Test
