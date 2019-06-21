@@ -41,7 +41,16 @@ class PostgresDataTablesTest {
     fun testDataReadLinkingEntitySetSql() {
         val ids = "'{\"00000000-0000-0001-0000-000000000000\"}'"
 
-        val select = selectLinkingEntitySetSql(UUID.fromString("00000000-0000-0001-0000-000000000000")).replaceFirst("?", ids).replaceFirst("?", ids)
+        val select = selectLinkingEntitySetSql(UUID.fromString("00000000-0000-0001-0000-000000000000")).replaceFirst("?", ids)
+        logger.info(select)
+    }
+
+    @Test
+    fun testDataReadLinkingEntitiesSql() {
+        val ids = "'{\"00000000-0000-0001-0000-000000000000\"}'"
+        val partitions = "ARRAY[1,2,3]"
+
+        val select = selectLinkingEntitiesByNormalEntitySetIdsSql.replaceFirst("?", ids).replaceFirst("?", ids).replaceFirst("?", partitions)
         logger.info(select)
     }
 

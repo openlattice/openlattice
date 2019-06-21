@@ -6,8 +6,7 @@ import com.openlattice.postgres.*
 import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresDataTables.Companion.getColumnDefinition
-import com.openlattice.postgres.PostgresTable.DATA
-import com.openlattice.postgres.PostgresTable.ENTITY_KEY_IDS
+import com.openlattice.postgres.PostgresTable.*
 import java.util.*
 
 /**
@@ -69,15 +68,30 @@ internal val selectEntitySetGroupedByIdAndPropertyTypeId =
  * table with the following bind order:
  *
  * 1. normal entity set ids (array)
- * 2. normal entity set ids (array)
+ * 2. linking ids (array)
+ * 3. partition (array)
  *
  */
 // todo do we use ids or entity_key_ids???
-internal val selectLinkingEntitySetGroupedByIdAndPropertyTypeId =
+// todo filter on partitions too??
+internal val selectLinkingEntitiesGroupedByLinkingIdAndPropertyTypeId =
         "SELECT ${ENTITY_SET_ID.name}, ${LINKING_ID.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name}, $valuesColumnsSql " +
                 "FROM ${DATA.name} " +
-                "INNER JOIN ( SELECT ${LINKING_ID.name}, ${ID.name} FROM ${ENTITY_KEY_IDS.name} WHERE ${ENTITY_SET_ID.name} = ANY(?) ) as ids USING(${ID_VALUE.name}) " +
-                "WHERE ${ENTITY_SET_ID.name} = ANY(?) " +
+                "INNER JOIN ( SELECT ${LINKING_ID.name}, ${ID.name} FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = ANY(?) AND ${LINKING_ID.name} = ANY(?) AND ${PARTITION.name} = ANY(?) ) as ids USING(${ID_VALUE.name}) " +
+                "GROUP BY (${ENTITY_SET_ID.name}, ${LINKING_ID.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
+
+/**
+ * Preparable SQL that selects an entire linking entity set grouping by linking id and property type id from the [DATA]
+ * table with the following bind order:
+ *
+ * 1. normal entity set ids (array)
+ *
+ */
+// todo do we use ids or entity_key_ids???
+internal val selectLinkingEntitySetGroupedByLinkingIdAndPropertyTypeId =
+        "SELECT ${ENTITY_SET_ID.name}, ${LINKING_ID.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name}, $valuesColumnsSql " +
+                "FROM ${DATA.name} " +
+                "INNER JOIN ( SELECT ${LINKING_ID.name}, ${ID.name} FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = ANY(?) ) as ids USING(${ID_VALUE.name}) " +
                 "GROUP BY (${ENTITY_SET_ID.name}, ${LINKING_ID.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
 
 /**
@@ -106,15 +120,28 @@ internal val selectEntitySetsSql =
 
 
 /**
+ * Preparable SQL that selects linking entities across multiple entity sets grouping by linking id and property type id
+ * from the  [DATA] table with the following bind order:
+ *
+ * 1. normal entity set ids (array)
+ * 2. linking ids (array)
+ * 3. partition (array)
+ *
+ */
+internal val selectLinkingEntitiesByNormalEntitySetIdsSql =
+     "SELECT ${ENTITY_SET_ID.name},${LINKING_ID.name},$jsonValueColumnsSql FROM ($selectLinkingEntitiesGroupedByLinkingIdAndPropertyTypeId) entity_set " +
+            "GROUP BY (${ENTITY_SET_ID.name},${LINKING_ID.name}, ${PARTITION.name})"
+
+/**
  * Preparable SQL that selects an entire linking entity set grouping by linking id and property type id from the [DATA]
  * table with the following bind order:
  *
  * 1. normal entity set ids (array)
- * 2. normal entity set ids (array)
  *
  */
+// todo: what if we want to select multiple linking entity sets?
 internal fun selectLinkingEntitySetSql(linkingEntitySetId: UUID): String {
-    return "SELECT '$linkingEntitySetId' AS ${ENTITY_SET_ID.name},${LINKING_ID.name},$jsonValueColumnsSql FROM ($selectLinkingEntitySetGroupedByIdAndPropertyTypeId) entity_set " +
+    return "SELECT '$linkingEntitySetId' AS ${ENTITY_SET_ID.name},${LINKING_ID.name},$jsonValueColumnsSql FROM ($selectLinkingEntitySetGroupedByLinkingIdAndPropertyTypeId) entity_set " +
             "GROUP BY (${ENTITY_SET_ID.name},${LINKING_ID.name}, ${PARTITION.name})"
 }
 
