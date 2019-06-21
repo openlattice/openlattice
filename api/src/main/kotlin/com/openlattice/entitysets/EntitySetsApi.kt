@@ -110,7 +110,7 @@ interface EntitySetsApi {
     @GET(BASE + ALL + ID_PATH)
     fun getEntitySet(@Path(ID) entitySetId: UUID): EntitySet
 
-    @POST(BASE + ALL + ID_PATH + METADATA_PATH)
+    @POST(BASE + ALL + METADATA_PATH)
     fun getPropertyMetadataForEntitySets(@Body entitySetIds: Set<UUID>): Map<UUID, Map<UUID, EntitySetPropertyMetadata>>
 
     @GET(BASE + ALL + ID_PATH + METADATA_PATH)
