@@ -20,8 +20,6 @@
 
 package com.openlattice.datastore.pods;
 
-import static com.openlattice.datastore.util.Util.returnAndLog;
-
 import com.amazonaws.services.s3.AmazonS3;
 import com.codahale.metrics.MetricRegistry;
 import com.dataloom.mappers.ObjectMappers;
@@ -107,13 +105,16 @@ import com.openlattice.tasks.PostConstructInitializerTaskDependencies.PostConstr
 import com.openlattice.twilio.TwilioConfiguration;
 import com.openlattice.twilio.pods.TwilioConfigurationPod;
 import com.zaxxer.hikari.HikariDataSource;
-import javax.annotation.PostConstruct;
-import javax.inject.Inject;
 import org.jdbi.v3.core.Jdbi;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+
+import javax.annotation.PostConstruct;
+import javax.inject.Inject;
+
+import static com.openlattice.datastore.util.Util.returnAndLog;
 
 @Configuration
 @Import( {
@@ -305,6 +306,7 @@ public class DatastoreServicesPod {
                 authorizationManager(),
                 principalService(),
                 phoneNumberService(),
+                partitionManager(),
                 assembler() );
     }
 
