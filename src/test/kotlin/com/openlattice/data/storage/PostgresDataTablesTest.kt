@@ -3,6 +3,7 @@ package com.openlattice.data.storage
 import com.openlattice.postgres.PostgresDataTables
 import org.junit.Test
 import org.slf4j.LoggerFactory
+import java.sql.PreparedStatement
 import java.util.*
 
 /**
@@ -23,8 +24,34 @@ class PostgresDataTablesTest {
     }
 
     @Test
-    fun testDataReadSql() {
-        logger.info(selectEntitySetSql)
+    fun testDataReadEntitySetSql() {
+        logger.info(selectEntitySetsSql)
+    }
+
+    @Test
+    fun testDataReadEntitiesSql() {
+        val ids = "'{\"00000000-0000-0001-0000-000000000000\"}'"
+        val partitions = "ARRAY[1,2,3]"
+
+        val select = selectEntitiesSql.replaceFirst("?", ids).replaceFirst("?", ids).replaceFirst("?", partitions)
+        logger.info(select)
+    }
+
+    @Test
+    fun testDataReadLinkingEntitySetSql() {
+        val ids = "'{\"00000000-0000-0001-0000-000000000000\"}'"
+
+        val select = selectLinkingEntitySetSql(UUID.fromString("00000000-0000-0001-0000-000000000000")).replaceFirst("?", ids)
+        logger.info(select)
+    }
+
+    @Test
+    fun testDataReadLinkingEntitiesSql() {
+        val ids = "'{\"00000000-0000-0001-0000-000000000000\"}'"
+        val partitions = "ARRAY[1,2,3]"
+
+        val select = selectLinkingEntitiesByNormalEntitySetIdsSql.replaceFirst("?", ids).replaceFirst("?", ids).replaceFirst("?", partitions)
+        logger.info(select)
     }
 
     @Test

@@ -12,6 +12,9 @@ import com.openlattice.postgres.PostgresDataTables.Companion.getColumnDefinition
 import com.openlattice.postgres.PostgresTable.DATA
 import java.sql.Connection
 import java.sql.PreparedStatement
+
+import com.openlattice.postgres.PostgresTable.*
+
 import java.util.*
 
 /**
@@ -43,6 +46,7 @@ val jsonValueColumnsSql = PostgresDataTables.dataColumns.entries
         }
 
 /**
+<<<<<<< HEAD
  * Builds a preparable SQL query for reading filterable data.
  *
  * The first three columns om
@@ -153,41 +157,114 @@ internal fun doBind(ps: PreparedStatement, info: SqlBindInfo) {
 /**
  * Preparable SQL that selects entities grouping by id and property type id from the [DATA] table with the following
  * bind order:
+=======
+ * Preparable SQL that selects entities across multiple entity sets grouping by id and property type id from the [DATA]
+ * table with the following bind order:
+>>>>>>> b274bd2f7ae1c30218937313881ddf738492dfe8
  *
  * 1. entity set ids (array)
  * 2. entity key ids (array)
  * 3. partition (array)
  *
  */
-internal val selectEntitiesGroupedByIdAndPropertyTypeId = "SELECT ${ENTITY_SET_ID.name}, ${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name}, $valuesColumnsSql FROM ${DATA.name} where ${ENTITY_SET_ID.name} = ANY(?) AND id = ANY(?) AND partition = ANY(?) GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
+internal val selectEntitiesGroupedByIdAndPropertyTypeId =
+        "SELECT ${ENTITY_SET_ID.name}, ${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name}, $valuesColumnsSql " +
+                "FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = ANY(?) AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ANY(?) " +
+                "GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
 
 /**
- * Preparable SQL that selects an entire entity set grouping by id and property type id from the [DATA] table with the following
- * bind order:
+ * Preparable SQL that selects entire entity sets grouping by id and property type id from the [DATA] table with the
+ * following bind order:
  *
- * 1. entity set id
+ * 1. entity set ids (array)
  *
  */
-internal val selectEntitySetGroupedByIdAndPropertyTypeId = "SELECT ${ENTITY_SET_ID.name}, ${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name}, $valuesColumnsSql FROM ${DATA.name} where ${ENTITY_SET_ID.name} = ANY(?) GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
+internal val selectEntitySetGroupedByIdAndPropertyTypeId =
+        "SELECT ${ENTITY_SET_ID.name}, ${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name}, $valuesColumnsSql " +
+                "FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = ANY(?) " +
+                "GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
+
 /**
- * Preparable SQL that selects entities grouping by id and property type id from the [DATA] table with the following
- * bind order:
+ * Preparable SQL that selects an entire linking entity set grouping by linking id and property type id from the [DATA]
+ * table with the following bind order:
+ *
+ * 1. normal entity set ids (array)
+ * 2. linking ids (array)
+ * 3. partition (array)
+ *
+ */
+// todo do we use ids or entity_key_ids???
+// todo filter on partitions too??
+internal val selectLinkingEntitiesGroupedByLinkingIdAndPropertyTypeId =
+        "SELECT ${ENTITY_SET_ID.name}, ${LINKING_ID.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name}, $valuesColumnsSql " +
+                "FROM ${DATA.name} " +
+                "INNER JOIN ( SELECT ${LINKING_ID.name}, ${ID.name} FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = ANY(?) AND ${LINKING_ID.name} = ANY(?) AND ${PARTITION.name} = ANY(?) ) as ids USING(${ID_VALUE.name}) " +
+                "GROUP BY (${ENTITY_SET_ID.name}, ${LINKING_ID.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
+
+/**
+ * Preparable SQL that selects an entire linking entity set grouping by linking id and property type id from the [DATA]
+ * table with the following bind order:
+ *
+ * 1. normal entity set ids (array)
+ *
+ */
+// todo do we use ids or entity_key_ids???
+internal val selectLinkingEntitySetGroupedByLinkingIdAndPropertyTypeId =
+        "SELECT ${ENTITY_SET_ID.name}, ${LINKING_ID.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name}, $valuesColumnsSql " +
+                "FROM ${DATA.name} " +
+                "INNER JOIN ( SELECT ${LINKING_ID.name}, ${ID.name} FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = ANY(?) ) as ids USING(${ID_VALUE.name}) " +
+                "GROUP BY (${ENTITY_SET_ID.name}, ${LINKING_ID.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
+
+/**
+ * Preparable SQL that selects entities across multiple entity sets grouping by id and property type id from the [DATA]
+ * table with the following bind order:
  *
  * 1. entity set ids (array)
  * 2. entity key ids (array)
  * 3. partition (array)
  *
  */
-internal val selectEntitiesSql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},$jsonValueColumnsSql from ($selectEntitiesGroupedByIdAndPropertyTypeId) entities group by (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name})"
+internal val selectEntitiesSql =
+        "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},$jsonValueColumnsSql FROM ($selectEntitiesGroupedByIdAndPropertyTypeId) entities " +
+                "GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name})"
 
 /**
- * Preparable SQL that selects an entire entity set grouping by id and property type id from the [DATA] table with the following
- * bind order:
+ * Preparable SQL that selects entire entity sets grouping by id and property type id from the [DATA] table with the
+ * following bind order:
  *
- * 1. entity set id
+ * 1. entity set ids (array)
  *
  */
-internal val selectEntitySetSql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},$jsonValueColumnsSql from ($selectEntitySetGroupedByIdAndPropertyTypeId) entity_set group by (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name})"
+internal val selectEntitySetsSql =
+        "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},$jsonValueColumnsSql FROM ($selectEntitySetGroupedByIdAndPropertyTypeId) entity_set " +
+                "GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name})"
+
+
+/**
+ * Preparable SQL that selects linking entities across multiple entity sets grouping by linking id and property type id
+ * from the  [DATA] table with the following bind order:
+ *
+ * 1. normal entity set ids (array)
+ * 2. linking ids (array)
+ * 3. partition (array)
+ *
+ */
+internal val selectLinkingEntitiesByNormalEntitySetIdsSql =
+     "SELECT ${ENTITY_SET_ID.name},${LINKING_ID.name},$jsonValueColumnsSql FROM ($selectLinkingEntitiesGroupedByLinkingIdAndPropertyTypeId) entity_set " +
+            "GROUP BY (${ENTITY_SET_ID.name},${LINKING_ID.name}, ${PARTITION.name})"
+
+/**
+ * Preparable SQL that selects an entire linking entity set grouping by linking id and property type id from the [DATA]
+ * table with the following bind order:
+ *
+ * 1. normal entity set ids (array)
+ *
+ */
+// todo: what if we want to select multiple linking entity sets?
+internal fun selectLinkingEntitySetSql(linkingEntitySetId: UUID): String {
+    return "SELECT '$linkingEntitySetId' AS ${ENTITY_SET_ID.name},${LINKING_ID.name},$jsonValueColumnsSql FROM ($selectLinkingEntitySetGroupedByLinkingIdAndPropertyTypeId) entity_set " +
+            "GROUP BY (${ENTITY_SET_ID.name},${LINKING_ID.name}, ${PARTITION.name})"
+}
 
 /**
  * 1 - version
@@ -360,7 +437,7 @@ fun getPartitionsInfoMap(entityKeyIds: Set<UUID>, partitions: List<Int>): Map<UU
 }
 
 fun getDataColumnName(datatype: PostgresDatatype): String {
-    return "v_$datatype.name"
+    return "v_${datatype.name}"
 }
 
 /**
