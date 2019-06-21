@@ -29,13 +29,12 @@ class PostgresDataTables {
                 EdmPrimitiveTypeKind.Binary
         )
 
+        val dataColumns = supportedEdmPrimitiveTypeKinds
+                .map(PostgresEdmTypeConverter::map)
+                .associateWith { nonIndexedValueColumn(it) to btreeIndexedValueColumn(it) }
 
-        val nonIndexedColumns = supportedEdmPrimitiveTypeKinds
-                .map(PostgresEdmTypeConverter::map)
-                .map(::nonIndexedValueColumn)
-        val btreeIndexedColumns = supportedEdmPrimitiveTypeKinds
-                .map(PostgresEdmTypeConverter::map)
-                .map(::btreeIndexedValueColumn)
+        val nonIndexedColumns = dataColumns.map { it.value.first }
+        val btreeIndexedColumns = dataColumns.map { it.value.second }
 
         val dataTableMetadataColumns = listOf(
                 ENTITY_SET_ID,
@@ -77,7 +76,9 @@ class PostgresDataTables {
                             IndexType.NONE -> nonIndexedValueColumn(
                                     PostgresEdmTypeConverter.map(edmType)
                             )
-                            else -> throw IllegalArgumentException("HASH or GIN indexes are not yet supported by openlattice.")
+                            else -> throw IllegalArgumentException(
+                                    "HASH or GIN indexes are not yet supported by openlattice."
+                            )
                         }
                     }
                 }
@@ -123,7 +124,9 @@ class PostgresDataTables {
                     .ifNotExists()
                     .desc()
 
-            val currentPropertiesForEntitySetIndex = PostgresColumnsIndexDefinition(tableDefinition, ENTITY_SET_ID, VERSION)
+            val currentPropertiesForEntitySetIndex = PostgresColumnsIndexDefinition(
+                    tableDefinition, ENTITY_SET_ID, VERSION
+            )
                     .name(quote(prefix + "entity_set_id_version_idx"))
                     .ifNotExists()
                     .desc()
