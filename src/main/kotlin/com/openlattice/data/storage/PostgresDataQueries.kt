@@ -69,14 +69,16 @@ internal val selectEntitySetGroupedByIdAndPropertyTypeId =
  * table with the following bind order:
  *
  * 1. normal entity set ids (array)
+ * 2. normal entity set ids (array)
  *
  */
+// todo do we use ids or entity_key_ids???
 internal val selectLinkingEntitySetGroupedByIdAndPropertyTypeId =
-        "SELECT ${DATA.name}.${ENTITY_SET_ID.name}, ${LINKING_ID.name}, ${DATA.name}.${PARTITION.name}, ${PROPERTY_TYPE_ID.name}, $valuesColumnsSql " +
+        "SELECT ${ENTITY_SET_ID.name}, ${LINKING_ID.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name}, $valuesColumnsSql " +
                 "FROM ${DATA.name} " +
-                "INNER JOIN ${ENTITY_KEY_IDS.name} USING(${ID_VALUE.name}) " +
-                "WHERE ${DATA.name}.${ENTITY_SET_ID.name} = ANY(?) " +
-                "GROUP BY (${DATA.name}.${ENTITY_SET_ID.name}, ${LINKING_ID.name}, ${DATA.name}.${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
+                "INNER JOIN ( SELECT ${LINKING_ID.name}, ${ID.name} FROM ${ENTITY_KEY_IDS.name} WHERE ${ENTITY_SET_ID.name} = ANY(?) ) as ids USING(${ID_VALUE.name}) " +
+                "WHERE ${ENTITY_SET_ID.name} = ANY(?) " +
+                "GROUP BY (${ENTITY_SET_ID.name}, ${LINKING_ID.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
 
 /**
  * Preparable SQL that selects entities across multiple entity sets grouping by id and property type id from the [DATA]
@@ -108,6 +110,7 @@ internal val selectEntitySetsSql =
  * table with the following bind order:
  *
  * 1. normal entity set ids (array)
+ * 2. normal entity set ids (array)
  *
  */
 internal fun selectLinkingEntitySetSql(linkingEntitySetId: UUID): String {
