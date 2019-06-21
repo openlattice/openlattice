@@ -30,10 +30,10 @@ class PostgresDataTablesTest {
 
     @Test
     fun testDataReadEntitiesSql() {
-        val ids = "ARRAY['00000000-0000-0001-0000-000000000000']"
+        val ids = "'{\"00000000-0000-0001-0000-000000000000\"}'"
         val partitions = "ARRAY[1,2,3]"
 
-        val select = selectEntitiesSql.replace("?", ids).replace("?", ids).replace("?", partitions)
+        val select = selectEntitiesSql.replaceFirst("?", ids).replaceFirst("?", ids).replaceFirst("?", partitions)
         logger.info(select)
     }
 
