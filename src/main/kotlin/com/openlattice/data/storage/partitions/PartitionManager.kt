@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service
 import java.util.*
 
 const val DEFAULT_PARTITION_COUNT = 2
+
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -122,8 +123,10 @@ class PartitionManager @JvmOverloads constructor(
     /**
      * Allocates default partitions for an organization based on emptiest partitions.
      */
-    fun allocateDefaultPartitions(organizationId: UUID, partitionCount: Int) {
-        setDefaultPartitions(organizationId, allocateDefaultPartitions(partitionCount))
+    fun allocateDefaultPartitions(organizationId: UUID, partitionCount: Int): List<Int> {
+        val defaultPartitions = allocateDefaultPartitions(partitionCount)
+        setDefaultPartitions(organizationId, defaultPartitions)
+        return defaultPartitions
     }
 
     fun repartition(organizationId: UUID) {
@@ -185,7 +188,6 @@ class PartitionManager @JvmOverloads constructor(
     }
 
 }
-
 
 
 private val ALL_PARTITIONS = "SELECT ${PARTITION.name}, COALESCE(count,0) as $COUNT FROM (SELECT unnest(?::integer[]) as ${PARTITION.name}) as partitions LEFT JOIN ${PARTITION_COUNTS.name} USING (${PARTITION.name}) ORDER BY $COUNT ASC "

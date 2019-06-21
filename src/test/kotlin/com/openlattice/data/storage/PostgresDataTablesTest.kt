@@ -23,6 +23,11 @@ class PostgresDataTablesTest {
     }
 
     @Test
+    fun testDataReadSql() {
+        logger.info(selectEntitySetSql)
+    }
+
+    @Test
     fun testQuery() {
         val tableDefinition = PostgresDataTables.buildDataTableDefinition()
         logger.info("create table sql: {}", tableDefinition.createTableQuery())

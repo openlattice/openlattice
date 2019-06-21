@@ -209,6 +209,11 @@ public class HazelcastOrganizationService {
 
     public void createOrganization( Organization organization ) {
         UUID organizationId = organization.getSecurablePrincipal().getId();
+
+        final var defaultPartitions = partitionManager
+                .allocateDefaultPartitions( organizationId, DEFAULT_PARTITION_COUNT );
+        organization.setPartitions( defaultPartitions );
+
         titles.set( organizationId, organization.getTitle() );
         descriptions.set( organizationId, organization.getDescription() );
         autoApprovedEmailDomainsOf.set( organizationId,
@@ -216,11 +221,7 @@ public class HazelcastOrganizationService {
         membersOf.set( organizationId, PrincipalSet.wrap( organization.getMembers() ) );
         apps.set( organizationId, DelegatedUUIDSet.wrap( organization.getApps() ) );
         phoneNumbers.setPhoneNumber( organizationId, organization.getSmsEntitySetInfo() );
-        partitionManager.allocateDefaultPartitions( organizationId, DEFAULT_PARTITION_COUNT );
-        
-        final var defaultPartitions = getDefaultPartitions( organizationId );
-        partitions.set( organizationId, new DelegatedIntList( defaultPartitions ) );
-        organization.setPartitions( defaultPartitions );
+
     }
 
     public Organization getOrganization( UUID organizationId ) {
