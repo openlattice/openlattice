@@ -168,7 +168,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             @PathVariable( ID ) UUID organizationId,
             @RequestBody List<SmsEntitySetInformation> entitySetInformationList ) {
         ensureAdminAccess();
-        organizations.setSmsEntitySetInformation( organizationId, entitySetInformationList );
+        organizations.setSmsEntitySetInformation( entitySetInformationList );
         return entitySetInformationList.size();
     }
 
