@@ -12,8 +12,7 @@ import java.util.*
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 @Service
-open class PhoneNumberService(val hazelcastInstance: HazelcastInstance) {
-
+class PhoneNumberService(hazelcastInstance: HazelcastInstance) {
     private val phoneNumbers = hazelcastInstance.getMap<SmsInformationKey, SmsEntitySetInformation>(
             HazelcastMap.SMS_INFORMATION.name
     )

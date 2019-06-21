@@ -254,7 +254,7 @@ fun getPartitionsInfoMap(entityKeyIds: Set<UUID>, partitions: List<Int>): Map<UU
 }
 
 fun getDataColumnName( datatype :PostgresDatatype ) : String {
-    return "v_$datatype.name"
+    return "v_${datatype.name}"
 }
 /**
  * This function generates preparable sql with the following bind order:

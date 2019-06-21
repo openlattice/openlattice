@@ -3,6 +3,7 @@ package com.openlattice.data.storage
 import com.openlattice.postgres.PostgresDataTables
 import org.junit.Test
 import org.slf4j.LoggerFactory
+import java.sql.PreparedStatement
 import java.util.*
 
 /**
@@ -23,8 +24,17 @@ class PostgresDataTablesTest {
     }
 
     @Test
-    fun testDataReadSql() {
+    fun testDataReadEntitySetSql() {
         logger.info(selectEntitySetsSql)
+    }
+
+    @Test
+    fun testDataReadEntitiesSql() {
+        val ids = "ARRAY['00000000-0000-0001-0000-000000000000']"
+        val partitions = "ARRAY[1,2,3]"
+
+        val select = selectEntitiesSql.replace("?", ids).replace("?", ids).replace("?", partitions)
+        logger.info(select)
     }
 
     @Test
