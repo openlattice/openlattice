@@ -31,9 +31,10 @@ val valuesColumnsSql = PostgresDataTables.dataTableValueColumns.joinToString(","
     "COALESCE(array_agg(${it.name}) FILTER (where ${it.name} IS NOT NULL),'{}') as ${it.name}"
 }
 
-val jsonValueColumnsSql = PostgresDataTables.dataTableValueColumns.joinToString(",") {
-    "jsonb_object_agg(${PROPERTY_TYPE_ID.name}, ${it.name}"
-}
+val jsonValueColumnsSql = PostgresDataTables.btreeIndexedColumns.zip(PostgresDataTables.nonIndexedColumns)
+        .joinToString(",") { (bt, ni) ->
+            "jsonb_object_agg(${PROPERTY_TYPE_ID.name}, ${bt.name} || ${ni.name})"
+        }
 
 /**
  * Preparable SQL that selects entities grouping by id and property type id from the [DATA] table with the following
