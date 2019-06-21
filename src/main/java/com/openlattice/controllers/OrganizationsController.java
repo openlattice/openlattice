@@ -160,20 +160,6 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
 
     @Timed
     @Override
-    @PostMapping(
-            value = ID_PATH + PHONE,
-            consumes = MediaType.TEXT_PLAIN_VALUE )
-    // Hopefully spring is in the frameworks that accepts plain quoted string as a valid value.
-    public Integer setOrganizationEntitySetInformation(
-            @PathVariable( ID ) UUID organizationId,
-            @RequestBody List<SmsEntitySetInformation> entitySetInformationList ) {
-        ensureAdminAccess();
-        organizations.setSmsEntitySetInformation( entitySetInformationList );
-        return entitySetInformationList.size();
-    }
-
-    @Timed
-    @Override
     @GetMapping( value = ID_PATH + INTEGRATION, produces = MediaType.APPLICATION_JSON_VALUE )
     public OrganizationIntegrationAccount getOrganizationIntegrationAccount( @PathVariable( ID ) UUID organizationId ) {
         ensureOwner( organizationId );
