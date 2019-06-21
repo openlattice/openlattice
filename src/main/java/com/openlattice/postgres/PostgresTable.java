@@ -215,7 +215,7 @@ public final class PostgresTable {
                             VERSION,
                             VERSIONS,
                             PARTITIONS_VERSION)
-                    .primaryKey( ID, EDGE_COMP_1, EDGE_COMP_2, COMPONENT_TYPES )
+                        .primaryKey( PARTITION,SRC_ENTITY_KEY_ID,DST_ENTITY_KEY_ID, EDGE_ENTITY_KEY_ID )
                     .distributionColumn( ID_VALUE );
     public static final PostgresTableDefinition        ENTITY_KEY_IDS               =
             new CitusDistributedTableDefinition( "entity_key_ids" )
