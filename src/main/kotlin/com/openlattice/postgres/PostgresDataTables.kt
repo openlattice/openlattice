@@ -50,7 +50,9 @@ class PostgresDataTables {
                 VERSIONS,
                 PARTITIONS_VERSION
         )
-        val dataTableColumns = dataTableMetadataColumns + btreeIndexedColumns + nonIndexedColumns
+
+        val dataTableValueColumns = btreeIndexedColumns + nonIndexedColumns
+        val dataTableColumns = dataTableMetadataColumns + dataTableValueColumns
 
         private val columnDefinitionCache = CacheBuilder.newBuilder().build(
                 object : CacheLoader<Pair<IndexType, EdmPrimitiveTypeKind>, PostgresColumnDefinition>() {
