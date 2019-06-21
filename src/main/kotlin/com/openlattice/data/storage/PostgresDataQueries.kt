@@ -10,7 +10,6 @@ import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresDataTables.Companion.getColumnDefinition
 import com.openlattice.postgres.PostgresTable.DATA
-import java.sql.Connection
 import java.sql.PreparedStatement
 
 import com.openlattice.postgres.PostgresTable.*
@@ -46,7 +45,6 @@ val jsonValueColumnsSql = PostgresDataTables.dataColumns.entries
         }
 
 /**
-<<<<<<< HEAD
  * Builds a preparable SQL query for reading filterable data.
  *
  * The first three columns om
@@ -62,9 +60,9 @@ fun buildPreparableFiltersClauseForLinkedEntities(
         propertyTypeFilters: Map<UUID, Set<Filter>>
 ): Pair<String, Set<SqlBinder>> {
     val filtersClauses = buildPreparableFiltersClause(1, propertyTypes, propertyTypeFilters)
-    val sql = "SELECT ${PostgresColumn.ENTITY_SET_ID.name}, ${PostgresColumn.ID_VALUE.name}, ${PostgresColumn.PARTITION.name}, ${PostgresColumn.PROPERTY_TYPE_ID.name}, $valuesColumnsSql " +
-            "FROM ${PostgresTable.DATA.name} WHERE ${PostgresColumn.ENTITY_SET_ID.name} = ANY(?) AND ${PostgresColumn.ID_VALUE.name} = ANY(?) AND partition = ANY(?) AND ${filtersClauses.first}" +
-            "GROUP BY (${PostgresColumn.ENTITY_SET_ID.name},${PostgresColumn.LINKING_ID.name}, ${PostgresColumn.PARTITION.name}, ${PostgresColumn.PROPERTY_TYPE_ID.name})"
+    val sql = "SELECT ${ENTITY_SET_ID.name}, ${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name}, $valuesColumnsSql " +
+            "FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = ANY(?) AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ANY(?) AND ${filtersClauses.first}" +
+            "GROUP BY (${ENTITY_SET_ID.name},${LINKING_ID.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
 
     return sql to filtersClauses.second
 
@@ -86,9 +84,9 @@ fun buildPreparableFiltersClauseForEntities(
         propertyTypeFilters: Map<UUID, Set<Filter>>
 ): Pair<String, Set<SqlBinder>> {
     val filtersClauses = buildPreparableFiltersClause(1, propertyTypes, propertyTypeFilters)
-    val sql = "SELECT ${PostgresColumn.ENTITY_SET_ID.name}, ${PostgresColumn.ID_VALUE.name}, ${PostgresColumn.PARTITION.name}, ${PostgresColumn.PROPERTY_TYPE_ID.name}, $valuesColumnsSql " +
-            "FROM ${PostgresTable.DATA.name} WHERE ${PostgresColumn.ENTITY_SET_ID.name} = ANY(?) AND ${PostgresColumn.ID_VALUE.name} = ANY(?) AND partition = ANY(?) AND ${filtersClauses.first}" +
-            "GROUP BY (${PostgresColumn.ENTITY_SET_ID.name},${PostgresColumn.ID_VALUE.name}, ${PostgresColumn.PARTITION.name}, ${PostgresColumn.PROPERTY_TYPE_ID.name})"
+    val sql = "SELECT ${ENTITY_SET_ID.name}, ${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name}, $valuesColumnsSql " +
+            "FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = ANY(?) AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ANY(?) AND ${filtersClauses.first}" +
+            "GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
 
     return sql to filtersClauses.second
 
@@ -155,12 +153,8 @@ internal fun doBind(ps: PreparedStatement, info: SqlBindInfo) {
 
 
 /**
- * Preparable SQL that selects entities grouping by id and property type id from the [DATA] table with the following
- * bind order:
-=======
  * Preparable SQL that selects entities across multiple entity sets grouping by id and property type id from the [DATA]
  * table with the following bind order:
->>>>>>> b274bd2f7ae1c30218937313881ddf738492dfe8
  *
  * 1. entity set ids (array)
  * 2. entity key ids (array)
@@ -195,6 +189,7 @@ internal val selectEntitySetGroupedByIdAndPropertyTypeId =
  */
 // todo do we use ids or entity_key_ids???
 // todo filter on partitions too??
+// todo: filter partition on ids table or data table?
 internal val selectLinkingEntitiesGroupedByLinkingIdAndPropertyTypeId =
         "SELECT ${ENTITY_SET_ID.name}, ${LINKING_ID.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name}, $valuesColumnsSql " +
                 "FROM ${DATA.name} " +
@@ -209,10 +204,11 @@ internal val selectLinkingEntitiesGroupedByLinkingIdAndPropertyTypeId =
  *
  */
 // todo do we use ids or entity_key_ids???
+// todo: filter partition on ids table or data table?
 internal val selectLinkingEntitySetGroupedByLinkingIdAndPropertyTypeId =
         "SELECT ${ENTITY_SET_ID.name}, ${LINKING_ID.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name}, $valuesColumnsSql " +
                 "FROM ${DATA.name} " +
-                "INNER JOIN ( SELECT ${LINKING_ID.name}, ${ID.name} FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = ANY(?) ) as ids USING(${ID_VALUE.name}) " +
+                "INNER JOIN ( SELECT ${LINKING_ID.name}, ${ID.name} FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = ANY(?) AND ${LINKING_ID.name} IS NOT NULL ) as ids USING(${ID_VALUE.name}) " +
                 "GROUP BY (${ENTITY_SET_ID.name}, ${LINKING_ID.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
 
 /**
@@ -250,14 +246,32 @@ internal val selectEntitySetsSql =
  *
  */
 internal val selectLinkingEntitiesByNormalEntitySetIdsSql =
-     "SELECT ${ENTITY_SET_ID.name},${LINKING_ID.name},$jsonValueColumnsSql FROM ($selectLinkingEntitiesGroupedByLinkingIdAndPropertyTypeId) entity_set " +
+     "SELECT ${ENTITY_SET_ID.name},${LINKING_ID.name},$jsonValueColumnsSql FROM ($selectLinkingEntitiesGroupedByLinkingIdAndPropertyTypeId) entities " +
             "GROUP BY (${ENTITY_SET_ID.name},${LINKING_ID.name}, ${PARTITION.name})"
+
+/**
+ * Preparable SQL that selects linking entities across multiple entity sets grouping by linking id and property type id
+ * from the  [DATA] table with the following bind order:
+ *
+ * 1. normal entity set ids (array)
+ * 2. linking ids (array)
+ * 3. partition (array)
+ *
+ * Note: It's only selecting from 1 linking entity set
+ *
+ */
+internal fun selectLinkingEntitiesByLinkingEntitySetIdSql (linkingEntitySetId: UUID): String {
+    return "SELECT '$linkingEntitySetId' AS ${ENTITY_SET_ID.name},${LINKING_ID.name},$jsonValueColumnsSql FROM ($selectLinkingEntitiesGroupedByLinkingIdAndPropertyTypeId) entities " +
+            "GROUP BY (${ENTITY_SET_ID.name},${LINKING_ID.name}, ${PARTITION.name})"
+}
 
 /**
  * Preparable SQL that selects an entire linking entity set grouping by linking id and property type id from the [DATA]
  * table with the following bind order:
  *
  * 1. normal entity set ids (array)
+ *
+ * Note: It's only selecting from 1 linking entity set
  *
  */
 // todo: what if we want to select multiple linking entity sets?

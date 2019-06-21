@@ -55,6 +55,15 @@ class PostgresDataTablesTest {
     }
 
     @Test
+    fun testDataReadLinkingEntitiesWithLinkingEntitySetIdSql() {
+        val ids = "'{\"00000000-0000-0001-0000-000000000000\"}'"
+        val partitions = "ARRAY[1,2,3]"
+
+        val select = selectLinkingEntitiesByLinkingEntitySetIdSql(UUID.fromString("00000000-0000-0001-0000-000000000000")).replaceFirst("?", ids).replaceFirst("?", ids).replaceFirst("?", partitions)
+        logger.info(select)
+    }
+
+    @Test
     fun testQuery() {
         val tableDefinition = PostgresDataTables.buildDataTableDefinition()
         logger.info("create table sql: {}", tableDefinition.createTableQuery())
