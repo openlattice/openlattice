@@ -8,6 +8,9 @@ import com.openlattice.data.util.PostgresDataHasher
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.JsonDeserializer
 import com.openlattice.postgres.PostgresArrays
+import com.openlattice.postgres.PostgresDatatype
+import com.openlattice.postgres.streams.BasePostgresIterable
+import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.slf4j.LoggerFactory
@@ -15,6 +18,7 @@ import java.security.InvalidParameterException
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.util.*
+import kotlin.streams.asStream
 
 /**
  *
@@ -200,6 +204,137 @@ class PostgresEntityDataQueryService2(
 
 
         return WriteEvent(tombstoneVersion, numUpdated)
+    }
+
+    /**
+     * Tombstones (writes a negative version) for the provided entities.
+     * @param entitySetId The entity set to operate on.
+     * @param entityKeyIds The entity key ids to tombstone.
+     * @param authorizedPropertyTypes The property types the user is allowed to tombstone. We assume that authorization
+     * checks are enforced at a higher level and that this just streamlines issuing the necessary queries.
+     */
+    fun clearEntities(
+            entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
+    ): WriteEvent {
+        return hds.connection.use { conn ->
+            tombstone(conn, entitySetId, entityKeyIds, authorizedPropertyTypes.values)
+            tombstone(conn, entitySetId, entityKeyIds)
+        }
+    }
+
+    /**
+     * Tombstones (writes a negative version) for the provided entity properties.
+     * @param entitySetId The entity set to operate on.
+     * @param entityKeyIds The entity key ids to tombstone.
+     * @param authorizedPropertyTypes The property types the user is requested and is allowed to tombstone. We assume
+     * that authorization checks are enforced at a higher level and that this just streamlines issuing the necessary
+     * queries.
+     */
+    fun clearEntityData(
+            entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
+    ): WriteEvent {
+        return hds.connection.use { conn ->
+            tombstone(conn, entitySetId, entityKeyIds, authorizedPropertyTypes.values)
+        }
+    }
+
+    fun deleteEntityData(
+            entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
+    ): WriteEvent {
+        val connection = hds.connection
+        val numUpdates = connection.use {
+            authorizedPropertyTypes
+                    .map { property ->
+                        if (property.value.datatype == EdmPrimitiveTypeKind.Binary) {
+                            deletePropertyOfEntityFromS3(entitySetId, entityKeyIds, property.key)
+                        }
+
+                        val ps = it.prepareStatement(deletePropertiesOfEntities(entitySetId, property.key))
+                        val arr = PostgresArrays.createUuidArray(it, entityKeyIds)
+                        ps.setArray(1, arr)
+
+                        val count = ps.executeUpdate()
+                        ps.close()
+                        count
+                    }
+                    .sum()
+        }
+
+        return WriteEvent(System.currentTimeMillis(), numUpdates)
+    }
+
+    fun deleteEntitySetData(entitySetId: UUID, propertyTypes: Map<UUID, PropertyType>): WriteEvent {
+        val numUpdates = hds.connection.use { connection ->
+            propertyTypes
+                    .map {
+                        if (it.value.datatype == EdmPrimitiveTypeKind.Binary) {
+                            deletePropertiesInEntitySetFromS3(entitySetId, it.key)
+                        }
+                        connection.createStatement().use { stmt ->
+                            stmt.executeUpdate(deletePropertiesInEntitySet(entitySetId, it.key))
+                        }
+                    }
+                    .sum()
+        }
+
+        return WriteEvent(System.currentTimeMillis(), numUpdates)
+    }
+
+    fun deletePropertyOfEntityFromS3(
+            entitySetId: UUID,
+            entityKeyIds: Set<UUID>,
+            propertyTypeId: UUID
+    ) {
+        BasePostgresIterable<String>(
+                PreparedStatementHolderSupplier(hds, selectEntitySetTextProperties, FETCH_SIZE) { ps ->
+                    val connection = ps.connection
+                    val ps = connection.prepareStatement(selectEntitiesTextProperties)
+                    val entitySetIdsArr = PostgresArrays.createUuidArray(connection, setOf(entitySetId))
+                    val propertyTypeIdsArr = PostgresArrays.createUuidArray(connection, setOf(propertyTypeId))
+                    val entityKeyIdsArr = PostgresArrays.createUuidArray(connection, entityKeyIds)
+                    ps.setObject(1, entitySetIdsArr)
+                    ps.setArray(2, propertyTypeIdsArr)
+                    ps.setArray(3, entityKeyIdsArr)
+                }
+        ) { rs ->
+            rs.getString(getDataColumnName(PostgresDatatype.TEXT))
+        }.asSequence().chunked(10000).asStream().parallel().forEach { byteBlobDataManager.deleteObjects(it) }
+    }
+
+
+    fun deletePropertiesInEntitySetFromS3(entitySetId: UUID, propertyTypeId: UUID) {
+        BasePostgresIterable<String>(
+                PreparedStatementHolderSupplier(hds, selectEntitySetTextProperties, FETCH_SIZE) { ps ->
+                    val connection = ps.connection
+                    val ps = connection.prepareStatement(selectEntitySetTextProperties)
+                    val entitySetIdsArr = PostgresArrays.createUuidArray(connection, setOf(entitySetId))
+                    val propertyTypeIdsArr = PostgresArrays.createUuidArray(connection, setOf(propertyTypeId))
+                    ps.setObject(1, entitySetIdsArr)
+                    ps.setArray(2, propertyTypeIdsArr)
+                }
+        ) { rs ->
+            rs.getString(getDataColumnName(PostgresDatatype.TEXT))
+        }.asSequence().chunked(10000).asStream().parallel().forEach { byteBlobDataManager.deleteObjects(it) }
+    }
+
+    fun deleteEntitySet(entitySetId: UUID): WriteEvent {
+        val numUpdates = hds.connection.use {
+            val s = it.prepareStatement(deleteEntitySetEntityKeys(entitySetId))
+            s.executeUpdate()
+        }
+
+        return WriteEvent(System.currentTimeMillis(), numUpdates)
+    }
+
+    fun deleteEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): WriteEvent {
+        val numUpdates = hds.connection.use {
+            val s = it.prepareStatement(deleteEntityKeys(entitySetId))
+            val arr = PostgresArrays.createUuidArray(it, entityKeyIds)
+            s.setArray(1, arr)
+            s.executeUpdate()
+        }
+
+        return WriteEvent(System.currentTimeMillis(), numUpdates)
     }
 
     /**

@@ -2,12 +2,10 @@ package com.openlattice.data.storage
 
 
 import com.openlattice.edm.type.PropertyType
-import com.openlattice.postgres.DataTables
+import com.openlattice.postgres.*
 import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.PostgresColumn.*
-import com.openlattice.postgres.PostgresDataTables
 import com.openlattice.postgres.PostgresDataTables.Companion.getColumnDefinition
-import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.PostgresTable.DATA
 import java.util.*
 
@@ -36,7 +34,7 @@ val jsonValueColumnsSql = PostgresDataTables.dataColumns.entries
             val (ni, bt) = cols
             "COALESCE(jsonb_object_agg(${PROPERTY_TYPE_ID.name}, ${bt.name} || ${ni.name}) " +
                     "FILTER (WHERE ${bt.name} IS NOT NULL OR ${ni.name} IS NOT NULL ),'{}') " +
-                    "as v_${datatype.name}"
+                    "as ${getDataColumnName(datatype)}"
         }
 
 /**
@@ -209,6 +207,21 @@ internal val updateVersionsForPropertiesInEntitiesInEntitySet = "$updateVersions
  */
 internal val updateVersionsForPropertyTypesInEntitiesInEntitySet = "$updateVersionsForPropertiesInEntitiesInEntitySet AND ${PROPERTY_TYPE_ID.name} = ANY(?)"
 
+/**
+ * Selects a text properties from entity sets with the following bind order:
+ * 1. entity set ids  (array)
+ * 2. property type ids (array)
+ *
+ */
+internal val selectEntitySetTextProperties = "SELECT ${getDataColumnName(PostgresDatatype.TEXT)} FROM ${DATA.name} WHERE ${PostgresColumn.ENTITY_SET_ID.name} = ANY(?) AND $PROPERTY_TYPE_ID = ANY(?)"
+
+/**
+ * Selects a text properties from specific entities with the following bind order:
+ * 1. entity set ids  (array)
+ * 2. property type ids (array)
+ * 3. entity key ids (array)
+ */
+internal val selectEntitiesTextProperties = "$selectEntitySetTextProperties AND $ID_VALUE = ANY(?)"
 
 fun partitionSelectorFromId(entityKeyId: UUID): Int {
     return entityKeyId.leastSignificantBits.toInt()
@@ -240,6 +253,9 @@ fun getPartitionsInfoMap(entityKeyIds: Set<UUID>, partitions: List<Int>): Map<UU
     return entityKeyIds.associateWith { entityKeyId -> getPartition(entityKeyId, partitions) }
 }
 
+fun getDataColumnName( datatype :PostgresDatatype ) : String {
+    return "v_$datatype.name"
+}
 /**
  * This function generates preparable sql with the following bind order:
  *
