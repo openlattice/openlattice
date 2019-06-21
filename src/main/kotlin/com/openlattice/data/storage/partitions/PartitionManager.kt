@@ -187,5 +187,5 @@ class PartitionManager @JvmOverloads constructor(
 }
 
 
-private val ALL_PARTITIONS = "SELECT ${PARTITION.name}, COALESCE(count,0) as partition_count FROM (SELECT unnest(?::integer[]) as ${PARTITION.name}) as partitions LEFT JOIN ${PARTITION_COUNTS.name} USING (${PARTITION.name}) ORDER BY partition_count ASC "
+private val ALL_PARTITIONS = "SELECT ${PARTITION.name}, COALESCE(count,0) as $COUNT FROM (SELECT unnest(?::integer[]) as ${PARTITION.name}) as partitions LEFT JOIN ${PARTITION_COUNTS.name} USING (${PARTITION.name}) ORDER BY $COUNT ASC "
 private val EMPTIEST_PARTITIONS = "$ALL_PARTITIONS LIMIT ?"
