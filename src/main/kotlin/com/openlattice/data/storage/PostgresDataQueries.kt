@@ -139,6 +139,7 @@ private fun buildBindDetails(
     return BindDetails(startIndex + bindInfo.size, bindInfo, "${PROPERTY_TYPE_ID.name} = ? AND " + filter.asSql(col))
 }
 
+@Suppress("UNCHECKED_CAST")
 internal fun doBind(ps: PreparedStatement, info: SqlBindInfo) {
     when (val v = info.value) {
         is String -> ps.setString(info.bindIndex, v)
@@ -147,6 +148,13 @@ internal fun doBind(ps: PreparedStatement, info: SqlBindInfo) {
         is Boolean -> ps.setBoolean(info.bindIndex, v)
         is Short -> ps.setShort(info.bindIndex, v)
         is java.sql.Array -> ps.setArray(info.bindIndex, v)
+        is Collection<*> -> when(v.first()) {
+            is String -> PostgresArrays.createTextArray(ps.connection, v as Collection<String>)
+            is Int -> PostgresArrays.createIntArray(ps.connection, v as Collection<Int>)
+            is Long -> PostgresArrays.createLongArray(ps.connection, v as Collection<Long>)
+            is Boolean -> PostgresArrays.createBooleanArray(ps.connection, v as Collection<Boolean>)
+            is Short -> PostgresArrays.createShortArray(ps.connection, v as Collection<Short>)
+        }
         else -> ps.setObject(info.bindIndex, v)
     }
 }
