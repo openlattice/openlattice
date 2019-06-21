@@ -311,7 +311,7 @@ constructor(
 
     @Timed
     @RequestMapping(
-            path = [ALL + ID_PATH + METADATA_PATH],
+            path = [ALL + METADATA_PATH],
             method = [RequestMethod.POST],
             produces = [MediaType.APPLICATION_JSON_VALUE]
     )
