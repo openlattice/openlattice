@@ -35,7 +35,7 @@ interface EntitySetsApi {
     companion object {
         /* These determine the service routing */
         const val SERVICE = "/datastore"
-        const val CONTROLLER = "/entity_sets"
+        const val CONTROLLER = "/entity-sets"
         const val BASE = SERVICE + CONTROLLER
 
         const val ALL = "/all"
