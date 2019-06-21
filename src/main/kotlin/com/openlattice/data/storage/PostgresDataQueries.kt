@@ -41,8 +41,8 @@ val jsonValueColumnsSql = PostgresDataTables.dataColumns.entries
  * Preparable SQL that selects entities grouping by id and property type id from the [DATA] table with the following
  * bind order:
  *
- * 1. entity set id
- * 2. entity key id
+ * 1. entity set ids (array)
+ * 2. entity key ids (array)
  * 3. partition (array)
  *
  */
@@ -60,8 +60,8 @@ internal val selectEntitySetGroupedByIdAndPropertyTypeId = "SELECT ${ENTITY_SET_
  * Preparable SQL that selects entities grouping by id and property type id from the [DATA] table with the following
  * bind order:
  *
- * 1. entity set id
- * 2. entity key id
+ * 1. entity set ids (array)
+ * 2. entity key ids (array)
  * 3. partition (array)
  *
  */
