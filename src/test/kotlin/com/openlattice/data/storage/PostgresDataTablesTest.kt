@@ -3,7 +3,6 @@ package com.openlattice.data.storage
 import com.openlattice.postgres.PostgresDataTables
 import org.junit.Test
 import org.slf4j.LoggerFactory
-import java.sql.PreparedStatement
 import java.util.*
 
 /**
