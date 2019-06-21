@@ -21,7 +21,13 @@
 
 package com.openlattice.analysis.requests;
 
+import com.openlattice.analysis.SqlBindInfo;
+import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
+import javax.annotation.Nonnull;
 
 /**
  * A range filter for query property types.
@@ -54,10 +60,17 @@ public abstract class AbstractRangeFilter<T extends Comparable<T>> implements Ra
     }
 
     public String asSql( String field ) {
-        var lowerboundExpr = lowerboundEqual ? field + ">= " + getLowerboundSql() : field + ">" + getLowerboundSql();
-        var upperboundExpr = upperboundEqual ? field + "<= " + getUpperboundSql() : field + "<" + getUpperboundSql();
+        var lowerboundExpr = lowerboundEqual ? field + ">= ?" : field + "> ?";
+        var upperboundExpr = upperboundEqual ? field + "<= ?" : field + "< ?";
 
         return lowerboundExpr + " AND " + upperboundExpr;
+    }
+
+    @Override public Set<SqlBindInfo> bindInfo( int base ) {
+        final var lowerboundBindInfo = new SqlBindInfo( base , lowerbound );
+        final var upperboundBindInfo = new SqlBindInfo( base + 1, upperbound );
+
+        return new LinkedHashSet<>( Arrays.asList(lowerboundBindInfo, upperboundBindInfo) );
     }
 
     @Override
@@ -77,6 +90,8 @@ public abstract class AbstractRangeFilter<T extends Comparable<T>> implements Ra
     protected abstract String getLowerboundSql();
 
     protected abstract String getUpperboundSql();
+
+
 
     @Override public boolean equals( Object o ) {
         if ( this == o ) { return true; }

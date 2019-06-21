@@ -21,9 +21,14 @@
 
 
 package com.openlattice.analysis.requests;
+
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.annotation.JsonTypeInfo.As;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
+import com.openlattice.analysis.SqlBindInfo;
+import java.util.Set;
+import java.util.UUID;
+import javax.annotation.Nonnull;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 /**
  *
@@ -36,4 +41,6 @@ public interface Filter {
      * @return The sql expression for this filter applied to the specified field.
      */
     String asSql( String field );
+
+    @NonNull Set<SqlBindInfo> bindInfo( int base );
 }
