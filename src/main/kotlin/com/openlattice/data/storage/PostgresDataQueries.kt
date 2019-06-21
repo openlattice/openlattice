@@ -33,7 +33,7 @@ val valuesColumnsSql = PostgresDataTables.dataTableValueColumns.joinToString(","
 
 val jsonValueColumnsSql = PostgresDataTables.btreeIndexedColumns.zip(PostgresDataTables.nonIndexedColumns)
         .joinToString(",") { (bt, ni) ->
-            "jsonb_object_agg(${PROPERTY_TYPE_ID.name}, ${bt.name} || ${ni.name})"
+            "jsonb_object_agg(${PROPERTY_TYPE_ID.name}, ${bt.name} || ${ni.name}) as ${ni.name}"
         }
 
 /**
