@@ -39,7 +39,6 @@ private const val BLACKLIST = "blacklist"
 private const val ENTITY_TYPES_FIELD = "entity-types"
 private const val WHITELIST = "whitelist"
 private const val SEARCH_CONFIGURATION = "searchConfiguration"
-private const val REPORT_EMAIL_ADDRESS = "reportEmailAddress"
 private const val BATCH_SIZE = "batch-size"
 private const val LOAD_SIZE = "load-size"
 private val DEFAULT_ENTITY_TYPES = setOf("general.person")
@@ -50,7 +49,6 @@ private val DEFAULT_ENTITY_TYPES = setOf("general.person")
 @ReloadableConfiguration(uri = CONFIG_YAML_NAME )
 data class LinkingConfiguration(
         @JsonProperty(SEARCH_CONFIGURATION ) val searchConfiguration: SearchConfiguration,
-        @JsonProperty(REPORT_EMAIL_ADDRESS ) val errorReportingEmail: String,
         @JsonProperty(BLOCK_SIZE_FIELD) val blockSize: Int = DEFAULT_BLOCK_SIZE,
         @JsonProperty(WHITELIST) val whitelist: Optional<Set<UUID>>,
         @JsonProperty(BLACKLIST) val blacklist: Set<UUID> = setOf(),
