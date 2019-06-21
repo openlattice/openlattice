@@ -36,11 +36,42 @@ val jsonValueColumnsSql = PostgresDataTables.dataTableValueColumns.joinToString(
 }
 
 /**
- * This functio
+ * Preparable SQL that selects entities grouping by id and property type id from the [DATA] table with the following
+ * bind order:
+ *
+ * 1. entity set id
+ * 2. entity key id
+ * 3. partition (array)
+ *
  */
 internal val selectEntitiesGroupedByIdAndPropertyTypeId = "SELECT ${ENTITY_SET_ID.name}, ${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name}, $valuesColumnsSql from data where entity_set_id = ? AND id = ANY(?) AND partition = ANY(?) GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
+
+/**
+ * Preparable SQL that selects an entire entity set grouping by id and property type id from the [DATA] table with the following
+ * bind order:
+ *
+ * 1. entity set id
+ *
+ */
 internal val selectEntitySetGroupedByIdAndPropertyTypeId = "SELECT ${ENTITY_SET_ID.name}, ${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name}, $valuesColumnsSql from data where entity_set_id = ? GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
+/**
+ * Preparable SQL that selects entities grouping by id and property type id from the [DATA] table with the following
+ * bind order:
+ *
+ * 1. entity set id
+ * 2. entity key id
+ * 3. partition (array)
+ *
+ */
 internal val selectEntitiesSql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},$jsonValueColumnsSql from ($selectEntitiesGroupedByIdAndPropertyTypeId) entities group by (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name})"
+
+/**
+ * Preparable SQL that selects an entire entity set grouping by id and property type id from the [DATA] table with the following
+ * bind order:
+ *
+ * 1. entity set id
+ *
+ */
 internal val selectEntitySetSql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},$jsonValueColumnsSql from ($selectEntitySetGroupedByIdAndPropertyTypeId) entity_set group by (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name})"
 
 /**
@@ -122,7 +153,7 @@ internal val updateVersionsForEntitiesInEntitySet = "$updateVersionsForEntitySet
         "AND ${PARTITION.name} = ANY(?) AND ${PARTITIONS_VERSION.name} = ?"
 
 /**
- * Prepared statement for that upserts a version for all properties in a given entity set in [PostgresTable.DATA]
+ * Preparable SQL thatupserts a version for all properties in a given entity set in [PostgresTable.DATA]
  *
  * The following bind order is expected:
  *
@@ -135,7 +166,7 @@ internal val updateVersionsForEntitiesInEntitySet = "$updateVersionsForEntitySet
 internal val updateVersionsForPropertyTypesInEntitySet = "$updateVersionsForPropertiesInEntitySet AND ${PROPERTY_TYPE_ID.name} = ANY(?)"
 
 /**
- * Prepared statement for that upserts a version for all properties in a given entity set in [PostgresTable.DATA]
+ * Preparable SQL thatupserts a version for all properties in a given entity set in [PostgresTable.DATA]
  *
  * The following bind order is expected:
  *
@@ -150,7 +181,7 @@ internal val updateVersionsForPropertyTypesInEntitySet = "$updateVersionsForProp
 internal val updateVersionsForPropertiesInEntitiesInEntitySet = "$updateVersionsForPropertiesInEntitySet AND ${ID_VALUE.name} = ANY(?) " +
         "AND PARTITION = ANY(?) AND ${PARTITIONS_VERSION.name} = ? "
 /**
- * Prepared statement for that upserts a version for all properties in a given entity set in [PostgresTable.DATA]
+ * Preparable SQL thatpserts a version for all properties in a given entity set in [PostgresTable.DATA]
  *
  * The following bind order is expected:
  *
