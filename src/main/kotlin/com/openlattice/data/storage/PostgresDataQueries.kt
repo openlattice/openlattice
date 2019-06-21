@@ -7,6 +7,7 @@ import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresDataTables.Companion.getColumnDefinition
 import com.openlattice.postgres.PostgresTable.DATA
+import com.openlattice.postgres.PostgresTable.ENTITY_KEY_IDS
 import java.util.*
 
 /**
@@ -52,7 +53,7 @@ internal val selectEntitiesGroupedByIdAndPropertyTypeId =
                 "GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
 
 /**
- * Preparable SQL that selects an entire entity sets grouping by id and property type id from the [DATA] table with the
+ * Preparable SQL that selects entire entity sets grouping by id and property type id from the [DATA] table with the
  * following bind order:
  *
  * 1. entity set ids (array)
@@ -62,6 +63,21 @@ internal val selectEntitySetGroupedByIdAndPropertyTypeId =
         "SELECT ${ENTITY_SET_ID.name}, ${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name}, $valuesColumnsSql " +
                 "FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = ANY(?) " +
                 "GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
+
+/**
+ * Preparable SQL that selects an entire linking entity set grouping by linking id and property type id from the [DATA]
+ * table with the following bind order:
+ *
+ * 1. normal entity set ids (array)
+ *
+ */
+internal val selectLinkingEntitySetGroupedByIdAndPropertyTypeId =
+        "SELECT ${DATA.name}.${ENTITY_SET_ID.name}, ${LINKING_ID.name}, ${DATA.name}.${PARTITION.name}, ${PROPERTY_TYPE_ID.name}, $valuesColumnsSql " +
+                "FROM ${DATA.name} " +
+                "INNER JOIN ${ENTITY_KEY_IDS.name} USING(${ID_VALUE.name}) " +
+                "WHERE ${DATA.name}.${ENTITY_SET_ID.name} = ANY(?) " +
+                "GROUP BY (${DATA.name}.${ENTITY_SET_ID.name}, ${LINKING_ID.name}, ${DATA.name}.${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
+
 /**
  * Preparable SQL that selects entities across multiple entity sets grouping by id and property type id from the [DATA]
  * table with the following bind order:
@@ -76,14 +92,28 @@ internal val selectEntitiesSql =
                 "GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name})"
 
 /**
- * Preparable SQL that selects an entire entity sets grouping by id and property type id from the [DATA] table with the
+ * Preparable SQL that selects entire entity sets grouping by id and property type id from the [DATA] table with the
  * following bind order:
  *
  * 1. entity set ids (array)
  *
  */
-internal val selectEntitySetsSql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},$jsonValueColumnsSql FROM ($selectEntitySetGroupedByIdAndPropertyTypeId) entity_set " +
-        "GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name})"
+internal val selectEntitySetsSql =
+        "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},$jsonValueColumnsSql FROM ($selectEntitySetGroupedByIdAndPropertyTypeId) entity_set " +
+                "GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name})"
+
+
+/**
+ * Preparable SQL that selects an entire linking entity set grouping by linking id and property type id from the [DATA]
+ * table with the following bind order:
+ *
+ * 1. normal entity set ids (array)
+ *
+ */
+internal fun selectLinkingEntitySetSql(linkingEntitySetId: UUID): String {
+    return "SELECT '$linkingEntitySetId' AS ${ENTITY_SET_ID.name},${LINKING_ID.name},$jsonValueColumnsSql FROM ($selectLinkingEntitySetGroupedByIdAndPropertyTypeId) entity_set " +
+            "GROUP BY (${ENTITY_SET_ID.name},${LINKING_ID.name}, ${PARTITION.name})"
+}
 
 /**
  * 1 - version
@@ -253,9 +283,10 @@ fun getPartitionsInfoMap(entityKeyIds: Set<UUID>, partitions: List<Int>): Map<UU
     return entityKeyIds.associateWith { entityKeyId -> getPartition(entityKeyId, partitions) }
 }
 
-fun getDataColumnName( datatype :PostgresDatatype ) : String {
+fun getDataColumnName(datatype: PostgresDatatype): String {
     return "v_${datatype.name}"
 }
+
 /**
  * This function generates preparable sql with the following bind order:
  *

@@ -38,6 +38,14 @@ class PostgresDataTablesTest {
     }
 
     @Test
+    fun testDataReadLinkingEntitySetSql() {
+        val ids = "'{\"00000000-0000-0001-0000-000000000000\"}'"
+
+        val select = selectLinkingEntitySetSql(UUID.fromString("00000000-0000-0001-0000-000000000000")).replaceFirst("?", ids)
+        logger.info(select)
+    }
+
+    @Test
     fun testQuery() {
         val tableDefinition = PostgresDataTables.buildDataTableDefinition()
         logger.info("create table sql: {}", tableDefinition.createTableQuery())
