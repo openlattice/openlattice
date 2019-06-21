@@ -335,7 +335,7 @@ public final class PostgresColumn {
     public static final String                   PARTITIONS_FIELD                  = "partitions";
     public static final PostgresColumnDefinition PARTITIONS                        = new PostgresColumnDefinition(
             PARTITIONS_FIELD,
-            INTEGER_ARRAY ).notNull();
+            INTEGER_ARRAY ).notNull().withDefault( "'{}'" );
     public static final String                   PARTITION_FIELD          = "partition";
     public static final PostgresColumnDefinition PARTITION                = new PostgresColumnDefinition(
             PARTITION_FIELD,
