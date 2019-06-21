@@ -541,7 +541,7 @@ class PostgresEntityDataQueryService(
         return tombstone(entitySetId, entityKeyIds)
     }
 
-    /**int
+    /**
      * Tombstones (writes a negative version) for the provided entity properties.
      * @param entitySetId The entity set to operate on.
      * @param entityKeyIds The entity key ids to tombstone.
