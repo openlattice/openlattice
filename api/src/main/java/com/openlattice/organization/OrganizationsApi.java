@@ -21,59 +21,57 @@ package com.openlattice.organization;
 import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.notifications.sms.SmsEntitySetInformation;
 import com.openlattice.organization.roles.Role;
-import java.util.List;
-import retrofit2.http.*;
-
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import retrofit2.http.Body;
+import retrofit2.http.DELETE;
+import retrofit2.http.GET;
+import retrofit2.http.HTTP;
+import retrofit2.http.POST;
+import retrofit2.http.PUT;
+import retrofit2.http.Path;
 
 public interface OrganizationsApi {
-    /*
-     * These determine the service routing for the LB
-     */
-    // @formatter:off
-    String SERVICE           = "/datastore";
+    String ASSEMBLE     = "/assemble";
     String CONTROLLER        = "/organizations";
-    String BASE              = SERVICE + CONTROLLER;
+    String DESCRIPTION       = "/description";
+    String EMAIL_DOMAIN      = "email-domain";
+    String EMAIL_DOMAINS     = "/email-domains";
+    String EMAIL_DOMAIN_PATH = "/{" + EMAIL_DOMAIN + ":.+}";
+    String ENTITY_SETS       = "/entity-sets";
     // @formatter:on
     /*
      * Acutal path elements
      */
     String ID                = "id";
     String ID_PATH           = "/{" + ID + "}";
-    String DESCRIPTION       = "/description";
-    String TITLE             = "/title";
-
-    String ENTITY_SETS       = "/entity-sets";
     String INTEGRATION       = "/integration";
-    String EMAIL_DOMAIN      = "email-domain";
-    String EMAIL_DOMAINS     = "/email-domains";
-    String EMAIL_DOMAIN_PATH = "/{" + EMAIL_DOMAIN + ":.+}";
+    String MEMBERS           = "/members";
     String PRINCIPALS        = "/principals";
     String PRINCIPAL_ID      = "pid";
     String PRINCIPAL_ID_PATH = "/{" + PRINCIPAL_ID + "}";
+    String REFRESH      = "/refresh";
+    String REFRESH_RATE = "/refresh-rate";
+    String ROLES             = "/roles";
+    String ROLE_ID      = "roleId";
+    String ROLE_ID_PATH = "/{" + ROLE_ID + "}";
+    /*
+     * These determine the service routing for the LB
+     */
+    // @formatter:off
+    String SERVICE           = "/datastore";
+    String BASE              = SERVICE + CONTROLLER;
+    String SET_ID       = "setId";
+    String SET_ID_PATH  = "/{" + SET_ID + "}";
+    String SYNCHRONIZE  = "/synchronize";
+    String TITLE             = "/title";
     String TYPE              = "type";
     String TYPE_PATH         = "/{" + TYPE + "}";
-    String ROLES             = "/roles";
-    String MEMBERS           = "/members";
-
-    String ASSEMBLE          = "/assemble";
-    String ROLE_ID           = "roleId";
-    String ROLE_ID_PATH      = "/{" + ROLE_ID + "}";
-    String USER_ID           = "userId";
-    String USER_ID_PATH      = "/{" + USER_ID + ":.*}";
-
-    String SYNCHRONIZE       = "/synchronize";
-    String REFRESH           = "/refresh";
-    String REFRESH_RATE      = "/refresh-rate";
-    String SET_ID            = "setId";
-    String SET_ID_PATH       = "/{" + SET_ID + "}";
-
-    String PHONE = "/phone" ;
-
-
+    String USER_ID      = "userId";
+    String USER_ID_PATH = "/{" + USER_ID + ":.*}";
 
     @GET( BASE )
     Iterable<Organization> getOrganizations();
@@ -87,29 +85,18 @@ public interface OrganizationsApi {
     @DELETE( BASE + ID_PATH )
     Void destroyOrganization( @Path( ID ) UUID organizationId );
 
-    /**
-     * Sets the organization phone number.
-     * @param organizationId The organization id to set the phone number for.
-     * @param entitySetInformationList An array of {@link SmsEntitySetInformation} containing per entity set contact info.
-     * @return The current phone number after the set operation completed. This be different from the input phone number
-     * either because it has been reformatted or someone else set the phone number simultaneously.
-     */
-    @POST( BASE + ID_PATH + PHONE )
-    Integer setOrganizationEntitySetInformation( @Path( ID ) UUID organizationId, @Body List<SmsEntitySetInformation> entitySetInformationList);
-
     @GET( BASE + ID_PATH + INTEGRATION )
-    OrganizationIntegrationAccount getOrganizationIntegrationAccount(@Path(ID) UUID organizationId );
+    OrganizationIntegrationAccount getOrganizationIntegrationAccount( @Path( ID ) UUID organizationId );
 
     /**
      * Retrieves all the organization entity sets without filtering.
      *
      * @param organizationId The id of the organization for which to retrieve entity sets
-     *
      * @return All the organization entity sets along with flags indicating whether they are internal, external, and/or
      * materialized.
      */
     @GET( BASE + ID_PATH + ENTITY_SETS )
-    Map<UUID,Set<OrganizationEntitySetFlag>> getOrganizationEntitySets( @Path( ID ) UUID organizationId);
+    Map<UUID, Set<OrganizationEntitySetFlag>> getOrganizationEntitySets( @Path( ID ) UUID organizationId );
 
     /**
      * Retrieves the entity sets belong to an organization matching a specified filter.
@@ -120,7 +107,7 @@ public interface OrganizationsApi {
      * materialized.
      */
     @POST( BASE + ID_PATH + ENTITY_SETS )
-    Map<UUID,Set<OrganizationEntitySetFlag>> getOrganizationEntitySets(
+    Map<UUID, Set<OrganizationEntitySetFlag>> getOrganizationEntitySets(
             @Path( ID ) UUID organizationId,
             @Body EnumSet<OrganizationEntitySetFlag> flagFilter );
 
@@ -128,7 +115,7 @@ public interface OrganizationsApi {
      * Materializes entity sets into the organization database.
      *
      * @param refreshRatesOfEntitySets The refresh rate in minutes of each entity set to assemble into materialized
-     *                                 views mapped by their ids.
+     * views mapped by their ids.
      */
     @POST( BASE + ID_PATH + ENTITY_SETS + ASSEMBLE )
     Map<UUID, Set<OrganizationEntitySetFlag>> assembleEntitySets(
@@ -139,7 +126,7 @@ public interface OrganizationsApi {
      * Synchronizes EDM changes to the requested materialized entity set in the organization.
      *
      * @param organizationId The id of the organization in which to synchronize the materialized entity set.
-     * @param entitySetId    The id of the entity set to synchronize.
+     * @param entitySetId The id of the entity set to synchronize.
      */
     @POST( BASE + ID_PATH + SET_ID_PATH + SYNCHRONIZE )
     Void synchronizeEdmChanges( @Path( ID ) UUID organizationId, @Path( SET_ID ) UUID entitySetId );
@@ -148,15 +135,16 @@ public interface OrganizationsApi {
      * Refreshes the requested materialized entity set with data changes in the organization.
      *
      * @param organizationId The id of the organization in which to refresh the materialized entity sets data.
-     * @param entitySetId    The id of the entity set to refresh.
+     * @param entitySetId The id of the entity set to refresh.
      */
     @POST( BASE + ID_PATH + SET_ID_PATH + REFRESH )
     Void refreshDataChanges( @Path( ID ) UUID organizationId, @Path( SET_ID ) UUID entitySetId );
 
     /**
      * Changes the refresh rate of a materialized entity set in the requested organization.
+     *
      * @param organizationId The id of the organization in which to change the refresh rate of the materialized entity
-     *                       set.
+     * set.
      * @param entitySetId The id of the entity set, whose refresh rate to change.
      * @param refreshRate The new refresh rate in minutes.
      */
@@ -165,6 +153,16 @@ public interface OrganizationsApi {
             @Path( ID ) UUID organizationId,
             @Path( SET_ID ) UUID entitySetId,
             @Body Integer refreshRate );
+
+    /**
+     * Disables automatic refresh of a materialized entity set in the requested organization.
+     * @param organizationId The id of the organization in which to disable automatic refresh of the materialized entity
+     *                       set.
+     * @param entitySetId The id of the entity set, which not to refresh automatically.
+     */
+    @DELETE( BASE + ID_PATH + SET_ID_PATH + REFRESH_RATE )
+    Void deleteRefreshRate( @Path( ID ) UUID organizationId, @Path( SET_ID ) UUID entitySetId );
+
 
     @PUT( BASE + ID_PATH + TITLE )
     Void updateTitle( @Path( ID ) UUID organziationId, @Body String title );

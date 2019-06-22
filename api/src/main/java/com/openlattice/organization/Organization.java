@@ -32,6 +32,7 @@ import com.openlattice.client.serialization.SerializationConstants;
 import com.openlattice.notifications.sms.SmsEntitySetInformation;
 import com.openlattice.organization.roles.Role;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -118,6 +119,27 @@ public class Organization {
                 Optional.empty() );
     }
 
+    public Organization(
+            Optional<UUID> id,
+            Principal principal,
+            String title,
+            Optional<String> description,
+            Set<String> autoApprovedEmails,
+            Set<Principal> members,
+            Set<Role> roles,
+            List<Integer> partitions ) {
+        this( id,
+                principal,
+                title,
+                description,
+                autoApprovedEmails,
+                members,
+                roles,
+                ImmutableSet.of(),
+                Optional.empty(),
+                Optional.of( partitions ) );
+    }
+
     @JsonIgnore
     public AclKey getAclKey() {
         return securablePrincipal.getAclKey();
@@ -170,7 +192,13 @@ public class Organization {
 
     @JsonProperty( SerializationConstants.PARTITIONS )
     public List<Integer> getPartitions() {
-        return partitions;
+        return Collections.unmodifiableList(partitions);
+    }
+
+    @JsonIgnore
+    public void setPartitions( List<Integer> partitions ) {
+        this.partitions.clear();
+        this.partitions.addAll( partitions );
     }
 
     @Override public boolean equals( Object o ) {
