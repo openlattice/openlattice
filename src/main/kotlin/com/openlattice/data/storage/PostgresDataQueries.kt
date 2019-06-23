@@ -61,7 +61,8 @@ fun buildPreparableFiltersClauseForLinkedEntities(
 ): Pair<String, Set<SqlBinder>> {
     val filtersClauses = buildPreparableFiltersClause(1, propertyTypes, propertyTypeFilters)
     val sql = "SELECT ${ENTITY_SET_ID.name}, ${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name}, $valuesColumnsSql " +
-            "FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = ANY(?) AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ANY(?) AND ${filtersClauses.first}" +
+            "FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = ANY(?) AND ${LINKING_ID.name} = ANY(?) AND ${PARTITION.name} = ANY(?) AND ${VERSION.name} > 0" +
+            "AND ${filtersClauses.first} " +
             "GROUP BY (${ENTITY_SET_ID.name},${LINKING_ID.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
 
     return sql to filtersClauses.second
@@ -85,7 +86,8 @@ fun buildPreparableFiltersClauseForEntities(
 ): Pair<String, Set<SqlBinder>> {
     val filtersClauses = buildPreparableFiltersClause(1, propertyTypes, propertyTypeFilters)
     val sql = "SELECT ${ENTITY_SET_ID.name}, ${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name}, $valuesColumnsSql " +
-            "FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = ANY(?) AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ANY(?) AND ${filtersClauses.first}" +
+            "FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = ANY(?) AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ANY(?) AND ${VERSION.name} > 0 " +
+            "AND ${filtersClauses.first} " +
             "GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
 
     return sql to filtersClauses.second
@@ -148,6 +150,7 @@ internal fun doBind(ps: PreparedStatement, info: SqlBindInfo) {
         is Boolean -> ps.setBoolean(info.bindIndex, v)
         is Short -> ps.setShort(info.bindIndex, v)
         is java.sql.Array -> ps.setArray(info.bindIndex, v)
+        //TODO: Fix this bustedness.
         is Collection<*> -> when(v.first()) {
             is String -> PostgresArrays.createTextArray(ps.connection, v as Collection<String>)
             is Int -> PostgresArrays.createIntArray(ps.connection, v as Collection<Int>)
@@ -196,7 +199,7 @@ internal val selectEntitySetGroupedByIdAndPropertyTypeId =
  *
  */
 // todo: filter partition on ids table or data table?
-internal val selectLinkingEntitiesGroupedByLinkingIdAndPropertyTypeId =
+internal val selectLinkedEntitiesGroupedByLinkingIdAndPropertyTypeId =
         "SELECT ${ENTITY_SET_ID.name}, ${LINKING_ID.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name}, $valuesColumnsSql " +
                 "FROM ${DATA.name} " +
                 "INNER JOIN ( SELECT ${LINKING_ID.name}, ${ID.name} FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = ANY(?) AND ${LINKING_ID.name} = ANY(?) AND ${PARTITION.name} = ANY(?) ) as ids USING(${ID_VALUE.name}) " +
@@ -210,7 +213,7 @@ internal val selectLinkingEntitiesGroupedByLinkingIdAndPropertyTypeId =
  *
  */
 // todo: filter partition on ids table or data table?
-internal val selectLinkingEntitySetGroupedByLinkingIdAndPropertyTypeId =
+internal val selectLinkedEntitySetGroupedByLinkingIdAndPropertyTypeId =
         "SELECT ${ENTITY_SET_ID.name}, ${LINKING_ID.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name}, $valuesColumnsSql " +
                 "FROM ${DATA.name} " +
                 "INNER JOIN ( SELECT ${LINKING_ID.name}, ${ID.name} FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = ANY(?) AND ${LINKING_ID.name} IS NOT NULL ) as ids USING(${ID_VALUE.name}) " +
@@ -251,7 +254,7 @@ internal val selectEntitySetsSql =
  *
  */
 internal val selectLinkingEntitiesByNormalEntitySetIdsSql =
-     "SELECT ${ENTITY_SET_ID.name},${LINKING_ID.name},$jsonValueColumnsSql FROM ($selectLinkingEntitiesGroupedByLinkingIdAndPropertyTypeId) entities " +
+     "SELECT ${ENTITY_SET_ID.name},${LINKING_ID.name},$jsonValueColumnsSql FROM ($selectLinkedEntitiesGroupedByLinkingIdAndPropertyTypeId) entities " +
             "GROUP BY (${ENTITY_SET_ID.name},${LINKING_ID.name}, ${PARTITION.name})"
 
 /**
@@ -267,7 +270,7 @@ internal val selectLinkingEntitiesByNormalEntitySetIdsSql =
  */
 // todo: what if we want to select multiple linking entity sets?
 internal fun selectLinkingEntitiesByLinkingEntitySetIdSql (linkingEntitySetId: UUID): String {
-    return "SELECT '$linkingEntitySetId' AS ${ENTITY_SET_ID.name},${LINKING_ID.name},$jsonValueColumnsSql FROM ($selectLinkingEntitiesGroupedByLinkingIdAndPropertyTypeId) entities " +
+    return "SELECT '$linkingEntitySetId' AS ${ENTITY_SET_ID.name},${LINKING_ID.name},$jsonValueColumnsSql FROM ($selectLinkedEntitiesGroupedByLinkingIdAndPropertyTypeId) entities " +
             "GROUP BY (${ENTITY_SET_ID.name},${LINKING_ID.name}, ${PARTITION.name})"
 }
 
@@ -282,7 +285,7 @@ internal fun selectLinkingEntitiesByLinkingEntitySetIdSql (linkingEntitySetId: U
  */
 // todo: what if we want to select multiple linking entity sets?
 internal fun selectLinkingEntitySetSql(linkingEntitySetId: UUID): String {
-    return "SELECT '$linkingEntitySetId' AS ${ENTITY_SET_ID.name},${LINKING_ID.name},$jsonValueColumnsSql FROM ($selectLinkingEntitySetGroupedByLinkingIdAndPropertyTypeId) entity_set " +
+    return "SELECT '$linkingEntitySetId' AS ${ENTITY_SET_ID.name},${LINKING_ID.name},$jsonValueColumnsSql FROM ($selectLinkedEntitySetGroupedByLinkingIdAndPropertyTypeId) entity_set " +
             "GROUP BY (${ENTITY_SET_ID.name},${LINKING_ID.name}, ${PARTITION.name})"
 }
 
