@@ -24,7 +24,6 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
 import com.openlattice.assembler.Assembler;
 import com.openlattice.authorization.AuthorizationManager;
-import com.openlattice.conductor.rpc.ConductorConfiguration;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.EntityDatastore;
 import com.openlattice.data.EntityKeyIdService;
@@ -33,6 +32,7 @@ import com.openlattice.data.storage.ByteBlobDataManager;
 import com.openlattice.data.storage.HazelcastEntityDatastore;
 import com.openlattice.data.storage.IndexingMetadataManager;
 import com.openlattice.data.storage.PostgresEntityDataQueryService;
+import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.datastore.pods.ByteBlobServicePod;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.ids.HazelcastIdGenerationService;
@@ -44,11 +44,11 @@ import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.linking.PostgresLinkingFeedbackService;
 import com.openlattice.linking.graph.PostgresLinkingQueryService;
 import com.zaxxer.hikari.HikariDataSource;
-import java.io.IOException;
-import javax.inject.Inject;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+
+import javax.inject.Inject;
 
 @Configuration
 @Import( { ByteBlobServicePod.class } )
@@ -93,7 +93,12 @@ public class IndexerPostConfigurationServicesPod {
 
     @Bean
     public PostgresEntityDataQueryService dataQueryService() {
-        return new PostgresEntityDataQueryService( hikariDataSource, byteBlobDataManager );
+        return new PostgresEntityDataQueryService( hikariDataSource, byteBlobDataManager, partitionManager() );
+    }
+
+    @Bean
+    public PartitionManager partitionManager() {
+        return new PartitionManager( hazelcastInstance, hikariDataSource );
     }
 
     @Bean

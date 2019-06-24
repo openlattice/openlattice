@@ -1,14 +1,11 @@
 package com.openlattice.indexing.pods;
 
 import com.hazelcast.core.HazelcastInstance;
-import com.openlattice.BackgroundGraphProcessingService;
 import com.openlattice.data.storage.PostgresEntityDataQueryService;
 import com.openlattice.datastore.services.EdmManager;
-import com.openlattice.graph.processing.GraphProcessingService;
 import com.openlattice.graph.processing.processors.GraphProcessor;
 import com.openlattice.graph.processing.processors.SharedGraphProcessors;
 import com.zaxxer.hikari.HikariDataSource;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.FilterType;
