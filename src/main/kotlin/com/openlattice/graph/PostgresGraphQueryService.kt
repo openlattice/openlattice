@@ -39,6 +39,7 @@ import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.PostgresTable.EDGES
 import com.openlattice.postgres.PostgresTable.GRAPH_QUERIES
+import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
 import com.zaxxer.hikari.HikariDataSource
@@ -332,13 +333,18 @@ class PostgresGraphQueryService(
 
         entities.forEach { (entitySetId, data) ->
             val apt = authorizedPropertyTypes
+                    .mapValues { (_, propertyTypeIds) ->
+                        propertyTypeIds.associateWith { propertyTypeId ->
+                            propertyTypes.getValue(propertyTypeId)
+                        }
+                    }
                     .getValue(entitySetId)
-                    .associateWith { propertyTypes.getValue(it) }
+
             val sw = Stopwatch.createStarted()
-            pgDataService.streamableEntitySetWithEntityKeyIdsAndPropertyTypeIds(
-                    entitySetId,
-                    Optional.of(data.keys),
+            pgDataService.streamableEntitySet(
+                    mapOf(entitySetId to Optional.of(data.keys)),
                     apt,
+                    mapOf(),
                     EnumSet.of(MetadataOption.LAST_WRITE)
             ).forEach { data[it.first] = it.second }
             logger.info("Loading data for entity set {} took {} ms", entitySetId, sw.elapsed(TimeUnit.MILLISECONDS))

@@ -44,6 +44,7 @@ val jsonValueColumnsSql = PostgresDataTables.dataColumns.entries
                     "as ${getDataColumnName(datatype)}"
         }
 
+
 /**
  * Builds a preparable SQL query for reading filterable data.
  *
@@ -60,8 +61,8 @@ fun buildPreparableFiltersClauseForLinkedEntities(
         propertyTypeFilters: Map<UUID, Set<Filter>>
 ): Pair<String, Set<SqlBinder>> {
     val filtersClauses = buildPreparableFiltersClause(1, propertyTypes, propertyTypeFilters)
-    val sql = "SELECT ${ENTITY_SET_ID.name}, ${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name}, $valuesColumnsSql " +
-            "FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = ANY(?) AND ${LINKING_ID.name} = ANY(?) AND ${PARTITION.name} = ANY(?) AND ${VERSION.name} > 0" +
+    val sql = selectEntitiesGroupedByIdAndPropertyTypeId
+    "AND ${ORIGIN_ID.name} IS NOT NULL AND ${VERSION.name} > 0" +
             "AND ${filtersClauses.first} " +
             "GROUP BY (${ENTITY_SET_ID.name},${LINKING_ID.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
 
@@ -80,49 +81,58 @@ fun buildPreparableFiltersClauseForLinkedEntities(
  * 3. partition(s) (array)
  *
  */
-fun buildPreparableFiltersClauseForEntities(
+fun buildPreparableFiltersSqlForEntities(
         propertyTypes: Map<UUID, PropertyType>,
         propertyTypeFilters: Map<UUID, Set<Filter>>
 ): Pair<String, Set<SqlBinder>> {
     val filtersClauses = buildPreparableFiltersClause(1, propertyTypes, propertyTypeFilters)
-    val sql = "SELECT ${ENTITY_SET_ID.name}, ${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name}, $valuesColumnsSql " +
-            "FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = ANY(?) AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ANY(?) AND ${VERSION.name} > 0 " +
+    //TODO: I'm pretty sure if propertyTypeFilters are entity this won't work properly.
+    val sql = selectEntitiesGroupedByIdAndPropertyTypeId +
             "AND ${filtersClauses.first} " +
-            "GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
+                    GROUP_BY_ESID_EKID_PART_PTID
 
     return sql to filtersClauses.second
 
 }
 
+/*
+ * Creates a preparable query with the following clauses.
+ */
 private fun buildPreparableFiltersClause(
         startIndex: Int,
         propertyTypes: Map<UUID, PropertyType>,
         propertyTypeFilters: Map<UUID, Set<Filter>>
 ): Pair<String, Set<SqlBinder>> {
-    val bindList = propertyTypeFilters.entries.flatMap { (propertyTypeId, filters) ->
-        if (filters.isEmpty()) return@flatMap listOf<BindDetails>()
-        val nCol = PostgresDataTables
-                .nonIndexedValueColumn(PostgresEdmTypeConverter.map(propertyTypes.getValue(propertyTypeId).datatype))
-        val bCol = PostgresDataTables
-                .btreeIndexedValueColumn(PostgresEdmTypeConverter.map(propertyTypes.getValue(propertyTypeId).datatype))
+    val bindList = propertyTypeFilters.entries
+            .filter { (_, filters) -> filters.isEmpty() }
+            .flatMap { (propertyTypeId, filters) ->
+                if (filters.isEmpty()) return@flatMap listOf<BindDetails>()
+                val nCol = PostgresDataTables
+                        .nonIndexedValueColumn(
+                                PostgresEdmTypeConverter.map(propertyTypes.getValue(propertyTypeId).datatype)
+                        )
+                val bCol = PostgresDataTables
+                        .btreeIndexedValueColumn(
+                                PostgresEdmTypeConverter.map(propertyTypes.getValue(propertyTypeId).datatype)
+                        )
 
-        //Generate sql preparable sql fragments
-        var currentIndex = startIndex
-        val nFilterFragments = filters.map { filter ->
-            val bindDetails = buildBindDetails(currentIndex, propertyTypeId, filter, nCol.name)
-            currentIndex = bindDetails.nextIndex
-            bindDetails
-        }
-
-        val bFilterFragments = filters
-                .map { filter ->
-                    val bindDetails = buildBindDetails(currentIndex, propertyTypeId, filter, bCol.name)
+                //Generate sql preparable sql fragments
+                var currentIndex = startIndex
+                val nFilterFragments = filters.map { filter ->
+                    val bindDetails = buildBindDetails(currentIndex, propertyTypeId, filter, nCol.name)
                     currentIndex = bindDetails.nextIndex
                     bindDetails
                 }
 
-        nFilterFragments + bFilterFragments
-    }
+                val bFilterFragments = filters
+                        .map { filter ->
+                            val bindDetails = buildBindDetails(currentIndex, propertyTypeId, filter, bCol.name)
+                            currentIndex = bindDetails.nextIndex
+                            bindDetails
+                        }
+
+                nFilterFragments + bFilterFragments
+            }
 
     val sql = bindList.joinToString(" AND ") { "(${it.sql})" }
     val bindInfo = bindList.flatMap { it.bindInfo }.toSet()
@@ -175,8 +185,11 @@ internal fun doBind(ps: PreparedStatement, info: SqlBindInfo) {
 internal val selectEntitiesGroupedByIdAndPropertyTypeId =
         "SELECT ${ENTITY_SET_ID.name}, ${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name}, $valuesColumnsSql " +
                 "FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = ANY(?) AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ANY(?) " +
-                "GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
+                "AND ${VERSION.name} > 0 "
 
+
+internal val GROUP_BY_ESID_EKID_PART_PTID = "GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
+//"GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
 /**
  * Preparable SQL that selects entire entity sets grouping by id and property type id from the [DATA] table with the
  * following bind order:

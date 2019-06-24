@@ -8,10 +8,7 @@ import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.data.storage.partitions.PartitionsInfo
 import com.openlattice.data.util.PostgresDataHasher
 import com.openlattice.edm.type.PropertyType
-import com.openlattice.postgres.JsonDeserializer
-import com.openlattice.postgres.PostgresArrays
-import com.openlattice.postgres.PostgresDatatype
-import com.openlattice.postgres.PostgresTable
+import com.openlattice.postgres.*
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.zaxxer.hikari.HikariDataSource
@@ -37,6 +34,19 @@ class PostgresEntityDataQueryService(
         private val logger = LoggerFactory.getLogger(PostgresEntityDataQueryService::class.java)
     }
 
+    fun streamableEntitySet(
+            entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
+            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
+            propertyTypeFilters: Map<UUID, Set<Filter>> = mapOf(),
+            metadataOptions: Set<MetadataOption> = EnumSet.noneOf(MetadataOption::class.java),
+            version: Optional<Long> = Optional.empty(),
+            linking: Boolean = false
+    ): BasePostgresIterable<MutableMap<UUID, MutableSet<Any>>> {
+        return streamableEntitySet(
+                entityKeyIds, authorizedPropertyTypes, propertyTypeFilters, metadataOptions, version, linking
+        ) { rs -> ResultSetAdapters.implicitEntityValuesById(rs, authorizedPropertyTypes, byteBlobDataManager) }
+    }
+
     /**
      * Note: for linking queries, linking id and entity set id will be returned, thus data won't be merged by linking id
      */
@@ -46,7 +56,7 @@ class PostgresEntityDataQueryService(
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
             propertyTypeFilters: Map<UUID, Set<Filter>>,
             metadataOptions: Set<MetadataOption>,
-            version: Optional<Long>,
+            version: Optional<Long> = Optional.empty(),
             linking: Boolean = false,
             adapter: (ResultSet) -> T
     ): BasePostgresIterable<T> {
@@ -58,7 +68,12 @@ class PostgresEntityDataQueryService(
                 getPartitionsInfo(it, partitionManager.getEntitySetPartitionsInfo(entitySetId).partitions.toList())
             }.orElse(emptyList())
         }
-        val (sql, binders) = buildPreparableFiltersClauseForEntities(propertyTypes, propertyTypeFilters)
+        val (sql, binders) = if (linking) {
+            buildPreparableFiltersClauseForLinkedEntities(propertyTypes, propertyTypeFilters)
+        } else {
+            buildPreparableFiltersSqlForEntities(propertyTypes, propertyTypeFilters)
+        }
+
 
         return BasePostgresIterable(PreparedStatementHolderSupplier(hds, sql, FETCH_SIZE) { ps ->
             (linkedSetOf(

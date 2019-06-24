@@ -47,7 +47,6 @@ class PostgresDataTables {
                 PARTITION,
                 PROPERTY_TYPE_ID,
                 HASH,
-                LAST_WRITE,
                 LAST_PROPAGATE,
                 LAST_MIGRATE,
                 VERSION,
