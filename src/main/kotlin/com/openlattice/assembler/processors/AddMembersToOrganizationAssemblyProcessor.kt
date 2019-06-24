@@ -22,6 +22,7 @@
 package com.openlattice.assembler.processors
 
 import com.hazelcast.core.Offloadable
+import com.hazelcast.core.ReadOnly
 import com.hazelcast.spi.ExecutionService
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.assembler.AssemblerConnectionManager
@@ -32,7 +33,7 @@ import java.lang.IllegalStateException
 import java.util.*
 
 data class AddMembersToOrganizationAssemblyProcessor(val newMembers: PrincipalSet)
-    : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(), Offloadable {
+    : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(), Offloadable, ReadOnly {
 
     @Transient
     private lateinit var acm: AssemblerConnectionManager

@@ -21,6 +21,7 @@
 package com.openlattice.assembler.processors
 
 import com.hazelcast.core.Offloadable
+import com.hazelcast.core.ReadOnly
 import com.hazelcast.spi.ExecutionService
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.assembler.AssemblerConnectionManager
@@ -35,7 +36,7 @@ private val logger = LoggerFactory.getLogger(RemoveMembersFromOrganizationAssemb
 private const val NOT_INITIALIZED = "Assembler Connection Manager not initialized."
 
 data class RemoveMembersFromOrganizationAssemblyProcessor(val members: PrincipalSet)
-    : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(), Offloadable {
+    : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(), Offloadable, ReadOnly {
 
     @Transient
     private var acm: AssemblerConnectionManager? = null

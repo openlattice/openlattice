@@ -22,6 +22,7 @@
 package com.openlattice.assembler.processors
 
 import com.hazelcast.core.Offloadable
+import com.hazelcast.core.ReadOnly
 import com.hazelcast.spi.ExecutionService
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.assembler.AssemblerConnectionManager
@@ -31,7 +32,8 @@ import java.util.UUID
 
 private const val NOT_INITIALIZED = "Assembler Connection Manager not initialized."
 
-class MaterializeEdgesProcessor : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(), Offloadable {
+class MaterializeEdgesProcessor
+    : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(), Offloadable, ReadOnly {
     @Transient
     private var acm: AssemblerConnectionManager? = null
 
