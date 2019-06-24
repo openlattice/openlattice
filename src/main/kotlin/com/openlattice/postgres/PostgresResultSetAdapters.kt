@@ -2,6 +2,8 @@ package com.openlattice.postgres
 
 import com.openlattice.data.storage.ByteBlobDataManager
 import com.openlattice.edm.type.PropertyType
+import com.openlattice.postgres.ResultSetAdapters.entitySetId
+import com.openlattice.postgres.ResultSetAdapters.id
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.slf4j.LoggerFactory
 import java.sql.*
@@ -17,12 +19,13 @@ internal class PostgresResultSetAdapters
 private val logger = LoggerFactory.getLogger(PostgresResultSetAdapters::class.java)
 
 @Throws(SQLException::class)
-fun implicitEntityValuesById(
+fun getEntityPropertiesByPropertyTypeId(
         rs: ResultSet,
         authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
         byteBlobDataManager: ByteBlobDataManager
-): Map<UUID, Set<Any>> {
-    val data = HashMap<UUID, Set<Any>>()
+): Pair<UUID, MutableMap<UUID, MutableSet<Any>>> {
+    val id = id( rs )
+    val data = mutableMapOf<UUID, MutableSet<Any>>()
 
     val allPropertyTypes = authorizedPropertyTypes.values
             .flatMap { propertyTypesOfEntitySet -> propertyTypesOfEntitySet.values }
@@ -40,7 +43,7 @@ fun implicitEntityValuesById(
         }
     }
 
-    return data
+    return id to data
 }
 
 //TODO: If we are getting NPEs on read we may have to do better filtering here.

@@ -34,17 +34,17 @@ class PostgresEntityDataQueryService(
         private val logger = LoggerFactory.getLogger(PostgresEntityDataQueryService::class.java)
     }
 
-    fun streamableEntitySet(
+    fun getEntitiesWithPropertyTypeIds(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
             propertyTypeFilters: Map<UUID, Set<Filter>> = mapOf(),
             metadataOptions: Set<MetadataOption> = EnumSet.noneOf(MetadataOption::class.java),
             version: Optional<Long> = Optional.empty(),
             linking: Boolean = false
-    ): BasePostgresIterable<MutableMap<UUID, MutableSet<Any>>> {
+    ): Map<UUID, MutableMap<UUID, MutableSet<Any>>> {
         return streamableEntitySet(
                 entityKeyIds, authorizedPropertyTypes, propertyTypeFilters, metadataOptions, version, linking
-        ) { rs -> ResultSetAdapters.implicitEntityValuesById(rs, authorizedPropertyTypes, byteBlobDataManager) }
+        ) { rs -> getEntityPropertiesByPropertyTypeId(rs, authorizedPropertyTypes, byteBlobDataManager) }.toMap()
     }
 
     /**
