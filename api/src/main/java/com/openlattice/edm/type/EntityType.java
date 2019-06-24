@@ -45,6 +45,7 @@ public class EntityType extends AbstractSchemaAssociatedSecurableType {
     private final     int                              shards;
     private final     SecurableObjectType              category;
     protected         LinkedHashMultimap<UUID, String> propertyTags;
+    protected         LinkedHashMultimap<UUID, String> propertyTypeDescriptions;
     protected         LinkedHashSet<UUID>              properties;
 
     @JsonCreator
@@ -58,6 +59,8 @@ public class EntityType extends AbstractSchemaAssociatedSecurableType {
             @JsonProperty( SerializationConstants.PROPERTIES_FIELD ) LinkedHashSet<UUID> properties,
             @JsonProperty( SerializationConstants.PROPERTY_TAGS )
                     Optional<LinkedHashMultimap<UUID, String>> propertyTags,
+            @JsonProperty( SerializationConstants.PROPERTY_TYPE_DESCRIPTIONS )
+                    Optional<LinkedHashMultimap<UUID, String>> propertyTypeDescriptions,
             @JsonProperty( SerializationConstants.BASE_TYPE_FIELD ) Optional<UUID> baseType,
             @JsonProperty( SerializationConstants.CATEGORY ) Optional<SecurableObjectType> category,
             @JsonProperty( SerializationConstants.SHARDS ) Optional<Integer> shards ) {
@@ -65,6 +68,7 @@ public class EntityType extends AbstractSchemaAssociatedSecurableType {
         this.properties = checkNotNull( properties, "Entity type properties cannot be null" );
         this.baseType = baseType;
         this.category = category.orElse( SecurableObjectType.EntityType );
+        this.propertyTypeDescriptions = propertyTypeDescriptions.orElse ( LinkedHashMultimap.create() );
         this.propertyTags = propertyTags.orElse( LinkedHashMultimap.create() );
         this.key = key;
         this.shards = shards.orElse( DEFAULT_SHARDS );
@@ -84,6 +88,7 @@ public class EntityType extends AbstractSchemaAssociatedSecurableType {
             LinkedHashSet<UUID> key,
             LinkedHashSet<UUID> properties,
             LinkedHashMultimap<UUID, String> propertyTags,
+            LinkedHashMultimap<UUID, String> propertyTypeDescriptions,
             Optional<UUID> baseType,
             Optional<SecurableObjectType> category,
             Optional<Integer> shards ) {
@@ -95,6 +100,7 @@ public class EntityType extends AbstractSchemaAssociatedSecurableType {
                 key,
                 properties,
                 Optional.of( propertyTags ),
+                Optional.of( propertyTypeDescriptions ),
                 baseType,
                 category,
                 shards );
@@ -119,6 +125,7 @@ public class EntityType extends AbstractSchemaAssociatedSecurableType {
                 schemas,
                 key,
                 properties,
+                Optional.of( propertyTags ),
                 Optional.empty(),
                 baseType,
                 category,
@@ -132,6 +139,7 @@ public class EntityType extends AbstractSchemaAssociatedSecurableType {
                 ", h=" + h +
                 ", shards=" + shards +
                 ", propertyTags=" + propertyTags +
+                ", propertyTypeDescription=" + propertyTypeDescriptions +
                 ", properties=" + properties +
                 ", schemas=" + schemas +
                 ", type=" + type +
@@ -160,6 +168,11 @@ public class EntityType extends AbstractSchemaAssociatedSecurableType {
     @JsonProperty( SerializationConstants.PROPERTIES_FIELD )
     public Set<UUID> getProperties() {
         return Collections.unmodifiableSet( properties );
+    }
+
+    @JsonProperty( SerializationConstants.PROPERTY_TAGS )
+    public LinkedHashMultimap<UUID, String> getPropertyTypeDescriptions() {
+        return propertyTypeDescriptions;
     }
 
     @JsonProperty( SerializationConstants.PROPERTY_TAGS )
@@ -201,6 +214,10 @@ public class EntityType extends AbstractSchemaAssociatedSecurableType {
         this.propertyTags = propertyTags;
     }
 
+    public void setPropertyTypeDescriptions( LinkedHashMultimap<UUID, String> propertyTypeDescriptions ) {
+        this.propertyTypeDescriptions = propertyTypeDescriptions;
+    }
+
     @Override public boolean equals( Object o ) {
         if ( this == o )
             return true;
@@ -215,10 +232,11 @@ public class EntityType extends AbstractSchemaAssociatedSecurableType {
                 Objects.equals( baseType, that.baseType ) &&
                 category == that.category &&
                 Objects.equals( propertyTags, that.propertyTags ) &&
+                Objects.equals( propertyTypeDescriptions, that.propertyTypeDescriptions ) &&
                 Objects.equals( properties, that.properties );
     }
 
     @Override public int hashCode() {
-        return Objects.hash( super.hashCode(), key, baseType, h, shards, category, propertyTags, properties );
+        return Objects.hash( super.hashCode(), key, baseType, h, shards, category, propertyTags, propertyTypeDescriptions, properties );
     }
 }
