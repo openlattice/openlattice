@@ -194,11 +194,7 @@ class AssemblerConnectionManager(
     }
 
     fun removeMembersFromOrganization(dbName: String, dataSource: HikariDataSource, members: Set<Principal>) {
-        members.filter { it.id != SystemRole.OPENLATTICE.principal.id && it.id != SystemRole.ADMIN.principal.id }
-                .filter {
-                    securePrincipalsManager.principalExists(it)
-                } //There are some bad principals in the member list some how-- probably from testing.
-                .forEach { principal ->
+        members.forEach { principal ->
                     revokeConnectAndSchemaUsage(
                             dataSource,
                             dbName,
