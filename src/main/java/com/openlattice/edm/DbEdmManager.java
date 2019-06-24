@@ -20,11 +20,9 @@
 
 package com.openlattice.edm;
 
-import com.openlattice.authorization.Permission;
-import com.openlattice.authorization.Principal;
 import com.openlattice.edm.type.PropertyType;
+
 import java.util.Collection;
-import java.util.EnumSet;
 
 /**
  * Some design assumptions:
@@ -45,39 +43,4 @@ public interface DbEdmManager {
      */
     void createEntitySet( EntitySet entitySet, Collection<PropertyType> propertyTypes ) throws Exception;
 
-    void deleteEntitySet( EntitySet entitySet, Collection<PropertyType> propertyTypes );
-
-    void removePropertiesFromEntitySet( EntitySet entitySet, PropertyType... propertyTypes );
-
-    void removePropertiesFromEntitySet( EntitySet entitySet, Collection<PropertyType> propertyType );
-
-    /**
-     * Grants {@code permissions} on an entity sets property types for a given principal.
-     *
-     * @param principal The principal from which to grant permissions.
-     * @param entitySet The entity set to grant permissions on.
-     * @param propertyTypes The property types on which to grant permissions on. If no property types are provided
-     * then no actions will be taken.
-     * @param permissions The permissions to grant.
-     */
-    void grant(
-            Principal principal,
-            EntitySet entitySet,
-            Collection<PropertyType> propertyTypes,
-            EnumSet<Permission> permissions );
-
-    /**
-     * Revokes {@code permissions} on an entity sets property types for a given principal.
-     *
-     * @param principal The principal from which to revoke permissions.
-     * @param entitySet The entity set to revoke permissions on.
-     * @param propertyTypes The property types on which to revoke permission on. If no property types are provided
-     * then no actions will be taken.
-     * @param permissions The permissions to revoke.
-     */
-    void revoke(
-            Principal principal,
-            EntitySet entitySet,
-            Collection<PropertyType> propertyTypes,
-            EnumSet<Permission> permissions );
 }

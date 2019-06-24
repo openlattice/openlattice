@@ -53,7 +53,6 @@ class OrganizationAssemblyStreamSerializer : SelfRegisteringStreamSerializer<Org
     override fun write(out: ObjectDataOutput, obj: OrganizationAssembly) {
         UUIDStreamSerializer.serialize(out, obj.organizationId)
         out.writeBoolean(obj.initialized)
-        out.writeUTF(obj.dbname)
 
         out.writeInt(obj.materializedEntitySets.size)
         obj.materializedEntitySets.forEach { entitySetId, flags ->
@@ -69,7 +68,6 @@ class OrganizationAssemblyStreamSerializer : SelfRegisteringStreamSerializer<Org
     override fun read(input: ObjectDataInput): OrganizationAssembly {
         val organizationId = UUIDStreamSerializer.deserialize(input)
         val initialized = input.readBoolean()
-        val dbName = input.readUTF()
 
         val materializedEntitySets = mutableMapOf<UUID, EnumSet<OrganizationEntitySetFlag>>()
         (0 until input.readInt()).forEach { _ ->
@@ -83,6 +81,6 @@ class OrganizationAssemblyStreamSerializer : SelfRegisteringStreamSerializer<Org
             materializedEntitySets[entitySetId] = flags
         }
 
-        return OrganizationAssembly(organizationId, dbName, initialized, materializedEntitySets)
+        return OrganizationAssembly(organizationId, initialized, materializedEntitySets)
     }
 }
