@@ -351,7 +351,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public GraphService graphApi() {
-        return new Graph( hikariDataSource, dataModelService() );
+        return new Graph( hikariDataSource, dataModelService(), partitionManager() );
     }
 
     @Bean
