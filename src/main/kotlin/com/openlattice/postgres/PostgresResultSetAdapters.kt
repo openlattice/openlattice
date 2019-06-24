@@ -25,20 +25,19 @@ fun getEntityPropertiesByPropertyTypeId(
         byteBlobDataManager: ByteBlobDataManager
 ): Pair<UUID, MutableMap<UUID, MutableSet<Any>>> {
     val id = id( rs )
+    val entitySetId = entitySetId( rs )
     val data = mutableMapOf<UUID, MutableSet<Any>>()
 
-    val allPropertyTypes = authorizedPropertyTypes.values
-            .flatMap { propertyTypesOfEntitySet -> propertyTypesOfEntitySet.values }
-            .toSet()
+    val allPropertyTypes = authorizedPropertyTypes.getValue( entitySetId ) .values
 
     for (propertyType in allPropertyTypes) {
         val objects = propertyValue(rs, propertyType)
 
         if (objects != null) {
             if (propertyType.datatype == EdmPrimitiveTypeKind.Binary) {
-                data[propertyType.id] = mutableSetOf(byteBlobDataManager.getObjects(objects as List<String>))
+                data[propertyType.id] = mutableSetOf<Any>(byteBlobDataManager.getObjects(objects as List<String>))
             } else {
-                data[propertyType.id] = mutableSetOf(objects)
+                data[propertyType.id] = mutableSetOf<Any>(objects)
             }
         }
     }

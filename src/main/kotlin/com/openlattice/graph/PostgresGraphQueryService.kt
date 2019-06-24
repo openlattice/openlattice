@@ -340,7 +340,7 @@ class PostgresGraphQueryService(
                     }
             val sw = Stopwatch.createStarted()
             pgDataService.getEntitiesWithPropertyTypeIds(
-                    mapOf(entitySetId to Optional.of(data.keys)),
+                    mapOf(entitySetId to Optional.of(data.keys as Set<UUID>)),
                     apt,
                     mapOf(),
                     EnumSet.of(MetadataOption.LAST_WRITE)
