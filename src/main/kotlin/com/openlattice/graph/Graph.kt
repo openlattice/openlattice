@@ -32,7 +32,11 @@ import com.openlattice.data.DataEdgeKey
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.WriteEvent
 import com.openlattice.data.analytics.IncrementableWeightId
+import com.openlattice.data.storage.PostgresDataQueries
 import com.openlattice.data.storage.entityKeyIdColumns
+import com.openlattice.data.storage.getPartition
+import com.openlattice.data.storage.partitions.PartitionManager
+import com.openlattice.data.storage.partitions.PartitionsInfo
 import com.openlattice.data.storage.selectEntitySetWithCurrentVersionOfPropertyTypes
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.type.PropertyType
@@ -70,7 +74,11 @@ private const val BATCH_SIZE = 10000
 
 private val logger = LoggerFactory.getLogger(Graph::class.java)
 
-class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : GraphService {
+class Graph(
+        private val hds: HikariDataSource,
+        private val edm: EdmManager,
+        private val partitionManager: PartitionManager
+) : GraphService {
 
     /* Create */
 
@@ -79,6 +87,8 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
             val ps = connection.prepareStatement(UPSERT_SQL)
             val version = System.currentTimeMillis()
             val versions = PostgresArrays.createLongArray(connection, ImmutableList.of(version))
+
+            val partitionsInfoByEntitySet = mutableMapOf<UUID, PartitionsInfo>()
             ps.use {
                 keys.forEach { dataEdgeKey ->
                     createAddSrcRowToBatch(ps, version, versions, dataEdgeKey)
@@ -88,6 +98,28 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                 return WriteEvent(version, ps.executeBatch().sum())
             }
         }
+    }
+
+    private fun bindColumnsForEdge(
+            ps: PreparedStatement,
+            dataEdgeKey: DataEdgeKey,
+            version: Long,
+            versions: java.sql.Array,
+            entityDataKey: EntityDataKey,
+            partitionsInfo: PartitionsInfo,
+            startIndex: Int = 1): Int {
+        var index = startIndex
+        ps.setObject(index++, getPartition(entityDataKey.entityKeyId, partitionsInfo.partitions.toList()))
+        ps.setObject(index++, dataEdgeKey.src.entitySetId)
+        ps.setObject(index++, dataEdgeKey.src.entityKeyId)
+        ps.setObject(index++, dataEdgeKey.dst.entitySetId)
+        ps.setObject(index++, dataEdgeKey.dst.entityKeyId)
+        ps.setObject(index++, dataEdgeKey.edge.entitySetId)
+        ps.setObject(index++, dataEdgeKey.edge.entityKeyId)
+        ps.setLong(index++, version)
+        ps.setArray(index++, versions)
+        ps.setObject(index++, partitionsInfo.partitionsVersion)
+        return index
     }
 
     /*
