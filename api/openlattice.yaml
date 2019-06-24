@@ -568,6 +568,86 @@ paths:
       responses:
         "200":
           description: Success
+  /datastore/edm/entity/type/{entityTypeId}/property:
+    get:
+      summary: Get all EntityType propertyType metadata
+      operationId: getAllEntityTypePropertyMetadata
+      parameters:
+        - name: entityTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  $ref: "#/components/entityTypePropertyMetadata"
+
+  /datastore/edm/entity/type/{entityTypeId}/property/{propertyTypeId}:
+    get:
+      summary: Get EntityType propertyType metadata
+      operationId: getEntityTypePropertyMetadata
+      parameters:
+        - name: entityTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: propertyTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/entityTypePropertyMetadata"
+    post:
+      summary: Update EntityType Property metadata
+      operationId: updateEntityTypePropertyMetadata
+      parameters:
+        - name: entityTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: propertyTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+      
 
   # property Types
 
@@ -2464,6 +2544,14 @@ components:
         key: [8f79e123-3411-4099-a41f-88e5d22d0e8d, e39dfdfa-a3e6-4f1f-b54b-646a723c3085]
         properties: [8f79e123-3411-4099-a41f-88e5d22d0e8d, e39dfdfa-a3e6-4f1f-b54b-646a723c3085, fae6af98-2675-45bd-9a5b-1619a87235a8]
         category: EntityType
+    entityTypePropertyMetadata:
+      title: An entity type property metadata
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
     associationType:
       type: object
       properties:

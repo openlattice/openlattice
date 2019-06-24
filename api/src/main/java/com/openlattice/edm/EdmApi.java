@@ -24,10 +24,7 @@ import com.openlattice.edm.requests.EdmDetailsSelector;
 import com.openlattice.edm.requests.EdmRequest;
 import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.edm.set.EntitySetPropertyMetadata;
-import com.openlattice.edm.type.AssociationDetails;
-import com.openlattice.edm.type.AssociationType;
-import com.openlattice.edm.type.EntityType;
-import com.openlattice.edm.type.PropertyType;
+import com.openlattice.edm.type.*;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import retrofit2.http.*;
 
@@ -610,6 +607,20 @@ public interface EdmApi {
 
     @POST( ENTITY_SETS_PATH + ID_PATH + PROPERTY_TYPE_PATH + PROPERTY_TYPE_ID_PATH )
     Void updateEntitySetPropertyMetadata(
+            @Path( ID ) UUID entitySetId,
+            @Path( PROPERTY_TYPE_ID ) UUID propertyTypeId,
+            @Body MetadataUpdate update );
+
+    @GET( ENTITY_TYPE_BASE_PATH + ID_PATH + ENTITY_TYPE_PATH )
+    Map<UUID, EntityTypePropertyMetadata> getAllEntityTypePropertyMetadata( @Path( ID ) UUID entityTypeId );
+
+    @GET( ENTITY_TYPE_BASE_PATH + ID_PATH + PROPERTY_TYPE_PATH + PROPERTY_TYPE_ID_PATH )
+    EntityTypePropertyMetadata getEntityTypePropertyMetadata(
+            @Path( ID ) UUID entityTypeId,
+            @Path( PROPERTY_TYPE_ID ) UUID propertyTypeId );
+
+    @POST( ENTITY_TYPE_BASE_PATH + ID_PATH + PROPERTY_TYPE_PATH + PROPERTY_TYPE_ID_PATH )
+    Void updateEntityTypePropertyMetadata(
             @Path( ID ) UUID entitySetId,
             @Path( PROPERTY_TYPE_ID ) UUID propertyTypeId,
             @Body MetadataUpdate update );
