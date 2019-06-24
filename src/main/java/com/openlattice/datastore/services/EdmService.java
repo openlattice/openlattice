@@ -70,23 +70,8 @@ import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
 import com.openlattice.edm.set.EntitySetFlag;
 import com.openlattice.edm.set.EntitySetPropertyKey;
 import com.openlattice.edm.set.EntitySetPropertyMetadata;
-import com.openlattice.edm.type.AssociationDetails;
-import com.openlattice.edm.type.AssociationType;
-import com.openlattice.edm.type.EntityType;
-import com.openlattice.edm.type.PropertyType;
-import com.openlattice.edm.types.processors.AddDstEntityTypesToAssociationTypeProcessor;
-import com.openlattice.edm.types.processors.AddPrimaryKeysToEntityTypeProcessor;
-import com.openlattice.edm.types.processors.AddPropertyTypesToEntityTypeProcessor;
-import com.openlattice.edm.types.processors.AddSrcEntityTypesToAssociationTypeProcessor;
-import com.openlattice.edm.types.processors.RemoveDstEntityTypesFromAssociationTypeProcessor;
-import com.openlattice.edm.types.processors.RemovePrimaryKeysFromEntityTypeProcessor;
-import com.openlattice.edm.types.processors.RemovePropertyTypesFromEntityTypeProcessor;
-import com.openlattice.edm.types.processors.RemoveSrcEntityTypesFromAssociationTypeProcessor;
-import com.openlattice.edm.types.processors.ReorderPropertyTypesInEntityTypeProcessor;
-import com.openlattice.edm.types.processors.UpdateEntitySetMetadataProcessor;
-import com.openlattice.edm.types.processors.UpdateEntitySetPropertyMetadataProcessor;
-import com.openlattice.edm.types.processors.UpdateEntityTypeMetadataProcessor;
-import com.openlattice.edm.types.processors.UpdatePropertyTypeMetadataProcessor;
+import com.openlattice.edm.type.*;
+import com.openlattice.edm.types.processors.*;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.hazelcast.HazelcastUtils;
 import com.openlattice.hazelcast.processors.AddEntitySetsToLinkingEntitySetProcessor;
@@ -124,6 +109,7 @@ public class EdmService implements EdmManager {
     private final IMap<UUID, String>                                    names;
     private final IMap<UUID, AssociationType>                           associationTypes;
     private final IMap<EntitySetPropertyKey, EntitySetPropertyMetadata> entitySetPropertyMetadata;
+    private final IMap<EntityTypePropertyKey, EntityTypePropertyMetadata> entityTypePropertyMetadata;
     private final IMap<AclKey, SecurableObjectType>                     securableObjectTypes;
 
     private final HazelcastAclKeyReservationService aclKeyReservations;
@@ -164,6 +150,7 @@ public class EdmService implements EdmManager {
         this.aclKeys = hazelcastInstance.getMap( HazelcastMap.ACL_KEYS.name() );
         this.associationTypes = hazelcastInstance.getMap( HazelcastMap.ASSOCIATION_TYPES.name() );
         this.entitySetPropertyMetadata = hazelcastInstance.getMap( HazelcastMap.ENTITY_SET_PROPERTY_METADATA.name() );
+        this.entityTypePropertyMetadata = hazelcastInstance.getMap( HazelcastMap.ENTITY_TYPE_PROPERTY_METADATA.name() );
         this.securableObjectTypes = hazelcastInstance.getMap( HazelcastMap.SECURABLE_OBJECT_TYPES.name() );
         this.aclKeyReservations = aclKeyReservations;
         propertyTypes.values().forEach( propertyType -> logger.debug( "Property type read: {}", propertyType ) );
@@ -317,6 +304,7 @@ public class EdmService implements EdmManager {
         // Only create entity table if insert transaction succeeded.
         final EntityType existing = entityTypes.putIfAbsent( entityType.getId(), entityType );
         if ( existing == null ) {
+            setupDefaultEntityTypePropertyMetadata( entityType.getId() );
             /*
              * As long as schemas are registered with upsertSchema, the schema query service should pick up the schemas
              * directly from the entity types and property types tables. Longer term, we should be more explicit about
@@ -546,6 +534,19 @@ public class EdmService implements EdmManager {
             entitySetPropertyMetadata.put( key, metadata );
         } );
     }
+
+    private void setupDefaultEntityTypePropertyMetadata( UUID entityTypeId ) {
+        final var et = getEntityType( entityTypeId );
+        et.getProperties().forEach( propertyTypeId -> {
+            EntityTypePropertyKey key = new EntityTypePropertyKey( entityTypeId, propertyTypeId );
+            PropertyType property = getPropertyType( propertyTypeId );
+            EntityTypePropertyMetadata metadata = new EntityTypePropertyMetadata(
+                    property.getTitle(),
+                    property.getDescription() );
+            entityTypePropertyMetadata.put( key, metadata );
+        } );
+    }
+
 
     @SuppressWarnings( "unchecked" )
     @Override
@@ -1626,6 +1627,28 @@ public class EdmService implements EdmManager {
     public void updateEntitySetPropertyMetadata( UUID entitySetId, UUID propertyTypeId, MetadataUpdate update ) {
         EntitySetPropertyKey key = new EntitySetPropertyKey( entitySetId, propertyTypeId );
         entitySetPropertyMetadata.executeOnKey( key, new UpdateEntitySetPropertyMetadataProcessor( update ) );
+    }
+
+    @Override
+    public Map<UUID, EntityTypePropertyMetadata> getAllEntityTypePropertyMetadata( UUID entityTypeId ) {
+        return getEntityType( entityTypeId ).getProperties().stream()
+                .collect( Collectors.toMap( propertyTypeId -> propertyTypeId,
+                        propertyTypeId -> getEntityTypePropertyMetadata( entityTypeId, propertyTypeId ) ) );
+    }
+
+    @Override
+    public EntityTypePropertyMetadata getEntityTypePropertyMetadata( UUID entityTypeId, UUID propertyTypeId ) {
+        EntityTypePropertyKey key = new EntityTypePropertyKey( entityTypeId, propertyTypeId );
+        if ( !entityTypePropertyMetadata.containsKey( key ) ) {
+            setupDefaultEntityTypePropertyMetadata( entityTypeId );
+        }
+        return entityTypePropertyMetadata.get( key );
+    }
+
+    @Override
+    public void updateEntityTypePropertyMetadata( UUID entitySetId, UUID propertyTypeId, MetadataUpdate update ) {
+        EntityTypePropertyKey key = new EntityTypePropertyKey( entitySetId, propertyTypeId );
+        entityTypePropertyMetadata.executeOnKey( key, new UpdateEntityTypePropertyMetadataProcessor( update ) );
     }
 
     @Override public EntityDataModel getEntityDataModel() {

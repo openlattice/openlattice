@@ -33,10 +33,7 @@ import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.edm.set.EntitySetFlag;
 import com.openlattice.edm.set.EntitySetPropertyMetadata;
-import com.openlattice.edm.type.AssociationDetails;
-import com.openlattice.edm.type.AssociationType;
-import com.openlattice.edm.type.EntityType;
-import com.openlattice.edm.type.PropertyType;
+import com.openlattice.edm.type.*;
 
 import java.util.*;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
@@ -217,6 +214,12 @@ public interface EdmManager {
     EntitySetPropertyMetadata getEntitySetPropertyMetadata( UUID entitySetId, UUID propertyTypeId );
 
     void updateEntitySetPropertyMetadata( UUID entitySetId, UUID propertyTypeId, MetadataUpdate update );
+
+    Map<UUID, EntityTypePropertyMetadata> getAllEntityTypePropertyMetadata( UUID entityTypeId );
+
+    EntityTypePropertyMetadata getEntityTypePropertyMetadata( UUID entityTypeId, UUID propertyTypeId );
+
+    void updateEntityTypePropertyMetadata( UUID entityTypeId, UUID propertyTypeId, MetadataUpdate update );
 
     EntityDataModel getEntityDataModel();
 
