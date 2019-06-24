@@ -54,8 +54,8 @@ class PostgresEntityDataQueryService(
     private fun <T> streamableEntitySet(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
-            propertyTypeFilters: Map<UUID, Set<Filter>>,
-            metadataOptions: Set<MetadataOption>,
+            propertyTypeFilters: Map<UUID, Set<Filter>> = mapOf(),
+            metadataOptions: Set<MetadataOption> = EnumSet.noneOf(MetadataOption::class.java),
             version: Optional<Long> = Optional.empty(),
             linking: Boolean = false,
             adapter: (ResultSet) -> T
