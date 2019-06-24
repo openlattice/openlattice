@@ -151,7 +151,7 @@ internal fun doBind(ps: PreparedStatement, info: SqlBindInfo) {
         is Short -> ps.setShort(info.bindIndex, v)
         is java.sql.Array -> ps.setArray(info.bindIndex, v)
         //TODO: Fix this bustedness.
-        is Collection<*> -> when(v.first()) {
+        is Collection<*> -> when (v.first()) {
             is String -> PostgresArrays.createTextArray(ps.connection, v as Collection<String>)
             is Int -> PostgresArrays.createIntArray(ps.connection, v as Collection<Int>)
             is Long -> PostgresArrays.createLongArray(ps.connection, v as Collection<Long>)
@@ -190,36 +190,6 @@ internal val selectEntitySetGroupedByIdAndPropertyTypeId =
                 "GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
 
 /**
- * Preparable SQL that selects an entire linking entity set grouping by linking id and property type id from the [DATA]
- * table with the following bind order:
- *
- * 1. normal entity set ids (array)
- * 2. linking ids (array)
- * 3. partition (array)
- *
- */
-// todo: filter partition on ids table or data table?
-internal val selectLinkedEntitiesGroupedByLinkingIdAndPropertyTypeId =
-        "SELECT ${ENTITY_SET_ID.name}, ${LINKING_ID.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name}, $valuesColumnsSql " +
-                "FROM ${DATA.name} " +
-                "INNER JOIN ( SELECT ${LINKING_ID.name}, ${ID.name} FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = ANY(?) AND ${LINKING_ID.name} = ANY(?) AND ${PARTITION.name} = ANY(?) ) as ids USING(${ID_VALUE.name}) " +
-                "GROUP BY (${ENTITY_SET_ID.name}, ${LINKING_ID.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
-
-/**
- * Preparable SQL that selects an entire linking entity set grouping by linking id and property type id from the [DATA]
- * table with the following bind order:
- *
- * 1. normal entity set ids (array)
- *
- */
-// todo: filter partition on ids table or data table?
-internal val selectLinkedEntitySetGroupedByLinkingIdAndPropertyTypeId =
-        "SELECT ${ENTITY_SET_ID.name}, ${LINKING_ID.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name}, $valuesColumnsSql " +
-                "FROM ${DATA.name} " +
-                "INNER JOIN ( SELECT ${LINKING_ID.name}, ${ID.name} FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = ANY(?) AND ${LINKING_ID.name} IS NOT NULL ) as ids USING(${ID_VALUE.name}) " +
-                "GROUP BY (${ENTITY_SET_ID.name}, ${LINKING_ID.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
-
-/**
  * Preparable SQL that selects entities across multiple entity sets grouping by id and property type id from the [DATA]
  * table with the following bind order:
  *
@@ -254,8 +224,8 @@ internal val selectEntitySetsSql =
  *
  */
 internal val selectLinkingEntitiesByNormalEntitySetIdsSql =
-     "SELECT ${ENTITY_SET_ID.name},${LINKING_ID.name},$jsonValueColumnsSql FROM ($selectLinkedEntitiesGroupedByLinkingIdAndPropertyTypeId) entities " +
-            "GROUP BY (${ENTITY_SET_ID.name},${LINKING_ID.name}, ${PARTITION.name})"
+        "SELECT ${ENTITY_SET_ID.name},${LINKING_ID.name},$jsonValueColumnsSql FROM ($selectEntitiesGroupedByIdAndPropertyTypeId) entities " +
+                "GROUP BY (${ENTITY_SET_ID.name},${LINKING_ID.name}, ${PARTITION.name})"
 
 /**
  * Preparable SQL that selects linking entities across multiple entity sets grouping by linking id and property type id
@@ -269,8 +239,8 @@ internal val selectLinkingEntitiesByNormalEntitySetIdsSql =
  *
  */
 // todo: what if we want to select multiple linking entity sets?
-internal fun selectLinkingEntitiesByLinkingEntitySetIdSql (linkingEntitySetId: UUID): String {
-    return "SELECT '$linkingEntitySetId' AS ${ENTITY_SET_ID.name},${LINKING_ID.name},$jsonValueColumnsSql FROM ($selectLinkedEntitiesGroupedByLinkingIdAndPropertyTypeId) entities " +
+internal fun selectLinkingEntitiesByLinkingEntitySetIdSql(linkingEntitySetId: UUID): String {
+    return "SELECT '$linkingEntitySetId' AS ${ENTITY_SET_ID.name},${LINKING_ID.name},$jsonValueColumnsSql FROM ($selectEntitiesGroupedByIdAndPropertyTypeId) entities " +
             "GROUP BY (${ENTITY_SET_ID.name},${LINKING_ID.name}, ${PARTITION.name})"
 }
 
@@ -285,8 +255,8 @@ internal fun selectLinkingEntitiesByLinkingEntitySetIdSql (linkingEntitySetId: U
  */
 // todo: what if we want to select multiple linking entity sets?
 internal fun selectLinkingEntitySetSql(linkingEntitySetId: UUID): String {
-    return "SELECT '$linkingEntitySetId' AS ${ENTITY_SET_ID.name},${LINKING_ID.name},$jsonValueColumnsSql FROM ($selectLinkedEntitySetGroupedByLinkingIdAndPropertyTypeId) entity_set " +
-            "GROUP BY (${ENTITY_SET_ID.name},${LINKING_ID.name}, ${PARTITION.name})"
+    return "SELECT '$linkingEntitySetId' AS ${ENTITY_SET_ID.name},${ID.name},$jsonValueColumnsSql FROM ($selectEntitySetGroupedByIdAndPropertyTypeId) entity_set " +
+            "GROUP BY (${ENTITY_SET_ID.name},${ID.name}, ${PARTITION.name})"
 }
 
 /**

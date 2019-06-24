@@ -7,6 +7,7 @@ import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresColumn.*
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
+import java.util.*
 
 /**
  *
@@ -14,7 +15,7 @@ import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
  */
 class PostgresDataTables {
     companion object {
-        private val supportedEdmPrimitiveTypeKinds: Array<EdmPrimitiveTypeKind> = arrayOf(
+        private val supportedEdmPrimitiveTypeKinds = arrayOf(
                 EdmPrimitiveTypeKind.String,
                 EdmPrimitiveTypeKind.Guid,
                 EdmPrimitiveTypeKind.Byte,
@@ -29,6 +30,9 @@ class PostgresDataTables {
                 EdmPrimitiveTypeKind.Binary
         )
 
+        val PERSON_ENTITY_SET_ID = UUID(0,0)
+        val CONTACT_INFO_ENTITY_SET_ID = UUID( 0, 1 )
+
         val dataColumns = supportedEdmPrimitiveTypeKinds
                 .map(PostgresEdmTypeConverter::map)
                 .associateWith { nonIndexedValueColumn(it) to btreeIndexedValueColumn(it) }
@@ -39,7 +43,7 @@ class PostgresDataTables {
         val dataTableMetadataColumns = listOf(
                 ENTITY_SET_ID,
                 ID_VALUE,
-                LINKING_ID,
+                ORIGIN_ID,
                 PARTITION,
                 PROPERTY_TYPE_ID,
                 HASH,

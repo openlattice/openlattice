@@ -277,7 +277,7 @@ public final class PostgresColumn {
             TIMESTAMPTZ )
             .withDefault( "'-infinity'" )
             .notNull();
-    public static final String LAST_REFRESH_FIELD                                  = "last_refresh";
+    public static final String                   LAST_REFRESH_FIELD                = "last_refresh";
     public static final PostgresColumnDefinition LAST_REFRESH                      = new PostgresColumnDefinition(
             LAST_REFRESH_FIELD,
             TIMESTAMPTZ )
@@ -332,26 +332,29 @@ public final class PostgresColumn {
     public static final String                   ORGANIZATION_ID_FIELD             = "organization_id";
     public static final PostgresColumnDefinition ORGANIZATION_ID                   =
             new PostgresColumnDefinition( ORGANIZATION_ID_FIELD, UUID ).notNull();
+    public static final String                   ORIGIN_ID_FIELD                   = "origin_id";
+    public static final PostgresColumnDefinition ORIGIN_ID                         =
+            new PostgresColumnDefinition( ORIGIN_ID_FIELD, UUID );
     public static final String                   PARTITIONS_FIELD                  = "partitions";
     public static final PostgresColumnDefinition PARTITIONS                        = new PostgresColumnDefinition(
             PARTITIONS_FIELD,
             INTEGER_ARRAY ).notNull().withDefault( "'{}'" );
-    public static final String                   PARTITION_FIELD          = "partition";
-    public static final PostgresColumnDefinition PARTITION                = new PostgresColumnDefinition(
-            PARTITION_FIELD,
-            INTEGER ).notNull().withDefault( "'{}'" );
-    public static final String                   PARTITION_INDEX_FIELD    = "partition_index";
-    public static final PostgresColumnDefinition PARTITION_INDEX          =
-            new PostgresColumnDefinition( PARTITION_INDEX_FIELD, BIGINT ).notNull();
-    public static final String                   PARTITIONS_VERSION_FIELD = "partitions_version";
-    public static final PostgresColumnDefinition PARTITIONS_VERSION       = new PostgresColumnDefinition(
+    public static final String                   PARTITIONS_VERSION_FIELD          = "partitions_version";
+    public static final PostgresColumnDefinition PARTITIONS_VERSION                = new PostgresColumnDefinition(
             PARTITIONS_VERSION_FIELD,
             INTEGER ).notNull();
-    public static final String                   PERMISSIONS_FIELD        = "permissions";
-    public static final PostgresColumnDefinition PERMISSIONS              =
+    public static final String                   PARTITION_FIELD                   = "partition";
+    public static final PostgresColumnDefinition PARTITION                         = new PostgresColumnDefinition(
+            PARTITION_FIELD,
+            INTEGER ).notNull().withDefault( "'{}'" );
+    public static final String                   PARTITION_INDEX_FIELD             = "partition_index";
+    public static final PostgresColumnDefinition PARTITION_INDEX                   =
+            new PostgresColumnDefinition( PARTITION_INDEX_FIELD, BIGINT ).notNull();
+    public static final String                   PERMISSIONS_FIELD                 = "permissions";
+    public static final PostgresColumnDefinition PERMISSIONS                       =
             new PostgresColumnDefinition( PERMISSIONS_FIELD, TEXT_ARRAY );
-    public static final String                   PHONE_NUMBER_FIELD       = "phone_number";
-    public static final PostgresColumnDefinition PHONE_NUMBER             =
+    public static final String                   PHONE_NUMBER_FIELD                = "phone_number";
+    public static final PostgresColumnDefinition PHONE_NUMBER                      =
             new PostgresColumnDefinition( PHONE_NUMBER_FIELD, TEXT ).notNull();
     public static final String                   PII_FIELD                         = "pii";
     public static final PostgresColumnDefinition PII                               =
@@ -388,7 +391,7 @@ public final class PostgresColumn {
     public static final String                   REASON_FIELD                      = "reason";
     public static final PostgresColumnDefinition REASON                            =
             new PostgresColumnDefinition( REASON_FIELD, TEXT );
-    public static final String REFRESH_RATE_FIELD                                  = "refresh_rate";
+    public static final String                   REFRESH_RATE_FIELD                = "refresh_rate";
     public static final PostgresColumnDefinition REFRESH_RATE                      =
             new PostgresColumnDefinition( REFRESH_RATE_FIELD, BIGINT );
     public static final String                   ROLE_ID_FIELD                     = "role_id";
