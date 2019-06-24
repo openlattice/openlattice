@@ -66,7 +66,7 @@ public abstract class AbstractRangeFilter<T extends Comparable<T>> implements Ra
         return lowerboundExpr + " AND " + upperboundExpr;
     }
 
-    @Override public Set<SqlBindInfo> bindInfo( int base ) {
+    @Override public LinkedHashSet<SqlBindInfo> bindInfo( int base ) {
         final var lowerboundBindInfo = new SqlBindInfo( base , lowerbound );
         final var upperboundBindInfo = new SqlBindInfo( base + 1, upperbound );
 
