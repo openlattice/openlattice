@@ -22,12 +22,10 @@
 package com.openlattice.analysis.requests;
 
 import com.openlattice.analysis.SqlBindInfo;
+
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.Objects;
-import java.util.Set;
-import java.util.UUID;
-import javax.annotation.Nonnull;
 
 /**
  * A range filter for query property types.
@@ -90,7 +88,6 @@ public abstract class AbstractRangeFilter<T extends Comparable<T>> implements Ra
     protected abstract String getLowerboundSql();
 
     protected abstract String getUpperboundSql();
-
 
 
     @Override public boolean equals( Object o ) {
