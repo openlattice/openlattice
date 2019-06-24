@@ -25,6 +25,7 @@ package com.openlattice.analysis.requests;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.openlattice.analysis.SqlBindInfo;
+import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.UUID;
 import javax.annotation.Nonnull;
@@ -42,5 +43,5 @@ public interface Filter {
      */
     String asSql( String field );
 
-    @NonNull Set<SqlBindInfo> bindInfo( int base );
+    @NonNull LinkedHashSet<SqlBindInfo> bindInfo( int base );
 }
