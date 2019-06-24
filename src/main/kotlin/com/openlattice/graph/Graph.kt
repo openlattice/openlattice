@@ -194,71 +194,6 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         }
     }
 
-    override fun clearVerticesInEntitySetWithoutLocking(entitySetId: UUID): Int {
-        hds.connection.use { connection ->
-            connection.autoCommit = false
-
-            val psClear = connection.prepareStatement(CLEAR_BY_SET_SQL)
-            val version = -System.currentTimeMillis()
-            clearEdgesAddVersion(psClear, version)
-            psClear.setObject(3, entitySetId)
-            psClear.setObject(4, entitySetId)
-            psClear.setObject(5, entitySetId)
-
-            val clearCount = psClear.executeUpdate()
-            connection.commit()
-
-            connection.autoCommit = true
-
-            return clearCount
-        }
-    }
-
-    override fun clearVerticesWithoutLocking(entitySetId: UUID, vertices: Set<UUID>): Int {
-        hds.connection.use { connection ->
-            connection.autoCommit = false
-
-            val arr = PostgresArrays.createUuidArray(connection, vertices)
-            val version = -System.currentTimeMillis()
-            val psClear = connection.prepareStatement(CLEAR_BY_VERTICES_SQL)
-            clearEdgesAddVersion(psClear, version)
-            psClear.setObject(3, arr)
-            psClear.setObject(4, arr)
-            psClear.setObject(5, arr)
-
-            val clearCount = psClear.executeUpdate()
-            connection.commit()
-
-            connection.autoCommit = true
-
-            return clearCount
-        }
-    }
-
-    override fun clearVerticesOfAssociationsWithoutLocking(entitySetId: UUID, vertices: Set<UUID>): Int {
-        hds.connection.use { connection ->
-            connection.autoCommit = false
-
-            val ids = PostgresArrays.createUuidArray(connection, vertices)
-            val version = -System.currentTimeMillis()
-            val psClear = connection.prepareStatement(CLEAR_BY_ASSOCIATIONS_SQL)
-            clearEdgesAddVersion(psClear, version)
-            psClear.setArray(3, ids)
-            psClear.setObject(4, entitySetId)
-            psClear.setArray(5, ids)
-            psClear.setObject(6, entitySetId)
-            psClear.setArray(7, ids)
-            psClear.setObject(8, entitySetId)
-
-            val clearCount = psClear.executeUpdate()
-            connection.commit()
-
-            connection.autoCommit = true
-
-            return clearCount
-        }
-    }
-
     private fun clearEdgesAddVersion(ps: PreparedStatement, version: Long) {
         ps.setLong(1, version)
         ps.setLong(2, version)
@@ -297,82 +232,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         }
     }
 
-    override fun deleteVerticesInEntitySetWithoutLocking(entitySetId: UUID?): Int {
-        hds.connection.use { connection ->
-            connection.autoCommit = false
-
-            val psDelete = connection.prepareStatement(DELETE_BY_SET_SQL)
-            psDelete.setObject(1, entitySetId)
-            psDelete.setObject(2, entitySetId)
-            psDelete.setObject(3, entitySetId)
-
-            val deleteCount = psDelete.executeUpdate()
-            connection.commit()
-
-            connection.autoCommit = true
-
-            return deleteCount
-        }
-    }
-
-    override fun deleteVerticesWithoutLocking(entitySetId: UUID, vertices: Set<UUID>): Int {
-        hds.connection.use { connection ->
-            connection.autoCommit = false
-
-            val arr = PostgresArrays.createUuidArray(connection, vertices)
-            val psDelete = connection.prepareStatement(DELETE_BY_VERTICES_SQL)
-            psDelete.setObject(1, arr)
-            psDelete.setObject(2, arr)
-            psDelete.setObject(3, arr)
-
-            val deleteCount = psDelete.executeUpdate()
-            connection.commit()
-
-            connection.autoCommit = true
-
-            return deleteCount
-        }
-    }
-
-    override fun deleteVerticesOfAssociationsWithoutLocking(entitySetId: UUID, vertices: Set<UUID>): Int {
-        hds.connection.use { connection ->
-            connection.autoCommit = false
-
-            val ids = PostgresArrays.createUuidArray(connection, vertices)
-            val psDelete = connection.prepareStatement(DELETE_BY_ASSOCIATIONS_SQL)
-            psDelete.setArray(1, ids)
-            psDelete.setObject(2, entitySetId)
-            psDelete.setArray(3, ids)
-            psDelete.setObject(4, entitySetId)
-            psDelete.setArray(5, ids)
-            psDelete.setObject(6, entitySetId)
-
-            val deleteCount = psDelete.executeUpdate()
-            connection.commit()
-            connection.autoCommit = true
-
-            return deleteCount
-        }
-    }
-
-
     /* Select */
-
-    override fun getEdge(key: DataEdgeKey): Edge {
-        return getEdges(setOf(key)).collect(MoreCollectors.onlyElement())
-    }
-
-    override fun getEdges(keys: Set<DataEdgeKey>): Stream<Edge> {
-        return PostgresIterable(
-                Supplier {
-                    val connection = hds.connection
-                    val stmt = connection.createStatement()
-                    val rs = stmt.executeQuery(selectEdges(keys))
-                    StatementHolder(connection, stmt, rs)
-                },
-                Function<ResultSet, Edge> { ResultSetAdapters.edge(it) }
-        ).stream()
-    }
 
     override fun getEdgeKeysContainingEntities(entitySetId: UUID, entityKeyIds: Set<UUID>)
             : PostgresIterable<DataEdgeKey> {
@@ -621,24 +481,6 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
 
 
     @Deprecated("Edges table queries need update")
-    override fun computeGraphAggregation(
-            limit: Int, entitySetId: UUID, srcFilters: SetMultimap<UUID, UUID>, dstFilters: SetMultimap<UUID, UUID>
-    ): Array<IncrementableWeightId> {
-        return topEntitiesOld(limit, entitySetId, srcFilters, dstFilters).toList().toTypedArray()
-    }
-
-    @Deprecated("Edges table queries need update")
-    override fun topEntitiesOld(
-            limit: Int, entitySetId: UUID, srcFilters: SetMultimap<UUID, UUID>, dstFilters: SetMultimap<UUID, UUID>
-    ): Stream<IncrementableWeightId> {
-        return topEntitiesWorker(limit, entitySetId, srcFilters, dstFilters).map {
-            IncrementableWeightId(
-                    it.first.entityKeyId, it.second
-            )
-        }
-    }
-
-    @Deprecated("Edges table queries need update")
     private fun topEntitiesWorker(
             limit: Int, entitySetId: UUID, srcFilters: SetMultimap<UUID, UUID>, dstFilters: SetMultimap<UUID, UUID>
     ): Stream<Pair<EntityDataKey, Long>> {
@@ -807,12 +649,6 @@ private val INSERT_COLUMNS = setOf(
         VERSIONS
 ).map { it.name }.toSet()
 
-private val SET_ID_COLUMNS = setOf(
-        SRC_ENTITY_SET_ID,
-        DST_ENTITY_SET_ID,
-        EDGE_ENTITY_SET_ID
-).map { it.name }.toSet()
-
 /**
  * Builds the SQL query for top utilizers.
  *
@@ -875,24 +711,6 @@ private val CLEAR_BY_VERTEX_SQL = "$CLEAR_SQL $VERTEX_FILTER_SQL"
 private val DELETE_BY_VERTEX_SQL = "$DELETE_SQL $VERTEX_FILTER_SQL"
 private val LOCK_BY_VERTEX_SQL = "$LOCK_SQL1 $VERTEX_FILTER_SQL $LOCK_SQL2"
 
-private val SET_FILTER_SQL = "${SET_ID_COLUMNS.joinToString(" = ? OR ")} = ? "
-
-private val CLEAR_BY_SET_SQL = "$CLEAR_SQL $SET_FILTER_SQL "
-private val DELETE_BY_SET_SQL = "$DELETE_SQL $SET_FILTER_SQL"
-
-private val VERTICES_FILTER_SQL = "${ID_VALUE.name} = ANY(?) OR ${EDGE_COMP_1.name} = ANY(?) OR ${EDGE_COMP_2.name} = ANY(?) "
-
-private val DELETE_BY_VERTICES_SQL = "$DELETE_SQL $VERTICES_FILTER_SQL"
-private val CLEAR_BY_VERTICES_SQL = "$CLEAR_SQL $VERTICES_FILTER_SQL"
-
-private val ASSOCIATIONS_FILTER_SQL = "(${ID_VALUE.name} = ANY(?) AND ${EDGE_ENTITY_SET_ID.name} = ? AND ${COMPONENT_TYPES.name} = ${ComponentType.EDGE.ordinal}) OR" +
-        "(${EDGE_COMP_2.name} = ANY(?) AND ${EDGE_ENTITY_SET_ID.name} = ? AND ${COMPONENT_TYPES.name} = ${ComponentType.SRC.ordinal}) OR" +
-        "(${EDGE_COMP_1.name} = ANY(?) AND ${EDGE_ENTITY_SET_ID.name} = ? AND ${COMPONENT_TYPES.name} = ${ComponentType.DST.ordinal}) "
-
-private val CLEAR_BY_ASSOCIATIONS_SQL = "$CLEAR_SQL $ASSOCIATIONS_FILTER_SQL"
-private val DELETE_BY_ASSOCIATIONS_SQL = "$DELETE_SQL $ASSOCIATIONS_FILTER_SQL"
-
-
 private val NEIGHBORHOOD_OF_ENTITY_SET_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
         "(${SRC_ENTITY_SET_ID.name} = ?) OR (${DST_ENTITY_SET_ID.name} = ? )"
 
@@ -949,17 +767,6 @@ internal fun getFilteredNeighborhoodSql(filter: EntityNeighborsFilter, multipleE
     }
 
     return "SELECT * FROM ${EDGES.name} WHERE $idsClause AND ( ( $srcSql ) OR ( $dstSql ) )"
-}
-
-
-private fun selectEdges(keys: Set<DataEdgeKey>): String {
-    check(keys.isNotEmpty()) { "Cannot select an empty set of edges." }
-    return "SELECT * from ${EDGES.name} WHERE " +
-            keys.joinToString(" OR ") {
-                "( ${ID_VALUE.name} = ${it.src.entityKeyId} AND " +
-                        "$EDGE_COMP_1 = ${it.dst.entityKeyId} AND " +
-                        "$EDGE_COMP_2 = ${it.edge.entityKeyId} )"
-            }
 }
 
 private fun srcClauses(entitySetId: UUID, associationFilters: SetMultimap<UUID, UUID>): String {
