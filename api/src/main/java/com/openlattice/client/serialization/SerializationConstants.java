@@ -192,7 +192,6 @@ public final class SerializationConstants {
     public static final String PROPERTY_FIELD                   = "property";
     public static final String PROPERTY_METADATA                = "propertyMetadata";
     public static final String PROPERTY_TAGS                    = "propertyTags";
-    public static final String PROPERTY_TYPE_DESCRIPTION        = "propertyTypeDescription";
     public static final String PROPERTY_TYPES                   = "propertyTypes";
     public static final String PROPERTY_TYPE_ID                 = "propertyTypeId";
     public static final String PROPERTY_TYPE_IDS                = "propertyTypeIds";
