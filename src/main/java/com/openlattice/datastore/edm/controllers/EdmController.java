@@ -1337,6 +1337,60 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return null;
     }
 
+    @Timed
+    @Override
+    @RequestMapping(
+            path = ENTITY_SETS_PATH + ID_PATH + PROPERTY_TYPE_PATH,
+            method = RequestMethod.GET,
+            produces = MediaType.APPLICATION_JSON_VALUE )
+    public Map<UUID, EntityTypePropertyMetadata> getAllEntityTypePropertyMetadata(
+            @PathVariable( ID ) UUID entityTypeId ) {
+        //You should be able to get properties without having read access
+        ensureReadAccess( new AclKey( entityTypeId ) );
+        return modelService.getAllEntityTypePropertyMetadata( entityTypeId );
+    }
+
+    @Timed
+    @Override
+    @RequestMapping(
+            path = ENTITY_TYPE_PATH + ID_PATH + PROPERTY_TYPE_PATH + PROPERTY_TYPE_ID_PATH,
+            method = RequestMethod.GET,
+            produces = MediaType.APPLICATION_JSON_VALUE )
+    public EntityTypePropertyMetadata getEntityTypePropertyMetadata(
+            @PathVariable( ID ) UUID entityTypeId,
+            @PathVariable( PROPERTY_TYPE_ID ) UUID propertyTypeId ) {
+        ensureReadAccess( new AclKey( entityTypeId, propertyTypeId ) );
+        return modelService.getEntityTypePropertyMetadata( entityTypeId, propertyTypeId );
+    }
+
+    @Timed
+    @Override
+    @RequestMapping(
+            path = ENTITY_TYPE_PATH + ID_PATH + PROPERTY_TYPE_PATH + PROPERTY_TYPE_ID_PATH,
+            method = RequestMethod.POST,
+            produces = MediaType.APPLICATION_JSON_VALUE )
+    public Void updateEntityTypePropertyMetadata(
+            @PathVariable( ID ) UUID entityTypeId,
+            @PathVariable( PROPERTY_TYPE_ID ) UUID propertyTypeId,
+            @RequestBody MetadataUpdate update ) {
+        ensureAdminAccess();
+        modelService.updateEntityTypePropertyMetadata( entityTypeId, propertyTypeId, update );
+
+        recordEvent( new AuditableEvent(
+                getCurrentUserId(),
+                new AclKey( entityTypeId, propertyTypeId ),
+                AuditEventType.UPDATE_ENTITY_SET_PROPERTY_METADATA,
+                "Entity type property metadata updated through EdmApi.updateEntityTypePropertyMetadata",
+                Optional.empty(),
+                ImmutableMap.of( "update", update ),
+                OffsetDateTime.now(),
+                Optional.empty()
+        ) );
+
+        return null;
+    }
+
+
     private static void setDownloadContentType( HttpServletResponse response, FileType fileType ) {
 
         if ( fileType == null ) {
