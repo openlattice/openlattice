@@ -49,7 +49,7 @@ class TautologicalRangeFilter : RangeFilter<Int> {
         return " true "
     }
 
-    override fun bindInfo(base: Int): Set<SqlBindInfo> {
-        return setOf()
+    override fun bindInfo(base: Int): LinkedHashSet<SqlBindInfo> {
+        return linkedSetOf()
     }
 }
