@@ -1,3 +1,11 @@
+
+reportEmailAddress: support@openlattice.com
+
+searchConfiguration:
+  elasticsearchUrl: localhost
+  elasticsearchCluster: openlattice
+  elasticsearchPort: 9300
+
 entity-types:
   - "general.person"
 block-size: 1000
