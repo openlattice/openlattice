@@ -79,18 +79,18 @@ class AuditInitializationTask(
 
             if (dependencies.edmService.auditRecordEntitySetsManager.auditingTypes.isAuditingInitialized()) {
 
-                edmAuditEntitySet = EntitySet(
-                        dependencies.edmService.auditRecordEntitySetsManager.auditingTypes.auditingEntityTypeId,
-                        EDM_AUDIT_ENTITY_SET_NAME,
-                        "EDM Audit Entity Set",
-                        Optional.of("Audit entity set for the entity data model"),
-                        ImmutableSet.of(),
-                        Optional.empty(),
-                        Optional.empty(),
-                        Optional.of(EnumSet.of(EntitySetFlag.AUDIT)),
-                        Optional.empty())
-
-                //TODO: Make sure audit entity set gets distributed across all partitions.
+                edmAuditEntitySet = dependencies.partitionManager.allocatePartitions(
+                        EntitySet(
+                                dependencies.edmService.auditRecordEntitySetsManager.auditingTypes.auditingEntityTypeId,
+                                EDM_AUDIT_ENTITY_SET_NAME,
+                                "EDM Audit Entity Set",
+                                Optional.of("Audit entity set for the entity data model"),
+                                ImmutableSet.of(),
+                                Optional.empty(),
+                                Optional.empty(),
+                                Optional.of(EnumSet.of(EntitySetFlag.AUDIT)),
+                                Optional.empty()),
+                        dependencies.partitionManager.getPartitionCount())
 
                 dependencies.edmService.createEntitySet(admins.first(), edmAuditEntitySet)
             }
@@ -130,7 +130,7 @@ class AuditInitializationTask(
                 .filter { it.value.activeAuditEdgeEntitySetId == null }
                 .forEach { (entitySetId, _) ->
                     logger.info("Creating missing audit edge entity set for entity set {}", entitySetId)
-                    dependencies.edmService.auditRecordEntitySetsManager.initializeAuditEdgeEntitySet( entitySetId )
+                    dependencies.edmService.auditRecordEntitySetsManager.initializeAuditEdgeEntitySet(entitySetId)
 
                 }
 
