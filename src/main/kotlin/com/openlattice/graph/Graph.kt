@@ -766,7 +766,6 @@ private val BULK_NEIGHBORHOOD_SQL = "SELECT * FROM ${E.name} WHERE ($SRC_IDS_SQL
 private val NEIGHBORHOOD_SQL = "SELECT * FROM ${E.name} WHERE ($SRC_ID_SQL) OR ($DST_ID_SQL)"
 
 internal fun getFilteredNeighborhoodSql(filter: EntityNeighborsFilter, multipleEntitySetIds: Boolean): String {
-    val idsClause = "${ID_VALUE.name} = ANY(?)"
 
     var (srcSql, dstSql) = if (multipleEntitySetIds) {
         SRC_IDS_SQL to DST_IDS_SQL
@@ -803,7 +802,7 @@ internal fun getFilteredNeighborhoodSql(filter: EntityNeighborsFilter, multipleE
         ) { "'$it'" }}))"
     }
 
-    return "SELECT * FROM ${E.name} WHERE $idsClause AND ( ( $srcSql ) OR ( $dstSql ) )"
+    return "SELECT * FROM ${E.name} WHERE ( ( $srcSql ) OR ( $dstSql ) )"
 }
 
 private fun srcClauses(entitySetId: UUID, associationFilters: SetMultimap<UUID, UUID>): String {
