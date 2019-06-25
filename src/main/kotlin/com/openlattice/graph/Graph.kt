@@ -186,7 +186,7 @@ class Graph(
     }
 
     private fun addKeyIds(ps: PreparedStatement, dataEdgeKey: DataEdgeKey, idType: IdType, startIndex: Int = 1) {
-        val edk = when( idType ) {
+        val edk = when (idType) {
             IdType.DST -> dataEdgeKey.dst
             IdType.EDGE -> dataEdgeKey.edge
             IdType.SRC -> dataEdgeKey.src
@@ -245,9 +245,9 @@ class Graph(
         }
     }
 
-    private fun newClearEdges( keys: Iterable<DataEdgeKey>): Int {
+    private fun newClearEdges(keys: Iterable<DataEdgeKey>): Int {
         val version = -System.currentTimeMillis()
-        return lockAndOperateOnEdges( keys, NEW_CLEAR_BY_VERTEX_SQL ) { lockStmt, operationStmt, dataEdgeKey ->
+        return lockAndOperateOnEdges(keys, NEW_CLEAR_BY_VERTEX_SQL) { lockStmt, operationStmt, dataEdgeKey ->
 
             addKeyIds(lockStmt, dataEdgeKey, IdType.SRC)
             addKeyIds(lockStmt, dataEdgeKey, IdType.DST)
@@ -263,7 +263,7 @@ class Graph(
     }
 
     private fun newDeleteEdges(keys: Iterable<DataEdgeKey>): WriteEvent {
-        val updates = lockAndOperateOnEdges( keys, NEW_DELETE_BY_VERTEX_SQL) { lockStmt, operationStmt, dataEdgeKey ->
+        val updates = lockAndOperateOnEdges(keys, NEW_DELETE_BY_VERTEX_SQL) { lockStmt, operationStmt, dataEdgeKey ->
             addKeyIds(lockStmt, dataEdgeKey, IdType.SRC)
             addKeyIds(lockStmt, dataEdgeKey, IdType.DST)
             addKeyIds(lockStmt, dataEdgeKey, IdType.EDGE)
@@ -277,12 +277,12 @@ class Graph(
 
     private fun lockAndOperateOnEdges(keys: Iterable<DataEdgeKey>,
                                       statement: String,
-                                      statementSupplier: (lockStmt: PreparedStatement, operationStmt: PreparedStatement, dataEdgeKey: DataEdgeKey) -> Unit ): Int {
+                                      statementSupplier: (lockStmt: PreparedStatement, operationStmt: PreparedStatement, dataEdgeKey: DataEdgeKey) -> Unit): Int {
         hds.connection.use { connection ->
             var updates = 0
             connection.autoCommit = false
             connection.prepareStatement(LOCK_BY_VERTEX_SQL).use { psLocks ->
-                connection.prepareStatement( statement ).use { psExecute ->
+                connection.prepareStatement(statement).use { psExecute ->
                     keys.forEach { dataEdgeKey ->
                         statementSupplier(psLocks, psExecute, dataEdgeKey)
                     }
@@ -347,8 +347,10 @@ class Graph(
                     val stmt = connection.prepareStatement(BULK_NEIGHBORHOOD_SQL)
                     stmt.setObject(1, idArr)
                     stmt.setObject(2, entitySetId)
-                    stmt.setObject(3, entitySetId)
+                    stmt.setObject(3, idArr)
                     stmt.setObject(4, entitySetId)
+                    stmt.setObject(5, idArr)
+                    stmt.setObject(6, entitySetId)
                     stmt.fetchSize = BATCH_SIZE
                     val rs = stmt.executeQuery()
                     StatementHolder(connection, stmt, rs)
@@ -810,11 +812,17 @@ private val NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
         "(( ${SRC_ENTITY_SET_ID.name} = ? AND ${COMPONENT_TYPES.name} = ${IdType.SRC.ordinal} ) OR " +
         "( ${DST_ENTITY_SET_ID.name} = ? AND ${COMPONENT_TYPES.name} = ${IdType.DST.ordinal} ))"
 
-private val BULK_NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
-        "${ID_VALUE.name} = ANY(?) AND " +
-        "((${SRC_ENTITY_SET_ID.name} = ? AND ${COMPONENT_TYPES.name} = ${IdType.SRC.ordinal}) OR " +
-        "(${DST_ENTITY_SET_ID.name} = ? AND ${COMPONENT_TYPES.name} = ${IdType.DST.ordinal}) OR " +
-        "(${EDGE_ENTITY_SET_ID.name} = ? AND ${COMPONENT_TYPES.name} = ${IdType.EDGE.ordinal}))"
+private val SRC_IDS_SQL = "${SRC_ENTITY_KEY_ID.name} = ANY(?) AND ${SRC_ENTITY_SET_ID.name} = ? AND ${ID_TYPE.name} = ${IdType.SRC.ordinal}"
+private val DST_IDS_SQL = "${DST_ENTITY_KEY_ID.name} = ANY(?) AND ${DST_ENTITY_SET_ID.name} = ? AND ${ID_TYPE.name} = ${IdType.DST.ordinal}"
+private val EDGE_IDS_SQL = "${EDGE_ENTITY_KEY_ID.name} = ANY(?) AND ${EDGE_ENTITY_SET_ID.name} = ? AND ${ID_TYPE.name} = ${IdType.SRC.ordinal}"
+
+/**
+ * Loads edges where either the source, destination, or association matches a set of entityKeyIds from a specific entity set
+ *
+ * 1, 3, 5: entityKeyIds
+ * 2, 4, 6: entitySetId
+ */
+private val BULK_NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE ($SRC_IDS_SQL) OR ($DST_IDS_SQL) OR ($EDGE_IDS_SQL)"
 
 
 internal fun getFilteredNeighborhoodSql(filter: EntityNeighborsFilter, multipleEntitySetIds: Boolean): String {
