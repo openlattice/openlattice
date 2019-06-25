@@ -402,7 +402,8 @@ class Graph(
                     val stmt = connection.prepareStatement(getFilteredNeighborhoodSql(filter, false))
                     stmt.setArray(1, ids)
                     stmt.setObject(2, entitySetId)
-                    stmt.setObject(3, entitySetId)
+                    stmt.setArray(3, ids)
+                    stmt.setObject(4, entitySetId)
                     val rs = stmt.executeQuery()
                     StatementHolder(connection, stmt, rs)
                 },
@@ -426,7 +427,8 @@ class Graph(
                     val stmt = connection.prepareStatement(getFilteredNeighborhoodSql(filter, true))
                     stmt.setArray(1, ids)
                     stmt.setArray(2, entitySetIdsArr)
-                    stmt.setArray(3, entitySetIdsArr)
+                    stmt.setArray(3, ids)
+                    stmt.setArray(4, entitySetIdsArr)
                     val rs = stmt.executeQuery()
                     StatementHolder(connection, stmt, rs)
                 },
@@ -834,17 +836,15 @@ private val BULK_NEIGHBORHOOD_SQL = "SELECT * FROM ${E.name} WHERE ($SRC_IDS_SQL
  */
 private val NEIGHBORHOOD_SQL = "SELECT * FROM ${E.name} WHERE ($SRC_ID_SQL) OR ($DST_ID_SQL)"
 
-
 internal fun getFilteredNeighborhoodSql(filter: EntityNeighborsFilter, multipleEntitySetIds: Boolean): String {
     val idsClause = "${ID_VALUE.name} = ANY(?)"
 
-    val (srcEntitySetSql, dstEntitySetSql) = if (multipleEntitySetIds) {
-        "${SRC_ENTITY_SET_ID.name} = ANY( ? )" to "${DST_ENTITY_SET_ID.name} = ANY( ? )"
+    var (srcSql, dstSql) = if (multipleEntitySetIds) {
+        SRC_IDS_SQL to DST_IDS_SQL
     } else {
-        "${SRC_ENTITY_SET_ID.name} = ?" to "${DST_ENTITY_SET_ID.name} = ?"
+        SRC_ID_SQL to DST_ID_SQL
     }
 
-    var srcSql = "$srcEntitySetSql AND ${COMPONENT_TYPES.name} = ${IdType.SRC.ordinal}"
     if (filter.dstEntitySetIds.isPresent) {
         if (filter.dstEntitySetIds.get().size > 0) {
             srcSql += " AND ( ${DST_ENTITY_SET_ID.name} IN (${filter.dstEntitySetIds.get().joinToString(
@@ -855,7 +855,6 @@ internal fun getFilteredNeighborhoodSql(filter: EntityNeighborsFilter, multipleE
         }
     }
 
-    var dstSql = "$dstEntitySetSql AND ${COMPONENT_TYPES.name} = ${IdType.DST.ordinal}"
     if (filter.srcEntitySetIds.isPresent) {
         if (filter.srcEntitySetIds.get().size > 0) {
             dstSql += " AND ( ${SRC_ENTITY_SET_ID.name} IN (${filter.srcEntitySetIds.get().joinToString(
@@ -875,7 +874,7 @@ internal fun getFilteredNeighborhoodSql(filter: EntityNeighborsFilter, multipleE
         ) { "'$it'" }}))"
     }
 
-    return "SELECT * FROM ${EDGES.name} WHERE $idsClause AND ( ( $srcSql ) OR ( $dstSql ) )"
+    return "SELECT * FROM ${E.name} WHERE $idsClause AND ( ( $srcSql ) OR ( $dstSql ) )"
 }
 
 private fun srcClauses(entitySetId: UUID, associationFilters: SetMultimap<UUID, UUID>): String {
