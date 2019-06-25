@@ -804,7 +804,7 @@ private val NEW_DELETE_BY_VERTEX_SQL = "$DELETE_SQL $NEW_VERTEX_FILTER_SQL"
 private val DELETE_BY_VERTEX_SQL = "$DELETE_SQL $VERTEX_FILTER_SQL"
 private val LOCK_BY_VERTEX_SQL = "$LOCK_SQL1 $VERTEX_FILTER_SQL $LOCK_SQL2"
 
-private val NEIGHBORHOOD_OF_ENTITY_SET_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
+private val NEIGHBORHOOD_OF_ENTITY_SET_SQL = "SELECT * FROM ${E.name} WHERE " +
         "(${SRC_ENTITY_SET_ID.name} = ?) OR (${DST_ENTITY_SET_ID.name} = ? )"
 
 private val NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
@@ -822,7 +822,7 @@ private val EDGE_IDS_SQL = "${EDGE_ENTITY_KEY_ID.name} = ANY(?) AND ${EDGE_ENTIT
  * 1, 3, 5: entityKeyIds
  * 2, 4, 6: entitySetId
  */
-private val BULK_NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE ($SRC_IDS_SQL) OR ($DST_IDS_SQL) OR ($EDGE_IDS_SQL)"
+private val BULK_NEIGHBORHOOD_SQL = "SELECT * FROM ${E.name} WHERE ($SRC_IDS_SQL) OR ($DST_IDS_SQL) OR ($EDGE_IDS_SQL)"
 
 
 internal fun getFilteredNeighborhoodSql(filter: EntityNeighborsFilter, multipleEntitySetIds: Boolean): String {
