@@ -198,6 +198,7 @@ class Graph(
         ps.setObject(startIndex + 2, dataEdgeKey.src.entityKeyId)
         ps.setObject(startIndex + 3, dataEdgeKey.dst.entityKeyId)
         ps.setObject(startIndex + 4, dataEdgeKey.edge.entityKeyId)
+        ps.addBatch()
     }
 
     private fun addEdgeKeyIds(ps: PreparedStatement, dataEdgeKey: DataEdgeKey, startIndex: Int = 1) {
@@ -249,39 +250,27 @@ class Graph(
         return lockAndOperateOnEdges( keys, NEW_CLEAR_BY_VERTEX_SQL ) { lockStmt, operationStmt, dataEdgeKey ->
 
             addKeyIds(lockStmt, dataEdgeKey, IdType.SRC)
-            lockStmt.addBatch()
             addKeyIds(lockStmt, dataEdgeKey, IdType.DST)
-            lockStmt.addBatch()
             addKeyIds(lockStmt, dataEdgeKey, IdType.EDGE)
-            lockStmt.addBatch()
 
             clearEdgesAddVersion(operationStmt, version)
             addKeyIds(lockStmt, dataEdgeKey, IdType.SRC, 3)
-            operationStmt.addBatch()
             clearEdgesAddVersion(operationStmt, version)
             addKeyIds(lockStmt, dataEdgeKey, IdType.DST, 3)
-            operationStmt.addBatch()
             clearEdgesAddVersion(operationStmt, version)
             addKeyIds(lockStmt, dataEdgeKey, IdType.EDGE, 3)
-            operationStmt.addBatch()
         }
     }
 
     private fun newDeleteEdges(keys: Iterable<DataEdgeKey>): WriteEvent {
         val updates = lockAndOperateOnEdges( keys, NEW_DELETE_BY_VERTEX_SQL) { lockStmt, operationStmt, dataEdgeKey ->
             addKeyIds(lockStmt, dataEdgeKey, IdType.SRC)
-            lockStmt.addBatch()
             addKeyIds(lockStmt, dataEdgeKey, IdType.DST)
-            lockStmt.addBatch()
             addKeyIds(lockStmt, dataEdgeKey, IdType.EDGE)
-            lockStmt.addBatch()
 
             addKeyIds(operationStmt, dataEdgeKey, IdType.SRC)
-            operationStmt.addBatch()
             addKeyIds(operationStmt, dataEdgeKey, IdType.DST)
-            operationStmt.addBatch()
             addKeyIds(operationStmt, dataEdgeKey, IdType.EDGE)
-            operationStmt.addBatch()
         }
         return WriteEvent(System.currentTimeMillis(), updates)
     }
