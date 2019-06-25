@@ -30,7 +30,6 @@ import com.google.common.collect.SetMultimap;
 import com.google.common.eventbus.EventBus;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
-import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.query.Predicate;
 import com.hazelcast.query.Predicates;
 import com.openlattice.authorization.AclKey;
@@ -288,13 +287,6 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
     }
 
     @Override
-    public Map<AclKey, Object> executeOnPrincipal(
-            EntryProcessor<AclKey, SecurablePrincipal> ep,
-            Predicate p ) {
-        return principals.executeOnEntries( ep, p );
-    }
-
-    @Override
     public Collection<SecurablePrincipal> getSecurablePrincipals( Predicate p ) {
         return principals.values( p );
     }
@@ -305,9 +297,8 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
     }
 
     @Override
-    public Collection<SecurablePrincipal> getSecurablePrincipals( Set<Principal> members ) {
-        Predicate p = Predicates
-                .in( "principal", members.toArray( new Principal[ 0 ] ) );
+    public Collection<SecurablePrincipal> getSecurablePrincipals( Collection<Principal> members ) {
+        final var p = findPrincipals( members );
         return principals.values( p );
     }
 
@@ -373,6 +364,10 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
 
     private static Predicate findPrincipal( Principal p ) {
         return Predicates.equal( "principal", p );
+    }
+
+    private static Predicate findPrincipals( Collection<Principal> principals ) {
+        return Predicates.in( "principal", principals.toArray( new Principal[] {} ) );
     }
 
     private static Predicate hasSecurablePrincipal( AclKey principalAclKey ) {
