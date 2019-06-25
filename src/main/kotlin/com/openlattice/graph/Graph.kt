@@ -240,14 +240,18 @@ class Graph(
         return lockAndOperateOnEdges( keys, NEW_CLEAR_BY_VERTEX_SQL ) { lockStmt, operationStmt, dataEdgeKey ->
 
             addKeyIds(lockStmt, dataEdgeKey, ComponentType.SRC)
+            lockStmt.addBatch()
             addKeyIds(lockStmt, dataEdgeKey, ComponentType.DST)
+            lockStmt.addBatch()
             addKeyIds(lockStmt, dataEdgeKey, ComponentType.EDGE)
             lockStmt.addBatch()
 
             clearEdgesAddVersion(operationStmt, version)
             addKeyIds(lockStmt, dataEdgeKey, ComponentType.SRC, 3)
+            operationStmt.addBatch()
             clearEdgesAddVersion(operationStmt, version)
             addKeyIds(lockStmt, dataEdgeKey, ComponentType.DST, 3)
+            operationStmt.addBatch()
             clearEdgesAddVersion(operationStmt, version)
             addKeyIds(lockStmt, dataEdgeKey, ComponentType.EDGE, 3)
             operationStmt.addBatch()
@@ -257,12 +261,16 @@ class Graph(
     private fun newDeleteEdges(keys: Iterable<DataEdgeKey>): WriteEvent {
         val updates = lockAndOperateOnEdges( keys, NEW_DELETE_BY_VERTEX_SQL) { lockStmt, operationStmt, dataEdgeKey ->
             addKeyIds(lockStmt, dataEdgeKey, ComponentType.SRC)
+            lockStmt.addBatch()
             addKeyIds(lockStmt, dataEdgeKey, ComponentType.DST)
+            lockStmt.addBatch()
             addKeyIds(lockStmt, dataEdgeKey, ComponentType.EDGE)
             lockStmt.addBatch()
 
             addKeyIds(operationStmt, dataEdgeKey, ComponentType.SRC)
+            operationStmt.addBatch()
             addKeyIds(operationStmt, dataEdgeKey, ComponentType.DST)
+            operationStmt.addBatch()
             addKeyIds(operationStmt, dataEdgeKey, ComponentType.EDGE)
             operationStmt.addBatch()
         }
