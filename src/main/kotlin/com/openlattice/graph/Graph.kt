@@ -86,9 +86,9 @@ class Graph(
             val partitionsInfoByEntitySet = mutableMapOf<UUID, PartitionsInfo>()
             ps.use {
                 keys.forEach { dataEdgeKey ->
-                    createAddSrcRowToBatch(ps, version, versions, dataEdgeKey)
-                    createAddDstRowToBatch(ps, version, versions, dataEdgeKey)
-                    createAddEdgeRowToBatch(ps, version, versions, dataEdgeKey)
+                    bindColumnsForEdge(ps, dataEdgeKey, version, versions, IdType.SRC, dataEdgeKey.src, partitionsInfoByEntitySet)
+                    bindColumnsForEdge(ps, dataEdgeKey, version, versions, IdType.DST, dataEdgeKey.dst, partitionsInfoByEntitySet)
+                    bindColumnsForEdge(ps, dataEdgeKey, version, versions, IdType.EDGE, dataEdgeKey.edge, partitionsInfoByEntitySet)
                 }
                 return WriteEvent(version, ps.executeBatch().sum())
             }
@@ -100,11 +100,19 @@ class Graph(
             dataEdgeKey: DataEdgeKey,
             version: Long,
             versions: java.sql.Array,
-            entityDataKey: EntityDataKey,
-            partitionsInfo: PartitionsInfo,
-            startIndex: Int = 1): Int {
-        var index = startIndex
-        ps.setObject(index++, getPartition(entityDataKey.entityKeyId, partitionsInfo.partitions.toList()))
+            idType: IdType,
+            edk: EntityDataKey,
+            partitionsInfoByEntitySet: MutableMap<UUID, PartitionsInfo>) {
+
+        if (!partitionsInfoByEntitySet.containsKey(edk.entitySetId)) {
+            partitionsInfoByEntitySet[edk.entitySetId] = partitionManager.getEntitySetPartitionsInfo(edk.entitySetId)
+        }
+        val partitionsInfo = partitionsInfoByEntitySet.getValue(edk.entitySetId)
+
+        var index = 1
+
+        ps.setObject(index++, getPartition(edk.entityKeyId, partitionsInfo.partitions.toList()))
+        ps.setInt(index++, idType.ordinal)
         ps.setObject(index++, dataEdgeKey.src.entitySetId)
         ps.setObject(index++, dataEdgeKey.src.entityKeyId)
         ps.setObject(index++, dataEdgeKey.dst.entitySetId)
@@ -114,7 +122,7 @@ class Graph(
         ps.setLong(index++, version)
         ps.setArray(index++, versions)
         ps.setObject(index++, partitionsInfo.partitionsVersion)
-        return index
+        ps.addBatch()
     }
 
     /*
@@ -166,26 +174,26 @@ class Graph(
         ps.setObject(startIndex, dataEdgeKey.src.entityKeyId)
         ps.setObject(startIndex + 1, dataEdgeKey.dst.entityKeyId)
         ps.setObject(startIndex + 2, dataEdgeKey.edge.entityKeyId)
-        ps.setObject(startIndex + 3, ComponentType.SRC.ordinal)
+        ps.setObject(startIndex + 3, IdType.SRC.ordinal)
     }
 
     private fun addDstKeyIds(ps: PreparedStatement, dataEdgeKey: DataEdgeKey, startIndex: Int = 1) {
         ps.setObject(startIndex, dataEdgeKey.dst.entityKeyId)
         ps.setObject(startIndex + 1, dataEdgeKey.edge.entityKeyId)
         ps.setObject(startIndex + 2, dataEdgeKey.src.entityKeyId)
-        ps.setObject(startIndex + 3, ComponentType.DST.ordinal)
+        ps.setObject(startIndex + 3, IdType.DST.ordinal)
     }
 
-    private fun addKeyIds(ps: PreparedStatement, dataEdgeKey: DataEdgeKey, component: ComponentType, startIndex: Int = 1) {
-        val edk = when( component ) {
-            ComponentType.DST -> dataEdgeKey.dst
-            ComponentType.EDGE -> dataEdgeKey.edge
-            ComponentType.SRC -> dataEdgeKey.src
+    private fun addKeyIds(ps: PreparedStatement, dataEdgeKey: DataEdgeKey, idType: IdType, startIndex: Int = 1) {
+        val edk = when( idType ) {
+            IdType.DST -> dataEdgeKey.dst
+            IdType.EDGE -> dataEdgeKey.edge
+            IdType.SRC -> dataEdgeKey.src
         }
         val partitionInfo = partitionManager.getEntitySetPartitionsInfo(edk.entitySetId)
         val partition = getPartition(edk.entityKeyId, partitionInfo.partitions.toList())
         ps.setObject(startIndex, partition)
-        ps.setObject(startIndex + 1, component)
+        ps.setObject(startIndex + 1, idType)
         ps.setObject(startIndex + 2, dataEdgeKey.src.entityKeyId)
         ps.setObject(startIndex + 3, dataEdgeKey.dst.entityKeyId)
         ps.setObject(startIndex + 4, dataEdgeKey.edge.entityKeyId)
@@ -195,7 +203,7 @@ class Graph(
         ps.setObject(startIndex, dataEdgeKey.edge.entityKeyId)
         ps.setObject(startIndex + 1, dataEdgeKey.src.entityKeyId)
         ps.setObject(startIndex + 2, dataEdgeKey.dst.entityKeyId)
-        ps.setObject(startIndex + 3, ComponentType.EDGE.ordinal)
+        ps.setObject(startIndex + 3, IdType.EDGE.ordinal)
     }
 
     /* Delete  */
@@ -239,39 +247,39 @@ class Graph(
         val version = -System.currentTimeMillis()
         return lockAndOperateOnEdges( keys, NEW_CLEAR_BY_VERTEX_SQL ) { lockStmt, operationStmt, dataEdgeKey ->
 
-            addKeyIds(lockStmt, dataEdgeKey, ComponentType.SRC)
+            addKeyIds(lockStmt, dataEdgeKey, IdType.SRC)
             lockStmt.addBatch()
-            addKeyIds(lockStmt, dataEdgeKey, ComponentType.DST)
+            addKeyIds(lockStmt, dataEdgeKey, IdType.DST)
             lockStmt.addBatch()
-            addKeyIds(lockStmt, dataEdgeKey, ComponentType.EDGE)
+            addKeyIds(lockStmt, dataEdgeKey, IdType.EDGE)
             lockStmt.addBatch()
 
             clearEdgesAddVersion(operationStmt, version)
-            addKeyIds(lockStmt, dataEdgeKey, ComponentType.SRC, 3)
+            addKeyIds(lockStmt, dataEdgeKey, IdType.SRC, 3)
             operationStmt.addBatch()
             clearEdgesAddVersion(operationStmt, version)
-            addKeyIds(lockStmt, dataEdgeKey, ComponentType.DST, 3)
+            addKeyIds(lockStmt, dataEdgeKey, IdType.DST, 3)
             operationStmt.addBatch()
             clearEdgesAddVersion(operationStmt, version)
-            addKeyIds(lockStmt, dataEdgeKey, ComponentType.EDGE, 3)
+            addKeyIds(lockStmt, dataEdgeKey, IdType.EDGE, 3)
             operationStmt.addBatch()
         }
     }
 
     private fun newDeleteEdges(keys: Iterable<DataEdgeKey>): WriteEvent {
         val updates = lockAndOperateOnEdges( keys, NEW_DELETE_BY_VERTEX_SQL) { lockStmt, operationStmt, dataEdgeKey ->
-            addKeyIds(lockStmt, dataEdgeKey, ComponentType.SRC)
+            addKeyIds(lockStmt, dataEdgeKey, IdType.SRC)
             lockStmt.addBatch()
-            addKeyIds(lockStmt, dataEdgeKey, ComponentType.DST)
+            addKeyIds(lockStmt, dataEdgeKey, IdType.DST)
             lockStmt.addBatch()
-            addKeyIds(lockStmt, dataEdgeKey, ComponentType.EDGE)
+            addKeyIds(lockStmt, dataEdgeKey, IdType.EDGE)
             lockStmt.addBatch()
 
-            addKeyIds(operationStmt, dataEdgeKey, ComponentType.SRC)
+            addKeyIds(operationStmt, dataEdgeKey, IdType.SRC)
             operationStmt.addBatch()
-            addKeyIds(operationStmt, dataEdgeKey, ComponentType.DST)
+            addKeyIds(operationStmt, dataEdgeKey, IdType.DST)
             operationStmt.addBatch()
-            addKeyIds(operationStmt, dataEdgeKey, ComponentType.EDGE)
+            addKeyIds(operationStmt, dataEdgeKey, IdType.EDGE)
             operationStmt.addBatch()
         }
         return WriteEvent(System.currentTimeMillis(), updates)
@@ -729,33 +737,15 @@ class Graph(
     }
 }
 
-enum class ComponentType {
+enum class IdType {
     SRC,
     DST,
     EDGE
 }
 
-// Drop-in replace NEW_KEY_COLUMNS for KEY_COLUMNS and delete is happy
-private val NEW_KEY_COLUMNS = E.primaryKey.map { col -> col.name }.toSet()
+private val KEY_COLUMNS = E.primaryKey.map { col -> col.name }.toSet()
 
-private val KEY_COLUMNS = setOf(
-        ID_VALUE,
-        EDGE_COMP_1,
-        EDGE_COMP_2,
-        COMPONENT_TYPES
-).map { it.name }.toSet()
-
-private val INSERT_COLUMNS = setOf(
-        ID_VALUE,
-        EDGE_COMP_1,
-        EDGE_COMP_2,
-        COMPONENT_TYPES,
-        SRC_ENTITY_SET_ID,
-        DST_ENTITY_SET_ID,
-        EDGE_ENTITY_SET_ID,
-        VERSION,
-        VERSIONS
-).map { it.name }.toSet()
+private val INSERT_COLUMNS = E.columns.map { it.name }.toSet()
 
 /**
  * Builds the SQL query for top utilizers.
@@ -803,7 +793,7 @@ internal fun getTopUtilizersFromDst(entitySetId: UUID, filters: SetMultimap<UUID
 }
 
 
-private val UPSERT_SQL = "INSERT INTO ${EDGES.name} (${INSERT_COLUMNS.joinToString(",")}) VALUES (?,?,?,?,?,?,?,?,?) " +
+private val UPSERT_SQL = "INSERT INTO ${E.name} (${INSERT_COLUMNS.joinToString(",")}) VALUES (${(0 until INSERT_COLUMNS.size).map { "?" }.joinToString { "," }}) " +
         "ON CONFLICT (${KEY_COLUMNS.joinToString(",")}) " +
         "DO UPDATE SET version = EXCLUDED.version, versions = ${EDGES.name}.versions || EXCLUDED.version"
 
@@ -814,7 +804,7 @@ private val LOCK_SQL1 = "SELECT 1 FROM ${EDGES.name} WHERE "
 private const val LOCK_SQL2 = " FOR UPDATE"
 
 private val VERTEX_FILTER_SQL = "${KEY_COLUMNS.joinToString(" = ? AND ")} = ? "
-private val NEW_VERTEX_FILTER_SQL = "${NEW_KEY_COLUMNS.joinToString(" = ? AND ")} = ? "
+private val NEW_VERTEX_FILTER_SQL = "${KEY_COLUMNS.joinToString(" = ? AND ")} = ? "
 
 private val CLEAR_BY_VERTEX_SQL = "$CLEAR_SQL $VERTEX_FILTER_SQL"
 private val NEW_CLEAR_BY_VERTEX_SQL = "$CLEAR_SQL $NEW_VERTEX_FILTER_SQL"
@@ -827,14 +817,14 @@ private val NEIGHBORHOOD_OF_ENTITY_SET_SQL = "SELECT * FROM ${EDGES.name} WHERE 
 
 private val NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
         "${ID_VALUE.name} = ? AND " +
-        "(( ${SRC_ENTITY_SET_ID.name} = ? AND ${COMPONENT_TYPES.name} = ${ComponentType.SRC.ordinal} ) OR " +
-        "( ${DST_ENTITY_SET_ID.name} = ? AND ${COMPONENT_TYPES.name} = ${ComponentType.DST.ordinal} ))"
+        "(( ${SRC_ENTITY_SET_ID.name} = ? AND ${COMPONENT_TYPES.name} = ${IdType.SRC.ordinal} ) OR " +
+        "( ${DST_ENTITY_SET_ID.name} = ? AND ${COMPONENT_TYPES.name} = ${IdType.DST.ordinal} ))"
 
 private val BULK_NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
         "${ID_VALUE.name} = ANY(?) AND " +
-        "((${SRC_ENTITY_SET_ID.name} = ? AND ${COMPONENT_TYPES.name} = ${ComponentType.SRC.ordinal}) OR " +
-        "(${DST_ENTITY_SET_ID.name} = ? AND ${COMPONENT_TYPES.name} = ${ComponentType.DST.ordinal}) OR " +
-        "(${EDGE_ENTITY_SET_ID.name} = ? AND ${COMPONENT_TYPES.name} = ${ComponentType.EDGE.ordinal}))"
+        "((${SRC_ENTITY_SET_ID.name} = ? AND ${COMPONENT_TYPES.name} = ${IdType.SRC.ordinal}) OR " +
+        "(${DST_ENTITY_SET_ID.name} = ? AND ${COMPONENT_TYPES.name} = ${IdType.DST.ordinal}) OR " +
+        "(${EDGE_ENTITY_SET_ID.name} = ? AND ${COMPONENT_TYPES.name} = ${IdType.EDGE.ordinal}))"
 
 
 internal fun getFilteredNeighborhoodSql(filter: EntityNeighborsFilter, multipleEntitySetIds: Boolean): String {
@@ -846,7 +836,7 @@ internal fun getFilteredNeighborhoodSql(filter: EntityNeighborsFilter, multipleE
         "${SRC_ENTITY_SET_ID.name} = ?" to "${DST_ENTITY_SET_ID.name} = ?"
     }
 
-    var srcSql = "$srcEntitySetSql AND ${COMPONENT_TYPES.name} = ${ComponentType.SRC.ordinal}"
+    var srcSql = "$srcEntitySetSql AND ${COMPONENT_TYPES.name} = ${IdType.SRC.ordinal}"
     if (filter.dstEntitySetIds.isPresent) {
         if (filter.dstEntitySetIds.get().size > 0) {
             srcSql += " AND ( ${DST_ENTITY_SET_ID.name} IN (${filter.dstEntitySetIds.get().joinToString(
@@ -857,7 +847,7 @@ internal fun getFilteredNeighborhoodSql(filter: EntityNeighborsFilter, multipleE
         }
     }
 
-    var dstSql = "$dstEntitySetSql AND ${COMPONENT_TYPES.name} = ${ComponentType.DST.ordinal}"
+    var dstSql = "$dstEntitySetSql AND ${COMPONENT_TYPES.name} = ${IdType.DST.ordinal}"
     if (filter.srcEntitySetIds.isPresent) {
         if (filter.srcEntitySetIds.get().size > 0) {
             dstSql += " AND ( ${SRC_ENTITY_SET_ID.name} IN (${filter.srcEntitySetIds.get().joinToString(
@@ -921,12 +911,12 @@ private fun buildEdgeFilteringClause(
                     "AND $selfEntitySetColumn IN (${selfEntitySetIds.joinToString(",") { "'$it'" }})"
 
     val componentTypeClause = if (association) {
-        "${COMPONENT_TYPES.name} = ${ComponentType.EDGE.ordinal}"
+        "${COMPONENT_TYPES.name} = ${IdType.EDGE.ordinal}"
     } else {
         if (isDst) {
-            "${COMPONENT_TYPES.name} = ${ComponentType.DST.ordinal}"
+            "${COMPONENT_TYPES.name} = ${IdType.DST.ordinal}"
         } else {
-            "${COMPONENT_TYPES.name} = ${ComponentType.SRC.ordinal}"
+            "${COMPONENT_TYPES.name} = ${IdType.SRC.ordinal}"
         }
     }
 
@@ -943,7 +933,7 @@ private fun buildSpineSql(
 
 
     val baseEntityColumnsSql = if (association) {
-        // Order on which we select is {edge, src, dst}, EDGE ComponentType
+        // Order on which we select is {edge, src, dst}, EDGE IdType
         if (isDst) { // select src and edge
             "${SRC_ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${EDGE_COMP_1.name} as $SELF_ENTITY_KEY_ID, " +
                     "${EDGE_ENTITY_SET_ID.name} as ${PostgresColumn.ENTITY_SET_ID.name}, ${ID_VALUE.name} as ${ID_VALUE.name}"
@@ -952,11 +942,11 @@ private fun buildSpineSql(
                     "${EDGE_ENTITY_SET_ID.name} as ${PostgresColumn.ENTITY_SET_ID.name}, ${ID_VALUE.name} as ${ID_VALUE.name}"
         }
     } else {
-        // Order on which we select is {src, dst, edge}, DST ComponentType
+        // Order on which we select is {src, dst, edge}, DST IdType
         if (isDst) { // select src and dst
             "${SRC_ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${EDGE_COMP_2.name} as $SELF_ENTITY_KEY_ID, " +
                     "${DST_ENTITY_SET_ID.name} as ${PostgresColumn.ENTITY_SET_ID.name}, ${ID_VALUE.name} as ${ID_VALUE.name}"
-        } else { // Order on which we select is {src, dst, edge}, SRC ComponentType
+        } else { // Order on which we select is {src, dst, edge}, SRC IdType
             // select dst and src
             "${DST_ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${EDGE_COMP_1.name} as $SELF_ENTITY_KEY_ID, " +
                     "${SRC_ENTITY_SET_ID.name} as ${PostgresColumn.ENTITY_SET_ID.name}, ${ID_VALUE.name} as ${ID_VALUE.name}"
