@@ -104,6 +104,7 @@ class Graph(
             edk: EntityDataKey,
             partitionsInfoByEntitySet: MutableMap<UUID, PartitionsInfo>) {
 
+        // TODO figure out if this is sketchy
         if (!partitionsInfoByEntitySet.containsKey(edk.entitySetId)) {
             partitionsInfoByEntitySet[edk.entitySetId] = partitionManager.getEntitySetPartitionsInfo(edk.entitySetId)
         }
