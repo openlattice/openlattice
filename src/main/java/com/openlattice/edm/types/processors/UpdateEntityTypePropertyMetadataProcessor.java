@@ -33,6 +33,7 @@ public class UpdateEntityTypePropertyMetadataProcessor extends
             if ( update.getDescription().isPresent() ) {
                 metadata.setDescription( update.getDescription().get() );
             }
+            entry.setValue( metadata );
         }
         return null;
     }
