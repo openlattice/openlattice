@@ -211,43 +211,8 @@ class Graph(
     /* Delete  */
 
     override fun clearEdges(keys: Iterable<DataEdgeKey>): Int {
-        hds.connection.use { connection ->
-            connection.autoCommit = false
-
-            val psLocks = connection.prepareStatement(LOCK_BY_VERTEX_SQL)
-            val psClear = connection.prepareStatement(CLEAR_BY_VERTEX_SQL)
-            val version = -System.currentTimeMillis()
-            keys.forEach { dataEdgeKey ->
-                addSrcKeyIds(psLocks, dataEdgeKey)
-                psLocks.addBatch()
-                addDstKeyIds(psLocks, dataEdgeKey)
-                psLocks.addBatch()
-                addEdgeKeyIds(psLocks, dataEdgeKey)
-                psLocks.addBatch()
-
-                clearEdgesAddVersion(psClear, version)
-                addSrcKeyIds(psClear, dataEdgeKey, 3)
-                psClear.addBatch()
-                clearEdgesAddVersion(psClear, version)
-                addDstKeyIds(psClear, dataEdgeKey, 3)
-                psClear.addBatch()
-                clearEdgesAddVersion(psClear, version)
-                addEdgeKeyIds(psClear, dataEdgeKey, 3)
-                psClear.addBatch()
-            }
-            psLocks.executeBatch()
-            val clearCount = psClear.executeBatch().sum()
-            connection.commit()
-
-            connection.autoCommit = true
-
-            return clearCount
-        }
-    }
-
-    private fun newClearEdges(keys: Iterable<DataEdgeKey>): Int {
         val version = -System.currentTimeMillis()
-        return lockAndOperateOnEdges(keys, NEW_CLEAR_BY_VERTEX_SQL) { lockStmt, operationStmt, dataEdgeKey ->
+        return lockAndOperateOnEdges(keys, CLEAR_BY_VERTEX_SQL) { lockStmt, operationStmt, dataEdgeKey ->
 
             addKeyIds(lockStmt, dataEdgeKey, IdType.SRC)
             addKeyIds(lockStmt, dataEdgeKey, IdType.DST)
@@ -260,19 +225,6 @@ class Graph(
             clearEdgesAddVersion(operationStmt, version)
             addKeyIds(lockStmt, dataEdgeKey, IdType.EDGE, 3)
         }
-    }
-
-    private fun newDeleteEdges(keys: Iterable<DataEdgeKey>): WriteEvent {
-        val updates = lockAndOperateOnEdges(keys, NEW_DELETE_BY_VERTEX_SQL) { lockStmt, operationStmt, dataEdgeKey ->
-            addKeyIds(lockStmt, dataEdgeKey, IdType.SRC)
-            addKeyIds(lockStmt, dataEdgeKey, IdType.DST)
-            addKeyIds(lockStmt, dataEdgeKey, IdType.EDGE)
-
-            addKeyIds(operationStmt, dataEdgeKey, IdType.SRC)
-            addKeyIds(operationStmt, dataEdgeKey, IdType.DST)
-            addKeyIds(operationStmt, dataEdgeKey, IdType.EDGE)
-        }
-        return WriteEvent(System.currentTimeMillis(), updates)
     }
 
     private fun lockAndOperateOnEdges(keys: Iterable<DataEdgeKey>,
@@ -303,36 +255,16 @@ class Graph(
     }
 
     override fun deleteEdges(keys: Iterable<DataEdgeKey>): WriteEvent {
-        val connection = hds.connection
+        val updates = lockAndOperateOnEdges(keys, DELETE_BY_VERTEX_SQL) { lockStmt, operationStmt, dataEdgeKey ->
+            addKeyIds(lockStmt, dataEdgeKey, IdType.SRC)
+            addKeyIds(lockStmt, dataEdgeKey, IdType.DST)
+            addKeyIds(lockStmt, dataEdgeKey, IdType.EDGE)
 
-        connection.use {
-            connection.autoCommit = false
-
-            val psLocks = connection.prepareStatement(LOCK_BY_VERTEX_SQL)
-            val psDelete = connection.prepareStatement(DELETE_BY_VERTEX_SQL)
-            keys.forEach { dataEdgeKey ->
-                addSrcKeyIds(psLocks, dataEdgeKey)
-                psLocks.addBatch()
-                addDstKeyIds(psLocks, dataEdgeKey)
-                psLocks.addBatch()
-                addEdgeKeyIds(psLocks, dataEdgeKey)
-                psLocks.addBatch()
-
-                addSrcKeyIds(psDelete, dataEdgeKey)
-                psDelete.addBatch()
-                addDstKeyIds(psDelete, dataEdgeKey)
-                psDelete.addBatch()
-                addEdgeKeyIds(psDelete, dataEdgeKey)
-                psDelete.addBatch()
-            }
-            psLocks.executeBatch()
-            val updates = psDelete.executeBatch()
-            connection.commit()
-
-            connection.autoCommit = true
-
-            return WriteEvent(System.currentTimeMillis(), updates.sum())
+            addKeyIds(operationStmt, dataEdgeKey, IdType.SRC)
+            addKeyIds(operationStmt, dataEdgeKey, IdType.DST)
+            addKeyIds(operationStmt, dataEdgeKey, IdType.EDGE)
         }
+        return WriteEvent(System.currentTimeMillis(), updates)
     }
 
     /* Select */
