@@ -1063,7 +1063,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         if ( !authorizedPropertyTypes.keySet().containsAll( requiredProperties ) ) {
             throw new ForbiddenException(
                     "You must have " + propertyPermissionsToCheck.iterator().next() + " permission of all required " +
-                            "entity set properties to delete entities from it." );
+                            "entity set " + entitySet.getId() + " properties to delete entities from it." );
         }
 
         return authorizedPropertyTypes;
