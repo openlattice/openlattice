@@ -176,7 +176,14 @@ class Graph(
         ps.setObject(startIndex + 3, ComponentType.DST.ordinal)
     }
 
-    private fun addKeyIds(ps: PreparedStatement, dataEdgeKey: DataEdgeKey, startIndex: Int = 1, partition: Int, component: ComponentType ) {
+    private fun addKeyIds(ps: PreparedStatement, dataEdgeKey: DataEdgeKey, component: ComponentType, startIndex: Int = 1) {
+        val edk = when( component ) {
+            ComponentType.DST -> dataEdgeKey.dst
+            ComponentType.EDGE -> dataEdgeKey.edge
+            ComponentType.SRC -> dataEdgeKey.src
+        }
+        val partitionInfo = partitionManager.getEntitySetPartitionsInfo(edk.entitySetId)
+        val partition = getPartition(edk.entityKeyId, partitionInfo.partitions.toList())
         ps.setObject(startIndex, partition)
         ps.setObject(startIndex + 1, component)
         ps.setObject(startIndex + 2, dataEdgeKey.src.entityKeyId)
@@ -190,7 +197,6 @@ class Graph(
         ps.setObject(startIndex + 2, dataEdgeKey.dst.entityKeyId)
         ps.setObject(startIndex + 3, ComponentType.EDGE.ordinal)
     }
-
 
     /* Delete  */
 
@@ -232,28 +238,27 @@ class Graph(
     private fun newClearEdges( keys: Iterable<DataEdgeKey>): Int {
         val version = -System.currentTimeMillis()
         return lockAndOperateOnEdges( keys, NEW_CLEAR_BY_VERTEX_SQL ) { lockStmt, operationStmt, dataEdgeKey ->
-            addKeyIds(lockStmt, dataEdgeKey, partition=1, component=ComponentType.SRC)
-            addKeyIds(lockStmt, dataEdgeKey, partition=1, component=ComponentType.DST)
-            addKeyIds(lockStmt, dataEdgeKey, partition=1, component=ComponentType.EDGE)
+
+            addKeyIds(lockStmt, dataEdgeKey, ComponentType.SRC)
+            addKeyIds(lockStmt, dataEdgeKey, ComponentType.DST)
+            addKeyIds(lockStmt, dataEdgeKey, ComponentType.EDGE)
             lockStmt.addBatch()
 
             clearEdgesAddVersion(operationStmt, version)
-            addKeyIds(lockStmt, dataEdgeKey, partition=1, component=ComponentType.SRC)
+            addKeyIds(lockStmt, dataEdgeKey, ComponentType.SRC, 3)
             clearEdgesAddVersion(operationStmt, version)
-            addKeyIds(lockStmt, dataEdgeKey, partition=1, component=ComponentType.DST)
+            addKeyIds(lockStmt, dataEdgeKey, ComponentType.DST, 3)
             clearEdgesAddVersion(operationStmt, version)
-            addKeyIds(lockStmt, dataEdgeKey, partition=1, component=ComponentType.EDGE)
+            addKeyIds(lockStmt, dataEdgeKey, ComponentType.EDGE, 3)
             operationStmt.addBatch()
         }
     }
 
     private fun newDeleteEdges(keys: Iterable<DataEdgeKey>): WriteEvent {
         val updates = lockAndOperateOnEdges( keys, NEW_DELETE_BY_VERTEX_SQL) { lockStmt, operationStmt, dataEdgeKey ->
-            addSrcKeyIds(lockStmt, dataEdgeKey)
-            lockStmt.addBatch()
-            addDstKeyIds(lockStmt, dataEdgeKey)
-            lockStmt.addBatch()
-            addEdgeKeyIds(lockStmt, dataEdgeKey)
+            addKeyIds(lockStmt, dataEdgeKey, ComponentType.SRC)
+            addKeyIds(lockStmt, dataEdgeKey, ComponentType.DST)
+            addKeyIds(lockStmt, dataEdgeKey, ComponentType.EDGE)
             lockStmt.addBatch()
 
             addSrcKeyIds(operationStmt, dataEdgeKey)
