@@ -611,7 +611,7 @@ public interface EdmApi {
             @Path( PROPERTY_TYPE_ID ) UUID propertyTypeId,
             @Body MetadataUpdate update );
 
-    @GET( ENTITY_TYPE_BASE_PATH + ID_PATH + ENTITY_TYPE_PATH )
+    @GET( ENTITY_TYPE_BASE_PATH + ID_PATH + PROPERTY_TYPE_PATH )
     Map<UUID, EntityTypePropertyMetadata> getAllEntityTypePropertyMetadata( @Path( ID ) UUID entityTypeId );
 
     @GET( ENTITY_TYPE_BASE_PATH + ID_PATH + PROPERTY_TYPE_PATH + PROPERTY_TYPE_ID_PATH )

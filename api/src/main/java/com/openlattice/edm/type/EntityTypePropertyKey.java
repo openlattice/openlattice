@@ -4,9 +4,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.openlattice.client.serialization.SerializationConstants;
 
+import java.io.Serializable;
 import java.util.UUID;
 
-public class EntityTypePropertyKey {
+public class EntityTypePropertyKey implements Serializable {
     private UUID entityTypeId;
     private UUID propertyTypeId;
 

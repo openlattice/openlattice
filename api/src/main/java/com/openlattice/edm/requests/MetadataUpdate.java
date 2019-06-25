@@ -27,6 +27,7 @@ import com.openlattice.postgres.IndexType;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
+import java.io.Serializable;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -36,7 +37,7 @@ import java.util.UUID;
  * Used for updating metadata of property type, entity type, or entity set. Non-existent fields for the specific object
  * would be ignored.
  */
-public class MetadataUpdate {
+public class MetadataUpdate implements Serializable {
 
     // Common across property type, entity type, entity set
     private Optional<String>                           title;
