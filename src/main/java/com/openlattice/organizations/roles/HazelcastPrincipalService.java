@@ -363,11 +363,11 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
     }
 
     private static Predicate findPrincipal( Principal p ) {
-        return Predicates.equal( "principal", p );
+        return Predicates.equal( PrincipalMapstore.PRINCIPAL_INDEX, p );
     }
 
     private static Predicate findPrincipals( Collection<Principal> principals ) {
-        return Predicates.in( "principal", principals.toArray( new Principal[] {} ) );
+        return Predicates.in( PrincipalMapstore.PRINCIPAL_INDEX, principals.toArray( new Principal[] {} ) );
     }
 
     private static Predicate hasSecurablePrincipal( AclKey principalAclKey ) {
