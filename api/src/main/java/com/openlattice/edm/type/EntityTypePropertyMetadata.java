@@ -5,9 +5,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.openlattice.client.serialization.SerializationConstants;
 
-import java.io.Serializable;
-
-public class EntityTypePropertyMetadata implements Serializable {
+public class EntityTypePropertyMetadata {
     private String                title;
     private String                description;
 
