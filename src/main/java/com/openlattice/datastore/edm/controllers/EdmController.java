@@ -1375,8 +1375,8 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
 
         recordEvent( new AuditableEvent(
                 getCurrentUserId(),
-                new AclKey( entityTypeId, propertyTypeId ),
-                AuditEventType.UPDATE_ENTITY_SET_PROPERTY_METADATA,
+                new AclKey( entityTypeId ),
+                AuditEventType.UPDATE_ENTITY_TYPE_PROPERTY_METADATA,
                 "Entity type property metadata updated through EdmApi.updateEntityTypePropertyMetadata",
                 Optional.empty(),
                 ImmutableMap.of( "update", update ),
