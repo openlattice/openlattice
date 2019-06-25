@@ -270,14 +270,17 @@ class Graph(
                                       statement: String,
                                       statementSupplier: (lockStmt: PreparedStatement, operationStmt: PreparedStatement, dataEdgeKey: DataEdgeKey) -> Unit ): Int {
         hds.connection.use { connection ->
+            var updates = 0
             connection.autoCommit = false
-            val psLocks = connection.prepareStatement(LOCK_BY_VERTEX_SQL)
-            val psExecute = connection.prepareStatement( statement )
-            keys.forEach { dataEdgeKey ->
-                statementSupplier(psLocks, psExecute, dataEdgeKey)
+            connection.prepareStatement(LOCK_BY_VERTEX_SQL).use { psLocks ->
+                connection.prepareStatement( statement ).use { psExecute ->
+                    keys.forEach { dataEdgeKey ->
+                        statementSupplier(psLocks, psExecute, dataEdgeKey)
+                    }
+                    psLocks.executeBatch()
+                    updates = psExecute.executeBatch().sum()
+                }
             }
-            psLocks.executeBatch()
-            val updates = psExecute.executeBatch().sum()
             connection.commit()
 
             connection.autoCommit = true
