@@ -72,6 +72,8 @@ public interface SecurePrincipalsManager {
 
     void removePrincipalFromPrincipal( AclKey source, AclKey target );
 
+    void removePrincipalsFromPrincipal( Set<AclKey> sources, AclKey target );
+
     //More logical to use Principal
 
     void removePrincipalFromPrincipals( AclKey source, Predicate targetFilter );

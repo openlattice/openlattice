@@ -237,6 +237,13 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
     }
 
     @Override
+    public void removePrincipalsFromPrincipal( Set<AclKey> source, AclKey target ) {
+        ensurePrincipalsExist( target );
+        ensurePrincipalsExist( source );
+        principalTrees.executeOnKey( target, new NestedPrincipalRemover( source ) );
+    }
+
+    @Override
     public void removePrincipalFromPrincipals( AclKey source, Predicate targetFilter ) {
         principalTrees.executeOnEntries( new NestedPrincipalRemover( ImmutableSet.of( source ) ), targetFilter );
     }
@@ -244,10 +251,9 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
     @Override
     public Collection<SecurablePrincipal> getAllPrincipalsWithPrincipal( AclKey aclKey ) {
         //We start from the bottom layer and use predicates to sweep up the tree and enumerate all roles with this role.
-        final Set<AclKey> principalsWithPrincipal = new HashSet<>();
-        Set<AclKey> parentLayer = principalTrees
-                .keySet( hasSecurablePrincipal( aclKey ) );
-        principalsWithPrincipal.addAll( parentLayer );
+        Set<AclKey> parentLayer = principalTrees.keySet( hasSecurablePrincipal( aclKey ) );
+        final Set<AclKey> principalsWithPrincipal = new HashSet<>(parentLayer);
+
         while ( !parentLayer.isEmpty() ) {
             parentLayer = parentLayer
                     .parallelStream()
@@ -347,14 +353,18 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
     }
 
     private void ensurePrincipalsExist( AclKey... aclKeys ) {
-        ensurePrincipalsExist( "All principals must exists!", aclKeys );
+        ensurePrincipalsExist( Stream.of( aclKeys ) );
     }
 
-    private void ensurePrincipalsExist( String msg, AclKey... aclKeys ) {
-        checkState( Stream.of( aclKeys )
+    private void ensurePrincipalsExist( Set<AclKey> aclKeys ) {
+        ensurePrincipalsExist( aclKeys.stream() );
+    }
+
+    private void ensurePrincipalsExist( Stream<AclKey> aclKeys ) {
+        checkState( aclKeys
                 .filter( aclKey -> !principals.containsKey( aclKey ) )
                 .peek( aclKey -> logger.error( "Principal with acl key {} does not exists!", aclKey ) )
-                .count() == 0, msg );
+                .count() == 0, "All principals must exists!" );
     }
 
     @Override

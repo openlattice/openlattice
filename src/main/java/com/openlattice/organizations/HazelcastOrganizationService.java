@@ -328,7 +328,10 @@ public class HazelcastOrganizationService {
                 .collect( Collectors.toList() );
         final var securablePrincipals = securePrincipalsManager.getSecurablePrincipals( users );
 
-        removeRolesFromMembers( getRolesInFull( organizationId ).stream().map( Role::getAclKey ), securablePrincipals );
+        removeRolesFromMembers(
+                getRoles( organizationId ).stream().map( Role::getAclKey ).collect( Collectors.toSet() ),
+                securablePrincipals
+        );
         membersOf.executeOnKey( organizationId, new OrganizationMemberRemover( members ) );
         final AclKey orgAclKey = new AclKey( organizationId );
         removeOrganizationFromMembers( orgAclKey, securablePrincipals );
@@ -341,11 +344,9 @@ public class HazelcastOrganizationService {
         );
     }
 
-    private void removeRolesFromMembers( Stream<AclKey> roles, Collection<SecurablePrincipal> members ) {
+    private void removeRolesFromMembers( Set<AclKey> roles, Collection<SecurablePrincipal> members ) {
         members.forEach( securablePrincipal ->
-                roles.forEach( role ->
-                        securePrincipalsManager.removePrincipalFromPrincipal( role, securablePrincipal.getAclKey() )
-                )
+                securePrincipalsManager.removePrincipalsFromPrincipal( roles, securablePrincipal.getAclKey() )
         );
     }
 
@@ -374,15 +375,11 @@ public class HazelcastOrganizationService {
         securePrincipalsManager.addPrincipalToPrincipal( roleKey, securePrincipalsManager.lookup( principal ) );
     }
 
-    private Collection<Role> getRolesInFull( UUID organizationId ) {
+    public Set<Role> getRoles( UUID organizationId ) {
         return securePrincipalsManager.getAllRolesInOrganization( organizationId )
                 .stream()
                 .map( sp -> (Role) sp )
-                .collect( Collectors.toList() );
-    }
-
-    public Set<Role> getRoles( UUID organizationId ) {
-        return StreamUtil.stream( getRolesInFull( organizationId ) ).collect( Collectors.toSet() );
+                .collect( Collectors.toSet() );
     }
 
     public void removeRoleFromUser( AclKey roleKey, Principal user ) {
