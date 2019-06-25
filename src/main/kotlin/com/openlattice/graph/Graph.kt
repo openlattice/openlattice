@@ -383,7 +383,10 @@ class Graph(
                     val stmt = connection.prepareStatement(NEIGHBORHOOD_SQL)
                     stmt.setObject(1, vertexId)
                     stmt.setObject(2, entitySetId)
-                    stmt.setObject(3, entitySetId)
+                    stmt.setObject(3, vertexId)
+                    stmt.setObject(4, entitySetId)
+                    stmt.setObject(5, vertexId)
+                    stmt.setObject(6, entitySetId)
                     val rs = stmt.executeQuery()
                     StatementHolder(connection, stmt, rs)
                 },
@@ -807,14 +810,13 @@ private val LOCK_BY_VERTEX_SQL = "$LOCK_SQL1 $VERTEX_FILTER_SQL $LOCK_SQL2"
 private val NEIGHBORHOOD_OF_ENTITY_SET_SQL = "SELECT * FROM ${E.name} WHERE " +
         "(${SRC_ENTITY_SET_ID.name} = ?) OR (${DST_ENTITY_SET_ID.name} = ? )"
 
-private val NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
-        "${ID_VALUE.name} = ? AND " +
-        "(( ${SRC_ENTITY_SET_ID.name} = ? AND ${COMPONENT_TYPES.name} = ${IdType.SRC.ordinal} ) OR " +
-        "( ${DST_ENTITY_SET_ID.name} = ? AND ${COMPONENT_TYPES.name} = ${IdType.DST.ordinal} ))"
+private val SRC_ID_SQL = "${SRC_ENTITY_KEY_ID.name} = ? AND ${SRC_ENTITY_SET_ID.name} = ? AND ${ID_TYPE.name} = ${IdType.SRC.ordinal}"
+private val DST_ID_SQL = "${DST_ENTITY_KEY_ID.name} = ? AND ${DST_ENTITY_SET_ID.name} = ? AND ${ID_TYPE.name} = ${IdType.DST.ordinal}"
+private val EDGE_ID_SQL = "${EDGE_ENTITY_KEY_ID.name} = ? AND ${EDGE_ENTITY_SET_ID.name} = ? AND ${ID_TYPE.name} = ${IdType.EDGE.ordinal}"
 
 private val SRC_IDS_SQL = "${SRC_ENTITY_KEY_ID.name} = ANY(?) AND ${SRC_ENTITY_SET_ID.name} = ? AND ${ID_TYPE.name} = ${IdType.SRC.ordinal}"
 private val DST_IDS_SQL = "${DST_ENTITY_KEY_ID.name} = ANY(?) AND ${DST_ENTITY_SET_ID.name} = ? AND ${ID_TYPE.name} = ${IdType.DST.ordinal}"
-private val EDGE_IDS_SQL = "${EDGE_ENTITY_KEY_ID.name} = ANY(?) AND ${EDGE_ENTITY_SET_ID.name} = ? AND ${ID_TYPE.name} = ${IdType.SRC.ordinal}"
+private val EDGE_IDS_SQL = "${EDGE_ENTITY_KEY_ID.name} = ANY(?) AND ${EDGE_ENTITY_SET_ID.name} = ? AND ${ID_TYPE.name} = ${IdType.EDGE.ordinal}"
 
 /**
  * Loads edges where either the source, destination, or association matches a set of entityKeyIds from a specific entity set
@@ -823,6 +825,14 @@ private val EDGE_IDS_SQL = "${EDGE_ENTITY_KEY_ID.name} = ANY(?) AND ${EDGE_ENTIT
  * 2, 4, 6: entitySetId
  */
 private val BULK_NEIGHBORHOOD_SQL = "SELECT * FROM ${E.name} WHERE ($SRC_IDS_SQL) OR ($DST_IDS_SQL) OR ($EDGE_IDS_SQL)"
+
+/**
+ * Loads edges where either the source or destination matches an EntityDataKey
+ *
+ * 1, 3, 5: entityKeyId
+ * 2, 4, 6: entitySetId
+ */
+private val NEIGHBORHOOD_SQL = "SELECT * FROM ${E.name} WHERE ($SRC_ID_SQL) OR ($DST_ID_SQL)"
 
 
 internal fun getFilteredNeighborhoodSql(filter: EntityNeighborsFilter, multipleEntitySetIds: Boolean): String {
