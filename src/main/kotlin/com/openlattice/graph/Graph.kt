@@ -23,7 +23,6 @@ package com.openlattice.graph
 
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.collect.ImmutableList
-import com.google.common.collect.MoreCollectors
 import com.google.common.collect.Multimaps
 import com.google.common.collect.SetMultimap
 import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking
@@ -31,8 +30,6 @@ import com.openlattice.analysis.requests.WeightedRankingAggregation
 import com.openlattice.data.DataEdgeKey
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.WriteEvent
-import com.openlattice.data.analytics.IncrementableWeightId
-import com.openlattice.data.storage.PostgresDataQueries
 import com.openlattice.data.storage.entityKeyIdColumns
 import com.openlattice.data.storage.getPartition
 import com.openlattice.data.storage.partitions.PartitionManager
@@ -47,8 +44,7 @@ import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn
 import com.openlattice.postgres.PostgresColumn.*
-import com.openlattice.postgres.PostgresTable.EDGES
-import com.openlattice.postgres.PostgresTable.ENTITY_KEY_IDS
+import com.openlattice.postgres.PostgresTable.*
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
@@ -62,7 +58,6 @@ import java.util.*
 import java.util.function.Function
 import java.util.function.Supplier
 import java.util.stream.Stream
-import kotlin.streams.toList
 
 /**
  *
@@ -181,6 +176,14 @@ class Graph(
         ps.setObject(startIndex + 3, ComponentType.DST.ordinal)
     }
 
+    private fun addKeyIds(ps: PreparedStatement, dataEdgeKey: DataEdgeKey, startIndex: Int = 1, partition: Int, component: ComponentType ) {
+        ps.setObject(startIndex, partition)
+        ps.setObject(startIndex + 1, component)
+        ps.setObject(startIndex + 2, dataEdgeKey.src.entityKeyId)
+        ps.setObject(startIndex + 3, dataEdgeKey.dst.entityKeyId)
+        ps.setObject(startIndex + 4, dataEdgeKey.edge.entityKeyId)
+    }
+
     private fun addEdgeKeyIds(ps: PreparedStatement, dataEdgeKey: DataEdgeKey, startIndex: Int = 1) {
         ps.setObject(startIndex, dataEdgeKey.edge.entityKeyId)
         ps.setObject(startIndex + 1, dataEdgeKey.src.entityKeyId)
@@ -223,6 +226,62 @@ class Graph(
             connection.autoCommit = true
 
             return clearCount
+        }
+    }
+
+    private fun newClearEdges( keys: Iterable<DataEdgeKey>): Int {
+        val version = -System.currentTimeMillis()
+        return lockAndOperateOnEdges( keys, NEW_CLEAR_BY_VERTEX_SQL ) { lockStmt, operationStmt, dataEdgeKey ->
+            addKeyIds(lockStmt, dataEdgeKey, partition=1, component=ComponentType.SRC)
+            addKeyIds(lockStmt, dataEdgeKey, partition=1, component=ComponentType.DST)
+            addKeyIds(lockStmt, dataEdgeKey, partition=1, component=ComponentType.EDGE)
+            lockStmt.addBatch()
+
+            clearEdgesAddVersion(operationStmt, version)
+            addKeyIds(lockStmt, dataEdgeKey, partition=1, component=ComponentType.SRC)
+            clearEdgesAddVersion(operationStmt, version)
+            addKeyIds(lockStmt, dataEdgeKey, partition=1, component=ComponentType.DST)
+            clearEdgesAddVersion(operationStmt, version)
+            addKeyIds(lockStmt, dataEdgeKey, partition=1, component=ComponentType.EDGE)
+            operationStmt.addBatch()
+        }
+    }
+
+    private fun newDeleteEdges(keys: Iterable<DataEdgeKey>): WriteEvent {
+        val updates = lockAndOperateOnEdges( keys, NEW_DELETE_BY_VERTEX_SQL) { lockStmt, operationStmt, dataEdgeKey ->
+            addSrcKeyIds(lockStmt, dataEdgeKey)
+            lockStmt.addBatch()
+            addDstKeyIds(lockStmt, dataEdgeKey)
+            lockStmt.addBatch()
+            addEdgeKeyIds(lockStmt, dataEdgeKey)
+            lockStmt.addBatch()
+
+            addSrcKeyIds(operationStmt, dataEdgeKey)
+            operationStmt.addBatch()
+            addDstKeyIds(operationStmt, dataEdgeKey)
+            operationStmt.addBatch()
+            addEdgeKeyIds(operationStmt, dataEdgeKey)
+            operationStmt.addBatch()
+        }
+        return WriteEvent(System.currentTimeMillis(), updates)
+    }
+
+    private fun lockAndOperateOnEdges(keys: Iterable<DataEdgeKey>,
+                                      statement: String,
+                                      statementSupplier: (lockStmt: PreparedStatement, operationStmt: PreparedStatement, dataEdgeKey: DataEdgeKey) -> Unit ): Int {
+        hds.connection.use { connection ->
+            connection.autoCommit = false
+            val psLocks = connection.prepareStatement(LOCK_BY_VERTEX_SQL)
+            val psExecute = connection.prepareStatement( statement )
+            keys.forEach { dataEdgeKey ->
+                statementSupplier(psLocks, psExecute, dataEdgeKey)
+            }
+            psLocks.executeBatch()
+            val updates = psExecute.executeBatch().sum()
+            connection.commit()
+
+            connection.autoCommit = true
+            return updates
         }
     }
 
@@ -662,6 +721,9 @@ enum class ComponentType {
     EDGE
 }
 
+// Drop-in replace NEW_KEY_COLUMNS for KEY_COLUMNS and delete is happy
+private val NEW_KEY_COLUMNS = E.primaryKey.map { col -> col.name }.toSet()
+
 private val KEY_COLUMNS = setOf(
         ID_VALUE,
         EDGE_COMP_1,
@@ -738,8 +800,11 @@ private val LOCK_SQL1 = "SELECT 1 FROM ${EDGES.name} WHERE "
 private const val LOCK_SQL2 = " FOR UPDATE"
 
 private val VERTEX_FILTER_SQL = "${KEY_COLUMNS.joinToString(" = ? AND ")} = ? "
+private val NEW_VERTEX_FILTER_SQL = "${NEW_KEY_COLUMNS.joinToString(" = ? AND ")} = ? "
 
 private val CLEAR_BY_VERTEX_SQL = "$CLEAR_SQL $VERTEX_FILTER_SQL"
+private val NEW_CLEAR_BY_VERTEX_SQL = "$CLEAR_SQL $NEW_VERTEX_FILTER_SQL"
+private val NEW_DELETE_BY_VERTEX_SQL = "$DELETE_SQL $NEW_VERTEX_FILTER_SQL"
 private val DELETE_BY_VERTEX_SQL = "$DELETE_SQL $VERTEX_FILTER_SQL"
 private val LOCK_BY_VERTEX_SQL = "$LOCK_SQL1 $VERTEX_FILTER_SQL $LOCK_SQL2"
 
