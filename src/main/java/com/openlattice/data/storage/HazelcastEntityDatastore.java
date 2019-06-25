@@ -36,6 +36,7 @@ import com.openlattice.edm.set.EntitySetFlag;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.linking.PostgresLinkingFeedbackService;
+import com.openlattice.postgres.streams.BasePostgresIterable;
 import com.openlattice.postgres.streams.PostgresIterable;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.commons.lang3.tuple.Pair;
@@ -90,17 +91,14 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     public Map<UUID, Map<UUID, Set<Object>>> getEntitySetData(
             UUID entitySetId,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
-        return dataQueryService.entitySetDataWithEntityKeyIdsAndPropertyTypeIds(
-                entitySetId,
-                Optional.empty(),
-                authorizedPropertyTypes,
-                EnumSet.noneOf( MetadataOption.class ),
-                Optional.empty() );
+        return dataQueryService.getEntitiesWithPropertyTypeIds(
+                ImmutableMap.of( entitySetId, Optional.empty() ),
+                ImmutableMap.of( entitySetId, authorizedPropertyTypes ) );
     }
 
     @Override
     @Timed
-    public PostgresIterable<UUID> getEntityKeyIdsInEntitySet( UUID entitySetId ) {
+    public BasePostgresIterable<UUID> getEntityKeyIdsInEntitySet( UUID entitySetId ) {
         return dataQueryService.getEntityKeyIdsInEntitySet( entitySetId );
     }
 
@@ -120,7 +118,8 @@ public class HazelcastEntityDatastore implements EntityDatastore {
 
         if ( !oldLinkingIds.isEmpty() ) {
             signalLinkedEntitiesUpserted(
-                    dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).stream()
+                    dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId )
+                            .stream()
                             .collect( Collectors.toSet() ),
                     oldLinkingIds,
                     entities.keySet() );
@@ -376,10 +375,10 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                 EnumSet.noneOf( MetadataOption.class ),
                 Optional.empty() )
                 : dataQueryService.streamableEntitySet(
-                entityKeyIds,
-                authorizedPropertyTypes,
-                EnumSet.noneOf( MetadataOption.class ),
-                Optional.empty() );
+                        entityKeyIds,
+                        authorizedPropertyTypes,
+                        EnumSet.noneOf( MetadataOption.class ),
+                        Optional.empty() );
 
         return new EntitySetData<>( orderedPropertyTypes, result );
     }
@@ -454,7 +453,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     /**
      * Retrieves the authorized, linked property data for the given linking ids of entity sets.
      *
-     * @param linkingIdsByEntitySetId              map of linked(normal) entity set ids and their linking ids
+     * @param linkingIdsByEntitySetId map of linked(normal) entity set ids and their linking ids
      * @param authorizedPropertyTypesByEntitySetId map of authorized property types
      */
     @Override
@@ -499,7 +498,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     /**
      * Loads data from multiple entity sets. Note: not implemented for linking entity sets!
      *
-     * @param entitySetIdsToEntityKeyIds         map of entity sets to entity keys for which the data should be loaded
+     * @param entitySetIdsToEntityKeyIds map of entity sets to entity keys for which the data should be loaded
      * @param authorizedPropertyTypesByEntitySet map of entity sets and the property types for which the user is authorized
      * @return map of entity set ids to list of entity data
      */

@@ -27,6 +27,7 @@ import com.google.common.collect.SetMultimap;
 import com.openlattice.data.storage.MetadataOption;
 import com.openlattice.edm.type.PropertyType;
 
+import com.openlattice.postgres.streams.BasePostgresIterable;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.stream.Stream;
@@ -44,7 +45,7 @@ public interface EntityDatastore {
             UUID entitySetId,
             Map<UUID, PropertyType> authorizedPropertyTypes );
 
-    PostgresIterable<UUID> getEntityKeyIdsInEntitySet( UUID entitySetId );
+    BasePostgresIterable<UUID> getEntityKeyIdsInEntitySet( UUID entitySetId );
 
     Stream<SetMultimap<FullQualifiedName, Object>> getEntities(
             UUID entitySetId,
