@@ -175,7 +175,7 @@ import com.openlattice.edm.type.Analyzer;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
-import com.openlattice.graph.ComponentType;
+import com.openlattice.graph.IdType;
 import com.openlattice.graph.NeighborhoodQuery;
 import com.openlattice.graph.NeighborhoodSelection;
 import com.openlattice.graph.edge.Edge;
@@ -242,7 +242,7 @@ public final class ResultSetAdapters {
     private static final ObjectMapper                       mapper               = ObjectMappers.newJsonMapper();
     private static final TypeReference<Map<String, Object>> alertMetadataTypeRef = new TypeReference<Map<String, Object>>() {
     };
-    private static final ComponentType[]                    componentTypes       = ComponentType.values();
+    private static final IdType[]                           ID_TYPES             = IdType.values();
 
     @NotNull public static SmsInformationKey smsInformationKey(
             @NotNull ResultSet rs ) throws SQLException {
@@ -390,11 +390,11 @@ public final class ResultSetAdapters {
     public static DataEdgeKey edgeKey( ResultSet rs ) throws SQLException {
         final int typeId = rs.getInt( COMPONENT_TYPES_FIELD );
 
-        if ( typeId >= componentTypes.length ) {
+        if ( typeId >= ID_TYPES.length ) {
             throw new IllegalStateException( "Type " + typeId + " is not recognized." );
         }
 
-        final ComponentType type = componentTypes[ typeId ];
+        final IdType type = ID_TYPES[ typeId ];
         final UUID srcEntityKeyId;
         final UUID dstEntityKeyId;
         final UUID edgeEntityKeyId;
