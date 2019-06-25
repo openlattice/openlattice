@@ -86,9 +86,9 @@ class Graph(
             val partitionsInfoByEntitySet = mutableMapOf<UUID, PartitionsInfo>()
             ps.use {
                 keys.forEach { dataEdgeKey ->
-                    createAddSrcRowToBatch(ps, version, versions, dataEdgeKey)
-                    createAddDstRowToBatch(ps, version, versions, dataEdgeKey)
-                    createAddEdgeRowToBatch(ps, version, versions, dataEdgeKey)
+                    bindColumnsForEdge(ps, dataEdgeKey, version, versions, ComponentType.SRC, dataEdgeKey.src, partitionsInfoByEntitySet)
+                    bindColumnsForEdge(ps, dataEdgeKey, version, versions, ComponentType.DST, dataEdgeKey.dst, partitionsInfoByEntitySet)
+                    bindColumnsForEdge(ps, dataEdgeKey, version, versions, ComponentType.EDGE, dataEdgeKey.edge, partitionsInfoByEntitySet)
                 }
                 return WriteEvent(version, ps.executeBatch().sum())
             }
@@ -100,11 +100,19 @@ class Graph(
             dataEdgeKey: DataEdgeKey,
             version: Long,
             versions: java.sql.Array,
-            entityDataKey: EntityDataKey,
-            partitionsInfo: PartitionsInfo,
-            startIndex: Int = 1): Int {
-        var index = startIndex
-        ps.setObject(index++, getPartition(entityDataKey.entityKeyId, partitionsInfo.partitions.toList()))
+            idType: ComponentType,
+            edk: EntityDataKey,
+            partitionsInfoByEntitySet: MutableMap<UUID, PartitionsInfo>) {
+
+        if (!partitionsInfoByEntitySet.containsKey(edk.entitySetId)) {
+            partitionsInfoByEntitySet[edk.entitySetId] = partitionManager.getEntitySetPartitionsInfo(edk.entitySetId)
+        }
+        val partitionsInfo = partitionsInfoByEntitySet.getValue(edk.entitySetId)
+
+        var index = 1
+
+        ps.setObject(index++, getPartition(edk.entityKeyId, partitionsInfo.partitions.toList()))
+        ps.setInt(index++, idType.ordinal)
         ps.setObject(index++, dataEdgeKey.src.entitySetId)
         ps.setObject(index++, dataEdgeKey.src.entityKeyId)
         ps.setObject(index++, dataEdgeKey.dst.entitySetId)
@@ -114,7 +122,7 @@ class Graph(
         ps.setLong(index++, version)
         ps.setArray(index++, versions)
         ps.setObject(index++, partitionsInfo.partitionsVersion)
-        return index
+        ps.addBatch()
     }
 
     /*
@@ -729,27 +737,9 @@ enum class ComponentType {
     EDGE
 }
 
-// Drop-in replace NEW_KEY_COLUMNS for KEY_COLUMNS and delete is happy
-private val NEW_KEY_COLUMNS = E.primaryKey.map { col -> col.name }.toSet()
+private val KEY_COLUMNS = E.primaryKey.map { col -> col.name }.toSet()
 
-private val KEY_COLUMNS = setOf(
-        ID_VALUE,
-        EDGE_COMP_1,
-        EDGE_COMP_2,
-        COMPONENT_TYPES
-).map { it.name }.toSet()
-
-private val INSERT_COLUMNS = setOf(
-        ID_VALUE,
-        EDGE_COMP_1,
-        EDGE_COMP_2,
-        COMPONENT_TYPES,
-        SRC_ENTITY_SET_ID,
-        DST_ENTITY_SET_ID,
-        EDGE_ENTITY_SET_ID,
-        VERSION,
-        VERSIONS
-).map { it.name }.toSet()
+private val INSERT_COLUMNS = E.columns.map { it.name }.toSet()
 
 /**
  * Builds the SQL query for top utilizers.
@@ -797,7 +787,7 @@ internal fun getTopUtilizersFromDst(entitySetId: UUID, filters: SetMultimap<UUID
 }
 
 
-private val UPSERT_SQL = "INSERT INTO ${EDGES.name} (${INSERT_COLUMNS.joinToString(",")}) VALUES (?,?,?,?,?,?,?,?,?) " +
+private val UPSERT_SQL = "INSERT INTO ${E.name} (${INSERT_COLUMNS.joinToString(",")}) VALUES (${(0 until INSERT_COLUMNS.size).map { "?" }.joinToString { "," }}) " +
         "ON CONFLICT (${KEY_COLUMNS.joinToString(",")}) " +
         "DO UPDATE SET version = EXCLUDED.version, versions = ${EDGES.name}.versions || EXCLUDED.version"
 
@@ -808,7 +798,7 @@ private val LOCK_SQL1 = "SELECT 1 FROM ${EDGES.name} WHERE "
 private const val LOCK_SQL2 = " FOR UPDATE"
 
 private val VERTEX_FILTER_SQL = "${KEY_COLUMNS.joinToString(" = ? AND ")} = ? "
-private val NEW_VERTEX_FILTER_SQL = "${NEW_KEY_COLUMNS.joinToString(" = ? AND ")} = ? "
+private val NEW_VERTEX_FILTER_SQL = "${KEY_COLUMNS.joinToString(" = ? AND ")} = ? "
 
 private val CLEAR_BY_VERTEX_SQL = "$CLEAR_SQL $VERTEX_FILTER_SQL"
 private val NEW_CLEAR_BY_VERTEX_SQL = "$CLEAR_SQL $NEW_VERTEX_FILTER_SQL"
