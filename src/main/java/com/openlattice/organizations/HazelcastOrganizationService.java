@@ -287,7 +287,10 @@ public class HazelcastOrganizationService {
 
     public void addMembers( UUID organizationId, Set<Principal> members ) {
         addMembers( new AclKey( organizationId ), members );
-        eventBus.post( new MembersAddedToOrganizationEvent( organizationId, new PrincipalSet( members ) ) );
+        final var securablePrincipals = securePrincipalsManager.getSecurablePrincipals( members );
+        eventBus.post(
+                new MembersAddedToOrganizationEvent( organizationId, new SecurablePrincipalList( securablePrincipals ) )
+        );
     }
 
     private void addMembers( AclKey orgAclKey, Set<Principal> members ) {
@@ -320,25 +323,36 @@ public class HazelcastOrganizationService {
     }
 
     public void removeMembers( UUID organizationId, Set<Principal> members ) {
-        removeRolesFromMembers(
-                getRolesInFull( organizationId ).stream().map( Role::getAclKey ),
-                members
-                        .stream()
-                        .filter( m -> m.getType().equals( PrincipalType.USER ) )
-                        .map( securePrincipalsManager::lookup ) );
+        final var users = members.stream()
+                .filter( m -> m.getType().equals( PrincipalType.USER ) )
+                .collect( Collectors.toList() );
+        final var securablePrincipals = securePrincipalsManager.getSecurablePrincipals( users );
+
+        removeRolesFromMembers( getRolesInFull( organizationId ).stream().map( Role::getAclKey ), securablePrincipals );
         membersOf.executeOnKey( organizationId, new OrganizationMemberRemover( members ) );
-
         final AclKey orgAclKey = new AclKey( organizationId );
-        members.stream().filter( PrincipalType.USER::equals )
-                .map( securePrincipalsManager::lookup )
-                .forEach( target -> securePrincipalsManager.removePrincipalFromPrincipal( orgAclKey, target ) );
+        removeOrganizationFromMembers( orgAclKey, securablePrincipals );
 
-        eventBus.post( new MembersRemovedFromOrganizationEvent( organizationId, new PrincipalSet( members ) ) );
+        eventBus.post(
+                new MembersRemovedFromOrganizationEvent(
+                        organizationId,
+                        new SecurablePrincipalList( securablePrincipals )
+                )
+        );
     }
 
-    private void removeRolesFromMembers( Stream<AclKey> roles, Stream<AclKey> members ) {
-        members.forEach( member -> roles
-                .forEach( role -> securePrincipalsManager.removePrincipalFromPrincipal( role, member ) ) );
+    private void removeRolesFromMembers( Stream<AclKey> roles, Collection<SecurablePrincipal> members ) {
+        members.forEach( securablePrincipal ->
+                roles.forEach( role ->
+                        securePrincipalsManager.removePrincipalFromPrincipal( role, securablePrincipal.getAclKey() )
+                )
+        );
+    }
+
+    private void removeOrganizationFromMembers( AclKey organization, Collection<SecurablePrincipal> members ) {
+        members.forEach( securablePrincipal ->
+                securePrincipalsManager.removePrincipalFromPrincipal( organization, securablePrincipal.getAclKey() )
+        );
     }
 
     public void createRoleIfNotExists( Principal callingUser, Role role ) {

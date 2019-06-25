@@ -27,16 +27,15 @@ import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcesso
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.OrganizationAssembly
 import com.openlattice.assembler.PostgresDatabases
-import com.openlattice.organizations.PrincipalSet
+import com.openlattice.authorization.SecurablePrincipal
 import org.slf4j.LoggerFactory
-import java.lang.IllegalStateException
 import java.util.*
 
 private val logger = LoggerFactory.getLogger(RemoveMembersFromOrganizationAssemblyProcessor::class.java)
 private const val NOT_INITIALIZED = "Assembler Connection Manager not initialized."
 
-data class RemoveMembersFromOrganizationAssemblyProcessor(val members: PrincipalSet)
-    : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(), Offloadable, ReadOnly {
+data class RemoveMembersFromOrganizationAssemblyProcessor(val principals: Collection<SecurablePrincipal>)
+    : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(false), Offloadable, ReadOnly {
 
     @Transient
     private var acm: AssemblerConnectionManager? = null
@@ -45,14 +44,16 @@ data class RemoveMembersFromOrganizationAssemblyProcessor(val members: Principal
         val organizationId = entry.key
         val assembly = entry.value
         if (assembly == null) {
-            logger.error("Encountered null assembly while trying to remove members $members from organization " +
+            logger.error("Encountered null assembly while trying to remove principals $principals from organization " +
                     "$organizationId.")
         } else {
             if (acm == null) {
                 throw IllegalStateException(NOT_INITIALIZED)
             }
             val dbName = PostgresDatabases.buildOrganizationDatabaseName(organizationId)
-            acm!!.connect(dbName).use { dataSource -> acm!!.removeMembersFromOrganization(dbName, dataSource, members) }
+            acm!!.connect(dbName).use {
+                dataSource -> acm!!.removeMembersFromOrganization(dbName, dataSource, principals)
+            }
         }
 
         return null

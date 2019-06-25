@@ -28,12 +28,12 @@ import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcesso
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.OrganizationAssembly
 import com.openlattice.assembler.PostgresDatabases
-import com.openlattice.organizations.PrincipalSet
+import com.openlattice.authorization.SecurablePrincipal
 import java.lang.IllegalStateException
 import java.util.*
 
-data class AddMembersToOrganizationAssemblyProcessor(val newMembers: PrincipalSet)
-    : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(), Offloadable, ReadOnly {
+data class AddMembersToOrganizationAssemblyProcessor(val newPrincipals: Collection<SecurablePrincipal>)
+    : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(false), Offloadable, ReadOnly {
 
     @Transient
     private lateinit var acm: AssemblerConnectionManager
@@ -42,11 +42,11 @@ data class AddMembersToOrganizationAssemblyProcessor(val newMembers: PrincipalSe
         val organizationId = entry.key
         val assembly = entry.value
         if (assembly == null) {
-            throw IllegalStateException("Encountered null assembly while trying to add new members $newMembers to " +
-                    "organization $organizationId.")
+            throw IllegalStateException("Encountered null assembly while trying to add new principals $newPrincipals " +
+                    "to organization $organizationId.")
         } else {
             val dbName = PostgresDatabases.buildOrganizationDatabaseName(organizationId)
-            acm.connect(dbName).use { dataSource -> acm.addMembersToOrganization(dbName, dataSource, newMembers) }
+            acm.connect(dbName).use { dataSource -> acm.configureNewUsersInDatabase(dbName, dataSource, newPrincipals) }
         }
 
         return null

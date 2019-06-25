@@ -24,11 +24,13 @@ package com.openlattice.hazelcast.serializers
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.processors.AddMembersToOrganizationAssemblyProcessor
-import com.openlattice.authorization.Principal
-import com.openlattice.authorization.PrincipalType
-import com.openlattice.organizations.PrincipalSet
+import com.openlattice.authorization.AclKey
+import com.openlattice.authorization.SecurablePrincipal
+import com.openlattice.mapstores.TestDataFactory
+import com.openlattice.organizations.SecurablePrincipalList
 import org.apache.commons.lang3.RandomStringUtils
 import org.mockito.Mockito
+import java.util.*
 
 class AddMembersToOrganizationAssemblyProcessorStreamSerializerTest
     : AbstractStreamSerializerTest<AddMembersToOrganizationAssemblyProcessorStreamSerializer,
@@ -42,7 +44,8 @@ class AddMembersToOrganizationAssemblyProcessorStreamSerializerTest
 
     override fun createInput(): AddMembersToOrganizationAssemblyProcessor {
         return AddMembersToOrganizationAssemblyProcessor(
-                PrincipalSet(setOf(Principal(PrincipalType.USER, RandomStringUtils.randomAlphabetic(5)))))
+                SecurablePrincipalListStreamSerializerTest.createSecurablePrincipalList()
+        )
     }
 
 }

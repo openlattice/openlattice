@@ -172,7 +172,7 @@ class AssemblerConnectionManager(
 
     fun addMembersToOrganization(dbName: String, dataSource: HikariDataSource, members: Set<Principal>) {
         logger.info("Configuring members for organization database {}", dbName)
-        members
+        val securablePrincipalsToAdd = members
                 .filter {
                     it.id != SystemRole.OPENLATTICE.principal.id && it.id != SystemRole.ADMIN.principal.id
                 }
@@ -183,24 +183,32 @@ class AssemblerConnectionManager(
                     }
                     return@filter principalExists
                 } //There are some bad principals in the member list some how-- probably from testing.
-                .forEach { principal ->
-                    val securablePrincipal = securePrincipalsManager.getPrincipal(principal.id)
-                    configureUserInDatabase(
-                            dataSource,
-                            dbName,
-                            buildPostgresUsername(securablePrincipal)
-                    )
-                }
+                .map { securePrincipalsManager.getPrincipal(it.id) }
+
+        configureNewUsersInDatabase(dbName, dataSource, securablePrincipalsToAdd)
     }
 
-    fun removeMembersFromOrganization(dbName: String, dataSource: HikariDataSource, members: Set<Principal>) {
-        members.forEach { principal ->
-                    revokeConnectAndSchemaUsage(
-                            dataSource,
-                            dbName,
-                            buildPostgresUsername(securePrincipalsManager.getPrincipal(principal.id))
-                    )
-                }
+    fun configureNewUsersInDatabase(
+            dbName: String,
+            dataSource: HikariDataSource,
+            principals: Collection<SecurablePrincipal>) {
+        principals.forEach {
+            configureUserInDatabase(dataSource, dbName, buildPostgresUsername(it))
+        }
+    }
+
+    fun removeMembersFromOrganization(
+            dbName: String,
+            dataSource: HikariDataSource,
+            members: Collection<SecurablePrincipal>
+    ) {
+        members.forEach { securablePrincipal ->
+            revokeConnectAndSchemaUsage(
+                    dataSource,
+                    dbName,
+                    buildPostgresUsername(securablePrincipal)
+            )
+        }
     }
 
     private fun createOrganizationDatabase(organizationId: UUID, dbname: String) {
