@@ -724,12 +724,12 @@ internal fun getTopUtilizersFromDst(entitySetId: UUID, filters: SetMultimap<UUID
 
 private val UPSERT_SQL = "INSERT INTO ${E.name} (${INSERT_COLUMNS.joinToString(",")}) VALUES (${(0 until INSERT_COLUMNS.size).map { "?" }.joinToString { "," }}) " +
         "ON CONFLICT (${KEY_COLUMNS.joinToString(",")}) " +
-        "DO UPDATE SET version = EXCLUDED.version, versions = ${EDGES.name}.versions || EXCLUDED.version"
+        "DO UPDATE SET version = EXCLUDED.version, versions = ${E.name}.versions || EXCLUDED.version"
 
 
-private val CLEAR_SQL = "UPDATE ${EDGES.name} SET version = ?, versions = versions || ? WHERE "
-private val DELETE_SQL = "DELETE FROM ${EDGES.name} WHERE "
-private val LOCK_SQL1 = "SELECT 1 FROM ${EDGES.name} WHERE "
+private val CLEAR_SQL = "UPDATE ${E.name} SET version = ?, versions = versions || ? WHERE "
+private val DELETE_SQL = "DELETE FROM ${E.name} WHERE "
+private val LOCK_SQL1 = "SELECT 1 FROM ${E.name} WHERE "
 private const val LOCK_SQL2 = " FOR UPDATE"
 
 private val VERTEX_FILTER_SQL = "${KEY_COLUMNS.joinToString(" = ? AND ")} = ? "
