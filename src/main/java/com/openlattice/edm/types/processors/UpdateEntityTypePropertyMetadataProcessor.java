@@ -6,12 +6,14 @@ import com.openlattice.edm.type.EntityTypePropertyKey;
 import com.openlattice.edm.type.EntityTypePropertyMetadata;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
+import java.io.Serializable;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class UpdateEntityTypePropertyMetadataProcessor        extends
-        AbstractRhizomeEntryProcessor<EntityTypePropertyKey, EntityTypePropertyMetadata, Object> {
+public class UpdateEntityTypePropertyMetadataProcessor extends
+        AbstractRhizomeEntryProcessor<EntityTypePropertyKey, EntityTypePropertyMetadata, Object> implements
+        Serializable {
     private static final long           serialVersionUID = 8300328089856740121L;
     @SuppressFBWarnings( value = "SE_BAD_FIELD", justification = "Custom Stream Serializer is implemented" )
 
