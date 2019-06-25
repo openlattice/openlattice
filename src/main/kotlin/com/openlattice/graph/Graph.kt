@@ -269,11 +269,9 @@ class Graph(
             addKeyIds(lockStmt, dataEdgeKey, IdType.EDGE)
             lockStmt.addBatch()
 
-            addSrcKeyIds(operationStmt, dataEdgeKey)
-            operationStmt.addBatch()
-            addDstKeyIds(operationStmt, dataEdgeKey)
-            operationStmt.addBatch()
-            addEdgeKeyIds(operationStmt, dataEdgeKey)
+            addKeyIds(operationStmt, dataEdgeKey, ComponentType.SRC)
+            addKeyIds(operationStmt, dataEdgeKey, ComponentType.DST)
+            addKeyIds(operationStmt, dataEdgeKey, ComponentType.EDGE)
             operationStmt.addBatch()
         }
         return WriteEvent(System.currentTimeMillis(), updates)
