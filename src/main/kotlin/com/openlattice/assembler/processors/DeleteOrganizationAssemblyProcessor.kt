@@ -35,7 +35,7 @@ private val logger = LoggerFactory.getLogger(DeleteOrganizationAssemblyProcessor
 private const val NOT_INITIALIZED = "Assembler Connection Manager not initialized."
 
 class DeleteOrganizationAssemblyProcessor
-    : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(), Offloadable, ReadOnly {
+    : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(false), Offloadable, ReadOnly {
     @Transient
     private var acm: AssemblerConnectionManager? = null
 

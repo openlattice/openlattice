@@ -33,7 +33,7 @@ import java.util.UUID
 private const val NOT_INITIALIZED = "Assembler Connection Manager not initialized."
 
 class MaterializeEdgesProcessor
-    : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(), Offloadable, ReadOnly {
+    : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(false), Offloadable, ReadOnly {
     @Transient
     private var acm: AssemblerConnectionManager? = null
 
