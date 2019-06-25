@@ -614,7 +614,7 @@ class Graph(
         val neighbors: MutableList<NeighborSets> = ArrayList()
 
         val query = "SELECT DISTINCT ${SRC_ENTITY_SET_ID.name},${EDGE_ENTITY_SET_ID.name}, ${DST_ENTITY_SET_ID.name} " +
-                "FROM ${EDGES.name} " +
+                "FROM ${E.name} " +
                 "WHERE ${SRC_ENTITY_SET_ID.name} = ANY(?) OR ${DST_ENTITY_SET_ID.name} = ANY(?)"
         val connection = hds.connection
         connection.use {
