@@ -109,21 +109,10 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             Map<UUID, Map<UUID, Set<Object>>> entities,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
         // need to collect linking ids before writes to the entities
-        Set<UUID> oldLinkingIds = dataQueryService
-                .getLinkingIds( Map.of( entitySetId, Optional.of( entities.keySet() ) ) )
-                .values().stream().flatMap( Set::stream ).collect( Collectors.toSet() );
 
         WriteEvent writeEvent = dataQueryService.upsertEntities( entitySetId, entities, authorizedPropertyTypes );
         signalCreatedEntities( entitySetId, entities.keySet() );
 
-        if ( !oldLinkingIds.isEmpty() ) {
-            signalLinkedEntitiesUpserted(
-                    dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId )
-                            .stream()
-                            .collect( Collectors.toSet() ),
-                    oldLinkingIds,
-                    entities.keySet() );
-        }
         return writeEvent;
     }
 
@@ -134,20 +123,10 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             Map<UUID, Map<UUID, Set<Object>>> entities,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
         // need to collect linking ids before writes to the entities
-        Set<UUID> oldLinkingIds = dataQueryService
-                .getLinkingIds( Map.of( entitySetId, Optional.of( entities.keySet() ) ) )
-                .values().stream().flatMap( Set::stream ).collect( Collectors.toSet() );
 
         WriteEvent writeEvent = dataQueryService.upsertEntities( entitySetId, entities, authorizedPropertyTypes );
         signalCreatedEntities( entitySetId, entities.keySet() );
 
-        if ( !oldLinkingIds.isEmpty() ) {
-            signalLinkedEntitiesUpserted(
-                    dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).stream()
-                            .collect( Collectors.toSet() ),
-                    oldLinkingIds,
-                    entities.keySet() );
-        }
         return writeEvent;
     }
 
@@ -157,20 +136,10 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             Map<UUID, Map<UUID, Set<Object>>> entities,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
         // need to collect linking ids before writes to the entities
-        Set<UUID> oldLinkingIds = dataQueryService
-                .getLinkingIds( Map.of( entitySetId, Optional.of( entities.keySet() ) ) )
-                .values().stream().flatMap( Set::stream ).collect( Collectors.toSet() );
 
         final var writeEvent = dataQueryService.replaceEntities( entitySetId, entities, authorizedPropertyTypes );
         signalCreatedEntities( entitySetId, entities.keySet() );
 
-        if ( !oldLinkingIds.isEmpty() ) {
-            signalLinkedEntitiesUpserted(
-                    dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).stream()
-                            .collect( Collectors.toSet() ),
-                    oldLinkingIds,
-                    entities.keySet() );
-        }
         return writeEvent;
     }
 

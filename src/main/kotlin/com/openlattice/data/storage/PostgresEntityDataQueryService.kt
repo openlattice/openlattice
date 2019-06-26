@@ -37,6 +37,10 @@ class PostgresEntityDataQueryService(
         private val logger = LoggerFactory.getLogger(PostgresEntityDataQueryService::class.java)
     }
 
+    fun getLinkingEntitySetIdsOfEntitySet( entitySetId : UUID ) {
+
+    }
+
     @JvmOverloads
     fun getEntityKeyIdsInEntitySet(
             entitySetId: UUID,
@@ -45,7 +49,7 @@ class PostgresEntityDataQueryService(
         return if (version.isPresent) {
             throw NotImplementedException("BLAME MTR. Not yet implemented.")
         } else {
-            BasePostgresIterable<UUID>(
+            BasePostgresIterable(
                     PreparedStatementHolderSupplier(
                             hds,
                             "SELECT ${ID_VALUE.name} FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${VERSION.name} > 0",
