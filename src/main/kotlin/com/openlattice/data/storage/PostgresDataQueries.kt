@@ -10,9 +10,8 @@ import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresDataTables.Companion.getColumnDefinition
 import com.openlattice.postgres.PostgresTable.DATA
+import java.lang.IllegalArgumentException
 import java.sql.PreparedStatement
-
-import com.openlattice.postgres.PostgresTable.*
 
 import java.util.*
 
@@ -106,7 +105,6 @@ private fun buildPreparableFiltersClause(
     val bindList = propertyTypeFilters.entries
             .filter { (_, filters) -> filters.isEmpty() }
             .flatMap { (propertyTypeId, filters) ->
-                if (filters.isEmpty()) return@flatMap listOf<BindDetails>()
                 val nCol = PostgresDataTables
                         .nonIndexedValueColumn(
                                 PostgresEdmTypeConverter.map(propertyTypes.getValue(propertyTypeId).datatype)
@@ -161,12 +159,17 @@ internal fun doBind(ps: PreparedStatement, info: SqlBindInfo) {
         is Short -> ps.setShort(info.bindIndex, v)
         is java.sql.Array -> ps.setArray(info.bindIndex, v)
         //TODO: Fix this bustedness.
-        is Collection<*> -> when (v.first()) {
-            is String -> PostgresArrays.createTextArray(ps.connection, v as Collection<String>)
-            is Int -> PostgresArrays.createIntArray(ps.connection, v as Collection<Int>)
-            is Long -> PostgresArrays.createLongArray(ps.connection, v as Collection<Long>)
-            is Boolean -> PostgresArrays.createBooleanArray(ps.connection, v as Collection<Boolean>)
-            is Short -> PostgresArrays.createShortArray(ps.connection, v as Collection<Short>)
+        is Collection<*> -> {
+            val array = when (val elem = v.first()!!) {
+                is String -> PostgresArrays.createTextArray(ps.connection, v as Collection<String>)
+                is Int -> PostgresArrays.createIntArray(ps.connection, v as Collection<Int>)
+                is Long -> PostgresArrays.createLongArray(ps.connection, v as Collection<Long>)
+                is Boolean -> PostgresArrays.createBooleanArray(ps.connection, v as Collection<Boolean>)
+                is Short -> PostgresArrays.createShortArray(ps.connection, v as Collection<Short>)
+                else -> throw IllegalArgumentException("Collection with elements of ${elem.javaClass} are not " +
+                        "supported in filters")
+            }
+            ps.setArray(info.bindIndex, array)
         }
         else -> ps.setObject(info.bindIndex, v)
     }
