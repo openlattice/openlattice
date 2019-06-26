@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018. OpenLattice, Inc.
+ * Copyright (C) 2019. OpenLattice, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,15 +19,20 @@
  *
  */
 
-package com.openlattice.analysis.requests;
+package com.openlattice.graph
+
+import com.openlattice.analysis.requests.Filter
+import java.util.*
 
 /**
- * Types of supported aggregations
+ *
+ * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public enum AggregationType {
-    SUM,
-    AVG,
-    MIN,
-    MAX,
-    COUNT
-}
+data class NeighborhoodSelection(
+        val entityTypeIds: Optional<Set<UUID>> = Optional.empty(),
+        val entitySetIds: Optional<Set<UUID>> = Optional.empty(),
+        val entityFilters: Optional<Map<UUID, Map<UUID, Set<Filter>>>> = Optional.empty(),
+        val associationTypeIds: Optional<Set<UUID>> = Optional.empty(),
+        val associationEntitySetIds: Optional<Set<UUID>> = Optional.empty(),
+        val associationFilters: Optional<Map<UUID, Map<UUID, Set<Filter>>>> = Optional.empty()
+)

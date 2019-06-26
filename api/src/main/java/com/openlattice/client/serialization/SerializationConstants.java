@@ -62,6 +62,8 @@ public final class SerializationConstants {
     public static final String BASE_TYPE_FIELD                  = "baseType";
     public static final String BIDIRECTIONAL                    = "bidirectional";
     public static final String BLOCK_ID                         = "blockId";
+    public static final String CALCULATION_TYPE                 = "calculationType";
+    public static final String CALCULATIONS                     = "calculations";
     public static final String CATEGORY                         = "category";
     public static final String CHILD_CLAUSES                    = "childClauses";
     public static final String CHILD_QUERIES                    = "childQueries";
@@ -88,6 +90,7 @@ public final class SerializationConstants {
     public static final String DST_ENTITY_SET_ID                = "dstEntitySetId";
     public static final String EDGE                             = "edge";
     public static final String EDGE_COUNT                       = "edgeCount";
+    public static final String EDGE_ENTITY_SET_ID               = "edgeEntitySetId";
     public static final String EDM_TEMPLATES_FIELD              = "edmTemplates";
     public static final String ELAPSED_MILLIS                   = "elapsedMillis";
     public static final String EMAILS_FIELD                     = "emails";
@@ -120,11 +123,13 @@ public final class SerializationConstants {
     public static final String EXPLANATION                      = "explanation";
     public static final String EXTERNAL                         = "external";
     public static final String FEATURES                         = "features";
+    public static final String FILTER                           = "filter";
     public static final String FILTERS                          = "filters";
     public static final String FIRST                            = "first";
     public static final String FLAGS_FIELD                      = "flags";
     public static final String FQN                              = "fqn";
     public static final String FUZZY                            = "fuzzy";
+    public static final String GROUPINGS                        = "groupings";
     public static final String GTE                              = "gte";
     public static final String HASH                             = "hash";
     public static final String HITS                             = "hits";
@@ -172,10 +177,12 @@ public final class SerializationConstants {
     public static final String NUM_HITS                         = "numHits";
     public static final String ORGANIZATION                     = "organization";
     public static final String ORGANIZATION_ID                  = "organizationId";
+    public static final String ORIENTATION                      = "orientation";
     public static final String PAGING_TOKEN                     = "pagingToken";
     public static final String PARENT_TYPE_FIELD                = "parentType";
     public static final String PERMISSIONS                      = "permissions";
     public static final String PERMISSIONS_MAP                  = "permissionsMap";
+    public static final String PHONE_NUMBER                     = "phoneNumber";
     public static final String PII_FIELD                        = "pii";
     public static final String PRESENT                          = "present";
     public static final String PRINCIPAL                        = "principal";
@@ -231,6 +238,7 @@ public final class SerializationConstants {
     public static final String URL                              = "url";
     public static final String USER_ID                          = "userId";
     public static final String VALUE_FIELD                      = "value";
+    public static final String VALUES                           = "values";
     public static final String VALUE_MAPPER                     = "valueMapper";
     public static final String VERSION                          = "version";
     public static final String VERSIONS                         = "versions";

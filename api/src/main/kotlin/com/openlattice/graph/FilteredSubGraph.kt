@@ -28,6 +28,5 @@ import kotlin.collections.LinkedHashSet
 data class FilteredSubGraph (
         val ids: LinkedHashSet<EntityDataKey>,
         val entities: List<Map<UUID, Set<Any>>>,
-        val edges : Map<UUID, List<Pair<Int,Int>>>
-
+        val edges : Map<UUID, List<AssociationReference>>
 )

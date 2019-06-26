@@ -232,6 +232,10 @@ public final class TestDataFactory {
     }
 
     public static PropertyType propertyType() {
+        return propertyType( INDEX_TYPES[ r.nextInt( INDEX_TYPES.length ) ]);
+    }
+
+    public static PropertyType propertyType(IndexType postgresIndexType) {
         return new PropertyType(
                 UUID.randomUUID(),
                 fqn(),
@@ -241,7 +245,7 @@ public final class TestDataFactory {
                 EdmPrimitiveTypeKind.String,
                 Optional.of( r.nextBoolean() ),
                 Optional.of( analyzers[ r.nextInt( analyzers.length ) ] ),
-                Optional.of( INDEX_TYPES[ r.nextInt( INDEX_TYPES.length ) ] ) );
+                Optional.of( postgresIndexType ) );
     }
 
     public static PropertyType binaryPropertyType() {
@@ -266,7 +270,8 @@ public final class TestDataFactory {
                 ImmutableSet.of( RandomStringUtils.randomAlphanumeric( 5 ), RandomStringUtils.randomAlphanumeric( 5 ) ),
                 ImmutableSet.of( userPrincipal() ),
                 ImmutableSet.of( role() ),
-                ImmutableSet.of( UUID.randomUUID() ) );
+                ImmutableSet.of( UUID.randomUUID() ),
+                Optional.empty() );
     }
 
     public static Principal organizationPrincipal() {

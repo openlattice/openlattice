@@ -18,21 +18,14 @@
 
 package com.openlattice.organization;
 
-import java.util.EnumSet;
+import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.organization.roles.Role;
+import retrofit2.http.*;
+
+import java.util.EnumSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-
-import com.openlattice.directory.pojo.Auth0UserBasic;
-
-import retrofit2.http.Body;
-import retrofit2.http.DELETE;
-import retrofit2.http.GET;
-import retrofit2.http.HTTP;
-import retrofit2.http.POST;
-import retrofit2.http.PUT;
-import retrofit2.http.Path;
 
 public interface OrganizationsApi {
     /*
@@ -72,8 +65,12 @@ public interface OrganizationsApi {
 
     String SYNCHRONIZE       = "/synchronize";
     String REFRESH           = "/refresh";
+    String REFRESH_RATE      = "/refresh-rate";
     String SET_ID            = "setId";
     String SET_ID_PATH       = "/{" + SET_ID + "}";
+
+    String SET_PHONE         = "setPhone";
+    String SET_PHONE_PATH    = "/{" + SET_PHONE + "}";
 
 
     @GET( BASE )
@@ -87,6 +84,9 @@ public interface OrganizationsApi {
 
     @DELETE( BASE + ID_PATH )
     Void destroyOrganization( @Path( ID ) UUID organizationId );
+
+    @POST( BASE + ID_PATH + SET_PHONE_PATH )
+    Void setOrganizationPhoneNumber( @Path( ID ) UUID organizationId, @Path( SET_PHONE ) String phoneNumber );
 
     @GET( BASE + ID_PATH + INTEGRATION )
     OrganizationIntegrationAccount getOrganizationIntegrationAccount(@Path(ID) UUID organizationId );
@@ -118,12 +118,13 @@ public interface OrganizationsApi {
     /**
      * Materializes entity sets into the organization database.
      *
-     * @param entitySetIds The ids of the entity sets which to assemble into materialized views.
+     * @param refreshRatesOfEntitySets The refresh rate in minutes of each entity set to assemble into materialized
+     *                                 views mapped by their ids.
      */
     @POST( BASE + ID_PATH + ENTITY_SETS + ASSEMBLE )
     Map<UUID, Set<OrganizationEntitySetFlag>> assembleEntitySets(
             @Path( ID ) UUID organizationId,
-            @Body Set<UUID> entitySetIds );
+            @Body Map<UUID, Integer> refreshRatesOfEntitySets );
 
     /**
      * Synchronizes EDM changes to the requested materialized entity set in the organization.
@@ -142,6 +143,28 @@ public interface OrganizationsApi {
      */
     @POST( BASE + ID_PATH + SET_ID_PATH + REFRESH )
     Void refreshDataChanges( @Path( ID ) UUID organizationId, @Path( SET_ID ) UUID entitySetId );
+
+    /**
+     * Changes the refresh rate of a materialized entity set in the requested organization.
+     * @param organizationId The id of the organization in which to change the refresh rate of the materialized entity
+     *                       set.
+     * @param entitySetId The id of the entity set, whose refresh rate to change.
+     * @param refreshRate The new refresh rate in minutes.
+     */
+    @PUT( BASE + ID_PATH + SET_ID_PATH + REFRESH_RATE )
+    Void updateRefreshRate(
+            @Path( ID ) UUID organizationId,
+            @Path( SET_ID ) UUID entitySetId,
+            @Body Integer refreshRate );
+
+    /**
+     * Disables automatic refresh of a materialized entity set in the requested organization.
+     * @param organizationId The id of the organization in which to disable automatic refresh of the materialized entity
+     *                       set.
+     * @param entitySetId The id of the entity set, which not to refresh automatically.
+     */
+    @DELETE( BASE + ID_PATH + SET_ID_PATH + REFRESH_RATE )
+    Void deleteRefreshRate( @Path( ID ) UUID organizationId, @Path( SET_ID ) UUID entitySetId );
 
     @PUT( BASE + ID_PATH + TITLE )
     Void updateTitle( @Path( ID ) UUID organziationId, @Body String title );

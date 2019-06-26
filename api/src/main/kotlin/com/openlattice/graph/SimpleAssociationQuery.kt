@@ -19,15 +19,13 @@
  *
  */
 
-package com.openlattice.analysis.requests;
+package com.openlattice.graph
 
-/**
- * Types of supported aggregations
- */
-public enum AggregationType {
-    SUM,
-    AVG,
-    MIN,
-    MAX,
-    COUNT
-}
+import java.util.*
+
+data class SimpleAssociationQuery(
+        val associationTypeId: UUID,
+        val association : AssociationReference )
+
+
+

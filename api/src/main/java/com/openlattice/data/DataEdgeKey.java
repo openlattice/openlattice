@@ -64,18 +64,19 @@ public class DataEdgeKey {
         if ( !( o instanceof DataEdgeKey ) ) { return false; }
         DataEdgeKey that = (DataEdgeKey) o;
         return Objects.equals( src, that.src ) &&
-                Objects.equals( dst, that.dst );
+                Objects.equals( dst, that.dst ) &&
+                Objects.equals( edge, that.edge );
     }
 
     @Override public int hashCode() {
-
-        return Objects.hash( src, dst );
+        return Objects.hash( src, dst, edge );
     }
 
     @Override public String toString() {
         return "DataEdgeKey{" +
                 "src=" + src +
                 ", dst=" + dst +
+                ", edge=" + edge +
                 '}';
     }
 }

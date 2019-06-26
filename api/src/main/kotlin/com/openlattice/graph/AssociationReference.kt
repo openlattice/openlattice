@@ -19,15 +19,10 @@
  *
  */
 
-package com.openlattice.analysis.requests;
+package com.openlattice.graph
 
-/**
- * Types of supported aggregations
- */
-public enum AggregationType {
-    SUM,
-    AVG,
-    MIN,
-    MAX,
-    COUNT
-}
+data class AssociationReference(
+        val srcIndex: Int,
+        val dstIndex: Int,
+        val edgeIndexL: Int
+)

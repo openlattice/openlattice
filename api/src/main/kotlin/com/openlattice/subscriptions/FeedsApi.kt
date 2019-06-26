@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018. OpenLattice, Inc.
+ * Copyright (C) 2019. OpenLattice, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,15 +19,27 @@
  *
  */
 
-package com.openlattice.analysis.requests;
+package com.openlattice.subscriptions
+
+import com.openlattice.graph.Neighborhood
+import retrofit2.http.GET
 
 /**
- * Types of supported aggregations
+ * This API is for managing Subscriptions on entities
  */
-public enum AggregationType {
-    SUM,
-    AVG,
-    MIN,
-    MAX,
-    COUNT
+interface FeedsApi {
+    companion object {
+        const val SERVICE = "/datastore"
+        const val CONTROLLER = "/feeds"
+        const val BASE = SERVICE + CONTROLLER
+
+        const val FEED_ID = "feedId"
+        const val FEED_ID_PATH = "/{$FEED_ID}"
+
+        const val FEED_IDS = "feedIds"
+    }
+
+    @GET(BASE)
+    fun getLatestFeed() : Iterator<Neighborhood>
+
 }

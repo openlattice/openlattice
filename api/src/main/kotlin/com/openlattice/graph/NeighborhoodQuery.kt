@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018. OpenLattice, Inc.
+ * Copyright (C) 2019. OpenLattice, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,15 +19,19 @@
  *
  */
 
-package com.openlattice.analysis.requests;
+package com.openlattice.graph
+
+import java.util.*
 
 /**
- * Types of supported aggregations
+ * @param ids The entity key ids for which to build the neighborhood
+ * @param srcSelections The list of neighborhood selections where the ids are the destination. (src + filter > edge + filter > ids)
+ * @param dstSelections The list of neighborhood selections where the ids are the source. (ids > edge + filter > dst + filter)
+ * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public enum AggregationType {
-    SUM,
-    AVG,
-    MIN,
-    MAX,
-    COUNT
-}
+data class NeighborhoodQuery(
+        val ids: Map<UUID, Optional<Set<UUID>>>,
+        val srcSelections: List<NeighborhoodSelection>,
+        val dstSelections: List<NeighborhoodSelection>
+)
+

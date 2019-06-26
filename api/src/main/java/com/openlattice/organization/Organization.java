@@ -41,6 +41,7 @@ public class Organization {
     private final Set<Principal>     members;
     private final Set<Role>          roles;
     private final Set<UUID>          apps;
+    private final String             phoneNumber;
 
     private transient int h = 0;
 
@@ -53,8 +54,9 @@ public class Organization {
             @JsonProperty( SerializationConstants.EMAILS_FIELD ) Set<String> autoApprovedEmails,
             @JsonProperty( SerializationConstants.MEMBERS_FIELD ) Set<Principal> members,
             @JsonProperty( SerializationConstants.ROLES ) Set<Role> roles,
-            @JsonProperty( SerializationConstants.APPS ) Set<UUID> apps ) {
-        this( new OrganizationPrincipal( id, principal, title, description ), autoApprovedEmails, members, roles, apps );
+            @JsonProperty( SerializationConstants.APPS ) Set<UUID> apps,
+            @JsonProperty( SerializationConstants.PHONE_NUMBER ) Optional<String> phoneNumber ) {
+        this( new OrganizationPrincipal( id, principal, title, description ), autoApprovedEmails, members, roles, apps, phoneNumber.orElse("" ));
     }
 
     public Organization(
@@ -62,13 +64,15 @@ public class Organization {
             Set<String> autoApprovedEmails,
             Set<Principal> members,
             Set<Role> roles,
-            Set<UUID> apps ) {
+            Set<UUID> apps,
+            String phoneNumber ) {
         checkArgument( securablePrincipal.getPrincipalType().equals( PrincipalType.ORGANIZATION ) );
         this.securablePrincipal = securablePrincipal;
         this.autoApprovedEmails = checkNotNull( autoApprovedEmails );
         this.members = checkNotNull( members );
         this.roles = checkNotNull( roles );
         this.apps = checkNotNull( apps );
+        this.phoneNumber = phoneNumber;
     }
 
     public Organization(
@@ -76,7 +80,7 @@ public class Organization {
             Set<String> autoApprovedEmails,
             Set<Principal> members,
             Set<Role> roles ) {
-        this( principal, autoApprovedEmails, members, roles, ImmutableSet.of() );
+        this( principal, autoApprovedEmails, members, roles, ImmutableSet.of(), "" );
     }
 
     public Organization(
@@ -87,7 +91,7 @@ public class Organization {
             Set<String> autoApprovedEmails,
             Set<Principal> members,
             Set<Role> roles ) {
-        this( id, principal, title, description, autoApprovedEmails, members, roles, ImmutableSet.of() );
+        this( id, principal, title, description, autoApprovedEmails, members, roles, ImmutableSet.of(), Optional.empty() );
     }
 
     @JsonIgnore
@@ -123,6 +127,11 @@ public class Organization {
     @JsonProperty( SerializationConstants.MEMBERS_FIELD )
     public Set<Principal> getMembers() {
         return members;
+    }
+
+    @JsonProperty( SerializationConstants.PHONE_NUMBER)
+    public String getPhoneNumber() {
+        return phoneNumber;
     }
 
     @JsonProperty( SerializationConstants.ROLES )
