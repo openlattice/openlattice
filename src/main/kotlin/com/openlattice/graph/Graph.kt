@@ -86,9 +86,9 @@ class Graph(
             val partitionsInfoByEntitySet = mutableMapOf<UUID, PartitionsInfo>()
             ps.use {
                 keys.forEach { dataEdgeKey ->
-                    bindColumnsForEdge(ps, dataEdgeKey, version, versions, IdType.SRC, dataEdgeKey.src, partitionsInfoByEntitySet)
-                    bindColumnsForEdge(ps, dataEdgeKey, version, versions, IdType.DST, dataEdgeKey.dst, partitionsInfoByEntitySet)
-                    bindColumnsForEdge(ps, dataEdgeKey, version, versions, IdType.EDGE, dataEdgeKey.edge, partitionsInfoByEntitySet)
+                    bindColumnsForEdge(ps, IdType.SRC, dataEdgeKey, version, versions, partitionsInfoByEntitySet)
+                    bindColumnsForEdge(ps, IdType.DST, dataEdgeKey, version, versions, partitionsInfoByEntitySet)
+                    bindColumnsForEdge(ps, IdType.EDGE, dataEdgeKey, version, versions, partitionsInfoByEntitySet)
                 }
                 return WriteEvent(version, ps.executeBatch().sum())
             }
@@ -97,12 +97,13 @@ class Graph(
 
     private fun bindColumnsForEdge(
             ps: PreparedStatement,
+            idType: IdType,
             dataEdgeKey: DataEdgeKey,
             version: Long,
             versions: java.sql.Array,
-            idType: IdType,
-            edk: EntityDataKey,
             partitionsInfoByEntitySet: MutableMap<UUID, PartitionsInfo>) {
+
+        val edk = getEntityDataKeyForIdType(dataEdgeKey, idType)
 
         // TODO figure out if this is sketchy
         if (!partitionsInfoByEntitySet.containsKey(edk.entitySetId)) {
@@ -186,11 +187,7 @@ class Graph(
     }
 
     private fun addKeyIds(ps: PreparedStatement, dataEdgeKey: DataEdgeKey, idType: IdType, startIndex: Int = 1) {
-        val edk = when (idType) {
-            IdType.DST -> dataEdgeKey.dst
-            IdType.EDGE -> dataEdgeKey.edge
-            IdType.SRC -> dataEdgeKey.src
-        }
+        val edk = getEntityDataKeyForIdType(dataEdgeKey, idType)
         val partitionInfo = partitionManager.getEntitySetPartitionsInfo(edk.entitySetId)
         val partition = getPartition(edk.entityKeyId, partitionInfo.partitions.toList())
         ps.setObject(startIndex, partition)
@@ -206,6 +203,14 @@ class Graph(
         ps.setObject(startIndex + 1, dataEdgeKey.src.entityKeyId)
         ps.setObject(startIndex + 2, dataEdgeKey.dst.entityKeyId)
         ps.setObject(startIndex + 3, IdType.EDGE.ordinal)
+    }
+
+    private fun getEntityDataKeyForIdType(dataEdgeKey: DataEdgeKey, idType: IdType): EntityDataKey {
+        return when (idType) {
+            IdType.DST -> dataEdgeKey.dst
+            IdType.EDGE -> dataEdgeKey.edge
+            IdType.SRC -> dataEdgeKey.src
+        }
     }
 
     /* Delete  */
