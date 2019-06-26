@@ -1,8 +1,10 @@
 package com.openlattice.analysis.requests;
 
 import com.openlattice.analysis.SqlBindInfo;
+
 import java.util.Collections;
 import java.util.LinkedHashSet;
+
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 import java.util.Set;
@@ -11,6 +13,9 @@ public class ValueFilter<T extends Comparable<T>> implements Filter {
     private final Set<T> values;
 
     public ValueFilter( Set<T> values ) {
+        if ( values.isEmpty() ) {
+            throw new IllegalArgumentException( "Values of a ValueFilter cannot be empty" );
+        }
         this.values = values;
     }
 
