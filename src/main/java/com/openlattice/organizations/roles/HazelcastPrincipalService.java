@@ -237,10 +237,10 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
     }
 
     @Override
-    public void removePrincipalsFromPrincipal( Set<AclKey> source, AclKey target ) {
+    public void removePrincipalsFromPrincipals( Collection<AclKey> source, Set<AclKey> target ) {
         ensurePrincipalsExist( target );
         ensurePrincipalsExist( source );
-        principalTrees.executeOnKey( target, new NestedPrincipalRemover( source ) );
+        principalTrees.executeOnKeys( target, new NestedPrincipalRemover( source ) );
     }
 
     @Override
@@ -356,7 +356,7 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
         ensurePrincipalsExist( Stream.of( aclKeys ) );
     }
 
-    private void ensurePrincipalsExist( Set<AclKey> aclKeys ) {
+    private void ensurePrincipalsExist( Collection<AclKey> aclKeys ) {
         ensurePrincipalsExist( aclKeys.stream() );
     }
 

@@ -1,5 +1,3 @@
-
-
 /*
  * Copyright (C) 2018. OpenLattice, Inc.
  *
@@ -22,7 +20,6 @@
 
 package com.openlattice.organizations;
 
-import com.dataloom.streams.StreamUtil;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -327,14 +324,16 @@ public class HazelcastOrganizationService {
                 .filter( m -> m.getType().equals( PrincipalType.USER ) )
                 .collect( Collectors.toList() );
         final var securablePrincipals = securePrincipalsManager.getSecurablePrincipals( users );
+        final var userAclKeys = securePrincipalsManager.getSecurablePrincipals( users ).stream()
+                .map( SecurablePrincipal::getAclKey ).collect( Collectors.toSet() );
 
         removeRolesFromMembers(
-                getRoles( organizationId ).stream().map( Role::getAclKey ).collect( Collectors.toSet() ),
-                securablePrincipals
+                getRoles( organizationId ).stream().map( Role::getAclKey ).collect( Collectors.toList() ),
+                userAclKeys
         );
         membersOf.executeOnKey( organizationId, new OrganizationMemberRemover( members ) );
         final AclKey orgAclKey = new AclKey( organizationId );
-        removeOrganizationFromMembers( orgAclKey, securablePrincipals );
+        removeOrganizationFromMembers( orgAclKey, userAclKeys );
 
         eventBus.post(
                 new MembersRemovedFromOrganizationEvent(
@@ -344,16 +343,12 @@ public class HazelcastOrganizationService {
         );
     }
 
-    private void removeRolesFromMembers( Set<AclKey> roles, Collection<SecurablePrincipal> members ) {
-        members.forEach( securablePrincipal ->
-                securePrincipalsManager.removePrincipalsFromPrincipal( roles, securablePrincipal.getAclKey() )
-        );
+    private void removeRolesFromMembers( Collection<AclKey> roles, Set<AclKey> members ) {
+        securePrincipalsManager.removePrincipalsFromPrincipals( roles, members );
     }
 
-    private void removeOrganizationFromMembers( AclKey organization, Collection<SecurablePrincipal> members ) {
-        members.forEach( securablePrincipal ->
-                securePrincipalsManager.removePrincipalFromPrincipal( organization, securablePrincipal.getAclKey() )
-        );
+    private void removeOrganizationFromMembers( AclKey organization, Set<AclKey> members ) {
+        securePrincipalsManager.removePrincipalsFromPrincipals( List.of( organization ), members );
     }
 
     public void createRoleIfNotExists( Principal callingUser, Role role ) {
