@@ -172,7 +172,7 @@ class AssemblerConnectionManager(
 
     fun addMembersToOrganization(dbName: String, dataSource: HikariDataSource, members: Set<Principal>) {
         logger.info("Configuring members for organization database {}", dbName)
-        val securablePrincipalsToAdd = members
+        val validUserPrincipals = members
                 .filter {
                     it.id != SystemRole.OPENLATTICE.principal.id && it.id != SystemRole.ADMIN.principal.id
                 }
@@ -183,8 +183,8 @@ class AssemblerConnectionManager(
                     }
                     return@filter principalExists
                 } //There are some bad principals in the member list some how-- probably from testing.
-                .map { securePrincipalsManager.getPrincipal(it.id) }
 
+        val securablePrincipalsToAdd = securePrincipalsManager.getSecurablePrincipals(validUserPrincipals)
         configureNewUsersInDatabase(dbName, dataSource, securablePrincipalsToAdd)
     }
 
@@ -192,9 +192,8 @@ class AssemblerConnectionManager(
             dbName: String,
             dataSource: HikariDataSource,
             principals: Collection<SecurablePrincipal>) {
-        principals.forEach {
-            configureUserInDatabase(dataSource, dbName, buildPostgresUsername(it))
-        }
+        val userNames = principals.map { quote(buildPostgresUsername(it)) }
+        configureUsersInDatabase(dataSource, dbName, userNames)
     }
 
     fun removeMembersFromOrganization(
@@ -626,26 +625,29 @@ class AssemblerConnectionManager(
         }
     }
 
-    private fun configureUserInDatabase(datasource: HikariDataSource, dbname: String, userId: String) {
-        val dbUser = quote(userId)
-        logger.info("Configuring user {} in database {}", userId, dbname)
+    private fun configureUsersInDatabase(datasource: HikariDataSource, dbname: String, userIds: List<String>) {
+        val userIdsSql = userIds.joinToString(", ")
+
+        logger.info("Configuring users {} in database {}", userIds, dbname)
         //First we will grant all privilege which for database is connect, temporary, and create schema
         target.connection.use { connection ->
             connection.createStatement().use { statement ->
                 statement.execute("GRANT ${MEMBER_ORG_DATABASE_PERMISSIONS.joinToString(", ")} " +
-                        "ON DATABASE ${quote(dbname)} TO $dbUser")
+                        "ON DATABASE ${quote(dbname)} TO $userIdsSql")
             }
         }
 
         datasource.connection.use { connection ->
             connection.createStatement().use { statement ->
 
-                statement.execute("GRANT USAGE ON SCHEMA $MATERIALIZED_VIEWS_SCHEMA TO $dbUser")
+                statement.execute("GRANT USAGE ON SCHEMA $MATERIALIZED_VIEWS_SCHEMA TO $userIdsSql")
                 //Don't allow users to access public schema which will contain foreign data wrapper tables.
-                logger.info("Revoking $PUBLIC_SCHEMA schema right from user: {}", userId)
-                statement.execute("REVOKE USAGE ON SCHEMA $PUBLIC_SCHEMA FROM $dbUser")
+                logger.info("Revoking $PUBLIC_SCHEMA schema right from user: {}", userIds)
+                statement.execute("REVOKE USAGE ON SCHEMA $PUBLIC_SCHEMA FROM $userIdsSql")
                 //Set the search path for the user
-                statement.execute("ALTER USER $dbUser set search_path TO $MATERIALIZED_VIEWS_SCHEMA")
+                userIds.forEach { userId ->
+                    statement.execute("ALTER USER $userId SET search_path TO $MATERIALIZED_VIEWS_SCHEMA")
+                }
 
                 return@use
             }
