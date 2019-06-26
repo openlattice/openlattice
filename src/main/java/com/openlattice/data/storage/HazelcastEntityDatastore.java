@@ -159,7 +159,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
 
         if ( !oldLinkingIds.isEmpty() ) {
             signalLinkedEntitiesUpserted(
-                    dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).stream()
+                    linkingQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).stream()
                             .collect( Collectors.toSet() ),
                     oldLinkingIds,
                     entities.keySet() );
@@ -178,7 +178,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
 
         markMaterializedEntitySetDirty( entitySetId ); // mark entityset as unsync with data
         // mark all involved linking entitysets as unsync with data
-        dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId )
+        linkingQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId )
                 .forEach( this::markMaterializedEntitySetDirty );
     }
 
@@ -192,7 +192,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         //                      -> background indexing job will pick up updated entity with new linking id
         // It makes more sense to let background task (re-)index, instead of explicitly calling re-index, since an
         // update/create event affects all the linking entity sets, where that linking id is present
-        Set<UUID> remainingLinkingIds = dataQueryService
+        Set<UUID> remainingLinkingIds = linkingQueryService
                 .getEntityKeyIdsOfLinkingIds( oldLinkingIds ).stream()
                 // we cannot know, whether the old entity was already updated with a new linking id or is still there
                 .filter( linkingIds -> !Sets.difference( linkingIds.getRight(), deletedEntityKeyIds ).isEmpty() )
@@ -227,7 +227,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
 
         signalLinkedEntitiesDeleted( entitySetId, Optional.of( entityKeyIds ) );
         // mark all involved linking entitysets as unsync with data
-        dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId )
+       linkingQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId )
                 .forEach( this::markMaterializedEntitySetDirty );
     }
 
@@ -241,10 +241,10 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         // otherwise we re-index
         // It makes more sense to mark them, instead of explicitly calling re-index, since an update event
         // affects all the linking entity sets, where that linking id is present
-        Map<UUID, Set<UUID>> linkingIds = dataQueryService.getLinkingIds( Map.of( entitySetId, entityKeyIds ) );
+        Map<UUID, Set<UUID>> linkingIds = linkingQueryService.getLinkingIds( Map.of( entitySetId, entityKeyIds ) );
 
         if ( !linkingIds.isEmpty() ) {
-            Map<UUID, Set<UUID>> entityKeyIdsOfLinkingIds = dataQueryService
+            Map<UUID, Set<UUID>> entityKeyIdsOfLinkingIds = linkingQueryService
                     .getEntityKeyIdsOfLinkingIds(
                             linkingIds.values().stream().flatMap( Set::stream ).collect( Collectors.toSet() ) )
                     .stream().collect( Collectors.toMap(
@@ -260,7 +260,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             if ( groupedEntityKeyIdsOfLinkingIds.get( true ) != null ) {
                 Set<UUID> deletedLinkingIds = groupedEntityKeyIdsOfLinkingIds.get( true ).stream()
                         .map( Map.Entry::getKey ).collect( Collectors.toSet() );
-                Set<UUID> linkingEntitySetIds = dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId )
+                Set<UUID> linkingEntitySetIds = linkingQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId )
                         .stream().collect( Collectors.toSet() );
                 eventBus.post( new LinkedEntitiesDeletedEvent( linkingEntitySetIds, deletedLinkingIds ) );
             }
@@ -284,7 +284,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Object>>> replacementProperties,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
         // need to collect linking ids before writes to the entities
-        Set<UUID> oldLinkingIds = dataQueryService
+        Set<UUID> oldLinkingIds = linkingQueryService
                 .getLinkingIds( Map.of( entitySetId, Optional.of( replacementProperties.keySet() ) ) )
                 .values().stream().flatMap( Set::stream ).collect( Collectors.toSet() );
 

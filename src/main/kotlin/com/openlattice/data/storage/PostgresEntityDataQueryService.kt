@@ -37,10 +37,6 @@ class PostgresEntityDataQueryService(
         private val logger = LoggerFactory.getLogger(PostgresEntityDataQueryService::class.java)
     }
 
-    fun getLinkingEntitySetIdsOfEntitySet( entitySetId : UUID ) {
-
-    }
-
     @JvmOverloads
     fun getEntityKeyIdsInEntitySet(
             entitySetId: UUID,
