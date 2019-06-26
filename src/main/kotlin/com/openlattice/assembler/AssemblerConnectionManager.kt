@@ -641,8 +641,9 @@ class AssemblerConnectionManager(
                 statement.execute("REVOKE USAGE ON SCHEMA $PUBLIC_SCHEMA FROM $userIdsSql")
                 //Set the search path for the user
                 userIds.forEach { userId ->
-                    statement.execute("ALTER USER $userId SET search_path TO $MATERIALIZED_VIEWS_SCHEMA")
+                    statement.addBatch("ALTER USER $userId SET search_path TO $MATERIALIZED_VIEWS_SCHEMA")
                 }
+                statement.executeBatch()
 
                 return@use
             }
