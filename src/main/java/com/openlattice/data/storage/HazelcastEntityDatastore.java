@@ -445,7 +445,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
 
         // map of: pair<linking_id, entity_set_id> to property_data
         PostgresIterable<kotlin.Pair<kotlin.Pair<UUID, UUID>, Map<UUID, Set<Object>>>> linkedEntityDataStream =
-                dataQueryService.getLinkedEntityDataWithMetadata( linkingIdsByEntitySetId,
+                linkingQueryService.getLinkedEntityDataWithMetadata( linkingIdsByEntitySetId,
                         authorizedPropertyTypesByEntitySetId,
                         metadataOptions );
 
@@ -504,20 +504,20 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     @Override
     @Timed
     public Map<UUID, Set<UUID>> getLinkingIdsByEntitySetIds( Set<UUID> entitySetIds ) {
-        return dataQueryService.getLinkingIds( entitySetIds.stream().collect(
+        return linkingQueryService.getLinkingIds( entitySetIds.stream().collect(
                 Collectors.toMap( Function.identity(), it -> Optional.empty() ) ) );
     }
 
     @Override
     @Timed
     public PostgresIterable<Pair<UUID, Set<UUID>>> getEntityKeyIdsOfLinkingIds( Set<UUID> linkingIds ) {
-        return dataQueryService.getEntityKeyIdsOfLinkingIds( linkingIds );
+        return linkingQueryService.getEntityKeyIdsOfLinkingIds( linkingIds );
     }
 
     @Override
     @Timed
     public PostgresIterable<UUID> getLinkingEntitySetIds( UUID linkingId ) {
-        return dataQueryService.getLinkingEntitySetIds( linkingId );
+        return linkingQueryService.getLinkingEntitySetIds( linkingId );
     }
 
     /**
