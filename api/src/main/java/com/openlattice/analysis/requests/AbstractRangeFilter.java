@@ -22,6 +22,7 @@
 package com.openlattice.analysis.requests;
 
 import com.openlattice.analysis.SqlBindInfo;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 import java.util.Arrays;
 import java.util.LinkedHashSet;
@@ -64,7 +65,8 @@ public abstract class AbstractRangeFilter<T extends Comparable<T>> implements Ra
         return lowerboundExpr + " AND " + upperboundExpr;
     }
 
-    @Override public LinkedHashSet<SqlBindInfo> bindInfo( int base ) {
+    @Override
+    @NonNull public LinkedHashSet<SqlBindInfo> bindInfo( int base ) {
         final var lowerboundBindInfo = new SqlBindInfo( base , lowerbound );
         final var upperboundBindInfo = new SqlBindInfo( base + 1, upperbound );
 

@@ -1,12 +1,11 @@
 package com.openlattice.analysis.requests;
 
 import com.openlattice.analysis.SqlBindInfo;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 import java.util.Set;
-import java.util.stream.Collectors;
 
 public class ValueFilter<T extends Comparable<T>> implements Filter {
     private final Set<T> values;
@@ -22,6 +21,6 @@ public class ValueFilter<T extends Comparable<T>> implements Filter {
 
     @Override
     public @NonNull LinkedHashSet<SqlBindInfo> bindInfo( int base ) {
-        return new LinkedHashSet<>( Arrays.asList( new SqlBindInfo( base, values ) ) );
+        return new LinkedHashSet<>( Collections.singletonList( new SqlBindInfo( base, values ) ) );
     }
 }
