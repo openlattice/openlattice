@@ -36,17 +36,17 @@ interface LinkingQueryService {
 
     fun getLinkingIds(entityKeyIds: Map<UUID, Optional<Set<UUID>>>): Map<UUID, Set<UUID>>
 
-   fun getEntityKeyIdsOfLinkingIds(
+    fun getEntityKeyIdsOfLinkingIds(
             linkingIds: Set<UUID>
     ): PostgresIterable<org.apache.commons.lang3.tuple.Pair<UUID, Set<UUID>>>
 
-   fun getLinkingEntitySetIds(linkingId: UUID): PostgresIterable<UUID>
+    fun getLinkingEntitySetIds(linkingId: UUID): PostgresIterable<UUID>
 
- fun getLinkedEntityDataWithMetadata(
-         linkingIdsByEntitySetId: Map<UUID, Optional<Set<UUID>>>,
-         authorizedPropertyTypesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>,
-         metadataOptions: EnumSet<MetadataOption>
- ): PostgresIterable<Pair<Pair<UUID, UUID>, Map<UUID, Set<Any>>>>
+    fun getLinkedEntityDataWithMetadata(
+            linkingIdsByEntitySetId: Map<UUID, Optional<Set<UUID>>>,
+            authorizedPropertyTypesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>,
+            metadataOptions: EnumSet<MetadataOption>
+    ): PostgresIterable<Pair<Pair<UUID, UUID>, Map<UUID, Set<Any>>>>
 
     /**
      * Inserts the results scoring pairs of elements within a cluster to persistent storage. The initial cluster usually
