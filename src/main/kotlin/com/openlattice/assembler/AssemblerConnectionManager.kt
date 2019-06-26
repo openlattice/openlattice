@@ -199,15 +199,10 @@ class AssemblerConnectionManager(
     fun removeMembersFromOrganization(
             dbName: String,
             dataSource: HikariDataSource,
-            members: Collection<SecurablePrincipal>
+            principals: Collection<SecurablePrincipal>
     ) {
-        members.forEach { securablePrincipal ->
-            revokeConnectAndSchemaUsage(
-                    dataSource,
-                    dbName,
-                    buildPostgresUsername(securablePrincipal)
-            )
-        }
+        val userNames = principals.map { quote(buildPostgresUsername(it)) }
+        revokeConnectAndSchemaUsage(dataSource, dbName, userNames)
     }
 
     private fun createOrganizationDatabase(organizationId: UUID, dbname: String) {
@@ -654,15 +649,18 @@ class AssemblerConnectionManager(
         }
     }
 
-    private fun revokeConnectAndSchemaUsage(datasource: HikariDataSource, dbname: String, userId: String) {
-        val dbUser = quote(userId)
-        logger.info("Removing user {} from database {} and schema usage of $MATERIALIZED_VIEWS_SCHEMA", userId, dbname)
+    private fun revokeConnectAndSchemaUsage(datasource: HikariDataSource, dbname: String, userIds: List<String>) {
+        val userIdsSql = userIds.joinToString(", ")
+
+        logger.info("Removing users {} from database {} and schema usage of $MATERIALIZED_VIEWS_SCHEMA",
+                userIds,
+                dbname)
 
         datasource.connection.use { conn ->
             conn.createStatement().use { stmt ->
                 stmt.execute("REVOKE ${MEMBER_ORG_DATABASE_PERMISSIONS.joinToString(", ")} " +
-                        "ON DATABASE ${quote(dbname)} FROM $dbUser")
-                stmt.execute("REVOKE ALL PRIVILEGES ON SCHEMA $MATERIALIZED_VIEWS_SCHEMA FROM $dbUser")
+                        "ON DATABASE ${quote(dbname)} FROM $userIdsSql")
+                stmt.execute("REVOKE ALL PRIVILEGES ON SCHEMA $MATERIALIZED_VIEWS_SCHEMA FROM $userIdsSql")
             }
         }
     }
