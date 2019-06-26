@@ -22,6 +22,8 @@
 package com.openlattice.linking.graph
 
 import com.openlattice.data.EntityDataKey
+import com.openlattice.data.storage.MetadataOption
+import com.openlattice.edm.type.PropertyType
 import com.openlattice.linking.EntityKeyPair
 import com.openlattice.linking.LinkingQueryService
 import com.openlattice.postgres.DataTables.*
@@ -48,7 +50,6 @@ private const val AVG_SCORE_FIELD = "avg_score"
  * @param hds A hikari datasource that can be used for executing SQL.
  */
 class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQueryService {
-
 
     override fun lockClustersForUpdates(clusters: Set<UUID>): Connection {
         val connection = hds.connection
@@ -219,6 +220,22 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQu
                     val score = ResultSetAdapters.score(it)
                     dstEntityDataKey to score
                 }).toMap()
+    }
+
+    override fun getLinkingIds(entityKeyIds: Map<UUID, Optional<Set<UUID>>>): Map<UUID, Set<UUID>> {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
+    override fun getEntityKeyIdsOfLinkingIds(linkingIds: Set<UUID>): PostgresIterable<org.apache.commons.lang3.tuple.Pair<UUID, Set<UUID>>> {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
+    override fun getLinkingEntitySetIds(linkingId: UUID): PostgresIterable<UUID> {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
+    override fun getLinkedEntityDataWithMetadata(linkingIdsByEntitySetId: Map<UUID, Optional<Set<UUID>>>, authorizedPropertyTypesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>, metadataOptions: EnumSet<MetadataOption>): PostgresIterable<Pair<Pair<UUID, UUID>, Map<UUID, Set<Any>>>> {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
     override fun insertMatchScores(
