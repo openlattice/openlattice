@@ -551,17 +551,17 @@ class AssemblerConnectionManager(
 
 
     private fun configureRolesInDatabase(datasource: HikariDataSource, spm: SecurePrincipalsManager) {
-        getAllRoles(spm).forEach { role ->
-            val dbRole = quote(buildPostgresRoleName(role))
+        val roles = getAllRoles(spm)
+        val roleIds = roles.map { quote(buildPostgresRoleName(it)) }
+        val roleIdsSql = roleIds.joinToString(",")
 
-            datasource.connection.use { connection ->
-                connection.createStatement().use { statement ->
-                    logger.info("Revoking $PUBLIC_SCHEMA schema right from role: {}", role)
-                    //Don't allow users to access public schema which will contain foreign data wrapper tables.
-                    statement.execute("REVOKE USAGE ON SCHEMA $PUBLIC_SCHEMA FROM $dbRole")
+        datasource.connection.use { connection ->
+            connection.createStatement().use { statement ->
+                logger.info("Revoking $PUBLIC_SCHEMA schema right from roles: {}", roleIds)
+                //Don't allow users to access public schema which will contain foreign data wrapper tables.
+                statement.execute("REVOKE USAGE ON SCHEMA $PUBLIC_SCHEMA FROM $roleIdsSql")
 
-                    return@use
-                }
+                return@use
             }
         }
     }
