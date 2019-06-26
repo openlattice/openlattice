@@ -224,11 +224,11 @@ class Graph(
             addKeyIds(lockStmt, dataEdgeKey, IdType.EDGE)
 
             clearEdgesAddVersion(operationStmt, version)
-            addKeyIds(lockStmt, dataEdgeKey, IdType.SRC, 3)
+            addKeyIds(operationStmt, dataEdgeKey, IdType.SRC, 3)
             clearEdgesAddVersion(operationStmt, version)
-            addKeyIds(lockStmt, dataEdgeKey, IdType.DST, 3)
+            addKeyIds(operationStmt, dataEdgeKey, IdType.DST, 3)
             clearEdgesAddVersion(operationStmt, version)
-            addKeyIds(lockStmt, dataEdgeKey, IdType.EDGE, 3)
+            addKeyIds(operationStmt, dataEdgeKey, IdType.EDGE, 3)
         }
     }
 
