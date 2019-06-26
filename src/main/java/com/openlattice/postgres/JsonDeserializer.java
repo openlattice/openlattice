@@ -4,7 +4,6 @@ import static com.google.common.base.Preconditions.checkState;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.SetMultimap;
-import com.openlattice.data.Property;
 import com.openlattice.data.storage.BinaryDataWithContentType;
 import com.openlattice.edm.type.PropertyType;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -18,8 +17,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import kotlin.Pair;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.geo.Geospatial.Dimension;
 import org.apache.olingo.commons.api.edm.geo.Geospatial.Type;
@@ -31,9 +30,9 @@ import org.slf4j.LoggerFactory;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class JsonDeserializer {
-    private static final Logger         logger              = LoggerFactory.getLogger( JsonDeserializer.class );
-    private static final Base64.Decoder decoder             = Base64.getDecoder();
-    private static final String         geographyPointRegex = "(\\-)?[0-9]+(\\.){1}[0-9]+(\\,){1}(\\-)?[0-9]+(\\.){1}[0-9]+";
+    private static final Logger         logger       = LoggerFactory.getLogger( JsonDeserializer.class );
+    private static final Base64.Decoder decoder      = Base64.getDecoder();
+    private static final Pattern geographyPointRegex = Pattern.compile("(\\-)?[0-9]+(\\.){1}[0-9]+(\\,){1}(\\-)?[0-9]+(\\.){1}[0-9]+");
 
     public static SetMultimap<UUID, Object> validateFormatAndNormalize(
             Map<UUID, Set<Object>> propertyValues,
@@ -223,7 +222,7 @@ public class JsonDeserializer {
                     if ( point.getGeoType() == Type.POINT && point.getDimension() == Dimension.GEOGRAPHY ) {
                         return point.getY() + "," + point.getX();
                     }
-                } else if ( value instanceof String && ( (String) value ).matches( geographyPointRegex ) ) {
+                } else if ( value instanceof String && geographyPointRegex.matcher( ( String ) value ).matches() ) {
                     return value;
                 }
                 break;

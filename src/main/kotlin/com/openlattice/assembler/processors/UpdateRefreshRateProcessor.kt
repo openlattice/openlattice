@@ -18,30 +18,22 @@
  *
  *
  */
+package com.openlattice.assembler.processors
 
-package com.openlattice.tasks
+import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
+import com.openlattice.assembler.EntitySetAssemblyKey
+import com.openlattice.assembler.MaterializedEntitySet
+import javax.annotation.Nullable
 
-/**
- *
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
- */
-enum class Task {
-    AUDIT_INITIALIZATION,
-    AUTH0_SYNC_INITIALIZATION_TASK,
-    AUTH0_SYNC_TASK,
-    AUTHORIZATION_BOOTSTRAP,
-    CLEAN_OUT_OLDER_USERS_INITIALIZATON,
-    ENTITY_VIEWS_INITIALIZER,
-    MATERIALIZED_ENTITY_SETS_DATA_REFRESH_TASK,
-    ORGANIZATION_ASSEMBLIES_INITIALIZER,
-    ORGANIZATION_BOOTSTRAP,
-    ORGANIZATION_MEMBERS_CLEANUP,
-    PERSISTENT_SEARCH_MESSENGER_TASK,
-    PRODUCTION_VIEW_INITIALIZATON,
-    POST_INITIALIZER,
-    POSTGRES_ENTITY_SET_SIZES_INITIALIZATION,
-    POSTGRES_ENTITY_SET_SIZES_REFRESH_TASK,
-    USERS_AND_ROLES_INITIALIZATON,
-    USER_CREDENTIAL_SYNC_TASK
+data class UpdateRefreshRateProcessor(
+        @Nullable val refreshRate: Long? = null
+) : AbstractRhizomeEntryProcessor<EntitySetAssemblyKey, MaterializedEntitySet, Void?>() {
 
+    override fun process(entry: MutableMap.MutableEntry<EntitySetAssemblyKey, MaterializedEntitySet>?): Void? {
+        val materializedEntitySet = entry!!.value
+        materializedEntitySet.refreshRate = refreshRate
+        entry.setValue(materializedEntitySet)
+
+        return null
+    }
 }

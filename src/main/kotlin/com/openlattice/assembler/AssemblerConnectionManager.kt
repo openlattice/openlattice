@@ -35,6 +35,7 @@ import com.openlattice.authorization.*
 import com.openlattice.data.storage.MetadataOption
 import com.openlattice.data.storage.entityKeyIdColumnsList
 import com.openlattice.data.storage.linkingEntityKeyIdColumnsList
+import com.openlattice.directory.MaterializedViewAccount
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.organization.OrganizationEntitySetFlag
@@ -105,7 +106,18 @@ class AssemblerConnectionManager(
     }
 
     fun connect(dbname: String): HikariDataSource {
+        return connect(dbname, assemblerConfiguration.server.clone() as Properties)
+    }
+
+    fun connect(dbname: String, account: MaterializedViewAccount): HikariDataSource {
         val config = assemblerConfiguration.server.clone() as Properties
+        config["username"] = account.username
+        config["password"] = account.credential
+
+        return connect(dbname, config)
+    }
+
+    fun connect(dbname: String, config: Properties): HikariDataSource {
         config.computeIfPresent("jdbcUrl") { _, jdbcUrl ->
             "${(jdbcUrl as String).removeSuffix(
                     "/"
@@ -417,6 +429,7 @@ class AssemblerConnectionManager(
         return connection.createStatement().use { stmt ->
             authorizedPropertiesOfPrincipal.forEach { principal, propertyTypes ->
                 val columns = (if (entitySet.isLinking) linkingEntityKeyIdColumnsList else entityKeyIdColumnsList) +
+                        ResultSetAdapters.mapMetadataOptionToPostgresColumn(MetadataOption.ENTITY_KEY_IDS) +
                         propertyTypes.map { it.type.fullQualifiedNameAsString }
                 val grantSelectSql = grantSelectSql(tableName, principal, columns)
 
@@ -818,6 +831,5 @@ internal fun dropUserIfExistsSql(dbUser: String): String {
             "END\n" +
             "\$do\$;"
 }
-
 
 

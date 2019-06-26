@@ -1,14 +1,11 @@
 package com.openlattice.subscriptions
 
-import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.openlattice.authorization.Principal
 import com.openlattice.authorization.PrincipalType
-import com.openlattice.graph.NeighborhoodQuery
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.SUBSCRIPTIONS
-import com.openlattice.postgres.PostgresTable.SUBSCRIPTION_CONTACTS
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
@@ -16,7 +13,6 @@ import com.zaxxer.hikari.HikariDataSource
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
-import java.time.OffsetDateTime
 import java.util.*
 import java.util.function.Function
 import java.util.function.Supplier
@@ -25,39 +21,26 @@ class PostgresSubscriptionService(
         private val hds: HikariDataSource,
         private val mapper: ObjectMapper
 ) : SubscriptionService {
-
     // v code v
-
-    override fun createOrUpdateSubscription(subscription: NeighborhoodQuery, organizationId: UUID, user: Principal) {
+    override fun createOrUpdateSubscription(subscription: Subscription, user: Principal) {
         hds.connection.use { conn ->
-            subscription.ids.map { ekid ->
-                conn.prepareStatement(createOrUpdateSubscriptionSQL).use { ps ->
-                    val srcString = mapper.writeValueAsString(subscription.srcSelections)
-                    val dstString = mapper.writeValueAsString(subscription.dstSelections)
-                    ps.setObject(1, user.id)
-                    ps.setObject(2, ekid)
-                    ps.setObject(3, srcString)
-                    ps.setObject(4, dstString)
-                    ps.setObject(5, organizationId)
-                    print(ps.toString())
-                    ps.executeUpdate()
-                }
+
+            conn.prepareStatement(createOrUpdateSubscriptionSQL).use { ps ->
+                val srcString = mapper.writeValueAsString(subscription.query.srcSelections)
+                val dstString = mapper.writeValueAsString(subscription.query.dstSelections)
+                val (entitySetId, id) = subscription.query.ids.entries.map { it.key to it.value.get().first() }.first()
+                ps.setObject(1, user.id)
+                ps.setObject(2, entitySetId)
+                ps.setObject(3, id)
+                ps.setObject(4, srcString)
+                ps.setObject(5, dstString)
+                ps.setObject(6, mapper.writeValueAsString(subscription.contact))
+
+                print(ps.toString())
+                ps.executeUpdate()
             }
         }
-    }
 
-    override fun createOrUpdateSubscriptionContact(contactInfo: SubscriptionContact, user: Principal) {
-        hds.connection.use { conn ->
-            contactInfo.subscription.ids.map { id ->
-                conn.prepareStatement(createOrUpdateSubscriptionContactSQL).use { ps ->
-                    ps.setObject(1, user.id)
-                    ps.setObject(2, id)
-                    ps.setObject(3, mapper.writeValueAsString(contactInfo.contact))
-                    print(ps.toString())
-                    ps.executeUpdate()
-                }
-            }
-        }
     }
 
     override fun markLastNotified(ekIds: Set<UUID>, user: Principal) {
@@ -82,7 +65,7 @@ class PostgresSubscriptionService(
         }
     }
 
-    override fun getAllSubscriptions(): Iterable<Pair<Principal, SubscriptionContact>> {
+    override fun getAllSubscriptions(): Iterable<Pair<Principal, Subscription>> {
         return execSqlSelectReturningIterable(getAllSubscriptionsUnfilteredSQL,
                                               { rs: ResultSet ->
                                                   Principal(
@@ -92,7 +75,7 @@ class PostgresSubscriptionService(
                                               }, { ps: PreparedStatement, _: Connection -> ps })
     }
 
-    override fun getAllSubscriptions(user: Principal): Iterable<SubscriptionContact> {
+    override fun getAllSubscriptions(user: Principal): Iterable<Subscription> {
         return execSqlSelectReturningIterable(getAllSubscriptionsSQL,
                                               { rs: ResultSet -> ResultSetAdapters.subscriptionContact(rs) },
                                               { ps: PreparedStatement, _: Connection ->
@@ -103,7 +86,7 @@ class PostgresSubscriptionService(
         )
     }
 
-    override fun getSubscriptions(ekIds: List<UUID>, user: Principal): Iterable<SubscriptionContact> {
+    override fun getSubscriptions(ekIds: List<UUID>, user: Principal): Iterable<Subscription> {
         return execSqlSelectReturningIterable(getSubscriptionSQL,
                                               { rs: ResultSet -> ResultSetAdapters.subscriptionContact(rs) },
                                               { ps: PreparedStatement, conn: Connection ->
@@ -116,8 +99,8 @@ class PostgresSubscriptionService(
         )
     }
 
-    // ^ code ^
-    // v util v
+// ^ code ^
+// v util v
 
     fun <T> execSqlSelectReturningIterable(
             sql: String,
@@ -139,22 +122,18 @@ class PostgresSubscriptionService(
 }
 
 private val createOrUpdateSubscriptionSQL = "INSERT INTO ${SUBSCRIPTIONS.name} " +
-        "(${PRINCIPAL_ID.name}, ${ID.name}, ${SRC_SELECTS.name}, ${DST_SELECTS.name}, ${ORGANIZATION_ID.name})" +
-        " VALUES (?,?::uuid,?::jsonb,?::jsonb,?::uuid)" +
+        "(${PRINCIPAL_ID.name},${ENTITY_SET_ID.name}, ${ID.name}, ${SRC_SELECTS.name}, ${DST_SELECTS.name},${CONTACT_INFO.name},${LAST_NOTIFIED.name})" +
+        " VALUES (?,?::uuid,?::uuid,?::jsonb,?::jsonb,?::jsonb, now())" +
         " ON CONFLICT ( ${PRINCIPAL_ID.name}, ${ID.name} ) DO UPDATE " +
-        " SET ${SRC_SELECTS.name} = EXCLUDED.${SRC_SELECTS.name}, ${DST_SELECTS.name} = EXCLUDED.${DST_SELECTS.name}, ${ORGANIZATION_ID.name} = EXCLUDED.${ORGANIZATION_ID.name}"
-
-private val createOrUpdateSubscriptionContactSQL = "INSERT INTO ${SUBSCRIPTION_CONTACTS.name} " +
-        "(${PRINCIPAL_ID.name}, ${ID.name}, ${CONTACT_INFO.name})" +
-        " VALUES (?,?::uuid,?)" +
-        " ON CONFLICT ( ${PRINCIPAL_ID.name}, ${ID.name} ) DO UPDATE " +
-        " SET ${CONTACT_INFO.name} = EXCLUDED.${CONTACT_INFO.name}"
+        " SET ${ENTITY_SET_ID.name} = EXCLUDED.${ENTITY_SET_ID.name}, ${SRC_SELECTS.name} = EXCLUDED.${SRC_SELECTS.name}," +
+        "  ${DST_SELECTS.name} = EXCLUDED.${DST_SELECTS.name}, ${ORGANIZATION_ID.name} = EXCLUDED.${ORGANIZATION_ID.name}," +
+        "  ${CONTACT_INFO.name} = EXCLUDED.${CONTACT_INFO.name}, ${LAST_NOTIFIED.name} = EXCLUDED.${LAST_NOTIFIED.name}"
 
 private val markLastNotifiedSQL = "UPDATE ${SUBSCRIPTIONS.name}" +
         " SET ${LAST_NOTIFIED.name} = now()" +
         " WHERE ${ID.name} = ? AND ${PRINCIPAL_ID.name} = ?"
 
 private val deleteSubscriptionSQL = "DELETE FROM ${SUBSCRIPTIONS.name} WHERE ${PRINCIPAL_ID.name} = ? AND ${ID.name} = ?"
-private val getSubscriptionSQL = "SELECT * FROM ${SUBSCRIPTIONS.name} INNER JOIN ${SUBSCRIPTION_CONTACTS.name} USING( ${ID.name}, ${PRINCIPAL_ID.name} ) WHERE ${PRINCIPAL_ID.name} = ? AND ${ID.name} = ANY(?)"
-private val getAllSubscriptionsSQL = "SELECT * FROM ${SUBSCRIPTIONS.name} INNER JOIN ${SUBSCRIPTION_CONTACTS.name} USING( ${ID.name}, ${PRINCIPAL_ID.name} ) WHERE ${PRINCIPAL_ID.name} = ?"
-private val getAllSubscriptionsUnfilteredSQL = "SELECT * FROM ${SUBSCRIPTIONS.name} INNER JOIN ${SUBSCRIPTION_CONTACTS.name} USING( ${ID.name}, ${PRINCIPAL_ID.name} )"
+private val getSubscriptionSQL = "SELECT * FROM ${SUBSCRIPTIONS.name} WHERE ${PRINCIPAL_ID.name} = ? AND ${ID.name} = ANY(?)"
+private val getAllSubscriptionsSQL = "SELECT * FROM ${SUBSCRIPTIONS.name} WHERE ${PRINCIPAL_ID.name} = ?"
+private val getAllSubscriptionsUnfilteredSQL = "SELECT * FROM ${SUBSCRIPTIONS.name} "

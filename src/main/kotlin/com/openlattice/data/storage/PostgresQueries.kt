@@ -451,7 +451,7 @@ internal fun buildEntitiesClause(entityKeyIds: Map<UUID, Optional<Set<UUID>>>, l
                 .filter { ids -> ids.isNotEmpty() }
                 .map { ids -> " $idsColumn IN (" + ids.joinToString(",") { id -> "'$id'" } + ") AND" }
                 .orElse("")
-        " ($idsClause ${ENTITY_SET_ID.name} = '${it.key}' )"
+        " ($idsClause ${IDS.name}.${ENTITY_SET_ID.name} = '${it.key}' )"
     } + ")"
 }
 

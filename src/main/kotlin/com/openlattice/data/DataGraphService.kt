@@ -195,7 +195,7 @@ open class DataGraphService(
 
     override fun clearAssociationsBatch(
             entitySetId: UUID,
-            associationsEdgeKeys: PostgresIterable<DataEdgeKey>,
+            associationsEdgeKeys: Iterable<DataEdgeKey>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
     ): List<WriteEvent> {
         var associationClearCount = 0
@@ -279,7 +279,7 @@ open class DataGraphService(
     ): WriteEvent {
         // delete edges
         val dataEdgeKeys = getEdgesConnectedToEntities(entitySetId, entityKeyIds)
-        val verticesCount = graphService.deleteEdges(dataEdgeKeys)
+        val verticesCount = graphService.deleteEdges(dataEdgeKeys).numUpdates
 
         // delete entities
         val entityWriteEvent = eds.deleteEntities(entitySetId, entityKeyIds, authorizedPropertyTypes)
@@ -328,7 +328,7 @@ open class DataGraphService(
         // delete entities
         val entityWriteEvent = eds.deleteEntities(entitySetId, entityKeyIds, authorizedPropertyTypes)
 
-        logger.info("Deleted {} entities and {} vertices.", entityWriteEvent.numUpdates, verticesCount)
+        logger.info("Deleted {} entities and {} vertices.", entityWriteEvent.numUpdates, verticesCount.numUpdates)
 
         return entityWriteEvent
     }

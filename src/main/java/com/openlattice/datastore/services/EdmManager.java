@@ -31,6 +31,7 @@ import com.openlattice.edm.EntityDataModel;
 import com.openlattice.edm.EntityDataModelDiff;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.requests.MetadataUpdate;
+import com.openlattice.edm.set.EntitySetFlag;
 import com.openlattice.edm.set.EntitySetPropertyMetadata;
 import com.openlattice.edm.type.AssociationDetails;
 import com.openlattice.edm.type.AssociationType;
@@ -38,7 +39,6 @@ import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
 
 import java.util.*;
-import java.util.stream.Stream;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 public interface EdmManager {
@@ -206,6 +206,8 @@ public interface EdmManager {
 
     Iterable<EntityType> getAvailableAssociationTypesForEntityType( UUID entityTypeId );
 
+    boolean isAssociationEntitySet( UUID entitySetId );
+
     EntityDataModelDiff getEntityDataModelDiff( EntityDataModel edm );
 
     Map<UUID, EntitySetPropertyMetadata> getAllEntitySetPropertyMetadata( UUID entitySetId );
@@ -224,7 +226,11 @@ public interface EdmManager {
 
     Collection<EntitySet> getEntitySetsOfType( UUID entityTypeId );
 
+    Collection<UUID> getEntitySetIdsOfType( UUID entityTypeId );
+
     Set<UUID> getEntitySetsForOrganization( UUID organizationId );
+
+    Set<UUID> getEntitySetIdsWithFlags( Set<UUID> entitySetIds, Set<EntitySetFlag> filteringFlags );
 
     AuditRecordEntitySetsManager getAuditRecordEntitySetsManager();
 }

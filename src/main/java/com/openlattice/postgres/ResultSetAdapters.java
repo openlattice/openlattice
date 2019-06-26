@@ -33,7 +33,6 @@ import com.openlattice.assembler.MaterializedEntitySet;
 import com.openlattice.auditing.AuditRecordEntitySetConfiguration;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
-import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.*;
 import com.openlattice.data.storage.ByteBlobDataManager;
 import com.openlattice.data.storage.MetadataOption;
@@ -67,7 +66,7 @@ import com.openlattice.requests.Status;
 import com.openlattice.search.PersistentSearchNotificationType;
 import com.openlattice.search.requests.PersistentSearch;
 import com.openlattice.search.requests.SearchConstraints;
-import com.openlattice.subscriptions.SubscriptionContact;
+import com.openlattice.subscriptions.Subscription;
 import com.openlattice.subscriptions.SubscriptionContactType;
 import javax.annotation.Nullable;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
@@ -186,8 +185,8 @@ public final class ResultSetAdapters {
         return mapper.readValue( neighborhoodSelectionJson, NeighborhoodSelection[].class );
     }
 
-    public static SubscriptionContact subscriptionContact( ResultSet rs ) throws SQLException, IOException {
-        return new SubscriptionContact( ResultSetAdapters.subscription( rs ),
+    public static Subscription subscriptionContact( ResultSet rs ) throws SQLException, IOException {
+        return new Subscription( ResultSetAdapters.subscription( rs ),
                 mapper.readValue(
                         rs.getString( CONTACT_INFO.getName() ),
                         new TypeReference<Map<SubscriptionContactType, String>>() {
@@ -199,13 +198,14 @@ public final class ResultSetAdapters {
     }
 
     public static NeighborhoodQuery subscription( ResultSet rs ) throws SQLException, IOException {
-        LinkedHashSet<UUID> ekIds = new LinkedHashSet<>( 1 );
-        ekIds.add( rs.getObject( ID_VALUE.getName(), UUID.class ) );
+        var id = id( rs );
+        var entitySetId = entitySetId( rs );
+        var dataKeys = Collections.singletonMap( entitySetId, Optional.of( Collections.singleton( id ) ) );
         List<NeighborhoodSelection> srcSelections = Arrays
                 .asList( neighborhoodSelections( rs, SRC_SELECTS.getName() ) );
         List<NeighborhoodSelection> dstSelections = Arrays
                 .asList( neighborhoodSelections( rs, DST_SELECTS.getName() ) );
-        return new NeighborhoodQuery( ekIds, srcSelections, dstSelections );
+        return new NeighborhoodQuery( dataKeys, srcSelections, dstSelections );
     }
 
     public static Edge edge( ResultSet rs ) throws SQLException {
@@ -1083,11 +1083,15 @@ public final class ResultSetAdapters {
         final EntitySetAssemblyKey entitySetAssemblyKey = entitySetAssemblyKey( rs );
         final EnumSet<OrganizationEntitySetFlag> organizationEntitySetFlags = organizationEntitySetFlags( rs );
 
-        return new MaterializedEntitySet( entitySetAssemblyKey, organizationEntitySetFlags );
-    }
+        final var refreshRate = rs.getLong( REFRESH_RATE.getName() );
+        // default value is -infinity, which is adapted to OffsetDateTime.MIN
+        final var lastRefresh = rs.getObject( LAST_REFRESH.getName(), OffsetDateTime.class );
 
-    public static String dbName( ResultSet rs ) throws SQLException {
-        return rs.getString( DB_NAME.getName() );
+        return new MaterializedEntitySet(
+                entitySetAssemblyKey,
+                refreshRate,
+                organizationEntitySetFlags,
+                lastRefresh );
     }
 
     public static Boolean initialized( ResultSet rs ) throws SQLException {

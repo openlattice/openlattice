@@ -236,7 +236,11 @@ public final class PostgresTable {
 
     public static final PostgresTableDefinition MATERIALIZED_ENTITY_SETS =
             new PostgresTableDefinition( "materialized_entity_sets" )
-                    .addColumns( ENTITY_SET_ID, ORGANIZATION_ID, ENTITY_SET_FLAGS )
+                    .addColumns( ENTITY_SET_ID,
+                            ORGANIZATION_ID,
+                            ENTITY_SET_FLAGS,
+                            REFRESH_RATE,
+                            LAST_REFRESH )
                     .primaryKey( ENTITY_SET_ID, ORGANIZATION_ID );
     public static final PostgresTableDefinition NAMES                    =
             new PostgresTableDefinition( "names" )
@@ -248,9 +252,8 @@ public final class PostgresTable {
     //.setUnique( NAME );
     public static final PostgresTableDefinition ORGANIZATION_ASSEMBLIES  =
             new PostgresTableDefinition( "organization_assemblies" )
-                    .addColumns( ORGANIZATION_ID, DB_NAME, INITIALIZED )
-                    .primaryKey( ORGANIZATION_ID )
-                    .setUnique( DB_NAME ); //We may have to delete for citus
+                    .addColumns( ORGANIZATION_ID, INITIALIZED )
+                    .primaryKey( ORGANIZATION_ID );
 
     public static final PostgresTableDefinition PERMISSIONS =
             new PostgresTableDefinition( "permissions" )
@@ -328,22 +331,15 @@ public final class PostgresTable {
                     .primaryKey( ACL_KEY );
     public static final PostgresTableDefinition SUBSCRIPTIONS     =
             new PostgresTableDefinition( "subscriptions" )
-                    .addColumns( ID_VALUE,
+                    .addColumns( ENTITY_SET_ID,
+                            ID_VALUE,
                             PRINCIPAL_ID,
                             LAST_NOTIFIED,
                             SRC_SELECTS,
                             DST_SELECTS,
-                            ORGANIZATION_ID)
-                    .primaryKey( ID, PRINCIPAL_ID );
-
-    public static final PostgresTableDefinition SUBSCRIPTION_CONTACTS =
-            new PostgresTableDefinition( "subscription_contacts" )
-                    .addColumns( ID_VALUE,
-                            PRINCIPAL_ID,
                             CONTACT_TYPE,
-                            CONTACT_INFO )
+                            CONTACT_INFO)
                     .primaryKey( ID, PRINCIPAL_ID );
-
     public static final PostgresTableDefinition SYNC_IDS                 =
             new CitusDistributedTableDefinition( "sync_ids" )
                     .addColumns( ENTITY_SET_ID, ENTITY_ID, ID_VALUE )
@@ -428,6 +424,7 @@ public final class PostgresTable {
                         ENTITY_SET_ID.getName()
                                 + ",(" + LAST_LINK.getName() + " < " + LAST_WRITE.getName() + ")"
                                 + ",(" + LAST_INDEX.getName() + " >= " + LAST_WRITE.getName() + ")"
+                                + ",(" + LAST_INDEX.getName() + " > '-infinity' )"
                                 + ",(" + VERSION.getName() + " > 0)" )
                         .name( "entity_key_ids_needing_linking_idx" )
                         .ifNotExists(),
@@ -504,6 +501,13 @@ public final class PostgresTable {
         MATERIALIZED_ENTITY_SETS.addIndexes(
                 new PostgresColumnsIndexDefinition( MATERIALIZED_ENTITY_SETS, ORGANIZATION_ID )
                         .name( "materialized_entity_sets_organization_id_idx" )
+                        .ifNotExists(),
+                new PostgresColumnsIndexDefinition( MATERIALIZED_ENTITY_SETS, ENTITY_SET_FLAGS )
+                        .name( "materialized_entity_sets_entity_set_flags_idx" )
+                        .method( IndexType.GIN )
+                        .ifNotExists(),
+                new PostgresColumnsIndexDefinition( MATERIALIZED_ENTITY_SETS, LAST_REFRESH )
+                        .name( "materialized_entity_sets_last_refresh_idx" )
                         .ifNotExists() );
     }
 
