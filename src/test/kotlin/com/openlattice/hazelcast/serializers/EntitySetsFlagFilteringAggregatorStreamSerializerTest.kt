@@ -23,6 +23,7 @@ package com.openlattice.hazelcast.serializers
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest
 import com.openlattice.edm.processors.EntitySetsFlagFilteringAggregator
 import com.openlattice.edm.set.EntitySetFlag
+import java.util.*
 import kotlin.random.Random
 
 class EntitySetsFlagFilteringAggregatorStreamSerializerTest
@@ -39,7 +40,8 @@ class EntitySetsFlagFilteringAggregatorStreamSerializerTest
                 filteringFlags.add(entitySetFlags[it])
             }
         }
+        val filteredEntitySets = (0 until Random.nextInt(0, 5)).map { UUID.randomUUID() }.toMutableSet()
 
-        return EntitySetsFlagFilteringAggregator(filteringFlags)
+        return EntitySetsFlagFilteringAggregator(filteringFlags, filteredEntitySets)
     }
 }
