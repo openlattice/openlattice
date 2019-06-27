@@ -1,5 +1,3 @@
-
-
 /*
  * Copyright (C) 2018. OpenLattice, Inc.
  *
@@ -26,7 +24,6 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.openlattice.data.storage.partitions.PartitionManagerKt.DEFAULT_PARTITION_COUNT;
 
-import com.dataloom.streams.StreamUtil;
 import com.geekbeast.rhizome.hazelcast.DelegatedIntList;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
@@ -322,7 +319,10 @@ public class HazelcastOrganizationService {
 
     public void addMembers( UUID organizationId, Set<Principal> members ) {
         addMembers( new AclKey( organizationId ), members );
-        eventBus.post( new MembersAddedToOrganizationEvent( organizationId, new PrincipalSet( members ) ) );
+        final var securablePrincipals = securePrincipalsManager.getSecurablePrincipals( members );
+        eventBus.post(
+                new MembersAddedToOrganizationEvent( organizationId, new SecurablePrincipalList( securablePrincipals ) )
+        );
     }
 
     private void addMembers( AclKey orgAclKey, Set<Principal> members ) {
@@ -355,25 +355,35 @@ public class HazelcastOrganizationService {
     }
 
     public void removeMembers( UUID organizationId, Set<Principal> members ) {
+        final var users = members.stream()
+                .filter( m -> m.getType().equals( PrincipalType.USER ) )
+                .collect( Collectors.toList() );
+        final var securablePrincipals = securePrincipalsManager.getSecurablePrincipals( users );
+        final var userAclKeys = securePrincipalsManager.getSecurablePrincipals( users ).stream()
+                .map( SecurablePrincipal::getAclKey ).collect( Collectors.toSet() );
+
         removeRolesFromMembers(
-                getRolesInFull( organizationId ).stream().map( Role::getAclKey ),
-                members
-                        .stream()
-                        .filter( m -> m.getType().equals( PrincipalType.USER ) )
-                        .map( securePrincipalsManager::lookup ) );
+                getRoles( organizationId ).stream().map( Role::getAclKey ).collect( Collectors.toList() ),
+                userAclKeys
+        );
         membersOf.executeOnKey( organizationId, new OrganizationMemberRemover( members ) );
-
         final AclKey orgAclKey = new AclKey( organizationId );
-        members.stream().filter( PrincipalType.USER::equals )
-                .map( securePrincipalsManager::lookup )
-                .forEach( target -> securePrincipalsManager.removePrincipalFromPrincipal( orgAclKey, target ) );
+        removeOrganizationFromMembers( orgAclKey, userAclKeys );
 
-        eventBus.post( new MembersRemovedFromOrganizationEvent( organizationId, new PrincipalSet( members ) ) );
+        eventBus.post(
+                new MembersRemovedFromOrganizationEvent(
+                        organizationId,
+                        new SecurablePrincipalList( securablePrincipals )
+                )
+        );
     }
 
-    private void removeRolesFromMembers( Stream<AclKey> roles, Stream<AclKey> members ) {
-        members.forEach( member -> roles
-                .forEach( role -> securePrincipalsManager.removePrincipalFromPrincipal( role, member ) ) );
+    private void removeRolesFromMembers( Collection<AclKey> roles, Set<AclKey> members ) {
+        securePrincipalsManager.removePrincipalsFromPrincipals( roles, members );
+    }
+
+    private void removeOrganizationFromMembers( AclKey organization, Set<AclKey> members ) {
+        securePrincipalsManager.removePrincipalsFromPrincipals( List.of( organization ), members );
     }
 
     public void createRoleIfNotExists( Principal callingUser, Role role ) {
@@ -395,15 +405,11 @@ public class HazelcastOrganizationService {
         securePrincipalsManager.addPrincipalToPrincipal( roleKey, securePrincipalsManager.lookup( principal ) );
     }
 
-    private Collection<Role> getRolesInFull( UUID organizationId ) {
+    public Set<Role> getRoles( UUID organizationId ) {
         return securePrincipalsManager.getAllRolesInOrganization( organizationId )
                 .stream()
                 .map( sp -> (Role) sp )
-                .collect( Collectors.toList() );
-    }
-
-    public Set<Role> getRoles( UUID organizationId ) {
-        return StreamUtil.stream( getRolesInFull( organizationId ) ).collect( Collectors.toSet() );
+                .collect( Collectors.toSet() );
     }
 
     public void removeRoleFromUser( AclKey roleKey, Principal user ) {

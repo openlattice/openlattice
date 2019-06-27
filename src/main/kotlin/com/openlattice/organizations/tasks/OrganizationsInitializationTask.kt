@@ -24,6 +24,8 @@ package com.openlattice.organizations.tasks
 import com.google.common.base.Preconditions.checkState
 import com.google.common.base.Stopwatch
 import com.google.common.collect.ImmutableSet
+import com.openlattice.assembler.tasks.ProductionViewSchemaInitializationTask
+import com.openlattice.assembler.tasks.UsersAndRolesInitializationTask
 import com.openlattice.authorization.initializers.AuthorizationInitializationTask
 import com.openlattice.authorization.initializers.AuthorizationInitializationTask.Companion.GLOBAL_ADMIN_ROLE
 import com.openlattice.authorization.initializers.AuthorizationInitializationTask.Companion.OPENLATTICE_ROLE
@@ -33,7 +35,7 @@ import com.openlattice.organization.OrganizationConstants.Companion.GLOBAL_ORG_P
 import com.openlattice.organization.OrganizationConstants.Companion.OPENLATTICE_ORGANIZATION_ID
 import com.openlattice.organization.OrganizationConstants.Companion.OPENLATTICE_ORG_PRINCIPAL
 import com.openlattice.tasks.HazelcastInitializationTask
-import com.openlattice.tasks.PostConstructInitializerTaskDependencies.*
+import com.openlattice.tasks.PostConstructInitializerTaskDependencies.PostConstructInitializerTask
 import com.openlattice.tasks.Task
 import org.slf4j.LoggerFactory
 import java.util.*
@@ -64,7 +66,7 @@ class OrganizationsInitializationTask : HazelcastInitializationTask<Organization
         } else {
             organizationService.createOrganization(
                     GLOBAL_ADMIN_ROLE.principal,
-                    createGlobalOrg(defaultPartitions)
+                    createGlobalOrg()
             )
         }
 
@@ -78,7 +80,7 @@ class OrganizationsInitializationTask : HazelcastInitializationTask<Organization
         } else {
             organizationService.createOrganization(
                     OPENLATTICE_ROLE.principal,
-                    createOpenLatticeOrg(defaultPartitions)
+                    createOpenLatticeOrg()
             )
         }
         logger.info("Bootstrapping for organizations took {} ms", sw.elapsed(TimeUnit.MILLISECONDS))
@@ -93,7 +95,12 @@ class OrganizationsInitializationTask : HazelcastInitializationTask<Organization
     }
 
     override fun after(): Set<Class<out HazelcastInitializationTask<*>>> {
-        return setOf(AuthorizationInitializationTask::class.java, PostConstructInitializerTask::class.java)
+        return setOf(
+                AuthorizationInitializationTask::class.java,
+                UsersAndRolesInitializationTask::class.java,
+                PostConstructInitializerTask::class.java,
+                ProductionViewSchemaInitializationTask::class.java
+        )
     }
 
     override fun getName(): String {

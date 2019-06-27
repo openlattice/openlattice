@@ -24,7 +24,6 @@ import com.openlattice.authorization.*;
 import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.organization.roles.Role;
 import com.google.common.collect.SetMultimap;
-import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.query.Predicate;
 
 import java.util.*;
@@ -37,8 +36,6 @@ public interface SecurePrincipalsManager {
      * @return True if the securable principal was created false otherwise.
      */
     boolean createSecurablePrincipalIfNotExists( Principal owner, SecurablePrincipal principal );
-
-    //    SecurablePrincipal getSecurablePrincipal( Principal principal );
 
     /**
      * Retrieves a securable principal by acl key lookup.
@@ -75,7 +72,7 @@ public interface SecurePrincipalsManager {
 
     void removePrincipalFromPrincipal( AclKey source, AclKey target );
 
-    Map<AclKey, Object> executeOnPrincipal( EntryProcessor<AclKey, SecurablePrincipal> ep, Predicate p );
+    void removePrincipalsFromPrincipals( Collection<AclKey> sources, Set<AclKey> target );
 
     //More logical to use Principal
 
@@ -106,7 +103,7 @@ public interface SecurePrincipalsManager {
 
     Collection<Principal> getPrincipals( Predicate<AclKey, SecurablePrincipal> p );
 
-    Collection<SecurablePrincipal> getSecurablePrincipals( Set<Principal> members );
+    Collection<SecurablePrincipal> getSecurablePrincipals( Collection<Principal> members );
 
     Collection<SecurablePrincipal> getAllPrincipals( SecurablePrincipal sp );
 
