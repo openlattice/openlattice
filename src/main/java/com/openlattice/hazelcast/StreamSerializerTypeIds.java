@@ -22,7 +22,6 @@
 
 package com.openlattice.hazelcast;
 
-
 /**
  * Simplifies management of type ids within Hazelcast for serialization. Can be re-ordered safely unless doing hot
  * upgrade. <b>NOTE: Leave first entry in place</b>
@@ -213,5 +212,6 @@ public enum StreamSerializerTypeIds {
     SUBSCRIPTION_NOTIFICATION_TASK,
     MESSAGE_REQUEST,
     ENTITY_SETS_FLAG_FILTERING_AGGREGATOR,
-    MATERIALIZED_ENTITY_SETS_REFRESH_AGGREGATOR
+    MATERIALIZED_ENTITY_SETS_REFRESH_AGGREGATOR,
+    MATERIALIZED_ENTITY_SETS_DATA_REFRESH_TASK;
 }
