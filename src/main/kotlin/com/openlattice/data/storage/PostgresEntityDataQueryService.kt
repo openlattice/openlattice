@@ -58,6 +58,7 @@ class PostgresEntityDataQueryService(
 
     }
 
+
     @JvmOverloads
     fun getEntitiesWithPropertyTypeIds(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,

@@ -149,7 +149,8 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             Map<UUID, Map<UUID, Set<Object>>> entities,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
         // need to collect linking ids before writes to the entities
-        Set<UUID> oldLinkingIds = linkingQueryService.getLinkingIds( Map.of( entitySetId, Optional.of( entities.keySet() ) ) )
+        Set<UUID> oldLinkingIds = linkingQueryService
+                .getLinkingIds( Map.of( entitySetId, Optional.of( entities.keySet() ) ) )
                 .values().stream().flatMap( Set::stream )
                 .collect( Collectors.toSet() );
 
@@ -169,9 +170,11 @@ public class HazelcastEntityDatastore implements EntityDatastore {
 
     private void signalCreatedEntities( UUID entitySetId, Set<UUID> entityKeyIds ) {
         if ( shouldIndexDirectly( entitySetId, entityKeyIds ) ) {
-            eventBus.post( new EntitiesUpsertedEvent( entitySetId, dataQueryService
-                    .getEntitiesWithPropertyTypeIds( ImmutableMap.of( entitySetId, Optional.of(entityKeyIds) ),
-                            edmManager.getPropertyTypesForEntitySet( entitySetId ) ) ) );
+            final var entities = dataQueryService
+                    .getEntitiesWithPropertyTypeIds(
+                            ImmutableMap.of( entitySetId, Optional.of( entityKeyIds ) ),
+                            ImmutableMap.of( entitySetId, edmManager.getPropertyTypesForEntitySet( entitySetId ) ) );
+            eventBus.post( new EntitiesUpsertedEvent( entitySetId, entities ) );
         }
 
         markMaterializedEntitySetDirty( entitySetId ); // mark entityset as unsync with data
@@ -225,7 +228,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
 
         signalLinkedEntitiesDeleted( entitySetId, Optional.of( entityKeyIds ) );
         // mark all involved linking entitysets as unsync with data
-       linkingQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId )
+        linkingQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId )
                 .forEach( this::markMaterializedEntitySetDirty );
     }
 
@@ -335,13 +338,13 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
             Boolean linking ) {
         //If the query generated exceed 33.5M UUIDs good chance that it exceed Postgres's 1 GB max query buffer size
-        PostgresIterable result = dataQueryService.getEntitiesWithPropertyTypeIds(
+        final var result = dataQueryService.getEntitiesWithPropertyTypeFqns(
                 entityKeyIds,
                 authorizedPropertyTypes,
                 ImmutableMap.of(),
                 EnumSet.noneOf( MetadataOption.class ),
                 Optional.empty(),
-                linking);
+                linking );
 
         return new EntitySetData<>( orderedPropertyTypes, result );
     }
@@ -368,7 +371,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             EnumSet<MetadataOption> metadataOptions ) {
         //If the query generated exceeds 33.5M UUIDs good chance that it exceeds Postgres's 1 GB max query buffer size
         return dataQueryService.getEntitiesWithPropertyTypeIds(
-                ImmutableMap.of(entitySetId, Optional.of( ids ) ),
+                ImmutableMap.of( entitySetId, Optional.of( ids ) ),
                 authorizedPropertyTypes,
                 ImmutableMap.of(),
                 metadataOptions
@@ -382,7 +385,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             Set<UUID> ids,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes ) {
         return dataQueryService.getEntitiesWithPropertyTypeIds(
-                ImmutableMap.of(entitySetId, Optional.of( ids ) ),
+                ImmutableMap.of( entitySetId, Optional.of( ids ) ),
                 authorizedPropertyTypes );
     }
 
@@ -483,7 +486,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                 .forEach( e -> entities //
                         .putAll( e.getKey(),
                                 dataQueryService.getEntitiesWithPropertyTypeIds(
-                                        ImmutableMap.of(e.getKey(), Optional.of(e.getValue())),
+                                        ImmutableMap.of( e.getKey(), Optional.of( e.getValue() ) ),
                                         Map.of( e.getKey(), authorizedPropertyTypesByEntitySet.get( e.getKey() ) ),
                                         ImmutableMap.of(),
                                         EnumSet.noneOf( MetadataOption.class ) )
