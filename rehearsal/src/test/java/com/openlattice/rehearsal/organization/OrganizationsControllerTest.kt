@@ -2,10 +2,8 @@ package com.openlattice.rehearsal.organization
 
 import com.openlattice.authorization.*
 import com.openlattice.mapstores.TestDataFactory
-import com.openlattice.organization.OrganizationsApi
 import com.openlattice.rehearsal.GeneralException
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
-import okhttp3.RequestBody
 import org.junit.Assert
 import org.junit.BeforeClass
 import org.junit.Test

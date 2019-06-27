@@ -81,15 +81,31 @@ class TestAssemblerConnectionManager {
          * If entitySetIds are left empty, the query will select all rows.
          */
         @JvmStatic
-        fun selectEdgesOfEntitySetsSql(entitySetIds: Set<UUID> = setOf()): String {
+        fun selectEdgesOfEntitySetsSql(
+                srcEntitySetId: Optional<UUID> = Optional.empty(),
+                edgeEntitySetId: Optional<UUID> = Optional.empty(),
+                dstEntitySetId: Optional<UUID> = Optional.empty()
+        ): String {
             return "SELECT * FROM ${AssemblerConnectionManager.MATERIALIZED_VIEWS_SCHEMA}.${PostgresTable.EDGES.name} " +
-                    if (entitySetIds.isEmpty()) {
+                    if (!srcEntitySetId.isPresent && !edgeEntitySetId.isPresent && !dstEntitySetId.isPresent) {
                         ""
                     } else {
-                        val setIdsClause = entitySetIds.joinToString("','", "('", "')")
-                        "WHERE ${PostgresColumn.SRC_ENTITY_SET_ID.name} IN $setIdsClause " +
-                                "OR ${PostgresColumn.EDGE_ENTITY_SET_ID.name} IN $setIdsClause " +
-                                "OR ${PostgresColumn.DST_ENTITY_SET_ID.name} IN $setIdsClause"
+                        val srcEntitySetIdClause = if(srcEntitySetId.isPresent) {
+                            "${PostgresColumn.SRC_ENTITY_SET_ID.name} = '${srcEntitySetId.get()}' AND "
+                        } else {
+                            "TRUE AND "
+                        }
+                        val edgeEntitySetIdClause = if(edgeEntitySetId.isPresent) {
+                            "${PostgresColumn.EDGE_ENTITY_SET_ID.name} = '${edgeEntitySetId.get()}' AND "
+                        } else {
+                            "TRUE AND "
+                        }
+                        val dstEntitySetIdClause = if(dstEntitySetId.isPresent) {
+                            "${PostgresColumn.DST_ENTITY_SET_ID.name} = '${dstEntitySetId.get()}'"
+                        } else {
+                            "TRUE"
+                        }
+                        "WHERE $srcEntitySetIdClause $edgeEntitySetIdClause $dstEntitySetIdClause"
                     }
         }
 
