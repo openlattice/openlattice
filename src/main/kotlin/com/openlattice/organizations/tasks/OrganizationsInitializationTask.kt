@@ -66,7 +66,7 @@ class OrganizationsInitializationTask : HazelcastInitializationTask<Organization
         } else {
             organizationService.createOrganization(
                     GLOBAL_ADMIN_ROLE.principal,
-                    createGlobalOrg()
+                    createGlobalOrg(defaultPartitions)
             )
         }
 
@@ -80,7 +80,7 @@ class OrganizationsInitializationTask : HazelcastInitializationTask<Organization
         } else {
             organizationService.createOrganization(
                     OPENLATTICE_ROLE.principal,
-                    createOpenLatticeOrg()
+                    createOpenLatticeOrg(defaultPartitions)
             )
         }
         logger.info("Bootstrapping for organizations took {} ms", sw.elapsed(TimeUnit.MILLISECONDS))
