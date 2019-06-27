@@ -43,7 +43,6 @@ import com.openlattice.authorization.HazelcastSecurableObjectResolveTypeService;
 import com.openlattice.authorization.PostgresUserApi;
 import com.openlattice.authorization.Principals;
 import com.openlattice.authorization.SecurableObjectResolveTypeService;
-import com.openlattice.conductor.rpc.ConductorConfiguration;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.datastore.services.EdmManager;
@@ -56,6 +55,7 @@ import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
 import com.openlattice.edm.schemas.postgres.PostgresSchemaQueryService;
 import com.openlattice.hazelcast.HazelcastQueue;
 import com.openlattice.kindling.search.ConductorElasticsearchImpl;
+import com.openlattice.linking.LinkingConfiguration;
 import com.openlattice.linking.Matcher;
 import com.openlattice.linking.PostgresLinkingFeedbackService;
 import com.openlattice.linking.matching.SocratesMatcher;
@@ -111,7 +111,7 @@ public class LinkerServicesPod {
     private EventBus eventBus;
 
     @Inject
-    private ConductorConfiguration conductorConfiguration;
+    private LinkingConfiguration linkingConfiguration;
 
     @Inject
     private AuditingConfiguration auditingConfiguration;
@@ -124,7 +124,7 @@ public class LinkerServicesPod {
 
     @Bean
     public ConductorElasticsearchApi elasticsearchApi() throws IOException {
-        return new ConductorElasticsearchImpl( conductorConfiguration.getSearchConfiguration() );
+        return new ConductorElasticsearchImpl( linkingConfiguration.getSearchConfiguration() );
     }
 
     @Bean
