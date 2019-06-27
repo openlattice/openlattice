@@ -191,9 +191,12 @@ class AssemblerConnectionManager(
     fun configureNewUsersInDatabase(
             dbName: String,
             dataSource: HikariDataSource,
-            principals: Collection<SecurablePrincipal>) {
-        val userNames = principals.map { quote(buildPostgresUsername(it)) }
-        configureUsersInDatabase(dataSource, dbName, userNames)
+            principals: Collection<SecurablePrincipal>
+    ) {
+        if (principals.isNotEmpty()) {
+            val userNames = principals.map { quote(buildPostgresUsername(it)) }
+            configureUsersInDatabase(dataSource, dbName, userNames)
+        }
     }
 
     fun removeMembersFromOrganization(
@@ -201,8 +204,10 @@ class AssemblerConnectionManager(
             dataSource: HikariDataSource,
             principals: Collection<SecurablePrincipal>
     ) {
-        val userNames = principals.map { quote(buildPostgresUsername(it)) }
-        revokeConnectAndSchemaUsage(dataSource, dbName, userNames)
+        if (principals.isNotEmpty()) {
+            val userNames = principals.map { quote(buildPostgresUsername(it)) }
+            revokeConnectAndSchemaUsage(dataSource, dbName, userNames)
+        }
     }
 
     private fun createOrganizationDatabase(organizationId: UUID, dbname: String) {
@@ -552,16 +557,18 @@ class AssemblerConnectionManager(
 
     private fun configureRolesInDatabase(datasource: HikariDataSource, spm: SecurePrincipalsManager) {
         val roles = getAllRoles(spm)
-        val roleIds = roles.map { quote(buildPostgresRoleName(it)) }
-        val roleIdsSql = roleIds.joinToString(",")
+        if (roles.iterator().hasNext()) {
+            val roleIds = roles.map { quote(buildPostgresRoleName(it)) }
+            val roleIdsSql = roleIds.joinToString(",")
 
-        datasource.connection.use { connection ->
-            connection.createStatement().use { statement ->
-                logger.info("Revoking $PUBLIC_SCHEMA schema right from roles: {}", roleIds)
-                //Don't allow users to access public schema which will contain foreign data wrapper tables.
-                statement.execute("REVOKE USAGE ON SCHEMA $PUBLIC_SCHEMA FROM $roleIdsSql")
+            datasource.connection.use { connection ->
+                connection.createStatement().use { statement ->
+                    logger.info("Revoking $PUBLIC_SCHEMA schema right from roles: {}", roleIds)
+                    //Don't allow users to access public schema which will contain foreign data wrapper tables.
+                    statement.execute("REVOKE USAGE ON SCHEMA $PUBLIC_SCHEMA FROM $roleIdsSql")
 
-                return@use
+                    return@use
+                }
             }
         }
     }
