@@ -5,6 +5,7 @@ import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.ResultSetAdapters.entitySetId
 import com.openlattice.postgres.ResultSetAdapters.id
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
+import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import java.sql.*
 import java.sql.Date
@@ -18,8 +19,7 @@ internal class PostgresResultSetAdapters
 
 private val logger = LoggerFactory.getLogger(PostgresResultSetAdapters::class.java)
 
-@Throws(SQLException::class)
-fun <T> getEntityPropertiesByPropertyTypeId(
+private fun <T> getEntityPropertiesByFunctionResult(
         rs: ResultSet,
         authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
         byteBlobDataManager: ByteBlobDataManager,
@@ -44,6 +44,24 @@ fun <T> getEntityPropertiesByPropertyTypeId(
         }
     }
     return id to data
+}
+
+@Throws(SQLException::class)
+fun getEntityPropertiesByPropertyTypeId(
+        rs: ResultSet,
+        authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
+        byteBlobDataManager: ByteBlobDataManager
+): Pair<UUID, MutableMap<UUID, MutableSet<Any>>> {
+    return getEntityPropertiesByFunctionResult(rs, authorizedPropertyTypes, byteBlobDataManager) { it.id }
+}
+
+@Throws(SQLException::class)
+fun getEntityPropertiesByFullQualifiedName(
+        rs: ResultSet,
+        authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
+        byteBlobDataManager: ByteBlobDataManager
+): Pair<UUID, MutableMap<FullQualifiedName, MutableSet<Any>>> {
+    return getEntityPropertiesByFunctionResult(rs, authorizedPropertyTypes, byteBlobDataManager) { it.datatype.fullQualifiedName }
 }
 
 //TODO: If we are getting NPEs on read we may have to do better filtering here.

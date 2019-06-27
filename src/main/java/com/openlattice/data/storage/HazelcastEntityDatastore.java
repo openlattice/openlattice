@@ -26,6 +26,7 @@ import com.codahale.metrics.annotation.Timed;
 import com.google.common.collect.*;
 import com.google.common.eventbus.EventBus;
 import com.openlattice.assembler.Assembler;
+import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.data.*;
 import com.openlattice.data.events.EntitiesDeletedEvent;
 import com.openlattice.data.events.LinkedEntitiesDeletedEvent;
@@ -337,7 +338,9 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             LinkedHashSet<String> orderedPropertyTypes,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
             Boolean linking ) {
+
         //If the query generated exceed 33.5M UUIDs good chance that it exceed Postgres's 1 GB max query buffer size
+
         final var result = dataQueryService.getEntitiesWithPropertyTypeFqns(
                 entityKeyIds,
                 authorizedPropertyTypes,
@@ -346,7 +349,8 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                 Optional.empty(),
                 linking );
 
-        return new EntitySetData<>( orderedPropertyTypes, result );
+
+        return new EntitySetData( orderedPropertyTypes, result );
     }
 
     @Override
@@ -370,8 +374,9 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
             EnumSet<MetadataOption> metadataOptions ) {
         //If the query generated exceeds 33.5M UUIDs good chance that it exceeds Postgres's 1 GB max query buffer size
-        return dataQueryService.getEntitiesWithPropertyTypeIds(
-                ImmutableMap.of( entitySetId, Optional.of( ids ) ),
+
+        return dataQueryService.getEntitiesWithPropertyTypeFqns(
+                ImmutableMap.of(entitySetId, Optional.of( ids ) ),
                 authorizedPropertyTypes,
                 ImmutableMap.of(),
                 metadataOptions
@@ -380,12 +385,12 @@ public class HazelcastEntityDatastore implements EntityDatastore {
 
     @Override
     @Timed
-    public PostgresIterable<Pair<UUID, Map<FullQualifiedName, Set<Object>>>> getEntitiesById(
+    public Map<UUID, Map<FullQualifiedName, Set<Object>>> getEntitiesById(
             UUID entitySetId,
             Set<UUID> ids,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes ) {
-        return dataQueryService.getEntitiesWithPropertyTypeIds(
-                ImmutableMap.of( entitySetId, Optional.of( ids ) ),
+        return dataQueryService.getEntitiesWithPropertyTypeFqns(
+                ImmutableMap.of(entitySetId, Optional.of( ids ) ),
                 authorizedPropertyTypes );
     }
 

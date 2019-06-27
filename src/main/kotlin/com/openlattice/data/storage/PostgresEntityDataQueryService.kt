@@ -17,6 +17,7 @@ import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.commons.lang3.NotImplementedException
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
+import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import java.nio.ByteBuffer
 import java.security.InvalidParameterException
@@ -55,7 +56,6 @@ class PostgresEntityDataQueryService(
                     ) { ps -> ps.setObject(1, entitySetId) }
             ) { rs -> ResultSetAdapters.id(rs) }
         }
-
     }
 
 
@@ -70,9 +70,23 @@ class PostgresEntityDataQueryService(
     ): Map<UUID, MutableMap<UUID, MutableSet<Any>>> {
         return streamableEntitySet(
                 entityKeyIds, authorizedPropertyTypes, propertyTypeFilters, metadataOptions, version, linking
-        ) { rs -> getEntityPropertiesByPropertyTypeId(rs, authorizedPropertyTypes, byteBlobDataManager
-        ) { pt -> pt.id } }.toMap()
+        ) { rs -> getEntityPropertiesByPropertyTypeId(rs, authorizedPropertyTypes, byteBlobDataManager) }.toMap()
     }
+
+    @JvmOverloads
+    fun getEntitiesWithPropertyTypeFqns(
+            entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
+            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
+            propertyTypeFilters: Map<UUID, Set<Filter>> = mapOf(),
+            metadataOptions: Set<MetadataOption> = EnumSet.noneOf(MetadataOption::class.java),
+            version: Optional<Long> = Optional.empty(),
+            linking: Boolean = false
+    ): Map<UUID, MutableMap<FullQualifiedName, MutableSet<Any>>> {
+        return streamableEntitySet(
+                entityKeyIds, authorizedPropertyTypes, propertyTypeFilters, metadataOptions, version, linking
+        ) { rs -> getEntityPropertiesByFullQualifiedName(rs, authorizedPropertyTypes, byteBlobDataManager) }.toMap()
+    }
+
 
     /**
      * Note: for linking queries, linking id and entity set id will be returned, thus data won't be merged by linking id
