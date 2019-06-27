@@ -122,7 +122,7 @@ class AssemblerConnectionManager(
             "${(jdbcUrl as String).removeSuffix(
                     "/"
             )}/$dbname" + if (assemblerConfiguration.ssl) {
-                "?sslmode=required"
+                "?sslmode=require"
             } else {
                 ""
             }
