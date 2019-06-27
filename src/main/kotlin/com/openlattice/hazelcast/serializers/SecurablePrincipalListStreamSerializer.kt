@@ -18,36 +18,32 @@
  *
  *
  */
-
 package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
-import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
+import com.openlattice.authorization.SecurablePrincipal
 import com.openlattice.hazelcast.StreamSerializerTypeIds
-import com.openlattice.organizations.events.MembersAddedToOrganizationEvent
+import com.openlattice.organizations.SecurablePrincipalList
 import org.springframework.stereotype.Component
 
 @Component
-class MembersAddedToOrganizationEventStreamSerializer
-    : SelfRegisteringStreamSerializer<MembersAddedToOrganizationEvent> {
-
-    override fun write(out: ObjectDataOutput, obj: MembersAddedToOrganizationEvent) {
-        UUIDStreamSerializer.serialize(out, obj.organizationId)
-        SecurablePrincipalListStreamSerializer().write(out, obj.newMembers)
-    }
-
-    override fun read(input: ObjectDataInput): MembersAddedToOrganizationEvent {
-        return MembersAddedToOrganizationEvent(
-                UUIDStreamSerializer.deserialize(input),
-                SecurablePrincipalListStreamSerializer().read(input))
-    }
+class SecurablePrincipalListStreamSerializer
+    : ListStreamSerializer<SecurablePrincipalList, SecurablePrincipal>(SecurablePrincipalList::class.java) {
 
     override fun getTypeId(): Int {
-        return StreamSerializerTypeIds.MEMBERS_ADDED_TO_ORGANIZATION_EVENT.ordinal
+        return StreamSerializerTypeIds.SECURABLE_PRINCIPAL_LIST.ordinal
     }
 
-    override fun getClazz(): Class<out MembersAddedToOrganizationEvent> {
-        return MembersAddedToOrganizationEvent::class.java
+    override fun newInstanceWithExpectedSize(size: Int): SecurablePrincipalList {
+        return SecurablePrincipalList(ArrayList(size))
+    }
+
+    override fun readSingleElement(input: ObjectDataInput): SecurablePrincipal {
+        return SecurablePrincipalStreamSerializer.deserialize(input)
+    }
+
+    override fun writeSingleElement(output: ObjectDataOutput, element: SecurablePrincipal) {
+        SecurablePrincipalStreamSerializer.serialize(output, element)
     }
 }
