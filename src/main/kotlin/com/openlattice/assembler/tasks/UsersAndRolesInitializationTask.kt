@@ -46,7 +46,7 @@ class UsersAndRolesInitializationTask : HazelcastInitializationTask<AssemblerDep
     }
 
     override fun after(): Set<Class<out HazelcastInitializationTask<*>>> {
-        return setOf(OrganizationsInitializationTask::class.java, AuthorizationInitializationTask::class.java)
+        return setOf(AuthorizationInitializationTask::class.java)
     }
 
     override fun getInitialDelay(): Long {

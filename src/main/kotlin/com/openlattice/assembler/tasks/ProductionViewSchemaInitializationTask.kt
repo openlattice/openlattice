@@ -21,9 +21,9 @@
 
 package com.openlattice.assembler.tasks
 
-import com.openlattice.assembler.*
+import com.openlattice.assembler.AssemblerConnectionManager
+import com.openlattice.assembler.AssemblerDependencies
 import com.openlattice.authorization.initializers.AuthorizationInitializationTask
-import com.openlattice.organizations.tasks.OrganizationsInitializationTask
 import com.openlattice.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.Task
 import org.slf4j.LoggerFactory
@@ -48,7 +48,7 @@ class ProductionViewSchemaInitializationTask : HazelcastInitializationTask<Assem
     }
 
     override fun after(): Set<Class<out HazelcastInitializationTask<*>>> {
-        return setOf(OrganizationsInitializationTask::class.java, AuthorizationInitializationTask::class.java)
+        return setOf(AuthorizationInitializationTask::class.java)
     }
 
     override fun getInitialDelay(): Long {

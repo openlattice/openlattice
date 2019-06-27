@@ -1750,7 +1750,7 @@ public class EdmService implements EdmManager {
     @SuppressWarnings( "unchecked" )
     public Set<UUID> getEntitySetIdsWithFlags( Set<UUID> entitySetIds, Set<EntitySetFlag> filteringFlags ) {
         return entitySets.aggregate(
-                new EntitySetsFlagFilteringAggregator( filteringFlags ),
+                new EntitySetsFlagFilteringAggregator( filteringFlags, new HashSet<>() ),
                 Predicates.in( "__key", entitySetIds.toArray( new UUID[]{} ) ) );
     }
 

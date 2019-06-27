@@ -22,40 +22,28 @@ package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
-import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
-import com.openlattice.assembler.EntitySetAssemblyKey
+import com.openlattice.authorization.SecurablePrincipal
 import com.openlattice.hazelcast.StreamSerializerTypeIds
+import com.openlattice.organizations.SecurablePrincipalList
 import org.springframework.stereotype.Component
 
 @Component
-class EntitySetAssemblyKeyStreamSerializer : SelfRegisteringStreamSerializer<EntitySetAssemblyKey> {
-
-    companion object {
-
-        fun serialize(out: ObjectDataOutput, obj: EntitySetAssemblyKey) {
-            UUIDStreamSerializer.serialize(out, obj.entitySetId)
-            UUIDStreamSerializer.serialize(out, obj.organizationId)
-        }
-
-        fun deserialize(input: ObjectDataInput): EntitySetAssemblyKey {
-            return EntitySetAssemblyKey(UUIDStreamSerializer.deserialize(input), UUIDStreamSerializer.deserialize(input))
-        }
-
-    }
+class SecurablePrincipalListStreamSerializer
+    : ListStreamSerializer<SecurablePrincipalList, SecurablePrincipal>(SecurablePrincipalList::class.java) {
 
     override fun getTypeId(): Int {
-        return StreamSerializerTypeIds.ENTITY_SET_ASSEMBLY_KEY.ordinal
+        return StreamSerializerTypeIds.SECURABLE_PRINCIPAL_LIST.ordinal
     }
 
-    override fun getClazz(): Class<out EntitySetAssemblyKey> {
-        return EntitySetAssemblyKey::class.java
+    override fun newInstanceWithExpectedSize(size: Int): SecurablePrincipalList {
+        return SecurablePrincipalList(ArrayList(size))
     }
 
-    override fun write(out: ObjectDataOutput, obj: EntitySetAssemblyKey) {
-        serialize(out, obj)
+    override fun readSingleElement(input: ObjectDataInput): SecurablePrincipal {
+        return SecurablePrincipalStreamSerializer.deserialize(input)
     }
 
-    override fun read(input: ObjectDataInput): EntitySetAssemblyKey {
-        return deserialize(input)
+    override fun writeSingleElement(output: ObjectDataOutput, element: SecurablePrincipal) {
+        SecurablePrincipalStreamSerializer.serialize(output, element)
     }
 }

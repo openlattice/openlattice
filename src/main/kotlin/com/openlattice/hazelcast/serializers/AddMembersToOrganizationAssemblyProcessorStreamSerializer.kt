@@ -27,6 +27,7 @@ import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.processors.AddMembersToOrganizationAssemblyProcessor
 import com.openlattice.hazelcast.StreamSerializerTypeIds
+import com.openlattice.organizations.SecurablePrincipalList
 import org.springframework.stereotype.Component
 
 @Component
@@ -45,11 +46,11 @@ class AddMembersToOrganizationAssemblyProcessorStreamSerializer
     }
 
     override fun write(out: ObjectDataOutput, obj: AddMembersToOrganizationAssemblyProcessor) {
-        PrincipalSetStreamSerializer().write(out, obj.newMembers)
+        SecurablePrincipalListStreamSerializer().write(out, SecurablePrincipalList(obj.newPrincipals))
     }
 
     override fun read(input: ObjectDataInput): AddMembersToOrganizationAssemblyProcessor {
-        return AddMembersToOrganizationAssemblyProcessor(PrincipalSetStreamSerializer().read(input)).init(acm)
+        return AddMembersToOrganizationAssemblyProcessor(SecurablePrincipalListStreamSerializer().read(input)).init(acm)
     }
 
     override fun init(assemblerConnectionManager: AssemblerConnectionManager) {

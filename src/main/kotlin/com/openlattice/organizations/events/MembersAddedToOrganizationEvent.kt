@@ -20,8 +20,8 @@
  */
 package com.openlattice.organizations.events
 
-import com.openlattice.organizations.PrincipalSet
+import com.openlattice.organizations.SecurablePrincipalList
 import java.util.UUID
 
 
-data class MembersAddedToOrganizationEvent(val organizationId: UUID, val newMembers: PrincipalSet)
+data class MembersAddedToOrganizationEvent(val organizationId: UUID, val newMembers: SecurablePrincipalList)
