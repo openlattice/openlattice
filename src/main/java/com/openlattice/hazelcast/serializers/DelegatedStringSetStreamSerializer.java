@@ -1,5 +1,3 @@
-
-
 /*
  * Copyright (C) 2018. OpenLattice, Inc.
  *
@@ -26,7 +24,6 @@ import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.google.common.collect.Sets;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializer;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import java.io.IOException;
 import org.springframework.stereotype.Component;

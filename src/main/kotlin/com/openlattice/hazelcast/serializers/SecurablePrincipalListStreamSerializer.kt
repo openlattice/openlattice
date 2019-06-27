@@ -22,7 +22,6 @@ package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
-import com.kryptnostic.rhizome.hazelcast.serializers.ListStreamSerializer
 import com.openlattice.authorization.SecurablePrincipal
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.organizations.SecurablePrincipalList
