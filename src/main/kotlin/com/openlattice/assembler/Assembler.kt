@@ -464,10 +464,7 @@ class Assembler(
         }
 
         override fun after(): Set<Class<out HazelcastInitializationTask<*>>> {
-            return setOf(
-                    OrganizationsInitializationTask::class.java,
-                    UsersAndRolesInitializationTask::class.java
-            )
+            return setOf(OrganizationsInitializationTask::class.java)
         }
 
         override fun getName(): String {
