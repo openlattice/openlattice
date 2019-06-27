@@ -171,7 +171,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         if ( shouldIndexDirectly( entitySetId, entityKeyIds ) ) {
             eventBus.post( new EntitiesUpsertedEvent( entitySetId, dataQueryService
                     .getEntitiesWithPropertyTypeIds( ImmutableMap.of( entitySetId, Optional.of(entityKeyIds) ),
-                            edmManager.getPropertyTypesForEntitySet( entitySetId ) );
+                            edmManager.getPropertyTypesForEntitySet( entitySetId ) ) ) );
         }
 
         markMaterializedEntitySetDirty( entitySetId ); // mark entityset as unsync with data
