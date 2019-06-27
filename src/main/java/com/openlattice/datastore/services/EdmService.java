@@ -1802,6 +1802,7 @@ public class EdmService implements EdmManager {
         return entitySets.aggregate(
                 new EntitySetsFlagFilteringAggregator( filteringFlags ),
                 Predicates.in( "__key", entitySetIds.toArray( new UUID[] {} ) ) );
+
     }
 
     @Override

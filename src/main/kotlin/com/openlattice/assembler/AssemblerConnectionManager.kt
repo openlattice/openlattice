@@ -435,7 +435,7 @@ class AssemblerConnectionManager(
                         ResultSetAdapters.mapMetadataOptionToPostgresColumn(MetadataOption.ENTITY_KEY_IDS) +
                         propertyTypes.map { it.type.fullQualifiedNameAsString }
                 val grantSelectSql = grantSelectSql(tableName, principal, columns)
-
+                logger.info("AssemblerConnectionManager.grantSelectForEntitySet grant query: $grantSelectSql")
                 stmt.addBatch(grantSelectSql)
             }
             stmt.executeBatch()
@@ -454,6 +454,7 @@ class AssemblerConnectionManager(
 
         authorizedPrincipals.forEach {
             val grantSelectSql = grantSelectSql(tableName, it, listOf())
+            logger.info("AssemblerConnectionManager.grantSelectForEdges grant query: $grantSelectSql")
             stmt.addBatch(grantSelectSql)
         }
 

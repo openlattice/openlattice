@@ -22,6 +22,7 @@ package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
+import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.edm.processors.EntitySetsFlagFilteringAggregator
 import com.openlattice.edm.set.EntitySetFlag
@@ -46,6 +47,8 @@ class EntitySetsFlagFilteringAggregatorStreamSerializer
         obj.filteringFlags.forEach {
             output.writeInt(it.ordinal)
         }
+
+        SetStreamSerializers.fastUUIDSetSerialize(output, obj.filteredEntitySetIds)
     }
 
     override fun read(input: ObjectDataInput): EntitySetsFlagFilteringAggregator {
@@ -54,6 +57,8 @@ class EntitySetsFlagFilteringAggregatorStreamSerializer
             filteringFlags.add(entitySetFlags[input.readInt()])
         }
 
-        return EntitySetsFlagFilteringAggregator(filteringFlags)
+        val filteredEntitySetIds = SetStreamSerializers.fastUUIDSetDeserialize(input)
+
+        return EntitySetsFlagFilteringAggregator(filteringFlags, filteredEntitySetIds)
     }
 }
