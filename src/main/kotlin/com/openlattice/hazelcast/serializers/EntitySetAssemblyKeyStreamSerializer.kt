@@ -29,6 +29,20 @@ import org.springframework.stereotype.Component
 
 @Component
 class EntitySetAssemblyKeyStreamSerializer : SelfRegisteringStreamSerializer<EntitySetAssemblyKey> {
+
+    companion object {
+
+        fun serialize(out: ObjectDataOutput, obj: EntitySetAssemblyKey) {
+            UUIDStreamSerializer.serialize(out, obj.entitySetId)
+            UUIDStreamSerializer.serialize(out, obj.organizationId)
+        }
+
+        fun deserialize(input: ObjectDataInput): EntitySetAssemblyKey {
+            return EntitySetAssemblyKey(UUIDStreamSerializer.deserialize(input), UUIDStreamSerializer.deserialize(input))
+        }
+
+    }
+
     override fun getTypeId(): Int {
         return StreamSerializerTypeIds.ENTITY_SET_ASSEMBLY_KEY.ordinal
     }
@@ -38,11 +52,10 @@ class EntitySetAssemblyKeyStreamSerializer : SelfRegisteringStreamSerializer<Ent
     }
 
     override fun write(out: ObjectDataOutput, obj: EntitySetAssemblyKey) {
-        UUIDStreamSerializer.serialize(out, obj.entitySetId)
-        UUIDStreamSerializer.serialize(out, obj.organizationId)
+        serialize(out, obj)
     }
 
     override fun read(input: ObjectDataInput): EntitySetAssemblyKey {
-        return EntitySetAssemblyKey(UUIDStreamSerializer.deserialize(input), UUIDStreamSerializer.deserialize(input))
+        return deserialize(input)
     }
 }
