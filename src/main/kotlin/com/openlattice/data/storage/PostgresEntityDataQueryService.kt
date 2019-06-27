@@ -1,6 +1,7 @@
 package com.openlattice.data.storage
 
 import com.google.common.collect.Multimaps
+import com.google.common.collect.SetMultimap
 import com.openlattice.analysis.SqlBindInfo
 import com.openlattice.analysis.requests.Filter
 import com.openlattice.data.WriteEvent
@@ -17,6 +18,7 @@ import com.zaxxer.hikari.HikariDataSource
 import org.apache.commons.lang3.NotImplementedException
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.slf4j.LoggerFactory
+import java.nio.ByteBuffer
 import java.security.InvalidParameterException
 import java.sql.Connection
 import java.sql.PreparedStatement
@@ -262,6 +264,27 @@ class PostgresEntityDataQueryService(
         return WriteEvent(version, updatedEntityCount)
     }
 
+    fun replaceEntities(
+            entitySetId: UUID,
+            entities: Map<UUID, Map<UUID, Set<Any>>>,
+            authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent {
+        TODO("Not implemented")
+    }
+
+    fun partialReplaceEntities(
+            entitySetId: UUID,
+            entities: Map<UUID, Map<UUID, Set<Any>>>,
+            authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent {
+        TODO("Not implemented")
+    }
+
+    fun replacePropertiesInEntities(
+            entitySetId: UUID,
+            replacementProperties: Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Any>>>,
+            authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent {
+        TODO("Not implemented")
+    }
+
     /**
      * Tombstones all entities in an entity set.
      */
@@ -295,6 +318,10 @@ class PostgresEntityDataQueryService(
 
 
         return WriteEvent(tombstoneVersion, numUpdated)
+    }
+
+    fun clearEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent {
+        TODO("Not implemented")
     }
 
     /**
