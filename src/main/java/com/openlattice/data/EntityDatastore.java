@@ -26,15 +26,19 @@ import com.google.common.collect.ListMultimap;
 import com.google.common.collect.SetMultimap;
 import com.openlattice.data.storage.MetadataOption;
 import com.openlattice.edm.type.PropertyType;
-
 import com.openlattice.postgres.streams.BasePostgresIterable;
-import java.nio.ByteBuffer;
-import java.util.*;
-import java.util.stream.Stream;
-
 import com.openlattice.postgres.streams.PostgresIterable;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
+
+import java.nio.ByteBuffer;
+import java.util.EnumSet;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Stream;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -58,7 +62,7 @@ public interface EntityDatastore {
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
             EnumSet<MetadataOption> metadataOptions );
 
-    PostgresIterable<Pair<UUID, Map<FullQualifiedName, Set<Object>>>> getEntitiesById(
+    Map<UUID, Map<FullQualifiedName, Set<Object>>> getEntitiesById(
             UUID entitySetId,
             Set<UUID> ids,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes );

@@ -26,6 +26,7 @@ import com.codahale.metrics.annotation.Timed;
 import com.google.common.collect.*;
 import com.google.common.eventbus.EventBus;
 import com.openlattice.assembler.Assembler;
+import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.data.*;
 import com.openlattice.data.events.EntitiesDeletedEvent;
 import com.openlattice.data.events.LinkedEntitiesDeletedEvent;
@@ -170,8 +171,11 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     private void signalCreatedEntities( UUID entitySetId, Set<UUID> entityKeyIds ) {
         if ( shouldIndexDirectly( entitySetId, entityKeyIds ) ) {
             eventBus.post( new EntitiesUpsertedEvent( entitySetId, dataQueryService
-                    .getEntitiesWithPropertyTypeIds( ImmutableMap.of( entitySetId, Optional.of(entityKeyIds) ),
-                            edmManager.getPropertyTypesForEntitySet( entitySetId ) ) ) );
+                    .getEntitiesWithPropertyTypeIds(
+                            ImmutableMap.of( entitySetId, Optional.of(entityKeyIds) ),
+                            ImmutableMap.of( entitySetId, edmManager.getPropertyTypesForEntitySet( entitySetId ) )
+                    ) )
+            );
         }
 
         markMaterializedEntitySetDirty( entitySetId ); // mark entityset as unsync with data
@@ -335,15 +339,16 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
             Boolean linking ) {
         //If the query generated exceed 33.5M UUIDs good chance that it exceed Postgres's 1 GB max query buffer size
-        PostgresIterable result = dataQueryService.getEntitiesWithPropertyTypeIds(
-                entityKeyIds,
-                authorizedPropertyTypes,
-                ImmutableMap.of(),
-                EnumSet.noneOf( MetadataOption.class ),
-                Optional.empty(),
-                linking);
+        Map<UUID, Map<FullQualifiedName, Set<Object>>> result = dataQueryService
+                .getEntitiesWithPropertyTypeFqns(
+                        entityKeyIds,
+                        authorizedPropertyTypes,
+                        ImmutableMap.of(),
+                        EnumSet.noneOf( MetadataOption.class ),
+                        Optional.empty(),
+                        linking );
 
-        return new EntitySetData<>( orderedPropertyTypes, result );
+        return new EntitySetData( orderedPropertyTypes, result );
     }
 
     @Override
@@ -367,7 +372,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
             EnumSet<MetadataOption> metadataOptions ) {
         //If the query generated exceeds 33.5M UUIDs good chance that it exceeds Postgres's 1 GB max query buffer size
-        return dataQueryService.getEntitiesWithPropertyTypeIds(
+        return dataQueryService.getEntitiesWithPropertyTypeFqns(
                 ImmutableMap.of(entitySetId, Optional.of( ids ) ),
                 authorizedPropertyTypes,
                 ImmutableMap.of(),
@@ -377,11 +382,11 @@ public class HazelcastEntityDatastore implements EntityDatastore {
 
     @Override
     @Timed
-    public PostgresIterable<Pair<UUID, Map<FullQualifiedName, Set<Object>>>> getEntitiesById(
+    public Map<UUID, Map<FullQualifiedName, Set<Object>>> getEntitiesById(
             UUID entitySetId,
             Set<UUID> ids,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes ) {
-        return dataQueryService.getEntitiesWithPropertyTypeIds(
+        return dataQueryService.getEntitiesWithPropertyTypeFqns(
                 ImmutableMap.of(entitySetId, Optional.of( ids ) ),
                 authorizedPropertyTypes );
     }
