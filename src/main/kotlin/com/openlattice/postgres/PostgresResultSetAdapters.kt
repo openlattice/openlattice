@@ -19,29 +19,30 @@ internal class PostgresResultSetAdapters
 private val logger = LoggerFactory.getLogger(PostgresResultSetAdapters::class.java)
 
 @Throws(SQLException::class)
-fun getEntityPropertiesByPropertyTypeId(
+fun <T> getEntityPropertiesByPropertyTypeId(
         rs: ResultSet,
         authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
-        byteBlobDataManager: ByteBlobDataManager
-): Pair<UUID, MutableMap<UUID, MutableSet<Any>>> {
+        byteBlobDataManager: ByteBlobDataManager,
+        mapper: ( PropertyType ) -> T
+): Pair<UUID, MutableMap<T, MutableSet<Any>>> {
     val id = id( rs )
     val entitySetId = entitySetId( rs )
-    val data = mutableMapOf<UUID, MutableSet<Any>>()
+    val data = mutableMapOf<T, MutableSet<Any>>()
 
-    val allPropertyTypes = authorizedPropertyTypes.getValue( entitySetId ) .values
+    val allPropertyTypes = authorizedPropertyTypes.getValue( entitySetId ).values
 
     for (propertyType in allPropertyTypes) {
         val objects = propertyValue(rs, propertyType)
 
         if (objects != null) {
+            val key = mapper( propertyType )
             if (propertyType.datatype == EdmPrimitiveTypeKind.Binary) {
-                data[propertyType.id] = mutableSetOf<Any>(byteBlobDataManager.getObjects(objects as List<String>))
+                data[key] = mutableSetOf<Any>(byteBlobDataManager.getObjects(objects as List<String>))
             } else {
-                data[propertyType.id] = mutableSetOf<Any>(objects)
+                data[key] = mutableSetOf<Any>(objects)
             }
         }
     }
-
     return id to data
 }
 

@@ -170,7 +170,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     private void signalCreatedEntities( UUID entitySetId, Set<UUID> entityKeyIds ) {
         if ( shouldIndexDirectly( entitySetId, entityKeyIds ) ) {
             eventBus.post( new EntitiesUpsertedEvent( entitySetId, dataQueryService
-                    .getEntitiesWithPropertyTypeIds( ImmutableMap.of( entitySetId, entityKeyIds ),
+                    .getEntitiesWithPropertyTypeIds( ImmutableMap.of( entitySetId, Optional.of(entityKeyIds) ),
                             edmManager.getPropertyTypesForEntitySet( entitySetId ) );
         }
 

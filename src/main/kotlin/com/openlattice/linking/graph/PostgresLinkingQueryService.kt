@@ -233,7 +233,7 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQu
     override fun getLinkingEntitySetIds(linkingId: UUID): PostgresIterable<UUID> {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
-    
+
     override fun getLinkingEntitySetIdsOfEntitySet(entitySetId: UUID): PostgresIterable<UUID> {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }

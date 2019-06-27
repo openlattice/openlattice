@@ -67,7 +67,8 @@ class PostgresEntityDataQueryService(
     ): Map<UUID, MutableMap<UUID, MutableSet<Any>>> {
         return streamableEntitySet(
                 entityKeyIds, authorizedPropertyTypes, propertyTypeFilters, metadataOptions, version, linking
-        ) { rs -> getEntityPropertiesByPropertyTypeId(rs, authorizedPropertyTypes, byteBlobDataManager) }.toMap()
+        ) { rs -> getEntityPropertiesByPropertyTypeId(rs, authorizedPropertyTypes, byteBlobDataManager
+        ) { pt -> pt.id } }.toMap()
     }
 
     /**
