@@ -22,8 +22,9 @@
 package com.openlattice.linking
 
 import com.openlattice.data.EntityDataKey
+import com.openlattice.data.storage.MetadataOption
+import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.streams.PostgresIterable
-import com.openlattice.postgres.streams.StatementHolder
 import java.sql.Connection
 import java.util.*
 
@@ -32,7 +33,24 @@ import java.util.*
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 interface LinkingQueryService {
-    /**
+
+    fun getLinkingIds(entityKeyIds: Map<UUID, Optional<Set<UUID>>>): Map<UUID, Set<UUID>>
+
+    fun getEntityKeyIdsOfLinkingIds(
+            linkingIds: Set<UUID>
+    ): PostgresIterable<org.apache.commons.lang3.tuple.Pair<UUID, Set<UUID>>>
+
+    fun getLinkingEntitySetIds(linkingId: UUID): PostgresIterable<UUID>
+
+    fun getLinkedEntityDataWithMetadata(
+            linkingIdsByEntitySetId: Map<UUID, Optional<Set<UUID>>>,
+            authorizedPropertyTypesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>,
+            metadataOptions: EnumSet<MetadataOption>
+    ): PostgresIterable<Pair<Pair<UUID, UUID>, Map<UUID, Set<Any>>>>
+
+    fun getLinkingEntitySetIdsOfEntitySet(entitySetId: UUID): PostgresIterable<UUID>
+
+        /**
      * Inserts the results scoring pairs of elements within a cluster to persistent storage. The initial cluster usually
      * consists of all scored pairs within a single block returned by the [Blocker].
      *
