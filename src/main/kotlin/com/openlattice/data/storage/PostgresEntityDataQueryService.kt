@@ -101,6 +101,7 @@ class PostgresEntityDataQueryService(
         return BasePostgresIterable(PreparedStatementHolderSupplier(hds, sql, FETCH_SIZE) { ps ->
             (linkedSetOf(
                     SqlBinder(SqlBindInfo(1, PostgresArrays.createUuidArray(ps.connection, entitySetIds)), ::doBind),
+                    // TODO with empty ids it won't return any rows
                     SqlBinder(SqlBindInfo(2, PostgresArrays.createUuidArray(ps.connection, ids)), ::doBind),
                     SqlBinder(SqlBindInfo(3, PostgresArrays.createIntArray(ps.connection, partitions)), ::doBind)
             ) + binders).forEach { it.bind(ps) }
