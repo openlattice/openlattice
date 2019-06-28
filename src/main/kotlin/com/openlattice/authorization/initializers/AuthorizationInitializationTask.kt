@@ -22,9 +22,9 @@
 package com.openlattice.authorization.initializers
 
 import com.openlattice.authorization.SystemRole
-import com.openlattice.IdConstants.Companion.GLOBAL_ORGANIZATION_ID
-import com.openlattice.IdConstants.Companion.OPENLATTICE_ORGANIZATION_ID
-import com.openlattice.IdConstants.Companion.ROOT_PRINCIPAL_ID
+import com.openlattice.IdConstants.GLOBAL_ORGANIZATION_ID
+import com.openlattice.IdConstants.OPENLATTICE_ORGANIZATION_ID
+import com.openlattice.IdConstants.ROOT_PRINCIPAL_ID
 import com.openlattice.organization.roles.Role
 import com.openlattice.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.Task
@@ -70,8 +70,8 @@ class AuthorizationInitializationTask : HazelcastInitializationTask<Authorizatio
 
         @JvmField
         val OPENLATTICE_ROLE = Role(
-                Optional.of(ROOT_PRINCIPAL_ID),
-                OPENLATTICE_ORGANIZATION_ID,
+                Optional.of(ROOT_PRINCIPAL_ID.id),
+                OPENLATTICE_ORGANIZATION_ID.id,
                 SystemRole.OPENLATTICE.principal,
                 "OpenLattice Root Group",
                 Optional.of("Initial account granting access to everything.")
@@ -80,7 +80,7 @@ class AuthorizationInitializationTask : HazelcastInitializationTask<Authorizatio
         @JvmField
         val GLOBAL_USER_ROLE = Role(
                 Optional.empty(),
-                GLOBAL_ORGANIZATION_ID,
+                GLOBAL_ORGANIZATION_ID.id,
                 SystemRole.AUTHENTICATED_USER.principal,
                 "OpenLattice User Role",
                 Optional.of("The default user role granted to all authenticated users of the system.")
@@ -89,7 +89,7 @@ class AuthorizationInitializationTask : HazelcastInitializationTask<Authorizatio
         @JvmField
         val GLOBAL_ADMIN_ROLE = Role(
                 Optional.empty(),
-                GLOBAL_ORGANIZATION_ID,
+                GLOBAL_ORGANIZATION_ID.id,
                 SystemRole.ADMIN.principal,
                 "Global Admin Role",
                 Optional.of("The global administrative role that allows management of entity data model.")
