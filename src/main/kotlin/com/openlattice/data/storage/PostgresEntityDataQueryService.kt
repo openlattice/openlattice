@@ -316,13 +316,13 @@ class PostgresEntityDataQueryService(
 
                         upsertPropertyValue.setObject(1, entitySetId)
                         upsertPropertyValue.setObject(2, entityKeyId)
-                        upsertPropertyValue.setObject(3, getPartition(entityKeyId, partitions))
+                        upsertPropertyValue.setInt(3, getPartition(entityKeyId, partitions))
                         upsertPropertyValue.setObject(4, propertyTypeId)
                         upsertPropertyValue.setObject(5, propertyHash)
                         upsertPropertyValue.setObject(6, version)
-                        upsertPropertyValue.setObject(7, versionsArrays)
-                        upsertPropertyValue.setObject(8, insertValue)
-                        upsertPropertyValue.setObject(9, partitionsInfo.partitionsVersion)
+                        upsertPropertyValue.setArray(7, versionsArrays)
+                        upsertPropertyValue.setInt(8, partitionsInfo.partitionsVersion)
+                        upsertPropertyValue.setObject(9, insertValue)
                         upsertPropertyValue.addBatch()
                     }
                 }
