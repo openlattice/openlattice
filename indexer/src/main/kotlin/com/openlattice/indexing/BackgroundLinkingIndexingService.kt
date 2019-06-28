@@ -4,7 +4,7 @@ import com.google.common.base.Stopwatch
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi
-import com.openlattice.data.EntityDatastore
+import com.openlattice.data.storage.EntityDatastore
 import com.openlattice.data.storage.IndexingMetadataManager
 import com.openlattice.data.storage.MetadataOption
 import com.openlattice.edm.EntitySet
@@ -91,12 +91,13 @@ class BackgroundLinkingIndexingService(
                             .getLinkedEntityDataByLinkingIdWithMetadata(
                                     dirtyLinkingIdsByEntitySetId,
                                     propertyTypesOfEntitySets,
-                                    EnumSet.of(MetadataOption.LAST_WRITE))
+                                    EnumSet.of(MetadataOption.LAST_WRITE)
+                            )
 
 
                     // it is important to iterate over linking ids which have an associated linking entity set id!
                     val indexCount = linkingEntitySetIdsByLinkingIds.map {
-                        indexLinkedEntity(it.key, it.value, linkedEntityData[it.key]!!, linkedEntitySetIdsLookup)
+                        indexLinkedEntity(it.key, it.value, linkedEntityData.getValue(it.key), linkedEntitySetIdsLookup)
                     }.sum()
 
                     logger.info("Created {} linked indices in {} ms", indexCount, watch.elapsed(TimeUnit.MILLISECONDS))
@@ -129,7 +130,9 @@ class BackgroundLinkingIndexingService(
                     val linkedEntitySetIds = linkedEntitySetIdsLookup[it]!!
                     val filteredData = dataByEntitySetId
                             .filterKeys { entitySetId -> linkedEntitySetIds.contains(entitySetId) }
-                    elasticsearchApi.createBulkLinkedData(entitySets[it]!!.entityTypeId, it, mapOf(linkingId to filteredData))
+                    elasticsearchApi.createBulkLinkedData(
+                            entitySets[it]!!.entityTypeId, it, mapOf(linkingId to filteredData)
+                    )
                 }) {
             indexCount += dataManager.markAsIndexed(
                     linkingEntitySetIds.flatMap { linkedEntitySetIdsLookup[it]!! }
