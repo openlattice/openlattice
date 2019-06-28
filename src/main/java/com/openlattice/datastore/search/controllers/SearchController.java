@@ -686,7 +686,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
         return searchResult.getHits().stream().map( SearchController::getEntityKeyId ).collect( Collectors.toSet() );
     }
 
-    private static UUID getEntityKeyId( SetMultimap<FullQualifiedName, Object> entity ) {
+    private static UUID getEntityKeyId( Map<FullQualifiedName, Set<Object>> entity ) {
         return UUID.fromString( entity.get( ID_FQN ).iterator().next().toString() );
     }
 
