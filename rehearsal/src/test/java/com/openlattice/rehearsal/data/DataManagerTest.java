@@ -34,6 +34,7 @@ import com.openlattice.data.requests.EntitySetSelection;
 import com.openlattice.data.requests.FileType;
 import com.openlattice.edm.EdmApi;
 import com.openlattice.edm.type.PropertyType;
+import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.rehearsal.SetupEnvironment;
 
 import java.io.*;
@@ -54,7 +55,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
-import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.apache.olingo.commons.api.edm.geo.Geospatial.Dimension;
@@ -407,7 +407,7 @@ public class DataManagerTest extends SetupEnvironment {
                 rawObj = random.nextLong();
                 break;
             case String:
-                rawObj = RandomStringUtils.randomAlphanumeric( 10 );
+                rawObj = TestDataFactory.randomAlphanumeric( 10 );
                 break;
             case SByte:
                 rawObj = random.nextInt( 256 ) - 128;
