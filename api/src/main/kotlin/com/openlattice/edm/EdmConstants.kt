@@ -25,10 +25,6 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName
 class EdmConstants {
 
     companion object {
-        // entity type
-        @JvmField
-        val PERSON_FQN = FullQualifiedName("general", "person")
-
         // property type
         @JvmField
         val ID_FQN = FullQualifiedName("openlattice", "@id")
