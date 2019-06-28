@@ -64,7 +64,7 @@ class BackgroundLinkingService
         private val matcher: Matcher,
         private val ids: EntityKeyIdService,
         private val loader: DataLoader,
-        private val gqs: LinkingQueryService,
+        private val lqs: LinkingQueryService,
         private val linkingFeedbackService: PostgresLinkingFeedbackService,
         private val linkableTypes: Set<UUID>,
         private val configuration: LinkingConfiguration
@@ -125,7 +125,7 @@ class BackgroundLinkingService
                 val cluster = clusters.entries.first()
                 val clusterId = cluster.key
 
-                gqs.lockClustersForUpdates(setOf(clusterId)).use {
+                lqs.lockClustersForUpdates(setOf(clusterId)).use {
                     val scoredCluster = cluster(candidate, cluster, ::completeLinkCluster)
                     if (scoredCluster.score <= MINIMUM_SCORE) {
                         logger.error(
@@ -175,7 +175,7 @@ class BackgroundLinkingService
             //No locks are required since any items that block to this element will be skipped.
             try {
                 val clusters = getClusters(dataKeys)
-                gqs.lockClustersForUpdates(clusters.keys).use {
+                lqs.lockClustersForUpdates(clusters.keys).use {
                     var maybeBestCluster = clusters
                             .asSequence()
                             .map { cluster -> cluster(candidate, cluster, ::completeLinkCluster) }
@@ -237,7 +237,7 @@ class BackgroundLinkingService
         logger.debug("Starting neighborhood cleanup of {}", candidate)
         val positiveFeedbacks = linkingFeedbackService.getLinkingFeedbackOnEntity(FeedbackType.Positive, candidate)
                 .map(EntityLinkingFeedback::entityPair)
-        val clearedCount = gqs.deleteNeighborhood(candidate, positiveFeedbacks)
+        val clearedCount = lqs.deleteNeighborhood(candidate, positiveFeedbacks)
         logger.debug("Cleared {} neighbors from neighborhood of {}", clearedCount, candidate)
     }
 
@@ -248,12 +248,12 @@ class BackgroundLinkingService
      * @return A map of pre-scored clusters associated with the given data keys.
      */
     private fun getClusters(dataKeys: Set<EntityDataKey>): Map<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>> {
-        return gqs.getClusters(gqs.getIdsOfClustersContaining(dataKeys).toList())
+        return lqs.getClusters(lqs.getIdsOfClustersContaining(dataKeys).toList())
     }
 
     private fun insertMatches(clusterUpdate: ClusterUpdate, connection: Connection) {
-        gqs.insertMatchScores(connection, clusterUpdate.clusterId, clusterUpdate.scores)
-        gqs.updateLinkingTable(clusterUpdate.clusterId, clusterUpdate.newMember)
+        lqs.insertMatchScores(connection, clusterUpdate.clusterId, clusterUpdate.scores)
+        lqs.updateLinkingTable(clusterUpdate.clusterId, clusterUpdate.newMember)
     }
 
     @Timed
@@ -304,13 +304,13 @@ class BackgroundLinkingService
 
         executor.submit {
             var entitiesNeedingLinking =
-                    gqs
+                    lqs
                             .getEntitiesNeedingLinking(setOf(entitySetId), configuration.loadSize)
                             .map { EntityDataKey(it.first, it.second) }
             while (entitiesNeedingLinking.isNotEmpty()) {
                 entitiesNeedingLinking.forEach(candidates::put)
                 entitiesNeedingLinking =
-                        gqs
+                        lqs
                                 .getEntitiesNeedingLinking(setOf(entitySetId), configuration.loadSize)
                                 .map { EntityDataKey(it.first, it.second) }
             }
@@ -342,7 +342,6 @@ data class ScoredCluster(
     override fun compareTo(other: Double): Int {
         return score.compareTo(other)
     }
-
 }
 
 private fun avgLinkCluster(matchedCluster: Map<EntityDataKey, Map<EntityDataKey, Double>>): Double {
