@@ -271,6 +271,28 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQu
         }
     }
 
+    override fun updateLinkingLog(
+            connection: Connection,
+            clusterId: UUID,
+            scores: Map<EntityDataKey, Map<EntityDataKey, Double>>
+    ): Int {
+        connection.use { conn ->
+            val ekids = mutableSetOf<UUID>()
+            scores.keys.map{ edk -> edk.entityKeyId }.toCollection(ekids)
+
+            scores.flatMap { entry ->
+                return@flatMap entry.value.keys.map { edk -> edk.entityKeyId }
+            }.toCollection(ekids)
+
+            val linkedEkids = PostgresArrays.createUuidArray(conn, ekids)
+            conn.prepareStatement(UPSERT_LINKING_LOG_SQL).use { ps ->
+                ps.setObject(1, clusterId)
+                ps.setArray(2, linkedEkids)
+                return  ps.executeUpdate()
+            }
+        }
+    }
+
     override fun deleteMatchScore(blockKey: EntityDataKey, blockElement: EntityDataKey): Int {
         hds.connection.use {
             it.prepareStatement(DELETE_SQL).use {
@@ -309,7 +331,6 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQu
             }
         }
     }
-
 
     override fun deleteEntitySetNeighborhood(entitySetId: UUID): Int {
         hds.connection.use {
@@ -414,3 +435,13 @@ private val LINKABLE_ENTITY_SET_IDS = "SELECT ${ID.name} " +
         "WHERE ${ENTITY_TYPE_ID.name} = ANY(?) AND NOT ${ID.name} = ANY(?) AND ${ID.name} = ANY(?) "
 
 private val LOCK_CLUSTERS_SQL = "SELECT 1 FROM ${MATCHED_ENTITIES.name} WHERE linking_id = ? FOR UPDATE"
+
+private val LOG_COLUMNS = listOf(
+        LINKING_ID,
+        ENTITY_KEY_IDS_COL,
+        VERSION
+).joinToString(",", transform = PostgresColumnDefinition::getName)
+
+private val UPSERT_LINKING_LOG_SQL = "INSERT INTO ${LINKING_LOG.name} ($LOG_COLUMNS) VALUES (?,?,now()) " +
+        "ON CONFLICT ON CONSTRAINT ${LINKING_LOG.name}_pkey " +
+        "DO UPDATE SET ${ENTITY_KEY_IDS_COL.name} = EXCLUDED.${ENTITY_KEY_IDS_COL.name}"

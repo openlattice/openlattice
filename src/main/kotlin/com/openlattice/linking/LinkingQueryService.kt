@@ -63,6 +63,8 @@ interface LinkingQueryService {
             clusterId: UUID,
             scores: Map<EntityDataKey, Map<EntityDataKey, Double>>): Int
 
+    fun updateLinkingLog(connection: Connection, clusterId: UUID, scores: Map<EntityDataKey, Map<EntityDataKey, Double>>): Int
+
     fun getNeighborhoodScores(blockKey: EntityDataKey): Map<EntityDataKey, Double>
     fun deleteMatchScore(blockKey: EntityDataKey, blockElement: EntityDataKey): Int
 
