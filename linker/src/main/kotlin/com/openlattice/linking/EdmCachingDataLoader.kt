@@ -82,11 +82,10 @@ class EdmCachingDataLoader(
     override fun getEntityStream(
             entitySetId: UUID, entityKeyIds: Set<UUID>
     ): PostgresIterable<Pair<UUID, Map<UUID, Set<Any>>>> {
-        return dataQueryService.streamableEntitySetWithEntityKeyIdsAndPropertyTypeIds(
-                entitySetId,
-                Optional.of(entityKeyIds),
+        return dataQueryService.getEntitiesWithPropertyTypeIds(
+                mapOf(entitySetId, Optional.of(entityKeyIds)),
                 authorizedPropertyTypesCache.get(),
-                EnumSet.noneOf(MetadataOption::class.java)
+                metadataOptions = EnumSet.noneOf(MetadataOption::class.java)
         )
     }
 
