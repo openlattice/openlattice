@@ -15,7 +15,7 @@ import com.openlattice.indexing.configuration.IndexerConfiguration
 import com.openlattice.postgres.DataTables.*
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
-import com.openlattice.postgres.PostgresTable.IDS
+import com.openlattice.postgres.PostgresTable.ENTITY_KEY_IDS
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
@@ -166,7 +166,7 @@ class BackgroundLinkingIndexingService(
 
     private fun selectDirtyLinkingIds(): String {
         return "SELECT ${ENTITY_SET_ID.name}, array_agg(${LINKING_ID.name}) AS ${LINKING_ID.name} " +
-                "FROM ${IDS.name} " +
+                "FROM ${ENTITY_KEY_IDS.name} " +
                 "WHERE ${LINKING_ID.name} IS NOT NULL " +
                 "AND ${LAST_INDEX.name} >= ${LAST_WRITE.name} " +
                 "AND ${LAST_LINK.name} >= ${LAST_WRITE.name} " +
@@ -190,7 +190,7 @@ class BackgroundLinkingIndexingService(
     }
 
     private fun selectLinkingIdsByEntitySetIds(): String {
-        return "SELECT ${ENTITY_SET_ID.name}, array_agg(${LINKING_ID.name}) AS ${LINKING_ID.name} FROM ${IDS.name} " +
+        return "SELECT ${ENTITY_SET_ID.name}, array_agg(${LINKING_ID.name}) AS ${LINKING_ID.name} FROM ${ENTITY_KEY_IDS.name} " +
                 "WHERE ${LINKING_ID.name} in (SELECT UNNEST( (?)::uuid[] )) " +
                 "GROUP BY ${ENTITY_SET_ID.name}"
     }

@@ -25,14 +25,13 @@ import com.google.common.util.concurrent.ListeningExecutorService
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
 import com.openlattice.admin.indexing.IndexingState
-import com.openlattice.data.storage.IndexingMetadataManager
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.HazelcastQueue
 import com.openlattice.hazelcast.processors.UUIDKeyToUUIDSetMerger
-import com.openlattice.postgres.PostgresColumn.ENTITY_KEY_IDS
+import com.openlattice.postgres.PostgresTable.ENTITY_KEY_IDS
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
