@@ -233,7 +233,7 @@ public final class PostgresTable {
                             DST_ENTITY_KEY_ID );
 
     public static final PostgresTableDefinition LINKING_LOG             =
-            new CitusDistributedTableDefinition( "linking_logs" )
+            new CitusDistributedTableDefinition( "linking_log" )
                     .addColumns( LINKING_ID,
                             ENTITY_KEY_IDS_COL,
                             VERSION)
