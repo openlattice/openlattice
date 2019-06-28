@@ -28,6 +28,7 @@ import com.openlattice.data.EntityDataKey
 import com.openlattice.data.UpdateType
 import com.openlattice.data.requests.EntitySetSelection
 import com.openlattice.data.requests.FileType
+import com.openlattice.edm.EdmConstants
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.edm.type.EntityType
@@ -36,7 +37,6 @@ import com.openlattice.mapstores.TestDataFactory.fqn
 import com.openlattice.mapstores.TestDataFactory.randomStringEntityData
 import com.openlattice.organization.Organization
 import com.openlattice.organization.OrganizationEntitySetFlag
-import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn
 import com.openlattice.postgres.ResultSetAdapters
@@ -267,7 +267,7 @@ class AssemblerLinkingTest : SetupTestData() {
         // get linking ids
         val ess = EntitySetSelection(Optional.of(personEt.properties))
         val data1 = ImmutableList.copyOf(dataApi.loadEntitySetData(esLinking.id, ess, FileType.json))
-        val linkingIds1 = data1.map { UUID.fromString(it[DataTables.ID_FQN].first() as String) }.toSet()
+        val linkingIds1 = data1.map { UUID.fromString(it[EdmConstants.ID_FQN].first() as String) }.toSet()
 
         // materialize entity set with all it's properties, no refresh
         grantMaterializePermissions(organization, esLinking, personEt.properties)
@@ -313,7 +313,7 @@ class AssemblerLinkingTest : SetupTestData() {
 
         // check linking ids
         val data12 = ImmutableList.copyOf(dataApi.loadEntitySetData(esLinking.id, ess, FileType.json))
-        val linkingIds12 = data12.map { UUID.fromString(it[DataTables.ID_FQN].first() as String) }.toSet()
+        val linkingIds12 = data12.map { UUID.fromString(it[EdmConstants.ID_FQN].first() as String) }.toSet()
 
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
@@ -348,7 +348,7 @@ class AssemblerLinkingTest : SetupTestData() {
 
         // check linking ids
         val data2 = ImmutableList.copyOf(dataApi.loadEntitySetData(esLinking.id, ess, FileType.json))
-        val linkingIds2 = data2.map { UUID.fromString(it[DataTables.ID_FQN].first() as String) }.toSet()
+        val linkingIds2 = data2.map { UUID.fromString(it[EdmConstants.ID_FQN].first() as String) }.toSet()
 
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
@@ -419,8 +419,8 @@ class AssemblerLinkingTest : SetupTestData() {
         val ess = EntitySetSelection(Optional.of(setOf(EdmTestConstants.personGivenNameId)))
         val loadedDataWithLinkingId = dataApi.loadEntitySetData(esLinking.id, ess, FileType.json).map {
             val values = it.asMap()
-            val id = UUID.fromString(it[DataTables.ID_FQN].first() as String)
-            values.remove(DataTables.ID_FQN)
+            val id = UUID.fromString(it[EdmConstants.ID_FQN].first() as String)
+            values.remove(EdmConstants.ID_FQN)
 
             id to values
         }.toMap()
@@ -482,8 +482,8 @@ class AssemblerLinkingTest : SetupTestData() {
 
         val newLoadedDataWithLinkingId = dataApi.loadEntitySetData(esLinking.id, ess, FileType.json).map {
             val values = it.asMap()
-            val id = UUID.fromString(it[DataTables.ID_FQN].first() as String)
-            values.remove(DataTables.ID_FQN)
+            val id = UUID.fromString(it[EdmConstants.ID_FQN].first() as String)
+            values.remove(EdmConstants.ID_FQN)
 
             id to values
         }.toMap()

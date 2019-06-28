@@ -23,15 +23,14 @@ package com.openlattice.rehearsal.linking
 
 import com.google.common.collect.ImmutableSet
 import com.openlattice.data.EntityDataKey
+import com.openlattice.edm.EdmConstants
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.EntityType
 import com.openlattice.linking.FeedbackType
 import com.openlattice.linking.LinkingFeedback
-import com.openlattice.postgres.DataTables
 import com.openlattice.rehearsal.SetupTestData
 import com.openlattice.rehearsal.edm.EdmTestConstants
 import com.openlattice.search.requests.SearchConstraints
-import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.junit.*
 import org.junit.runners.MethodSorters
 import org.slf4j.LoggerFactory
@@ -122,7 +121,7 @@ class LinkingFeedbackTest : SetupTestData() {
                 SearchConstraints.simpleSearchConstraints(
                         arrayOf(linkingEntitySet.id), 0, 100, "*")).hits
         linkingId = linkedData.map {
-            UUID.fromString(it.getValue(DataTables.ID_FQN).first() as String)
+            UUID.fromString(it.getValue(EdmConstants.ID_FQN).first() as String)
         }.toSet().first()
         val matchedEntities = realtimeLinkingApi.getMatchedEntitiesForLinkingId(linkingId)
 
