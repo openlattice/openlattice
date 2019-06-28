@@ -33,6 +33,7 @@ import com.openlattice.data.storage.PostgresEntityDataQueryService
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PostgresIterable
 import org.slf4j.LoggerFactory
 import java.util.*
@@ -80,11 +81,10 @@ class EdmCachingDataLoader(
 
     override fun getEntityStream(
             entitySetId: UUID, entityKeyIds: Set<UUID>
-    ): PostgresIterable<Pair<UUID, Map<UUID, Set<Any>>>> {
-        return dataQueryService.streamableEntitySetWithEntityKeyIdsAndPropertyTypeIds(
-                entitySetId,
-                Optional.of(entityKeyIds),
-                authorizedPropertyTypesCache.get(),
+    ): BasePostgresIterable<Pair<UUID, Map<UUID, Set<Any>>>> {
+        return dataQueryService.getEntitySetWithPropertyTypeIdsIterable(
+                mapOf(entitySetId to Optional.of(entityKeyIds)),
+                mapOf( entitySetId to authorizedPropertyTypesCache.get() ),
                 EnumSet.noneOf(MetadataOption::class.java)
         )
     }

@@ -39,6 +39,7 @@ import com.openlattice.authentication.Auth0Configuration;
 import com.openlattice.authorization.*;
 import com.openlattice.conductor.rpc.ConductorConfiguration;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
+import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.directory.UserDirectoryService;
@@ -54,6 +55,7 @@ import com.openlattice.linking.PostgresLinkingFeedbackService;
 import com.openlattice.linking.matching.SocratesMatcher;
 import com.openlattice.linking.util.PersonProperties;
 import com.openlattice.mail.config.MailServiceRequirements;
+import com.openlattice.notifications.sms.PhoneNumberService;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
@@ -111,6 +113,11 @@ public class LinkerServicesPod {
 
     @Inject
     private MetricRegistry metricRegistry;
+
+    @Bean
+    public PartitionManager partitionManager() {
+        return new PartitionManager( hazelcastInstance, hikariDataSource );
+    }
 
     @Bean
     public ConductorElasticsearchApi elasticsearchApi() throws IOException {
@@ -174,12 +181,19 @@ public class LinkerServicesPod {
     }
 
     @Bean
+    public PhoneNumberService phoneNumberService() {
+        return new PhoneNumberService( hazelcastInstance );
+    }
+
+    @Bean
     public HazelcastOrganizationService organizationsManager() {
         return new HazelcastOrganizationService(
                 hazelcastInstance,
                 aclKeyReservationService(),
                 authorizationManager(),
                 principalService(),
+                phoneNumberService(),
+                partitionManager(),
                 assembler() );
     }
 
@@ -234,6 +248,7 @@ public class LinkerServicesPod {
                 entityTypeManager(),
                 schemaManager(),
                 auditingConfiguration,
+                partitionManager(),
                 assembler() );
     }
 

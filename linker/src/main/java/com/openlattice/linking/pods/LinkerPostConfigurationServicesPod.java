@@ -27,13 +27,14 @@ import com.openlattice.assembler.Assembler;
 import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.conductor.rpc.ConductorConfiguration;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
-import com.openlattice.data.EntityDatastore;
 import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.ids.PostgresEntityKeyIdService;
 import com.openlattice.data.storage.ByteBlobDataManager;
-import com.openlattice.data.storage.HazelcastEntityDatastore;
+import com.openlattice.data.storage.EntityDatastore;
 import com.openlattice.data.storage.IndexingMetadataManager;
 import com.openlattice.data.storage.PostgresEntityDataQueryService;
+import com.openlattice.data.storage.PostgresEntityDatastore;
+import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.datastore.pods.ByteBlobServicePod;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.edm.PostgresEdmManager;
@@ -93,6 +94,9 @@ public class LinkerPostConfigurationServicesPod {
     @Inject
     private PostgresEdmManager pgEdmManager;
 
+    @Inject
+    private PartitionManager partitionManager;
+
     @Bean
     public HazelcastIdGenerationService idGeneration() {
         return new HazelcastIdGenerationService( hazelcastInstance );
@@ -105,7 +109,7 @@ public class LinkerPostConfigurationServicesPod {
 
     @Bean
     public PostgresEntityDataQueryService dataQueryService() {
-        return new PostgresEntityDataQueryService( hikariDataSource, byteBlobDataManager );
+        return new PostgresEntityDataQueryService( hikariDataSource, byteBlobDataManager, partitionManager );
     }
 
     @Bean
@@ -129,7 +133,7 @@ public class LinkerPostConfigurationServicesPod {
 
     @Bean
     public EntityDatastore entityDatastore() {
-        return new HazelcastEntityDatastore( idService(),
+        return new PostgresEntityDatastore( idService(),
                 postgresDataManager(),
                 dataQueryService(),
                 edm,

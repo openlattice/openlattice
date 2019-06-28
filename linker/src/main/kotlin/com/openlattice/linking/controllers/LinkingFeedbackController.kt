@@ -25,7 +25,7 @@ import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
 import com.openlattice.data.EntityDataKey
-import com.openlattice.data.EntityDatastore
+import com.openlattice.data.storage.EntityDatastore
 import com.openlattice.data.storage.IndexingMetadataManager
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.linking.*
@@ -35,7 +35,6 @@ import org.elasticsearch.common.util.set.Sets
 import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.*
-import java.lang.IllegalArgumentException
 import javax.inject.Inject
 
 @RestController
@@ -111,7 +110,7 @@ constructor(
     private fun linkingFeedbackCheck(entityDataKeys: Set<EntityDataKey>, linkingEntityDataKey: EntityDataKey) {
         val linkingEntitySet = edm.getEntitySet(linkingEntityDataKey.entitySetId)
         val entityKeyIdsOfLinkingId = entityDataStore
-                .getEntityKeyIdsOfLinkingIds(setOf(linkingEntityDataKey.entityKeyId)).first().right
+                .getEntityKeyIdsOfLinkingIds(setOf(linkingEntityDataKey.entityKeyId)).first().second
 
         entityDataKeys.forEach { entityDataKey ->
             if (!linkingEntitySet.linkedEntitySets.contains(entityDataKey.entitySetId)) {
