@@ -20,9 +20,6 @@
 
 package com.openlattice.linking.pods;
 
-import static com.openlattice.linking.MatcherKt.DL4J;
-import static com.openlattice.linking.MatcherKt.KERAS;
-
 import com.codahale.metrics.MetricRegistry;
 import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -36,8 +33,16 @@ import com.openlattice.auditing.AuditingConfiguration;
 import com.openlattice.auditing.pods.AuditingConfigurationPod;
 import com.openlattice.auth0.Auth0TokenProvider;
 import com.openlattice.authentication.Auth0Configuration;
-import com.openlattice.authorization.*;
-import com.openlattice.conductor.rpc.ConductorConfiguration;
+import com.openlattice.authorization.AuthorizationManager;
+import com.openlattice.authorization.AuthorizationQueryService;
+import com.openlattice.authorization.DbCredentialService;
+import com.openlattice.authorization.EdmAuthorizationHelper;
+import com.openlattice.authorization.HazelcastAclKeyReservationService;
+import com.openlattice.authorization.HazelcastAuthorizationService;
+import com.openlattice.authorization.HazelcastSecurableObjectResolveTypeService;
+import com.openlattice.authorization.PostgresUserApi;
+import com.openlattice.authorization.Principals;
+import com.openlattice.authorization.SecurableObjectResolveTypeService;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.datastore.services.EdmManager;
@@ -50,6 +55,7 @@ import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
 import com.openlattice.edm.schemas.postgres.PostgresSchemaQueryService;
 import com.openlattice.hazelcast.HazelcastQueue;
 import com.openlattice.kindling.search.ConductorElasticsearchImpl;
+import com.openlattice.linking.LinkingConfiguration;
 import com.openlattice.linking.Matcher;
 import com.openlattice.linking.PostgresLinkingFeedbackService;
 import com.openlattice.linking.matching.SocratesMatcher;
@@ -61,11 +67,6 @@ import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.PostgresTableManager;
 import com.zaxxer.hikari.HikariDataSource;
-
-import java.io.IOException;
-import javax.annotation.PostConstruct;
-import javax.inject.Inject;
-
 import org.deeplearning4j.nn.modelimport.keras.KerasModelImport;
 import org.deeplearning4j.nn.modelimport.keras.exceptions.InvalidKerasConfigurationException;
 import org.deeplearning4j.nn.modelimport.keras.exceptions.UnsupportedKerasConfigurationException;
@@ -78,6 +79,13 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Profile;
+
+import javax.annotation.PostConstruct;
+import javax.inject.Inject;
+import java.io.IOException;
+
+import static com.openlattice.linking.MatcherKt.DL4J;
+import static com.openlattice.linking.MatcherKt.KERAS;
 
 @Configuration
 @Import( { LinkerConfigurationPod.class, AuditingConfigurationPod.class, AssemblerConfigurationPod.class } )
@@ -103,7 +111,7 @@ public class LinkerServicesPod {
     private EventBus eventBus;
 
     @Inject
-    private ConductorConfiguration conductorConfiguration;
+    private LinkingConfiguration linkingConfiguration;
 
     @Inject
     private AuditingConfiguration auditingConfiguration;
@@ -121,7 +129,7 @@ public class LinkerServicesPod {
 
     @Bean
     public ConductorElasticsearchApi elasticsearchApi() throws IOException {
-        return new ConductorElasticsearchImpl( conductorConfiguration.getSearchConfiguration() );
+        return new ConductorElasticsearchImpl( linkingConfiguration.getSearchConfiguration() );
     }
 
     @Bean

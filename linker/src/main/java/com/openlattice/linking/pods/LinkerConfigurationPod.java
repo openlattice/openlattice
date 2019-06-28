@@ -26,15 +26,16 @@ import com.kryptnostic.rhizome.configuration.ConfigurationConstants.Profiles;
 import com.kryptnostic.rhizome.configuration.amazon.AmazonLaunchConfiguration;
 import com.kryptnostic.rhizome.configuration.service.ConfigurationService;
 import com.openlattice.ResourceConfigurationLoader;
-import com.openlattice.conductor.rpc.ConductorConfiguration;
-import java.io.IOException;
-import javax.inject.Inject;
+import com.openlattice.linking.LinkingConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
+
+import javax.inject.Inject;
+import java.io.IOException;
 
 /**
  *
@@ -52,23 +53,23 @@ public class LinkerConfigurationPod {
     @Autowired( required = false )
     private AmazonLaunchConfiguration awsLaunchConfig;
 
-    @Bean( name = "conductorConfiguration" )
+    @Bean( name = "linkingConfiguration" )
     @Profile( Profiles.LOCAL_CONFIGURATION_PROFILE )
-    public ConductorConfiguration getLocalConductorConfiguration() throws IOException {
-        ConductorConfiguration config = configurationService.getConfiguration( ConductorConfiguration.class );
-        logger.info( "Using local conductor configuration: {}", config );
+    public LinkingConfiguration getLocalLinkingConfiguration() throws IOException {
+        LinkingConfiguration config = configurationService.getConfiguration( LinkingConfiguration.class );
+        logger.info( "Using local linking configuration: {}", config );
         return config;
     }
 
-    @Bean( name = "conductorConfiguration" )
+    @Bean( name = "likningConfiguration" )
     @Profile( { Profiles.AWS_CONFIGURATION_PROFILE, Profiles.AWS_TESTING_PROFILE } )
-    public ConductorConfiguration getAwsConductorConfiguration() throws IOException {
-        ConductorConfiguration config = ResourceConfigurationLoader.loadConfigurationFromS3( s3,
+    public LinkingConfiguration getAwsLinkingConfiguration() throws IOException {
+        LinkingConfiguration config = ResourceConfigurationLoader.loadConfigurationFromS3( s3,
                 awsLaunchConfig.getBucket(),
                 awsLaunchConfig.getFolder(),
-                ConductorConfiguration.class );
+                LinkingConfiguration.class );
 
-        logger.info( "Using aws conductor configuration: {}", config );
+        logger.info( "Using aws linking configuration: {}", config );
         return config;
     }
 }
