@@ -38,7 +38,7 @@ interface LinkingQueryService {
 
     fun getEntityKeyIdsOfLinkingIds(
             linkingIds: Set<UUID>
-    ): PostgresIterable<org.apache.commons.lang3.tuple.Pair<UUID, Set<UUID>>>
+    ): PostgresIterable<Pair<UUID, Set<UUID>>>
 
     fun getLinkingEntitySetIds(linkingId: UUID): PostgresIterable<UUID>
 

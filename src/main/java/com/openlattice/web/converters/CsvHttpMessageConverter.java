@@ -86,7 +86,7 @@ public class CsvHttpMessageConverter
     @Override
     protected EntitySetData<?> readInternal(
             Class<? extends EntitySetData<?>> clazz,
-            HttpInputMessage inputMessage ) throws IOException, HttpMessageNotReadableException {
+            HttpInputMessage inputMessage ) throws HttpMessageNotReadableException {
         throw new UnsupportedOperationException( "CSV is not a supported input format" );
     }
 
