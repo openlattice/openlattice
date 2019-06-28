@@ -21,7 +21,7 @@
 
 package com.openlattice
 
-import java.util.*
+import java.util.UUID
 
 enum class IdConstants(val id: UUID) {
 
@@ -29,39 +29,34 @@ enum class IdConstants(val id: UUID) {
     /* Organizations */
 
     OPENLATTICE_ORGANIZATION_ID(UUID(0, 0)),
-
-
     ROOT_PRINCIPAL_ID(UUID(0, 1)),
-
-
     GLOBAL_ORGANIZATION_ID(UUID(1, 0)),
 
 
     /* ElasticSearch */
 
     LAST_WRITE(UUID(0, 10)),
-
-
     ENTITY_SET_ID_KEY(UUID(1, 10)),
 
 
     /* Postgres */
 
-    LAST_WRITE_ID(UUID(0, 20)),
+    // metadata
+    ENTITY_KEY_IDS_ID(UUID(0, 20)),
+    ENTITY_SET_IDS_ID(UUID(1, 20)),
+    LAST_INDEX_ID(UUID(2, 20)),
+    LAST_LINK_ID(UUID(3, 20)),
+    LAST_WRITE_ID(UUID(4, 20)),
+    VERSION_ID(UUID(5, 20)),
 
-
-    LAST_MIGRATE_ID(UUID(1, 20)),
-
-
-    LINKING_PERSON_ENTITY_SET_ID(UUID(2, 20)),
-
-
-    CONTACT_INFO_ENTITY_SET_ID(UUID(3, 20)),
+    // entity set ids
+    LINKING_PERSON_ENTITY_SET_ID(UUID(6, 20)),
+    CONTACT_INFO_ENTITY_SET_ID(UUID(7, 20)),
 
 
     /* Indexer */
 
-    LB_UUID(UUID(0, 30)), // todo what is this for??
+    LB_UUID(UUID(0, 50)), // todo what is this for??
 
 
     /* Linker */
@@ -70,6 +65,6 @@ enum class IdConstants(val id: UUID) {
      * assigned to any real entity set.
      */
 
-    LINKING_ENTITY_SET_ID(UUID(0, 40))
+    LINKING_ENTITY_SET_ID(UUID(0, 60))
 
 }
