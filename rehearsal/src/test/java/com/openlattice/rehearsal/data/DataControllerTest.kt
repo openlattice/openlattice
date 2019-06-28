@@ -536,9 +536,18 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         // Update propertytype type
         val update = MetadataUpdate(
-                Optional.of(pt.title), Optional.empty(), Optional.of(es.name),
-                Optional.of(es.contacts), Optional.of(FullQualifiedName(newNameSpace, pt.type.name)), Optional.empty(),
-                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty()
+                Optional.of(pt.title),
+                Optional.empty(),
+                Optional.of(es.name),
+                Optional.of(es.contacts),
+                Optional.of(FullQualifiedName(newNameSpace, pt.type.name)),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty()
         )
         edmApi.updatePropertyTypeMetadata(pt.id, update)
 
@@ -660,7 +669,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         permissionsApi.updateAcl(AclData(es2ReadAcl, Action.ADD))
 
         loginAs("user1")
-        val noData2 = dataApi.getEntity(es2.id, id).asMap()
+        val noData2 = dataApi.getEntity(es2.id, id)
         Assert.assertEquals(1, noData2.size)
         noData2.forEach { Assert.assertEquals(DataTables.ID_FQN, it.key) }
 
@@ -681,7 +690,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         permissionsApi.updateAcl(AclData(ptReadAcl, Action.ADD))
 
         loginAs("user1")
-        val ptData1 = dataApi.getEntity(es2.id, id).asMap()
+        val ptData1 = dataApi.getEntity(es2.id, id)
         Assert.assertEquals(1, ptData1[DataTables.ID_FQN]!!.size)
         Assert.assertEquals(setOf(DataTables.ID_FQN, pt.type), ptData1.keys)
         val ptData2 = dataApi.getEntity(es2.id, id, property)
@@ -698,7 +707,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         }
 
         loginAs("user1")
-        val dataAll1 = dataApi.getEntity(es2.id, id).asMap()
+        val dataAll1 = dataApi.getEntity(es2.id, id)
         Assert.assertEquals(1, dataAll1[DataTables.ID_FQN]!!.size)
         val fqns = et2.properties.map { edmApi.getPropertyType(it).type }.toMutableSet()
         fqns.add(DataTables.ID_FQN)
@@ -1209,7 +1218,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         val loadedEntity = dataApi.getEntity(es.id, entityId)
 
         Assert.assertEquals(numberOfEntries, dataApi.loadEntitySetData(es.id, ess, FileType.json).toList().size)
-        Assert.assertFalse(loadedEntity.keySet().contains(EdmTestConstants.personGivenNameFqn))
+        Assert.assertFalse(loadedEntity.keys.contains(EdmTestConstants.personGivenNameFqn))
     }
 
     @Test

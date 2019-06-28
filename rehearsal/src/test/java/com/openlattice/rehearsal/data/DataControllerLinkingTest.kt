@@ -52,7 +52,8 @@ class DataControllerLinkingTest : SetupTestData() {
     companion object {
         private val importedEntitySets = mapOf(
                 "SocratesTestC" to Pair("socratesC.yaml", "emptyTestData.csv"),
-                "SocratesTestD" to Pair("socratesD.yaml", "emptyTestData.csv"))
+                "SocratesTestD" to Pair("socratesD.yaml", "emptyTestData.csv")
+        )
 
         lateinit var personEt: EntityType
 
@@ -182,8 +183,10 @@ class DataControllerLinkingTest : SetupTestData() {
         val esLinking = createEntitySet(personEt, true, setOf(esId1, esId2))
 
         val testData = (1..numberOfEntries).map {
-            mapOf(EdmTestConstants.personGivenNameId to setOf(RandomStringUtils.randomAscii(5)),
-                    EdmTestConstants.personMiddleNameId to setOf(RandomStringUtils.randomAscii(5)))
+            mapOf(
+                    EdmTestConstants.personGivenNameId to setOf(RandomStringUtils.randomAscii(5)),
+                    EdmTestConstants.personMiddleNameId to setOf(RandomStringUtils.randomAscii(5))
+            )
         }
 
         dataApi.createEntities(esId1, testData)
@@ -212,12 +215,16 @@ class DataControllerLinkingTest : SetupTestData() {
             permissionsApi.updateAcl(
                     AclData(
                             Acl(AclKey(esId), setOf(Ace(user1, readPermission, OffsetDateTime.MAX))),
-                            Action.REMOVE))
+                            Action.REMOVE
+                    )
+            )
             personEt.properties.forEach {
                 permissionsApi.updateAcl(
                         AclData(
                                 Acl(AclKey(esId, it), setOf(Ace(user1, readPermission, OffsetDateTime.MAX))),
-                                Action.REMOVE))
+                                Action.REMOVE
+                        )
+                )
             }
         }
 
@@ -227,9 +234,13 @@ class DataControllerLinkingTest : SetupTestData() {
             dataApi.loadEntitySetData(esLinking.id, ess, FileType.json)
             Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(e.undeclaredThrowable.message!!
-                    .contains("Insufficient permissions to read the entity set ${esLinking.id} or it doesn't " +
-                            "exists.", true))
+            Assert.assertTrue(
+                    e.undeclaredThrowable.message!!
+                            .contains(
+                                    "Insufficient permissions to read the entity set ${esLinking.id} or it doesn't " +
+                                            "exists.", true
+                            )
+            )
         } finally {
             loginAs("admin")
         }
@@ -266,7 +277,8 @@ class DataControllerLinkingTest : SetupTestData() {
         esLinking.linkedEntitySets.forEach {
             val givenNameReadAcl = Acl(
                     AclKey(it, EdmTestConstants.personGivenNameId),
-                    setOf(Ace(user1, readPermission, OffsetDateTime.MAX)))
+                    setOf(Ace(user1, readPermission, OffsetDateTime.MAX))
+            )
             permissionsApi.updateAcl(AclData(givenNameReadAcl, Action.ADD))
         }
 
@@ -293,7 +305,8 @@ class DataControllerLinkingTest : SetupTestData() {
         dataAll.forEach {
             Assert.assertEquals(
                     setOf(DataTables.ID_FQN, EdmTestConstants.personGivenNameFqn, EdmTestConstants.personMiddleNameFqn),
-                    it.asMap().keys)
+                    it.asMap().keys
+            )
         }
         loginAs("admin")
 
@@ -306,12 +319,16 @@ class DataControllerLinkingTest : SetupTestData() {
             permissionsApi.updateAcl(
                     AclData(
                             Acl(AclKey(esId), setOf(Ace(user1, readPermission, OffsetDateTime.MAX))),
-                            Action.REMOVE))
+                            Action.REMOVE
+                    )
+            )
             personEt.properties.forEach {
                 permissionsApi.updateAcl(
                         AclData(
                                 Acl(AclKey(esId, it), setOf(Ace(user1, readPermission, OffsetDateTime.MAX))),
-                                Action.REMOVE))
+                                Action.REMOVE
+                        )
+                )
             }
         }
 
@@ -323,16 +340,20 @@ class DataControllerLinkingTest : SetupTestData() {
             dataApi.getEntity(esLinking.id, id)
             Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(e.undeclaredThrowable.message!!
-                    .contains("Object [${esLinking.id}] is not accessible.", true))
+            Assert.assertTrue(
+                    e.undeclaredThrowable.message!!
+                            .contains("Object [${esLinking.id}] is not accessible.", true)
+            )
         }
 
         try {
             dataApi.getEntity(esLinking.id, id, EdmTestConstants.personGivenNameId)
             Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(e.undeclaredThrowable.message!!
-                    .contains("Object [${esLinking.id}] is not accessible.", true))
+            Assert.assertTrue(
+                    e.undeclaredThrowable.message!!
+                            .contains("Object [${esLinking.id}] is not accessible.", true)
+            )
         } finally {
             loginAs("admin")
         }
@@ -368,7 +389,7 @@ class DataControllerLinkingTest : SetupTestData() {
         }
 
         loginAs("user1")
-        val noData2 = dataApi.getEntity(esLinking.id, id).asMap()
+        val noData2 = dataApi.getEntity(esLinking.id, id)
         Assert.assertEquals(1, noData2.size)
         noData2.forEach { Assert.assertEquals(DataTables.ID_FQN, it.key) }
 
@@ -376,10 +397,14 @@ class DataControllerLinkingTest : SetupTestData() {
             dataApi.getEntity(esLinking.id, id, EdmTestConstants.personGivenNameId)
             Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(e.undeclaredThrowable.message!!
-                    .contains("Not authorized to read property type ${EdmTestConstants.personGivenNameId} in " +
-                            "one or more normal entity sets of linking entity set ${esLinking.id}",
-                            true))
+            Assert.assertTrue(
+                    e.undeclaredThrowable.message!!
+                            .contains(
+                                    "Not authorized to read property type ${EdmTestConstants.personGivenNameId} in " +
+                                            "one or more normal entity sets of linking entity set ${esLinking.id}",
+                                    true
+                            )
+            )
         } finally {
             loginAs("admin")
         }
@@ -389,14 +414,15 @@ class DataControllerLinkingTest : SetupTestData() {
         esLinking.linkedEntitySets.forEach {
             val givenNameReadAcl = Acl(
                     AclKey(it, EdmTestConstants.personGivenNameId),
-                    setOf(Ace(user1, readPermission, OffsetDateTime.MAX)))
+                    setOf(Ace(user1, readPermission, OffsetDateTime.MAX))
+            )
             permissionsApi.updateAcl(AclData(givenNameReadAcl, Action.ADD))
         }
 
 
         loginAs("user1")
 
-        val ptData1 = dataApi.getEntity(esLinking.id, id).asMap()
+        val ptData1 = dataApi.getEntity(esLinking.id, id)
         Assert.assertEquals(1, ptData1[DataTables.ID_FQN]!!.size)
         Assert.assertEquals(setOf(DataTables.ID_FQN, EdmTestConstants.personGivenNameFqn), ptData1.keys)
 
@@ -409,18 +435,22 @@ class DataControllerLinkingTest : SetupTestData() {
         // add permission on all properties on all normal entity sets
         esLinking.linkedEntitySets.forEach { esId ->
             personEt.properties.forEach {
-                permissionsApi.updateAcl(AclData(
-                        Acl(AclKey(esId, it), setOf(Ace(user1, readPermission, OffsetDateTime.MAX))), Action.ADD))
+                permissionsApi.updateAcl(
+                        AclData(
+                                Acl(AclKey(esId, it), setOf(Ace(user1, readPermission, OffsetDateTime.MAX))), Action.ADD
+                        )
+                )
             }
         }
 
         loginAs("user1")
 
-        val dataAll1 = dataApi.getEntity(esLinking.id, id).asMap()
+        val dataAll1 = dataApi.getEntity(esLinking.id, id)
         Assert.assertEquals(1, dataAll1[DataTables.ID_FQN]!!.size)
         Assert.assertEquals(
                 setOf(DataTables.ID_FQN, EdmTestConstants.personGivenNameFqn, EdmTestConstants.personMiddleNameFqn),
-                dataAll1.keys)
+                dataAll1.keys
+        )
 
         val dataAll2 = dataApi.getEntity(esLinking.id, id, EdmTestConstants.personGivenNameId)
         Assert.assertEquals(1, dataAll2.size)
