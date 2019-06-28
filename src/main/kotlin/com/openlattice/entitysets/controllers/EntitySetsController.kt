@@ -56,6 +56,7 @@ import com.openlattice.entitysets.EntitySetsApi.Companion.NAME_PATH
 import com.openlattice.entitysets.EntitySetsApi.Companion.PROPERTIES_PATH
 import com.openlattice.entitysets.EntitySetsApi.Companion.PROPERTY_TYPE_ID
 import com.openlattice.entitysets.EntitySetsApi.Companion.PROPERTY_TYPE_ID_PATH
+import com.openlattice.linking.util.PersonProperties
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.springframework.http.MediaType
@@ -420,13 +421,13 @@ constructor(
     }
 
     private fun ensureValidLinkedEntitySets(entitySetIds: Set<UUID>) {
-        val entityTypeId = edmManager.getEntityType(EdmConstants.PERSON_FQN).id
+        val entityTypeId = edmManager.getEntityType(PersonProperties.PERSON_TYPE_FQN).id
         Preconditions.checkState(
                 entitySetIds.stream()
                         .map { edmManager.getEntitySet(it).entityTypeId }
                         .allMatch { entityTypeId == it },
                 "Linked entity sets are of differing entity types than %s :{}",
-                EdmConstants.PERSON_FQN.fullQualifiedNameAsString, entitySetIds
+                PersonProperties.PERSON_TYPE_FQN.fullQualifiedNameAsString, entitySetIds
         )
 
         Preconditions.checkState(
