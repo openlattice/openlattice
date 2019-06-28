@@ -954,7 +954,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     @RequestMapping(
             path = { "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH },
             method = RequestMethod.GET )
-    public SetMultimap<FullQualifiedName, Object> getEntity(
+    public Map<FullQualifiedName, Set<Object>> getEntity(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId ) {
         ensureReadAccess( new AclKey( entitySetId ) );
