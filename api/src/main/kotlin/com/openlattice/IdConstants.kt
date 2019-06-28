@@ -40,34 +40,38 @@ class IdConstants {
 
         /* ElasticSearch */
         @JvmField
-        val LAST_WRITE = UUID(0, 0)
+        val LAST_WRITE = UUID(0, 10)
 
         @JvmField
-        val ENTITY_SET_ID_KEY = UUID(0, 1)
+        val ENTITY_SET_ID_KEY = UUID(1, 10)
 
 
         /* Postgres */
         @JvmField
-        val LAST_WRITE_ID = UUID(0, 0)
+        val LAST_WRITE_ID = UUID(0, 20)
 
         @JvmField
-        val LINKING_PERSON_ENTITY_SET_ID = UUID(0, 0)
+        val LAST_MIGRATE_ID = UUID(1, 20)
 
         @JvmField
-        val CONTACT_INFO_ENTITY_SET_ID = UUID(0, 1)
+        val LINKING_PERSON_ENTITY_SET_ID = UUID(2, 20)
+
+        @JvmField
+        val CONTACT_INFO_ENTITY_SET_ID = UUID(3, 20)
+
 
         /* Indexer */
         @JvmField
-        val LB_UUID = UUID(0, 0) // todo what is this for??
+        val LB_UUID = UUID(0, 30) // todo what is this for??
+
 
         /* Linker */
         /**
          * Entity sets ids are assigned by calling [UUID.randomUUID] as a result we know that this can never be accidentally
          * assigned to any real entity set.
          */
-        // todo probably needs to change after we actual;ly user linking entity set id
         @JvmField
-        val LINKING_ENTITY_SET_ID = UUID(0, 0)
+        val LINKING_ENTITY_SET_ID = UUID(0, 40)
 
     }
 }
