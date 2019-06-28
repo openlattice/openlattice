@@ -39,6 +39,7 @@ import com.openlattice.controllers.util.ApiExceptions
 import com.openlattice.data.DataGraphManager
 import com.openlattice.data.WriteEvent
 import com.openlattice.datastore.services.EdmManager
+import com.openlattice.edm.EdmConstants
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.edm.set.EntitySetFlag
@@ -76,7 +77,7 @@ constructor(
         private val authzHelper: EdmAuthorizationHelper,
         private val securableObjectTypes: SecurableObjectResolveTypeService
 ) : EntitySetsApi, AuthorizingComponent, AuditingComponent {
-    private val PERSON_FQN = "general.person"
+
 
     override fun getDataGraphService(): DataGraphManager {
         return dgm
@@ -419,13 +420,13 @@ constructor(
     }
 
     private fun ensureValidLinkedEntitySets(entitySetIds: Set<UUID>) {
-        val entityTypeId = edmManager.getEntityType(FullQualifiedName(PERSON_FQN)).id
+        val entityTypeId = edmManager.getEntityType(EdmConstants.PERSON_FQN).id
         Preconditions.checkState(
                 entitySetIds.stream()
                         .map { edmManager.getEntitySet(it).entityTypeId }
                         .allMatch { entityTypeId == it },
                 "Linked entity sets are of differing entity types than %s :{}",
-                PERSON_FQN, entitySetIds
+                EdmConstants.PERSON_FQN.fullQualifiedNameAsString, entitySetIds
         )
 
         Preconditions.checkState(
