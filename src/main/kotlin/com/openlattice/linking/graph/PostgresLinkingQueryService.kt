@@ -222,26 +222,6 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQu
                 }).toMap()
     }
 
-    override fun getLinkingIds(entityKeyIds: Map<UUID, Optional<Set<UUID>>>): Map<UUID, Set<UUID>> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    override fun getEntityKeyIdsOfLinkingIds(linkingIds: Set<UUID>): PostgresIterable<Pair<UUID, Set<UUID>>> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    override fun getLinkingEntitySetIds(linkingId: UUID): PostgresIterable<UUID> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    override fun getLinkingEntitySetIdsOfEntitySet(entitySetId: UUID): PostgresIterable<UUID> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    override fun getLinkedEntityDataWithMetadata(linkingIdsByEntitySetId: Map<UUID, Optional<Set<UUID>>>, authorizedPropertyTypesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>, metadataOptions: EnumSet<MetadataOption>): PostgresIterable<Pair<Pair<UUID, UUID>, Map<UUID, Set<Any>>>> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
     override fun insertMatchScores(
             connection: Connection,
             clusterId: UUID,
