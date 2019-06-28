@@ -22,24 +22,20 @@
 package com.openlattice.linking
 
 import com.google.common.base.Suppliers
-import com.google.common.collect.Multimaps
-import com.google.common.collect.SetMultimap
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
 import com.hazelcast.query.Predicates
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.storage.MetadataOption
 import com.openlattice.data.storage.PostgresEntityDataQueryService
-import com.openlattice.edm.EdmConstants
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.linking.util.PersonProperties
 import com.openlattice.postgres.streams.PostgresIterable
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.locks.ReentrantReadWriteLock
-import java.util.stream.Stream
 
 /**
  *
@@ -57,7 +53,7 @@ class EdmCachingDataLoader(
 
     private val propertyTypes: IMap<UUID, PropertyType> = hazelcast.getMap(HazelcastMap.PROPERTY_TYPES.name)
     private val personEntityType = entityTypes.values(
-            Predicates.equal("type.fullQualifiedNameAsString", EdmConstants.PERSON_FQN.fullQualifiedNameAsString)
+            Predicates.equal("type.fullQualifiedNameAsString", PersonProperties.PERSON_TYPE_FQN.fullQualifiedNameAsString)
     ).first()
     private val authorizedPropertyTypesCache = Suppliers.memoizeWithExpiration(
             { propertyTypes.getAll(personEntityType.properties) },
