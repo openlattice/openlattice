@@ -89,7 +89,7 @@ public class EntitySet extends AbstractSecurableObject {
         this.name = name;
         this.entityTypeId = checkNotNull( entityTypeId );
         this.contacts = Sets.newHashSet( contacts );
-        this.organizationId = organizationId.orElse( IdConstants.GLOBAL_ORGANIZATION_ID );
+        this.organizationId = organizationId.orElse( IdConstants.GLOBAL_ORGANIZATION_ID.getId() );
         partitions.ifPresent( this::setPartitions );
     }
 

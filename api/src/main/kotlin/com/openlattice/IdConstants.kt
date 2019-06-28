@@ -21,57 +21,55 @@
 
 package com.openlattice
 
-import java.util.UUID
+import java.util.*
 
-class IdConstants {
-
-    companion object {
-
-        /* Organizations */
-        @JvmField
-        val OPENLATTICE_ORGANIZATION_ID = UUID(0, 0)
-
-        @JvmField
-        val ROOT_PRINCIPAL_ID = UUID(0, 1)
-
-        @JvmField
-        val GLOBAL_ORGANIZATION_ID = UUID(1, 0)
+enum class IdConstants(val id: UUID) {
 
 
-        /* ElasticSearch */
-        @JvmField
-        val LAST_WRITE = UUID(0, 10)
+    /* Organizations */
 
-        @JvmField
-        val ENTITY_SET_ID_KEY = UUID(1, 10)
+    OPENLATTICE_ORGANIZATION_ID(UUID(0, 0)),
 
 
-        /* Postgres */
-        @JvmField
-        val LAST_WRITE_ID = UUID(0, 20)
-
-        @JvmField
-        val LAST_MIGRATE_ID = UUID(1, 20)
-
-        @JvmField
-        val LINKING_PERSON_ENTITY_SET_ID = UUID(2, 20)
-
-        @JvmField
-        val CONTACT_INFO_ENTITY_SET_ID = UUID(3, 20)
+    ROOT_PRINCIPAL_ID(UUID(0, 1)),
 
 
-        /* Indexer */
-        @JvmField
-        val LB_UUID = UUID(0, 30) // todo what is this for??
+    GLOBAL_ORGANIZATION_ID(UUID(1, 0)),
 
 
-        /* Linker */
-        /**
-         * Entity sets ids are assigned by calling [UUID.randomUUID] as a result we know that this can never be accidentally
-         * assigned to any real entity set.
-         */
-        @JvmField
-        val LINKING_ENTITY_SET_ID = UUID(0, 40)
+    /* ElasticSearch */
 
-    }
+    LAST_WRITE(UUID(0, 10)),
+
+
+    ENTITY_SET_ID_KEY(UUID(1, 10)),
+
+
+    /* Postgres */
+
+    LAST_WRITE_ID(UUID(0, 20)),
+
+
+    LAST_MIGRATE_ID(UUID(1, 20)),
+
+
+    LINKING_PERSON_ENTITY_SET_ID(UUID(2, 20)),
+
+
+    CONTACT_INFO_ENTITY_SET_ID(UUID(3, 20)),
+
+
+    /* Indexer */
+
+    LB_UUID(UUID(0, 30)), // todo what is this for??
+
+
+    /* Linker */
+    /**
+     * Entity sets ids are assigned by calling [UUID.randomUUID] as a result we know that this can never be accidentally
+     * assigned to any real entity set.
+     */
+
+    LINKING_ENTITY_SET_ID(UUID(0, 40))
+
 }
