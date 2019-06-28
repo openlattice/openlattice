@@ -13,6 +13,7 @@ import com.openlattice.postgres.*
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.streams.BasePostgresIterable
+import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.commons.lang3.NotImplementedException
@@ -69,7 +70,12 @@ class PostgresEntityDataQueryService(
             linking: Boolean = false
     ): Map<UUID, MutableMap<UUID, MutableSet<Any>>> {
         return getEntitySetIterable(
-                entityKeyIds, authorizedPropertyTypes, propertyTypeFilters, metadataOptions, version, linking
+                entityKeyIds,
+                authorizedPropertyTypes,
+                propertyTypeFilters,
+                metadataOptions,
+                version,
+                linking
         ) { rs -> getEntityPropertiesByPropertyTypeId(rs, authorizedPropertyTypes, byteBlobDataManager) }.toMap()
     }
 
@@ -83,7 +89,12 @@ class PostgresEntityDataQueryService(
             linking: Boolean = false
     ): Map<UUID, MutableMap<FullQualifiedName, MutableSet<Any>>> {
         return getEntitySetIterable(
-                entityKeyIds, authorizedPropertyTypes, propertyTypeFilters, metadataOptions, version, linking
+                entityKeyIds,
+                authorizedPropertyTypes,
+                propertyTypeFilters,
+                metadataOptions,
+                version,
+                linking
         ) { rs -> getEntityPropertiesByFullQualifiedName(rs, authorizedPropertyTypes, byteBlobDataManager) }.toMap()
     }
 
@@ -126,6 +137,15 @@ class PostgresEntityDataQueryService(
         }, adapter).asSequence()
     }
 
+    fun getEntitySetWithPropertyTypeIdsIterable(
+            entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
+            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
+            metadataOptions: Set<MetadataOption> = EnumSet.noneOf(MetadataOption::class.java)
+    ) : BasePostgresIterable<Pair<UUID, Map<UUID, Set<Any>>>> {
+        return getEntitySetIterable(entityKeyIds, authorizedPropertyTypes,mapOf(), metadataOptions) { rs ->
+            getEntityPropertiesByPropertyTypeId(rs, authorizedPropertyTypes, byteBlobDataManager)
+        }
+    }
     /**
      * Note: for linking queries, linking id and entity set id will be returned, thus data won't be merged by linking id
      */
