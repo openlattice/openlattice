@@ -20,13 +20,8 @@
 
 package com.openlattice.postgres;
 
-import com.openlattice.authorization.Permission;
 import com.openlattice.edm.PostgresEdmTypeConverter;
 import com.openlattice.edm.type.PropertyType;
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
-
-import java.util.Base64;
-import java.util.Base64.Encoder;
 import java.util.UUID;
 
 import static com.openlattice.postgres.PostgresColumn.*;
@@ -36,17 +31,11 @@ import static com.openlattice.postgres.PostgresDatatype.TIMESTAMPTZ;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class DataTables {
-    public static final FullQualifiedName        COUNT_FQN      = new FullQualifiedName( "openlattice",
-            "@count" );
-    public static final FullQualifiedName        ID_FQN         = new FullQualifiedName( "openlattice",
-            "@id" );
     public static final PostgresColumnDefinition LAST_INDEX     = new PostgresColumnDefinition(
             LAST_INDEX_FIELD,
             TIMESTAMPTZ )
             .withDefault( "'-infinity'" )
             .notNull();
-    public static final FullQualifiedName        LAST_INDEX_FQN = new FullQualifiedName( "openlattice",
-            "@lastIndex" );
     public static final PostgresColumnDefinition LAST_LINK      = new PostgresColumnDefinition(
             LAST_LINK_FIELD,
             TIMESTAMPTZ )
@@ -57,9 +46,6 @@ public class DataTables {
             TIMESTAMPTZ )
             .withDefault( "'-infinity'" )
             .notNull();
-
-    public static final  FullQualifiedName        LAST_WRITE_FQN = new FullQualifiedName( "openlattice",
-            "@lastWrite" );
     public static final  PostgresColumnDefinition OWNERS         = new PostgresColumnDefinition(
             "owners",
             PostgresDatatype.UUID );
