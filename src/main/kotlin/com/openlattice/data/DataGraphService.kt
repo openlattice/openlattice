@@ -30,6 +30,7 @@ import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking
 import com.openlattice.analysis.requests.FilteredNeighborsRankingAggregation
 import com.openlattice.data.integration.Association
 import com.openlattice.data.integration.Entity
+import com.openlattice.data.storage.EntityDatastore
 import com.openlattice.data.storage.PostgresEntitySetSizesTask
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.type.PropertyType
@@ -104,7 +105,7 @@ open class DataGraphService(
             entitySetId: UUID,
             entityKeyId: UUID,
             authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): SetMultimap<FullQualifiedName, Any> {
+    ): Map<FullQualifiedName, Set<Any>> {
         return eds.getEntities(
                 entitySetId,
                 setOf(entityKeyId),
@@ -116,7 +117,7 @@ open class DataGraphService(
             entitySetIds: Set<UUID>,
             entityKeyId: UUID,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
-    ): SetMultimap<FullQualifiedName, Any> {
+    ): Map<FullQualifiedName, Set<Any>> {
         return eds.getLinkingEntities(
                 entitySetIds.map { it to Optional.of(setOf(entityKeyId)) }.toMap(),
                 authorizedPropertyTypes
@@ -366,7 +367,7 @@ open class DataGraphService(
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Map<EntityKey, UUID> {
         val ids = idService.getEntityKeyIds(entities.keys.map { EntityKey(entitySetId, it) }.toSet())
-        val identifiedEntities = ids.map { it.value to entities[it.key.entityId] }.toMap()
+        val identifiedEntities = ids.map { it.value to entities.getValue(it.key.entityId) }.toMap()
         eds.integrateEntities(entitySetId, identifiedEntities, authorizedPropertyTypes)
 
         return ids

@@ -62,13 +62,13 @@ interface DataGraphManager {
             entitySetId: UUID,
             entityKeyId: UUID,
             authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): SetMultimap<FullQualifiedName, Any>
+    ): Map<FullQualifiedName, Set<Any>>
 
     fun getLinkingEntity(
             entitySetIds: Set<UUID>,
             entityKeyId: UUID,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
-    ): SetMultimap<FullQualifiedName, Any>
+    ): Map<FullQualifiedName, Set<Any>>
 
     //Soft deletes
     fun clearEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent
