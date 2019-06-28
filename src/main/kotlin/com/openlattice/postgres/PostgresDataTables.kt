@@ -44,6 +44,7 @@ class PostgresDataTables {
                 PARTITION,
                 PROPERTY_TYPE_ID,
                 HASH,
+                LAST_WRITE,
                 LAST_PROPAGATE,
                 LAST_MIGRATE,
                 VERSION,
@@ -111,8 +112,11 @@ class PostgresDataTables {
                     .name(quote(prefix + "_version_idx"))
                     .ifNotExists()
                     .desc()
-
-            val lastWriteIndex = PostgresColumnsIndexDefinition(tableDefinition, LAST_MIGRATE)
+            val lastWriteIndex = PostgresColumnsIndexDefinition(tableDefinition, LAST_WRITE)
+                    .name(quote(prefix + "_last_write_idx"))
+                    .ifNotExists()
+                    .desc()
+            val lastMigrateIndex = PostgresColumnsIndexDefinition(tableDefinition, LAST_MIGRATE)
                     .name(quote(prefix + "_last_migrate_idx"))
                     .ifNotExists()
                     .desc()
@@ -142,6 +146,7 @@ class PostgresDataTables {
                     entitySetIdIndex,
                     versionIndex,
                     lastWriteIndex,
+                    lastMigrateIndex,
                     propertyTypeIdIndex,
                     partitionsVersionIndex,
                     currentPropertiesForEntitySetIndex,

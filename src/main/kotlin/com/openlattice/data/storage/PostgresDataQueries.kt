@@ -468,13 +468,15 @@ fun upsertPropertyValueSql(propertyType: PropertyType): String {
             PARTITION,
             PROPERTY_TYPE_ID,
             HASH,
+            LAST_WRITE,
             VERSION,
             VERSIONS,
             PARTITIONS_VERSION
     ).joinToString(",") { it.name }
-    return "INSERT INTO ${DATA.name} ($metadataColumnsSql,${insertColumn.name}) VALUES (?,?,?,?,?,?,?,?,?) " +
+    return "INSERT INTO ${DATA.name} ($metadataColumnsSql,${insertColumn.name}) VALUES (?,?,?,?,?,now(),?,?,?,?) " +
             "ON CONFLICT (${PARTITION.name},${PROPERTY_TYPE_ID.name},${ID_VALUE.name}, ${HASH.name}) DO UPDATE " +
             "SET ${VERSIONS.name} = ${DATA.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
+            "${LAST_WRITE.name} = GREATEST(${LAST_WRITE.name},EXCLUDED.${LAST_WRITE.name}), " +
             "${PARTITIONS_VERSION.name} = EXCLUDED.${PARTITIONS_VERSION.name}, " +
             "${VERSION.name} = CASE WHEN abs(${DATA.name}.${VERSION.name}) < EXCLUDED.${VERSION.name} THEN EXCLUDED.${VERSION.name} " +
             "ELSE ${DATA.name}.${VERSION.name} END"
