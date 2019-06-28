@@ -54,7 +54,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION;
-import static com.openlattice.postgres.DataTables.ID_FQN;
+import static com.openlattice.edm.EdmConstants.ID_FQN;
 
 @RestController
 @RequestMapping( SearchApi.CONTROLLER )
