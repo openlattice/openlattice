@@ -28,6 +28,7 @@ import com.hazelcast.aggregation.Aggregators
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
+import com.openlattice.IdConstants
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.EntityKeyIdService
 import com.openlattice.edm.EntitySet
@@ -46,13 +47,6 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import java.util.stream.Stream
 
-
-/**
- * Entity sets ids are assigned by calling [UUID.randomUUID] as a result we know that this can never be accidentally
- * assigned to any real entity set.
- */
-internal val LINKING_ENTITY_SET_ID = UUID(0, 0)
-internal const val PERSON_FQN = "general.person"
 internal const val REFRESH_PROPERTY_TYPES_INTERVAL_MILLIS = 30000L
 internal const val LINKING_BATCH_TIMEOUT_MILLIS = 120000L
 internal const val MINIMUM_SCORE = 0.75
@@ -190,7 +184,7 @@ class BackgroundLinkingService
 
                     //TODO: When creating new cluster do we really need to re-match or can we assume score of 1.0?
                     val clusterUpdate = if (maybeBestCluster == null) {
-                        val clusterId = ids.reserveIds(LINKING_ENTITY_SET_ID, 1).first()
+                        val clusterId = ids.reserveIds(IdConstants.LINKING_ENTITY_SET_ID, 1).first()
                         val block = candidate to mapOf(candidate to elem)
                         ClusterUpdate(clusterId, candidate, matcher.match(block).second)
                     } else {

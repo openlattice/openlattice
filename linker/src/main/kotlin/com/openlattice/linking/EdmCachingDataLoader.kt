@@ -30,6 +30,7 @@ import com.hazelcast.query.Predicates
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.storage.MetadataOption
 import com.openlattice.data.storage.PostgresEntityDataQueryService
+import com.openlattice.edm.EdmConstants
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
@@ -56,7 +57,7 @@ class EdmCachingDataLoader(
 
     private val propertyTypes: IMap<UUID, PropertyType> = hazelcast.getMap(HazelcastMap.PROPERTY_TYPES.name)
     private val personEntityType = entityTypes.values(
-            Predicates.equal("type.fullQualifiedNameAsString", PERSON_FQN)
+            Predicates.equal("type.fullQualifiedNameAsString", EdmConstants.PERSON_FQN.fullQualifiedNameAsString)
     ).first()
     private val authorizedPropertyTypesCache = Suppliers.memoizeWithExpiration(
             { propertyTypes.getAll(personEntityType.properties) },

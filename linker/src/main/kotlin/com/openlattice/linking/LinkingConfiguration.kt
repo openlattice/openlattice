@@ -28,6 +28,7 @@ import com.kryptnostic.rhizome.configuration.ConfigurationKey
 import com.kryptnostic.rhizome.configuration.SimpleConfigurationKey
 import com.kryptnostic.rhizome.configuration.annotation.ReloadableConfiguration
 import com.openlattice.conductor.rpc.SearchConfiguration
+import com.openlattice.edm.EdmConstants
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import java.util.*
 
@@ -41,7 +42,7 @@ private const val WHITELIST = "whitelist"
 private const val SEARCH_CONFIGURATION = "searchConfiguration"
 private const val BATCH_SIZE = "batch-size"
 private const val LOAD_SIZE = "load-size"
-private val DEFAULT_ENTITY_TYPES = setOf("general.person")
+private val DEFAULT_ENTITY_TYPES = setOf(EdmConstants.PERSON_FQN.fullQualifiedNameAsString)
 
 /**
  * Configuration class for linking.
