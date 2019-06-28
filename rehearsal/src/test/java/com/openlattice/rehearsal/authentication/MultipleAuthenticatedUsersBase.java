@@ -79,9 +79,9 @@ import org.junit.Assert;
 import retrofit2.Retrofit;
 
 public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
-    private final static Map<String, Retrofit> retrofitMap = new HashMap<>();
-    private final static Map<String, Retrofit> linkerRetrofitMap = new HashMap<>();
-    private final static Map<String, OkHttpClient> httpClientMap = new HashMap<>();
+    private final static Map<String, Retrofit>     retrofitMap       = new HashMap<>();
+    private final static Map<String, Retrofit>     linkerRetrofitMap = new HashMap<>();
+    private final static Map<String, OkHttpClient> httpClientMap     = new HashMap<>();
 
     protected static EdmApi             edmApi;
     protected static PermissionsApi     permissionsApi;
@@ -96,7 +96,7 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
     protected static LinkingFeedbackApi linkingFeedbackApi;
     protected static PrincipalApi       principalApi;
 
-    protected static OkHttpClient       currentHttpClient;
+    protected static OkHttpClient currentHttpClient;
 
     static {
         retrofitMap.put( "admin", retrofit );
@@ -182,7 +182,6 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
         }
     }
 
-
     public static PropertyType getBinaryPropertyType() {
         PropertyType pt = TestDataFactory.binaryPropertyType();
         UUID propertyTypeId = edmApi.createPropertyType( pt );
@@ -198,7 +197,7 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
             Map<Permission, Boolean> permissionMap,
             EnumSet<Permission> expectedPermissions ) {
         EnumSet.allOf( Permission.class ).forEach( permission ->
-            Assert.assertEquals( expectedPermissions.contains( permission ), permissionMap.get( permission ) )
+                Assert.assertEquals( expectedPermissions.contains( permission ), permissionMap.get( permission ) )
         );
     }
 
@@ -252,9 +251,10 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
         return createEntityType( Optional.empty(), SecurableObjectType.AssociationType, propertyTypes );
     }
 
-    private static EntityType createEntityType( Optional<FullQualifiedName> fqn,
-                                                SecurableObjectType category,
-                                                UUID... propertyTypes ) {
+    private static EntityType createEntityType(
+            Optional<FullQualifiedName> fqn,
+            SecurableObjectType category,
+            UUID... propertyTypes ) {
         PropertyType k = createPropertyType();
         EntityType expected = TestDataFactory.entityType( fqn, category, k );
         expected.removePropertyTypes( expected.getProperties() );
@@ -299,12 +299,13 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
         return createEntitySet( UUID.randomUUID(), entityType, linking, linkedEntitySetIds );
     }
 
-    public static EntitySet createEntitySet( UUID entitySetId,
-                                             EntityType entityType,
-                                             boolean linking,
-                                             Set<UUID> linkedEntitySetIds ) {
+    public static EntitySet createEntitySet(
+            UUID entitySetId,
+            EntityType entityType,
+            boolean linking,
+            Set<UUID> linkedEntitySetIds ) {
         EnumSet<EntitySetFlag> flags = EnumSet.of( EntitySetFlag.EXTERNAL );
-        if(linking) {
+        if ( linking ) {
             flags.add( EntitySetFlag.LINKING );
         }
         EntitySet newES = new EntitySet(
@@ -316,9 +317,10 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
                 ImmutableSet.of( "foo@bar.com", "foobar@foo.net" ),
                 Optional.of( linkedEntitySetIds ),
                 Optional.empty(),
-                Optional.of(flags));
+                Optional.of( flags ),
+                Optional.empty());
 
-        Map<String, UUID> entitySetIds = edmApi.createEntitySets( ImmutableSet.of( newES ) );
+        Map<String, UUID> entitySetIds = entitySetsApi.createEntitySets( ImmutableSet.of( newES ) );
 
         Assert.assertTrue( "Entity Set creation does not return correct UUID",
                 entitySetIds.values().contains( newES.getId() ) );
@@ -341,20 +343,21 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
             Set<UUID> properties,
             List<UUID> srcIds,
             List<UUID> dstIds,
-            int numberOfEntries) {
+            int numberOfEntries ) {
         List<Map<UUID, Set<Object>>> edgeData = Lists.newArrayList(
-                TestDataFactory.randomStringEntityData(numberOfEntries, properties).values() );
+                TestDataFactory.randomStringEntityData( numberOfEntries, properties ).values() );
 
         List<DataEdge> edges = Streams
                 .mapWithIndex(
                         Stream.of( srcIds.toArray() ),
                         ( data, index ) -> {
                             int idx = (int) index;
-                            EntityDataKey srcDataKey = new EntityDataKey( srcEntitySetId, srcIds.get( idx) );
+                            EntityDataKey srcDataKey = new EntityDataKey( srcEntitySetId, srcIds.get( idx ) );
                             EntityDataKey dstDataKey = new EntityDataKey( dstEntitySetId, dstIds.get( idx ) );
-                            return new DataEdge( srcDataKey, dstDataKey, edgeData.get( idx ) ); } )
+                            return new DataEdge( srcDataKey, dstDataKey, edgeData.get( idx ) );
+                        } )
                 .collect( Collectors.toList() );
 
-        return new Pair<>(edgeEntitySetId, edges);
+        return new Pair<>( edgeEntitySetId, edges );
     }
 }
