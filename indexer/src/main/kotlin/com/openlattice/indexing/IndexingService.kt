@@ -90,12 +90,12 @@ class IndexingService(
                                 entityTypes.getValue(entitySet.entityTypeId).properties
                         )
 
-                        var cursor = indexingProgress.getOrPut(entitySetId) { IdConstants.LB_UUID }
+                        var cursor = indexingProgress.getOrPut(entitySetId) { IdConstants.LB_UUID.id }
                         var entityKeyIds: Set<UUID> = indexingJobs.getValue(entitySetId)
 
                         //An empty set of ids means all keys
                         if (entityKeyIds.isEmpty()) {
-                            entityKeyIds = getNextBatch(entitySetId, cursor, cursor != IdConstants.LB_UUID).toSet()
+                            entityKeyIds = getNextBatch(entitySetId, cursor, cursor != IdConstants.LB_UUID.id).toSet()
                         }
 
                         while (entityKeyIds.isNotEmpty()) {
@@ -105,7 +105,7 @@ class IndexingService(
 
                             indexingProgress.set(entitySetId, cursor)
 
-                            entityKeyIds = getNextBatch(entitySetId, cursor, cursor != IdConstants.LB_UUID).toSortedSet()
+                            entityKeyIds = getNextBatch(entitySetId, cursor, cursor != IdConstants.LB_UUID.id).toSortedSet()
                         }
 
                         logger.info("Finished indexing entity set $entitySetId")
