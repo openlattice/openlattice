@@ -21,21 +21,10 @@
 package com.openlattice.rehearsal.edm
 
 import com.openlattice.edm.type.EntityType
+import com.openlattice.linking.util.PersonProperties
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import java.util.*
-
-private const val PERSON_NAMESPACE = "general"
-private const val PERSON_NAME = "person"
-
-private const val PERSON_GIVEN_NAME_NAMESPACE = "nc"
-private const val PERSON_GIVEN_NAME_NAME = "PersonGivenName"
-private const val PERSON_MIDDLE_NAME_NAMESPACE = "nc"
-private const val PERSON_MIDDLE_NAME_NAME = "PersonMiddleName"
-private const val PERSON_SURNAME_NAMESPACE = "nc"
-private const val PERSON_SURNAME_NAME = "PersonSurName"
-private const val PERSON_DOB_NAMESPACE = "nc"
-private const val PERSON_DOB_NAME = "PersonBirthDate"
 
 class EdmTestConstants : MultipleAuthenticatedUsersBase() {
     companion object {
@@ -52,16 +41,24 @@ class EdmTestConstants : MultipleAuthenticatedUsersBase() {
 
         init {
             loginAs("admin")
-            personEt = edmApi.getEntityType(edmApi.getEntityTypeId(PERSON_NAMESPACE, PERSON_NAME))
+            personEt = edmApi.getEntityType(edmApi.getEntityTypeId(PersonProperties.PERSON_TYPE_FQN))
 
-            personGivenNameId = edmApi.getPropertyTypeId(PERSON_GIVEN_NAME_NAMESPACE, PERSON_GIVEN_NAME_NAME)
-            personGivenNameFqn = FullQualifiedName(PERSON_GIVEN_NAME_NAMESPACE, PERSON_GIVEN_NAME_NAME)
-            personMiddleNameId = edmApi.getPropertyTypeId(PERSON_MIDDLE_NAME_NAMESPACE, PERSON_MIDDLE_NAME_NAME)
-            personMiddleNameFqn = FullQualifiedName(PERSON_MIDDLE_NAME_NAMESPACE, PERSON_MIDDLE_NAME_NAME)
-            personSurnameId = edmApi.getPropertyTypeId(PERSON_SURNAME_NAMESPACE, PERSON_SURNAME_NAME)
-            personSurnameFqn = FullQualifiedName(PERSON_SURNAME_NAMESPACE, PERSON_SURNAME_NAME)
-            personDateOfBirthId = edmApi.getPropertyTypeId(PERSON_DOB_NAMESPACE, PERSON_DOB_NAME)
-            personDateOfBirthFqn = FullQualifiedName(PERSON_DOB_NAMESPACE, PERSON_DOB_NAME)
+            personGivenNameId = edmApi.getPropertyTypeId(
+                    PersonProperties.FIRST_NAME_FQN.namespace,
+                    PersonProperties.FIRST_NAME_FQN.name)
+            personGivenNameFqn = PersonProperties.FIRST_NAME_FQN
+            personMiddleNameId = edmApi.getPropertyTypeId(
+                    PersonProperties.MIDDLE_NAME_FQN.namespace,
+                    PersonProperties.MIDDLE_NAME_FQN.name)
+            personMiddleNameFqn = PersonProperties.MIDDLE_NAME_FQN
+            personSurnameId = edmApi.getPropertyTypeId(
+                    PersonProperties.LAST_NAME_FQN.namespace,
+                    PersonProperties.LAST_NAME_FQN.name)
+            personSurnameFqn = PersonProperties.LAST_NAME_FQN
+            personDateOfBirthId = edmApi.getPropertyTypeId(
+                    PersonProperties.DOB_FQN.namespace,
+                    PersonProperties.DOB_FQN.name)
+            personDateOfBirthFqn = PersonProperties.DOB_FQN
         }
     }
 
