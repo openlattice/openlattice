@@ -21,7 +21,9 @@
 
 package com.openlattice.linking
 
+import com.openlattice.conductor.rpc.SearchConfiguration
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer
+import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.serializer.AbstractJacksonYamlSerializationTest
 import org.apache.commons.lang.RandomStringUtils
 import org.apache.commons.lang.math.RandomUtils
@@ -43,6 +45,7 @@ class LinkingConfigurationTest : AbstractJacksonYamlSerializationTest<LinkingCon
 
     override fun getSampleData(): LinkingConfiguration {
         return LinkingConfiguration(
+                SearchConfiguration("foo://fooster.foo.com/foo", "McClusterFace", 3200),
                 RandomUtils.nextInt(),
                 Optional.of(setOf(UUID.randomUUID())),
                 setOf(UUID.randomUUID()),
