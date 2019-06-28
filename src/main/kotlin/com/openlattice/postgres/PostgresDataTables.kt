@@ -112,8 +112,8 @@ class PostgresDataTables {
                     .ifNotExists()
                     .desc()
 
-            val lastWriteIndex = PostgresColumnsIndexDefinition(tableDefinition, LAST_WRITE)
-                    .name(quote(prefix + "_last_write_idx"))
+            val lastWriteIndex = PostgresColumnsIndexDefinition(tableDefinition, LAST_MIGRATE)
+                    .name(quote(prefix + "_last_migrate_idx"))
                     .ifNotExists()
                     .desc()
             val propertyTypeIdIndex = PostgresColumnsIndexDefinition(tableDefinition, PROPERTY_TYPE_ID)
