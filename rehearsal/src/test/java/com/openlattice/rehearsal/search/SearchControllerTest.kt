@@ -168,7 +168,7 @@ class SearchControllerTest : MultipleAuthenticatedUsersBase() {
         Assert.assertEquals(numberOfEntries, noNeighborData6.size)
         Assert.assertEquals(1, noNeighborData6[ids.random()]!!.size)
         Assert.assertEquals(1, noNeighborData6[ids.random()]!![edge.id]!!.size())
-        Assert.assertEquals(setOf(dst.id), noNeighborData6[ids.random()]!![edge.id]!!.keySet()])
+        Assert.assertEquals(setOf(dst.id), noNeighborData6[ids.random()]!![edge.id]!!.keySet())
 
         loginAs("admin")
 
