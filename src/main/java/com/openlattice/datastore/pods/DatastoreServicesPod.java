@@ -54,12 +54,10 @@ import com.openlattice.authorization.SecurableObjectResolveTypeService;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.DataGraphService;
-import com.openlattice.data.EntityDatastore;
 import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.ids.PostgresEntityKeyIdService;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.openlattice.data.storage.ByteBlobDataManager;
-import com.openlattice.data.storage.HazelcastEntityDatastore;
 import com.openlattice.data.storage.IndexingMetadataManager;
 import com.openlattice.data.storage.PostgresDataSinkService;
 import com.openlattice.data.storage.PostgresEntityDataQueryService;
@@ -72,7 +70,6 @@ import com.openlattice.datastore.apps.services.AppService;
 import com.openlattice.datastore.services.DatastoreConductorElasticsearchApi;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.EdmService;
-import com.openlattice.datastore.services.ODataStorageService;
 import com.openlattice.datastore.services.SyncTicketService;
 import com.openlattice.directory.UserDirectoryService;
 import com.openlattice.edm.PostgresEdmManager;
@@ -247,13 +244,6 @@ public class DatastoreServicesPod {
     @Bean
     public HazelcastAclKeyReservationService aclKeyReservationService() {
         return new HazelcastAclKeyReservationService( hazelcastInstance );
-    }
-
-    @Bean
-    public ODataStorageService odataStorageService() {
-        return new ODataStorageService(
-                hazelcastInstance,
-                dataModelService() );
     }
 
     @Bean
