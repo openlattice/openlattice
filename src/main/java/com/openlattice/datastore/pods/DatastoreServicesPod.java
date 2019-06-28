@@ -399,7 +399,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public PostgresEntityDataQueryService dataQueryService() {
-        return new PostgresEntityDataQueryService( hikariDataSource, byteBlobDataManager );
+        return new PostgresEntityDataQueryService( hikariDataSource, byteBlobDataManager, partitionManager() );
     }
 
     @Bean
@@ -430,7 +430,7 @@ public class DatastoreServicesPod {
     }
 
     @Bean AwsDataSinkService awsDataSinkService() {
-        return new AwsDataSinkService( byteBlobDataManager, hikariDataSource );
+        return new AwsDataSinkService( partitionManager(), byteBlobDataManager, hikariDataSource );
     }
 
     @Bean
