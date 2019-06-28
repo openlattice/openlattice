@@ -272,7 +272,7 @@ public interface DataApi {
      * @return A enttity details object, with property type FQNs as keys.
      */
     @GET( BASE + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH )
-    SetMultimap<FullQualifiedName, Object> getEntity(
+    Map<FullQualifiedName, Set<Object>> getEntity(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Path( ENTITY_KEY_ID ) UUID entityKeyId );
 
