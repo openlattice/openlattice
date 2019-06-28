@@ -1,5 +1,3 @@
-
-
 /*
  * Copyright (C) 2019. OpenLattice, Inc.
  *
@@ -27,10 +25,21 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName
 class EdmConstants {
 
     companion object {
+        // entity type
         @JvmField
-        val OPENLATTICE_ID_FQN = FullQualifiedName("openlattice.@id")
+        val PERSON_FQN = FullQualifiedName("general", "person")
+
+        // property type
+        @JvmField
+        val ID_FQN = FullQualifiedName("openlattice", "@id")
 
         @JvmField
-        val PERSON_FQN = FullQualifiedName("general.person")
+        val COUNT_FQN = FullQualifiedName("openlattice", "@count")
+
+        @JvmField
+        val LAST_INDEX_FQN = FullQualifiedName("openlattice", "@lastIndex")
+
+        @JvmField
+        val LAST_WRITE_FQN = FullQualifiedName("openlattice", "@lastWrite")
     }
 }
