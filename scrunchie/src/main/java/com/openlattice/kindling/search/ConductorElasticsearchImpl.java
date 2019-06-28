@@ -80,6 +80,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.toSet;
+import static com.openlattice.IdConstants.ENTITY_SET_ID_KEY;
+import static com.openlattice.IdConstants.LAST_WRITE;
 
 public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     // @formatter:off
