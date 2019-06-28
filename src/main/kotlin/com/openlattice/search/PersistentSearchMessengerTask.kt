@@ -109,7 +109,7 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
         }
     }
 
-    private fun getLatestRead(vehicleReads: List<SetMultimap<FullQualifiedName, Any>>): OffsetDateTime? {
+    private fun getLatestRead(vehicleReads: List<Map<FullQualifiedName, Set<Any>>>): OffsetDateTime? {
         return vehicleReads
                 .flatMap { it[LAST_WRITE_FQN] ?: emptySet() }
                 .map {
@@ -119,8 +119,8 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
                 }.max()
     }
 
-    private fun getHitEntityKeyIds(hits: List<SetMultimap<FullQualifiedName, Any>>): Set<UUID> {
-        return hits.map { UUID.fromString(it[DataTables.ID_FQN].first().toString()) }.toSet()
+    private fun getHitEntityKeyIds(hits: List<Map<FullQualifiedName, Set<Any>>>): Set<UUID> {
+        return hits.map { UUID.fromString((it[DataTables.ID_FQN] ?: emptySet()).first().toString()) }.toSet()
     }
 
     private fun findNewWritesForAlert(userAclKey: AclKey, persistentSearch: PersistentSearch): OffsetDateTime? {
