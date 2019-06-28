@@ -350,7 +350,7 @@ public final class PostgresColumn {
     public static final String                   PARTITION_FIELD                   = "partition";
     public static final PostgresColumnDefinition PARTITION                         = new PostgresColumnDefinition(
             PARTITION_FIELD,
-            INTEGER ).notNull().withDefault( "'{}'" );
+            INTEGER ).notNull();
     public static final String                   PARTITION_INDEX_FIELD             = "partition_index";
     public static final PostgresColumnDefinition PARTITION_INDEX                   =
             new PostgresColumnDefinition( PARTITION_INDEX_FIELD, BIGINT ).notNull();
