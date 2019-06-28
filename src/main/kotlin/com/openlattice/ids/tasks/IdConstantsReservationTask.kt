@@ -18,36 +18,40 @@
  *
  *
  */
-
 package com.openlattice.ids.tasks
 
-import com.openlattice.ids.IdCatchupEntryProcessor
+import com.openlattice.IdConstants
+import com.openlattice.data.EntityKey
 import com.openlattice.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.Task
+import java.util.*
 
 /**
- *
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
+ * Reserves UUIDs for commonly used ids found in [com.openlattice.IdConstants].
  */
-
-class IdGenerationCatchUpTask : HazelcastInitializationTask<IdGenerationCatchupDependency> {
+class IdConstantsReservationTask : HazelcastInitializationTask<IdConstantsReservationDependency> {
     override fun getInitialDelay(): Long {
-        return 0
+        return 0L
     }
 
-    override fun initialize(dependencies: IdGenerationCatchupDependency) {
-        dependencies.idGenerationMap.executeOnEntries(IdCatchupEntryProcessor(dependencies.hds))
+    override fun initialize(dependencies: IdConstantsReservationDependency) {
+        val entityKeyIdsToReserve = IdConstants.values()
+                .map {
+                    EntityKey(UUID(100, 100), it.id.toString())
+                }.toSet()
+        dependencies.entityKeyIdService.reserveEntityKeyIds(entityKeyIdsToReserve)
     }
 
     override fun after(): Set<Class<out HazelcastInitializationTask<*>>> {
-        return setOf(IdConstantsReservationTask::class.java)
+        return emptySet()
     }
 
     override fun getName(): String {
-        return Task.ID_GEN_CATCH_UP.name
+        return Task.ID_CONSTANT_RESERVATION.name
     }
 
-    override fun getDependenciesClass(): Class<out IdGenerationCatchupDependency> {
-        return IdGenerationCatchupDependency::class.java
+    override fun getDependenciesClass(): Class<out IdConstantsReservationDependency> {
+        return IdConstantsReservationDependency::class.java
     }
+
 }

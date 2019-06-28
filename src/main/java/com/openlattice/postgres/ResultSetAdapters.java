@@ -913,7 +913,7 @@ public final class ResultSetAdapters {
             }
         }
 
-        data.put( IdConstants.LAST_WRITE_ID, ImmutableSet.of( lastWrite( rs ) ) );
+        data.put( IdConstants.LAST_WRITE_ID.getId(), ImmutableSet.of( lastWrite( rs ) ) );
         return data;
     }
 

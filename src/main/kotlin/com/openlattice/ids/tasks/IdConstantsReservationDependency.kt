@@ -18,18 +18,9 @@
  *
  *
  */
-
 package com.openlattice.ids.tasks
 
-import com.hazelcast.core.IMap
-import com.openlattice.ids.Range
+import com.openlattice.data.EntityKeyIdService
 import com.openlattice.tasks.HazelcastTaskDependencies
-import com.zaxxer.hikari.HikariDataSource
 
-/**
- *
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
- */
-data class IdGenerationCatchupDependency(
-        val idGenerationMap: IMap<Long, Range>,
-        val hds: HikariDataSource) : HazelcastTaskDependencies
+data class IdConstantsReservationDependency(val entityKeyIdService: EntityKeyIdService) : HazelcastTaskDependencies

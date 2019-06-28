@@ -66,11 +66,9 @@ public class DataTables {
     public static final  PostgresColumnDefinition READERS        = new PostgresColumnDefinition(
             "readers",
             PostgresDatatype.UUID );
-    public static final  String                   VALUE_FIELD    = "value";
     public static final  PostgresColumnDefinition WRITERS        = new PostgresColumnDefinition(
             "writers",
             PostgresDatatype.UUID );
-    private static final Encoder                  encoder        = Base64.getEncoder();
 
     public static String propertyTableName( UUID propertyTypeId ) {
         return "pt_" + propertyTypeId.toString();
@@ -89,13 +87,6 @@ public class DataTables {
         return new PostgresColumnDefinition( quote( pt.getType().getFullQualifiedNameAsString() ),
                 PostgresEdmTypeConverter.map( pt.getDatatype() ) );
 
-    }
-
-    public static String mapPermissionToPostgresPrivilege( Permission p ) {
-        switch ( p ) {
-            default:
-                return p.name();
-        }
     }
 
     public static PostgresTableDefinition buildPropertyTableDefinition(
