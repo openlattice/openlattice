@@ -25,6 +25,8 @@ import java.util.LinkedHashSet;
 
 import java.util.Map;
 import java.util.Set;
+
+import com.openlattice.edm.EdmConstants;
 import org.apache.commons.lang3.NotImplementedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,7 +49,7 @@ public class EntitySetData<T> implements Iterable<SetMultimap<T, Object>> {
             LinkedHashSet<String> columnTitles,
             Iterable<Map<T, Set<Object>>> entities ) {
         this.columnTitles = columnTitles;
-        this.columnTitles.add( "openlattice.@id" );
+        this.columnTitles.add( EdmConstants.OPENLATTICE_ID_FQN.getFullQualifiedNameAsString() );
         this.entities = entities;
     }
 

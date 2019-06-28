@@ -58,6 +58,7 @@ import com.openlattice.data.storage.EntityDatastore;
 import com.openlattice.data.storage.IndexingMetadataManager;
 import com.openlattice.data.storage.MetadataOption;
 import com.openlattice.datastore.services.EdmManager;
+import com.openlattice.edm.EdmConstants;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.events.AppCreatedEvent;
 import com.openlattice.edm.events.AppDeletedEvent;
@@ -621,7 +622,7 @@ public class SearchService {
 
         Map<UUID, Map<FullQualifiedName, Set<Object>>> entities = Maps.newHashMap();
         entitiesByEntitySetId.entries().forEach( entry -> entities
-                .put( UUID.fromString( entry.getValue().get( new FullQualifiedName( "openlattice.@id" ) ).iterator()
+                .put( UUID.fromString( entry.getValue().get( EdmConstants.OPENLATTICE_ID_FQN ).iterator()
                                 .next().toString() ),
                         entry.getValue() ) );
 
