@@ -39,7 +39,7 @@ import com.openlattice.postgres.DataTables.LAST_INDEX
 import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
 import com.openlattice.postgres.PostgresColumn.VERSION
-import com.openlattice.postgres.PostgresTable.IDS
+import com.openlattice.postgres.PostgresTable.ENTITY_KEY_IDS
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
@@ -153,11 +153,11 @@ class BackgroundIndexingService(
     }
 
     private fun getEntityDataKeysQuery(entitySetId: UUID): String {
-        return "SELECT * FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${VERSION.name} > 0"
+        return "SELECT * FROM ${ENTITY_KEY_IDS.name} WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${VERSION.name} > 0"
     }
 
     private fun getDirtyEntitiesQuery(entitySetId: UUID): String {
-        return "SELECT * FROM ${IDS.name} " +
+        return "SELECT * FROM ${ENTITY_KEY_IDS.name} " +
                 "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND " +
                 "${LAST_INDEX.name} < ${LAST_WRITE.name} AND " +
                 "${VERSION.name} > 0 " +
@@ -235,7 +235,9 @@ class BackgroundIndexingService(
             markAsIndexed: Boolean = true
     ): Int {
         val esb = Stopwatch.createStarted()
-        val entitiesById = dataQueryService.getEntitiesByIdWithLastWrite(entitySet.id, propertyTypeMap, batchToIndex)
+        val entitiesById = dataQueryService.getEntitiesWithPropertyTypeIds(
+                mapOf(entitySet.id to Optional.of(batchToIndex)),
+                mapOf(entitySet.id to propertyTypeMap))
 
         if (entitiesById.size != batchToIndex.size) {
             logger.error(

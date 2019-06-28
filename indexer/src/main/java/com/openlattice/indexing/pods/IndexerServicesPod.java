@@ -169,10 +169,14 @@ public class IndexerServicesPod {
     }
 
     @Bean
+    public PartitionManager partitionManager() {
+        return new PartitionManager( hazelcastInstance, hikariDataSource );
+    }
+
+    @Bean
     public PhoneNumberService phoneNumberService() {
         return new PhoneNumberService( hazelcastInstance );
     }
-
     @Bean
     public HazelcastOrganizationService organizationsManager() {
         return new HazelcastOrganizationService(
@@ -225,10 +229,6 @@ public class IndexerServicesPod {
         return () -> hazelcastInstance.getQueue( HazelcastQueue.EMAIL_SPOOL.name() );
     }
 
-    @Bean
-    public PartitionManager partitionManager() {
-        return new PartitionManager( hazelcastInstance,hikariDataSource );
-    }
     @Bean
     public EdmManager dataModelService() {
         return new EdmService(
