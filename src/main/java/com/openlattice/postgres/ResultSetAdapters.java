@@ -1007,12 +1007,12 @@ public final class ResultSetAdapters {
         UUID entityTypeID = (UUID) rs.getObject( ENTITY_TYPE_ID_FIELD );
         String entitySetName = rs.getString( ENTITY_SET_NAME_FIELD );
         UUID entitySetId = (UUID) rs.getObject( ENTITY_SET_ID_FIELD );
-        long count = rs.getLong( COUNT );
+        long count = count( rs );
         return new PropertyUsageSummary( entityTypeID, entitySetName, entitySetId, count );
     }
 
     public static Long count( ResultSet rs ) throws SQLException {
-        return rs.getObject( "count", Long.class );
+        return rs.getLong( COUNT );
     }
 
     public static OffsetDateTime expirationDate( ResultSet rs ) throws SQLException {
