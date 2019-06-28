@@ -24,9 +24,11 @@ package com.openlattice.rehearsal
 import com.openlattice.authentication.AuthenticationTest
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
 import com.openlattice.shuttle.MissionControl
+import com.openlattice.shuttle.Shuttle
 import com.openlattice.shuttle.ShuttleCli
 import com.openlattice.shuttle.main
 import org.apache.olingo.commons.api.edm.FullQualifiedName
+import org.junit.Test
 import java.io.File
 import java.util.*
 
@@ -42,6 +44,12 @@ open class SetupTestData : MultipleAuthenticatedUsersBase() {
             MissionControl.continueAfterSuccess()
         }
 
+        @Test
+        fun doImport() {
+//            importDataSet("associationTestFlight.yaml","")
+            importDataSet("$DATA_FOLDER/socratesA.yaml","$FLIGHT_FOLDER/testdata1.csv")
+            importDataSet("$DATA_FOLDER/socratesB.yaml","$FLIGHT_FOLDER/testdata2.csv")
+        }
         /**
          * Import datasets via Shuttle
          * @param
@@ -69,7 +77,7 @@ open class SetupTestData : MultipleAuthenticatedUsersBase() {
          */
         fun checkLinkingFinished( importedGeneralPersonFqns: Set<String>): Boolean {
             val finishedEntitySets = realtimeLinkingApi.linkingFinishedEntitySets
-            val finished = importedGeneralPersonFqns.all { finishedEntitySets.contains(edmApi.getEntitySetId(it)) }
+            val finished = importedGeneralPersonFqns.all { finishedEntitySets.contains(entitySetsApi.getEntitySetId(it)) }
 
             logger.info("Linking is finished:{} with imported entity sets: {}", finished, importedGeneralPersonFqns)
             return finished
