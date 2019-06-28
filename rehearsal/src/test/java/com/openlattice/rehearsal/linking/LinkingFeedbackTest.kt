@@ -122,7 +122,7 @@ class LinkingFeedbackTest : SetupTestData() {
                 SearchConstraints.simpleSearchConstraints(
                         arrayOf(linkingEntitySet.id), 0, 100, "*")).hits
         linkingId = linkedData.map {
-            UUID.fromString(it[DataTables.ID_FQN].first() as String)
+            UUID.fromString(it.getValue(DataTables.ID_FQN).first() as String)
         }.toSet().first()
         val matchedEntities = realtimeLinkingApi.getMatchedEntitiesForLinkingId(linkingId)
 
@@ -207,7 +207,7 @@ class LinkingFeedbackTest : SetupTestData() {
         val linkedDataProperties = searchApi.searchEntitySetData(
                 SearchConstraints.simpleSearchConstraints(
                         arrayOf(linkingEntitySet.id), 0, 100, "*")).hits
-                .flatMap { it.asMap().map { it.key.fullQualifiedNameAsString } }
+                .flatMap { hit -> hit.map { it.key.fullQualifiedNameAsString } }
         logger.info("$linkedDataProperties")
         val feedbackFeatures = feedbacksWithFeatures.map { it.features.filter { it.value > 0.0 } }
                 .flatMap { it.keys }.toSet()
