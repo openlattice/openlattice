@@ -54,15 +54,15 @@ import com.openlattice.authorization.SecurableObjectResolveTypeService;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.DataGraphService;
-import com.openlattice.data.EntityDatastore;
 import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.ids.PostgresEntityKeyIdService;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.openlattice.data.storage.ByteBlobDataManager;
-import com.openlattice.data.storage.HazelcastEntityDatastore;
+import com.openlattice.data.storage.EntityDatastore;
 import com.openlattice.data.storage.IndexingMetadataManager;
 import com.openlattice.data.storage.PostgresDataSinkService;
 import com.openlattice.data.storage.PostgresEntityDataQueryService;
+import com.openlattice.data.storage.PostgresEntityDatastore;
 import com.openlattice.data.storage.PostgresEntitySetSizesInitializationTask;
 import com.openlattice.data.storage.PostgresEntitySetSizesTask;
 import com.openlattice.data.storage.PostgresEntitySetSizesTaskDependency;
@@ -263,7 +263,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public EntityDatastore entityDatastore() {
-        return new HazelcastEntityDatastore( idService(),
+        return new PostgresEntityDatastore( idService(),
                 postgresDataManager(),
                 dataQueryService(),
                 dataModelService(),
@@ -415,7 +415,10 @@ public class DatastoreServicesPod {
 
     @Bean
     public PostgresEntityDataQueryService dataQueryService() {
-        return new PostgresEntityDataQueryService( hikariDataSource, byteBlobDataManager );
+        return new PostgresEntityDataQueryService(
+                hikariDataSource,
+                byteBlobDataManager,
+                partitionManager() );
     }
 
     @Bean
@@ -446,7 +449,7 @@ public class DatastoreServicesPod {
     }
 
     @Bean AwsDataSinkService awsDataSinkService() {
-        return new AwsDataSinkService( byteBlobDataManager, hikariDataSource );
+        return new AwsDataSinkService( partitionManager(), byteBlobDataManager, hikariDataSource );
     }
 
     @Bean
