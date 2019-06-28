@@ -34,23 +34,7 @@ import java.util.*
  */
 interface LinkingQueryService {
 
-    fun getLinkingIds(entityKeyIds: Map<UUID, Optional<Set<UUID>>>): Map<UUID, Set<UUID>>
-
-    fun getEntityKeyIdsOfLinkingIds(
-            linkingIds: Set<UUID>
-    ): PostgresIterable<Pair<UUID, Set<UUID>>>
-
-    fun getLinkingEntitySetIds(linkingId: UUID): PostgresIterable<UUID>
-
-    fun getLinkedEntityDataWithMetadata(
-            linkingIdsByEntitySetId: Map<UUID, Optional<Set<UUID>>>,
-            authorizedPropertyTypesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>,
-            metadataOptions: EnumSet<MetadataOption>
-    ): PostgresIterable<Pair<Pair<UUID, UUID>, Map<UUID, Set<Any>>>>
-
-    fun getLinkingEntitySetIdsOfEntitySet(entitySetId: UUID): PostgresIterable<UUID>
-
-        /**
+    /**
      * Inserts the results scoring pairs of elements within a cluster to persistent storage. The initial cluster usually
      * consists of all scored pairs within a single block returned by the [Blocker].
      *
