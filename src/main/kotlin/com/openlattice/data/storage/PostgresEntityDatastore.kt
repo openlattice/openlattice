@@ -9,6 +9,7 @@ import com.openlattice.data.EntitySetData
 import com.openlattice.data.WriteEvent
 import com.openlattice.data.events.EntitiesDeletedEvent
 import com.openlattice.data.events.EntitiesUpsertedEvent
+import com.openlattice.data.events.LinkedEntitiesDeletedEvent
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.events.EntitySetDataDeletedEvent
 import com.openlattice.edm.set.EntitySetFlag
@@ -23,6 +24,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.nio.ByteBuffer
 import java.util.*
+import java.util.stream.Collectors
 import java.util.stream.Stream
 import javax.inject.Inject
 
@@ -232,17 +234,18 @@ class PostgresEntityDatastore(
 
         //If the query generated exceed 33.5M UUIDs good chance that it exceed Postgres's 1 GB max query buffer size
 
-        val result = dataQueryService.getEntitiesWithPropertyTypeFqns(
-                entityKeyIds,
-                authorizedPropertyTypes,
-                emptyMap(),
-                EnumSet.noneOf(MetadataOption::class.java),
-                Optional.empty(),
-                linking
+        return EntitySetData(
+                orderedPropertyTypes,
+                dataQueryService.getEntitiesWithPropertyTypeFqns(
+                        entityKeyIds,
+                        authorizedPropertyTypes,
+                        emptyMap(),
+                        EnumSet.noneOf(MetadataOption::class.java),
+                        Optional.empty(),
+                        linking
+                ).values.asIterable()
+
         )
-
-
-        return EntitySetData(orderedPropertyTypes, result::iterator )
     }
 
     @Timed
@@ -404,7 +407,8 @@ class PostgresEntityDatastore(
 
     @Timed
     override fun getLinkingIdsByEntitySetIds(entitySetIds: Set<UUID>): Map<UUID, Set<UUID>> {
-        return linkingQueryService.getLinkingIds(entitySetIds.associateWith { Optional.empty() })
+        val optEmpty = Optional.empty<Set<UUID>>()
+        return linkingQueryService.getLinkingIds(entitySetIds.associateWith { optEmpty })
 
     }
 

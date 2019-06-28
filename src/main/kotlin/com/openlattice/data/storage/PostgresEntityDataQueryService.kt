@@ -68,7 +68,7 @@ class PostgresEntityDataQueryService(
             version: Optional<Long> = Optional.empty(),
             linking: Boolean = false
     ): Map<UUID, MutableMap<UUID, MutableSet<Any>>> {
-        return streamableEntitySet(
+        return getEntitySetIterable(
                 entityKeyIds, authorizedPropertyTypes, propertyTypeFilters, metadataOptions, version, linking
         ) { rs -> getEntityPropertiesByPropertyTypeId(rs, authorizedPropertyTypes, byteBlobDataManager) }.toMap()
     }
@@ -82,7 +82,7 @@ class PostgresEntityDataQueryService(
             version: Optional<Long> = Optional.empty(),
             linking: Boolean = false
     ): Map<UUID, MutableMap<FullQualifiedName, MutableSet<Any>>> {
-        return streamableEntitySet(
+        return getEntitySetIterable(
                 entityKeyIds, authorizedPropertyTypes, propertyTypeFilters, metadataOptions, version, linking
         ) { rs -> getEntityPropertiesByFullQualifiedName(rs, authorizedPropertyTypes, byteBlobDataManager) }.toMap()
     }
@@ -92,7 +92,45 @@ class PostgresEntityDataQueryService(
      * Note: for linking queries, linking id and entity set id will be returned, thus data won't be merged by linking id
      */
     // todo: linking queries: do we return linking entity set id or normal? If linking -> query can only be done for 1 linking entityset yet
-    private fun <T> streamableEntitySet(
+    private fun <T> getEntitySetSequence(
+            entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
+            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
+            propertyTypeFilters: Map<UUID, Set<Filter>> = mapOf(),
+            metadataOptions: Set<MetadataOption> = EnumSet.noneOf(MetadataOption::class.java),
+            version: Optional<Long> = Optional.empty(),
+            linking: Boolean = false,
+            adapter: (ResultSet) -> T
+    ): Sequence<T> {
+        val propertyTypes = authorizedPropertyTypes.values.flatMap { it.values }.associateBy { it.id }
+        val entitySetIds = entityKeyIds.keys
+        val ids = entityKeyIds.values.flatMap { it.orElse(emptySet()) }.toSet()
+        val partitions = entityKeyIds.flatMap { (entitySetId, maybeEntityKeyIds) ->
+            maybeEntityKeyIds.map {
+                getPartitionsInfo(it, partitionManager.getEntitySetPartitionsInfo(entitySetId).partitions.toList())
+            }.orElse(emptyList())
+        }
+        val (sql, binders) = if (linking) {
+            buildPreparableFiltersClauseForLinkedEntities(propertyTypes, propertyTypeFilters)
+        } else {
+            buildPreparableFiltersSqlForEntities(propertyTypes, propertyTypeFilters)
+        }
+
+
+        return BasePostgresIterable(PreparedStatementHolderSupplier(hds, sql, FETCH_SIZE) { ps ->
+            (linkedSetOf(
+                    SqlBinder(SqlBindInfo(1, PostgresArrays.createUuidArray(ps.connection, entitySetIds)), ::doBind),
+                    // TODO with empty ids it won't return any rows
+                    SqlBinder(SqlBindInfo(2, PostgresArrays.createUuidArray(ps.connection, ids)), ::doBind),
+                    SqlBinder(SqlBindInfo(3, PostgresArrays.createIntArray(ps.connection, partitions)), ::doBind)
+            ) + binders).forEach { it.bind(ps) }
+        }, adapter).asSequence()
+    }
+
+    /**
+     * Note: for linking queries, linking id and entity set id will be returned, thus data won't be merged by linking id
+     */
+    // todo: linking queries: do we return linking entity set id or normal? If linking -> query can only be done for 1 linking entityset yet
+    private fun <T> getEntitySetIterable(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
             propertyTypeFilters: Map<UUID, Set<Filter>> = mapOf(),
