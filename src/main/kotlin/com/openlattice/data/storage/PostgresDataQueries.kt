@@ -276,14 +276,13 @@ internal fun selectLinkingEntitySetSql(linkingEntitySetId: UUID): String {
 }
 
 /**
- * 1 - version
+ * 1 - versions
  * 2 - version
- * 3 - version
- * 4 - entity set id
- * 5 - entity key ids
+ * 3 - entity set id
+ * 4 - entity key ids
  */
 internal val upsertEntitiesSql = "UPDATE ${PostgresTable.ENTITY_KEY_IDS.name} SET ${VERSIONS.name} = ${VERSIONS.name} || ARRAY[?], ${DataTables.LAST_WRITE.name} = now(), " +
-        "${VERSION.name} = CASE WHEN abs(${PostgresTable.ENTITY_KEY_IDS.name}.${VERSION.name}) < ? THEN $ " +
+        "${VERSION.name} = CASE WHEN abs(${PostgresTable.ENTITY_KEY_IDS.name}.${VERSION.name}) < ? THEN ${VERSION.name} " +
         "ELSE ${PostgresTable.ENTITY_KEY_IDS.name}.${VERSION.name} END " +
         "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?)"
 
@@ -471,15 +470,13 @@ fun upsertPropertyValueSql(propertyType: PropertyType): String {
             PARTITION,
             PROPERTY_TYPE_ID,
             HASH,
-            LAST_WRITE,  // Will get set to now()
             VERSION,
             VERSIONS,
             PARTITIONS_VERSION
-    ).joinToString(",")
-    return "INSERT INTO ${DATA.name} ($metadataColumnsSql,${insertColumn.name}) VALUES (?,?,?,?,?,now(),?,?,?,?) " +
+    ).joinToString(",") { it.name }
+    return "INSERT INTO ${DATA.name} ($metadataColumnsSql,${insertColumn.name}) VALUES (?,?,?,?,?,?,?,?,?) " +
             "ON CONFLICT (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${HASH.name}) DO UPDATE " +
             "SET ${VERSIONS.name} = ${DATA.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
-            "${LAST_WRITE.name} = GREATEST(${LAST_WRITE.name},EXCLUDED.${LAST_WRITE.name}), " +
             "${PARTITIONS_VERSION.name} = EXCLUDED.${PARTITIONS_VERSION.name}, " +
             "${VERSION.name} = CASE WHEN abs(${DATA.name}.${VERSION.name}) < EXCLUDED.${VERSION.name} THEN EXCLUDED.${VERSION.name} " +
             "ELSE ${DATA.name}.${VERSION.name} END"
