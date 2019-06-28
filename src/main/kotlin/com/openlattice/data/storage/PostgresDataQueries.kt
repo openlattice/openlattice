@@ -292,7 +292,8 @@ internal val upsertEntitiesSql = "UPDATE ${PostgresTable.ENTITY_KEY_IDS.name} SE
  * Preparable sql to lock entities with the following bind order:
  * 1. entity set id
  * 2. entity key ids
- * 3. partition
+ * 3. partitions
+ * 4. partition version
  */
 internal val lockEntitiesSql = "SELECT 1 FROM ${PostgresTable.ENTITY_KEY_IDS.name} " +
         "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?) AND $PARTITION = ANY(?) AND ${PARTITIONS_VERSION.name} = ? " +

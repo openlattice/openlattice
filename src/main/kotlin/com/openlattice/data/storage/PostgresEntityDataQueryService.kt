@@ -224,6 +224,7 @@ class PostgresEntityDataQueryService(
             connection.autoCommit = false
             val entityKeyIdsArr = PostgresArrays.createUuidArray(connection, entities.keys)
             val versionsArrays = PostgresArrays.createLongArray(connection, arrayOf(version))
+            val partitionsArray = PostgresArrays.createIntArray(connection, partitions)
 
             /*
              * Our approach is to use entity level locking that takes advantage of the router executor to avoid deadlocks.
@@ -235,8 +236,9 @@ class PostgresEntityDataQueryService(
             //Acquire entity key id locks
             val rowLocks = connection.prepareStatement(lockEntitiesSql)
             rowLocks.setObject(1, entitySetId)
-            rowLocks.setObject(2, entities.keys)
-            rowLocks.setObject(3, entityKeyIdsArr)
+            rowLocks.setArray(2, entityKeyIdsArr)
+            rowLocks.setArray(3, partitionsArray)
+            rowLocks.setObject(4, partitionsInfo.partitionsVersion)
             rowLocks.execute()
 
             //Update metadata
@@ -245,7 +247,7 @@ class PostgresEntityDataQueryService(
             upsertEntities.setObject(2, version)
             upsertEntities.setObject(3, version)
             upsertEntities.setObject(4, entitySetId)
-            upsertEntities.setObject(5, entityKeyIdsArr)
+            upsertEntities.setArray(5, entityKeyIdsArr)
             val updatedEntityCount = upsertEntities.executeUpdate()
 
             //Basic validation.
