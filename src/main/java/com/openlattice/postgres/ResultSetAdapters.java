@@ -39,6 +39,7 @@ import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
+import com.openlattice.IdConstants;
 import com.openlattice.apps.App;
 import com.openlattice.apps.AppConfigKey;
 import com.openlattice.apps.AppType;
@@ -912,7 +913,7 @@ public final class ResultSetAdapters {
             }
         }
 
-        data.put( DataTables.LAST_WRITE_ID, ImmutableSet.of( lastWrite( rs ) ) );
+        data.put( IdConstants.LAST_WRITE_ID, ImmutableSet.of( lastWrite( rs ) ) );
         return data;
     }
 

@@ -133,9 +133,6 @@ public interface ConductorElasticsearchApi {
     String ENTITY              = "entity";
     String ENTITY_SET_ID_FIELD = "entitySetId";
 
-    UUID LAST_WRITE        = new UUID( 0, 0 );
-    UUID ENTITY_SET_ID_KEY = new UUID( 0, 1 );
-
     Set<UUID> getEntityTypesWithIndices();
 
     /**

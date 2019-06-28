@@ -22,9 +22,9 @@
 package com.openlattice.authorization.initializers
 
 import com.openlattice.authorization.SystemRole
-import com.openlattice.organization.OrganizationConstants.Companion.GLOBAL_ORGANIZATION_ID
-import com.openlattice.organization.OrganizationConstants.Companion.OPENLATTICE_ORGANIZATION_ID
-import com.openlattice.organization.OrganizationConstants.Companion.ROOT_PRINCIPAL_ID
+import com.openlattice.IdConstants.Companion.GLOBAL_ORGANIZATION_ID
+import com.openlattice.IdConstants.Companion.OPENLATTICE_ORGANIZATION_ID
+import com.openlattice.IdConstants.Companion.ROOT_PRINCIPAL_ID
 import com.openlattice.organization.roles.Role
 import com.openlattice.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.Task

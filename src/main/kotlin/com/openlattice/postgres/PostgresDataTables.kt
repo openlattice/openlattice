@@ -30,9 +30,6 @@ class PostgresDataTables {
                 EdmPrimitiveTypeKind.Binary
         )
 
-        val PERSON_ENTITY_SET_ID = UUID(0,0)
-        val CONTACT_INFO_ENTITY_SET_ID = UUID( 0, 1 )
-
         val dataColumns = supportedEdmPrimitiveTypeKinds
                 .map(PostgresEdmTypeConverter::map)
                 .associateWith { nonIndexedValueColumn(it) to btreeIndexedValueColumn(it) }
