@@ -20,13 +20,12 @@
 
 package com.openlattice.postgres;
 
-import static com.openlattice.postgres.DataTables.LAST_INDEX;
-import static com.openlattice.postgres.DataTables.LAST_LINK;
-import static com.openlattice.postgres.DataTables.LAST_WRITE;
-import static com.openlattice.postgres.PostgresColumn.*;
-
 import com.google.common.collect.ImmutableList;
+
 import java.util.List;
+
+import static com.openlattice.postgres.DataTables.*;
+import static com.openlattice.postgres.PostgresColumn.*;
 
 /**
  * Tables definitions for all tables used in the OpenLattice platform.
@@ -232,6 +231,14 @@ public final class PostgresTable {
                             SRC_ENTITY_KEY_ID,
                             DST_ENTITY_SET_ID,
                             DST_ENTITY_KEY_ID );
+
+    public static final PostgresTableDefinition LINKING_LOG             =
+            new CitusDistributedTableDefinition( "linking_log" )
+                    .addColumns( LINKING_ID,
+                            ENTITY_KEY_IDS_COL,
+                            VERSION)
+                    .primaryKey( LINKING_ID )
+                    .distributionColumn( LINKING_ID );
 
     public static final PostgresTableDefinition MATCHED_ENTITIES         =
             new CitusDistributedTableDefinition( "matched_entities" )
