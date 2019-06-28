@@ -17,7 +17,7 @@ class PersistentSearchEmailRenderer {
 
         fun renderEmail(
                 persistentSearch: PersistentSearch,
-                entity: SetMultimap<FullQualifiedName, Any>,
+                entity: Map<FullQualifiedName, Set<Any>>,
                 userEmail: String, neighbors: List<NeighborEntityDetails>,
                 dependencies: PersistentSearchMessengerTaskDependencies
         ): RenderableEmailRequest? {

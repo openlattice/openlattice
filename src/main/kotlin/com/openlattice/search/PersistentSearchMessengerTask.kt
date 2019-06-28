@@ -99,7 +99,7 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
 
         val userEmail = dependencies.principalsManager.getUser(userSecurablePrincipal.principal.id).email
         newResults.hits.forEach {
-            val entityKeyId = UUID.fromString(it[DataTables.ID_FQN].first().toString())
+            val entityKeyId = UUID.fromString(it.getValue(DataTables.ID_FQN).first().toString())
             val renderableEmail = PersistentSearchEmailRenderer.renderEmail(
                     persistentSearch, it, userEmail, neighborsById.getOrDefault(
                     entityKeyId, listOf()
