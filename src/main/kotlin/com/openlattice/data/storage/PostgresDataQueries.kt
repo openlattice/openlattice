@@ -276,11 +276,10 @@ internal fun selectLinkingEntitySetSql(linkingEntitySetId: UUID): String {
 }
 
 /**
- * 1 - version
+ * 1 - versions
  * 2 - version
- * 3 - version
- * 4 - entity set id
- * 5 - entity key ids
+ * 3 - entity set id
+ * 4 - entity key ids
  */
 internal val upsertEntitiesSql = "UPDATE ${PostgresTable.ENTITY_KEY_IDS.name} SET ${VERSIONS.name} = ${VERSIONS.name} || ARRAY[?], ${DataTables.LAST_WRITE.name} = now(), " +
         "${VERSION.name} = CASE WHEN abs(${PostgresTable.ENTITY_KEY_IDS.name}.${VERSION.name}) < ? THEN $ " +

@@ -243,11 +243,10 @@ class PostgresEntityDataQueryService(
 
             //Update metadata
             val upsertEntities = connection.prepareStatement(upsertEntitiesSql)
-            upsertEntities.setObject(1, version)
+            upsertEntities.setObject(1, versionsArrays)
             upsertEntities.setObject(2, version)
-            upsertEntities.setObject(3, version)
-            upsertEntities.setObject(4, entitySetId)
-            upsertEntities.setArray(5, entityKeyIdsArr)
+            upsertEntities.setObject(3, entitySetId)
+            upsertEntities.setArray(4, entityKeyIdsArr)
             val updatedEntityCount = upsertEntities.executeUpdate()
 
             //Basic validation.
