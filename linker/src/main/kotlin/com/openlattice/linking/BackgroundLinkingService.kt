@@ -184,7 +184,7 @@ class BackgroundLinkingService
 
                     //TODO: When creating new cluster do we really need to re-match or can we assume score of 1.0?
                     val clusterUpdate = if (maybeBestCluster == null) {
-                        val clusterId = ids.reserveIds(IdConstants.LINKING_ENTITY_SET_ID, 1).first()
+                        val clusterId = ids.reserveIds(IdConstants.LINKING_ENTITY_SET_ID.id, 1).first()
                         val block = candidate to mapOf(candidate to elem)
                         ClusterUpdate(clusterId, candidate, matcher.match(block).second)
                     } else {
