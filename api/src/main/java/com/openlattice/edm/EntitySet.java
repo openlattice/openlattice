@@ -25,11 +25,11 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Sets;
+import com.openlattice.IdConstants;
 import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.client.serialization.SerializationConstants;
 import com.openlattice.edm.set.EntitySetFlag;
-import com.openlattice.organization.OrganizationConstants;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -89,7 +89,7 @@ public class EntitySet extends AbstractSecurableObject {
         this.name = name;
         this.entityTypeId = checkNotNull( entityTypeId );
         this.contacts = Sets.newHashSet( contacts );
-        this.organizationId = organizationId.orElse( OrganizationConstants.GLOBAL_ORGANIZATION_ID );
+        this.organizationId = organizationId.orElse( IdConstants.GLOBAL_ORGANIZATION_ID );
         partitions.ifPresent( this::setPartitions );
     }
 
