@@ -78,6 +78,26 @@ public final class PostgresTable {
             new PostgresTableDefinition( "db_creds" )
                     .addColumns( PRINCIPAL_ID, CREDENTIAL )
                     .primaryKey( PRINCIPAL_ID );
+    public static final PostgresTableDefinition        E                            =
+            new CitusDistributedTableDefinition( "edges" )
+                    .addColumns(
+                            PARTITION,
+                            ID_TYPE,
+                            SRC_ENTITY_SET_ID,
+                            SRC_ENTITY_KEY_ID,
+                            DST_ENTITY_SET_ID,
+                            DST_ENTITY_KEY_ID,
+                            EDGE_ENTITY_SET_ID,
+                            EDGE_ENTITY_KEY_ID,
+                            VERSION,
+                            VERSIONS,
+                            PARTITIONS_VERSION )
+                    .primaryKey( PARTITION,
+                            ID_TYPE,
+                            SRC_ENTITY_KEY_ID,
+                            DST_ENTITY_KEY_ID,
+                            EDGE_ENTITY_KEY_ID )
+                    .distributionColumn( PARTITION );
     public static final PostgresTableDefinition        EDGES                        =
             new CitusDistributedTableDefinition( "edges" )
                     .addColumns(
@@ -92,26 +112,6 @@ public final class PostgresTable {
                             VERSIONS )
                     .primaryKey( ID, EDGE_COMP_1, EDGE_COMP_2, COMPONENT_TYPES )
                     .distributionColumn( ID_VALUE );
-    public static final PostgresTableDefinition        E                        =
-            new CitusDistributedTableDefinition( "edges" )
-                    .addColumns(
-                            PARTITION,
-                            ID_TYPE,
-                            SRC_ENTITY_SET_ID,
-                            SRC_ENTITY_KEY_ID,
-                            DST_ENTITY_SET_ID,
-                            DST_ENTITY_KEY_ID,
-                            EDGE_ENTITY_SET_ID,
-                            EDGE_ENTITY_KEY_ID,
-                            VERSION,
-                            VERSIONS,
-                            PARTITIONS_VERSION)
-                    .primaryKey( PARTITION,
-                            ID_TYPE,
-                            SRC_ENTITY_KEY_ID,
-                            DST_ENTITY_KEY_ID,
-                            EDGE_ENTITY_KEY_ID )
-                    .distributionColumn( PARTITION );
     public static final PostgresTableDefinition        ENTITY_KEY_IDS               =
             new CitusDistributedTableDefinition( "entity_key_ids" )
                     .addColumns( ENTITY_SET_ID,
@@ -202,7 +202,7 @@ public final class PostgresTable {
             new CitusDistributedTableDefinition( "ids" )
                     .addColumns( PARTITION,
                             ENTITY_SET_ID,
-                            ID,
+                            ID_VALUE,
                             ENTITY_ID,
                             LINKING_ID,
                             VERSION,
@@ -214,6 +214,7 @@ public final class PostgresTable {
                             LAST_MIGRATE,
                             LAST_LINK_INDEX,
                             PARTITIONS_VERSION )
+                    .primaryKey( ID_VALUE, PARTITION )
                     .distributionColumn( PARTITION );
     public static final PostgresTableDefinition        ID_GENERATION                =
             new PostgresTableDefinition( "id_gen" )
@@ -233,11 +234,11 @@ public final class PostgresTable {
                             DST_ENTITY_SET_ID,
                             DST_ENTITY_KEY_ID );
 
-    public static final PostgresTableDefinition LINKING_LOG             =
+    public static final PostgresTableDefinition LINKING_LOG =
             new CitusDistributedTableDefinition( "linking_log" )
                     .addColumns( LINKING_ID,
                             ENTITY_KEY_IDS_COL,
-                            VERSION)
+                            VERSION )
                     .primaryKey( LINKING_ID )
                     .distributionColumn( LINKING_ID );
 
