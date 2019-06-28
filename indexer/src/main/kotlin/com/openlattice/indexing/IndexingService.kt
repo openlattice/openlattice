@@ -24,6 +24,7 @@ package com.openlattice.indexing
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
+import com.openlattice.IdConstants
 import com.openlattice.admin.indexing.IndexingState
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.EntityType
@@ -47,7 +48,7 @@ import java.util.function.Supplier
 import java.util.stream.Stream
 
 private val logger = LoggerFactory.getLogger(IndexingService::class.java)
-private val LB_UUID = UUID(0, 0)
+
 
 private const val BATCH_LIMIT = 8000
 
@@ -89,12 +90,12 @@ class IndexingService(
                                 entityTypes.getValue(entitySet.entityTypeId).properties
                         )
 
-                        var cursor = indexingProgress.getOrPut(entitySetId) { LB_UUID }
+                        var cursor = indexingProgress.getOrPut(entitySetId) { IdConstants.LB_UUID }
                         var entityKeyIds: Set<UUID> = indexingJobs.getValue(entitySetId)
 
                         //An empty set of ids means all keys
                         if (entityKeyIds.isEmpty()) {
-                            entityKeyIds = getNextBatch(entitySetId, cursor, cursor != LB_UUID).toSet()
+                            entityKeyIds = getNextBatch(entitySetId, cursor, cursor != IdConstants.LB_UUID).toSet()
                         }
 
                         while (entityKeyIds.isNotEmpty()) {
@@ -104,7 +105,7 @@ class IndexingService(
 
                             indexingProgress.set(entitySetId, cursor)
 
-                            entityKeyIds = getNextBatch(entitySetId, cursor, cursor != LB_UUID).toSortedSet()
+                            entityKeyIds = getNextBatch(entitySetId, cursor, cursor != IdConstants.LB_UUID).toSortedSet()
                         }
 
                         logger.info("Finished indexing entity set $entitySetId")
