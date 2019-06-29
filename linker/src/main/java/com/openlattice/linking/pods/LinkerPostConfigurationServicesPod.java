@@ -51,16 +51,12 @@ import com.openlattice.linking.blocking.ElasticsearchBlocker;
 import com.openlattice.linking.controllers.RealtimeLinkingController;
 import com.openlattice.linking.graph.PostgresLinkingQueryService;
 import com.zaxxer.hikari.HikariDataSource;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 
 import javax.inject.Inject;
 import java.io.IOException;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
 
 @Configuration
 @Import( { ByteBlobServicePod.class } )
