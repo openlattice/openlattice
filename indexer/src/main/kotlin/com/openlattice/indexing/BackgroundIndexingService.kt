@@ -237,7 +237,7 @@ class BackgroundIndexingService(
         val esb = Stopwatch.createStarted()
         val entitiesById = dataQueryService.getEntitiesWithPropertyTypeIds(
                 mapOf(entitySet.id to Optional.of(batchToIndex)),
-                mapOf(entitySet.id to propertyTypeMap))
+                mapOf(entitySet.id to propertyTypeMap)).toMap()
 
         if (entitiesById.size != batchToIndex.size) {
             logger.error(
