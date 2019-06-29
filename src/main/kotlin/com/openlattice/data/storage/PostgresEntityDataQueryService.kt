@@ -203,7 +203,7 @@ class PostgresEntityDataQueryService(
     /**
      * Updates or insert entities.
      * @param entitySetId The entity set id for which to insert entities for.
-     * @param entities The entites to update or insert.
+     * @param entities The entities to update or insert.
      * @param authorizedPropertyTypes The authorized property types for the insertion.
      * @param awsPassthrough True if the data will be stored directly in AWS via another means and all that is being
      * provided is the s3 prefix and key.
@@ -230,7 +230,7 @@ class PostgresEntityDataQueryService(
              * Our approach is to use entity level locking that takes advantage of the router executor to avoid deadlocks.
              *
              * If performance becomes an issue, we can break this is up into individual transactions at the risk of
-             * ending up with partitial property right and decoupled metadata updates.
+             * ending up with partial property right and decoupled metadata updates.
              */
 
             //Acquire entity key id locks
