@@ -482,6 +482,7 @@ class PostgresEntityDatastore(
         )
 
         return writeEvent
+        TODO("DREW add linking logs")
     }
 
     override fun deleteEntityProperties(

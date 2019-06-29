@@ -7,5 +7,5 @@ interface LinkingLogService {
 
     fun clearLink(linkingId: UUID, linkedEntities: Map<UUID, Set<UUID>>)
 
-    fun deleteLink(linkingId: UUID, linkedEntities: Map<UUID, Set<UUID>>)
+    fun deleteLink(linkingId: UUID, entitySetId: UUID)
 }
