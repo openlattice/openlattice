@@ -1,5 +1,7 @@
 package com.openlattice.postgres
 
+import com.dataloom.mappers.ObjectMappers
+import com.openlattice.data.Property
 import com.openlattice.data.storage.ByteBlobDataManager
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.ResultSetAdapters.entitySetId
@@ -18,6 +20,7 @@ import java.util.*
 internal class PostgresResultSetAdapters
 
 private val logger = LoggerFactory.getLogger(PostgresResultSetAdapters::class.java)
+private val mapper = ObjectMappers.newJsonMapper()
 
 private fun <T> getEntityPropertiesByFunctionResult(
         rs: ResultSet,
@@ -43,6 +46,36 @@ private fun <T> getEntityPropertiesByFunctionResult(
             }
         }
     }
+    return id to data
+}
+
+@Throws(SQLException::class)
+fun getJsonEntityPropertiesByPropertyTypeId(
+        rs: ResultSet,
+        authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
+        byteBlobDataManager: ByteBlobDataManager
+): Pair<UUID, MutableMap<UUID, MutableSet<Property>>> {
+    val id = id( rs )
+    val entitySetId = entitySetId( rs )
+    PostgresDataTables.dataColumns.forEach { datatype, columns ->
+
+    }
+    val data = mutableMapOf<UUID, MutableSet<Property>>() //mapper.readValue( rs.get)
+
+    val allPropertyTypes = authorizedPropertyTypes.getValue( entitySetId ).values
+//
+//    for (propertyType in allPropertyTypes) {
+//        val objects = propertyValue(rs, propertyType)
+//
+//        if (objects != null) {
+//            val key = mapper( propertyType )
+//            if (propertyType.datatype == EdmPrimitiveTypeKind.Binary) {
+//                data[key] = mutableSetOf<Any>(byteBlobDataManager.getObjects(objects as List<String>))
+//            } else {
+//                data[key] = mutableSetOf<Any>(objects)
+//            }
+//        }
+//    }
     return id to data
 }
 

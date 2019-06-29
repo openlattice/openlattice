@@ -142,8 +142,8 @@ class PostgresEntityDatastore(
 
         markMaterializedEntitySetDirty(entitySetId) // mark entityset as unsync with data
         // mark all involved linking entitysets as unsync with data
-        linkingQueryService!!.getLinkingEntitySetIdsOfEntitySet(entitySetId)
-                .forEach { this.markMaterializedEntitySetDirty(it) }
+//        linkingQueryService!!.getLinkingEntitySetIdsOfEntitySet(entitySetId)
+//                .forEach { this.markMaterializedEntitySetDirty(it) }
     }
 
     private fun signalEntitySetDataDeleted(entitySetId: UUID) {
@@ -151,9 +151,9 @@ class PostgresEntityDatastore(
         markMaterializedEntitySetDirty(entitySetId) // mark entityset as unsync with data
 
         // mark all involved linking entitysets as unsync with data
-        linkingQueryService
-                .getLinkingEntitySetIdsOfEntitySet(entitySetId)
-                .forEach { this.markMaterializedEntitySetDirty(it) }
+//        linkingQueryService
+//                .getLinkingEntitySetIdsOfEntitySet(entitySetId)
+//                .forEach { this.markMaterializedEntitySetDirty(it) }
     }
 
     private fun signalDeletedEntities(entitySetId: UUID, entityKeyIds: Set<UUID>) {
@@ -164,9 +164,9 @@ class PostgresEntityDatastore(
         markMaterializedEntitySetDirty(entitySetId) // mark entityset as unsync with data
 
         // mark all involved linking entitysets as unsync with data
-        linkingQueryService
-                .getLinkingEntitySetIdsOfEntitySet(entitySetId)
-                .forEach { this.markMaterializedEntitySetDirty(it) }
+//        linkingQueryService
+//                .getLinkingEntitySetIdsOfEntitySet(entitySetId)
+//                .forEach { this.markMaterializedEntitySetDirty(it) }
     }
 
     private fun shouldIndexDirectly(entitySetId: UUID, entityKeyIds: Set<UUID>): Boolean {
@@ -347,22 +347,25 @@ class PostgresEntityDatastore(
     ): Map<UUID, Map<UUID, Map<UUID, Set<Any>>>> {
         // TODO: Do this less terribly
         // map of: pair<linking_id, entity_set_id> to property_data
-        val linkedEntityDataStream = linkingQueryService!!.getLinkedEntityDataWithMetadata(
+        val linkedEntityDataStream = dataQueryService.getEntitiesWithPropertyTypeIds(
                 linkingIdsByEntitySetId,
                 authorizedPropertyTypesByEntitySetId,
-                metadataOptions
+                emptyMap(),
+                metadataOptions,
+                Optional.empty(),
+                true
         )
 
         val linkedEntityData = HashMap<UUID, MutableMap<UUID, MutableMap<UUID, Set<Any>>>>()
-        linkedEntityDataStream.forEach { (first, second) ->
-            val primaryId = first.first //linking_id
-            val secondaryId = first.second //entity_set_id
-
-            linkedEntityData
-                    .getOrPut(primaryId) { mutableMapOf() }
-                    .getOrPut(secondaryId) { second.toMutableMap() }
-
-        }
+//        linkedEntityDataStream.forEach { (first, second) ->
+//            val primaryId = first.first //linking_id
+//            val secondaryId = first.second //entity_set_id
+//
+//            linkedEntityData
+//                    .getOrPut(primaryId) { mutableMapOf() }
+//                    .getOrPut(secondaryId) { second.toMutableMap() }
+//
+//        }
 
         // linking_id/entity_set_id/property_type_id
         return linkedEntityData
@@ -407,19 +410,19 @@ class PostgresEntityDatastore(
 
     @Timed
     override fun getLinkingIdsByEntitySetIds(entitySetIds: Set<UUID>): Map<UUID, Set<UUID>> {
-        val optEmpty = Optional.empty<Set<UUID>>()
-        return linkingQueryService.getLinkingIds(entitySetIds.associateWith { optEmpty })
-
+        TODO("DELETE OR IMPLEMENT")
+//        val optEmpty = Optional.empty<Set<UUID>>()
+//        return linkingQueryService.getLinkingIds(entitySetIds.associateWith { optEmpty })
     }
 
     @Timed
     override fun getEntityKeyIdsOfLinkingIds(linkingIds: Set<UUID>): PostgresIterable<Pair<UUID, Set<UUID>>> {
-        return linkingQueryService.getEntityKeyIdsOfLinkingIds(linkingIds)
+        TODO("DELETE OR IMPLEMENT")
     }
 
     @Timed
     override fun getLinkingEntitySetIds(linkingId: UUID): PostgresIterable<UUID> {
-        return linkingQueryService.getLinkingEntitySetIds(linkingId)
+        TODO("DELETE OR IMPLEMENT")
     }
 
     /**

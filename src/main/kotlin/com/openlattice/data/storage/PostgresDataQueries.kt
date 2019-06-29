@@ -88,7 +88,7 @@ fun buildPreparableFiltersSqlForEntities(
     //TODO: I'm pretty sure if propertyTypeFilters are entity this won't work properly.
     val sql = selectEntitiesGroupedByIdAndPropertyTypeId +
             "AND ${filtersClauses.first} " +
-                    GROUP_BY_ESID_EKID_PART_PTID
+            GROUP_BY_ESID_EKID_PART_PTID
 
     return sql to filtersClauses.second
 
@@ -166,8 +166,10 @@ internal fun doBind(ps: PreparedStatement, info: SqlBindInfo) {
                 is Long -> PostgresArrays.createLongArray(ps.connection, v as Collection<Long>)
                 is Boolean -> PostgresArrays.createBooleanArray(ps.connection, v as Collection<Boolean>)
                 is Short -> PostgresArrays.createShortArray(ps.connection, v as Collection<Short>)
-                else -> throw IllegalArgumentException("Collection with elements of ${elem.javaClass} are not " +
-                        "supported in filters")
+                else -> throw IllegalArgumentException(
+                        "Collection with elements of ${elem.javaClass} are not " +
+                                "supported in filters"
+                )
             }
             ps.setArray(info.bindIndex, array)
         }
@@ -175,6 +177,8 @@ internal fun doBind(ps: PreparedStatement, info: SqlBindInfo) {
     }
 }
 
+
+internal val GROUP_BY_ID_PT_ID_HASH = "GROUP BY (${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
 
 /**
  * Preparable SQL that selects entities across multiple entity sets grouping by id and property type id from the [DATA]
@@ -186,9 +190,10 @@ internal fun doBind(ps: PreparedStatement, info: SqlBindInfo) {
  *
  */
 internal val selectEntitiesGroupedByIdAndPropertyTypeId =
-        "SELECT ${ENTITY_SET_ID.name}, ${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name}, $valuesColumnsSql " +
+        "SELECT ${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name},array_agg(${ENTITY_SET_ID.name}),$valuesColumnsSql " +
                 "FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = ANY(?) AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ANY(?) " +
-                "AND ${VERSION.name} > 0 "
+                "AND ${VERSION.name} > 0 " +
+                GROUP_BY_ID_PT_ID_HASH
 
 
 internal val GROUP_BY_ESID_EKID_PART_PTID = "GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
@@ -201,9 +206,9 @@ internal val GROUP_BY_ESID_EKID_PART_PTID = "GROUP BY (${ENTITY_SET_ID.name},${I
  *
  */
 internal val selectEntitySetGroupedByIdAndPropertyTypeId =
-        "SELECT ${ENTITY_SET_ID.name}, ${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name}, $valuesColumnsSql " +
+        "SELECT ${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name},array_agg(${ENTITY_SET_ID.name}),$valuesColumnsSql " +
                 "FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = ANY(?) " +
-                "GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
+                GROUP_BY_ID_PT_ID_HASH
 
 /**
  * Preparable SQL that selects entities across multiple entity sets grouping by id and property type id from the [DATA]

@@ -4,6 +4,7 @@ import com.google.common.collect.Multimaps
 import com.google.common.collect.SetMultimap
 import com.openlattice.analysis.SqlBindInfo
 import com.openlattice.analysis.requests.Filter
+import com.openlattice.data.Property
 import com.openlattice.data.WriteEvent
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.data.storage.partitions.PartitionsInfo
@@ -59,6 +60,27 @@ class PostgresEntityDataQueryService(
         }
     }
 
+    /**
+     *
+     */
+    @JvmOverloads
+    fun getEntitiesWithPropertyTypeIds2(
+            entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
+            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
+            propertyTypeFilters: Map<UUID, Set<Filter>> = mapOf(),
+            metadataOptions: Set<MetadataOption> = EnumSet.noneOf(MetadataOption::class.java),
+            version: Optional<Long> = Optional.empty(),
+            linking: Boolean = false
+    ): BasePostgresIterable<Pair<UUID, MutableMap<UUID, MutableSet<Property>>>> {
+        return getEntitySetIterable(
+                entityKeyIds,
+                authorizedPropertyTypes,
+                propertyTypeFilters,
+                metadataOptions,
+                version,
+                linking
+        ) { rs -> getJsonEntityPropertiesByPropertyTypeId(rs, authorizedPropertyTypes, byteBlobDataManager) }
+    }
 
     @JvmOverloads
     fun getEntitiesWithPropertyTypeIds(
@@ -149,7 +171,6 @@ class PostgresEntityDataQueryService(
     /**
      * Note: for linking queries, linking id and entity set id will be returned, thus data won't be merged by linking id
      */
-    // todo: linking queries: do we return linking entity set id or normal? If linking -> query can only be done for 1 linking entityset yet
     private fun <T> getEntitySetIterable(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
@@ -172,7 +193,6 @@ class PostgresEntityDataQueryService(
         } else {
             buildPreparableFiltersSqlForEntities(propertyTypes, propertyTypeFilters)
         }
-
 
         return BasePostgresIterable(PreparedStatementHolderSupplier(hds, sql, FETCH_SIZE) { ps ->
             (linkedSetOf(
