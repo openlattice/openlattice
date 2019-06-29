@@ -86,9 +86,12 @@ fun buildPreparableFiltersSqlForEntities(
 ): Pair<String, Set<SqlBinder>> {
     val filtersClauses = buildPreparableFiltersClause(1, propertyTypes, propertyTypeFilters)
     //TODO: I'm pretty sure if propertyTypeFilters are entity this won't work properly.
-    val sql = selectEntitiesGroupedByIdAndPropertyTypeId +
-            "AND ${filtersClauses.first} " +
+    val filtersClause = filtersClauses.first
+    val innerSql = selectEntitiesGroupedByIdAndPropertyTypeId +
+            " ${if (filtersClause.isNotEmpty()) "AND ${filtersClauses.first} " else ""}" +
             GROUP_BY_ESID_EKID_PART_PTID
+    val sql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},$jsonValueColumnsSql FROM ($innerSql) entities " +
+            GROUP_BY_ESID_EKID_PART
 
     return sql to filtersClauses.second
 
@@ -201,8 +204,7 @@ internal val GROUP_BY_ID = "GROUP BY (${ID_VALUE.name}, ${PARTITION.name})"
 internal val selectEntitiesGroupedByIdAndPropertyTypeId =
         "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name},${PROPERTY_TYPE_ID.name},$valuesColumnsSql " +
                 "FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = ANY(?) AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ANY(?) " +
-                "AND ${VERSION.name} > 0 " +
-                GROUP_BY_ESID_EKID_PART_PTID
+                "AND ${VERSION.name} > 0 "
 
 
 
@@ -216,8 +218,7 @@ internal val selectEntitiesGroupedByIdAndPropertyTypeId =
  */
 internal val selectEntitySetGroupedByIdAndPropertyTypeId =
         "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name},${PROPERTY_TYPE_ID.name},$valuesColumnsSql " +
-                "FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = ANY(?) " +
-                GROUP_BY_ESID_EKID_PART_PTID
+                "FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = ANY(?) "
 
 /**
  * Preparable SQL that selects entities across multiple entity sets grouping by id and property type id from the [DATA]
@@ -292,11 +293,12 @@ internal fun selectLinkingEntitySetSql(linkingEntitySetId: UUID): String {
 /**
  * 1 - versions
  * 2 - version
- * 3 - entity set id
- * 4 - entity key ids
+ * 3 - version
+ * 4 - entity set id
+ * 5 - entity key ids
  */
 internal val upsertEntitiesSql = "UPDATE ${PostgresTable.ENTITY_KEY_IDS.name} SET ${VERSIONS.name} = ${VERSIONS.name} || ?, ${DataTables.LAST_WRITE.name} = now(), " +
-        "${VERSION.name} = CASE WHEN abs(${PostgresTable.ENTITY_KEY_IDS.name}.${VERSION.name}) < ? THEN ${VERSION.name} " +
+        "${VERSION.name} = CASE WHEN abs(${PostgresTable.ENTITY_KEY_IDS.name}.${VERSION.name}) < ? THEN ? " +
         "ELSE ${PostgresTable.ENTITY_KEY_IDS.name}.${VERSION.name} END " +
         "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?)"
 

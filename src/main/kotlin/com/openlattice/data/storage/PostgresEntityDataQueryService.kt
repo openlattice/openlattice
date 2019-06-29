@@ -184,9 +184,10 @@ class PostgresEntityDataQueryService(
         val entitySetIds = entityKeyIds.keys
         val ids = entityKeyIds.values.flatMap { it.orElse(emptySet()) }.toSet()
         val partitions = entityKeyIds.flatMap { (entitySetId, maybeEntityKeyIds) ->
+            val entitySetPartitions = partitionManager.getEntitySetPartitionsInfo(entitySetId).partitions.toList()
             maybeEntityKeyIds.map {
-                getPartitionsInfo(it, partitionManager.getEntitySetPartitionsInfo(entitySetId).partitions.toList())
-            }.orElse(emptyList())
+                getPartitionsInfo(it, entitySetPartitions)
+            }.orElse(entitySetPartitions)
         }
         val (sql, binders) = if (linking) {
             buildPreparableFiltersClauseForLinkedEntities(propertyTypes, propertyTypeFilters)
@@ -263,8 +264,9 @@ class PostgresEntityDataQueryService(
             val upsertEntities = connection.prepareStatement(upsertEntitiesSql)
             upsertEntities.setObject(1, versionsArrays)
             upsertEntities.setObject(2, version)
-            upsertEntities.setObject(3, entitySetId)
-            upsertEntities.setArray(4, entityKeyIdsArr)
+            upsertEntities.setObject(3, version)
+            upsertEntities.setObject(4, entitySetId)
+            upsertEntities.setArray(5, entityKeyIdsArr)
             val updatedEntityCount = upsertEntities.executeUpdate()
 
             //Basic validation.
