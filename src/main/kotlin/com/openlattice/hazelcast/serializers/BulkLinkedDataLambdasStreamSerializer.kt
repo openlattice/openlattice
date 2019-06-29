@@ -87,6 +87,6 @@ class BulkLinkedDataLambdasStreamSerializer(
             entitiesByLinkingId[linkingId] = Maps.transformValues(entitiesByEntitySetId, Multimaps::asMap)
         }
 
-        return BulkLinkedDataLambdas(entityTypeId, linkedEntitySetId, entitiesByLinkingId)
+        return BulkLinkedDataLambdas(entityTypeId, entitiesByLinkingId)
     }
 }
