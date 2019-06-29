@@ -36,10 +36,10 @@ class EdmConstants {
 
         // metadata
         @JvmField
-        val ENTITY_KEY_IDS_ID = FullQualifiedName("openlattice", "@entityKeyIds")
+        val ENTITY_KEY_IDS_FQN = FullQualifiedName("openlattice", "@entityKeyIds")
 
         @JvmField
-        val ENTITY_SET_IDS_ID = FullQualifiedName("openlattice", "@entitySetIds")
+        val ENTITY_SET_IDS_FQN = FullQualifiedName("openlattice", "@entitySetIds")
 
         @JvmField
         val LAST_INDEX_FQN = FullQualifiedName("openlattice", "@lastIndex")
@@ -51,6 +51,6 @@ class EdmConstants {
         val LAST_WRITE_FQN = FullQualifiedName("openlattice", "@lastWrite")
 
         @JvmField
-        val VERSION_ID = FullQualifiedName("openlattice", "@version")
+        val VERSION_FQN = FullQualifiedName("openlattice", "@version")
     }
 }
