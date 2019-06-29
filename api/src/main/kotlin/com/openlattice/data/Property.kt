@@ -35,5 +35,9 @@ import java.util.*
 @SuppressFBWarnings(value = [""], justification = "POJO for Rest APIs")
 data class Property(
         @JsonProperty(SerializationConstants.VALUE_FIELD) val value: Any,
-        @JsonProperty(SerializationConstants.PROPERTY_METADATA) val metadata: PropertyMetadata
+        @JsonProperty(SerializationConstants.HASH) val hash: Optional<ByteArray> = Optional.empty(),
+        @JsonProperty(SerializationConstants.VERSION) val version: Optional<Long> = Optional.empty(),
+        @JsonProperty(SerializationConstants.VERSIONS) val versions: Optional<LongArray> = Optional.empty(),
+        @JsonProperty(SerializationConstants.ENTITY_SET_IDS) val entitySetIds: Optional<Set<UUID>> = Optional.empty(),
+        @JsonProperty(SerializationConstants.LAST_WRITE) val lastWrite: Optional<OffsetDateTime> = Optional.empty()
 )
