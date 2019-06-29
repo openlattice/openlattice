@@ -187,7 +187,7 @@ class PostgresEntityDataQueryService(
         val (sql, binders) = if (linking) {
             buildPreparableFiltersClauseForLinkedEntities(startIndex, propertyTypes, propertyTypeFilters)
         } else {
-            buildPreparableFiltersSqlForEntities(propertyTypes, propertyTypeFilters)
+            buildPreparableFiltersSqlForEntities(startIndex, propertyTypes, propertyTypeFilters, ids.isNotEmpty(), partitions.isNotEmpty())
         }
 
         return BasePostgresIterable(PreparedStatementHolderSupplier(hds, sql, FETCH_SIZE) { ps ->
@@ -207,7 +207,7 @@ class PostgresEntityDataQueryService(
                 )
             }
 
-            if (partitions.isEmpty()) {
+            if (partitions.isNotEmpty()) {
                 metaBinders.add(
                         SqlBinder(
                                 SqlBindInfo(bindIndex, PostgresArrays.createIntArray(ps.connection, partitions)),

@@ -97,6 +97,29 @@ fun getEntityPropertiesByPropertyTypeId2(
 
 
 @Throws(SQLException::class)
+fun getEntityPropertiesByPropertyTypeId3(
+        rs: ResultSet,
+        authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
+        byteBlobDataManager: ByteBlobDataManager
+): Pair<UUID, MutableMap<FullQualifiedName, MutableSet<Any>>> {
+    val id = id(rs)
+    val entitySetId = entitySetId(rs)
+    val propertyTypes = authorizedPropertyTypes.getValue( entitySetId )
+    return id to propertyTypes
+            .map { PostgresEdmTypeConverter.map(it.value.datatype) }
+            .mapNotNull { datatype ->
+                rs.getString("v_$datatype")
+            }
+            .map{ mapper.readValue<MutableMap<UUID, MutableSet<Any>>>( it )}
+            .map { it.mapKeys { propertyTypes.getValue(it.key).type }.toMutableMap() }
+            .reduce { acc, mutableMap ->
+                acc.putAll(mutableMap)
+                return@reduce acc
+            }
+
+}
+
+@Throws(SQLException::class)
 fun getEntityPropertiesByPropertyTypeId(
         rs: ResultSet,
         authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
@@ -111,9 +134,9 @@ fun getEntityPropertiesByFullQualifiedName(
         authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
         byteBlobDataManager: ByteBlobDataManager
 ): Pair<UUID, MutableMap<FullQualifiedName, MutableSet<Any>>> {
-    return getEntityPropertiesByFunctionResult(
+    return getEntityPropertiesByPropertyTypeId3(
             rs, authorizedPropertyTypes, byteBlobDataManager
-    ) { it.datatype.fullQualifiedName }
+    )
 }
 
 //TODO: If we are getting NPEs on read we may have to do better filtering here.

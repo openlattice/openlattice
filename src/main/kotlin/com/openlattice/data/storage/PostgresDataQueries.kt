@@ -61,7 +61,7 @@ fun buildPreparableFiltersClauseForLinkedEntities(
         propertyTypeFilters: Map<UUID, Set<Filter>>
 ): Pair<String, Set<SqlBinder>> {
     val filtersClauses = buildPreparableFiltersClause(startIndex, propertyTypes, propertyTypeFilters)
-    val sql = selectEntitiesGroupedByIdAndPropertyTypeId
+    val sql = selectEntitiesGroupedByIdAndPropertyTypeId()
     "AND ${ORIGIN_ID.name} IS NOT NULL AND ${VERSION.name} > 0" +
             "AND ${filtersClauses.first} " +
             "GROUP BY (${ENTITY_SET_ID.name},${LINKING_ID.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
@@ -82,13 +82,16 @@ fun buildPreparableFiltersClauseForLinkedEntities(
  *
  */
 fun buildPreparableFiltersSqlForEntities(
+        startIndex: Int,
         propertyTypes: Map<UUID, PropertyType>,
-        propertyTypeFilters: Map<UUID, Set<Filter>>
+        propertyTypeFilters: Map<UUID, Set<Filter>>,
+        idsPresent: Boolean,
+        partitionsPresent: Boolean
 ): Pair<String, Set<SqlBinder>> {
-    val filtersClauses = buildPreparableFiltersClause(1, propertyTypes, propertyTypeFilters)
+    val filtersClauses = buildPreparableFiltersClause(startIndex, propertyTypes, propertyTypeFilters)
     //TODO: I'm pretty sure if propertyTypeFilters are entity this won't work properly.
     val filtersClause = filtersClauses.first
-    val innerSql = selectEntitiesGroupedByIdAndPropertyTypeId +
+    val innerSql = selectEntitiesGroupedByIdAndPropertyTypeId(idsPresent = idsPresent, partitionsPresent = partitionsPresent) +
             " ${if (filtersClause.isNotEmpty()) "AND ${filtersClauses.first} " else ""}" +
             GROUP_BY_ESID_EKID_PART_PTID
     val sql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},$jsonValueColumnsSql FROM ($innerSql) entities " +
@@ -202,11 +205,22 @@ internal val GROUP_BY_ID = "GROUP BY (${ID_VALUE.name}, ${PARTITION.name})"
  * 3. partition (array)
  *
  */
-internal val selectEntitiesGroupedByIdAndPropertyTypeId =
-        "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name},${PROPERTY_TYPE_ID.name},$valuesColumnsSql " +
-                "FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = ANY(?) AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ANY(?) " +
-                "AND ${VERSION.name} > 0 "
+internal fun selectEntitiesGroupedByIdAndPropertyTypeId(
+        idsPresent: Boolean = true,
+        partitionsPresent: Boolean = true,
+        entitySetsPresent: Boolean = true): String {
 
+    val entitySetClause = if (entitySetsPresent) "${ENTITY_SET_ID.name} = ANY(?)" else ""
+    val idsClause = if (idsPresent) "${ID_VALUE.name} = ANY(?)" else ""
+    val partitionClause = if (partitionsPresent) "${PARTITION.name} = ANY(?)" else ""
+    val versionsClause = "${VERSION.name} > 0 "
+
+    val optionalClauses = listOf(entitySetClause, idsClause, partitionClause, versionsClause).filter { it.isNotBlank() }
+    val optionalClausesSql = if (optionalClauses.isEmpty()) "" else "WHERE ${optionalClauses.joinToString(" AND ")}"
+
+    return "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name},${PROPERTY_TYPE_ID.name},$valuesColumnsSql " +
+            "FROM ${DATA.name} $optionalClausesSql"
+}
 
 
 //"GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
@@ -231,7 +245,7 @@ internal val selectEntitySetGroupedByIdAndPropertyTypeId =
  *
  */
 internal val selectEntitiesSql =
-        "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},$jsonValueColumnsSql FROM ($selectEntitiesGroupedByIdAndPropertyTypeId) entities " +
+        "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},$jsonValueColumnsSql FROM (${selectEntitiesGroupedByIdAndPropertyTypeId()}) entities " +
                 GROUP_BY_ESID_EKID_PART
 
 /**
@@ -256,7 +270,7 @@ internal val selectEntitySetsSql =
  *
  */
 internal val selectLinkingEntitiesByNormalEntitySetIdsSql =
-        "SELECT ${ENTITY_SET_ID.name},${LINKING_ID.name},$jsonValueColumnsSql FROM ($selectEntitiesGroupedByIdAndPropertyTypeId) entities " +
+        "SELECT ${ENTITY_SET_ID.name},${LINKING_ID.name},$jsonValueColumnsSql FROM (${selectEntitiesGroupedByIdAndPropertyTypeId()} entities " +
                 "GROUP BY (${ENTITY_SET_ID.name},${LINKING_ID.name}, ${PARTITION.name})"
 
 /**
@@ -272,7 +286,7 @@ internal val selectLinkingEntitiesByNormalEntitySetIdsSql =
  */
 // todo: what if we want to select multiple linking entity sets?
 internal fun selectLinkingEntitiesByLinkingEntitySetIdSql(linkingEntitySetId: UUID): String {
-    return "SELECT '$linkingEntitySetId' AS ${ENTITY_SET_ID.name},${LINKING_ID.name},$jsonValueColumnsSql FROM ($selectEntitiesGroupedByIdAndPropertyTypeId) entities " +
+    return "SELECT '$linkingEntitySetId' AS ${ENTITY_SET_ID.name},${LINKING_ID.name},$jsonValueColumnsSql FROM (${selectEntitiesGroupedByIdAndPropertyTypeId()}) entities " +
             "GROUP BY (${ENTITY_SET_ID.name},${LINKING_ID.name}, ${PARTITION.name})"
 }
 
