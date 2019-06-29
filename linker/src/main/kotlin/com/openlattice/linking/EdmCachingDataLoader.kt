@@ -34,7 +34,6 @@ import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.linking.util.PersonProperties
 import com.openlattice.postgres.mapstores.EntityTypeMapstore
 import com.openlattice.postgres.streams.BasePostgresIterable
-import com.openlattice.postgres.streams.PostgresIterable
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -72,7 +71,7 @@ class EdmCachingDataLoader(
                 .groupBy({ it.entitySetId }, { it.entityKeyId })
                 .mapValues { it.value.toSet() }
                 .flatMap { edkp ->
-                    getEntityStream(edkp.key, edkp.value).map { EntityDataKey(edkp.key, it.key) to it.value }
+                    getEntityStream(edkp.key, edkp.value).map { EntityDataKey(edkp.key, it.first) to it.second}
                 }
                 .toMap()
     }
