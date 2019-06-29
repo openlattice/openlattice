@@ -455,10 +455,11 @@ fun getDataColumnName(datatype: PostgresDatatype): String {
  * 3.  PARTITION
  * 4.  PROPERTY_TYPE_ID
  * 5.  HASH
- * 6.  VERSION,
- * 7.  VERSIONS
- * 8.  PARTITIONS_VERSION
- * 9. Value Column
+ * 6.  LAST_WRITE
+ * 7.  VERSION,
+ * 8.  VERSIONS
+ * 9.  PARTITIONS_VERSION
+ * 10. Value Column
  */
 fun upsertPropertyValueSql(propertyType: PropertyType): String {
     val insertColumn = getColumnDefinition(propertyType.postgresIndexType, propertyType.datatype)
