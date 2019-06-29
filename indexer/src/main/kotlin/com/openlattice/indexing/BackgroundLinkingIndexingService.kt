@@ -131,7 +131,7 @@ class BackgroundLinkingIndexingService(
                     val filteredData = dataByEntitySetId
                             .filterKeys { entitySetId -> linkedEntitySetIds.contains(entitySetId) }
                     elasticsearchApi.createBulkLinkedData(
-                            entitySets[it]!!.entityTypeId, it, mapOf(linkingId to filteredData)
+                            entitySets[it]!!.entityTypeId, mapOf(linkingId to filteredData)
                     )
                 }) {
             indexCount += dataManager.markAsIndexed(
