@@ -245,10 +245,6 @@ public class LinkerServicesPod {
     }
 
     @Bean
-    public PartitionManager partitionManager() {
-        return new PartitionManager( hazelcastInstance, hikariDataSource );
-    }
-    @Bean
     public EdmManager dataModelService() {
         return new EdmService(
                 hikariDataSource,
