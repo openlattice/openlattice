@@ -25,17 +25,32 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName
 class EdmConstants {
 
     companion object {
-        // property type
+
+        // misc
         @JvmField
         val ID_FQN = FullQualifiedName("openlattice", "@id")
 
         @JvmField
         val COUNT_FQN = FullQualifiedName("openlattice", "@count")
 
+
+        // metadata
+        @JvmField
+        val ENTITY_KEY_IDS_ID = FullQualifiedName("openlattice", "@entityKeyIds")
+
+        @JvmField
+        val ENTITY_SET_IDS_ID = FullQualifiedName("openlattice", "@entitySetIds")
+
         @JvmField
         val LAST_INDEX_FQN = FullQualifiedName("openlattice", "@lastIndex")
 
         @JvmField
+        val LAST_LINK_FQN = FullQualifiedName("openlattice", "@lastIndex")
+
+        @JvmField
         val LAST_WRITE_FQN = FullQualifiedName("openlattice", "@lastWrite")
+
+        @JvmField
+        val VERSION_ID = FullQualifiedName("openlattice", "@version")
     }
 }
