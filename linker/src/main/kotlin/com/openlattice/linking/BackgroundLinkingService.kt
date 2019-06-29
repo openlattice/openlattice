@@ -41,7 +41,6 @@ import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
-import java.sql.Connection
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -140,7 +139,7 @@ class BackgroundLinkingService
 
                     val clusterUpdate = ClusterUpdate(scoredCluster.clusterId, candidate, scoredCluster.cluster)
 
-                    insertMatches(clusterUpdate, it)
+                    insertMatches(clusterUpdate)
                 }
             } catch (ex: Exception) {
                 logger.error("An error occurred while performing linking.", ex)
@@ -178,7 +177,7 @@ class BackgroundLinkingService
             try {
                 val clusters = getClusters(dataKeys)
                 lqs.lockClustersForUpdates(clusters.keys).use {
-                    var maybeBestCluster = clusters
+                    val maybeBestCluster = clusters
                             .asSequence()
                             .map { cluster -> cluster(candidate, cluster, ::completeLinkCluster) }
                             .filter { scoredCluster -> scoredCluster.score > MINIMUM_SCORE }
@@ -194,7 +193,7 @@ class BackgroundLinkingService
                         ClusterUpdate(bestCluster.clusterId, candidate, bestCluster.cluster)
                     }
 
-                    insertMatches(clusterUpdate, it)
+                    insertMatches(clusterUpdate)
                 }
 
             } catch (ex: Exception) {
@@ -203,7 +202,6 @@ class BackgroundLinkingService
             }
         }
     }
-
 
     private fun isLocked(block: Set<EntityDataKey>): Boolean {
         //Skip locked elements as they will be requeued.
@@ -226,7 +224,6 @@ class BackgroundLinkingService
         return ScoredCluster(identifiedCluster.key, matchedCluster, score)
     }
 
-
     private fun <T> collectKeys(m: Map<EntityDataKey, Map<EntityDataKey, T>>): Set<EntityDataKey> {
         return m.keys + m.values.flatMap { it.keys }
     }
@@ -243,7 +240,6 @@ class BackgroundLinkingService
         logger.debug("Cleared {} neighbors from neighborhood of {}", clearedCount, candidate)
     }
 
-
     /**
      * Retrieve the clusters containing any of the provided data keys.
      * @param dataKeys The entity data keys used to determine which clusters to return.
@@ -253,7 +249,7 @@ class BackgroundLinkingService
         return lqs.getClusters(lqs.getIdsOfClustersContaining(dataKeys).toList())
     }
 
-    private fun insertMatches(clusterUpdate: ClusterUpdate, connection: Connection) {
+    private fun insertMatches(clusterUpdate: ClusterUpdate) {
         lqs.insertMatchScores(clusterUpdate.clusterId, clusterUpdate.scores)
         lqs.updateLinkingTable(clusterUpdate.clusterId, clusterUpdate.newMember)
         linkingLogService.createOrUpdateForLinks(
@@ -315,22 +311,23 @@ class BackgroundLinkingService
 
         executor.submit {
             var entitiesNeedingLinking =
-                    lqs
-                            .getEntitiesNeedingLinking(setOf(entitySetId), configuration.loadSize)
+                    lqs.getEntitiesNeedingLinking(setOf(entitySetId), configuration.loadSize)
                             .map { EntityDataKey(it.first, it.second) }
+            entitiesNeedingLinking.forEach(candidates::put)
             while (entitiesNeedingLinking.isNotEmpty()) {
-                entitiesNeedingLinking.forEach(candidates::put)
-                entitiesNeedingLinking =
-                        lqs
-                                .getEntitiesNeedingLinking(setOf(entitySetId), configuration.loadSize)
-                                .map { EntityDataKey(it.first, it.second) }
+                val stillNotLinked = lqs
+                        .getEntitiesNeedingLinking(setOf(entitySetId), configuration.loadSize)
+                        .map { EntityDataKey(it.first, it.second) }
+                        .filterNot { entitiesNeedingLinking.contains(it) }
+                stillNotLinked.forEach (candidates::put)
+
+                entitiesNeedingLinking = stillNotLinked
             }
 
             //Allow other nodes to link this entity set.
             linkingLocks.delete(entitySetId)
         }
     }
-
 
     private fun lock(candidate: EntityDataKey) {
         val existingExpiration = entityLinkingLocks.putIfAbsent(
