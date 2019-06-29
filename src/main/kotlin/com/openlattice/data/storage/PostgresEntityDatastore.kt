@@ -63,7 +63,7 @@ class PostgresEntityDatastore(
         return dataQueryService.getEntitiesWithPropertyTypeIds(
                 ImmutableMap.of(entitySetId, Optional.empty()),
                 ImmutableMap.of(entitySetId, authorizedPropertyTypes)
-        )
+        ).toMap()
     }
 
     @Timed
