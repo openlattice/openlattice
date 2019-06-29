@@ -56,14 +56,13 @@ class BulkLinkedDataLambdasStreamSerializer(
                 }
             }
         } catch (e: JsonProcessingException) {
-            logger.debug("Unable to serialize entity with type: {}", data.entityTypeId)
+            logger.debug("Unable to serialize linking entities linking ids: {}", data.entitiesByLinkingId.keys)
         }
     }
 
 
     override fun read(kryo: Kryo, input: Input, type: Class<BulkLinkedDataLambdas>): BulkLinkedDataLambdas {
         val entityTypeId = readUUID(input)
-        val linkedEntitySetId = readUUID(input)
 
         val linkingIdsSize = input.readInt()
         val entitiesByLinkingId = HashMap<UUID, Map<UUID, Map<UUID, Set<Any>>>>(linkingIdsSize)
