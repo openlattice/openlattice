@@ -30,6 +30,11 @@ class PostgresLinkingLogService( val hds: HikariDataSource ) : LinkingLogService
         }
     }
 
+    override fun deleteLink(linkingId: UUID, linkedEntities: Map<UUID, Set<UUID>>) {
+        safePrepStatementExec(DELETE_LOG_SQL) { ps, conn ->
+        }
+    }
+
 
     private fun safePrepStatementExec(prepStatementSql: String, bindFunc: (PreparedStatement, Connection) -> Unit ) {
         hds.connection.use { conn ->
@@ -46,3 +51,5 @@ private val LOG_COLUMNS = LINKING_LOG.columns.joinToString(",", transform = Post
 private val UPSERT_LOG_SQL = "INSERT INTO ${LINKING_LOG.name} ($LOG_COLUMNS) VALUES (?,?,?,now())"
 
 private val TOMBSTONE_LOG_SQL = ""
+
+private val DELETE_LOG_SQL = ""
