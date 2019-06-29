@@ -135,7 +135,7 @@ class PostgresEntityDatastore(
                             ImmutableMap.of(entitySetId, Optional.of(entityKeyIds)),
                             ImmutableMap.of(entitySetId, edmManager.getPropertyTypesForEntitySet(entitySetId))
                     )
-            eventBus!!.post(EntitiesUpsertedEvent(entitySetId, entities))
+            eventBus!!.post(EntitiesUpsertedEvent(entitySetId, entities.toMap()))
         }
 
         markMaterializedEntitySetDirty(entitySetId) // mark entityset as unsync with data
