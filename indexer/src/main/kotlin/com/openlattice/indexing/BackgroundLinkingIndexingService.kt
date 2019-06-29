@@ -44,6 +44,7 @@ import com.openlattice.postgres.streams.StatementHolder
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
+import org.springframework.stereotype.Component
 import java.sql.ResultSet
 import java.time.Instant
 import java.util.*
@@ -54,7 +55,7 @@ import java.util.stream.Stream
 internal const val LINKING_INDEXING_TIMEOUT_MILLIS = 120000L
 internal const val LINKING_INDEX_RATE = 30000L
 
-
+@Component
 class BackgroundLinkingIndexingService(
         hazelcastInstance: HazelcastInstance,
         private val executor: ListeningExecutorService,
@@ -108,9 +109,8 @@ class BackgroundLinkingIndexingService(
     fun updateCandidateList() {
         if (indexerConfiguration.backgroundIndexingEnabled) {
             executor.submit {
+                logger.info("Registering linking ids needing indexing.")
                 var dirtyLinkingIds = getDirtyLinkingIds()
-
-                logger.info("Registering linking ids needing indexing {}.", dirtyLinkingIds)
                 while (dirtyLinkingIds.iterator().hasNext()) {
                     dirtyLinkingIds.forEach(candidates::put)
                     dirtyLinkingIds = getDirtyLinkingIds()
