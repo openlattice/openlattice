@@ -223,11 +223,10 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQu
     }
 
     override fun insertMatchScores(
-            connection: Connection,
             clusterId: UUID,
             scores: Map<EntityDataKey, Map<EntityDataKey, Double>>
     ): Int {
-        connection.use { conn ->
+        hds.connection.use { conn ->
             conn.prepareStatement(INSERT_SQL).use {
                 val ps = it
                 scores.forEach {
@@ -239,7 +238,7 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQu
                         ps.setObject(2, srcEntityDataKey.entitySetId)
                         ps.setObject(3, srcEntityDataKey.entityKeyId)
                         ps.setObject(4, dstEntityDataKey.entitySetId)
-                        ps.setObject(5, dstEntityDataKey.entityKeyId)
+                       ps.setObject(5, dstEntityDataKey.entityKeyId)
                         ps.setObject(6, score)
                         ps.addBatch()
                     }
@@ -247,28 +246,6 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQu
                 val insertCount = ps.executeBatch().sum()
                 conn.commit()
                 return insertCount
-            }
-        }
-    }
-
-    override fun updateLinkingLog(
-            connection: Connection,
-            clusterId: UUID,
-            scores: Map<EntityDataKey, Map<EntityDataKey, Double>>
-    ): Int {
-        connection.use { conn ->
-            val ekids = mutableSetOf<UUID>()
-            scores.keys.map{ edk -> edk.entityKeyId }.toCollection(ekids)
-
-            scores.flatMap { entry ->
-                return@flatMap entry.value.keys.map { edk -> edk.entityKeyId }
-            }.toCollection(ekids)
-
-            val linkedEkids = PostgresArrays.createUuidArray(conn, ekids)
-            conn.prepareStatement(UPSERT_LINKING_LOG_SQL).use { ps ->
-                ps.setObject(1, clusterId)
-                ps.setArray(2, linkedEkids)
-                return  ps.executeUpdate()
             }
         }
     }
@@ -352,14 +329,8 @@ internal fun uuidString(id: UUID): String {
     return "'$id'::uuid"
 }
 
-private val COLUMNS = listOf(
-        LINKING_ID,
-        SRC_ENTITY_SET_ID,
-        SRC_ENTITY_KEY_ID,
-        DST_ENTITY_SET_ID,
-        DST_ENTITY_KEY_ID,
-        SCORE
-).joinToString(",", transform = PostgresColumnDefinition::getName)
+private val COLUMNS = MATCHED_ENTITIES.columns
+        .joinToString(",", transform = PostgresColumnDefinition::getName)
 
 private val CLUSTER_CONTAINING_SQL = "SELECT * FROM ${MATCHED_ENTITIES.name} WHERE linking_id = ANY(?)"
 
@@ -414,14 +385,5 @@ private val LINKABLE_ENTITY_SET_IDS = "SELECT ${ID.name} " +
         "FROM ${ENTITY_SETS.name} " +
         "WHERE ${ENTITY_TYPE_ID.name} = ANY(?) AND NOT ${ID.name} = ANY(?) AND ${ID.name} = ANY(?) "
 
-private val LOCK_CLUSTERS_SQL = "SELECT 1 FROM ${MATCHED_ENTITIES.name} WHERE linking_id = ? FOR UPDATE"
+private val LOCK_CLUSTERS_SQL = "SELECT 1 FROM ${MATCHED_ENTITIES.name} WHERE ${LINKING_ID.name} = ? FOR UPDATE"
 
-private val LOG_COLUMNS = listOf(
-        LINKING_ID,
-        ENTITY_KEY_IDS_COL,
-        VERSION
-).joinToString(",", transform = PostgresColumnDefinition::getName)
-
-private val UPSERT_LINKING_LOG_SQL = "INSERT INTO ${LINKING_LOG.name} ($LOG_COLUMNS) VALUES (?,?,now()) " +
-        "ON CONFLICT ON CONSTRAINT ${LINKING_LOG.name}_pkey " +
-        "DO UPDATE SET ${ENTITY_KEY_IDS_COL.name} = EXCLUDED.${ENTITY_KEY_IDS_COL.name}"
