@@ -1,8 +1,6 @@
 package com.openlattice.linking
 
-import com.openlattice.postgres.PostgresArrays
-import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
-import com.openlattice.postgres.PostgresColumn.LINKING_ID
+import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresColumnDefinition
 import com.openlattice.postgres.PostgresTable.LINKING_LOG
 import com.zaxxer.hikari.HikariDataSource
@@ -16,14 +14,14 @@ class PostgresLinkingLogService( val hds: HikariDataSource ) : LinkingLogService
 
         safePrepStatementExec(INSERT_LOG_SQL) { ps, conn  ->
             // edk -> esid -> List<ekid> -> PGArray
-            linkedEntities.mapValues {
-                PostgresArrays.createUuidArray(conn, it.value.stream())
-            }.forEach { (esid, pgArray) ->
-                ps.setObject(1, linkingId)
-                ps.setObject(2, esid)
-                ps.setArray(3, pgArray)
-                ps.setLong(4, System.currentTimeMillis())
-                ps.addBatch()
+            linkedEntities.forEach {( esid, ekids ) ->
+                ekids.forEach {ekid ->
+                    ps.setObject(1, linkingId)
+                    ps.setObject(2, esid)
+                    ps.setObject(3, ekid)
+                    ps.setLong(4, System.currentTimeMillis())
+                    ps.addBatch()
+                }
             }
         }
     }
@@ -31,14 +29,14 @@ class PostgresLinkingLogService( val hds: HikariDataSource ) : LinkingLogService
     override fun clearLink(linkingId: UUID, linkedEntities: Map<UUID, Set<UUID>>) {
             safePrepStatementExec(INSERT_LOG_SQL) { ps, conn ->
             // edk -> esid -> List<ekid> -> PGArray
-            linkedEntities.mapValues {
-                PostgresArrays.createUuidArray(conn, it.value.stream())
-            }.forEach { (esid, pgArray) ->
-                ps.setObject(1, linkingId)
-                ps.setObject(2, esid)
-                ps.setArray(3, pgArray)
-                ps.setLong(4, System.currentTimeMillis() * -1)
-                ps.addBatch()
+            linkedEntities.forEach { (esid, ekids) ->
+                ekids.forEach { ekid ->
+                    ps.setObject(1, linkingId)
+                    ps.setObject(2, esid)
+                    ps.setObject(3, ekid)
+                    ps.setLong(4, System.currentTimeMillis() * -1)
+                    ps.addBatch()
+                }
             }
         }
     }
@@ -50,6 +48,18 @@ class PostgresLinkingLogService( val hds: HikariDataSource ) : LinkingLogService
         }
     }
 
+    override fun deleteEntitiesFromLink(linkingId: UUID, entitySetIdToEntityKeyIds: Map<UUID, Set<UUID>>) {
+        safePrepStatementExec(DELETE_LOG_SQL) { ps, conn ->
+            entitySetIdToEntityKeyIds.forEach { ( esid, ekids ) ->
+                ekids.forEach { ekid ->
+                    ps.setObject(1, linkingId)
+                    ps.setObject(2, esid)
+                    ps.setObject(3, ekid)
+                    ps.addBatch()
+                }
+            }
+        }
+    }
 
     private fun safePrepStatementExec(prepStatementSql: String, bindFunc: (PreparedStatement, Connection) -> Unit ) {
         hds.connection.use { conn ->
@@ -66,3 +76,8 @@ private val LOG_COLUMNS = LINKING_LOG.columns.joinToString(",", transform = Post
 private val INSERT_LOG_SQL = "INSERT INTO ${LINKING_LOG.name} ($LOG_COLUMNS) VALUES (?,?,?,?)"
 
 private val DELETE_LOG_SQL = "DELETE FROM ${LINKING_LOG.name} WHERE ${LINKING_ID.name} = ? AND ${ENTITY_SET_ID.name} = ?"
+
+private val DELETE_ENTITIES_SQL = "DELETE FROM ${LINKING_LOG.name} " +
+        "WHERE ${LINKING_ID.name} = ? " +
+        "AND ${ENTITY_SET_ID.name} = ? " +
+        "AND ${ENTITY_ID.name} = ?"
