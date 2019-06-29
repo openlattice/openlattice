@@ -293,7 +293,7 @@ internal val upsertEntitiesSql = "UPDATE ${PostgresTable.ENTITY_KEY_IDS.name} SE
  * 2. partitions
  */
 internal val lockEntitiesSql = "SELECT 1 FROM ${PostgresTable.IDS.name} " +
-        "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ANY(?) " +
+        "WHERE ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ANY(?) " +
         "FOR UPDATE"
 
 
