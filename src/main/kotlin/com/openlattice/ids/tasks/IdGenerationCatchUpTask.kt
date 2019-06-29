@@ -40,7 +40,7 @@ class IdGenerationCatchUpTask : HazelcastInitializationTask<IdGenerationCatchupD
     }
 
     override fun after(): Set<Class<out HazelcastInitializationTask<*>>> {
-        return setOf(IdConstantsReservationTask::class.java)
+        return emptySet()
     }
 
     override fun getName(): String {

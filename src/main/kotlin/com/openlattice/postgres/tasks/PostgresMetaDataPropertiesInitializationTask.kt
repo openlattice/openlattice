@@ -18,40 +18,34 @@
  *
  *
  */
-package com.openlattice.ids.tasks
+package com.openlattice.postgres.tasks
 
-import com.openlattice.IdConstants
-import com.openlattice.data.EntityKey
+import com.openlattice.edm.tasks.EdmSyncInitializerTask
+import com.openlattice.postgres.PostgresMetaDataProperties
 import com.openlattice.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.Task
-import java.util.*
 
-/**
- * Reserves UUIDs for commonly used ids found in [com.openlattice.IdConstants].
- */
-class IdConstantsReservationTask : HazelcastInitializationTask<IdConstantsReservationDependency> {
+class PostgresMetaDataPropertiesInitializationTask
+    : HazelcastInitializationTask<PostgresMetaDataPropertiesInitializationDependency> {
     override fun getInitialDelay(): Long {
         return 0L
     }
 
-    override fun initialize(dependencies: IdConstantsReservationDependency) {
-        val entityKeyIdsToReserve = IdConstants.values()
-                .map {
-                    EntityKey(UUID(100, 100), it.id.toString())
-                }.toSet()
-        dependencies.entityKeyIdService.reserveEntityKeyIds(entityKeyIdsToReserve)
+    override fun initialize(dependencies: PostgresMetaDataPropertiesInitializationDependency) {
+        PostgresMetaDataProperties.values().forEach {
+            dependencies.edmManager.createPropertyTypeIfNotExists(it.propertyType)
+        }
     }
 
     override fun after(): Set<Class<out HazelcastInitializationTask<*>>> {
-        return setOf(IdConstantsReservationTask::class.java)
+        return setOf(EdmSyncInitializerTask::class.java)
     }
 
     override fun getName(): String {
-        return Task.ID_CONSTANT_RESERVATION.name
+        return Task.POSTGRES_META_DATA_PROPERTIES_INITIALIZATION.name
     }
 
-    override fun getDependenciesClass(): Class<out IdConstantsReservationDependency> {
-        return IdConstantsReservationDependency::class.java
+    override fun getDependenciesClass(): Class<out PostgresMetaDataPropertiesInitializationDependency> {
+        return PostgresMetaDataPropertiesInitializationDependency::class.java
     }
-
 }
