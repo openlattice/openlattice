@@ -9,7 +9,6 @@ import com.openlattice.data.EntitySetData
 import com.openlattice.data.WriteEvent
 import com.openlattice.data.events.EntitiesDeletedEvent
 import com.openlattice.data.events.EntitiesUpsertedEvent
-import com.openlattice.data.events.LinkedEntitiesDeletedEvent
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.events.EntitySetDataDeletedEvent
 import com.openlattice.edm.set.EntitySetFlag
@@ -24,7 +23,6 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.nio.ByteBuffer
 import java.util.*
-import java.util.stream.Collectors
 import java.util.stream.Stream
 import javax.inject.Inject
 
@@ -350,10 +348,8 @@ class PostgresEntityDatastore(
         val linkedEntityDataStream = dataQueryService.getEntitiesWithPropertyTypeIds(
                 linkingIdsByEntitySetId,
                 authorizedPropertyTypesByEntitySetId,
-                emptyMap(),
-                metadataOptions,
-                Optional.empty(),
-                true
+                metadataOptions = metadataOptions,
+                linking = true
         )
 
         val linkedEntityData = HashMap<UUID, MutableMap<UUID, MutableMap<UUID, Set<Any>>>>()
