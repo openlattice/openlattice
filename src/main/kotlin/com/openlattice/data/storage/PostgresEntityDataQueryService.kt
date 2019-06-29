@@ -71,7 +71,7 @@ class PostgresEntityDataQueryService(
             metadataOptions: Set<MetadataOption> = EnumSet.noneOf(MetadataOption::class.java),
             version: Optional<Long> = Optional.empty(),
             linking: Boolean = false
-    ): BasePostgresIterable<Pair<UUID, MutableMap<UUID, MutableSet<Property>>>> {
+    ): BasePostgresIterable<Pair<UUID, MutableMap<UUID, MutableSet<Any>>>> {
         return getEntitySetIterable(
                 entityKeyIds,
                 authorizedPropertyTypes,
@@ -79,7 +79,7 @@ class PostgresEntityDataQueryService(
                 metadataOptions,
                 version,
                 linking
-        ) { rs -> getJsonEntityPropertiesByPropertyTypeId(rs, authorizedPropertyTypes, byteBlobDataManager) }
+        ) { rs -> getEntityPropertiesByPropertyTypeId2(rs, authorizedPropertyTypes, byteBlobDataManager) }
     }
 
     @JvmOverloads

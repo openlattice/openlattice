@@ -71,6 +71,27 @@ fun getJsonEntityPropertiesByPropertyTypeId(
                 acc.putAll(mutableMap)
                 return@reduce acc
             }
+}
+
+@Throws(SQLException::class)
+fun getEntityPropertiesByPropertyTypeId2(
+        rs: ResultSet,
+        authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
+        byteBlobDataManager: ByteBlobDataManager
+): Pair<UUID, MutableMap<UUID, MutableSet<Any>>> {
+    val id = id(rs)
+    val entitySetId = entitySetId(rs)
+    val propertyTypes = authorizedPropertyTypes.getValue( entitySetId )
+    return id to propertyTypes
+            .map { PostgresEdmTypeConverter.map(it.value.datatype) }
+            .mapNotNull { datatype ->
+                rs.getString("v_$datatype")
+            }
+            .map{ mapper.readValue<MutableMap<UUID, MutableSet<Any>>>( it )}
+            .reduce { acc, mutableMap ->
+                acc.putAll(mutableMap)
+                return@reduce acc
+            }
 
 }
 
