@@ -163,11 +163,12 @@ class PostgresEntityDataQueryService(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
             metadataOptions: Set<MetadataOption> = EnumSet.noneOf(MetadataOption::class.java)
-    ) : BasePostgresIterable<Pair<UUID, Map<UUID, Set<Any>>>> {
-        return getEntitySetIterable(entityKeyIds, authorizedPropertyTypes,mapOf(), metadataOptions) { rs ->
+    ): BasePostgresIterable<Pair<UUID, Map<UUID, Set<Any>>>> {
+        return getEntitySetIterable(entityKeyIds, authorizedPropertyTypes, mapOf(), metadataOptions) { rs ->
             getEntityPropertiesByPropertyTypeId(rs, authorizedPropertyTypes, byteBlobDataManager)
         }
     }
+
     /**
      * Note: for linking queries, linking id and entity set id will be returned, thus data won't be merged by linking id
      */
@@ -189,19 +190,46 @@ class PostgresEntityDataQueryService(
                 getPartitionsInfo(it, entitySetPartitions)
             }.orElse(entitySetPartitions)
         }
+        var startIndex = 2
+        if (ids.isNotEmpty()) {
+            startIndex++
+        }
+        if (partitions.isNotEmpty()) {
+            startIndex++
+        }
+
         val (sql, binders) = if (linking) {
-            buildPreparableFiltersClauseForLinkedEntities(propertyTypes, propertyTypeFilters)
+            buildPreparableFiltersClauseForLinkedEntities(startIndex, propertyTypes, propertyTypeFilters)
         } else {
             buildPreparableFiltersSqlForEntities(propertyTypes, propertyTypeFilters)
         }
 
         return BasePostgresIterable(PreparedStatementHolderSupplier(hds, sql, FETCH_SIZE) { ps ->
-            (linkedSetOf(
-                    SqlBinder(SqlBindInfo(1, PostgresArrays.createUuidArray(ps.connection, entitySetIds)), ::doBind),
-                    // TODO with empty ids it won't return any rows
-                    SqlBinder(SqlBindInfo(2, PostgresArrays.createUuidArray(ps.connection, ids)), ::doBind),
-                    SqlBinder(SqlBindInfo(3, PostgresArrays.createIntArray(ps.connection, partitions)), ::doBind)
-            ) + binders).forEach { it.bind(ps) }
+            val metaBinders = linkedSetOf<SqlBinder>()
+            var bindIndex = 1
+            metaBinders.add(
+                    SqlBinder(
+                            SqlBindInfo(bindIndex++, PostgresArrays.createUuidArray(ps.connection, entitySetIds)),
+                            ::doBind
+                    )
+            )
+            if (ids.isNotEmpty()) {
+                metaBinders.add(
+                        SqlBinder(
+                                SqlBindInfo(bindIndex++, PostgresArrays.createUuidArray(ps.connection, ids)), ::doBind
+                        )
+                )
+            }
+
+            if (partitions.isEmpty()) {
+                metaBinders.add(
+                        SqlBinder(
+                                SqlBindInfo(bindIndex, PostgresArrays.createIntArray(ps.connection, partitions)),
+                                ::doBind
+                        )
+                )
+            }
+            (metaBinders + binders).forEach { it.bind(ps) }
         }, adapter)
     }
 
@@ -361,21 +389,24 @@ class PostgresEntityDataQueryService(
     fun replaceEntities(
             entitySetId: UUID,
             entities: Map<UUID, Map<UUID, Set<Any>>>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent {
+            authorizedPropertyTypes: Map<UUID, PropertyType>
+    ): WriteEvent {
         TODO("Not implemented")
     }
 
     fun partialReplaceEntities(
             entitySetId: UUID,
             entities: Map<UUID, Map<UUID, Set<Any>>>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent {
+            authorizedPropertyTypes: Map<UUID, PropertyType>
+    ): WriteEvent {
         TODO("Not implemented")
     }
 
     fun replacePropertiesInEntities(
             entitySetId: UUID,
             replacementProperties: Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Any>>>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent {
+            authorizedPropertyTypes: Map<UUID, PropertyType>
+    ): WriteEvent {
         TODO("Not implemented")
     }
 

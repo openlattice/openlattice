@@ -56,10 +56,11 @@ val jsonValueColumnsSql = PostgresDataTables.dataColumns.entries
  *
  */
 fun buildPreparableFiltersClauseForLinkedEntities(
+        startIndex: Int,
         propertyTypes: Map<UUID, PropertyType>,
         propertyTypeFilters: Map<UUID, Set<Filter>>
 ): Pair<String, Set<SqlBinder>> {
-    val filtersClauses = buildPreparableFiltersClause(1, propertyTypes, propertyTypeFilters)
+    val filtersClauses = buildPreparableFiltersClause(startIndex, propertyTypes, propertyTypeFilters)
     val sql = selectEntitiesGroupedByIdAndPropertyTypeId
     "AND ${ORIGIN_ID.name} IS NOT NULL AND ${VERSION.name} > 0" +
             "AND ${filtersClauses.first} " +
