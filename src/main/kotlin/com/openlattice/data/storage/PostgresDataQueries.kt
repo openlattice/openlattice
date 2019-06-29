@@ -177,8 +177,17 @@ internal fun doBind(ps: PreparedStatement, info: SqlBindInfo) {
     }
 }
 
+internal val GROUP_BY_ESID_EKID_PART_PTID = "GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
+internal val GROUP_BY_ESID_EKID_PART = "GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name})"
+internal val GROUP_BY_ID_PT_ID_HASH = "GROUP BY (${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name}, ${HASH.name})"
+internal val GROUP_BY_ID = "GROUP BY (${ID_VALUE.name}, ${PARTITION.name})"
+//TODO: This was in case we needed to filter entity_set_ids, but we don't since for entity_set_id to show up it must
+//be in at least one (id, pt_id, hash) pair
+//internal val DATA_COLULMNS_NOT_NULL = PostgresDataTables.dataTableValueColumns.joinToString(" AND ") {
+//  "${it.name} IS NOT NULL"
+//}
+//internal val FILTERED_ENTITY_SET_IDS = "array_agg(${ENTITY_SET_ID.name}) FILTER ( ) as ${ENTITY_SET_IDS.name}"
 
-internal val GROUP_BY_ID_PT_ID_HASH = "GROUP BY (${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
 
 /**
  * Preparable SQL that selects entities across multiple entity sets grouping by id and property type id from the [DATA]
@@ -190,13 +199,13 @@ internal val GROUP_BY_ID_PT_ID_HASH = "GROUP BY (${ID_VALUE.name}, ${PARTITION.n
  *
  */
 internal val selectEntitiesGroupedByIdAndPropertyTypeId =
-        "SELECT ${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name},array_agg(${ENTITY_SET_ID.name}),$valuesColumnsSql " +
+        "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name},${PROPERTY_TYPE_ID.name},$valuesColumnsSql " +
                 "FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = ANY(?) AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ANY(?) " +
                 "AND ${VERSION.name} > 0 " +
-                GROUP_BY_ID_PT_ID_HASH
+                GROUP_BY_ESID_EKID_PART_PTID
 
 
-internal val GROUP_BY_ESID_EKID_PART_PTID = "GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
+
 //"GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
 /**
  * Preparable SQL that selects entire entity sets grouping by id and property type id from the [DATA] table with the
@@ -206,9 +215,9 @@ internal val GROUP_BY_ESID_EKID_PART_PTID = "GROUP BY (${ENTITY_SET_ID.name},${I
  *
  */
 internal val selectEntitySetGroupedByIdAndPropertyTypeId =
-        "SELECT ${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name},array_agg(${ENTITY_SET_ID.name}),$valuesColumnsSql " +
+        "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name},${PROPERTY_TYPE_ID.name},$valuesColumnsSql " +
                 "FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = ANY(?) " +
-                GROUP_BY_ID_PT_ID_HASH
+                GROUP_BY_ESID_EKID_PART_PTID
 
 /**
  * Preparable SQL that selects entities across multiple entity sets grouping by id and property type id from the [DATA]
@@ -221,7 +230,7 @@ internal val selectEntitySetGroupedByIdAndPropertyTypeId =
  */
 internal val selectEntitiesSql =
         "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},$jsonValueColumnsSql FROM ($selectEntitiesGroupedByIdAndPropertyTypeId) entities " +
-                "GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name})"
+                GROUP_BY_ESID_EKID_PART
 
 /**
  * Preparable SQL that selects entire entity sets grouping by id and property type id from the [DATA] table with the
@@ -232,7 +241,7 @@ internal val selectEntitiesSql =
  */
 internal val selectEntitySetsSql =
         "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},$jsonValueColumnsSql FROM ($selectEntitySetGroupedByIdAndPropertyTypeId) entity_set " +
-                "GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name})"
+                GROUP_BY_ESID_EKID_PART
 
 
 /**

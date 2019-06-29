@@ -30,6 +30,8 @@ class PostgresDataTables {
                 EdmPrimitiveTypeKind.Binary
         )
 
+        //The associate is collapsing edm primitive type kinds such that only 1 is preserved for converted type.
+        //If you change this such that columns generated are sensitive to being discarded make sure you update logic.
         val dataColumns = supportedEdmPrimitiveTypeKinds
                 .map(PostgresEdmTypeConverter::map)
                 .associateWith { nonIndexedValueColumn(it) to btreeIndexedValueColumn(it) }

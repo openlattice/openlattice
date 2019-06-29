@@ -64,7 +64,7 @@ class PostgresEntityDataQueryService(
      *
      */
     @JvmOverloads
-    fun getEntitiesWithPropertyTypeIds2(
+    fun getEntitiesWithPropertyTypeIds(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
             propertyTypeFilters: Map<UUID, Set<Filter>> = mapOf(),
@@ -83,7 +83,7 @@ class PostgresEntityDataQueryService(
     }
 
     @JvmOverloads
-    fun getEntitiesWithPropertyTypeIds(
+    fun getEntitiesWithPropertyTypeIdsOld(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
             propertyTypeFilters: Map<UUID, Set<Filter>> = mapOf(),
