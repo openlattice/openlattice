@@ -12,7 +12,7 @@ class PostgresLinkingLogService( val hds: HikariDataSource ) : LinkingLogService
 
     override fun createOrUpdateForLinks(linkingId: UUID, linkedEntities: Map<UUID, Set<UUID>>) {
 
-        safePrepStatementExec(UPSERT_LINKING_LOG_SQL) { ps, conn  ->
+        safePrepStatementExec(UPSERT_LOG_SQL) { ps, conn  ->
             // edk -> esid -> List<ekid> -> PGArray
             linkedEntities.mapValues {
                 PostgresArrays.createUuidArray(conn, it.value.stream())
@@ -25,7 +25,13 @@ class PostgresLinkingLogService( val hds: HikariDataSource ) : LinkingLogService
         }
     }
 
-    fun safePrepStatementExec( prepStatementSql: String, bindFunc: (PreparedStatement, Connection) -> Unit ) {
+    override fun clearLink(linkingId: UUID, linkedEntities: Map<UUID, Set<UUID>>) {
+        safePrepStatementExec(TOMBSTONE_LOG_SQL) { ps, conn ->
+        }
+    }
+
+
+    private fun safePrepStatementExec(prepStatementSql: String, bindFunc: (PreparedStatement, Connection) -> Unit ) {
         hds.connection.use { conn ->
             conn.prepareStatement(prepStatementSql).use { ps ->
                 bindFunc(ps, conn)
@@ -37,5 +43,6 @@ class PostgresLinkingLogService( val hds: HikariDataSource ) : LinkingLogService
 
 private val LOG_COLUMNS = LINKING_LOG.columns.joinToString(",", transform = PostgresColumnDefinition::getName)
 
-private val UPSERT_LINKING_LOG_SQL = "INSERT INTO ${LINKING_LOG.name} ($LOG_COLUMNS) VALUES (?,?,?,now())"
+private val UPSERT_LOG_SQL = "INSERT INTO ${LINKING_LOG.name} ($LOG_COLUMNS) VALUES (?,?,?,now())"
 
+private val TOMBSTONE_LOG_SQL = ""

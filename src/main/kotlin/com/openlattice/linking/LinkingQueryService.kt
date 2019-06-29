@@ -22,8 +22,6 @@
 package com.openlattice.linking
 
 import com.openlattice.data.EntityDataKey
-import com.openlattice.data.storage.MetadataOption
-import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.streams.PostgresIterable
 import java.sql.Connection
 import java.util.*
@@ -43,7 +41,6 @@ interface LinkingQueryService {
      * @return The total number of stored elements.
      */
     fun insertMatchScores(
-            connection: Connection,
             clusterId: UUID,
             scores: Map<EntityDataKey, Map<EntityDataKey, Double>>): Int
 
