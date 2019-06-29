@@ -19,7 +19,7 @@ class PostgresLinkingLogService( val hds: HikariDataSource ) : LinkingLogService
             }.forEach { (esid, pgArray) ->
                 ps.setObject(1, linkingId)
                 ps.setObject(2, esid)
-                ps.setArray(2, pgArray)
+                ps.setArray(3, pgArray)
                 ps.addBatch()
             }
         }
