@@ -28,15 +28,15 @@ enum class IdConstants(val id: UUID) {
 
     /* Organizations */
 
-    GLOBAL_ORGANIZATION_ID(UUID(0, 0)),
-    OPENLATTICE_ORGANIZATION_ID(UUID(1, 0)),
-    ROOT_PRINCIPAL_ID(UUID(2, 0)),
+    OPENLATTICE_ORGANIZATION_ID(UUID(0, 0)),
+    GLOBAL_ORGANIZATION_ID(UUID(1, 0)),
+    ROOT_PRINCIPAL_ID(UUID(0, 1)),
 
 
     /* ElasticSearch */
 
-    ENTITY_SET_ID_KEY_ID(UUID(0, 10)),
-    LAST_WRITE_KEY_ID(UUID(1, 10)),
+    ENTITY_SET_ID_KEY_ID(UUID(0, 10)), // was UUID(0, 1)
+    LAST_WRITE_KEY_ID(UUID(1, 10)), // was UUID(0, 0)
 
 
     /* Postgres */
@@ -60,7 +60,7 @@ enum class IdConstants(val id: UUID) {
 
     /* Indexer */
 
-    LB_UUID(UUID(0, 50)), // todo what is this for??
+    LB_UUID(UUID(0, 30)), // todo what is this for??
 
 
     /* Linker */
@@ -69,6 +69,6 @@ enum class IdConstants(val id: UUID) {
      * Entity sets ids are assigned by calling [UUID.randomUUID] as a result we know that this can never be accidentally
      * assigned to any real entity set.
      */
-    LINKING_ENTITY_SET_ID(UUID(0, 60))
+    LINKING_ENTITY_SET_ID(UUID(0, 40))
 
 }
