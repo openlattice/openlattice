@@ -337,7 +337,7 @@ public class SearchService {
                                     Collectors.toMap( Function.identity(), entitySetId -> propertyTypes ) ),
                             EnumSet.of( MetadataOption.LAST_WRITE ) );
 
-            elasticsearchApi.createBulkLinkedData( entityTypeId, linkingEntitySetId, linkedData );
+            elasticsearchApi.createBulkLinkedData( entityTypeId, linkedData );
         }
     }
 
