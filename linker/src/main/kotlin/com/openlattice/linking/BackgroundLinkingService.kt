@@ -41,6 +41,7 @@ import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
+import java.sql.Connection
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -126,7 +127,7 @@ class BackgroundLinkingService
                 val cluster = clusters.entries.first()
                 val clusterId = cluster.key
 
-                lqs.lockClustersForUpdates(setOf(clusterId)).use {
+                lqs.lockClustersForUpdates(setOf(clusterId)).use { conn ->
                     val scoredCluster = cluster(candidate, cluster, ::completeLinkCluster)
                     if (scoredCluster.score <= MINIMUM_SCORE) {
                         logger.error(
@@ -139,7 +140,7 @@ class BackgroundLinkingService
 
                     val clusterUpdate = ClusterUpdate(scoredCluster.clusterId, candidate, scoredCluster.cluster)
 
-                    insertMatches(clusterUpdate)
+                    insertMatches(clusterUpdate, conn)
                 }
             } catch (ex: Exception) {
                 logger.error("An error occurred while performing linking.", ex)
@@ -176,7 +177,7 @@ class BackgroundLinkingService
             //No locks are required since any items that block to this element will be skipped.
             try {
                 val clusters = getClusters(dataKeys)
-                lqs.lockClustersForUpdates(clusters.keys).use {
+                lqs.lockClustersForUpdates(clusters.keys).use { conn ->
                     val maybeBestCluster = clusters
                             .asSequence()
                             .map { cluster -> cluster(candidate, cluster, ::completeLinkCluster) }
@@ -189,11 +190,10 @@ class BackgroundLinkingService
                         val block = candidate to mapOf(candidate to elem)
                         ClusterUpdate(clusterId, candidate, matcher.match(block).second)
                     } else {
-                        val bestCluster = maybeBestCluster!!
-                        ClusterUpdate(bestCluster.clusterId, candidate, bestCluster.cluster)
+                        ClusterUpdate(maybeBestCluster.clusterId, candidate, maybeBestCluster.cluster)
                     }
 
-                    insertMatches(clusterUpdate)
+                    insertMatches(clusterUpdate, conn)
                 }
 
             } catch (ex: Exception) {
@@ -249,8 +249,8 @@ class BackgroundLinkingService
         return lqs.getClusters(lqs.getIdsOfClustersContaining(dataKeys).toList())
     }
 
-    private fun insertMatches(clusterUpdate: ClusterUpdate) {
-        lqs.insertMatchScores(clusterUpdate.clusterId, clusterUpdate.scores)
+    private fun insertMatches(clusterUpdate: ClusterUpdate, conn: Connection) {
+        lqs.insertMatchScores(conn clusterUpdate.clusterId, clusterUpdate.scores)
         lqs.updateLinkingTable(clusterUpdate.clusterId, clusterUpdate.newMember)
         linkingLogService.createOrUpdateForLinks(
                 clusterUpdate.clusterId, //clusterUpdate.scores
