@@ -134,29 +134,15 @@ class PostgresEntityDataQueryService(
             linking: Boolean = false,
             adapter: (ResultSet) -> T
     ): Sequence<T> {
-        val propertyTypes = authorizedPropertyTypes.values.flatMap { it.values }.associateBy { it.id }
-        val entitySetIds = entityKeyIds.keys
-        val ids = entityKeyIds.values.flatMap { it.orElse(emptySet()) }.toSet()
-        val partitions = entityKeyIds.flatMap { (entitySetId, maybeEntityKeyIds) ->
-            maybeEntityKeyIds.map {
-                getPartitionsInfo(it, partitionManager.getEntitySetPartitionsInfo(entitySetId).partitions.toList())
-            }.orElse(emptyList())
-        }
-        val (sql, binders) = if (linking) {
-            buildPreparableFiltersClauseForLinkedEntities(propertyTypes, propertyTypeFilters)
-        } else {
-            buildPreparableFiltersSqlForEntities(propertyTypes, propertyTypeFilters)
-        }
-
-
-        return BasePostgresIterable(PreparedStatementHolderSupplier(hds, sql, FETCH_SIZE) { ps ->
-            (linkedSetOf(
-                    SqlBinder(SqlBindInfo(1, PostgresArrays.createUuidArray(ps.connection, entitySetIds)), ::doBind),
-                    // TODO with empty ids it won't return any rows
-                    SqlBinder(SqlBindInfo(2, PostgresArrays.createUuidArray(ps.connection, ids)), ::doBind),
-                    SqlBinder(SqlBindInfo(3, PostgresArrays.createIntArray(ps.connection, partitions)), ::doBind)
-            ) + binders).forEach { it.bind(ps) }
-        }, adapter).asSequence()
+        return getEntitySetIterable(
+                entityKeyIds,
+                authorizedPropertyTypes,
+                propertyTypeFilters,
+                metadataOptions,
+                version,
+                linking,
+                adapter
+        ).asSequence()
     }
 
     fun getEntitySetWithPropertyTypeIdsIterable(
