@@ -41,7 +41,6 @@ class BulkLinkedDataLambdasStreamSerializer(
 
     override fun write(kryo: Kryo, output: Output, data: BulkLinkedDataLambdas) {
         writeUUID(output, data.entityTypeId)
-        writeUUID(output, data.linkingEntitySetId)
 
         try {
             output.writeInt(data.entitiesByLinkingId.size)
@@ -57,7 +56,7 @@ class BulkLinkedDataLambdasStreamSerializer(
                 }
             }
         } catch (e: JsonProcessingException) {
-            logger.debug("Unable to serialize entity with for entity set: {}", data.linkingEntitySetId)
+            logger.debug("Unable to serialize entity with type: {}", data.entityTypeId)
         }
     }
 
