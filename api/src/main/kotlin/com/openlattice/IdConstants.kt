@@ -28,30 +28,34 @@ enum class IdConstants(val id: UUID) {
 
     /* Organizations */
 
-    OPENLATTICE_ORGANIZATION_ID(UUID(0, 0)),
-    ROOT_PRINCIPAL_ID(UUID(0, 1)),
-    GLOBAL_ORGANIZATION_ID(UUID(1, 0)),
+    GLOBAL_ORGANIZATION_ID(UUID(0, 0)),
+    OPENLATTICE_ORGANIZATION_ID(UUID(1, 0)),
+    ROOT_PRINCIPAL_ID(UUID(2, 0)),
 
 
     /* ElasticSearch */
 
-    LAST_WRITE(UUID(0, 10)),
-    ENTITY_SET_ID_KEY(UUID(1, 10)),
+    ENTITY_SET_ID_KEY_ID(UUID(0, 10)),
+    LAST_WRITE_KEY_ID(UUID(1, 10)),
 
 
     /* Postgres */
 
+    // misc
+    COUNT_ID(UUID(0, 20)),
+    ID_ID(UUID(1, 20)),
+
     // metadata
-    ENTITY_KEY_IDS_ID(UUID(0, 20)),
-    ENTITY_SET_IDS_ID(UUID(1, 20)),
-    LAST_INDEX_ID(UUID(2, 20)),
-    LAST_LINK_ID(UUID(3, 20)),
-    LAST_WRITE_ID(UUID(4, 20)),
-    VERSION_ID(UUID(5, 20)),
+    ENTITY_KEY_IDS_ID(UUID(2, 20)),
+    ENTITY_SET_IDS_ID(UUID(3, 20)),
+    LAST_INDEX_ID(UUID(4, 20)),
+    LAST_LINK_ID(UUID(5, 20)),
+    LAST_WRITE_ID(UUID(6, 20)),
+    VERSION_ID(UUID(7, 20)),
 
     // entity set ids
-    LINKING_PERSON_ENTITY_SET_ID(UUID(6, 20)),
-    CONTACT_INFO_ENTITY_SET_ID(UUID(7, 20)),
+    CONTACT_INFO_ENTITY_SET_ID(UUID(8, 20)),
+    LINKING_PERSON_ENTITY_SET_ID(UUID(9, 20)),
 
 
     /* Indexer */
@@ -60,11 +64,11 @@ enum class IdConstants(val id: UUID) {
 
 
     /* Linker */
+
     /**
      * Entity sets ids are assigned by calling [UUID.randomUUID] as a result we know that this can never be accidentally
      * assigned to any real entity set.
      */
-
     LINKING_ENTITY_SET_ID(UUID(0, 60))
 
 }
