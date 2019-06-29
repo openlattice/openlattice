@@ -42,19 +42,25 @@ import com.openlattice.linking.Blocker;
 import com.openlattice.linking.DataLoader;
 import com.openlattice.linking.EdmCachingDataLoader;
 import com.openlattice.linking.LinkingConfiguration;
+import com.openlattice.linking.LinkingLogService;
 import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.linking.Matcher;
 import com.openlattice.linking.PostgresLinkingFeedbackService;
+import com.openlattice.linking.PostgresLinkingLogService;
 import com.openlattice.linking.blocking.ElasticsearchBlocker;
 import com.openlattice.linking.controllers.RealtimeLinkingController;
 import com.openlattice.linking.graph.PostgresLinkingQueryService;
 import com.zaxxer.hikari.HikariDataSource;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 
 import javax.inject.Inject;
 import java.io.IOException;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 @Configuration
 @Import( { ByteBlobServicePod.class } )
@@ -156,7 +162,14 @@ public class LinkerPostConfigurationServicesPod {
                 lqs(),
                 postgresLinkingFeedbackQueryService(),
                 edm.getEntityTypeUuids( linkingConfiguration.getEntityTypes() ),
+                linkingLogService(),
                 linkingConfiguration );
+    }
+
+
+    @Bean
+    public LinkingLogService linkingLogService() {
+        return new PostgresLinkingLogService( hikariDataSource );
     }
 
     @Bean
