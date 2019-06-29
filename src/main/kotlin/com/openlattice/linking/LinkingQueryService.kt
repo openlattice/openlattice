@@ -41,6 +41,7 @@ interface LinkingQueryService {
      * @return The total number of stored elements.
      */
     fun insertMatchScores(
+            connection: Connection,
             clusterId: UUID,
             scores: Map<EntityDataKey, Map<EntityDataKey, Double>>): Int
 

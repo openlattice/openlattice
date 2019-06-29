@@ -223,10 +223,11 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQu
     }
 
     override fun insertMatchScores(
+            connection: Connection,
             clusterId: UUID,
             scores: Map<EntityDataKey, Map<EntityDataKey, Double>>
     ): Int {
-        hds.connection.use { conn ->
+        connection.use { conn ->
             conn.prepareStatement(INSERT_SQL).use {
                 val ps = it
                 scores.forEach {
