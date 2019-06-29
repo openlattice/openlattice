@@ -49,7 +49,7 @@ public class EntitySetData<T> implements Iterable<SetMultimap<T, Object>> {
             LinkedHashSet<String> columnTitles,
             Iterable<Map<T, Set<Object>>> entities ) {
         this.columnTitles = columnTitles;
-        this.columnTitles.add( EdmConstants.OPENLATTICE_ID_FQN.getFullQualifiedNameAsString() );
+        this.columnTitles.add( EdmConstants.ID_FQN.getFullQualifiedNameAsString() );
         this.entities = entities;
     }
 

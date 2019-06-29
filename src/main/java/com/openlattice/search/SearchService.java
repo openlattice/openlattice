@@ -622,7 +622,7 @@ public class SearchService {
 
         Map<UUID, Map<FullQualifiedName, Set<Object>>> entities = Maps.newHashMap();
         entitiesByEntitySetId.entries().forEach( entry -> entities
-                .put( UUID.fromString( entry.getValue().get( EdmConstants.OPENLATTICE_ID_FQN ).iterator()
+                .put( UUID.fromString( entry.getValue().get( EdmConstants.ID_FQN ).iterator()
                                 .next().toString() ),
                         entry.getValue() ) );
 

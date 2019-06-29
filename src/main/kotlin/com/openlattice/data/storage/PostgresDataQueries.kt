@@ -298,7 +298,7 @@ internal val upsertEntitiesSql = "UPDATE ${PostgresTable.ENTITY_KEY_IDS.name} SE
  * 2. partitions
  */
 internal val lockEntitiesSql = "SELECT 1 FROM ${PostgresTable.IDS.name} " +
-        "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ANY(?) " +
+        "WHERE ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ANY(?) " +
         "FOR UPDATE"
 
 
@@ -460,10 +460,11 @@ fun getDataColumnName(datatype: PostgresDatatype): String {
  * 3.  PARTITION
  * 4.  PROPERTY_TYPE_ID
  * 5.  HASH
- * 6.  VERSION,
- * 7.  VERSIONS
- * 8.  PARTITIONS_VERSION
- * 9. Value Column
+ * 6.  LAST_WRITE
+ * 7.  VERSION,
+ * 8.  VERSIONS
+ * 9.  PARTITIONS_VERSION
+ * 10. Value Column
  */
 fun upsertPropertyValueSql(propertyType: PropertyType): String {
     val insertColumn = getColumnDefinition(propertyType.postgresIndexType, propertyType.datatype)
@@ -473,13 +474,15 @@ fun upsertPropertyValueSql(propertyType: PropertyType): String {
             PARTITION,
             PROPERTY_TYPE_ID,
             HASH,
+            LAST_WRITE,
             VERSION,
             VERSIONS,
             PARTITIONS_VERSION
     ).joinToString(",") { it.name }
-    return "INSERT INTO ${DATA.name} ($metadataColumnsSql,${insertColumn.name}) VALUES (?,?,?,?,?,?,?,?,?) " +
+    return "INSERT INTO ${DATA.name} ($metadataColumnsSql,${insertColumn.name}) VALUES (?,?,?,?,?,now(),?,?,?,?) " +
             "ON CONFLICT (${PARTITION.name},${PROPERTY_TYPE_ID.name},${ID_VALUE.name}, ${HASH.name}) DO UPDATE " +
             "SET ${VERSIONS.name} = ${DATA.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
+            "${LAST_WRITE.name} = GREATEST(${DATA.name}.${LAST_WRITE.name},EXCLUDED.${LAST_WRITE.name}), " +
             "${PARTITIONS_VERSION.name} = EXCLUDED.${PARTITIONS_VERSION.name}, " +
             "${VERSION.name} = CASE WHEN abs(${DATA.name}.${VERSION.name}) < EXCLUDED.${VERSION.name} THEN EXCLUDED.${VERSION.name} " +
             "ELSE ${DATA.name}.${VERSION.name} END"

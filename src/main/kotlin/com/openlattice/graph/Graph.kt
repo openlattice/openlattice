@@ -757,16 +757,24 @@ private val EDGE_IDS_SQL = "${EDGE_ENTITY_KEY_ID.name} = ANY(?) AND ${EDGE_ENTIT
 /**
  * Loads edges where either the source, destination, or association matches a set of entityKeyIds from a specific entity set
  *
- * 1, 3, 5: entityKeyIds
- * 2, 4, 6: entitySetId
+ * 1. entityKeyIds
+ * 2. entitySetId
+ * 3. entityKeyIds
+ * 4. entitySetId
+ * 5. entityKeyIds
+ * 6. entitySetId
  */
 private val BULK_NEIGHBORHOOD_SQL = "SELECT * FROM ${E.name} WHERE ($SRC_IDS_SQL) OR ($DST_IDS_SQL) OR ($EDGE_IDS_SQL)"
 
 /**
  * Loads edges where either the source or destination matches an EntityDataKey
  *
- * 1, 3, 5: entityKeyId
- * 2, 4, 6: entitySetId
+ * 1. entityKeyId
+ * 2. entitySetId
+ * 3. entityKeyId
+ * 4. entitySetId
+ * 5. entityKeyId
+ * 6. entitySetId
  */
 private val NEIGHBORHOOD_SQL = "SELECT * FROM ${E.name} WHERE ($SRC_ID_SQL) OR ($DST_ID_SQL)"
 
