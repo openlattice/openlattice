@@ -23,6 +23,7 @@ package com.openlattice.linking
 
 import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Stopwatch
+import com.google.common.collect.Sets
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.hazelcast.aggregation.Aggregators
 import com.hazelcast.core.HazelcastInstance
@@ -67,6 +68,7 @@ class BackgroundLinkingService
         private val lqs: LinkingQueryService,
         private val linkingFeedbackService: PostgresLinkingFeedbackService,
         private val linkableTypes: Set<UUID>,
+        private val linkingLogService: LinkingLogService,
         private val configuration: LinkingConfiguration
 ) {
     companion object {
@@ -252,9 +254,17 @@ class BackgroundLinkingService
     }
 
     private fun insertMatches(clusterUpdate: ClusterUpdate, connection: Connection) {
-        lqs.insertMatchScores(connection, clusterUpdate.clusterId, clusterUpdate.scores)
-        lqs.updateLinkingLog(connection, clusterUpdate.clusterId, clusterUpdate.scores)
+        lqs.insertMatchScores(clusterUpdate.clusterId, clusterUpdate.scores)
         lqs.updateLinkingTable(clusterUpdate.clusterId, clusterUpdate.newMember)
+        linkingLogService.createOrUpdateForLinks(
+                clusterUpdate.clusterId, //clusterUpdate.scores
+                clusterUpdate.scores.flatMap { entry ->
+                    return@flatMap Sets.union(entry.value.keys, setOf(entry.key))
+                }.groupBy { edk -> edk.entitySetId
+                }.mapValues { entry ->
+                    Sets.newLinkedHashSet(entry.value.map { it.entityKeyId })
+                }
+        )
     }
 
     @Timed
