@@ -45,7 +45,7 @@ class EdmConstants {
         val LAST_INDEX_FQN = FullQualifiedName("openlattice", "@lastIndex")
 
         @JvmField
-        val LAST_LINK_FQN = FullQualifiedName("openlattice", "@lastIndex")
+        val LAST_LINK_FQN = FullQualifiedName("openlattice", "@lastLink")
 
         @JvmField
         val LAST_WRITE_FQN = FullQualifiedName("openlattice", "@lastWrite")
