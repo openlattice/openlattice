@@ -23,6 +23,7 @@ package com.openlattice.linking
 
 import com.google.common.collect.SetMultimap
 import com.openlattice.data.EntityDataKey
+import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PostgresIterable
 import java.util.*
 import java.util.stream.Stream
@@ -33,5 +34,5 @@ import java.util.stream.Stream
 interface DataLoader {
     fun getEntity(dataKey: EntityDataKey): Map<UUID, Set<Any>>
     fun getEntities(dataKeys: Set<EntityDataKey>): Map<EntityDataKey, Map<UUID, Set<Any>>>
-    fun getEntityStream(entitySetId: UUID, entityKeyIds: Set<UUID>): Map<UUID, Map<UUID, Set<Any>>>
+    fun getEntityStream(entitySetId: UUID, entityKeyIds: Set<UUID>): BasePostgresIterable<Pair<UUID, Map<UUID, Set<Any>>>>
 }

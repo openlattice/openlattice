@@ -123,6 +123,11 @@ public class LinkerServicesPod {
     private MetricRegistry metricRegistry;
 
     @Bean
+    public PartitionManager partitionManager() {
+        return new PartitionManager( hazelcastInstance, hikariDataSource );
+    }
+
+    @Bean
     public ConductorElasticsearchApi elasticsearchApi() throws IOException {
         return new ConductorElasticsearchImpl( linkingConfiguration.getSearchConfiguration() );
     }
