@@ -27,14 +27,12 @@ import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.ids.PostgresEntityKeyIdService;
-import com.openlattice.data.storage.*;
 import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.data.storage.ByteBlobDataManager;
 import com.openlattice.data.storage.EntityDatastore;
 import com.openlattice.data.storage.IndexingMetadataManager;
 import com.openlattice.data.storage.PostgresEntityDataQueryService;
 import com.openlattice.data.storage.PostgresEntityDatastore;
-import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.datastore.pods.ByteBlobServicePod;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.ids.HazelcastIdGenerationService;
@@ -140,12 +138,14 @@ public class IndexerPostConfigurationServicesPod {
 
     @Bean
     public BackgroundLinkingIndexingService backgroundLinkingIndexingService() {
-        return new BackgroundLinkingIndexingService( hikariDataSource,
-                entityDatastore(),
+        return new BackgroundLinkingIndexingService(
+                hazelcastInstance,
+                executor,
+                hikariDataSource,
                 elasticsearchApi,
                 indexingMetadataManager(),
-                indexerConfiguration,
-                hazelcastInstance );
+                entityDatastore(),
+                indexerConfiguration );
     }
 
     @Bean
