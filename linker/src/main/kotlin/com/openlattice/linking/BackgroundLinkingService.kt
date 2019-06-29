@@ -250,7 +250,7 @@ class BackgroundLinkingService
     }
 
     private fun insertMatches(clusterUpdate: ClusterUpdate, conn: Connection) {
-        lqs.insertMatchScores(conn clusterUpdate.clusterId, clusterUpdate.scores)
+        lqs.insertMatchScores(conn, clusterUpdate.clusterId, clusterUpdate.scores)
         lqs.updateLinkingTable(clusterUpdate.clusterId, clusterUpdate.newMember)
         linkingLogService.createOrUpdateForLinks(
                 clusterUpdate.clusterId, //clusterUpdate.scores
