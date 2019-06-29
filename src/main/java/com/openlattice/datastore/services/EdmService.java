@@ -154,6 +154,7 @@ public class EdmService implements EdmManager {
     private final PostgresEdmManager                edmManager;
     private final PostgresTypeManager               entityTypeManager;
     private final HazelcastSchemaManager            schemaManager;
+    private final PartitionManager                  partitionManager;
 
     private final HazelcastInstance            hazelcastInstance;
     private final HikariDataSource             hds;
@@ -198,6 +199,7 @@ public class EdmService implements EdmManager {
                 authorizations,
                 hazelcastInstance
         );
+        this.partitionManager = partitionManager;
         this.assembler = assembler;
     }
 
@@ -497,6 +499,10 @@ public class EdmService implements EdmManager {
     public void createEntitySet( Principal principal, EntitySet entitySet ) {
         EntityType entityType = entityTypes.get( entitySet.getEntityTypeId() );
         ensureValidEntitySet( entitySet );
+
+        if ( entitySet.getPartitions().isEmpty() ) {
+            partitionManager.allocatePartitions( entitySet, partitionManager.getPartitionCount() );
+        }
 
         if ( entityType.getCategory().equals( SecurableObjectType.AssociationType ) ) {
             entitySet.addFlag( EntitySetFlag.ASSOCIATION );

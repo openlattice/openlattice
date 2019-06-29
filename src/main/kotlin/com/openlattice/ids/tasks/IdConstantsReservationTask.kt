@@ -43,7 +43,7 @@ class IdConstantsReservationTask : HazelcastInitializationTask<IdConstantsReserv
     }
 
     override fun after(): Set<Class<out HazelcastInitializationTask<*>>> {
-        return setOf(IdConstantsReservationTask::class.java)
+        return setOf(IdGenerationCatchUpTask::class.java)
     }
 
     override fun getName(): String {

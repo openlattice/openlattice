@@ -238,7 +238,7 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQu
                         ps.setObject(2, srcEntityDataKey.entitySetId)
                         ps.setObject(3, srcEntityDataKey.entityKeyId)
                         ps.setObject(4, dstEntityDataKey.entitySetId)
-                       ps.setObject(5, dstEntityDataKey.entityKeyId)
+                        ps.setObject(5, dstEntityDataKey.entityKeyId)
                         ps.setObject(6, score)
                         ps.addBatch()
                     }
