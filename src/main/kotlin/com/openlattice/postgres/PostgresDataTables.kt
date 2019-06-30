@@ -48,7 +48,6 @@ class PostgresDataTables {
                 HASH,
                 LAST_WRITE,
                 LAST_PROPAGATE,
-                LAST_MIGRATE,
                 VERSION,
                 VERSIONS,
                 PARTITIONS_VERSION
