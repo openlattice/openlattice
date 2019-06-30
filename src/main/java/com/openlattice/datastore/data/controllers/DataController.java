@@ -1110,8 +1110,8 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                 .collect( Collectors.toSet() );
     }
 
-    private static Set<UUID> requiredReplacementPropertyTypes( Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Object>>> entities ) {
-        return entities.values().stream().map( SetMultimap::keySet ).flatMap( Set::stream )
+    private static Set<UUID> requiredReplacementPropertyTypes(Map<UUID, Map<UUID, Set<Map<ByteBuffer, Object>>>> entities ) {
+        return entities.values().stream().map( Map::keySet ).flatMap( Set::stream )
                 .collect( Collectors.toSet() );
     }
 
