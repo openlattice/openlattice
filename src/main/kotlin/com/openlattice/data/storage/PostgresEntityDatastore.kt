@@ -179,7 +179,7 @@ class PostgresEntityDatastore(
     @Timed
     override fun replacePropertiesInEntities(
             entitySetId: UUID,
-            replacementProperties: Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Any>>>,
+            replacementProperties: Map<UUID, Map<UUID, Set<Map<ByteBuffer, Any>>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): WriteEvent {
 
