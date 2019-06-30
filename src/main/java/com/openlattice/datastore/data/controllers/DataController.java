@@ -281,7 +281,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     @Timed
     public Integer replaceEntityProperties(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
-            @RequestBody Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Object>>> entities ) {
+            @RequestBody Map<UUID, Map<UUID, Set<Map<ByteBuffer, Object>>>> entities ) {
         ensureReadAccess( new AclKey( entitySetId ) );
 
         final Set<UUID> requiredPropertyTypes = requiredReplacementPropertyTypes( entities );
