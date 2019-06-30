@@ -748,11 +748,13 @@ private val NEIGHBORHOOD_OF_ENTITY_SET_SQL = "SELECT * FROM ${E.name} WHERE " +
 
 private val SRC_ID_SQL = "${SRC_ENTITY_KEY_ID.name} = ? AND ${SRC_ENTITY_SET_ID.name} = ? AND ${ID_TYPE.name} = ${IdType.SRC.ordinal}"
 private val DST_ID_SQL = "${DST_ENTITY_KEY_ID.name} = ? AND ${DST_ENTITY_SET_ID.name} = ? AND ${ID_TYPE.name} = ${IdType.DST.ordinal}"
-private val EDGE_ID_SQL = "${EDGE_ENTITY_KEY_ID.name} = ? AND ${EDGE_ENTITY_SET_ID.name} = ? AND ${ID_TYPE.name} = ${IdType.EDGE.ordinal}"
 
 private val SRC_IDS_SQL = "${SRC_ENTITY_KEY_ID.name} = ANY(?) AND ${SRC_ENTITY_SET_ID.name} = ? AND ${ID_TYPE.name} = ${IdType.SRC.ordinal}"
 private val DST_IDS_SQL = "${DST_ENTITY_KEY_ID.name} = ANY(?) AND ${DST_ENTITY_SET_ID.name} = ? AND ${ID_TYPE.name} = ${IdType.DST.ordinal}"
 private val EDGE_IDS_SQL = "${EDGE_ENTITY_KEY_ID.name} = ANY(?) AND ${EDGE_ENTITY_SET_ID.name} = ? AND ${ID_TYPE.name} = ${IdType.EDGE.ordinal}"
+
+private val SRC_IDS_AND_ENTITY_SETS_SQL = "${SRC_ENTITY_KEY_ID.name} = ANY(?) AND ${SRC_ENTITY_SET_ID.name} = ANY(?) AND ${ID_TYPE.name} = ${IdType.SRC.ordinal}"
+private val DST_IDS_AND_ENTITY_SETS_SQL = "${DST_ENTITY_KEY_ID.name} = ANY(?) AND ${DST_ENTITY_SET_ID.name} = ANY(?) AND ${ID_TYPE.name} = ${IdType.DST.ordinal}"
 
 /**
  * Loads edges where either the source, destination, or association matches a set of entityKeyIds from a specific entity set
@@ -781,9 +783,9 @@ private val NEIGHBORHOOD_SQL = "SELECT * FROM ${E.name} WHERE ($SRC_ID_SQL) OR (
 internal fun getFilteredNeighborhoodSql(filter: EntityNeighborsFilter, multipleEntitySetIds: Boolean): String {
 
     var (srcSql, dstSql) = if (multipleEntitySetIds) {
-        SRC_IDS_SQL to DST_IDS_SQL
+        SRC_IDS_AND_ENTITY_SETS_SQL to DST_IDS_AND_ENTITY_SETS_SQL
     } else {
-        SRC_ID_SQL to DST_ID_SQL
+        SRC_IDS_SQL to DST_IDS_SQL
     }
 
     if (filter.dstEntitySetIds.isPresent) {

@@ -251,38 +251,11 @@ public final class ResultSetAdapters {
     }
 
     public static DataEdgeKey edgeKey( ResultSet rs ) throws SQLException {
-        final int typeId = rs.getInt( ID_TYPE.getName() );
-
-        if ( typeId >= ID_TYPES.length ) {
-            throw new IllegalStateException( "Type " + typeId + " is not recognized." );
-        }
-
-        final IdType type = ID_TYPES[ typeId ];
-        final UUID srcEntityKeyId;
-        final UUID dstEntityKeyId;
-        final UUID edgeEntityKeyId;
-        switch ( type ) {
-            case SRC:
-                srcEntityKeyId = rs.getObject( ID_VALUE.getName(), UUID.class );
-                dstEntityKeyId = rs.getObject( EDGE_COMP_1.getName(), UUID.class );
-                edgeEntityKeyId = rs.getObject( EDGE_COMP_2.getName(), UUID.class );
-                break;
-            case DST:
-                srcEntityKeyId = rs.getObject( EDGE_COMP_2.getName(), UUID.class );
-                dstEntityKeyId = rs.getObject( ID_VALUE.getName(), UUID.class );
-                edgeEntityKeyId = rs.getObject( EDGE_COMP_1.getName(), UUID.class );
-                break;
-            case EDGE:
-                srcEntityKeyId = rs.getObject( EDGE_COMP_1.getName(), UUID.class );
-                dstEntityKeyId = rs.getObject( EDGE_COMP_2.getName(), UUID.class );
-                edgeEntityKeyId = rs.getObject( ID_VALUE.getName(), UUID.class );
-                break;
-            default:
-                throw new IllegalStateException( "Type " + type.name() + " is not recognized." );
-        }
-
+        final UUID srcEntityKeyId = rs.getObject( SRC_ENTITY_KEY_ID.getName(), UUID.class );
         final UUID srcEntitySetId = rs.getObject( SRC_ENTITY_SET_ID.getName(), UUID.class );
+        final UUID dstEntityKeyId = rs.getObject( DST_ENTITY_KEY_ID.getName(), UUID.class );
         final UUID dstEntitySetId = rs.getObject( DST_ENTITY_SET_ID.getName(), UUID.class );
+        final UUID edgeEntityKeyId = rs.getObject( EDGE_ENTITY_KEY_ID.getName(), UUID.class );
         final UUID edgeEntitySetId = rs.getObject( EDGE_ENTITY_SET_ID.getName(), UUID.class );
 
         return new DataEdgeKey( new EntityDataKey( srcEntitySetId, srcEntityKeyId ),
