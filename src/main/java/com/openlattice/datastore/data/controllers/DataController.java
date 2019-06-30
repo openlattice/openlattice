@@ -1214,7 +1214,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     }
 
     private static Set<UUID> requiredReplacementPropertyTypes( Map<UUID, Map<UUID, Set<Map<ByteBuffer, Object>>>> entities ) {
-        return entities.values().stream().flatMap( m -> m.keySet().stream();
+        return entities.values().stream().flatMap( m -> m.keySet().stream() ).collect( Collectors.toSet() );
     }
 
     private static OffsetDateTime getDateTimeFromLong( long epochTime ) {
