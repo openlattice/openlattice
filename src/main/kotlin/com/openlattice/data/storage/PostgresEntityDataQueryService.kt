@@ -700,7 +700,7 @@ class PostgresEntityDataQueryService(
             ps.setObject(4, entitySetId)
             ps.setObject(5, entityKeyIdsArr)
             ps.setObject(6, partitionsArr)
-            ps.setObject(5, propertyTypeIdsArr)
+            ps.setObject(7, propertyTypeIdsArr)
             ps.executeUpdate()
         }
 
