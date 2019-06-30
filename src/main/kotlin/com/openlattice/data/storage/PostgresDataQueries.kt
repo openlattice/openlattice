@@ -362,8 +362,8 @@ internal val updateVersionsForEntitySet = "UPDATE ${PostgresTable.ENTITY_KEY_IDS
  * 4. entity set id
  */
 internal val updateVersionsForPropertiesInEntitySet = "UPDATE ${DATA.name} SET versions = versions || ARRAY[?], " +
-        "${VERSION.name} = CASE WHEN abs(${PostgresTable.ENTITY_KEY_IDS.name}.${VERSION.name}) < ? THEN ? " +
-        "ELSE ${PostgresTable.ENTITY_KEY_IDS.name}.${VERSION.name} END " +
+        "${VERSION.name} = CASE WHEN abs(${DATA.name}.${VERSION.name}) < ? THEN ? " +
+        "ELSE ${DATA.name}.${VERSION.name} END " +
         "WHERE ${ENTITY_SET_ID.name} = ? "
 
 
