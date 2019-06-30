@@ -27,7 +27,9 @@ class PostgresDataTables {
                 EdmPrimitiveTypeKind.DateTimeOffset,
                 EdmPrimitiveTypeKind.Double,
                 EdmPrimitiveTypeKind.Boolean,
-                EdmPrimitiveTypeKind.Binary
+                EdmPrimitiveTypeKind.Binary,
+                EdmPrimitiveTypeKind.Guid,
+                EdmPrimitiveTypeKind.TimeOfDay
         )
 
         //The associate is collapsing edm primitive type kinds such that only 1 is preserved for converted type.
