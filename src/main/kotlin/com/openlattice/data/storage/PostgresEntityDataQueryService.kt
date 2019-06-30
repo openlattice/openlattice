@@ -249,12 +249,12 @@ class PostgresEntityDataQueryService(
      *
      * @return A write event summarizing the results of performing this operation.
      */
-    fun upsertEntities(
+    private fun upsertEntities(
             connection: Connection,
             entitySetId: UUID,
             entities: Map<UUID, Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>,
-            awsPassthrough: Boolean
+            awsPassthrough: Boolean = false
     ): WriteEvent {
         check(!connection.autoCommit) { "Connection must not be in autocommit mode." }
         val version = System.currentTimeMillis()
@@ -399,8 +399,11 @@ class PostgresEntityDataQueryService(
             entities: Map<UUID, Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): WriteEvent {
-
-
+        return hds.connection.use { connection ->
+            connection.autoCommit = false
+            tombstone(connection,entitySetId, entities.keys, authorizedPropertyTypes.values)
+            return upsertEntities(connection, entitySetId, entities, authorizedPropertyTypes)
+        }
     }
 
     fun partialReplaceEntities(
@@ -410,6 +413,7 @@ class PostgresEntityDataQueryService(
     ): WriteEvent {
         //Only tombstone properties being replaced.
         return hds.connection.use { connection ->
+            connection.autoCommit = false
             entities.forEach { (entityKeyId, entity) ->
                 //Implied access enforcement as it will raise exception if lacking permission
                 tombstone(
@@ -419,7 +423,7 @@ class PostgresEntityDataQueryService(
                         entity.keys.map { authorizedPropertyTypes.getValue(it) }.toSet()
                 )
             }
-            upsertEntities(entitySetId, entities, authorizedPropertyTypes)
+            upsertEntities(connection, entitySetId, entities, authorizedPropertyTypes)
         }
     }
 
