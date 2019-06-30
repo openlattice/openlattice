@@ -10,9 +10,7 @@ import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresDataTables.Companion.getColumnDefinition
 import com.openlattice.postgres.PostgresTable.DATA
-import java.lang.IllegalArgumentException
 import java.sql.PreparedStatement
-
 import java.util.*
 
 /**
@@ -91,7 +89,9 @@ fun buildPreparableFiltersSqlForEntities(
     val filtersClauses = buildPreparableFiltersClause(startIndex, propertyTypes, propertyTypeFilters)
     //TODO: I'm pretty sure if propertyTypeFilters are entity this won't work properly.
     val filtersClause = filtersClauses.first
-    val innerSql = selectEntitiesGroupedByIdAndPropertyTypeId(idsPresent = idsPresent, partitionsPresent = partitionsPresent) +
+    val innerSql = selectEntitiesGroupedByIdAndPropertyTypeId(
+            idsPresent = idsPresent, partitionsPresent = partitionsPresent
+    ) +
             " ${if (filtersClause.isNotEmpty()) "AND ${filtersClauses.first} " else ""}" +
             GROUP_BY_ESID_EKID_PART_PTID
     val sql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},$jsonValueColumnsSql FROM ($innerSql) entities " +
@@ -208,7 +208,8 @@ internal val GROUP_BY_ID = "GROUP BY (${ID_VALUE.name}, ${PARTITION.name})"
 internal fun selectEntitiesGroupedByIdAndPropertyTypeId(
         idsPresent: Boolean = true,
         partitionsPresent: Boolean = true,
-        entitySetsPresent: Boolean = true): String {
+        entitySetsPresent: Boolean = true
+): String {
 
     val entitySetClause = if (entitySetsPresent) "${ENTITY_SET_ID.name} = ANY(?)" else ""
     val idsClause = if (idsPresent) "${ID_VALUE.name} = ANY(?)" else ""
@@ -351,7 +352,7 @@ internal val updateVersionsForEntitySet = "UPDATE ${PostgresTable.ENTITY_KEY_IDS
         "WHERE ${ENTITY_SET_ID.name} = ? "
 
 /**
- * Preparable SQL that upserts a version for all properties in a given entity set in [PostgresTable.DATA]
+ * Preparable SQL that updates a version for all properties in a given entity set in [PostgresTable.DATA]
  *
  * The following bind order is expected:
  *
@@ -396,7 +397,7 @@ internal val updateVersionsForEntitiesInEntitySet = "$updateVersionsForEntitySet
 internal val updateVersionsForPropertyTypesInEntitySet = "$updateVersionsForPropertiesInEntitySet AND ${PROPERTY_TYPE_ID.name} = ANY(?)"
 
 /**
- * Preparable SQL thatupserts a version for all properties in a given entity set in [PostgresTable.DATA]
+ * Preparable SQL that updates a version for all properties in a given entity set in [PostgresTable.DATA]
  *
  * The following bind order is expected:
  *
@@ -410,6 +411,7 @@ internal val updateVersionsForPropertyTypesInEntitySet = "$updateVersionsForProp
  */
 internal val updateVersionsForPropertiesInEntitiesInEntitySet = "$updateVersionsForPropertiesInEntitySet AND ${ID_VALUE.name} = ANY(?) " +
         "AND PARTITION = ANY(?) AND ${PARTITIONS_VERSION.name} = ? "
+
 /**
  * Preparable SQL thatpserts a version for all properties in a given entity set in [PostgresTable.DATA]
  *
@@ -425,6 +427,25 @@ internal val updateVersionsForPropertiesInEntitiesInEntitySet = "$updateVersions
  * 8. property type ids
  */
 internal val updateVersionsForPropertyTypesInEntitiesInEntitySet = "$updateVersionsForPropertiesInEntitiesInEntitySet AND ${PROPERTY_TYPE_ID.name} = ANY(?)"
+
+/**
+ * Preparable SQL updates a version for all property values in a given entity set in [PostgresTable.DATA]
+ *
+ * The following bind order is expected:
+ *
+ * 1. version
+ * 2. version
+ * 3. version
+ * 4. entity set id
+ * 5. entity key ids
+ * 6. partition
+ * 7. partition version
+ * 8. property type id
+ * 9. value
+ */
+internal val updateVersionsForPropertyValuesInEntitiesInEntitySet = "$updateVersionsForPropertiesInEntitySet AND ${ID_VALUE.name} = ANY(?) " +
+        "AND PARTITION = ANY(?) AND ${PARTITIONS_VERSION.name} = ? ${PROPERTY_TYPE_ID.name} = ? AND ${HASH.name} = ?"
+
 
 /**
  * Selects a text properties from entity sets with the following bind order:
@@ -477,6 +498,7 @@ fun getPartitionsInfoMap(entityKeyIds: Set<UUID>, partitions: List<Int>): Map<UU
 fun getDataColumnName(datatype: PostgresDatatype): String {
     return "v_${datatype.name}"
 }
+
 
 /**
  * This function generates preparable sql with the following bind order:
