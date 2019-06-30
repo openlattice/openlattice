@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.openlattice.data.Property
 import com.openlattice.data.storage.ByteBlobDataManager
+import com.openlattice.edm.EdmConstants.Companion.ID_FQN
 import com.openlattice.edm.PostgresEdmTypeConverter
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.ResultSetAdapters.entitySetId
@@ -105,7 +106,7 @@ fun getEntityPropertiesByPropertyTypeId3(
     val id = id(rs)
     val entitySetId = entitySetId(rs)
     val propertyTypes = authorizedPropertyTypes.getValue( entitySetId )
-    return id to propertyTypes
+    val propertyValues = propertyTypes
             .map { PostgresEdmTypeConverter.map(it.value.datatype) }
             .mapNotNull { datatype ->
                 rs.getString("v_$datatype")
@@ -116,6 +117,8 @@ fun getEntityPropertiesByPropertyTypeId3(
                 acc.putAll(mutableMap)
                 return@reduce acc
             }
+    propertyValues[ID_FQN] = mutableSetOf(id)
+    return id to propertyValues
 
 }
 
