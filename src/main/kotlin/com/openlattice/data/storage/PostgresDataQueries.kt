@@ -56,12 +56,15 @@ val jsonValueColumnsSql = PostgresDataTables.dataColumns.entries
 fun buildPreparableFiltersClauseForLinkedEntities(
         startIndex: Int,
         propertyTypes: Map<UUID, PropertyType>,
-        propertyTypeFilters: Map<UUID, Set<Filter>>
+        propertyTypeFilters: Map<UUID, Set<Filter>>,
+        idsPresent: Boolean,
+        partitionsPresent: Boolean
 ): Pair<String, Set<SqlBinder>> {
     val filtersClauses = buildPreparableFiltersClause(startIndex, propertyTypes, propertyTypeFilters)
-    val sql = selectEntitiesGroupedByIdAndPropertyTypeId()
-    "AND ${ORIGIN_ID.name} IS NOT NULL AND ${VERSION.name} > 0" +
-            "AND ${filtersClauses.first} " +
+    val filtersClause = filtersClauses.first
+    val sql = selectEntitiesGroupedByIdAndPropertyTypeId( idsPresent = idsPresent, partitionsPresent = partitionsPresent)
+    " AND ${ORIGIN_ID.name} IS NOT NULL AND ${VERSION.name} > 0" +
+            " ${if (filtersClause.isNotEmpty()) "AND $filtersClause " else ""}" +
             "GROUP BY (${ENTITY_SET_ID.name},${LINKING_ID.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
 
     return sql to filtersClauses.second
@@ -92,7 +95,7 @@ fun buildPreparableFiltersSqlForEntities(
     val innerSql = selectEntitiesGroupedByIdAndPropertyTypeId(
             idsPresent = idsPresent, partitionsPresent = partitionsPresent
     ) +
-            " ${if (filtersClause.isNotEmpty()) "AND ${filtersClauses.first} " else ""}" +
+            " ${if (filtersClause.isNotEmpty()) "AND $filtersClause " else ""}" +
             GROUP_BY_ESID_EKID_PART_PTID
     val sql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},$jsonValueColumnsSql FROM ($innerSql) entities " +
             GROUP_BY_ESID_EKID_PART
