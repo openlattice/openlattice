@@ -1,5 +1,6 @@
 package com.openlattice.linking
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresColumnDefinition
 import com.openlattice.postgres.PostgresTable.LINKING_LOG
@@ -8,58 +9,55 @@ import java.sql.Connection
 import java.sql.PreparedStatement
 import java.util.*
 
-class PostgresLinkingLogService( val hds: HikariDataSource ) : LinkingLogService {
+class PostgresLinkingLogService(
+        val hds: HikariDataSource,
+        val mapper: ObjectMapper
+) : LinkingLogService {
 
-    override fun createOrUpdateForLinks(linkingId: UUID, linkedEntities: Map<UUID, Set<UUID>>) {
-
+    override fun logLinkCreated(linkingId: UUID, linkedEntities: Map<UUID, Set<UUID>>) {
         safePrepStatementExec(INSERT_LOG_SQL) { ps, conn  ->
-            // edk -> esid -> List<ekid> -> PGArray
-            linkedEntities.forEach {( esid, ekids ) ->
-                ekids.forEach {ekid ->
-                    ps.setObject(1, linkingId)
-                    ps.setObject(2, esid)
-                    ps.setObject(3, ekid)
-                    ps.setLong(4, System.currentTimeMillis())
-                    ps.addBatch()
-                }
-            }
-        }
-    }
-
-    override fun clearLink(linkingId: UUID, linkedEntities: Map<UUID, Set<UUID>>) {
-            safePrepStatementExec(INSERT_LOG_SQL) { ps, conn ->
-            // edk -> esid -> List<ekid> -> PGArray
-            linkedEntities.forEach { (esid, ekids) ->
-                ekids.forEach { ekid ->
-                    ps.setObject(1, linkingId)
-                    ps.setObject(2, esid)
-                    ps.setObject(3, ekid)
-                    ps.setLong(4, System.currentTimeMillis() * -1)
-                    ps.addBatch()
-                }
-            }
-        }
-    }
-
-    override fun deleteLink(linkingId: UUID, entitySetId: UUID ) {
-        safePrepStatementExec(DELETE_LOG_SQL) { ps, conn ->
             ps.setObject(1, linkingId)
-            ps.setObject(2, entitySetId)
+            ps.setString(2, mapper.writeValueAsString(linkedEntities) )
+            ps.setLong(3, System.currentTimeMillis())
         }
     }
 
-    override fun deleteEntitiesFromLink(linkingId: UUID, entitySetIdToEntityKeyIds: Map<UUID, Set<UUID>>) {
-        safePrepStatementExec(DELETE_LOG_SQL) { ps, conn ->
-            entitySetIdToEntityKeyIds.forEach { ( esid, ekids ) ->
-                ekids.forEach { ekid ->
+    override fun logEntitiesAddedToLink(linkingId: UUID, linkedEntities: Map<UUID, Set<UUID>>) {
+        linkedEntities.forEach { esid, ekids ->
+            ekids.forEach { ekid ->
+                safePrepStatementExec(ADD_LINK_SQL) { ps, conn  ->
                     ps.setObject(1, linkingId)
-                    ps.setObject(2, esid)
-                    ps.setObject(3, ekid)
+                    ps.setObject(2, linkingId)
+                    ps.setObject(3, esid)
+                    ps.setObject(4, esid)
+                    ps.setObject(5, ekid)
+                    ps.setLong(6, System.currentTimeMillis())
+                    ps.setObject(7, linkingId)
                     ps.addBatch()
                 }
             }
         }
     }
+
+    override fun logEntitiesRemovedFromLink(linkingId: UUID, linkedEntities: Map<UUID, Set<UUID>>) {
+        linkedEntities.forEach { esid, ekids ->
+            ekids.forEach { ekid ->
+                safePrepStatementExec(REMOVE_ENTITY_SQL) { ps, conn ->
+                    ps.setObject(1, linkingId)
+                    ps.setObject(2, "$esid,$ekid")
+                    ps.setObject(3, linkingId)
+                    ps.addBatch()
+                }
+            }
+        }
+    }
+
+    override fun readLatestLinkLog(linkingId: UUID) {
+        safePrepStatementExec(READ_LATEST_LINKED_SQL) { ps, conn ->
+            ps.setObject(1, linkingId)
+        }
+    }
+
 
     private fun safePrepStatementExec(prepStatementSql: String, bindFunc: (PreparedStatement, Connection) -> Unit ) {
         hds.connection.use { conn ->
@@ -73,11 +71,29 @@ class PostgresLinkingLogService( val hds: HikariDataSource ) : LinkingLogService
 
 private val LOG_COLUMNS = LINKING_LOG.columns.joinToString(",", transform = PostgresColumnDefinition::getName)
 
-private val INSERT_LOG_SQL = "INSERT INTO ${LINKING_LOG.name} ($LOG_COLUMNS) VALUES (?,?,?,?)"
+private val INSERT_LOG_SQL = "INSERT INTO ${LINKING_LOG.name} ($LOG_COLUMNS) VALUES (?,?::jsonb,?)"
 
-private val DELETE_LOG_SQL = "DELETE FROM ${LINKING_LOG.name} WHERE ${LINKING_ID.name} = ? AND ${ENTITY_SET_ID.name} = ?"
+// Read latest version of a link
+private val READ_LATEST_LINKED_SQL = "SELECT ${ID_MAP.name} FROM ${LINKING_LOG.name} WHERE ${LINKING_ID.name} = ? ORDER BY ${VERSION.name} LIMIT 1"
 
-private val DELETE_ENTITIES_SQL = "DELETE FROM ${LINKING_LOG.name} " +
-        "WHERE ${LINKING_ID.name} = ? " +
-        "AND ${ENTITY_SET_ID.name} = ? " +
-        "AND ${ENTITY_ID.name} = ?"
+// Add a link. Grab previous value from a temp table
+private val ADD_LINK_SQL = "WITH old_json as " +
+        "( SELECT ${ID_MAP.name} as value FROM ${LINKING_LOG.name} WHERE ${LINKING_ID.name} = ? ORDER BY ${VERSION.name} LIMIT 1 )" +
+        "UPDATE ${LINKING_LOG.name} " +
+        "SET ${LINKING_ID.name} = ?" +
+        "${ID_MAP.name} = jsonb_set( old_json.value, '{?}', ${ID_MAP.name}->'?' || '?' )," +
+        "${VERSION.name} = ?" +
+        "FROM old_json" +
+        "WHERE ${LINKING_ID.name} = ?"
+
+// Delete Entity
+private val REMOVE_ENTITY_SQL= "UPDATE ${LINKING_LOG.name} " +
+        "SET ${ID_MAP.name} = ( $READ_LATEST_LINKED_SQL  #- '{?}')" +
+        "WHERE ${LINKING_ID.name} = ?"
+
+// one by one in place array append
+//private val IN_PLACE_UPDATE_JSON_SQL = "UPDATE ${LINKING_LOG.name} " +
+//        "SET ${ID_MAP.name} = jsonb_set(${ID_MAP.name}, '{?}', ${ID_MAP.name}->'?' || '?')," +
+//        " ${VERSION.name} = ?" +
+//        "WHERE ${LINKING_ID.name} = ?"
+
