@@ -24,17 +24,15 @@ class PostgresLinkingLogService(
 
     override fun logEntitiesAddedToLink(linkingId: UUID, linkedEntities: Map<UUID, Set<UUID>>) {
         linkedEntities.forEach { esid, ekids ->
-            ekids.forEach { ekid ->
-                safePrepStatementExec(ADD_LINK_SQL) { ps, conn  ->
-                    ps.setObject(1, linkingId)
-                    ps.setObject(2, linkingId)
-                    ps.setObject(3, esid)
-                    ps.setObject(4, esid)
-                    ps.setObject(5, ekid)
-                    ps.setLong(6, System.currentTimeMillis())
-                    ps.setObject(7, linkingId)
-                    ps.addBatch()
-                }
+            safePrepStatementExec(ADD_LINK_SQL) { ps, conn  ->
+                ps.setObject(1, linkingId)
+                ps.setObject(2, linkingId)
+                ps.setObject(3, esid)
+                ps.setObject(4, esid)
+                ps.setObject(5, mapper.writeValueAsString(ekids))
+                ps.setLong(6, System.currentTimeMillis())
+                ps.setObject(7, linkingId)
+                ps.addBatch()
             }
         }
     }
@@ -81,7 +79,7 @@ private val ADD_LINK_SQL = "WITH old_json as " +
         "( SELECT ${ID_MAP.name} as value FROM ${LINKING_LOG.name} WHERE ${LINKING_ID.name} = ? ORDER BY ${VERSION.name} LIMIT 1 )" +
         "UPDATE ${LINKING_LOG.name} " +
         "SET ${LINKING_ID.name} = ?" +
-        "${ID_MAP.name} = jsonb_set( old_json.value, '{?}', ${ID_MAP.name}->'?' || '?' )," +
+        "${ID_MAP.name} = jsonb_set( old_json.value, '{?}', ${ID_MAP.name}->'?' || '?'::jsonb )," +
         "${VERSION.name} = ?" +
         "FROM old_json" +
         "WHERE ${LINKING_ID.name} = ?"
