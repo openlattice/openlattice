@@ -113,6 +113,7 @@ public final class SerializationConstants {
     public static final String ENTITY_TYPE_ID                   = "entityTypeId";
     public static final String ENTITY_TYPE_IDS_FIELD            = "entityTypeIds";
     public static final String ENUM_VALUES                      = "enumValues";
+    public static final String EVENT_TYPE                       = "auditEventType";
     public static final String EXACT                            = "exact";
     public static final String EXACT_SEARCH_FIELDS              = "exactSearchFields";
     public static final String EXPIRATION                       = "expiration";
@@ -172,6 +173,7 @@ public final class SerializationConstants {
     public static final String NEIGHBOR_PROPERTY_TYPES          = "neighborPropertyTypes";
     public static final String NEIGHBOR_TYPE_ID                 = "neighborTypeId";
     public static final String NUM_HITS                         = "numHits";
+    public static final String OPERATION_ID                     = "operationId";
     public static final String ORGANIZATION                     = "organization";
     public static final String ORGANIZATION_ID                  = "organizationId";
     public static final String ORIENTATION                      = "orientation";
