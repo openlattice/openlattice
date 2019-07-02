@@ -944,6 +944,10 @@ public final class ResultSetAdapters {
         return (UUID) rs.getObject( LINKING_ID.getName() );
     }
 
+    public static OffsetDateTime lastWriteTyped( ResultSet rs ) throws SQLException {
+        return rs.getObject( LAST_WRITE.getName(), OffsetDateTime.class );
+    }
+
     public static Object lastWrite( ResultSet rs ) throws SQLException {
         return rs.getObject( LAST_WRITE.getName() );
     }

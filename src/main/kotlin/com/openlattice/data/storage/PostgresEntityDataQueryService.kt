@@ -182,7 +182,9 @@ class PostgresEntityDataQueryService(
         }
 
         val (sql, binders) = if (linking) {
-            buildPreparableFiltersClauseForLinkedEntities(startIndex, propertyTypes, propertyTypeFilters)
+            buildPreparableFiltersClauseForLinkedEntities(
+                    startIndex, propertyTypes, propertyTypeFilters,ids.isNotEmpty(), partitions.isNotEmpty()
+            )
         } else {
             buildPreparableFiltersSqlForEntities(
                     startIndex, propertyTypes, propertyTypeFilters, ids.isNotEmpty(), partitions.isNotEmpty()
