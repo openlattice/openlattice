@@ -79,7 +79,7 @@ public final class PostgresTable {
                     .addColumns( PRINCIPAL_ID, CREDENTIAL )
                     .primaryKey( PRINCIPAL_ID );
     public static final PostgresTableDefinition        E                            =
-            new CitusDistributedTableDefinition( "edges" )
+            new CitusDistributedTableDefinition( "e" )
                     .addColumns(
                             PARTITION,
                             ID_TYPE,
