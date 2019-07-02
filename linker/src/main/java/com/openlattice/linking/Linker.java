@@ -20,6 +20,7 @@
 
 package com.openlattice.linking;
 
+import com.dataloom.mappers.ObjectMappers;
 import com.kryptnostic.rhizome.configuration.websockets.BaseRhizomeServer;
 import com.kryptnostic.rhizome.core.RhizomeApplicationServer;
 import com.kryptnostic.rhizome.hazelcast.serializers.RhizomeUtils.Pods;
@@ -27,6 +28,7 @@ import com.kryptnostic.rhizome.pods.hazelcast.RegistryBasedHazelcastInstanceConf
 import com.openlattice.auditing.pods.AuditingConfigurationPod;
 import com.openlattice.auth0.Auth0Pod;
 import com.openlattice.aws.AwsS3Pod;
+import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.openlattice.hazelcast.pods.MapstoresPod;
 import com.openlattice.hazelcast.pods.SharedStreamSerializersPod;
 import com.openlattice.jdbc.JdbcPod;
@@ -67,6 +69,10 @@ public class Linker extends BaseRhizomeServer {
     };
 
     public static final Class<?>[] webPods = new Class<?>[]{ LinkerServletsPod.class, LinkerSecurityPod.class };
+
+    static {
+        ObjectMappers.foreach( FullQualifiedNameJacksonSerializer::registerWithMapper );
+    }
 
     public Linker() {
         super( Pods.concatenate( RhizomeApplicationServer.DEFAULT_PODS, webPods, rhizomePods, conductorPods ) );
