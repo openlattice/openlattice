@@ -86,6 +86,7 @@ class BackgroundIndexingService(
 
     private val taskLock = ReentrantLock()
 
+    @Suppress("UNCHECKED_CAST", "UNUSED")
     @Scheduled(fixedRate = EXPIRATION_MILLIS)
     fun scavengeIndexingLocks() {
         indexingLocks.removeAll(
@@ -96,6 +97,7 @@ class BackgroundIndexingService(
         )
     }
 
+    @Suppress("UNUSED")
     @Scheduled(fixedRate = INDEX_RATE)
     fun indexUpdatedEntitySets() {
         logger.info("Starting background indexing task.")
@@ -257,7 +259,7 @@ class BackgroundIndexingService(
         if (entitiesById.isNotEmpty() &&
                 elasticsearchApi.createBulkEntityData(entitySet.entityTypeId, entitySet.id, entitiesById)) {
             indexCount = if (markAsIndexed) {
-                dataManager.markAsIndexed(mapOf(entitySet.id to batchToIndex),  false)
+                dataManager.markAsIndexed(mapOf(entitySet.id to batchToIndex), false)
             } else {
                 batchToIndex.size
             }
@@ -278,7 +280,7 @@ class BackgroundIndexingService(
 
     }
 
-    internal fun tryLockEntitySet(entitySet: EntitySet): Boolean {
+    private fun tryLockEntitySet(entitySet: EntitySet): Boolean {
         return indexingLocks.putIfAbsent(entitySet.id, System.currentTimeMillis() + EXPIRATION_MILLIS) == null
     }
 

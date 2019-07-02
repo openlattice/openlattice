@@ -87,7 +87,7 @@ class BackgroundLinkingIndexingService(
      */
     private val candidates = hazelcastInstance.getQueue<Pair<UUID, OffsetDateTime>>(HazelcastQueue.LINKING_INDEXING.name)
 
-
+    @Suppress("UNUSED")
     private val linkingIndexingWorker = executor.submit {
         Stream.generate { candidates.take() }
                 .parallel()
@@ -105,6 +105,7 @@ class BackgroundLinkingIndexingService(
                 }
     }
 
+    @Suppress("UNUSED")
     @Timed
     @Scheduled(fixedRate = LINKING_INDEX_RATE)
     fun updateCandidateList() {
