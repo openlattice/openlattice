@@ -294,7 +294,7 @@ class AssemblerConnectionManager(
                     val clause = entitySetIds.joinToString { entitySetId -> "'$entitySetId'" }
 
                     val tableName = "$MATERIALIZED_VIEWS_SCHEMA.${EDGES.name}"
-                    stmt.execute("DROP MATERIALIZED VIEW IF EXISTS $tableName")
+                    stmt.execute("DROP MATERIALIZED VIEW IF EXISTS $tableName CASCADE")
                     stmt.execute(
                             "CREATE MATERIALIZED VIEW IF NOT EXISTS $tableName AS " +
                                     "SELECT * FROM $PRODUCTION_FOREIGN_SCHEMA.${EDGES.name} " +
