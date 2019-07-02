@@ -47,22 +47,19 @@ private val DEFAULT_ENTITY_TYPES = setOf(PersonProperties.PERSON_TYPE_FQN.fullQu
 /**
  * Configuration class for linking.
  */
-@ReloadableConfiguration(uri = CONFIG_YAML_NAME )
+@ReloadableConfiguration(uri = CONFIG_YAML_NAME)
 data class LinkingConfiguration(
-        @JsonProperty(SEARCH_CONFIGURATION ) val searchConfiguration: SearchConfiguration,
+        @JsonProperty(SEARCH_CONFIGURATION) val searchConfiguration: SearchConfiguration,
         @JsonProperty(BLOCK_SIZE_FIELD) val blockSize: Int = DEFAULT_BLOCK_SIZE,
         @JsonProperty(WHITELIST) val whitelist: Optional<Set<UUID>>,
         @JsonProperty(BLACKLIST) val blacklist: Set<UUID> = setOf(),
-        @JsonProperty(BATCH_SIZE ) val batchSize: Int = 10,
-        @JsonProperty(LOAD_SIZE ) val loadSize: Int = 100,
+        @JsonProperty(BATCH_SIZE) val batchSize: Int = 10,
+        @JsonProperty(LOAD_SIZE) val loadSize: Int = 100,
         @JsonProperty(ENTITY_TYPES_FIELD) private val entityTypesFqns: Set<String> = DEFAULT_ENTITY_TYPES
 ) : Configuration {
     companion object {
-        private val key = SimpleConfigurationKey(CONFIG_YAML_NAME )
         @JvmStatic
-        fun key(): ConfigurationKey {
-            return key
-        }
+        private val configKey = SimpleConfigurationKey(CONFIG_YAML_NAME)
     }
 
     val entityTypes: Set<FullQualifiedName> = entityTypesFqns.map { FullQualifiedName(it) }.toSet()
@@ -70,6 +67,6 @@ data class LinkingConfiguration(
 
     @JsonIgnore
     override fun getKey(): ConfigurationKey {
-        return key()
+        return configKey
     }
 }
