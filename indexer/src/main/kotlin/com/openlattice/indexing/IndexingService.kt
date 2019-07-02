@@ -32,15 +32,18 @@ import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.HazelcastQueue
 import com.openlattice.hazelcast.processors.UUIDKeyToUUIDSetMerger
-import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
-import com.openlattice.postgres.PostgresColumn.ID
-import com.openlattice.postgres.PostgresTable
+import com.openlattice.postgres.DataTables.LAST_WRITE
+import com.openlattice.postgres.PostgresArrays
+import com.openlattice.postgres.PostgresColumn.*
+import com.openlattice.postgres.PostgresTable.ENTITY_KEY_IDS
+import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
+import java.time.OffsetDateTime
 import java.util.*
 import java.util.concurrent.locks.ReentrantLock
 import java.util.function.Function
@@ -91,21 +94,23 @@ class IndexingService(
                         )
 
                         var cursor = indexingProgress.getOrPut(entitySetId) { IdConstants.LB_UUID.id }
-                        var entityKeyIds: Set<UUID> = indexingJobs.getValue(entitySetId)
+                        val entityKeyIds: Set<UUID> = indexingJobs.getValue(entitySetId)
+                        var entityKeyIdsWithLastWrite: Map<UUID, OffsetDateTime> =
+                                //An empty set of ids means all keys
+                                if (entityKeyIds.isEmpty()) {
+                                    getNextBatch(entitySetId, cursor, cursor != IdConstants.LB_UUID.id).toMap()
+                                } else {
+                                    getEntitiesWithLastWrite(entitySet.id, entityKeyIds).toMap()
+                                }
 
-                        //An empty set of ids means all keys
-                        if (entityKeyIds.isEmpty()) {
-                            entityKeyIds = getNextBatch(entitySetId, cursor, cursor != IdConstants.LB_UUID.id).toSet()
-                        }
-
-                        while (entityKeyIds.isNotEmpty()) {
+                        while (entityKeyIdsWithLastWrite.isNotEmpty()) {
                             logger.info("Indexing entity set ${entitySet.name} (${entitySet.id}) starting at $cursor.")
-                            backgroundIndexingService.indexEntities(entitySet, entityKeyIds, propertyTypeMap, false)
-                            val cursor = entityKeyIds.max()!!
+                            backgroundIndexingService.indexEntities(entitySet, entityKeyIdsWithLastWrite, propertyTypeMap, false)
+                            cursor = entityKeyIdsWithLastWrite.keys.max()!!
 
                             indexingProgress.set(entitySetId, cursor)
 
-                            entityKeyIds = getNextBatch(entitySetId, cursor, cursor != IdConstants.LB_UUID.id).toSortedSet()
+                            entityKeyIdsWithLastWrite = getNextBatch(entitySetId, cursor, cursor != IdConstants.LB_UUID.id).toMap()
                         }
 
                         logger.info("Finished indexing entity set $entitySetId")
@@ -157,12 +162,12 @@ class IndexingService(
             ""
         }
 
-        return "SELECT ${ID.name} FROM ${PostgresTable.IDS.name} WHERE ${ENTITY_SET_ID.name} = ? $lowerBoundSql " +
+        return "SELECT ${ID.name}, ${LAST_WRITE.name} FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = ? $lowerBoundSql " +
                 "ORDER BY ${ID.name} LIMIT $BATCH_LIMIT"
     }
 
 
-    private fun getNextBatch(entitySetId: UUID, cursor: UUID, useLowerBound: Boolean): PostgresIterable<UUID> {
+    private fun getNextBatch(entitySetId: UUID, cursor: UUID, useLowerBound: Boolean): PostgresIterable<Pair<UUID, OffsetDateTime>> {
         return PostgresIterable(
                 Supplier {
                     val connection = hds.connection
@@ -172,7 +177,28 @@ class IndexingService(
                         ps.setObject(2, cursor)
                     }
                     StatementHolder(connection, ps, ps.executeQuery())
-                }, Function { ResultSetAdapters.id(it) }
+                }, Function { ResultSetAdapters.id(it) to ResultSetAdapters.lastWriteTyped(it) }
+        )
+
+    }
+
+    private fun getEntitiesWithLastWriteQuery(): String {
+        return "SELECT ${ID.name}, ${LAST_WRITE.name} FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND $ENTITY_KEY_IDS = ANY(?) " +
+                "ORDER BY ${ID.name} LIMIT $BATCH_LIMIT"
+    }
+
+
+    private fun getEntitiesWithLastWrite(entitySetId: UUID, entityKeyIds: Set<UUID>): PostgresIterable<Pair<UUID, OffsetDateTime>> {
+        return PostgresIterable(
+                Supplier {
+                    val connection = hds.connection
+                    val ps = connection.prepareStatement(getEntitiesWithLastWriteQuery())
+                    val idsArray = PostgresArrays.createUuidArray(connection, entityKeyIds)
+                    ps.setObject(1, entitySetId)
+                    ps.setArray(2, idsArray)
+
+                    StatementHolder(connection, ps, ps.executeQuery())
+                }, Function { ResultSetAdapters.id(it) to ResultSetAdapters.lastWriteTyped(it) }
         )
 
     }
@@ -192,7 +218,7 @@ class IndexingService(
     fun setForIndexing(entities: Map<UUID, Set<UUID>>) {
         try {
             indexingLock.lock()
-            entities.forEach { entitySetId, entityKeyIds ->
+            entities.forEach { (entitySetId, entityKeyIds) ->
                 if (!indexingJobs.containsKey(entitySetId)) {
                     indexingQueue.put(entitySetId)
                 }
