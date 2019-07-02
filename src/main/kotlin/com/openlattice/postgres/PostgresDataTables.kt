@@ -145,7 +145,6 @@ class PostgresDataTables {
                     entitySetIdIndex,
                     versionIndex,
                     lastWriteIndex,
-                    lastMigrateIndex,
                     propertyTypeIdIndex,
                     partitionsVersionIndex,
                     currentPropertiesForEntitySetIndex,
