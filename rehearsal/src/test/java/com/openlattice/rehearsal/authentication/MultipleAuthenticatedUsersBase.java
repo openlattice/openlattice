@@ -321,7 +321,7 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
                 Optional.of(flags),
                 Optional.empty());
 
-        Map<String, UUID> entitySetIds = entitySetsApi.createEntitySets( ImmutableSet.of( newES ) );
+        Map<String, UUID> entitySetIds = entitySetsApi.createEntitySets( Set.of( newES ) );
 
         Assert.assertTrue( "Entity Set creation does not return correct UUID",
                 entitySetIds.values().contains( newES.getId() ) );
