@@ -99,7 +99,7 @@ class IndexingService(
                         }
 
                         while (entityKeyIds.isNotEmpty()) {
-                            logger.info("Indexing entity set ${entitySet.name} ($entitySet.id) starting at $cursor.")
+                            logger.info("Indexing entity set ${entitySet.name} (${entitySet.id}) starting at $cursor.")
                             backgroundIndexingService.indexEntities(entitySet, entityKeyIds, propertyTypeMap, false)
                             val cursor = entityKeyIds.max()!!
 

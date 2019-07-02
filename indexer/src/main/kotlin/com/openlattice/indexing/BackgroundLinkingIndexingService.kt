@@ -47,6 +47,7 @@ import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import java.sql.ResultSet
 import java.time.Instant
+import java.time.OffsetDateTime
 import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.function.Function
@@ -84,7 +85,7 @@ class BackgroundLinkingIndexingService(
     /**
      * Queue containing linking ids, which need to be re-indexed in elasticsearch.
      */
-    private val candidates = hazelcastInstance.getQueue<UUID>(HazelcastQueue.LINKING_INDEXING.name)
+    private val candidates = hazelcastInstance.getQueue<Pair<UUID, OffsetDateTime>>(HazelcastQueue.LINKING_INDEXING.name)
 
 
     private val linkingIndexingWorker = executor.submit {
@@ -93,12 +94,12 @@ class BackgroundLinkingIndexingService(
                 .forEach { candidate ->
                     if (indexerConfiguration.backgroundIndexingEnabled) {
                         try {
-                            lock(candidate)
-                            index(candidate)
+                            lock(candidate.first)
+                            index(candidate.first, candidate.second)
                         } catch (ex: Exception) {
-                            logger.error("Unable to index linking entity with linking_id $candidate.", ex)
+                            logger.error("Unable to index linking entity with linking_id ${candidate.first}.", ex)
                         } finally {
-                            unLock(candidate)
+                            unLock(candidate.first)
                         }
                     }
                 }
@@ -119,14 +120,14 @@ class BackgroundLinkingIndexingService(
         }
     }
 
-    private fun index(linkingId: UUID) {
+    private fun index(linkingId: UUID, lastWrite: OffsetDateTime) {
         logger.info("Starting background linking indexing task for linking id $linkingId.")
         val watch = Stopwatch.createStarted()
 
         // get data for linking id by entity set ids and property ids
         val dirtyLinkingIdsByEntitySetId = getEntitySetIdsOfLinkingId(linkingId) // entity_set_id/linking_id
                 .toMap()
-        val propertyTypesOfEntitySets = dirtyLinkingIdsByEntitySetId // entity_set_id/property_type_id
+        val propertyTypesOfEntitySets = dirtyLinkingIdsByEntitySetId // entity_set_id/property_type_id/property_type
                 .map { it.key to personPropertyTypes }
                 .toMap()
         val linkedEntityData = dataStore // linking_id/entity_set_id/property_type_id
@@ -135,7 +136,9 @@ class BackgroundLinkingIndexingService(
                         propertyTypesOfEntitySets,
                         EnumSet.of(MetadataOption.LAST_WRITE))
 
-        val indexCount = indexLinkedEntity(linkingId, personEntityType.id, linkedEntityData.getValue(linkingId))
+        val indexCount = indexLinkedEntity(
+                linkingId, lastWrite, personEntityType.id, linkedEntityData.getValue(linkingId)
+        )
 
         logger.info(
                 "Finished linked indexing {} elements with linking id {} in {} ms",
@@ -147,12 +150,13 @@ class BackgroundLinkingIndexingService(
 
     private fun indexLinkedEntity(
             linkingId: UUID,
+            lastWrite: OffsetDateTime,
             entityTypeId: UUID,
             dataByEntitySetId: Map<UUID, Map<UUID, Set<Any>>>
     ): Int {
         return if (elasticsearchApi.createBulkLinkedData(entityTypeId, mapOf(linkingId to dataByEntitySetId))) {
             dataManager.markAsIndexed(
-                    dataByEntitySetId.keys.map { it to Optional.of(setOf(linkingId)) }.toMap(),
+                    dataByEntitySetId.keys.map { it to mapOf(linkingId to lastWrite).toMap() }.toMap(),
                     true
             )
         } else {
@@ -175,25 +179,25 @@ class BackgroundLinkingIndexingService(
     /**
      * Returns the linking ids, which are needing to be indexed.
      */
-    private fun getDirtyLinkingIds(): PostgresIterable<UUID> {
+    private fun getDirtyLinkingIds(): PostgresIterable<Pair<UUID, OffsetDateTime>> {
         return PostgresIterable(Supplier<StatementHolder> {
             val connection = hds.connection
             val stmt = connection.prepareStatement(selectDirtyLinkingIds())
             val rs = stmt.executeQuery()
             StatementHolder(connection, stmt, rs)
-        }, Function<ResultSet, UUID> {
-            ResultSetAdapters.linkingId(it)
+        }, Function<ResultSet, Pair<UUID, OffsetDateTime>> {
+            ResultSetAdapters.linkingId(it) to ResultSetAdapters.lastWriteTyped(it)
         })
     }
 
     private fun selectDirtyLinkingIds(): String {
-        return "SELECT ${PostgresColumn.LINKING_ID.name} " +
+        return "SELECT ${PostgresColumn.LINKING_ID.name}, ${DataTables.LAST_WRITE.name} " +
                 "FROM ${PostgresTable.IDS.name} " +
                 "WHERE ${PostgresColumn.LINKING_ID.name} IS NOT NULL " +
                 "AND ${DataTables.LAST_INDEX.name} >= ${DataTables.LAST_WRITE.name} " +
                 "AND ${DataTables.LAST_LINK.name} >= ${DataTables.LAST_WRITE.name} " +
                 "AND ${PostgresColumn.LAST_LINK_INDEX.name} < ${DataTables.LAST_WRITE.name} " +
-                "AND ${PostgresColumn.VERSION.name} > 0 " +
+                "AND ${PostgresColumn.VERSION.name} > 0 AND ${PostgresColumn.LINKING_ID.name} IS NOT NULL " +
                 "GROUP BY ${PostgresColumn.ENTITY_SET_ID.name} " +
                 "LIMIT $FETCH_SIZE"
     }
