@@ -71,7 +71,7 @@ interface EntitySetsApi {
      * @return The entity sets created with UUIDs.
      */
     @POST(BASE)
-    fun createEntitySets(@Body entitySets: Set<EntitySet>): Map<String, UUID>
+    fun createEntitySets(@Body entitySets: Set<@JvmSuppressWildcards EntitySet>): Map<String, UUID>
 
 
     /**
