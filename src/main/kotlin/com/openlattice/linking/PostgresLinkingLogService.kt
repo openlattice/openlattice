@@ -1,6 +1,7 @@
 package com.openlattice.linking
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresColumnDefinition
 import com.openlattice.postgres.PostgresTable.LINKING_LOG
@@ -27,9 +28,10 @@ class PostgresLinkingLogService(
             safePrepStatementExec(ADD_LINK_SQL) { ps, conn  ->
                 ps.setObject(1, linkingId)
                 ps.setObject(2, linkingId)
-                ps.setObject(3, esid)
-                ps.setObject(4, esid)
-                ps.setObject(5, mapper.writeValueAsString(ekids))
+                val asRay = PostgresArrays.createTextArray( conn, listOf(esid.toString()) )
+                ps.setArray(3, asRay)
+                ps.setString(4, "{$esid}")
+                ps.setString(5, mapper.writeValueAsString(ekids))
                 ps.setLong(6, System.currentTimeMillis())
                 ps.setObject(7, linkingId)
                 ps.addBatch()
@@ -42,7 +44,8 @@ class PostgresLinkingLogService(
             ekids.forEach { ekid ->
                 safePrepStatementExec(REMOVE_ENTITY_SQL) { ps, conn ->
                     ps.setObject(1, linkingId)
-                    ps.setObject(2, "$esid,$ekid")
+                    val asRay = PostgresArrays.createTextArray( conn, listOf(esid.toString(), ekid.toString()) )
+                    ps.setArray(2, asRay)
                     ps.setObject(3, linkingId)
                     ps.addBatch()
                 }
@@ -76,22 +79,17 @@ private val READ_LATEST_LINKED_SQL = "SELECT ${ID_MAP.name} FROM ${LINKING_LOG.n
 
 // Add a link. Grab previous value from a temp table
 private val ADD_LINK_SQL = "WITH old_json as " +
-        "( SELECT ${ID_MAP.name} as value FROM ${LINKING_LOG.name} WHERE ${LINKING_ID.name} = ? ORDER BY ${VERSION.name} LIMIT 1 )" +
+        "( SELECT ${ID_MAP.name} as value FROM ${LINKING_LOG.name} WHERE ${LINKING_ID.name} = ? ORDER BY ${VERSION.name} LIMIT 1 ) " +
         "UPDATE ${LINKING_LOG.name} " +
-        "SET ${LINKING_ID.name} = ?" +
-        "${ID_MAP.name} = jsonb_set( old_json.value, '{?}', ${ID_MAP.name}->'?' || '?'::jsonb )," +
-        "${VERSION.name} = ?" +
-        "FROM old_json" +
+        "SET ${LINKING_ID.name} = ?, " +
+        "${ID_MAP.name} = jsonb_set( old_json.value, ?, ${ID_MAP.name}->? || ?::jsonb ), " +
+        "${VERSION.name} = ? " +
+        "FROM old_json " +
         "WHERE ${LINKING_ID.name} = ?"
 
 // Delete Entity
 private val REMOVE_ENTITY_SQL= "UPDATE ${LINKING_LOG.name} " +
-        "SET ${ID_MAP.name} = ( $READ_LATEST_LINKED_SQL  #- '{?}')" +
+        "SET ${ID_MAP.name} = " +
+        "( SELECT ${ID_MAP.name} as value FROM ${LINKING_LOG.name} WHERE ${LINKING_ID.name} = ? ORDER BY ${VERSION.name} LIMIT 1 ) " +
+        "#- ? " +
         "WHERE ${LINKING_ID.name} = ?"
-
-// one by one in place array append
-//private val IN_PLACE_UPDATE_JSON_SQL = "UPDATE ${LINKING_LOG.name} " +
-//        "SET ${ID_MAP.name} = jsonb_set(${ID_MAP.name}, '{?}', ${ID_MAP.name}->'?' || '?')," +
-//        " ${VERSION.name} = ?" +
-//        "WHERE ${LINKING_ID.name} = ?"
-
