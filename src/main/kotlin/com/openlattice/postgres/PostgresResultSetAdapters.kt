@@ -1,7 +1,6 @@
 package com.openlattice.postgres
 
 import com.dataloom.mappers.ObjectMappers
-import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.openlattice.IdConstants
 import com.openlattice.data.Property
@@ -143,6 +142,15 @@ fun getEntityPropertiesByFullQualifiedName(
     return getEntityPropertiesByPropertyTypeId3(
             rs, authorizedPropertyTypes, byteBlobDataManager
     )
+}
+
+@Throws(SQLException::class)
+fun getJsonColumnAsEsidEkidMap(
+        rs: ResultSet,
+        colName: String
+) : Map<UUID, Set<UUID>>{
+    val columnJson = rs.getString( colName )
+    return mapper.readValue(columnJson)
 }
 
 //TODO: If we are getting NPEs on read we may have to do better filtering here.
