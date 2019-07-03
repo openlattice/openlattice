@@ -236,27 +236,31 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         Assert.assertNotNull(createdEdges)
         Assert.assertEquals(edges.size * 3, createdEdges)
 
-        // Test permissions on property types. First add read permission on entity sets
-        val add = EnumSet.of(Permission.READ)
+        // Test permissions on entity sets. First add write permission to src,dst
+        val add = EnumSet.of(Permission.WRITE)
         val newAcl1 = Acl(AclKey(esSrc.id), setOf(Ace(user1, add, OffsetDateTime.now(ZoneOffset.UTC))))
         val newAcl2 = Acl(AclKey(esDst.id), setOf(Ace(user1, add, OffsetDateTime.now(ZoneOffset.UTC))))
-        val newAcl3 = Acl(AclKey(esEdge.id), setOf(Ace(user1, add, OffsetDateTime.now(ZoneOffset.UTC))))
+
         permissionsApi.updateAcl(AclData(newAcl1, Action.ADD))
         permissionsApi.updateAcl(AclData(newAcl2, Action.ADD))
-        permissionsApi.updateAcl(AclData(newAcl3, Action.ADD))
 
         try {
             loginAs("user1")
             dataApi.createAssociations(edges)
             Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
-            val uuidRegex = Regex("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
-            val forbiddenAclKey = uuidRegex.findAll(e.undeclaredThrowable.message!!)
-            Assert.assertEquals(esEdge.id, UUID.fromString(forbiddenAclKey.first().value))
-            Assert.assertTrue(edge.key.contains(UUID.fromString(forbiddenAclKey.last().value)))
+            Assert.assertTrue(e.undeclaredThrowable.message!!
+                    .contains("Insufficient permissions to perform operation."))
         } finally {
             loginAs("admin")
         }
+
+        val newAcl3 = Acl(AclKey(esEdge.id), setOf(Ace(user1, add, OffsetDateTime.now(ZoneOffset.UTC))))
+        permissionsApi.updateAcl(AclData(newAcl3, Action.ADD))
+
+        loginAs("user1")
+        dataApi.createAssociations(edges)
+        loginAs("admin")
     }
 
     @Test
