@@ -588,10 +588,9 @@ class PostgresEntityDataQueryService(
         BasePostgresIterable<String>(
                 PreparedStatementHolderSupplier(hds, selectEntitySetTextProperties, FETCH_SIZE) { ps ->
                     val connection = ps.connection
-                    val ps = connection.prepareStatement(selectEntitySetTextProperties)
                     val entitySetIdsArr = PostgresArrays.createUuidArray(connection, setOf(entitySetId))
                     val propertyTypeIdsArr = PostgresArrays.createUuidArray(connection, setOf(propertyTypeId))
-                    ps.setObject(1, entitySetIdsArr)
+                    ps.setArray(1, entitySetIdsArr)
                     ps.setArray(2, propertyTypeIdsArr)
                 }
         ) { rs ->
