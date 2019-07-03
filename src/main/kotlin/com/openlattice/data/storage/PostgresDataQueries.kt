@@ -458,7 +458,7 @@ internal val updateVersionsForPropertyValuesInEntitiesInEntitySet = "$updateVers
  */
 internal val selectEntitySetTextProperties = "SELECT ${getDataColumnName(
         PostgresDatatype.TEXT
-)} FROM ${DATA.name} WHERE ${PostgresColumn.ENTITY_SET_ID.name} = ANY(?) AND $PROPERTY_TYPE_ID = ANY(?)"
+)} FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = ANY(?) AND ${PROPERTY_TYPE_ID.name} = ANY(?)"
 
 /**
  * Selects a text properties from specific entities with the following bind order:
@@ -466,7 +466,7 @@ internal val selectEntitySetTextProperties = "SELECT ${getDataColumnName(
  * 2. property type ids (array)
  * 3. entity key ids (array)
  */
-internal val selectEntitiesTextProperties = "$selectEntitySetTextProperties AND $ID_VALUE = ANY(?)"
+internal val selectEntitiesTextProperties = "$selectEntitySetTextProperties AND ${ID_VALUE.name} = ANY(?)"
 
 fun partitionSelectorFromId(entityKeyId: UUID): Int {
     return entityKeyId.leastSignificantBits.toInt()
