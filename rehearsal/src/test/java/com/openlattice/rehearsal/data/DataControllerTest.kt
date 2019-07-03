@@ -25,7 +25,6 @@ import com.google.common.cache.CacheBuilder
 import com.google.common.cache.CacheLoader
 import com.google.common.cache.LoadingCache
 import com.google.common.collect.*
-import com.google.common.collect.Maps.transformValues
 import com.openlattice.authorization.*
 import com.openlattice.data.*
 import com.openlattice.data.requests.EntitySetSelection
@@ -169,11 +168,10 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         Assert.assertEquals(indexExpected, indexActual)
 
         val propertySrc = entries[0]
-        val replacement: SetMultimap<UUID, Any> = HashMultimap.create()
         val replacementProperty = propertySrc.keys.first()
-        replacement.put(replacementProperty, RandomStringUtils.random(10) as Any)
+        val replacement = mapOf(replacementProperty to setOf(RandomStringUtils.random(10) as Any))
 
-        val replacementMap = transformValues(mapOf(ids[0]!! to replacement), Multimaps::asMap)
+        val replacementMap = mapOf(ids[0]!! to replacement)
 
         Assert.assertEquals(1, dataApi.updateEntitiesInEntitySet(es.id, replacementMap, UpdateType.PartialReplace))
 
@@ -302,15 +300,15 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         // when loading entitysets, the result is grouped by entity key id
         createdEdges.values().map { it.toString() }
 
-        val actualEdgeData = ImmutableList.copyOf(dataApi.loadEntitySetData(es.id, ess, FileType.json))
-        val edgesCreatedData = Multimaps.asMap(edgesToBeCreated).entries.first().value
+        val actualEdgeData = dataApi.loadEntitySetData(es.id, ess, FileType.json)
+        val edgesCreatedData = edgesToBeCreated[edgeData.first]
         actualEdgeData.mapIndexed { index, de ->
             val edgeDataLookup = lookupEdgeDataByFqn(
                     edgesCreatedData[numberOfEntries - index - 1].data.mapValues { it.value.toMutableSet() }.toMutableMap()
             )
             de.asMap()
                     .filter { it.key.name != EdmConstants.ID_FQN.name }
-                    .forEach { fqn, data -> Assert.assertEquals(data, edgeDataLookup[fqn]) }
+                    .forEach { (fqn, data) -> Assert.assertEquals(data, edgeDataLookup[fqn]) }
         }
     }
 
@@ -404,7 +402,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
     ): Pair<UUID, List<DataEdge>> {
         val edgeData = ImmutableList.copyOf(TestDataFactory.randomStringEntityData(numberOfEntries, properties).values)
 
-        val edges = srcIds.mapIndexed { index, data ->
+        val edges = srcIds.mapIndexed { index, _ ->
             val srcDataKey = EntityDataKey(srcEntitySetId, srcIds[index])
             val dstDataKey = EntityDataKey(dstEntitySetId, dstIds[index])
             DataEdge(srcDataKey, dstDataKey, edgeData[index])
@@ -445,12 +443,11 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         val d = LocalDate.now()
         val odt = OffsetDateTime.ofInstant(Instant.now(), ZoneId.of("UTC"))
-        val testData = Arrays.asList(
-                Multimaps.asMap(
-                        HashMultimap.create(
-                                ImmutableSetMultimap
-                                        .of(p1.id, odt, p2.id, d, k.id, RandomStringUtils.randomAlphanumeric(5))
-                        ) as SetMultimap<UUID, Any>
+        val testData = listOf(
+                mapOf(
+                        p1.id to setOf(odt as Any),
+                        p2.id to setOf(d as Any),
+                        k.id to setOf(RandomStringUtils.randomAlphanumeric(5) as Any)
                 )
         )
 
@@ -1396,7 +1393,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         val testData = TestDataFactory.randomStringEntityData(numberOfEntries, et.properties)
 
         val entries = ImmutableList.copyOf(testData.values)
-        val ids = dataApi.createEntities(es.id, entries)
+        dataApi.createEntities(es.id, entries)
 
         Assert.assertEquals(0L, dataApi.getEntitySetSize(es.id))
 
