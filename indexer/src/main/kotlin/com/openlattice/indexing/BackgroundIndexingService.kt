@@ -297,7 +297,8 @@ class BackgroundIndexingService(
 
         var i = 0
         while (entityKeyIdStream.hasNext() && i < INDEX_SIZE) {
-            entityKeyIds[entityKeyIdStream.next().first] = entityKeyIdStream.next().second
+            val entityWithLastWrite = entityKeyIdStream.next()
+            entityKeyIds[entityWithLastWrite.first] = entityWithLastWrite.second
             ++i
         }
 
