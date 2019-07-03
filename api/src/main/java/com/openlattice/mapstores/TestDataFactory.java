@@ -278,7 +278,7 @@ public final class TestDataFactory {
                 EdmPrimitiveTypeKind.Binary,
                 Optional.of( r.nextBoolean() ),
                 Optional.of( analyzers[ r.nextInt( analyzers.length ) ] ),
-                Optional.of( INDEX_TYPES[ r.nextInt( INDEX_TYPES.length ) ] ) );
+                Optional.of( IndexType.NONE );
     }
 
     public static Organization organization() {
