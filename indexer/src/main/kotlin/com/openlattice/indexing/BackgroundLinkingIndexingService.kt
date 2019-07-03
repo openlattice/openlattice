@@ -37,7 +37,11 @@ import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.HazelcastQueue
 import com.openlattice.indexing.configuration.IndexerConfiguration
 import com.openlattice.linking.util.PersonProperties
-import com.openlattice.postgres.*
+import com.openlattice.postgres.DataTables
+import com.openlattice.postgres.DataTables.*
+import com.openlattice.postgres.PostgresColumn.*
+import com.openlattice.postgres.PostgresTable.IDS
+import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.mapstores.EntityTypeMapstore
 import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
@@ -192,14 +196,13 @@ class BackgroundLinkingIndexingService(
     }
 
     private fun selectDirtyLinkingIds(): String {
-        return "SELECT ${PostgresColumn.LINKING_ID.name}, ${DataTables.LAST_WRITE.name} " +
-                "FROM ${PostgresTable.IDS.name} " +
-                "WHERE ${PostgresColumn.LINKING_ID.name} IS NOT NULL " +
-                "AND ${DataTables.LAST_INDEX.name} >= ${DataTables.LAST_WRITE.name} " +
-                "AND ${DataTables.LAST_LINK.name} >= ${DataTables.LAST_WRITE.name} " +
-                "AND ${PostgresColumn.LAST_LINK_INDEX.name} < ${DataTables.LAST_WRITE.name} " +
-                "AND ${PostgresColumn.VERSION.name} > 0 AND ${PostgresColumn.LINKING_ID.name} IS NOT NULL " +
-                "GROUP BY ${PostgresColumn.ENTITY_SET_ID.name} " +
+        return "SELECT ${LINKING_ID.name}, ${DataTables.LAST_WRITE.name} " +
+                "FROM ${IDS.name} " +
+                "WHERE ${LINKING_ID.name} IS NOT NULL " +
+                "AND ${LAST_INDEX.name} >= ${LAST_WRITE.name} " +
+                "AND ${LAST_LINK.name} >= ${LAST_WRITE.name} " +
+                "AND ${LAST_LINK_INDEX.name} < ${LAST_WRITE.name} " +
+                "AND ${VERSION.name} > 0 AND ${LINKING_ID.name} IS NOT NULL " +
                 "LIMIT $FETCH_SIZE"
     }
 
@@ -216,9 +219,9 @@ class BackgroundLinkingIndexingService(
     }
 
     private fun selectLinkingIdsByEntitySetIds(): String {
-        return "SELECT ${PostgresColumn.ENTITY_SET_ID.name}, array_agg(${PostgresColumn.LINKING_ID.name}) AS ${PostgresColumn.LINKING_ID.name} " +
-                "FROM ${PostgresTable.IDS.name} " +
-                "WHERE ${PostgresColumn.LINKING_ID.name} = ? " +
-                "GROUP BY ${PostgresColumn.ENTITY_SET_ID.name}"
+        return "SELECT ${ENTITY_SET_ID.name}, array_agg(${LINKING_ID.name}) AS ${LINKING_ID.name} " +
+                "FROM ${IDS.name} " +
+                "WHERE ${LINKING_ID.name} = ? " +
+                "GROUP BY ${ENTITY_SET_ID.name}"
     }
 }
