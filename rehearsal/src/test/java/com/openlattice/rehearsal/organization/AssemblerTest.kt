@@ -1,6 +1,7 @@
 package com.openlattice.rehearsal.organization
 
 import com.google.common.collect.ImmutableList
+import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.authorization.*
 import com.openlattice.data.DataEdgeKey
 import com.openlattice.data.DeleteType
@@ -12,8 +13,10 @@ import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.organization.Organization
 import com.openlattice.organization.OrganizationEntitySetFlag
+import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn
+import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
 import org.junit.Assert
@@ -45,9 +48,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
             organizationID = organizationsApi.createOrganizationIfNotExists(organization)
         }
     }
-    // todo: test for changing refresh rate
-    // todo: test for automatic refresh
-
+    // todo: test having read access through role
 
     @Test
     fun testCreateMaterializedViews() {
@@ -897,6 +898,158 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                 Assert.assertFalse(rs.next())
             }
         }
+    }
+
+    @Test
+    fun testDeleteEntitySet() {
+        // create data and edges
+        val src = createEntityType()
+        val dst = createEntityType()
+        val edge = createEdgeEntityType()
+
+        val esSrc = createEntitySet(src)
+        val esDst = createEntitySet(dst)
+        val esEdge = createEntitySet(edge)
+
+        val srcPropertyFqns = edmApi.getPropertyTypesForEntitySet(esSrc.id)
+                .map { it.key to it.value.type.fullQualifiedNameAsString }.toMap()
+
+        // create association type with defining src and dst entity types
+        createAssociationType(edge, setOf(src), setOf(dst))
+
+        val testDataSrc = TestDataFactory.randomStringEntityData(numberOfEntities, src.properties)
+        val testDataDst = TestDataFactory.randomStringEntityData(numberOfEntities, dst.properties)
+        val testDataEdge = TestDataFactory.randomStringEntityData(numberOfEntities, edge.properties)
+
+        val entitiesSrc = ImmutableList.copyOf(testDataSrc.values)
+        val idsSrc = dataApi.createEntities(esSrc.id, entitiesSrc)
+
+        val entitiesDst = ImmutableList.copyOf(testDataDst.values)
+        val idsDst = dataApi.createEntities(esDst.id, entitiesDst)
+
+        val entitiesEdge = ImmutableList.copyOf(testDataEdge.values)
+        val idsEdge = dataApi.createEntities(esEdge.id, entitiesEdge)
+
+        val edges = idsSrc.mapIndexed { index, _ ->
+            DataEdgeKey(
+                    EntityDataKey(esSrc.id, idsSrc[index]),
+                    EntityDataKey(esDst.id, idsDst[index]),
+                    EntityDataKey(esEdge.id, idsEdge[index])
+            )
+        }.toSet()
+
+        dataApi.createAssociations(edges)
+
+        // add permission to src entity set and it's properties to organization principal for materialization
+        grantMaterializePermissions(organization, esSrc, src.properties)
+
+        // materialize src entity set
+        organizationsApi.assembleEntitySets(organizationID, mapOf(esSrc.id to 100))
+
+        organizationDataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esSrc))
+                // all columns are there
+                (1..rs.metaData.columnCount).forEach {
+                    val columnName = rs.metaData.getColumnName(it)
+                    if (columnName != PostgresColumn.ID.name && columnName != PostgresColumn.ENTITY_SET_ID.name
+                            && columnName != ResultSetAdapters
+                                    .mapMetadataOptionToPostgresColumn(MetadataOption.ENTITY_KEY_IDS)) {
+                        Assert.assertTrue(srcPropertyFqns.values.contains(columnName))
+                    }
+                }
+            }
+        }
+
+        edmApi.deleteEntitySet(esSrc.id)
+
+        // we need to wait a bit for assembler to finish all tasks after deleting a materialized entity set
+        Thread.sleep(1000L)
+
+        val materializedEntitySets = organizationsApi.getOrganizationEntitySets(organizationID)
+
+        Assert.assertFalse(materializedEntitySets.keys.contains(esSrc.id))
+
+        // materialized entity set shouldn't be there anymore
+        organizationDataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                try {
+                    stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esSrc))
+                    Assert.fail("Should have thrown Exception but did not!")
+                } catch (e: PSQLException) {
+                    Assert.assertTrue(e.message!!
+                            .contains("relation ${quote("${AssemblerConnectionManager.MATERIALIZED_VIEWS_SCHEMA}.${esSrc.name}")} does not exist", true))
+                }
+            }
+        }
+    }
+
+    /**
+     * Users should only be able to access openlattice schema, but not public or prod.
+     */
+    @Test
+    fun testSchemaAccess() {
+        // todo test public schema privileges
+        val src = createEntityType()
+
+        loginAs("user1")
+        val organization = TestDataFactory.organization()
+        val organizationID = organizationsApi.createOrganizationIfNotExists(organization)
+
+        val es = createEntitySet(src)
+
+        // add permission to src entity set and it's properties to organization principal for materialization
+        grantMaterializePermissions(organization, es, src.properties)
+
+        // materialize src entity set
+        organizationsApi.assembleEntitySets(organizationID, mapOf(es.id to 1))
+
+
+        // try connect with user1
+        val materializedViewAccount = principalApi.materializedViewAccount
+
+        val connectionProperties = Properties()
+        connectionProperties["jdbcUrl"] = "jdbc:postgresql://localhost:5432"
+        connectionProperties["username"] = materializedViewAccount.username
+        connectionProperties["password"] = materializedViewAccount.credential
+        connectionProperties["maximumPoolSize"] = 5
+        connectionProperties["connectionTimeout"] = 60000
+
+        // connect with user1(simple member) credentials
+        val user1OrganizationDataSource = TestAssemblerConnectionManager.connect(
+                organizationID,
+                Optional.of(connectionProperties))
+
+        user1OrganizationDataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                stmt.executeQuery("SELECT * FROM " +
+                        "${AssemblerConnectionManager.MATERIALIZED_VIEWS_SCHEMA}.${quote(es.name)}")
+
+                try {
+                    stmt.executeQuery("SELECT * FROM ${AssemblerConnectionManager.PRODUCTION_FOREIGN_SCHEMA}.${PostgresTable.ENTITY_TYPES.name}")
+                    Assert.fail("Should have thrown Exception but did not!")
+                } catch (e: PSQLException) {
+                    Assert.assertTrue(e.message!!
+                            .contains("permission denied for schema prod", true))
+                }
+                try {
+                    stmt.executeQuery("SELECT * FROM ${AssemblerConnectionManager.PRODUCTION_FOREIGN_SCHEMA}.${PostgresTable.EDGES.name}")
+                    Assert.fail("Should have thrown Exception but did not!")
+                } catch (e: PSQLException) {
+                    Assert.assertTrue(e.message!!
+                            .contains("permission denied for schema prod", true))
+                }
+                try {
+                    stmt.executeQuery("SELECT * FROM ${AssemblerConnectionManager.PRODUCTION_FOREIGN_SCHEMA}.${quote(es.name)}")
+                    Assert.fail("Should have thrown Exception but did not!")
+                } catch (e: PSQLException) {
+                    Assert.assertTrue(e.message!!
+                            .contains("permission denied for schema prod", true))
+                }
+            }
+        }
+
+        loginAs("admin")
     }
 
 
