@@ -32,6 +32,7 @@ import com.openlattice.data.integration.Association
 import com.openlattice.data.integration.Entity
 import com.openlattice.data.storage.PostgresEntitySetSizesTask
 import com.openlattice.datastore.services.EdmManager
+import com.openlattice.edm.type.AssociationType
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.core.GraphService
 import com.openlattice.graph.core.NeighborSets
@@ -573,21 +574,13 @@ open class DataGraphService(
             val dstEntityTypes = edmManager.getEntityTypeIdsByEntitySetIds(dstEntitySetIds).values
 
             // ensure, that src and dst entity types are part of src and dst entity types of AssociationType
-            if (!edgeAssociationType.src.containsAll(srcEntityTypes)) {
-                throw IllegalArgumentException(
-                        "One or more entity types of src entity sets $srcEntitySetIds differs " +
-                                "from allowed entity types (${edgeAssociationType.src}) in association type of entity set " +
-                                edgeEntitySetId
-                )
-            }
-
-            if (!edgeAssociationType.dst.containsAll(dstEntityTypes)) {
-                throw IllegalArgumentException(
-                        "One or more entity types of dst entity sets $dstEntitySetIds differs " +
-                                "from allowed entity types (${edgeAssociationType.dst}) in association type of entity set " +
-                                edgeEntitySetId
-                )
-            }
+            checkAllowedEntityTypesOfAssociation(
+                    edgeAssociationType,
+                    edgeEntitySetId,
+                    srcEntityTypes,
+                    srcEntitySetIds,
+                    dstEntityTypes,
+                    dstEntitySetIds)
         }
     }
 
@@ -600,12 +593,51 @@ open class DataGraphService(
             // ensure, that DataEdge src and dst entity types are part of src and dst entity types of AssociationType
             val srcEntityType = edmManager.getEntityTypeByEntitySetId(it.src.entitySetId)
             val dstEntityType = edmManager.getEntityTypeByEntitySetId(it.dst.entitySetId)
-            if (!(associationType.src.contains(srcEntityType.id)
-                            && associationType.dst.contains(dstEntityType.id))) {
+
+            checkAllowedEntityTypesOfAssociation(
+                    associationType,
+                    associationEntitySetId,
+                    setOf(srcEntityType.id),
+                    setOf(it.src.entitySetId),
+                    setOf(dstEntityType.id),
+                    setOf(it.dst.entitySetId))
+        }
+    }
+
+    private fun checkAllowedEntityTypesOfAssociation(
+            edgeAssociationType: AssociationType,
+            edgeEntitySetId: UUID,
+            srcEntityTypes: Collection<UUID>,
+            srcEntitySetIds: Set<UUID>,
+            dstEntityTypes: Collection<UUID>,
+            dstEntitySetIds: Set<UUID>
+    ) {
+        val isSrcMNotAllowed = !edgeAssociationType.src.containsAll(srcEntityTypes)
+        val isDstNotAllowed = !edgeAssociationType.dst.containsAll(dstEntityTypes)
+
+        if (edgeAssociationType.isBidirectional) {
+            val isSrcNotAllowedInDst = !edgeAssociationType.dst.containsAll(srcEntityTypes)
+            val isDstNotAllowedInSrc = !edgeAssociationType.src.containsAll(dstEntityTypes)
+
+            if ((isSrcMNotAllowed || isDstNotAllowed) && (isSrcNotAllowedInDst || isDstNotAllowedInSrc)) {
                 throw IllegalArgumentException(
-                        "Entity type of src/dst entity set in data keys {src(${it.src}), " +
-                                "dst(${it.dst})} differs from allowed entity types in association type " +
-                                associationType.associationEntityType.id
+                        "One or more entity types of src or dst entity sets differs from allowed entity types " +
+                                "(src: ${edgeAssociationType.src}, dst: ${edgeAssociationType.dst}) in bidirectional " +
+                                "association type of entity set $edgeEntitySetId"
+                )
+            }
+        } else {
+            if (isSrcMNotAllowed) {
+                throw IllegalArgumentException(
+                        "One or more entity types of src entity sets $srcEntitySetIds differs from allowed entity " +
+                                "types (${edgeAssociationType.src}) in association type of entity set $edgeEntitySetId"
+                )
+            }
+
+            if (isDstNotAllowed) {
+                throw IllegalArgumentException(
+                        "One or more entity types of dst entity sets $dstEntitySetIds differs from allowed entity " +
+                                "types (${edgeAssociationType.dst}) in association type of entity set $edgeEntitySetId"
                 )
             }
         }
