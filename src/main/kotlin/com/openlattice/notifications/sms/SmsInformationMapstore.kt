@@ -58,7 +58,7 @@ class SmsInformationMapstore(
     }
 
     override fun bind(ps: PreparedStatement, key: SmsInformationKey, value: SmsEntitySetInformation) {
-        var offset = bind(ps, key)
+        var offset = bind(ps, key, 1)
 
         ps.setArray(offset++, PostgresArrays.createUuidArray(ps.connection, value.entitySetIds))
         ps.setArray(offset++, PostgresArrays.createTextArray(ps.connection, value.tags))
