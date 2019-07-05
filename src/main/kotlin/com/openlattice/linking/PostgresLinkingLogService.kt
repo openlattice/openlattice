@@ -28,9 +28,9 @@ class PostgresLinkingLogService(
             safePrepStatementExec(ADD_LINK_SQL) { ps, conn  ->
                 ps.setObject(1, linkingId)
                 ps.setObject(2, linkingId)
-                val asRay = PostgresArrays.createTextArray( conn, listOf(esid.toString()) )
+                val asRay = PostgresArrays.createTextArray(conn, listOf(esid.toString()))
                 ps.setArray(3, asRay)
-                ps.setString(4, "{$esid}")
+                ps.setString(4, esid.toString())
                 ps.setString(5, mapper.writeValueAsString(ekids))
                 ps.setLong(6, System.currentTimeMillis())
                 ps.setObject(7, linkingId)
@@ -44,9 +44,11 @@ class PostgresLinkingLogService(
             ekids.forEach { ekid ->
                 safePrepStatementExec(REMOVE_ENTITY_SQL) { ps, conn ->
                     ps.setObject(1, linkingId)
-                    val asRay = PostgresArrays.createTextArray( conn, listOf(esid.toString(), ekid.toString()) )
-                    ps.setArray(2, asRay)
-                    ps.setObject(3, linkingId)
+//                    val asRay = PostgresArrays.createTextArray( conn, listOf(esid.toString(), ekid.toString()) )
+//                    ps.setArray(2, asRay)
+                    ps.setString(2, esid.toString())
+                    ps.setString(3, ekid.toString())
+                    ps.setObject(4, linkingId)
                     ps.addBatch()
                 }
             }
@@ -82,14 +84,16 @@ private val ADD_LINK_SQL = "WITH old_json as " +
         "( SELECT ${ID_MAP.name} as value FROM ${LINKING_LOG.name} WHERE ${LINKING_ID.name} = ? ORDER BY ${VERSION.name} LIMIT 1 ) " +
         "UPDATE ${LINKING_LOG.name} " +
         "SET ${LINKING_ID.name} = ?, " +
-        "${ID_MAP.name} = jsonb_set( old_json.value, ?, ${ID_MAP.name}->? || ?::jsonb ), " +
+        "${ID_MAP.name} = jsonb_set( old_json.value, ?, COALESCE(${ID_MAP.name}->?, '[]'::jsonb) || ?::jsonb ), " +
         "${VERSION.name} = ? " +
         "FROM old_json " +
         "WHERE ${LINKING_ID.name} = ?"
 
+
+
 // Delete Entity
 private val REMOVE_ENTITY_SQL= "UPDATE ${LINKING_LOG.name} " +
         "SET ${ID_MAP.name} = " +
-        "( SELECT ${ID_MAP.name} as value FROM ${LINKING_LOG.name} WHERE ${LINKING_ID.name} = ? ORDER BY ${VERSION.name} LIMIT 1 ) " +
-        "#- ? " +
+        "((SELECT ${ID_MAP.name} as value FROM ${LINKING_LOG.name} WHERE ${LINKING_ID.name} = ? ORDER BY ${VERSION.name} LIMIT 1 )->?) " +
+        "- ? " +
         "WHERE ${LINKING_ID.name} = ?"
