@@ -73,8 +73,8 @@ class SmsInformationMapstore(
     }
 
     override fun bind(ps: PreparedStatement, key: SmsInformationKey, offset: Int): Int {
-        ps.setString(offset.inc(), key.phoneNumber)
-        ps.setObject(offset, key.organizationId)
+        ps.setString(offset, key.phoneNumber)
+        ps.setObject(offset + 1, key.organizationId)
         return offset + 2
     }
 
