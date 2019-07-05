@@ -42,7 +42,7 @@ import java.util.concurrent.TimeUnit
 
 class MaterializedEntitySetsDataRefreshTask : HazelcastFixedRateTask<MaterializedEntitySetsDependencies> {
     override fun getInitialDelay(): Long {
-        return 0L
+        return 30000L // wait until AssemblerConnectionManager can be initialized
     }
 
     override fun getPeriod(): Long {

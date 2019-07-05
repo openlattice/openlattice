@@ -509,6 +509,7 @@ class AssemblerConnectionManager(
         connect(dbName).use { datasource ->
             entitySetIds.forEach { dropMaterializedEntitySet(datasource, it) }
         }
+        logger.info("Materialized entity sets $entitySetIds removed from organization $organizationId")
     }
 
     fun dropMaterializedEntitySet(datasource: HikariDataSource, entitySetId: UUID) {
