@@ -78,7 +78,7 @@ class DataControllerLinkingTest : SetupTestData() {
         fun tearDown() {
             importedEntitySets.keys.forEach {
                 try {
-                    entitySetsApi.deleteEntitySet(entitySetsApi.getEntitySetId(it))
+                    edmApi.deleteEntitySet(edmApi.getEntitySetId(it))
                 } catch (e: UndeclaredThrowableException) {
                 }
             }
@@ -87,8 +87,8 @@ class DataControllerLinkingTest : SetupTestData() {
 
     @Test
     fun testGetLinkedEntitySets() {
-        val esId1 = entitySetsApi.getEntitySetId(importedEntitySets.keys.first())
-        val esId2 = entitySetsApi.getEntitySetId(importedEntitySets.keys.last())
+        val esId1 = edmApi.getEntitySetId(importedEntitySets.keys.first())
+        val esId2 = edmApi.getEntitySetId(importedEntitySets.keys.last())
 
         dataApi.deleteAllEntitiesFromEntitySet(esId1, DeleteType.Soft)
         dataApi.deleteAllEntitiesFromEntitySet(esId2, DeleteType.Hard)
@@ -128,8 +128,8 @@ class DataControllerLinkingTest : SetupTestData() {
 
     @Test
     fun testGetLinkedEntitySetsWithLinkingIds() {
-        val esId1 = entitySetsApi.getEntitySetId(importedEntitySets.keys.first())
-        val esId2 = entitySetsApi.getEntitySetId(importedEntitySets.keys.last())
+        val esId1 = edmApi.getEntitySetId(importedEntitySets.keys.first())
+        val esId2 = edmApi.getEntitySetId(importedEntitySets.keys.last())
 
         dataApi.deleteAllEntitiesFromEntitySet(esId1, DeleteType.Soft)
         dataApi.deleteAllEntitiesFromEntitySet(esId2, DeleteType.Hard)
@@ -174,8 +174,8 @@ class DataControllerLinkingTest : SetupTestData() {
     @Test
     fun testLoadDataAuthorizations() {
         // create data with admin
-        val esId1 = entitySetsApi.getEntitySetId(importedEntitySets.keys.first())
-        val esId2 = entitySetsApi.getEntitySetId(importedEntitySets.keys.last())
+        val esId1 = edmApi.getEntitySetId(importedEntitySets.keys.first())
+        val esId2 = edmApi.getEntitySetId(importedEntitySets.keys.last())
 
         dataApi.deleteAllEntitiesFromEntitySet(esId1, DeleteType.Soft)
         dataApi.deleteAllEntitiesFromEntitySet(esId2, DeleteType.Hard)
@@ -389,7 +389,7 @@ class DataControllerLinkingTest : SetupTestData() {
         }
 
         loginAs("user1")
-        val noData2 = dataApi.getEntity(esLinking.id, id)
+        val noData2 = dataApi.getEntity(esLinking.id, id).asMap()
         Assert.assertEquals(1, noData2.size)
         noData2.forEach { Assert.assertEquals(DataTables.ID_FQN, it.key) }
 
@@ -422,7 +422,7 @@ class DataControllerLinkingTest : SetupTestData() {
 
         loginAs("user1")
 
-        val ptData1 = dataApi.getEntity(esLinking.id, id)
+        val ptData1 = dataApi.getEntity(esLinking.id, id).asMap()
         Assert.assertEquals(1, ptData1[DataTables.ID_FQN]!!.size)
         Assert.assertEquals(setOf(DataTables.ID_FQN, EdmTestConstants.personGivenNameFqn), ptData1.keys)
 
@@ -445,7 +445,7 @@ class DataControllerLinkingTest : SetupTestData() {
 
         loginAs("user1")
 
-        val dataAll1 = dataApi.getEntity(esLinking.id, id)
+        val dataAll1 = dataApi.getEntity(esLinking.id, id).asMap()
         Assert.assertEquals(1, dataAll1[DataTables.ID_FQN]!!.size)
         Assert.assertEquals(
                 setOf(DataTables.ID_FQN, EdmTestConstants.personGivenNameFqn, EdmTestConstants.personMiddleNameFqn),

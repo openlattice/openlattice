@@ -77,7 +77,7 @@ open class SetupTestData : MultipleAuthenticatedUsersBase() {
          */
         fun checkLinkingFinished( importedGeneralPersonFqns: Set<String>): Boolean {
             val finishedEntitySets = realtimeLinkingApi.linkingFinishedEntitySets
-            val finished = importedGeneralPersonFqns.all { finishedEntitySets.contains(entitySetsApi.getEntitySetId(it)) }
+            val finished = importedGeneralPersonFqns.all { finishedEntitySets.contains(edmApi.getEntitySetId(it)) }
 
             logger.info("Linking is finished:{} with imported entity sets: {}", finished, importedGeneralPersonFqns)
             return finished
