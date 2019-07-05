@@ -342,7 +342,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
             Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!
-                    .contains("differs from allowed entity types in association type ${edge1.id}", true))
+                    .contains("differs from allowed entity types ([]) in association type of entity set ${esEdge1.id}", true))
         }
 
         // add src and dst to association type
@@ -375,13 +375,75 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
             Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!
-                    .contains("differs from allowed entity types in association type ${edge2.id}", true))
+                    .contains("differs from allowed entity types ([]) in association type of entity set ${esEdge2.id}", true))
         }
 
         // add src and dst to association type
         edmApi.addSrcEntityTypeToAssociationType(edge2.id, src.id)
         edmApi.addDstEntityTypeToAssociationType(edge2.id, dst.id)
         dataApi.createAssociations(edgesToBeCreated)
+    }
+
+
+    @Test
+    fun testCreateBidirectionalEdgesWithDifferentEntityTypes() {
+        // Test for createAssociations( ListMultimap<UUID, DataEdge> associations )
+        val edge = createEdgeEntityType()
+        val esEdge = createEntitySet(edge)
+        val src = createEntityType()
+        val esSrc = createEntitySet(src)
+        val dst = createEntityType()
+        val esDst = createEntitySet(dst)
+
+        // create association type with only src
+        createAssociationType(edge, setOf(src), setOf(), true)
+
+        val testDataSrc = TestDataFactory.randomStringEntityData(numberOfEntries, src.properties)
+        val testDataDst = TestDataFactory.randomStringEntityData(numberOfEntries, dst.properties)
+
+        val entriesSrc = ImmutableList.copyOf(testDataSrc.values)
+        val idsSrc = dataApi.createEntities(esSrc.id, entriesSrc)
+
+        val entriesDst = ImmutableList.copyOf(testDataDst.values)
+        val idsDst = dataApi.createEntities(esDst.id, entriesDst)
+
+
+        val edgesToBeCreated1: ListMultimap<UUID, DataEdge> = ArrayListMultimap.create()
+        val edgeData1 = createDataEdges(esEdge.id, edge.properties, esSrc.id, idsSrc, esDst.id, idsDst)
+        edgesToBeCreated1.putAll(edgeData1.first, edgeData1.second)
+        val edgesToBeCreated2: ListMultimap<UUID, DataEdge> = ArrayListMultimap.create()
+        val edgeData2 = createDataEdges(esEdge.id, edge.properties, esDst.id, idsDst, esSrc.id, idsSrc)
+        edgesToBeCreated2.putAll(edgeData2.first, edgeData2.second)
+
+        // try to create edges
+        try {
+            dataApi.createAssociations(edgesToBeCreated1)
+            Assert.fail("Should have thrown Exception but did not!")
+        } catch (e: UndeclaredThrowableException) {
+            Assert.assertTrue(e.undeclaredThrowable.message!!
+                    .contains("differs from allowed entity types (src: [${src.id}], dst: []) " +
+                            "in bidirectional association type of entity set ${esEdge.id}", true))
+        }
+
+        // try to create edges opposite direction
+        try {
+            dataApi.createAssociations(edgesToBeCreated2)
+            Assert.fail("Should have thrown Exception but did not!")
+        } catch (e: UndeclaredThrowableException) {
+            Assert.assertTrue(e.undeclaredThrowable.message!!
+                    .contains("differs from allowed entity types (src: [${src.id}], dst: []) " +
+                            "in bidirectional association type of entity set ${esEdge.id}", true))
+        }
+
+        // add src and dst to association type
+        edmApi.addSrcEntityTypeToAssociationType(edge.id, src.id)
+        edmApi.addDstEntityTypeToAssociationType(edge.id, dst.id)
+
+        // create edges
+        dataApi.createAssociations(edgesToBeCreated1)
+
+        // create edges is opposite direction
+        dataApi.createAssociations(edgesToBeCreated1)
     }
 
     private fun lookupEdgeDataByFqn(edgeData: MutableMap<UUID, MutableCollection<Any>>):
