@@ -36,13 +36,13 @@ class SmsInformationMapstore(
     }
 
     override fun generateTestKey(): SmsInformationKey {
-        return SmsInformationKey(RandomStringUtils.randomAlphanumeric(10), UUID.randomUUID())
+        return SmsInformationKey("818 555 1234", UUID(1,2))
     }
 
     override fun generateTestValue(): SmsEntitySetInformation {
         return SmsEntitySetInformation(
-                RandomStringUtils.randomAlphanumeric(10),
-                UUID.randomUUID(),
+                "818 555 1234",
+                UUID(1,2),
                 ImmutableSet.of(UUID.randomUUID(), UUID.randomUUID()),
                 ImmutableSet.of(RandomStringUtils.random(5), RandomStringUtils.random(5))
         )
