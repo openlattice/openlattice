@@ -33,6 +33,7 @@ import com.openlattice.data.DataIntegrationApi;
 import com.openlattice.data.S3Api;
 import com.openlattice.directory.PrincipalApi;
 import com.openlattice.edm.EdmApi;
+import com.openlattice.entitysets.EntitySetsApi;
 import com.openlattice.organization.OrganizationsApi;
 import com.openlattice.search.SearchApi;
 import org.slf4j.Logger;
@@ -96,6 +97,10 @@ public class ApiClient implements ApiFactoryFactory {
 
     public EdmApi getEdmApi() throws ExecutionException {
         return get().create( EdmApi.class );
+    }
+
+    public EntitySetsApi getEntitySetsApi() throws ExecutionException {
+        return get().create( EntitySetsApi.class );
     }
 
     public OrganizationsApi getOrganizationsApi() throws ExecutionException {

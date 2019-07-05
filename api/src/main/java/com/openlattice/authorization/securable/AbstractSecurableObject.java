@@ -18,37 +18,33 @@
 
 package com.openlattice.authorization.securable;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
-import com.openlattice.client.serialization.SerializationConstants;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import java.util.HashSet;
-import java.util.Optional;
-import java.util.Set;
-import org.apache.commons.lang3.StringUtils;
-
-import java.util.UUID;
-
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.openlattice.client.serialization.SerializationConstants;
+import java.util.Optional;
+import java.util.UUID;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * Base class for all securable objects in the system.
  */
-@JsonInclude(value= Include.NON_ABSENT) //This means empty collections will not be included in generated JSON.
+@JsonInclude( value = Include.NON_ABSENT ) //This means empty collections will not be included in generated JSON.
 public abstract class AbstractSecurableObject {
 
     protected final UUID    id;
-    //This is only a descriptive property so relax finality.
-    protected String  title;
-    protected String  description;
-
     private final   boolean idPresent;
+    //This is only a descriptive property so relax finality.
+    protected       String  title;
+    protected       String  description;
 
     /**
-     * @param id          The UUID of the securable object. Must not be null.
-     * @param title       The title of the securable object. Must not be blank.
+     * @param id The UUID of the securable object. Must not be null.
+     * @param title The title of the securable object. Must not be blank.
      * @param description An optional description for the object. Can be blank or null.
      */
     protected AbstractSecurableObject(
@@ -59,8 +55,8 @@ public abstract class AbstractSecurableObject {
     }
 
     /**
-     * @param id          An optional id for the securable object in the form a UUID.
-     * @param title       The title of the securable object. Must not be blank.
+     * @param id An optional id for the securable object in the form a UUID.
+     * @param title The title of the securable object. Must not be blank.
      * @param description An optional description for the object. Can be blank or null.
      */
     protected AbstractSecurableObject(
@@ -71,15 +67,43 @@ public abstract class AbstractSecurableObject {
     }
 
     /**
-     * @param id          The id of the securable object in the form of a UUID. Must not be null.
-     * @param title       The title of the securable object. Must not be blank.
+     * @param id The id of the securable object in the form of a UUID. Must not be null.
+     * @param title The title of the securable object. Must not be blank.
      * @param description An optional description for the object. Can be blank or null.
-     * @param idPresent   Whether the id was present at creation time or whether it was generate randomly.
+     * @param idPresent Whether the id was present at creation time or whether it was generate randomly.
      */
     private AbstractSecurableObject(
             UUID id,
             String title,
             Optional<String> description,
+            boolean idPresent ) {
+        this( id, title, description.orElse( "" ), idPresent );
+    }
+
+    /**
+     * Serialization constructor
+     *
+     * @param id The id of the securable object in the form of a UUID. Must not be null.
+     * @param title The title of the securable object. Must not be blank.
+     * @param description An optional description for the object. Can be blank or null.
+     */
+    protected AbstractSecurableObject(
+            UUID id,
+            String title,
+            String description ) {
+        this( id, title, description, true );
+    }
+
+    /**
+     * @param id The id of the securable object in the form of a UUID. Must not be null.
+     * @param title The title of the securable object. Must not be blank.
+     * @param description An optional description for the object. Can be blank or null.
+     * @param idPresent Whether the id was present at creation time or whether it was generate randomly.
+     */
+    private AbstractSecurableObject(
+            UUID id,
+            String title,
+            String description,
             boolean idPresent ) {
 
         /*
@@ -89,7 +113,7 @@ public abstract class AbstractSecurableObject {
         checkArgument( StringUtils.isNotBlank( title ), "Title cannot be blank." );
         this.id = checkNotNull( id );
         this.idPresent = idPresent;
-        this.description = description.orElse( "" );
+        this.description = description;
         this.title = title;
     }
 
@@ -101,6 +125,11 @@ public abstract class AbstractSecurableObject {
     @JsonProperty( SerializationConstants.TITLE_FIELD )
     public String getTitle() {
         return title;
+    }
+
+    @JsonIgnore
+    public void setTitle( String title ) {
+        this.title = title;
     }
 
     @Override
@@ -115,12 +144,7 @@ public abstract class AbstractSecurableObject {
     }
 
     @JsonIgnore
-    public void setTitle( String title ){
-        this.title = title;
-    }
-
-    @JsonIgnore
-    public void setDescription( String description ){
+    public void setDescription( String description ) {
         this.description = description;
     }
 

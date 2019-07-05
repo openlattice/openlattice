@@ -142,7 +142,7 @@ public interface DataApi {
     @PATCH( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH )
     Integer replaceEntityProperties(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
-            @Body Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Object>>> entities );
+            @Body Map<UUID, Map<UUID, Set<Map<ByteBuffer, Object>>>> entities );
 
     /**
      * Creates a new set of associations.
@@ -272,7 +272,7 @@ public interface DataApi {
      * @return A enttity details object, with property type FQNs as keys.
      */
     @GET( BASE + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH )
-    SetMultimap<FullQualifiedName, Object> getEntity(
+    Map<FullQualifiedName, Set<Object>> getEntity(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Path( ENTITY_KEY_ID ) UUID entityKeyId );
 
