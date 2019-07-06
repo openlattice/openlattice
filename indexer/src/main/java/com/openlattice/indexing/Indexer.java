@@ -28,7 +28,6 @@ import com.openlattice.auditing.pods.AuditingConfigurationPod;
 import com.openlattice.indexing.pods.*;
 import com.openlattice.auth0.Auth0Pod;
 import com.openlattice.aws.AwsS3Pod;
-import com.openlattice.datastore.cassandra.CassandraTablesPod;
 import com.openlattice.hazelcast.pods.MapstoresPod;
 import com.openlattice.hazelcast.pods.SharedStreamSerializersPod;
 import com.openlattice.jdbc.JdbcPod;
