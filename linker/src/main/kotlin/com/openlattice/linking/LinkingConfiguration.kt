@@ -28,6 +28,7 @@ import com.kryptnostic.rhizome.configuration.ConfigurationKey
 import com.kryptnostic.rhizome.configuration.SimpleConfigurationKey
 import com.kryptnostic.rhizome.configuration.annotation.ReloadableConfiguration
 import com.openlattice.conductor.rpc.SearchConfiguration
+import com.openlattice.linking.util.PersonProperties
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import java.util.*
 
@@ -41,27 +42,24 @@ private const val WHITELIST = "whitelist"
 private const val SEARCH_CONFIGURATION = "searchConfiguration"
 private const val BATCH_SIZE = "batch-size"
 private const val LOAD_SIZE = "load-size"
-private val DEFAULT_ENTITY_TYPES = setOf("general.person")
+private val DEFAULT_ENTITY_TYPES = setOf(PersonProperties.PERSON_TYPE_FQN.fullQualifiedNameAsString)
 
 /**
  * Configuration class for linking.
  */
-@ReloadableConfiguration(uri = CONFIG_YAML_NAME )
+@ReloadableConfiguration(uri = CONFIG_YAML_NAME)
 data class LinkingConfiguration(
-        @JsonProperty(SEARCH_CONFIGURATION ) val searchConfiguration: SearchConfiguration,
+        @JsonProperty(SEARCH_CONFIGURATION) val searchConfiguration: SearchConfiguration,
         @JsonProperty(BLOCK_SIZE_FIELD) val blockSize: Int = DEFAULT_BLOCK_SIZE,
         @JsonProperty(WHITELIST) val whitelist: Optional<Set<UUID>>,
         @JsonProperty(BLACKLIST) val blacklist: Set<UUID> = setOf(),
-        @JsonProperty(BATCH_SIZE ) val batchSize: Int = 10,
-        @JsonProperty(LOAD_SIZE ) val loadSize: Int = 100,
+        @JsonProperty(BATCH_SIZE) val batchSize: Int = 10,
+        @JsonProperty(LOAD_SIZE) val loadSize: Int = 100,
         @JsonProperty(ENTITY_TYPES_FIELD) private val entityTypesFqns: Set<String> = DEFAULT_ENTITY_TYPES
 ) : Configuration {
     companion object {
-        private val key = SimpleConfigurationKey(CONFIG_YAML_NAME )
         @JvmStatic
-        fun key(): ConfigurationKey {
-            return key
-        }
+        private val configKey = SimpleConfigurationKey(CONFIG_YAML_NAME)
     }
 
     val entityTypes: Set<FullQualifiedName> = entityTypesFqns.map { FullQualifiedName(it) }.toSet()
@@ -69,6 +67,6 @@ data class LinkingConfiguration(
 
     @JsonIgnore
     override fun getKey(): ConfigurationKey {
-        return key()
+        return configKey
     }
 }

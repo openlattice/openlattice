@@ -1,6 +1,4 @@
 
-reportEmailAddress: support@openlattice.com
-
 searchConfiguration:
   elasticsearchUrl: localhost
   elasticsearchCluster: openlattice

@@ -22,8 +22,6 @@
 package com.openlattice.linking
 
 import com.google.common.base.Suppliers
-import com.google.common.collect.Multimaps
-import com.google.common.collect.SetMultimap
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
 import com.hazelcast.query.Predicates
@@ -33,13 +31,12 @@ import com.openlattice.data.storage.PostgresEntityDataQueryService
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.linking.util.PersonProperties
+import com.openlattice.postgres.mapstores.EntityTypeMapstore
 import com.openlattice.postgres.streams.BasePostgresIterable
-import com.openlattice.postgres.streams.PostgresIterable
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.locks.ReentrantReadWriteLock
-import java.util.stream.Stream
 
 /**
  *
@@ -57,7 +54,7 @@ class EdmCachingDataLoader(
 
     private val propertyTypes: IMap<UUID, PropertyType> = hazelcast.getMap(HazelcastMap.PROPERTY_TYPES.name)
     private val personEntityType = entityTypes.values(
-            Predicates.equal("type.fullQualifiedNameAsString", PERSON_FQN)
+            Predicates.equal(EntityTypeMapstore.FULLQUALIFIED_NAME_PREDICATE, PersonProperties.PERSON_TYPE_FQN.fullQualifiedNameAsString)
     ).first()
     private val authorizedPropertyTypesCache = Suppliers.memoizeWithExpiration(
             { propertyTypes.getAll(personEntityType.properties) },
@@ -74,7 +71,7 @@ class EdmCachingDataLoader(
                 .groupBy({ it.entitySetId }, { it.entityKeyId })
                 .mapValues { it.value.toSet() }
                 .flatMap { edkp ->
-                    getEntityStream(edkp.key, edkp.value).map { EntityDataKey(edkp.key, it.first) to it.second }
+                    getEntityStream(edkp.key, edkp.value).map { EntityDataKey(edkp.key, it.first) to it.second}
                 }
                 .toMap()
     }

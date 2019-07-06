@@ -61,7 +61,7 @@ public class LinkerConfigurationPod {
         return config;
     }
 
-    @Bean( name = "likningConfiguration" )
+    @Bean( name = "linkingConfiguration" )
     @Profile( { Profiles.AWS_CONFIGURATION_PROFILE, Profiles.AWS_TESTING_PROFILE } )
     public LinkingConfiguration getAwsLinkingConfiguration() throws IOException {
         LinkingConfiguration config = ResourceConfigurationLoader.loadConfigurationFromS3( s3,

@@ -33,6 +33,8 @@ import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.EntityType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.linking.*
+import com.openlattice.linking.util.PersonProperties
+import com.openlattice.postgres.mapstores.EntityTypeMapstore
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -58,7 +60,7 @@ class ElasticsearchBlocker(
     private val entityTypes: IMap<UUID, EntityType> = hazelcast.getMap(HazelcastMap.ENTITY_TYPES.name)
 
     private val personEntityType = entityTypes.values(
-            Predicates.equal("type.fullQualifiedNameAsString", PERSON_FQN)
+            Predicates.equal(EntityTypeMapstore.FULLQUALIFIED_NAME_PREDICATE, PersonProperties.PERSON_TYPE_FQN.fullQualifiedNameAsString)
     ).first()
 
     private val entitySetsCache = Suppliers
