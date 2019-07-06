@@ -54,7 +54,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION;
-import static com.openlattice.postgres.DataTables.ID_FQN;
+import static com.openlattice.edm.EdmConstants.ID_FQN;
 
 @RestController
 @RequestMapping( SearchApi.CONTROLLER )
@@ -686,7 +686,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
         return searchResult.getHits().stream().map( SearchController::getEntityKeyId ).collect( Collectors.toSet() );
     }
 
-    private static UUID getEntityKeyId( SetMultimap<FullQualifiedName, Object> entity ) {
+    private static UUID getEntityKeyId( Map<FullQualifiedName, Set<Object>> entity ) {
         return UUID.fromString( entity.get( ID_FQN ).iterator().next().toString() );
     }
 

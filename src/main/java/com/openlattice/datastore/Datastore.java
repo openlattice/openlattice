@@ -41,19 +41,21 @@ import com.openlattice.tasks.pods.TaskSchedulerPod;
 
 public class Datastore extends BaseRhizomeServer {
     private static final Class<?>[] datastorePods = new Class<?>[] {
+            AuditingConfigurationPod.class,
+            AwsS3Pod.class,
             ByteBlobServicePod.class,
             DatastoreServicesPod.class,
-            SharedStreamSerializersPod.class,
-            AwsS3Pod.class,
             JdbcPod.class,
             MapstoresPod.class,
             PostgresPod.class,
-            AuditingConfigurationPod.class,
+            SharedStreamSerializersPod.class,
             TaskSchedulerPod.class
     };
+
     private static final Class<?>[] rhizomePods   = new Class<?>[] {
             RegistryBasedHazelcastInstanceConfigurationPod.class,
             Auth0Pod.class };
+
     private static final Class<?>[] webPods       = new Class<?>[] {
             DatastoreServletsPod.class,
             DatastoreSecurityPod.class, };

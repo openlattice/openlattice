@@ -30,10 +30,25 @@ import com.google.common.eventbus.EventBus;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.hazelcast.query.Predicates;
-import com.openlattice.apps.*;
-import com.openlattice.apps.processors.*;
-import com.openlattice.authorization.*;
-import com.openlattice.authorization.securable.SecurableObjectType;
+import com.openlattice.apps.App;
+import com.openlattice.apps.AppConfig;
+import com.openlattice.apps.AppConfigKey;
+import com.openlattice.apps.AppType;
+import com.openlattice.apps.AppTypeSetting;
+import com.openlattice.apps.processors.AddAppTypesToAppProcessor;
+import com.openlattice.apps.processors.RemoveAppTypesFromAppProcessor;
+import com.openlattice.apps.processors.UpdateAppConfigEntitySetProcessor;
+import com.openlattice.apps.processors.UpdateAppConfigPermissionsProcessor;
+import com.openlattice.apps.processors.UpdateAppMetadataProcessor;
+import com.openlattice.apps.processors.UpdateAppTypeMetadataProcessor;
+import com.openlattice.authorization.AccessCheck;
+import com.openlattice.authorization.AclKey;
+import com.openlattice.authorization.AuthorizationManager;
+import com.openlattice.authorization.AuthorizationQueryService;
+import com.openlattice.authorization.HazelcastAclKeyReservationService;
+import com.openlattice.authorization.Permission;
+import com.openlattice.authorization.Principal;
+import com.openlattice.authorization.PrincipalType;
 import com.openlattice.authorization.util.AuthorizationUtils;
 import com.openlattice.controllers.exceptions.BadRequestException;
 import com.openlattice.datastore.services.EdmManager;
@@ -51,13 +66,18 @@ import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.mapstores.AppConfigMapstore;
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
-
-import javax.inject.Inject;
-import java.util.*;
+import java.util.EnumSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.inject.Inject;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 public class AppService {
     private final IMap<UUID, App>                    apps;
@@ -158,7 +178,8 @@ public class AppService {
                 ImmutableSet.of(),
                 Optional.empty(),
                 Optional.of( organizationId ),
-                Optional.of( flags ) );
+                Optional.of( flags ),
+                Optional.of( new LinkedHashSet<>( organizationService.getDefaultPartitions( organizationId ) ) ) );
         edmService.createEntitySet( principal, entitySet );
         return entitySet.getId();
     }
