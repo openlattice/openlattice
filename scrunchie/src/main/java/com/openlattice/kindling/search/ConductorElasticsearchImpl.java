@@ -80,6 +80,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.toSet;
+import static com.openlattice.IdConstants.ENTITY_SET_ID_KEY_ID;
+import static com.openlattice.IdConstants.LAST_WRITE_KEY_ID;
 
 public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     // @formatter:off
@@ -503,8 +505,8 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         Map<String, Object> entityMapping = Maps.newHashMap();
         Map<String, Object> entityPropertiesMapping = Maps.newHashMap();
 
-        entityPropertiesMapping.put( ENTITY_SET_ID_KEY.toString(), keywordMapping );
-        entityPropertiesMapping.put( LAST_WRITE.toString(), keywordMapping );
+        entityPropertiesMapping.put( ENTITY_SET_ID_KEY_ID.getId().toString(), keywordMapping );
+        entityPropertiesMapping.put( LAST_WRITE_KEY_ID.getId().toString(), keywordMapping );
 
         for ( PropertyType propertyType : propertyTypes ) {
 
@@ -595,7 +597,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
             Map<Object, Object> values = new HashMap<>( entity.size() + 1 );
             entity.entrySet().forEach( entry -> values.put( entry.getKey(), entry.getValue() ) );
-            values.put( ENTITY_SET_ID_KEY, entitySetId );
+            values.put( ENTITY_SET_ID_KEY_ID.getId(), entitySetId );
 
             return values;
         } ).collect( Collectors.toList() );
@@ -613,7 +615,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
         Map<Object, Object> values = new HashMap<>( entity.size() + 1 );
         entity.entrySet().forEach( entry -> values.put( entry.getKey(), entry.getValue() ) );
-        values.put( ENTITY_SET_ID_KEY, entitySetId );
+        values.put( ENTITY_SET_ID_KEY_ID.getId(), entitySetId );
 
         try {
             return mapper.writeValueAsBytes( ImmutableMap.of( ENTITY, values, ENTITY_SET_ID_FIELD, entitySetId ) );
@@ -676,7 +678,6 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     @Override
     public boolean createBulkLinkedData(
             UUID entityTypeId,
-            UUID linkingEntitySetId,
             Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> entitiesByLinkingId ) { // linking_id/entity_set_id/property_id
         if ( !verifyElasticsearchConnection() ) { return false; }
 
@@ -878,7 +879,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         BoolQueryBuilder query = QueryBuilders.boolQuery().minimumShouldMatch( 1 );
 
         for ( int i = 0; i < entitySetIds.length; i++ ) {
-            RangeQueryBuilder rangeQuery = QueryBuilders.rangeQuery( getFieldName( LAST_WRITE ) );
+            RangeQueryBuilder rangeQuery = QueryBuilders.rangeQuery( getFieldName( LAST_WRITE_KEY_ID.getId() ) );
 
             if ( constraint.getStartDate().isPresent() ) {
                 rangeQuery.gt( constraint.getStartDate().get().toString() );
@@ -954,8 +955,10 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
         BoolQueryBuilder entitySetQuery = QueryBuilders.boolQuery().minimumShouldMatch( 1 );
         entitySetIds.forEach( entitySetId -> {
-            entitySetQuery
-                    .should( QueryBuilders.termQuery( getFieldName( ENTITY_SET_ID_KEY ), entitySetId.toString() ) );
+            entitySetQuery.should(
+                    QueryBuilders.termQuery( getFieldName( ENTITY_SET_ID_KEY_ID.getId() ),
+                            entitySetId.toString() )
+            );
         } );
 
         query.must( QueryBuilders.nestedQuery( ENTITY, entitySetQuery, ScoreMode.Max ) );

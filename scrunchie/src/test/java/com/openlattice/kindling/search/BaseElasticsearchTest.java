@@ -180,7 +180,8 @@ public class BaseElasticsearchTest {
                 ImmutableSet.of( "foo@bar.com", "foobar@foo.net" ),
                 Optional.empty(),
                 Optional.empty(),
-                Optional.empty() );
+                Optional.empty(),
+                Optional.empty());
         entitySet2 = new EntitySet(
                 Optional.of( entitySet2Id ),
                 ENTITY_TYPE_ID,
@@ -190,7 +191,8 @@ public class BaseElasticsearchTest {
                 ImmutableSet.of( "foo@bar.com", "foobar@foo.net" ),
                 Optional.empty(),
                 Optional.empty(),
-                Optional.empty() );
+                Optional.empty(),
+                Optional.empty());
 
         owner = new Principal( PrincipalType.USER, "support@openlattice.com" );
         openlatticeUser = new Principal( PrincipalType.ROLE, "openlatticeUser" );
