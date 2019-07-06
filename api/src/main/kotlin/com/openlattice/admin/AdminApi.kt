@@ -1,6 +1,7 @@
 package com.openlattice.admin
 
 import com.openlattice.authorization.Principal
+import com.openlattice.notifications.sms.SmsEntitySetInformation
 import retrofit2.http.*
 import java.util.*
 
@@ -18,6 +19,7 @@ const val LINKING = "linking"
 const val OMIT_ENTITY_SET_ID = "omitEntitySetId"
 const val ENTITY_SETS = "/entity/sets"
 const val COUNT = "/count"
+const val PHONE = "/phone"
 
 const val ID = "id"
 const val ID_PATH = "/{${ID}}"
@@ -51,5 +53,18 @@ interface AdminApi {
 
     @POST(BASE + ENTITY_SETS + COUNT)
     fun countEntitySetsOfEntityTypes(@Body entityTypeIds: Set<UUID>): Map<UUID, Long>
+
+    /**
+     * Sets the organization phone number.
+     *
+     * @param organizationId The organization id to set the phone number for.
+     * @param entitySetInformationList An array of [SmsEntitySetInformation] containing per entity set contact info.
+     * @return The current phone number after the set operation completed. This be different from the input phone number
+     * either because it has been reformatted or someone else set the phone number simultaneously.
+     */
+    @POST(BASE + ID_PATH + PHONE)
+    fun setOrganizationEntitySetInformation(
+            @Path(ID) organizationId: UUID,
+            @Body entitySetInformationList: List<SmsEntitySetInformation>): Int?
 
 }

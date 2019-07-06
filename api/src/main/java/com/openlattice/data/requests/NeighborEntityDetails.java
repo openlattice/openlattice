@@ -21,22 +21,20 @@ package com.openlattice.data.requests;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
-import com.google.common.collect.SetMultimap;
 import com.openlattice.client.serialization.SerializationConstants;
 import com.openlattice.edm.EntitySet;
-import com.openlattice.edm.type.PropertyType;
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
-
-import java.util.Collection;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 public class NeighborEntityDetails {
     private final EntitySet                              associationEntitySet;
-    private final SetMultimap<FullQualifiedName, Object> associationDetails;
+    private final Map<FullQualifiedName, Set<Object>> associationDetails;
 
-    private final Optional<EntitySet>                              neighborEntitySet;
-    private final Optional<UUID>                                   neighborId;
-    private final Optional<SetMultimap<FullQualifiedName, Object>> neighborDetails;
+    private final Optional<EntitySet>                           neighborEntitySet;
+    private final Optional<UUID>                                neighborId;
+    private final Optional<Map<FullQualifiedName, Set<Object>>> neighborDetails;
 
     private final boolean entityIsSrc;
 
@@ -44,11 +42,11 @@ public class NeighborEntityDetails {
     public NeighborEntityDetails(
             @JsonProperty( SerializationConstants.ASSOCIATION_ENTITY_SET ) EntitySet associationEntitySet,
             @JsonProperty( SerializationConstants.ASSOCIATION_DETAILS )
-                    SetMultimap<FullQualifiedName, Object> associationDetails,
+                    Map<FullQualifiedName, Set<Object>> associationDetails,
             @JsonProperty( SerializationConstants.NEIGHBOR_ENTITY_SET ) Optional<EntitySet> neighborEntitySet,
             @JsonProperty( SerializationConstants.NEIGHBOR_ID ) Optional<UUID> neighborId,
             @JsonProperty( SerializationConstants.NEIGHBOR_DETAILS )
-                    Optional<SetMultimap<FullQualifiedName, Object>> neighborDetails,
+                    Optional<Map<FullQualifiedName, Set<Object>>> neighborDetails,
             @JsonProperty( SerializationConstants.SRC ) boolean entityIsSrc ) {
         this.associationEntitySet = associationEntitySet;
         this.associationDetails = associationDetails;
@@ -60,10 +58,10 @@ public class NeighborEntityDetails {
 
     public NeighborEntityDetails(
             EntitySet associationEntitySet,
-            SetMultimap<FullQualifiedName, Object> associationDetails,
+            Map<FullQualifiedName, Set<Object>> associationDetails,
             EntitySet neighborEntitySet,
             UUID neighborId,
-            SetMultimap<FullQualifiedName, Object> neighborDetails,
+            Map<FullQualifiedName, Set<Object>> neighborDetails,
             boolean entityIsSrc ) {
         this(
                 associationEntitySet,
@@ -76,7 +74,7 @@ public class NeighborEntityDetails {
 
     public NeighborEntityDetails(
             EntitySet associationEntitySet,
-            SetMultimap<FullQualifiedName, Object> associationDetails,
+            Map<FullQualifiedName, Set<Object>> associationDetails,
             boolean entityIsSrc ) {
         this(
                 associationEntitySet,
@@ -93,7 +91,7 @@ public class NeighborEntityDetails {
     }
 
     @JsonProperty( SerializationConstants.ASSOCIATION_DETAILS )
-    public SetMultimap<FullQualifiedName, Object> getAssociationDetails() {
+    public Map<FullQualifiedName, Set<Object>> getAssociationDetails() {
         return associationDetails;
     }
 
@@ -108,7 +106,7 @@ public class NeighborEntityDetails {
     }
 
     @JsonProperty( SerializationConstants.NEIGHBOR_DETAILS )
-    public Optional<SetMultimap<FullQualifiedName, Object>> getNeighborDetails() {
+    public Optional<Map<FullQualifiedName, Set<Object>>> getNeighborDetails() {
         return neighborDetails;
     }
 
