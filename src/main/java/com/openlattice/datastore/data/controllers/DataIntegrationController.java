@@ -34,7 +34,7 @@ import com.openlattice.authorization.Permission;
 import com.openlattice.data.*;
 import com.openlattice.data.integration.*;
 import com.openlattice.data.integration.Entity;
-import com.openlattice.data.storage.AwsDataSinkService;
+import com.openlattice.data.storage.aws.AwsDataSinkService;
 import com.openlattice.data.storage.PostgresDataSinkService;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.edm.type.PropertyType;
@@ -51,9 +51,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.web.bind.annotation.*;
-
-import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION;
-import static com.openlattice.authorization.EdmAuthorizationHelper.aclKeysForAccessCheck;
 
 @RestController
 @RequestMapping( DataIntegrationApi.CONTROLLER )
