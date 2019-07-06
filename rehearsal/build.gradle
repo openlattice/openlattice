@@ -32,7 +32,7 @@ group = "com.openlattice"
 
 apply from: "https://raw.githubusercontent.com/openlattice/gradles/master/openlattice.gradle"
 
-sourceCompatibility=JavaVersion.VERSION_1_8
+sourceCompatibility=JavaVersion.VERSION_11
 
 def versions = [
   checkstyle: '7.4',
@@ -100,7 +100,7 @@ install {
 eclipse {
     ext.downloadSources = true
     ext.downloadJavadoc = true
-    ext.sourceCompatibility=JavaVersion.VERSION_1_8
+    ext.sourceCompatibility=JavaVersion.VERSION_11
 }
 
 compileKotlin {

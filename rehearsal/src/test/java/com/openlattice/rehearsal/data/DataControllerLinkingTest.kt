@@ -27,8 +27,8 @@ import com.openlattice.authorization.*
 import com.openlattice.data.DeleteType
 import com.openlattice.data.requests.EntitySetSelection
 import com.openlattice.data.requests.FileType
+import com.openlattice.edm.EdmConstants
 import com.openlattice.edm.type.EntityType
-import com.openlattice.postgres.DataTables
 import com.openlattice.rehearsal.SetupTestData
 import com.openlattice.rehearsal.edm.EdmTestConstants
 import org.apache.commons.lang.RandomStringUtils
@@ -115,9 +115,9 @@ class DataControllerLinkingTest : SetupTestData() {
 
         //Remove the extra properties for easier equals.
         data.forEach {
-            it.removeAll(DataTables.ID_FQN)
-            it.removeAll(DataTables.LAST_INDEX_FQN)
-            it.removeAll(DataTables.LAST_WRITE_FQN)
+            it.removeAll(EdmConstants.ID_FQN)
+            it.removeAll(EdmConstants.LAST_INDEX_FQN)
+            it.removeAll(EdmConstants.LAST_WRITE_FQN)
         }
 
         val actualGivenNamesData = data.flatMap { it[EdmTestConstants.personGivenNameFqn] }.toSet()
@@ -157,7 +157,7 @@ class DataControllerLinkingTest : SetupTestData() {
                         FileType.json
                 )
         )
-        val linkingIds = data.map { UUID.fromString(it[DataTables.ID_FQN].first() as String) }
+        val linkingIds = data.map { UUID.fromString(it[EdmConstants.ID_FQN].first() as String) }
         val indexedData = index(data)
 
         linkingIds.forEach {
@@ -200,7 +200,7 @@ class DataControllerLinkingTest : SetupTestData() {
 
         val ess = EntitySetSelection(Optional.of(personEt.properties), Optional.empty())
         val data = ImmutableList.copyOf(dataApi.loadEntitySetData(esLinking.id, ess, FileType.json))
-        val linkingIds = data.map { UUID.fromString(it[DataTables.ID_FQN].first() as String) }
+        val linkingIds = data.map { UUID.fromString(it[EdmConstants.ID_FQN].first() as String) }
 
         val arrayPattern = "Object \\[(.*?)\\]".toRegex()
 
@@ -269,7 +269,7 @@ class DataControllerLinkingTest : SetupTestData() {
         loginAs("user1")
         val noData = ImmutableList.copyOf(dataApi.loadEntitySetData(esLinking.id, ess, FileType.json))
         Assert.assertEquals(linkingIds.size, noData.size)
-        noData.forEach { Assert.assertEquals(setOf(DataTables.ID_FQN), it.asMap().keys) }
+        noData.forEach { Assert.assertEquals(setOf(EdmConstants.ID_FQN), it.asMap().keys) }
         loginAs("admin")
 
 
@@ -286,7 +286,7 @@ class DataControllerLinkingTest : SetupTestData() {
         val givenNameData = ImmutableList.copyOf(dataApi.loadEntitySetData(esLinking.id, ess, FileType.json))
         Assert.assertEquals(linkingIds.size, givenNameData.size)
         givenNameData.forEach {
-            Assert.assertEquals(setOf(DataTables.ID_FQN, EdmTestConstants.personGivenNameFqn), it.asMap().keys)
+            Assert.assertEquals(setOf(EdmConstants.ID_FQN, EdmTestConstants.personGivenNameFqn), it.asMap().keys)
         }
         loginAs("admin")
 
@@ -304,7 +304,7 @@ class DataControllerLinkingTest : SetupTestData() {
         Assert.assertEquals(linkingIds.size, dataAll.size)
         dataAll.forEach {
             Assert.assertEquals(
-                    setOf(DataTables.ID_FQN, EdmTestConstants.personGivenNameFqn, EdmTestConstants.personMiddleNameFqn),
+                    setOf(EdmConstants.ID_FQN, EdmTestConstants.personGivenNameFqn, EdmTestConstants.personMiddleNameFqn),
                     it.asMap().keys
             )
         }
@@ -391,7 +391,7 @@ class DataControllerLinkingTest : SetupTestData() {
         loginAs("user1")
         val noData2 = dataApi.getEntity(esLinking.id, id)
         Assert.assertEquals(1, noData2.size)
-        noData2.forEach { Assert.assertEquals(DataTables.ID_FQN, it.key) }
+        noData2.forEach { Assert.assertEquals(EdmConstants.ID_FQN, it.key) }
 
         try {
             dataApi.getEntity(esLinking.id, id, EdmTestConstants.personGivenNameId)
@@ -423,8 +423,8 @@ class DataControllerLinkingTest : SetupTestData() {
         loginAs("user1")
 
         val ptData1 = dataApi.getEntity(esLinking.id, id)
-        Assert.assertEquals(1, ptData1[DataTables.ID_FQN]!!.size)
-        Assert.assertEquals(setOf(DataTables.ID_FQN, EdmTestConstants.personGivenNameFqn), ptData1.keys)
+        Assert.assertEquals(1, ptData1[EdmConstants.ID_FQN]!!.size)
+        Assert.assertEquals(setOf(EdmConstants.ID_FQN, EdmTestConstants.personGivenNameFqn), ptData1.keys)
 
         val ptData2 = dataApi.getEntity(esLinking.id, id, EdmTestConstants.personGivenNameId)
         Assert.assertEquals(1, ptData2.size)
@@ -446,9 +446,9 @@ class DataControllerLinkingTest : SetupTestData() {
         loginAs("user1")
 
         val dataAll1 = dataApi.getEntity(esLinking.id, id)
-        Assert.assertEquals(1, dataAll1[DataTables.ID_FQN]!!.size)
+        Assert.assertEquals(1, dataAll1[EdmConstants.ID_FQN]!!.size)
         Assert.assertEquals(
-                setOf(DataTables.ID_FQN, EdmTestConstants.personGivenNameFqn, EdmTestConstants.personMiddleNameFqn),
+                setOf(EdmConstants.ID_FQN, EdmTestConstants.personGivenNameFqn, EdmTestConstants.personMiddleNameFqn),
                 dataAll1.keys
         )
 
@@ -462,7 +462,7 @@ class DataControllerLinkingTest : SetupTestData() {
             data: Collection<SetMultimap<FullQualifiedName, Any>>
     ): Map<UUID, SetMultimap<FullQualifiedName, Any>> {
         return data.map {
-            UUID.fromString(it[DataTables.ID_FQN].first() as String) to it
+            UUID.fromString(it[EdmConstants.ID_FQN].first() as String) to it
         }.toMap()
     }
 }

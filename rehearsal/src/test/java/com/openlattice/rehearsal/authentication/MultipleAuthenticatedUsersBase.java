@@ -318,10 +318,10 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
                 ImmutableSet.of( "foo@bar.com", "foobar@foo.net" ),
                 Optional.of( linkedEntitySetIds ),
                 Optional.empty(),
-                Optional.of( flags ),
+                Optional.of(flags),
                 Optional.empty());
 
-        Map<String, UUID> entitySetIds = entitySetsApi.createEntitySets( ImmutableSet.of( newES ) );
+        Map<String, UUID> entitySetIds = entitySetsApi.createEntitySets( Set.of( newES ) );
 
         Assert.assertTrue( "Entity Set creation does not return correct UUID",
                 entitySetIds.values().contains( newES.getId() ) );
