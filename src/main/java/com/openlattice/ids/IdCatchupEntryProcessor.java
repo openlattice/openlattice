@@ -73,7 +73,7 @@ public class IdCatchupEntryProcessor extends AbstractRhizomeEntryProcessor<Integ
 
     public PreparedStatement prepareExistQuery( Connection connection ) throws SQLException {
         return connection.prepareStatement(
-                "SELECT count(*) from " + PostgresTable.IDS.getName() +
+                "SELECT count(*) from " + PostgresTable.ENTITY_KEY_IDS.getName() +
                         " WHERE " + PostgresColumn.ID_VALUE.getName() + " = ?" );
     }
 

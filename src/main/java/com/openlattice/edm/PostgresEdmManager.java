@@ -20,6 +20,11 @@
 
 package com.openlattice.edm;
 
+import static com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID;
+import static com.openlattice.postgres.PostgresColumn.ENTITY_TYPE_ID;
+import static com.openlattice.postgres.PostgresColumn.LINKING_ID;
+import static com.openlattice.postgres.PostgresTable.ENTITY_KEY_IDS;
+
 import com.codahale.metrics.annotation.ExceptionMetered;
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.annotations.VisibleForTesting;
@@ -31,23 +36,29 @@ import com.hazelcast.query.Predicates;
 import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.hazelcast.HazelcastMap;
-import com.openlattice.postgres.*;
+import com.openlattice.postgres.DataTables;
+import com.openlattice.postgres.PostgresArrays;
+import com.openlattice.postgres.PostgresColumn;
+import com.openlattice.postgres.PostgresTable;
+import com.openlattice.postgres.PostgresTableDefinition;
+import com.openlattice.postgres.PostgresTableManager;
+import com.openlattice.postgres.ResultSetAdapters;
 import com.openlattice.postgres.mapstores.EntitySetMapstore;
 import com.openlattice.postgres.streams.PostgresIterable;
 import com.openlattice.postgres.streams.StatementHolder;
 import com.zaxxer.hikari.HikariDataSource;
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.sql.*;
+import java.sql.Array;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-
-import static com.openlattice.postgres.PostgresColumn.*;
-import static com.openlattice.postgres.PostgresTable.IDS;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -140,7 +151,7 @@ public class PostgresEdmManager implements DbEdmManager {
         String query =
                 "SELECT " + ENTITY_SET_ID.getName() + ", array_agg(" + LINKING_ID.getName() + ") AS " + LINKING_ID
                         .getName() +
-                        " FROM " + IDS.getName() +
+                        " FROM " + ENTITY_KEY_IDS.getName() +
                         " WHERE " + LINKING_ID.getName() + " IS NOT NULL AND " + ENTITY_SET_ID.getName()
                         + " = ANY( ? ) " +
                         " GROUP BY " + ENTITY_SET_ID.getName();

@@ -79,7 +79,7 @@ public class IterableCsvHttpMessageConverter
     protected Iterable<Multimap<String, ?>> readInternal(
             Class<? extends Iterable<Multimap<String, ?>>> clazz,
             HttpInputMessage inputMessage )
-            throws IOException, HttpMessageNotReadableException {
+            throws HttpMessageNotReadableException {
         throw new UnsupportedOperationException( "CSV is not a supported input format" );
     }
 

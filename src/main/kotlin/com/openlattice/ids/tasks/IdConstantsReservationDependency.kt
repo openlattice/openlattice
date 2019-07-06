@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018. OpenLattice, Inc
+ * Copyright (C) 2019. OpenLattice, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,31 +16,11 @@
  *
  * You can contact the owner of the copyright at support@openlattice.com
  *
+ *
  */
+package com.openlattice.ids.tasks
 
-package com.openlattice.data;
+import com.openlattice.data.EntityKeyIdService
+import com.openlattice.tasks.HazelcastTaskDependencies
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import java.util.Optional;
-import java.util.UUID;
-
-/**
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
- */
-public class Property {
-    private final Optional<UUID>   entitySetId;
-    private final PropertyMetadata metadata;
-    private final Object           value;
-
-    @JsonCreator
-    public Property( Optional<UUID> entitySetId, PropertyMetadata metadata, Object value ) {
-        this.entitySetId = entitySetId;
-        this.metadata = metadata;
-        this.value = value;
-    }
-
-    public Optional<UUID> getEntitySetId() {
-        return entitySetId;
-    }
-
-}
+data class IdConstantsReservationDependency(val entityKeyIdService: EntityKeyIdService) : HazelcastTaskDependencies

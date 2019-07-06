@@ -28,6 +28,7 @@ import com.openlattice.analysis.requests.AggregationType
 import com.openlattice.analysis.requests.DateRangeFilter
 import com.openlattice.analysis.requests.FilteredNeighborsRankingAggregation
 import com.openlattice.analysis.requests.WeightedRankingAggregation
+import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.mapstores.TestDataFactory
@@ -102,7 +103,8 @@ class TopUtilizersTests {
     private fun buildTopEntitiesQuery(linking: Boolean): String {
         val hds = HikariDataSource()
         val edmService = Mockito.mock(EdmManager::class.java)
-        val graph = Graph(hds, edmService)
+        val partitionManager = Mockito.mock(PartitionManager::class.java)
+        val graph = Graph(hds, edmService, partitionManager)
 
         val limit = 200
         val entitySetIds = setOf(

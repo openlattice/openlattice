@@ -1,11 +1,9 @@
 package com.openlattice.search
 
-import com.google.common.collect.SetMultimap
 import com.openlattice.authorization.*
 import com.openlattice.data.requests.NeighborEntityDetails
+import com.openlattice.edm.EdmConstants
 import com.openlattice.edm.type.PropertyType
-import com.openlattice.postgres.DataTables
-import com.openlattice.postgres.DataTables.LAST_WRITE_FQN
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.PERSISTENT_SEARCHES
 import com.openlattice.postgres.ResultSetAdapters
@@ -99,7 +97,7 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
 
         val userEmail = dependencies.principalsManager.getUser(userSecurablePrincipal.principal.id).email
         newResults.hits.forEach {
-            val entityKeyId = UUID.fromString(it[DataTables.ID_FQN].first().toString())
+            val entityKeyId = UUID.fromString(it.getValue(EdmConstants.ID_FQN).first().toString())
             val renderableEmail = PersistentSearchEmailRenderer.renderEmail(
                     persistentSearch, it, userEmail, neighborsById.getOrDefault(
                     entityKeyId, listOf()
@@ -109,9 +107,9 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
         }
     }
 
-    private fun getLatestRead(vehicleReads: List<SetMultimap<FullQualifiedName, Any>>): OffsetDateTime? {
+    private fun getLatestRead(vehicleReads: List<Map<FullQualifiedName, Set<Any>>>): OffsetDateTime? {
         return vehicleReads
-                .flatMap { it[LAST_WRITE_FQN] ?: emptySet() }
+                .flatMap { it[EdmConstants.LAST_WRITE_FQN] ?: emptySet() }
                 .map {
                     logger.info("New read datetime as string: {}", it)
                     val localDateTime = Timestamp.valueOf(it.toString()).toLocalDateTime()
@@ -119,8 +117,8 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
                 }.max()
     }
 
-    private fun getHitEntityKeyIds(hits: List<SetMultimap<FullQualifiedName, Any>>): Set<UUID> {
-        return hits.map { UUID.fromString(it[DataTables.ID_FQN].first().toString()) }.toSet()
+    private fun getHitEntityKeyIds(hits: List<Map<FullQualifiedName, Set<Any>>>): Set<UUID> {
+        return hits.map { UUID.fromString((it[EdmConstants.ID_FQN] ?: emptySet()).first().toString()) }.toSet()
     }
 
     private fun findNewWritesForAlert(userAclKey: AclKey, persistentSearch: PersistentSearch): OffsetDateTime? {

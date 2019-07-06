@@ -23,6 +23,10 @@ package com.openlattice.data;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 
+import java.util.Map;
+import java.util.Set;
+
+import com.openlattice.edm.EdmConstants;
 import org.apache.commons.lang3.NotImplementedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,13 +43,13 @@ public class EntitySetData<T> implements Iterable<SetMultimap<T, Object>> {
             .getLogger( EntitySetData.class );
 
     private LinkedHashSet<String>            columnTitles;
-    private Iterable<SetMultimap<T, Object>> entities;
+    private Iterable<Map<T, Set<Object>>> entities;
 
     public EntitySetData(
             LinkedHashSet<String> columnTitles,
-            Iterable<SetMultimap<T, Object>> entities ) {
+            Iterable<Map<T, Set<Object>>> entities ) {
         this.columnTitles = columnTitles;
-        this.columnTitles.add( "openlattice.@id" );
+        this.columnTitles.add( EdmConstants.ID_FQN.getFullQualifiedNameAsString() );
         this.entities = entities;
     }
 
@@ -54,7 +58,7 @@ public class EntitySetData<T> implements Iterable<SetMultimap<T, Object>> {
     }
 
     @JsonValue
-    public Iterable<SetMultimap<T, Object>> getEntities() {
+    public Iterable<Map<T, Set<Object>>> getEntities() {
         return entities::iterator;
     }
 

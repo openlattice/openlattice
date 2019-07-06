@@ -22,7 +22,6 @@
 
 package com.openlattice.conductor.codecs.odata;
 
-import com.openlattice.edm.internal.DatastoreConstants;
 import com.openlattice.datastore.cassandra.CommonColumns;
 import com.kryptnostic.rhizome.cassandra.CassandraMaterializedViewBuilder;
 import com.kryptnostic.rhizome.cassandra.CassandraTableBuilder;
@@ -81,7 +80,7 @@ public enum Table implements TableDef {
     private static final Logger                                logger   = LoggerFactory
             .getLogger( Table.class );
     private static final EnumMap<Table, CassandraTableBuilder> cache    = new EnumMap<>( Table.class );
-    private static       String                                keyspace = DatastoreConstants.KEYSPACE;
+    private static       String                                keyspace = "sparks";
 
     public String getName() {
         return name();

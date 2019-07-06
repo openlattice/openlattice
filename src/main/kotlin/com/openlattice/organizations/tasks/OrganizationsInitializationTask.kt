@@ -30,9 +30,9 @@ import com.openlattice.authorization.initializers.AuthorizationInitializationTas
 import com.openlattice.authorization.initializers.AuthorizationInitializationTask.Companion.GLOBAL_ADMIN_ROLE
 import com.openlattice.authorization.initializers.AuthorizationInitializationTask.Companion.OPENLATTICE_ROLE
 import com.openlattice.organization.Organization
-import com.openlattice.organization.OrganizationConstants.Companion.GLOBAL_ORGANIZATION_ID
+import com.openlattice.IdConstants.GLOBAL_ORGANIZATION_ID
 import com.openlattice.organization.OrganizationConstants.Companion.GLOBAL_ORG_PRINCIPAL
-import com.openlattice.organization.OrganizationConstants.Companion.OPENLATTICE_ORGANIZATION_ID
+import com.openlattice.IdConstants.OPENLATTICE_ORGANIZATION_ID
 import com.openlattice.organization.OrganizationConstants.Companion.OPENLATTICE_ORG_PRINCIPAL
 import com.openlattice.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies.PostConstructInitializerTask
@@ -54,17 +54,19 @@ class OrganizationsInitializationTask : HazelcastInitializationTask<Organization
         val organizationService = dependencies.organizationService
         val globalOrg = organizationService.maybeGetOrganization(GLOBAL_ORG_PRINCIPAL)
         val olOrg = organizationService.maybeGetOrganization(OPENLATTICE_ORG_PRINCIPAL)
+        val defaultPartitions = organizationService.allocateDefaultPartitions(organizationService.numberOfPartitions)
+
         if (globalOrg.isPresent) {
             logger.info(
                     "Expected id = {}, Actual id = {}",
-                    GLOBAL_ORGANIZATION_ID,
+                    GLOBAL_ORGANIZATION_ID.id,
                     globalOrg.get().id
             )
-            checkState(GLOBAL_ORGANIZATION_ID == globalOrg.get().id)
+            checkState(GLOBAL_ORGANIZATION_ID.id == globalOrg.get().id)
         } else {
             organizationService.createOrganization(
                     GLOBAL_ADMIN_ROLE.principal,
-                    createGlobalOrg()
+                    createGlobalOrg(defaultPartitions)
             )
         }
 
@@ -74,11 +76,11 @@ class OrganizationsInitializationTask : HazelcastInitializationTask<Organization
                     OPENLATTICE_ORGANIZATION_ID,
                     olOrg.get().id
             )
-            checkState(OPENLATTICE_ORGANIZATION_ID == olOrg.get().id)
+            checkState(OPENLATTICE_ORGANIZATION_ID.id == olOrg.get().id)
         } else {
             organizationService.createOrganization(
                     OPENLATTICE_ROLE.principal,
-                    createOpenLatticeOrg()
+                    createOpenLatticeOrg(defaultPartitions)
             )
         }
         logger.info("Bootstrapping for organizations took {} ms", sw.elapsed(TimeUnit.MILLISECONDS))
@@ -110,8 +112,8 @@ class OrganizationsInitializationTask : HazelcastInitializationTask<Organization
     }
 
     companion object {
-        private fun createGlobalOrg(): Organization {
-            val id = GLOBAL_ORGANIZATION_ID
+        private fun createGlobalOrg(partitions: List<Int>): Organization {
+            val id = GLOBAL_ORGANIZATION_ID.id
             val title = "Global Organization"
             return Organization(
                     Optional.of(id),
@@ -120,12 +122,13 @@ class OrganizationsInitializationTask : HazelcastInitializationTask<Organization
                     Optional.empty(),
                     ImmutableSet.of(),
                     ImmutableSet.of(),
-                    ImmutableSet.of()
+                    ImmutableSet.of(),
+                    partitions
             )
         }
 
-        private fun createOpenLatticeOrg(): Organization {
-            val id = OPENLATTICE_ORGANIZATION_ID
+        private fun createOpenLatticeOrg(partitions: List<Int>): Organization {
+            val id = OPENLATTICE_ORGANIZATION_ID.id
             val title = "OpenLattice, Inc."
             return Organization(
                     Optional.of(id),
@@ -134,7 +137,8 @@ class OrganizationsInitializationTask : HazelcastInitializationTask<Organization
                     Optional.empty(),
                     ImmutableSet.of(),
                     ImmutableSet.of(),
-                    ImmutableSet.of()
+                    ImmutableSet.of(),
+                    partitions
             )
         }
     }
