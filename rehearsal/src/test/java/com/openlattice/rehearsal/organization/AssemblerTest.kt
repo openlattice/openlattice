@@ -93,9 +93,11 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         // materialize src entity set
         organizationsApi.assembleEntitySets(organizationID, mapOf(esSrc.id to 1))
 
-        Assert.assertTrue(organizationsApi
-                .getOrganizationEntitySets(organizationID, EnumSet.of(OrganizationEntitySetFlag.MATERIALIZED))
-                .keys.contains(esSrc.id))
+        Assert.assertTrue(
+                organizationsApi
+                        .getOrganizationEntitySets(organizationID, EnumSet.of(OrganizationEntitySetFlag.MATERIALIZED))
+                        .keys.contains(esSrc.id)
+        )
     }
 
     @Test
@@ -106,20 +108,26 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         // materialize entity set, no automatic refresh
         grantMaterializePermissions(organization, es1, setOf())
         organizationsApi.assembleEntitySets(organizationID, mapOf(es1.id to null))
-        Assert.assertFalse(organizationsApi.getOrganizationEntitySets(organizationID)[es1.id]!!
-                .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED))
+        Assert.assertFalse(
+                organizationsApi.getOrganizationEntitySets(organizationID)[es1.id]!!
+                        .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED)
+        )
 
 
         // add property type
         val pt = createPropertyType()
         edmApi.addPropertyTypeToEntityType(et.id, pt.id)
-        Assert.assertTrue(organizationsApi.getOrganizationEntitySets(organizationID)[es1.id]!!
-                .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED))
+        Assert.assertTrue(
+                organizationsApi.getOrganizationEntitySets(organizationID)[es1.id]!!
+                        .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED)
+        )
         grantMaterializePermissions(organization, es1, setOf(pt.id))
         // sync edm changes
         organizationsApi.synchronizeEdmChanges(organizationID, es1.id)
-        Assert.assertFalse(organizationsApi.getOrganizationEntitySets(organizationID)[es1.id]!!
-                .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED))
+        Assert.assertFalse(
+                organizationsApi.getOrganizationEntitySets(organizationID)[es1.id]!!
+                        .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED)
+        )
         // check if new column is there
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
@@ -135,14 +143,17 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         organizationsApi.assembleEntitySets(organizationID, mapOf(es2.id to null))
 
 
-        Assert.assertFalse(organizationsApi.getOrganizationEntitySets(organizationID)[es2.id]!!
-                .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED))
+        Assert.assertFalse(
+                organizationsApi.getOrganizationEntitySets(organizationID)[es2.id]!!
+                        .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED)
+        )
         // change property type fqn
         val propertyToChange = et.properties.first()
         val newFqn = TestDataFactory.fqn()
         edmApi.updatePropertyTypeMetadata(
                 propertyToChange,
-                MetadataUpdate(Optional.empty(),
+                MetadataUpdate(
+                        Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
@@ -151,18 +162,28 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                         Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
-                        Optional.empty()))
-        Assert.assertTrue(organizationsApi.getOrganizationEntitySets(organizationID)[es2.id]!!
-                .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED))
+                        Optional.empty(),
+                        Optional.empty()
+                )
+        )
+        Assert.assertTrue(
+                organizationsApi.getOrganizationEntitySets(organizationID)[es2.id]!!
+                        .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED)
+        )
         organizationsApi.synchronizeEdmChanges(organizationID, es2.id)
-        Assert.assertFalse(organizationsApi.getOrganizationEntitySets(organizationID)[es2.id]!!
-                .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED))
+        Assert.assertFalse(
+                organizationsApi.getOrganizationEntitySets(organizationID)[es2.id]!!
+                        .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED)
+        )
         // check if column has new name
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(
-                        es2,
-                        setOf(edmApi.getPropertyType(propertyToChange).type.fullQualifiedNameAsString)))
+                val rs = stmt.executeQuery(
+                        TestAssemblerConnectionManager.selectFromEntitySetSql(
+                                es2,
+                                setOf(edmApi.getPropertyType(propertyToChange).type.fullQualifiedNameAsString)
+                        )
+                )
                 Assert.assertEquals(newFqn.fullQualifiedNameAsString, rs.metaData.getColumnName(1))
             }
         }
@@ -171,13 +192,17 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         // remove property type from entity type
         edmApi.forceRemovePropertyTypeFromEntityType(et.id, pt.id)
 
-        Assert.assertTrue(organizationsApi.getOrganizationEntitySets(organizationID)[es1.id]!!
-                .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED))
+        Assert.assertTrue(
+                organizationsApi.getOrganizationEntitySets(organizationID)[es1.id]!!
+                        .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED)
+        )
         grantMaterializePermissions(organization, es1, setOf(pt.id))
         // sync edm changes
         organizationsApi.synchronizeEdmChanges(organizationID, es1.id)
-        Assert.assertFalse(organizationsApi.getOrganizationEntitySets(organizationID)[es1.id]!!
-                .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED))
+        Assert.assertFalse(
+                organizationsApi.getOrganizationEntitySets(organizationID)[es1.id]!!
+                        .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED)
+        )
         // check if old column is deleted
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
@@ -191,7 +216,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
     fun testDataUnsync() {
         val et = createEntityType()
         val es = createEntitySet(et)
-        val propertyFqns = edmApi.getPropertyTypesForEntitySet(es.id)
+        val propertyFqns = entitySetsApi.getPropertyTypesForEntitySet(es.id)
                 .map { it.key to it.value.type.fullQualifiedNameAsString }.toMap()
 
         // materialize entity set with all it's properties and no automatic refresh
@@ -216,18 +241,24 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         }
 
         // add data
-        Assert.assertFalse(organizationsApi.getOrganizationEntitySets(organizationID)[es.id]!!
-                .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED))
+        Assert.assertFalse(
+                organizationsApi.getOrganizationEntitySets(organizationID)[es.id]!!
+                        .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED)
+        )
         val testData = TestDataFactory.randomStringEntityData(numberOfEntities, et.properties).values.toList()
         val ids = dataApi.createEntities(es.id, testData)
         val testDataWithIds = ids.zip(testData).toMap()
 
-        Assert.assertTrue(organizationsApi.getOrganizationEntitySets(organizationID)[es.id]!!
-                .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED))
+        Assert.assertTrue(
+                organizationsApi.getOrganizationEntitySets(organizationID)[es.id]!!
+                        .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED)
+        )
         // refresh
         organizationsApi.refreshDataChanges(organizationID, es.id)
-        Assert.assertFalse(organizationsApi.getOrganizationEntitySets(organizationID)[es.id]!!
-                .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED))
+        Assert.assertFalse(
+                organizationsApi.getOrganizationEntitySets(organizationID)[es.id]!!
+                        .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED)
+        )
         // check if data is in org database
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
@@ -242,7 +273,8 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                     propertyFqns.forEach { propertyId, fqn ->
                         Assert.assertEquals(
                                 testDataWithIds.getValue(id).getValue(propertyId).first(),
-                                getStringResult(rs, fqn))
+                                getStringResult(rs, fqn)
+                        )
                     }
                     index++
 
@@ -257,12 +289,16 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         val newTestData = TestDataFactory.randomStringEntityData(numberOfEntities, et.properties).values.toList()
         val newTestDataWithIds = ids.zip(newTestData).toMap()
         dataApi.updateEntitiesInEntitySet(es.id, newTestDataWithIds, UpdateType.Replace)
-        Assert.assertTrue(organizationsApi.getOrganizationEntitySets(organizationID)[es.id]!!
-                .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED))
+        Assert.assertTrue(
+                organizationsApi.getOrganizationEntitySets(organizationID)[es.id]!!
+                        .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED)
+        )
         // refresh
         organizationsApi.refreshDataChanges(organizationID, es.id)
-        Assert.assertFalse(organizationsApi.getOrganizationEntitySets(organizationID)[es.id]!!
-                .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED))
+        Assert.assertFalse(
+                organizationsApi.getOrganizationEntitySets(organizationID)[es.id]!!
+                        .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED)
+        )
         // check if data is updated in org database
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
@@ -277,7 +313,8 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                     propertyFqns.forEach { propertyId, fqn ->
                         Assert.assertEquals(
                                 newTestDataWithIds.getValue(id).getValue(propertyId).first(),
-                                getStringResult(rs, fqn))
+                                getStringResult(rs, fqn)
+                        )
                     }
                     index++
 
@@ -289,12 +326,16 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
 
         // delete data
         dataApi.deleteEntities(es.id, ids.toSet(), DeleteType.Hard)
-        Assert.assertTrue(organizationsApi.getOrganizationEntitySets(organizationID)[es.id]!!
-                .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED))
+        Assert.assertTrue(
+                organizationsApi.getOrganizationEntitySets(organizationID)[es.id]!!
+                        .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED)
+        )
         // refresh
         organizationsApi.refreshDataChanges(organizationID, es.id)
-        Assert.assertFalse(organizationsApi.getOrganizationEntitySets(organizationID)[es.id]!!
-                .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED))
+        Assert.assertFalse(
+                organizationsApi.getOrganizationEntitySets(organizationID)[es.id]!!
+                        .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED)
+        )
         // check if data is deleted in org database
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
@@ -373,7 +414,9 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                         TestAssemblerConnectionManager.selectEdgesOfEntitySetsSql(
                                 Optional.of(esSrc.id),
                                 Optional.of(esEdge.id),
-                                Optional.of(esDst.id)))
+                                Optional.of(esDst.id)
+                        )
+                )
 
                 var index = 0
                 Assert.assertTrue(rs.next())
@@ -398,7 +441,9 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                         TestAssemblerConnectionManager.selectEdgesOfEntitySetsSql(
                                 Optional.of(esSrc.id),
                                 Optional.of(esEdge.id),
-                                Optional.of(esDst.id)))
+                                Optional.of(esDst.id)
+                        )
+                )
 
                 var index = 0
                 Assert.assertTrue(rs.next())
@@ -439,8 +484,11 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
             organizationsApi.assembleEntitySets(organizationID, mapOf(es.id to 100))
             Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(e.undeclaredThrowable.message!!.contains(
-                    "Object [$organizationID] is not accessible.", true))
+            Assert.assertTrue(
+                    e.undeclaredThrowable.message!!.contains(
+                            "Object [$organizationID] is not accessible.", true
+                    )
+            )
         } finally {
             loginAs("admin")
         }
@@ -449,7 +497,8 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         // org principal has no permission on entityset
         val organizationAcl = Acl(
                 AclKey(organizationID),
-                setOf(Ace(user1, EnumSet.of(Permission.OWNER), OffsetDateTime.MAX)))
+                setOf(Ace(user1, EnumSet.of(Permission.OWNER), OffsetDateTime.MAX))
+        )
         permissionsApi.updateAcl(AclData(organizationAcl, Action.ADD))
 
         try {
@@ -457,8 +506,11 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
             organizationsApi.assembleEntitySets(organizationID, mapOf(es.id to 100))
             Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(e.undeclaredThrowable.message!!.contains(
-                    "EntitySet [${es.id}] is not accessible by organization principal", true))
+            Assert.assertTrue(
+                    e.undeclaredThrowable.message!!.contains(
+                            "EntitySet [${es.id}] is not accessible by organization principal", true
+                    )
+            )
         } finally {
             loginAs("admin")
         }
@@ -468,7 +520,8 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         val materializePermissions = EnumSet.of(Permission.MATERIALIZE)
         val esMaterializationAcl = Acl(
                 AclKey(es.id),
-                setOf(Ace(organization.principal, materializePermissions, OffsetDateTime.MAX)))
+                setOf(Ace(organization.principal, materializePermissions, OffsetDateTime.MAX))
+        )
         permissionsApi.updateAcl(AclData(esMaterializationAcl, Action.ADD))
 
         loginAs("user1")
@@ -482,7 +535,8 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         val propertyType = edmApi.getPropertyType(propertyTypeId)
         val ptMaterializationAcl = Acl(
                 AclKey(es.id, propertyTypeId),
-                setOf(Ace(organization.principal, materializePermissions, OffsetDateTime.MAX)))
+                setOf(Ace(organization.principal, materializePermissions, OffsetDateTime.MAX))
+        )
         permissionsApi.updateAcl(AclData(ptMaterializationAcl, Action.ADD))
 
         loginAs("user1")
@@ -496,7 +550,8 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                 Assert.assertEquals(PostgresColumn.ID.name, rs.metaData.getColumnName(2))
                 Assert.assertEquals(
                         ResultSetAdapters.mapMetadataOptionToPostgresColumn(MetadataOption.ENTITY_KEY_IDS),
-                        rs.metaData.getColumnName(3))
+                        rs.metaData.getColumnName(3)
+                )
                 Assert.assertEquals(propertyType.type.fullQualifiedNameAsString, rs.metaData.getColumnName(4))
             }
         }
@@ -507,7 +562,8 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         et.properties.forEach {
             val acl = Acl(
                     AclKey(es.id, it),
-                    setOf(Ace(organization.principal, materializePermissions, OffsetDateTime.MAX)))
+                    setOf(Ace(organization.principal, materializePermissions, OffsetDateTime.MAX))
+            )
             permissionsApi.updateAcl(AclData(acl, Action.ADD))
         }
 
@@ -521,7 +577,8 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                 Assert.assertEquals(PostgresColumn.ID.name, rs.metaData.getColumnName(2))
                 Assert.assertEquals(
                         ResultSetAdapters.mapMetadataOptionToPostgresColumn(MetadataOption.ENTITY_KEY_IDS),
-                        rs.metaData.getColumnName(3))
+                        rs.metaData.getColumnName(3)
+                )
                 val columnNames = TestAssemblerConnectionManager.getColumnNames(rs)
                 et.properties.forEach {
                     Assert.assertTrue(columnNames.contains(edmApi.getPropertyType(it).type.fullQualifiedNameAsString))
@@ -543,7 +600,8 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         // connect with user1(simple member) credentials
         val user1OrganizationDataSource = TestAssemblerConnectionManager.connect(
                 organizationID,
-                Optional.of(connectionProperties))
+                Optional.of(connectionProperties)
+        )
 
         user1OrganizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
@@ -551,8 +609,10 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                     stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es))
                     Assert.fail("Should have thrown Exception but did not!")
                 } catch (e: PSQLException) {
-                    Assert.assertTrue(e.message!!
-                            .contains("permission denied for materialized view ${es.name}", true))
+                    Assert.assertTrue(
+                            e.message!!
+                                    .contains("permission denied for materialized view ${es.name}", true)
+                    )
                 }
             }
         }
@@ -574,8 +634,10 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                     stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es))
                     Assert.fail("Should have thrown Exception but did not!")
                 } catch (e: PSQLException) {
-                    Assert.assertTrue(e.message!!
-                            .contains("permission denied for materialized view ${es.name}", true))
+                    Assert.assertTrue(
+                            e.message!!
+                                    .contains("permission denied for materialized view ${es.name}", true)
+                    )
                 }
             }
         }
@@ -585,19 +647,25 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
             connection.createStatement().use { stmt ->
                 //  user1 can access edges, since it has permission to 1 entityset
                 stmt.executeQuery(TestAssemblerConnectionManager.selectEdgesOfEntitySetsSql())
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager
-                        .selectFromEntitySetSql(
-                                es,
-                                setOf(
-                                        PostgresColumn.ENTITY_SET_ID.name,
-                                        PostgresColumn.ID.name,
-                                        ResultSetAdapters.mapMetadataOptionToPostgresColumn(
-                                                MetadataOption.ENTITY_KEY_IDS))))
+                val rs = stmt.executeQuery(
+                        TestAssemblerConnectionManager
+                                .selectFromEntitySetSql(
+                                        es,
+                                        setOf(
+                                                PostgresColumn.ENTITY_SET_ID.name,
+                                                PostgresColumn.ID.name,
+                                                ResultSetAdapters.mapMetadataOptionToPostgresColumn(
+                                                        MetadataOption.ENTITY_KEY_IDS
+                                                )
+                                        )
+                                )
+                )
                 Assert.assertEquals(PostgresColumn.ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
                 Assert.assertEquals(PostgresColumn.ID.name, rs.metaData.getColumnName(2))
                 Assert.assertEquals(
                         ResultSetAdapters.mapMetadataOptionToPostgresColumn(MetadataOption.ENTITY_KEY_IDS),
-                        rs.metaData.getColumnName(3))
+                        rs.metaData.getColumnName(3)
+                )
             }
         }
 
@@ -615,8 +683,10 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                     stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es))
                     Assert.fail("Should have thrown Exception but did not!")
                 } catch (e: PSQLException) {
-                    Assert.assertTrue(e.message!!
-                            .contains("permission denied for materialized view ${es.name}", true))
+                    Assert.assertTrue(
+                            e.message!!
+                                    .contains("permission denied for materialized view ${es.name}", true)
+                    )
                 }
             }
         }
@@ -624,17 +694,25 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         // try to select only columns, which the user is authorized for
         user1OrganizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager
-                        .selectFromEntitySetSql(es, setOf(
-                                PostgresColumn.ENTITY_SET_ID.name,
-                                PostgresColumn.ID.name,
-                                ResultSetAdapters.mapMetadataOptionToPostgresColumn(MetadataOption.ENTITY_KEY_IDS),
-                                propertyType.type.fullQualifiedNameAsString)))
+                val rs = stmt.executeQuery(
+                        TestAssemblerConnectionManager
+                                .selectFromEntitySetSql(
+                                        es, setOf(
+                                        PostgresColumn.ENTITY_SET_ID.name,
+                                        PostgresColumn.ID.name,
+                                        ResultSetAdapters.mapMetadataOptionToPostgresColumn(
+                                                MetadataOption.ENTITY_KEY_IDS
+                                        ),
+                                        propertyType.type.fullQualifiedNameAsString
+                                )
+                                )
+                )
                 Assert.assertEquals(PostgresColumn.ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
                 Assert.assertEquals(PostgresColumn.ID.name, rs.metaData.getColumnName(2))
                 Assert.assertEquals(
                         ResultSetAdapters.mapMetadataOptionToPostgresColumn(MetadataOption.ENTITY_KEY_IDS),
-                        rs.metaData.getColumnName(3))
+                        rs.metaData.getColumnName(3)
+                )
                 Assert.assertEquals(propertyType.type.fullQualifiedNameAsString, rs.metaData.getColumnName(4))
             }
         }
@@ -655,7 +733,8 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                 Assert.assertEquals(PostgresColumn.ID.name, rs.metaData.getColumnName(2))
                 Assert.assertEquals(
                         ResultSetAdapters.mapMetadataOptionToPostgresColumn(MetadataOption.ENTITY_KEY_IDS),
-                        rs.metaData.getColumnName(3))
+                        rs.metaData.getColumnName(3)
+                )
                 val columns = TestAssemblerConnectionManager.getColumnNames(rs)
                 et.properties.forEach {
                     Assert.assertTrue(columns.contains(edmApi.getPropertyType(it).type.fullQualifiedNameAsString))
@@ -670,7 +749,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
     fun testRefreshRate() {
         val et = createEntityType()
         val es = createEntitySet(et)
-        val propertyFqns = edmApi.getPropertyTypesForEntitySet(es.id)
+        val propertyFqns = entitySetsApi.getPropertyTypesForEntitySet(es.id)
                 .map { it.key to it.value.type.fullQualifiedNameAsString }.toMap()
         // grant materialize to org principal
         grantMaterializePermissions(organization, es, et.properties)
@@ -680,16 +759,22 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
             organizationsApi.assembleEntitySets(organizationID, mapOf(es.id to 0))
             Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(e.undeclaredThrowable.message!!.contains(
-                    "Minimum refresh rate is 1 minute.", true))
+            Assert.assertTrue(
+                    e.undeclaredThrowable.message!!.contains(
+                            "Minimum refresh rate is 1 minute.", true
+                    )
+            )
         }
 
         try {
             organizationsApi.assembleEntitySets(organizationID, mapOf(es.id to -12))
             Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(e.undeclaredThrowable.message!!.contains(
-                    "Minimum refresh rate is 1 minute.", true))
+            Assert.assertTrue(
+                    e.undeclaredThrowable.message!!.contains(
+                            "Minimum refresh rate is 1 minute.", true
+                    )
+            )
         }
 
         // materialize with 2 min refresh rate
@@ -697,14 +782,18 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         organizationsApi.assembleEntitySets(organizationID, mapOf(es.id to refreshRate))
 
         // add data
-        Assert.assertFalse(organizationsApi.getOrganizationEntitySets(organizationID)[es.id]!!
-                .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED))
+        Assert.assertFalse(
+                organizationsApi.getOrganizationEntitySets(organizationID)[es.id]!!
+                        .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED)
+        )
         val testData = TestDataFactory.randomStringEntityData(numberOfEntities, et.properties).values.toList()
         val ids = dataApi.createEntities(es.id, testData)
         val testDataWithIds = ids.zip(testData).toMap()
 
-        Assert.assertTrue(organizationsApi.getOrganizationEntitySets(organizationID)[es.id]!!
-                .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED))
+        Assert.assertTrue(
+                organizationsApi.getOrganizationEntitySets(organizationID)[es.id]!!
+                        .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED)
+        )
 
         // data is not supposed to be there, only the columns until automatic refresh
         organizationDataSource.connection.use { connection ->
@@ -742,7 +831,8 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                     propertyFqns.forEach { propertyId, fqn ->
                         Assert.assertEquals(
                                 testDataWithIds.getValue(id).getValue(propertyId).first(),
-                                getStringResult(rs, fqn))
+                                getStringResult(rs, fqn)
+                        )
                     }
                     index++
 
@@ -970,14 +1060,16 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         val newPermissions = EnumSet.of(Permission.MATERIALIZE)
         val entitySetAcl = Acl(
                 AclKey(entitySet.id),
-                setOf(Ace(organization.principal, newPermissions, OffsetDateTime.MAX)))
+                setOf(Ace(organization.principal, newPermissions, OffsetDateTime.MAX))
+        )
         permissionsApi.updateAcl(AclData(entitySetAcl, Action.ADD))
 
         // add permissions on properties
         properties.forEach {
             val propertyTypeAcl = Acl(
                     AclKey(entitySet.id, it),
-                    setOf(Ace(organization.principal, newPermissions, OffsetDateTime.MAX)))
+                    setOf(Ace(organization.principal, newPermissions, OffsetDateTime.MAX))
+            )
             permissionsApi.updateAcl(AclData(propertyTypeAcl, Action.ADD))
         }
     }
