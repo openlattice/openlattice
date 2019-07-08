@@ -18,8 +18,24 @@
 
 package com.openlattice.mapstores;
 
-import com.google.common.collect.*;
-import com.openlattice.authorization.*;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.LinkedHashMultimap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Multimaps;
+import com.google.common.collect.SetMultimap;
+import com.google.common.collect.Sets;
+import com.openlattice.authorization.Ace;
+import com.openlattice.authorization.AceValue;
+import com.openlattice.authorization.Acl;
+import com.openlattice.authorization.AclData;
+import com.openlattice.authorization.AclKey;
+import com.openlattice.authorization.Action;
+import com.openlattice.authorization.Permission;
+import com.openlattice.authorization.Principal;
+import com.openlattice.authorization.PrincipalType;
 import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.AbstractSecurableType;
 import com.openlattice.authorization.securable.SecurableObjectType;
@@ -46,14 +62,22 @@ import com.openlattice.search.requests.SearchDetails;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.commons.text.RandomStringGenerator;
 import org.apache.commons.text.CharacterPredicates;
+import java.time.OffsetDateTime;
+import java.util.Arrays;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Random;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
-
-import java.time.OffsetDateTime;
-import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @SuppressFBWarnings( value = "SECPR", justification = "Only used for testing." )
 public final class TestDataFactory {
@@ -254,10 +278,10 @@ public final class TestDataFactory {
     }
 
     public static PropertyType propertyType() {
-        return propertyType( INDEX_TYPES[ r.nextInt( INDEX_TYPES.length ) ]);
+        return propertyType( INDEX_TYPES[ r.nextInt( INDEX_TYPES.length ) ] );
     }
 
-    public static PropertyType propertyType(IndexType postgresIndexType) {
+    public static PropertyType propertyType( IndexType postgresIndexType ) {
         return new PropertyType(
                 UUID.randomUUID(),
                 fqn(),
@@ -280,7 +304,7 @@ public final class TestDataFactory {
                 EdmPrimitiveTypeKind.Binary,
                 Optional.of( r.nextBoolean() ),
                 Optional.of( analyzers[ r.nextInt( analyzers.length ) ] ),
-                Optional.of( INDEX_TYPES[ r.nextInt( INDEX_TYPES.length ) ] ) );
+                Optional.of( IndexType.NONE ) );
     }
 
     public static Organization organization() {
@@ -293,7 +317,8 @@ public final class TestDataFactory {
                 ImmutableSet.of( userPrincipal() ),
                 ImmutableSet.of( role() ),
                 ImmutableSet.of( UUID.randomUUID() ),
-                Optional.empty() );
+                Optional.empty(),
+                Optional.of( Lists.newArrayList( 1, 2, 3 ) ) );
     }
 
     public static Principal organizationPrincipal() {
@@ -514,7 +539,8 @@ public final class TestDataFactory {
                 Optional.empty(),
                 Optional.of( randomAlphanumeric( 4 ) ),
                 Optional.of( propertyTags ),
-                Optional.of( UUID.randomUUID() ) );
+                Optional.of( UUID.randomUUID() ),
+                Optional.of(new LinkedHashSet<>( Arrays.asList(1,2,3,4) )) );
     }
 
     public static SearchDetails searchDetails() {
