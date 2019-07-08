@@ -23,11 +23,13 @@ package com.openlattice.linking
 
 import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Stopwatch
+import com.google.common.collect.Sets
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.hazelcast.aggregation.Aggregators
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
+import com.openlattice.IdConstants
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.EntityKeyIdService
 import com.openlattice.edm.EntitySet
@@ -46,13 +48,6 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import java.util.stream.Stream
 
-
-/**
- * Entity sets ids are assigned by calling [UUID.randomUUID] as a result we know that this can never be accidentally
- * assigned to any real entity set.
- */
-internal val LINKING_ENTITY_SET_ID = UUID(0, 0)
-internal const val PERSON_FQN = "general.person"
 internal const val REFRESH_PROPERTY_TYPES_INTERVAL_MILLIS = 30000L
 internal const val LINKING_BATCH_TIMEOUT_MILLIS = 120000L
 internal const val MINIMUM_SCORE = 0.75
@@ -70,9 +65,10 @@ class BackgroundLinkingService
         private val matcher: Matcher,
         private val ids: EntityKeyIdService,
         private val loader: DataLoader,
-        private val gqs: LinkingQueryService,
+        private val lqs: LinkingQueryService,
         private val linkingFeedbackService: PostgresLinkingFeedbackService,
         private val linkableTypes: Set<UUID>,
+        private val linkingLogService: LinkingLogService,
         private val configuration: LinkingConfiguration
 ) {
     companion object {
@@ -131,7 +127,7 @@ class BackgroundLinkingService
                 val cluster = clusters.entries.first()
                 val clusterId = cluster.key
 
-                gqs.lockClustersForUpdates(setOf(clusterId)).use {
+                lqs.lockClustersForUpdates(setOf(clusterId)).use { conn ->
                     val scoredCluster = cluster(candidate, cluster, ::completeLinkCluster)
                     if (scoredCluster.score <= MINIMUM_SCORE) {
                         logger.error(
@@ -144,7 +140,7 @@ class BackgroundLinkingService
 
                     val clusterUpdate = ClusterUpdate(scoredCluster.clusterId, candidate, scoredCluster.cluster)
 
-                    insertMatches(clusterUpdate, it)
+                    insertMatches(clusterUpdate, conn)
                 }
             } catch (ex: Exception) {
                 logger.error("An error occurred while performing linking.", ex)
@@ -181,8 +177,8 @@ class BackgroundLinkingService
             //No locks are required since any items that block to this element will be skipped.
             try {
                 val clusters = getClusters(dataKeys)
-                gqs.lockClustersForUpdates(clusters.keys).use {
-                    var maybeBestCluster = clusters
+                lqs.lockClustersForUpdates(clusters.keys).use { conn ->
+                    val maybeBestCluster = clusters
                             .asSequence()
                             .map { cluster -> cluster(candidate, cluster, ::completeLinkCluster) }
                             .filter { scoredCluster -> scoredCluster.score > MINIMUM_SCORE }
@@ -190,15 +186,14 @@ class BackgroundLinkingService
 
                     //TODO: When creating new cluster do we really need to re-match or can we assume score of 1.0?
                     val clusterUpdate = if (maybeBestCluster == null) {
-                        val clusterId = ids.reserveIds(LINKING_ENTITY_SET_ID, 1).first()
+                        val clusterId = ids.reserveIds(IdConstants.LINKING_ENTITY_SET_ID.id, 1).first()
                         val block = candidate to mapOf(candidate to elem)
                         ClusterUpdate(clusterId, candidate, matcher.match(block).second)
                     } else {
-                        val bestCluster = maybeBestCluster!!
-                        ClusterUpdate(bestCluster.clusterId, candidate, bestCluster.cluster)
+                        ClusterUpdate(maybeBestCluster.clusterId, candidate, maybeBestCluster.cluster)
                     }
 
-                    insertMatches(clusterUpdate, it)
+                    insertMatches(clusterUpdate, conn)
                 }
 
             } catch (ex: Exception) {
@@ -207,7 +202,6 @@ class BackgroundLinkingService
             }
         }
     }
-
 
     private fun isLocked(block: Set<EntityDataKey>): Boolean {
         //Skip locked elements as they will be requeued.
@@ -230,7 +224,6 @@ class BackgroundLinkingService
         return ScoredCluster(identifiedCluster.key, matchedCluster, score)
     }
 
-
     private fun <T> collectKeys(m: Map<EntityDataKey, Map<EntityDataKey, T>>): Set<EntityDataKey> {
         return m.keys + m.values.flatMap { it.keys }
     }
@@ -243,10 +236,9 @@ class BackgroundLinkingService
         logger.debug("Starting neighborhood cleanup of {}", candidate)
         val positiveFeedbacks = linkingFeedbackService.getLinkingFeedbackOnEntity(FeedbackType.Positive, candidate)
                 .map(EntityLinkingFeedback::entityPair)
-        val clearedCount = gqs.deleteNeighborhood(candidate, positiveFeedbacks)
+        val clearedCount = lqs.deleteNeighborhood(candidate, positiveFeedbacks)
         logger.debug("Cleared {} neighbors from neighborhood of {}", clearedCount, candidate)
     }
-
 
     /**
      * Retrieve the clusters containing any of the provided data keys.
@@ -254,12 +246,21 @@ class BackgroundLinkingService
      * @return A map of pre-scored clusters associated with the given data keys.
      */
     private fun getClusters(dataKeys: Set<EntityDataKey>): Map<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>> {
-        return gqs.getClusters(gqs.getIdsOfClustersContaining(dataKeys).toList())
+        return lqs.getClusters(lqs.getIdsOfClustersContaining(dataKeys).toList())
     }
 
-    private fun insertMatches(clusterUpdate: ClusterUpdate, connection: Connection) {
-        gqs.insertMatchScores(connection, clusterUpdate.clusterId, clusterUpdate.scores)
-        gqs.updateLinkingTable(clusterUpdate.clusterId, clusterUpdate.newMember)
+    private fun insertMatches(clusterUpdate: ClusterUpdate, conn: Connection) {
+        lqs.insertMatchScores(conn, clusterUpdate.clusterId, clusterUpdate.scores)
+        lqs.updateLinkingTable(clusterUpdate.clusterId, clusterUpdate.newMember)
+        linkingLogService.createOrUpdateForLinks(
+                clusterUpdate.clusterId, //clusterUpdate.scores
+                clusterUpdate.scores.flatMap { entry ->
+                    return@flatMap Sets.union(entry.value.keys, setOf(entry.key))
+                }.groupBy { edk -> edk.entitySetId
+                }.mapValues { entry ->
+                    Sets.newLinkedHashSet(entry.value.map { it.entityKeyId })
+                }
+        )
     }
 
     @Timed
@@ -310,22 +311,23 @@ class BackgroundLinkingService
 
         executor.submit {
             var entitiesNeedingLinking =
-                    gqs
-                            .getEntitiesNeedingLinking(setOf(entitySetId), configuration.loadSize)
+                    lqs.getEntitiesNeedingLinking(setOf(entitySetId), configuration.loadSize)
                             .map { EntityDataKey(it.first, it.second) }
+            entitiesNeedingLinking.forEach(candidates::put)
             while (entitiesNeedingLinking.isNotEmpty()) {
-                entitiesNeedingLinking.forEach(candidates::put)
-                entitiesNeedingLinking =
-                        gqs
-                                .getEntitiesNeedingLinking(setOf(entitySetId), configuration.loadSize)
-                                .map { EntityDataKey(it.first, it.second) }
+                val stillNotLinked = lqs
+                        .getEntitiesNeedingLinking(setOf(entitySetId), configuration.loadSize)
+                        .map { EntityDataKey(it.first, it.second) }
+                        .filterNot { entitiesNeedingLinking.contains(it) }
+                stillNotLinked.forEach (candidates::put)
+
+                entitiesNeedingLinking = stillNotLinked
             }
 
             //Allow other nodes to link this entity set.
             linkingLocks.delete(entitySetId)
         }
     }
-
 
     private fun lock(candidate: EntityDataKey) {
         val existingExpiration = entityLinkingLocks.putIfAbsent(
@@ -348,7 +350,6 @@ data class ScoredCluster(
     override fun compareTo(other: Double): Int {
         return score.compareTo(other)
     }
-
 }
 
 private fun avgLinkCluster(matchedCluster: Map<EntityDataKey, Map<EntityDataKey, Double>>): Double {
