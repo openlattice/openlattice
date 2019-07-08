@@ -29,6 +29,7 @@ public enum HazelcastQueue {
     EMAIL_SPOOL,
     INDEXING,
     LINKING_CANDIDATES,
+    LINKING_INDEXING,
     TWILIO,
     SIGNAL
 }

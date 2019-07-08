@@ -31,7 +31,7 @@ import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.ids.HazelcastIdGenerationService
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
-import com.openlattice.postgres.PostgresTable.IDS
+import com.openlattice.postgres.PostgresTable.ENTITY_KEY_IDS
 import com.openlattice.postgres.PostgresTable.SYNC_IDS
 import com.openlattice.postgres.ResultSetAdapters
 import com.zaxxer.hikari.HikariDataSource
@@ -44,10 +44,10 @@ import kotlin.collections.HashMap
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-private val entityKeysSql = "SELECT * FROM ${IDS.name} WHERE ${ID.name} = ANY(?) "
+private val entityKeysSql = "SELECT * FROM ${ENTITY_KEY_IDS.name} WHERE ${ID.name} = ANY(?) "
 private val entityKeyIdsSql = "SELECT * FROM ${SYNC_IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${ENTITY_ID.name} = ANY(?) "
 private val entityKeyIdSql = "SELECT * FROM ${SYNC_IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${ENTITY_ID.name} = ? "
-private val INSERT_SQL = "INSERT INTO ${IDS.name} (${ENTITY_SET_ID.name},${ID.name}) VALUES(?,?)"
+private val INSERT_SQL = "INSERT INTO ${ENTITY_KEY_IDS.name} (${ENTITY_SET_ID.name},${ID.name}) VALUES(?,?)"
 private val INSERT_SYNC_SQL = "INSERT INTO ${SYNC_IDS.name} (${ENTITY_SET_ID.name},${ENTITY_ID.name},${ID.name}) VALUES(?,?,?)"
 
 private val logger = LoggerFactory.getLogger(PostgresEntityKeyIdService::class.java)

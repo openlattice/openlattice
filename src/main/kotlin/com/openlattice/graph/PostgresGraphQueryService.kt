@@ -71,7 +71,7 @@ class PostgresGraphQueryService(
                 Supplier {
                     val connection = hds.connection
                     val ps = connection.prepareStatement(
-                            "SELECT ${PostgresColumn.ENTITY_SET_ID.name},${ID_VALUE.name} FROM ${PostgresTable.IDS.name} WHERE ${ID_VALUE.name} = ANY(?)"
+                            "SELECT ${PostgresColumn.ENTITY_SET_ID.name},${ID_VALUE.name} FROM ${PostgresTable.ENTITY_KEY_IDS.name} WHERE ${ID_VALUE.name} = ANY(?)"
                     )
                     val arr = PostgresArrays.createUuidArray(connection, ids)
                     ps.setArray(1, arr)
@@ -332,15 +332,18 @@ class PostgresGraphQueryService(
 
         entities.forEach { (entitySetId, data) ->
             val apt = authorizedPropertyTypes
-                    .getValue(entitySetId)
-                    .associateWith { propertyTypes.getValue(it) }
+                    .mapValues { (_, propertyTypeIds) ->
+                        propertyTypeIds.associateWith { propertyTypeId ->
+                            propertyTypes.getValue(propertyTypeId)
+                        }
+                    }
             val sw = Stopwatch.createStarted()
-            pgDataService.streamableEntitySetWithEntityKeyIdsAndPropertyTypeIds(
-                    entitySetId,
-                    Optional.of(data.keys),
+            pgDataService.getEntitiesWithPropertyTypeIds(
+                    mapOf(entitySetId to Optional.of(data.keys as Set<UUID>)),
                     apt,
+                    mapOf(),
                     EnumSet.of(MetadataOption.LAST_WRITE)
-            ).forEach { data[it.first] = it.second }
+            ).toMap().forEach { data[it.key] = it.value }
             logger.info("Loading data for entity set {} took {} ms", entitySetId, sw.elapsed(TimeUnit.MILLISECONDS))
         }
 
@@ -586,7 +589,7 @@ class PostgresGraphQueryService(
         val dataKeys = dataKeysClause(dataKeys, EDGE_COMP_1.name, DST_ENTITY_SET_ID.name)
         val srcEntitySetIdsClause = "AND ${SRC_ENTITY_SET_ID.name} ${inClause(entitySetIds)}"
         val associationEntitySetIdsClause = "AND ${EDGE_ENTITY_SET_ID.name} ${inClause(associationEntitySetIds)}"
-        val componentTypeClause = "AND ${COMPONENT_TYPES.name} = ${ComponentType.SRC.ordinal}"
+        val componentTypeClause = "AND ${COMPONENT_TYPES.name} = ${IdType.SRC.ordinal}"
 
         //For this there is no dstEntitySet clause since the target is self.
         return "SELECT * FROM ${EDGES.name} WHERE $dataKeys $srcEntitySetIdsClause $associationEntitySetIdsClause $componentTypeClause"
@@ -604,7 +607,7 @@ class PostgresGraphQueryService(
         val idsClause = dataKeysClause(ids, EDGE_COMP_2.name, SRC_ENTITY_SET_ID.name)
         val associationEntitySetIdsClause = "AND ${EDGE_ENTITY_SET_ID.name} ${inClause(associationEntitySetIds)}"
         val dstEntitySetIdsClause = "AND ${DST_ENTITY_SET_ID.name} ${inClause(entitySetIds)}"
-        val componentTypeClause = "AND ${COMPONENT_TYPES.name} = ${ComponentType.DST.ordinal}"
+        val componentTypeClause = "AND ${COMPONENT_TYPES.name} = ${IdType.DST.ordinal}"
 
         return "SELECT * FROM ${EDGES.name} WHERE $idsClause $dstEntitySetIdsClause $associationEntitySetIdsClause $componentTypeClause"
     }
@@ -622,7 +625,7 @@ class PostgresGraphQueryService(
         val idsClause = "${EDGE_COMP_2.name} ${inClause(ids)}"
         val associationEntitySetIdsClause = "AND ${EDGE_ENTITY_SET_ID.name} ${inClause(associationEntitySetIds)}"
         val srcEntitySetIdsClause = "AND ${DST_ENTITY_SET_ID.name} ${inClause(entitySetIds)}"
-        val componentTypeClause = "AND ${COMPONENT_TYPES.name} = ${ComponentType.EDGE.ordinal}"
+        val componentTypeClause = "AND ${COMPONENT_TYPES.name} = ${IdType.EDGE.ordinal}"
 
         return "SELECT * FROM ${EDGES.name} WHERE $idsClause $srcEntitySetIdsClause $associationEntitySetIdsClause $componentTypeClause"
     }
@@ -640,7 +643,7 @@ class PostgresGraphQueryService(
         val idsClause = "${EDGE_COMP_1.name} ${inClause(ids)}"
         val associationEntitySetIdsClause = "AND ${EDGE_ENTITY_SET_ID.name} ${inClause(associationEntitySetIds)}"
         val dstEntitySetIdsClause = "AND ${DST_ENTITY_SET_ID.name} ${inClause(entitySetIds)}"
-        val componentTypeClause = "AND ${COMPONENT_TYPES.name} = ${ComponentType.EDGE.ordinal}"
+        val componentTypeClause = "AND ${COMPONENT_TYPES.name} = ${IdType.EDGE.ordinal}"
 
         return "SELECT * FROM ${EDGES.name} WHERE $idsClause $dstEntitySetIdsClause $associationEntitySetIdsClause $componentTypeClause"
     }

@@ -23,7 +23,6 @@ package com.openlattice.linking
 
 import com.openlattice.data.EntityDataKey
 import com.openlattice.postgres.streams.PostgresIterable
-import com.openlattice.postgres.streams.StatementHolder
 import java.sql.Connection
 import java.util.*
 
@@ -32,6 +31,7 @@ import java.util.*
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 interface LinkingQueryService {
+
     /**
      * Inserts the results scoring pairs of elements within a cluster to persistent storage. The initial cluster usually
      * consists of all scored pairs within a single block returned by the [Blocker].
@@ -65,8 +65,8 @@ interface LinkingQueryService {
 
     fun updateLinkingTable(clusterId: UUID, newMember: EntityDataKey): Int
 
-    fun getEntitiesNeedingLinking(entitySetIds: Set<UUID>, limit: Int = 10000): PostgresIterable<Pair<UUID, UUID>>
-    fun getEntitiesNotLinked(entitySetIds: Set<UUID>, limit: Int = 10000): PostgresIterable<Pair<UUID, UUID>>
+    fun getEntitiesNeedingLinking(entitySetIds: Set<UUID>, limit: Int = 10_000): PostgresIterable<Pair<UUID, UUID>>
+    fun getEntitiesNotLinked(entitySetIds: Set<UUID>, limit: Int = 10_000): PostgresIterable<Pair<UUID, UUID>>
     fun getLinkableEntitySets(
             linkableEntityTypeIds: Set<UUID>,
             entitySetBlacklist: Set<UUID>,

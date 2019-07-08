@@ -9,6 +9,7 @@ import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import java.io.DataInput;
 import java.io.IOException;
+import java.util.LinkedHashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -54,6 +55,9 @@ public class MetadataUpdateStreamSerializer implements SelfRegisteringStreamSeri
         OptionalStreamSerializers
                 .serialize( out, object.getPropertyTags(), GuavaStreamSerializersKt::serializeSetMultimap );
         OptionalStreamSerializers.serialize( out, object.getOrganizationId(), UUIDStreamSerializer::serialize );
+        OptionalStreamSerializers.serialize( out,
+                object.getPartitions(),
+                ( output, elem ) -> output.writeIntArray( elem.stream().mapToInt( e -> e ).toArray() ) );
     }
 
     public static MetadataUpdate deserialize( ObjectDataInput in ) throws IOException {
@@ -70,6 +74,8 @@ public class MetadataUpdateStreamSerializer implements SelfRegisteringStreamSeri
                 .deserialize( in, GuavaStreamSerializersKt::deserializeLinkedHashMultimap );
         Optional<UUID> organizationId = OptionalStreamSerializers
                 .deserialize( in, UUIDStreamSerializer::deserialize );
+        Optional<LinkedHashSet<Integer>> partitions = OptionalStreamSerializers
+                .deserialize( in, input -> toLinkedHashSet( input.readIntArray() ) );
         return new MetadataUpdate( title,
                 description,
                 name,
@@ -79,6 +85,15 @@ public class MetadataUpdateStreamSerializer implements SelfRegisteringStreamSeri
                 defaultShow,
                 url,
                 propertyTags,
-                organizationId);
+                organizationId,
+                partitions );
+    }
+
+    private static LinkedHashSet<Integer> toLinkedHashSet( int[] array ) {
+        final var s = new LinkedHashSet<Integer>( array.length );
+        for ( int i = 0; i < array.length; ++i ) {
+            s.add( array[ i ] );
+        }
+        return s;
     }
 }

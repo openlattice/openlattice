@@ -56,13 +56,29 @@ import com.openlattice.controllers.exceptions.ResourceNotFoundException;
 import com.openlattice.controllers.exceptions.TypeExistsException;
 import com.openlattice.controllers.exceptions.TypeNotFoundException;
 import com.openlattice.data.PropertyUsageSummary;
+import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.datastore.util.Util;
 import com.openlattice.edm.EntityDataModel;
 import com.openlattice.edm.EntityDataModelDiff;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.PostgresEdmManager;
 import com.openlattice.edm.Schema;
-import com.openlattice.edm.events.*;
+import com.openlattice.edm.events.AssociationTypeCreatedEvent;
+import com.openlattice.edm.events.AssociationTypeDeletedEvent;
+import com.openlattice.edm.events.ClearAllDataEvent;
+import com.openlattice.edm.events.EntitySetCreatedEvent;
+import com.openlattice.edm.events.EntitySetDeletedEvent;
+import com.openlattice.edm.events.EntitySetMetadataUpdatedEvent;
+import com.openlattice.edm.events.EntityTypeCreatedEvent;
+import com.openlattice.edm.events.EntityTypeDeletedEvent;
+import com.openlattice.edm.events.LinkedEntitySetAddedEvent;
+import com.openlattice.edm.events.LinkedEntitySetRemovedEvent;
+import com.openlattice.edm.events.PropertyTypeCreatedEvent;
+import com.openlattice.edm.events.PropertyTypeDeletedEvent;
+import com.openlattice.edm.events.PropertyTypeMetaDataUpdatedEvent;
+import com.openlattice.edm.events.PropertyTypesAddedToEntitySetEvent;
+import com.openlattice.edm.events.PropertyTypesAddedToEntityTypeEvent;
+import com.openlattice.edm.events.PropertyTypesInEntitySetUpdatedEvent;
 import com.openlattice.edm.processors.EntitySetsFlagFilteringAggregator;
 import com.openlattice.edm.properties.PostgresTypeManager;
 import com.openlattice.edm.requests.MetadataUpdate;
@@ -91,23 +107,30 @@ import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.hazelcast.HazelcastUtils;
 import com.openlattice.hazelcast.processors.AddEntitySetsToLinkingEntitySetProcessor;
 import com.openlattice.hazelcast.processors.RemoveEntitySetsFromLinkingEntitySetProcessor;
-import com.openlattice.organization.OrganizationEntitySetFlag;
 import com.openlattice.postgres.DataTables;
 import com.openlattice.postgres.PostgresQuery;
 import com.openlattice.postgres.PostgresTablesPod;
 import com.openlattice.postgres.mapstores.EntitySetMapstore;
 import com.openlattice.postgres.mapstores.EntityTypeMapstore;
 import com.zaxxer.hikari.HikariDataSource;
-
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.util.*;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.inject.Inject;
-
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
@@ -131,6 +154,7 @@ public class EdmService implements EdmManager {
     private final PostgresEdmManager                edmManager;
     private final PostgresTypeManager               entityTypeManager;
     private final HazelcastSchemaManager            schemaManager;
+    private final PartitionManager                  partitionManager;
 
     private final HazelcastInstance            hazelcastInstance;
     private final HikariDataSource             hds;
@@ -149,6 +173,7 @@ public class EdmService implements EdmManager {
             PostgresTypeManager entityTypeManager,
             HazelcastSchemaManager schemaManager,
             AuditingConfiguration auditingConfiguration,
+            PartitionManager partitionManager,
             Assembler assembler ) {
 
         this.authorizations = authorizations;
@@ -170,8 +195,11 @@ public class EdmService implements EdmManager {
         entityTypes.values().forEach( entityType -> logger.debug( "Object type read: {}", entityType ) );
         this.aresManager = new AuditRecordEntitySetsManager( new AuditingTypes( this, auditingConfiguration ),
                 this,
+                partitionManager,
                 authorizations,
-                hazelcastInstance );
+                hazelcastInstance
+        );
+        this.partitionManager = partitionManager;
         this.assembler = assembler;
     }
 
@@ -471,6 +499,10 @@ public class EdmService implements EdmManager {
     public void createEntitySet( Principal principal, EntitySet entitySet ) {
         EntityType entityType = entityTypes.get( entitySet.getEntityTypeId() );
         ensureValidEntitySet( entitySet );
+
+        if ( entitySet.getPartitions().isEmpty() ) {
+            partitionManager.allocatePartitions( entitySet, partitionManager.getPartitionCount() );
+        }
 
         if ( entityType.getCategory().equals( SecurableObjectType.AssociationType ) ) {
             entitySet.addFlag( EntitySetFlag.ASSOCIATION );
@@ -986,6 +1018,28 @@ public class EdmService implements EdmManager {
         }
         entitySets.executeOnKey( entitySetId, new UpdateEntitySetMetadataProcessor( update ) );
         eventBus.post( new EntitySetMetadataUpdatedEvent( getEntitySet( entitySetId ) ) );
+
+        /* If an entity set is being moved across organizations, its audit entity sets should also be moved to the new organization */
+        if ( update.getOrganizationId().isPresent() ) {
+
+            AclKey aclKey = new AclKey( entitySetId );
+
+            Set<UUID> auditEntitySetIds = Sets.union( aresManager.getAuditRecordEntitySets( aclKey ),
+                    aresManager.getAuditEdgeEntitySets( aclKey ) );
+
+            entitySets.executeOnKeys( auditEntitySetIds,
+                    new UpdateEntitySetMetadataProcessor( new MetadataUpdate( Optional.empty(),
+                            Optional.empty(),
+                            Optional.empty(),
+                            Optional.empty(),
+                            Optional.empty(),
+                            Optional.empty(),
+                            Optional.empty(),
+                            Optional.empty(),
+                            Optional.empty(),
+                            update.getOrganizationId(),
+                            Optional.empty() ) ) );
+        }
     }
 
     private void markMaterializedEntitySetDirtyWithEdmChanges( UUID entitySetId ) {
@@ -1270,6 +1324,7 @@ public class EdmService implements EdmManager {
                     Optional.empty(),
                     Optional.empty(),
                     Optional.empty(),
+                    Optional.empty(),
                     Optional.empty() ) );
         }
     }
@@ -1300,6 +1355,7 @@ public class EdmService implements EdmManager {
                     Optional.empty(),
                     Optional.empty(),
                     optionalPropertyTagsUpdate,
+                    Optional.empty(),
                     Optional.empty() ) );
             if ( !et.getProperties().equals( existing.getProperties() ) ) {
                 addPropertyTypesToEntityType( existing.getId(), et.getProperties() );
@@ -1750,8 +1806,9 @@ public class EdmService implements EdmManager {
     @SuppressWarnings( "unchecked" )
     public Set<UUID> getEntitySetIdsWithFlags( Set<UUID> entitySetIds, Set<EntitySetFlag> filteringFlags ) {
         return entitySets.aggregate(
-                new EntitySetsFlagFilteringAggregator( filteringFlags, new HashSet<>() ),
-                Predicates.in( "__key", entitySetIds.toArray( new UUID[]{} ) ) );
+                new EntitySetsFlagFilteringAggregator( filteringFlags ),
+                Predicates.in( "__key", entitySetIds.toArray( new UUID[] {} ) ) );
+
     }
 
     @Override

@@ -24,6 +24,7 @@ import org.postgresql.util.PGobject;
 
 public class EntityTypeMapstore extends AbstractBasePostgresMapstore<UUID, EntityType> {
     public static final String PROPERTIES_INDEX = "properties[any]";
+    public static final String FULLQUALIFIED_NAME_PREDICATE = "type.fullQualifiedNameAsString";
     private final ObjectMapper mapper;
 
     public EntityTypeMapstore( HikariDataSource hds ) {

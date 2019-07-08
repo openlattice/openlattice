@@ -21,7 +21,6 @@
 
 package com.openlattice.data
 
-import com.openlattice.data.EntityKey
 import java.util.*
 
 /**
