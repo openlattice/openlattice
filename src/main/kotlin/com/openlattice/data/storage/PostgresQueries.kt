@@ -24,7 +24,7 @@ package com.openlattice.data.storage
 import com.openlattice.analysis.requests.Filter
 import com.openlattice.postgres.DataTables.*
 import com.openlattice.postgres.PostgresColumn.*
-import com.openlattice.postgres.PostgresTable.IDS
+import com.openlattice.postgres.PostgresTable.ENTITY_KEY_IDS
 import com.openlattice.postgres.ResultSetAdapters
 import org.slf4j.LoggerFactory
 import java.util.*
@@ -123,9 +123,9 @@ internal fun buildWithClause(linking: Boolean, entitiesClause: String): String {
     } else {
         listOf(ENTITY_SET_ID.name, ID_VALUE.name)
     }
-    val selectColumns = joinColumns.joinToString(",") { "${IDS.name}.$it AS $it" }
+    val selectColumns = joinColumns.joinToString(",") { "${ENTITY_KEY_IDS.name}.$it AS $it" }
 
-    val queriesSql = "SELECT $selectColumns FROM ${IDS.name} WHERE ${VERSION.name} > 0 $entitiesClause"
+    val queriesSql = "SELECT $selectColumns FROM ${ENTITY_KEY_IDS.name} WHERE ${VERSION.name} > 0 $entitiesClause"
 
     return "WITH $FILTERED_ENTITY_KEY_IDS AS ( $queriesSql ) "
 }
@@ -234,7 +234,7 @@ internal fun selectVersionOfPropertyTypeInEntitySetSql(
      */
     val linkingIdSubquerySql =
             if (linking) {
-                "INNER JOIN (SELECT $entityKeyIdColumns,${LINKING_ID.name} FROM ${IDS.name}) as linking_ids USING($entityKeyIdColumns)"
+                "INNER JOIN (SELECT $entityKeyIdColumns,${LINKING_ID.name} FROM ${ENTITY_KEY_IDS.name}) as linking_ids USING($entityKeyIdColumns)"
             } else {
                 ""
             }
@@ -331,7 +331,7 @@ internal fun selectEntityKeyIdsFilteredByVersionSubquerySql(
         "(SELECT $selectedColumns " +
                 "FROM ( SELECT $selectedColumns, max(versions) as abs_max, max(abs(versions)) as max_abs " +
                 "       FROM (  SELECT $selectedColumns, unnest(versions) as versions " +
-                "           FROM ${IDS.name} " +
+                "           FROM ${ENTITY_KEY_IDS.name} " +
                 "           WHERE TRUE $entitiesClause ) as $EXPANDED_VERSIONS " +
                 "       WHERE abs(versions) <= $version " +
                 "       GROUP BY($selectedColumns)) as unfiltered_data_keys " +
@@ -341,10 +341,10 @@ internal fun selectEntityKeyIdsFilteredByVersionSubquerySql(
         val metadataColumns = metadataOptions.joinToString(",") {
             ResultSetAdapters.mapMetadataOptionToPostgresColumn(it)
         }
-        return "(SELECT $selectedColumns,$metadataColumns FROM ${IDS.name} INNER JOIN (SELECT $selectedColumns " +
+        return "(SELECT $selectedColumns,$metadataColumns FROM ${ENTITY_KEY_IDS.name} INNER JOIN (SELECT $selectedColumns " +
                 "FROM ( SELECT $selectedColumns, max(versions) as abs_max, max(abs(versions)) as max_abs " +
                 "       FROM (  SELECT $selectedColumns, unnest(versions) as versions " +
-                "           FROM ${IDS.name} " +
+                "           FROM ${ENTITY_KEY_IDS.name} " +
                 "           WHERE TRUE $entitiesClause ) as $EXPANDED_VERSIONS " +
                 "       WHERE abs(versions) <= $version " +
                 "       GROUP BY($selectedColumns)) as unfiltered_data_keys " +
@@ -364,7 +364,7 @@ internal fun selectLinkingIdsFilteredByVersionSubquerySql(
     return "(SELECT DISTINCT $selectedColumns " +
             "FROM ( SELECT $selectedColumns, max(versions) as abs_max, max(abs(versions)) as max_abs " +
             "       FROM (  SELECT $selectedColumns, unnest(versions) as versions " +
-            "           FROM ${IDS.name} " +
+            "           FROM ${ENTITY_KEY_IDS.name} " +
             "           WHERE TRUE $entitiesClause ) as $EXPANDED_VERSIONS " +
             "       WHERE abs(versions) <= $version " +
             "       GROUP BY($selectedColumns)) as unfiltered_data_keys " +
@@ -394,7 +394,7 @@ internal fun selectEntityKeyIdsWithCurrentVersionSubquerySql(
     val selectColumns = joinColumnsSql +
             // used in materialized entitysets for both linking and non-linking entity sets to join on edges
             if (metadataOptions.contains(MetadataOption.ENTITY_KEY_IDS)) {
-                ", array_agg(${IDS.name}.${ID.name}) AS " +
+                ", array_agg(${ENTITY_KEY_IDS.name}.${ID.name}) AS " +
                         ResultSetAdapters.mapMetadataOptionToPostgresColumn(MetadataOption.ENTITY_KEY_IDS)
             } else {
                 ""
@@ -407,7 +407,7 @@ internal fun selectEntityKeyIdsWithCurrentVersionSubquerySql(
                     } else {
                         ""
                     } + if (metadataOptions.contains(MetadataOption.ENTITY_SET_IDS)) {
-                        ", array_agg(${IDS.name}.${ENTITY_SET_ID.name}) AS " +
+                        ", array_agg(${ENTITY_KEY_IDS.name}.${ENTITY_SET_ID.name}) AS " +
                                 ResultSetAdapters.mapMetadataOptionToPostgresColumn(MetadataOption.ENTITY_SET_IDS)
                     } else {
                         ""
@@ -433,7 +433,7 @@ internal fun selectEntityKeyIdsWithCurrentVersionSubquerySql(
         }
     }
 
-    return "( SELECT $selectColumns FROM ${IDS.name} INNER JOIN $FILTERED_ENTITY_KEY_IDS USING($joinColumnsSql) WHERE true $entitiesClause $groupBy ) as $ENTITIES_TABLE_ALIAS"
+    return "( SELECT $selectColumns FROM ${ENTITY_KEY_IDS.name} INNER JOIN $FILTERED_ENTITY_KEY_IDS USING($joinColumnsSql) WHERE true $entitiesClause $groupBy ) as $ENTITIES_TABLE_ALIAS"
 }
 
 internal fun arrayAggSql(fqn: String): String {
@@ -451,7 +451,7 @@ internal fun buildEntitiesClause(entityKeyIds: Map<UUID, Optional<Set<UUID>>>, l
                 .filter { ids -> ids.isNotEmpty() }
                 .map { ids -> " $idsColumn IN (" + ids.joinToString(",") { id -> "'$id'" } + ") AND" }
                 .orElse("")
-        " ($idsClause ${IDS.name}.${ENTITY_SET_ID.name} = '${it.key}' )"
+        " ($idsClause ${ENTITY_KEY_IDS.name}.${ENTITY_SET_ID.name} = '${it.key}' )"
     } + ")"
 }
 
@@ -481,7 +481,7 @@ internal fun buildFilterClause(fqn: String, filter: Set<Filter>): String {
 internal fun selectEntityKeyIdsByLinkingIds(linkingIds: Set<UUID>): String {
     val linkingEntitiesClause = buildLinkingEntitiesClause(linkingIds)
     return "SELECT ${LINKING_ID.name}, array_agg(${ID_VALUE.name}) AS ${ENTITY_KEY_IDS.name} " +
-            "FROM  ${IDS.name} " +
+            "FROM  ${ENTITY_KEY_IDS.name} " +
             "WHERE ${VERSION.name} > 0 AND ${LINKING_ID.name} IS NOT NULL $linkingEntitiesClause " +
             "GROUP BY ${LINKING_ID.name} "
 }

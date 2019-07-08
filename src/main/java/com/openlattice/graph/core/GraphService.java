@@ -43,23 +43,7 @@ public interface GraphService {
 
     int clearEdges( Iterable<DataEdgeKey> keys );
 
-    int clearVerticesInEntitySetWithoutLocking( @Nonnull UUID entitySetId );
-
-    int clearVerticesWithoutLocking( @Nonnull UUID entitySetId, @Nonnull Set<UUID> vertices );
-
-    int clearVerticesOfAssociationsWithoutLocking( UUID entitySetId, Set<UUID> vertices );
-
     WriteEvent deleteEdges( Iterable<DataEdgeKey> keys );
-
-    int deleteVerticesInEntitySetWithoutLocking( UUID entitySetId );
-
-    int deleteVerticesWithoutLocking( UUID entitySetId, Set<UUID> vertices );
-
-    int deleteVerticesOfAssociationsWithoutLocking( UUID entitySetId, Set<UUID> vertices );
-
-    Edge getEdge( DataEdgeKey key );
-
-    Stream<Edge> getEdges( Set<DataEdgeKey> keys );
 
     PostgresIterable<DataEdgeKey> getEdgeKeysOfEntitySet( UUID entitySetId );
 
@@ -71,12 +55,6 @@ public interface GraphService {
 
     Stream<Edge> getEdgesAndNeighborsForVerticesBulk( Set<UUID> entitySetIds, EntityNeighborsFilter filter );
 
-    Stream<IncrementableWeightId> topEntitiesOld(
-            int limit,
-            UUID entitySetId,
-            SetMultimap<UUID, UUID> srcFilters,
-            SetMultimap<UUID, UUID> dstFilters );
-
     PostgresIterable<Map<String, Object>> computeTopEntities(
             int limit,
             Set<UUID> entitySetIds,
@@ -84,16 +62,6 @@ public interface GraphService {
             List<AuthorizedFilteredNeighborsRanking> details,
             boolean linked,
             Optional<UUID> linkingEntitySetId );
-
-    /**
-     * @param srcFilters Association type ids to neighbor entity set ids
-     * @param dstFilters Association type ids to neighbor entity set ids
-     */
-    IncrementableWeightId[] computeGraphAggregation(
-            int limit,
-            UUID entitySetId,
-            SetMultimap<UUID, UUID> srcFilters,
-            SetMultimap<UUID, UUID> dstFilters );
 
     List<NeighborSets> getNeighborEntitySets( Set<UUID> entitySetIds );
 }

@@ -41,7 +41,6 @@ class BulkLinkedDataLambdasStreamSerializer(
 
     override fun write(kryo: Kryo, output: Output, data: BulkLinkedDataLambdas) {
         writeUUID(output, data.entityTypeId)
-        writeUUID(output, data.linkingEntitySetId)
 
         try {
             output.writeInt(data.entitiesByLinkingId.size)
@@ -57,14 +56,13 @@ class BulkLinkedDataLambdasStreamSerializer(
                 }
             }
         } catch (e: JsonProcessingException) {
-            logger.debug("Unable to serialize entity with for entity set: {}", data.linkingEntitySetId)
+            logger.debug("Unable to serialize linking entities linking ids: {}", data.entitiesByLinkingId.keys)
         }
     }
 
 
     override fun read(kryo: Kryo, input: Input, type: Class<BulkLinkedDataLambdas>): BulkLinkedDataLambdas {
         val entityTypeId = readUUID(input)
-        val linkedEntitySetId = readUUID(input)
 
         val linkingIdsSize = input.readInt()
         val entitiesByLinkingId = HashMap<UUID, Map<UUID, Map<UUID, Set<Any>>>>(linkingIdsSize)
@@ -88,6 +86,6 @@ class BulkLinkedDataLambdasStreamSerializer(
             entitiesByLinkingId[linkingId] = Maps.transformValues(entitiesByEntitySetId, Multimaps::asMap)
         }
 
-        return BulkLinkedDataLambdas(entityTypeId, linkedEntitySetId, entitiesByLinkingId)
+        return BulkLinkedDataLambdas(entityTypeId, entitiesByLinkingId)
     }
 }

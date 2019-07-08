@@ -22,19 +22,19 @@
 
 package com.openlattice.hazelcast.serializers;
 
-import com.openlattice.authorization.Principal;
-import com.openlattice.authorization.PrincipalType;
-import com.openlattice.edm.set.EntitySetFlag;
-import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.edm.EntitySet;
-
+import com.openlattice.edm.set.EntitySetFlag;
+import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import java.io.IOException;
-import java.util.*;
-
+import java.util.EnumSet;
+import java.util.LinkedHashSet;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -56,6 +56,13 @@ public class EntitySetStreamSerializer implements SelfRegisteringStreamSerialize
             out.writeUTF( flag.toString() );
         }
 
+        var partitions = new int[ object.getPartitions().size() ];
+        var index = 0;
+        for ( var partition : object.getPartitions() ) {
+            partitions[ index++ ] = partition;
+        }
+
+        out.writeIntArray( partitions );
     }
 
     @Override
@@ -75,6 +82,13 @@ public class EntitySetStreamSerializer implements SelfRegisteringStreamSerialize
             flags.add( EntitySetFlag.valueOf( in.readUTF() ) );
         }
 
+        var partitionsArray = in.readIntArray();
+        var partitions = new LinkedHashSet<Integer>( partitionsArray.length );
+
+        for ( var p : partitionsArray ) {
+            partitions.add( p );
+        }
+
         EntitySet es = new EntitySet(
                 id,
                 entityTypeId,
@@ -84,7 +98,8 @@ public class EntitySetStreamSerializer implements SelfRegisteringStreamSerialize
                 contacts,
                 linkedEntitySets,
                 Optional.of( organizationId ),
-                Optional.of( flags ) );
+                Optional.of( flags ),
+                Optional.of( partitions ) );
 
         return es;
     }
