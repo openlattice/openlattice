@@ -27,10 +27,10 @@ class EntitySetsTest : MultipleAuthenticatedUsersBase() {
         val es = createEntitySet(EdmTestConstants.personEt)
 
         entitySetsApi.addEntitySetsToLinkingEntitySet(linkingEs.id, setOf<UUID>(es.id))
-        Assert.assertEquals(es.id, edmApi.getEntitySet(linkingEs.id).linkedEntitySets.single())
+        Assert.assertEquals(es.id, entitySetsApi.getEntitySet(linkingEs.id).linkedEntitySets.single())
 
         entitySetsApi.removeEntitySetsFromLinkingEntitySet(linkingEs.id, setOf(es.id))
-        Assert.assertEquals(setOf<UUID>(), edmApi.getEntitySet(linkingEs.id).linkedEntitySets)
+        Assert.assertEquals(setOf<UUID>(), entitySetsApi.getEntitySet(linkingEs.id).linkedEntitySets)
     }
 
     @Test
