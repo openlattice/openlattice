@@ -27,7 +27,7 @@ import com.datastax.driver.core.querybuilder.BindMarker;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.google.common.base.Preconditions;
 import com.kryptnostic.rhizome.cassandra.ColumnDef;
-import org.apache.commons.lang3.RandomStringUtils;
+import com.openlattice.mapstores.TestDataFactory;
 
 import java.util.function.Function;
 
@@ -146,9 +146,9 @@ public enum CommonColumns implements ColumnDef {
 
     private CommonColumns( DataType type ) {
         this.type = type;
-        String maybeNewMarker = RandomStringUtils.randomAlphabetic( 8 );
+        String maybeNewMarker = TestDataFactory.randomAlphabetic( 8 );
         while ( !CommonColumnsHelper.usedBindMarkers.add( maybeNewMarker ) ) {
-            maybeNewMarker = RandomStringUtils.randomAlphabetic( 8 );
+            maybeNewMarker = TestDataFactory.randomAlphabetic( 8 );
         }
     }
 
