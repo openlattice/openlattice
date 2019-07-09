@@ -42,10 +42,10 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.junit.Assert
 import org.junit.BeforeClass
 import org.junit.Test
-import java.lang.Math.abs
 import java.lang.reflect.UndeclaredThrowableException
 import java.time.*
 import java.util.*
+import kotlin.math.abs
 
 /**
  *
@@ -784,7 +784,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
             Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!
-                    .contains("You must have OWNER permission of all required entity set properties to delete entities from it.", true))
+                    .contains("You must have OWNER permission of all required entity set ${es.id} properties to delete entities from it.", true))
         } finally {
             loginAs("admin")
         }
@@ -838,7 +838,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
             Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!
-                    .contains("You must have OWNER permission of all required entity set properties to delete entities from it.", true))
+                    .contains("You must have OWNER permission of all required entity set ${esEdge.id} properties to delete entities from it.", true))
         } finally {
             loginAs("admin")
         }
@@ -869,7 +869,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
             Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!
-                    .contains("You must have WRITE permission of all required entity set properties to delete entities from it.", true))
+                    .contains("You must have WRITE permission of all required entity set ${es.id} properties to delete entities from it.", true))
         } finally {
             loginAs("admin")
         }
@@ -907,7 +907,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
             Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!
-                    .contains("You must have WRITE permission of all required entity set properties to delete entities from it.", true))
+                    .contains("You must have WRITE permission of all required entity set ${esEdge.id} properties to delete entities from it.", true))
         } finally {
             loginAs("admin")
         }
@@ -949,7 +949,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
             Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!
-                    .contains("You must have WRITE permission of all required entity set properties to delete entities from it.", true))
+                    .contains("You must have WRITE permission of all required entity set ${esDst.id} properties to delete entities from it.", true))
         } finally {
             loginAs("admin")
         }
