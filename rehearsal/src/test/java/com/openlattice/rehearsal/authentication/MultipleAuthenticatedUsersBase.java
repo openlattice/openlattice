@@ -74,7 +74,6 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.junit.Assert;
 import retrofit2.Retrofit;
@@ -314,7 +313,7 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
         EntitySet newES = new EntitySet(
                 Optional.of( entitySetId ),
                 entityType.getId(),
-                RandomStringUtils.randomAlphanumeric( 10 ),
+                TestDataFactory.randomAlphanumeric( 10 ),
                 "foobar",
                 Optional.of( "barred" ),
                 ImmutableSet.of( "foo@bar.com", "foobar@foo.net" ),
