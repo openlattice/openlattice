@@ -445,7 +445,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         dataApi.createAssociations(edgesToBeCreated1)
 
         // create edges is opposite direction
-        dataApi.createAssociations(edgesToBeCreated1)
+        dataApi.createAssociations(edgesToBeCreated2)
     }
 
     private fun lookupEdgeDataByFqn(edgeData: MutableMap<UUID, MutableCollection<Any>>):
