@@ -10,6 +10,7 @@ import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresDataTables.Companion.getColumnDefinition
 import com.openlattice.postgres.PostgresTable.DATA
+import com.openlattice.postgres.PostgresTable.IDS
 import java.sql.PreparedStatement
 import java.util.*
 
@@ -316,9 +317,9 @@ internal fun selectLinkingEntitySetSql(linkingEntitySetId: UUID): String {
  * 4 - entity set id
  * 5 - entity key ids
  */
-internal val upsertEntitiesSql = "UPDATE ${PostgresTable.ENTITY_KEY_IDS.name} SET ${VERSIONS.name} = ${VERSIONS.name} || ?, ${DataTables.LAST_WRITE.name} = now(), " +
-        "${VERSION.name} = CASE WHEN abs(${PostgresTable.ENTITY_KEY_IDS.name}.${VERSION.name}) < ? THEN ? " +
-        "ELSE ${PostgresTable.ENTITY_KEY_IDS.name}.${VERSION.name} END " +
+internal val upsertEntitiesSql = "UPDATE ${IDS.name} SET ${VERSIONS.name} = ${VERSIONS.name} || ?, ${DataTables.LAST_WRITE.name} = now(), " +
+        "${VERSION.name} = CASE WHEN abs(${IDS.name}.${VERSION.name}) < ? THEN ? " +
+        "ELSE ${IDS.name}.${VERSION.name} END " +
         "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?)"
 
 
@@ -327,12 +328,12 @@ internal val upsertEntitiesSql = "UPDATE ${PostgresTable.ENTITY_KEY_IDS.name} SE
  * 1. entity key ids
  * 2. partitions
  */
-internal val lockEntitiesSql = "SELECT 1 FROM ${PostgresTable.IDS.name} " +
+internal val lockEntitiesSql = "SELECT 1 FROM ${IDS.name} " +
         "WHERE ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ANY(?) " +
         "FOR UPDATE"
 
-
-fun upsertEntities(entitySetId: UUID, idsClause: String, version: Long): String {
+@Deprecated("Old version of upsert")
+fun upsertEntitiesOld(entitySetId: UUID, idsClause: String, version: Long): String {
     return "UPDATE ${PostgresTable.ENTITY_KEY_IDS.name} SET ${VERSIONS.name} = ${VERSIONS.name} || ARRAY[$version], ${DataTables.LAST_WRITE.name} = now(), " +
             "${VERSION.name} = CASE WHEN abs(${PostgresTable.ENTITY_KEY_IDS.name}.${VERSION.name}) < $version THEN $version " +
             "ELSE ${PostgresTable.ENTITY_KEY_IDS.name}.${VERSION.name} END " +
@@ -340,7 +341,7 @@ fun upsertEntities(entitySetId: UUID, idsClause: String, version: Long): String 
 }
 
 /**
- * Preparable SQL that upserts a version for all entities in a given entity set in [PostgresTable.ENTITY_KEY_IDS]
+ * Preparable SQL that upserts a version for all entities in a given entity set in [IDS]
  *
  * The following bind order is expected:
  *
@@ -349,13 +350,13 @@ fun upsertEntities(entitySetId: UUID, idsClause: String, version: Long): String 
  * 3. version
  * 4. entity set id
  */
-internal val updateVersionsForEntitySet = "UPDATE ${PostgresTable.ENTITY_KEY_IDS.name} SET versions = versions || ARRAY[?]::uuid[], " +
-        "${VERSION.name} = CASE WHEN abs(${PostgresTable.ENTITY_KEY_IDS.name}.${VERSION.name}) < abs(?) THEN ? " +
-        "ELSE ${PostgresTable.ENTITY_KEY_IDS.name}.${VERSION.name} END " +
+internal val updateVersionsForEntitySet = "UPDATE ${IDS.name} SET versions = versions || ARRAY[?], " +
+        "${VERSION.name} = CASE WHEN abs(${IDS.name}.${VERSION.name}) < abs(?) THEN ? " +
+        "ELSE ${IDS.name}.${VERSION.name} END " +
         "WHERE ${ENTITY_SET_ID.name} = ? "
 
 /**
- * Preparable SQL that updates a version for all properties in a given entity set in [PostgresTable.DATA]
+ * Preparable SQL that updates a version for all properties in a given entity set in [DATA]
  *
  * The following bind order is expected:
  *
@@ -371,7 +372,7 @@ internal val updateVersionsForPropertiesInEntitySet = "UPDATE ${DATA.name} SET v
 
 
 /**
- * Preparable SQL that upserts a version for all entities in a given entity set in [PostgresTable.ENTITY_KEY_IDS]
+ * Preparable SQL that upserts a version for all entities in a given entity set in [IDS]
  *
  * The following bind order is expected:
  *

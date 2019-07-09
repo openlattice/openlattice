@@ -402,7 +402,7 @@ class PostgresEntityDataQueryServiceOld(
             //            connection.autoCommit = false
             return@use connection.createStatement().use { updateEntities ->
                 //                updateEntities.execute(lockEntities(entitySetId, citusIdsClause, version))
-                val updateCount = updateEntities.executeUpdate(upsertEntities(entitySetId, idsClause, version))
+                val updateCount = updateEntities.executeUpdate(upsertEntitiesOld(entitySetId, idsClause, version))
 //                connection.commit()
 //                connection.autoCommit = true
                 return@use updateCount
