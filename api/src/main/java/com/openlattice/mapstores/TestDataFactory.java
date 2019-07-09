@@ -60,6 +60,8 @@ import com.openlattice.search.requests.PersistentSearch;
 import com.openlattice.search.requests.SearchConstraints;
 import com.openlattice.search.requests.SearchDetails;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import org.apache.commons.text.RandomStringGenerator;
+import org.apache.commons.text.CharacterPredicates;
 import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -73,7 +75,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
@@ -87,6 +88,19 @@ public final class TestDataFactory {
     private static final Analyzer[]            analyzers            = Analyzer.values();
     private static final IndexType[]           INDEX_TYPES          = IndexType.values();
     private static final Random                r                    = new Random();
+
+    private static final char [][] allowedLetters                   = {{'a','z'},{'A','Z'}};
+    private static final char [][] allowedDigitsAndLetters          = {{'a','z'},{'A','Z'},{'0','9'}};
+    private static final RandomStringGenerator random               = new RandomStringGenerator.Builder()
+            .build();
+    private static final RandomStringGenerator randomAlpha          = new RandomStringGenerator.Builder()
+            .withinRange( allowedLetters )
+            .filteredBy( CharacterPredicates.LETTERS )
+            .build();
+    private static final RandomStringGenerator randomAlphaNumeric   = new RandomStringGenerator.Builder()
+            .withinRange( allowedDigitsAndLetters )
+            .filteredBy(CharacterPredicates.LETTERS, CharacterPredicates.DIGITS)
+            .build();
 
     private TestDataFactory() {
     }
@@ -103,12 +117,24 @@ public final class TestDataFactory {
         return r.nextInt();
     }
 
+    public static String random(int length) {
+        return random.generate( length );
+    }
+
+    public static String randomAlphabetic(int length) {
+        return randomAlpha.generate( length );
+    }
+
+    public static String randomAlphanumeric(int length) {
+        return randomAlphaNumeric.generate( length );
+    }
+
     public static Principal userPrincipal() {
-        return new Principal( PrincipalType.USER, RandomStringUtils.randomAlphanumeric( 10 ) );
+        return new Principal( PrincipalType.USER, randomAlphanumeric( 10 ) );
     }
 
     public static Principal rolePrincipal() {
-        return new Principal( PrincipalType.ROLE, RandomStringUtils.randomAlphanumeric( 5 ) );
+        return new Principal( PrincipalType.ROLE, randomAlphanumeric( 5 ) );
     }
 
     public static EntityType entityType( PropertyType... keys ) {
@@ -160,8 +186,8 @@ public final class TestDataFactory {
         return new EntityType(
                 UUID.randomUUID(),
                 fqn.orElseGet( TestDataFactory::fqn ),
-                RandomStringUtils.randomAlphanumeric( 5 ),
-                Optional.of( RandomStringUtils.randomAlphanumeric( 5 ) ),
+                randomAlphanumeric( 5 ),
+                Optional.of( randomAlphanumeric( 5 ) ),
                 ImmutableSet.of( fqn(), fqn(), fqn() ),
                 k,
                 Sets.newLinkedHashSet( Sets
@@ -199,16 +225,16 @@ public final class TestDataFactory {
 
     public static FullQualifiedName fqn() {
         return new FullQualifiedName(
-                RandomStringUtils.randomAlphanumeric( 5 ),
-                RandomStringUtils.randomAlphanumeric( 5 ) );
+                randomAlphanumeric( 5 ),
+                randomAlphanumeric( 5 ) );
     }
 
     public static String email() {
-        return RandomStringUtils.randomAlphanumeric( 5 ) + "@" + RandomStringUtils.randomAlphanumeric( 5 ) + ".com";
+        return randomAlphanumeric( 5 ) + "@" + randomAlphanumeric( 5 ) + ".com";
     }
 
     public static String name() {
-        return RandomStringUtils.randomAlphanumeric( 5 );
+        return randomAlphanumeric( 5 );
     }
 
     public static EntitySet entitySet() {
@@ -219,9 +245,9 @@ public final class TestDataFactory {
         return new EntitySet(
                 UUID.randomUUID(),
                 entityTypeId,
-                RandomStringUtils.randomAlphanumeric( 5 ),
-                RandomStringUtils.randomAlphanumeric( 5 ),
-                Optional.of( RandomStringUtils.randomAlphanumeric( 5 ) ),
+                randomAlphanumeric( 5 ),
+                randomAlphanumeric( 5 ),
+                Optional.of( randomAlphanumeric( 5 ) ),
                 ImmutableSet.of( email(), email() ) );
     }
 
@@ -229,8 +255,8 @@ public final class TestDataFactory {
         return new PropertyType(
                 UUID.randomUUID(),
                 fqn(),
-                RandomStringUtils.randomAlphanumeric( 5 ),
-                Optional.of( RandomStringUtils.randomAlphanumeric( 5 ) ),
+                randomAlphanumeric( 5 ),
+                Optional.of( randomAlphanumeric( 5 ) ),
                 ImmutableSet.of(),
                 EdmPrimitiveTypeKind.Date,
                 Optional.of( r.nextBoolean() ),
@@ -242,8 +268,8 @@ public final class TestDataFactory {
         return new PropertyType(
                 UUID.randomUUID(),
                 fqn(),
-                RandomStringUtils.randomAlphanumeric( 5 ),
-                Optional.of( RandomStringUtils.randomAlphanumeric( 5 ) ),
+                randomAlphanumeric( 5 ),
+                Optional.of( randomAlphanumeric( 5 ) ),
                 ImmutableSet.of(),
                 EdmPrimitiveTypeKind.DateTimeOffset,
                 Optional.of( r.nextBoolean() ),
@@ -259,8 +285,8 @@ public final class TestDataFactory {
         return new PropertyType(
                 UUID.randomUUID(),
                 fqn(),
-                RandomStringUtils.randomAlphanumeric( 5 ),
-                Optional.of( RandomStringUtils.randomAlphanumeric( 5 ) ),
+                randomAlphanumeric( 5 ),
+                Optional.of( randomAlphanumeric( 5 ) ),
                 ImmutableSet.of(),
                 EdmPrimitiveTypeKind.String,
                 Optional.of( r.nextBoolean() ),
@@ -272,8 +298,8 @@ public final class TestDataFactory {
         return new PropertyType(
                 UUID.randomUUID(),
                 fqn(),
-                RandomStringUtils.randomAlphanumeric( 5 ),
-                Optional.of( RandomStringUtils.randomAlphanumeric( 5 ) ),
+                randomAlphanumeric( 5 ),
+                Optional.of( randomAlphanumeric( 5 ) ),
                 ImmutableSet.of(),
                 EdmPrimitiveTypeKind.Binary,
                 Optional.of( r.nextBoolean() ),
@@ -285,9 +311,9 @@ public final class TestDataFactory {
         return new Organization(
                 Optional.of( UUID.randomUUID() ),
                 organizationPrincipal(),
-                RandomStringUtils.randomAlphanumeric( 5 ),
-                Optional.of( RandomStringUtils.randomAlphanumeric( 5 ) ),
-                ImmutableSet.of( RandomStringUtils.randomAlphanumeric( 5 ), RandomStringUtils.randomAlphanumeric( 5 ) ),
+                randomAlphanumeric( 5 ),
+                Optional.of( randomAlphanumeric( 5 ) ),
+                ImmutableSet.of( randomAlphanumeric( 5 ), randomAlphanumeric( 5 ) ),
                 ImmutableSet.of( userPrincipal() ),
                 ImmutableSet.of( role() ),
                 ImmutableSet.of( UUID.randomUUID() ),
@@ -296,7 +322,7 @@ public final class TestDataFactory {
     }
 
     public static Principal organizationPrincipal() {
-        return new Principal( PrincipalType.ORGANIZATION, RandomStringUtils.randomAlphanumeric( 10 ) );
+        return new Principal( PrincipalType.ORGANIZATION, randomAlphanumeric( 10 ) );
     }
 
     public static Role role() {
@@ -304,8 +330,8 @@ public final class TestDataFactory {
                 Optional.of( UUID.randomUUID() ),
                 UUID.randomUUID(),
                 rolePrincipal(),
-                RandomStringUtils.randomAlphanumeric( 5 ),
-                Optional.of( RandomStringUtils.randomAlphanumeric( 5 ) ) );
+                randomAlphanumeric( 5 ),
+                Optional.of( randomAlphanumeric( 5 ) ) );
     }
 
     public static Role role( UUID organizationId ) {
@@ -313,8 +339,8 @@ public final class TestDataFactory {
                 Optional.of( UUID.randomUUID() ),
                 organizationId,
                 rolePrincipal(),
-                RandomStringUtils.randomAlphanumeric( 5 ),
-                Optional.of( RandomStringUtils.randomAlphanumeric( 5 ) ) );
+                randomAlphanumeric( 5 ),
+                Optional.of( randomAlphanumeric( 5 ) ) );
     }
 
     public static SecurableObjectType securableObjectType() {
@@ -415,7 +441,7 @@ public final class TestDataFactory {
             UUID entityId = UUID.randomUUID();
             SetMultimap<UUID, Object> entity = HashMultimap.create();
             for ( UUID propertyId : propertyIds ) {
-                entity.put( propertyId, RandomStringUtils.randomAlphanumeric( 5 ) );
+                entity.put( propertyId, randomAlphanumeric( 5 ) );
             }
 
             data.put( entityId, Multimaps.asMap( entity ) );
@@ -428,7 +454,7 @@ public final class TestDataFactory {
     }
 
     public static EntityKey entityKey( UUID entitySetId ) {
-        return new EntityKey( entitySetId, RandomStringUtils.random( 10 ).replace( Character.MIN_VALUE, '0' ) );
+        return new EntityKey( entitySetId, random( 10 ).replace( Character.MIN_VALUE, '0' ) );
     }
 
     public static PropertyType propertyType( EdmPrimitiveTypeKind type ) {
@@ -437,8 +463,8 @@ public final class TestDataFactory {
                 return new PropertyType(
                         UUID.randomUUID(),
                         fqn(),
-                        RandomStringUtils.randomAlphanumeric( 5 ),
-                        Optional.of( RandomStringUtils.randomAlphanumeric( 5 ) ),
+                        randomAlphanumeric( 5 ),
+                        Optional.of( randomAlphanumeric( 5 ) ),
                         ImmutableSet.of(),
                         type,
                         Optional.of( r.nextBoolean() ),
@@ -448,8 +474,8 @@ public final class TestDataFactory {
                 return new PropertyType(
                         UUID.randomUUID(),
                         fqn(),
-                        RandomStringUtils.randomAlphanumeric( 5 ),
-                        Optional.of( RandomStringUtils.randomAlphanumeric( 5 ) ),
+                        randomAlphanumeric( 5 ),
+                        Optional.of( randomAlphanumeric( 5 ) ),
                         ImmutableSet.of(),
                         type,
                         Optional.of( r.nextBoolean() ),
@@ -463,7 +489,7 @@ public final class TestDataFactory {
         propertyTags.put( key.getId(), "PRIMARY KEY TAG" );
         return new EntityType( UUID.randomUUID(),
                 fqn(),
-                RandomStringUtils.randomAlphanumeric( 5 ),
+                randomAlphanumeric( 5 ),
                 Optional.empty(),
                 ImmutableSet.of(),
                 Stream.of( key ).map( PropertyType::getId )
@@ -490,7 +516,7 @@ public final class TestDataFactory {
 
     public static Map<UUID, Set<Object>> randomElement( UUID keyType, UUID binaryType ) {
         SetMultimap<UUID, Object> element = HashMultimap.create();
-        element.put( keyType, RandomStringUtils.random( 5 ) );
+        element.put( keyType, random( 5 ) );
         element.put( binaryType,
                 ImmutableMap.of( "content-type", "application/octet-stream", "data", RandomUtils.nextBytes( 128 ) ) );
         element.put( binaryType,
@@ -503,29 +529,29 @@ public final class TestDataFactory {
     public static MetadataUpdate metadataUpdate() {
         final var propertyTags = LinkedHashMultimap.<UUID, String>create();
         propertyTags.put( UUID.randomUUID(), "SOME PROPERTY TAG" );
-        return new MetadataUpdate( Optional.of( RandomStringUtils.randomAlphanumeric( 5 ) ),
-                Optional.of( RandomStringUtils.randomAlphanumeric( 5 ) ),
+        return new MetadataUpdate( Optional.of( randomAlphanumeric( 5 ) ),
+                Optional.of( randomAlphanumeric( 5 ) ),
                 Optional.empty(),
-                Optional.of( new HashSet<>( Arrays.asList( RandomStringUtils.randomAlphanumeric( 3 ),
-                        RandomStringUtils.randomAlphanumeric( 5 ) ) ) ),
+                Optional.of( new HashSet<>( Arrays.asList( randomAlphanumeric( 3 ),
+                        randomAlphanumeric( 5 ) ) ) ),
                 Optional.of( fqn() ),
                 Optional.of( r.nextBoolean() ),
                 Optional.empty(),
-                Optional.of( RandomStringUtils.randomAlphanumeric( 4 ) ),
+                Optional.of( randomAlphanumeric( 4 ) ),
                 Optional.of( propertyTags ),
                 Optional.of( UUID.randomUUID() ),
                 Optional.of(new LinkedHashSet<>( Arrays.asList(1,2,3,4) )) );
     }
 
     public static SearchDetails searchDetails() {
-        return new SearchDetails( RandomStringUtils.randomAlphanumeric( 10 ), UUID.randomUUID(), r.nextBoolean() );
+        return new SearchDetails( randomAlphanumeric( 10 ), UUID.randomUUID(), r.nextBoolean() );
     }
 
     public static SearchConstraints simpleSearchConstraints() {
         return SearchConstraints.simpleSearchConstraints( new UUID[] { UUID.randomUUID() },
                 r.nextInt( 1000 ),
                 r.nextInt( 1000 ),
-                RandomStringUtils.randomAlphanumeric( 10 ) );
+                randomAlphanumeric( 10 ) );
     }
 
     public static PersistentSearch persistentSearch() {
