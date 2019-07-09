@@ -332,14 +332,6 @@ internal val lockEntitiesSql = "SELECT 1 FROM ${IDS.name} " +
         "WHERE ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ANY(?) " +
         "FOR UPDATE"
 
-@Deprecated("Old version of upsert")
-fun upsertEntitiesOld(entitySetId: UUID, idsClause: String, version: Long): String {
-    return "UPDATE ${PostgresTable.ENTITY_KEY_IDS.name} SET ${VERSIONS.name} = ${VERSIONS.name} || ARRAY[$version], ${DataTables.LAST_WRITE.name} = now(), " +
-            "${VERSION.name} = CASE WHEN abs(${PostgresTable.ENTITY_KEY_IDS.name}.${VERSION.name}) < $version THEN $version " +
-            "ELSE ${PostgresTable.ENTITY_KEY_IDS.name}.${VERSION.name} END " +
-            "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${ID_VALUE.name} IN ($idsClause)"
-}
-
 /**
  * Preparable SQL that upserts a version for all entities in a given entity set in [IDS]
  *
