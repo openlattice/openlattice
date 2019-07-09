@@ -613,14 +613,14 @@ open class DataGraphService(
             dstEntityTypes: Collection<UUID>,
             dstEntitySetIds: Set<UUID>
     ) {
-        val isSrcMNotAllowed = !edgeAssociationType.src.containsAll(srcEntityTypes)
+        val isSrcNotAllowed = !edgeAssociationType.src.containsAll(srcEntityTypes)
         val isDstNotAllowed = !edgeAssociationType.dst.containsAll(dstEntityTypes)
 
         if (edgeAssociationType.isBidirectional) {
             val isSrcNotAllowedInDst = !edgeAssociationType.dst.containsAll(srcEntityTypes)
             val isDstNotAllowedInSrc = !edgeAssociationType.src.containsAll(dstEntityTypes)
 
-            if ((isSrcMNotAllowed || isDstNotAllowed) && (isSrcNotAllowedInDst || isDstNotAllowedInSrc)) {
+            if ((isSrcNotAllowed || isDstNotAllowed) && (isSrcNotAllowedInDst || isDstNotAllowedInSrc)) {
                 throw IllegalArgumentException(
                         "One or more entity types of src or dst entity sets differs from allowed entity types " +
                                 "(src: ${edgeAssociationType.src}, dst: ${edgeAssociationType.dst}) in bidirectional " +
@@ -628,7 +628,7 @@ open class DataGraphService(
                 )
             }
         } else {
-            if (isSrcMNotAllowed) {
+            if (isSrcNotAllowed) {
                 throw IllegalArgumentException(
                         "One or more entity types of src entity sets $srcEntitySetIds differs from allowed entity " +
                                 "types (${edgeAssociationType.src}) in association type of entity set $edgeEntitySetId"
