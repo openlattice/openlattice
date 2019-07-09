@@ -30,10 +30,10 @@ import com.hazelcast.config.MapStoreConfig.InitialLoadMode;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.hazelcast.HazelcastMap;
+import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.postgres.*;
 import com.openlattice.postgres.mapstores.AbstractBasePostgresMapstore;
 import com.zaxxer.hikari.HikariDataSource;
-import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import java.sql.Array;
@@ -142,7 +142,7 @@ public class PermissionMapstore extends AbstractBasePostgresMapstore<AceKey, Ace
     public AceKey generateTestKey() {
         return new AceKey(
                 new AclKey( UUID.randomUUID() ),
-                new Principal( PrincipalType.USER, RandomStringUtils.randomAlphanumeric( 5 ) ) );
+                new Principal( PrincipalType.USER, TestDataFactory.randomAlphanumeric( 5 ) ) );
     }
 
     @Override

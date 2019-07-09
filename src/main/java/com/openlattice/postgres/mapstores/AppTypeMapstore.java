@@ -2,11 +2,11 @@ package com.openlattice.postgres.mapstores;
 
 import com.openlattice.apps.AppType;
 import com.openlattice.hazelcast.HazelcastMap;
+import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.postgres.PostgresTable;
 import com.openlattice.postgres.ResultSetAdapters;
 import com.zaxxer.hikari.HikariDataSource;
 import java.util.Optional;
-import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 import java.sql.PreparedStatement;
@@ -55,10 +55,10 @@ public class AppTypeMapstore extends AbstractBasePostgresMapstore<UUID, AppType>
 
     @Override public AppType generateTestValue() {
         return new AppType( UUID.randomUUID(),
-                new FullQualifiedName( RandomStringUtils.randomAlphanumeric( 5 ),
-                        RandomStringUtils.randomAlphanumeric( 5 ) ),
-                RandomStringUtils.randomAlphanumeric( 5 ),
-                Optional.of( RandomStringUtils.randomAlphanumeric( 5 ) ),
+                new FullQualifiedName( TestDataFactory.randomAlphanumeric( 5 ),
+                        TestDataFactory.randomAlphanumeric( 5 ) ),
+                TestDataFactory.randomAlphanumeric( 5 ),
+                Optional.of( TestDataFactory.randomAlphanumeric( 5 ) ),
                 UUID.randomUUID() );
     }
 }

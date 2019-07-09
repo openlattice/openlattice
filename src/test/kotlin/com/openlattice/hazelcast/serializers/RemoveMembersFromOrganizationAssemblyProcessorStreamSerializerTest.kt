@@ -23,13 +23,7 @@ package com.openlattice.hazelcast.serializers
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.processors.RemoveMembersFromOrganizationAssemblyProcessor
-import com.openlattice.authorization.AclKey
-import com.openlattice.authorization.SecurablePrincipal
-import com.openlattice.mapstores.TestDataFactory
-import com.openlattice.organizations.SecurablePrincipalList
-import org.apache.commons.lang3.RandomStringUtils
 import org.mockito.Mockito
-import java.util.*
 
 class RemoveMembersFromOrganizationAssemblyProcessorStreamSerializerTest
     : AbstractStreamSerializerTest<RemoveMembersFromOrganizationAssemblyProcessorStreamSerializer,
