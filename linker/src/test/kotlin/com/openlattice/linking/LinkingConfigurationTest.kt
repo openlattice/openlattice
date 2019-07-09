@@ -25,8 +25,8 @@ import com.openlattice.conductor.rpc.SearchConfiguration
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.serializer.AbstractJacksonYamlSerializationTest
-import org.apache.commons.lang.RandomStringUtils
 import org.apache.commons.lang.math.RandomUtils
+
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.junit.BeforeClass
 import java.util.*
@@ -39,13 +39,15 @@ class LinkingConfigurationTest : AbstractJacksonYamlSerializationTest<LinkingCon
         @BeforeClass
         @JvmStatic
         fun configureObjectMappers() {
-            AbstractJacksonYamlSerializationTest.registerModule(FullQualifiedNameJacksonSerializer::registerWithMapper)
+            registerModule(FullQualifiedNameJacksonSerializer::registerWithMapper)
         }
     }
 
     override fun getSampleData(): LinkingConfiguration {
         return LinkingConfiguration(
-                SearchConfiguration("foo://fooster.foo.com/foo", "McClusterFace", 3200),
+                SearchConfiguration(TestDataFactory.randomAlphabetic(5),
+                        TestDataFactory.randomAlphabetic(5),
+                        RandomUtils.nextInt()),
                 RandomUtils.nextInt(),
                 Optional.of(setOf(UUID.randomUUID())),
                 setOf(UUID.randomUUID()),
