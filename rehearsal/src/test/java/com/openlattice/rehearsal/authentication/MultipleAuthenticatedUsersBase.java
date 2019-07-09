@@ -214,6 +214,7 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
 
     public static PropertyType createDatePropertyType() {
         PropertyType pt = TestDataFactory.datePropertyType();
+        pt.setPostgresIndexType( IndexType.NONE );
         UUID propertyTypeId = edmApi.createPropertyType( pt );
 
         Assert.assertNotNull( "Property type creation returned null value.", propertyTypeId );
@@ -223,6 +224,7 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
 
     public static PropertyType createDateTimePropertyType() {
         PropertyType pt = TestDataFactory.dateTimePropertyType();
+        pt.setPostgresIndexType( IndexType.BTREE );
         UUID propertyTypeId = edmApi.createPropertyType( pt );
 
         Assert.assertNotNull( "Property type creation returned null value.", propertyTypeId );
