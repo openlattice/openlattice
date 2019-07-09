@@ -668,6 +668,7 @@ class PostgresEntityDataQueryService(
         val partitions = partitionsInfo.partitions.toList()
         val tombstoneVersion = -System.currentTimeMillis()
         val entityKeyIdsArr = PostgresArrays.createUuidArray(conn, entityKeyIds)
+        val partitionsVersion = partitionsInfo.partitionsVersion
         val partitionsArr = PostgresArrays.createIntArray(conn, entityKeyIds.map { getPartition(it, partitions) })
 
         val numUpdated = conn.prepareStatement(updateVersionsForEntitiesInEntitySet).use { ps ->
@@ -675,8 +676,9 @@ class PostgresEntityDataQueryService(
             ps.setObject(2, tombstoneVersion)
             ps.setObject(3, tombstoneVersion)
             ps.setObject(4, entitySetId)
-            ps.setObject(5, entityKeyIdsArr)
-            ps.setObject(6, partitionsArr)
+            ps.setArray(5, entityKeyIdsArr)
+            ps.setArray(6, partitionsArr)
+            ps.setInt(7, partitionsVersion)
             ps.executeUpdate()
         }
 
