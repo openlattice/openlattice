@@ -911,7 +911,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         val esDst = createEntitySet(dst)
         val esEdge = createEntitySet(edge)
 
-        val srcPropertyFqns = edmApi.getPropertyTypesForEntitySet(esSrc.id)
+        val srcPropertyFqns = entitySetsApi.getPropertyTypesForEntitySet(esSrc.id)
                 .map { it.key to it.value.type.fullQualifiedNameAsString }.toMap()
 
         // create association type with defining src and dst entity types
@@ -961,7 +961,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
             }
         }
 
-        edmApi.deleteEntitySet(esSrc.id)
+        entitySetsApi.deleteEntitySet(esSrc.id)
 
         // we need to wait a bit for assembler to finish all tasks after deleting a materialized entity set
         Thread.sleep(1000L)
