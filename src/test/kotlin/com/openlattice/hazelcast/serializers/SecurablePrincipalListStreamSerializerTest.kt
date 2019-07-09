@@ -25,7 +25,6 @@ import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.SecurablePrincipal
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.organizations.SecurablePrincipalList
-import org.apache.commons.lang3.RandomStringUtils
 import java.util.*
 import kotlin.random.Random
 
@@ -41,14 +40,14 @@ class SecurablePrincipalListStreamSerializerTest
                                 SecurablePrincipal(
                                         AclKey(UUID.randomUUID()),
                                         TestDataFactory.userPrincipal(),
-                                        RandomStringUtils.randomAlphanumeric(10),
-                                        Optional.of(RandomStringUtils.randomAlphanumeric(10))
+                                        TestDataFactory.randomAlphanumeric(10),
+                                        Optional.of(TestDataFactory.randomAlphanumeric(10))
                                 ),
                                 SecurablePrincipal(
                                         AclKey(UUID.randomUUID()),
                                         TestDataFactory.userPrincipal(),
-                                        RandomStringUtils.randomAlphanumeric(10),
-                                        Optional.of(RandomStringUtils.randomAlphanumeric(10))
+                                        TestDataFactory.randomAlphanumeric(10),
+                                        Optional.of(TestDataFactory.randomAlphanumeric(10))
                                 )
                         )
                 )
