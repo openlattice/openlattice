@@ -70,7 +70,7 @@ internal fun constructPropertyType(id: UUID, fqn: FullQualifiedName, dataType: E
     return PropertyType(
             id,
             fqn,
-            "Reserved property type for ${EdmConstants.ID_FQN.fullQualifiedNameAsString}",
+            "Reserved property type for $fqn",
             Optional.empty(),
             setOf(),
             dataType)
