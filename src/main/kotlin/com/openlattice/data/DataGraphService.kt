@@ -421,9 +421,16 @@ open class DataGraphService(
     override fun createAssociations(
             associations: Set<DataEdgeKey>,
             srcAssociationEntitySetIds: Map<UUID, Set<UUID>>,
-            dstAssociationEntitySetIds: Map<UUID, Set<UUID>>
+            dstAssociationEntitySetIds: Map<UUID, Set<UUID>>,
+            bidirectionalEntitySetIds: Map<UUID, Set<Pair<UUID, UUID>>>,
+            associationTypes: Map<UUID, AssociationType>
     ): WriteEvent {
-        checkAssociationEntityTypes(srcAssociationEntitySetIds, dstAssociationEntitySetIds)
+        checkAssociationEntityTypes(
+                srcAssociationEntitySetIds,
+                dstAssociationEntitySetIds,
+                bidirectionalEntitySetIds,
+                associationTypes
+        )
         return graphService.createEdges(associations)
     }
 
@@ -469,6 +476,9 @@ open class DataGraphService(
         //Create graph structure and check entity types
         val srcAssociationEntitySetIds = mutableMapOf<UUID, MutableSet<UUID>>() // edge-src
         val dstAssociationEntitySetIds = mutableMapOf<UUID, MutableSet<UUID>>() // edge-dst
+        val bidirectionalEntitySetIds = mutableMapOf<UUID, MutableSet<Pair<UUID, UUID>>>() // edge-(src,dst)
+        val associationTypes = mutableMapOf<UUID, AssociationType>()
+
         associations
                 .asSequence()
                 .forEach { association ->
@@ -476,15 +486,31 @@ open class DataGraphService(
                     val dstEsId = association.dst.entitySetId
                     val edgeEsId = association.key.entitySetId
 
-                    if (srcAssociationEntitySetIds.putIfAbsent(edgeEsId, mutableSetOf(srcEsId)) != null) {
-                        srcAssociationEntitySetIds.getValue(edgeEsId).add(srcEsId)
-                    }
+                    val edgeAssociationType = edmManager.getAssociationTypeByEntitySetId(edgeEsId)
+                    associationTypes[edgeEsId] = edgeAssociationType
 
-                    if (dstAssociationEntitySetIds.putIfAbsent(edgeEsId, mutableSetOf(dstEsId)) != null) {
-                        dstAssociationEntitySetIds.getValue(edgeEsId).add(dstEsId)
+                    if (edgeAssociationType.isBidirectional) {
+                        if (bidirectionalEntitySetIds.putIfAbsent(
+                                        edgeEsId,
+                                        mutableSetOf(Pair.of(srcEsId, dstEsId))) != null) {
+                            bidirectionalEntitySetIds.getValue(edgeEsId).add(Pair.of(srcEsId, dstEsId))
+                        }
+                    } else {
+
+                        if (srcAssociationEntitySetIds.putIfAbsent(edgeEsId, mutableSetOf(srcEsId)) != null) {
+                            srcAssociationEntitySetIds.getValue(edgeEsId).add(srcEsId)
+                        }
+
+                        if (dstAssociationEntitySetIds.putIfAbsent(edgeEsId, mutableSetOf(dstEsId)) != null) {
+                            dstAssociationEntitySetIds.getValue(edgeEsId).add(dstEsId)
+                        }
                     }
                 }
-        checkAssociationEntityTypes(srcAssociationEntitySetIds, dstAssociationEntitySetIds)
+        checkAssociationEntityTypes(
+                srcAssociationEntitySetIds,
+                dstAssociationEntitySetIds,
+                bidirectionalEntitySetIds,
+                associationTypes)
 
         //Create the entities for the association and build list of required entity keys
         val integrationResults = associationsByEntitySet
@@ -561,16 +587,16 @@ open class DataGraphService(
     }
 
     private fun checkAssociationEntityTypes(
-            srcAssociationEntitySetIds: Map<UUID, Set<UUID>>, dstAssociationEntitySetIds: Map<UUID, Set<UUID>>
+            srcAssociationEntitySetIds: Map<UUID, Set<UUID>>,
+            dstAssociationEntitySetIds: Map<UUID, Set<UUID>>,
+            bidirectionalEntitySetIds: Map<UUID, Set<Pair<UUID, UUID>>>, // edge - (src, dst)
+            associationTypes: Map<UUID, AssociationType> // entityset id - associationtype
     ) {
-        val edgeEntitySetIds = srcAssociationEntitySetIds.keys
-        val associationTypeDetails = edmManager.getAssociationTypeDetailsByEntitySetIds(edgeEntitySetIds)
-
-        edgeEntitySetIds.forEach { edgeEntitySetId ->
+        associationTypes.keys.forEach { edgeEntitySetId ->
             val srcEntitySetIds = srcAssociationEntitySetIds.getValue(edgeEntitySetId)
             val dstEntitySetIds = dstAssociationEntitySetIds.getValue(edgeEntitySetId)
 
-            val edgeAssociationType = associationTypeDetails.getValue(edgeEntitySetId)
+            val edgeAssociationType = associationTypes.getValue(edgeEntitySetId)
             val srcEntityTypes = edmManager.getEntityTypeIdsByEntitySetIds(srcEntitySetIds).values
             val dstEntityTypes = edmManager.getEntityTypeIdsByEntitySetIds(dstEntitySetIds).values
 
@@ -581,10 +607,33 @@ open class DataGraphService(
                     srcEntityTypes,
                     srcEntitySetIds,
                     dstEntityTypes,
-                    dstEntitySetIds)
+                    dstEntitySetIds
+            )
+        }
+
+        associationTypes.forEach { (associationEntitySetId, associationType) ->
+            val entitySetIds = bidirectionalEntitySetIds.getValue(associationEntitySetId)
+
+            entitySetIds.forEach { (srcEntitySetId, dstEntitySetId) ->
+                val srcEntityTypeId = edmManager.getEntityTypeByEntitySetId(srcEntitySetId).id
+                val dstEntityTypeId = edmManager.getEntityTypeByEntitySetId(dstEntitySetId).id
+
+                checkAllowedEntityTypesOfBidirectionalAssociation(
+                        associationType,
+                        associationEntitySetId,
+                        setOf(srcEntityTypeId),
+                        setOf(dstEntityTypeId)
+                )
+            }
         }
     }
 
+    /**
+     * Checks whether the entity type of the src and dst entity sets in each association are part of allowed src and dst
+     * entity types of the association entity type.
+     *
+     * Note: no need to separate bidirectional cases, since the it's checking for each individual association.
+     */
     private fun checkAssociationEntityTypes(associationEntitySetId: UUID, associations: List<DataEdge>) {
         val associationType = edmManager.getAssociationTypeByEntitySetId(associationEntitySetId)
         if (associationType.associationEntityType.id == edmManager.auditRecordEntitySetsManager.auditingTypes.auditingEdgeEntityTypeId) {
@@ -594,53 +643,67 @@ open class DataGraphService(
             // ensure, that DataEdge src and dst entity types are part of src and dst entity types of AssociationType
             val srcEntityType = edmManager.getEntityTypeByEntitySetId(it.src.entitySetId)
             val dstEntityType = edmManager.getEntityTypeByEntitySetId(it.dst.entitySetId)
-
-            checkAllowedEntityTypesOfAssociation(
-                    associationType,
-                    associationEntitySetId,
-                    setOf(srcEntityType.id),
-                    setOf(it.src.entitySetId),
-                    setOf(dstEntityType.id),
-                    setOf(it.dst.entitySetId))
+            if (associationType.isBidirectional) {
+                checkAllowedEntityTypesOfBidirectionalAssociation(
+                        associationType,
+                        associationEntitySetId,
+                        setOf(srcEntityType.id),
+                        setOf(dstEntityType.id))
+            } else {
+                checkAllowedEntityTypesOfAssociation(
+                        associationType,
+                        associationEntitySetId,
+                        setOf(srcEntityType.id),
+                        setOf(it.src.entitySetId),
+                        setOf(dstEntityType.id),
+                        setOf(it.dst.entitySetId))
+            }
         }
     }
 
     private fun checkAllowedEntityTypesOfAssociation(
-            edgeAssociationType: AssociationType,
+            associationType: AssociationType,
             edgeEntitySetId: UUID,
             srcEntityTypes: Collection<UUID>,
             srcEntitySetIds: Set<UUID>,
             dstEntityTypes: Collection<UUID>,
             dstEntitySetIds: Set<UUID>
     ) {
-        val isSrcNotAllowed = !edgeAssociationType.src.containsAll(srcEntityTypes)
-        val isDstNotAllowed = !edgeAssociationType.dst.containsAll(dstEntityTypes)
+        val isSrcNotAllowed = !associationType.src.containsAll(srcEntityTypes)
+        val isDstNotAllowed = !associationType.dst.containsAll(dstEntityTypes)
 
-        if (edgeAssociationType.isBidirectional) {
-            val isSrcNotAllowedInDst = !edgeAssociationType.dst.containsAll(srcEntityTypes)
-            val isDstNotAllowedInSrc = !edgeAssociationType.src.containsAll(dstEntityTypes)
+        if (isSrcNotAllowed) {
+            throw IllegalArgumentException(
+                    "One or more entity types of src entity sets $srcEntitySetIds differs from allowed entity " +
+                            "types (${associationType.src}) in association type of entity set $edgeEntitySetId"
+            )
+        }
 
-            if ((isSrcNotAllowed || isDstNotAllowed) && (isSrcNotAllowedInDst || isDstNotAllowedInSrc)) {
-                throw IllegalArgumentException(
-                        "One or more entity types of src or dst entity sets differs from allowed entity types " +
-                                "(src: ${edgeAssociationType.src}, dst: ${edgeAssociationType.dst}) in bidirectional " +
-                                "association type of entity set $edgeEntitySetId"
-                )
-            }
-        } else {
-            if (isSrcNotAllowed) {
-                throw IllegalArgumentException(
-                        "One or more entity types of src entity sets $srcEntitySetIds differs from allowed entity " +
-                                "types (${edgeAssociationType.src}) in association type of entity set $edgeEntitySetId"
-                )
-            }
+        if (isDstNotAllowed) {
+            throw IllegalArgumentException(
+                    "One or more entity types of dst entity sets $dstEntitySetIds differs from allowed entity " +
+                            "types (${associationType.dst}) in association type of entity set $edgeEntitySetId"
+            )
+        }
+    }
 
-            if (isDstNotAllowed) {
-                throw IllegalArgumentException(
-                        "One or more entity types of dst entity sets $dstEntitySetIds differs from allowed entity " +
-                                "types (${edgeAssociationType.dst}) in association type of entity set $edgeEntitySetId"
-                )
-            }
+    private fun checkAllowedEntityTypesOfBidirectionalAssociation(
+            associationType: AssociationType,
+            edgeEntitySetId: UUID,
+            srcEntityTypes: Collection<UUID>,
+            dstEntityTypes: Collection<UUID>) {
+        val isSrcNotAllowed = !associationType.src.containsAll(srcEntityTypes)
+        val isDstNotAllowed = !associationType.dst.containsAll(dstEntityTypes)
+
+        val isSrcNotAllowedInDst = !associationType.dst.containsAll(srcEntityTypes)
+        val isDstNotAllowedInSrc = !associationType.src.containsAll(dstEntityTypes)
+
+        if ((isSrcNotAllowed || isDstNotAllowed) && (isSrcNotAllowedInDst || isDstNotAllowedInSrc)) {
+            throw IllegalArgumentException(
+                    "One or more entity types of src or dst entity sets differs from allowed entity types " +
+                            "(src: ${associationType.src}, dst: ${associationType.dst}) in bidirectional " +
+                            "association type of entity set $edgeEntitySetId"
+            )
         }
     }
 
