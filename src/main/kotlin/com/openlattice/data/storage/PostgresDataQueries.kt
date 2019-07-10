@@ -327,11 +327,11 @@ internal val upsertEntitiesSql = "UPDATE ${IDS.name} SET ${VERSIONS.name} = ${VE
 
 /**
  * Preparable sql to lock entities with the following bind order:
- * 1. entity key ids
- * 2. partitions
+ * 1. partitions
+ * 2. entity key ids
  */
 internal val lockEntitiesSql = "SELECT 1 FROM ${IDS.name} " +
-        "WHERE ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ANY(?) " +
+        "WHERE ${PARTITION.name} = ANY(?) AND ${ID_VALUE.name} = ANY(?) " +
         "FOR UPDATE"
 
 /**

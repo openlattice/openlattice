@@ -301,8 +301,8 @@ class PostgresEntityDataQueryService(
 
         //Acquire entity key id locks
         val rowLocks = connection.prepareStatement(lockEntitiesSql)
-        rowLocks.setArray(1, entityKeyIdsArr)
-        rowLocks.setArray(2, partitionsArray)
+        rowLocks.setArray(1, partitionsArray)
+        rowLocks.setArray(2, entityKeyIdsArr)
         rowLocks.executeQuery()
 
         //Update metadata
