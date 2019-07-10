@@ -303,6 +303,7 @@ class PostgresEntityDataQueryService(
         val rowLocks = connection.prepareStatement(lockEntitiesSql)
         rowLocks.setArray(1, partitionsArray)
         rowLocks.setArray(2, entityKeyIdsArr)
+        logger.info("Is this causing problems? {}", rowLocks.toString())
         rowLocks.executeQuery()
 
         //Update metadata
