@@ -11,7 +11,6 @@ import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresDataTables.Companion.getColumnDefinition
 import com.openlattice.postgres.PostgresTable.DATA
 import com.openlattice.postgres.PostgresTable.IDS
-import java.lang.IllegalStateException
 import java.sql.PreparedStatement
 import java.util.*
 
@@ -449,9 +448,9 @@ internal val updateVersionsForPropertyValuesInEntitiesInEntitySet = "$updateVers
  * 2. property type ids (array)
  *
  */
-internal val selectEntitySetTextProperties = "SELECT COALESCE(${getSourceDataColumnName(PostgresDatatype.TEXT,IndexType.NONE)},${getSourceDataColumnName(PostgresDatatype.TEXT,IndexType.BTREE)}) AS ${getMergedDataColumnName(PostgresDatatype.TEXT)} " +
+internal val selectEntitySetTextProperties = "SELECT COALESCE(${getSourceDataColumnName(PostgresDatatype.TEXT, IndexType.NONE)},${getSourceDataColumnName(PostgresDatatype.TEXT, IndexType.BTREE)}) AS ${getMergedDataColumnName(PostgresDatatype.TEXT)} " +
         "FROM ${DATA.name} " +
-        "WHERE (${getSourceDataColumnName(PostgresDatatype.TEXT,IndexType.NONE)} IS NOT NULL OR ${getSourceDataColumnName(PostgresDatatype.TEXT,IndexType.BTREE)} IS NOT NULL) AND " +
+        "WHERE (${getSourceDataColumnName(PostgresDatatype.TEXT, IndexType.NONE)} IS NOT NULL OR ${getSourceDataColumnName(PostgresDatatype.TEXT, IndexType.BTREE)} IS NOT NULL) AND " +
         "${ENTITY_SET_ID.name} = ANY(?) AND ${PROPERTY_TYPE_ID.name} = ANY(?) "
 
 
@@ -493,7 +492,7 @@ fun getPartitionsInfoMap(entityKeyIds: Set<UUID>, partitions: List<Int>): Map<UU
     return entityKeyIds.associateWith { entityKeyId -> getPartition(entityKeyId, partitions) }
 }
 
-fun getSourceDataColumnName(datatype: PostgresDatatype, indexType: IndexType) : String {
+fun getSourceDataColumnName(datatype: PostgresDatatype, indexType: IndexType): String {
     return when (indexType) {
         IndexType.BTREE -> "b_${datatype.name}"
         IndexType.NONE -> "n_${datatype.name}"

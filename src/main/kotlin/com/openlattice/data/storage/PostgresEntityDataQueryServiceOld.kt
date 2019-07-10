@@ -496,7 +496,7 @@ class PostgresEntityDataQueryServiceOld(
 
     fun deleteEntitySet(entitySetId: UUID): WriteEvent {
         val numUpdates = hds.connection.use {
-            val s = it.prepareStatement(deleteEntitySetEntityKeys(entitySetId))
+            val s = it.prepareStatement(deleteEntitySetEntityKeysOld(entitySetId))
             s.executeUpdate()
         }
 
@@ -685,21 +685,21 @@ fun updatePropertyValueVersion(entitySetId: UUID, propertyTypeId: UUID, version:
             "AND ${HASH.name} = ?"
 }
 
-fun deletePropertiesInEntitySet(entitySetId: UUID, propertyTypeId: UUID): String {
+fun deletePropertiesInEntitySetOld(entitySetId: UUID, propertyTypeId: UUID): String {
     val propertyTable = quote(propertyTableName(propertyTypeId))
     return "DELETE FROM $propertyTable WHERE ${ENTITY_SET_ID.name} = '$entitySetId' "
 }
 
 fun deletePropertiesOfEntities(entitySetId: UUID, propertyTypeId: UUID): String {
-    return deletePropertiesInEntitySet(entitySetId, propertyTypeId) +
+    return deletePropertiesInEntitySetOld(entitySetId, propertyTypeId) +
             " AND id in (SELECT * FROM UNNEST( (?)::uuid[] )) "
 }
 
 fun deleteEntityKeys(entitySetId: UUID): String {
-    return deleteEntitySetEntityKeys(entitySetId) + "AND ${ID.name} in (SELECT * FROM UNNEST( (?)::uuid[] )) "
+    return deleteEntitySetEntityKeysOld(entitySetId) + "AND ${ID.name} in (SELECT * FROM UNNEST( (?)::uuid[] )) "
 }
 
-fun deleteEntitySetEntityKeys(entitySetId: UUID): String {
+fun deleteEntitySetEntityKeysOld(entitySetId: UUID): String {
     return "DELETE FROM ${ENTITY_KEY_IDS.name} WHERE ${ENTITY_SET_ID.name} = '$entitySetId' "
 }
 
