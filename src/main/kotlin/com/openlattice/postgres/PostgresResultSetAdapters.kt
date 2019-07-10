@@ -115,8 +115,10 @@ fun getEntityPropertiesByPropertyTypeId3(
                 rs.getString("v_$datatype")
             }
             .map { mapper.readValue<MutableMap<UUID, MutableSet<Any>>>(it) }
-            .map { propertyValues ->
-                propertyValues.mapKeys {
+            .map { propertyValue ->
+                propertyValue.filter {
+                    propertyTypes.containsKey(it.key)
+                }.mapKeys {
                     propertyTypes.getValue(it.key).type
                 }.toMutableMap()
             }
