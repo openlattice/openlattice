@@ -24,7 +24,10 @@ import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.util.*
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.streams.asStream
+
+const val S3_DELETE_BATCH_SIZE = 10000
 
 /**
  *
@@ -183,7 +186,7 @@ class PostgresEntityDataQueryService(
 
         val (sql, binders) = if (linking) {
             buildPreparableFiltersClauseForLinkedEntities(
-                    startIndex, propertyTypes, propertyTypeFilters,ids.isNotEmpty(), partitions.isNotEmpty()
+                    startIndex, propertyTypes, propertyTypeFilters, ids.isNotEmpty(), partitions.isNotEmpty()
             )
         } else {
             buildPreparableFiltersSqlForEntities(
@@ -567,8 +570,9 @@ class PostgresEntityDataQueryService(
             entityKeyIds: Set<UUID>,
             propertyTypeId: UUID
     ) {
+        val count = AtomicLong()
         BasePostgresIterable<String>(
-                PreparedStatementHolderSupplier(hds, selectEntitySetTextProperties, FETCH_SIZE) { ps ->
+                PreparedStatementHolderSupplier(hds, selectEntitiesTextProperties, FETCH_SIZE) { ps ->
                     val connection = ps.connection
                     val ps = connection.prepareStatement(selectEntitiesTextProperties)
                     val entitySetIdsArr = PostgresArrays.createUuidArray(connection, setOf(entitySetId))
@@ -579,12 +583,16 @@ class PostgresEntityDataQueryService(
                     ps.setArray(3, entityKeyIdsArr)
                 }
         ) { rs ->
-            rs.getString(getDataColumnName(PostgresDatatype.TEXT))
-        }.asSequence().chunked(10000).asStream().parallel().forEach { byteBlobDataManager.deleteObjects(it) }
+            rs.getString(getMergedDataColumnName(PostgresDatatype.TEXT))
+        }.asSequence().chunked(S3_DELETE_BATCH_SIZE).asStream().parallel().forEach { s3Keys ->
+            byteBlobDataManager.deleteObjects(s3Keys)
+            count.addAndGet(s3Keys.size.toLong())
+        }
     }
 
 
-    fun deletePropertiesInEntitySetFromS3(entitySetId: UUID, propertyTypeId: UUID) {
+    fun deletePropertiesInEntitySetFromS3(entitySetId: UUID, propertyTypeId: UUID): Long {
+        val count = AtomicLong()
         BasePostgresIterable<String>(
                 PreparedStatementHolderSupplier(hds, selectEntitySetTextProperties, FETCH_SIZE) { ps ->
                     val connection = ps.connection
@@ -594,8 +602,12 @@ class PostgresEntityDataQueryService(
                     ps.setArray(2, propertyTypeIdsArr)
                 }
         ) { rs ->
-            rs.getString(getDataColumnName(PostgresDatatype.TEXT))
-        }.asSequence().chunked(10000).asStream().parallel().forEach { byteBlobDataManager.deleteObjects(it) }
+            rs.getString(getMergedDataColumnName(PostgresDatatype.TEXT))
+        }.asSequence().chunked(S3_DELETE_BATCH_SIZE).asStream().parallel().forEach { s3Keys ->
+            byteBlobDataManager.deleteObjects(s3Keys)
+            count.addAndGet(s3Keys.size.toLong())
+        }
+        return count.get()
     }
 
     fun deleteEntitySet(entitySetId: UUID): WriteEvent {

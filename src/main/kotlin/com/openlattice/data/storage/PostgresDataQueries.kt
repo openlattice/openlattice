@@ -11,6 +11,7 @@ import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresDataTables.Companion.getColumnDefinition
 import com.openlattice.postgres.PostgresTable.DATA
 import com.openlattice.postgres.PostgresTable.IDS
+import java.lang.IllegalStateException
 import java.sql.PreparedStatement
 import java.util.*
 
@@ -39,7 +40,7 @@ val jsonValueColumnsSql = PostgresDataTables.dataColumns.entries
             val (ni, bt) = cols
             "COALESCE(jsonb_object_agg(${PROPERTY_TYPE_ID.name}, ${bt.name} || ${ni.name}) " +
                     "FILTER (WHERE ${bt.name} IS NOT NULL OR ${ni.name} IS NOT NULL ),'{}') " +
-                    "as ${getDataColumnName(datatype)}"
+                    "as ${getMergedDataColumnName(datatype)}"
         }
 
 
@@ -63,7 +64,7 @@ fun buildPreparableFiltersClauseForLinkedEntities(
 ): Pair<String, Set<SqlBinder>> {
     val filtersClauses = buildPreparableFiltersClause(startIndex, propertyTypes, propertyTypeFilters)
     val filtersClause = filtersClauses.first
-    val sql = selectEntitiesGroupedByIdAndPropertyTypeId( idsPresent = idsPresent, partitionsPresent = partitionsPresent)
+    val sql = selectEntitiesGroupedByIdAndPropertyTypeId(idsPresent = idsPresent, partitionsPresent = partitionsPresent)
     " AND ${ORIGIN_ID.name} IS NOT NULL AND ${VERSION.name} > 0" +
             " ${if (filtersClause.isNotEmpty()) "AND $filtersClause " else ""}" +
             "GROUP BY (${ENTITY_SET_ID.name},${LINKING_ID.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
@@ -442,16 +443,17 @@ internal val updateVersionsForPropertyTypesInEntitiesInEntitySet = "$updateVersi
 internal val updateVersionsForPropertyValuesInEntitiesInEntitySet = "$updateVersionsForPropertiesInEntitySet AND ${ID_VALUE.name} = ANY(?) " +
         "AND PARTITION = ANY(?) AND ${PARTITIONS_VERSION.name} = ? ${PROPERTY_TYPE_ID.name} = ? AND ${HASH.name} = ?"
 
-
 /**
  * Selects a text properties from entity sets with the following bind order:
  * 1. entity set ids  (array)
  * 2. property type ids (array)
  *
  */
-internal val selectEntitySetTextProperties = "SELECT ${getDataColumnName(
-        PostgresDatatype.TEXT
-)} FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = ANY(?) AND ${PROPERTY_TYPE_ID.name} = ANY(?)"
+internal val selectEntitySetTextProperties = "SELECT COALESCE(${getSourceDataColumnName(PostgresDatatype.TEXT,IndexType.NONE)},${getSourceDataColumnName(PostgresDatatype.TEXT,IndexType.BTREE)}) AS ${getMergedDataColumnName(PostgresDatatype.TEXT)} " +
+        "FROM ${DATA.name} " +
+        "WHERE (${getSourceDataColumnName(PostgresDatatype.TEXT,IndexType.NONE)} IS NOT NULL OR ${getSourceDataColumnName(PostgresDatatype.TEXT,IndexType.BTREE)} IS NOT NULL) AND " +
+        "${ENTITY_SET_ID.name} = ANY(?) AND ${PROPERTY_TYPE_ID.name} = ANY(?) "
+
 
 /**
  * Selects a text properties from specific entities with the following bind order:
@@ -491,7 +493,15 @@ fun getPartitionsInfoMap(entityKeyIds: Set<UUID>, partitions: List<Int>): Map<UU
     return entityKeyIds.associateWith { entityKeyId -> getPartition(entityKeyId, partitions) }
 }
 
-fun getDataColumnName(datatype: PostgresDatatype): String {
+fun getSourceDataColumnName(datatype: PostgresDatatype, indexType: IndexType) : String {
+    return when (indexType) {
+        IndexType.BTREE -> "b_${datatype.name}"
+        IndexType.NONE -> "n_${datatype.name}"
+        else -> throw IllegalStateException("Unsupported index type: $indexType")
+    }
+}
+
+fun getMergedDataColumnName(datatype: PostgresDatatype): String {
     return "v_${datatype.name}"
 }
 
