@@ -576,7 +576,6 @@ class PostgresEntityDataQueryService(
         BasePostgresIterable<String>(
                 PreparedStatementHolderSupplier(hds, selectEntitiesTextProperties, FETCH_SIZE) { ps ->
                     val connection = ps.connection
-                    val ps = connection.prepareStatement(selectEntitiesTextProperties)
                     val entitySetIdsArr = PostgresArrays.createUuidArray(connection, setOf(entitySetId))
                     val propertyTypeIdsArr = PostgresArrays.createUuidArray(connection, setOf(propertyTypeId))
                     val entityKeyIdsArr = PostgresArrays.createUuidArray(connection, entityKeyIds)
@@ -597,9 +596,8 @@ class PostgresEntityDataQueryService(
         val count = AtomicLong()
         BasePostgresIterable<String>(
                 PreparedStatementHolderSupplier(hds, selectEntitySetTextProperties, FETCH_SIZE) { ps ->
-                    val connection = ps.connection
-                    val entitySetIdsArr = PostgresArrays.createUuidArray(connection, setOf(entitySetId))
-                    val propertyTypeIdsArr = PostgresArrays.createUuidArray(connection, setOf(propertyTypeId))
+                    val entitySetIdsArr = PostgresArrays.createUuidArray(ps.connection, setOf(entitySetId))
+                    val propertyTypeIdsArr = PostgresArrays.createUuidArray(ps.connection, setOf(propertyTypeId))
                     ps.setArray(1, entitySetIdsArr)
                     ps.setArray(2, propertyTypeIdsArr)
                 }

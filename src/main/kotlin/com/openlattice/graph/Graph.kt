@@ -335,7 +335,7 @@ class Graph(
         return PostgresIterable(
                 Supplier {
                     val connection = hds.connection
-                    val ids = PostgresArrays.createUuidArray(connection, filter.entityKeyIds.stream())
+                    val ids = PostgresArrays.createUuidArray(connection, filter.entityKeyIds)
                     val stmt = connection.prepareStatement(getFilteredNeighborhoodSql(filter, false))
                     stmt.setArray(1, ids)
                     stmt.setObject(2, entitySetId)
