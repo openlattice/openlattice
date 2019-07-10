@@ -391,12 +391,19 @@ class AssemblerConnectionManager(
             entitySet: EntitySet,
             materializedPropertyTypes: Map<UUID, PropertyType>
     ): IntArray {
-
+        val permissionsToCheck = EdmAuthorizationHelper.READ_PERMISSION
         // collect all principals of type user, role, which have read access on entityset
         val authorizedPrincipals = securePrincipalsManager
-                .getAuthorizedPrincipalsOnSecurableObject(AclKey(entitySet.id), EdmAuthorizationHelper.READ_PERMISSION)
+                .getAuthorizedPrincipalsOnSecurableObject(AclKey(entitySet.id), permissionsToCheck)
                 .filter { it.type == PrincipalType.USER || it.type == PrincipalType.ROLE }
-                .toSet()
+                .filter {
+                    //There are some non-existing principals with permissions
+                    val principalExists = securePrincipalsManager.principalExists(it)
+                    if (!principalExists) {
+                        logger.warn("Principal $it does not exists but has $permissionsToCheck permission on entity set ${entitySet.id}")
+                    }
+                    return@filter principalExists
+                }
 
         val propertyCheckFunction: (Principal) -> (Map<UUID, PropertyType>) = if (entitySet.isLinking) {
             { principal ->
@@ -430,7 +437,7 @@ class AssemblerConnectionManager(
 
         // prepare batch queries
         return connection.createStatement().use { stmt ->
-            authorizedPropertiesOfPrincipal.forEach { principal, propertyTypes ->
+            authorizedPropertiesOfPrincipal.forEach { (principal, propertyTypes) ->
                 val columns = (if (entitySet.isLinking) linkingEntityKeyIdColumnsList else entityKeyIdColumnsList) +
                         ResultSetAdapters.mapMetadataOptionToPostgresColumn(MetadataOption.ENTITY_KEY_IDS) +
                         propertyTypes.map { it.type.fullQualifiedNameAsString }
@@ -443,13 +450,26 @@ class AssemblerConnectionManager(
     }
 
     fun grantSelectForEdges(stmt: Statement, tableName: String, entitySetIds: Set<UUID>): IntArray {
-        val permissions = EnumSet.of(Permission.READ)
+        val permissionsToCheck = EdmAuthorizationHelper.READ_PERMISSION
         // collect all principals of type user, role, which have read access on entityset
         val authorizedPrincipals = entitySetIds.fold(mutableSetOf<Principal>()) { acc, entitySetId ->
-            Sets.union(acc,
-                    securePrincipalsManager.getAuthorizedPrincipalsOnSecurableObject(AclKey(entitySetId), permissions)
+            Sets.union(
+                    acc,
+                    securePrincipalsManager.getAuthorizedPrincipalsOnSecurableObject(
+                            AclKey(entitySetId),
+                            permissionsToCheck
+                    )
                             .filter { it.type == PrincipalType.USER || it.type == PrincipalType.ROLE }
-                            .toSet())
+                            .toSet()
+            )
+        }.filter {
+            //There are some non-existing principals with permissions
+            val principalExists = securePrincipalsManager.principalExists(it)
+            if (!principalExists) {
+                logger.warn("Principal $it does not exists but has $permissionsToCheck permissions on one of the " +
+                        "entity sets $entitySetIds")
+            }
+            return@filter principalExists
         }
 
         authorizedPrincipals.forEach {
