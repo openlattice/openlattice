@@ -240,7 +240,10 @@ class PostgresEntityDataQueryService(
     ): WriteEvent {
         return hds.connection.use { connection ->
             connection.autoCommit = false
-            upsertEntities(connection, entitySetId, entities, authorizedPropertyTypes, awsPassthrough)
+            val writeEvent = upsertEntities(connection, entitySetId, entities, authorizedPropertyTypes, awsPassthrough)
+            connection.commit()
+            connection.autoCommit = true
+            return@use writeEvent
         }
     }
 
@@ -412,7 +415,7 @@ class PostgresEntityDataQueryService(
             }
             upsertPropertyValues.values.map { it.executeBatch().sum() }.sum()
         }.sum()
-        connection.commit()
+
         return updatedEntityCount to updatedPropertyCounts
 
 
