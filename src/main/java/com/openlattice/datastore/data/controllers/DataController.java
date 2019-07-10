@@ -74,6 +74,7 @@ import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.SyncTicketService;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.set.EntitySetFlag;
+import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
@@ -359,6 +360,8 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     public Integer createAssociations( @RequestBody Set<DataEdgeKey> associations ) {
         final var srcAssociationEntitySetIds = new HashMap<UUID, Set<UUID>>(); // edge-src
         final var dstAssociationEntitySetIds = new HashMap<UUID, Set<UUID>>(); // edge-dst
+        final var bidirectionalEntitySetIds = new HashMap<UUID, Set<Pair<UUID, UUID>>>(); // edge-(src,dst)
+        final var associationTypes = new HashMap<UUID, AssociationType>();
 
         final var entitySetIdChecks = new HashMap<AclKey, EnumSet<Permission>>();
         associations.forEach(
@@ -371,14 +374,25 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                     entitySetIdChecks.put( new AclKey( srcEntitySetId ), WRITE_PERMISSION );
                     entitySetIdChecks.put( new AclKey( dstEntitySetId ), WRITE_PERMISSION );
 
-                    if ( srcAssociationEntitySetIds
-                            .putIfAbsent( edgeEntitySetId, Sets.newHashSet( srcEntitySetId ) ) != null ) {
-                        srcAssociationEntitySetIds.get( edgeEntitySetId ).add( srcEntitySetId );
-                    }
+                    final var edgeAssociationType = edmService.getAssociationTypeByEntitySetId( edgeEntitySetId );
+                    associationTypes.put( edgeEntitySetId, edgeAssociationType );
 
-                    if ( dstAssociationEntitySetIds
-                            .putIfAbsent( edgeEntitySetId, Sets.newHashSet( dstEntitySetId ) ) != null ) {
-                        dstAssociationEntitySetIds.get( edgeEntitySetId ).add( dstEntitySetId );
+                    if ( edgeAssociationType.isBidirectional() ) {
+                        if ( bidirectionalEntitySetIds.putIfAbsent(
+                                edgeEntitySetId,
+                                Sets.newHashSet( Pair.of( srcEntitySetId, dstEntitySetId ) ) ) != null ) {
+                            bidirectionalEntitySetIds.get( edgeEntitySetId ).add( Pair.of( srcEntitySetId, dstEntitySetId ) );
+                        }
+                    } else {
+                        if ( srcAssociationEntitySetIds
+                                .putIfAbsent( edgeEntitySetId, Sets.newHashSet( srcEntitySetId ) ) != null ) {
+                            srcAssociationEntitySetIds.get( edgeEntitySetId ).add( srcEntitySetId );
+                        }
+
+                        if ( dstAssociationEntitySetIds
+                                .putIfAbsent( edgeEntitySetId, Sets.newHashSet( dstEntitySetId ) ) != null ) {
+                            dstAssociationEntitySetIds.get( edgeEntitySetId ).add( dstEntitySetId );
+                        }
                     }
                 }
         );
@@ -386,8 +400,12 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         //Ensure that we have write access to entity sets.
         accessCheck( entitySetIdChecks );
 
-        WriteEvent writeEvent = dgm
-                .createAssociations( associations, srcAssociationEntitySetIds, dstAssociationEntitySetIds );
+        WriteEvent writeEvent = dgm.createAssociations(
+                associations,
+                srcAssociationEntitySetIds,
+                dstAssociationEntitySetIds,
+                bidirectionalEntitySetIds,
+                associationTypes );
 
         Stream<Pair<EntityDataKey, Map<String, Object>>> neighborMappingsCreated = associations.stream()
                 .flatMap( dataEdgeKey -> Stream.of(
