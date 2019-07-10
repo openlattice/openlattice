@@ -46,7 +46,9 @@ import com.openlattice.entitysets.EntitySetsApi;
 import com.openlattice.linking.LinkingFeedbackApi;
 import com.openlattice.linking.RealtimeLinkingApi;
 import com.openlattice.mapstores.TestDataFactory;
+import com.openlattice.organization.Organization;
 import com.openlattice.organization.OrganizationsApi;
+import com.openlattice.organization.roles.Role;
 import com.openlattice.postgres.IndexType;
 import com.openlattice.rehearsal.GeneralException;
 import com.openlattice.rehearsal.SetupEnvironment;
@@ -361,5 +363,24 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
                 .collect( Collectors.toList() );
 
         return new Pair<>( edgeEntitySetId, edges );
+    }
+
+
+    /**
+     * Helper methods for OrganizationsApi
+     */
+
+    public static Organization createOrganization() {
+        final var organization = TestDataFactory.organization();
+        organizationsApi.createOrganizationIfNotExists( organization );
+
+        return organization;
+    }
+
+    public static Role createRoleInOrganization( UUID organizationId ) {
+        final var role = TestDataFactory.role( organizationId );
+        organizationsApi.createRole( role );
+
+        return role;
     }
 }

@@ -44,8 +44,8 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
             loginAs("admin")
 
             //create organization
-            organization = TestDataFactory.organization()
-            organizationID = organizationsApi.createOrganizationIfNotExists(organization)
+            organization = createOrganization()
+            organizationID = organization.id
         }
     }
     // todo: test having read access through role
@@ -86,6 +86,19 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         }.toSet()
 
         dataApi.createAssociations(edges)
+
+        // add permissions to 1 user, 1 role and 1 organization on src entity set for grant select sanity check
+        val readPermission = EnumSet.of(Permission.READ)
+        val esReadAclUser1 = Acl(AclKey(esSrc.id), setOf(Ace(user1, readPermission, OffsetDateTime.MAX)))
+        permissionsApi.updateAcl(AclData(esReadAclUser1, Action.ADD))
+
+        val role = createRoleInOrganization(organizationID)
+        val esReadAclRole = Acl(AclKey(esSrc.id), setOf(Ace(role.principal, readPermission, OffsetDateTime.MAX)))
+        permissionsApi.updateAcl(AclData(esReadAclRole, Action.ADD))
+
+        val organization2 = createOrganization()
+        val esReadAclOrg = Acl(AclKey(esSrc.id), setOf(Ace(organization2.principal, readPermission, OffsetDateTime.MAX)))
+        permissionsApi.updateAcl(AclData(esReadAclOrg, Action.ADD))
 
         // add permission to src entity set and it's properties to organization principal for materialization
         grantMaterializePermissions(organization, esSrc, src.properties)
@@ -349,8 +362,8 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
     @Test
     fun testMaterializeEdges() {
         // create new organization to test empty edges
-        val organization = TestDataFactory.organization()
-        val organizationID = organizationsApi.createOrganizationIfNotExists(organization)
+        val organization = createOrganization()
+        val organizationID = organization.id
         val organizationDataSource = TestAssemblerConnectionManager.connect(organizationID)
 
         // create entity sets
@@ -465,8 +478,8 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         // TODO: after automatic permission change handling, remove extra calls of re-materialization
 
         // create new organization
-        val organization = TestDataFactory.organization()
-        val organizationID = organizationsApi.createOrganizationIfNotExists(organization)
+        val organization = createOrganization()
+        val organizationID = organization.id
 
         // create entityset and entities
         val et = createEntityType()
@@ -993,8 +1006,8 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         val src = createEntityType()
 
         loginAs("user1")
-        val organization = TestDataFactory.organization()
-        val organizationID = organizationsApi.createOrganizationIfNotExists(organization)
+        val organization = createOrganization()
+        val organizationID = organization.id
 
         val es = createEntitySet(src)
 

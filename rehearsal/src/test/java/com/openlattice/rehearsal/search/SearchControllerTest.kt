@@ -28,8 +28,8 @@ class SearchControllerTest : MultipleAuthenticatedUsersBase() {
     fun testOrganizationIndex() {
         loginAs("admin")
 
-        val organization = TestDataFactory.organization()
-        val id = organizationsApi.createOrganizationIfNotExists(organization)
+        val organization = createOrganization()
+        val id = organization.id
         Thread.sleep(3000)
 
         val search1 = searchApi.executeOrganizationSearch(
