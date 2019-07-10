@@ -2,6 +2,7 @@ package com.openlattice.postgres.mapstores;
 
 import com.openlattice.hazelcast.HazelcastMap;
 import com.google.common.collect.ImmutableList;
+import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.postgres.PostgresColumnDefinition;
 import com.openlattice.postgres.ResultSetAdapters;
 import com.zaxxer.hikari.HikariDataSource;
@@ -11,7 +12,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.UUID;
-import org.apache.commons.lang3.RandomStringUtils;
 
 import static com.openlattice.postgres.PostgresColumn.ID;
 import static com.openlattice.postgres.PostgresColumn.NULLABLE_TITLE;
@@ -59,6 +59,6 @@ public class OrganizationTitlesMapstore extends AbstractBasePostgresMapstore<UUI
     }
 
     @Override public String generateTestValue() {
-        return RandomStringUtils.random( 10 );
+        return TestDataFactory.random( 10 );
     }
 }
