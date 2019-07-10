@@ -108,17 +108,23 @@ fun getEntityPropertiesByPropertyTypeId3(
 ): Pair<UUID, MutableMap<FullQualifiedName, MutableSet<Any>>> {
     val id = id(rs)
     val entitySetId = entitySetId(rs)
-    val propertyTypes = authorizedPropertyTypes.getValue( entitySetId )
+    val propertyTypes = authorizedPropertyTypes.getValue(entitySetId)
     val propertyValues = propertyTypes
             .map { PostgresEdmTypeConverter.map(it.value.datatype) }
             .mapNotNull { datatype ->
                 rs.getString("v_$datatype")
             }
-            .map{ mapper.readValue<MutableMap<UUID, MutableSet<Any>>>( it )}
-            .map { it.mapKeys { propertyTypes.getValue(it.key).type }.toMutableMap() }
-            .reduce { acc, mutableMap ->
+            .map { mapper.readValue<MutableMap<UUID, MutableSet<Any>>>(it) }
+            .map { propertyValue ->
+                propertyValue.filter {
+                    propertyTypes.containsKey(it.key)
+                }.mapKeys {
+                    propertyTypes.getValue(it.key).type
+                }.toMutableMap()
+            }
+            .fold(mutableMapOf<FullQualifiedName, MutableSet<Any>>()) { acc, mutableMap ->
                 acc.putAll(mutableMap)
-                return@reduce acc
+                return@fold acc
             }
     propertyValues[ID_FQN] = mutableSetOf<Any>(id)
     return id to propertyValues
