@@ -312,6 +312,7 @@ class PostgresEntityDataQueryService(
         upsertEntities.setObject(3, version)
         upsertEntities.setObject(4, entitySetId)
         upsertEntities.setArray(5, entityKeyIdsArr)
+        upsertEntities.setArray(6, partitionsArray)
         val updatedEntityCount = upsertEntities.executeUpdate()
 
         //Basic validation.

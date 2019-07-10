@@ -9,6 +9,7 @@ import com.openlattice.postgres.*
 import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresDataTables.Companion.getColumnDefinition
+import com.openlattice.postgres.PostgresDataTables.Companion.getSourceDataColumnName
 import com.openlattice.postgres.PostgresTable.DATA
 import com.openlattice.postgres.PostgresTable.IDS
 import java.sql.PreparedStatement
@@ -316,11 +317,12 @@ internal fun selectLinkingEntitySetSql(linkingEntitySetId: UUID): String {
  * 3 - version
  * 4 - entity set id
  * 5 - entity key ids
+ * 6 - partitions
  */
 internal val upsertEntitiesSql = "UPDATE ${IDS.name} SET ${VERSIONS.name} = ${VERSIONS.name} || ?, ${DataTables.LAST_WRITE.name} = now(), " +
         "${VERSION.name} = CASE WHEN abs(${IDS.name}.${VERSION.name}) < ? THEN ? " +
         "ELSE ${IDS.name}.${VERSION.name} END " +
-        "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?)"
+        "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ANY(?)"
 
 
 /**
@@ -490,14 +492,6 @@ fun getPartitionsInfo(entityKeyIds: Set<UUID>, partitions: List<Int>): List<Int>
  */
 fun getPartitionsInfoMap(entityKeyIds: Set<UUID>, partitions: List<Int>): Map<UUID, Int> {
     return entityKeyIds.associateWith { entityKeyId -> getPartition(entityKeyId, partitions) }
-}
-
-fun getSourceDataColumnName(datatype: PostgresDatatype, indexType: IndexType): String {
-    return when (indexType) {
-        IndexType.BTREE -> "b_${datatype.name}"
-        IndexType.NONE -> "n_${datatype.name}"
-        else -> throw IllegalStateException("Unsupported index type: $indexType")
-    }
 }
 
 fun getMergedDataColumnName(datatype: PostgresDatatype): String {

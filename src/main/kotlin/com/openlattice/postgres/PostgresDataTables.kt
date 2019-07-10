@@ -2,7 +2,6 @@ package com.openlattice.postgres
 
 import com.google.common.cache.CacheBuilder
 import com.google.common.cache.CacheLoader
-import com.openlattice.data.storage.getSourceDataColumnName
 import com.openlattice.edm.PostgresEdmTypeConverter
 import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.DataTables.quote
@@ -188,6 +187,15 @@ class PostgresDataTables {
         @JvmStatic
         fun getColumnDefinition(indexType: IndexType, edmType: EdmPrimitiveTypeKind): PostgresColumnDefinition {
             return columnDefinitionCache[indexType to edmType]
+        }
+
+        @JvmStatic
+        fun getSourceDataColumnName(datatype: PostgresDatatype, indexType: IndexType) : String {
+            return when (indexType) {
+                IndexType.BTREE -> "b_${datatype.name}"
+                IndexType.NONE -> "n_${datatype.name}"
+                else -> throw IllegalStateException("Unsupported index type: $indexType")
+            }
         }
     }
 }
