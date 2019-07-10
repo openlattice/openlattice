@@ -262,6 +262,7 @@ class PostgresEntityDataQueryService(
             entitySetId: UUID,
             entities: Map<UUID, Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>,
+
             awsPassthrough: Boolean = false
     ): WriteEvent {
         check(!connection.autoCommit) { "Connection must not be in autocommit mode." }
@@ -273,7 +274,7 @@ class PostgresEntityDataQueryService(
         var updatedPropertyCounts = 0
 
         entities.entries
-                .groupBy( { getPartition(it.key, partitions ) }, { it.toPair() })
+                .groupBy({ getPartition(it.key, partitions) }, { it.toPair() })
                 .mapValues { it.value.toMap() }
                 .forEach { (partition, entities) ->
                     val (uec, upc) = upsertEntities(
@@ -283,11 +284,11 @@ class PostgresEntityDataQueryService(
                             authorizedPropertyTypes,
                             version,
                             partitionsInfo,
-                            partitions,
+                            partition,
                             awsPassthrough
                     )
-                    updatedEntityCount+=uec
-                    updatedPropertyCounts+=upc
+                    updatedEntityCount += uec
+                    updatedPropertyCounts += upc
                 }
 
         logger.debug("Updated $updatedEntityCount entities and $updatedPropertyCounts properties")
@@ -302,7 +303,7 @@ class PostgresEntityDataQueryService(
             authorizedPropertyTypes: Map<UUID, PropertyType>,
             version: Long,
             partitionsInfo: PartitionsInfo,
-            partitions: List<Int>,
+            partition: Int,
             awsPassthrough: Boolean
     ): Pair<Int, Int> {
 
@@ -311,7 +312,6 @@ class PostgresEntityDataQueryService(
         connection.autoCommit = false
         val entityKeyIdsArr = PostgresArrays.createUuidArray(connection, entities.keys)
         val versionsArrays = PostgresArrays.createLongArray(connection, arrayOf(version))
-        val partitionsArray = PostgresArrays.createIntArray(connection, partitions)
 
         /*
          * Our approach is to use entity level locking that takes advantage of the router executor to avoid deadlocks.
@@ -322,18 +322,20 @@ class PostgresEntityDataQueryService(
 
         //Acquire entity key id locks
         val rowLocks = connection.prepareStatement(lockEntitiesSql)
-        rowLocks.setArray(1, partitionsArray)
-        rowLocks.setArray(2, entityKeyIdsArr)
+        rowLocks.setArray(1, entityKeyIdsArr)
+        rowLocks.setInt(2, partition)
         rowLocks.executeQuery()
 
         //Update metadata
         val upsertEntities = connection.prepareStatement(upsertEntitiesSql)
+
         upsertEntities.setObject(1, versionsArrays)
         upsertEntities.setObject(2, version)
         upsertEntities.setObject(3, version)
         upsertEntities.setObject(4, entitySetId)
         upsertEntities.setArray(5, entityKeyIdsArr)
-        upsertEntities.setArray(6, partitionsArray)
+        upsertEntities.setInt(6, partition)
+
         val updatedEntityCount = upsertEntities.executeUpdate()
 
         //Basic validation.
@@ -403,7 +405,7 @@ class PostgresEntityDataQueryService(
 
                     upsertPropertyValue.setObject(1, entitySetId)
                     upsertPropertyValue.setObject(2, entityKeyId)
-                    upsertPropertyValue.setInt(3, getPartition(entityKeyId, partitions))
+                    upsertPropertyValue.setInt(3, partition)
                     upsertPropertyValue.setObject(4, propertyTypeId)
                     upsertPropertyValue.setObject(5, propertyHash)
                     upsertPropertyValue.setObject(6, version)
