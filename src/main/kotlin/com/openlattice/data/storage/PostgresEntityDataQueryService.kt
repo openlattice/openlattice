@@ -10,6 +10,7 @@ import com.openlattice.data.util.PostgresDataHasher
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.*
 import com.openlattice.postgres.PostgresColumn.*
+import com.openlattice.postgres.PostgresTable.DATA
 import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
@@ -809,4 +810,12 @@ private fun abortInsert(entitySetId: UUID, entityKeyId: UUID): Nothing {
     throw InvalidParameterException(
             "Cannot insert property type not in authorized property types for entity $entityKeyId from entity set $entitySetId."
     )
+}
+
+fun deletePropertiesInEntitySet(entitySetId: UUID, propertyTypeId: UUID): String {
+    return "DELETE FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${PROPERTY_TYPE_ID.name} = '$propertyTypeId' "
+}
+
+fun deleteEntitySetEntityKeys(entitySetId: UUID): String {
+    return "DELETE FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = '$entitySetId' "
 }
