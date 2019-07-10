@@ -189,6 +189,15 @@ class PostgresDataTables {
         fun getColumnDefinition(indexType: IndexType, edmType: EdmPrimitiveTypeKind): PostgresColumnDefinition {
             return columnDefinitionCache[indexType to edmType]
         }
+
+        @JvmStatic
+        fun getSourceDataColumnName(datatype: PostgresDatatype, indexType: IndexType) : String {
+            return when (indexType) {
+                IndexType.BTREE -> "b_${datatype.name}"
+                IndexType.NONE -> "n_${datatype.name}"
+                else -> throw IllegalStateException("Unsupported index type: $indexType")
+            }
+        }
     }
 
 }

@@ -491,7 +491,12 @@ fun getPartitionsInfoMap(entityKeyIds: Set<UUID>, partitions: List<Int>): Map<UU
     return entityKeyIds.associateWith { entityKeyId -> getPartition(entityKeyId, partitions) }
 }
 
+<<<<<<< Updated upstream
 fun getDataColumnName(datatype: PostgresDatatype): String {
+=======
+
+fun getMergedDataColumnName(datatype: PostgresDatatype): String {
+>>>>>>> Stashed changes
     return "v_${datatype.name}"
 }
 
