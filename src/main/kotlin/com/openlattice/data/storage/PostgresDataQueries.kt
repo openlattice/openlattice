@@ -9,6 +9,7 @@ import com.openlattice.postgres.*
 import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresDataTables.Companion.getColumnDefinition
+import com.openlattice.postgres.PostgresDataTables.Companion.nonIndexedValueColumn
 import com.openlattice.postgres.PostgresTable.DATA
 import com.openlattice.postgres.PostgresTable.IDS
 import java.sql.PreparedStatement
@@ -449,7 +450,7 @@ internal val updateVersionsForPropertyValuesInEntitiesInEntitySet = "$updateVers
  * 2. property type ids (array)
  *
  */
-internal val selectEntitySetTextProperties = "SELECT ${getDataColumnName(
+internal val selectEntitySetTextProperties = "SELECT ${nonIndexedValueColumn(
         PostgresDatatype.TEXT
 )} FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = ANY(?) AND ${PROPERTY_TYPE_ID.name} = ANY(?)"
 
