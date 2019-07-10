@@ -2,7 +2,6 @@ package com.openlattice.postgres
 
 import com.google.common.cache.CacheBuilder
 import com.google.common.cache.CacheLoader
-import com.openlattice.data.storage.getSourceDataColumnName
 import com.openlattice.edm.PostgresEdmTypeConverter
 import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.DataTables.quote
