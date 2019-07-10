@@ -2,12 +2,12 @@ package com.openlattice.postgres
 
 import com.google.common.cache.CacheBuilder
 import com.google.common.cache.CacheLoader
+import com.openlattice.data.storage.getSourceDataColumnName
 import com.openlattice.edm.PostgresEdmTypeConverter
 import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresColumn.*
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
-import java.util.*
 
 /**
  *
@@ -170,12 +170,12 @@ class PostgresDataTables {
 
         @JvmStatic
         fun nonIndexedValueColumn(datatype: PostgresDatatype): PostgresColumnDefinition {
-            return PostgresColumnDefinition("n_${datatype.name}", datatype)
+            return PostgresColumnDefinition(getSourceDataColumnName(datatype, IndexType.NONE), datatype)
         }
 
         @JvmStatic
         fun btreeIndexedValueColumn(datatype: PostgresDatatype): PostgresColumnDefinition {
-            return PostgresColumnDefinition("b_${datatype.name}", datatype)
+            return PostgresColumnDefinition(getSourceDataColumnName(datatype, IndexType.BTREE), datatype)
         }
 
         /**
@@ -199,5 +199,4 @@ class PostgresDataTables {
             }
         }
     }
-
 }
