@@ -265,10 +265,28 @@ class PostgresEntityDataQueryService(
         val version = System.currentTimeMillis()
         val partitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
         val partitions = partitionsInfo.partitions.toList()
-        val (updatedEntityCount, updatedPropertyCounts) = upsertEntities(
-                connection, entitySetId, entities, authorizedPropertyTypes, version, partitionsInfo, partitions,
-                awsPassthrough
-        )
+
+        var updatedEntityCount = 0
+        var updatedPropertyCounts = 0
+
+        entities.entries
+                .groupBy( { getPartition(it.key, partitions ) }, { it.toPair() })
+                .mapValues { it.value.toMap() }
+                .forEach { (partition, entities) ->
+                    val (uec, upc) = upsertEntities(
+                            connection,
+                            entitySetId,
+                            entities,
+                            authorizedPropertyTypes,
+                            version,
+                            partitionsInfo,
+                            partitions,
+                            awsPassthrough
+                    )
+                    updatedEntityCount+=uec
+                    updatedPropertyCounts+=upc
+                }
+
         logger.debug("Updated $updatedEntityCount entities and $updatedPropertyCounts properties")
 
         return WriteEvent(version, updatedEntityCount)
