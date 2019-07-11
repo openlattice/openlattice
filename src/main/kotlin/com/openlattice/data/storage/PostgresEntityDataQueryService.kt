@@ -513,7 +513,10 @@ class PostgresEntityDataQueryService(
     }
 
     fun clearEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent {
-        TODO("Not implemented")
+        return hds.connection.use { conn ->
+            tombstone(conn, entitySetId, authorizedPropertyTypes.values)
+            tombstone(conn, entitySetId)
+        }
     }
 
     /**
