@@ -26,6 +26,7 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.codahale.metrics.MetricRegistry;
 import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.geekbeast.hazelcast.HazelcastClientProvider;
 import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
@@ -155,6 +156,9 @@ public class DatastoreServicesPod {
 
     @Inject
     private MetricRegistry metricRegistry;
+
+    @Inject
+    private HazelcastClientProvider hazelcastClientProvider;
 
     @Bean
     public PostgresUserApi pgUserApi() {
@@ -347,12 +351,12 @@ public class DatastoreServicesPod {
 
     @Bean
     public HazelcastIdGenerationService idGenerationService() {
-        return new HazelcastIdGenerationService( hazelcastInstance );
+        return new HazelcastIdGenerationService( hazelcastClientProvider );
     }
 
     @Bean
     public EntityKeyIdService idService() {
-        return new PostgresEntityKeyIdService( hazelcastInstance, executor, hikariDataSource, idGenerationService() );
+        return new PostgresEntityKeyIdService( hazelcastClientProvider, executor, hikariDataSource, idGenerationService() );
     }
 
     @Bean
