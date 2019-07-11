@@ -408,7 +408,7 @@ internal val updateVersionsForPropertyTypesInEntitySet = "$updateVersionsForProp
  * 7. partition version
  */
 internal val updateVersionsForPropertiesInEntitiesInEntitySet = "$updateVersionsForPropertiesInEntitySet AND ${ID_VALUE.name} = ANY(?) " +
-        "AND PARTITION = ANY(?) AND ${PARTITIONS_VERSION.name} = ? "
+        "AND ${PARTITION.name} = ANY(?) AND ${PARTITIONS_VERSION.name} = ? "
 
 /**
  * Preparable SQL thatpserts a version for all properties in a given entity set in [PostgresTable.DATA]
@@ -436,13 +436,57 @@ internal val updateVersionsForPropertyTypesInEntitiesInEntitySet = "$updateVersi
  * 3. version
  * 4. entity set id
  * 5. entity key ids
- * 6. partition
+ * 6. partitions
  * 7. partition version
  * 8. property type id
  * 9. value
  */
 internal val updateVersionsForPropertyValuesInEntitiesInEntitySet = "$updateVersionsForPropertiesInEntitySet AND ${ID_VALUE.name} = ANY(?) " +
-        "AND PARTITION = ANY(?) AND ${PARTITIONS_VERSION.name} = ? ${PROPERTY_TYPE_ID.name} = ? AND ${HASH.name} = ?"
+        "AND ${PARTITION.name} = ANY(?) AND ${PARTITIONS_VERSION.name} = ? ${PROPERTY_TYPE_ID.name} = ? AND ${HASH.name} = ?"
+
+
+/**
+ * Preparable SQL deletes a given property in a given entity set in [PostgresTable.IDS]
+ *
+ * The following bind order is expected:
+ *
+ * 1. entity set id
+ * 2. property type id
+ */
+internal val deletePropertyInEntitySet = "DELETE FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${PROPERTY_TYPE_ID.name} = ? "
+
+/**
+ * Preparable SQL deletes all entity ids a given entity set in [PostgresTable.IDS]
+ *
+ * The following bind order is expected:
+ *
+ * 1. entity set id
+ */
+internal val deleteEntitySetEntityKeys = "DELETE FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = ? "
+
+/**
+ * Preparable SQL deletes all property values of entities in a given entity set in [PostgresTable.DATA]
+ *
+ * The following bind order is expected:
+ *
+ * 1. entity set id
+ * 2. entity key ids
+ * 3. partition
+ * 4. partition version
+ * 5. property type ids
+ */
+internal val deletePropertiesOfEntitiesInEntitySet = "DELETE FROM ${DATA.name} " +
+        "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ? AND ${PARTITIONS_VERSION.name} = ? AND ${PROPERTY_TYPE_ID.name} = ANY(?) "
+
+/**
+ * Preparable SQL deletes all entities in a given entity set in [PostgresTable.IDS]
+ *
+ * The following bind order is expected:
+ *
+ * 1. entity set id
+ * 2. entity key ids
+ */
+internal val deleteEntityKeys = "DELETE FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${ID.name} = ANY(?)"
 
 /**
  * Selects a text properties from entity sets with the following bind order:
