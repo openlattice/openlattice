@@ -21,12 +21,14 @@
 
 package com.openlattice.data.ids
 
+import com.geekbeast.hazelcast.HazelcastClientProvider
 import com.google.common.base.Preconditions.checkState
 import com.google.common.collect.Queues
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.hazelcast.core.HazelcastInstance
 import com.openlattice.data.EntityKey
 import com.openlattice.data.EntityKeyIdService
+import com.openlattice.hazelcast.HazelcastClient
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.ids.HazelcastIdGenerationService
 import com.openlattice.postgres.PostgresArrays
@@ -49,15 +51,15 @@ private val entityKeyIdsSql = "SELECT * FROM ${SYNC_IDS.name} WHERE ${ENTITY_SET
 private val entityKeyIdSql = "SELECT * FROM ${SYNC_IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${ENTITY_ID.name} = ? "
 private val INSERT_SQL = "INSERT INTO ${IDS.name} (${ENTITY_SET_ID.name},${ID.name}) VALUES(?,?)"
 private val INSERT_SYNC_SQL = "INSERT INTO ${SYNC_IDS.name} (${ENTITY_SET_ID.name},${ENTITY_ID.name},${ID.name}) VALUES(?,?,?)"
-
 private val logger = LoggerFactory.getLogger(PostgresEntityKeyIdService::class.java)
 
 class PostgresEntityKeyIdService(
-        hazelcastInstance: HazelcastInstance,
+        hazelcastClients: HazelcastClientProvider,
         private val executor: ListeningExecutorService,
         private val hds: HikariDataSource,
         private val idGenerationService: HazelcastIdGenerationService
 ) : EntityKeyIdService {
+    private val hazelcastInstance = hazelcastClients.getClient(HazelcastClient.IDS.name)
     private val q: BlockingQueue<UUID> = Queues.newArrayBlockingQueue(65536)
     private val idRefCounts = hazelcastInstance.getMap<EntityKey, Long>(HazelcastMap.ID_REF_COUNTS.name)
     private val idMap = hazelcastInstance.getMap<EntityKey, UUID>(HazelcastMap.ID_CACHE.name)
