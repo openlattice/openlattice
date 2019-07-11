@@ -342,6 +342,7 @@ class Graph(
                     stmt.setArray(3, ids)
                     stmt.setObject(4, entitySetId)
                     val rs = stmt.executeQuery()
+                    logger.info("Bulk neighbors query (single): {}", stmt.toString())
                     StatementHolder(connection, stmt, rs)
                 },
                 Function<ResultSet, Edge> { ResultSetAdapters.edge(it) }
