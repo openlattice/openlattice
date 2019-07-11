@@ -85,7 +85,7 @@ class PostgresLinkedEntityDataQueryServiceTest {
                         propertyTypeMap.keys.map { it to (it == UUID.fromString("45aa6695-a7e7-46b6-96bd-782e6aa9ac13")) }.toMap()
                 )
         )
-//        logger.info("Versioned query: {}", selectEntitySetWithPropertyTypes(entitySetId, propertyTypeMap, setOf(MetadataOption.LAST_WRITE, MetadataOption.LAST_INDEX), version))
+//        logger.info("Versioned query: {}", selectEntitySetWithPropertyTypes(entitySetId, propertyTypeMap, setOf(MetadataOption.LAST_WRITE_KEY_ID, MetadataOption.LAST_INDEX), version))
     }
 
 
@@ -142,12 +142,12 @@ class PostgresLinkedEntityDataQueryServiceTest {
 //                        entitySetId,
 //                        Optional.of(entityKeyIds),
 //                        propertyTypeMap,
-//                        setOf(MetadataOption.LAST_WRITE, MetadataOption.LAST_INDEX),
+//                        setOf(MetadataOption.LAST_WRITE_KEY_ID, MetadataOption.LAST_INDEX),
 //                        version,
 //                        propertyTypeMap.keys.map { it to (it==UUID.fromString("45aa6695-a7e7-46b6-96bd-782e6aa9ac13")) }.toMap()
 //                )
         )
-//        logger.info("Versioned query: {}", selectEntitySetWithPropertyTypes(entitySetId, propertyTypeMap, setOf(MetadataOption.LAST_WRITE, MetadataOption.LAST_INDEX), version))
+//        logger.info("Versioned query: {}", selectEntitySetWithPropertyTypes(entitySetId, propertyTypeMap, setOf(MetadataOption.LAST_WRITE_KEY_ID, MetadataOption.LAST_INDEX), version))
     }
 
     @Test
@@ -272,7 +272,7 @@ class PostgresLinkedEntityDataQueryServiceTest {
                         false
                 )
         )
-//        logger.info("Versioned query: {}", selectEntitySetWithPropertyTypes(entitySetId, propertyTypeMap, setOf(MetadataOption.LAST_WRITE, MetadataOption.LAST_INDEX), version))
+//        logger.info("Versioned query: {}", selectEntitySetWithPropertyTypes(entitySetId, propertyTypeMap, setOf(MetadataOption.LAST_WRITE_KEY_ID, MetadataOption.LAST_INDEX), version))
     }
 
     @Test

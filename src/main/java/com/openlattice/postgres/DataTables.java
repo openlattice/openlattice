@@ -20,13 +20,8 @@
 
 package com.openlattice.postgres;
 
-import com.openlattice.authorization.Permission;
 import com.openlattice.edm.PostgresEdmTypeConverter;
 import com.openlattice.edm.type.PropertyType;
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
-
-import java.util.Base64;
-import java.util.Base64.Encoder;
 import java.util.UUID;
 
 import static com.openlattice.postgres.PostgresColumn.*;
@@ -36,17 +31,11 @@ import static com.openlattice.postgres.PostgresDatatype.TIMESTAMPTZ;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class DataTables {
-    public static final FullQualifiedName        COUNT_FQN      = new FullQualifiedName( "openlattice",
-            "@count" );
-    public static final FullQualifiedName        ID_FQN         = new FullQualifiedName( "openlattice",
-            "@id" );
     public static final PostgresColumnDefinition LAST_INDEX     = new PostgresColumnDefinition(
             LAST_INDEX_FIELD,
             TIMESTAMPTZ )
             .withDefault( "'-infinity'" )
             .notNull();
-    public static final FullQualifiedName        LAST_INDEX_FQN = new FullQualifiedName( "openlattice",
-            "@lastIndex" );
     public static final PostgresColumnDefinition LAST_LINK      = new PostgresColumnDefinition(
             LAST_LINK_FIELD,
             TIMESTAMPTZ )
@@ -57,21 +46,15 @@ public class DataTables {
             TIMESTAMPTZ )
             .withDefault( "'-infinity'" )
             .notNull();
-
-    public static final  FullQualifiedName        LAST_WRITE_FQN = new FullQualifiedName( "openlattice",
-            "@lastWrite" );
-    public static final  UUID                     LAST_WRITE_ID  = new UUID( 0, 0 );
     public static final  PostgresColumnDefinition OWNERS         = new PostgresColumnDefinition(
             "owners",
             PostgresDatatype.UUID );
     public static final  PostgresColumnDefinition READERS        = new PostgresColumnDefinition(
             "readers",
             PostgresDatatype.UUID );
-    public static final  String                   VALUE_FIELD    = "value";
     public static final  PostgresColumnDefinition WRITERS        = new PostgresColumnDefinition(
             "writers",
             PostgresDatatype.UUID );
-    private static final Encoder                  encoder        = Base64.getEncoder();
 
     public static String propertyTableName( UUID propertyTypeId ) {
         return "pt_" + propertyTypeId.toString();
@@ -90,13 +73,6 @@ public class DataTables {
         return new PostgresColumnDefinition( quote( pt.getType().getFullQualifiedNameAsString() ),
                 PostgresEdmTypeConverter.map( pt.getDatatype() ) );
 
-    }
-
-    public static String mapPermissionToPostgresPrivilege( Permission p ) {
-        switch ( p ) {
-            default:
-                return p.name();
-        }
     }
 
     public static PostgresTableDefinition buildPropertyTableDefinition(
@@ -138,7 +114,7 @@ public class DataTables {
                 .name( quote( idxPrefix + "_entity_set_id_idx" ) )
                 .ifNotExists();
 
-        PostgresIndexDefinition versionIndex = new PostgresColumnsIndexDefinition( ptd, LAST_WRITE )
+        PostgresIndexDefinition versionIndex = new PostgresColumnsIndexDefinition( ptd, VERSION )
                 .name( quote( idxPrefix + "_version_idx" ) )
                 .ifNotExists()
                 .desc();

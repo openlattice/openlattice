@@ -4,13 +4,12 @@ import com.amazonaws.HttpMethod
 import com.amazonaws.regions.Region
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.s3.AmazonS3
-import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.s3.AmazonS3ClientBuilder
 import com.google.common.util.concurrent.MoreExecutors
 import com.kryptnostic.rhizome.configuration.amazon.AmazonLaunchConfiguration
 import com.kryptnostic.rhizome.configuration.amazon.AwsLaunchConfiguration
 import com.openlattice.ResourceConfigurationLoader
-import com.openlattice.data.storage.AwsBlobDataService
+import com.openlattice.data.storage.aws.AwsBlobDataService
 import com.openlattice.data.storage.ByteBlobDataManager
 import com.openlattice.datastore.configuration.DatastoreConfiguration
 import org.junit.*
@@ -37,7 +36,8 @@ class AwsBlobDataServiceTest {
 
             val byteBlobDataManager = AwsBlobDataService(
                     config,
-                    MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(2)))
+                    MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(2))
+            )
             this.byteBlobDataManager = byteBlobDataManager
         }
 

@@ -50,13 +50,15 @@ class SubscriptionNotificationTask : HazelcastFixedRateTask<SubscriptionNotifica
 
             //If there are notifications fire the notifications.
             if (neighborhood.entities.isNotEmpty()) {
-                subscriptionContact.contact.forEach { contactType, contact ->
+                subscriptionContact.contact.forEach { (contactType, contact) ->
                     when (contactType) {
                         SubscriptionContactType.PHONE -> {
                             dependencies.twilioQueue.put(
                                     MessageRequest(
                                             subscriptionContact.organizationId,
-                                            "One of your users has been involved in the following event type: ", contact
+                                            subscriptionContact.organizationId, 
+                                            "One of your users has been involved in the following event type: ",
+                                            contact
                                     )
                             )
                         }
