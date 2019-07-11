@@ -59,6 +59,7 @@ import java.sql.Statement
 import java.util.*
 import java.util.function.Function
 import java.util.function.Supplier
+import kotlin.NoSuchElementException
 
 private val logger = LoggerFactory.getLogger(AssemblerConnectionManager::class.java)
 
@@ -396,14 +397,6 @@ class AssemblerConnectionManager(
         val authorizedPrincipals = securePrincipalsManager
                 .getAuthorizedPrincipalsOnSecurableObject(AclKey(entitySet.id), permissionsToCheck)
                 .filter { it.type == PrincipalType.USER || it.type == PrincipalType.ROLE }
-                .filter {
-                    //There are some non-existing principals with permissions
-                    val principalExists = securePrincipalsManager.principalExists(it)
-                    if (!principalExists) {
-                        logger.warn("Principal $it does not exists but has $permissionsToCheck permission on entity set ${entitySet.id}")
-                    }
-                    return@filter principalExists
-                }
 
         val propertyCheckFunction: (Principal) -> (Map<UUID, PropertyType>) = if (entitySet.isLinking) {
             { principal ->
@@ -441,9 +434,13 @@ class AssemblerConnectionManager(
                 val columns = (if (entitySet.isLinking) linkingEntityKeyIdColumnsList else entityKeyIdColumnsList) +
                         ResultSetAdapters.mapMetadataOptionToPostgresColumn(MetadataOption.ENTITY_KEY_IDS) +
                         propertyTypes.map { it.type.fullQualifiedNameAsString }
-                val grantSelectSql = grantSelectSql(tableName, principal, columns)
-                logger.info("AssemblerConnectionManager.grantSelectForEntitySet grant query: $grantSelectSql")
-                stmt.addBatch(grantSelectSql)
+                try {
+                    val grantSelectSql = grantSelectSql(tableName, principal, columns)
+                    logger.info("AssemblerConnectionManager.grantSelectForEntitySet grant query: $grantSelectSql")
+                    stmt.addBatch(grantSelectSql)
+                } catch (e: NoSuchElementException) {
+                    logger.error("Principal $principal does not exists but has $permissionsToCheck permission on entity set ${entitySet.id}")
+                }
             }
             stmt.executeBatch()
         }
@@ -462,20 +459,16 @@ class AssemblerConnectionManager(
                             .filter { it.type == PrincipalType.USER || it.type == PrincipalType.ROLE }
                             .toSet()
             )
-        }.filter {
-            //There are some non-existing principals with permissions
-            val principalExists = securePrincipalsManager.principalExists(it)
-            if (!principalExists) {
-                logger.warn("Principal $it does not exists but has $permissionsToCheck permissions on one of the " +
-                        "entity sets $entitySetIds")
-            }
-            return@filter principalExists
         }
 
         authorizedPrincipals.forEach {
-            val grantSelectSql = grantSelectSql(tableName, it, listOf())
-            logger.info("AssemblerConnectionManager.grantSelectForEdges grant query: $grantSelectSql")
-            stmt.addBatch(grantSelectSql)
+            try {
+                val grantSelectSql = grantSelectSql(tableName, it, listOf())
+                logger.info("AssemblerConnectionManager.grantSelectForEdges grant query: $grantSelectSql")
+                stmt.addBatch(grantSelectSql)
+            } catch (e: NoSuchElementException) {
+                logger.error("Principal $it does not exists but has $permissionsToCheck permission on one of the entity sets $entitySetIds")
+            }
         }
 
         return stmt.executeBatch()
@@ -485,6 +478,7 @@ class AssemblerConnectionManager(
      * Build grant select sql statement for a given table and user with column level security.
      * If properties (columns) are left empty, it will grant select on whole table.
      */
+    @Throws(NoSuchElementException::class)
     private fun grantSelectSql(
             entitySetTableName: String,
             principal: Principal,
