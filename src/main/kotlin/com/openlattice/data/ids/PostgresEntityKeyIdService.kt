@@ -51,7 +51,7 @@ import kotlin.collections.HashMap
 private val entityKeysSql = "SELECT * FROM ${IDS.name} WHERE ${ID.name} = ANY(?) "
 private val entityKeyIdsSql = "SELECT * FROM ${SYNC_IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${ENTITY_ID.name} = ANY(?) "
 private val entityKeyIdSql = "SELECT * FROM ${SYNC_IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${ENTITY_ID.name} = ? "
-private val INSERT_SQL = "INSERT INTO ${IDS.name} (${ENTITY_SET_ID.name},${ID.name},${PARTITION.name}) VALUES(?,?,?)"
+private val INSERT_SQL = "INSERT INTO ${IDS.name} (${ENTITY_SET_ID.name},${ID.name},${PARTITION.name},${PARTITIONS_VERSION.name}) VALUES(?,?,?,?)"
 private val INSERT_SYNC_SQL = "INSERT INTO ${SYNC_IDS.name} (${ENTITY_SET_ID.name},${ENTITY_ID.name},${ID.name}) VALUES(?,?,?)"
 private val logger = LoggerFactory.getLogger(PostgresEntityKeyIdService::class.java)
 
@@ -78,7 +78,7 @@ class PostgresEntityKeyIdService(
     }
 
     private fun storeEntityKeyIdReservations(entitySetId: UUID, entityKeyIds: Set<UUID>) {
-        val partitions = partitionManager.getEntitySetPartitionsInfo(entitySetId).partitions.toList()
+        val partitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
 
         hds.connection.use { connection ->
 
@@ -87,7 +87,8 @@ class PostgresEntityKeyIdService(
             entityKeyIds.forEach { entityKeyId ->
                 insertIds.setObject(1, entitySetId)
                 insertIds.setObject(2, entityKeyId)
-                insertIds.setInt(3, getPartition(entityKeyId, partitions))
+                insertIds.setInt(3, getPartition(entityKeyId, partitionsInfo.partitions.toList()))
+                insertIds.setInt(4, partitionsInfo.partitionsVersion)
                 insertIds.addBatch()
             }
 
@@ -100,7 +101,7 @@ class PostgresEntityKeyIdService(
 
     private fun storeEntityKeyIds(entityKeyIds: Map<EntityKey, UUID>): Map<EntityKey, UUID> {
         val partitionsByEntitySet = partitionManager.getEntitySetsPartitionsInfo(entityKeyIds.keys.map { it.entitySetId }.toSet())
-                .mapValues { it.value.partitions.toList() }
+                .mapValues { it.value.partitions.toList() to it.value.partitionsVersion }
 
         hds.connection.use { connection ->
             connection.autoCommit = false
@@ -119,7 +120,8 @@ class PostgresEntityKeyIdService(
             entityKeyIds.forEach {
                 insertIds.setObject(1, it.key.entitySetId)
                 insertIds.setObject(2, it.value)
-                insertIds.setInt(3, getPartition(it.value, partitionsByEntitySet.getValue(it.key.entitySetId)))
+                insertIds.setInt(3, getPartition(it.value, partitionsByEntitySet.getValue(it.key.entitySetId).first))
+                insertIds.setInt(4, partitionsByEntitySet.getValue(it.key.entitySetId).second)
                 insertIds.addBatch()
             }
 
