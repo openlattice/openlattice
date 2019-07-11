@@ -87,7 +87,7 @@ class PostgresEntityKeyIdService(
             entityKeyIds.forEach { entityKeyId ->
                 insertIds.setObject(1, entitySetId)
                 insertIds.setObject(2, entityKeyId)
-                insertIds.setObject(3, getPartition(entityKeyId, partitions))
+                insertIds.setInt(3, getPartition(entityKeyId, partitions))
                 insertIds.addBatch()
             }
 
@@ -119,7 +119,7 @@ class PostgresEntityKeyIdService(
             entityKeyIds.forEach {
                 insertIds.setObject(1, it.key.entitySetId)
                 insertIds.setObject(2, it.value)
-                insertIds.setObject(3, getPartition(it.value, partitionsByEntitySet.getValue(it.key.entitySetId)))
+                insertIds.setInt(3, getPartition(it.value, partitionsByEntitySet.getValue(it.key.entitySetId)))
                 insertIds.addBatch()
             }
 
