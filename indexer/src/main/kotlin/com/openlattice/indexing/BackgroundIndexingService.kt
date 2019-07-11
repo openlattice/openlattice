@@ -38,7 +38,7 @@ import com.openlattice.indexing.configuration.IndexerConfiguration
 import com.openlattice.postgres.DataTables.LAST_INDEX
 import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.PostgresColumn.*
-import com.openlattice.postgres.PostgresTable.ENTITY_KEY_IDS
+import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
@@ -155,12 +155,12 @@ class BackgroundIndexingService(
     }
 
     private fun getEntityDataKeysQuery(entitySetId: UUID): String {
-        return "SELECT ${ID.name}, ${LAST_WRITE.name} FROM ${ENTITY_KEY_IDS.name} " +
+        return "SELECT ${ID.name}, ${LAST_WRITE.name} FROM ${IDS.name} " +
                 "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${VERSION.name} > 0"
     }
 
     private fun getDirtyEntitiesWithLastWriteQuery(entitySetId: UUID): String {
-        return "SELECT ${ID.name}, ${LAST_WRITE.name} FROM ${ENTITY_KEY_IDS.name} " +
+        return "SELECT ${ID.name}, ${LAST_WRITE.name} FROM ${IDS.name} " +
                 "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND " +
                 "${LAST_INDEX.name} < ${LAST_WRITE.name} AND " +
                 "${VERSION.name} > 0 " +
