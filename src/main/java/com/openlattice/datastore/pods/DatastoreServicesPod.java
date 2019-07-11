@@ -107,8 +107,10 @@ import com.openlattice.tasks.PostConstructInitializerTaskDependencies.PostConstr
 import com.openlattice.twilio.TwilioConfiguration;
 import com.openlattice.twilio.pods.TwilioConfigurationPod;
 import com.zaxxer.hikari.HikariDataSource;
+
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
+
 import org.jdbi.v3.core.Jdbi;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -356,7 +358,11 @@ public class DatastoreServicesPod {
 
     @Bean
     public EntityKeyIdService idService() {
-        return new PostgresEntityKeyIdService( hazelcastClientProvider, executor, hikariDataSource, idGenerationService() );
+        return new PostgresEntityKeyIdService( hazelcastClientProvider,
+                executor,
+                hikariDataSource,
+                idGenerationService(),
+                partitionManager() );
     }
 
     @Bean
