@@ -366,7 +366,6 @@ class Graph(
                     stmt.setArray(2, entitySetIdsArr)
                     stmt.setArray(3, ids)
                     stmt.setArray(4, entitySetIdsArr)
-                    logger.info("Bulk neighbors query: {}", stmt.toString())
                     val rs = stmt.executeQuery()
                     StatementHolder(connection, stmt, rs)
                 },
