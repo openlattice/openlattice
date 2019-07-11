@@ -37,4 +37,9 @@ data class AssemblerConfiguration(
         val foreignUsername: String,
         val foreignPassword: String,
         val ssl: Boolean = true
-)
+) {
+    override fun toString(): String {
+        return "AssemblerConfiguration(server=$server, foreignHost='$foreignHost', foreignDbName='$foreignDbName', " +
+                "foreignPort=$foreignPort, foreignUsername='$foreignUsername', ssl=$ssl)"
+    }
+}

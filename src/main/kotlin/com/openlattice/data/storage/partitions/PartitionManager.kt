@@ -75,6 +75,11 @@ class PartitionManager @JvmOverloads constructor(
         return PartitionsInfo(entitySet.partitions, entitySet.partitionsVersion)
     }
 
+    fun getEntitySetsPartitionsInfo(entitySetIds: Set<UUID>): Map<UUID, PartitionsInfo> {
+        val entitySets = entitySets.getAll(entitySetIds).values
+        return entitySets.map { it.id to PartitionsInfo(it.partitions, it.partitionsVersion) }.toMap()
+    }
+
     /**
      * Performs the initial allocation of partitions for an entity set based on default partitions for the organization
      * it belongs to or all partitions if an audit entity set
