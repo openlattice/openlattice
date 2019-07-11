@@ -79,9 +79,9 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static java.util.stream.Collectors.toSet;
 import static com.openlattice.IdConstants.ENTITY_SET_ID_KEY_ID;
 import static com.openlattice.IdConstants.LAST_WRITE_KEY_ID;
+import static java.util.stream.Collectors.toSet;
 
 public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     // @formatter:off
@@ -570,7 +570,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
         client.prepareDelete( ENTITY_SET_DATA_MODEL, ENTITY_SET_TYPE, entitySetId.toString() ).execute().actionGet();
 
-        BulkByScrollResponse response = DeleteByQueryAction.INSTANCE.newRequestBuilder( client )
+        BulkByScrollResponse response = new DeleteByQueryRequestBuilder( client, DeleteByQueryAction.INSTANCE )
                 .filter( QueryBuilders.termQuery( ENTITY_SET_ID_FIELD, entitySetId.toString() ) )
                 .source( getIndexName( entityTypeId ) )
                 .get();
@@ -763,7 +763,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 entityDataKeys.add( new EntityDataKey( getEntitySetIdFromHit( hit ),
                         UUID.fromString( hit.getId() ) ) );
             }
-            totalHits += item.getResponse().getHits().totalHits;
+            totalHits += item.getResponse().getHits().getTotalHits().value;
         }
         return new EntityDataKeySearchResult( totalHits, entityDataKeys );
     }
@@ -1309,7 +1309,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             hits.add( hitMap );
         }
 
-        return new SearchResult( response.getHits().getTotalHits(), hits );
+        return new SearchResult( response.getHits().getTotalHits().value, hits );
     }
 
     @SuppressWarnings( "unchecked" )
@@ -1363,7 +1363,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
         List<Map<String, Object>> hits = Lists.newArrayList();
         response.getHits().forEach( hit -> hits.add( hit.getSourceAsMap() ) );
-        return new SearchResult( response.getHits().getTotalHits(), hits );
+        return new SearchResult( response.getHits().getTotalHits().value, hits );
     }
 
     /*** RE-INDEXING ***/
@@ -1436,7 +1436,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     public boolean clearAllData() {
         client.admin().indices()
                 .delete( new DeleteIndexRequest( DATA_INDEX_PREFIX + "*" ) );
-        DeleteByQueryAction.INSTANCE.newRequestBuilder( client )
+        new DeleteByQueryRequestBuilder( client, DeleteByQueryAction.INSTANCE )
                 .filter( QueryBuilders.matchAllQuery() ).source( ENTITY_SET_DATA_MODEL,
                 ENTITY_TYPE_INDEX,
                 PROPERTY_TYPE_INDEX,
@@ -1503,7 +1503,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         for ( SearchHit hit : response.getHits() ) {
             hits.add( hit.getSourceAsMap() );
         }
-        return new SearchResult( response.getHits().getTotalHits(), hits );
+        return new SearchResult( response.getHits().getTotalHits().value, hits );
     }
 
     private SearchResult executeFQNSearch(
@@ -1531,7 +1531,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         for ( SearchHit hit : response.getHits() ) {
             hits.add( hit.getSourceAsMap() );
         }
-        return new SearchResult( response.getHits().getTotalHits(), hits );
+        return new SearchResult( response.getHits().getTotalHits().value, hits );
     }
 
     private Map<String, Float> getFieldsMap( SecurableObjectType objectType ) {
