@@ -763,7 +763,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 entityDataKeys.add( new EntityDataKey( getEntitySetIdFromHit( hit ),
                         UUID.fromString( hit.getId() ) ) );
             }
-            totalHits += item.getResponse().getHits().totalHits;
+            totalHits += item.getResponse().getHits().getTotalHits().value;
         }
         return new EntityDataKeySearchResult( totalHits, entityDataKeys );
     }
@@ -1309,7 +1309,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             hits.add( hitMap );
         }
 
-        return new SearchResult( response.getHits().getTotalHits(), hits );
+        return new SearchResult( response.getHits().getTotalHits().value, hits );
     }
 
     @SuppressWarnings( "unchecked" )
@@ -1363,7 +1363,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
         List<Map<String, Object>> hits = Lists.newArrayList();
         response.getHits().forEach( hit -> hits.add( hit.getSourceAsMap() ) );
-        return new SearchResult( response.getHits().getTotalHits(), hits );
+        return new SearchResult( response.getHits().getTotalHits().value, hits );
     }
 
     /*** RE-INDEXING ***/
@@ -1503,7 +1503,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         for ( SearchHit hit : response.getHits() ) {
             hits.add( hit.getSourceAsMap() );
         }
-        return new SearchResult( response.getHits().getTotalHits(), hits );
+        return new SearchResult( response.getHits().getTotalHits().value, hits );
     }
 
     private SearchResult executeFQNSearch(
@@ -1531,7 +1531,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         for ( SearchHit hit : response.getHits() ) {
             hits.add( hit.getSourceAsMap() );
         }
-        return new SearchResult( response.getHits().getTotalHits(), hits );
+        return new SearchResult( response.getHits().getTotalHits().value, hits );
     }
 
     private Map<String, Float> getFieldsMap( SecurableObjectType objectType ) {
