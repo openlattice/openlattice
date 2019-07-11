@@ -79,9 +79,9 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static java.util.stream.Collectors.toSet;
 import static com.openlattice.IdConstants.ENTITY_SET_ID_KEY_ID;
 import static com.openlattice.IdConstants.LAST_WRITE_KEY_ID;
+import static java.util.stream.Collectors.toSet;
 
 public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     // @formatter:off
@@ -570,7 +570,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
         client.prepareDelete( ENTITY_SET_DATA_MODEL, ENTITY_SET_TYPE, entitySetId.toString() ).execute().actionGet();
 
-        BulkByScrollResponse response = DeleteByQueryAction.INSTANCE.newRequestBuilder( client )
+        BulkByScrollResponse response = new DeleteByQueryRequestBuilder( client, DeleteByQueryAction.INSTANCE )
                 .filter( QueryBuilders.termQuery( ENTITY_SET_ID_FIELD, entitySetId.toString() ) )
                 .source( getIndexName( entityTypeId ) )
                 .get();
@@ -1436,7 +1436,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     public boolean clearAllData() {
         client.admin().indices()
                 .delete( new DeleteIndexRequest( DATA_INDEX_PREFIX + "*" ) );
-        DeleteByQueryAction.INSTANCE.newRequestBuilder( client )
+        new DeleteByQueryRequestBuilder( client, DeleteByQueryAction.INSTANCE )
                 .filter( QueryBuilders.matchAllQuery() ).source( ENTITY_SET_DATA_MODEL,
                 ENTITY_TYPE_INDEX,
                 PROPERTY_TYPE_INDEX,
