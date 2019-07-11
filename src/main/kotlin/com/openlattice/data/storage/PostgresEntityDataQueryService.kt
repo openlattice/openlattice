@@ -549,25 +549,45 @@ class PostgresEntityDataQueryService(
     }
 
     fun deleteEntityData(
-            entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
+            entitySetId: UUID,
+            entityKeyIds: Set<UUID>,
+            authorizedPropertyTypes: Map<UUID, PropertyType>,
+            partitionsInfo: PartitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
     ): WriteEvent {
-        val connection = hds.connection
-        val numUpdates = connection.use {
-            authorizedPropertyTypes
-                    .map { property ->
-                        if (property.value.datatype == EdmPrimitiveTypeKind.Binary) {
-                            deletePropertyOfEntityFromS3(entitySetId, entityKeyIds, property.key)
-                        }
+        val numUpdates = hds.connection.use { connection ->
+            // Delete properties from S3
+            authorizedPropertyTypes.map { property ->
+                if (property.value.datatype == EdmPrimitiveTypeKind.Binary) {
+                    deletePropertyOfEntityFromS3(entitySetId, entityKeyIds, property.key)
+                }
+            }
 
-                        val ps = it.prepareStatement(deletePropertiesOfEntities(entitySetId, property.key))
-                        val arr = PostgresArrays.createUuidArray(it, entityKeyIds)
-                        ps.setArray(1, arr)
+            connection.autoCommit = false
+            val partitions = partitionsInfo.partitions.toList()
+            val propertyTypesArr = PostgresArrays.createUuidArray(connection, authorizedPropertyTypes.keys)
+            entityKeyIds
+                    .groupBy { getPartition(it, partitions) }
+                    .map { (partition, entities) ->
+                        val idsArr = PostgresArrays.createUuidArray(connection, entities)
+
+                        // Acquire entity key id locks
+                        val rowLocks = connection.prepareStatement(lockEntitiesSql)
+                        rowLocks.setArray(1, idsArr)
+                        rowLocks.setInt(2, partition)
+                        rowLocks.executeQuery()
+
+                        // Delete entity properties from data table
+                        val ps = connection.prepareStatement(deletePropertiesOfEntitiesInEntitySet)
+                        ps.setObject(1, entitySetId)
+                        ps.setArray(2, idsArr)
+                        ps.setInt(3, partition)
+                        ps.setInt(4, partitionsInfo.partitionsVersion)
+                        ps.setArray(5, propertyTypesArr)
 
                         val count = ps.executeUpdate()
-                        ps.close()
+                        connection.commit()
                         count
-                    }
-                    .sum()
+                    }.sum()
         }
 
         return WriteEvent(System.currentTimeMillis(), numUpdates)
@@ -575,16 +595,19 @@ class PostgresEntityDataQueryService(
 
     fun deleteEntitySetData(entitySetId: UUID, propertyTypes: Map<UUID, PropertyType>): WriteEvent {
         val numUpdates = hds.connection.use { connection ->
+            val ps = connection.prepareStatement(deletePropertyInEntitySet)
+
             propertyTypes
-                    .map {
-                        if (it.value.datatype == EdmPrimitiveTypeKind.Binary) {
-                            deletePropertiesInEntitySetFromS3(entitySetId, it.key)
+                    .map { propertyType ->
+                        if (propertyType.value.datatype == EdmPrimitiveTypeKind.Binary) {
+                            deletePropertiesInEntitySetFromS3(entitySetId, propertyType.key)
                         }
-                        connection.createStatement().use { stmt ->
-                            stmt.executeUpdate(deletePropertiesInEntitySet(entitySetId, it.key))
-                        }
+
+                        ps.setObject(1, entitySetId)
+                        ps.setObject(2, propertyType.key)
+                        ps.addBatch()
                     }
-                    .sum()
+            ps.executeBatch().sum()
         }
 
         return WriteEvent(System.currentTimeMillis(), numUpdates)
@@ -635,8 +658,9 @@ class PostgresEntityDataQueryService(
 
     fun deleteEntitySet(entitySetId: UUID): WriteEvent {
         val numUpdates = hds.connection.use {
-            val s = it.prepareStatement(deleteEntitySetEntityKeys(entitySetId))
-            s.executeUpdate()
+            val ps = it.prepareStatement(deleteEntitySetEntityKeys)
+            ps.setObject(1, entitySetId)
+            ps.executeUpdate()
         }
 
         return WriteEvent(System.currentTimeMillis(), numUpdates)
@@ -644,10 +668,12 @@ class PostgresEntityDataQueryService(
 
     fun deleteEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): WriteEvent {
         val numUpdates = hds.connection.use {
-            val s = it.prepareStatement(deleteEntityKeys(entitySetId))
+            val ps = it.prepareStatement(deleteEntityKeys)
             val arr = PostgresArrays.createUuidArray(it, entityKeyIds)
-            s.setArray(1, arr)
-            s.executeUpdate()
+            ps.setObject(1, entitySetId)
+            ps.setArray(2, arr)
+
+            ps.executeUpdate()
         }
 
         return WriteEvent(System.currentTimeMillis(), numUpdates)
@@ -794,7 +820,7 @@ class PostgresEntityDataQueryService(
                 updateVersionsForPropertyValuesInEntitiesInEntitySet
         )
 
-        entities.forEach { (entityKeyId, entity) ->
+        entities.forEach { (_, entity) ->
             entity.forEach { (propertyTypeId, updates) ->
                 //TODO: https://github.com/pgjdbc/pgjdbc/issues/936
                 //TODO: https://github.com/pgjdbc/pgjdbc/pull/1194
@@ -832,12 +858,4 @@ private fun abortInsert(entitySetId: UUID, entityKeyId: UUID): Nothing {
     throw InvalidParameterException(
             "Cannot insert property type not in authorized property types for entity $entityKeyId from entity set $entitySetId."
     )
-}
-
-fun deletePropertiesInEntitySet(entitySetId: UUID, propertyTypeId: UUID): String {
-    return "DELETE FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${PROPERTY_TYPE_ID.name} = '$propertyTypeId' "
-}
-
-fun deleteEntitySetEntityKeys(entitySetId: UUID): String {
-    return "DELETE FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = '$entitySetId' "
 }
