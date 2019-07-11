@@ -20,6 +20,7 @@
 
 package com.openlattice.indexing.pods;
 
+import com.geekbeast.hazelcast.HazelcastClientProvider;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
 import com.openlattice.assembler.Assembler;
@@ -81,14 +82,21 @@ public class IndexerPostConfigurationServicesPod {
     @Inject
     private Assembler assembler;
 
+    @Inject
+    private HazelcastClientProvider hazelcastClientProvider;
+
     @Bean
     public HazelcastIdGenerationService idGeneration() {
-        return new HazelcastIdGenerationService( hazelcastInstance );
+        return new HazelcastIdGenerationService( hazelcastClientProvider );
     }
 
     @Bean
     public EntityKeyIdService idService() {
-        return new PostgresEntityKeyIdService( hazelcastInstance, executor, hikariDataSource, idGeneration() );
+        return new PostgresEntityKeyIdService( hazelcastClientProvider,
+                executor,
+                hikariDataSource,
+                idGeneration(),
+                partitionManager() );
     }
 
     @Bean
