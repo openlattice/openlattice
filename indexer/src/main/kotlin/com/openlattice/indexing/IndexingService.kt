@@ -121,7 +121,7 @@ class IndexingService(
 
                         val entityKeyIds: Set<UUID> = indexingJobs.getValue(entitySetId)
 
-                        for( var i in partitionCursor until partitions.size ) {
+                        for( i in partitionCursor until partitions.size ) {
                             var entityKeyIdsWithLastWrite: Map<UUID, OffsetDateTime> =
                                     //An empty set of ids means all keys
                                     if (entityKeyIds.isEmpty()) {
