@@ -23,8 +23,6 @@ package com.openlattice.indexing
 
 import com.geekbeast.rhizome.hazelcast.DelegatedIntList
 import com.geekbeast.util.StopWatch
-import com.geekbeast.util.Time
-import com.google.common.base.Stopwatch
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
