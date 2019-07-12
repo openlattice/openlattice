@@ -246,6 +246,8 @@ class BackgroundIndexingService(
                 mapOf(entitySet.id to Optional.of(batchToIndex.keys)),
                 mapOf(entitySet.id to propertyTypeMap)).toMap()
 
+        logger.info("Loading data for indexEntities took {}", esb.elapsed(TimeUnit.MILLISECONDS))
+
         if (entitiesById.size != batchToIndex.size) {
             logger.error(
                     "Expected {} items to index but received {}. Marking as indexed to prevent infinite loop.",
