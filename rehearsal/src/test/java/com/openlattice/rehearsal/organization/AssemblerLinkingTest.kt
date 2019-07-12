@@ -84,8 +84,8 @@ class AssemblerLinkingTest : SetupTestData() {
             loginAs("admin")
             personEt = EdmTestConstants.personEt
 
-            organization = TestDataFactory.organization()
-            organizationID = organizationsApi.createOrganizationIfNotExists(organization)
+            organization = createOrganization()
+            organizationID = organization.id
         }
 
         @JvmStatic
@@ -625,8 +625,8 @@ class AssemblerLinkingTest : SetupTestData() {
         // TODO: after automatic permission change handling, remove extra calls of re-materialization
 
         // create new organization
-        val organization = TestDataFactory.organization()
-        val organizationID = organizationsApi.createOrganizationIfNotExists(organization)
+        val organization = createOrganization()
+        val organizationID = organization.id
 
         // create entityset and 1 entity for both normal entity sets
         val esId1 = entitySetsApi.getEntitySetId(importedEntitySets.keys.first())
