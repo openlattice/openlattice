@@ -130,7 +130,7 @@ class IndexingService(
 
                                         //An empty set of ids means all keys
                                         if (entityKeyIds.isEmpty()) {
-                                            getNextBatch(entitySetId, partitions[partitionCursor], cursor).toMap()
+                                            getNextBatch(entitySetId, partitions[i], cursor).toMap()
                                         } else {
                                             getEntitiesWithLastWrite(entitySet.id, partitions, entityKeyIds).toMap()
                                         }
@@ -151,7 +151,7 @@ class IndexingService(
                                     )
                                 }
                                 cursor = entityKeyIdsWithLastWrite.keys.max()!!
-                                indexingPartitionProgress.set(entitySetId, partitionCursor)
+                                indexingPartitionProgress.set(entitySetId, i)
                                 indexingProgress.set(entitySetId, cursor)
 
                                 StopWatch(
@@ -160,7 +160,7 @@ class IndexingService(
 
                                     entityKeyIdsWithLastWrite = getNextBatch(
                                             entitySetId,
-                                            partitions[partitionCursor],
+                                            partitions[i],
                                             cursor
                                     ).toMap()
                                 }
