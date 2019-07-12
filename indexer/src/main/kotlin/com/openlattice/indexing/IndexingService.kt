@@ -34,8 +34,8 @@ import com.openlattice.hazelcast.HazelcastQueue
 import com.openlattice.hazelcast.processors.UUIDKeyToUUIDSetMerger
 import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.PostgresArrays
-import com.openlattice.postgres.PostgresColumn.*
-import com.openlattice.postgres.PostgresTable.ENTITY_KEY_IDS
+import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.ID
 import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.PostgresIterable
@@ -183,7 +183,7 @@ class IndexingService(
     }
 
     private fun getEntitiesWithLastWriteQuery(): String {
-        return "SELECT ${ID.name}, ${LAST_WRITE.name} FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND $ENTITY_KEY_IDS = ANY(?) " +
+        return "SELECT ${ID.name}, ${LAST_WRITE.name} FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${ID.name} = ANY(?) " +
                 "ORDER BY ${ID.name} LIMIT $BATCH_LIMIT"
     }
 
