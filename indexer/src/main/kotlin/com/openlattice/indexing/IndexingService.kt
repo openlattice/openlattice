@@ -120,31 +120,36 @@ class IndexingService(
                         )
 
                         val entityKeyIds: Set<UUID> = indexingJobs.getValue(entitySetId)
-                        var entityKeyIdsWithLastWrite: Map<UUID, OffsetDateTime> =
-                                //An empty set of ids means all keys
-                                if (entityKeyIds.isEmpty()) {
-                                    getNextBatch(entitySetId, partitionCursor, cursor).toMap()
-                                } else {
-                                    getEntitiesWithLastWrite(entitySet.id, partitions, entityKeyIds).toMap()
-                                }
 
-                        while (entityKeyIdsWithLastWrite.isNotEmpty()) {
-                            logger.info("Indexing entity set ${entitySet.name} (${entitySet.id}) starting at $cursor.")
-                            backgroundIndexingService.indexEntities(
-                                    entitySet,
-                                    entityKeyIdsWithLastWrite,
-                                    propertyTypeMap,
-                                    false
-                            )
-                            cursor = entityKeyIdsWithLastWrite.keys.max()!!
-                            indexingPartitionProgress.set(entitySetId, ++partitionCursor)
-                            indexingProgress.set(entitySetId, cursor)
+                        for( var i in partitionCursor until partitions.size ) {
+                            var entityKeyIdsWithLastWrite: Map<UUID, OffsetDateTime> =
+                                    //An empty set of ids means all keys
+                                    if (entityKeyIds.isEmpty()) {
+                                        getNextBatch(entitySetId, partitions[partitionCursor], cursor).toMap()
+                                    } else {
+                                        getEntitiesWithLastWrite(entitySet.id, partitions, entityKeyIds).toMap()
+                                    }
 
-                            entityKeyIdsWithLastWrite = getNextBatch(
-                                    entitySetId,
-                                    partitions[partitionCursor],
-                                    cursor
-                            ).toMap()
+                            while (entityKeyIdsWithLastWrite.isNotEmpty()) {
+                                logger.info(
+                                        "Indexing entity set ${entitySet.name} (${entitySet.id}) starting at $cursor."
+                                )
+                                backgroundIndexingService.indexEntities(
+                                        entitySet,
+                                        entityKeyIdsWithLastWrite,
+                                        propertyTypeMap,
+                                        false
+                                )
+                                cursor = entityKeyIdsWithLastWrite.keys.max()!!
+                                indexingPartitionProgress.set(entitySetId, partitionCursor)
+                                indexingProgress.set(entitySetId, cursor)
+
+                                entityKeyIdsWithLastWrite = getNextBatch(
+                                        entitySetId,
+                                        partitions[partitionCursor],
+                                        cursor
+                                ).toMap()
+                            }
                         }
 
                         logger.info("Finished indexing entity set $entitySetId")
@@ -153,6 +158,9 @@ class IndexingService(
                             indexingLock.lock()
                             indexingJobs.delete(entitySetId)
                             indexingProgress.delete(entitySetId)
+                            indexingPartitionsVersion.delete(entitySetId)
+                            indexingPartitionList.delete(entitySetId)
+                            indexingPartitionProgress.delete(entitySetId)
                         } finally {
                             indexingLock.unlock()
                         }
