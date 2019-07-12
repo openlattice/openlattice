@@ -53,7 +53,7 @@ import java.util.stream.Stream
 private val logger = LoggerFactory.getLogger(IndexingService::class.java)
 
 
-private const val BATCH_LIMIT = 8000
+private const val BATCH_LIMIT = 64000
 private val LB_UUID = UUID(0, 0)
 private val IDS_WITH_LAST_WRITE = "SELECT ${ID.name}, ${LAST_WRITE.name} FROM ${IDS.name} " +
         "WHERE ${ENTITY_SET_ID.name} = ? AND ${PARTITION.name} = ? AND ${ID.name} = ANY(?) " +
