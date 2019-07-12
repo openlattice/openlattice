@@ -218,7 +218,7 @@ class IndexingService(
             ps.setObject(1, entitySetId)
             ps.setInt(2, partition)
             if (useLowerBound) {
-                ps.setObject(2, cursor)
+                ps.setObject(3, cursor)
             }
         }) { ResultSetAdapters.id(it) to ResultSetAdapters.lastWriteTyped(it) }
     }
