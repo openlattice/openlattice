@@ -52,6 +52,10 @@ class PartitionManager @JvmOverloads constructor(
         partitionList.addAll(partitionList.size until partitions)
     }
 
+    fun getAllPartitions() : List<Int> {
+        return partitionList
+    }
+
     fun setEntitySetPartitions(entitySetId: UUID, partitions: List<Int>) {
         val update = MetadataUpdate(
                 Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
