@@ -20,6 +20,7 @@
 
 package com.openlattice.linking.pods;
 
+import com.geekbeast.hazelcast.HazelcastClientProvider;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
 import com.openlattice.assembler.Assembler;
@@ -46,6 +47,7 @@ import com.openlattice.linking.LinkingLogService;
 import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.linking.Matcher;
 import com.openlattice.linking.PostgresLinkingFeedbackService;
+import com.openlattice.linking.PostgresLinkingLogService;
 import com.openlattice.linking.blocking.ElasticsearchBlocker;
 import com.openlattice.linking.controllers.RealtimeLinkingController;
 import com.openlattice.linking.graph.PostgresLinkingQueryService;
@@ -100,14 +102,21 @@ public class LinkerPostConfigurationServicesPod {
     @Inject
     private LinkingLogService linkingLogService;
 
+    @Inject
+    private HazelcastClientProvider hazelcastClientProvider;
+
     @Bean
     public HazelcastIdGenerationService idGeneration() {
-        return new HazelcastIdGenerationService( hazelcastInstance );
+        return new HazelcastIdGenerationService( hazelcastClientProvider );
     }
 
     @Bean
     public EntityKeyIdService idService() {
-        return new PostgresEntityKeyIdService( hazelcastInstance, executor, hikariDataSource, idGeneration() );
+        return new PostgresEntityKeyIdService( hazelcastClientProvider,
+                executor,
+                hikariDataSource,
+                idGeneration(),
+                partitionManager );
     }
 
     @Bean
@@ -162,6 +171,11 @@ public class LinkerPostConfigurationServicesPod {
                 edm.getEntityTypeUuids( linkingConfiguration.getEntityTypes() ),
                 linkingLogService,
                 linkingConfiguration );
+    }
+
+    @Bean
+    public LinkingLogService linkingLogService() {
+        return new PostgresLinkingLogService( hikariDataSource );
     }
 
     @Bean
