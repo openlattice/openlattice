@@ -175,7 +175,7 @@ class PostgresEntityDataQueryService(
             maybeEntityKeyIds.map {
                 getPartitionsInfo(it, entitySetPartitions)
             }.orElse(entitySetPartitions)
-        }
+        }.toSet()
         var startIndex = 2
         if (ids.isNotEmpty()) {
             startIndex++
