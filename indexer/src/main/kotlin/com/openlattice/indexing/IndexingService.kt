@@ -22,6 +22,9 @@
 package com.openlattice.indexing
 
 import com.geekbeast.rhizome.hazelcast.DelegatedIntList
+import com.geekbeast.util.StopWatch
+import com.geekbeast.util.Time
+import com.google.common.base.Stopwatch
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
@@ -121,34 +124,48 @@ class IndexingService(
 
                         val entityKeyIds: Set<UUID> = indexingJobs.getValue(entitySetId)
 
-                        for( i in partitionCursor until partitions.size ) {
+                        for (i in partitionCursor until partitions.size) {
                             var entityKeyIdsWithLastWrite: Map<UUID, OffsetDateTime> =
-                                    //An empty set of ids means all keys
-                                    if (entityKeyIds.isEmpty()) {
-                                        getNextBatch(entitySetId, partitions[partitionCursor], cursor).toMap()
-                                    } else {
-                                        getEntitiesWithLastWrite(entitySet.id, partitions, entityKeyIds).toMap()
-                                    }
+                                    StopWatch(
+                                            "Loading index batch for entity ${entitySet.name} (${entitySet.id})} took "
+                                    ).use {
 
+                                        //An empty set of ids means all keys
+                                        if (entityKeyIds.isEmpty()) {
+                                            getNextBatch(entitySetId, partitions[partitionCursor], cursor).toMap()
+                                        } else {
+                                            getEntitiesWithLastWrite(entitySet.id, partitions, entityKeyIds).toMap()
+                                        }
+
+                                    }
                             while (entityKeyIdsWithLastWrite.isNotEmpty()) {
                                 logger.info(
                                         "Indexing entity set ${entitySet.name} (${entitySet.id}) starting at $cursor."
                                 )
-                                backgroundIndexingService.indexEntities(
-                                        entitySet,
-                                        entityKeyIdsWithLastWrite,
-                                        propertyTypeMap,
-                                        false
-                                )
+                                StopWatch(
+                                        "Indexing batch for entity ${entitySet.name} (${entitySet.id})} took "
+                                ).use {
+                                    backgroundIndexingService.indexEntities(
+                                            entitySet,
+                                            entityKeyIdsWithLastWrite,
+                                            propertyTypeMap,
+                                            false
+                                    )
+                                }
                                 cursor = entityKeyIdsWithLastWrite.keys.max()!!
                                 indexingPartitionProgress.set(entitySetId, partitionCursor)
                                 indexingProgress.set(entitySetId, cursor)
 
-                                entityKeyIdsWithLastWrite = getNextBatch(
-                                        entitySetId,
-                                        partitions[partitionCursor],
-                                        cursor
-                                ).toMap()
+                                StopWatch(
+                                        "Loading index batch for entity ${entitySet.name} (${entitySet.id})} took "
+                                ).use {
+
+                                    entityKeyIdsWithLastWrite = getNextBatch(
+                                            entitySetId,
+                                            partitions[partitionCursor],
+                                            cursor
+                                    ).toMap()
+                                }
                             }
                         }
 
