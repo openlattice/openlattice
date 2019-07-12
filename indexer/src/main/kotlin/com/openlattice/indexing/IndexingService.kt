@@ -21,11 +21,13 @@
 
 package com.openlattice.indexing
 
+import com.geekbeast.rhizome.hazelcast.DelegatedIntList
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
-import com.openlattice.IdConstants
 import com.openlattice.admin.indexing.IndexingState
+import com.openlattice.data.storage.getPartition
+import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
@@ -34,26 +36,28 @@ import com.openlattice.hazelcast.HazelcastQueue
 import com.openlattice.hazelcast.processors.UUIDKeyToUUIDSetMerger
 import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.PostgresArrays
-import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
-import com.openlattice.postgres.PostgresColumn.ID
+import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.ResultSetAdapters
-import com.openlattice.postgres.streams.PostgresIterable
-import com.openlattice.postgres.streams.StatementHolder
+import com.openlattice.postgres.streams.BasePostgresIterable
+import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import java.time.OffsetDateTime
 import java.util.*
 import java.util.concurrent.locks.ReentrantLock
-import java.util.function.Function
-import java.util.function.Supplier
 import java.util.stream.Stream
 
 private val logger = LoggerFactory.getLogger(IndexingService::class.java)
 
 
 private const val BATCH_LIMIT = 8000
+private val LB_UUID = UUID(0, 0)
+private val IDS_WITH_LAST_WRITE = "SELECT ${ID.name}, ${LAST_WRITE.name} FROM ${IDS.name} " +
+        "WHERE ${ENTITY_SET_ID.name} = ? AND ${PARTITION.name} = ? AND ${ID.name} = ANY(?) " +
+        "ORDER BY ${ID.name} LIMIT $BATCH_LIMIT"
+
 
 /**
  *
@@ -62,6 +66,7 @@ private const val BATCH_LIMIT = 8000
 class IndexingService(
         private val hds: HikariDataSource,
         private val backgroundIndexingService: BackgroundIndexingService,
+        private val partitionManager: PartitionManager,
         executor: ListeningExecutorService,
         hazelcastInstance: HazelcastInstance
 ) {
@@ -70,6 +75,15 @@ class IndexingService(
     private val entityTypes = hazelcastInstance.getMap<UUID, EntityType>(HazelcastMap.ENTITY_TYPES.name)
     private val indexingJobs = hazelcastInstance.getMap<UUID, DelegatedUUIDSet>(HazelcastMap.INDEXING_JOBS.name)
     private val indexingProgress = hazelcastInstance.getMap<UUID, UUID>(HazelcastMap.INDEXING_PROGRESS.name)
+    private val indexingPartitionProgress = hazelcastInstance.getMap<UUID, Int>(
+            HazelcastMap.INDEXING_PARTITION_PROGRESS.name
+    )
+    private val indexingPartitionList = hazelcastInstance.getMap<UUID, DelegatedIntList>(
+            HazelcastMap.INDEXING_PARTITION_LIST.name
+    )
+    private val indexingPartitionsVersion = hazelcastInstance.getMap<UUID, Int>(
+            HazelcastMap.INDEXING_PARTITIONS_VERSION.name
+    )
     private val indexingQueue = hazelcastInstance.getQueue<UUID>(HazelcastQueue.INDEXING.name)
     private val indexingLock = ReentrantLock()
 
@@ -89,28 +103,48 @@ class IndexingService(
                 .parallel().forEach { entitySetId ->
                     try {
                         val entitySet = entitySets.getValue(entitySetId)
+                        var cursor = indexingProgress.getOrPut(entitySetId) { LB_UUID }
+                        val currentPartitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
+                        val partitionsVersion = indexingPartitionsVersion.getOrPut(
+                                entitySetId
+                        ) { currentPartitionsInfo.partitionsVersion }
+                        val partitions = indexingPartitionList.getOrPut(entitySetId) {
+                            DelegatedIntList(
+                                    currentPartitionsInfo.partitions.toList()
+                            )
+                        }
+                        var partitionCursor = indexingPartitionProgress.getOrPut(entitySetId) { 0 }
+
                         val propertyTypeMap = propertyTypes.getAll(
                                 entityTypes.getValue(entitySet.entityTypeId).properties
                         )
 
-                        var cursor = indexingProgress.getOrPut(entitySetId) { IdConstants.LB_UUID.id }
                         val entityKeyIds: Set<UUID> = indexingJobs.getValue(entitySetId)
                         var entityKeyIdsWithLastWrite: Map<UUID, OffsetDateTime> =
                                 //An empty set of ids means all keys
                                 if (entityKeyIds.isEmpty()) {
-                                    getNextBatch(entitySetId, cursor, cursor != IdConstants.LB_UUID.id).toMap()
+                                    getNextBatch(entitySetId, partitionCursor, cursor).toMap()
                                 } else {
-                                    getEntitiesWithLastWrite(entitySet.id, entityKeyIds).toMap()
+                                    getEntitiesWithLastWrite(entitySet.id, partitions, entityKeyIds).toMap()
                                 }
 
                         while (entityKeyIdsWithLastWrite.isNotEmpty()) {
                             logger.info("Indexing entity set ${entitySet.name} (${entitySet.id}) starting at $cursor.")
-                            backgroundIndexingService.indexEntities(entitySet, entityKeyIdsWithLastWrite, propertyTypeMap, false)
+                            backgroundIndexingService.indexEntities(
+                                    entitySet,
+                                    entityKeyIdsWithLastWrite,
+                                    propertyTypeMap,
+                                    false
+                            )
                             cursor = entityKeyIdsWithLastWrite.keys.max()!!
-
+                            indexingPartitionProgress.set(entitySetId, ++partitionCursor)
                             indexingProgress.set(entitySetId, cursor)
 
-                            entityKeyIdsWithLastWrite = getNextBatch(entitySetId, cursor, cursor != IdConstants.LB_UUID.id).toMap()
+                            entityKeyIdsWithLastWrite = getNextBatch(
+                                    entitySetId,
+                                    partitions[partitionCursor],
+                                    cursor
+                            ).toMap()
                         }
 
                         logger.info("Finished indexing entity set $entitySetId")
@@ -162,45 +196,49 @@ class IndexingService(
             ""
         }
 
-        return "SELECT ${ID.name}, ${LAST_WRITE.name} FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = ? $lowerBoundSql " +
+        return "SELECT ${ID.name}, ${LAST_WRITE.name} FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${PARTITION.name} = ? $lowerBoundSql " +
                 "ORDER BY ${ID.name} LIMIT $BATCH_LIMIT"
     }
 
-
-    private fun getNextBatch(entitySetId: UUID, cursor: UUID, useLowerBound: Boolean): PostgresIterable<Pair<UUID, OffsetDateTime>> {
-        return PostgresIterable(
-                Supplier {
-                    val connection = hds.connection
-                    val ps = connection.prepareStatement(getNextBatchQuery(useLowerBound))
-                    ps.setObject(1, entitySetId)
-                    if (useLowerBound) {
-                        ps.setObject(2, cursor)
-                    }
-                    StatementHolder(connection, ps, ps.executeQuery())
-                }, Function { ResultSetAdapters.id(it) to ResultSetAdapters.lastWriteTyped(it) }
-        )
-
+    private fun getNextBatch(
+            entitySetId: UUID,
+            partition: Int,
+            cursor: UUID,
+            useLowerBound: Boolean = (cursor !== LB_UUID)
+    ): BasePostgresIterable<Pair<UUID, OffsetDateTime>> {
+        return BasePostgresIterable(PreparedStatementHolderSupplier(hds, getNextBatchQuery(useLowerBound)) { ps ->
+            ps.setObject(1, entitySetId)
+            ps.setInt(2, partition)
+            if (useLowerBound) {
+                ps.setObject(2, cursor)
+            }
+        }) { ResultSetAdapters.id(it) to ResultSetAdapters.lastWriteTyped(it) }
     }
 
-    private fun getEntitiesWithLastWriteQuery(): String {
-        return "SELECT ${ID.name}, ${LAST_WRITE.name} FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${ID.name} = ANY(?) " +
-                "ORDER BY ${ID.name} LIMIT $BATCH_LIMIT"
+    //TODO: This is unecessary. If someone requests a re-index of a particular set of entity key ids, we should forcibly index those keys.
+    private fun getEntitiesWithLastWrite(
+            entitySetId: UUID,
+            partitions: List<Int>,
+            entityKeyIds: Set<UUID>
+    ): Map<UUID, OffsetDateTime> {
+        return entityKeyIds
+                .groupBy { getPartition(it, partitions) }
+                .flatMap { (partition, ids) -> getEntitiesWithLastWrite(entitySetId, partition, ids) }
+                .toMap()
     }
 
+    private fun getEntitiesWithLastWrite(
+            entitySetId: UUID,
+            partition: Int,
+            entityKeyIds: Collection<UUID>
+    ): BasePostgresIterable<Pair<UUID, OffsetDateTime>> {
+        return BasePostgresIterable(PreparedStatementHolderSupplier(hds, IDS_WITH_LAST_WRITE) { ps ->
+            val idsArray = PostgresArrays.createUuidArray(ps.connection, entityKeyIds)
+            ps.setObject(1, entitySetId)
+            ps.setInt(2, partition)
+            ps.setArray(3, idsArray)
 
-    private fun getEntitiesWithLastWrite(entitySetId: UUID, entityKeyIds: Set<UUID>): PostgresIterable<Pair<UUID, OffsetDateTime>> {
-        return PostgresIterable(
-                Supplier {
-                    val connection = hds.connection
-                    val ps = connection.prepareStatement(getEntitiesWithLastWriteQuery())
-                    val idsArray = PostgresArrays.createUuidArray(connection, entityKeyIds)
-                    ps.setObject(1, entitySetId)
-                    ps.setArray(2, idsArray)
-
-                    StatementHolder(connection, ps, ps.executeQuery())
-                }, Function { ResultSetAdapters.id(it) to ResultSetAdapters.lastWriteTyped(it) }
-        )
-
+        }) { ResultSetAdapters.id(it) to ResultSetAdapters.lastWriteTyped(it) }
     }
 
     fun clearIndexingJobs(): Int {
