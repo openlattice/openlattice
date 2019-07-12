@@ -30,7 +30,7 @@ class PermissionsControllerTest : MultipleAuthenticatedUsersBase() {
             entitySetAclKey = AclKey(es.id)
 
             //create roles
-            val organizationID = organizationsApi.createOrganizationIfNotExists(TestDataFactory.organization())
+            val organizationID = createOrganization().id
             val role1 = TestDataFactory.role(organizationID)
             val role2 = TestDataFactory.role(organizationID)
 

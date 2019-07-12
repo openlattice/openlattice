@@ -21,7 +21,7 @@ class OrganizationsControllerTest : MultipleAuthenticatedUsersBase() {
             loginAs("admin")
 
             //create organization, role
-            organizationID = organizationsApi.createOrganizationIfNotExists(TestDataFactory.organization())
+            organizationID = createOrganization().id
             val role = TestDataFactory.role(organizationID)
             roleId = role.id
             organizationsApi.createRole(role)
