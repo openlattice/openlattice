@@ -22,21 +22,19 @@ package com.openlattice.hazelcast.serializers
 
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest
 import com.openlattice.assembler.AssemblerConnectionManager
-import com.openlattice.assembler.processors.RemoveMembersFromOrganizationAssemblyProcessor
+import com.openlattice.assembler.processors.DropMaterializedEntitySetProcessor
 import org.mockito.Mockito
 
-class RemoveMembersFromOrganizationAssemblyProcessorStreamSerializerTest
-    : AbstractStreamSerializerTest<RemoveMembersFromOrganizationAssemblyProcessorStreamSerializer,
-        RemoveMembersFromOrganizationAssemblyProcessor>() {
-    override fun createSerializer(): RemoveMembersFromOrganizationAssemblyProcessorStreamSerializer {
-        val processorSerializer = RemoveMembersFromOrganizationAssemblyProcessorStreamSerializer()
+class DropMaterializedEntitySetProcessorStreamSerializerTest
+    : AbstractStreamSerializerTest<DropMaterializedEntitySetProcessorStreamSerializer, DropMaterializedEntitySetProcessor>() {
+
+    override fun createSerializer(): DropMaterializedEntitySetProcessorStreamSerializer {
+        val processorSerializer = DropMaterializedEntitySetProcessorStreamSerializer()
         processorSerializer.init(Mockito.mock(AssemblerConnectionManager::class.java))
         return processorSerializer
     }
 
-    override fun createInput(): RemoveMembersFromOrganizationAssemblyProcessor {
-        return RemoveMembersFromOrganizationAssemblyProcessor(
-                SecurablePrincipalListStreamSerializerTest.createSecurablePrincipalList()
-        )
+    override fun createInput(): DropMaterializedEntitySetProcessor {
+        return DropMaterializedEntitySetProcessor()
     }
 }

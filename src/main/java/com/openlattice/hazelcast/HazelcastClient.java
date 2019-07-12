@@ -1,3 +1,5 @@
+
+
 /*
  * Copyright (C) 2018. OpenLattice, Inc.
  *
@@ -18,25 +20,8 @@
  *
  */
 
-package com.openlattice.hazelcast.serializers;
+package com.openlattice.hazelcast;
 
-import java.util.UUID;
-
-import com.openlattice.mapstores.TestDataFactory;
-
-import com.openlattice.data.TicketKey;
-import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest;
-
-public class TicketKeyStreamSerializerTest extends AbstractStreamSerializerTest<TicketKeyStreamSerializer, TicketKey> {
-
-    @Override
-    protected TicketKeyStreamSerializer createSerializer() {
-        return new TicketKeyStreamSerializer();
-    }
-
-    @Override
-    protected TicketKey createInput() {
-        return new TicketKey( TestDataFactory.random( 10 ), UUID.randomUUID() );
-    }
-
+public enum HazelcastClient {
+    IDS
 }

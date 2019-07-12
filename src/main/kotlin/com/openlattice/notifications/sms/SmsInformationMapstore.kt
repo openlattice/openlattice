@@ -36,13 +36,13 @@ class SmsInformationMapstore(
     }
 
     override fun generateTestKey(): SmsInformationKey {
-        return SmsInformationKey(RandomStringUtils.randomAlphanumeric(10), UUID.randomUUID())
+        return SmsInformationKey("818 555 1234", UUID(1,2))
     }
 
     override fun generateTestValue(): SmsEntitySetInformation {
         return SmsEntitySetInformation(
-                RandomStringUtils.randomAlphanumeric(10),
-                UUID.randomUUID(),
+                "818 555 1234",
+                UUID(1,2),
                 ImmutableSet.of(UUID.randomUUID(), UUID.randomUUID()),
                 ImmutableSet.of(RandomStringUtils.random(5), RandomStringUtils.random(5))
         )
@@ -58,7 +58,7 @@ class SmsInformationMapstore(
     }
 
     override fun bind(ps: PreparedStatement, key: SmsInformationKey, value: SmsEntitySetInformation) {
-        var offset = bind(ps, key)
+        var offset = bind(ps, key, 1)
 
         ps.setArray(offset++, PostgresArrays.createUuidArray(ps.connection, value.entitySetIds))
         ps.setArray(offset++, PostgresArrays.createTextArray(ps.connection, value.tags))
@@ -73,8 +73,8 @@ class SmsInformationMapstore(
     }
 
     override fun bind(ps: PreparedStatement, key: SmsInformationKey, offset: Int): Int {
-        ps.setObject(offset.inc(), key.phoneNumber)
-        ps.setObject(offset, key.organizationId)
+        ps.setString(offset, key.phoneNumber)
+        ps.setObject(offset + 1, key.organizationId)
         return offset + 2
     }
 

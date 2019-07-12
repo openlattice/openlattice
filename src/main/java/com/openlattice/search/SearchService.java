@@ -897,10 +897,7 @@ public class SearchService {
 
         EntitySet entitySet = dataModelService.getEntitySet( entitySetId );
         Set<UUID> entitySetIds = ( entitySet.isLinking() ) ? entitySet.getLinkedEntitySets() : Set.of( entitySetId );
-        indexingMetadataManager.markAsNeedsToBeIndexed(
-                entitySetIds.stream().collect( Collectors.toMap( Function.identity(), esId -> Optional.empty() ) ),
-                entitySet.isLinking()
-        );
+        indexingMetadataManager.markEntitySetsAsNeedsToBeIndexed( entitySetIds, entitySet.isLinking() );
     }
 
     public void triggerAllEntitySetDataIndex() {

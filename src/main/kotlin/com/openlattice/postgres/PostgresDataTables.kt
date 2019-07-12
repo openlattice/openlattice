@@ -7,7 +7,6 @@ import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresColumn.*
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
-import java.util.*
 
 /**
  *
@@ -119,10 +118,6 @@ class PostgresDataTables {
                     .name(quote(prefix + "_last_write_idx"))
                     .ifNotExists()
                     .desc()
-            val lastMigrateIndex = PostgresColumnsIndexDefinition(tableDefinition, LAST_MIGRATE)
-                    .name(quote(prefix + "_last_migrate_idx"))
-                    .ifNotExists()
-                    .desc()
             val propertyTypeIdIndex = PostgresColumnsIndexDefinition(tableDefinition, PROPERTY_TYPE_ID)
                     .name(quote(prefix + "_property_type_id_idx"))
                     .ifNotExists()
@@ -149,7 +144,6 @@ class PostgresDataTables {
                     entitySetIdIndex,
                     versionIndex,
                     lastWriteIndex,
-                    lastMigrateIndex,
                     propertyTypeIdIndex,
                     partitionsVersionIndex,
                     currentPropertiesForEntitySetIndex,
@@ -175,12 +169,12 @@ class PostgresDataTables {
 
         @JvmStatic
         fun nonIndexedValueColumn(datatype: PostgresDatatype): PostgresColumnDefinition {
-            return PostgresColumnDefinition("n_${datatype.name}", datatype)
+            return PostgresColumnDefinition(getSourceDataColumnName(datatype, IndexType.NONE), datatype)
         }
 
         @JvmStatic
         fun btreeIndexedValueColumn(datatype: PostgresDatatype): PostgresColumnDefinition {
-            return PostgresColumnDefinition("b_${datatype.name}", datatype)
+            return PostgresColumnDefinition(getSourceDataColumnName(datatype, IndexType.BTREE), datatype)
         }
 
         /**
@@ -194,6 +188,14 @@ class PostgresDataTables {
         fun getColumnDefinition(indexType: IndexType, edmType: EdmPrimitiveTypeKind): PostgresColumnDefinition {
             return columnDefinitionCache[indexType to edmType]
         }
-    }
 
+        @JvmStatic
+        fun getSourceDataColumnName(datatype: PostgresDatatype, indexType: IndexType) : String {
+            return when (indexType) {
+                IndexType.BTREE -> "b_${datatype.name}"
+                IndexType.NONE -> "n_${datatype.name}"
+                else -> throw IllegalStateException("Unsupported index type: $indexType")
+            }
+        }
+    }
 }

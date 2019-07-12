@@ -176,14 +176,14 @@ class Graph(
         ps.setObject(startIndex, dataEdgeKey.src.entityKeyId)
         ps.setObject(startIndex + 1, dataEdgeKey.dst.entityKeyId)
         ps.setObject(startIndex + 2, dataEdgeKey.edge.entityKeyId)
-        ps.setObject(startIndex + 3, IdType.SRC.ordinal)
+        ps.setInt(startIndex + 3, IdType.SRC.ordinal)
     }
 
     private fun addDstKeyIds(ps: PreparedStatement, dataEdgeKey: DataEdgeKey, startIndex: Int = 1) {
         ps.setObject(startIndex, dataEdgeKey.dst.entityKeyId)
         ps.setObject(startIndex + 1, dataEdgeKey.edge.entityKeyId)
         ps.setObject(startIndex + 2, dataEdgeKey.src.entityKeyId)
-        ps.setObject(startIndex + 3, IdType.DST.ordinal)
+        ps.setInt(startIndex + 3, IdType.DST.ordinal)
     }
 
     private fun addKeyIds(ps: PreparedStatement, dataEdgeKey: DataEdgeKey, idType: IdType, startIndex: Int = 1) {
@@ -191,7 +191,7 @@ class Graph(
         val partitionInfo = partitionManager.getEntitySetPartitionsInfo(edk.entitySetId)
         val partition = getPartition(edk.entityKeyId, partitionInfo.partitions.toList())
         ps.setObject(startIndex, partition)
-        ps.setObject(startIndex + 1, idType)
+        ps.setInt(startIndex + 1, idType.ordinal)
         ps.setObject(startIndex + 2, dataEdgeKey.src.entityKeyId)
         ps.setObject(startIndex + 3, dataEdgeKey.dst.entityKeyId)
         ps.setObject(startIndex + 4, dataEdgeKey.edge.entityKeyId)
@@ -202,7 +202,7 @@ class Graph(
         ps.setObject(startIndex, dataEdgeKey.edge.entityKeyId)
         ps.setObject(startIndex + 1, dataEdgeKey.src.entityKeyId)
         ps.setObject(startIndex + 2, dataEdgeKey.dst.entityKeyId)
-        ps.setObject(startIndex + 3, IdType.EDGE.ordinal)
+        ps.setInt(startIndex + 3, IdType.EDGE.ordinal)
     }
 
     private fun getEntityDataKeyForIdType(dataEdgeKey: DataEdgeKey, idType: IdType): EntityDataKey {
@@ -335,7 +335,7 @@ class Graph(
         return PostgresIterable(
                 Supplier {
                     val connection = hds.connection
-                    val ids = PostgresArrays.createUuidArray(connection, filter.entityKeyIds.stream())
+                    val ids = PostgresArrays.createUuidArray(connection, filter.entityKeyIds)
                     val stmt = connection.prepareStatement(getFilteredNeighborhoodSql(filter, false))
                     stmt.setArray(1, ids)
                     stmt.setObject(2, entitySetId)

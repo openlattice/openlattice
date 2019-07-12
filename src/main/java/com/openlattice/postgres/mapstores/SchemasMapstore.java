@@ -6,6 +6,7 @@ import static com.openlattice.postgres.PostgresTable.SCHEMA;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
+import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.postgres.PostgresArrays;
 import com.openlattice.postgres.ResultSetAdapters;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
@@ -14,7 +15,6 @@ import java.sql.Array;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import org.apache.commons.lang3.RandomStringUtils;
 
 public class SchemasMapstore extends AbstractBasePostgresMapstore<String, DelegatedStringSet> {
 
@@ -47,12 +47,12 @@ public class SchemasMapstore extends AbstractBasePostgresMapstore<String, Delega
     }
 
     @Override public String generateTestKey() {
-        return RandomStringUtils.randomAlphanumeric( 5 );
+        return TestDataFactory.randomAlphanumeric( 5 );
     }
 
     @Override public DelegatedStringSet generateTestValue() {
-        return DelegatedStringSet.wrap( ImmutableSet.of( RandomStringUtils.randomAlphanumeric( 5 ),
-                RandomStringUtils.randomAlphanumeric( 5 ),
-                RandomStringUtils.randomAlphanumeric( 5 ) ) );
+        return DelegatedStringSet.wrap( ImmutableSet.of( TestDataFactory.randomAlphanumeric( 5 ),
+                TestDataFactory.randomAlphanumeric( 5 ),
+                TestDataFactory.randomAlphanumeric( 5 ) ) );
     }
 }

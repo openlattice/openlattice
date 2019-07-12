@@ -52,6 +52,10 @@ class PartitionManager @JvmOverloads constructor(
         partitionList.addAll(partitionList.size until partitions)
     }
 
+    fun getAllPartitions() : List<Int> {
+        return partitionList
+    }
+
     fun setEntitySetPartitions(entitySetId: UUID, partitions: List<Int>) {
         val update = MetadataUpdate(
                 Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
@@ -73,6 +77,11 @@ class PartitionManager @JvmOverloads constructor(
         //TODO: Consider doing this using an entry processor
         val entitySet = entitySets.getValue(entitySetId)
         return PartitionsInfo(entitySet.partitions, entitySet.partitionsVersion)
+    }
+
+    fun getEntitySetsPartitionsInfo(entitySetIds: Set<UUID>): Map<UUID, PartitionsInfo> {
+        val entitySets = entitySets.getAll(entitySetIds).values
+        return entitySets.map { it.id to PartitionsInfo(it.partitions, it.partitionsVersion) }.toMap()
     }
 
     /**

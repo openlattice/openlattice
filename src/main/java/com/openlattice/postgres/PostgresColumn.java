@@ -176,7 +176,7 @@ public final class PostgresColumn {
     public static final PostgresColumnDefinition ENTITY_SET_ID                     =
             new PostgresColumnDefinition( ENTITY_SET_ID_FIELD, UUID ).notNull();
     public static final PostgresColumnDefinition ENTITY_SET_IDS                    =
-            new PostgresColumnDefinition( ENTITY_SET_ID_FIELD, UUID_ARRAY ).notNull();
+            new PostgresColumnDefinition( ENTITY_SET_IDS_FIELD, UUID_ARRAY ).notNull();
     public static final String                   ENTITY_SET_NAME_FIELD             = "entity_set_name";
     public static final PostgresColumnDefinition ENTITY_SET_Name                   =
             new PostgresColumnDefinition( ENTITY_SET_NAME_FIELD, UUID ).notNull();
