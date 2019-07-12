@@ -221,6 +221,7 @@ class PostgresEntityDataQueryService(
                 )
             }
             (metaBinders + binders).forEach { it.bind(ps) }
+            logger.info("RUNNING THIS QUERY: {}", ps.toString())
         }, adapter)
     }
 
@@ -353,8 +354,8 @@ class PostgresEntityDataQueryService(
                 rawValue
             } else {
                 Multimaps.asMap(JsonDeserializer
-                                        .validateFormatAndNormalize(rawValue, authorizedPropertyTypes)
-                                        { "Entity set $entitySetId with entity key id $entityKeyId" })
+                        .validateFormatAndNormalize(rawValue, authorizedPropertyTypes)
+                        { "Entity set $entitySetId with entity key id $entityKeyId" })
             }
 
             entityData.map { (propertyTypeId, values) ->
