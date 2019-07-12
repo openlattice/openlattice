@@ -191,7 +191,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             	        .startObject( ANALYZER )
                 	        .startObject( METAPHONE_ANALYZER )
                 	            .field( TOKENIZER, LOWERCASE )
-                	            .field( FILTER, Lists.newArrayList( STANDARD, LOWERCASE, SHINGLE_FILTER, METAPHONE_FILTER ) )
+                	            .field( FILTER, Lists.newArrayList( LOWERCASE, SHINGLE_FILTER, METAPHONE_FILTER ) )
                 	        .endObject()
                 	    .endObject()
         	        .endObject()
