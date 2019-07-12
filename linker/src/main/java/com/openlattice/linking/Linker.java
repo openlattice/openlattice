@@ -24,7 +24,6 @@ import com.dataloom.mappers.ObjectMappers;
 import com.kryptnostic.rhizome.configuration.websockets.BaseRhizomeServer;
 import com.kryptnostic.rhizome.core.RhizomeApplicationServer;
 import com.kryptnostic.rhizome.hazelcast.serializers.RhizomeUtils.Pods;
-import com.kryptnostic.rhizome.pods.hazelcast.RegistryBasedHazelcastInstanceConfigurationPod;
 import com.openlattice.auditing.pods.AuditingConfigurationPod;
 import com.openlattice.auth0.Auth0Pod;
 import com.openlattice.aws.AwsS3Pod;
@@ -47,24 +46,20 @@ import com.openlattice.tasks.pods.TaskSchedulerPod;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class Linker extends BaseRhizomeServer {
-    public static final Class<?>[] rhizomePods = new Class<?>[]{
-            RegistryBasedHazelcastInstanceConfigurationPod.class,
-            Auth0Pod.class };
 
     public static final Class<?>[] conductorPods = new Class<?>[]{
-            LinkerPostConfigurationServicesPod.class,
-            LinkerServicesPod.class,
-            SharedStreamSerializersPod.class,
-            PlasmaCoupling.class,
-            MailServicePod.class,
-            Auth0Pod.class,
-            MapstoresPod.class,
-            JdbcPod.class,
-            PostgresTablesPod.class,
-            PostgresPod.class,
+            AuditingConfigurationPod.class,
             Auth0Pod.class,
             AwsS3Pod.class,
-            AuditingConfigurationPod.class,
+            JdbcPod.class,
+            LinkerPostConfigurationServicesPod.class,
+            LinkerServicesPod.class,
+            MailServicePod.class,
+            MapstoresPod.class,
+            PlasmaCoupling.class,
+            PostgresPod.class,
+            PostgresTablesPod.class,
+            SharedStreamSerializersPod.class,
             TaskSchedulerPod.class
     };
 
@@ -75,7 +70,7 @@ public class Linker extends BaseRhizomeServer {
     }
 
     public Linker() {
-        super( Pods.concatenate( RhizomeApplicationServer.DEFAULT_PODS, webPods, rhizomePods, conductorPods ) );
+        super( Pods.concatenate( RhizomeApplicationServer.DEFAULT_PODS, webPods, conductorPods ) );
     }
 
     @Override
