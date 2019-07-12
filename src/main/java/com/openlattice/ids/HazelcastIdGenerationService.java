@@ -20,9 +20,11 @@
 
 package com.openlattice.ids;
 
+import com.geekbeast.hazelcast.HazelcastClientProvider;
 import com.google.common.collect.ImmutableMap;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
+import com.openlattice.hazelcast.HazelcastClient;
 import com.openlattice.hazelcast.HazelcastMap;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -51,7 +53,8 @@ public class HazelcastIdGenerationService {
     private final        IMap<Long, Range> scrolls;
     private final        AtomicInteger     rangeIndex     = new AtomicInteger();
 
-    public HazelcastIdGenerationService( HazelcastInstance hazelcastInstance ) {
+    public HazelcastIdGenerationService(  HazelcastClientProvider clients ) {
+        final var hazelcastInstance = clients.getClient( HazelcastClient.IDS.name() );
         this.scrolls = hazelcastInstance.getMap( HazelcastMap.ID_GENERATION.name() );
         if ( scrolls.isEmpty() ) {
             initializeRanges();

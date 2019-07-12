@@ -21,12 +21,16 @@
 
 package com.openlattice.data.ids
 
+import com.geekbeast.hazelcast.HazelcastClientProvider
 import com.google.common.base.Preconditions.checkState
 import com.google.common.collect.Queues
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.hazelcast.core.HazelcastInstance
 import com.openlattice.data.EntityKey
 import com.openlattice.data.EntityKeyIdService
+import com.openlattice.data.storage.getPartition
+import com.openlattice.data.storage.partitions.PartitionManager
+import com.openlattice.hazelcast.HazelcastClient
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.ids.HazelcastIdGenerationService
 import com.openlattice.postgres.PostgresArrays
@@ -47,17 +51,18 @@ import kotlin.collections.HashMap
 private val entityKeysSql = "SELECT * FROM ${IDS.name} WHERE ${ID.name} = ANY(?) "
 private val entityKeyIdsSql = "SELECT * FROM ${SYNC_IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${ENTITY_ID.name} = ANY(?) "
 private val entityKeyIdSql = "SELECT * FROM ${SYNC_IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${ENTITY_ID.name} = ? "
-private val INSERT_SQL = "INSERT INTO ${IDS.name} (${ENTITY_SET_ID.name},${ID.name}) VALUES(?,?)"
+private val INSERT_SQL = "INSERT INTO ${IDS.name} (${ENTITY_SET_ID.name},${ID.name},${PARTITION.name},${PARTITIONS_VERSION.name}) VALUES(?,?,?,?)"
 private val INSERT_SYNC_SQL = "INSERT INTO ${SYNC_IDS.name} (${ENTITY_SET_ID.name},${ENTITY_ID.name},${ID.name}) VALUES(?,?,?)"
-
 private val logger = LoggerFactory.getLogger(PostgresEntityKeyIdService::class.java)
 
 class PostgresEntityKeyIdService(
-        hazelcastInstance: HazelcastInstance,
+        hazelcastClients: HazelcastClientProvider,
         private val executor: ListeningExecutorService,
         private val hds: HikariDataSource,
-        private val idGenerationService: HazelcastIdGenerationService
+        private val idGenerationService: HazelcastIdGenerationService,
+        private val partitionManager: PartitionManager
 ) : EntityKeyIdService {
+    private val hazelcastInstance = hazelcastClients.getClient(HazelcastClient.IDS.name)
     private val q: BlockingQueue<UUID> = Queues.newArrayBlockingQueue(65536)
     private val idRefCounts = hazelcastInstance.getMap<EntityKey, Long>(HazelcastMap.ID_REF_COUNTS.name)
     private val idMap = hazelcastInstance.getMap<EntityKey, UUID>(HazelcastMap.ID_CACHE.name)
@@ -73,6 +78,8 @@ class PostgresEntityKeyIdService(
     }
 
     private fun storeEntityKeyIdReservations(entitySetId: UUID, entityKeyIds: Set<UUID>) {
+        val partitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
+
         hds.connection.use { connection ->
 
             val insertIds = connection.prepareStatement(INSERT_SQL)
@@ -80,6 +87,8 @@ class PostgresEntityKeyIdService(
             entityKeyIds.forEach { entityKeyId ->
                 insertIds.setObject(1, entitySetId)
                 insertIds.setObject(2, entityKeyId)
+                insertIds.setInt(3, getPartition(entityKeyId, partitionsInfo.partitions.toList()))
+                insertIds.setInt(4, partitionsInfo.partitionsVersion)
                 insertIds.addBatch()
             }
 
@@ -91,6 +100,9 @@ class PostgresEntityKeyIdService(
     }
 
     private fun storeEntityKeyIds(entityKeyIds: Map<EntityKey, UUID>): Map<EntityKey, UUID> {
+        val partitionsByEntitySet = partitionManager.getEntitySetsPartitionsInfo(entityKeyIds.keys.map { it.entitySetId }.toSet())
+                .mapValues { it.value.partitions.toList() to it.value.partitionsVersion }
+
         hds.connection.use { connection ->
             connection.autoCommit = false
 
@@ -108,6 +120,8 @@ class PostgresEntityKeyIdService(
             entityKeyIds.forEach {
                 insertIds.setObject(1, it.key.entitySetId)
                 insertIds.setObject(2, it.value)
+                insertIds.setInt(3, getPartition(it.value, partitionsByEntitySet.getValue(it.key.entitySetId).first))
+                insertIds.setInt(4, partitionsByEntitySet.getValue(it.key.entitySetId).second)
                 insertIds.addBatch()
             }
 
@@ -161,7 +175,7 @@ class PostgresEntityKeyIdService(
 
     override fun reserveEntityKeyIds(entityKeys: Set<EntityKey>): Set<UUID> {
         val entityIdsByEntitySet = entityKeys.groupBy({ it.entitySetId },
-                                                      { it.entityId }).mapValues { it.value.toSet() }
+                { it.entityId }).mapValues { it.value.toSet() }
         val existing = loadEntityKeyIds(entityIdsByEntitySet)
         val missing = entityKeys - existing.keys
 
@@ -232,7 +246,7 @@ class PostgresEntityKeyIdService(
             entityKeys: Set<EntityKey>, entityKeyIds: MutableMap<EntityKey, UUID>
     ): MutableMap<EntityKey, UUID> {
         val entityIdsByEntitySet = entityKeys.groupBy({ it.entitySetId },
-                                                      { it.entityId }).mapValues { it.value.toSet() }
+                { it.entityId }).mapValues { it.value.toSet() }
         entityKeyIds.putAll(loadEntityKeyIds(entityIdsByEntitySet))
 
         //Making this line O(n) is why we chose to just take a set instead of a sequence (thus allowing lazy views since copy is required anyway)
