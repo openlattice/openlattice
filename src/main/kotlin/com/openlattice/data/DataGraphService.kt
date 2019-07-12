@@ -586,6 +586,13 @@ open class DataGraphService(
         return null
     }
 
+    /**
+     * Checks entity types of associations against the allowed src and dst entity types in association type.
+     * @param srcAssociationEntitySetIds The entity set ids of the src entities in associations mapped by their association entity set id.
+     * @param dstAssociationEntitySetIds The entity set ids of the dst entities in associations mapped by their association entity set id.
+     * @param bidirectionalEntitySetIds The src and dst entity set id pairs of bidirectional associations mapped by the association entity set id.
+     * @param associationTypes Map of association entity set ids and their association types.
+     */
     private fun checkAssociationEntityTypes(
             srcAssociationEntitySetIds: Map<UUID, Set<UUID>>,
             dstAssociationEntitySetIds: Map<UUID, Set<UUID>>,
