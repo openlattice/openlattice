@@ -484,7 +484,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
                 getCurrentUserId(),
                 new AclKey( entityType.getId() ), // TODO should this be written as an AclKey?
                 AuditEventType.CREATE_ENTITY_TYPE,
-                "Entity type deleted through EdmApi.createEntityType",
+                "Entity type created through EdmApi.createEntityType",
                 Optional.empty(),
                 ImmutableMap.of( "entityType", entityType ),
                 OffsetDateTime.now(),
