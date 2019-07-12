@@ -669,7 +669,15 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 }
             }
 
-            requestBuilder.execute().actionGet();
+            BulkResponse resp = requestBuilder.execute().actionGet();
+
+            if ( resp.hasFailures() ) {
+                logger.info( "At least one failure observed when attempting to index {} entities for entity set {}: {}",
+                        entitiesById.size(),
+                        entitySetId,
+                        resp.buildFailureMessage() );
+                return false;
+            }
 
         }
         return true;
@@ -984,12 +992,12 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             UUID entitySetId = searchConstraints.getEntitySetIds()[ i ];
 
             Set<UUID> normalEntitySets = linkingEntitySets.getOrDefault(
-                    entitySetId,  DelegatedUUIDSet.wrap(  ImmutableSet.of( entitySetId ) ) );
+                    entitySetId, DelegatedUUIDSet.wrap( ImmutableSet.of( entitySetId ) ) );
 
             Map<UUID, Map<String, Float>> authorizedFieldsMap =
                     getFieldsMap( entitySetId, authorizedPropertyTypesByEntitySet );
 
-            QueryBuilder searchQuery = getQueryForSearch( normalEntitySets , searchConstraints, authorizedFieldsMap );
+            QueryBuilder searchQuery = getQueryForSearch( normalEntitySets, searchConstraints, authorizedFieldsMap );
 
             if ( searchQuery != null ) {
 
