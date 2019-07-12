@@ -175,9 +175,9 @@ constructor(
     }
 
     @Timed
-    @RequestMapping(path = ["", "/"], method = [RequestMethod.GET])
-    override fun getEntitySets(): Iterable<EntitySet> {
-        return authorizations.getAuthorizedObjectsOfType(
+    @RequestMapping(path = ["", "/"], method = [RequestMethod.GET], produces = [MediaType.APPLICATION_JSON_VALUE])
+    override fun getEntitySets(): Set<EntitySet> {
+        val es =  authorizations.getAuthorizedObjectsOfType(
                 Principals.getCurrentPrincipals(),
                 SecurableObjectType.EntitySet,
                 EnumSet.of(Permission.READ)
@@ -185,7 +185,9 @@ constructor(
                 .asSequence()
                 .map { AuthorizationUtils.getLastAclKeySafely(it) }
                 .map { edmManager.getEntitySet(it) }
-                .asIterable()
+                .toSet()
+
+        return es
 
     }
 
