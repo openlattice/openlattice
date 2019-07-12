@@ -221,7 +221,6 @@ class PostgresEntityDataQueryService(
                 )
             }
             (metaBinders + binders).forEach { it.bind(ps) }
-            logger.info("RUNNING THIS QUERY: {}", ps.toString())
         }, adapter)
     }
 
