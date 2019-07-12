@@ -54,7 +54,6 @@ public interface ConductorElasticsearchApi {
     String OUTPUT_UNIGRAMS    = "output_unigrams";
     String TOKEN_SEPARATOR    = "token_separator";
     String TOKENIZER          = "tokenizer";
-    String STANDARD           = "standard";
     String LOWERCASE          = "lowercase";
     String PHONETIC           = "phonetic";
     String METAPHONE          = "metaphone";
