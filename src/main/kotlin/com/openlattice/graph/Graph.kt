@@ -78,8 +78,8 @@ class Graph(
     /* Create */
 
     override fun createEdges(keys: MutableSet<DataEdgeKey>): WriteEvent {
-        val partitionsInfoByEntitySet = keys.flatMap { listOf( it.src, it.dst, it.edge ) }.map { it.entitySetId }.toSet()
-                .associateWith {  partitionManager.getEntitySetPartitionsInfo(it) }.toMap()
+        val partitionsInfoByEntitySet = partitionManager.getEntitySetsPartitionsInfo(keys.flatMap { listOf( it.src, it.dst, it.edge ) }
+                .map { it.entitySetId }.toSet())
 
         hds.connection.use { connection ->
             val ps = connection.prepareStatement(UPSERT_SQL)
@@ -92,7 +92,6 @@ class Graph(
                     bindColumnsForEdge(ps, IdType.DST, dataEdgeKey, version, versions, partitionsInfoByEntitySet)
                     bindColumnsForEdge(ps, IdType.EDGE, dataEdgeKey, version, versions, partitionsInfoByEntitySet)
                 }
-                logger.info("Graph.createEdges sql: {}", ps.toString())
                 return WriteEvent(version, ps.executeBatch().sum())
             }
         }
