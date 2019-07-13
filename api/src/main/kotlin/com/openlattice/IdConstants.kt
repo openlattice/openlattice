@@ -58,10 +58,6 @@ enum class IdConstants(val id: UUID) {
     LINKING_PERSON_ENTITY_SET_ID(UUID(9, 20)),
 
 
-    /* Indexer */
-
-    LB_UUID(UUID(0, 30)), // todo what is this for??
-
 
     /* Linker */
 
