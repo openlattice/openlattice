@@ -177,8 +177,6 @@ public class SearchService {
             SearchConstraints searchConstraints,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySet ) {
 
-        Stopwatch sw = Stopwatch.createStarted();
-
         final Set<UUID> entitySetIds = Sets.newHashSet( Arrays.asList( searchConstraints.getEntitySetIds() ) );
         final Map<UUID, EntitySet> entitySetsById = dataModelService.getEntitySetsAsMap( entitySetIds );
         final var linkingEntitySets = entitySetsById.values().stream()
@@ -201,15 +199,11 @@ public class SearchService {
                 .stream()
                 .collect( Collectors.toMap( EntitySet::getId, EntitySet::getEntityTypeId ) );
 
-        logger.info( "Preparing search: {}", sw.elapsed( TimeUnit.MILLISECONDS ) );
-
         EntityDataKeySearchResult result = elasticsearchApi.executeSearch(
                 searchConstraints,
                 entityTypesByEntitySet,
                 authorizedPropertiesByEntitySet,
                 linkingEntitySets );
-
-        logger.info( "Querying elasticsearch: {}", sw.elapsed( TimeUnit.MILLISECONDS ) );
 
         SetMultimap<UUID, UUID> entityKeyIdsByEntitySetId = HashMultimap.create();
         result.getEntityDataKeys()
@@ -223,8 +217,6 @@ public class SearchService {
                         entitySetsById.get( entitySetId ).isLinking() ) )
                 .flatMap( List::stream )
                 .collect( Collectors.toList() );
-
-        logger.info( "Loading data ({} distinct entity set ids): {}", entityKeyIdsByEntitySetId.keySet().size(), sw.elapsed( TimeUnit.MILLISECONDS ) );
 
         return new DataSearchResult( result.getNumHits(), results );
     }
