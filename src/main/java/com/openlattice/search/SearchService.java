@@ -224,7 +224,7 @@ public class SearchService {
                 .flatMap( List::stream )
                 .collect( Collectors.toList() );
 
-        logger.info( "Loading data ({} distinct entity set ids): {}", entityKeyIdsByEntitySetId.keySet().size(), sw.elapsed() );
+        logger.info( "Loading data ({} distinct entity set ids): {}", entityKeyIdsByEntitySetId.keySet().size(), sw.elapsed( TimeUnit.MILLISECONDS ) );
 
         return new DataSearchResult( result.getNumHits(), results );
     }
