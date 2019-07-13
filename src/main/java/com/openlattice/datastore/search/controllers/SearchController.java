@@ -23,6 +23,7 @@ package com.openlattice.datastore.search.controllers;
 import com.codahale.metrics.annotation.Timed;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicates;
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.*;
 import com.openlattice.auditing.AuditEventType;
 import com.openlattice.auditing.AuditRecordEntitySetsManager;
@@ -51,6 +52,7 @@ import org.springframework.web.bind.annotation.*;
 import javax.inject.Inject;
 import java.time.OffsetDateTime;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION;
@@ -161,6 +163,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
                     .executeSearch( searchConstraints, authorizedPropertyTypesByEntitySet );
         }
 
+        Stopwatch sw = Stopwatch.createStarted();
         List<AuditableEvent> searchEvents = Lists.newArrayList();
         for ( int i = 0; i < searchConstraints.getEntitySetIds().length; i++ ) {
             searchEvents.add( new AuditableEvent(
@@ -175,7 +178,10 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             ) );
         }
 
+        logger.info( "Preparing audit events: {}", sw.elapsed( TimeUnit.MILLISECONDS ) );
         recordEvents( searchEvents );
+        logger.info( "Recorded audit events: {}", sw.elapsed( TimeUnit.MILLISECONDS ) );
+
         return results;
     }
 
