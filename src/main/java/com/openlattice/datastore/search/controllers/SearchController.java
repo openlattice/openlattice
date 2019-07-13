@@ -23,7 +23,6 @@ package com.openlattice.datastore.search.controllers;
 import com.codahale.metrics.annotation.Timed;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicates;
-import com.google.common.base.Stopwatch;
 import com.google.common.collect.*;
 import com.openlattice.auditing.AuditEventType;
 import com.openlattice.auditing.AuditRecordEntitySetsManager;
@@ -52,7 +51,6 @@ import org.springframework.web.bind.annotation.*;
 import javax.inject.Inject;
 import java.time.OffsetDateTime;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION;
@@ -155,15 +153,13 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
         DataSearchResult results = new DataSearchResult( 0, Lists.newArrayList() );
 
         // if user has read access on all normal entity sets
-        if ( authorizedEntitySetIds.size() == searchConstraints.getEntitySetIds().length) {
+        if ( authorizedEntitySetIds.size() == searchConstraints.getEntitySetIds().length ) {
             final var authorizedPropertyTypesByEntitySet = authorizationsHelper.getAuthorizedPropertiesOnEntitySets(
                     authorizedEntitySetIds, READ_PERMISSION, Principals.getCurrentPrincipals() );
 
             results = searchService
                     .executeSearch( searchConstraints, authorizedPropertyTypesByEntitySet );
         }
-
-        Stopwatch sw = Stopwatch.createStarted();
 
         List<AuditableEvent> searchEvents = Lists.newArrayList();
         for ( int i = 0; i < searchConstraints.getEntitySetIds().length; i++ ) {
@@ -179,11 +175,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             ) );
         }
 
-        logger.info( "Preparing audit for search ({}) events: {}", searchEvents.size(), sw.elapsed( TimeUnit.MILLISECONDS ) );
-
         recordEvents( searchEvents );
-
-        logger.info( "Preparing audit for search: {}", sw.elapsed( TimeUnit.MILLISECONDS ) );
 
         return results;
     }
@@ -215,7 +207,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
 
         return searchEntitySetData(
                 SearchConstraints.simpleSearchConstraints(
-                        new UUID[]{ entitySetId },
+                        new UUID[] { entitySetId },
                         searchTerm.getStart(),
                         searchTerm.getMaxHits(),
                         searchTerm.getSearchTerm(),
@@ -235,7 +227,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
 
         return searchEntitySetData(
                 SearchConstraints.advancedSearchConstraints(
-                        new UUID[]{ entitySetId },
+                        new UUID[] { entitySetId },
                         search.getStart(),
                         search.getMaxHits(),
                         search.getSearches() )
@@ -466,8 +458,6 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
                 } )
         );
 
-        Stopwatch sw = Stopwatch.createStarted();
-
         List<AuditableEvent> events = new ArrayList<>( neighborsByEntitySet.keySet().size() + 1 );
         UUID userId = getCurrentUserId();
 
@@ -531,11 +521,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             }
         }
 
-        logger.info( "Preparing audit for filtered neighbors ({}) events: {}", events.size(), sw.elapsed( TimeUnit.MILLISECONDS ) );
-
         recordEvents( events );
-
-        logger.info( "Recording audit events for filtered neighbors: {}", sw.elapsed( TimeUnit.MILLISECONDS ) );
 
         return result;
     }
@@ -565,8 +551,9 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
                                         EnumSet.of( Permission.READ ) ) )
                         .collect( Collectors.toSet() );
                 if ( authorizedEntitySets.size() != es.getLinkedEntitySets().size() ) {
-                    logger.warn( "Read authorization failed some of the normal entity sets of linking entity set or it " +
-                            "is empty." );
+                    logger.warn(
+                            "Read authorization failed some of the normal entity sets of linking entity set or it " +
+                                    "is empty." );
                 } else {
                     result = searchService
                             .executeLinkingEntityNeighborIdsSearch( authorizedEntitySets, filter, principals );
