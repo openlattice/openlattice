@@ -92,6 +92,7 @@ class Graph(
                     bindColumnsForEdge(ps, IdType.DST, dataEdgeKey, version, versions, partitionsInfoByEntitySet)
                     bindColumnsForEdge(ps, IdType.EDGE, dataEdgeKey, version, versions, partitionsInfoByEntitySet)
                 }
+                logger.info("Graph.createEdges sql: {}", ps.toString())
                 return WriteEvent(version, ps.executeBatch().sum())
             }
         }
