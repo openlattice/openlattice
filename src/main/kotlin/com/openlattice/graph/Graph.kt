@@ -78,12 +78,14 @@ class Graph(
     /* Create */
 
     override fun createEdges(keys: MutableSet<DataEdgeKey>): WriteEvent {
+        val partitionsInfoByEntitySet = keys.flatMap { listOf( it.src, it.dst, it.edge ) }.map { it.entitySetId }.toSet()
+                .associateWith {  partitionManager.getEntitySetPartitionsInfo(it) }.toMap()
+
         hds.connection.use { connection ->
             val ps = connection.prepareStatement(UPSERT_SQL)
             val version = System.currentTimeMillis()
             val versions = PostgresArrays.createLongArray(connection, ImmutableList.of(version))
 
-            val partitionsInfoByEntitySet = mutableMapOf<UUID, PartitionsInfo>()
             ps.use {
                 keys.forEach { dataEdgeKey ->
                     bindColumnsForEdge(ps, IdType.SRC, dataEdgeKey, version, versions, partitionsInfoByEntitySet)
@@ -101,14 +103,9 @@ class Graph(
             dataEdgeKey: DataEdgeKey,
             version: Long,
             versions: java.sql.Array,
-            partitionsInfoByEntitySet: MutableMap<UUID, PartitionsInfo>) {
+            partitionsInfoByEntitySet: Map<UUID, PartitionsInfo>) {
 
         val edk = getEntityDataKeyForIdType(dataEdgeKey, idType)
-
-        // TODO figure out if this is sketchy
-        if (!partitionsInfoByEntitySet.containsKey(edk.entitySetId)) {
-            partitionsInfoByEntitySet[edk.entitySetId] = partitionManager.getEntitySetPartitionsInfo(edk.entitySetId)
-        }
         val partitionsInfo = partitionsInfoByEntitySet.getValue(edk.entitySetId)
 
         var index = 1
