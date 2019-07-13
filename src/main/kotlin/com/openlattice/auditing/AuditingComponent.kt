@@ -23,11 +23,12 @@ package com.openlattice.auditing
 
 import com.codahale.metrics.annotation.Timed
 import com.dataloom.mappers.ObjectMappers
-import com.google.common.collect.ArrayListMultimap
-import com.google.common.collect.ImmutableMap
+import com.google.common.base.Stopwatch
+import com.google.common.collect.*
 import com.openlattice.data.DataEdge
 import com.openlattice.data.DataGraphManager
 import com.openlattice.data.EntityDataKey
+import org.slf4j.LoggerFactory
 import java.util.*
 
 private val mapper = ObjectMappers.newJsonMapper()
@@ -37,6 +38,8 @@ private val mapper = ObjectMappers.newJsonMapper()
  * This class makes it easy for other classes to implement auditing by passing a instance of the auditable event class
  * with the appropriate data configured.
  */
+
+private val logger = LoggerFactory.getLogger(AuditingComponent::class.java)
 
 interface AuditingComponent {
 
@@ -68,11 +71,13 @@ interface AuditingComponent {
                     }
                     .map { (auditEntitySetConfiguration, entities) ->
                         val auditEntitySet = auditEntitySetConfiguration.auditRecordEntitySet
+                        val sw = Stopwatch.createStarted()
                         val (entityKeyIds, _) = getDataGraphService().createEntities(
                                 auditEntitySet!!,
                                 toMap(entities),
                                 auditingConfiguration.propertyTypes
                         )
+                        logger.info("AuditingComponent.recordEvents createEntities took {}", sw.elapsed())
 
                         if (auditEntitySetConfiguration.auditEdgeEntitySet != null) {
                             val auditEdgeEntitySet = auditEntitySetConfiguration.auditEdgeEntitySet
@@ -95,8 +100,10 @@ interface AuditingComponent {
                                             return@forEach
                                         }
                                     }
+                            sw.reset().start()
                             getDataGraphService()
                                     .createAssociations(lm, ImmutableMap.of(auditEdgeEntitySet, emptyMap()))
+                            logger.info("AuditingComponent.recordEvents createAssociations took {}", sw.elapsed())
 
                         }
                         entityKeyIds.size
