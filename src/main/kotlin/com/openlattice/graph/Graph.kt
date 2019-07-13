@@ -80,6 +80,7 @@ class Graph(
     override fun createEdges(keys: MutableSet<DataEdgeKey>): WriteEvent {
         val partitionsInfoByEntitySet = partitionManager.getEntitySetsPartitionsInfo(keys.flatMap { listOf( it.src, it.dst, it.edge ) }
                 .map { it.entitySetId }.toSet())
+                .mapValues { it.value.partitionsVersion to it.value.partitions.toList() }
 
         hds.connection.use { connection ->
             val ps = connection.prepareStatement(UPSERT_SQL)
@@ -103,14 +104,14 @@ class Graph(
             dataEdgeKey: DataEdgeKey,
             version: Long,
             versions: java.sql.Array,
-            partitionsInfoByEntitySet: Map<UUID, PartitionsInfo>) {
+            partitionsInfoByEntitySet: Map<UUID, Pair<Int, List<Int>>>) {
 
         val edk = getEntityDataKeyForIdType(dataEdgeKey, idType)
         val partitionsInfo = partitionsInfoByEntitySet.getValue(edk.entitySetId)
 
         var index = 1
 
-        ps.setObject(index++, getPartition(edk.entityKeyId, partitionsInfo.partitions.toList()))
+        ps.setObject(index++, getPartition(edk.entityKeyId, partitionsInfo.second))
         ps.setInt(index++, idType.ordinal)
         ps.setObject(index++, dataEdgeKey.src.entitySetId)
         ps.setObject(index++, dataEdgeKey.src.entityKeyId)
@@ -120,7 +121,7 @@ class Graph(
         ps.setObject(index++, dataEdgeKey.edge.entityKeyId)
         ps.setLong(index++, version)
         ps.setArray(index++, versions)
-        ps.setObject(index++, partitionsInfo.partitionsVersion)
+        ps.setObject(index++, partitionsInfo.first)
         ps.addBatch()
     }
 
