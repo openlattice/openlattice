@@ -22,7 +22,6 @@
 package com.openlattice.graph
 
 import com.google.common.annotations.VisibleForTesting
-import com.google.common.base.Stopwatch
 import com.google.common.collect.ImmutableList
 import com.google.common.collect.Multimaps
 import com.google.common.collect.SetMultimap
@@ -34,7 +33,6 @@ import com.openlattice.data.WriteEvent
 import com.openlattice.data.storage.entityKeyIdColumns
 import com.openlattice.data.storage.getPartition
 import com.openlattice.data.storage.partitions.PartitionManager
-import com.openlattice.data.storage.partitions.PartitionsInfo
 import com.openlattice.data.storage.selectEntitySetWithCurrentVersionOfPropertyTypes
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.type.PropertyType
@@ -56,7 +54,6 @@ import org.slf4j.LoggerFactory
 import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.util.*
-import java.util.concurrent.TimeUnit
 import java.util.function.Function
 import java.util.function.Supplier
 import java.util.stream.Stream
@@ -80,19 +77,14 @@ class Graph(
     /* Create */
 
     override fun createEdges(keys: MutableSet<DataEdgeKey>): WriteEvent {
-        val sw = Stopwatch.createStarted()
-        val partitionsInfoByEntitySet = partitionManager.getEntitySetsPartitionsInfo(keys.flatMap { listOf( it.src, it.dst, it.edge ) }
+        val partitionsInfoByEntitySet = partitionManager.getEntitySetsPartitionsInfo(keys.flatMap { listOf(it.src, it.dst, it.edge) }
                 .map { it.entitySetId }.toSet())
                 .mapValues { it.value.partitionsVersion to it.value.partitions.toList() }
-
-        logger.info("GRAPH: loading partitions took {}", sw.elapsed(TimeUnit.MILLISECONDS))
 
         hds.connection.use { connection ->
             val ps = connection.prepareStatement(UPSERT_SQL)
             val version = System.currentTimeMillis()
             val versions = PostgresArrays.createLongArray(connection, ImmutableList.of(version))
-
-            sw.reset().start()
 
             ps.use {
                 keys.forEach { dataEdgeKey ->
@@ -100,14 +92,8 @@ class Graph(
                     bindColumnsForEdge(ps, IdType.DST, dataEdgeKey, version, versions, partitionsInfoByEntitySet)
                     bindColumnsForEdge(ps, IdType.EDGE, dataEdgeKey, version, versions, partitionsInfoByEntitySet)
                 }
-                logger.info("GRAPH: binding stuff took {}", sw.elapsed(TimeUnit.MILLISECONDS))
-                sw.reset().start()
 
-                val we = WriteEvent(version, ps.executeBatch().sum())
-
-                logger.info("GRAPH: query took {}", sw.elapsed(TimeUnit.MILLISECONDS))
-
-                return we
+                return WriteEvent(version, ps.executeBatch().sum())
             }
         }
     }

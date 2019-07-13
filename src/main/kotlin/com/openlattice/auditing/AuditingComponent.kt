@@ -23,8 +23,8 @@ package com.openlattice.auditing
 
 import com.codahale.metrics.annotation.Timed
 import com.dataloom.mappers.ObjectMappers
-import com.google.common.base.Stopwatch
-import com.google.common.collect.*
+import com.google.common.collect.ArrayListMultimap
+import com.google.common.collect.ImmutableMap
 import com.openlattice.data.DataEdge
 import com.openlattice.data.DataGraphManager
 import com.openlattice.data.EntityDataKey
@@ -71,13 +71,11 @@ interface AuditingComponent {
                     }
                     .map { (auditEntitySetConfiguration, entities) ->
                         val auditEntitySet = auditEntitySetConfiguration.auditRecordEntitySet
-                        val sw = Stopwatch.createStarted()
                         val (entityKeyIds, _) = getDataGraphService().createEntities(
                                 auditEntitySet!!,
                                 toMap(entities),
                                 auditingConfiguration.propertyTypes
                         )
-                        logger.info("AuditingComponent.recordEvents createEntities took {}", sw.elapsed())
 
                         if (auditEntitySetConfiguration.auditEdgeEntitySet != null) {
                             val auditEdgeEntitySet = auditEntitySetConfiguration.auditEdgeEntitySet
@@ -100,10 +98,8 @@ interface AuditingComponent {
                                             return@forEach
                                         }
                                     }
-                            sw.reset().start()
                             getDataGraphService()
                                     .createAssociations(lm, ImmutableMap.of(auditEdgeEntitySet, emptyMap()))
-                            logger.info("AuditingComponent.recordEvents createAssociations took {}", sw.elapsed())
 
                         }
                         entityKeyIds.size
