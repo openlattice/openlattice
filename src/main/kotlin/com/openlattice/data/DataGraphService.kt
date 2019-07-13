@@ -439,7 +439,7 @@ open class DataGraphService(
                     val entitySetId = it.key
 
                     // check entity types of associations before creation
-                    checkAssociationEntityTypes(entitySetId, it.value)
+                    // checkAssociationEntityTypes(entitySetId, it.value) TODO
 
                     val entities = it.value.map(DataEdge::getData)
                     val (ids, entityWrite) = createEntities(
@@ -592,11 +592,13 @@ open class DataGraphService(
         }
     }
 
+    // TODO improve perf
     private fun checkAssociationEntityTypes(associationEntitySetId: UUID, associations: List<DataEdge>) {
         val associationType = edmManager.getAssociationTypeByEntitySetId(associationEntitySetId)
         if (associationType.associationEntityType.id == edmManager.auditRecordEntitySetsManager.auditingTypes.auditingEdgeEntityTypeId) {
             return
         }
+
         associations.forEach {
             // ensure, that DataEdge src and dst entity types are part of src and dst entity types of AssociationType
             val srcEntityType = edmManager.getEntityTypeByEntitySetId(it.src.entitySetId)
