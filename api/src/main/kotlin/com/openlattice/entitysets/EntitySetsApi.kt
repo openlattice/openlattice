@@ -62,7 +62,7 @@ interface EntitySetsApi {
      * @return Iterable containing entity sets available to the calling user.
      */
     @GET(BASE)
-    fun getEntitySets(): Iterable<EntitySet>
+    fun getEntitySets(): Set<EntitySet>
 
     /**
      * Creates multiple entity sets if they do not exist.
