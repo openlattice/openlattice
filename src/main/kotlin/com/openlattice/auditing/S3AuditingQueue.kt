@@ -4,8 +4,10 @@ import com.amazonaws.services.s3.model.ListObjectsV2Request
 import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.services.s3.model.PutObjectRequest
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import com.google.common.collect.Queues
 import com.google.common.util.concurrent.MoreExecutors
+import com.hazelcast.com.fasterxml.jackson.core.type.TypeReference
 import com.openlattice.aws.newS3Client
 import com.openlattice.ids.HazelcastLongIdService
 import com.openlattice.ids.IdScopes
@@ -51,12 +53,21 @@ class S3AuditingQueue(
         return events.size
     }
 
-    fun getRecordedEvents(maxKeys : Int = 1000): List<AuditableEvent> {
-        val remainingKeys = maxKeys
-        while( remainingKeys > 1000 ) {
-            val req = ListObjectsV2Request().withBucketName(bucket)
+    fun getRecordedEvents(): List<AuditableEvent> {
+        //TODO: Need to make sure that auditable event is only queued up once from s3
+        
+
+        val objectListing = s3.listObjectsV2(ListObjectsV2Request().withBucketName(bucket) )
+
+        val objects : List<AuditableEvent> = objectListing.objectSummaries.flatMap { objSummary ->
+            mapper.readValue(s3.getObject( bucket, objSummary.key).objectContent)
         }
 
+        return objects
+    }
+
+    fun deleteIntegratedEvents( keys: List<String>) {
+        TODO("Implement deleting events after they are stored.")
     }
 
     private fun getId(): Long {

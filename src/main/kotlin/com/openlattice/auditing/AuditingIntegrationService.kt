@@ -9,10 +9,8 @@ import com.openlattice.data.DataEdge
 import com.openlattice.data.DataGraphManager
 import com.openlattice.data.EntityDataKey
 import com.openlattice.hazelcast.HazelcastQueue
-import com.openlattice.tasks.HazelcastFixedRateTask
 import java.util.*
 import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 import java.util.stream.Stream
 
 /**
@@ -23,54 +21,36 @@ class AuditingIntegrationService(
         hazelcastInstance: HazelcastInstance,
         private val ares: AuditRecordEntitySetsManager,
         private val dgm: DataGraphManager,
-        private val s3AuditingQueue: S3AuditingQueue
+        private val s3AuditingQueue: S3AuditingQueue,
+        private val mapper: ObjectMapper
 ) {
-    val auditingQueue = hazelcastInstance.getQueue<AuditableEvent>( HazelcastQueue.AUDITING.name)
+    val auditingQueue = hazelcastInstance.getQueue<AuditableEvent>(HazelcastQueue.AUDITING.name)
     val integrationExecutor = MoreExecutors.listeningDecorator(Executors.newSingleThreadExecutor())
     val loadingExecutor = MoreExecutors.listeningDecorator(Executors.newSingleThreadExecutor())
 
-    val loadingWorker = executor.execute {
+    val loadingWorker = loadingExecutor.execute {
 
-        while(true) {
-            auditingQueue
+        while (true) {
+            var events = s3AuditingQueue.getRecordedEvents()
+            events.forEach(auditingQueue::put)
+            while (events.isNotEmpty()) {
+                events = s3AuditingQueue.getRecordedEvents()
+                events.forEach(auditingQueue::put)
+            }
         }
     }
-    val integrationWorker = executor.execute {
-        Stream.generate { s3 }
-    }
-    override fun getInitialDelay(): Long {
-        return 60
-    }
-
-    override fun getPeriod(): Long {
-        return 60
+    val integrationWorker = integrationExecutor.execute {
+        Stream.generate { auditingQueue.take() }
+                .parallel()
+                .forEach(::integrateEvent)
     }
 
-    override fun getTimeUnit(): TimeUnit {
-        return TimeUnit.SECONDS
-    }
-
-    override fun runTask() {
-        integrateEvents(getDependency().s3AuditingQueue.getRecordedEvents())
-    }
-
-    override fun getName(): String {
-        return "auditing-integration"
-    }
-
-    override fun getDependenciesClass(): Class<out AuditingIntegrationDependencies> {
-        return AuditingIntegrationDependencies::class.java
-    }
-
-    private fun integrateEvents(events: List<AuditableEvent>): Int {
-        val dependency = getDependency()
-        val ares = dependency.auditRecordEntitySetsManager
+    private fun integrateEvent(event: AuditableEvent): Int {
         val auditingConfiguration = ares.auditingTypes
-        val dgm = dependency.dataGraphManager
 
         return if (auditingConfiguration.isAuditingInitialized()) {
-            events
-                    .groupBy { ares.getActiveAuditEntitySetIds(it.aclKey, it.eventType) }
+            //TODO: Fix having to wrap in a list.
+            mapOf(ares.getActiveAuditEntitySetIds(event.aclKey, event.eventType) to listOf(event))
                     .filter { (auditEntitySetConfiguration, _) ->
                         auditEntitySetConfiguration.auditRecordEntitySet != null
                     }
@@ -78,7 +58,7 @@ class AuditingIntegrationService(
                         val auditEntitySet = auditEntitySetConfiguration.auditRecordEntitySet
                         val (entityKeyIds, _) = dgm.createEntities(
                                 auditEntitySet!!,
-                                toMap(ares, dependency.mapper, entities),
+                                toMap(entities),
                                 auditingConfiguration.propertyTypes
                         )
 
@@ -113,11 +93,7 @@ class AuditingIntegrationService(
         }
     }
 
-    private fun toMap(
-            ares: AuditRecordEntitySetsManager,
-            mapper: ObjectMapper,
-            events: List<AuditableEvent>
-    ): List<Map<UUID, Set<Any>>> {
+    private fun toMap(events: List<AuditableEvent>): List<Map<UUID, Set<Any>>> {
         val auditingConfiguration = ares.auditingTypes
         return events.map { event ->
             val eventEntity = mutableMapOf<UUID, Set<Any>>()
