@@ -47,8 +47,8 @@ interface AuditingComponent {
         const val MAX_ENTITY_KEY_IDS_PER_EVENT = 100
     }
 
-    fun getAuditRecordEntitySetsManager(): AuditRecordEntitySetsManager
-    fun getDataGraphService(): DataGraphManager
+    fun getS3AuditingQueue() : S3AuditingQueue
+
 
     @Timed
     @JvmDefault
@@ -59,88 +59,7 @@ interface AuditingComponent {
     @Timed
     @JvmDefault
     fun recordEvents(events: List<AuditableEvent>): Int {
-
-        val ares = getAuditRecordEntitySetsManager()
-        val auditingConfiguration = ares.auditingTypes
-
-        return if (auditingConfiguration.isAuditingInitialized()) {
-            events
-                    .groupBy { ares.getActiveAuditEntitySetIds(it.aclKey, it.eventType) }
-                    .filter { (auditEntitySetConfiguration, _) ->
-                        auditEntitySetConfiguration.auditRecordEntitySet != null
-                    }
-                    .map { (auditEntitySetConfiguration, entities) ->
-                        val auditEntitySet = auditEntitySetConfiguration.auditRecordEntitySet
-                        val (entityKeyIds, _) = getDataGraphService().createEntities(
-                                auditEntitySet!!,
-                                toMap(entities),
-                                auditingConfiguration.propertyTypes
-                        )
-
-                        if (auditEntitySetConfiguration.auditEdgeEntitySet != null) {
-                            val auditEdgeEntitySet = auditEntitySetConfiguration.auditEdgeEntitySet
-
-                            val lm = ArrayListMultimap.create<UUID, DataEdge>()
-                            entityKeyIds.asSequence().zip(entities.asSequence())
-                                    .filter { it.second.entities.isPresent }
-                                    .forEach { (auditEntityKeyId, ae) ->
-                                        val aeEntitySetId = ae.aclKey[0]
-                                        val aeEntityKeyIds = ae.entities.get()
-                                        aeEntityKeyIds.forEach { id ->
-                                            lm.put(
-                                                    auditEdgeEntitySet,
-                                                    DataEdge(
-                                                            EntityDataKey(aeEntitySetId, id),
-                                                            EntityDataKey(auditEntitySet, auditEntityKeyId),
-                                                            ImmutableMap.of()
-                                                    )
-                                            )
-                                            return@forEach
-                                        }
-                                    }
-                            getDataGraphService()
-                                    .createAssociations(lm, ImmutableMap.of(auditEdgeEntitySet, emptyMap()))
-
-                        }
-                        entityKeyIds.size
-                    }.sum()
-        } else {
-            0
-        }
-    }
-
-    private fun toMap(events: List<AuditableEvent>): List<Map<UUID, Set<Any>>> {
-        val auditingConfiguration = getAuditRecordEntitySetsManager().auditingTypes
-        return events.map { event ->
-            val eventEntity = mutableMapOf<UUID, Set<Any>>()
-
-            eventEntity[auditingConfiguration.getPropertyTypeId(
-                    AuditProperty.ACL_KEY
-            )] = setOf(event.aclKey.index)
-
-            event.entities.ifPresent {
-                eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.ENTITIES)] = it
-            }
-
-            event.operationId.ifPresent {
-                eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.OPERATION_ID)] = setOf(it)
-            }
-
-            eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.ID)] = setOf(
-                    event.aclKey.last().toString()
-            ) //ID of securable object
-            eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.PRINCIPAL)] = setOf(
-                    event.principal.toString()
-            )
-            eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.EVENT_TYPE)] = setOf(event.eventType.name)
-            eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.DESCRIPTION)] = setOf(event.description)
-            eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.DATA)] = setOf(
-                    mapper.writeValueAsString(event.data)
-            )
-            eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.TIMESTAMP)] = setOf(event.timestamp)
-
-            return@map eventEntity
-        }
+        return getS3AuditingQueue().recordEvents(events)
     }
 
 }
