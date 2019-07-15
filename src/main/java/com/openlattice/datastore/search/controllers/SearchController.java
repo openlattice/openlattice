@@ -25,9 +25,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicates;
 import com.google.common.collect.*;
 import com.openlattice.auditing.AuditEventType;
-import com.openlattice.auditing.AuditRecordEntitySetsManager;
 import com.openlattice.auditing.AuditableEvent;
 import com.openlattice.auditing.AuditingComponent;
+import com.openlattice.auditing.S3AuditingService;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.authorization.util.AuthorizationUtils;
@@ -85,7 +85,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
     private ObjectMapper mapper;
 
     @Inject
-    private AuditRecordEntitySetsManager auditRecordEntitySetsManager;
+    private S3AuditingService s3AuditingService;
 
     @Inject
     private DataGraphManager dgm;
@@ -684,23 +684,15 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
         return spm.getPrincipal( Principals.getCurrentUser().getId() ).getId();
     }
 
+    @NotNull @Override public S3AuditingService getS3AuditingService() {
+        return null;
+    }
+
     private static Set<UUID> getEntityKeyIdsFromSearchResult( DataSearchResult searchResult ) {
         return searchResult.getHits().stream().map( SearchController::getEntityKeyId ).collect( Collectors.toSet() );
     }
 
     private static UUID getEntityKeyId( Map<FullQualifiedName, Set<Object>> entity ) {
         return UUID.fromString( entity.get( ID_FQN ).iterator().next().toString() );
-    }
-
-    @NotNull
-    @Override
-    public AuditRecordEntitySetsManager getAuditRecordEntitySetsManager() {
-        return auditRecordEntitySetsManager;
-    }
-
-    @NotNull
-    @Override
-    public DataGraphManager getDataGraphService() {
-        return dgm;
     }
 }
