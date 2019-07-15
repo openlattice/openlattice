@@ -1164,7 +1164,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
 
         return new WriteEvent( maxVersion, numUpdates );
     }
-    
+
     @NotNull @Override public S3AuditingService getS3AuditingService() {
         return null;
     }
