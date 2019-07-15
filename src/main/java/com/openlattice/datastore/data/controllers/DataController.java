@@ -1166,7 +1166,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     }
 
     @NotNull @Override public S3AuditingService getS3AuditingService() {
-        return null;
+        return s3AuditingService;
     }
 
     /**
