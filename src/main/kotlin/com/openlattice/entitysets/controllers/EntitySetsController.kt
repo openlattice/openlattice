@@ -25,10 +25,7 @@ import com.google.common.collect.ImmutableMap
 import com.google.common.collect.ImmutableSet
 import com.google.common.collect.Lists
 import com.google.common.collect.Maps
-import com.openlattice.auditing.AuditEventType
-import com.openlattice.auditing.AuditRecordEntitySetsManager
-import com.openlattice.auditing.AuditableEvent
-import com.openlattice.auditing.AuditingComponent
+import com.openlattice.auditing.*
 import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.authorization.util.AuthorizationUtils
@@ -39,7 +36,6 @@ import com.openlattice.controllers.util.ApiExceptions
 import com.openlattice.data.DataGraphManager
 import com.openlattice.data.WriteEvent
 import com.openlattice.datastore.services.EdmManager
-import com.openlattice.edm.EdmConstants
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.edm.set.EntitySetFlag
@@ -58,7 +54,6 @@ import com.openlattice.entitysets.EntitySetsApi.Companion.PROPERTY_TYPE_ID
 import com.openlattice.entitysets.EntitySetsApi.Companion.PROPERTY_TYPE_ID_PATH
 import com.openlattice.linking.util.PersonProperties
 import com.openlattice.organizations.roles.SecurePrincipalsManager
-import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.*
 import java.time.OffsetDateTime
@@ -73,19 +68,15 @@ constructor(
         private val authorizations: AuthorizationManager,
         private val edmManager: EdmManager,
         private val aresManager: AuditRecordEntitySetsManager,
+        private val s3AuditingService: S3AuditingService,
         private val dgm: DataGraphManager,
         private val spm: SecurePrincipalsManager,
         private val authzHelper: EdmAuthorizationHelper,
         private val securableObjectTypes: SecurableObjectResolveTypeService
 ) : EntitySetsApi, AuthorizingComponent, AuditingComponent {
 
-
-    override fun getDataGraphService(): DataGraphManager {
-        return dgm
-    }
-
-    override fun getAuditRecordEntitySetsManager(): AuditRecordEntitySetsManager {
-        return aresManager
+    override fun getS3AuditingService(): S3AuditingService {
+        return s3AuditingService
     }
 
     @Timed

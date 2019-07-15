@@ -43,7 +43,6 @@ class AuditController : AuditApi, AuditingComponent {
 
     @Inject
     private lateinit var s3AuditingService: S3AuditingService
-    
     override fun getS3AuditingService(): S3AuditingService {
         return s3AuditingService
     }
