@@ -685,7 +685,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
     }
 
     @NotNull @Override public S3AuditingService getS3AuditingService() {
-        return null;
+        return s3AuditingService;
     }
 
     private static Set<UUID> getEntityKeyIdsFromSearchResult( DataSearchResult searchResult ) {
