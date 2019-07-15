@@ -33,5 +33,6 @@ data class AuditingConfiguration(
         @JsonProperty("entity-type") val entityTypeFqn: String,
         @JsonProperty("edge-entity-type") val edgeEntityTypeFqn: String,
         @JsonProperty("fqns") val fqns: Map<AuditProperty, String>,
-        @JsonProperty( "aws") val awsS3ClientConfiguration: AwsS3ClientConfiguration
+        @JsonProperty("aws") val awsS3ClientConfiguration: AwsS3ClientConfiguration,
+        @JsonProperty("partitions") val partitions: Int = 257
 )

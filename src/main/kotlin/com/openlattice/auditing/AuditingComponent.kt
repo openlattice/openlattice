@@ -23,13 +23,7 @@ package com.openlattice.auditing
 
 import com.codahale.metrics.annotation.Timed
 import com.dataloom.mappers.ObjectMappers
-import com.google.common.collect.ArrayListMultimap
-import com.google.common.collect.ImmutableMap
-import com.openlattice.data.DataEdge
-import com.openlattice.data.DataGraphManager
-import com.openlattice.data.EntityDataKey
 import org.slf4j.LoggerFactory
-import java.util.*
 
 private val mapper = ObjectMappers.newJsonMapper()
 
@@ -47,7 +41,7 @@ interface AuditingComponent {
         const val MAX_ENTITY_KEY_IDS_PER_EVENT = 100
     }
 
-    fun getS3AuditingQueue() : S3AuditingQueue
+    fun getS3AuditingService() : S3AuditingService
 
 
     @Timed
@@ -59,7 +53,7 @@ interface AuditingComponent {
     @Timed
     @JvmDefault
     fun recordEvents(events: List<AuditableEvent>): Int {
-        return getS3AuditingQueue().recordEvents(events)
+        return getS3AuditingService().recordEvents(events)
     }
 
 }

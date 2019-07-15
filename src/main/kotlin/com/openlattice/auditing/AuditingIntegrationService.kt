@@ -21,7 +21,7 @@ class AuditingIntegrationService(
         hazelcastInstance: HazelcastInstance,
         private val ares: AuditRecordEntitySetsManager,
         private val dgm: DataGraphManager,
-        private val s3AuditingQueue: S3AuditingQueue,
+        private val s3AuditingService: S3AuditingService,
         private val mapper: ObjectMapper
 ) {
     val auditingQueue = hazelcastInstance.getQueue<AuditableEvent>(HazelcastQueue.AUDITING.name)
@@ -31,10 +31,10 @@ class AuditingIntegrationService(
     val loadingWorker = loadingExecutor.execute {
 
         while (true) {
-            var events = s3AuditingQueue.getRecordedEvents()
+            var events = s3AuditingService.getRecordedEvents()
             events.forEach(auditingQueue::put)
             while (events.isNotEmpty()) {
-                events = s3AuditingQueue.getRecordedEvents()
+                events = s3AuditingService.getRecordedEvents()
                 events.forEach(auditingQueue::put)
             }
         }
@@ -42,7 +42,7 @@ class AuditingIntegrationService(
     val integrationWorker = integrationExecutor.execute {
         Stream.generate { auditingQueue.take() }
                 .parallel()
-                .forEach(::integrateEvent)
+                .forEach { integrateEvent(it) }
     }
 
     private fun integrateEvent(event: AuditableEvent): Int {

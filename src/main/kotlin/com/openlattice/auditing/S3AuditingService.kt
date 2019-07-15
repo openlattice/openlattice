@@ -7,7 +7,6 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.google.common.collect.Queues
 import com.google.common.util.concurrent.MoreExecutors
-import com.hazelcast.com.fasterxml.jackson.core.type.TypeReference
 import com.openlattice.aws.newS3Client
 import com.openlattice.ids.HazelcastLongIdService
 import com.openlattice.ids.IdScopes
@@ -20,12 +19,13 @@ private const val LONG_IDS_BATCH_SIZE = 8192
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-class S3AuditingQueue(
+class S3AuditingService(
         auditingConfiguration: AuditingConfiguration,
         private val longIdService: HazelcastLongIdService,
         private val mapper: ObjectMapper
 
 ) {
+    private val partitions = auditingConfiguration.partitions
     private val bucket = auditingConfiguration.awsS3ClientConfiguration.bucket
     private val longIdsQueue = Queues.newArrayBlockingQueue<Long>(LONG_IDS_BATCH_SIZE)
     private val executorService = MoreExecutors.listeningDecorator(Executors.newSingleThreadExecutor())
@@ -48,7 +48,8 @@ class S3AuditingQueue(
         metadata.contentLength = eventsInputStream.available().toLong()
         metadata.contentType = MediaType.APPLICATION_JSON_VALUE
 
-        val key = "${System.currentTimeMillis()}/event-${getId()}.json"
+        val partition = getId() % partitions.toLong()
+        val key = "$partition/${System.currentTimeMillis()}/event-${getId()}.json"
         s3.putObject(PutObjectRequest(bucket, key,eventsInputStream, metadata))
         return events.size
     }
@@ -60,7 +61,8 @@ class S3AuditingQueue(
         val objectListing = s3.listObjectsV2(ListObjectsV2Request().withBucketName(bucket) )
 
         val objects : List<AuditableEvent> = objectListing.objectSummaries.flatMap { objSummary ->
-            mapper.readValue(s3.getObject( bucket, objSummary.key).objectContent)
+            val someObjects: List<AuditableEvent>  = mapper.readValue(s3.getObject( bucket, objSummary.key).objectContent)
+            return@flatMap someObjects
         }
 
         return objects
