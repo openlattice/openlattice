@@ -119,7 +119,7 @@ public class EntityType extends AbstractSchemaAssociatedSecurableType {
                 schemas,
                 key,
                 properties,
-                Optional.empty(),
+                Optional.of( propertyTags ),
                 baseType,
                 category,
                 shards );
