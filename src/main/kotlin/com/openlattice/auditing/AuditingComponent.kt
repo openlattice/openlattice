@@ -23,10 +23,12 @@ package com.openlattice.auditing
 
 import com.codahale.metrics.annotation.Timed
 import com.dataloom.mappers.ObjectMappers
-import com.google.common.collect.*
+import com.google.common.collect.ArrayListMultimap
+import com.google.common.collect.ImmutableMap
 import com.openlattice.data.DataEdge
 import com.openlattice.data.DataGraphManager
 import com.openlattice.data.EntityDataKey
+import org.slf4j.LoggerFactory
 import java.util.*
 
 private val mapper = ObjectMappers.newJsonMapper()
@@ -36,6 +38,8 @@ private val mapper = ObjectMappers.newJsonMapper()
  * This class makes it easy for other classes to implement auditing by passing a instance of the auditable event class
  * with the appropriate data configured.
  */
+
+private val logger = LoggerFactory.getLogger(AuditingComponent::class.java)
 
 interface AuditingComponent {
 
@@ -96,6 +100,7 @@ interface AuditingComponent {
                                     }
                             getDataGraphService()
                                     .createAssociations(lm, ImmutableMap.of(auditEdgeEntitySet, emptyMap()))
+
                         }
                         entityKeyIds.size
                     }.sum()
