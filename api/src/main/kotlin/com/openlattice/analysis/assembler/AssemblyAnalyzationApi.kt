@@ -31,6 +31,6 @@ const val SIMPLE_AGGREGATION = "/simple-aggregation"
 interface AssemblyAnalyzationApi {
 
     @POST(BASE + SIMPLE_AGGREGATION)
-    fun getSimpleAssemblyAggregates(@Body assemblyAggregationFilter: AssemblyAggregationFilter): Iterable<Map<String, Any>>
+    fun getSimpleAssemblyAggregates(@Body assemblyAggregationFilter: AssemblyAggregationFilter): Iterable<Map<String, Any?>>
 
 }
