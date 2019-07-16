@@ -47,7 +47,7 @@ class AssemblerQueryService(private val edmService: EdmManager) {
                           srcAggregates: Map<String, List<AggregationType>>, edgeAggregates: Map<String, List<AggregationType>>, dstAggregates: Map<String, List<AggregationType>>,
                           calculations: Set<Calculation>,
                           srcFilters: Map<String, List<Filter>>, edgeFilters: Map<String, List<Filter>>, dstFilters: Map<String, List<Filter>>
-    ): Iterable<Map<String, Any>> {
+    ): Iterable<Map<String, Any?>> {
 
         // Groupings
 
