@@ -20,7 +20,7 @@
  */
 package com.openlattice.postgres.tasks
 
-import com.openlattice.edm.tasks.EdmSyncInitializerTask
+import com.openlattice.ids.tasks.IdConstantsReservationTask
 import com.openlattice.postgres.PostgresMetaDataProperties
 import com.openlattice.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.Task
@@ -38,7 +38,7 @@ class PostgresMetaDataPropertiesInitializationTask
     }
 
     override fun after(): Set<Class<out HazelcastInitializationTask<*>>> {
-        return setOf(EdmSyncInitializerTask::class.java)
+        return setOf(IdConstantsReservationTask::class.java)
     }
 
     override fun getName(): String {
