@@ -20,7 +20,7 @@
  */
 package com.openlattice.postgres.tasks
 
-import com.openlattice.edm.tasks.EdmSyncInitializerTask
+import com.openlattice.ids.tasks.IdConstantsReservationTask
 import com.openlattice.postgres.PostgresMetaDataProperties
 import com.openlattice.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.Task
@@ -33,12 +33,15 @@ class PostgresMetaDataPropertiesInitializationTask
 
     override fun initialize(dependencies: PostgresMetaDataPropertiesInitializationDependency) {
         PostgresMetaDataProperties.values().forEach {
-            dependencies.edmManager.createPropertyTypeIfNotExists(it.propertyType)
+            // only create property type if it wasn't created already by edm sync task
+            if(!dependencies.edmManager.checkPropertyTypeExists(it.propertyType.id)) {
+                dependencies.edmManager.createPropertyTypeIfNotExists(it.propertyType)
+            }
         }
     }
 
     override fun after(): Set<Class<out HazelcastInitializationTask<*>>> {
-        return setOf(EdmSyncInitializerTask::class.java)
+        return setOf(IdConstantsReservationTask::class.java)
     }
 
     override fun getName(): String {
