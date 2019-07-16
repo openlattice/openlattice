@@ -33,7 +33,10 @@ class PostgresMetaDataPropertiesInitializationTask
 
     override fun initialize(dependencies: PostgresMetaDataPropertiesInitializationDependency) {
         PostgresMetaDataProperties.values().forEach {
-            dependencies.edmManager.createPropertyTypeIfNotExists(it.propertyType)
+            // only create property type if it wasn't created already by edm sync task
+            if(!dependencies.edmManager.checkPropertyTypeExists(it.propertyType.id)) {
+                dependencies.edmManager.createPropertyTypeIfNotExists(it.propertyType)
+            }
         }
     }
 
