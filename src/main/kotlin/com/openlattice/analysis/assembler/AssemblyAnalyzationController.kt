@@ -61,7 +61,7 @@ class AssemblyAnalyzationController : AssemblyAnalyzationApi, AuthorizingCompone
     @PostMapping(value = [SIMPLE_AGGREGATION], produces = [MediaType.APPLICATION_JSON_VALUE])
     override fun getSimpleAssemblyAggregates(
             @RequestBody assemblyAggregationFilter: AssemblyAggregationFilter
-    ): Iterable<Map<String, Any>> {
+    ): Iterable<Map<String, Any?>> {
         val principal = PostgresRoles.buildPostgresUsername(Principals.getCurrentSecurablePrincipal())
         val account = MaterializedViewAccount(principal, dbCredService.getDbCredential(principal))
 
@@ -115,7 +115,7 @@ class AssemblyAnalyzationController : AssemblyAnalyzationApi, AuthorizingCompone
 
 
         val connection = assemblerConnectionManager.connect(dbName, account).connection
-        val asd = assemblerQueryService.simpleAggregation(
+        val aggregationValues = assemblerQueryService.simpleAggregation(
                 connection,
                 srcEntitySetName, edgeEntitySetName, dstEntitySetName,
                 srcGroupColumns, edgeGroupColumns, dstGroupColumns,
@@ -123,8 +123,7 @@ class AssemblyAnalyzationController : AssemblyAnalyzationApi, AuthorizingCompone
                 assemblyAggregationFilter.customCalculations,
                 srcFilters, edgeFilters, dstFilters)
 
-        return asd
-
+        return aggregationValues
     }
 
     override fun getAuthorizationManager(): AuthorizationManager {
