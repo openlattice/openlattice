@@ -41,6 +41,8 @@ import com.openlattice.edm.type.PropertyType;
 import java.util.*;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
+import javax.annotation.Nullable;
+
 public interface EdmManager {
     void clearTables();
 
@@ -161,6 +163,8 @@ public interface EdmManager {
     AssociationType getAssociationType( FullQualifiedName typeFqn );
 
     EntityType getEntityType( FullQualifiedName type );
+
+    @Nullable EntityType getEntityTypeSafe( FullQualifiedName typeFqn );
 
     EntitySet getEntitySet( String entitySetName );
 
