@@ -54,7 +54,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION;
-import static com.openlattice.postgres.DataTables.ID_FQN;
+import static com.openlattice.edm.EdmConstants.ID_FQN;
 
 @RestController
 @RequestMapping( SearchApi.CONTROLLER )
@@ -153,7 +153,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
         DataSearchResult results = new DataSearchResult( 0, Lists.newArrayList() );
 
         // if user has read access on all normal entity sets
-        if ( authorizedEntitySetIds.size() == searchConstraints.getEntitySetIds().length) {
+        if ( authorizedEntitySetIds.size() == searchConstraints.getEntitySetIds().length ) {
             final var authorizedPropertyTypesByEntitySet = authorizationsHelper.getAuthorizedPropertiesOnEntitySets(
                     authorizedEntitySetIds, READ_PERMISSION, Principals.getCurrentPrincipals() );
 
@@ -176,6 +176,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
         }
 
         recordEvents( searchEvents );
+
         return results;
     }
 
@@ -206,7 +207,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
 
         return searchEntitySetData(
                 SearchConstraints.simpleSearchConstraints(
-                        new UUID[]{ entitySetId },
+                        new UUID[] { entitySetId },
                         searchTerm.getStart(),
                         searchTerm.getMaxHits(),
                         searchTerm.getSearchTerm(),
@@ -226,7 +227,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
 
         return searchEntitySetData(
                 SearchConstraints.advancedSearchConstraints(
-                        new UUID[]{ entitySetId },
+                        new UUID[] { entitySetId },
                         search.getStart(),
                         search.getMaxHits(),
                         search.getSearches() )
@@ -574,8 +575,9 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
                                         EnumSet.of( Permission.READ ) ) )
                         .collect( Collectors.toSet() );
                 if ( authorizedEntitySets.size() != es.getLinkedEntitySets().size() ) {
-                    logger.warn( "Read authorization failed some of the normal entity sets of linking entity set or it " +
-                            "is empty." );
+                    logger.warn(
+                            "Read authorization failed some of the normal entity sets of linking entity set or it " +
+                                    "is empty." );
                 } else {
                     result = searchService
                             .executeLinkingEntityNeighborIdsSearch( authorizedEntitySets, filter, principals );
@@ -710,7 +712,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
         return searchResult.getHits().stream().map( SearchController::getEntityKeyId ).collect( Collectors.toSet() );
     }
 
-    private static UUID getEntityKeyId( SetMultimap<FullQualifiedName, Object> entity ) {
+    private static UUID getEntityKeyId( Map<FullQualifiedName, Set<Object>> entity ) {
         return UUID.fromString( entity.get( ID_FQN ).iterator().next().toString() );
     }
 

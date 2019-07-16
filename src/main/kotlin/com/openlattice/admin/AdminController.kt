@@ -3,7 +3,6 @@ package com.openlattice.admin
 import com.codahale.metrics.annotation.Timed
 import com.google.common.collect.Iterables
 import com.hazelcast.core.HazelcastInstance
-import com.openlattice.auditing.AuditRecordEntitySetsManager
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
 import com.openlattice.authorization.Principal
@@ -13,8 +12,9 @@ import com.openlattice.data.storage.selectEntitySetWithCurrentVersionOfPropertyT
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.PostgresEdmManager
 import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.notifications.sms.SmsEntitySetInformation
+import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.postgres.DataTables.quote
-import org.apache.olingo.commons.api.edm.EdmPrimitiveType
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType
@@ -32,9 +32,6 @@ class AdminController : AdminApi, AuthorizingComponent {
     }
 
     @Inject
-    private lateinit var auditRecordEntitySetsManager: AuditRecordEntitySetsManager
-
-    @Inject
     private lateinit var authorizationManager: AuthorizationManager
 
     @Inject
@@ -45,6 +42,9 @@ class AdminController : AdminApi, AuthorizingComponent {
 
     @Inject
     private lateinit var edm: EdmManager
+
+    @Inject
+    private lateinit var organizations: HazelcastOrganizationService
 
     @GetMapping(value = [SQL + ID_PATH], produces = [MediaType.APPLICATION_JSON_VALUE])
     override fun getEntitySetSql(
@@ -136,6 +136,17 @@ class AdminController : AdminApi, AuthorizingComponent {
     override fun countEntitySetsOfEntityTypes(@RequestBody entityTypeIds: Set<UUID>): Map<UUID, Long> {
         ensureAdminAccess()
         return postgresEdmManager.countEntitySetsOfEntityTypes(entityTypeIds)
+    }
+
+    @Timed
+    @PostMapping(value = [ID_PATH + PHONE], consumes = [MediaType.TEXT_PLAIN_VALUE])
+    override// Hopefully spring is in the frameworks that accepts plain quoted string as a valid value.
+    fun setOrganizationEntitySetInformation(
+            @PathVariable(ID) organizationId: UUID,
+            @RequestBody entitySetInformationList: List<SmsEntitySetInformation>): Int? {
+        ensureAdminAccess()
+        organizations.setSmsEntitySetInformation(entitySetInformationList)
+        return entitySetInformationList.size
     }
 
     override fun getAuthorizationManager(): AuthorizationManager {

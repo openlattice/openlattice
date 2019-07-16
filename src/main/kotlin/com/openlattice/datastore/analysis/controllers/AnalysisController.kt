@@ -37,9 +37,8 @@ import com.openlattice.data.DataGraphManager
 import com.openlattice.data.requests.FileType
 import com.openlattice.web.mediatypes.CustomMediaType
 import com.openlattice.datastore.services.EdmService
-import com.openlattice.edm.EntitySet
-import com.openlattice.postgres.DataTables.COUNT_FQN
-import com.openlattice.postgres.DataTables.ID_FQN
+import com.openlattice.edm.EdmConstants.Companion.COUNT_FQN
+import com.openlattice.edm.EdmConstants.Companion.ID_FQN
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.*

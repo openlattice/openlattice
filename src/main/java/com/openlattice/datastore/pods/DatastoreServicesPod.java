@@ -24,6 +24,7 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.codahale.metrics.MetricRegistry;
 import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.geekbeast.hazelcast.HazelcastClientProvider;
 import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
@@ -42,13 +43,17 @@ import com.openlattice.collections.CollectionsManager;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.DataGraphService;
-import com.openlattice.data.EntityDatastore;
 import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.ids.PostgresEntityKeyIdService;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.openlattice.data.storage.*;
+import com.openlattice.data.storage.aws.AwsDataSinkService;
+import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.datastore.apps.services.AppService;
-import com.openlattice.datastore.services.*;
+import com.openlattice.datastore.services.DatastoreConductorElasticsearchApi;
+import com.openlattice.datastore.services.EdmManager;
+import com.openlattice.datastore.services.EdmService;
+import com.openlattice.datastore.services.SyncTicketService;
 import com.openlattice.directory.UserDirectoryService;
 import com.openlattice.edm.PostgresEdmManager;
 import com.openlattice.edm.properties.PostgresTypeManager;
@@ -64,6 +69,7 @@ import com.openlattice.ids.HazelcastIdGenerationService;
 import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.linking.PostgresLinkingFeedbackService;
 import com.openlattice.linking.graph.PostgresLinkingQueryService;
+import com.openlattice.notifications.sms.PhoneNumberService;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
@@ -132,6 +138,9 @@ public class DatastoreServicesPod {
     @Inject
     private MetricRegistry metricRegistry;
 
+    @Inject
+    private HazelcastClientProvider hazelcastClientProvider;
+
     @Bean
     public PostgresUserApi pgUserApi() {
         return jdbi.onDemand( PostgresUserApi.class );
@@ -194,6 +203,10 @@ public class DatastoreServicesPod {
         return new PostgresTypeManager( hikariDataSource );
     }
 
+    @Bean PartitionManager partitionManager() {
+        return new PartitionManager( hazelcastInstance, hikariDataSource );
+    }
+
     @Bean
     public EdmManager dataModelService() {
         return new EdmService(
@@ -205,6 +218,7 @@ public class DatastoreServicesPod {
                 entityTypeManager(),
                 schemaManager(),
                 auditingConfiguration,
+                partitionManager(),
                 assembler() );
     }
 
@@ -219,20 +233,13 @@ public class DatastoreServicesPod {
     }
 
     @Bean
-    public ODataStorageService odataStorageService() {
-        return new ODataStorageService(
-                hazelcastInstance,
-                dataModelService() );
-    }
-
-    @Bean
     public IndexingMetadataManager postgresDataManager() {
         return new IndexingMetadataManager( hikariDataSource );
     }
 
     @Bean
     public EntityDatastore entityDatastore() {
-        return new HazelcastEntityDatastore( idService(),
+        return new PostgresEntityDatastore( idService(),
                 postgresDataManager(),
                 dataQueryService(),
                 dataModelService(),
@@ -263,12 +270,19 @@ public class DatastoreServicesPod {
     }
 
     @Bean
+    public PhoneNumberService phoneNumberService() {
+        return new PhoneNumberService( hazelcastInstance );
+    }
+
+    @Bean
     public HazelcastOrganizationService organizationsManager() {
         return new HazelcastOrganizationService(
                 hazelcastInstance,
                 aclKeyReservationService(),
                 authorizationManager(),
                 principalService(),
+                phoneNumberService(),
+                partitionManager(),
                 assembler() );
     }
 
@@ -313,17 +327,21 @@ public class DatastoreServicesPod {
 
     @Bean
     public GraphService graphApi() {
-        return new Graph( hikariDataSource, dataModelService() );
+        return new Graph( hikariDataSource, dataModelService(), partitionManager() );
     }
 
     @Bean
     public HazelcastIdGenerationService idGenerationService() {
-        return new HazelcastIdGenerationService( hazelcastInstance );
+        return new HazelcastIdGenerationService( hazelcastClientProvider );
     }
 
     @Bean
     public EntityKeyIdService idService() {
-        return new PostgresEntityKeyIdService( hazelcastInstance, executor, hikariDataSource, idGenerationService() );
+        return new PostgresEntityKeyIdService( hazelcastClientProvider,
+                executor,
+                hikariDataSource,
+                idGenerationService(),
+                partitionManager() );
     }
 
     @Bean
@@ -377,7 +395,10 @@ public class DatastoreServicesPod {
 
     @Bean
     public PostgresEntityDataQueryService dataQueryService() {
-        return new PostgresEntityDataQueryService( hikariDataSource, byteBlobDataManager );
+        return new PostgresEntityDataQueryService(
+                hikariDataSource,
+                byteBlobDataManager,
+                partitionManager() );
     }
 
     @Bean
@@ -392,7 +413,6 @@ public class DatastoreServicesPod {
                 eventBus,
                 metricRegistry );
     }
-
 
     @Bean
     public AssemblerQueryService assemblerQueryService() {
@@ -409,7 +429,7 @@ public class DatastoreServicesPod {
     }
 
     @Bean AwsDataSinkService awsDataSinkService() {
-        return new AwsDataSinkService( byteBlobDataManager, hikariDataSource );
+        return new AwsDataSinkService( partitionManager(), byteBlobDataManager, hikariDataSource );
     }
 
     @Bean
