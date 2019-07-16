@@ -122,7 +122,7 @@ class AssemblerConnectionManager(
             "${(jdbcUrl as String).removeSuffix(
                     "/"
             )}/$dbname" + if (assemblerConfiguration.ssl) {
-                "?ssl=true"
+                "?sslmode=require"
             } else {
                 ""
             }
@@ -172,7 +172,7 @@ class AssemblerConnectionManager(
 
     fun addMembersToOrganization(dbName: String, dataSource: HikariDataSource, members: Set<Principal>) {
         logger.info("Configuring members for organization database {}", dbName)
-        members
+        val validUserPrincipals = members
                 .filter {
                     it.id != SystemRole.OPENLATTICE.principal.id && it.id != SystemRole.ADMIN.principal.id
                 }
@@ -183,28 +183,31 @@ class AssemblerConnectionManager(
                     }
                     return@filter principalExists
                 } //There are some bad principals in the member list some how-- probably from testing.
-                .forEach { principal ->
-                    val securablePrincipal = securePrincipalsManager.getPrincipal(principal.id)
-                    configureUserInDatabase(
-                            dataSource,
-                            dbName,
-                            buildPostgresUsername(securablePrincipal)
-                    )
-                }
+
+        val securablePrincipalsToAdd = securePrincipalsManager.getSecurablePrincipals(validUserPrincipals)
+        configureNewUsersInDatabase(dbName, dataSource, securablePrincipalsToAdd)
     }
 
-    fun removeMembersFromOrganization(dbName: String, dataSource: HikariDataSource, members: Set<Principal>) {
-        members.filter { it.id != SystemRole.OPENLATTICE.principal.id && it.id != SystemRole.ADMIN.principal.id }
-                .filter {
-                    securePrincipalsManager.principalExists(it)
-                } //There are some bad principals in the member list some how-- probably from testing.
-                .forEach { principal ->
-                    revokeConnectAndSchemaUsage(
-                            dataSource,
-                            dbName,
-                            buildPostgresUsername(securePrincipalsManager.getPrincipal(principal.id))
-                    )
-                }
+    fun configureNewUsersInDatabase(
+            dbName: String,
+            dataSource: HikariDataSource,
+            principals: Collection<SecurablePrincipal>
+    ) {
+        if (principals.isNotEmpty()) {
+            val userNames = principals.map { quote(buildPostgresUsername(it)) }
+            configureUsersInDatabase(dataSource, dbName, userNames)
+        }
+    }
+
+    fun removeMembersFromOrganization(
+            dbName: String,
+            dataSource: HikariDataSource,
+            principals: Collection<SecurablePrincipal>
+    ) {
+        if (principals.isNotEmpty()) {
+            val userNames = principals.map { quote(buildPostgresUsername(it)) }
+            revokeConnectAndSchemaUsage(dataSource, dbName, userNames)
+        }
     }
 
     private fun createOrganizationDatabase(organizationId: UUID, dbname: String) {
@@ -291,7 +294,7 @@ class AssemblerConnectionManager(
                     val clause = entitySetIds.joinToString { entitySetId -> "'$entitySetId'" }
 
                     val tableName = "$MATERIALIZED_VIEWS_SCHEMA.${EDGES.name}"
-                    stmt.execute("DROP MATERIALIZED VIEW IF EXISTS $tableName")
+                    stmt.execute("DROP MATERIALIZED VIEW IF EXISTS $tableName CASCADE")
                     stmt.execute(
                             "CREATE MATERIALIZED VIEW IF NOT EXISTS $tableName AS " +
                                     "SELECT * FROM $PRODUCTION_FOREIGN_SCHEMA.${EDGES.name} " +
@@ -432,7 +435,7 @@ class AssemblerConnectionManager(
                         ResultSetAdapters.mapMetadataOptionToPostgresColumn(MetadataOption.ENTITY_KEY_IDS) +
                         propertyTypes.map { it.type.fullQualifiedNameAsString }
                 val grantSelectSql = grantSelectSql(tableName, principal, columns)
-
+                logger.info("AssemblerConnectionManager.grantSelectForEntitySet grant query: $grantSelectSql")
                 stmt.addBatch(grantSelectSql)
             }
             stmt.executeBatch()
@@ -451,6 +454,7 @@ class AssemblerConnectionManager(
 
         authorizedPrincipals.forEach {
             val grantSelectSql = grantSelectSql(tableName, it, listOf())
+            logger.info("AssemblerConnectionManager.grantSelectForEdges grant query: $grantSelectSql")
             stmt.addBatch(grantSelectSql)
         }
 
@@ -505,6 +509,7 @@ class AssemblerConnectionManager(
         connect(dbName).use { datasource ->
             entitySetIds.forEach { dropMaterializedEntitySet(datasource, it) }
         }
+        logger.info("Materialized entity sets $entitySetIds removed from organization $organizationId")
     }
 
     fun dropMaterializedEntitySet(datasource: HikariDataSource, entitySetId: UUID) {
@@ -553,14 +558,16 @@ class AssemblerConnectionManager(
 
 
     private fun configureRolesInDatabase(datasource: HikariDataSource, spm: SecurePrincipalsManager) {
-        getAllRoles(spm).forEach { role ->
-            val dbRole = quote(buildPostgresRoleName(role))
+        val roles = getAllRoles(spm)
+        if (roles.iterator().hasNext()) {
+            val roleIds = roles.map { quote(buildPostgresRoleName(it)) }
+            val roleIdsSql = roleIds.joinToString(",")
 
             datasource.connection.use { connection ->
                 connection.createStatement().use { statement ->
-                    logger.info("Revoking $PUBLIC_SCHEMA schema right from role: {}", role)
+                    logger.info("Revoking $PUBLIC_SCHEMA schema right from roles: {}", roleIds)
                     //Don't allow users to access public schema which will contain foreign data wrapper tables.
-                    statement.execute("REVOKE USAGE ON SCHEMA $PUBLIC_SCHEMA FROM $dbRole")
+                    statement.execute("REVOKE USAGE ON SCHEMA $PUBLIC_SCHEMA FROM $roleIdsSql")
 
                     return@use
                 }
@@ -622,41 +629,48 @@ class AssemblerConnectionManager(
         }
     }
 
-    private fun configureUserInDatabase(datasource: HikariDataSource, dbname: String, userId: String) {
-        val dbUser = quote(userId)
-        logger.info("Configuring user {} in database {}", userId, dbname)
+    private fun configureUsersInDatabase(datasource: HikariDataSource, dbname: String, userIds: List<String>) {
+        val userIdsSql = userIds.joinToString(", ")
+
+        logger.info("Configuring users {} in database {}", userIds, dbname)
         //First we will grant all privilege which for database is connect, temporary, and create schema
         target.connection.use { connection ->
             connection.createStatement().use { statement ->
                 statement.execute("GRANT ${MEMBER_ORG_DATABASE_PERMISSIONS.joinToString(", ")} " +
-                        "ON DATABASE ${quote(dbname)} TO $dbUser")
+                        "ON DATABASE ${quote(dbname)} TO $userIdsSql")
             }
         }
 
         datasource.connection.use { connection ->
             connection.createStatement().use { statement ->
 
-                statement.execute("GRANT USAGE ON SCHEMA $MATERIALIZED_VIEWS_SCHEMA TO $dbUser")
+                statement.execute("GRANT USAGE ON SCHEMA $MATERIALIZED_VIEWS_SCHEMA TO $userIdsSql")
                 //Don't allow users to access public schema which will contain foreign data wrapper tables.
-                logger.info("Revoking $PUBLIC_SCHEMA schema right from user: {}", userId)
-                statement.execute("REVOKE USAGE ON SCHEMA $PUBLIC_SCHEMA FROM $dbUser")
+                logger.info("Revoking $PUBLIC_SCHEMA schema right from user: {}", userIds)
+                statement.execute("REVOKE USAGE ON SCHEMA $PUBLIC_SCHEMA FROM $userIdsSql")
                 //Set the search path for the user
-                statement.execute("ALTER USER $dbUser set search_path TO $MATERIALIZED_VIEWS_SCHEMA")
+                userIds.forEach { userId ->
+                    statement.addBatch("ALTER USER $userId SET search_path TO $MATERIALIZED_VIEWS_SCHEMA")
+                }
+                statement.executeBatch()
 
                 return@use
             }
         }
     }
 
-    private fun revokeConnectAndSchemaUsage(datasource: HikariDataSource, dbname: String, userId: String) {
-        val dbUser = quote(userId)
-        logger.info("Removing user {} from database {} and schema usage of $MATERIALIZED_VIEWS_SCHEMA", userId, dbname)
+    private fun revokeConnectAndSchemaUsage(datasource: HikariDataSource, dbname: String, userIds: List<String>) {
+        val userIdsSql = userIds.joinToString(", ")
+
+        logger.info("Removing users {} from database {} and schema usage of $MATERIALIZED_VIEWS_SCHEMA",
+                userIds,
+                dbname)
 
         datasource.connection.use { conn ->
             conn.createStatement().use { stmt ->
                 stmt.execute("REVOKE ${MEMBER_ORG_DATABASE_PERMISSIONS.joinToString(", ")} " +
-                        "ON DATABASE ${quote(dbname)} FROM $dbUser")
-                stmt.execute("REVOKE ALL PRIVILEGES ON SCHEMA $MATERIALIZED_VIEWS_SCHEMA FROM $dbUser")
+                        "ON DATABASE ${quote(dbname)} FROM $userIdsSql")
+                stmt.execute("REVOKE ALL PRIVILEGES ON SCHEMA $MATERIALIZED_VIEWS_SCHEMA FROM $userIdsSql")
             }
         }
     }

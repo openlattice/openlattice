@@ -62,10 +62,8 @@ import org.slf4j.LoggerFactory;
 public class MapstoresTest extends HzAuthzTest {
     private static final Logger                                       logger   = LoggerFactory
             .getLogger( MapstoresTest.class );
-    private static final Set<String>                                  excluded =
-            ImmutableSet.of( HazelcastMap.EDGES.name(),
-                    HazelcastMap.BACKEDGES.name(),
-                    HazelcastMap.PERMISSIONS.name() );
+    private static final Set<String>                                  excluded = ImmutableSet
+            .of( HazelcastMap.PERMISSIONS.name() );
     @SuppressWarnings( "rawtypes" )
     private static final Map<String, TestableSelfRegisteringMapStore> mapstoreMap;
     private static final Collection<TestableSelfRegisteringMapStore>  mapstores;

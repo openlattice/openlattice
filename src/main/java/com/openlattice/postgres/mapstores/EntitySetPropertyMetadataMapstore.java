@@ -5,6 +5,7 @@ import static com.openlattice.postgres.PostgresTable.ENTITY_SET_PROPERTY_METADAT
 import com.openlattice.edm.set.EntitySetPropertyKey;
 import com.openlattice.edm.set.EntitySetPropertyMetadata;
 import com.openlattice.hazelcast.HazelcastMap;
+import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.postgres.PostgresArrays;
 import com.openlattice.postgres.ResultSetAdapters;
 import com.zaxxer.hikari.HikariDataSource;
@@ -14,7 +15,6 @@ import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.UUID;
-import org.apache.commons.lang3.RandomStringUtils;
 
 public class EntitySetPropertyMetadataMapstore
         extends AbstractBasePostgresMapstore<EntitySetPropertyKey, EntitySetPropertyMetadata> {
@@ -60,10 +60,10 @@ public class EntitySetPropertyMetadataMapstore
     }
 
     @Override public EntitySetPropertyMetadata generateTestValue() {
-        return new EntitySetPropertyMetadata( RandomStringUtils.random( 10 ),
-                RandomStringUtils.random( 10 ),
+        return new EntitySetPropertyMetadata( TestDataFactory.random( 10 ),
+                TestDataFactory.random( 10 ),
                 new LinkedHashSet<>( Arrays
-                        .asList( RandomStringUtils.random( 5 ), RandomStringUtils.random( 5 ) ) ),
+                        .asList( TestDataFactory.random( 5 ), TestDataFactory.random( 5 ) ) ),
                 true );
     }
 }

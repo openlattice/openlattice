@@ -22,6 +22,7 @@
 package com.openlattice.assembler.processors
 
 import com.hazelcast.core.Offloadable
+import com.hazelcast.core.ReadOnly
 import com.hazelcast.spi.ExecutionService
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.assembler.AssemblerConnectionManager
@@ -43,7 +44,9 @@ private const val NOT_INITIALIZED = "Assembler Connection Manager not initialize
  */
 
 data class MaterializeEntitySetProcessor(val entitySet: EntitySet, val authorizedPropertyTypes: Map<UUID, PropertyType>
-) : AbstractRhizomeEntryProcessor<EntitySetAssemblyKey, MaterializedEntitySet, Void?>(true), Offloadable {
+) : AbstractRhizomeEntryProcessor<EntitySetAssemblyKey, MaterializedEntitySet, Void?>(false),
+        Offloadable,
+        ReadOnly {
     @Transient
     private var acm: AssemblerConnectionManager? = null
 
@@ -55,8 +58,7 @@ data class MaterializeEntitySetProcessor(val entitySet: EntitySet, val authorize
         } else {
             acm?.materializeEntitySets(
                     entitySetAssemblyKey.organizationId,
-                    mapOf(entitySet to authorizedPropertyTypes)
-            ) ?: throw IllegalStateException(NOT_INITIALIZED)
+                    mapOf(entitySet to authorizedPropertyTypes)) ?: throw IllegalStateException(NOT_INITIALIZED)
         }
 
         return null

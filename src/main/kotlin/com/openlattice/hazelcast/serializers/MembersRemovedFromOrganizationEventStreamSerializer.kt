@@ -33,13 +33,14 @@ class MembersRemovedFromOrganizationEventStreamSerializer
 
     override fun write(out: ObjectDataOutput, obj: MembersRemovedFromOrganizationEvent) {
         UUIDStreamSerializer.serialize(out, obj.organizationId)
-        PrincipalSetStreamSerializer().write(out, obj.members)
+        SecurablePrincipalListStreamSerializer().write(out, obj.members)
     }
 
     override fun read(input: ObjectDataInput): MembersRemovedFromOrganizationEvent {
         return MembersRemovedFromOrganizationEvent(
                 UUIDStreamSerializer.deserialize(input),
-                PrincipalSetStreamSerializer().read(input))
+                SecurablePrincipalListStreamSerializer().read(input)
+        )
     }
 
     override fun getTypeId(): Int {

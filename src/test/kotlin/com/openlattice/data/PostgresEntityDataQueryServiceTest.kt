@@ -116,7 +116,7 @@ class PostgresEntityDataQueryServiceTest {
                         }.toMap()
                 )
         )
-//        logger.info("Versioned query: {}", selectEntitySetWithPropertyTypes(entitySetId, propertyTypeMap, setOf(MetadataOption.LAST_WRITE, MetadataOption.LAST_INDEX), version))
+//        logger.info("Versioned query: {}", selectEntitySetWithPropertyTypes(entitySetId, propertyTypeMap, setOf(MetadataOption.LAST_WRITE_KEY_ID, MetadataOption.LAST_INDEX), version))
     }
 
 
@@ -173,7 +173,7 @@ class PostgresEntityDataQueryServiceTest {
                         false
                 )
         )
-//        logger.info("Versioned query: {}", selectEntitySetWithPropertyTypes(entitySetId, propertyTypeMap, setOf(MetadataOption.LAST_WRITE, MetadataOption.LAST_INDEX), version))
+//        logger.info("Versioned query: {}", selectEntitySetWithPropertyTypes(entitySetId, propertyTypeMap, setOf(MetadataOption.LAST_WRITE_KEY_ID, MetadataOption.LAST_INDEX), version))
     }
 
 
@@ -225,7 +225,7 @@ class PostgresEntityDataQueryServiceTest {
                         }.toMap()
                 )
         )
-//        logger.info("Versioned query: {}", selectEntitySetWithPropertyTypes(entitySetId, propertyTypeMap, setOf(MetadataOption.LAST_WRITE, MetadataOption.LAST_INDEX), version))
+//        logger.info("Versioned query: {}", selectEntitySetWithPropertyTypes(entitySetId, propertyTypeMap, setOf(MetadataOption.LAST_WRITE_KEY_ID, MetadataOption.LAST_INDEX), version))
     }
 
     @Test

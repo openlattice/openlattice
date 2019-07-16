@@ -18,8 +18,33 @@ class IndexingMetadataManager(private val hds: HikariDataSource) {
         private val logger = LoggerFactory.getLogger(IndexingMetadataManager::class.java)
     }
 
-    fun markAsIndexed(entityKeyIds: Map<UUID, Optional<Set<UUID>>>, linking: Boolean): Int {
-        return updateLastIndex(entityKeyIds, linking, OffsetDateTime.now())
+    fun markAsIndexed(entityKeyIdsWithLastWrite: Map<UUID, Map<UUID, OffsetDateTime>>, linking: Boolean): Int {
+        return hds.connection.use { connection ->
+            val updateSql = updateLastIndexSql(linking)
+            connection.prepareStatement(updateSql).use { stmt ->
+                entityKeyIdsWithLastWrite.forEach { (entitySetId, entities) ->
+                    entities.forEach { (entityId, lastWrite) ->
+                        stmt.setObject(1, entitySetId)
+                        stmt.setObject(2, entityId)
+                        stmt.setObject(3, lastWrite)
+                        stmt.addBatch()
+                    }
+                }
+
+                return stmt.executeBatch().sum()
+            }
+        }
+    }
+
+    fun markEntitySetsAsNeedsToBeIndexed(entitySetIds: Set<UUID>, linking: Boolean): Int {
+        return hds.connection.use { connection ->
+            val updateSql = markEntitySetsAsNeedsToBeIndexedSql(linking)
+            connection.prepareStatement(updateSql).use { stmt ->
+                val entitySetIdsArray = PostgresArrays.createUuidArray(connection, entitySetIds)
+                stmt.setArray(1, entitySetIdsArray)
+                return stmt.executeUpdate()
+            }
+        }
     }
 
     fun markLinkingIdsAsNeedToBeIndexed(linkingIds: Set<UUID>): Int {
@@ -27,22 +52,6 @@ class IndexingMetadataManager(private val hds: HikariDataSource) {
             connection.prepareStatement(markLinkingIdsAsNeedToBeIndexedSql()).use { stmt ->
                 val arr = PostgresArrays.createUuidArray(connection, linkingIds)
                 stmt.setArray(1, arr)
-                return stmt.executeUpdate()
-            }
-        }
-    }
-
-    fun markAsNeedsToBeIndexed(entityKeyIds: Map<UUID, Optional<Set<UUID>>>, linking: Boolean): Int {
-        return updateLastIndex(entityKeyIds, linking, OffsetDateTime.MIN)
-    }
-
-    private fun updateLastIndex(
-            entityKeyIds: Map<UUID, Optional<Set<UUID>>>, linking: Boolean, dateTime: OffsetDateTime
-    ): Int {
-        hds.connection.use { connection ->
-            val updateSql = if (linking) updateLastLinkIndexSql(entityKeyIds) else updateLastIndexSql(entityKeyIds)
-            connection.prepareStatement(updateSql).use { stmt ->
-                stmt.setObject(1, dateTime)
                 return stmt.executeUpdate()
             }
         }
@@ -57,26 +66,45 @@ class IndexingMetadataManager(private val hds: HikariDataSource) {
     }
 }
 
-
-fun updateLastIndexSql(idsByEntitySetId: Map<UUID, Optional<Set<UUID>>>): String {
-    val entitiesClause = buildEntitiesClause(idsByEntitySetId, false)
-    val withClause = buildWithClause(false, entitiesClause)
+/**
+ * Arguments of preparable sql in order:
+ * 1. entity set id
+ * 2. entity key id
+ * 3. if linking      -> last_linking_index
+ *    if non-linking  -> last_index
+ */
+fun updateLastIndexSql(linking: Boolean): String {
+    val idColumn = if (linking) LINKING_ID.name else ID.name
+    val filterLinkingIds = if (linking) " AND ${LINKING_ID.name} IS NOT NULL " else ""
+    val entitiesClause = " AND ${ENTITY_SET_ID.name} = ? AND  $idColumn = ? $filterLinkingIds"
+    val withClause = buildWithClause(linking, entitiesClause)
+    // rather use id than linking_id in linking join
     val joinClause = joinClause(IDS.name, FILTERED_ENTITY_KEY_IDS, entityKeyIdColumnsList)
+    val updateColumn = if (linking) LAST_LINK_INDEX.name else LAST_INDEX.name
 
-    return "$withClause UPDATE ${IDS.name} SET ${LAST_INDEX.name} = ? " +
+    return "$withClause UPDATE ${IDS.name} SET $updateColumn = ? " +
             "FROM $FILTERED_ENTITY_KEY_IDS WHERE ($joinClause)"
 }
 
-fun updateLastLinkIndexSql(linkingIdsByEntitySetId: Map<UUID, Optional<Set<UUID>>>): String {
-    val entitiesClause = buildEntitiesClause(linkingIdsByEntitySetId, true)
-    val withClause = buildWithClause(true, entitiesClause)
-    // rather use id than linking_id in join
+/**
+ * Arguments of preparable sql in order:
+ * 1. entity set ids (array)
+ */
+fun markEntitySetsAsNeedsToBeIndexedSql(linking: Boolean): String {
+    val entitiesClause = " AND ${ENTITY_SET_ID.name} = ANY(?) "
+    val withClause = buildWithClause(linking, entitiesClause)
+    // rather use id than linking_id in linking join
     val joinClause = joinClause(IDS.name, FILTERED_ENTITY_KEY_IDS, entityKeyIdColumnsList)
+    val updateColumn = if (linking) LAST_LINK_INDEX.name else LAST_INDEX.name
 
-    return "$withClause UPDATE ${IDS.name} SET ${LAST_LINK_INDEX.name} = ? " +
+    return "$withClause UPDATE ${IDS.name} SET $updateColumn = '-infinity()' " +
             "FROM $FILTERED_ENTITY_KEY_IDS WHERE ($joinClause) "
 }
 
+/**
+ * Arguments of preparable sql in order:
+ * 1. linking ids (array)
+ */
 fun markLinkingIdsAsNeedToBeIndexedSql(): String {
     val linkingEntitiesClause = " AND ${LINKING_ID.name} IS NOT NULL AND ${LINKING_ID.name} = ANY(?) "
     val withClause = buildWithClause(true, linkingEntitiesClause)
@@ -87,6 +115,9 @@ fun markLinkingIdsAsNeedToBeIndexedSql(): String {
             "FROM $FILTERED_ENTITY_KEY_IDS WHERE ($joinClause) "
 }
 
+/**
+ * No arguments needed for preparable statement
+ */
 fun markAsNeedsToBeLinkedSql(entityDataKeys: Set<EntityDataKey>): String {
     val entityKeyIds = entityDataKeys
             .groupBy { it.entitySetId }

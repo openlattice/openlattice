@@ -1,28 +1,24 @@
-package com.openlattice.data.storage
+package com.openlattice.data.storage.aws
 
 import com.amazonaws.HttpMethod
 import com.google.common.collect.Lists
-import com.google.common.collect.Sets
-import com.openlattice.data.IntegrationResults
-import com.openlattice.data.integration.EntityData
 import com.openlattice.data.integration.S3EntityData
+import com.openlattice.data.storage.ByteBlobDataManager
+import com.openlattice.data.storage.PostgresEntityDataQueryService
+import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.edm.type.PropertyType
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
-import org.springframework.stereotype.Service
-import java.net.URL
-import java.sql.PreparedStatement
 import java.util.*
-import javax.annotation.PostConstruct
-import javax.inject.Inject
 
 private val logger = LoggerFactory.getLogger(AwsDataSinkService::class.java)
 
 class AwsDataSinkService(
+        private val partitionManager: PartitionManager,
         private val byteBlobDataManager: ByteBlobDataManager,
         private val hds: HikariDataSource
 ) {
-    private val dqs = PostgresEntityDataQueryService(hds, byteBlobDataManager)
+    private val dqs = PostgresEntityDataQueryService(hds, byteBlobDataManager, partitionManager)
 
     fun generatePresignedUrls(
             entities: List<S3EntityData>, authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>

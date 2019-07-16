@@ -21,6 +21,7 @@
 
 package com.openlattice.data
 
+import com.google.common.base.Stopwatch
 import com.google.common.collect.ListMultimap
 import com.google.common.collect.Multimaps
 import com.google.common.collect.SetMultimap
@@ -30,6 +31,7 @@ import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking
 import com.openlattice.analysis.requests.FilteredNeighborsRankingAggregation
 import com.openlattice.data.integration.Association
 import com.openlattice.data.integration.Entity
+import com.openlattice.data.storage.EntityDatastore
 import com.openlattice.data.storage.PostgresEntitySetSizesTask
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.type.PropertyType
@@ -43,6 +45,7 @@ import org.slf4j.LoggerFactory
 import java.nio.ByteBuffer
 import java.util.*
 import java.util.concurrent.ExecutionException
+import java.util.concurrent.TimeUnit
 import java.util.stream.Stream
 import kotlin.collections.HashMap
 import kotlin.collections.HashSet
@@ -104,7 +107,7 @@ open class DataGraphService(
             entitySetId: UUID,
             entityKeyId: UUID,
             authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): SetMultimap<FullQualifiedName, Any> {
+    ): Map<FullQualifiedName, Set<Any>> {
         return eds.getEntities(
                 entitySetId,
                 setOf(entityKeyId),
@@ -116,7 +119,7 @@ open class DataGraphService(
             entitySetIds: Set<UUID>,
             entityKeyId: UUID,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
-    ): SetMultimap<FullQualifiedName, Any> {
+    ): Map<FullQualifiedName, Set<Any>> {
         return eds.getLinkingEntities(
                 entitySetIds.map { it to Optional.of(setOf(entityKeyId)) }.toMap(),
                 authorizedPropertyTypes
@@ -366,7 +369,7 @@ open class DataGraphService(
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Map<EntityKey, UUID> {
         val ids = idService.getEntityKeyIds(entities.keys.map { EntityKey(entitySetId, it) }.toSet())
-        val identifiedEntities = ids.map { it.value to entities[it.key.entityId] }.toMap()
+        val identifiedEntities = ids.map { it.value to entities.getValue(it.key.entityId) }.toMap()
         eds.integrateEntities(entitySetId, identifiedEntities, authorizedPropertyTypes)
 
         return ids
@@ -410,7 +413,7 @@ open class DataGraphService(
 
     override fun replacePropertiesInEntities(
             entitySetId: UUID,
-            replacementProperties: Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Any>>>,
+            replacementProperties: Map<UUID, Map<UUID, Set<Map<ByteBuffer, Any>>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): WriteEvent {
         return eds.replacePropertiesInEntities(entitySetId, replacementProperties, authorizedPropertyTypes)
@@ -438,7 +441,7 @@ open class DataGraphService(
                     val entitySetId = it.key
 
                     // check entity types of associations before creation
-                    checkAssociationEntityTypes(entitySetId, it.value)
+                    // checkAssociationEntityTypes(entitySetId, it.value) TODO
 
                     val entities = it.value.map(DataEdge::getData)
                     val (ids, entityWrite) = createEntities(
@@ -448,7 +451,9 @@ open class DataGraphService(
                     val edgeKeys = it.value.asSequence().mapIndexed { index, dataEdge ->
                         DataEdgeKey(dataEdge.src, dataEdge.dst, EntityDataKey(entitySetId, ids[index]))
                     }.toSet()
+                    val sw = Stopwatch.createStarted()
                     val edgeWrite = graphService.createEdges(edgeKeys)
+                    logger.info("graphService.createEdges (for {} edgeKeys) took {}", edgeKeys.size, sw.elapsed(TimeUnit.MILLISECONDS))
 
                     associationCreateEvents[entitySetId] = CreateAssociationEvent(ids, entityWrite, edgeWrite)
                 }
@@ -591,11 +596,13 @@ open class DataGraphService(
         }
     }
 
+    // TODO improve perf
     private fun checkAssociationEntityTypes(associationEntitySetId: UUID, associations: List<DataEdge>) {
         val associationType = edmManager.getAssociationTypeByEntitySetId(associationEntitySetId)
         if (associationType.associationEntityType.id == edmManager.auditRecordEntitySetsManager.auditingTypes.auditingEdgeEntityTypeId) {
             return
         }
+
         associations.forEach {
             // ensure, that DataEdge src and dst entity types are part of src and dst entity types of AssociationType
             val srcEntityType = edmManager.getEntityTypeByEntitySetId(it.src.entitySetId)

@@ -48,16 +48,17 @@ import org.slf4j.LoggerFactory;
 import java.time.LocalDate;
 
 public class PersonProperties {
-    private static final Logger            logger             = LoggerFactory.getLogger( PersonProperties.class );
-    private static final FullQualifiedName FIRST_NAME_FQN     = new FullQualifiedName( "nc.PersonGivenName" );
-    private static final FullQualifiedName MIDDLE_NAME_FQN    = new FullQualifiedName( "nc.PersonMiddleName" );
-    private static final FullQualifiedName LAST_NAME_FQN      = new FullQualifiedName( "nc.PersonSurName" );
-    private static final FullQualifiedName SEX_FQN            = new FullQualifiedName( "nc.PersonSex" );
-    private static final FullQualifiedName RACE_FQN           = new FullQualifiedName( "nc.PersonRace" );
-    private static final FullQualifiedName ETHNICITY_FQN      = new FullQualifiedName( "nc.PersonEthnicity" );
-    private static final FullQualifiedName DOB_FQN            = new FullQualifiedName( "nc.PersonBirthDate" );
-    private static final FullQualifiedName IDENTIFICATION_FQN = new FullQualifiedName( "nc.SubjectIdentification" );
-    private static final FullQualifiedName SSN_FQN            = new FullQualifiedName( "nc.SSN" );
+    private static final Logger            logger            = LoggerFactory.getLogger( PersonProperties.class );
+    public static final FullQualifiedName PERSON_TYPE_FQN    = new FullQualifiedName( "general.person" );
+    public static final FullQualifiedName FIRST_NAME_FQN     = new FullQualifiedName( "nc.PersonGivenName" );
+    public static final FullQualifiedName MIDDLE_NAME_FQN    = new FullQualifiedName( "nc.PersonMiddleName" );
+    public static final FullQualifiedName LAST_NAME_FQN      = new FullQualifiedName( "nc.PersonSurName" );
+    public static final FullQualifiedName SEX_FQN            = new FullQualifiedName( "nc.PersonSex" );
+    public static final FullQualifiedName RACE_FQN           = new FullQualifiedName( "nc.PersonRace" );
+    public static final FullQualifiedName ETHNICITY_FQN      = new FullQualifiedName( "nc.PersonEthnicity" );
+    public static final FullQualifiedName DOB_FQN            = new FullQualifiedName( "nc.PersonBirthDate" );
+    public static final FullQualifiedName IDENTIFICATION_FQN = new FullQualifiedName( "nc.SubjectIdentification" );
+    public static final FullQualifiedName SSN_FQN            = new FullQualifiedName( "nc.SSN" );
 
     public static final Set<FullQualifiedName> FQNS = ImmutableSet.of( FIRST_NAME_FQN,
             MIDDLE_NAME_FQN,

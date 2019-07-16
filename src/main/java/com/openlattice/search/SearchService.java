@@ -32,16 +32,17 @@ import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.EntityDataKey;
-import com.openlattice.data.EntityDatastore;
 import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.events.EntitiesDeletedEvent;
 import com.openlattice.data.events.EntitiesUpsertedEvent;
 import com.openlattice.data.events.LinkedEntitiesDeletedEvent;
 import com.openlattice.data.requests.NeighborEntityDetails;
 import com.openlattice.data.requests.NeighborEntityIds;
+import com.openlattice.data.storage.EntityDatastore;
 import com.openlattice.data.storage.IndexingMetadataManager;
 import com.openlattice.data.storage.MetadataOption;
 import com.openlattice.datastore.services.EdmManager;
+import com.openlattice.edm.EdmConstants;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.collection.EntitySetCollection;
 import com.openlattice.edm.collection.EntityTypeCollection;
@@ -58,7 +59,7 @@ import com.openlattice.organizations.events.OrganizationUpdatedEvent;
 import com.openlattice.postgres.streams.PostgresIterable;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
 import com.openlattice.search.requests.*;
-import org.apache.commons.lang3.tuple.Pair;
+import kotlin.Pair;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -187,7 +188,7 @@ public class SearchService {
         result.getEntityDataKeys()
                 .forEach( edk -> entityKeyIdsByEntitySetId.put( edk.getEntitySetId(), edk.getEntityKeyId() ) );
 
-        List<SetMultimap<FullQualifiedName, Object>> results = entityKeyIdsByEntitySetId.keySet().parallelStream()
+        List<Map<FullQualifiedName, Set<Object>>> results = entityKeyIdsByEntitySetId.keySet().parallelStream()
                 .map( entitySetId -> getResults(
                         entitySetsById.get( entitySetId ),
                         entityKeyIdsByEntitySetId.get( entitySetId ),
@@ -316,7 +317,7 @@ public class SearchService {
                                     Collectors.toMap( Function.identity(), entitySetId -> propertyTypes ) ),
                             EnumSet.of( MetadataOption.LAST_WRITE ) );
 
-            elasticsearchApi.createBulkLinkedData( entityTypeId, linkingEntitySetId, linkedData );
+            elasticsearchApi.createBulkLinkedData( entityTypeId, linkedData );
         }
     }
 
@@ -548,7 +549,7 @@ public class SearchService {
 
         if ( linkingEntitySets.size() > 0 ) {
             entityKeyIdsByLinkingId = getEntityKeyIdsByLinkingIds( entityKeyIds ).stream()
-                    .collect( Collectors.toMap( Pair::getKey, Pair::getValue ) );
+                    .collect( Collectors.toMap( Pair::getFirst, Pair::getSecond ) );
             entityKeyIdsByLinkingId.values().forEach( entityKeyIds::addAll );
             entityKeyIds.removeAll( entityKeyIdsByLinkingId.keySet() ); // remove linking ids
 
@@ -644,14 +645,14 @@ public class SearchService {
         logger.info( "Edge and neighbor entity key ids collected in {} ms", sw1.elapsed( TimeUnit.MILLISECONDS ) );
         sw1.reset().start();
 
-        ListMultimap<UUID, SetMultimap<FullQualifiedName, Object>> entitiesByEntitySetId = dataManager
+        ListMultimap<UUID, Map<FullQualifiedName, Set<Object>>> entitiesByEntitySetId = dataManager
                 .getEntitiesAcrossEntitySets( entitySetIdToEntityKeyId, entitySetsIdsToAuthorizedProps );
         logger.info( "Get entities across entity sets query finished in {} ms", sw1.elapsed( TimeUnit.MILLISECONDS ) );
         sw1.reset().start();
 
-        Map<UUID, SetMultimap<FullQualifiedName, Object>> entities = Maps.newHashMap();
+        Map<UUID, Map<FullQualifiedName, Set<Object>>> entities = Maps.newHashMap();
         entitiesByEntitySetId.entries().forEach( entry -> entities
-                .put( UUID.fromString( entry.getValue().get( new FullQualifiedName( "openlattice.@id" ) ).iterator()
+                .put( UUID.fromString( entry.getValue().get( EdmConstants.ID_FQN ).iterator()
                                 .next().toString() ),
                         entry.getValue() ) );
 
@@ -697,7 +698,7 @@ public class SearchService {
             Map<UUID, Set<UUID>> authorizedEdgeESIdsToVertexESIds,
             Map<UUID, EntitySet> entitySetsById,
             boolean vertexIsSrc,
-            Map<UUID, SetMultimap<FullQualifiedName, Object>> entities ) {
+            Map<UUID, Map<FullQualifiedName, Set<Object>>> entities ) {
 
         UUID edgeEntitySetId = edge.getEdge().getEntitySetId();
         if ( authorizedEdgeESIdsToVertexESIds.containsKey( edgeEntitySetId ) ) {
@@ -708,11 +709,11 @@ public class SearchService {
                     ? edge.getDst().getEntitySetId()
                     : edge.getSrc().getEntitySetId();
 
-            SetMultimap<FullQualifiedName, Object> edgeDetails = entities.get( edge.getEdge().getEntityKeyId() );
+            Map<FullQualifiedName, Set<Object>> edgeDetails = entities.get( edge.getEdge().getEntityKeyId() );
             if ( edgeDetails != null ) {
                 if ( authorizedEdgeESIdsToVertexESIds.get( edgeEntitySetId )
                         .contains( neighborEntitySetId ) ) {
-                    SetMultimap<FullQualifiedName, Object> neighborDetails = entities.get( neighborEntityKeyId );
+                    Map<FullQualifiedName, Set<Object>> neighborDetails = entities.get( neighborEntityKeyId );
 
                     if ( neighborDetails != null ) {
                         return new NeighborEntityDetails(
@@ -749,7 +750,7 @@ public class SearchService {
         PostgresIterable<Pair<UUID, Set<UUID>>> entityKeyIdsByLinkingIds = getEntityKeyIdsByLinkingIds( linkingIds );
 
         Set<UUID> entityKeyIds = entityKeyIdsByLinkingIds.stream()
-                .flatMap( entityKeyIdsOfLinkingId -> entityKeyIdsOfLinkingId.getRight().stream() )
+                .flatMap( entityKeyIdsOfLinkingId -> entityKeyIdsOfLinkingId.getSecond().stream() )
                 .collect( Collectors.toSet() );
 
         // Will return only entries, where there is at least 1 neighbor
@@ -767,12 +768,12 @@ public class SearchService {
 
         return entityKeyIdsByLinkingIds.stream()
                 .filter( entityKeyIdsOfLinkingId ->
-                        entityNeighbors.keySet().stream().anyMatch( entityKeyIdsOfLinkingId.getRight()::contains ) )
+                        entityNeighbors.keySet().stream().anyMatch( entityKeyIdsOfLinkingId.getSecond()::contains ) )
                 .collect( Collectors.toMap(
-                        Pair::getLeft, // linking_id
+                        Pair::getFirst, // linking_id
                         entityKeyIdsOfLinkingId -> {
                             Map<UUID, SetMultimap<UUID, NeighborEntityIds>> neighborIds = Maps.newHashMap();
-                            entityKeyIdsOfLinkingId.getRight().stream()
+                            entityKeyIdsOfLinkingId.getSecond().stream()
                                     .filter( entityNeighbors::containsKey )
                                     .forEach( entityKeyId ->
                                             entityNeighbors.get( entityKeyId ).forEach( ( entityKey, neighbors ) -> {
@@ -854,7 +855,7 @@ public class SearchService {
         return neighbors;
     }
 
-    private List<SetMultimap<FullQualifiedName, Object>> getResults(
+    private List<Map<FullQualifiedName, Set<Object>>> getResults(
             EntitySet entitySet,
             Set<UUID> entityKeyIds,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
@@ -926,10 +927,7 @@ public class SearchService {
 
         EntitySet entitySet = dataModelService.getEntitySet( entitySetId );
         Set<UUID> entitySetIds = ( entitySet.isLinking() ) ? entitySet.getLinkedEntitySets() : Set.of( entitySetId );
-        indexingMetadataManager.markAsNeedsToBeIndexed(
-                entitySetIds.stream().collect( Collectors.toMap( Function.identity(), esId -> Optional.empty() ) ),
-                entitySet.isLinking()
-        );
+        indexingMetadataManager.markEntitySetsAsNeedsToBeIndexed( entitySetIds, entitySet.isLinking() );
     }
 
     public void triggerAllEntitySetDataIndex() {

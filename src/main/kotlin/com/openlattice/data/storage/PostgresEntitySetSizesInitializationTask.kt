@@ -60,12 +60,12 @@ class PostgresEntitySetSizesInitializationTask : HazelcastInitializationTask<Pos
 }
 
 private val NORMAL_ENTITY_SET_COUNTS =
-        "( SELECT ${ENTITY_SET_ID.name}, COUNT(*) as $COUNT FROM ${PostgresTable.IDS.name} " +
+        "( SELECT ${ENTITY_SET_ID.name}, COUNT(*) as $COUNT FROM ${PostgresTable.ENTITY_KEY_IDS.name} " +
                 "GROUP BY (${ENTITY_SET_ID.name}) )"
 
 private val LINKED_ENTITY_SET_COUNTS =
         "( SELECT  ${ID.name} as ${ENTITY_SET_ID.name}, COUNT(DISTINCT ${LINKING_ID.name}) as $COUNT FROM " +
-                "( SELECT DISTINCT ${ENTITY_SET_ID.name}, ${LINKING_ID.name} FROM ${PostgresTable.IDS.name} WHERE ${LINKING_ID.name} IS NOT NULL ) as linking_ids " +
+                "( SELECT DISTINCT ${ENTITY_SET_ID.name}, ${LINKING_ID.name} FROM ${PostgresTable.ENTITY_KEY_IDS.name} WHERE ${LINKING_ID.name} IS NOT NULL ) as linking_ids " +
                 "INNER JOIN " +
                 "( SELECT ${ID.name}, ${LINKED_ENTITY_SETS.name} FROM ${PostgresTable.ENTITY_SETS.name} WHERE '${EntitySetFlag.LINKING}' = ANY(${FLAGS.name}) ) as linking_sets " +
                 "ON ( linking_ids.${ENTITY_SET_ID.name} = ANY(linking_sets.${LINKED_ENTITY_SETS.name}) ) " +

@@ -30,7 +30,6 @@ import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.openlattice.assembler.PostgresRoles.Companion.buildOrganizationUserId
 import com.openlattice.assembler.processors.*
-import com.openlattice.assembler.tasks.UsersAndRolesInitializationTask
 import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.DbCredentialService
 import com.openlattice.authorization.SecurablePrincipal
@@ -85,13 +84,14 @@ class Assembler(
     private val entityTypes = hazelcast.getMap<UUID, EntityType>(ENTITY_TYPES.name)
     private val propertyTypes = hazelcast.getMap<UUID, PropertyType>(PROPERTY_TYPES.name)
     private val assemblies = hazelcast.getMap<UUID, OrganizationAssembly>(ASSEMBLIES.name)
-    private val materializedEntitySets = hazelcast.getMap<EntitySetAssemblyKey, MaterializedEntitySet>(
-            MATERIALIZED_ENTITY_SETS.name
-    )
+    private val materializedEntitySets = hazelcast
+            .getMap<EntitySetAssemblyKey, MaterializedEntitySet>(MATERIALIZED_ENTITY_SETS.name)
     private val securableObjectTypes = hazelcast.getMap<AclKey, SecurableObjectType>(SECURABLE_OBJECT_TYPES.name)
     private val principals = hazelcast.getMap<AclKey, SecurablePrincipal>(PRINCIPALS.name)
+
     private val createOrganizationTimer = metricRegistry.timer(name(Assembler::class.java, "createOrganization"))
     private val deleteOrganizationTimer = metricRegistry.timer(name(Assembler::class.java, "deleteOrganization"))
+
     private lateinit var acm: AssemblerConnectionManager
 
     init {
@@ -159,24 +159,26 @@ class Assembler(
     fun handleEntitySetDeleted(entitySetDeletedEvent: EntitySetDeletedEvent) {
         // when entity set is deleted, we drop it's view from both openlattice and organization databases and update
         // entity_sets and edges table in organization databases
-        if (isEntitySetMaterialized(entitySetDeletedEvent.entitySetId)) {
-            val droppedMaterializedEntitySets = materializedEntitySets.executeOnEntries(
-                    DropMaterializedEntitySetProcessor().init(acm),
+         if (isEntitySetMaterialized(entitySetDeletedEvent.entitySetId)) {
+            val entitySetAssembliesToDelete = materializedEntitySets.keySet(
                     entitySetIdPredicate(entitySetDeletedEvent.entitySetId)
-            ).keys
-            // also remove entries from assemblies entity sets
-            droppedMaterializedEntitySets
+            )
+            materializedEntitySets.executeOnKeys(
+                    entitySetAssembliesToDelete,
+                    DropMaterializedEntitySetProcessor().init(acm)
+            )
+
+            // also remove entries from assemblies entity sets and re-materialize edges
+            entitySetAssembliesToDelete
                     .groupBy { it.organizationId }
-                    .mapValues { it.value.map { it.entitySetId } }
+                    .mapValues { it.value.map(EntitySetAssemblyKey::entitySetId) }
                     .forEach { organizationId, entitySetIds ->
+                        assemblies.executeOnKey(organizationId, MaterializeEdgesProcessor().init(acm))
                         assemblies.executeOnKey(
                                 organizationId,
                                 RemoveMaterializedEntitySetsFromOrganizationProcessor(entitySetIds)
                         )
                     }
-
-            // re-materialize edges
-            assemblies.executeOnKey(entitySetDeletedEvent.entitySetId, MaterializeEdgesProcessor().init(acm))
         }
         dropProductionViewOfEntitySet(entitySetDeletedEvent.entitySetId)
     }
@@ -273,7 +275,7 @@ class Assembler(
 
             materializedEntitySets.set(
                     materializedEntitySetKey,
-                    MaterializedEntitySet(materializedEntitySetKey, refreshRatesOfEntitySets.getValue(entitySetId) ))
+                    MaterializedEntitySet(materializedEntitySetKey, refreshRatesOfEntitySets.getValue(entitySetId)))
             materializedEntitySets.executeOnKey(
                     materializedEntitySetKey,
                     MaterializeEntitySetProcessor(entitySet, authorizedPropertyTypes).init(acm)
@@ -407,6 +409,7 @@ class Assembler(
                 )
             }
         }
+        logger.info("Dropped production view of entity set {}", entitySetId)
     }
 
     fun getOrganizationIntegrationAccount(organizationId: UUID): OrganizationIntegrationAccount {
@@ -463,10 +466,7 @@ class Assembler(
         }
 
         override fun after(): Set<Class<out HazelcastInitializationTask<*>>> {
-            return setOf(
-                    OrganizationsInitializationTask::class.java,
-                    UsersAndRolesInitializationTask::class.java
-            )
+            return setOf(OrganizationsInitializationTask::class.java)
         }
 
         override fun getName(): String {

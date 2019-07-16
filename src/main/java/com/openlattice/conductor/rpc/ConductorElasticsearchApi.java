@@ -127,9 +127,6 @@ public interface ConductorElasticsearchApi {
     String ENTITY_SET_COLLECTION_INDEX = "entity_set_collection_index";
     String ENTITY_SET_COLLECTION       = "entity_set_collection";
 
-    UUID LAST_WRITE        = new UUID( 0, 0 );
-    UUID ENTITY_SET_ID_KEY = new UUID( 0, 1 );
-
     Set<UUID> getEntityTypesWithIndices();
 
     /**
@@ -146,7 +143,6 @@ public interface ConductorElasticsearchApi {
 
     boolean createBulkLinkedData(
             UUID entityTypeId,
-            UUID entitySetId,
             Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> entitiesByLinkingId );
 
     /* Delete */

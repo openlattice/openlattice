@@ -8,6 +8,7 @@ import com.openlattice.authorization.Permission
 import com.openlattice.authorization.SystemRole
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetFlag
+import com.openlattice.edm.tasks.EdmSyncInitializerTask
 import com.openlattice.edm.type.EntityType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organizations.tasks.OrganizationsInitializationTask
@@ -54,7 +55,8 @@ class AuditInitializationTask(
                 PostConstructInitializerTask::class.java,
                 UsersAndRolesInitializationTask::class.java,
                 OrganizationsInitializationTask::class.java,
-                Auth0SyncInitializationTask::class.java
+                Auth0SyncInitializationTask::class.java,
+                EdmSyncInitializerTask::class.java
         )
     }
 
@@ -79,16 +81,18 @@ class AuditInitializationTask(
 
             if (dependencies.edmService.auditRecordEntitySetsManager.auditingTypes.isAuditingInitialized()) {
 
-                edmAuditEntitySet = EntitySet(
-                        dependencies.edmService.auditRecordEntitySetsManager.auditingTypes.auditingEntityTypeId,
-                        EDM_AUDIT_ENTITY_SET_NAME,
-                        "EDM Audit Entity Set",
-                        Optional.of("Audit entity set for the entity data model"),
-                        ImmutableSet.of(),
-                        Optional.empty(),
-                        Optional.empty(),
-                        Optional.of(EnumSet.of(EntitySetFlag.AUDIT))
-                )
+                edmAuditEntitySet = dependencies.partitionManager.allocatePartitions(
+                        EntitySet(
+                                dependencies.edmService.auditRecordEntitySetsManager.auditingTypes.auditingEntityTypeId,
+                                EDM_AUDIT_ENTITY_SET_NAME,
+                                "EDM Audit Entity Set",
+                                Optional.of("Audit entity set for the entity data model"),
+                                ImmutableSet.of(),
+                                Optional.empty(),
+                                Optional.empty(),
+                                Optional.of(EnumSet.of(EntitySetFlag.AUDIT)),
+                                Optional.empty()),
+                        dependencies.partitionManager.getPartitionCount())
 
                 dependencies.edmService.createEntitySet(admins.first(), edmAuditEntitySet)
             }
@@ -128,7 +132,7 @@ class AuditInitializationTask(
                 .filter { it.value.activeAuditEdgeEntitySetId == null }
                 .forEach { (entitySetId, _) ->
                     logger.info("Creating missing audit edge entity set for entity set {}", entitySetId)
-                    dependencies.edmService.auditRecordEntitySetsManager.initializeAuditEdgeEntitySet( entitySetId )
+                    dependencies.edmService.auditRecordEntitySetsManager.initializeAuditEdgeEntitySet(entitySetId)
 
                 }
 

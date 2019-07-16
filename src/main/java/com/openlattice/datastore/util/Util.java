@@ -34,8 +34,6 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.openlattice.edm.internal.DatastoreConstants;
-import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.hazelcast.core.IMap;
@@ -53,26 +51,6 @@ public final class Util {
                     futurePropertyType.getClass().getTypeParameters()[ 0 ].getTypeName() );
             return null;
         }
-    }
-
-    public static boolean wasLightweightTransactionApplied( ResultSet rs ) {
-        return wasLightweightTransactionApplied( rs.one() );
-    }
-    
-    public static boolean wasLightweightTransactionApplied( Row row ){
-        if ( row == null ) {
-            return true;
-        } else {
-            return row.getBool( DatastoreConstants.APPLIED_FIELD );
-        }
-    }
-
-    public static long getCount( ResultSet rs ) {
-        return rs.one().getLong( DatastoreConstants.COUNT_FIELD );
-    }
-
-    public static boolean isCountNonZero( ResultSet rs ) {
-        return getCount( rs ) > 0;
     }
 
     public static String toUnhyphenatedString( UUID uuid ) {

@@ -1,4 +1,4 @@
-package com.openlattice.data.storage
+package com.openlattice.data.storage.aws
 
 import com.amazonaws.AmazonServiceException
 import com.amazonaws.HttpMethod
@@ -9,8 +9,8 @@ import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.AmazonS3ClientBuilder
 import com.amazonaws.services.s3.model.*
 import com.google.common.util.concurrent.ListeningExecutorService
+import com.openlattice.data.storage.ByteBlobDataManager
 import com.openlattice.datastore.configuration.DatastoreConfiguration
-import okhttp3.MediaType
 //import org.apache.tika.Tika
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
