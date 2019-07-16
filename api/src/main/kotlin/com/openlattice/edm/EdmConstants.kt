@@ -52,5 +52,10 @@ class EdmConstants {
 
         @JvmField
         val VERSION_FQN = FullQualifiedName("openlattice", "@version")
+
+
+        // entity type
+        @JvmField
+        val EMPTY_ENTITY_TYPE_FQN = FullQualifiedName("ol", "empty")
     }
 }
