@@ -23,7 +23,6 @@ package com.openlattice.linking.pods;
 import com.geekbeast.hazelcast.HazelcastClientProvider;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
-import com.openlattice.assembler.Assembler;
 import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.EntityKeyIdService;
@@ -91,9 +90,6 @@ public class LinkerPostConfigurationServicesPod {
     private ConductorElasticsearchApi elasticsearchApi;
 
     @Inject
-    private Assembler assembler;
-
-    @Inject
     private PostgresEdmManager pgEdmManager;
 
     @Inject
@@ -142,11 +138,7 @@ public class LinkerPostConfigurationServicesPod {
 
     @Bean
     public EntityDatastore entityDatastore() {
-        return new PostgresEntityDatastore( idService(),
-                postgresDataManager(),
-                dataQueryService(),
-                edm,
-                assembler );
+        return new PostgresEntityDatastore( idService(), postgresDataManager(), dataQueryService(), edm);
     }
 
     @Bean
