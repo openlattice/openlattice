@@ -1,5 +1,3 @@
-
-
 /*
  * Copyright (C) 2018. OpenLattice, Inc.
  *
@@ -23,7 +21,6 @@
 package com.openlattice.authorization;
 
 import com.codahale.metrics.annotation.Timed;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
@@ -95,11 +92,10 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
                 .collect( Collectors.toMap( Function.identity(), aclKey -> requiredPermissions ) );
 
         Map<AclKey, EnumMap<Permission, Boolean>> authorizations = authorize( accessRequest, principals );
-        authorizations.entrySet().stream()
-                .filter( authz -> authz.getValue().values().stream().anyMatch( v -> !v ) )
-                .forEach( authz -> propertyTypes.remove( authz.getKey().get( 1 ) ) );
-
-        return propertyTypes;
+        return authorizations.entrySet().stream()
+                .filter( authz -> authz.getValue().values().stream().allMatch( v -> v ) )
+                .map( authz -> authz.getKey().get( 1 ) )
+                .collect( Collectors.toMap( Function.identity(), propertyTypes::get ) );
     }
 
     private Map<UUID, PropertyType> getAuthorizedPropertyTypesOfLinkingEntitySet(
