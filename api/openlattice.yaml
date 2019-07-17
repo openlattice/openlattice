@@ -1565,7 +1565,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/compoents/MaterializedViewAccount"
+                $ref: "#/components/MaterializedViewAccount"
   /datastore/principals/users/:
     get:
       summary: Get all users.
