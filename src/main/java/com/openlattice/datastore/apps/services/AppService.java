@@ -41,14 +41,7 @@ import com.openlattice.apps.processors.UpdateAppConfigEntitySetProcessor;
 import com.openlattice.apps.processors.UpdateAppConfigPermissionsProcessor;
 import com.openlattice.apps.processors.UpdateAppMetadataProcessor;
 import com.openlattice.apps.processors.UpdateAppTypeMetadataProcessor;
-import com.openlattice.authorization.AccessCheck;
-import com.openlattice.authorization.AclKey;
-import com.openlattice.authorization.AuthorizationManager;
-import com.openlattice.authorization.AuthorizationQueryService;
-import com.openlattice.authorization.HazelcastAclKeyReservationService;
-import com.openlattice.authorization.Permission;
-import com.openlattice.authorization.Principal;
-import com.openlattice.authorization.PrincipalType;
+import com.openlattice.authorization.*;
 import com.openlattice.authorization.util.AuthorizationUtils;
 import com.openlattice.controllers.exceptions.BadRequestException;
 import com.openlattice.datastore.services.EdmManager;
@@ -222,6 +215,13 @@ public class AppService {
 
         Principal appPrincipal = new Principal( PrincipalType.APP,
                 AppConfig.getAppPrincipalId( appId, organizationId ) );
+
+        principalsService.createSecurablePrincipal( Principals.getCurrentUser(), new SecurablePrincipal(
+                new AclKey( appId, UUID.randomUUID() ),
+                appPrincipal,
+                app.getTitle() + " (" + organizationId.toString() + ")",
+                Optional.of( app.getDescription() + "\nInstalled for organization " + organizationId.toString() )
+        ) );
 
         Set<Principal> ownerPrincipals = Sets
                 .newHashSet( authorizations.getOwnersForSecurableObject( new AclKey( organizationId ) ) );
