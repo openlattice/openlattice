@@ -26,21 +26,17 @@ import com.hazelcast.spi.ExecutionService
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.OrganizationAssembly
-import com.openlattice.organization.Organization
 import org.slf4j.LoggerFactory
 import java.util.*
 
 private val logger = LoggerFactory.getLogger(InitializeOrganizationAssemblyProcessor::class.java)
 private const val NOT_INITIALIZED = "Assembler Connection Manager not initialized."
-
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 
-data class InitializeOrganizationAssemblyProcessor(
-        val organization: Organization
-) : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(), Offloadable {
+class InitializeOrganizationAssemblyProcessor : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(), Offloadable {
     @Transient
     private var acm: AssemblerConnectionManager? = null
 
@@ -56,7 +52,7 @@ data class InitializeOrganizationAssemblyProcessor(
                     organizationId
             )
             else -> {
-                acm?.createOrganizationDatabase(organization) ?: throw IllegalStateException(NOT_INITIALIZED)
+                acm?.createOrganizationDatabase(organizationId) ?: throw IllegalStateException(NOT_INITIALIZED)
                 assembly.initialized = true
                 entry.setValue(assembly)
             }
