@@ -152,20 +152,29 @@ public class IndexerServicesPod {
 
     @Bean
     public Assembler assembler() {
-        return new Assembler( dbcs(), hikariDataSource, metricRegistry, hazelcastInstance, eventBus );
+        return new Assembler(
+                dbcs(),
+                hikariDataSource,
+                authorizationManager(),
+                edmAuthorizationHelper(),
+                principalService(),
+                metricRegistry,
+                hazelcastInstance,
+                eventBus
+        );
     }
 
     @Bean
     public AssemblerConnectionManager assemblerConnectionManager() {
-        return new AssemblerConnectionManager( assemblerConfiguration,
+        return new AssemblerConnectionManager(
+                assemblerConfiguration,
                 hikariDataSource,
                 principalService(),
-                authorizationManager(),
-                edmAuthorizationHelper(),
                 organizationsManager(),
                 dbcs(),
                 eventBus,
-                metricRegistry );
+                metricRegistry
+        );
     }
 
     @Bean
