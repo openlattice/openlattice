@@ -3162,6 +3162,32 @@ components:
           type: array
           items:
             type: string
+        smsEntitySetInfo:
+          type: array
+          items:
+            $ref: "#/components/smsEntitySetInformation"
+        partitions:
+          type: array
+          items:
+            type: integer
+                          
+    smsEntitySetInformation:
+      type: object
+      properties:
+        phoneNumber:
+          type: string
+        organizationId:
+          type: string
+          format: uuid
+        entitysetIds:
+          type: array
+          items: 
+            type: string
+            format: uuid
+        tags:
+          type: array
+          items:
+            type: string          
     entitySetSelection:
       type: object
       properties:
