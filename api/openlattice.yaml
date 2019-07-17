@@ -2450,8 +2450,8 @@ paths:
       responses:
         "200":
           description: Success
-  ? /datastore/organizations/{organizationId}/principals/roles/{roleId}/description
-  : post:
+  /datastore/organizations/{organizationId}/principals/roles/{roleId}/description: 
+    post:
       summary: Update role description for an organization from a roleId
       operationId: updateRoleDescription
       tags:
@@ -2512,8 +2512,8 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/auth0userBasic"
-  ? /datastore/organizations/{organizationId}/principals/roles/{roleId}/members/{userId}
-  : put:
+  /datastore/organizations/{organizationId}/principals/roles/{roleId}/members/{userId}: 
+    put:
       summary: Add a role to a user
       operationId: addRoleToUser
       tags:
