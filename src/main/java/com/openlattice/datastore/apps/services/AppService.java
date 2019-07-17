@@ -217,7 +217,7 @@ public class AppService {
                 AppConfig.getAppPrincipalId( appId, organizationId ) );
 
         principalsService.createSecurablePrincipal( Principals.getCurrentUser(), new SecurablePrincipal(
-                new AclKey( appId, organizationId ),
+                new AclKey( appId, UUID.randomUUID() ),
                 appPrincipal,
                 app.getTitle() + " (" + organizationId.toString() + ")",
                 Optional.of( app.getDescription() + "\nInstalled for organization " + organizationId.toString() )
