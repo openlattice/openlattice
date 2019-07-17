@@ -249,8 +249,7 @@ public class IndexerServicesPod {
                 entityTypeManager(),
                 schemaManager(),
                 auditingConfiguration,
-                partitionManager(),
-                assembler() );
+                partitionManager() );
     }
 
 
