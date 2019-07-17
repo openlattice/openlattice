@@ -178,7 +178,6 @@ public class LinkerServicesPod {
                 authorizationManager(),
                 edmAuthorizationHelper(),
                 principalService(),
-                organizationsManager(),
                 metricRegistry,
                 hazelcastInstance,
                 eventBus
@@ -191,6 +190,7 @@ public class LinkerServicesPod {
                 assemblerConfiguration,
                 hikariDataSource,
                 principalService(),
+                organizationsManager(),
                 dbcs(),
                 eventBus,
                 metricRegistry
