@@ -2823,33 +2823,40 @@ components:
       title: An entity set
       type: object
       properties:
-        name:
-          type: string
         id:
           type: string
           format: uuid
+        entityTypeId:
+          type: string
+          format: uuid
+        name:
+          type: string
         title:
+          type: string
+        description:
           type: string
         contacts:
           type: array
           items:
             type: string
-        entityTypeId:
-          type: string
-          format: uuid
-        description:
-          type: string
         linking:
           type: boolean
-        linked_entity_sets:
+        linkedEntitySets:
           type: array
           items:
             type: string
-        external:
-          type: boolean
         organizationId:
           type: string
           format: uuid
+        flags:
+          type: array
+          items:
+            type: string
+            enum: [ASSOCIATION, AUDIT, EXTERNAL, LINKING]
+        partitions:
+          type: array
+          items:
+            type: integer
       example:
         entityTypeId: 963b597b-b28d-4f59-b2e6-4d443499e464
         id: 843b597b-b28d-4f59-b2e6-4d443499e323
