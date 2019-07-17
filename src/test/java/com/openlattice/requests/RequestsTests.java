@@ -43,9 +43,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class RequestsTests extends HzAuthzTest {
-    protected static final RequestQueryService      aqs;
     protected static final HazelcastRequestsManager hzRequests;
-    protected static final Lock                     lock      = new ReentrantLock();
     protected static final Status                   expected  = TestDataFactory.status();
     protected static final Status                   expected2 = new Status(
             expected.getRequest(),
@@ -92,7 +90,7 @@ public class RequestsTests extends HzAuthzTest {
 
             }
         }
-        aqs = new RequestQueryService( hds );
+        final var aqs = new RequestQueryService( hds );
         hzRequests = new HazelcastRequestsManager( hazelcastInstance, aqs );
         Map<AceKey, Status> statusMap = RequestUtil.statusMap( ss );
         hzRequests.submitAll( statusMap );
@@ -157,7 +155,7 @@ public class RequestsTests extends HzAuthzTest {
                 .checkIfHasPermissions( new AclKey( s.getRequest().getAclKey() ),
                         ImmutableSet.of( s.getPrincipal() ),
                         s.getRequest().getPermissions() ) ) );
-        ;
+
         hzRequests.submitAll( RequestUtil
                 .statusMap( submitted.stream().map( RequestUtil::approve ).collect( Collectors.toSet() ) ) );
 
