@@ -239,8 +239,7 @@ public class DatastoreServicesPod {
                 entityTypeManager(),
                 schemaManager(),
                 auditingConfiguration,
-                partitionManager(),
-                assembler() );
+                partitionManager() );
     }
 
     @Bean
@@ -263,8 +262,7 @@ public class DatastoreServicesPod {
         return new PostgresEntityDatastore( idService(),
                 postgresDataManager(),
                 dataQueryService(),
-                dataModelService(),
-                assembler() );
+                dataModelService() );
     }
 
     @Bean
