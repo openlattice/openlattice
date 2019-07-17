@@ -275,7 +275,6 @@ public class DatastoreServicesPod {
                 authorizationManager(),
                 edmAuthorizationHelper(),
                 principalService(),
-                organizationsManager(),
                 metricRegistry,
                 hazelcastInstance,
                 eventBus
@@ -428,6 +427,7 @@ public class DatastoreServicesPod {
         return new AssemblerConnectionManager( assemblerConfiguration,
                 hikariDataSource,
                 principalService(),
+                organizationsManager(),
                 dcs(),
                 eventBus,
                 metricRegistry );
