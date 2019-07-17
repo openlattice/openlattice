@@ -42,7 +42,7 @@ class CleanOutOldUsersInitializationTask : HazelcastInitializationTask<Assembler
         logger.info("Cleaning out unnecessary users from production.")
         val users = dependencies
                 .assemblerConnectionManager
-                .getAllUsers(dependencies.securePrincipalsManager)
+                .getAllUsers()
 /*        val organizations =
                 dependencies
                         .securableObjectTypes.keySet(Predicates.equal("this", SecurableObjectType.Organization))

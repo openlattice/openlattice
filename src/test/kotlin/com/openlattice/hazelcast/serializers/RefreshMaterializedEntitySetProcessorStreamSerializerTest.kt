@@ -44,6 +44,20 @@ class RefreshMaterializedEntitySetProcessorStreamSerializerTest
                 listOf(TestDataFactory.propertyType(), TestDataFactory.propertyType(), TestDataFactory.propertyType())
                         .map { it.id to it }
                         .toMap()
-        return RefreshMaterializedEntitySetProcessor(entitySet, propertyTypes)
+        val authorizedPropertyTypesOfPrincipals =
+                listOf(
+                        TestDataFactory.userPrincipal(),
+                        TestDataFactory.rolePrincipal(),
+                        TestDataFactory.userPrincipal()
+                ).map {
+                    it to setOf(
+                            TestDataFactory.propertyType(),
+                            TestDataFactory.propertyType(),
+                            TestDataFactory.propertyType()
+                    )
+                }.toMap()
+
+
+        return RefreshMaterializedEntitySetProcessor(entitySet, propertyTypes, authorizedPropertyTypesOfPrincipals)
     }
 }

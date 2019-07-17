@@ -36,11 +36,11 @@ class UsersAndRolesInitializationTask : HazelcastInitializationTask<AssemblerDep
     override fun initialize(dependencies: AssemblerDependencies) {
         dependencies
                 .assemblerConnectionManager
-                .getAllRoles(dependencies.securePrincipalsManager)
+                .getAllRoles()
                 .map(dependencies.assemblerConnectionManager::createRole)
         dependencies
                 .assemblerConnectionManager
-                .getAllUsers(dependencies.securePrincipalsManager)
+                .getAllUsers()
                 .map(dependencies.assemblerConnectionManager::createUnprivilegedUser)
 
     }

@@ -24,7 +24,6 @@ package com.openlattice.assembler
 import com.codahale.metrics.MetricRegistry
 import com.codahale.metrics.MetricRegistry.name
 import com.codahale.metrics.Timer
-import com.google.common.collect.Sets
 import com.google.common.eventbus.EventBus
 import com.google.common.eventbus.Subscribe
 import com.openlattice.assembler.PostgresDatabases.Companion.buildOrganizationDatabaseName
@@ -72,8 +71,6 @@ class AssemblerConnectionManager(
         private val assemblerConfiguration: AssemblerConfiguration,
         private val hds: HikariDataSource,
         private val securePrincipalsManager: SecurePrincipalsManager,
-        private val authorizationManager: AuthorizationManager,
-        private val edmAuthorizationHelper: EdmAuthorizationHelper,
         private val organizations: HazelcastOrganizationService,
         private val dbCredentialService: DbCredentialService,
         eventBus: EventBus,
@@ -152,7 +149,7 @@ class AssemblerConnectionManager(
         createOrganizationDatabase(organizationId, dbname)
 
         connect(dbname).use { datasource ->
-            configureRolesInDatabase(datasource, securePrincipalsManager)
+            configureRolesInDatabase(datasource)
             createOpenlatticeSchema(datasource)
 
             datasource.connection.use { connection ->
@@ -273,13 +270,13 @@ class AssemblerConnectionManager(
         }
     }
 
-    fun materializeEdges(organizationId: UUID, entitySetIds: Set<UUID>) {
+    fun materializeEdges(organizationId: UUID, entitySetIds: Set<UUID>, authorizedPrincipals: Set<Principal>) {
         logger.info("Materializing edges in organization $organizationId database")
 
         connect(buildOrganizationDatabaseName(organizationId)).use { datasource ->
             // re-import foreign view edges before creating materialized view
             updatePublicTables(datasource, setOf(EDGES.name))
-            materializeEdges(datasource, entitySetIds)
+            materializeEdges(datasource, entitySetIds, authorizedPrincipals)
         }
     }
 
@@ -288,7 +285,9 @@ class AssemblerConnectionManager(
      * should have their edges materialized.
      * For every edge materialization we use every entity set, that has been materialized within an organization.
      */
-    private fun materializeEdges(datasource: HikariDataSource, entitySetIds: Set<UUID>) {
+    private fun materializeEdges(
+            datasource: HikariDataSource, entitySetIds: Set<UUID>, authorizedPrincipals: Set<Principal>
+    ) {
         materializeEdgesTimer.time().use {
             datasource.connection.use { connection ->
                 connection.createStatement().use { stmt ->
@@ -304,7 +303,7 @@ class AssemblerConnectionManager(
                                     "OR ${EDGE_ENTITY_SET_ID.name} IN ($clause) "
                     )
                     // TODO: when roles are ready grant select to member role of org
-                    val selectGrantedResults = grantSelectForEdges(stmt, tableName, entitySetIds)
+                    val selectGrantedResults = grantSelectForEdges(stmt, tableName, entitySetIds, authorizedPrincipals)
 
                     logger.info("Granted select for ${selectGrantedResults.filter { it >= 0 }.size} users/roles " +
                             "on materialized view $tableName")
@@ -316,14 +315,19 @@ class AssemblerConnectionManager(
 
     fun materializeEntitySets(
             organizationId: UUID,
-            authorizedPropertyTypesByEntitySet: Map<EntitySet, Map<UUID, PropertyType>>
+            authorizedPropertyTypesByEntitySet: Map<EntitySet, Map<UUID, PropertyType>>,
+            authorizedPropertyTypesOfPrincipalsByEntitySetId: Map<UUID, Map<Principal, Set<PropertyType>>>
     ): Map<UUID, Set<OrganizationEntitySetFlag>> {
         logger.info("Materializing entity sets ${authorizedPropertyTypesByEntitySet.keys.map { it.id }} in " +
                 "organization $organizationId database.")
 
         materializeAllTimer.time().use {
             connect(buildOrganizationDatabaseName(organizationId)).use { datasource ->
-                materializeEntitySets(datasource, authorizedPropertyTypesByEntitySet)
+                materializeEntitySets(
+                        datasource,
+                        authorizedPropertyTypesByEntitySet,
+                        authorizedPropertyTypesOfPrincipalsByEntitySetId
+                )
             }
             return authorizedPropertyTypesByEntitySet
                     .map { it.key.id to EnumSet.of(OrganizationEntitySetFlag.MATERIALIZED) }
@@ -334,15 +338,21 @@ class AssemblerConnectionManager(
 
     private fun materializeEntitySets(
             datasource: HikariDataSource,
-            authorizedPropertyTypesByEntitySet: Map<EntitySet, Map<UUID, PropertyType>>
+            materializablePropertyTypesByEntitySet: Map<EntitySet, Map<UUID, PropertyType>>,
+            authorizedPropertyTypesOfPrincipalsByEntitySetId: Map<UUID, Map<Principal, Set<PropertyType>>>
     ) {
-        authorizedPropertyTypesByEntitySet.forEach { entitySet, authorizedPropertyTypes ->
+        materializablePropertyTypesByEntitySet.forEach { (entitySet, materializablePropertyTypes) ->
             // re-import materialized view of entity set
             updateProductionViewTables(datasource, setOf(entitySetIdTableName(entitySet.id)))
             // (re)-import property_types and entity_types in case of property type change
             updatePublicTables(datasource, setOf(ENTITY_TYPES.name, PROPERTY_TYPES.name))
 
-            materialize(datasource, entitySet, authorizedPropertyTypes)
+            materialize(
+                    datasource,
+                    entitySet,
+                    materializablePropertyTypes,
+                    authorizedPropertyTypesOfPrincipalsByEntitySetId.getValue(entitySet.id)
+            )
         }
     }
 
@@ -352,12 +362,14 @@ class AssemblerConnectionManager(
     private fun materialize(
             datasource: HikariDataSource,
             entitySet: EntitySet,
-            authorizedPropertyTypes: Map<UUID, PropertyType>) {
+            materializablePropertyTypes: Map<UUID, PropertyType>,
+            authorizedPropertyTypesOfPrincipals: Map<Principal, Set<PropertyType>>
+    ) {
         materializeEntitySetsTimer.time().use {
 
             val selectColumns = ((if (entitySet.isLinking) linkingEntityKeyIdColumnsList else entityKeyIdColumnsList) +
                     ResultSetAdapters.mapMetadataOptionToPostgresColumn(MetadataOption.ENTITY_KEY_IDS) +
-                    authorizedPropertyTypes.values.map { quote(it.type.fullQualifiedNameAsString) })
+                    materializablePropertyTypes.values.map { quote(it.type.fullQualifiedNameAsString) })
                     .joinToString(",")
 
             val sql = "SELECT $selectColumns FROM $PRODUCTION_FOREIGN_SCHEMA.${entitySetIdTableName(entitySet.id)} "
@@ -378,7 +390,7 @@ class AssemblerConnectionManager(
                         connection,
                         tableName,
                         entitySet,
-                        authorizedPropertyTypes
+                        authorizedPropertyTypesOfPrincipals
                 )
                 logger.info("Granted select for ${selectGrantedResults.filter { it >= 0 }.size} users/roles " +
                         "on materialized view $tableName")
@@ -390,47 +402,11 @@ class AssemblerConnectionManager(
             connection: Connection,
             tableName: String,
             entitySet: EntitySet,
-            materializedPropertyTypes: Map<UUID, PropertyType>
+            authorizedPropertyTypesOfPrincipals: Map<Principal, Set<PropertyType>>
     ): IntArray {
-        val permissionsToCheck = EdmAuthorizationHelper.READ_PERMISSION
-        // collect all principals of type user, role, which have read access on entityset
-        val authorizedPrincipals = securePrincipalsManager
-                .getAuthorizedPrincipalsOnSecurableObject(AclKey(entitySet.id), permissionsToCheck)
-                .filter { it.type == PrincipalType.USER || it.type == PrincipalType.ROLE }
-
-        val propertyCheckFunction: (Principal) -> (Map<UUID, PropertyType>) = if (entitySet.isLinking) {
-            { principal ->
-                // only grant select on authorized columns if principal has read access on every normal entity set
-                // within the linking entity set
-                if (entitySet.linkedEntitySets.all {
-                            authorizationManager.checkIfHasPermissions(
-                                    AclKey(it),
-                                    setOf(principal),
-                                    EdmAuthorizationHelper.READ_PERMISSION)
-                        }) {
-                    edmAuthorizationHelper.getAuthorizedPropertyTypes(
-                            entitySet.id, EdmAuthorizationHelper.READ_PERMISSION, setOf(principal))
-                            .filter { materializedPropertyTypes.keys.contains(it.key) }
-                } else {
-                    mapOf()
-                }
-            }
-        } else {
-            { principal ->
-                edmAuthorizationHelper.getAuthorizedPropertiesOnNormalEntitySets(
-                        setOf(entitySet.id), EdmAuthorizationHelper.READ_PERMISSION, setOf(principal))[entitySet.id]!!
-                        .filter { materializedPropertyTypes.keys.contains(it.key) }
-            }
-        }
-
-        // collect all authorized property types for principals which have read access on entity set
-        val authorizedPropertiesOfPrincipal = authorizedPrincipals
-                .map { it to propertyCheckFunction(it).values }
-                .toMap()
-
         // prepare batch queries
         return connection.createStatement().use { stmt ->
-            authorizedPropertiesOfPrincipal.forEach { (principal, propertyTypes) ->
+            authorizedPropertyTypesOfPrincipals.forEach { (principal, propertyTypes) ->
                 val columns = (if (entitySet.isLinking) linkingEntityKeyIdColumnsList else entityKeyIdColumnsList) +
                         ResultSetAdapters.mapMetadataOptionToPostgresColumn(MetadataOption.ENTITY_KEY_IDS) +
                         propertyTypes.map { it.type.fullQualifiedNameAsString }
@@ -439,35 +415,23 @@ class AssemblerConnectionManager(
                     logger.info("AssemblerConnectionManager.grantSelectForEntitySet grant query: $grantSelectSql")
                     stmt.addBatch(grantSelectSql)
                 } catch (e: NoSuchElementException) {
-                    logger.error("Principal $principal does not exists but has $permissionsToCheck permission on entity set ${entitySet.id}")
+                    logger.error("Principal $principal does not exists but has permission on entity set ${entitySet.id}")
                 }
             }
             stmt.executeBatch()
         }
     }
 
-    fun grantSelectForEdges(stmt: Statement, tableName: String, entitySetIds: Set<UUID>): IntArray {
-        val permissionsToCheck = EdmAuthorizationHelper.READ_PERMISSION
-        // collect all principals of type user, role, which have read access on entityset
-        val authorizedPrincipals = entitySetIds.fold(mutableSetOf<Principal>()) { acc, entitySetId ->
-            Sets.union(
-                    acc,
-                    securePrincipalsManager.getAuthorizedPrincipalsOnSecurableObject(
-                            AclKey(entitySetId),
-                            permissionsToCheck
-                    )
-                            .filter { it.type == PrincipalType.USER || it.type == PrincipalType.ROLE }
-                            .toSet()
-            )
-        }
-
+    fun grantSelectForEdges(
+            stmt: Statement, tableName: String, entitySetIds: Set<UUID>, authorizedPrincipals: Set<Principal>
+    ): IntArray {
         authorizedPrincipals.forEach {
             try {
                 val grantSelectSql = grantSelectSql(tableName, it, listOf())
                 logger.info("AssemblerConnectionManager.grantSelectForEdges grant query: $grantSelectSql")
                 stmt.addBatch(grantSelectSql)
             } catch (e: NoSuchElementException) {
-                logger.error("Principal $it does not exists but has $permissionsToCheck permission on one of the entity sets $entitySetIds")
+                logger.error("Principal $it does not exists but has permission on one of the entity sets $entitySetIds")
             }
         }
 
@@ -502,16 +466,21 @@ class AssemblerConnectionManager(
     }
 
     /**
-     * Synchronize data changes in entity set materialized view in organization database
+     * Synchronize data changes in entity set materialized view in organization database.
      */
-    fun refreshEntitySet(organizationId: UUID, entitySet: EntitySet, authorizedPropertyTypes: Map<UUID, PropertyType>) {
+    fun refreshEntitySet(
+            organizationId: UUID,
+            entitySet: EntitySet,
+            materializablePropertyTypes: Map<UUID, PropertyType>,
+            authorizedPropertyTypesOfPrincipals: Map<Principal, Set<PropertyType>>
+    ) {
         logger.info("Refreshing entity set ${entitySet.id} in organization $organizationId database")
         connect(buildOrganizationDatabaseName(organizationId)).use { datasource ->
             // re-import materialized view of entity set
             updateProductionViewTables(datasource, setOf(entitySetIdTableName(entitySet.id)))
 
             // re-materialize entity set
-            materialize(datasource, entitySet, authorizedPropertyTypes)
+            materialize(datasource, entitySet, materializablePropertyTypes, authorizedPropertyTypesOfPrincipals)
         }
     }
 
@@ -546,7 +515,7 @@ class AssemblerConnectionManager(
         }
     }
 
-    fun getAllRoles(spm: SecurePrincipalsManager): PostgresIterable<Role> {
+    fun getAllRoles(): PostgresIterable<Role> {
         return PostgresIterable(
                 Supplier {
                     val conn = hds.connection
@@ -554,11 +523,11 @@ class AssemblerConnectionManager(
                     ps.setString(1, PrincipalType.ROLE.name)
                     StatementHolder(conn, ps, ps.executeQuery())
                 },
-                Function { spm.getSecurablePrincipal(ResultSetAdapters.aclKey(it)) as Role }
+                Function { securePrincipalsManager.getSecurablePrincipal(ResultSetAdapters.aclKey(it)) as Role }
         )
     }
 
-    fun getAllUsers(spm: SecurePrincipalsManager): PostgresIterable<SecurablePrincipal> {
+    fun getAllUsers(): PostgresIterable<SecurablePrincipal> {
         return PostgresIterable(
                 Supplier {
                     val conn = hds.connection
@@ -566,13 +535,13 @@ class AssemblerConnectionManager(
                     ps.setString(1, PrincipalType.USER.name)
                     StatementHolder(conn, ps, ps.executeQuery())
                 },
-                Function { spm.getSecurablePrincipal(ResultSetAdapters.aclKey(it)) }
+                Function { securePrincipalsManager.getSecurablePrincipal(ResultSetAdapters.aclKey(it)) }
         )
     }
 
 
-    private fun configureRolesInDatabase(datasource: HikariDataSource, spm: SecurePrincipalsManager) {
-        val roles = getAllRoles(spm)
+    private fun configureRolesInDatabase(datasource: HikariDataSource) {
+        val roles = getAllRoles()
         if (roles.iterator().hasNext()) {
             val roleIds = roles.map { quote(buildPostgresRoleName(it)) }
             val roleIdsSql = roleIds.joinToString(",")
