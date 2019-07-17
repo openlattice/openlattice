@@ -21,6 +21,7 @@
 package com.openlattice.authorization;
 
 import com.codahale.metrics.annotation.Timed;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Maps;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
@@ -81,7 +82,12 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
                         entitySetId, propertyTypes, requiredPermissions, principals );
     }
 
-    private Map<UUID, PropertyType> getAuthorizedPropertyTypesOfNormalEntitySet(
+    /**
+     * @return Authorized property types for the requested permissions where at least 1 requested principal has been
+     * authorization for.
+     */
+    @VisibleForTesting
+    public Map<UUID, PropertyType> getAuthorizedPropertyTypesOfNormalEntitySet(
             UUID entitySetId,
             Map<UUID, PropertyType> propertyTypes,
             EnumSet<Permission> requiredPermissions,
