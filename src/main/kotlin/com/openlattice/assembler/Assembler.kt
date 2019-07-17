@@ -30,6 +30,8 @@ import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.openlattice.assembler.PostgresRoles.Companion.buildOrganizationUserId
+import com.openlattice.assembler.events.MaterializedEntitySetDataChangeEvent
+import com.openlattice.assembler.events.MaterializedEntitySetEdmChangeEvent
 import com.openlattice.assembler.processors.*
 import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.SecurableObjectType
@@ -122,12 +124,14 @@ class Assembler(
                 .isNotEmpty()
     }
 
-    fun flagMaterializedEntitySetDataUnsynch(entitySetId: UUID) {
-        flagMaterializedEntitySet(entitySetId, OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED)
+    @Subscribe
+    fun handleEntitySetDataChange(entitySetDataChangeEvent: MaterializedEntitySetDataChangeEvent) {
+        flagMaterializedEntitySet(entitySetDataChangeEvent.entitySetId, OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED)
     }
 
-    fun flagMaterializedEntitySetEdmUnsynch(entitySetId: UUID) {
-        flagMaterializedEntitySet(entitySetId, OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED)
+    @Subscribe
+    fun handleEntitySetEdmChange(entitySetEdmChangeEvent: MaterializedEntitySetEdmChangeEvent) {
+        flagMaterializedEntitySet(entitySetEdmChangeEvent.entitySetId, OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED)
     }
 
     private fun flagMaterializedEntitySet(entitySetId: UUID, flag: OrganizationEntitySetFlag) {
