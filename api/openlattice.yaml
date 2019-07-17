@@ -2575,6 +2575,10 @@ components:
         organizationId:
           type: string
           format: uuid
+        partitions:
+          type: array
+          items:
+            type: integer
     propertyUsageSummary:
       type: object
       properties:
