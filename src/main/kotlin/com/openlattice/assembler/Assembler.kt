@@ -280,7 +280,7 @@ class Assembler(
             val materializedEntitySetKey = EntitySetAssemblyKey(entitySetId, organizationId)
             val entitySet = entitySets.getValue(entitySetId)
             val authorizedPropertyTypesOfPrincipals =
-                    getAuthorizedPropertiesOfPrinciapls(entitySet, materializablePropertyTypes)
+                    getAuthorizedPropertiesOfPrincipals(entitySet, materializablePropertyTypes)
 
             materializedEntitySets.set(
                     materializedEntitySetKey,
@@ -313,7 +313,7 @@ class Assembler(
         assemblies.executeOnKey(organizationId, MaterializeEdgesProcessor(authorizedPrincipals).init(acm))
     }
 
-    private fun getAuthorizedPropertiesOfPrinciapls(
+    private fun getAuthorizedPropertiesOfPrincipals(
             entitySet: EntitySet,
             materializablePropertyTypes: Map<UUID, PropertyType>
     ): Map<Principal, Set<PropertyType>> {
@@ -376,7 +376,7 @@ class Assembler(
 
             val entitySet = entitySets.getValue(entitySetId)
             val authorizedPropertyTypesOfPrincipals =
-                    getAuthorizedPropertiesOfPrinciapls(entitySet, materializablePropertyTypes)
+                    getAuthorizedPropertiesOfPrincipals(entitySet, materializablePropertyTypes)
 
             materializedEntitySets.executeOnKey(
                     EntitySetAssemblyKey(entitySetId, organizationId),
@@ -418,7 +418,7 @@ class Assembler(
 
             val entitySet = entitySets.getValue(entitySetId)
             val authorizedPropertyTypesOfPrincipals =
-                    getAuthorizedPropertiesOfPrinciapls(entitySet, materializablePropertyTypes)
+                    getAuthorizedPropertiesOfPrincipals(entitySet, materializablePropertyTypes)
 
             materializedEntitySets.executeOnKey(
                     entitySetAssemblyKey,
