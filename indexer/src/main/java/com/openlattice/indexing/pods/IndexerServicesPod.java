@@ -158,6 +158,7 @@ public class IndexerServicesPod {
                 authorizationManager(),
                 edmAuthorizationHelper(),
                 principalService(),
+                organizationsManager(),
                 metricRegistry,
                 hazelcastInstance,
                 eventBus
@@ -170,7 +171,6 @@ public class IndexerServicesPod {
                 assemblerConfiguration,
                 hikariDataSource,
                 principalService(),
-                organizationsManager(),
                 dbcs(),
                 eventBus,
                 metricRegistry
