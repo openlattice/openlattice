@@ -7,7 +7,6 @@ import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.processors.InitializeOrganizationAssemblyProcessor
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import org.springframework.stereotype.Component
-import javax.inject.Inject
 
 /**
  *
@@ -23,11 +22,12 @@ class InitializeOrganizationAssemblyProcessorStreamSerializer : SelfRegisteringS
     }
 
     override fun write(out: ObjectDataOutput, obj: InitializeOrganizationAssemblyProcessor) {
-
+        OrganizationStreamSerializer.serialize(out, obj.organization)
     }
 
     override fun read(input: ObjectDataInput): InitializeOrganizationAssemblyProcessor {
-        return InitializeOrganizationAssemblyProcessor().init(acm)
+        val organization = OrganizationStreamSerializer.deserialize(input)
+        return InitializeOrganizationAssemblyProcessor(organization).init(acm)
     }
 
     override fun getTypeId(): Int {

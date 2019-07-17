@@ -37,9 +37,9 @@ import com.openlattice.data.storage.linkingEntityKeyIdColumnsList
 import com.openlattice.directory.MaterializedViewAccount
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
+import com.openlattice.organization.Organization
 import com.openlattice.organization.OrganizationEntitySetFlag
 import com.openlattice.organization.roles.Role
-import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresColumn.*
@@ -71,7 +71,6 @@ class AssemblerConnectionManager(
         private val assemblerConfiguration: AssemblerConfiguration,
         private val hds: HikariDataSource,
         private val securePrincipalsManager: SecurePrincipalsManager,
-        private val organizations: HazelcastOrganizationService,
         private val dbCredentialService: DbCredentialService,
         eventBus: EventBus,
         metricRegistry: MetricRegistry
@@ -143,10 +142,9 @@ class AssemblerConnectionManager(
      * Also sets up foreign data wrapper using assembler in assembler so that materialized views of data can be
      * provided.
      */
-    fun createOrganizationDatabase(organizationId: UUID) {
-        val organization = organizations.getOrganization(organizationId)
-        val dbname = buildOrganizationDatabaseName(organizationId)
-        createOrganizationDatabase(organizationId, dbname)
+    fun createOrganizationDatabase(organization: Organization) {
+        val dbname = buildOrganizationDatabaseName(organization.id)
+        createOrganizationDatabase(organization.id, dbname)
 
         connect(dbname).use { datasource ->
             configureRolesInDatabase(datasource)

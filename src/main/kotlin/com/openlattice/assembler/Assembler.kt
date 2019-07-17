@@ -46,6 +46,7 @@ import com.openlattice.hazelcast.serializers.AssemblerConnectionManagerDependent
 import com.openlattice.organization.Organization
 import com.openlattice.organization.OrganizationEntitySetFlag
 import com.openlattice.organization.OrganizationIntegrationAccount
+import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.organizations.events.MembersAddedToOrganizationEvent
 import com.openlattice.organizations.events.MembersRemovedFromOrganizationEvent
 import com.openlattice.organizations.roles.SecurePrincipalsManager
@@ -77,6 +78,7 @@ class Assembler(
         private val authorizationManager: AuthorizationManager,
         private val edmAuthorizationHelper: EdmAuthorizationHelper,
         private val securePrincipalsManager: SecurePrincipalsManager,
+        private val organizations: HazelcastOrganizationService,
         metricRegistry: MetricRegistry,
         hazelcast: HazelcastInstance,
         eventBus: EventBus
@@ -230,8 +232,10 @@ class Assembler(
 
     fun createOrganization(organizationId: UUID) {
         createOrganizationTimer.time().use {
+            val organization = organizations.getOrganization(organizationId)
+
             assemblies.set(organizationId, OrganizationAssembly(organizationId))
-            assemblies.executeOnKey(organizationId, InitializeOrganizationAssemblyProcessor().init(acm))
+            assemblies.executeOnKey(organizationId, InitializeOrganizationAssemblyProcessor(organization).init(acm))
             return@use
         }
     }
