@@ -3229,6 +3229,8 @@ tags:
     description: API endpoints to search data.
   - name: organizations
     description: API endpoints related to organizations.
+  - name: entitySets
+    description: API endpoints for dealing with entity sets.
 externalDocs:
   description: "Find out more about OpenLattice"
   url: "https://openlattice.com/"
