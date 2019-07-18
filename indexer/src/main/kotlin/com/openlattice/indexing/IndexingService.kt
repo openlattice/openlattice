@@ -125,7 +125,7 @@ class IndexingService(
                         for (i in partitionCursor until partitions.size) {
                             var entityKeyIdsWithLastWrite: Map<UUID, OffsetDateTime> =
                                     StopWatch(
-                                            "Loading index batch for entity ${entitySet.name} (${entitySet.id})} took "
+                                            "Loading index batch for entity ${entitySet.name} (${entitySet.id})} "
                                     ).use {
 
                                         //An empty set of ids means all keys
