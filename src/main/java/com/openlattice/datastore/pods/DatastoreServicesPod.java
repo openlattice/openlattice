@@ -488,7 +488,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public HazelcastLongIdService longIdService() {
-        return new HazelcastLongIdService( hazelcastClientProvider );
+        return new HazelcastLongIdService( hazelcastClientProvider, hazelcastInstance );
     }
 
     @Bean
