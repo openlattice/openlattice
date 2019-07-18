@@ -175,8 +175,6 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             ) );
         }
 
-        logger.info( "Going to recordEvents" );
-
         recordEvents( searchEvents );
 
         return results;
