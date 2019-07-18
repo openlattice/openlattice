@@ -55,7 +55,9 @@ class S3AuditingService(
         metadata.contentLength = eventsInputStream.available().toLong()
         metadata.contentType = MediaType.APPLICATION_JSON_VALUE
 
+        logger.info("Going to get id")
         val partition = getId() % partitions.toLong()
+        logger.info("Going to get id again for key")
         val key = "$partition/${System.currentTimeMillis()}/event-${getId()}.json"
         val s = Stopwatch.createStarted()
         logger.info("About to audit to s3")
