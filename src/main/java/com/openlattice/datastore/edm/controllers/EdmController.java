@@ -34,6 +34,7 @@ import com.openlattice.auditing.AuditEventType;
 import com.openlattice.auditing.AuditRecordEntitySetsManager;
 import com.openlattice.auditing.AuditableEvent;
 import com.openlattice.auditing.AuditingComponent;
+import com.openlattice.auditing.S3AuditingService;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.authorization.AuthorizingComponent;
@@ -138,6 +139,9 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
 
     @Inject
     private AuditRecordEntitySetsManager auditRecordEntitySetsManager;
+
+    @Inject
+    private S3AuditingService s3AuditingService;
 
     @RequestMapping(
             path = CLEAR_PATH,
@@ -1053,16 +1057,8 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return spm.getPrincipal( Principals.getCurrentUser().getId() ).getId();
     }
 
-    @NotNull
-    @Override
-    public AuditRecordEntitySetsManager getAuditRecordEntitySetsManager() {
-        return auditRecordEntitySetsManager;
-    }
-
-    @NotNull
-    @Override
-    public DataGraphManager getDataGraphService() {
-        return dgm;
+    @NotNull @Override public S3AuditingService getS3AuditingService() {
+        return s3AuditingService;
     }
 
     private static void setDownloadContentType( HttpServletResponse response, FileType fileType ) {

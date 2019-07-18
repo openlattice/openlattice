@@ -47,6 +47,7 @@ import com.openlattice.auditing.AuditEventType;
 import com.openlattice.auditing.AuditRecordEntitySetsManager;
 import com.openlattice.auditing.AuditableEvent;
 import com.openlattice.auditing.AuditingComponent;
+import com.openlattice.auditing.S3AuditingService;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.authorization.AuthorizingComponent;
@@ -148,9 +149,13 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     private AuditRecordEntitySetsManager auditRecordEntitySetsManager;
 
     @Inject
+    private S3AuditingService s3AuditingService;
+
+    @Inject
     private SecurePrincipalsManager spm;
 
-    private LoadingCache<UUID, EdmPrimitiveTypeKind>  primitiveTypeKinds;
+    private LoadingCache<UUID, EdmPrimitiveTypeKind> primitiveTypeKinds;
+
     private LoadingCache<AuthorizationKey, Set<UUID>> authorizedPropertyCache;
 
     @RequestMapping(
@@ -1160,16 +1165,8 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         return new WriteEvent( maxVersion, numUpdates );
     }
 
-    @NotNull
-    @Override
-    public AuditRecordEntitySetsManager getAuditRecordEntitySetsManager() {
-        return auditRecordEntitySetsManager;
-    }
-
-    @NotNull
-    @Override
-    public DataGraphManager getDataGraphService() {
-        return dgm;
+    @NotNull @Override public S3AuditingService getS3AuditingService() {
+        return s3AuditingService;
     }
 
     /**

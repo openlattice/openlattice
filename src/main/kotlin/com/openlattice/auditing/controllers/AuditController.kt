@@ -42,14 +42,9 @@ class AuditController : AuditApi, AuditingComponent {
     private lateinit var auditRecordEntitySetsManager: AuditRecordEntitySetsManager
 
     @Inject
-    private lateinit var dataGraphService: DataGraphService
-
-    override fun getAuditRecordEntitySetsManager(): AuditRecordEntitySetsManager {
-        return auditRecordEntitySetsManager
-    }
-
-    override fun getDataGraphService(): DataGraphService {
-        return dataGraphService
+    private lateinit var s3AuditingService: S3AuditingService
+    override fun getS3AuditingService(): S3AuditingService {
+        return s3AuditingService
     }
 
     override fun audit(audit: Audit): List<Map<UUID, Set<Any>>> {
