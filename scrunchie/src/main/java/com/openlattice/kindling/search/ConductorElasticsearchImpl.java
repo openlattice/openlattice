@@ -1581,7 +1581,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         BoolQueryBuilder deleteQuery = QueryBuilders.boolQuery();
         BulkRequestBuilder bulkRequest = client.prepareBulk();
 
-        client.delete( new DeleteRequest( index ) ).actionGet();
+        client.admin().indices().delete( new DeleteIndexRequest( index ) ).actionGet();
         createIndex( index );
 
         objects.forEach( object -> {
