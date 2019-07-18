@@ -620,10 +620,10 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
     @Timed
     public Void triggerEdmIndex() {
         ensureAdminAccess();
+        searchService.triggerEntitySetIndex();
         searchService.triggerPropertyTypeIndex( Lists.newArrayList( edm.getPropertyTypes() ) );
         searchService.triggerEntityTypeIndex( Lists.newArrayList( edm.getEntityTypes() ) );
         searchService.triggerAssociationTypeIndex( Lists.newArrayList( edm.getAssociationTypes() ) );
-        searchService.triggerEntitySetIndex();
         searchService.triggerAppIndex( Lists.newArrayList( appService.getApps() ) );
         searchService.triggerAppTypeIndex( Lists.newArrayList( appService.getAppTypes() ) );
         return null;
