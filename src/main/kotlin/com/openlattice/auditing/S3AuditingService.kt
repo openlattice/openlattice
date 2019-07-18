@@ -47,6 +47,7 @@ class S3AuditingService(
     }
 
     fun recordEvents(events: List<AuditableEvent>): Int {
+        logger.info("entered recordEvents")
         val eventsBytes = mapper.writeValueAsBytes(events)
         val eventsInputStream = eventsBytes.inputStream()
 
