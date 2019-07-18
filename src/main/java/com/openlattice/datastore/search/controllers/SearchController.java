@@ -685,6 +685,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
     }
 
     @NotNull @Override public S3AuditingService getS3AuditingService() {
+        logger.info( "Going to return s3AuditingService from SearchController" );
         return s3AuditingService;
     }
 
