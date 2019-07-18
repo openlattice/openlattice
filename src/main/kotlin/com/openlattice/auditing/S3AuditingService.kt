@@ -39,17 +39,14 @@ class S3AuditingService(
     private val s3 = newS3Client(auditingConfiguration.awsS3ClientConfiguration)
 
     private val refreshQueue = executorService.execute {
-        logger.info("Executing refreshQueue")
         while (true) {
-            val lr = longIdService
+            longIdService
                     .getIds(IdScopes.AUDITING.name, LONG_IDS_BATCH_SIZE.toLong())
-            logger.info("Got a LongRange from longIdService")
-            lr.forEach(longIdsQueue::put)
+                    .forEach(longIdsQueue::put)
         }
     }
 
     fun recordEvents(events: List<AuditableEvent>): Int {
-        logger.info("entered recordEvents")
         val eventsBytes = mapper.writeValueAsBytes(events)
         val eventsInputStream = eventsBytes.inputStream()
 
@@ -57,12 +54,10 @@ class S3AuditingService(
         metadata.contentLength = eventsInputStream.available().toLong()
         metadata.contentType = MediaType.APPLICATION_JSON_VALUE
 
-        logger.info("Going to get id")
         val id = getId()
         val partition = id % partitions.toLong()
         val key = "$partition/${System.currentTimeMillis()}/event-$id.json"
         val s = Stopwatch.createStarted()
-        logger.info("About to audit to s3")
         s3.putObject(PutObjectRequest(bucket, key, eventsInputStream, metadata))
         logger.info("Auditing took {} ms", s.elapsed(TimeUnit.MILLISECONDS))
         return events.size
