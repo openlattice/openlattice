@@ -41,6 +41,7 @@ import com.openlattice.assembler.pods.AssemblerConfigurationPod;
 import com.openlattice.assembler.tasks.UserCredentialSyncTask;
 import com.openlattice.auditing.AuditRecordEntitySetsManager;
 import com.openlattice.auditing.AuditingConfiguration;
+import com.openlattice.auditing.S3AuditingService;
 import com.openlattice.auth0.Auth0Pod;
 import com.openlattice.auth0.Auth0TokenProvider;
 import com.openlattice.authentication.Auth0Configuration;
@@ -88,6 +89,7 @@ import com.openlattice.graph.PostgresGraphQueryService;
 import com.openlattice.graph.core.GraphService;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.ids.HazelcastIdGenerationService;
+import com.openlattice.ids.HazelcastLongIdService;
 import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.linking.PostgresLinkingFeedbackService;
 import com.openlattice.linking.graph.PostgresLinkingQueryService;
@@ -482,6 +484,16 @@ public class DatastoreServicesPod {
     @Bean
     public PostgresEntitySetSizesInitializationTask postgresEntitySetSizesInitializationTask() {
         return new PostgresEntitySetSizesInitializationTask();
+    }
+
+    @Bean
+    public HazelcastLongIdService longIdService() {
+        return new HazelcastLongIdService( hazelcastClientProvider );
+    }
+
+    @Bean
+    public S3AuditingService s3AuditingService() {
+        return new S3AuditingService( auditingConfiguration, longIdService(), defaultObjectMapper() );
     }
 
     @PostConstruct
