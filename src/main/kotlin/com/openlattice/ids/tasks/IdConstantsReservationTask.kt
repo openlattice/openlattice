@@ -23,6 +23,7 @@ package com.openlattice.ids.tasks
 import com.google.common.collect.ImmutableSet
 import com.google.common.collect.LinkedHashMultimap
 import com.openlattice.IdConstants
+import com.openlattice.assembler.tasks.UsersAndRolesInitializationTask
 import com.openlattice.authorization.SystemRole.ADMIN
 import com.openlattice.data.EntityKey
 import com.openlattice.edm.EdmConstants
@@ -99,7 +100,7 @@ class IdConstantsReservationTask : HazelcastInitializationTask<IdConstantsReserv
     }
 
     override fun after(): Set<Class<out HazelcastInitializationTask<*>>> {
-        return setOf(IdGenerationCatchUpTask::class.java, EdmSyncInitializerTask::class.java)
+        return setOf(IdGenerationCatchUpTask::class.java, EdmSyncInitializerTask::class.java, UsersAndRolesInitializationTask::class.java)
     }
 
     override fun getName(): String {
