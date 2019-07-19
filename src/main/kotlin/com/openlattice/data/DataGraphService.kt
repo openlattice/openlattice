@@ -21,6 +21,7 @@
 
 package com.openlattice.data
 
+import com.google.common.base.Stopwatch
 import com.google.common.collect.ListMultimap
 import com.google.common.collect.Multimaps
 import com.google.common.collect.SetMultimap
@@ -45,6 +46,7 @@ import org.slf4j.LoggerFactory
 import java.nio.ByteBuffer
 import java.util.*
 import java.util.concurrent.ExecutionException
+import java.util.concurrent.TimeUnit
 import java.util.stream.Stream
 import kotlin.collections.HashMap
 import kotlin.collections.HashSet
@@ -457,7 +459,9 @@ open class DataGraphService(
                     val edgeKeys = it.value.asSequence().mapIndexed { index, dataEdge ->
                         DataEdgeKey(dataEdge.src, dataEdge.dst, EntityDataKey(entitySetId, ids[index]))
                     }.toSet()
+                    val sw = Stopwatch.createStarted()
                     val edgeWrite = graphService.createEdges(edgeKeys)
+                    logger.info("graphService.createEdges (for {} edgeKeys) took {}", edgeKeys.size, sw.elapsed(TimeUnit.MILLISECONDS))
 
                     associationCreateEvents[entitySetId] = CreateAssociationEvent(ids, entityWrite, edgeWrite)
                 }
@@ -635,6 +639,7 @@ open class DataGraphService(
         }
     }
 
+    // TODO improve perf
     /**
      * Checks whether the entity type of the src and dst entity sets in each association are part of allowed src and dst
      * entity types of the association entity type.
@@ -646,6 +651,7 @@ open class DataGraphService(
         if (associationType.associationEntityType.id == edmManager.auditRecordEntitySetsManager.auditingTypes.auditingEdgeEntityTypeId) {
             return
         }
+
         associations.forEach {
             // ensure, that DataEdge src and dst entity types are part of src and dst entity types of AssociationType
             val srcEntityType = edmManager.getEntityTypeByEntitySetId(it.src.entitySetId)

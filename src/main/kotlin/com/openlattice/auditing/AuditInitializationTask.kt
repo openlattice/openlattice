@@ -11,6 +11,7 @@ import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.edm.tasks.EdmSyncInitializerTask
 import com.openlattice.edm.type.EntityType
 import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.ids.tasks.IdConstantsReservationTask
 import com.openlattice.organizations.tasks.OrganizationsInitializationTask
 import com.openlattice.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies.PostConstructInitializerTask
@@ -56,7 +57,8 @@ class AuditInitializationTask(
                 UsersAndRolesInitializationTask::class.java,
                 OrganizationsInitializationTask::class.java,
                 Auth0SyncInitializationTask::class.java,
-                EdmSyncInitializerTask::class.java
+                EdmSyncInitializerTask::class.java,
+                IdConstantsReservationTask::class.java
         )
     }
 

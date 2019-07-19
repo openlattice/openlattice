@@ -130,6 +130,7 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
@@ -659,11 +660,17 @@ public class EdmService implements EdmManager {
 
     @Override
     public EntityType getEntityType( FullQualifiedName typeFqn ) {
-        UUID entityTypeId = getTypeAclKey( typeFqn );
-        checkNotNull( entityTypeId,
+        final var entityType = getEntityTypeSafe( typeFqn );
+        checkNotNull( entityType,
                 "Entity type %s does not exists.",
                 typeFqn.getFullQualifiedNameAsString() );
-        return getEntityType( entityTypeId );
+        return entityType;
+    }
+
+    @Override
+    public @Nullable EntityType getEntityTypeSafe( FullQualifiedName typeFqn ) {
+        UUID entityTypeId = getTypeAclKey( typeFqn );
+        return ( entityTypeId == null ) ? null : getEntityType( entityTypeId );
     }
 
     @Override

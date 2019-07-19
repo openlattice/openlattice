@@ -23,5 +23,6 @@
 package com.openlattice.hazelcast;
 
 public enum HazelcastClient {
-    IDS
+    IDS,
+    PERMISSIONS
 }

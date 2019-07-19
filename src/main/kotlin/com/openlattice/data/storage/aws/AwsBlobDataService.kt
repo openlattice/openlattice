@@ -26,9 +26,9 @@ class AwsBlobDataService(
         private val executorService: ListeningExecutorService
 ) : ByteBlobDataManager {
 
-    val s3Credentials = BasicAWSCredentials(datastoreConfiguration.accessKeyId, datastoreConfiguration.secretAccessKey)
+    private val s3Credentials = BasicAWSCredentials(datastoreConfiguration.accessKeyId, datastoreConfiguration.secretAccessKey)
 
-    val s3 = newS3Client(datastoreConfiguration)
+    private val s3 = newS3Client(datastoreConfiguration)
 
     fun newS3Client(datastoreConfiguration: DatastoreConfiguration): AmazonS3 {
         val builder = AmazonS3ClientBuilder.standard()

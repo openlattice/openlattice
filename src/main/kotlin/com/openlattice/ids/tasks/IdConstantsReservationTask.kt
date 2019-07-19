@@ -20,30 +20,87 @@
  */
 package com.openlattice.ids.tasks
 
+import com.google.common.collect.ImmutableSet
+import com.google.common.collect.LinkedHashMultimap
 import com.openlattice.IdConstants
+import com.openlattice.assembler.tasks.UsersAndRolesInitializationTask
+import com.openlattice.authorization.SystemRole.ADMIN
 import com.openlattice.data.EntityKey
+import com.openlattice.edm.EdmConstants
+import com.openlattice.edm.EntitySet
+import com.openlattice.edm.tasks.EdmSyncInitializerTask
+import com.openlattice.edm.type.EntityType
 import com.openlattice.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.Task
 import java.util.*
+import kotlin.collections.LinkedHashSet
+
+const val ID_CONSTANTS_ENTITY_SET_NAME = "id_constants_entity_set"
 
 /**
  * Reserves UUIDs for commonly used ids found in [com.openlattice.IdConstants].
  */
 class IdConstantsReservationTask : HazelcastInitializationTask<IdConstantsReservationDependency> {
+
     override fun getInitialDelay(): Long {
         return 0L
     }
 
     override fun initialize(dependencies: IdConstantsReservationDependency) {
+        val idConstantsEntitySetId = ensureIdConstantsEntitySetExists(dependencies)
+
         val entityKeyIdsToReserve = IdConstants.values()
-                .map {
-                    EntityKey(UUID(100, 100), it.id.toString())
-                }.toSet()
+                .map { EntityKey(idConstantsEntitySetId, it.id.toString()) }
+                .toSet()
         dependencies.entityKeyIdService.reserveEntityKeyIds(entityKeyIdsToReserve)
     }
 
+    private fun ensureIdConstantsEntitySetExists(dependencies: IdConstantsReservationDependency): UUID {
+        var idConstantsEntitySet = dependencies.edmService.getEntitySet(ID_CONSTANTS_ENTITY_SET_NAME)
+
+        if (idConstantsEntitySet == null) {
+            val admin = dependencies.spm.getAllUsersWithPrincipal(dependencies.spm.lookup(ADMIN.principal)).first()
+
+            val idConstantEntityTypeId = createEmptyEntityTypeIfNotExists(dependencies)
+
+            idConstantsEntitySet = EntitySet(
+                    idConstantEntityTypeId,
+                    ID_CONSTANTS_ENTITY_SET_NAME,
+                    "Entity set for reserving ids for constants",
+                    Optional.empty(),
+                    ImmutableSet.of()
+            )
+
+            dependencies.edmService.createEntitySet(admin, idConstantsEntitySet)
+        }
+
+        return idConstantsEntitySet.id
+    }
+
+    private fun createEmptyEntityTypeIfNotExists(dependencies: IdConstantsReservationDependency): UUID {
+        var idConstantsEntityType = dependencies.edmService.getEntityTypeSafe(EdmConstants.EMPTY_ENTITY_TYPE_FQN)
+        if (idConstantsEntityType == null) {
+            idConstantsEntityType = EntityType(
+                    EdmConstants.EMPTY_ENTITY_TYPE_FQN,
+                    "Empty Entity Type",
+                    "Empty entity type used for empty entity set reservation.",
+                    emptySet(),
+                    LinkedHashSet(),
+                    LinkedHashSet(),
+                    LinkedHashMultimap.create(),
+                    Optional.empty(),
+                    Optional.empty(),
+                    Optional.empty()
+            )
+
+            dependencies.edmService.createEntityType(idConstantsEntityType)
+        }
+
+        return idConstantsEntityType.id
+    }
+
     override fun after(): Set<Class<out HazelcastInitializationTask<*>>> {
-        return setOf(IdGenerationCatchUpTask::class.java)
+        return setOf(IdGenerationCatchUpTask::class.java, EdmSyncInitializerTask::class.java, UsersAndRolesInitializationTask::class.java)
     }
 
     override fun getName(): String {
