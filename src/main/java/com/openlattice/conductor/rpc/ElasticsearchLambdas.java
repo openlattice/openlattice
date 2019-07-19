@@ -33,7 +33,6 @@ import com.openlattice.search.requests.SearchResult;
 
 import java.io.Serializable;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -269,13 +268,6 @@ public class ElasticsearchLambdas implements Serializable {
     public static Function<ConductorElasticsearchApi, Boolean> triggerAssociationTypeIndex( List<AssociationType> associationTypes ) {
         return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ( api ) -> api
                 .triggerAssociationTypeIndex( associationTypes );
-    }
-
-    public static Function<ConductorElasticsearchApi, Boolean> triggerEntitySetIndex(
-            Map<EntitySet, Set<UUID>> entitySets,
-            Map<UUID, PropertyType> propertyTypes ) {
-        return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ( api ) -> api
-                .triggerEntitySetIndex( entitySets, propertyTypes );
     }
 
     public static Function<ConductorElasticsearchApi, Boolean> triggerAppIndex( List<App> apps ) {
