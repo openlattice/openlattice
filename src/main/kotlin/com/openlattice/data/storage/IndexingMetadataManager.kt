@@ -137,3 +137,16 @@ private fun joinClause(table1: String, table2: String, joinColumns: List<String>
     }
 }
 
+internal fun buildWithClause(linking: Boolean, entitiesClause: String): String {
+    val joinColumns = if (linking) {
+        listOf(ENTITY_SET_ID.name, ID_VALUE.name, LINKING_ID.name)
+    } else {
+        listOf(ENTITY_SET_ID.name, ID_VALUE.name)
+    }
+    val selectColumns = joinColumns.joinToString(",") { "${IDS.name}.$it AS $it" }
+
+    val queriesSql = "SELECT $selectColumns FROM ${IDS.name} WHERE ${VERSION.name} > 0 $entitiesClause"
+
+    return "WITH $FILTERED_ENTITY_KEY_IDS AS ( $queriesSql ) "
+}
+

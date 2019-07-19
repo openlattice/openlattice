@@ -25,6 +25,7 @@ import com.openlattice.analysis.requests.Filter
 import com.openlattice.postgres.DataTables.*
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.ENTITY_KEY_IDS
+import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.ResultSetAdapters
 import org.slf4j.LoggerFactory
 import java.util.*
@@ -115,19 +116,6 @@ fun selectEntitySetWithCurrentVersionOfPropertyTypes(
 
     val fullQuery = "$withClause SELECT $dataColumns FROM $entitiesSubquerySql $propertyTableJoins"
     return fullQuery
-}
-
-internal fun buildWithClause(linking: Boolean, entitiesClause: String): String {
-    val joinColumns = if (linking) {
-        listOf(ENTITY_SET_ID.name, ID_VALUE.name, LINKING_ID.name)
-    } else {
-        listOf(ENTITY_SET_ID.name, ID_VALUE.name)
-    }
-    val selectColumns = joinColumns.joinToString(",") { "${ENTITY_KEY_IDS.name}.$it AS $it" }
-
-    val queriesSql = "SELECT $selectColumns FROM ${ENTITY_KEY_IDS.name} WHERE ${VERSION.name} > 0 $entitiesClause"
-
-    return "WITH $FILTERED_ENTITY_KEY_IDS AS ( $queriesSql ) "
 }
 
 
