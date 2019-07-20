@@ -34,7 +34,6 @@ class SynchronizeMaterializedEntitySetProcessorStreamSerializer
     : SelfRegisteringStreamSerializer<SynchronizeMaterializedEntitySetProcessor>,
         AssemblerConnectionManagerDependent {
 
-    private val entitySetSerializer = EntitySetStreamSerializer()
     private lateinit var acm: AssemblerConnectionManager
 
     override fun getTypeId(): Int {
@@ -46,24 +45,33 @@ class SynchronizeMaterializedEntitySetProcessorStreamSerializer
     }
 
     override fun write(out: ObjectDataOutput, obj: SynchronizeMaterializedEntitySetProcessor) {
-        entitySetSerializer.write(out, obj.entitySet)
+        EntitySetStreamSerializer.serialize(out, obj.entitySet)
 
-        out.writeInt(obj.authorizedPropertyTypes.size)
+        out.writeInt(obj.materializablePropertyTypes.size)
 
-        obj.authorizedPropertyTypes.forEach { propertyTypeId, propertyType ->
+        obj.materializablePropertyTypes.forEach { (propertyTypeId, propertyType) ->
             UUIDStreamSerializer.serialize(out, propertyTypeId)
             PropertyTypeStreamSerializer.serialize(out, propertyType)
         }
+
+        MaterializeEntitySetProcessorStreamSerializer
+                .serializeAuthorizedPropertyTypesOfPrincipals(out, obj.authorizedPropertyTypesOfPrincipals)
     }
 
     override fun read(input: ObjectDataInput): SynchronizeMaterializedEntitySetProcessor {
-        val entitySet = entitySetSerializer.read(input)
+        val entitySet = EntitySetStreamSerializer.deserialize(input)
 
         val size = input.readInt()
-        val authorizedPropertyTypes = ((0 until size).map {
+        val materializablePropertyTypes = ((0 until size).map {
             UUIDStreamSerializer.deserialize(input) to PropertyTypeStreamSerializer.deserialize(input)
         }.toMap())
-        return SynchronizeMaterializedEntitySetProcessor(entitySet, authorizedPropertyTypes).init(acm)
+
+        val authorizedPropertyTypesOfPrincipals = MaterializeEntitySetProcessorStreamSerializer
+                .deserializeAuthorizedPropertyTypesOfPrincipals(input)
+
+        return SynchronizeMaterializedEntitySetProcessor(
+                entitySet, materializablePropertyTypes, authorizedPropertyTypesOfPrincipals
+        ).init(acm)
     }
 
     override fun init(assemblerConnectionManager: AssemblerConnectionManager) {

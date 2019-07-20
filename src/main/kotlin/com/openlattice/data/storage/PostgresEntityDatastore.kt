@@ -3,7 +3,7 @@ package com.openlattice.data.storage
 import com.codahale.metrics.annotation.Timed
 import com.google.common.collect.*
 import com.google.common.eventbus.EventBus
-import com.openlattice.assembler.Assembler
+import com.openlattice.assembler.events.MaterializedEntitySetDataChangeEvent
 import com.openlattice.data.EntityKeyIdService
 import com.openlattice.data.EntitySetData
 import com.openlattice.data.WriteEvent
@@ -35,10 +35,8 @@ class PostgresEntityDatastore(
         private val idService: EntityKeyIdService,
         private val pdm: IndexingMetadataManager,
         private val dataQueryService: PostgresEntityDataQueryService,
-        private val edmManager: EdmManager,
-        private val assembler: Assembler
+        private val edmManager: EdmManager
 ) : EntityDatastore {
-
 
     companion object {
         private val logger = LoggerFactory.getLogger(PostgresEntityDatastore::class.java)
@@ -173,7 +171,7 @@ class PostgresEntityDatastore(
     }
 
     private fun markMaterializedEntitySetDirty(entitySetId: UUID) {
-        assembler.flagMaterializedEntitySetDataUnsynch(entitySetId)
+        eventBus.post(MaterializedEntitySetDataChangeEvent(entitySetId))
     }
 
     @Timed
