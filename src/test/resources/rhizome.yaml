@@ -22,6 +22,15 @@ hazelcast:
     seed-nodes: 
         - "localhost"
 
+hazelcast-clients:
+    IDS:
+        server: false
+        group: "local"
+        password: "trellis"
+        cp-member-count: 0
+        seed-nodes:
+            - "localhost"
+
 postgres:
     hikari:
         jdbcUrl: jdbc:postgresql://localhost:5432/openlattice
