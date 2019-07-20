@@ -241,8 +241,7 @@ public class DatastoreServicesPod {
                 entityTypeManager(),
                 schemaManager(),
                 auditingConfiguration,
-                partitionManager(),
-                assembler() );
+                partitionManager() );
     }
 
     @Bean
@@ -265,13 +264,21 @@ public class DatastoreServicesPod {
         return new PostgresEntityDatastore( idService(),
                 postgresDataManager(),
                 dataQueryService(),
-                dataModelService(),
-                assembler() );
+                dataModelService() );
     }
 
     @Bean
     public Assembler assembler() {
-        return new Assembler( dcs(), hikariDataSource, metricRegistry, hazelcastInstance, eventBus );
+        return new Assembler(
+                dcs(),
+                hikariDataSource,
+                authorizationManager(),
+                edmAuthorizationHelper(),
+                principalService(),
+                metricRegistry,
+                hazelcastInstance,
+                eventBus
+        );
     }
 
     @Bean
@@ -311,16 +318,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public AssemblerDependencies assemblerDependencies() {
-        return new AssemblerDependencies(
-                assemblerConfiguration,
-                hikariDataSource,
-                principalService(),
-                organizationsManager(),
-                dcs(),
-                hazelcastInstance.getMap( HazelcastMap.ENTITY_SETS.name() ),
-                assemblerConnectionManager(),
-                hazelcastInstance.getMap( HazelcastMap.SECURABLE_OBJECT_TYPES.name() ),
-                metricRegistry );
+        return new AssemblerDependencies( hikariDataSource, dcs(), assemblerConnectionManager() );
     }
 
     @Bean
@@ -429,8 +427,6 @@ public class DatastoreServicesPod {
         return new AssemblerConnectionManager( assemblerConfiguration,
                 hikariDataSource,
                 principalService(),
-                authorizationManager(),
-                edmAuthorizationHelper(),
                 organizationsManager(),
                 dcs(),
                 eventBus,
