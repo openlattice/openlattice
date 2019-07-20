@@ -22,7 +22,6 @@ package com.openlattice.datastore.services;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.durableexecutor.DurableExecutorService;
@@ -38,18 +37,14 @@ import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organization.Organization;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
-import com.openlattice.search.requests.*;
-
-import java.util.Optional;
-
+import com.openlattice.search.requests.EntityDataKeySearchResult;
+import com.openlattice.search.requests.SearchConstraints;
+import com.openlattice.search.requests.SearchResult;
 import org.apache.commons.lang3.NotImplementedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 
 public class DatastoreConductorElasticsearchApi implements ConductorElasticsearchApi {
@@ -294,11 +289,13 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
     @Override public boolean deleteEntityDataBulk( UUID entitySetId, UUID entityTypeId, Set<UUID> entityKeyIds ) {
         try {
             return executor.submit( ConductorElasticsearchCall
-                    .wrap( ElasticsearchLambdas.deleteEntityDataBulk( entitySetId, entityTypeId, entityKeyIds ) ) ).get();
+                    .wrap( ElasticsearchLambdas.deleteEntityDataBulk( entitySetId, entityTypeId, entityKeyIds ) ) )
+                    .get();
         } catch ( InterruptedException | ExecutionException e ) {
             logger.debug( "unable to delete entity data from elasticsearch" );
             return false;
-        }    }
+        }
+    }
 
     @Override public EntityDataKeySearchResult executeSearch(
             SearchConstraints searchConstraints,
@@ -338,10 +335,13 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
     }
 
     @Override
-    public boolean saveAssociationTypeToElasticsearch( AssociationType associationType, List<PropertyType> propertyTypes ) {
+    public boolean saveAssociationTypeToElasticsearch(
+            AssociationType associationType,
+            List<PropertyType> propertyTypes ) {
         try {
             return executor.submit( ConductorElasticsearchCall
-                    .wrap( ElasticsearchLambdas.saveAssociationTypeToElasticsearch( associationType, propertyTypes ) ) ).get();
+                    .wrap( ElasticsearchLambdas.saveAssociationTypeToElasticsearch( associationType, propertyTypes ) ) )
+                    .get();
         } catch ( InterruptedException | ExecutionException e ) {
             logger.debug( "unable to save association type to elasticsearch" );
             return false;
@@ -524,7 +524,7 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
             Map<UUID, PropertyType> propertyTypes ) {
         try {
             return executor.submit( ConductorElasticsearchCall.wrap(
-                    ElasticsearchLambdas.triggerEntitySetIndex( entitySets, propertyTypes ) ) ).get();
+                    new ReIndexEntitySetMetadataLambdas( entitySets, propertyTypes ) ) ).get();
         } catch ( InterruptedException | ExecutionException e ) {
             logger.debug( "Unable to trigger entity set re-index" );
             return false;
