@@ -17,10 +17,20 @@ cassandra:
 
 hazelcast:
     server: true
+    cp-member-count: 0
     group: "local"
     password: "trellis"
     seed-nodes: 
         - "localhost"
+
+hazelcast-clients:
+    IDS:
+        server: false
+        group: "local"
+        password: "trellis"
+        cp-member-count: 0
+        seed-nodes:
+            - "localhost"
 
 postgres:
     hikari:
