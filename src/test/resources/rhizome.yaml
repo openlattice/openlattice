@@ -17,6 +17,7 @@ cassandra:
 
 hazelcast:
     server: true
+    cp-member-count: 0
     group: "local"
     password: "trellis"
     seed-nodes: 
