@@ -172,11 +172,11 @@ public final class PostgresColumn {
             new PostgresColumnDefinition( ENTITY_SET_FLAGS_FIELD, TEXT_ARRAY )
                     .withDefault( "'{}'" );
     public static final String                   ENTITY_SET_IDS_FIELD              = "entity_set_ids";
+    public static final PostgresColumnDefinition ENTITY_SET_IDS                    =
+            new PostgresColumnDefinition( ENTITY_SET_IDS_FIELD, UUID_ARRAY ).notNull();
     public static final String                   ENTITY_SET_ID_FIELD               = "entity_set_id";
     public static final PostgresColumnDefinition ENTITY_SET_ID                     =
             new PostgresColumnDefinition( ENTITY_SET_ID_FIELD, UUID ).notNull();
-    public static final PostgresColumnDefinition ENTITY_SET_IDS                    =
-            new PostgresColumnDefinition( ENTITY_SET_IDS_FIELD, UUID_ARRAY ).notNull();
     public static final String                   ENTITY_SET_NAME_FIELD             = "entity_set_name";
     public static final PostgresColumnDefinition ENTITY_SET_Name                   =
             new PostgresColumnDefinition( ENTITY_SET_NAME_FIELD, UUID ).notNull();
@@ -224,12 +224,12 @@ public final class PostgresColumn {
     public static final String                   ID_FIELD                          = "id";
     public static final PostgresColumnDefinition ID                                =
             new PostgresColumnDefinition( ID_FIELD, UUID ).primaryKey().notNull();
-    public static final PostgresColumnDefinition ID_VALUE                          =
-            new PostgresColumnDefinition( ID_FIELD, UUID );
     public static final String                   ID_TYPE_FIELD                     = "id_type";
     public static final PostgresColumnDefinition ID_TYPE                           =
             new PostgresColumnDefinition( ID_TYPE_FIELD, INTEGER )
                     .notNull();
+    public static final PostgresColumnDefinition ID_VALUE                          =
+            new PostgresColumnDefinition( ID_FIELD, UUID );
     public static final String                   INDEX_TYPE_FIELD                  = "index_type";
     public static final PostgresColumnDefinition INDEX_TYPE                        = new PostgresColumnDefinition(
             INDEX_TYPE_FIELD,
@@ -395,6 +395,10 @@ public final class PostgresColumn {
     public static final String                   SCHEMAS_FIELD                     = "schemas";
     public static final PostgresColumnDefinition SCHEMAS                           =
             new PostgresColumnDefinition( SCHEMAS_FIELD, TEXT_ARRAY ).notNull();
+    public static final String                   SCOPE_FIELD                       = "scope";
+    public static final PostgresColumnDefinition SCOPE                             = new PostgresColumnDefinition(
+            SCOPE_FIELD,
+            TEXT ).notNull();
     public static final String                   SCORE_FIELD                       = "score";
     public static final PostgresColumnDefinition SCORE                             =
             new PostgresColumnDefinition( SCORE_FIELD, PostgresDatatype.DOUBLE );

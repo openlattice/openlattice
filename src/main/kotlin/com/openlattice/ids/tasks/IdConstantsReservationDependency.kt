@@ -21,6 +21,12 @@
 package com.openlattice.ids.tasks
 
 import com.openlattice.data.EntityKeyIdService
+import com.openlattice.datastore.services.EdmManager
+import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.tasks.HazelcastTaskDependencies
 
-data class IdConstantsReservationDependency(val entityKeyIdService: EntityKeyIdService) : HazelcastTaskDependencies
+data class IdConstantsReservationDependency(
+        val entityKeyIdService: EntityKeyIdService,
+        val edmService: EdmManager,
+        val spm: SecurePrincipalsManager
+) : HazelcastTaskDependencies
