@@ -18,21 +18,8 @@
  *
  *
  */
+package com.openlattice.assembler.events
 
-package com.openlattice.assembler
+import java.util.UUID
 
-import com.openlattice.authorization.DbCredentialService
-import com.openlattice.tasks.HazelcastTaskDependencies
-import com.zaxxer.hikari.HikariDataSource
-
-/**
- *
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
- */
-data class AssemblerDependencies(
-        val hds: HikariDataSource,
-        val dbCredentialService: DbCredentialService,
-        val assemblerConnectionManager: AssemblerConnectionManager
-) : HazelcastTaskDependencies {
-    val target: HikariDataSource = assemblerConnectionManager.connect("postgres")
-}
+data class MaterializedEntitySetDataChangeEvent(val entitySetId: UUID)

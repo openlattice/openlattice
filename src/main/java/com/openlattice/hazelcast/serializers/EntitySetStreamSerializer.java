@@ -29,20 +29,25 @@ import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.set.EntitySetFlag;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
+
 import java.io.IOException;
 import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+
 import org.springframework.stereotype.Component;
 
 @Component
 public class EntitySetStreamSerializer implements SelfRegisteringStreamSerializer<EntitySet> {
 
     @Override
-    public void write( ObjectDataOutput out, EntitySet object )
-            throws IOException {
+    public void write( ObjectDataOutput out, EntitySet object ) throws IOException {
+        serialize( out, object );
+    }
+
+    public static void serialize( ObjectDataOutput out, EntitySet object ) throws IOException {
         UUIDStreamSerializer.serialize( out, object.getId() );
         UUIDStreamSerializer.serialize( out, object.getEntityTypeId() );
         out.writeUTF( object.getName() );
@@ -56,10 +61,10 @@ public class EntitySetStreamSerializer implements SelfRegisteringStreamSerialize
             out.writeUTF( flag.toString() );
         }
 
-        var partitions = new int[ object.getPartitions().size() ];
+        var partitions = new int[object.getPartitions().size()];
         var index = 0;
         for ( var partition : object.getPartitions() ) {
-            partitions[ index++ ] = partition;
+            partitions[index++] = partition;
         }
 
         out.writeIntArray( partitions );
@@ -67,6 +72,10 @@ public class EntitySetStreamSerializer implements SelfRegisteringStreamSerialize
 
     @Override
     public EntitySet read( ObjectDataInput in ) throws IOException {
+        return deserialize( in );
+    }
+
+    public static EntitySet deserialize( ObjectDataInput in ) throws IOException {
         Optional<UUID> id = Optional.of( UUIDStreamSerializer.deserialize( in ) );
         UUID entityTypeId = UUIDStreamSerializer.deserialize( in );
         String name = in.readUTF();
