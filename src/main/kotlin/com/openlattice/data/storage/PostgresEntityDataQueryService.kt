@@ -151,7 +151,8 @@ class PostgresEntityDataQueryService(
             metadataOptions: Set<MetadataOption> = EnumSet.noneOf(MetadataOption::class.java)
     ): BasePostgresIterable<Pair<UUID, Map<UUID, Set<Any>>>> {
         return getEntitySetIterable(entityKeyIds, authorizedPropertyTypes, mapOf(), metadataOptions) { rs ->
-            getEntityPropertiesByPropertyTypeId(rs, authorizedPropertyTypes, byteBlobDataManager)
+            getEntityPropertiesByPropertyTypeId2(rs, authorizedPropertyTypes,byteBlobDataManager )
+//            getEntityPropertiesByPropertyTypeId(rs, authorizedPropertyTypes, byteBlobDataManager)
         }
     }
 
