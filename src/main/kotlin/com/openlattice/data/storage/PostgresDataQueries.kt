@@ -35,6 +35,8 @@ val valuesColumnsSql = PostgresDataTables.dataTableValueColumns.joinToString(","
     "array_agg(${it.name}) FILTER (where ${it.name} IS NOT NULL) as ${it.name}"
 }
 
+val jsonValueColumnNamesAsString = PostgresDataTables.dataColumns.keys.map{ getMergedDataColumnName(it) }.joinToString(",")
+
 val jsonValueColumnsSql = PostgresDataTables.dataColumns.entries
         .joinToString(",") { (datatype, cols) ->
             val (ni, bt) = cols
@@ -42,7 +44,6 @@ val jsonValueColumnsSql = PostgresDataTables.dataColumns.entries
                     "FILTER (WHERE ${bt.name} IS NOT NULL OR ${ni.name} IS NOT NULL ),'{}') " +
                     "as ${getMergedDataColumnName(datatype)}"
         }
-
 
 /**
  * Builds a preparable SQL query for reading filterable data.
@@ -64,10 +65,13 @@ fun buildPreparableFiltersClauseForLinkedEntities(
 ): Pair<String, Set<SqlBinder>> {
     val filtersClauses = buildPreparableFiltersClause(startIndex, propertyTypes, propertyTypeFilters)
     val filtersClause = filtersClauses.first
-    val sql = selectEntitiesGroupedByIdAndPropertyTypeId(idsPresent = idsPresent, partitionsPresent = partitionsPresent)
-    " AND ${ORIGIN_ID.name} IS NOT NULL AND ${VERSION.name} > 0" +
+    val innerSql = selectEntitiesGroupedByIdAndPropertyTypeId(idsPresent = idsPresent, partitionsPresent = partitionsPresent)
+    val sql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name},${PROPERTY_TYPE_ID.name},$jsonValueColumnNamesAsString FROM ${IDS.name} LEFT JOIN (" +
+            "$innerSql AND ${ORIGIN_ID.name} IS NOT NULL AND ${VERSION.name} > 0" +
             " ${if (filtersClause.isNotEmpty()) "AND $filtersClause " else ""}" +
-            "GROUP BY (${ENTITY_SET_ID.name},${LINKING_ID.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
+            "GROUP BY (${ENTITY_SET_ID.name},${LINKING_ID.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})) AS data " +
+            "USING (${ID_VALUE.name},${PARTITION.name},${ENTITY_SET_ID.name}) " +
+            "${optionalWhereClauses(idsPresent = idsPresent, partitionsPresent = partitionsPresent)}"
 
     return sql to filtersClauses.second
 
@@ -99,8 +103,11 @@ fun buildPreparableFiltersSqlForEntities(
     ) +
             " ${if (filtersClause.isNotEmpty()) "AND $filtersClause " else ""}" +
             GROUP_BY_ESID_EKID_PART_PTID
-    val sql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},$jsonValueColumnsSql FROM ($innerSql) entities " +
-            GROUP_BY_ESID_EKID_PART
+
+    val sql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},$jsonValueColumnNamesAsString FROM ${IDS.name} LEFT JOIN (" +
+            "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name},$jsonValueColumnsSql FROM ($innerSql) entities " +
+            "$GROUP_BY_ESID_EKID_PART) AS data USING (${ID_VALUE.name},${PARTITION.name},${ENTITY_SET_ID.name}) " +
+            "${optionalWhereClauses(idsPresent = idsPresent, partitionsPresent = partitionsPresent)} "
 
     return sql to filtersClauses.second
 
@@ -210,22 +217,28 @@ internal val GROUP_BY_ID = "GROUP BY (${ID_VALUE.name}, ${PARTITION.name})"
  * 3. partition (array)
  *
  */
-internal fun selectEntitiesGroupedByIdAndPropertyTypeId(
+
+fun optionalWhereClauses(
         idsPresent: Boolean = true,
         partitionsPresent: Boolean = true,
         entitySetsPresent: Boolean = true
 ): String {
-
     val entitySetClause = if (entitySetsPresent) "${ENTITY_SET_ID.name} = ANY(?)" else ""
     val idsClause = if (idsPresent) "${ID_VALUE.name} = ANY(?)" else ""
     val partitionClause = if (partitionsPresent) "${PARTITION.name} = ANY(?)" else ""
     val versionsClause = "${VERSION.name} > 0 "
 
     val optionalClauses = listOf(entitySetClause, idsClause, partitionClause, versionsClause).filter { it.isNotBlank() }
-    val optionalClausesSql = if (optionalClauses.isEmpty()) "" else "WHERE ${optionalClauses.joinToString(" AND ")}"
+    return if (optionalClauses.isEmpty()) "" else "WHERE ${optionalClauses.joinToString(" AND ")}"
+}
 
+internal fun selectEntitiesGroupedByIdAndPropertyTypeId(
+        idsPresent: Boolean = true,
+        partitionsPresent: Boolean = true,
+        entitySetsPresent: Boolean = true
+): String {
     return "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name},${PROPERTY_TYPE_ID.name},$valuesColumnsSql " +
-            "FROM ${DATA.name} $optionalClausesSql"
+            "FROM ${DATA.name} ${optionalWhereClauses(idsPresent, partitionsPresent, entitySetsPresent)}"
 }
 
 
