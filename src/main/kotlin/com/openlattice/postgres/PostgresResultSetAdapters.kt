@@ -36,15 +36,15 @@ private fun <T> getEntityPropertiesByFunctionResult(
     val entitySetId = entitySetId(rs)
     val data = mutableMapOf<T, MutableSet<Any>>()
 
-    val allPropertyTypes = authorizedPropertyTypes.getValue(entitySetId).values
+    val propertyTypes = authorizedPropertyTypes.getValue(entitySetId).values
 
-    for (propertyType in allPropertyTypes) {
+    for (propertyType in propertyTypes) {
         val objects = propertyValue(rs, propertyType)
 
         if (objects != null) {
             val key = mapper(propertyType)
             if (propertyType.datatype == EdmPrimitiveTypeKind.Binary) {
-                data[key] = mutableSetOf<Any>(byteBlobDataManager.getObjects(objects as List<String>))
+                data[key] = byteBlobDataManager.getObjects(objects as List<String>).toMutableSet()
             } else {
                 data[key] = mutableSetOf<Any>(objects)
             }
@@ -149,7 +149,7 @@ fun getEntityPropertiesByPropertyTypeId(
         authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
         byteBlobDataManager: ByteBlobDataManager
 ): Pair<UUID, MutableMap<UUID, MutableSet<Any>>> {
-    return getEntityPropertiesByFunctionResult(rs, authorizedPropertyTypes, byteBlobDataManager) { it.id }
+    return getEntityPropertiesByPropertyTypeId2(rs, authorizedPropertyTypes, byteBlobDataManager)
 }
 
 @Throws(SQLException::class)
