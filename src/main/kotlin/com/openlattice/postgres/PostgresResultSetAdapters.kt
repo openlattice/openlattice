@@ -130,6 +130,7 @@ fun getEntityPropertiesByPropertyTypeId3(
                 if (propertyType.datatype == EdmPrimitiveTypeKind.Binary) {
                     val urls = dataMap.getOrElse(propertyType.id) { mutableSetOf() }
                     dataMap[propertyType.id] = byteBlobDataManager.getObjects(urls).toMutableSet()
+                    logger.info("URLS: {}", dataMap[propertyType.id])
                 }
 
                 dataMap.mapKeys { propertyTypes.getValue(it.key).type }.toMutableMap()
