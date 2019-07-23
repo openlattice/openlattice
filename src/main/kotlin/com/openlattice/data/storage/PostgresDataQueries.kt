@@ -329,7 +329,7 @@ internal fun selectLinkingEntitySetSql(linkingEntitySetId: UUID): String {
  * 6 - partitions
  */
 internal val upsertEntitiesSql = "UPDATE ${IDS.name} SET ${VERSIONS.name} = ${VERSIONS.name} || ?, ${DataTables.LAST_WRITE.name} = now(), " +
-        "${VERSION.name} = CASE WHEN abs(${IDS.name}.${VERSION.name}) < ? THEN ? " +
+        "${VERSION.name} = CASE WHEN abs(${IDS.name}.${VERSION.name}) < abs(?) THEN ? " +
         "ELSE ${IDS.name}.${VERSION.name} END " +
         "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ?"
 
