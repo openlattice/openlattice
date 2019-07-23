@@ -197,29 +197,27 @@ class PostgresEntityDataQueryService(
         return BasePostgresIterable(PreparedStatementHolderSupplier(hds, sql, FETCH_SIZE) { ps ->
             val metaBinders = linkedSetOf<SqlBinder>()
             var bindIndex = 1
-            repeat(2) {
+            metaBinders.add(
+                    SqlBinder(
+                            SqlBindInfo(bindIndex++, PostgresArrays.createUuidArray(ps.connection, entitySetIds)),
+                            ::doBind
+                    )
+            )
+            if (ids.isNotEmpty()) {
                 metaBinders.add(
                         SqlBinder(
-                                SqlBindInfo(bindIndex++, PostgresArrays.createUuidArray(ps.connection, entitySetIds)),
+                                SqlBindInfo(bindIndex++, PostgresArrays.createUuidArray(ps.connection, ids)), ::doBind
+                        )
+                )
+            }
+
+            if (partitions.isNotEmpty()) {
+                metaBinders.add(
+                        SqlBinder(
+                                SqlBindInfo(bindIndex++, PostgresArrays.createIntArray(ps.connection, partitions)),
                                 ::doBind
                         )
                 )
-                if (ids.isNotEmpty()) {
-                    metaBinders.add(
-                            SqlBinder(
-                                    SqlBindInfo(bindIndex++, PostgresArrays.createUuidArray(ps.connection, ids)), ::doBind
-                            )
-                    )
-                }
-
-                if (partitions.isNotEmpty()) {
-                    metaBinders.add(
-                            SqlBinder(
-                                    SqlBindInfo(bindIndex++, PostgresArrays.createIntArray(ps.connection, partitions)),
-                                    ::doBind
-                            )
-                    )
-                }
             }
             (metaBinders + binders).forEach { it.bind(ps) }
         }, adapter)
