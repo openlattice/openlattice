@@ -222,6 +222,7 @@ class PostgresEntityDataQueryService(
                 }
             }
             (metaBinders + binders).forEach { it.bind(ps) }
+            logger.info("sql is: {}", ps.toString())
         }, adapter)
     }
 
