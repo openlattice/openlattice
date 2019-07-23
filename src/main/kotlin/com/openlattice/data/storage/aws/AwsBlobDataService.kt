@@ -58,11 +58,11 @@ class AwsBlobDataService(
         s3.deleteObject(deleteRequest)
     }
 
-    override fun getObjects(keys: List<Any>): List<Any> {
+    override fun getObjects(keys: Collection<Any>): List<Any> {
         return getPresignedUrls(keys)
     }
 
-    override fun getPresignedUrls(keys: List<Any>): List<URL> {
+    override fun getPresignedUrls(keys: Collection<Any>): List<URL> {
         val expirationTime = Date()
         val timeToLive = expirationTime.time + datastoreConfiguration.timeToLive
         expirationTime.time = timeToLive
