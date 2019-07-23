@@ -35,7 +35,7 @@ val valuesColumnsSql = PostgresDataTables.dataTableValueColumns.joinToString(","
     "array_agg(${it.name}) FILTER (where ${it.name} IS NOT NULL) as ${it.name}"
 }
 
-val jsonValueColumnNamesAsString = PostgresDataTables.dataColumns.keys.map{ getMergedDataColumnName(it) }.joinToString(",")
+val jsonValueColumnNamesAsString = PostgresDataTables.dataColumns.keys.map { getMergedDataColumnName(it) }.joinToString(",")
 
 val jsonValueColumnsSql = PostgresDataTables.dataColumns.entries
         .joinToString(",") { (datatype, cols) ->
@@ -66,12 +66,14 @@ fun buildPreparableFiltersClauseForLinkedEntities(
     val filtersClauses = buildPreparableFiltersClause(startIndex, propertyTypes, propertyTypeFilters)
     val filtersClause = filtersClauses.first
     val innerSql = selectEntitiesGroupedByIdAndPropertyTypeId(idsPresent = idsPresent, partitionsPresent = partitionsPresent)
-    val sql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name},${PROPERTY_TYPE_ID.name},$jsonValueColumnNamesAsString FROM ${IDS.name} LEFT JOIN (" +
+
+    val sql = joinPreparableFiltersSelectToIdsTable(
             "$innerSql AND ${ORIGIN_ID.name} IS NOT NULL AND ${VERSION.name} > 0" +
-            " ${if (filtersClause.isNotEmpty()) "AND $filtersClause " else ""}" +
-            "GROUP BY (${ENTITY_SET_ID.name},${LINKING_ID.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})) AS data " +
-            "USING (${ID_VALUE.name},${PARTITION.name},${ENTITY_SET_ID.name}) " +
-            "${optionalWhereClauses(idsPresent = idsPresent, partitionsPresent = partitionsPresent)}"
+                    " ${if (filtersClause.isNotEmpty()) "AND $filtersClause " else ""}" +
+                    "GROUP BY (${ENTITY_SET_ID.name},${LINKING_ID.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})",
+            idsPresent = idsPresent,
+            partitionsPresent = partitionsPresent
+    )
 
     return sql to filtersClauses.second
 
@@ -104,13 +106,24 @@ fun buildPreparableFiltersSqlForEntities(
             " ${if (filtersClause.isNotEmpty()) "AND $filtersClause " else ""}" +
             GROUP_BY_ESID_EKID_PART_PTID
 
-    val sql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},$jsonValueColumnNamesAsString FROM ${IDS.name} LEFT JOIN (" +
-            "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name},$jsonValueColumnsSql FROM ($innerSql) entities " +
-            "$GROUP_BY_ESID_EKID_PART) AS data USING (${ID_VALUE.name},${PARTITION.name},${ENTITY_SET_ID.name}) " +
-            "${optionalWhereClauses(idsPresent = idsPresent, partitionsPresent = partitionsPresent)} "
+    val sql = joinPreparableFiltersSelectToIdsTable(
+            "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name},$jsonValueColumnsSql FROM ($innerSql) entities $GROUP_BY_ESID_EKID_PART",
+            idsPresent = idsPresent,
+            partitionsPresent = partitionsPresent
+    )
 
     return sql to filtersClauses.second
 
+}
+
+internal fun joinPreparableFiltersSelectToIdsTable(
+        innerSql: String,
+        idsPresent: Boolean,
+        partitionsPresent: Boolean
+): String {
+    return "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name},$jsonValueColumnNamesAsString FROM ${IDS.name} LEFT JOIN ($innerSql) as data " +
+            "USING (${ID_VALUE.name},${PARTITION.name},${ENTITY_SET_ID.name}) " +
+            "${optionalWhereClauses(idsPresent = idsPresent, partitionsPresent = partitionsPresent)}"
 }
 
 /*
@@ -229,7 +242,7 @@ fun optionalWhereClauses(
     val versionsClause = "${VERSION.name} > 0 "
 
     val optionalClauses = listOf(entitySetClause, idsClause, partitionClause, versionsClause).filter { it.isNotBlank() }
-    return if (optionalClauses.isEmpty()) "" else "WHERE ${optionalClauses.joinToString(" AND ")}"
+    return "WHERE ${optionalClauses.joinToString(" AND ")}"
 }
 
 internal fun selectEntitiesGroupedByIdAndPropertyTypeId(
