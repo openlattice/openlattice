@@ -133,7 +133,13 @@ fun getEntityPropertiesByPropertyTypeId3(
                     logger.info("URLS: {}", dataMap[propertyType.id])
                 }
 
-                dataMap.mapKeys { propertyTypes.getValue(it.key).type }.toMutableMap()
+                val returnMap = dataMap.mapKeys { propertyTypes.getValue(it.key).type }.toMutableMap()
+
+                if (returnMap.containsKey(FullQualifiedName("publicsafety.mugshot"))) {
+                    logger.info("this is the values {}", returnMap.get(FullQualifiedName("publicsafety.mugshot") ?: ""))
+                }
+
+                returnMap
             }
             .fold(mutableMapOf(ID_FQN to mutableSetOf<Any>(id))) { acc, mutableMap ->
                 acc.putAll(mutableMap)
