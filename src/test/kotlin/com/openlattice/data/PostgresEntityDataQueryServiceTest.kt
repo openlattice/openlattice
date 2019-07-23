@@ -25,11 +25,10 @@ import com.google.common.collect.ImmutableMap
 import com.openlattice.data.storage.*
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.DataTables
-
 import com.openlattice.postgres.IndexType
+import com.openlattice.postgres.PostgresTable
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.apache.olingo.commons.api.edm.FullQualifiedName
-import com.openlattice.postgres.PostgresTable
 import org.junit.Test
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -256,13 +255,5 @@ class PostgresEntityDataQueryServiceTest {
                         entitySetId, entityKeyIdsClause(setOf(entityKeyId)), propertyTypeId, fqn, version, false
                 )
         )
-    }
-
-    @Test
-    fun testBuildWithClause() {
-        val entitiesClause = buildEntitiesClause(
-                mapOf(UUID.fromString("ed5716db-830b-41b7-9905-24fa82761ace") to Optional.empty()),
-                false)
-        logger.info("Build with clause: \n {}", buildWithClause(false, entitiesClause))
     }
 }
