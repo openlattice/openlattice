@@ -90,11 +90,11 @@ fun getEntityPropertiesByPropertyTypeId2(
 
                 val dataMap = mapper
                         .readValue<MutableMap<UUID, MutableSet<Any>>>(json)
-                (dataMap.keys - propertyTypes.keys).forEach(dataMap::remove)
+                (dataMap.keys - propertyTypes.keys).forEach { dataMap.remove(it) }
 
                 if (propertyType.datatype == EdmPrimitiveTypeKind.Binary) {
                     val urls = dataMap.getOrElse(propertyType.id) { mutableSetOf() }
-                    dataMap[propertyType.id] = mutableSetOf(byteBlobDataManager.getObjects(urls))
+                    dataMap[propertyType.id] = byteBlobDataManager.getObjects(urls).toMutableSet()
                 }
                 dataMap
             }
@@ -125,11 +125,11 @@ fun getEntityPropertiesByPropertyTypeId3(
 
                 val dataMap = mapper
                         .readValue<MutableMap<UUID, MutableSet<Any>>>(json)
-                (dataMap.keys - propertyTypes.keys).forEach(dataMap::remove)
+                (dataMap.keys - propertyTypes.keys).forEach { dataMap.remove(it) }
 
                 if (propertyType.datatype == EdmPrimitiveTypeKind.Binary) {
                     val urls = dataMap.getOrElse(propertyType.id) { mutableSetOf() }
-                    dataMap[propertyType.id] = mutableSetOf(byteBlobDataManager.getObjects(urls))
+                    dataMap[propertyType.id] = byteBlobDataManager.getObjects(urls).toMutableSet()
                 }
 
                 dataMap.mapKeys { propertyTypes.getValue(it.key).type }.toMutableMap()
