@@ -54,6 +54,7 @@ import com.openlattice.authorization.AuthorizingComponent;
 import com.openlattice.authorization.EdmAuthorizationHelper;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principals;
+import com.openlattice.IdConstants;
 import com.openlattice.controllers.exceptions.BadRequestException;
 import com.openlattice.controllers.exceptions.ForbiddenException;
 import com.openlattice.data.CreateAssociationEvent;
@@ -78,6 +79,7 @@ import com.openlattice.edm.set.EntitySetFlag;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
+import com.openlattice.postgres.PostgresMetaDataProperties;
 import com.openlattice.postgres.streams.PostgresIterable;
 import com.openlattice.search.requests.EntityNeighborsFilter;
 import com.openlattice.web.mediatypes.CustomMediaType;
@@ -1111,6 +1113,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                         requiredProperties,
                         propertyPermissionsToCheck )
                 .get( entitySetId );
+        authorizedPropertyTypes.put( IdConstants.ID_ID.getId(), PostgresMetaDataProperties.ID.getPropertyType() );
         if ( !authorizedPropertyTypes.keySet().containsAll( requiredProperties ) ) {
             throw new ForbiddenException(
                     "You must have " + propertyPermissionsToCheck.iterator().next() + " permission of all required " +
