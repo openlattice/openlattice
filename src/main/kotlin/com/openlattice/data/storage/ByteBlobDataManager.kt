@@ -11,11 +11,11 @@ interface ByteBlobDataManager {
 
     fun deleteObject(s3Key: String)
 
-    fun getObjects(keys: List<Any>): List<Any>
+    fun getObjects(keys: Collection<Any>): List<Any>
 
     fun getPresignedUrl(key: Any, expiration: Date, httpMethod: HttpMethod = HttpMethod.GET, contentType: Optional<String>): URL
   
-    fun getPresignedUrls(keys: List<Any>): List<URL>
+    fun getPresignedUrls(keys: Collection<Any>): List<URL>
   
     fun deleteObjects(s3Keys: List<String>)
 }
