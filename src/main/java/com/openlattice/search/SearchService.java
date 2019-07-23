@@ -551,7 +551,8 @@ public class SearchService {
             allEntitySetIds.add( entityKeyIds.contains( edge.getSrc().getEntityKeyId() ) ?
                     edge.getDst().getEntitySetId() : edge.getSrc().getEntitySetId() );
         } );
-        logger.info( "Get edges and neighbors for vertices query finished in {} ms",
+        logger.info( "Get edges and neighbors for vertices query for {} ids finished in {} ms",
+                filter.getEntityKeyIds().size(),
                 sw1.elapsed( TimeUnit.MILLISECONDS ) );
         sw1.reset().start();
 

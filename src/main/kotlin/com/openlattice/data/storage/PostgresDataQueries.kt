@@ -65,15 +65,12 @@ fun buildPreparableFiltersClauseForLinkedEntities(
 ): Pair<String, Set<SqlBinder>> {
     val filtersClauses = buildPreparableFiltersClause(startIndex, propertyTypes, propertyTypeFilters)
     val filtersClause = filtersClauses.first
+
     val innerSql = selectEntitiesGroupedByIdAndPropertyTypeId(idsPresent = idsPresent, partitionsPresent = partitionsPresent)
 
-    val sql = joinPreparableFiltersSelectToIdsTable(
-            "$innerSql AND ${ORIGIN_ID.name} IS NOT NULL AND ${VERSION.name} > 0" +
+    val sql = "$innerSql AND ${ORIGIN_ID.name} IS NOT NULL AND ${VERSION.name} > 0" +
                     " ${if (filtersClause.isNotEmpty()) "AND $filtersClause " else ""}" +
-                    "GROUP BY (${ENTITY_SET_ID.name},${LINKING_ID.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})",
-            idsPresent = idsPresent,
-            partitionsPresent = partitionsPresent
-    )
+                    "GROUP BY (${ENTITY_SET_ID.name},${LINKING_ID.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
 
     return sql to filtersClauses.second
 
@@ -106,24 +103,10 @@ fun buildPreparableFiltersSqlForEntities(
             " ${if (filtersClause.isNotEmpty()) "AND $filtersClause " else ""}" +
             GROUP_BY_ESID_EKID_PART_PTID
 
-    val sql = joinPreparableFiltersSelectToIdsTable(
-            "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name},$jsonValueColumnsSql FROM ($innerSql) entities $GROUP_BY_ESID_EKID_PART",
-            idsPresent = idsPresent,
-            partitionsPresent = partitionsPresent
-    )
+    val sql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name},$jsonValueColumnsSql FROM ($innerSql) entities $GROUP_BY_ESID_EKID_PART"
 
     return sql to filtersClauses.second
 
-}
-
-internal fun joinPreparableFiltersSelectToIdsTable(
-        innerSql: String,
-        idsPresent: Boolean,
-        partitionsPresent: Boolean
-): String {
-    return "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name},$jsonValueColumnNamesAsString FROM ${IDS.name} LEFT JOIN ($innerSql) as data " +
-            "USING (${ID_VALUE.name},${PARTITION.name},${ENTITY_SET_ID.name}) " +
-            "${optionalWhereClauses(idsPresent = idsPresent, partitionsPresent = partitionsPresent)}"
 }
 
 /*
