@@ -98,7 +98,7 @@ fun getEntityPropertiesByPropertyTypeId2(
                 }
                 dataMap
             }
-            .fold(mutableMapOf<UUID, MutableSet<Any>>(IdConstants.ID_ID.id to mutableSetOf(id))) { acc, mutableMap ->
+            .fold(mutableMapOf(IdConstants.ID_ID.id to mutableSetOf(id) as MutableSet<Any>)) { acc, mutableMap ->
                 acc.putAll(mutableMap)
                 return@fold acc
             }
@@ -134,7 +134,7 @@ fun getEntityPropertiesByPropertyTypeId3(
 
                 dataMap.mapKeys { propertyTypes.getValue(it.key).type }.toMutableMap()
             }
-            .fold(mutableMapOf<FullQualifiedName, MutableSet<Any>>(ID_FQN to mutableSetOf(id))) { acc, mutableMap ->
+            .fold(mutableMapOf(ID_FQN to mutableSetOf(id) as MutableSet<Any> )) { acc, mutableMap ->
                 acc.putAll(mutableMap)
                 return@fold acc
             }
