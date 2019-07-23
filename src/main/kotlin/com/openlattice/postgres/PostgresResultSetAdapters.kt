@@ -103,7 +103,6 @@ fun getEntityPropertiesByPropertyTypeId3(
     (entity.keys - propertyTypes.keys).forEach { entity.remove(it) }
 
     propertyTypes.forEach { (_, propertyType) ->
-
         if (propertyType.datatype == EdmPrimitiveTypeKind.Binary) {
             val urls = entity.getOrElse(propertyType.id) { mutableSetOf() }
             if (urls.isNotEmpty()) {
