@@ -116,6 +116,7 @@ fun getEntityPropertiesByPropertyTypeId3(
         byteBlobDataManager: ByteBlobDataManager
 ): Pair<UUID, MutableMap<FullQualifiedName, MutableSet<Any>>> {
     val id = id(rs)
+    logger.info("This should get logged a bunch")
     val entitySetId = entitySetId(rs)
     val propertyTypes = authorizedPropertyTypes.getValue(entitySetId)
     val propertyValues = propertyTypes
@@ -128,6 +129,7 @@ fun getEntityPropertiesByPropertyTypeId3(
                 (dataMap.keys - propertyTypes.keys).forEach { dataMap.remove(it) }
 
                 if (propertyType.datatype == EdmPrimitiveTypeKind.Binary) {
+                    logger.info("This should never get logged")
                     val urls = dataMap.getOrElse(propertyType.id) { mutableSetOf() }
                     dataMap[propertyType.id] = byteBlobDataManager.getObjects(urls).toMutableSet()
                 }
