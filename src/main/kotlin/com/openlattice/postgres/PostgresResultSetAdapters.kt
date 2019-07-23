@@ -71,7 +71,9 @@ fun getEntityPropertiesByPropertyTypeId2(
 
         if (propertyType.datatype == EdmPrimitiveTypeKind.Binary) {
             val urls = entity.getOrElse(propertyType.id) { mutableSetOf() }
-            entity[propertyType.id] = byteBlobDataManager.getObjects(urls).toMutableSet()
+            if (urls.isNotEmpty()) {
+                entity[propertyType.id] = byteBlobDataManager.getObjects(urls).toMutableSet()
+            }
         }
     }
 
@@ -104,7 +106,9 @@ fun getEntityPropertiesByPropertyTypeId3(
 
         if (propertyType.datatype == EdmPrimitiveTypeKind.Binary) {
             val urls = entity.getOrElse(propertyType.id) { mutableSetOf() }
-            entity[propertyType.id] = byteBlobDataManager.getObjects(urls).toMutableSet()
+            if (urls.isNotEmpty()) {
+                entity[propertyType.id] = byteBlobDataManager.getObjects(urls).toMutableSet()
+            }
         }
     }
 
