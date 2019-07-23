@@ -36,15 +36,15 @@ private fun <T> getEntityPropertiesByFunctionResult(
     val entitySetId = entitySetId(rs)
     val data = mutableMapOf<T, MutableSet<Any>>()
 
-    val allPropertyTypes = authorizedPropertyTypes.getValue(entitySetId).values
+    val propertyTypes = authorizedPropertyTypes.getValue(entitySetId).values
 
-    for (propertyType in allPropertyTypes) {
+    for (propertyType in propertyTypes) {
         val objects = propertyValue(rs, propertyType)
 
         if (objects != null) {
             val key = mapper(propertyType)
             if (propertyType.datatype == EdmPrimitiveTypeKind.Binary) {
-                data[key] = mutableSetOf<Any>(byteBlobDataManager.getObjects(objects as List<String>))
+                data[key] = byteBlobDataManager.getObjects(objects as List<String>).toMutableSet()
             } else {
                 data[key] = mutableSetOf<Any>(objects)
             }
@@ -90,15 +90,15 @@ fun getEntityPropertiesByPropertyTypeId2(
 
                 val dataMap = mapper
                         .readValue<MutableMap<UUID, MutableSet<Any>>>(json)
-                (dataMap.keys - propertyTypes.keys).forEach(dataMap::remove)
+                (dataMap.keys - propertyTypes.keys).forEach { dataMap.remove(it) }
 
                 if (propertyType.datatype == EdmPrimitiveTypeKind.Binary) {
                     val urls = dataMap.getOrElse(propertyType.id) { mutableSetOf() }
-                    dataMap[propertyType.id] = linkedSetOf(byteBlobDataManager.getObjects(urls))
+                    dataMap[propertyType.id] = byteBlobDataManager.getObjects(urls).toMutableSet()
                 }
                 dataMap
             }
-            .fold(mutableMapOf(IdConstants.ID_ID.id to mutableSetOf(id) as MutableSet<Any>)) { acc, mutableMap ->
+            .fold(mutableMapOf(IdConstants.ID_ID.id to mutableSetOf<Any>(id))) { acc, mutableMap ->
                 acc.putAll(mutableMap)
                 return@fold acc
             }
@@ -125,16 +125,16 @@ fun getEntityPropertiesByPropertyTypeId3(
 
                 val dataMap = mapper
                         .readValue<MutableMap<UUID, MutableSet<Any>>>(json)
-                (dataMap.keys - propertyTypes.keys).forEach(dataMap::remove)
+                (dataMap.keys - propertyTypes.keys).forEach { dataMap.remove(it) }
 
                 if (propertyType.datatype == EdmPrimitiveTypeKind.Binary) {
                     val urls = dataMap.getOrElse(propertyType.id) { mutableSetOf() }
-                    dataMap[propertyType.id] = linkedSetOf(byteBlobDataManager.getObjects(urls))
+                    dataMap[propertyType.id] = byteBlobDataManager.getObjects(urls).toMutableSet()
                 }
 
                 dataMap.mapKeys { propertyTypes.getValue(it.key).type }.toMutableMap()
             }
-            .fold(mutableMapOf(ID_FQN to mutableSetOf(id) as MutableSet<Any> )) { acc, mutableMap ->
+            .fold(mutableMapOf(ID_FQN to mutableSetOf<Any>(id))) { acc, mutableMap ->
                 acc.putAll(mutableMap)
                 return@fold acc
             }
@@ -149,7 +149,7 @@ fun getEntityPropertiesByPropertyTypeId(
         authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
         byteBlobDataManager: ByteBlobDataManager
 ): Pair<UUID, MutableMap<UUID, MutableSet<Any>>> {
-    return getEntityPropertiesByFunctionResult(rs, authorizedPropertyTypes, byteBlobDataManager) { it.id }
+    return getEntityPropertiesByPropertyTypeId2(rs, authorizedPropertyTypes, byteBlobDataManager)
 }
 
 @Throws(SQLException::class)
