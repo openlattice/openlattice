@@ -15,8 +15,8 @@ import java.util.*
 
 class IndexingMetadataManager(private val hds: HikariDataSource, private val partitionManager: PartitionManager) {
 
-    fun markAsIndexed(entityKeyIdsWithLastWrite: Map<UUID, Map<UUID, OffsetDateTime>>): Long {
-        var count = 0L
+    fun markAsIndexed(entityKeyIdsWithLastWrite: Map<UUID, Map<UUID, OffsetDateTime>>): Int {
+        var count = 0
 
         hds.connection.use { connection ->
             entityKeyIdsWithLastWrite.forEach { (entitySetId, entities) ->
