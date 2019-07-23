@@ -158,7 +158,7 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
  * 4. partition
  */
 private val updateLastIndexSql = "UPDATE ${IDS.name} SET ${LAST_INDEX.name} = ? " +
-        "WHERE ${VERSION.name} > 0 AND $${ENTITY_SET_ID.name} = ? AND ${ID.name} = ANY(?) AND ${PARTITION.name} = ?"
+        "WHERE ${VERSION.name} > 0 AND ${ENTITY_SET_ID.name} = ? AND ${ID.name} = ANY(?) AND ${PARTITION.name} = ?"
 
 /**
  * Arguments of preparable sql in order:
