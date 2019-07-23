@@ -37,8 +37,7 @@ import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable
-import com.openlattice.postgres.PostgresTable.EDGES
-import com.openlattice.postgres.PostgresTable.GRAPH_QUERIES
+import com.openlattice.postgres.PostgresTable.*
 import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
 import com.zaxxer.hikari.HikariDataSource
@@ -551,7 +550,8 @@ class PostgresGraphQueryService(
             propertyTypeFqns: Map<UUID, String>,
             filter: Optional<Filter>
     ): String {
-        val tableSql = selectEntitySetWithCurrentVersionOfPropertyTypes(
+        val tableSql =
+                selectEntitySetWithCurrentVersionOfPropertyTypes(
                 filterDefinition.entitySetIds.associateWith { Optional.empty<Set<UUID>>() },
                 propertyTypeFqns,
                 setOf(),
@@ -592,7 +592,7 @@ class PostgresGraphQueryService(
         val componentTypeClause = "AND ${COMPONENT_TYPES.name} = ${IdType.SRC.ordinal}"
 
         //For this there is no dstEntitySet clause since the target is self.
-        return "SELECT * FROM ${EDGES.name} WHERE $dataKeys $srcEntitySetIdsClause $associationEntitySetIdsClause $componentTypeClause"
+        return "SELECT * FROM ${E.name} WHERE $dataKeys $srcEntitySetIdsClause $associationEntitySetIdsClause $componentTypeClause"
     }
 
     /**
