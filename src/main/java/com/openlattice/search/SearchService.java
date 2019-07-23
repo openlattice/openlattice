@@ -775,6 +775,7 @@ public class SearchService {
 
         Map<UUID, Map<UUID, SetMultimap<UUID, NeighborEntityIds>>> neighbors = Maps.newHashMap();
 
+        Stopwatch sw = Stopwatch.createStarted()
         graphService.getEdgesAndNeighborsForVerticesBulk( entitySetIds, filter ).forEach( edge -> {
 
             boolean isSrc = entityKeyIds.contains( edge.getSrc().getEntityKeyId() );
@@ -800,6 +801,7 @@ public class SearchService {
             allEntitySetIds.add( neighborEntityDataKey.getEntitySetId() );
 
         } );
+        logger.info( "Edge query took {}", sw.elapsed( TimeUnit.MILLISECONDS ) );
 
         Set<UUID> unauthorizedEntitySetIds = authorizations.accessChecksForPrincipals( allEntitySetIds.stream()
                 .map( esId -> new AccessCheck( new AclKey( esId ), READ_PERMISSION ) )
