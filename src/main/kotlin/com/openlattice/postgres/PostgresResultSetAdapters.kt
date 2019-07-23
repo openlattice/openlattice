@@ -1,7 +1,6 @@
 package com.openlattice.postgres
 
 import com.dataloom.mappers.ObjectMappers
-import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.openlattice.IdConstants
 import com.openlattice.data.Property
@@ -62,13 +61,13 @@ fun getJsonEntityPropertiesByPropertyTypeId(
 ): Pair<UUID, MutableMap<UUID, MutableSet<Property>>> {
     val id = id(rs)
     val entitySetId = entitySetId(rs)
-    val propertyTypes = authorizedPropertyTypes.getValue( entitySetId )
+    val propertyTypes = authorizedPropertyTypes.getValue(entitySetId)
     return id to propertyTypes
             .map { PostgresEdmTypeConverter.map(it.value.datatype) }
             .mapNotNull { datatype ->
                 rs.getString("v_$datatype")
             }
-            .map{ mapper.readValue<MutableMap<UUID, MutableSet<Property>>>( it )}
+            .map { mapper.readValue<MutableMap<UUID, MutableSet<Property>>>(it) }
             .reduce { acc, mutableMap ->
                 acc.putAll(mutableMap)
                 return@reduce acc
@@ -83,20 +82,30 @@ fun getEntityPropertiesByPropertyTypeId2(
 ): Pair<UUID, MutableMap<UUID, MutableSet<Any>>> {
     val id = id(rs)
     val entitySetId = entitySetId(rs)
-    val propertyTypes = authorizedPropertyTypes.getValue( entitySetId )
+    val propertyTypes = authorizedPropertyTypes.getValue(entitySetId)
     val propertyValues = propertyTypes
-            .map { PostgresEdmTypeConverter.map(it.value.datatype) }
-            .mapNotNull { datatype ->
-                rs.getString("v_$datatype")
-            }
-            .map{ mapper.readValue<MutableMap<UUID, MutableSet<Any>>>( it )}
-            .reduce { acc, mutableMap ->
-                acc.putAll(mutableMap)
-                return@reduce acc
-            }
-        propertyValues[IdConstants.ID_ID.id] = mutableSetOf<Any>(id)
-    return id to propertyValues
+            .map { (_, propertyType) ->
+                val datatype = PostgresEdmTypeConverter.map(propertyType.datatype)
+                val json = rs.getString("v_$datatype")  //This will never be blank worst case it will return '{}'
 
+                val dataMap = mapper
+                        .readValue<MutableMap<UUID, MutableSet<Any>>>(json)
+                (dataMap.keys - propertyTypes.keys).forEach(dataMap::remove)
+
+                if (propertyType.datatype == EdmPrimitiveTypeKind.Binary) {
+                    val urls = dataMap.getOrElse(propertyType.id) { mutableSetOf() }
+                    dataMap[propertyType.id] = linkedSetOf(byteBlobDataManager.getObjects(urls))
+                }
+                dataMap
+            }
+            .fold(mutableMapOf<UUID, MutableSet<Any>>(IdConstants.ID_ID.id to mutableSetOf(id))) { acc, mutableMap ->
+                acc.putAll(mutableMap)
+                return@fold acc
+            }
+
+
+
+    return id to propertyValues
 }
 
 
@@ -110,23 +119,26 @@ fun getEntityPropertiesByPropertyTypeId3(
     val entitySetId = entitySetId(rs)
     val propertyTypes = authorizedPropertyTypes.getValue(entitySetId)
     val propertyValues = propertyTypes
-            .map { PostgresEdmTypeConverter.map(it.value.datatype) }
-            .mapNotNull { datatype ->
-                rs.getString("v_$datatype")
+            .map { (_, propertyType) ->
+                val datatype = PostgresEdmTypeConverter.map(propertyType.datatype)
+                val json = rs.getString("v_$datatype")
+
+                val dataMap = mapper
+                        .readValue<MutableMap<UUID, MutableSet<Any>>>(json)
+                (dataMap.keys - propertyTypes.keys).forEach(dataMap::remove)
+
+                if (propertyType.datatype == EdmPrimitiveTypeKind.Binary) {
+                    val urls = dataMap.getOrElse(propertyType.id) { mutableSetOf() }
+                    dataMap[propertyType.id] = linkedSetOf(byteBlobDataManager.getObjects(urls))
+                }
+
+                dataMap.mapKeys { propertyTypes.getValue(it.key).type }.toMutableMap()
             }
-            .map { mapper.readValue<MutableMap<UUID, MutableSet<Any>>>(it) }
-            .map { propertyValue ->
-                propertyValue.filter {
-                    propertyTypes.containsKey(it.key)
-                }.mapKeys {
-                    propertyTypes.getValue(it.key).type
-                }.toMutableMap()
-            }
-            .fold(mutableMapOf<FullQualifiedName, MutableSet<Any>>()) { acc, mutableMap ->
+            .fold(mutableMapOf<FullQualifiedName, MutableSet<Any>>(ID_FQN to mutableSetOf(id))) { acc, mutableMap ->
                 acc.putAll(mutableMap)
                 return@fold acc
             }
-    propertyValues[ID_FQN] = mutableSetOf<Any>(id)
+
     return id to propertyValues
 
 }
