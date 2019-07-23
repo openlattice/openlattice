@@ -96,9 +96,9 @@ fun getEntityPropertiesByPropertyTypeId3(
     val entity = dataTypes.map { datatype ->
         val json = rs.getString("v_$datatype")
         mapper.readValue<MutableMap<UUID, MutableSet<Any>>>(json)
-    }.fold(mutableMapOf(IdConstants.ID_ID.id to mutableSetOf<Any>(id))) { acc, mutableMap ->
+    }.reduce { acc, mutableMap ->
         acc.putAll(mutableMap)
-        return@fold acc
+        acc
     }
 
     (entity.keys - propertyTypes.keys).forEach { entity.remove(it) }
@@ -112,13 +112,10 @@ fun getEntityPropertiesByPropertyTypeId3(
         }
     }
 
-    return id to entity.mapKeys {
-        if (it.key == IdConstants.ID_ID.id) {
-            ID_FQN
-        } else {
-            propertyTypes.getValue(it.key).type
-        }
-    }.toMutableMap()
+    val entityByFqn = entity.mapKeys { propertyTypes.getValue(it.key).type }.toMutableMap()
+    entityByFqn[ID_FQN] = mutableSetOf(id)
+
+    return id to entityByFqn
 
 }
 
