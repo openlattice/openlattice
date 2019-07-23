@@ -89,8 +89,6 @@ class Graph(
             ps.use {
                 keys.forEach { dataEdgeKey ->
                     bindColumnsForEdge(ps, IdType.SRC, dataEdgeKey, version, versions, partitionsInfoByEntitySet)
-                    bindColumnsForEdge(ps, IdType.DST, dataEdgeKey, version, versions, partitionsInfoByEntitySet)
-                    bindColumnsForEdge(ps, IdType.EDGE, dataEdgeKey, version, versions, partitionsInfoByEntitySet)
                 }
 
                 return WriteEvent(version, ps.executeBatch().sum())
