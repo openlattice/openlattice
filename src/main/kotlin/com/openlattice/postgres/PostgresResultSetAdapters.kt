@@ -113,7 +113,7 @@ fun getEntityPropertiesByPropertyTypeId3(
     }
 
     val entityByFqn = entity.mapKeys { propertyTypes.getValue(it.key).type }.toMutableMap()
-    entityByFqn[ID_FQN] = mutableSetOf(id)
+    entityByFqn[ID_FQN] = mutableSetOf<Any>(id)
 
     return id to entityByFqn
 
