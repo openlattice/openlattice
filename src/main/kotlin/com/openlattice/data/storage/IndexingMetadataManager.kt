@@ -181,7 +181,7 @@ fun markEntitySetsAsNeedsToBeIndexedSql(linking: Boolean): String {
     val updateColumn = if (linking) LAST_LINK_INDEX.name else LAST_INDEX.name
 
     return "UPDATE ${IDS.name} SET $updateColumn = '-infinity()' " +
-            "WHERE ${ENTITY_SET_ID.name} = ANY(?) AND ${PARTITION.name} = ANY(?)"
+            "WHERE ${VERSION.name} > 0 AND ${ENTITY_SET_ID.name} = ANY(?) AND ${PARTITION.name} = ANY(?)"
 }
 
 /**
