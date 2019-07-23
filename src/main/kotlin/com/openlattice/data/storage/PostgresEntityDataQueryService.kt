@@ -431,7 +431,9 @@ class PostgresEntityDataQueryService(
         return hds.connection.use { connection ->
             connection.autoCommit = false
             tombstone(connection, entitySetId, entities.keys, authorizedPropertyTypes.values)
-            return upsertEntities(connection, entitySetId, entities, authorizedPropertyTypes)
+            val event = upsertEntities(connection, entitySetId, entities, authorizedPropertyTypes)
+            connection.autoCommit = true
+            event
         }
     }
 
