@@ -113,7 +113,7 @@ fun getEntityPropertiesByPropertyTypeId3(
     }
 
     return id to entity.mapKeys {
-        if (it.key === IdConstants.ID_ID.id) {
+        if (it.key == IdConstants.ID_ID.id) {
             ID_FQN
         } else {
             propertyTypes.getValue(it.key).type
