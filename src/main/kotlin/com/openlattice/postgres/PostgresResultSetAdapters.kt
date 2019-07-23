@@ -5,6 +5,7 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import com.openlattice.IdConstants
 import com.openlattice.data.Property
 import com.openlattice.data.storage.ByteBlobDataManager
+import com.openlattice.edm.EdmConstants.Companion.ID_FQN
 import com.openlattice.edm.PostgresEdmTypeConverter
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.ResultSetAdapters.entitySetId
@@ -111,8 +112,13 @@ fun getEntityPropertiesByPropertyTypeId3(
         }
     }
 
-
-    return id to entity.mapKeys { propertyTypes.getValue(it.key).type }.toMutableMap()
+    return id to entity.mapKeys {
+        if (it.key == IdConstants.ID_ID.id) {
+            ID_FQN
+        } else {
+            propertyTypes.getValue(it.key).type
+        }
+    }.toMutableMap()
 
 }
 
