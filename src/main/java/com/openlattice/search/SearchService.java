@@ -551,7 +551,8 @@ public class SearchService {
             allEntitySetIds.add( entityKeyIds.contains( edge.getSrc().getEntityKeyId() ) ?
                     edge.getDst().getEntitySetId() : edge.getSrc().getEntitySetId() );
         } );
-        logger.info( "Get edges and neighbors for vertices query finished in {} ms",
+        logger.info( "Get edges and neighbors for vertices query for {} ids finished in {} ms",
+                filter.getEntityKeyIds().size(),
                 sw1.elapsed( TimeUnit.MILLISECONDS ) );
         sw1.reset().start();
 
@@ -775,7 +776,6 @@ public class SearchService {
 
         Map<UUID, Map<UUID, SetMultimap<UUID, NeighborEntityIds>>> neighbors = Maps.newHashMap();
 
-        Stopwatch sw = Stopwatch.createStarted();
         graphService.getEdgesAndNeighborsForVerticesBulk( entitySetIds, filter ).forEach( edge -> {
 
             boolean isSrc = entityKeyIds.contains( edge.getSrc().getEntityKeyId() );
@@ -801,7 +801,6 @@ public class SearchService {
             allEntitySetIds.add( neighborEntityDataKey.getEntitySetId() );
 
         } );
-        logger.info( "Edge query took {}", sw.elapsed( TimeUnit.MILLISECONDS ) );
 
         Set<UUID> unauthorizedEntitySetIds = authorizations.accessChecksForPrincipals( allEntitySetIds.stream()
                 .map( esId -> new AccessCheck( new AclKey( esId ), READ_PERMISSION ) )
