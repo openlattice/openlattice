@@ -246,7 +246,7 @@ class BackgroundIndexingService(
                 mapOf(entitySet.id to Optional.of(batchToIndex.keys)),
                 mapOf(entitySet.id to propertyTypeMap)).toMap()
 
-        logger.info("Loading data for indexEntities took {}", esb.elapsed(TimeUnit.MILLISECONDS))
+        logger.info("Loading data for indexEntities took {} ms", esb.elapsed(TimeUnit.MILLISECONDS))
 
         if (entitiesById.size != batchToIndex.size) {
             logger.error(
@@ -261,7 +261,7 @@ class BackgroundIndexingService(
         if (entitiesById.isNotEmpty() &&
                 elasticsearchApi.createBulkEntityData(entitySet.entityTypeId, entitySet.id, entitiesById)) {
             indexCount = if (markAsIndexed) {
-                dataManager.markAsIndexed(mapOf(entitySet.id to batchToIndex), false)
+                dataManager.markAsIndexed(mapOf(entitySet.id to batchToIndex))
             } else {
                 batchToIndex.size
             }
