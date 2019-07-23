@@ -34,7 +34,7 @@ class LocalBlobDataService(private val hds: HikariDataSource) : ByteBlobDataMana
         throw UnsupportedOperationException()
     }
 
-    override fun getPresignedUrls(keys: List<Any>): List<URL> {
+    override fun getPresignedUrls(keys: Collection<Any>): List<URL> {
         throw UnsupportedOperationException()
     }
 
@@ -50,7 +50,7 @@ class LocalBlobDataService(private val hds: HikariDataSource) : ByteBlobDataMana
         s3Keys.forEach { deleteEntity(it) }
     }
 
-    override fun getObjects(keys: List<Any>): List<Any> {
+    override fun getObjects(keys: Collection<Any>): List<Any> {
         return getEntities(keys)
     }
 
@@ -72,7 +72,7 @@ class LocalBlobDataService(private val hds: HikariDataSource) : ByteBlobDataMana
         connection.close()
     }
 
-    fun getEntities(keys: List<Any>): List<ByteArray> {
+    fun getEntities(keys: Collection<Any>): List<ByteArray> {
         val entities = mutableListOf<ByteArray>()
         val connection = hds.connection
         connection.use {
