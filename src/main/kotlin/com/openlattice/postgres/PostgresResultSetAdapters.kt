@@ -132,9 +132,7 @@ fun getEntityPropertiesByPropertyTypeId3(
                     dataMap[propertyType.id] = linkedSetOf(byteBlobDataManager.getObjects(urls))
                 }
 
-                dataMap.mapKeys {
-                    propertyTypes.getValue(it.key).type
-                }.toMutableMap()
+                dataMap.mapKeys { propertyTypes.getValue(it.key).type }.toMutableMap()
             }
             .fold(mutableMapOf<FullQualifiedName, MutableSet<Any>>(ID_FQN to mutableSetOf(id))) { acc, mutableMap ->
                 acc.putAll(mutableMap)
