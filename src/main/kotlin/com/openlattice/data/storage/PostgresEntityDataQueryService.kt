@@ -514,6 +514,11 @@ class PostgresEntityDataQueryService(
         return WriteEvent(tombstoneVersion, numUpdated)
     }
 
+    /**
+     * Tombstones all data from authorizedPropertyTypes for an entity set.
+     *
+     * NOTE: this function commits the tombstone transactions.
+     */
     fun clearEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent {
         return hds.connection.use { conn ->
             conn.autoCommit = false
