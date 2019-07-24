@@ -190,7 +190,7 @@ public final class PostgresColumn {
     public static final PostgresColumnDefinition ENTITY_SET_ID                     =
             new PostgresColumnDefinition( ENTITY_SET_ID_FIELD, UUID ).notNull();
     public static final String                   ENTITY_SET_NAME_FIELD             = "entity_set_name";
-    public static final PostgresColumnDefinition ENTITY_SET_Name                   =
+    public static final PostgresColumnDefinition ENTITY_SET_NAME                   =
             new PostgresColumnDefinition( ENTITY_SET_NAME_FIELD, UUID ).notNull();
     public static final String                   ENTITY_TYPE_IDS_FIELD             = "entity_type_ids";
     public static final PostgresColumnDefinition ENTITY_TYPE_IDS                   =

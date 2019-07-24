@@ -23,12 +23,8 @@ package com.openlattice.data
 
 import com.google.common.collect.ImmutableMap
 import com.openlattice.data.storage.*
-import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.DataTables
-import com.openlattice.postgres.IndexType
 import com.openlattice.postgres.PostgresTable
-import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
-import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.junit.Test
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -53,18 +49,6 @@ class PostgresEntityDataQueryServiceTest {
         logger.info(PostgresTable.EDGES.createIndexQueries.toList().joinToString("\n") { "$it;" })
         logger.info(PostgresTable.SYNC_IDS.createIndexQueries.toList().joinToString("\n") { "$it;" })
         logger.info(PostgresTable.QUERIES.createIndexQueries.toList().joinToString("\n") { "$it;" })
-    }
-
-    @Test
-    fun testBuildQuery() {
-        DataTables.buildPropertyTableDefinition(
-                PropertyType(
-                        UUID.fromString("f8a70a63-cd78-4e49-8936-7d382b4c59ef"),
-                        FullQualifiedName("ol", "bondtype"), "Bond type", Optional.of("A type of bail bond."), setOf(),
-                        EdmPrimitiveTypeKind.String,
-                        Optional.empty(), Optional.empty(), Optional.of(IndexType.BTREE)
-                )
-        ).createIndexQueries.forEach { System.out.println("$it;") }
     }
 
     @Test
