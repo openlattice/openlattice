@@ -192,7 +192,6 @@ public class EdmService implements EdmManager {
 
         if ( dbRecord == null ) {
             propertyType.getSchemas().forEach( schemaManager.propertyTypesSchemaAdder( propertyType.getId() ) );
-            edmManager.createPropertyTypeIfNotExist( propertyType );
 
             eventBus.post( new PropertyTypeCreatedEvent( propertyType ) );
         } else {
@@ -495,7 +494,6 @@ public class EdmService implements EdmManager {
 
             List<PropertyType> ownablePropertyTypes = Lists
                     .newArrayList( propertyTypes.getAll( ownablePropertyTypeIDs ).values() );
-            edmManager.createEntitySet( entitySet, ownablePropertyTypes );
 
             eventBus.post( new EntitySetCreatedEvent( entitySet, ownablePropertyTypes ) );
 
@@ -668,8 +666,7 @@ public class EdmService implements EdmManager {
 
     @Override
     public Iterable<PropertyUsageSummary> getPropertyUsageSummary( UUID propertyTypeId ) {
-        String propertyTableName = DataTables.quote( DataTables.propertyTableName( propertyTypeId ) );
-        return edmManager.getPropertyUsageSummary( propertyTableName );
+        return edmManager.getPropertyUsageSummary( propertyTypeId );
     }
 
     @Override
@@ -928,8 +925,6 @@ public class EdmService implements EdmManager {
 
         if ( isFqnUpdated ) {
             aclKeyReservations.renameReservation( propertyTypeId, update.getType().get() );
-            edmManager.updatePropertyTypeFqn( propertyType, update.getType().get() );
-
             eventBus.post( new PropertyTypeCreatedEvent( propertyType ) );
         }
         propertyTypes.executeOnKey( propertyTypeId, new UpdatePropertyTypeMetadataProcessor( update ) );
