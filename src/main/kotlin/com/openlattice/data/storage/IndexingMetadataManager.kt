@@ -164,7 +164,7 @@ fun markEntitySetsAsNeedsToBeIndexedSql(linking: Boolean): String {
     val updateColumn = if (linking) LAST_LINK_INDEX.name else LAST_INDEX.name
 
     return "UPDATE ${IDS.name} SET $updateColumn = '-infinity()' " +
-            "WHERE ${VERSION.name} > 0 AND ${ENTITY_SET_ID.name} = ANY(?) AND ${PARTITION.name} = ANY(?)"
+            "WHERE ${ENTITY_SET_ID.name} = ANY(?) AND ${PARTITION.name} = ANY(?)"
 }
 
 /**
@@ -174,7 +174,7 @@ fun markEntitySetsAsNeedsToBeIndexedSql(linking: Boolean): String {
  * 3. linking ids (uuid array)
  */
 private val markLinkingIdsAsNeedToBeIndexedSql = "UPDATE ${IDS.name} SET ${LAST_LINK_INDEX.name} = '-infinity()' " +
-        "WHERE ${VERSION.name} > 0 AND ${ENTITY_SET_ID.name} = ? AND ${PARTITION.name} = ? " +
+        "WHERE ${ENTITY_SET_ID.name} = ? AND ${PARTITION.name} = ? " +
         "AND ${LINKING_ID.name} IS NOT NULL AND ${LINKING_ID.name} = ANY(?)"
 
 /**
