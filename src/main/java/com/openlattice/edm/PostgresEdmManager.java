@@ -119,7 +119,7 @@ public class PostgresEdmManager {
         }
     }
 
-    public Iterable<PropertyUsageSummary> getPropertyUsageSummary( String propertyTableName ) {
+    public Iterable<PropertyUsageSummary> getPropertyUsageSummary() {
         final var wrappedEntitySetsTableName = "wrapped_entity_sets";
         final var getPropertyTypeSummary =
                 String.format( "WITH %1$s AS (SELECT %2$s, %3$s AS %4$s, %5$s FROM %6$s) " +
@@ -134,7 +134,7 @@ public class PostgresEdmManager {
                         ENTITY_SET_ID.getName(),
                         DATA.getName(),
                         VERSION.getName()
-                        );
+                );
 
         return new PostgresIterable<>( () -> {
             try {

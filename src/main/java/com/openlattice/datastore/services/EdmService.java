@@ -666,8 +666,7 @@ public class EdmService implements EdmManager {
 
     @Override
     public Iterable<PropertyUsageSummary> getPropertyUsageSummary( UUID propertyTypeId ) {
-        String propertyTableName = DataTables.quote( DataTables.propertyTableName( propertyTypeId ) );
-        return edmManager.getPropertyUsageSummary( propertyTableName );
+        return edmManager.getPropertyUsageSummary();
     }
 
     @Override
