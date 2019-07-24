@@ -41,8 +41,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import static com.openlattice.postgres.PostgresColumn.*;
-import static com.openlattice.postgres.PostgresTable.ENTITY_KEY_IDS;
-import static com.openlattice.postgres.PostgresTable.ENTITY_SETS;
+import static com.openlattice.postgres.PostgresTable.*;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -121,15 +120,22 @@ public class PostgresEdmManager {
     }
 
     public Iterable<PropertyUsageSummary> getPropertyUsageSummary( String propertyTableName ) {
-        String getPropertyTypeSummary =
-                String.format(
-                        "SELECT %1$s , %6$s AS %2$s , %3$s, COUNT(*) FROM %4$s LEFT JOIN %5$s ON %3$s = %5$s.id AND %4$s.version > 0 GROUP BY ( %1$s , %2$s, %3$s )",
+        final var wrappedEntitySetsTableName = "wrapped_entity_sets";
+        final var getPropertyTypeSummary =
+                String.format( "WITH %1$s AS (SELECT %2$s, %3$s AS %4$s, %5$s FROM %6$s) " +
+                                "SELECT %2$s, %4$s, %7$s, COUNT(*) FROM %8$s LEFT JOIN %1$s ON %7$s = %1$s.id " +
+                                "WHERE %9$s > 0 GROUP BY ( %2$s , %4$s, %7$s )",
+                        wrappedEntitySetsTableName,
                         ENTITY_TYPE_ID.getName(),
+                        NAME.getName(),
                         ENTITY_SET_NAME.getName(),
-                        ENTITY_SET_ID.getName(),
-                        propertyTableName,
+                        ID.getName(),
                         ENTITY_SETS.getName(),
-                        NAME.getName() );
+                        ENTITY_SET_ID.getName(),
+                        DATA.getName(),
+                        VERSION.getName()
+                        );
+
         return new PostgresIterable<>( () -> {
             try {
                 Connection connection = hds.getConnection();
