@@ -143,7 +143,7 @@ public final class PostgresTable {
                             TITLE,
                             DESCRIPTION,
                             CONTACTS,
-                            PostgresColumn.LINKED_ENTITY_SETS,
+                            LINKED_ENTITY_SETS,
                             ORGANIZATION_ID,
                             ENTITY_SET_FLAGS,
                             PARTITIONS,
@@ -288,7 +288,7 @@ public final class PostgresTable {
                             PRINCIPAL_TYPE,
                             PRINCIPAL_ID,
                             PostgresColumn.PERMISSIONS,
-                            PostgresColumn.EXPIRATION_DATE )
+                            EXPIRATION_DATE )
                     .primaryKey( ACL_KEY, PRINCIPAL_TYPE, PRINCIPAL_ID );
     public static final PostgresTableDefinition PERSISTENT_SEARCHES      =
             new PostgresTableDefinition( "persistent_searches" )
