@@ -119,12 +119,12 @@ public class PostgresEdmManager {
         }
     }
 
-    public Iterable<PropertyUsageSummary> getPropertyUsageSummary() {
+    public Iterable<PropertyUsageSummary> getPropertyUsageSummary( UUID propertyTypeId ) {
         final var wrappedEntitySetsTableName = "wrapped_entity_sets";
         final var getPropertyTypeSummary =
                 String.format( "WITH %1$s AS (SELECT %2$s, %3$s AS %4$s, %5$s FROM %6$s) " +
                                 "SELECT %2$s, %4$s, %7$s, COUNT(*) FROM %8$s LEFT JOIN %1$s ON %7$s = %1$s.id " +
-                                "WHERE %9$s > 0 GROUP BY ( %2$s , %4$s, %7$s )",
+                                "WHERE %9$s > 0 AND %10$s = ? GROUP BY ( %2$s , %4$s, %7$s )",
                         wrappedEntitySetsTableName,
                         ENTITY_TYPE_ID.getName(),
                         NAME.getName(),
@@ -133,13 +133,15 @@ public class PostgresEdmManager {
                         ENTITY_SETS.getName(),
                         ENTITY_SET_ID.getName(),
                         DATA.getName(),
-                        VERSION.getName()
+                        VERSION.getName(),
+                        PROPERTY_TYPE_ID.getName()
                 );
 
         return new PostgresIterable<>( () -> {
             try {
                 Connection connection = hds.getConnection();
                 PreparedStatement ps = connection.prepareStatement( getPropertyTypeSummary );
+                ps.setObject( 1, propertyTypeId );
                 ResultSet rs = ps.executeQuery();
                 return new StatementHolder( connection, ps, rs );
             } catch ( SQLException e ) {

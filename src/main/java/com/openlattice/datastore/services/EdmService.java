@@ -666,7 +666,7 @@ public class EdmService implements EdmManager {
 
     @Override
     public Iterable<PropertyUsageSummary> getPropertyUsageSummary( UUID propertyTypeId ) {
-        return edmManager.getPropertyUsageSummary();
+        return edmManager.getPropertyUsageSummary( propertyTypeId );
     }
 
     @Override
