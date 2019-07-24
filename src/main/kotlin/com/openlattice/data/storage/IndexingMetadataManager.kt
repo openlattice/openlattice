@@ -86,14 +86,17 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
         hds.connection.use { connection ->
             connection.prepareStatement(markLinkingIdsAsNeedToBeIndexedSql).use { stmt ->
                 linkingEntityKeys.forEach { (entitySetId, linkingIds) ->
-                    val linkingIdsArray = PostgresArrays.createUuidArray(connection, linkingIds)
-                    val partitionsArray = PostgresArrays
-                            .createIntArray(connection, entitySetPartitions.getValue(entitySetId).partitions)
-                    stmt.setObject(1, entitySetId)
-                    stmt.setArray(2, partitionsArray)
-                    stmt.setArray(3, linkingIdsArray)
+                    val partitions = entitySetPartitions.getValue(entitySetId).partitions.toList()
 
-                    stmt.addBatch()
+                    linkingIds.groupBy { getPartition(it, partitions) }
+                            .forEach { (partition, linkingIds) ->
+                                val linkingIdsArray = PostgresArrays.createUuidArray(connection, linkingIds)
+                                stmt.setObject(1, entitySetId)
+                                stmt.setInt(2, partition)
+                                stmt.setArray(3, linkingIdsArray)
+
+                                stmt.addBatch()
+                            }
                 }
 
                 return stmt.executeBatch().sum()
@@ -112,13 +115,16 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
         hds.connection.use { connection ->
             connection.prepareStatement(markAsNeedsToBeLinkedSql).use { stmt ->
                 linkingEntityKeys.forEach { (entitySetId, linkingIds) ->
-                    val partitionsArray = PostgresArrays
-                            .createIntArray(connection, entitySetPartitions.getValue(entitySetId).partitions)
-                    val linkingIdsArray = PostgresArrays.createUuidArray(connection, linkingIds)
-                    stmt.setObject(1, entitySetId)
-                    stmt.setArray(2, partitionsArray)
-                    stmt.setArray(3, linkingIdsArray)
-                    stmt.addBatch()
+                    val partitions = entitySetPartitions.getValue(entitySetId).partitions.toList()
+
+                    linkingIds.groupBy { getPartition(it, partitions) }
+                            .forEach { (partition, linkingIds) ->
+                                val linkingIdsArray = PostgresArrays.createUuidArray(connection, linkingIds)
+                                stmt.setObject(1, entitySetId)
+                                stmt.setInt(2, partition)
+                                stmt.setArray(3, linkingIdsArray)
+                                stmt.addBatch()
+                            }
                 }
 
                 return stmt.executeBatch().sum()
@@ -164,20 +170,20 @@ fun markEntitySetsAsNeedsToBeIndexedSql(linking: Boolean): String {
 /**
  * Arguments of preparable sql in order:
  * 1. entity set id
- * 2. partitions (int array)
+ * 2. partition
  * 3. linking ids (uuid array)
  */
 private val markLinkingIdsAsNeedToBeIndexedSql = "UPDATE ${IDS.name} SET ${LAST_LINK_INDEX.name} = '-infinity()' " +
-        "WHERE ${VERSION.name} > 0 AND ${ENTITY_SET_ID.name} = ? AND ${PARTITION.name} = ANY(?) " +
+        "WHERE ${VERSION.name} > 0 AND ${ENTITY_SET_ID.name} = ? AND ${PARTITION.name} = ? " +
         "AND ${LINKING_ID.name} IS NOT NULL AND ${LINKING_ID.name} = ANY(?)"
 
 /**
  * Arguments of preparable sql in order:
  * 1. entity set id
- * 2. partitions (int array)
+ * 2. partition
  * 3. linking ids (uuid array)
  */
 private val markAsNeedsToBeLinkedSql = "UPDATE ${IDS.name} SET ${LAST_LINK.name} = '-infinity()' " +
-        "WHERE ${VERSION.name} > 0 AND ${ENTITY_SET_ID.name} = ? AND ${PARTITION.name} = ANY(?) " +
+        "WHERE ${VERSION.name} > 0 AND ${ENTITY_SET_ID.name} = ? AND ${PARTITION.name} = ? " +
         "AND ${LINKING_ID.name} IS NOT NULL AND ${LINKING_ID.name} = ANY(?)"
 
