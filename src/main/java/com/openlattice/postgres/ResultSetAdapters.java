@@ -968,18 +968,6 @@ public final class ResultSetAdapters {
         return (Boolean) rs.getObject( EXTERNAL.getName() );
     }
 
-    public static Entity entity( ResultSet rs, Set<UUID> authorizedPropertyTypeIds ) throws SQLException {
-        UUID entityKeyId = id( rs );
-        Map<UUID, Set<Object>> data = new HashMap<>();
-        for ( UUID ptId : authorizedPropertyTypeIds ) {
-            Array valuesArr = rs.getArray( DataTables.propertyTableName( ptId ) );
-            if ( valuesArr != null ) {
-                data.put( ptId, Sets.newHashSet( valuesArr.getArray() ) );
-            }
-        }
-        return new Entity( entityKeyId, data );
-    }
-
     public static PropertyUsageSummary propertyUsageSummary( ResultSet rs ) throws SQLException {
         UUID entityTypeID = (UUID) rs.getObject( ENTITY_TYPE_ID_FIELD );
         String entitySetName = rs.getString( ENTITY_SET_NAME_FIELD );
