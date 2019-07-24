@@ -261,7 +261,7 @@ class BackgroundIndexingService(
         if (entitiesById.isNotEmpty() &&
                 elasticsearchApi.createBulkEntityData(entitySet.entityTypeId, entitySet.id, entitiesById)) {
             indexCount = if (markAsIndexed) {
-                dataManager.markAsIndexed(mapOf(entitySet.id to batchToIndex))
+                dataManager.markAsIndexed(mapOf(entitySet.id to batchToIndex), false)
             } else {
                 batchToIndex.size
             }

@@ -160,8 +160,9 @@ class BackgroundLinkingIndexingService(
             dataByEntitySetId: Map<UUID, Map<UUID, Set<Any>>>
     ): Int {
         return if (elasticsearchApi.createBulkLinkedData(entityTypeId, mapOf(linkingId to dataByEntitySetId))) {
-            dataManager.markLinkingIdsAsIndexed(
-                    dataByEntitySetId.keys.map { it to mapOf(linkingId to lastWrite).toMap() }.toMap()
+            dataManager.markAsIndexed(
+                    dataByEntitySetId.keys.map { it to mapOf(linkingId to lastWrite).toMap() }.toMap(),
+                    true
             )
         } else {
             0
