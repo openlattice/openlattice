@@ -24,21 +24,24 @@ import com.openlattice.client.serialization.SerializableSupplier;
 import com.openlattice.retrofit.RhizomeByteConverterFactory;
 import com.openlattice.retrofit.RhizomeCallAdapterFactory;
 import com.openlattice.retrofit.RhizomeJacksonConverterFactory;
+
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+
 import okhttp3.OkHttpClient;
 import retrofit2.CallAdapter;
 import retrofit2.Retrofit;
 
 public final class RetrofitFactory {
-    private static final String BASE_URL            = "https://api.openlattice.com/";
-    private static final String INTEGRATION_URL     = "https://integration.openlattice.com/";
-    private static final String LOCAL_BASE_URL      = "http://localhost:8080/";
-    private static final String STAGING_BASE_URL    = "https://api.staging.openlattice.com/";
-    private static final String TESTING_BASE_URL    = "http://localhost:8080/";
-    private static final String TESTING_INDEXER_URL = "http://localhost:8081/";
-    private static final String TESTING_LINKER_URL  = "http://localhost:8082/";
+    private static final String BASE_URL                = "https://api.openlattice.com/";
+    private static final String INTEGRATION_URL         = "https://integration.openlattice.com/";
+    private static final String LOCAL_BASE_URL          = "http://localhost:8080/";
+    private static final String STAGING_BASE_URL        = "https://api.staging.openlattice.com/";
+    private static final String STAGING_INTEGRATION_URL = "https://staging.integration.openlattice.com/";
+    private static final String TESTING_BASE_URL        = "http://localhost:8080/";
+    private static final String TESTING_INDEXER_URL     = "http://localhost:8081/";
+    private static final String TESTING_LINKER_URL      = "http://localhost:8082/";
 
     private static final ObjectMapper jsonMapper = ObjectMappers.getJsonMapper();
 
@@ -48,6 +51,7 @@ public final class RetrofitFactory {
     public enum Environment {
         PROD_INTEGRATION( INTEGRATION_URL ),
         PRODUCTION( BASE_URL ),
+        STAGING_INTEGRATION( STAGING_INTEGRATION_URL ),
         STAGING( STAGING_BASE_URL ),
         LOCAL( LOCAL_BASE_URL ),
         TESTING( TESTING_BASE_URL ),
