@@ -44,11 +44,11 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
             entitySetId: UUID,
             entityKeyIds: List<UUID>,
             partition: Int,
-            lastWrite: OffsetDateTime
+            lastIndex: OffsetDateTime
     ): Int {
         return connection.prepareStatement(updateLastIndexSql).use { stmt ->
             val entitiesArray = PostgresArrays.createUuidArray(connection, entityKeyIds)
-            stmt.setObject(1, lastWrite)
+            stmt.setObject(1, lastIndex)
             stmt.setObject(2, entitySetId)
             stmt.setArray(3, entitiesArray)
             stmt.setInt(4, partition)
@@ -158,7 +158,7 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
  * 4. partition
  */
 private val updateLastIndexSql = "UPDATE ${IDS.name} SET ${LAST_INDEX.name} = ? " +
-        "WHERE ${VERSION.name} > 0 AND ${ENTITY_SET_ID.name} = ? AND ${ID.name} = ANY(?) AND ${PARTITION.name} = ?"
+        "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID.name} = ANY(?) AND ${PARTITION.name} = ?"
 
 /**
  * Arguments of preparable sql in order:
@@ -168,7 +168,7 @@ private val updateLastIndexSql = "UPDATE ${IDS.name} SET ${LAST_INDEX.name} = ? 
  * 4. partitions (int array)
  */
 private val updateLastLinkingIndexSql = "UPDATE ${IDS.name} SET ${LAST_LINK_INDEX.name} = ? " +
-        "WHERE ${VERSION.name} > 0 AND ${ENTITY_SET_ID.name} = ? AND ${LINKING_ID.name} = ANY(?) " +
+        "WHERE ${ENTITY_SET_ID.name} = ? AND ${LINKING_ID.name} = ANY(?) " +
         "AND ${LINKING_ID.name} IS NOT NULL AND ${PARTITION.name} = ANY(?)"
 
 
