@@ -310,7 +310,7 @@ class PostgresEntityDataQueryService(
 
         //Update the versions of all entities.
 
-        connection.autoCommit = false
+        connection.autoCommit = true
         val entityKeyIdsArr = PostgresArrays.createUuidArray(connection, entities.keys)
         val versionsArrays = PostgresArrays.createLongArray(connection, arrayOf(version))
 
