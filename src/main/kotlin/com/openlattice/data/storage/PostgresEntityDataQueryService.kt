@@ -709,7 +709,7 @@ class PostgresEntityDataQueryService(
      * Tombstones the provided set of property types for each provided entity key.
      *
      * This version of tombstone only operates on the [PostgresTable.DATA] table and does not change the version of
-     * entities in the [PostgresTable.ENTITY_KEY_IDS] table
+     * entities in the [PostgresTable.IDS] table
      *
      * @param conn A valid JDBC connection, ideally with autocommit disabled.
      * @param entitySetId The entity set id for which to tombstone entries
@@ -739,7 +739,7 @@ class PostgresEntityDataQueryService(
     }
 
     /**
-     * Tombstones entities in the [PostgresTable.ENTITY_KEY_IDS] table.
+     * Tombstones entities in the [PostgresTable.IDS] table.
      *
      * @param conn A valid JDBC connection, ideally with autocommit disabled.
      * @param entitySetId The entity set id for which to tombstone entries.
@@ -776,7 +776,7 @@ class PostgresEntityDataQueryService(
      * Tombstones the provided set of property types for each provided entity key.
      *
      * This version of tombstone only operates on the [PostgresTable.DATA] table and does not change the version of
-     * entities in the [PostgresTable.ENTITY_KEY_IDS] table
+     * entities in the [PostgresTable.IDS] table
      *
      * @param conn A valid JDBC connection, ideally with autocommit disabled.
      * @param entitySetId The entity set id for which to tombstone entries
@@ -820,7 +820,7 @@ class PostgresEntityDataQueryService(
      * Tombstones the provided set of property type hash values for each provided entity key.
      *
      * This version of tombstone only operates on the [PostgresTable.DATA] table and does not change the version of
-     * entities in the [PostgresTable.ENTITY_KEY_IDS] table
+     * entities in the [PostgresTable.IDS] table
      *
      * @param conn A valid JDBC connection, ideally with autocommit disabled.
      * @param entitySetId The entity set id for which to tombstone entries
