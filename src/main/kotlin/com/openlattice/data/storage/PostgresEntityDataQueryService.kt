@@ -320,11 +320,11 @@ class PostgresEntityDataQueryService(
          * ending up with partial property right and decoupled metadata updates.
          */
 
-        //Acquire entity key id locks
-        val rowLocks = connection.prepareStatement(lockEntitiesSql)
-        rowLocks.setArray(1, entityKeyIdsArr)
-        rowLocks.setInt(2, partition)
-        rowLocks.executeQuery()
+//        //Acquire entity key id locks
+//        val rowLocks = connection.prepareStatement(lockEntitiesSql)
+//        rowLocks.setArray(1, entityKeyIdsArr)
+//        rowLocks.setInt(2, partition)
+//        rowLocks.executeQuery()
 
         //Update metadata
         val upsertEntities = connection.prepareStatement(upsertEntitiesSql)
