@@ -926,8 +926,6 @@ public class EdmService implements EdmManager {
 
         if ( isFqnUpdated ) {
             aclKeyReservations.renameReservation( propertyTypeId, update.getType().get() );
-            edmManager.updatePropertyTypeFqn( propertyType, update.getType().get() );
-
             eventBus.post( new PropertyTypeCreatedEvent( propertyType ) );
         }
         propertyTypes.executeOnKey( propertyTypeId, new UpdatePropertyTypeMetadataProcessor( update ) );
