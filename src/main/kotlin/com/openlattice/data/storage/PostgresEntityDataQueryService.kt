@@ -39,13 +39,10 @@ class PostgresEntityDataQueryService(
         private val hds: HikariDataSource,
         private val byteBlobDataManager: ByteBlobDataManager,
         private val partitionManager: PartitionManager,
-        hazelcastInstance:HazelcastInstance
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(PostgresEntityDataQueryService::class.java)
     }
-
-    private val writeLocks = hazelcastInstance.getMap<UUID, Boolean>(HazelcastMap.ENTITY_WRITE_LOCKS.name)
 
     @JvmOverloads
     fun getEntityKeyIdsInEntitySet(
