@@ -1,6 +1,7 @@
 package com.openlattice.data.storage
 
 import com.google.common.collect.Multimaps
+import com.hazelcast.core.HazelcastInstance
 import com.openlattice.analysis.SqlBindInfo
 import com.openlattice.analysis.requests.Filter
 import com.openlattice.data.WriteEvent
@@ -8,6 +9,7 @@ import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.data.storage.partitions.PartitionsInfo
 import com.openlattice.data.util.PostgresDataHasher
 import com.openlattice.edm.type.PropertyType
+import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.postgres.*
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.IDS
@@ -36,11 +38,14 @@ const val S3_DELETE_BATCH_SIZE = 10000
 class PostgresEntityDataQueryService(
         private val hds: HikariDataSource,
         private val byteBlobDataManager: ByteBlobDataManager,
-        private val partitionManager: PartitionManager
+        private val partitionManager: PartitionManager,
+        hazelcastInstance:HazelcastInstance
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(PostgresEntityDataQueryService::class.java)
     }
+
+    private val writeLocks = hazelcastInstance.getMap<UUID, Boolean>(HazelcastMap.ENTITY_WRITE_LOCKS.name)
 
     @JvmOverloads
     fun getEntityKeyIdsInEntitySet(
@@ -239,10 +244,9 @@ class PostgresEntityDataQueryService(
             awsPassthrough: Boolean = false
     ): WriteEvent {
         return hds.connection.use { connection ->
-            connection.autoCommit = false
             val writeEvent = upsertEntities(connection, entitySetId, entities, authorizedPropertyTypes, awsPassthrough)
-            connection.commit()
-            connection.autoCommit = true
+//            connection.commit()
+//            connection.autoCommit = true
             return@use writeEvent
         }
     }
@@ -262,10 +266,10 @@ class PostgresEntityDataQueryService(
             entitySetId: UUID,
             entities: Map<UUID, Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>,
-
             awsPassthrough: Boolean = false
     ): WriteEvent {
-        check(!connection.autoCommit) { "Connection must not be in autocommit mode." }
+        connection.autoCommit = true
+//        check(!connection.autoCommit) { "Connection must not be in autocommit mode." }
         val version = System.currentTimeMillis()
         val partitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
         val partitions = partitionsInfo.partitions.toList()
@@ -419,8 +423,6 @@ class PostgresEntityDataQueryService(
         }.sum()
 
         return updatedEntityCount to updatedPropertyCounts
-
-
     }
 
     fun replaceEntities(
