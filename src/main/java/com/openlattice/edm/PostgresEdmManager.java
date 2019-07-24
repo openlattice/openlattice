@@ -20,14 +20,6 @@
 
 package com.openlattice.edm;
 
-import static com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID;
-import static com.openlattice.postgres.PostgresColumn.ENTITY_TYPE_ID;
-import static com.openlattice.postgres.PostgresColumn.LINKING_ID;
-import static com.openlattice.postgres.PostgresTable.ENTITY_KEY_IDS;
-
-import com.codahale.metrics.annotation.ExceptionMetered;
-import com.codahale.metrics.annotation.Timed;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.hazelcast.core.HazelcastInstance;
@@ -36,34 +28,27 @@ import com.hazelcast.query.Predicates;
 import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.hazelcast.HazelcastMap;
-import com.openlattice.postgres.DataTables;
-import com.openlattice.postgres.PostgresArrays;
-import com.openlattice.postgres.PostgresColumn;
-import com.openlattice.postgres.PostgresTable;
-import com.openlattice.postgres.PostgresTableDefinition;
-import com.openlattice.postgres.PostgresTableManager;
-import com.openlattice.postgres.ResultSetAdapters;
+import com.openlattice.postgres.*;
 import com.openlattice.postgres.mapstores.EntitySetMapstore;
 import com.openlattice.postgres.streams.PostgresIterable;
 import com.openlattice.postgres.streams.StatementHolder;
 import com.zaxxer.hikari.HikariDataSource;
-import java.sql.Array;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.Collection;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.sql.*;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+
+import static com.openlattice.postgres.PostgresColumn.*;
+import static com.openlattice.postgres.PostgresTable.ENTITY_KEY_IDS;
+
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class PostgresEdmManager implements DbEdmManager {
+public class PostgresEdmManager {
     private static final String getAllEntitySets = "SELECT * FROM " + PostgresTable.ENTITY_SETS.getName();
     private static final Logger logger           = LoggerFactory.getLogger( PostgresEdmManager.class );
 
@@ -92,20 +77,6 @@ public class PostgresEdmManager implements DbEdmManager {
         this.ENTITY_SET_ID_FIELD = PostgresColumn.ENTITY_SET_ID_FIELD;
         this.ENTITY_SET_NAME_FIELD = PostgresColumn.ENTITY_SET_NAME_FIELD;
         this.NAME_FIELD = PostgresColumn.NAME_FIELD;
-    }
-
-    @Override
-    @ExceptionMetered
-    @Timed
-    public void createEntitySet( EntitySet entitySet, Collection<PropertyType> propertyTypes ) {
-        try {
-            for ( PropertyType pt : propertyTypes ) {
-                createPropertyTypeTableIfNotExist( pt );
-            }
-        } catch ( SQLException e ) {
-            logger.error( "Unable to create entity set {}", entitySet );
-        }
-        //Method is idempotent and should be re-executable in case of a failure.
     }
 
     public PostgresIterable<EntitySet> getAllEntitySets() {
@@ -201,27 +172,6 @@ public class PostgresEdmManager implements DbEdmManager {
                 throw new IllegalStateException( "Unable to load property summary information.", e );
             }
         } );
-    }
-
-    @ExceptionMetered
-    @Timed
-    public void createPropertyTypeIfNotExist( PropertyType propertyType ) {
-        try {
-            createPropertyTypeTableIfNotExist( propertyType );
-        } catch ( SQLException e ) {
-            logger.error( "Unable to process property type creation.", e );
-        }
-    }
-
-    /*
-     * Quick note on this function. It is IfNotExists only because PostgresTableDefinition queries
-     * all include an if not exists. If the behavior of that class changes this function should be updated
-     * appropriately.
-     */
-    @VisibleForTesting
-    public void createPropertyTypeTableIfNotExist( PropertyType propertyType ) throws SQLException {
-        PostgresTableDefinition ptd = DataTables.buildPropertyTableDefinition( propertyType );
-        ptm.registerTables( ptd );
     }
 
     public void updatePropertyTypeFqn( PropertyType propertyType, FullQualifiedName newFqn ) {

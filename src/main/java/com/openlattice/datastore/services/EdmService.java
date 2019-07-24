@@ -192,7 +192,6 @@ public class EdmService implements EdmManager {
 
         if ( dbRecord == null ) {
             propertyType.getSchemas().forEach( schemaManager.propertyTypesSchemaAdder( propertyType.getId() ) );
-            edmManager.createPropertyTypeIfNotExist( propertyType );
 
             eventBus.post( new PropertyTypeCreatedEvent( propertyType ) );
         } else {
@@ -495,7 +494,6 @@ public class EdmService implements EdmManager {
 
             List<PropertyType> ownablePropertyTypes = Lists
                     .newArrayList( propertyTypes.getAll( ownablePropertyTypeIDs ).values() );
-            edmManager.createEntitySet( entitySet, ownablePropertyTypes );
 
             eventBus.post( new EntitySetCreatedEvent( entitySet, ownablePropertyTypes ) );
 
