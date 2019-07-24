@@ -26,14 +26,12 @@ import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.hazelcast.query.Predicates;
 import com.openlattice.data.PropertyUsageSummary;
-import com.openlattice.edm.type.PropertyType;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.postgres.*;
 import com.openlattice.postgres.mapstores.EntitySetMapstore;
 import com.openlattice.postgres.streams.PostgresIterable;
 import com.openlattice.postgres.streams.StatementHolder;
 import com.zaxxer.hikari.HikariDataSource;
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,6 +42,7 @@ import java.util.UUID;
 
 import static com.openlattice.postgres.PostgresColumn.*;
 import static com.openlattice.postgres.PostgresTable.ENTITY_KEY_IDS;
+import static com.openlattice.postgres.PostgresTable.ENTITY_SETS;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -57,26 +56,12 @@ public class PostgresEdmManager {
 
     private final IMap<UUID, EntitySet> entitySets;
 
-    private final String ENTITY_SETS;
-    private final String ENTITY_TYPE_ID_FIELD;
-    private final String ENTITY_SET_ID_FIELD;
-    private final String ENTITY_SET_NAME_FIELD;
-    private final String NAME_FIELD;
 
     public PostgresEdmManager( HikariDataSource hds, PostgresTableManager ptm, HazelcastInstance hazelcastInstance ) {
         this.ptm = ptm;//new PostgresTableManager( hds );
         this.hds = hds;
 
         this.entitySets = hazelcastInstance.getMap( HazelcastMap.ENTITY_SETS.name() );
-
-        // Tables
-        this.ENTITY_SETS = PostgresTable.ENTITY_SETS.getName(); // "entity_sets"
-
-        // Properties
-        this.ENTITY_TYPE_ID_FIELD = PostgresColumn.ENTITY_TYPE_ID_FIELD;
-        this.ENTITY_SET_ID_FIELD = PostgresColumn.ENTITY_SET_ID_FIELD;
-        this.ENTITY_SET_NAME_FIELD = PostgresColumn.ENTITY_SET_NAME_FIELD;
-        this.NAME_FIELD = PostgresColumn.NAME_FIELD;
     }
 
     public PostgresIterable<EntitySet> getAllEntitySets() {
@@ -104,20 +89,11 @@ public class PostgresEdmManager {
                 }
         );
     }
-
-    /**
-     * In-memory version of
-     * {@link com.openlattice.data.storage.PostgresEntityDataQueryService#getLinkingEntitySetIdsOfEntitySet(UUID)}
-     */
     public Set<EntitySet> getAllLinkingEntitySetsForEntitySet( UUID entitySetId ) {
         return ImmutableSet.copyOf( entitySets
                 .values( Predicates.equal( EntitySetMapstore.LINKED_ENTITY_SET_INDEX, entitySetId ) ) );
     }
 
-    /**
-     * Duplicate of
-     * {@link  com.openlattice.data.EntityDatastore#getLinkingIdsByEntitySetIds(Set)}
-     */
     public Map<UUID, Set<UUID>> getLinkingIdsByEntitySetIds( Set<UUID> entitySetIds ) {
         String query =
                 "SELECT " + ENTITY_SET_ID.getName() + ", array_agg(" + LINKING_ID.getName() + ") AS " + LINKING_ID
@@ -148,12 +124,12 @@ public class PostgresEdmManager {
         String getPropertyTypeSummary =
                 String.format(
                         "SELECT %1$s , %6$s AS %2$s , %3$s, COUNT(*) FROM %4$s LEFT JOIN %5$s ON %3$s = %5$s.id AND %4$s.version > 0 GROUP BY ( %1$s , %2$s, %3$s )",
-                        ENTITY_TYPE_ID_FIELD,
-                        ENTITY_SET_NAME_FIELD,
-                        ENTITY_SET_ID_FIELD,
+                        ENTITY_TYPE_ID.getName(),
+                        ENTITY_SET_NAME.getName(),
+                        ENTITY_SET_ID.getName(),
                         propertyTableName,
-                        ENTITY_SETS,
-                        NAME_FIELD );
+                        ENTITY_SETS.getName(),
+                        NAME.getName() );
         return new PostgresIterable<>( () -> {
             try {
                 Connection connection = hds.getConnection();
@@ -176,7 +152,7 @@ public class PostgresEdmManager {
 
     public Map<UUID, Long> countEntitySetsOfEntityTypes( Set<UUID> entityTypeIds ) {
         String query =
-                "SELECT " + ENTITY_TYPE_ID.getName() + ", COUNT(*) FROM " + ENTITY_SETS + " WHERE " + ENTITY_TYPE_ID
+                "SELECT " + ENTITY_TYPE_ID.getName() + ", COUNT(*) FROM " + ENTITY_SETS.getName() + " WHERE " + ENTITY_TYPE_ID
                         .getName() + " = ANY( ? ) GROUP BY " + ENTITY_TYPE_ID.getName();
         try ( Connection connection = hds.getConnection();
                 PreparedStatement ps = connection.prepareStatement( query ) ) {
