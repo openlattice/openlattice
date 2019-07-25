@@ -85,7 +85,6 @@ public final class PostgresTable {
             new CitusDistributedTableDefinition( "e" )
                     .addColumns(
                             PARTITION,
-                            ID_TYPE,
                             SRC_ENTITY_SET_ID,
                             SRC_ENTITY_KEY_ID,
                             DST_ENTITY_SET_ID,
@@ -96,7 +95,6 @@ public final class PostgresTable {
                             VERSIONS,
                             PARTITIONS_VERSION )
                     .primaryKey( PARTITION,
-                            ID_TYPE,
                             SRC_ENTITY_KEY_ID,
                             DST_ENTITY_KEY_ID,
                             EDGE_ENTITY_KEY_ID )

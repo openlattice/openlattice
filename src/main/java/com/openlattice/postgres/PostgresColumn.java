@@ -233,10 +233,6 @@ public final class PostgresColumn {
     public static final String                   ID_FIELD                          = "id";
     public static final PostgresColumnDefinition ID                                =
             new PostgresColumnDefinition( ID_FIELD, UUID ).primaryKey().notNull();
-    public static final String                   ID_TYPE_FIELD                     = "id_type";
-    public static final PostgresColumnDefinition ID_TYPE                           =
-            new PostgresColumnDefinition( ID_TYPE_FIELD, INTEGER )
-                    .notNull();
     public static final PostgresColumnDefinition ID_VALUE                          =
             new PostgresColumnDefinition( ID_FIELD, UUID );
     public static final String                   INDEX_TYPE_FIELD                  = "index_type";
