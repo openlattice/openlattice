@@ -220,7 +220,7 @@ public class IndexerServicesPod {
 
     @Bean
     public PostgresEdmManager edmManager() {
-        return new PostgresEdmManager( hikariDataSource, partitionManager(), hazelcastInstance );
+        return new PostgresEdmManager( hikariDataSource, hazelcastInstance );
     }
 
     @Bean
