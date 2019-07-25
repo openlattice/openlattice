@@ -27,9 +27,11 @@ import com.openlattice.assembler.processors.MaterializeEntitySetProcessor;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.mapstores.TestDataFactory;
 
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
 import org.mockito.Mockito;
 
 /**
@@ -38,19 +40,36 @@ import org.mockito.Mockito;
 public class MaterializeEntitySetsProcessorStreamSerializerTest extends
         AbstractStreamSerializerTest<MaterializeEntitySetProcessorStreamSerializer, MaterializeEntitySetProcessor> {
 
-    @Override protected MaterializeEntitySetProcessorStreamSerializer createSerializer() {
+    @Override
+    protected MaterializeEntitySetProcessorStreamSerializer createSerializer() {
         final var processor = new MaterializeEntitySetProcessorStreamSerializer();
         processor.init( Mockito.mock( AssemblerConnectionManager.class ) );
         return processor;
     }
 
-    @Override protected MaterializeEntitySetProcessor createInput() {
+    @Override
+    protected MaterializeEntitySetProcessor createInput() {
         final var entitySet = TestDataFactory.entitySet();
 
-        final var propertyTypes = Stream
+        final var materializablePropertyTypes = Stream
                 .of( TestDataFactory.propertyType(), TestDataFactory.propertyType(), TestDataFactory.propertyType() )
                 .collect( Collectors.toMap( PropertyType::getId, Function.identity() ) );
 
-        return new MaterializeEntitySetProcessor( entitySet, propertyTypes );
+        final var authorizedPropertyTypesOfPrincipals = Stream
+                .of( TestDataFactory.userPrincipal(), TestDataFactory.rolePrincipal(), TestDataFactory.userPrincipal() )
+                .collect(
+                        Collectors.toMap(
+                                Function.identity(),
+                                principal -> Set.of(
+                                        TestDataFactory.propertyType(),
+                                        TestDataFactory.propertyType(),
+                                        TestDataFactory.propertyType()
+                                )
+                        )
+                );
+
+        return new MaterializeEntitySetProcessor(
+                entitySet, materializablePropertyTypes, authorizedPropertyTypesOfPrincipals
+        );
     }
 }

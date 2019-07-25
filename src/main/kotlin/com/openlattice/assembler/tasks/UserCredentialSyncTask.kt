@@ -41,7 +41,7 @@ class UserCredentialSyncTask : HazelcastInitializationTask<AssemblerDependencies
     override fun initialize(dependencies: AssemblerDependencies) {
         dependencies
                 .assemblerConnectionManager
-                .getAllUsers(dependencies.securePrincipalsManager)
+                .getAllUsers()
                 .forEach { user ->
                     dependencies.target.connection.use { conn ->
                         conn.createStatement().use { stmt ->

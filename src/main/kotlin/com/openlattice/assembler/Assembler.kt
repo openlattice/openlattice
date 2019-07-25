@@ -23,16 +23,17 @@ package com.openlattice.assembler
 
 import com.codahale.metrics.MetricRegistry
 import com.codahale.metrics.MetricRegistry.name
+import com.google.common.collect.Sets
 import com.google.common.eventbus.EventBus
 import com.google.common.eventbus.Subscribe
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.openlattice.assembler.PostgresRoles.Companion.buildOrganizationUserId
+import com.openlattice.assembler.events.MaterializedEntitySetDataChangeEvent
+import com.openlattice.assembler.events.MaterializedEntitySetEdmChangeEvent
 import com.openlattice.assembler.processors.*
-import com.openlattice.authorization.AclKey
-import com.openlattice.authorization.DbCredentialService
-import com.openlattice.authorization.SecurablePrincipal
+import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.controllers.exceptions.ResourceNotFoundException
 import com.openlattice.data.storage.MetadataOption
@@ -49,6 +50,7 @@ import com.openlattice.organization.OrganizationEntitySetFlag
 import com.openlattice.organization.OrganizationIntegrationAccount
 import com.openlattice.organizations.events.MembersAddedToOrganizationEvent
 import com.openlattice.organizations.events.MembersRemovedFromOrganizationEvent
+import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.organizations.tasks.OrganizationsInitializationTask
 import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.mapstores.MaterializedEntitySetMapStore
@@ -74,6 +76,9 @@ private val logger = LoggerFactory.getLogger(Assembler::class.java)
 class Assembler(
         private val dbCredentialService: DbCredentialService,
         val hds: HikariDataSource,
+        private val authorizationManager: AuthorizationManager,
+        private val edmAuthorizationHelper: EdmAuthorizationHelper,
+        private val securePrincipalsManager: SecurePrincipalsManager,
         metricRegistry: MetricRegistry,
         hazelcast: HazelcastInstance,
         eventBus: EventBus
@@ -119,12 +124,14 @@ class Assembler(
                 .isNotEmpty()
     }
 
-    fun flagMaterializedEntitySetDataUnsynch(entitySetId: UUID) {
-        flagMaterializedEntitySet(entitySetId, OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED)
+    @Subscribe
+    fun handleEntitySetDataChange(entitySetDataChangeEvent: MaterializedEntitySetDataChangeEvent) {
+        flagMaterializedEntitySet(entitySetDataChangeEvent.entitySetId, OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED)
     }
 
-    fun flagMaterializedEntitySetEdmUnsynch(entitySetId: UUID) {
-        flagMaterializedEntitySet(entitySetId, OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED)
+    @Subscribe
+    fun handleEntitySetEdmChange(entitySetEdmChangeEvent: MaterializedEntitySetEdmChangeEvent) {
+        flagMaterializedEntitySet(entitySetEdmChangeEvent.entitySetId, OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED)
     }
 
     private fun flagMaterializedEntitySet(entitySetId: UUID, flag: OrganizationEntitySetFlag) {
@@ -159,7 +166,7 @@ class Assembler(
     fun handleEntitySetDeleted(entitySetDeletedEvent: EntitySetDeletedEvent) {
         // when entity set is deleted, we drop it's view from both openlattice and organization databases and update
         // entity_sets and edges table in organization databases
-         if (isEntitySetMaterialized(entitySetDeletedEvent.entitySetId)) {
+        if (isEntitySetMaterialized(entitySetDeletedEvent.entitySetId)) {
             val entitySetAssembliesToDelete = materializedEntitySets.keySet(
                     entitySetIdPredicate(entitySetDeletedEvent.entitySetId)
             )
@@ -172,8 +179,8 @@ class Assembler(
             entitySetAssembliesToDelete
                     .groupBy { it.organizationId }
                     .mapValues { it.value.map(EntitySetAssemblyKey::entitySetId) }
-                    .forEach { organizationId, entitySetIds ->
-                        assemblies.executeOnKey(organizationId, MaterializeEdgesProcessor().init(acm))
+                    .forEach { (organizationId, entitySetIds) ->
+                        materializeEdges(organizationId)
                         assemblies.executeOnKey(
                                 organizationId,
                                 RemoveMaterializedEntitySetsFromOrganizationProcessor(entitySetIds)
@@ -268,17 +275,21 @@ class Assembler(
         ensureAssemblyInitialized(organizationId)
 
         // materialize entity sets
-        authorizedPropertyTypesByEntitySet.forEach { entitySetId, authorizedPropertyTypes ->
+        authorizedPropertyTypesByEntitySet.forEach { (entitySetId, materializablePropertyTypes) ->
             // even if we re-materialize, we would clear all flags
             val materializedEntitySetKey = EntitySetAssemblyKey(entitySetId, organizationId)
             val entitySet = entitySets.getValue(entitySetId)
+            val authorizedPropertyTypesOfPrincipals =
+                    getAuthorizedPropertiesOfPrincipals(entitySet, materializablePropertyTypes)
 
             materializedEntitySets.set(
                     materializedEntitySetKey,
                     MaterializedEntitySet(materializedEntitySetKey, refreshRatesOfEntitySets.getValue(entitySetId)))
             materializedEntitySets.executeOnKey(
                     materializedEntitySetKey,
-                    MaterializeEntitySetProcessor(entitySet, authorizedPropertyTypes).init(acm)
+                    MaterializeEntitySetProcessor(
+                            entitySet, materializablePropertyTypes, authorizedPropertyTypesOfPrincipals
+                    ).init(acm)
             )
         }
 
@@ -288,18 +299,72 @@ class Assembler(
                 AddMaterializedEntitySetsToOrganizationProcessor(authorizedPropertyTypesByEntitySet.keys)
         )
 
-        // materialize edges by including all the materialized entity sets in organization
-        assemblies.executeOnKey(organizationId, MaterializeEdgesProcessor().init(acm))
+        materializeEdges(organizationId)
 
         return getMaterializedEntitySetIdsInOrganization(organizationId).map {
             it to (setOf(OrganizationEntitySetFlag.MATERIALIZED) + getInternalEntitySetFlag(organizationId, it))
         }.toMap()
     }
 
+    private fun materializeEdges(organizationId: UUID) {
+        // materialize edges by including all the materialized entity sets in organization
+        val entitySetIds = assemblies.getValue(organizationId).materializedEntitySets.keys
+        val authorizedPrincipals = getAuthorizedPrincipalsForEdges(entitySetIds)
+        assemblies.executeOnKey(organizationId, MaterializeEdgesProcessor(authorizedPrincipals).init(acm))
+    }
+
+    private fun getAuthorizedPropertiesOfPrincipals(
+            entitySet: EntitySet,
+            materializablePropertyTypes: Map<UUID, PropertyType>
+    ): Map<Principal, Set<PropertyType>> {
+        // collect all principals of type user, role, which have read access on entityset
+        val authorizedPrincipals = getReadAuthorizedUsersAndRolesOnEntitySet(entitySet.id)
+
+        val propertyCheckFunction: (Principal) -> (Map<UUID, PropertyType>) = { principal ->
+            // only grant select on authorized columns if principal has read access on every normal entity set
+            // within the linking entity set
+            if (entitySet.isLinking &&
+                    !entitySet.linkedEntitySets.all {
+                        authorizationManager.checkIfHasPermissions(
+                                AclKey(it),
+                                setOf(principal),
+                                EdmAuthorizationHelper.READ_PERMISSION)
+                    }
+            ) {
+                mapOf()
+            } else {
+                edmAuthorizationHelper.getAuthorizedPropertyTypes(
+                        entitySet.id,
+                        EdmAuthorizationHelper.READ_PERMISSION,
+                        materializablePropertyTypes,
+                        setOf(principal)
+                )
+            }
+        }
+
+        // collect all authorized property types for principals which have read access on entity set
+        return authorizedPrincipals
+                .map { it to propertyCheckFunction(it).values.toSet() }
+                .toMap()
+    }
+
+    private fun getAuthorizedPrincipalsForEdges(entitySetIds: Set<UUID>): Set<Principal> {
+        // collect all principals of type user, role, which have read access on entityset
+        return entitySetIds.fold(mutableSetOf()) { acc, entitySetId ->
+            Sets.union(acc, getReadAuthorizedUsersAndRolesOnEntitySet(entitySetId).toSet())
+        }
+    }
+
+    private fun getReadAuthorizedUsersAndRolesOnEntitySet(entitySetId: UUID): List<Principal> {
+        return securePrincipalsManager
+                .getAuthorizedPrincipalsOnSecurableObject(AclKey(entitySetId), EdmAuthorizationHelper.READ_PERMISSION)
+                .filter { it.type == PrincipalType.USER || it.type == PrincipalType.ROLE }
+    }
+
     fun synchronizeMaterializedEntitySet(
             organizationId: UUID,
             entitySetId: UUID,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
+            materializablePropertyTypes: Map<UUID, PropertyType>
     ) {
         ensureAssemblyInitialized(organizationId)
         ensureEntitySetIsMaterialized(organizationId, entitySetId)
@@ -310,9 +375,14 @@ class Assembler(
             logger.info("Synchronizing materialized entity set $entitySetId")
 
             val entitySet = entitySets.getValue(entitySetId)
+            val authorizedPropertyTypesOfPrincipals =
+                    getAuthorizedPropertiesOfPrincipals(entitySet, materializablePropertyTypes)
+
             materializedEntitySets.executeOnKey(
                     EntitySetAssemblyKey(entitySetId, organizationId),
-                    SynchronizeMaterializedEntitySetProcessor(entitySet, authorizedPropertyTypes).init(acm)
+                    SynchronizeMaterializedEntitySetProcessor(
+                            entitySet, materializablePropertyTypes, authorizedPropertyTypesOfPrincipals
+                    ).init(acm)
             )
 
             // remove flag also from organization entity sets
@@ -327,13 +397,12 @@ class Assembler(
                     )
             )
 
-            // re-materialize edges with by including all the materialized entity sets in organization
-            assemblies.executeOnKey(organizationId, MaterializeEdgesProcessor().init(acm))
+            materializeEdges(organizationId)
         }
     }
 
     fun refreshMaterializedEntitySet(
-            organizationId: UUID, entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>
+            organizationId: UUID, entitySetId: UUID, materializablePropertyTypes: Map<UUID, PropertyType>
     ) {
         ensureAssemblyInitialized(organizationId)
         ensureEntitySetIsMaterialized(organizationId, entitySetId)
@@ -348,9 +417,14 @@ class Assembler(
             logger.info("Refreshing materialized entity set $entitySetId")
 
             val entitySet = entitySets.getValue(entitySetId)
+            val authorizedPropertyTypesOfPrincipals =
+                    getAuthorizedPropertiesOfPrincipals(entitySet, materializablePropertyTypes)
+
             materializedEntitySets.executeOnKey(
                     entitySetAssemblyKey,
-                    RefreshMaterializedEntitySetProcessor(entitySet, authorizedPropertyTypes).init(acm)
+                    RefreshMaterializedEntitySetProcessor(
+                            entitySet, materializablePropertyTypes, authorizedPropertyTypesOfPrincipals
+                    ).init(acm)
             )
             // remove flag also from organization entity sets
             assemblies.executeOnKey(
@@ -360,8 +434,7 @@ class Assembler(
                     )
             )
 
-            // re-materialize edges (with possible new edges)
-            assemblies.executeOnKey(organizationId, MaterializeEdgesProcessor().init(acm))
+            materializeEdges(organizationId)
         }
     }
 

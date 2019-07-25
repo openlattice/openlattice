@@ -89,8 +89,6 @@ class Graph(
             ps.use {
                 keys.forEach { dataEdgeKey ->
                     bindColumnsForEdge(ps, IdType.SRC, dataEdgeKey, version, versions, partitionsInfoByEntitySet)
-                    bindColumnsForEdge(ps, IdType.DST, dataEdgeKey, version, versions, partitionsInfoByEntitySet)
-                    bindColumnsForEdge(ps, IdType.EDGE, dataEdgeKey, version, versions, partitionsInfoByEntitySet)
                 }
 
                 return WriteEvent(version, ps.executeBatch().sum())
@@ -744,15 +742,15 @@ private val LOCK_BY_VERTEX_SQL = "$LOCK_SQL1 $VERTEX_FILTER_SQL $LOCK_SQL2"
 private val NEIGHBORHOOD_OF_ENTITY_SET_SQL = "SELECT * FROM ${E.name} WHERE " +
         "(${SRC_ENTITY_SET_ID.name} = ?) OR (${DST_ENTITY_SET_ID.name} = ? )"
 
-private val SRC_ID_SQL = "${SRC_ENTITY_KEY_ID.name} = ? AND ${SRC_ENTITY_SET_ID.name} = ? AND ${ID_TYPE.name} = ${IdType.SRC.ordinal}"
-private val DST_ID_SQL = "${DST_ENTITY_KEY_ID.name} = ? AND ${DST_ENTITY_SET_ID.name} = ? AND ${ID_TYPE.name} = ${IdType.DST.ordinal}"
+private val SRC_ID_SQL = "${SRC_ENTITY_KEY_ID.name} = ? AND ${SRC_ENTITY_SET_ID.name} = ?"
+private val DST_ID_SQL = "${DST_ENTITY_KEY_ID.name} = ? AND ${DST_ENTITY_SET_ID.name} = ?"
 
-private val SRC_IDS_SQL = "${SRC_ENTITY_KEY_ID.name} = ANY(?) AND ${SRC_ENTITY_SET_ID.name} = ? AND ${ID_TYPE.name} = ${IdType.SRC.ordinal}"
-private val DST_IDS_SQL = "${DST_ENTITY_KEY_ID.name} = ANY(?) AND ${DST_ENTITY_SET_ID.name} = ? AND ${ID_TYPE.name} = ${IdType.DST.ordinal}"
-private val EDGE_IDS_SQL = "${EDGE_ENTITY_KEY_ID.name} = ANY(?) AND ${EDGE_ENTITY_SET_ID.name} = ? AND ${ID_TYPE.name} = ${IdType.EDGE.ordinal}"
+private val SRC_IDS_SQL = "${SRC_ENTITY_KEY_ID.name} = ANY(?) AND ${SRC_ENTITY_SET_ID.name} = ?"
+private val DST_IDS_SQL = "${DST_ENTITY_KEY_ID.name} = ANY(?) AND ${DST_ENTITY_SET_ID.name} = ?"
+private val EDGE_IDS_SQL = "${EDGE_ENTITY_KEY_ID.name} = ANY(?) AND ${EDGE_ENTITY_SET_ID.name} = ?"
 
-private val SRC_IDS_AND_ENTITY_SETS_SQL = "${SRC_ENTITY_KEY_ID.name} = ANY(?) AND ${SRC_ENTITY_SET_ID.name} = ANY(?) AND ${ID_TYPE.name} = ${IdType.SRC.ordinal}"
-private val DST_IDS_AND_ENTITY_SETS_SQL = "${DST_ENTITY_KEY_ID.name} = ANY(?) AND ${DST_ENTITY_SET_ID.name} = ANY(?) AND ${ID_TYPE.name} = ${IdType.DST.ordinal}"
+private val SRC_IDS_AND_ENTITY_SETS_SQL = "${SRC_ENTITY_KEY_ID.name} = ANY(?) AND ${SRC_ENTITY_SET_ID.name} = ANY(?)"
+private val DST_IDS_AND_ENTITY_SETS_SQL = "${DST_ENTITY_KEY_ID.name} = ANY(?) AND ${DST_ENTITY_SET_ID.name} = ANY(?)"
 
 /**
  * Loads edges where either the source, destination, or association matches a set of entityKeyIds from a specific entity set

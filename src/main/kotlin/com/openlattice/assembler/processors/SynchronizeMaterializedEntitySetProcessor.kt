@@ -27,6 +27,7 @@ import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcesso
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.EntitySetAssemblyKey
 import com.openlattice.assembler.MaterializedEntitySet
+import com.openlattice.authorization.Principal
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
 import java.time.OffsetDateTime
@@ -35,7 +36,9 @@ import java.util.*
 private const val NOT_INITIALIZED = "Assembler Connection Manager not initialized."
 
 data class SynchronizeMaterializedEntitySetProcessor(
-        val entitySet: EntitySet, val authorizedPropertyTypes: Map<UUID, PropertyType>
+        val entitySet: EntitySet,
+        val materializablePropertyTypes: Map<UUID, PropertyType>,
+        val authorizedPropertyTypesOfPrincipals: Map<Principal, Set<PropertyType>>
 ) : AbstractRhizomeEntryProcessor<EntitySetAssemblyKey, MaterializedEntitySet, Void?>(), Offloadable {
     @Transient
     private var acm: AssemblerConnectionManager? = null
@@ -47,8 +50,11 @@ data class SynchronizeMaterializedEntitySetProcessor(
             throw IllegalStateException("Encountered null materialized entity set while trying to synchronize " +
                     "materialized view for entity set ${entitySet.id} in organization $organizationId.")
         } else {
-            acm?.materializeEntitySets(organizationId, mapOf(entitySet to authorizedPropertyTypes))
-                    ?: throw IllegalStateException(NOT_INITIALIZED)
+            acm?.materializeEntitySets(
+                    organizationId,
+                    mapOf(entitySet to materializablePropertyTypes),
+                    mapOf(entitySet.id to authorizedPropertyTypesOfPrincipals)
+            ) ?: throw IllegalStateException(NOT_INITIALIZED)
 
             // Clear edm and data unsync flags.
             // Note: if we will have other flags, we only need to remove these 2 and not clear all!
