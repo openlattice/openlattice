@@ -46,6 +46,7 @@ import com.openlattice.entitysets.EntitySetsApi.Companion.ALL
 import com.openlattice.entitysets.EntitySetsApi.Companion.ID
 import com.openlattice.entitysets.EntitySetsApi.Companion.IDS_PATH
 import com.openlattice.entitysets.EntitySetsApi.Companion.ID_PATH
+import com.openlattice.entitysets.EntitySetsApi.Companion.LINKING
 import com.openlattice.entitysets.EntitySetsApi.Companion.METADATA_PATH
 import com.openlattice.entitysets.EntitySetsApi.Companion.NAME
 import com.openlattice.entitysets.EntitySetsApi.Companion.NAME_PATH
@@ -80,16 +81,16 @@ constructor(
     }
 
     @Timed
-    @RequestMapping(path = [EntitySetsApi.LINKING + EntitySetsApi.ID_PATH], method = [RequestMethod.PUT])
+    @RequestMapping(path = [LINKING + ID_PATH], method = [RequestMethod.PUT])
     override fun addEntitySetsToLinkingEntitySet(
-            @PathVariable(EntitySetsApi.ID) linkingEntitySetId: UUID,
+            @PathVariable(ID) linkingEntitySetId: UUID,
             @RequestBody entitySetIds: Set<UUID>
     ): Int {
         return addEntitySets(linkingEntitySetId, entitySetIds)
     }
 
     @Timed
-    @RequestMapping(path = [EntitySetsApi.LINKING], method = [RequestMethod.POST])
+    @RequestMapping(path = [LINKING], method = [RequestMethod.POST])
     override fun addEntitySetsToLinkingEntitySets(@RequestBody entitySetIds: Map<UUID, Set<UUID>>): Int {
         return entitySetIds.map { addEntitySets(it.key, it.value) }.sum()
     }
@@ -107,16 +108,16 @@ constructor(
     }
 
     @Timed
-    @RequestMapping(path = [EntitySetsApi.LINKING + EntitySetsApi.ID_PATH], method = [RequestMethod.DELETE])
+    @RequestMapping(path = [LINKING + ID_PATH], method = [RequestMethod.DELETE])
     override fun removeEntitySetsFromLinkingEntitySet(
-            @PathVariable(EntitySetsApi.ID) linkingEntitySetId: UUID,
+            @PathVariable(ID) linkingEntitySetId: UUID,
             @RequestBody entitySetIds: Set<UUID>
     ): Int {
         return removeEntitySets(linkingEntitySetId, entitySetIds)
     }
 
     @Timed
-    @RequestMapping(path = [EntitySetsApi.LINKING], method = [RequestMethod.DELETE])
+    @RequestMapping(path = [LINKING], method = [RequestMethod.DELETE])
     override fun removeEntitySetsFromLinkingEntitySets(@RequestBody entitySetIds: Map<UUID, Set<UUID>>): Int {
         return entitySetIds.map { removeEntitySets(it.key, it.value) }.sum()
     }
