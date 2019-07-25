@@ -1,34 +1,102 @@
 package com.openlattice.data.storage
 
 import com.openlattice.data.EntityDataKey
+import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.postgres.DataTables.LAST_INDEX
 import com.openlattice.postgres.DataTables.LAST_LINK
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.IDS
 import com.zaxxer.hikari.HikariDataSource
-import org.slf4j.LoggerFactory
+import java.sql.Connection
 import java.time.OffsetDateTime
-import java.util.UUID
-import java.util.Optional
+import java.util.*
 
 
-class IndexingMetadataManager(private val hds: HikariDataSource) {
-    companion object {
-        private val logger = LoggerFactory.getLogger(IndexingMetadataManager::class.java)
-    }
+class IndexingMetadataManager(private val hds: HikariDataSource, private val partitionManager: PartitionManager) {
 
     fun markAsIndexed(entityKeyIdsWithLastWrite: Map<UUID, Map<UUID, OffsetDateTime>>, linking: Boolean): Int {
+        var count = 0
+
+        val entitySetPartitions = partitionManager.getEntitySetsPartitionsInfo(entityKeyIdsWithLastWrite.keys)
+
+        hds.connection.use { connection ->
+            entityKeyIdsWithLastWrite.forEach { (entitySetId, entities) ->
+                val partitions = entitySetPartitions.getValue(entitySetId).partitions.toList()
+
+                entities.entries
+                        .groupBy({ getPartition(it.key, partitions) }, { it.toPair() })
+                        .mapValues { it.value.toMap() }
+                        .forEach { (partition, entitiesWithLastWrite) ->
+
+                            entitiesWithLastWrite.entries
+                                    .groupBy { it.value }
+                                    .mapValues { it.value.map { it.key } }
+                                    .forEach { (lastWrite, entities) ->
+                                        count += markAsIndexed(
+                                                connection, entitySetId, entities, partition, lastWrite, linking
+                                        )
+                                    }
+                        }
+            }
+        }
+        return count
+    }
+
+    private fun markAsIndexed(
+            connection: Connection,
+            entitySetId: UUID,
+            entityKeyIds: List<UUID>,
+            partition: Int,
+            lastIndex: OffsetDateTime,
+            linking: Boolean
+    ): Int {
+        val updateSql = if (linking) updateLastLinkingIndexSql else updateLastIndexSql
+        return connection.prepareStatement(updateSql).use { stmt ->
+            val idsArray = PostgresArrays.createUuidArray(connection, entityKeyIds)
+            stmt.setObject(1, lastIndex)
+            stmt.setObject(2, entitySetId)
+            stmt.setArray(3, idsArray)
+            stmt.setInt(4, partition)
+            stmt.executeUpdate()
+        }
+    }
+
+    fun markEntitySetsAsNeedsToBeIndexed(entitySetIds: Set<UUID>, linking: Boolean): Int {
+        val entitySetPartitions = partitionManager.getEntitySetsPartitionsInfo(entitySetIds).values
+                .flatMap { it.partitions }
+                .toSet()
+
         return hds.connection.use { connection ->
-            val updateSql = updateLastIndexSql(linking)
+            val updateSql = markEntitySetsAsNeedsToBeIndexedSql(linking)
             connection.prepareStatement(updateSql).use { stmt ->
-                entityKeyIdsWithLastWrite.forEach { (entitySetId, entities) ->
-                    entities.forEach { (entityId, lastWrite) ->
-                        stmt.setObject(1, entitySetId)
-                        stmt.setObject(2, entityId)
-                        stmt.setObject(3, lastWrite)
-                        stmt.addBatch()
-                    }
+                val entitySetIdsArray = PostgresArrays.createUuidArray(connection, entitySetIds)
+                val partitionsArray = PostgresArrays.createIntArray(connection, entitySetPartitions)
+                stmt.setArray(1, entitySetIdsArray)
+                stmt.setArray(2, partitionsArray)
+
+                return stmt.executeUpdate()
+            }
+        }
+    }
+
+    fun markLinkingIdsAsNeedToBeIndexed(linkingEntityKeys: Map<UUID, Set<UUID>>): Int {
+        val entitySetPartitions = partitionManager.getEntitySetsPartitionsInfo(linkingEntityKeys.keys)
+
+        hds.connection.use { connection ->
+            connection.prepareStatement(markLinkingIdsAsNeedToBeIndexedSql).use { stmt ->
+                linkingEntityKeys.forEach { (entitySetId, linkingIds) ->
+                    val partitions = entitySetPartitions.getValue(entitySetId).partitions.toList()
+
+                    linkingIds.groupBy { getPartition(it, partitions) }
+                            .forEach { (partition, linkingIds) ->
+                                val linkingIdsArray = PostgresArrays.createUuidArray(connection, linkingIds)
+                                stmt.setObject(1, entitySetId)
+                                stmt.setInt(2, partition)
+                                stmt.setArray(3, linkingIdsArray)
+
+                                stmt.addBatch()
+                            }
                 }
 
                 return stmt.executeBatch().sum()
@@ -36,104 +104,86 @@ class IndexingMetadataManager(private val hds: HikariDataSource) {
         }
     }
 
-    fun markEntitySetsAsNeedsToBeIndexed(entitySetIds: Set<UUID>, linking: Boolean): Int {
-        return hds.connection.use { connection ->
-            val updateSql = markEntitySetsAsNeedsToBeIndexedSql(linking)
-            connection.prepareStatement(updateSql).use { stmt ->
-                val entitySetIdsArray = PostgresArrays.createUuidArray(connection, entitySetIds)
-                stmt.setArray(1, entitySetIdsArray)
-                return stmt.executeUpdate()
-            }
-        }
-    }
+    fun markAsNeedsToBeLinked(linkingEntityDataKeys: Set<EntityDataKey>): Int {
+        val linkingEntityKeys = linkingEntityDataKeys
+                .groupBy { it.entitySetId }
+                .mapValues {
+                    it.value.map { it.entityKeyId }
+                }
+        val entitySetPartitions = partitionManager.getEntitySetsPartitionsInfo(linkingEntityKeys.keys)
 
-    fun markLinkingIdsAsNeedToBeIndexed(linkingIds: Set<UUID>): Int {
         hds.connection.use { connection ->
-            connection.prepareStatement(markLinkingIdsAsNeedToBeIndexedSql()).use { stmt ->
-                val arr = PostgresArrays.createUuidArray(connection, linkingIds)
-                stmt.setArray(1, arr)
-                return stmt.executeUpdate()
-            }
-        }
-    }
+            connection.prepareStatement(markAsNeedsToBeLinkedSql).use { stmt ->
+                linkingEntityKeys.forEach { (entitySetId, linkingIds) ->
+                    val partitions = entitySetPartitions.getValue(entitySetId).partitions.toList()
 
-    fun markAsNeedsToBeLinked(entityDataKeys: Set<EntityDataKey>): Int {
-        return hds.connection.use { connection ->
-            connection.prepareStatement(markAsNeedsToBeLinkedSql(entityDataKeys)).use { stmt ->
-                stmt.executeUpdate()
+                    linkingIds.groupBy { getPartition(it, partitions) }
+                            .forEach { (partition, linkingIds) ->
+                                val linkingIdsArray = PostgresArrays.createUuidArray(connection, linkingIds)
+                                stmt.setObject(1, entitySetId)
+                                stmt.setInt(2, partition)
+                                stmt.setArray(3, linkingIdsArray)
+                                stmt.addBatch()
+                            }
+                }
+
+                return stmt.executeBatch().sum()
             }
         }
     }
+}
+
+/**
+ * Arguments of preparable sql in order:
+ * 1. last index
+ * 2. entity set id
+ * 3. entity key ids (uuid array)
+ * 4. partition
+ */
+private val updateLastIndexSql = "UPDATE ${IDS.name} SET ${LAST_INDEX.name} = ? " +
+        "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID.name} = ANY(?) AND ${PARTITION.name} = ?"
+
+/**
+ * Arguments of preparable sql in order:
+ * 1. last linking index
+ * 2. entity set id
+ * 3. linking ids (uuid array)
+ * 4. partition
+ */
+private val updateLastLinkingIndexSql = "UPDATE ${IDS.name} SET ${LAST_LINK_INDEX.name} = ? " +
+        "WHERE ${ENTITY_SET_ID.name} = ? AND ${LINKING_ID.name} = ANY(?) " +
+        "AND ${LINKING_ID.name} IS NOT NULL AND ${PARTITION.name} = ?"
+
+
+/**
+ * Arguments of preparable sql in order:
+ * 1. entity set ids (uuid array)
+ * 2. partitions (int array)
+ */
+fun markEntitySetsAsNeedsToBeIndexedSql(linking: Boolean): String {
+    val updateColumn = if (linking) LAST_LINK_INDEX.name else LAST_INDEX.name
+
+    return "UPDATE ${IDS.name} SET $updateColumn = '-infinity()' " +
+            "WHERE ${ENTITY_SET_ID.name} = ANY(?) AND ${PARTITION.name} = ANY(?)"
 }
 
 /**
  * Arguments of preparable sql in order:
  * 1. entity set id
- * 2. entity key id
- * 3. if linking      -> last_linking_index
- *    if non-linking  -> last_index
+ * 2. partition
+ * 3. linking ids (uuid array)
  */
-fun updateLastIndexSql(linking: Boolean): String {
-    val idColumn = if (linking) LINKING_ID.name else ID.name
-    val filterLinkingIds = if (linking) " AND ${LINKING_ID.name} IS NOT NULL " else ""
-    val entitiesClause = " AND ${ENTITY_SET_ID.name} = ? AND  $idColumn = ? $filterLinkingIds"
-    val withClause = buildWithClause(linking, entitiesClause)
-    // rather use id than linking_id in linking join
-    val joinClause = joinClause(IDS.name, FILTERED_ENTITY_KEY_IDS, entityKeyIdColumnsList)
-    val updateColumn = if (linking) LAST_LINK_INDEX.name else LAST_INDEX.name
-
-    return "$withClause UPDATE ${IDS.name} SET $updateColumn = ? " +
-            "FROM $FILTERED_ENTITY_KEY_IDS WHERE ($joinClause)"
-}
+private val markLinkingIdsAsNeedToBeIndexedSql = "UPDATE ${IDS.name} SET ${LAST_LINK_INDEX.name} = '-infinity()' " +
+        "WHERE ${ENTITY_SET_ID.name} = ? AND ${PARTITION.name} = ? " +
+        "AND ${LINKING_ID.name} IS NOT NULL AND ${LINKING_ID.name} = ANY(?)"
 
 /**
  * Arguments of preparable sql in order:
- * 1. entity set ids (array)
+ * 1. entity set id
+ * 2. partition
+ * 3. linking ids (uuid array)
  */
-fun markEntitySetsAsNeedsToBeIndexedSql(linking: Boolean): String {
-    val entitiesClause = " AND ${ENTITY_SET_ID.name} = ANY(?) "
-    val withClause = buildWithClause(linking, entitiesClause)
-    // rather use id than linking_id in linking join
-    val joinClause = joinClause(IDS.name, FILTERED_ENTITY_KEY_IDS, entityKeyIdColumnsList)
-    val updateColumn = if (linking) LAST_LINK_INDEX.name else LAST_INDEX.name
-
-    return "$withClause UPDATE ${IDS.name} SET $updateColumn = '-infinity()' " +
-            "FROM $FILTERED_ENTITY_KEY_IDS WHERE ($joinClause) "
-}
-
-/**
- * Arguments of preparable sql in order:
- * 1. linking ids (array)
- */
-fun markLinkingIdsAsNeedToBeIndexedSql(): String {
-    val linkingEntitiesClause = " AND ${LINKING_ID.name} IS NOT NULL AND ${LINKING_ID.name} = ANY(?) "
-    val withClause = buildWithClause(true, linkingEntitiesClause)
-    // rather use id than linking_id in join
-    val joinClause = joinClause(IDS.name, FILTERED_ENTITY_KEY_IDS, entityKeyIdColumnsList)
-
-    return "$withClause UPDATE ${IDS.name} SET ${LAST_LINK_INDEX.name} = '-infinity()' " +
-            "FROM $FILTERED_ENTITY_KEY_IDS WHERE ($joinClause) "
-}
-
-/**
- * No arguments needed for preparable statement
- */
-fun markAsNeedsToBeLinkedSql(entityDataKeys: Set<EntityDataKey>): String {
-    val entityKeyIds = entityDataKeys
-            .groupBy { it.entitySetId }
-            .mapValues { Optional.of(it.value.map { it.entityKeyId }.toSet()) }
-    val entitiesClause = buildEntitiesClause(entityKeyIds, true)
-    val withClause = buildWithClause(true, entitiesClause)
-    // rather use id than linking_id in join
-    val joinClause = joinClause(IDS.name, FILTERED_ENTITY_KEY_IDS, entityKeyIdColumnsList)
-
-    return "$withClause UPDATE ${IDS.name} SET ${LAST_LINK.name} = '-infinity()' " +
-            "FROM $FILTERED_ENTITY_KEY_IDS WHERE ($joinClause) "
-}
-
-private fun joinClause(table1: String, table2: String, joinColumns: List<String>): String {
-    return joinColumns.joinToString(" AND ") { column ->
-        "$table1.$column = $table2.$column"
-    }
-}
+private val markAsNeedsToBeLinkedSql = "UPDATE ${IDS.name} SET ${LAST_LINK.name} = '-infinity()' " +
+        "WHERE ${VERSION.name} > 0 AND ${ENTITY_SET_ID.name} = ? AND ${PARTITION.name} = ? " +
+        "AND ${LINKING_ID.name} IS NOT NULL AND ${LINKING_ID.name} = ANY(?)"
 

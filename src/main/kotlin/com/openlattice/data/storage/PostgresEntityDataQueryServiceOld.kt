@@ -297,24 +297,6 @@ class PostgresEntityDataQueryServiceOld(
         }, adapter)
     }
 
-    /**
-     * Selects linking ids by their entity set ids with filtering on entity key ids.
-     */
-    fun getLinkingIds(entityKeyIds: Map<UUID, Optional<Set<UUID>>>): Map<UUID, Set<UUID>> {
-        val adapter = Function<ResultSet, Pair<UUID, Set<UUID>>> {
-            Pair(ResultSetAdapters.entitySetId(it), ResultSetAdapters.linkingIds(it))
-        }
-        return PostgresIterable(Supplier<StatementHolder> {
-            val connection = hds.connection
-            connection.autoCommit = false
-            val statement = connection.createStatement()
-            statement.fetchSize = FETCH_SIZE
-
-            val rs = statement.executeQuery(selectLinkingIdsOfEntities(entityKeyIds))
-            StatementHolder(connection, statement, rs)
-        }, adapter).toMap()
-    }
-
     fun getLinkingIds(entitySetId: UUID): PostgresIterable<UUID> {
         val adapter = Function<ResultSet, UUID> { ResultSetAdapters.linkingId(it) }
         return PostgresIterable(Supplier<StatementHolder> {
@@ -463,18 +445,6 @@ internal fun entityKeyIdsClause(entityKeyIds: Set<UUID>): String {
     } else {
         "${ID_VALUE.name} IN ('" + entityKeyIds.joinToString("','") + "')"
     }
-}
-
-internal fun selectLinkingIdsOfEntities(entityKeyIds: Map<UUID, Optional<Set<UUID>>>): String {
-    val entitiesClause = buildEntitiesClause(entityKeyIds, false)
-    val filterLinkingIds = " AND ${LINKING_ID.name} IS NOT NULL "
-    val withClause = buildWithClause(true, entitiesClause + filterLinkingIds)
-    val joinColumnsSql = (entityKeyIdColumnsList + LINKING_ID.name).joinToString(",")
-
-    return "$withClause SELECT ${ENTITY_SET_ID.name}, array_agg(${LINKING_ID.name}) as ${LINKING_ID.name} " +
-            "FROM $FILTERED_ENTITY_KEY_IDS " +
-            "INNER JOIN ${ENTITY_KEY_IDS.name} USING($joinColumnsSql) " +
-            "GROUP BY ${ENTITY_SET_ID.name} "
 }
 
 internal fun selectLinkingIdsOfEntitySet(entitySetId: UUID): String {
