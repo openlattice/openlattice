@@ -16,9 +16,8 @@ import java.util.*
 
 class PostgresLinkingLogServiceTest {
 
-    private val logger: Logger = LoggerFactory.getLogger(PostgresLinkingLogServiceTest::class.java)
-
     companion object {
+        private val logger: Logger = LoggerFactory.getLogger(PostgresLinkingLogServiceTest::class.java)
 
         @JvmStatic
         private val objectMapper: ObjectMapper = ObjectMappers.getJsonMapper()
