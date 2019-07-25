@@ -106,7 +106,6 @@ class BackgroundLinkingService
                 }
     }
 
-
     /**
      * Links a candidate entity to other matching entities.
      *
@@ -140,7 +139,7 @@ class BackgroundLinkingService
 
                     val clusterUpdate = ClusterUpdate(scoredCluster.clusterId, candidate, scoredCluster.cluster)
 
-                    insertMatches(clusterUpdate, conn)
+                    insertMatches(clusterUpdate, conn, false)
                 }
             } catch (ex: Exception) {
                 logger.error("An error occurred while performing linking.", ex)
@@ -157,7 +156,6 @@ class BackgroundLinkingService
                     candidate.entityKeyId,
                     sw.elapsed(TimeUnit.MILLISECONDS)
             )
-
 
             if (isLocked(initialBlock.second.keys - candidate)) {
                 return
@@ -185,17 +183,16 @@ class BackgroundLinkingService
                             .maxBy { scoredCluster -> scoredCluster.score }
 
                     //TODO: When creating new cluster do we really need to re-match or can we assume score of 1.0?
-                    val clusterUpdate = if (maybeBestCluster == null) {
+                    if (maybeBestCluster == null) {
                         val clusterId = ids.reserveIds(IdConstants.LINKING_ENTITY_SET_ID.id, 1).first()
                         val block = candidate to mapOf(candidate to elem)
-                        ClusterUpdate(clusterId, candidate, matcher.match(block).second)
+                        val clusterUpdate = ClusterUpdate(clusterId, candidate, matcher.match(block).second)
+                        insertMatches(clusterUpdate, conn, true)
                     } else {
-                        ClusterUpdate(maybeBestCluster.clusterId, candidate, maybeBestCluster.cluster)
+                        val clusterUpdate = ClusterUpdate(maybeBestCluster.clusterId, candidate, maybeBestCluster.cluster)
+                        insertMatches(clusterUpdate, conn, false)
                     }
-
-                    insertMatches(clusterUpdate, conn)
                 }
-
             } catch (ex: Exception) {
                 logger.error("An error occurred while performing linking.", ex)
                 throw IllegalStateException("Error occured while performing linking.", ex)
@@ -249,10 +246,12 @@ class BackgroundLinkingService
         return lqs.getClusters(lqs.getIdsOfClustersContaining(dataKeys).toList())
     }
 
-    private fun insertMatches(clusterUpdate: ClusterUpdate, conn: Connection) {
+    private fun insertMatches(clusterUpdate: ClusterUpdate, conn: Connection, newCluster: Boolean) {
         lqs.insertMatchScores(conn, clusterUpdate.clusterId, clusterUpdate.scores)
         lqs.updateLinkingTable(clusterUpdate.clusterId, clusterUpdate.newMember)
-        linkingLogService.createCluster(
+        val clusterFunc = if ( newCluster ) linkingLogService::createCluster else linkingLogService::updateCluster
+
+        clusterFunc(
                 clusterUpdate.clusterId, //clusterUpdate.scores
                 clusterUpdate.scores.flatMap { entry ->
                     return@flatMap Sets.union(entry.value.keys, setOf(entry.key))
