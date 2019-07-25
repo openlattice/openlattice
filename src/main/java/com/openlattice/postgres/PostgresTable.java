@@ -143,7 +143,7 @@ public final class PostgresTable {
                             TITLE,
                             DESCRIPTION,
                             CONTACTS,
-                            PostgresColumn.LINKED_ENTITY_SETS,
+                            LINKED_ENTITY_SETS,
                             ORGANIZATION_ID,
                             ENTITY_SET_FLAGS,
                             PARTITIONS,
@@ -288,7 +288,7 @@ public final class PostgresTable {
                             PRINCIPAL_TYPE,
                             PRINCIPAL_ID,
                             PostgresColumn.PERMISSIONS,
-                            PostgresColumn.EXPIRATION_DATE )
+                            EXPIRATION_DATE )
                     .primaryKey( ACL_KEY, PRINCIPAL_TYPE, PRINCIPAL_ID );
     public static final PostgresTableDefinition PERSISTENT_SEARCHES      =
             new PostgresTableDefinition( "persistent_searches" )
@@ -405,6 +405,7 @@ public final class PostgresTable {
                 new PostgresColumnsIndexDefinition( EDGES, EDGE_ENTITY_SET_ID )
                         .name( "edges_edge_entity_set_id_idx" )
                         .ifNotExists() );
+
         ENTITY_KEY_IDS.addIndexes(
                 new PostgresColumnsIndexDefinition( ENTITY_KEY_IDS, ENTITY_SET_ID )
                         .name( "entity_key_ids_entity_set_id_idx" )
@@ -477,7 +478,7 @@ public final class PostgresTable {
                         .name( "entity_key_ids_needing_propagation_idx" )
                         .ifNotExists()
         );
-
+        
         QUERIES.addIndexes(
                 new PostgresColumnsIndexDefinition( QUERIES, ENTITY_SET_ID )
                         .name( "queries_entity_set_id_idx" )
