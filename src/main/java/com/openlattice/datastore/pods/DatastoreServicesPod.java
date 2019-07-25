@@ -87,7 +87,6 @@ import com.openlattice.graph.Graph;
 import com.openlattice.graph.GraphQueryService;
 import com.openlattice.graph.PostgresGraphQueryService;
 import com.openlattice.graph.core.GraphService;
-import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.ids.HazelcastIdGenerationService;
 import com.openlattice.ids.HazelcastLongIdService;
 import com.openlattice.linking.LinkingQueryService;
@@ -255,14 +254,14 @@ public class DatastoreServicesPod {
     }
 
     @Bean
-    public IndexingMetadataManager postgresDataManager() {
-        return new IndexingMetadataManager( hikariDataSource );
+    public IndexingMetadataManager indexingMetadataManager() {
+        return new IndexingMetadataManager( hikariDataSource, partitionManager() );
     }
 
     @Bean
     public EntityDatastore entityDatastore() {
         return new PostgresEntityDatastore( idService(),
-                postgresDataManager(),
+                indexingMetadataManager(),
                 dataQueryService(),
                 dataModelService() );
     }
