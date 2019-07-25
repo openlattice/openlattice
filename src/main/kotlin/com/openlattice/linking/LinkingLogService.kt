@@ -5,7 +5,7 @@ import java.util.*
 interface LinkingLogService {
     fun updateCluster(linkingId: UUID, linkedEntities: Map<UUID, Set<UUID>>)
 
-    fun removeEntitiesFromCluster(linkingId: UUID, linkedEntities: Map<UUID, Set<UUID>>)
+    fun clearEntitiesFromCluster(linkingId: UUID, linkedEntities: Map<UUID, Set<UUID>>)
 
     fun createCluster(linkingId: UUID, linkedEntities: Map<UUID, Set<UUID>>)
 

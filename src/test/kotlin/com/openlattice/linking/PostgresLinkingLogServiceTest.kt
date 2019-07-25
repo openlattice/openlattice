@@ -100,7 +100,7 @@ class PostgresLinkingLogServiceTest {
         latest = service.readLatestLinkLog(linkingId)
         assert( latest == links.plus(otherLinks) )
 
-        service.removeEntitiesFromCluster( linkingId, links )
+        service.clearEntitiesFromCluster( linkingId, links )
         latest = service.readLatestLinkLog(linkingId)
 
         println( otherLinks )
@@ -140,7 +140,7 @@ class PostgresLinkingLogServiceTest {
         latest = service.readLatestLinkLog( linkingId )
         assert(expected.equals(latest))
 
-        service.removeEntitiesFromCluster( linkingId, fourthAdd )
+        service.clearEntitiesFromCluster( linkingId, fourthAdd )
         latest = service.readLatestLinkLog( linkingId )
         expected = expected.minus( fourthAdd.keys.first() )
         assert(expected.equals(latest))
