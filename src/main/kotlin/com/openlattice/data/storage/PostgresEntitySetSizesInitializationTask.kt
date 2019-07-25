@@ -28,8 +28,8 @@ import com.openlattice.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.Task
 import org.slf4j.LoggerFactory
 
-
-internal const val ENTITY_SET_SIZES_VIEW = "entity_set_counts"
+// todo change name back to "entity_set_counts"
+internal const val ENTITY_SET_SIZES_VIEW = "entity_set_counts_staging"
 private val logger = LoggerFactory.getLogger(PostgresEntitySetSizesInitializationTask::class.java)
 
 class PostgresEntitySetSizesInitializationTask : HazelcastInitializationTask<PostgresEntitySetSizesTaskDependency> {
