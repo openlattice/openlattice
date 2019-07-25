@@ -99,13 +99,13 @@ private val APPEND_SUFFIX = "FROM ${LINKING_LOG.name} " +
         "ORDER BY ${VERSION.name} DESC " +
         "LIMIT 1 "
 
-private val READ_LATEST_LINKED_SQL = "SELECT ${ID_MAP.name} $APPEND_SUFFIX"
-
 private val READ_VERSION_LINKED_SQL = "SELECT ${ID_MAP.name} " +
         "FROM ${LINKING_LOG.name} " +
         "WHERE ${LINKING_ID.name} = ? AND ${VERSION.name} <= ? " +
         "ORDER BY ${VERSION.name} DESC " +
         "LIMIT 1"
+
+private val READ_LATEST_LINKED_SQL = "SELECT ${ID_MAP.name} $APPEND_SUFFIX"
 
 private val INSERT_LOG_SQL = "$APPEND_PREFIX VALUES (?,?::jsonb,?)"
 
@@ -118,9 +118,9 @@ private val ADD_LINK_SQL = APPEND_PREFIX +
 // Clear Entity
 private val REMOVE_ENTITY_SQL= APPEND_PREFIX +
         "( SELECT ${LINKING_ID.name}, " +
-        "CASE WHEN jsonb_array_length( (${ID_MAP.name}->?)-? ) > 0 " +
-            "THEN jsonb_set( ${ID_MAP.name}, ?, (${ID_MAP.name}->?)-? ) " + // resulting array is *not* empty
-            "ELSE ${ID_MAP.name}-? " +                                      // resulting array is empty
-        "END" +
-        ", ? " +
+            "CASE WHEN jsonb_array_length( (${ID_MAP.name}->?)-? ) > 0 " +
+                "THEN jsonb_set( ${ID_MAP.name}, ?, (${ID_MAP.name}->?)-? ) " + // resulting array is *not* empty
+                "ELSE ${ID_MAP.name}-? " +                                      // resulting array is empty
+            "END" +
+            ", ? " +
         APPEND_SUFFIX
