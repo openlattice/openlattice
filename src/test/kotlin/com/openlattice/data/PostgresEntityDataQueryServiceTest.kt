@@ -240,12 +240,4 @@ class PostgresEntityDataQueryServiceTest {
                 )
         )
     }
-
-    @Test
-    fun testBuildWithClause() {
-        val entitiesClause = buildEntitiesClause(
-                mapOf(UUID.fromString("ed5716db-830b-41b7-9905-24fa82761ace") to Optional.empty()),
-                false)
-        logger.info("Build with clause: \n {}", buildWithClause(false, entitiesClause))
-    }
 }
