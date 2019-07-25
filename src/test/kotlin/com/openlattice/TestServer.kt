@@ -26,6 +26,7 @@ import com.kryptnostic.rhizome.configuration.ConfigurationConstants
 import com.kryptnostic.rhizome.core.RhizomeApplicationServer
 import com.openlattice.auditing.pods.AuditingConfigurationPod
 import com.openlattice.auth0.Auth0Pod
+import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.datastore.constants.DatastoreProfiles
 import com.openlattice.edm.PostgresEdmManager
 import com.openlattice.hazelcast.pods.MapstoresPod
@@ -65,10 +66,10 @@ open class TestServer {
 
             hazelcastInstance = testServer.context.getBean(HazelcastInstance::class.java)
             hds = testServer.context.getBean(HikariDataSource::class.java)
-            val tableManager = testServer.context.getBean(PostgresTableManager::class.java)
+            val partitionManager = PartitionManager(hazelcastInstance, hds)
 
             testServer.context.getBean(EventBus::class.java)
-                    .register(PostgresEdmManager(hds, tableManager, hazelcastInstance))
+                    .register(PostgresEdmManager(hds, partitionManager, hazelcastInstance))
         }
     }
 }
