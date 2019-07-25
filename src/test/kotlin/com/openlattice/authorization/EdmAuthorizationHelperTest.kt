@@ -44,7 +44,7 @@ class EdmAuthorizationHelperTest : HzAuthzTest() {
                 hazelcastInstance,
                 HazelcastAclKeyReservationService(hazelcastInstance),
                 hzAuthz,
-                PostgresEdmManager(hds, PartitionManager(hazelcastInstance, hds), hazelcastInstance),
+                PostgresEdmManager(hds, hazelcastInstance),
                 PostgresTypeManager(hds),
                 HazelcastSchemaManager(hazelcastInstance, PostgresSchemaQueryService(hds)),
                 auditingConfig,

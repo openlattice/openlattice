@@ -26,14 +26,12 @@ import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.hazelcast.query.Predicates;
 import com.openlattice.data.PropertyUsageSummary;
-import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.postgres.*;
 import com.openlattice.postgres.mapstores.EntitySetMapstore;
 import com.openlattice.postgres.streams.PostgresIterable;
 import com.openlattice.postgres.streams.StatementHolder;
 import com.zaxxer.hikari.HikariDataSource;
-import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,7 +39,6 @@ import java.sql.*;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import static com.openlattice.postgres.PostgresColumn.*;
 import static com.openlattice.postgres.PostgresTable.*;
@@ -54,16 +51,12 @@ public class PostgresEdmManager {
     private static final Logger logger = LoggerFactory.getLogger( PostgresEdmManager.class );
 
     private final HikariDataSource hds;
-    private final PartitionManager partitionManager;
 
     private final IMap<UUID, EntitySet> entitySets;
 
 
-    public PostgresEdmManager(
-            HikariDataSource hds, PartitionManager partitionManager, HazelcastInstance hazelcastInstance
-    ) {
+    public PostgresEdmManager( HikariDataSource hds, HazelcastInstance hazelcastInstance ) {
         this.hds = hds;
-        this.partitionManager = partitionManager;
         this.entitySets = hazelcastInstance.getMap( HazelcastMap.ENTITY_SETS.name() );
     }
 
@@ -96,49 +89,6 @@ public class PostgresEdmManager {
     public Set<EntitySet> getAllLinkingEntitySetsForEntitySet( UUID entitySetId ) {
         return ImmutableSet.copyOf( entitySets
                 .values( Predicates.equal( EntitySetMapstore.LINKED_ENTITY_SET_INDEX, entitySetId ) ) );
-    }
-
-    /**
-     * Queries the linking ids belonging to the entities in the requested entity sets.
-     *
-     * @param entitySetIds Set of ids of regular entity sets.
-     * @return Set of linking ids mapped by the requested entity set ids.
-     */
-    public PostgresIterable<Pair<UUID, Set<UUID>>> getLinkingIdsByEntitySetIds( Set<UUID> entitySetIds ) {
-        final var entitySetPartitions = partitionManager.getEntitySetsPartitionsInfo( entitySetIds ).values().stream()
-                .flatMap( partitionInfo -> partitionInfo.getPartitions().stream() )
-                .collect( Collectors.toSet() );
-
-        final var query = "SELECT " + ENTITY_SET_ID.getName() + ", array_agg(" + LINKING_ID.getName() + ") AS " + LINKING_ID.getName() +
-                " FROM " + IDS.getName() +
-                " WHERE " + LINKING_ID.getName() + " IS NOT NULL AND " + ENTITY_SET_ID.getName() + " = ANY( ? ) AND " + VERSION.getName() + " > 0 AND " + PARTITION.getName() + " = ANY( ? ) " +
-                " GROUP BY " + ENTITY_SET_ID.getName();
-
-        return new PostgresIterable<>( () ->
-        {
-            try {
-                final var connection = hds.getConnection();
-                final var ps = connection.prepareStatement( query );
-                final var entitySetIdsArray = PostgresArrays.createUuidArray( connection, entitySetIds );
-                final var partitionsArray = PostgresArrays.createIntArray( connection, entitySetPartitions );
-                ps.setArray( 1, entitySetIdsArray );
-                ps.setArray( 2, partitionsArray );
-                final var rs = ps.executeQuery();
-
-                return new StatementHolder( connection, ps, rs );
-            } catch ( SQLException e ) {
-                logger.error( "Unable to create statement holder!", e );
-                throw new IllegalStateException( "Unable to create statement holder.", e );
-            }
-        }, rs -> {
-            try {
-                return Pair.of( ResultSetAdapters.entitySetId( rs ), ResultSetAdapters.linkingIds( rs ) );
-            } catch ( SQLException e ) {
-                logger.error( "Unable to load linking ids by entity sets ids for entity sets {}", entitySetIds, e );
-                throw new IllegalStateException( "Unable to load linking ids by entity sets ids for entity sets " +
-                        entitySetIds, e );
-            }
-        } );
     }
 
     public Iterable<PropertyUsageSummary> getPropertyUsageSummary( UUID propertyTypeId ) {
