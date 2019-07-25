@@ -270,14 +270,15 @@ class Graph(
 
     /* Select */
 
-    override fun getEdgeKeysContainingEntities(entitySetId: UUID, entityKeyIds: Set<UUID>)
+    override fun getEdgeKeysContainingEntities(entitySetId: UUID, entityKeyIds: Set<UUID>, includeClearedEdges: Boolean)
             : PostgresIterable<DataEdgeKey> {
+        val sql = if (includeClearedEdges) BULK_NEIGHBORHOOD_SQL else BULK_NON_TOMBSTONED_NEIGHBORHOOD_SQL
         return PostgresIterable(
                 Supplier {
                     val connection = hds.connection
                     connection.autoCommit = false
                     val idArr = PostgresArrays.createUuidArray(connection, entityKeyIds)
-                    val stmt = connection.prepareStatement(BULK_NEIGHBORHOOD_SQL)
+                    val stmt = connection.prepareStatement(sql)
                     stmt.setObject(1, idArr)
                     stmt.setObject(2, entitySetId)
                     stmt.setObject(3, idArr)
@@ -762,7 +763,8 @@ private val DST_IDS_AND_ENTITY_SETS_SQL = "${DST_ENTITY_KEY_ID.name} = ANY(?) AN
  * 5. entityKeyIds
  * 6. entitySetId
  */
-private val BULK_NEIGHBORHOOD_SQL = "SELECT * FROM ${E.name} WHERE ($SRC_IDS_SQL) OR ($DST_IDS_SQL) OR ($EDGE_IDS_SQL)"
+private val BULK_NEIGHBORHOOD_SQL = "SELECT * FROM ${E.name} WHERE (($SRC_IDS_SQL) OR ($DST_IDS_SQL) OR ($EDGE_IDS_SQL))"
+private val BULK_NON_TOMBSTONED_NEIGHBORHOOD_SQL = "$BULK_NEIGHBORHOOD_SQL AND ${VERSION.name} > 0"
 
 /**
  * Loads edges where either the source or destination matches an EntityDataKey
