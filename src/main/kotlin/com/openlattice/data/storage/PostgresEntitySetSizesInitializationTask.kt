@@ -22,13 +22,14 @@ package com.openlattice.data.storage
 
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.postgres.PostgresColumn.*
-import com.openlattice.postgres.PostgresTable
+import com.openlattice.postgres.PostgresTable.IDS
+import com.openlattice.postgres.PostgresTable.ENTITY_SETS
 import com.openlattice.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.Task
 import org.slf4j.LoggerFactory
 
-
-internal const val ENTITY_SET_SIZES_VIEW = "entity_set_counts"
+// todo change name back to "entity_set_counts"
+internal const val ENTITY_SET_SIZES_VIEW = "entity_set_counts_staging"
 private val logger = LoggerFactory.getLogger(PostgresEntitySetSizesInitializationTask::class.java)
 
 class PostgresEntitySetSizesInitializationTask : HazelcastInitializationTask<PostgresEntitySetSizesTaskDependency> {
@@ -60,16 +61,19 @@ class PostgresEntitySetSizesInitializationTask : HazelcastInitializationTask<Pos
 }
 
 private val NORMAL_ENTITY_SET_COUNTS =
-        "( SELECT ${ENTITY_SET_ID.name}, COUNT(*) as $COUNT FROM ${PostgresTable.ENTITY_KEY_IDS.name} " +
-                "GROUP BY (${ENTITY_SET_ID.name}) )"
+        "( SELECT ${ENTITY_SET_ID.name}, COUNT(*) as $COUNT FROM ${IDS.name} WHERE ${VERSION.name} > 0 GROUP BY (${ENTITY_SET_ID.name}) )"
+
+private const val WRAPPED_LINKED_ENTITY_SETS = "wrapped_linked_entity_sets"
+private val WITH_WRAPPED_LINKED_ENTITY_SETS = "WITH $WRAPPED_LINKED_ENTITY_SETS AS " +
+        "(SELECT ${ID.name}, ${LINKED_ENTITY_SETS.name} FROM ${ENTITY_SETS.name} WHERE '${EntitySetFlag.LINKING}' = ANY(${FLAGS.name}) ) "
 
 private val LINKED_ENTITY_SET_COUNTS =
-        "( SELECT  ${ID.name} as ${ENTITY_SET_ID.name}, COUNT(DISTINCT ${LINKING_ID.name}) as $COUNT FROM " +
-                "( SELECT DISTINCT ${ENTITY_SET_ID.name}, ${LINKING_ID.name} FROM ${PostgresTable.ENTITY_KEY_IDS.name} WHERE ${LINKING_ID.name} IS NOT NULL ) as linking_ids " +
-                "INNER JOIN " +
-                "( SELECT ${ID.name}, ${LINKED_ENTITY_SETS.name} FROM ${PostgresTable.ENTITY_SETS.name} WHERE '${EntitySetFlag.LINKING}' = ANY(${FLAGS.name}) ) as linking_sets " +
-                "ON ( linking_ids.${ENTITY_SET_ID.name} = ANY(linking_sets.${LINKED_ENTITY_SETS.name}) ) " +
-                "GROUP BY linking_sets.${ID.name} )"
+        "($WITH_WRAPPED_LINKED_ENTITY_SETS " +
+                "SELECT ${ID.name} as ${ENTITY_SET_ID.name}, COUNT(DISTINCT ${LINKING_ID.name}) as $COUNT FROM " +
+                "( SELECT DISTINCT ${ENTITY_SET_ID.name}, ${LINKING_ID.name} FROM ${IDS.name} WHERE ${LINKING_ID.name} IS NOT NULL AND ${VERSION.name} > 0 ) as linking_ids " +
+                "INNER JOIN $WRAPPED_LINKED_ENTITY_SETS " +
+                "ON ( linking_ids.${ENTITY_SET_ID.name} = ANY($WRAPPED_LINKED_ENTITY_SETS.${LINKED_ENTITY_SETS.name}) ) " +
+                "GROUP BY $WRAPPED_LINKED_ENTITY_SETS.${ID.name} )"
 
 internal val CREATE_ENTITY_SET_COUNTS_VIEW = "CREATE MATERIALIZED VIEW IF NOT EXISTS $ENTITY_SET_SIZES_VIEW " +
         "AS $NORMAL_ENTITY_SET_COUNTS UNION $LINKED_ENTITY_SET_COUNTS"
