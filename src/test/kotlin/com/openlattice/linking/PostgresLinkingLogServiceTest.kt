@@ -66,15 +66,9 @@ class PostgresLinkingLogServiceTest {
     fun logLinkCreated() {
         val linkingId = UUID.randomUUID()
         val links = generateNRandomLinks(10)
-        service.logLinkCreated( linkingId, links  )
-        assertRowForLinkingId(linkingId) {readLinkingId, version, rowMap ->
-            println(linkingId)
-            println(links)
-
-            println(readLinkingId)
-            assert(linkingId == readLinkingId)
-            assert(links == rowMap)
-        }
+        service.createCluster( linkingId, links  )
+        val latest = service.readLatestLinkLog( linkingId )
+        assert(links == latest)
     }
 
     @Test
@@ -82,53 +76,74 @@ class PostgresLinkingLogServiceTest {
         val linkingId = UUID.randomUUID()
         val links = generateNRandomLinks(10)
         val newLinks = generateNRandomLinks(10)
-        service.logLinkCreated( linkingId, links )
-        service.logEntitiesAddedToLink( linkingId, newLinks )
-        assertRowForLinkingId(linkingId) {readLinkingId, version, rowMap ->
-            println(linkingId)
-            println("==")
-            println(readLinkingId)
-            println()
+        service.createCluster( linkingId, links )
+        var latest = service.readLatestLinkLog( linkingId )
+        assert( latest == links )
 
-            println(links)
-            println("==")
-            println(newLinks)
-            println("==")
-            println(rowMap)
-
-//            val newLinkedIds = rowMap.get(links.keys.first())
-//            val linkedIds = rowMap.get(newLinks.keys.first())
-//
-            assert( rowMap.containsKey(links.keys.first()) )
-            assert( rowMap.containsKey(newLinks.keys.first()) )
-
-            assert(linkingId == readLinkingId)
-        }
+        service.updateCluster( linkingId, newLinks )
+        latest = service.readLatestLinkLog( linkingId )
+        assert( latest.containsKey(links.keys.first()) )
+        assert( latest.containsKey(newLinks.keys.first()) )
+        assert( latest == links.plus(newLinks) )
     }
 
     @Test
     fun logEntitiesRemovedFromLink() {
         val linkingId = UUID.randomUUID()
         val links = generateNRandomLinks(10)
-        service.logLinkCreated( linkingId, links  )
-        service.logEntitiesRemovedFromLink(linkingId, links )
-        assertRowForLinkingId(linkingId) {readLinkingId, version, rowMap ->
-            assert(linkingId == readLinkingId)
-            assert(rowMap.isEmpty())
+        val otherLinks = generateNRandomLinks(10)
+        service.createCluster( linkingId, links  )
+        var latest = service.readLatestLinkLog(linkingId)
+        assert( latest == links )
 
-            println(linkingId)
-            println(links)
+        service.updateCluster( linkingId, otherLinks )
+        latest = service.readLatestLinkLog(linkingId)
+        assert( latest == links.plus(otherLinks) )
 
-            println(readLinkingId)
-        }
+        service.removeEntitiesFromCluster( linkingId, links )
+        latest = service.readLatestLinkLog(linkingId)
+
+        println( otherLinks )
+        println( latest )
+
+        assert( latest == otherLinks )
     }
 
     @Test
     fun readLatestLinkLog() {
         val linkingId = UUID.randomUUID()
-        val links = generateNRandomLinks(10)
-        service.logLinkCreated( linkingId , links )
-        service.readLatestLinkLog( linkingId )
+        val firstAdd = generateNRandomLinks(10)
+        service.createCluster( linkingId, firstAdd )
+        var latest = service.readLatestLinkLog( linkingId )
+        var expected = firstAdd
+        assert(expected.equals(latest))
+
+        val secondAdd = generateNRandomLinks(10)
+        service.updateCluster( linkingId, secondAdd )
+        latest = service.readLatestLinkLog( linkingId )
+        expected = expected.plus(secondAdd)
+        assert(expected.equals(latest))
+
+        val thirdAdd = generateNRandomLinks(10)
+        service.updateCluster( linkingId, thirdAdd )
+        latest = service.readLatestLinkLog( linkingId )
+        expected = expected.plus(thirdAdd)
+        assert(expected.equals(latest))
+
+        val fourthAdd = generateNRandomLinks(10)
+        service.updateCluster( linkingId , fourthAdd )
+        latest = service.readLatestLinkLog( linkingId )
+        expected = expected.plus(fourthAdd)
+        assert(expected.equals(latest))
+
+        service.createCluster( UUID.randomUUID(), generateNRandomLinks(10) )
+        latest = service.readLatestLinkLog( linkingId )
+        assert(expected.equals(latest))
+
+        service.removeEntitiesFromCluster( linkingId, fourthAdd )
+        latest = service.readLatestLinkLog( linkingId )
+        expected = expected.minus( fourthAdd.keys.first() )
+        assert(expected.equals(latest))
     }
 
     fun assertRowForLinkingId( linkingId: UUID, assertFunc: (readLinkingId: UUID, version: Long, rowMap: Map<UUID, Set<UUID>>) -> Unit ) {
