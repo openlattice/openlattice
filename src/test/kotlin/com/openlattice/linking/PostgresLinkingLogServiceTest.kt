@@ -2,12 +2,9 @@ package com.openlattice.linking
 
 import com.dataloom.mappers.ObjectMappers
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.kryptnostic.rhizome.configuration.RhizomeConfiguration
 import com.kryptnostic.rhizome.configuration.service.ConfigurationService
-import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable
-import com.openlattice.postgres.PostgresTable.LINKING_LOG
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import org.junit.AfterClass
@@ -103,9 +100,6 @@ class PostgresLinkingLogServiceTest {
         service.clearEntitiesFromCluster( linkingId, links )
         latest = service.readLatestLinkLog(linkingId)
 
-        println( otherLinks )
-        println( latest )
-
         assert( latest == otherLinks )
     }
 
@@ -145,22 +139,4 @@ class PostgresLinkingLogServiceTest {
         expected = expected.minus( fourthAdd.keys.first() )
         assert(expected.equals(latest))
     }
-
-    fun assertRowForLinkingId( linkingId: UUID, assertFunc: (readLinkingId: UUID, version: Long, rowMap: Map<UUID, Set<UUID>>) -> Unit ) {
-        hds.connection.use { conn ->
-            conn.prepareStatement(getRowSQL).use { ps ->
-                ps.setObject(1, linkingId)
-                ps.executeQuery().use {
-                    it.next()
-                    val readLnkId = it.getObject(LINKING_ID.name, UUID::class.java)
-                    val json = it.getString(ID_MAP.name)
-                    val version = it.getLong(VERSION.name)
-                    val asMap = objectMapper.readValue<Map<UUID, Set<UUID>>>(json)
-                    assertFunc(readLnkId, version, asMap)
-                }
-            }
-        }
-    }
-
-    val getRowSQL = "SELECT * FROM ${LINKING_LOG.name} WHERE ${LINKING_ID.name} = ?"
 }

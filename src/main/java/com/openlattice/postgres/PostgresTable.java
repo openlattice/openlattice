@@ -243,7 +243,8 @@ public final class PostgresTable {
                             ID_MAP,
                             VERSION )
                     .primaryKey( LINKING_ID,
-                            ID_MAP)
+                            ID_MAP,
+                            VERSION)
                     .distributionColumn( LINKING_ID );
 
     public static final PostgresTableDefinition MATCHED_ENTITIES         =
