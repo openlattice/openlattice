@@ -405,6 +405,80 @@ public final class PostgresTable {
                 new PostgresColumnsIndexDefinition( EDGES, EDGE_ENTITY_SET_ID )
                         .name( "edges_edge_entity_set_id_idx" )
                         .ifNotExists() );
+
+        ENTITY_KEY_IDS.addIndexes(
+                new PostgresColumnsIndexDefinition( ENTITY_KEY_IDS, ENTITY_SET_ID )
+                        .name( "entity_key_ids_entity_set_id_idx" )
+                        .ifNotExists(),
+                new PostgresColumnsIndexDefinition( ENTITY_KEY_IDS, ENTITY_SET_ID, ENTITY_ID )
+                        .name( "entity_key_ids_entity_set_id_entity_id_idx" )
+                        .ifNotExists(),
+                new PostgresColumnsIndexDefinition( ENTITY_KEY_IDS, VERSION )
+                        .name( "entity_key_ids_version_idx" )
+                        .ifNotExists(),
+                new PostgresColumnsIndexDefinition( ENTITY_KEY_IDS, VERSIONS )
+                        .name( "entity_key_ids_versions_idx" )
+                        .method( IndexType.GIN )
+                        .ifNotExists(),
+                new PostgresColumnsIndexDefinition( ENTITY_KEY_IDS, LINKING_ID )
+                        .name( "entity_key_ids_linking_id_idx" )
+                        .ifNotExists(),
+                new PostgresColumnsIndexDefinition( ENTITY_KEY_IDS, LAST_WRITE )
+                        .name( "entity_key_ids_last_write_idx" )
+                        .ifNotExists(),
+                new PostgresColumnsIndexDefinition( ENTITY_KEY_IDS, LAST_INDEX )
+                        .name( "entity_key_ids_last_index_idx" )
+                        .ifNotExists(),
+                new PostgresColumnsIndexDefinition( ENTITY_KEY_IDS, LAST_PROPAGATE )
+                        .name( "entity_key_ids_last_propagate_idx" )
+                        .ifNotExists(),
+                new PostgresColumnsIndexDefinition( ENTITY_KEY_IDS, LAST_LINK_INDEX )
+                        .name( "entity_key_ids_last_link_index_idx" )
+                        .ifNotExists(),
+                new PostgresExpressionIndexDefinition( ENTITY_KEY_IDS,
+                        ENTITY_SET_ID.getName()
+                                + ",(" + LAST_INDEX.getName() + " < " + LAST_WRITE.getName() + ")"
+                                + ",(" + VERSION.getName() + " > 0)" )
+                        .name( "entity_key_ids_needing_indexing_idx" )
+                        .ifNotExists(),
+                new PostgresExpressionIndexDefinition( ENTITY_KEY_IDS,
+                        ENTITY_SET_ID.getName()
+                                + ",(" + LAST_INDEX.getName() + " < " + LAST_WRITE.getName() + ")"
+                                + ",(" + VERSION.getName() + " <= 0)" )
+                        .name( "entity_key_ids_needing_delete_index_idx" )
+                        .ifNotExists(),
+                new PostgresExpressionIndexDefinition( ENTITY_KEY_IDS,
+                        ENTITY_SET_ID.getName()
+                                + ",(" + LAST_LINK.getName() + " < " + LAST_WRITE.getName() + ")"
+                                + ",(" + LAST_INDEX.getName() + " >= " + LAST_WRITE.getName() + ")"
+                                + ",(" + LAST_INDEX.getName() + " > '-infinity' )"
+                                + ",(" + VERSION.getName() + " > 0)" )
+                        .name( "entity_key_ids_needing_linking_idx" )
+                        .ifNotExists(),
+                new PostgresExpressionIndexDefinition( ENTITY_KEY_IDS,
+                        ENTITY_SET_ID.getName()
+                                + ",(" + LINKING_ID.getName() + " IS NOT NULL" + ")"
+                                + ",(" + LAST_LINK.getName() + " >= " + LAST_WRITE.getName() + ")"
+                                + ",(" + LAST_INDEX.getName() + " >= " + LAST_WRITE.getName() + ")"
+                                + ",(" + LAST_LINK_INDEX.getName() + " < " + LAST_WRITE.getName() + ")"
+                                + ",(" + VERSION.getName() + " > 0)" )
+                        .name( "entity_key_ids_needing_linking_indexing_idx" )
+                        .ifNotExists(),
+                new PostgresExpressionIndexDefinition( ENTITY_KEY_IDS,
+                        ENTITY_SET_ID.getName()
+                                + ",(" + LINKING_ID.getName() + " IS NOT NULL" + ")"
+                                + ",(" + LAST_LINK_INDEX.getName() + " < " + LAST_WRITE.getName() + ")"
+                                + ",(" + VERSION.getName() + " <= 0)" )
+                        .name( "entity_key_ids_needing_delete_linking_index_idx" )
+                        .ifNotExists(),
+                new PostgresExpressionIndexDefinition( ENTITY_KEY_IDS,
+                        ENTITY_SET_ID.getName()
+                                + ",(" + LAST_PROPAGATE.getName() + " < " + LAST_WRITE.getName() + ")"
+                                + ",(" + VERSION.getName() + " > 0)" )
+                        .name( "entity_key_ids_needing_propagation_idx" )
+                        .ifNotExists()
+        );
+        
         QUERIES.addIndexes(
                 new PostgresColumnsIndexDefinition( QUERIES, ENTITY_SET_ID )
                         .name( "queries_entity_set_id_idx" )
