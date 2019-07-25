@@ -64,10 +64,11 @@ class PostgresLinkingLogService(
 
     override fun readVersion(linkingId: UUID, version: Long): Map<UUID, Set<UUID>> {
         hds.connection.use { conn ->
-            conn.prepareStatement(READ_LATEST_LINKED_SQL).use { ps ->
+            conn.prepareStatement(READ_VERSION_LINKED_SQL).use { ps ->
                 ps.setObject(1, linkingId)
+                ps.setObject(2, version)
                 ps.executeQuery().use { rs->
-                    throw Exception("not done")
+                    rs.next()
                     val searchConstraintsJson = rs.getString( ID_MAP_FIELD )
                     return mapper.readValue( searchConstraintsJson )
                 }
@@ -97,12 +98,12 @@ private val APPEND_SUFFIX = "FROM ${LINKING_LOG.name} " +
         "WHERE ${LINKING_ID.name}=? " +
         "ORDER BY ${VERSION.name} DESC LIMIT 1 ) "
 
-// Read latest version of a link
 private val READ_LATEST_LINKED_SQL = "SELECT ${ID_MAP.name} FROM ${LINKING_LOG.name} WHERE ${LINKING_ID.name} = ? ORDER BY ${VERSION.name} DESC LIMIT 1"
+
+private val READ_VERSION_LINKED_SQL = "SELECT ${ID_MAP.name} FROM ${LINKING_LOG.name} WHERE ${LINKING_ID.name} = ? AND ${VERSION.name} <= ? ORDER BY ${VERSION.name} DESC LIMIT 1"
 
 private val INSERT_LOG_SQL = "$APPEND_PREFIX VALUES (?,?::jsonb,?)"
 
-// Add a link. Grab previous value from a temp table
 private val ADD_LINK_SQL = APPEND_PREFIX +
         "( SELECT ${LINKING_ID.name}, jsonb_set( ${ID_MAP.name}, ?, COALESCE(${ID_MAP.name}->?, '[]'::jsonb) || ?::jsonb ), ? " + APPEND_SUFFIX
 

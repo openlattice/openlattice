@@ -30,7 +30,7 @@ class PostgresLinkingLogServiceTest {
         @JvmStatic
         fun setUp() {
             val sql = PostgresTable.LINKING_LOG.createTableQuery()
-            println("creating table $sql")
+            logger.info("creating table $sql")
             hds.connection.use { conn ->
                 conn.prepareStatement(sql).use {ps ->
                     ps.execute()
@@ -41,7 +41,7 @@ class PostgresLinkingLogServiceTest {
         @AfterClass
         @JvmStatic
         fun tearDown() {
-            println("dropping table")
+            logger.info("dropping table")
             hds.connection.use { conn ->
                 conn.prepareStatement("DROP TABLE linking_log").use {ps ->
                     ps.execute()
