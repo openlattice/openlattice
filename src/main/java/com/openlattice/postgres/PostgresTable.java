@@ -119,7 +119,6 @@ public final class PostgresTable {
             new CitusDistributedTableDefinition( "entity_key_ids" )
                     .addColumns( ENTITY_SET_ID,
                             ID,
-                            ENTITY_ID,
                             LINKING_ID,
                             VERSION,
                             VERSIONS,
@@ -206,7 +205,6 @@ public final class PostgresTable {
                     .addColumns( PARTITION,
                             ENTITY_SET_ID,
                             ID_VALUE,
-                            ENTITY_ID,
                             LINKING_ID,
                             VERSION,
                             VERSIONS,
@@ -241,7 +239,6 @@ public final class PostgresTable {
             new CitusDistributedTableDefinition( "linking_log" )
                     .addColumns( LINKING_ID,
                             ENTITY_SET_ID,
-                            ENTITY_ID,
                             VERSION )
                     .primaryKey( LINKING_ID,
                             ENTITY_SET_ID )
@@ -409,9 +406,6 @@ public final class PostgresTable {
         ENTITY_KEY_IDS.addIndexes(
                 new PostgresColumnsIndexDefinition( ENTITY_KEY_IDS, ENTITY_SET_ID )
                         .name( "entity_key_ids_entity_set_id_idx" )
-                        .ifNotExists(),
-                new PostgresColumnsIndexDefinition( ENTITY_KEY_IDS, ENTITY_SET_ID, ENTITY_ID )
-                        .name( "entity_key_ids_entity_set_id_entity_id_idx" )
                         .ifNotExists(),
                 new PostgresColumnsIndexDefinition( ENTITY_KEY_IDS, VERSION )
                         .name( "entity_key_ids_version_idx" )
