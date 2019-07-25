@@ -106,7 +106,7 @@ public class PostgresEdmManager {
      */
     public PostgresIterable<Pair<UUID, Set<UUID>>> getLinkingIdsByEntitySetIds( Set<UUID> entitySetIds ) {
         final var entitySetPartitions = partitionManager.getEntitySetsPartitionsInfo( entitySetIds ).values().stream()
-                .flatMap( partitionInfo -> partitionInfo.component1().stream() )
+                .flatMap( partitionInfo -> partitionInfo.getPartitions().stream() )
                 .collect( Collectors.toSet() );
 
         final var query = "SELECT " + ENTITY_SET_ID.getName() + ", array_agg(" + LINKING_ID.getName() + ") AS " + LINKING_ID.getName() +
