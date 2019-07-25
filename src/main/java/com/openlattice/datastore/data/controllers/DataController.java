@@ -771,7 +771,9 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         final Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes = new HashMap<>();
 
         // collect association entity key ids
-        final PostgresIterable<DataEdgeKey> associationsEdgeKeys = collectAssociations( entitySetId, entityKeyIds );
+        final PostgresIterable<DataEdgeKey> associationsEdgeKeys = collectAssociations( entitySetId,
+                entityKeyIds,
+                false );
 
         // collect edge entity sets
         final var edgeEntitySetIds = associationsEdgeKeys.stream()
@@ -802,7 +804,9 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
 
     private List<WriteEvent> deleteAssociations( UUID entitySetId, Optional<Set<UUID>> entityKeyIds ) {
         // collect association entity key ids
-        final PostgresIterable<DataEdgeKey> associationsEdgeKeys = collectAssociations( entitySetId, entityKeyIds );
+        final PostgresIterable<DataEdgeKey> associationsEdgeKeys = collectAssociations( entitySetId,
+                entityKeyIds,
+                true );
         final var edgeAuditPropertyTypes = edmService.getPropertyTypesAsMap(
                 edmService.getAuditRecordEntitySetsManager().getAuditingTypes().edgeEntityType
                         .getAssociationEntityType().getProperties() );
@@ -837,9 +841,12 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         return dgm.deleteAssociationsBatch( entitySetId, associationsEdgeKeys, authorizedPropertyTypes );
     }
 
-    private PostgresIterable<DataEdgeKey> collectAssociations( UUID entitySetId, Optional<Set<UUID>> entityKeyIds ) {
+    private PostgresIterable<DataEdgeKey> collectAssociations(
+            UUID entitySetId,
+            Optional<Set<UUID>> entityKeyIds,
+            boolean includeClearedEdges ) {
         return ( entityKeyIds.isPresent() )
-                ? dgm.getEdgesConnectedToEntities( entitySetId, entityKeyIds.get() )
+                ? dgm.getEdgesConnectedToEntities( entitySetId, entityKeyIds.get(), includeClearedEdges )
                 : dgm.getEdgeKeysOfEntitySet( entitySetId );
     }
 
@@ -873,8 +880,9 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
          * 1 - collect all neighbor entities, organized by EntitySet
          */
 
+        boolean includeClearedEdges = deleteType.equals( DeleteType.Hard );
         Map<UUID, Set<EntityDataKey>> entitySetIdToEntityDataKeysMap = dgm
-                .getEdgesConnectedToEntities( entitySetId, entityKeyIds )
+                .getEdgesConnectedToEntities( entitySetId, entityKeyIds, includeClearedEdges )
                 .stream()
                 .filter( edge ->
                         ( edge.getDst().getEntitySetId().equals( entitySetId )
