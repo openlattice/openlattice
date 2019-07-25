@@ -122,7 +122,7 @@ public class IndexerPostConfigurationServicesPod {
 
     @Bean
     public IndexingMetadataManager indexingMetadataManager() {
-        return new IndexingMetadataManager( hikariDataSource );
+        return new IndexingMetadataManager( hikariDataSource, partitionManager() );
     }
 
     @Bean
