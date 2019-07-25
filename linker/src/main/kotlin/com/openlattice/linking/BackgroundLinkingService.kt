@@ -252,7 +252,7 @@ class BackgroundLinkingService
     private fun insertMatches(clusterUpdate: ClusterUpdate, conn: Connection) {
         lqs.insertMatchScores(conn, clusterUpdate.clusterId, clusterUpdate.scores)
         lqs.updateLinkingTable(clusterUpdate.clusterId, clusterUpdate.newMember)
-        linkingLogService.createOrUpdateForLinks(
+        linkingLogService.createCluster(
                 clusterUpdate.clusterId, //clusterUpdate.scores
                 clusterUpdate.scores.flatMap { entry ->
                     return@flatMap Sets.union(entry.value.keys, setOf(entry.key))
