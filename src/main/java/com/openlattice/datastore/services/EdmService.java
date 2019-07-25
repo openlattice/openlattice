@@ -407,10 +407,14 @@ public class EdmService implements EdmManager {
         final EntitySet updatedLinkingEntitySet = (EntitySet) entitySets.executeOnKey(
                 linkingEntitySetId, new RemoveEntitySetsFromLinkingEntitySetProcessor( linkedEntitySets ) );
 
-        Set<UUID> removedLinkingIds = edmManager.getLinkingIdsByEntitySetIds( linkedEntitySets )
-                .values().stream().flatMap( Set::stream ).collect( Collectors.toSet() );
+        Set<UUID> removedLinkingIds = edmManager.getLinkingIdsByEntitySetIds( linkedEntitySets ).stream()
+                .map( Pair::getRight )
+                .flatMap( Set::stream )
+                .collect( Collectors.toSet() );
         Map<UUID, Set<UUID>> remainingLinkingIdsByEntitySetId = edmManager
-                .getLinkingIdsByEntitySetIds( updatedLinkingEntitySet.getLinkedEntitySets() );
+                .getLinkingIdsByEntitySetIds( updatedLinkingEntitySet.getLinkedEntitySets() )
+                .stream()
+                .collect( Collectors.toMap( Pair::getLeft, Pair::getRight ) );
         markMaterializedEntitySetDirtyWithDataChanges( linkingEntitySet.getId() );
 
         eventBus.post( new LinkedEntitySetRemovedEvent(
