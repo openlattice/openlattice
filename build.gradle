@@ -62,7 +62,7 @@ if (DS_XMX == 'null' || DS_XMX == null || DS_XMX == "") {
 }
 
 if (DS_ARGS == 'null' || DS_ARGS == null || DS_ARGS == "") {
-    DS_ARGS = 'local postgres medialocal'
+    DS_ARGS = 'local postgres medialocal auditlocal'
 }
 
 
