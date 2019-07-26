@@ -292,7 +292,7 @@ paths:
                 items:
                   $ref: "#/components/associationType"
     post:
-      summary: Creates a new AssociationType definition, if it doesn"t exist.
+      summary: Creates a new AssociationType definition, if it doesn't exist.
       operationId: createAssociationType
       tags:
         - edm
@@ -930,7 +930,7 @@ paths:
                 items:
                   $ref: "#/components/entitySet"
     post:
-      summary: Create new EntitySet definitions if they don"t exist.
+      summary: Create new EntitySet definitions if they don't exist.
       operationId: createEntitySets
       requestBody:
         required: true
@@ -1909,12 +1909,12 @@ paths:
                 $ref: "#/components/AuthorizedObjectsSearchResult"
 
   ########################
-  ## ORGANISATIONS APIs ##
+  ## ORGANIZATIONS APIs ##
   ########################
 
   /datastore/organizations:
     get:
-      summary: Get all organisations
+      summary: Get all organizations
       operationId: getOrganizations
       tags:
         - organizations
@@ -1931,7 +1931,7 @@ paths:
                 items:
                   $ref: "#/components/organization"
     post:
-      summary: Create an organisation if it doesn't exist.
+      summary: Create an organization if it doesn't exist.
       operationId: createOrganizationIfNotExists
       tags:
         - organizations
@@ -1954,7 +1954,7 @@ paths:
                 format: uuid
   /datastore/organizations/{organizationId}:
     get:
-      summary: Get an organisation from the organizationId
+      summary: Get an organization from the organizationId
       operationId: getOrganization
       tags:
         - organizations
@@ -1976,7 +1976,7 @@ paths:
               schema:
                 $ref: "#/components/organization"
     delete:
-      summary: Remove an organisation from the organizationId
+      summary: Remove an organization from the organizationId
       operationId: destroyOrganization
       tags:
         - organizations
@@ -2022,7 +2022,7 @@ paths:
                     type: array
                     items:
                       type: string
-                      enum: [INTERNAL, EXTERNAL, MATERIALISED]
+                      enum: [INTERNAL, EXTERNAL, MATERIALIZED]
     post:
       summary: Get the entity sets for an organization for a certain flag
       operationId: getFlaggedOrganizationEntitySets
@@ -2048,7 +2048,7 @@ paths:
                 type: array
                 items:
                   type: string
-                  enum: [INTERNAL, EXTERNAL, MATERIALISED]
+                  enum: [INTERNAL, EXTERNAL, MATERIALIZED]
       responses:
         "200":
           description: Success
@@ -2062,7 +2062,7 @@ paths:
                     type: array
                     items:
                       type: string
-                      enum: [INTERNAL, EXTERNAL, MATERIALISED]
+                      enum: [INTERNAL, EXTERNAL, MATERIALIZED]
   /datastore/organizations/{organizationId}/entitySets/assemble:
     post:
       summary: Materializes entity sets into the organization database.
@@ -2101,10 +2101,10 @@ paths:
                     type: array
                     items:
                       type: string
-                      enum: [INTERNAL, EXTERNAL, MATERIALISED]
+                      enum: [INTERNAL, EXTERNAL, MATERIALIZED]
   /datastore/organizations/{organizationId}/title:
     put:
-      summary: Update the organisation title
+      summary: Update the organization title
       operationId: updateTitle
       tags:
         - organizations
@@ -2129,7 +2129,7 @@ paths:
           description: Success
   /datastore/organizations/{organizationId}/description:
     put:
-      summary: Update the organisation description
+      summary: Update the organization description
       operationId: updateDescription
       tags:
         - organizations
@@ -3238,7 +3238,7 @@ tags:
   - name: edm
     description: API endpoints to the entity data model.
   - name: permissions
-    description: API endpoints for permissions for organisations, roles and users.
+    description: API endpoints for permissions for organizations, roles and users.
   - name: directory
     description: API endpoints for searching users and their properties.
   - name: data
