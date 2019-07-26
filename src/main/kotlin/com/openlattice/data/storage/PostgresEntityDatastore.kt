@@ -4,7 +4,6 @@ import com.codahale.metrics.annotation.Timed
 import com.google.common.collect.*
 import com.google.common.eventbus.EventBus
 import com.openlattice.assembler.events.MaterializedEntitySetDataChangeEvent
-import com.openlattice.data.EntityKeyIdService
 import com.openlattice.data.EntitySetData
 import com.openlattice.data.WriteEvent
 import com.openlattice.data.events.EntitiesDeletedEvent
@@ -402,11 +401,6 @@ class PostgresEntityDatastore(
 
     @Timed
     override fun getEntityKeyIdsOfLinkingIds(linkingIds: Set<UUID>): PostgresIterable<Pair<UUID, Set<UUID>>> {
-        TODO("DELETE OR IMPLEMENT")
-    }
-
-    @Timed
-    override fun getLinkingEntitySetIds(linkingId: UUID): PostgresIterable<UUID> {
         TODO("DELETE OR IMPLEMENT")
     }
 
