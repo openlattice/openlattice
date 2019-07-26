@@ -29,7 +29,6 @@ import com.openlattice.edm.properties.PostgresTypeManager
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager
 import com.openlattice.edm.schemas.postgres.PostgresSchemaQueryService
 import com.openlattice.mapstores.TestDataFactory
-import com.openlattice.postgres.PostgresTableManager
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.junit.Assert
 import org.junit.Test
@@ -45,7 +44,7 @@ class EdmAuthorizationHelperTest : HzAuthzTest() {
                 hazelcastInstance,
                 HazelcastAclKeyReservationService(hazelcastInstance),
                 hzAuthz,
-                PostgresEdmManager(hds, PostgresTableManager(hds), hazelcastInstance),
+                PostgresEdmManager(hds, hazelcastInstance),
                 PostgresTypeManager(hds),
                 HazelcastSchemaManager(hazelcastInstance, PostgresSchemaQueryService(hds)),
                 auditingConfig,
