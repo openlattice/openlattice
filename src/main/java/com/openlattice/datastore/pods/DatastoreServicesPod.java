@@ -30,6 +30,7 @@ import com.geekbeast.hazelcast.HazelcastClientProvider;
 import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
+import com.kryptnostic.rhizome.configuration.ConfigurationConstants;
 import com.kryptnostic.rhizome.configuration.amazon.AmazonLaunchConfiguration;
 import com.openlattice.analysis.AnalysisService;
 import com.openlattice.assembler.Assembler;
@@ -39,9 +40,7 @@ import com.openlattice.assembler.AssemblerDependencies;
 import com.openlattice.assembler.AssemblerQueryService;
 import com.openlattice.assembler.pods.AssemblerConfigurationPod;
 import com.openlattice.assembler.tasks.UserCredentialSyncTask;
-import com.openlattice.auditing.AuditRecordEntitySetsManager;
-import com.openlattice.auditing.AuditingConfiguration;
-import com.openlattice.auditing.S3AuditingService;
+import com.openlattice.auditing.*;
 import com.openlattice.auth0.Auth0Pod;
 import com.openlattice.auth0.Auth0TokenProvider;
 import com.openlattice.authentication.Auth0Configuration;
@@ -117,6 +116,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Profile;
 
 @Configuration
 @Import( {
@@ -491,8 +491,15 @@ public class DatastoreServicesPod {
     }
 
     @Bean
-    public S3AuditingService s3AuditingService() {
+    @Profile( { ConfigurationConstants.Profiles.AWS_CONFIGURATION_PROFILE, AuditingProfiles.LOCAL_AWS_AUDITING_PROFILE } )
+    public AuditingManager s3AuditingService() {
         return new S3AuditingService( auditingConfiguration, longIdService(), defaultObjectMapper() );
+    }
+
+    @Bean
+    @Profile( AuditingProfiles.LOCAL_AUDITING_PROFILE )
+    public AuditingManager localAuditingService() {
+        return new LocalAuditingService( dataGraphService(), auditRecordEntitySetsManager(), defaultObjectMapper() );
     }
 
     @PostConstruct
