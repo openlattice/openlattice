@@ -263,7 +263,8 @@ public class DatastoreServicesPod {
         return new PostgresEntityDatastore( idService(),
                 indexingMetadataManager(),
                 dataQueryService(),
-                dataModelService() );
+                dataModelService(),
+                pgEdmManager() );
     }
 
     @Bean
