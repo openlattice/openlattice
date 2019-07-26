@@ -35,6 +35,7 @@ import com.openlattice.data.storage.PostgresEntityDataQueryService;
 import com.openlattice.data.storage.PostgresEntityDatastore;
 import com.openlattice.datastore.pods.ByteBlobServicePod;
 import com.openlattice.datastore.services.EdmManager;
+import com.openlattice.edm.PostgresEdmManager;
 import com.openlattice.ids.HazelcastIdGenerationService;
 import com.openlattice.indexing.BackgroundIndexingService;
 import com.openlattice.indexing.BackgroundLinkingIndexingService;
@@ -81,6 +82,9 @@ public class IndexerPostConfigurationServicesPod {
     @Inject
     private HazelcastClientProvider hazelcastClientProvider;
 
+    @Inject
+    private PostgresEdmManager pgEdmManager;
+
     @Bean
     public HazelcastIdGenerationService idGeneration() {
         return new HazelcastIdGenerationService( hazelcastClientProvider );
@@ -117,7 +121,12 @@ public class IndexerPostConfigurationServicesPod {
 
     @Bean
     public EntityDatastore entityDatastore() {
-        return new PostgresEntityDatastore( idService(), indexingMetadataManager(), dataQueryService(), edm );
+        return new PostgresEntityDatastore(
+                idService(),
+                indexingMetadataManager(),
+                dataQueryService(),
+                edm,
+                pgEdmManager );
     }
 
     @Bean
