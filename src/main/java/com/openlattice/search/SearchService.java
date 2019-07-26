@@ -73,7 +73,6 @@ import com.openlattice.edm.events.EntitySetDeletedEvent;
 import com.openlattice.edm.events.EntitySetMetadataUpdatedEvent;
 import com.openlattice.edm.events.EntityTypeCreatedEvent;
 import com.openlattice.edm.events.EntityTypeDeletedEvent;
-import com.openlattice.edm.events.LinkedEntitySetRemovedEvent;
 import com.openlattice.edm.events.PropertyTypeCreatedEvent;
 import com.openlattice.edm.events.PropertyTypeDeletedEvent;
 import com.openlattice.edm.events.PropertyTypesAddedToEntityTypeEvent;
@@ -346,45 +345,6 @@ public class SearchService {
     @Subscribe
     public void addPropertyTypesToEntityType( PropertyTypesAddedToEntityTypeEvent event ) {
         elasticsearchApi.addPropertyTypesToEntityType( event.getEntityType(), event.getNewPropertyTypes() );
-    }
-
-    /**
-     * Handles indexing when 1 or more entity sets are unlinked/removed from linking entity set.
-     * If there are no linked entity sets remaining, the index for that linking entity set needs to be deleted,
-     * otherwise indexing needs to be triggered on the remaining linking ids, and documents with removed linking ids
-     * need to be deleted.
-     */
-    @Subscribe
-    public void removeLinkedEntitySetsFromEntitySet( LinkedEntitySetRemovedEvent event ) {
-        EntityType entityType = dataModelService.getEntityTypeByEntitySetId( event.getLinkingEntitySetId() );
-
-        if ( event.getRemainingLinkingIdsByEntitySetId().isEmpty() ) {
-            elasticsearchApi.deleteEntitySet( event.getLinkingEntitySetId(), entityType.getId() );
-        } else {
-            UUID linkingEntitySetId = event.getLinkingEntitySetId();
-
-            Set<UUID> removedLinkingIds = event.getRemovedLinkingIds();
-            Map<UUID, Set<UUID>> remainingLinkingIdsByEntitySetId = event.getRemainingLinkingIdsByEntitySetId();
-            Set<UUID> interSection = Sets.intersection(
-                    removedLinkingIds,
-                    remainingLinkingIdsByEntitySetId.values().stream()
-                            .flatMap( Set::stream ).collect( Collectors.toSet() ) );
-
-            Map<UUID, Set<UUID>> sharedLinkingIdsByEntitySets = remainingLinkingIdsByEntitySetId.entrySet().stream()
-                    .collect( Collectors.toMap(
-                            it -> it.getKey(),
-                            it -> Sets.intersection( it.getValue(), removedLinkingIds ) ) );
-            Map<UUID, PropertyType> propertyTypes = dataModelService
-                    .getPropertyTypesAsMap( entityType.getProperties() );
-
-            // Reindex documents(linking id) which are partially removed
-            indexLinkedEntities( linkingEntitySetId, sharedLinkingIdsByEntitySets, propertyTypes );
-
-            // Delete documents(linking id) which are fully removed
-            Sets.difference( removedLinkingIds, interSection ).forEach( linkingId ->
-                    elasticsearchApi.deleteEntityData( new EntityDataKey( linkingEntitySetId, linkingId ),
-                            entityType.getId() ) );
-        }
     }
 
     @Subscribe

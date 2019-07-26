@@ -33,7 +33,6 @@ import com.openlattice.hazelcast.pods.SharedStreamSerializersPod
 import com.openlattice.hazelcast.pods.TestPod
 import com.openlattice.jdbc.JdbcPod
 import com.openlattice.postgres.PostgresPod
-import com.openlattice.postgres.PostgresTableManager
 import com.openlattice.postgres.PostgresTablesPod
 import com.zaxxer.hikari.HikariDataSource
 
@@ -65,10 +64,9 @@ open class TestServer {
 
             hazelcastInstance = testServer.context.getBean(HazelcastInstance::class.java)
             hds = testServer.context.getBean(HikariDataSource::class.java)
-            val tableManager = testServer.context.getBean(PostgresTableManager::class.java)
 
             testServer.context.getBean(EventBus::class.java)
-                    .register(PostgresEdmManager(hds, tableManager, hazelcastInstance))
+                    .register(PostgresEdmManager(hds, hazelcastInstance))
         }
     }
 }
