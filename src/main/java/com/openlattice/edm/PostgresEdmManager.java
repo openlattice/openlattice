@@ -20,7 +20,6 @@
 
 package com.openlattice.edm;
 
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
@@ -88,9 +87,9 @@ public class PostgresEdmManager {
                 }
         );
     }
-    public Set<EntitySet> getAllLinkingEntitySetsForEntitySet( UUID entitySetId ) {
-        return ImmutableSet.copyOf( entitySets
-                .values( Predicates.equal( EntitySetMapstore.LINKED_ENTITY_SET_INDEX, entitySetId ) ) );
+
+    public Set<UUID> getAllLinkingEntitySetIdsForEntitySet( UUID entitySetId ) {
+        return entitySets.keySet( Predicates.equal( EntitySetMapstore.LINKED_ENTITY_SET_INDEX, entitySetId ) );
     }
 
     public Map<UUID, Set<UUID>> getLinkingIdsByEntitySetIds( Set<UUID> entitySetIds ) {
