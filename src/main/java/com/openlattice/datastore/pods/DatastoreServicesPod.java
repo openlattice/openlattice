@@ -394,7 +394,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public PostgresEdmManager pgEdmManager() {
-        PostgresEdmManager pgEdmManager = new PostgresEdmManager( hikariDataSource, tableManager, hazelcastInstance );
+        final var pgEdmManager = new PostgresEdmManager( hikariDataSource, hazelcastInstance );
         eventBus.register( pgEdmManager );
         return pgEdmManager;
     }
