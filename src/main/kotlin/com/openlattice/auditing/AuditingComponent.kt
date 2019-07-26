@@ -41,7 +41,7 @@ interface AuditingComponent {
         const val MAX_ENTITY_KEY_IDS_PER_EVENT = 100
     }
 
-    fun getS3AuditingService() : S3AuditingService
+    fun getAuditingManager() : AuditingManager
 
 
     @Timed
@@ -53,7 +53,7 @@ interface AuditingComponent {
     @Timed
     @JvmDefault
     fun recordEvents(events: List<AuditableEvent>): Int {
-        return getS3AuditingService().recordEvents(events)
+        return getAuditingManager().recordEvents(events)
     }
 
 }
