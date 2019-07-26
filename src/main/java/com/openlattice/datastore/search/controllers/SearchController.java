@@ -27,7 +27,7 @@ import com.google.common.collect.*;
 import com.openlattice.auditing.AuditEventType;
 import com.openlattice.auditing.AuditableEvent;
 import com.openlattice.auditing.AuditingComponent;
-import com.openlattice.auditing.S3AuditingService;
+import com.openlattice.auditing.AuditingManager;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.authorization.util.AuthorizationUtils;
@@ -85,7 +85,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
     private ObjectMapper mapper;
 
     @Inject
-    private S3AuditingService s3AuditingService;
+    private AuditingManager auditingManager;
 
     @Inject
     private DataGraphManager dgm;
@@ -684,8 +684,8 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
         return spm.getPrincipal( Principals.getCurrentUser().getId() ).getId();
     }
 
-    @NotNull @Override public S3AuditingService getS3AuditingService() {
-        return s3AuditingService;
+    @NotNull @Override public AuditingManager getAuditingManager() {
+        return auditingManager;
     }
 
     private static Set<UUID> getEntityKeyIdsFromSearchResult( DataSearchResult searchResult ) {
