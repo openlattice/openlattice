@@ -491,7 +491,8 @@ public class DatastoreServicesPod {
     }
 
     @Bean
-    @Profile( { ConfigurationConstants.Profiles.AWS_CONFIGURATION_PROFILE, AuditingProfiles.LOCAL_AWS_AUDITING_PROFILE } )
+    @Profile( { ConfigurationConstants.Profiles.AWS_CONFIGURATION_PROFILE,
+            ConfigurationConstants.Profiles.AWS_TESTING_PROFILE, AuditingProfiles.LOCAL_AWS_AUDITING_PROFILE } )
     public AuditingManager s3AuditingService() {
         return new S3AuditingService( auditingConfiguration, longIdService(), defaultObjectMapper() );
     }
