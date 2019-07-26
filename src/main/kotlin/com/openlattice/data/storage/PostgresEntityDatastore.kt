@@ -33,8 +33,6 @@ import javax.inject.Inject
  */
 @Service
 class PostgresEntityDatastore(
-        private val idService: EntityKeyIdService,
-        private val pdm: IndexingMetadataManager,
         private val dataQueryService: PostgresEntityDataQueryService,
         private val edmManager: EdmManager,
         private val postgresEdmManager: PostgresEdmManager
