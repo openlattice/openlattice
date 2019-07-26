@@ -28,11 +28,11 @@ class LocalAuditingService(
                     .filter { (auditEntitySetConfiguration, _) ->
                         auditEntitySetConfiguration.auditRecordEntitySet != null
                     }
-                    .map { (auditEntitySetConfiguration, entities) ->
+                    .map { (auditEntitySetConfiguration, auditableEvents) ->
                         val auditEntitySet = auditEntitySetConfiguration.auditRecordEntitySet
                         val (entityKeyIds, _) = dataGraphService.createEntities(
                                 auditEntitySet!!,
-                                toMap(entities),
+                                mapAuditableEventsToEntities(auditableEvents),
                                 auditingConfiguration.propertyTypes
                         )
 
@@ -40,7 +40,7 @@ class LocalAuditingService(
                             val auditEdgeEntitySet = auditEntitySetConfiguration.auditEdgeEntitySet
 
                             val lm = ArrayListMultimap.create<UUID, DataEdge>()
-                            entityKeyIds.asSequence().zip(entities.asSequence())
+                            entityKeyIds.asSequence().zip(auditableEvents.asSequence())
                                     .filter { it.second.entities.isPresent }
                                     .forEach { (auditEntityKeyId, ae) ->
                                         val aeEntitySetId = ae.aclKey[0]
@@ -68,7 +68,7 @@ class LocalAuditingService(
         }
     }
 
-    private fun toMap(events: List<AuditableEvent>): List<Map<UUID, Set<Any>>> {
+    private fun mapAuditableEventsToEntities(events: List<AuditableEvent>): List<Map<UUID, Set<Any>>> {
         val auditingConfiguration = ares.auditingTypes
         return events.map { event ->
             val eventEntity = mutableMapOf<UUID, Set<Any>>()
