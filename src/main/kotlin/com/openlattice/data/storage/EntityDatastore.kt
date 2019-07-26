@@ -78,8 +78,6 @@ interface EntityDatastore {
             authorizedPropertyTypesByEntitySet: Map<UUID, Map<UUID, PropertyType>>
     ): ListMultimap<UUID, MutableMap<FullQualifiedName, MutableSet<Any>>>
 
-    fun getLinkingIdsByEntitySetIds(entitySetIds: Set<UUID>): Map<UUID, Set<UUID>>
-
     fun getEntityKeyIdsOfLinkingIds(linkingIds: Set<UUID>): PostgresIterable<Pair<UUID, Set<UUID>>>
 
     fun getLinkingEntitySetIds(linkingId: UUID): PostgresIterable<UUID>
@@ -115,7 +113,7 @@ interface EntityDatastore {
      */
     fun partialReplaceEntities(
             entitySetId: UUID,
-            entity: Map<UUID, Map<UUID, Set<Any>>>,
+            entities: Map<UUID, Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): WriteEvent
 
