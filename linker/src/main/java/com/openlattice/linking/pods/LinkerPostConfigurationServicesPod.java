@@ -138,12 +138,7 @@ public class LinkerPostConfigurationServicesPod {
 
     @Bean
     public EntityDatastore entityDatastore() {
-        return new PostgresEntityDatastore(
-                idService(),
-                indexingMetadataManager(),
-                dataQueryService(),
-                edm,
-                pgEdmManager );
+        return new PostgresEntityDatastore( dataQueryService(), edm, pgEdmManager );
     }
 
     @Bean
