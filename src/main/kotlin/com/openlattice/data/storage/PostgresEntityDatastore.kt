@@ -401,7 +401,7 @@ class PostgresEntityDatastore(
 
     @Timed
     override fun getEntityKeyIdsOfLinkingIds(linkingIds: Set<UUID>): PostgresIterable<Pair<UUID, Set<UUID>>> {
-        TODO("DELETE OR IMPLEMENT")
+        return linkingQueryService.getEntityKeyIdsOfLinkingIds(linkingIds)
     }
 
     /**
