@@ -12,10 +12,9 @@ import com.openlattice.ids.processors.LongIdsGeneratingProcessor
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 class HazelcastLongIdService(hazelcastClientProvider: HazelcastClientProvider, hazelcastInstance: HazelcastInstance) {
-//    private val counters = hazelcastClientProvider
-//            .getClient(HazelcastClient.IDS.name)
-//            .getMap<String, Long>(HazelcastMap.LONG_IDS.name)
-    private val counters = hazelcastInstance.getMap<String, Long>(HazelcastMap.LONG_IDS.name) // TODO revert to hazelcastClientProvider once deployed
+    private val counters = hazelcastClientProvider
+            .getClient(HazelcastClient.IDS.name)
+            .getMap<String, Long>(HazelcastMap.LONG_IDS.name)
 
     /**
      * Generates a unique id of [scope]
