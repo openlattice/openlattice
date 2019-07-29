@@ -1209,7 +1209,7 @@ paths:
           content:
             application/json:
               schema:
-                type: list
+                type: array
                 items:
                   type: object
                   additionalProperties:
@@ -1496,9 +1496,9 @@ paths:
                 additionalProperties:
                   type: object
                   additionalProperties:
-                    type: array
+                    type: object
                     items:
-                      $ref: "#/components/neighborEntityDetailsReduced"
+                      $ref: "#/components/neighborEntityIds"
   
   ####################
   ## DIRECTORY APIs ##
@@ -1553,7 +1553,7 @@ paths:
   /datastore/principals/db:
     get:
       summary: Get the db access credentials.
-      operationId: getDbAccessCredentials
+      operationId: getMaterializedViewAccount
       tags:
         - principal
       security:
@@ -1565,7 +1565,7 @@ paths:
           content:
             application/json:
               schema:
-                type: string
+                $ref: "#/components/MaterializedViewAccount"
   /datastore/principals/users/:
     get:
       summary: Get all users.
@@ -1802,7 +1802,7 @@ paths:
       responses:
         "200":
           description: Success
-  /datastore/organizations/{organizationId}/entitySets:
+  /datastore/organizations/{organizationId}/entity-sets:
     get:
       summary: Get the entity sets for an organization for a certain filter
       operationId: getOrganizationEntitySets
@@ -1872,7 +1872,7 @@ paths:
                     items:
                       type: string
                       enum: [INTERNAL, EXTERNAL, MATERIALISED]
-  /datastore/organizations/{organizationId}/entitySets/assemble:
+  /datastore/organizations/{organizationId}/entity-sets/assemble:
     post:
       summary: Materializes entity sets into the organization database.
       operationId: assembleEntitySets
@@ -1893,24 +1893,21 @@ paths:
         content:
           application/json:
             schema:
-              type: array
-              items:
-                type: string
-                format: uuid
+              type: object
+              additionalProperties:
+                type: integer
       responses:
         "200":
           description: Success
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: object
-                  additionalProperties:
-                    type: array
-                    items:
-                      type: string
-                      enum: [INTERNAL, EXTERNAL, MATERIALISED]
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    type: string
+                    enum: [INTERNAL, EXTERNAL, MATERIALISED]
   /datastore/organizations/{organizationId}/title:
     put:
       summary: Update the organisation title
@@ -2983,7 +2980,13 @@ components:
             type: array
             items:
               type: string
-
+    MaterializedViewAccount:
+        type: object
+        properties:
+          username:
+            type: string
+          credential:
+            type: string
 tags:
 - name: edm
   description: API endpoints to the entity data model.
