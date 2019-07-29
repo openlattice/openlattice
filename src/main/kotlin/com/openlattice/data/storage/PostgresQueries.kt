@@ -25,6 +25,7 @@ import com.openlattice.analysis.requests.Filter
 import com.openlattice.postgres.DataTables.*
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.ENTITY_KEY_IDS
+import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.ResultSetAdapters
 import org.slf4j.LoggerFactory
 import java.util.*
@@ -71,7 +72,7 @@ fun selectEntitySetWithCurrentVersionOfPropertyTypes(
         metadataFilters: String = ""
 ): String {
     val entitiesClause = buildEntitiesClause(entityKeyIds, linking)
-    val withClause = buildWithClause(linking, entitiesClause)
+    val withClause = buildWithClauseOld(linking, entitiesClause)
     val joinColumns = getJoinColumns(linking, omitEntitySetId)
 
     val entitiesSubquerySql = selectEntityKeyIdsWithCurrentVersionSubquerySql(
@@ -117,7 +118,8 @@ fun selectEntitySetWithCurrentVersionOfPropertyTypes(
     return fullQuery
 }
 
-internal fun buildWithClause(linking: Boolean, entitiesClause: String): String {
+// todo delete entire thing, after Assembler is fixed for new data table
+private fun buildWithClauseOld(linking: Boolean, entitiesClause: String): String {
     val joinColumns = if (linking) {
         listOf(ENTITY_SET_ID.name, ID_VALUE.name, LINKING_ID.name)
     } else {

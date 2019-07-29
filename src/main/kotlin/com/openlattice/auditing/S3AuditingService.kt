@@ -6,13 +6,20 @@ import com.amazonaws.services.s3.model.PutObjectRequest
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.google.common.base.Stopwatch
+import com.google.common.collect.ArrayListMultimap
+import com.google.common.collect.ImmutableMap
 import com.google.common.collect.Queues
 import com.google.common.util.concurrent.MoreExecutors
 import com.openlattice.aws.newS3Client
+import com.openlattice.data.DataEdge
+import com.openlattice.data.DataGraphManager
+import com.openlattice.data.EntityDataKey
 import com.openlattice.ids.HazelcastLongIdService
 import com.openlattice.ids.IdScopes
 import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType
+import java.lang.IllegalStateException
+import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
@@ -30,13 +37,20 @@ class S3AuditingService(
         private val longIdService: HazelcastLongIdService,
         private val mapper: ObjectMapper
 
-) {
+) : AuditingManager {
+
+    init {
+        if (auditingConfiguration.awsS3ClientConfiguration.isEmpty) {
+            throw IllegalStateException("Auditing configuration from auditing.yaml must include S3 configuration details.")
+        }
+    }
+
     private val partitions = auditingConfiguration.partitions
-    private val bucket = auditingConfiguration.awsS3ClientConfiguration.bucket
+    private val bucket = auditingConfiguration.awsS3ClientConfiguration.get().bucket
     private val longIdsQueue = Queues.newArrayBlockingQueue<Long>(LONG_IDS_BATCH_SIZE)
     private val executorService = MoreExecutors.listeningDecorator(Executors.newSingleThreadExecutor())
 
-    private val s3 = newS3Client(auditingConfiguration.awsS3ClientConfiguration)
+    private val s3 = newS3Client(auditingConfiguration.awsS3ClientConfiguration.get())
 
     private val refreshQueue = executorService.execute {
         while (true) {
@@ -46,7 +60,7 @@ class S3AuditingService(
         }
     }
 
-    fun recordEvents(events: List<AuditableEvent>): Int {
+    override fun recordEvents(events: List<AuditableEvent>): Int {
         val eventsBytes = mapper.writeValueAsBytes(events)
         val eventsInputStream = eventsBytes.inputStream()
 

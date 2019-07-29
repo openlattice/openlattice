@@ -1,6 +1,7 @@
 package com.openlattice.data.storage
 
 import com.google.common.collect.Multimaps
+import com.hazelcast.core.HazelcastInstance
 import com.openlattice.analysis.SqlBindInfo
 import com.openlattice.analysis.requests.Filter
 import com.openlattice.data.WriteEvent
@@ -8,6 +9,7 @@ import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.data.storage.partitions.PartitionsInfo
 import com.openlattice.data.util.PostgresDataHasher
 import com.openlattice.edm.type.PropertyType
+import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.postgres.*
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.IDS
@@ -151,7 +153,8 @@ class PostgresEntityDataQueryService(
             metadataOptions: Set<MetadataOption> = EnumSet.noneOf(MetadataOption::class.java)
     ): BasePostgresIterable<Pair<UUID, Map<UUID, Set<Any>>>> {
         return getEntitySetIterable(entityKeyIds, authorizedPropertyTypes, mapOf(), metadataOptions) { rs ->
-            getEntityPropertiesByPropertyTypeId(rs, authorizedPropertyTypes, byteBlobDataManager)
+            getEntityPropertiesByPropertyTypeId2(rs, authorizedPropertyTypes,byteBlobDataManager )
+//            getEntityPropertiesByPropertyTypeId(rs, authorizedPropertyTypes, byteBlobDataManager)
         }
     }
 
@@ -238,10 +241,9 @@ class PostgresEntityDataQueryService(
             awsPassthrough: Boolean = false
     ): WriteEvent {
         return hds.connection.use { connection ->
-            connection.autoCommit = false
             val writeEvent = upsertEntities(connection, entitySetId, entities, authorizedPropertyTypes, awsPassthrough)
-            connection.commit()
-            connection.autoCommit = true
+//            connection.commit()
+//            connection.autoCommit = true
             return@use writeEvent
         }
     }
@@ -261,10 +263,10 @@ class PostgresEntityDataQueryService(
             entitySetId: UUID,
             entities: Map<UUID, Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>,
-
             awsPassthrough: Boolean = false
     ): WriteEvent {
-        check(!connection.autoCommit) { "Connection must not be in autocommit mode." }
+        connection.autoCommit = true
+//        check(!connection.autoCommit) { "Connection must not be in autocommit mode." }
         val version = System.currentTimeMillis()
         val partitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
         val partitions = partitionsInfo.partitions.toList()
@@ -308,7 +310,7 @@ class PostgresEntityDataQueryService(
 
         //Update the versions of all entities.
 
-        connection.autoCommit = false
+        connection.autoCommit = true
         val entityKeyIdsArr = PostgresArrays.createUuidArray(connection, entities.keys)
         val versionsArrays = PostgresArrays.createLongArray(connection, arrayOf(version))
 
@@ -319,11 +321,11 @@ class PostgresEntityDataQueryService(
          * ending up with partial property right and decoupled metadata updates.
          */
 
-        //Acquire entity key id locks
-        val rowLocks = connection.prepareStatement(lockEntitiesSql)
-        rowLocks.setArray(1, entityKeyIdsArr)
-        rowLocks.setInt(2, partition)
-        rowLocks.executeQuery()
+//        //Acquire entity key id locks
+//        val rowLocks = connection.prepareStatement(lockEntitiesSql)
+//        rowLocks.setArray(1, entityKeyIdsArr)
+//        rowLocks.setInt(2, partition)
+//        rowLocks.executeQuery()
 
         //Update metadata
         val upsertEntities = connection.prepareStatement(upsertEntitiesSql)
@@ -418,8 +420,6 @@ class PostgresEntityDataQueryService(
         }.sum()
 
         return updatedEntityCount to updatedPropertyCounts
-
-
     }
 
     fun replaceEntities(
@@ -430,7 +430,9 @@ class PostgresEntityDataQueryService(
         return hds.connection.use { connection ->
             connection.autoCommit = false
             tombstone(connection, entitySetId, entities.keys, authorizedPropertyTypes.values)
-            return upsertEntities(connection, entitySetId, entities, authorizedPropertyTypes)
+            val event = upsertEntities(connection, entitySetId, entities, authorizedPropertyTypes)
+            connection.autoCommit = true
+            event
         }
     }
 
@@ -511,10 +513,18 @@ class PostgresEntityDataQueryService(
         return WriteEvent(tombstoneVersion, numUpdated)
     }
 
+    /**
+     * Tombstones all data from authorizedPropertyTypes for an entity set.
+     *
+     * NOTE: this function commits the tombstone transactions.
+     */
     fun clearEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent {
         return hds.connection.use { conn ->
+            conn.autoCommit = false
             tombstone(conn, entitySetId, authorizedPropertyTypes.values)
-            tombstone(conn, entitySetId)
+            val event = tombstone(conn, entitySetId)
+            conn.autoCommit = true
+            event
         }
     }
 
@@ -698,7 +708,7 @@ class PostgresEntityDataQueryService(
      * Tombstones the provided set of property types for each provided entity key.
      *
      * This version of tombstone only operates on the [PostgresTable.DATA] table and does not change the version of
-     * entities in the [PostgresTable.ENTITY_KEY_IDS] table
+     * entities in the [PostgresTable.IDS] table
      *
      * @param conn A valid JDBC connection, ideally with autocommit disabled.
      * @param entitySetId The entity set id for which to tombstone entries
@@ -728,7 +738,7 @@ class PostgresEntityDataQueryService(
     }
 
     /**
-     * Tombstones entities in the [PostgresTable.ENTITY_KEY_IDS] table.
+     * Tombstones entities in the [PostgresTable.IDS] table.
      *
      * @param conn A valid JDBC connection, ideally with autocommit disabled.
      * @param entitySetId The entity set id for which to tombstone entries.
@@ -765,7 +775,7 @@ class PostgresEntityDataQueryService(
      * Tombstones the provided set of property types for each provided entity key.
      *
      * This version of tombstone only operates on the [PostgresTable.DATA] table and does not change the version of
-     * entities in the [PostgresTable.ENTITY_KEY_IDS] table
+     * entities in the [PostgresTable.IDS] table
      *
      * @param conn A valid JDBC connection, ideally with autocommit disabled.
      * @param entitySetId The entity set id for which to tombstone entries
@@ -809,7 +819,7 @@ class PostgresEntityDataQueryService(
      * Tombstones the provided set of property type hash values for each provided entity key.
      *
      * This version of tombstone only operates on the [PostgresTable.DATA] table and does not change the version of
-     * entities in the [PostgresTable.ENTITY_KEY_IDS] table
+     * entities in the [PostgresTable.IDS] table
      *
      * @param conn A valid JDBC connection, ideally with autocommit disabled.
      * @param entitySetId The entity set id for which to tombstone entries

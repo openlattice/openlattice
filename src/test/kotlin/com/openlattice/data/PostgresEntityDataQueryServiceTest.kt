@@ -23,12 +23,7 @@ package com.openlattice.data
 
 import com.google.common.collect.ImmutableMap
 import com.openlattice.data.storage.*
-import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.DataTables
-
-import com.openlattice.postgres.IndexType
-import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
-import org.apache.olingo.commons.api.edm.FullQualifiedName
 import com.openlattice.postgres.PostgresTable
 import org.junit.Test
 import org.slf4j.Logger
@@ -54,18 +49,6 @@ class PostgresEntityDataQueryServiceTest {
         logger.info(PostgresTable.EDGES.createIndexQueries.toList().joinToString("\n") { "$it;" })
         logger.info(PostgresTable.SYNC_IDS.createIndexQueries.toList().joinToString("\n") { "$it;" })
         logger.info(PostgresTable.QUERIES.createIndexQueries.toList().joinToString("\n") { "$it;" })
-    }
-
-    @Test
-    fun testBuildQuery() {
-        DataTables.buildPropertyTableDefinition(
-                PropertyType(
-                        UUID.fromString("f8a70a63-cd78-4e49-8936-7d382b4c59ef"),
-                        FullQualifiedName("ol", "bondtype"), "Bond type", Optional.of("A type of bail bond."), setOf(),
-                        EdmPrimitiveTypeKind.String,
-                        Optional.empty(), Optional.empty(), Optional.of(IndexType.BTREE)
-                )
-        ).createIndexQueries.forEach { System.out.println("$it;") }
     }
 
     @Test
@@ -256,13 +239,5 @@ class PostgresEntityDataQueryServiceTest {
                         entitySetId, entityKeyIdsClause(setOf(entityKeyId)), propertyTypeId, fqn, version, false
                 )
         )
-    }
-
-    @Test
-    fun testBuildWithClause() {
-        val entitiesClause = buildEntitiesClause(
-                mapOf(UUID.fromString("ed5716db-830b-41b7-9905-24fa82761ace") to Optional.empty()),
-                false)
-        logger.info("Build with clause: \n {}", buildWithClause(false, entitiesClause))
     }
 }

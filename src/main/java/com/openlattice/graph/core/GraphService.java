@@ -47,7 +47,7 @@ public interface GraphService {
 
     PostgresIterable<DataEdgeKey> getEdgeKeysOfEntitySet( UUID entitySetId );
 
-    PostgresIterable<DataEdgeKey> getEdgeKeysContainingEntities( UUID entitySetId, Set<UUID> entityKeyIds );
+    PostgresIterable<DataEdgeKey> getEdgeKeysContainingEntities( UUID entitySetId, Set<UUID> entityKeyIds, boolean includeClearedEdges );
 
     Stream<Edge> getEdgesAndNeighborsForVertex( UUID entitySetId, UUID vertexId );
 
