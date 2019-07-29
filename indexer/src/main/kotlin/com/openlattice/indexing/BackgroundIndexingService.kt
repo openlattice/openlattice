@@ -72,7 +72,7 @@ class BackgroundIndexingService(
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(BackgroundIndexingService::class.java)!!
-        const val INDEX_SIZE = 32000
+        const val INDEX_SIZE = 16000
     }
 
     private val propertyTypes: IMap<UUID, PropertyType> = hazelcastInstance.getMap(HazelcastMap.PROPERTY_TYPES.name)
