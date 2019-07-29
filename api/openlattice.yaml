@@ -1106,7 +1106,7 @@ paths:
               schema:
                 type: object
                 additionalProperties:
-                  $ref: "#/components/PropertyType"
+                  $ref: "#/components/propertyType"
   /datastore/entity-sets/{entitySetId}/properties/{propertyTypeId}/:
     get:
       summary: Get specified property type metadata for an entity set.
@@ -1134,7 +1134,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/entitySetPropertyMetaData"
+                $ref: "#/components/EntitySetPropertyMetaData"
     post:
       summary: Updates the property type metadata for the given entity set.
       operationId: updateEntitySetPropertyMetadata
@@ -1164,7 +1164,7 @@ paths:
       responses:
         200:
           description: Success
-  /datastore/entity-sets/{entitySetId}/metadata/:
+  /datastore/entity-sets/all/{entitySetId}/metadata/:
     patch:
       summary: Updates the EntitySet definition for the given EntitySet UUID with the given metadata.
       operationId: updateEntitySetMetaData
@@ -1368,7 +1368,7 @@ paths:
           content:
             application/json:
               schema:
-                type: list
+                type: array
                 items:
                   type: object
                   additionalProperties:
@@ -2846,7 +2846,7 @@ components:
         title: This is the title of the entitySet
         contacts: ["support@openlattice.com"]
         description: This is a more elaborate description of the entity set.
-    entitySetPropertyMetaData:
+    EntitySetPropertyMetaData:
       title: EntitySet Property Metadata
       type: object
       properties:
@@ -2933,7 +2933,7 @@ components:
       type: object
       properties:
         searchFields:
-          type: list
+          type: array
           items:
             $ref: "#/components/searchDetails"
         start:
@@ -2954,11 +2954,11 @@ components:
       type: object
       properties:
         entities:
-          type: list
+          type: array
           items:
             $ref: "#/components/entity"
         associations:
-          type: list
+          type: array
           items:
             $ref: "#/components/association"
     entity:
