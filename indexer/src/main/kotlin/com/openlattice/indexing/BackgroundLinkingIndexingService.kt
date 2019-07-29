@@ -96,7 +96,7 @@ class BackgroundLinkingIndexingService(
         Stream.generate { candidates.take() }
                 .parallel()
                 .forEach { candidate ->
-                    if (indexerConfiguration.backgroundIndexingEnabled) {
+                    if (indexerConfiguration.backgroundLinkingIndexingEnabled) {
                         try {
                             lock(candidate.first)
                             index(candidate.first, candidate.second)
@@ -113,7 +113,7 @@ class BackgroundLinkingIndexingService(
     @Timed
     @Scheduled(fixedRate = LINKING_INDEX_RATE)
     fun updateCandidateList() {
-        if (indexerConfiguration.backgroundIndexingEnabled) {
+        if (indexerConfiguration.backgroundLinkingIndexingEnabled) {
             executor.submit {
                 logger.info("Registering linking ids needing indexing.")
                 var dirtyLinkingIds = getDirtyLinkingIds()
