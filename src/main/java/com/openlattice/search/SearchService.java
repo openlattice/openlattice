@@ -225,17 +225,6 @@ public class SearchService {
     public void createEntitySet( EntitySetCreatedEvent event ) {
         EntityType entityType = dataModelService.getEntityType( event.getEntitySet().getEntityTypeId() );
         elasticsearchApi.saveEntitySetToElasticsearch( entityType, event.getEntitySet(), event.getPropertyTypes() );
-
-        // If a linking entity set is created (and it has linked entity sets, so linked data),
-        // we have to explicitly create the index and mappings for each linking id,
-        // because it won't get picked up by indexer
-        if ( event.getEntitySet().isLinking() && !event.getEntitySet().getLinkedEntitySets().isEmpty() ) {
-            indexLinkedEntities(
-                    event.getEntitySet().getId(),
-                    dataManager.getLinkingIdsByEntitySetIds( event.getEntitySet().getLinkedEntitySets() ),
-                    event.getPropertyTypes().stream()
-                            .collect( Collectors.toMap( PropertyType::getId, Function.identity() ) ) );
-        }
     }
 
     @Timed

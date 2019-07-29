@@ -117,7 +117,7 @@ class Graph(
         ps.setObject(index++, dataEdgeKey.edge.entityKeyId)
         ps.setLong(index++, version)
         ps.setArray(index++, versions)
-        ps.setObject(index++, partitionsInfo.first)
+        ps.setInt(index++, partitionsInfo.first)
         ps.addBatch()
     }
 
