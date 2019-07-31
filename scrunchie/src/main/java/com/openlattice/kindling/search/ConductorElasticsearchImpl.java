@@ -1455,35 +1455,27 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             Function<Object, String> idFn ) {
         if ( !verifyElasticsearchConnection() ) { return false; }
 
-        BoolQueryBuilder deleteQuery = QueryBuilders.boolQuery();
         BulkRequestBuilder bulkRequest = client.prepareBulk();
 
-        client.delete( new DeleteRequest( index ) ).actionGet();
+        client.admin().indices().delete( new DeleteIndexRequest( index ) ).actionGet();
         createIndex( index );
 
         objects.forEach( object -> {
             try {
                 String id = idFn.apply( object );
                 String s = ObjectMappers.getJsonMapper().writeValueAsString( object );
-                deleteQuery.mustNot( QueryBuilders.matchQuery( "_id", id ) );
                 bulkRequest
                         .add( client.prepareIndex( index, type, id )
                                 .setSource( s, XContentType.JSON ) );
             } catch ( JsonProcessingException e ) {
-                logger.debug( "Error re-indexing securable object types" );
+                logger.error( "Error re-indexing securable object type to index {}", index );
             }
         } );
-
-        new DeleteByQueryRequestBuilder( client, DeleteByQueryAction.INSTANCE )
-                .filter( deleteQuery )
-                .source( index )
-                .execute()
-                .actionGet();
 
         BulkResponse bulkResponse = bulkRequest.get();
         if ( bulkResponse.hasFailures() ) {
             bulkResponse.forEach( item -> logger
-                    .debug( "Failure during attempted re-index: {}", item.getFailureMessage() ) );
+                    .error( "Failure during attempted re-index: {}", item.getFailureMessage() ) );
         }
 
         return true;
