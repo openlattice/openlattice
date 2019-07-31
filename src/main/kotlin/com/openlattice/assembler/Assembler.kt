@@ -29,6 +29,7 @@ import com.google.common.eventbus.Subscribe
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
+import com.openlattice.IdConstants
 import com.openlattice.assembler.PostgresRoles.Companion.buildOrganizationUserId
 import com.openlattice.assembler.events.MaterializedEntitySetDataChangeEvent
 import com.openlattice.assembler.events.MaterializedEntitySetEdmChangeEvent
@@ -442,6 +443,7 @@ class Assembler(
         val entitySetPartitions = partitionManager.getEntitySetPartitionsInfo(entitySetId).partitions
         val authorizedPropertyTypes = propertyTypes
                 .getAll(entityTypes.getValue(entitySets.getValue(entitySetId).entityTypeId).properties)
+                .filter { it.key != IdConstants.ID_ID.id } //filter out @id
 
         val entitySetViewName = entitySetViewName(entitySetId)
         val selectPropertiesSql = selectPropertyTypesOfEntitySetColumnar(
