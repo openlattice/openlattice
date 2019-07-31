@@ -1019,7 +1019,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                             .contains("permission denied for schema prod", true))
                 }
                 try {
-                    stmt.executeQuery("SELECT * FROM ${AssemblerConnectionManager.PRODUCTION_FOREIGN_SCHEMA}.${PostgresTable.EDGES.name}")
+                    stmt.executeQuery("SELECT * FROM ${AssemblerConnectionManager.PRODUCTION_FOREIGN_SCHEMA}.${PostgresTable.E.name}")
                     Assert.fail("Should have thrown Exception but did not!")
                 } catch (e: PSQLException) {
                     Assert.assertTrue(e.message!!
