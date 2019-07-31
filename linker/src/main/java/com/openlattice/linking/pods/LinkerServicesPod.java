@@ -56,8 +56,10 @@ import com.openlattice.edm.schemas.postgres.PostgresSchemaQueryService;
 import com.openlattice.hazelcast.HazelcastQueue;
 import com.openlattice.kindling.search.ConductorElasticsearchImpl;
 import com.openlattice.linking.LinkingConfiguration;
+import com.openlattice.linking.LinkingLogService;
 import com.openlattice.linking.Matcher;
 import com.openlattice.linking.PostgresLinkingFeedbackService;
+import com.openlattice.linking.PostgresLinkingLogService;
 import com.openlattice.linking.matching.SocratesMatcher;
 import com.openlattice.linking.util.PersonProperties;
 import com.openlattice.mail.config.MailServiceRequirements;
@@ -251,6 +253,14 @@ public class LinkerServicesPod {
     @Bean
     public MailServiceRequirements mailServiceRequirements() {
         return () -> hazelcastInstance.getQueue( HazelcastQueue.EMAIL_SPOOL.name() );
+    }
+
+    @Bean
+    public LinkingLogService linkingLogService() {
+        return new PostgresLinkingLogService(
+                hikariDataSource,
+                defaultObjectMapper()
+        );
     }
 
     @Bean

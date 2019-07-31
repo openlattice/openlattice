@@ -20,6 +20,7 @@
 
 package com.openlattice.linking.pods;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.geekbeast.hazelcast.HazelcastClientProvider;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
@@ -96,7 +97,13 @@ public class LinkerPostConfigurationServicesPod {
     private PartitionManager partitionManager;
 
     @Inject
+    private LinkingLogService linkingLogService;
+
+    @Inject
     private HazelcastClientProvider hazelcastClientProvider;
+
+    @Inject
+    private ObjectMapper defaultObjectMapper;
 
     @Bean
     public HazelcastIdGenerationService idGeneration() {
@@ -158,13 +165,13 @@ public class LinkerPostConfigurationServicesPod {
                 lqs(),
                 postgresLinkingFeedbackQueryService(),
                 edm.getEntityTypeUuids( linkingConfiguration.getEntityTypes() ),
-                linkingLogService(),
+                linkingLogService,
                 linkingConfiguration );
     }
 
     @Bean
     public LinkingLogService linkingLogService() {
-        return new PostgresLinkingLogService( hikariDataSource );
+        return new PostgresLinkingLogService( hikariDataSource, defaultObjectMapper );
     }
 
     @Bean
