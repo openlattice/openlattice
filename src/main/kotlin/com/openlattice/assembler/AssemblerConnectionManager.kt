@@ -272,7 +272,7 @@ class AssemblerConnectionManager(
 
         connect(buildOrganizationDatabaseName(organizationId)).use { datasource ->
             // re-import foreign view edges before creating materialized view
-            updatePublicTables(datasource, setOf(EDGES.name))
+            updatePublicTables(datasource, setOf(E.name))
             materializeEdges(datasource, entitySetIds, authorizedPrincipals)
         }
     }
@@ -290,11 +290,11 @@ class AssemblerConnectionManager(
                 connection.createStatement().use { stmt ->
                     val clause = entitySetIds.joinToString { entitySetId -> "'$entitySetId'" }
 
-                    val tableName = "$MATERIALIZED_VIEWS_SCHEMA.${EDGES.name}"
+                    val tableName = "$MATERIALIZED_VIEWS_SCHEMA.${E.name}"
                     stmt.execute("DROP MATERIALIZED VIEW IF EXISTS $tableName CASCADE")
                     stmt.execute(
                             "CREATE MATERIALIZED VIEW IF NOT EXISTS $tableName AS " +
-                                    "SELECT * FROM $PRODUCTION_FOREIGN_SCHEMA.${EDGES.name} " +
+                                    "SELECT * FROM $PRODUCTION_FOREIGN_SCHEMA.${E.name} " +
                                     "WHERE ${SRC_ENTITY_SET_ID.name} IN ($clause) " +
                                     "OR ${DST_ENTITY_SET_ID.name} IN ($clause) " +
                                     "OR ${EDGE_ENTITY_SET_ID.name} IN ($clause) "
@@ -496,7 +496,7 @@ class AssemblerConnectionManager(
 
     fun dropMaterializedEntitySet(datasource: HikariDataSource, entitySetId: UUID) {
         // we drop materialized view of entity set from organization database, update edges and entity_sets table
-        updatePublicTables(datasource, setOf(ENTITY_SETS.name, EDGES.name))
+        updatePublicTables(datasource, setOf(ENTITY_SETS.name, E.name))
 
         datasource.connection.createStatement().use { stmt ->
             stmt.execute(dropProductionForeignSchemaSql(entitySetIdTableName(entitySetId)))
@@ -741,7 +741,7 @@ class AssemblerConnectionManager(
 }
 
 val MEMBER_ORG_DATABASE_PERMISSIONS = setOf("CREATE", "CONNECT", "TEMPORARY", "TEMP")
-val PUBLIC_TABLES = setOf(EDGES.name, PROPERTY_TYPES.name, ENTITY_TYPES.name, ENTITY_SETS.name)
+val PUBLIC_TABLES = setOf(E.name, PROPERTY_TYPES.name, ENTITY_TYPES.name, ENTITY_SETS.name)
 
 
 private val PRINCIPALS_SQL = "SELECT acl_key FROM principals WHERE ${PRINCIPAL_TYPE.name} = ?"
