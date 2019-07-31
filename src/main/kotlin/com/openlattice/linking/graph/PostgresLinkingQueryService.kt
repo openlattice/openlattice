@@ -22,6 +22,7 @@
 package com.openlattice.linking.graph
 
 import com.openlattice.data.EntityDataKey
+import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.linking.EntityKeyPair
 import com.openlattice.linking.LinkingQueryService
 import com.openlattice.postgres.DataTables.*
@@ -47,7 +48,7 @@ private const val AVG_SCORE_FIELD = "avg_score"
  *
  * @param hds A hikari datasource that can be used for executing SQL.
  */
-class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQueryService {
+class PostgresLinkingQueryService(private val hds: HikariDataSource, private val partitionManager: PartitionManager) : LinkingQueryService {
 
     override fun lockClustersForUpdates(clusters: Set<UUID>): Connection {
         val connection = hds.connection
@@ -385,16 +386,16 @@ private val BLOCKS_BY_SIZE_SQL = "SELECT ${SRC_ENTITY_SET_ID.name} as entity_set
         "GROUP BY (${SRC_ENTITY_SET_ID.name},${SRC_ENTITY_KEY_ID.name}) " +
         "ORDER BY $BLOCK_SIZE_FIELD DESC"
 
-private val UPDATE_LINKED_ENTITIES_SQL = "UPDATE ${ENTITY_KEY_IDS.name} " +
+private val UPDATE_LINKED_ENTITIES_SQL = "UPDATE ${IDS.name} " +
         "SET ${LINKING_ID.name} = ?, ${LAST_LINK.name}=now() WHERE ${ENTITY_SET_ID.name} =? AND ${ID_VALUE.name}=?"
 
 private val ENTITY_KEY_IDS_NEEDING_LINKING = "SELECT ${ENTITY_SET_ID.name},${ID.name} " +
-        "FROM ${ENTITY_KEY_IDS.name} " +
+        "FROM ${IDS.name} " +
         "WHERE ${ENTITY_SET_ID.name} = ANY(?) AND ${LAST_LINK.name} < ${LAST_WRITE.name} AND ( ${LAST_INDEX.name} >= ${LAST_WRITE.name}) AND ( ${LAST_INDEX.name} > '-infinity'::timestamptz) " +
         "AND ${VERSION.name} > 0 LIMIT ?"
 
 private val ENTITY_KEY_IDS_NOT_LINKED = "SELECT ${ENTITY_SET_ID.name},${ID.name} " +
-        "FROM ${ENTITY_KEY_IDS.name} " +
+        "FROM ${IDS.name} " +
         "WHERE ${ENTITY_SET_ID.name} = ANY(?) AND ${LAST_LINK.name} < ${LAST_WRITE.name} " +
         "AND ${VERSION.name} > 0 LIMIT ?"
 
