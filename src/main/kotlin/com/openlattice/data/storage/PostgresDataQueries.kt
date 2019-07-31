@@ -604,7 +604,7 @@ fun selectPropertyTypesOfEntitySetColumnar(
 
     val selectColumns = joinColumns +
             (authorizedPropertyTypes.map { propertyColumnName(it.value) }).joinToString()
-    val idJoin = "( SELECT $joinColumns FROM $allData ) AS metadata"
+    val idJoin = "( SELECT DISTINCT $joinColumns FROM $allData ) AS metadata"
     val propertyJoins = if(authorizedPropertyTypes.isNotEmpty()) {
         authorizedPropertyTypes.map { buildSelectPropertyTypeColumnar(it.value, allData, joinColumns) }
                 .joinToString(" USING ($joinColumns) INNER JOIN ", " INNER JOIN ", " USING ($joinColumns) ")
