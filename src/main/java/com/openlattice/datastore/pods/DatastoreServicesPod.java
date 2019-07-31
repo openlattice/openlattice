@@ -28,13 +28,13 @@ import com.geekbeast.hazelcast.HazelcastClientProvider;
 import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
+import com.kryptnostic.rhizome.configuration.ConfigurationConstants;
 import com.kryptnostic.rhizome.configuration.amazon.AmazonLaunchConfiguration;
 import com.openlattice.analysis.AnalysisService;
 import com.openlattice.assembler.*;
 import com.openlattice.assembler.pods.AssemblerConfigurationPod;
 import com.openlattice.assembler.tasks.UserCredentialSyncTask;
-import com.openlattice.auditing.AuditRecordEntitySetsManager;
-import com.openlattice.auditing.AuditingConfiguration;
+import com.openlattice.auditing.*;
 import com.openlattice.auth0.Auth0Pod;
 import com.openlattice.auth0.Auth0TokenProvider;
 import com.openlattice.authentication.Auth0Configuration;
@@ -64,8 +64,8 @@ import com.openlattice.graph.Graph;
 import com.openlattice.graph.GraphQueryService;
 import com.openlattice.graph.PostgresGraphQueryService;
 import com.openlattice.graph.core.GraphService;
-import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.ids.HazelcastIdGenerationService;
+import com.openlattice.ids.HazelcastLongIdService;
 import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.linking.PostgresLinkingFeedbackService;
 import com.openlattice.linking.graph.PostgresLinkingQueryService;
@@ -90,6 +90,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Profile;
 
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
@@ -218,8 +219,7 @@ public class DatastoreServicesPod {
                 entityTypeManager(),
                 schemaManager(),
                 auditingConfiguration,
-                partitionManager(),
-                assembler() );
+                partitionManager() );
     }
 
     @Bean
@@ -233,22 +233,27 @@ public class DatastoreServicesPod {
     }
 
     @Bean
-    public IndexingMetadataManager postgresDataManager() {
-        return new IndexingMetadataManager( hikariDataSource );
+    public IndexingMetadataManager indexingMetadataManager() {
+        return new IndexingMetadataManager( hikariDataSource, partitionManager() );
     }
 
     @Bean
     public EntityDatastore entityDatastore() {
-        return new PostgresEntityDatastore( idService(),
-                postgresDataManager(),
-                dataQueryService(),
-                dataModelService(),
-                assembler() );
+        return new PostgresEntityDatastore( dataQueryService(), dataModelService(), pgEdmManager() );
     }
 
     @Bean
     public Assembler assembler() {
-        return new Assembler( dcs(), hikariDataSource, metricRegistry, hazelcastInstance, eventBus );
+        return new Assembler(
+                dcs(),
+                hikariDataSource,
+                authorizationManager(),
+                edmAuthorizationHelper(),
+                principalService(),
+                metricRegistry,
+                hazelcastInstance,
+                eventBus
+        );
     }
 
     @Bean
@@ -288,16 +293,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public AssemblerDependencies assemblerDependencies() {
-        return new AssemblerDependencies(
-                assemblerConfiguration,
-                hikariDataSource,
-                principalService(),
-                organizationsManager(),
-                dcs(),
-                hazelcastInstance.getMap( HazelcastMap.ENTITY_SETS.name() ),
-                assemblerConnectionManager(),
-                hazelcastInstance.getMap( HazelcastMap.SECURABLE_OBJECT_TYPES.name() ),
-                metricRegistry );
+        return new AssemblerDependencies( hikariDataSource, dcs(), assemblerConnectionManager() );
     }
 
     @Bean
@@ -373,7 +369,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public PostgresEdmManager pgEdmManager() {
-        PostgresEdmManager pgEdmManager = new PostgresEdmManager( hikariDataSource, tableManager, hazelcastInstance );
+        final var pgEdmManager = new PostgresEdmManager( hikariDataSource, hazelcastInstance );
         eventBus.register( pgEdmManager );
         return pgEdmManager;
     }
@@ -406,8 +402,6 @@ public class DatastoreServicesPod {
         return new AssemblerConnectionManager( assemblerConfiguration,
                 hikariDataSource,
                 principalService(),
-                authorizationManager(),
-                edmAuthorizationHelper(),
                 organizationsManager(),
                 dcs(),
                 eventBus,
@@ -465,6 +459,24 @@ public class DatastoreServicesPod {
     @Bean
     public PostgresEntitySetSizesInitializationTask postgresEntitySetSizesInitializationTask() {
         return new PostgresEntitySetSizesInitializationTask();
+    }
+
+    @Bean
+    public HazelcastLongIdService longIdService() {
+        return new HazelcastLongIdService( hazelcastClientProvider, hazelcastInstance );
+    }
+
+    @Bean
+    @Profile( { ConfigurationConstants.Profiles.AWS_CONFIGURATION_PROFILE,
+            ConfigurationConstants.Profiles.AWS_TESTING_PROFILE, AuditingProfiles.LOCAL_AWS_AUDITING_PROFILE } )
+    public AuditingManager s3AuditingService() {
+        return new S3AuditingService( auditingConfiguration, longIdService(), defaultObjectMapper() );
+    }
+
+    @Bean
+    @Profile( AuditingProfiles.LOCAL_AUDITING_PROFILE )
+    public AuditingManager localAuditingService() {
+        return new LocalAuditingService( dataGraphService(), auditRecordEntitySetsManager(), defaultObjectMapper() );
     }
 
     @Bean

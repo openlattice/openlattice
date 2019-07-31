@@ -422,7 +422,7 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
             Map<UUID, PropertyType> propertyTypes ) {
         try {
             return executor.submit( ConductorElasticsearchCall.wrap(
-                    ElasticsearchLambdas.triggerEntitySetIndex( entitySets, propertyTypes ) ) ).get();
+                    new ReIndexEntitySetMetadataLambdas( entitySets, propertyTypes ) ) ).get();
         } catch ( InterruptedException | ExecutionException e ) {
             logger.debug( "Unable to trigger entity set re-index" );
             return false;
