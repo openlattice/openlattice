@@ -236,10 +236,11 @@ public final class PostgresTable {
     public static final PostgresTableDefinition LINKING_LOG =
             new CitusDistributedTableDefinition( "linking_log" )
                     .addColumns( LINKING_ID,
-                            ENTITY_SET_ID,
+                            ID_MAP,
                             VERSION )
                     .primaryKey( LINKING_ID,
-                            ENTITY_SET_ID )
+                            ID_MAP,
+                            VERSION)
                     .distributionColumn( LINKING_ID );
 
     public static final PostgresTableDefinition MATCHED_ENTITIES         =

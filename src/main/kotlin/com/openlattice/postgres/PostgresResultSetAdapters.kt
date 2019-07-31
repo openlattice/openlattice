@@ -139,6 +139,15 @@ fun getEntityPropertiesByFullQualifiedName(
     )
 }
 
+@Throws(SQLException::class)
+fun getJsonColumnAsEsidEkidMap(
+        rs: ResultSet,
+        colName: String
+) : Map<UUID, Set<UUID>>{
+    val columnJson = rs.getString( colName )
+    return mapper.readValue(columnJson)
+}
+
 //TODO: If we are getting NPEs on read we may have to do better filtering here.
 @Throws(SQLException::class)
 private fun propertyValue(rs: ResultSet, propertyType: PropertyType): List<*>? {
