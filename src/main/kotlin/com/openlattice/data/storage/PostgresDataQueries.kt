@@ -10,8 +10,7 @@ import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresDataTables.Companion.getColumnDefinition
 import com.openlattice.postgres.PostgresDataTables.Companion.getSourceDataColumnName
-import com.openlattice.postgres.PostgresTable.DATA
-import com.openlattice.postgres.PostgresTable.IDS
+import com.openlattice.postgres.PostgresTable.*
 import java.sql.PreparedStatement
 import java.util.*
 
@@ -69,8 +68,8 @@ fun buildPreparableFiltersClauseForLinkedEntities(
     val innerSql = selectEntitiesGroupedByIdAndPropertyTypeId(idsPresent = idsPresent, partitionsPresent = partitionsPresent)
 
     val sql = "$innerSql AND ${ORIGIN_ID.name} IS NOT NULL AND ${VERSION.name} > 0" +
-                    " ${if (filtersClause.isNotEmpty()) "AND $filtersClause " else ""}" +
-                    "GROUP BY (${ENTITY_SET_ID.name},${LINKING_ID.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
+            " ${if (filtersClause.isNotEmpty()) "AND $filtersClause " else ""}" +
+            "GROUP BY (${ENTITY_SET_ID.name},${LINKING_ID.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
 
     return sql to filtersClauses.second
 
@@ -589,4 +588,63 @@ fun upsertPropertyValueSql(propertyType: PropertyType): String {
 }
 
 
+/* For materialized views */
 
+/**
+ * This function  generates preparable sql for selecting property values columnar for a given entity set.
+ * It has the following bind order:
+ * 1. entity set id
+ * 2. partitions (int array)
+ */
+fun selectPropertyTypesOfEntitySetColumnar(authorizedPropertyTypes: Map<UUID, PropertyType>): String {
+    val joinColumns = setOf(ENTITY_SET_ID.name, ID.name, ENTITY_KEY_IDS.name).joinToString()
+    val allData = "all_data"
+    val withDataClause = "WITH $allData AS (${buildSelectDataFromEntitySetAsArray()})"
+
+    val selectColumns = joinColumns +
+            (authorizedPropertyTypes.map { propertyColumnName(it.value) }).joinToString()
+    val propertyJoins = authorizedPropertyTypes.map { buildSelectPropertyTypeColumnar(it.value, allData, joinColumns) }
+            .joinToString(" INNER JOIN ", postfix = " USING ($joinColumns) ")
+
+    return "$withDataClause SELECT $selectColumns FROM $propertyJoins"
+}
+
+private fun buildSelectDataFromEntitySetAsArray(): String {
+    val dataTypesAsArrays = PostgresDataTables.dataColumns.map { buildSelectDataTypeAsArray(it.key, it.value.first, it.value.second) }
+            .joinToString()
+    return "SELECT ${ENTITY_SET_ID.name}, ${ID.name}, array_agg( COALESCE( ${ORIGIN_ID.name}, ${ID.name} ) ) AS ${ENTITY_KEY_IDS.name}, ${PROPERTY_TYPE_ID.name}, $dataTypesAsArrays" +
+            "FROM ${DATA.name} " +
+            "WHERE ${VERSION.name} > 0 AND ${ENTITY_SET_ID.name} = ? AND ${PARTITION.name} = ANY( ? ) " +
+            "GROUP BY ( ${ENTITY_SET_ID.name}, ${ID.name}, ${PROPERTY_TYPE_ID.name} )"
+}
+
+private fun buildSelectDataTypeAsArray(
+        dataType: PostgresDatatype,
+        nonIndexedColumnDefinition: PostgresColumnDefinition,
+        btreeIndexedColumnDefinition: PostgresColumnDefinition): String {
+    val nonIndexedColumnName = nonIndexedColumnDefinition.name
+    val btreeIndexedColumnName = btreeIndexedColumnDefinition.name
+    val mergedName = getMergedDataColumnName(dataType)
+    
+    return "COALESCE(array_agg( $btreeIndexedColumnName ) FILTER ( WHERE $btreeIndexedColumnName IS NOT NULL),'{}') || " +
+            "COALESCE(array_agg( $nonIndexedColumnName ) FILTER ( WHERE $nonIndexedColumnName IS NOT NULL),'{}') " +
+            "AS $mergedName"
+}
+
+private fun buildSelectPropertyTypeColumnar(propertyType: PropertyType, tableName: String, joinColumns: String): String {
+    val propertyDataType = getMergedDataColumnName(PostgresEdmTypeConverter.map(propertyType.datatype))
+    val propertyColumnName = propertyColumnName(propertyType)
+    val propertyTableName = propertyTableName(propertyType)
+
+    return " ( SELECT $joinColumns, $propertyDataType AS $propertyColumnName " +
+            "FROM $tableName " +
+            "WHERE ${PROPERTY_TYPE_ID.name} = '${propertyType.id}' ) AS $propertyTableName "
+}
+
+private fun propertyTableName(propertyType: PropertyType): String {
+    return DataTables.quote("pt_${propertyType.id}")
+}
+
+private fun propertyColumnName(propertyType: PropertyType): String {
+    return DataTables.quote(propertyType.type.fullQualifiedNameAsString)
+}
