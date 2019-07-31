@@ -31,9 +31,6 @@ import com.openlattice.assembler.PostgresRoles.Companion.buildOrganizationUserId
 import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresRoleName
 import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresUsername
 import com.openlattice.authorization.*
-import com.openlattice.data.storage.MetadataOption
-import com.openlattice.data.storage.entityKeyIdColumnsList
-import com.openlattice.data.storage.linkingEntityKeyIdColumnsList
 import com.openlattice.directory.MaterializedViewAccount
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
@@ -367,9 +364,7 @@ class AssemblerConnectionManager(
     ) {
         materializeEntitySetsTimer.time().use {
 
-            val selectColumns = ((if (entitySet.isLinking) linkingEntityKeyIdColumnsList else entityKeyIdColumnsList) +
-                    ResultSetAdapters.mapMetadataOptionToPostgresColumn(MetadataOption.ENTITY_KEY_IDS) +
-                    materializablePropertyTypes.values.map { quote(it.type.fullQualifiedNameAsString) })
+            val selectColumns = getSelectColumnsForMaterializedView(materializablePropertyTypes.values)
                     .joinToString(",")
 
             val sql = "SELECT $selectColumns FROM $PRODUCTION_FOREIGN_SCHEMA.${entitySetIdTableName(entitySet.id)} "
@@ -398,6 +393,12 @@ class AssemblerConnectionManager(
         }
     }
 
+    private fun getSelectColumnsForMaterializedView(propertyTypes: Collection<PropertyType>): List<String> {
+        return listOf(ENTITY_SET_ID.name, ID_VALUE.name, ENTITY_KEY_IDS_COL.name) + propertyTypes.map {
+            quote(it.type.fullQualifiedNameAsString)
+        }
+    }
+
     private fun grantSelectForEntitySet(
             connection: Connection,
             tableName: String,
@@ -407,9 +408,7 @@ class AssemblerConnectionManager(
         // prepare batch queries
         return connection.createStatement().use { stmt ->
             authorizedPropertyTypesOfPrincipals.forEach { (principal, propertyTypes) ->
-                val columns = (if (entitySet.isLinking) linkingEntityKeyIdColumnsList else entityKeyIdColumnsList) +
-                        ResultSetAdapters.mapMetadataOptionToPostgresColumn(MetadataOption.ENTITY_KEY_IDS) +
-                        propertyTypes.map { it.type.fullQualifiedNameAsString }
+                val columns = getSelectColumnsForMaterializedView(propertyTypes)
                 try {
                     val grantSelectSql = grantSelectSql(tableName, principal, columns)
                     logger.info("AssemblerConnectionManager.grantSelectForEntitySet grant query: $grantSelectSql")
