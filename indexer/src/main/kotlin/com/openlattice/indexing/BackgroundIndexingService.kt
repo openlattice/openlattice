@@ -72,7 +72,7 @@ class BackgroundIndexingService(
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(BackgroundIndexingService::class.java)!!
-        const val INDEX_SIZE = 32000
+        const val INDEX_SIZE = 1000
     }
 
     private val propertyTypes: IMap<UUID, PropertyType> = hazelcastInstance.getMap(HazelcastMap.PROPERTY_TYPES.name)
@@ -246,7 +246,7 @@ class BackgroundIndexingService(
                 mapOf(entitySet.id to Optional.of(batchToIndex.keys)),
                 mapOf(entitySet.id to propertyTypeMap)).toMap()
 
-        logger.info("Loading data for indexEntities took {}", esb.elapsed(TimeUnit.MILLISECONDS))
+        logger.info("Loading data for indexEntities took {} ms", esb.elapsed(TimeUnit.MILLISECONDS))
 
         if (entitiesById.size != batchToIndex.size) {
             logger.error(
