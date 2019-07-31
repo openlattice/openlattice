@@ -120,7 +120,6 @@ class PartitionManager @JvmOverloads constructor(
         val defaults = getDefaultPartitions(entitySet.organizationId)
         return when {
             entitySet.flags.contains(EntitySetFlag.AUDIT) -> Collections.unmodifiableList(partitionList)
-            entitySet.isLinking -> listOf()
             else -> if (defaults.size < partitionCount) {
                 defaults + partitionList.toList().shuffled().take(partitionCount - defaults.size)
             } else {

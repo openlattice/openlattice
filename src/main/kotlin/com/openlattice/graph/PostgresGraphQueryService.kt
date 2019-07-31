@@ -37,8 +37,7 @@ import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable
-import com.openlattice.postgres.PostgresTable.EDGES
-import com.openlattice.postgres.PostgresTable.GRAPH_QUERIES
+import com.openlattice.postgres.PostgresTable.*
 import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
 import com.zaxxer.hikari.HikariDataSource
@@ -551,7 +550,8 @@ class PostgresGraphQueryService(
             propertyTypeFqns: Map<UUID, String>,
             filter: Optional<Filter>
     ): String {
-        val tableSql = selectEntitySetWithCurrentVersionOfPropertyTypes(
+        val tableSql =
+                selectEntitySetWithCurrentVersionOfPropertyTypes(
                 filterDefinition.entitySetIds.associateWith { Optional.empty<Set<UUID>>() },
                 propertyTypeFqns,
                 setOf(),
@@ -589,10 +589,9 @@ class PostgresGraphQueryService(
         val dataKeys = dataKeysClause(dataKeys, EDGE_COMP_1.name, DST_ENTITY_SET_ID.name)
         val srcEntitySetIdsClause = "AND ${SRC_ENTITY_SET_ID.name} ${inClause(entitySetIds)}"
         val associationEntitySetIdsClause = "AND ${EDGE_ENTITY_SET_ID.name} ${inClause(associationEntitySetIds)}"
-        val componentTypeClause = "AND ${COMPONENT_TYPES.name} = ${IdType.SRC.ordinal}"
 
         //For this there is no dstEntitySet clause since the target is self.
-        return "SELECT * FROM ${EDGES.name} WHERE $dataKeys $srcEntitySetIdsClause $associationEntitySetIdsClause $componentTypeClause"
+        return "SELECT * FROM ${E.name} WHERE $dataKeys $srcEntitySetIdsClause $associationEntitySetIdsClause"
     }
 
     /**
@@ -607,9 +606,8 @@ class PostgresGraphQueryService(
         val idsClause = dataKeysClause(ids, EDGE_COMP_2.name, SRC_ENTITY_SET_ID.name)
         val associationEntitySetIdsClause = "AND ${EDGE_ENTITY_SET_ID.name} ${inClause(associationEntitySetIds)}"
         val dstEntitySetIdsClause = "AND ${DST_ENTITY_SET_ID.name} ${inClause(entitySetIds)}"
-        val componentTypeClause = "AND ${COMPONENT_TYPES.name} = ${IdType.DST.ordinal}"
 
-        return "SELECT * FROM ${EDGES.name} WHERE $idsClause $dstEntitySetIdsClause $associationEntitySetIdsClause $componentTypeClause"
+        return "SELECT * FROM ${EDGES.name} WHERE $idsClause $dstEntitySetIdsClause $associationEntitySetIdsClause"
     }
 
     /**
@@ -625,9 +623,8 @@ class PostgresGraphQueryService(
         val idsClause = "${EDGE_COMP_2.name} ${inClause(ids)}"
         val associationEntitySetIdsClause = "AND ${EDGE_ENTITY_SET_ID.name} ${inClause(associationEntitySetIds)}"
         val srcEntitySetIdsClause = "AND ${DST_ENTITY_SET_ID.name} ${inClause(entitySetIds)}"
-        val componentTypeClause = "AND ${COMPONENT_TYPES.name} = ${IdType.EDGE.ordinal}"
 
-        return "SELECT * FROM ${EDGES.name} WHERE $idsClause $srcEntitySetIdsClause $associationEntitySetIdsClause $componentTypeClause"
+        return "SELECT * FROM ${EDGES.name} WHERE $idsClause $srcEntitySetIdsClause $associationEntitySetIdsClause"
     }
 
     /**
@@ -643,9 +640,8 @@ class PostgresGraphQueryService(
         val idsClause = "${EDGE_COMP_1.name} ${inClause(ids)}"
         val associationEntitySetIdsClause = "AND ${EDGE_ENTITY_SET_ID.name} ${inClause(associationEntitySetIds)}"
         val dstEntitySetIdsClause = "AND ${DST_ENTITY_SET_ID.name} ${inClause(entitySetIds)}"
-        val componentTypeClause = "AND ${COMPONENT_TYPES.name} = ${IdType.EDGE.ordinal}"
 
-        return "SELECT * FROM ${EDGES.name} WHERE $idsClause $dstEntitySetIdsClause $associationEntitySetIdsClause $componentTypeClause"
+        return "SELECT * FROM ${EDGES.name} WHERE $idsClause $dstEntitySetIdsClause $associationEntitySetIdsClause"
     }
 
     private fun inClause(ids: Set<UUID>): String {

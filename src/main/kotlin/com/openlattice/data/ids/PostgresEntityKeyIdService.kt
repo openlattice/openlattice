@@ -25,20 +25,21 @@ import com.geekbeast.hazelcast.HazelcastClientProvider
 import com.google.common.base.Preconditions.checkState
 import com.google.common.collect.Queues
 import com.google.common.util.concurrent.ListeningExecutorService
-import com.hazelcast.core.HazelcastInstance
+import com.openlattice.IdConstants
 import com.openlattice.data.EntityKey
 import com.openlattice.data.EntityKeyIdService
 import com.openlattice.data.storage.getPartition
 import com.openlattice.data.storage.partitions.PartitionManager
+import com.openlattice.data.util.PostgresDataHasher
 import com.openlattice.hazelcast.HazelcastClient
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.ids.HazelcastIdGenerationService
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
-import com.openlattice.postgres.PostgresTable.IDS
-import com.openlattice.postgres.PostgresTable.SYNC_IDS
+import com.openlattice.postgres.PostgresTable.*
 import com.openlattice.postgres.ResultSetAdapters
 import com.zaxxer.hikari.HikariDataSource
+import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.BlockingQueue
@@ -52,6 +53,14 @@ private val entityKeysSql = "SELECT * FROM ${IDS.name} WHERE ${ID.name} = ANY(?)
 private val entityKeyIdsSql = "SELECT * FROM ${SYNC_IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${ENTITY_ID.name} = ANY(?) "
 private val entityKeyIdSql = "SELECT * FROM ${SYNC_IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${ENTITY_ID.name} = ? "
 private val INSERT_SQL = "INSERT INTO ${IDS.name} (${ENTITY_SET_ID.name},${ID.name},${PARTITION.name},${PARTITIONS_VERSION.name}) VALUES(?,?,?,?)"
+private val INSERT_ID_TO_DATA_SQL = "INSERT INTO ${DATA.name} (" +
+        "${ENTITY_SET_ID.name}," +
+        "${ID.name}," +
+        "${PARTITION.name}," +
+        "${PARTITIONS_VERSION.name}," +
+        "${PROPERTY_TYPE_ID.name}," +
+        "${VERSION.name}," +
+        "${HASH.name}) VALUES (?,?,?,?,?,?,?)"
 private val INSERT_SYNC_SQL = "INSERT INTO ${SYNC_IDS.name} (${ENTITY_SET_ID.name},${ENTITY_ID.name},${ID.name}) VALUES(?,?,?)"
 private val logger = LoggerFactory.getLogger(PostgresEntityKeyIdService::class.java)
 
@@ -81,21 +90,40 @@ class PostgresEntityKeyIdService(
         val partitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
 
         hds.connection.use { connection ->
+            connection.autoCommit = false
 
             val insertIds = connection.prepareStatement(INSERT_SQL)
+            val insertToData = connection.prepareStatement(INSERT_ID_TO_DATA_SQL)
 
             entityKeyIds.forEach { entityKeyId ->
+                val partition = getPartition(entityKeyId, partitionsInfo.partitions.toList())
+
                 insertIds.setObject(1, entitySetId)
                 insertIds.setObject(2, entityKeyId)
-                insertIds.setInt(3, getPartition(entityKeyId, partitionsInfo.partitions.toList()))
+                insertIds.setInt(3, partition)
                 insertIds.setInt(4, partitionsInfo.partitionsVersion)
                 insertIds.addBatch()
+
+                insertToData.setObject(1, entitySetId)
+                insertToData.setObject(2, entityKeyId)
+                insertToData.setInt(3, partition)
+                insertToData.setInt(4, partitionsInfo.partitionsVersion)
+                insertToData.setObject(5, IdConstants.ID_ID.id)
+                insertToData.setLong(6, System.currentTimeMillis())
+                insertToData.setObject(7, PostgresDataHasher.hashObject(entityKeyId, EdmPrimitiveTypeKind.Guid))
+                insertToData.addBatch()
             }
 
             val totalWritten = insertIds.executeBatch().sum()
+            val totalDataRowsWritten = insertToData.executeBatch().sum()
             if (totalWritten != entityKeyIds.size) {
                 logger.warn("Expected ${entityKeyIds.size} entity key id writes. Only $totalWritten writes registered.")
             }
+            if (totalDataRowsWritten != entityKeyIds.size) {
+                logger.warn("Expected ${entityKeyIds.size} entityKeyUd data writes. Only $totalDataRowsWritten writes registered.")
+            }
+            connection.commit()
+            connection.autoCommit = true
         }
     }
 
@@ -116,23 +144,40 @@ class PostgresEntityKeyIdService(
             }
 
             val insertIds = connection.prepareStatement(INSERT_SQL)
+            val insertToData = connection.prepareStatement(INSERT_ID_TO_DATA_SQL)
 
             entityKeyIds.forEach {
+                val partition = getPartition(it.value, partitionsByEntitySet.getValue(it.key.entitySetId).first)
+                val partitionsVersion = partitionsByEntitySet.getValue(it.key.entitySetId).second
+
                 insertIds.setObject(1, it.key.entitySetId)
                 insertIds.setObject(2, it.value)
-                insertIds.setInt(3, getPartition(it.value, partitionsByEntitySet.getValue(it.key.entitySetId).first))
-                insertIds.setInt(4, partitionsByEntitySet.getValue(it.key.entitySetId).second)
+                insertIds.setInt(3, partition)
+                insertIds.setInt(4, partitionsVersion)
                 insertIds.addBatch()
+
+                insertToData.setObject(1, it.key.entitySetId)
+                insertToData.setObject(2, it.value)
+                insertToData.setInt(3, partition)
+                insertToData.setInt(4, partitionsVersion)
+                insertToData.setObject(5, IdConstants.ID_ID.id)
+                insertToData.setLong(6, System.currentTimeMillis())
+                insertToData.setObject(7, PostgresDataHasher.hashObject(it.value, EdmPrimitiveTypeKind.Guid))
+                insertToData.addBatch()
             }
 
             val totalSyncIdRowsWritten = insertSyncIds.executeBatch().sum()
             val totalWritten = insertIds.executeBatch().sum()
+            val dataRowsWritten = insertToData.executeBatch().sum()
 
             if (totalSyncIdRowsWritten != entityKeyIds.size) {
                 logger.warn("Expected ${entityKeyIds.size} sync id writes. Only $totalSyncIdRowsWritten writes registered.")
             }
             if (totalWritten != entityKeyIds.size) {
                 logger.warn("Expected ${entityKeyIds.size} entity key writes. Only $totalWritten writes registered.")
+            }
+            if (dataRowsWritten != entityKeyIds.size) {
+                logger.warn("Expected ${entityKeyIds.size} entityKeyId data writes. Only $dataRowsWritten writes registered.")
             }
             connection.commit()
             connection.autoCommit = true

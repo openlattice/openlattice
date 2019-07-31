@@ -26,9 +26,9 @@ class AwsBlobDataService(
         private val executorService: ListeningExecutorService
 ) : ByteBlobDataManager {
 
-    val s3Credentials = BasicAWSCredentials(datastoreConfiguration.accessKeyId, datastoreConfiguration.secretAccessKey)
+    private val s3Credentials = BasicAWSCredentials(datastoreConfiguration.accessKeyId, datastoreConfiguration.secretAccessKey)
 
-    val s3 = newS3Client(datastoreConfiguration)
+    private val s3 = newS3Client(datastoreConfiguration)
 
     fun newS3Client(datastoreConfiguration: DatastoreConfiguration): AmazonS3 {
         val builder = AmazonS3ClientBuilder.standard()
@@ -58,11 +58,11 @@ class AwsBlobDataService(
         s3.deleteObject(deleteRequest)
     }
 
-    override fun getObjects(keys: List<Any>): List<Any> {
+    override fun getObjects(keys: Collection<Any>): List<Any> {
         return getPresignedUrls(keys)
     }
 
-    override fun getPresignedUrls(keys: List<Any>): List<URL> {
+    override fun getPresignedUrls(keys: Collection<Any>): List<URL> {
         val expirationTime = Date()
         val timeToLive = expirationTime.time + datastoreConfiguration.timeToLive
         expirationTime.time = timeToLive

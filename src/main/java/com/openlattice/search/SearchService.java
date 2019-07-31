@@ -205,17 +205,6 @@ public class SearchService {
     public void createEntitySet( EntitySetCreatedEvent event ) {
         EntityType entityType = dataModelService.getEntityType( event.getEntitySet().getEntityTypeId() );
         elasticsearchApi.saveEntitySetToElasticsearch( entityType, event.getEntitySet(), event.getPropertyTypes() );
-
-        // If a linking entity set is created (and it has linked entity sets, so linked data),
-        // we have to explicitly create the index and mappings for each linking id,
-        // because it won't get picked up by indexer
-        if ( event.getEntitySet().isLinking() && !event.getEntitySet().getLinkedEntitySets().isEmpty() ) {
-            indexLinkedEntities(
-                    event.getEntitySet().getId(),
-                    dataManager.getLinkingIdsByEntitySetIds( event.getEntitySet().getLinkedEntitySets() ),
-                    event.getPropertyTypes().stream()
-                            .collect( Collectors.toMap( PropertyType::getId, Function.identity() ) ) );
-        }
     }
 
     @Timed
@@ -337,45 +326,6 @@ public class SearchService {
     @Subscribe
     public void addPropertyTypesToEntityType( PropertyTypesAddedToEntityTypeEvent event ) {
         elasticsearchApi.addPropertyTypesToEntityType( event.getEntityType(), event.getNewPropertyTypes() );
-    }
-
-    /**
-     * Handles indexing when 1 or more entity sets are unlinked/removed from linking entity set.
-     * If there are no linked entity sets remaining, the index for that linking entity set needs to be deleted,
-     * otherwise indexing needs to be triggered on the remaining linking ids, and documents with removed linking ids
-     * need to be deleted.
-     */
-    @Subscribe
-    public void removeLinkedEntitySetsFromEntitySet( LinkedEntitySetRemovedEvent event ) {
-        EntityType entityType = dataModelService.getEntityTypeByEntitySetId( event.getLinkingEntitySetId() );
-
-        if ( event.getRemainingLinkingIdsByEntitySetId().isEmpty() ) {
-            elasticsearchApi.deleteEntitySet( event.getLinkingEntitySetId(), entityType.getId() );
-        } else {
-            UUID linkingEntitySetId = event.getLinkingEntitySetId();
-
-            Set<UUID> removedLinkingIds = event.getRemovedLinkingIds();
-            Map<UUID, Set<UUID>> remainingLinkingIdsByEntitySetId = event.getRemainingLinkingIdsByEntitySetId();
-            Set<UUID> interSection = Sets.intersection(
-                    removedLinkingIds,
-                    remainingLinkingIdsByEntitySetId.values().stream()
-                            .flatMap( Set::stream ).collect( Collectors.toSet() ) );
-
-            Map<UUID, Set<UUID>> sharedLinkingIdsByEntitySets = remainingLinkingIdsByEntitySetId.entrySet().stream()
-                    .collect( Collectors.toMap(
-                            it -> it.getKey(),
-                            it -> Sets.intersection( it.getValue(), removedLinkingIds ) ) );
-            Map<UUID, PropertyType> propertyTypes = dataModelService
-                    .getPropertyTypesAsMap( entityType.getProperties() );
-
-            // Reindex documents(linking id) which are partially removed
-            indexLinkedEntities( linkingEntitySetId, sharedLinkingIdsByEntitySets, propertyTypes );
-
-            // Delete documents(linking id) which are fully removed
-            Sets.difference( removedLinkingIds, interSection ).forEach( linkingId ->
-                    elasticsearchApi.deleteEntityData( new EntityDataKey( linkingEntitySetId, linkingId ),
-                            entityType.getId() ) );
-        }
     }
 
     @Subscribe
@@ -581,7 +531,8 @@ public class SearchService {
             allEntitySetIds.add( entityKeyIds.contains( edge.getSrc().getEntityKeyId() ) ?
                     edge.getDst().getEntitySetId() : edge.getSrc().getEntitySetId() );
         } );
-        logger.info( "Get edges and neighbors for vertices query finished in {} ms",
+        logger.info( "Get edges and neighbors for vertices query for {} ids finished in {} ms",
+                filter.getEntityKeyIds().size(),
                 sw1.elapsed( TimeUnit.MILLISECONDS ) );
         sw1.reset().start();
 

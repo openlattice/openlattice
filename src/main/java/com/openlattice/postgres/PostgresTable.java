@@ -71,18 +71,20 @@ public final class PostgresTable {
                             PostgresColumn.AUDIT_RECORD_ENTITY_SET_IDS,
                             AUDIT_EDGE_ENTITY_SET_IDS )
                     .primaryKey( ACL_KEY );
+    public static final PostgresTableDefinition BASE_LONG_IDS =
+            new PostgresTableDefinition( "base_long_ids" )
+                    .addColumns( SCOPE, BASE )
+                    .primaryKey( SCOPE );
     public static final PostgresTableDefinition DATA                        = PostgresDataTables
             .buildDataTableDefinition();
-
-    public static final PostgresTableDefinition        DB_CREDS                     =
+    public static final PostgresTableDefinition DB_CREDS       =
             new PostgresTableDefinition( "db_creds" )
                     .addColumns( PRINCIPAL_ID, CREDENTIAL )
                     .primaryKey( PRINCIPAL_ID );
-    public static final PostgresTableDefinition        E                            =
+    public static final PostgresTableDefinition E              =
             new CitusDistributedTableDefinition( "e" )
                     .addColumns(
                             PARTITION,
-                            ID_TYPE,
                             SRC_ENTITY_SET_ID,
                             SRC_ENTITY_KEY_ID,
                             DST_ENTITY_SET_ID,
@@ -93,12 +95,11 @@ public final class PostgresTable {
                             VERSIONS,
                             PARTITIONS_VERSION )
                     .primaryKey( PARTITION,
-                            ID_TYPE,
                             SRC_ENTITY_KEY_ID,
                             DST_ENTITY_KEY_ID,
                             EDGE_ENTITY_KEY_ID )
                     .distributionColumn( PARTITION );
-    public static final PostgresTableDefinition        EDGES                        =
+    public static final PostgresTableDefinition EDGES          =
             new CitusDistributedTableDefinition( "edges" )
                     .addColumns(
                             ID_VALUE,
@@ -112,11 +113,10 @@ public final class PostgresTable {
                             VERSIONS )
                     .primaryKey( ID, EDGE_COMP_1, EDGE_COMP_2, COMPONENT_TYPES )
                     .distributionColumn( ID_VALUE );
-    public static final PostgresTableDefinition        ENTITY_KEY_IDS               =
+    public static final PostgresTableDefinition ENTITY_KEY_IDS =
             new CitusDistributedTableDefinition( "entity_key_ids" )
                     .addColumns( ENTITY_SET_ID,
                             ID,
-                            ENTITY_ID,
                             LINKING_ID,
                             VERSION,
                             VERSIONS,
@@ -127,7 +127,7 @@ public final class PostgresTable {
                             LAST_MIGRATE,
                             LAST_LINK_INDEX )
                     .distributionColumn( ID );
-    public static final PostgresTableDefinition        ENTITY_QUERIES               =
+    public static final PostgresTableDefinition ENTITY_QUERIES =
             new PostgresTableDefinition( "entity_graph_queries" )
                     .addColumns( QUERY_ID, ID_VALUE, CLAUSES )
                     .primaryKey( QUERY_ID, ID_VALUE );
@@ -140,7 +140,7 @@ public final class PostgresTable {
                             TITLE,
                             DESCRIPTION,
                             CONTACTS,
-                            PostgresColumn.LINKED_ENTITY_SETS,
+                            LINKED_ENTITY_SETS,
                             ORGANIZATION_ID,
                             ENTITY_SET_FLAGS,
                             PARTITIONS,
@@ -231,7 +231,6 @@ public final class PostgresTable {
                     .addColumns( PARTITION,
                             ENTITY_SET_ID,
                             ID_VALUE,
-                            ENTITY_ID,
                             LINKING_ID,
                             VERSION,
                             VERSIONS,
@@ -266,7 +265,6 @@ public final class PostgresTable {
             new CitusDistributedTableDefinition( "linking_log" )
                     .addColumns( LINKING_ID,
                             ENTITY_SET_ID,
-                            ENTITY_ID,
                             VERSION )
                     .primaryKey( LINKING_ID,
                             ENTITY_SET_ID )
@@ -313,7 +311,7 @@ public final class PostgresTable {
                             PRINCIPAL_TYPE,
                             PRINCIPAL_ID,
                             PostgresColumn.PERMISSIONS,
-                            PostgresColumn.EXPIRATION_DATE )
+                            EXPIRATION_DATE )
                     .primaryKey( ACL_KEY, PRINCIPAL_TYPE, PRINCIPAL_ID );
     public static final PostgresTableDefinition PERSISTENT_SEARCHES      =
             new PostgresTableDefinition( "persistent_searches" )
@@ -430,12 +428,10 @@ public final class PostgresTable {
                 new PostgresColumnsIndexDefinition( EDGES, EDGE_ENTITY_SET_ID )
                         .name( "edges_edge_entity_set_id_idx" )
                         .ifNotExists() );
+
         ENTITY_KEY_IDS.addIndexes(
                 new PostgresColumnsIndexDefinition( ENTITY_KEY_IDS, ENTITY_SET_ID )
                         .name( "entity_key_ids_entity_set_id_idx" )
-                        .ifNotExists(),
-                new PostgresColumnsIndexDefinition( ENTITY_KEY_IDS, ENTITY_SET_ID, ENTITY_ID )
-                        .name( "entity_key_ids_entity_set_id_entity_id_idx" )
                         .ifNotExists(),
                 new PostgresColumnsIndexDefinition( ENTITY_KEY_IDS, VERSION )
                         .name( "entity_key_ids_version_idx" )
@@ -502,7 +498,7 @@ public final class PostgresTable {
                         .name( "entity_key_ids_needing_propagation_idx" )
                         .ifNotExists()
         );
-
+        
         QUERIES.addIndexes(
                 new PostgresColumnsIndexDefinition( QUERIES, ENTITY_SET_ID )
                         .name( "queries_entity_set_id_idx" )

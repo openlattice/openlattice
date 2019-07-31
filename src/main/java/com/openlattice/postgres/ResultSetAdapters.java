@@ -50,7 +50,6 @@ import com.openlattice.edm.type.Analyzer;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
-import com.openlattice.graph.IdType;
 import com.openlattice.graph.NeighborhoodQuery;
 import com.openlattice.graph.NeighborhoodSelection;
 import com.openlattice.graph.edge.Edge;
@@ -113,7 +112,6 @@ public final class ResultSetAdapters {
     };
     private static final TypeReference<LinkedHashSet<CollectionTemplateType>> templateTypeRef      = new TypeReference<LinkedHashSet<CollectionTemplateType>>() {
     };
-    private static final IdType[]                           ID_TYPES             = IdType.values();
 
     @NotNull public static SmsInformationKey smsInformationKey(
             @NotNull ResultSet rs ) throws SQLException {
@@ -974,18 +972,6 @@ public final class ResultSetAdapters {
 
     public static Boolean external( ResultSet rs ) throws SQLException {
         return (Boolean) rs.getObject( EXTERNAL.getName() );
-    }
-
-    public static Entity entity( ResultSet rs, Set<UUID> authorizedPropertyTypeIds ) throws SQLException {
-        UUID entityKeyId = id( rs );
-        Map<UUID, Set<Object>> data = new HashMap<>();
-        for ( UUID ptId : authorizedPropertyTypeIds ) {
-            Array valuesArr = rs.getArray( DataTables.propertyTableName( ptId ) );
-            if ( valuesArr != null ) {
-                data.put( ptId, Sets.newHashSet( valuesArr.getArray() ) );
-            }
-        }
-        return new Entity( entityKeyId, data );
     }
 
     public static PropertyUsageSummary propertyUsageSummary( ResultSet rs ) throws SQLException {
