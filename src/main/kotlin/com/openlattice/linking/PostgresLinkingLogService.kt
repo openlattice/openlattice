@@ -123,4 +123,4 @@ private val REMOVE_ENTITY_SQL= APPEND_PREFIX +
                 "ELSE ${ID_MAP.name}-? " +                                      // resulting array is empty
             "END" +
             ", ? " +
-        APPEND_SUFFIX
+        "$APPEND_SUFFIX ) "
