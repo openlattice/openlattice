@@ -53,7 +53,6 @@ import com.openlattice.organizations.events.MembersRemovedFromOrganizationEvent
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.organizations.tasks.OrganizationsInitializationTask
 import com.openlattice.postgres.DataTables
-import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.mapstores.MaterializedEntitySetMapStore
 import com.openlattice.postgres.mapstores.OrganizationAssemblyMapstore
 import com.openlattice.postgres.mapstores.OrganizationAssemblyMapstore.INITIALIZED_INDEX
@@ -445,20 +444,17 @@ class Assembler(
                 .getAll(entityTypes.getValue(entitySets.getValue(entitySetId).entityTypeId).properties)
 
         val entitySetViewName = entitySetViewName(entitySetId)
-        val dropViewSql = "DROP VIEW IF EXISTS $entitySetViewName"
-        val selectPropertiesSql = selectPropertyTypesOfEntitySetColumnar(authorizedPropertyTypes)
-        val createViewSql = "CREATE OR REPLACE VIEW $entitySetViewName AS $selectPropertiesSql"
+        val selectPropertiesSql = selectPropertyTypesOfEntitySetColumnar(
+                entitySetId,
+                authorizedPropertyTypes,
+                entitySetPartitions
+        )
 
         //Drop and recreate the view with the latest schema
         hds.connection.use { conn ->
-            conn.prepareStatement(dropViewSql).use { stmt ->
-                stmt.execute()
-            }
-            conn.prepareStatement(createViewSql).use { stmt ->
-                val partitionsArray = PostgresArrays.createIntArray(conn, entitySetPartitions)
-                stmt.setObject(1, entitySetId)
-                stmt.setArray(2, partitionsArray)
-                stmt.execute()
+            conn.createStatement().use { stmt ->
+                stmt.execute("DROP VIEW IF EXISTS $entitySetViewName")
+                stmt.execute("CREATE OR REPLACE VIEW $entitySetViewName AS $selectPropertiesSql")
             }
         }
 

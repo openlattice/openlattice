@@ -591,15 +591,16 @@ fun upsertPropertyValueSql(propertyType: PropertyType): String {
 /* For materialized views */
 
 /**
- * This function  generates preparable sql for selecting property values columnar for a given entity set.
- * It has the following bind order:
- * 1. entity set id
- * 2. partitions (int array)
+ * This function generates prepared sql for selecting property values columnar for a given entity set.
  */
-fun selectPropertyTypesOfEntitySetColumnar(authorizedPropertyTypes: Map<UUID, PropertyType>): String {
+fun selectPropertyTypesOfEntitySetColumnar(
+        entitySetId: UUID,
+        authorizedPropertyTypes: Map<UUID, PropertyType>,
+        partitions: Set<Int>
+): String {
     val joinColumns = setOf(ENTITY_SET_ID.name, ID.name, ENTITY_KEY_IDS.name).joinToString()
     val allData = "all_data"
-    val withDataClause = "WITH $allData AS (${buildSelectDataFromEntitySetAsArray()})"
+    val withDataClause = "WITH $allData AS (${buildSelectDataFromEntitySetAsArray(entitySetId, partitions)})"
 
     val selectColumns = joinColumns +
             (authorizedPropertyTypes.map { propertyColumnName(it.value) }).joinToString()
@@ -614,12 +615,15 @@ fun selectPropertyTypesOfEntitySetColumnar(authorizedPropertyTypes: Map<UUID, Pr
     return "$withDataClause SELECT $selectColumns FROM $idJoin $propertyJoins"
 }
 
-private fun buildSelectDataFromEntitySetAsArray(): String {
+private fun buildSelectDataFromEntitySetAsArray(entitySetId: UUID, partitions: Set<Int>): String {
     val dataTypesAsArrays = PostgresDataTables.dataColumns.map { buildSelectDataTypeAsArray(it.key, it.value.first, it.value.second) }
             .joinToString()
+    val entitySetIdValue = "'$entitySetId'::uuid"
+    val partitionsArrayValue = " ANY ('{${partitions.joinToString()}}')"
+
     return "SELECT ${ENTITY_SET_ID.name}, ${ID.name}, array_agg( COALESCE( ${ORIGIN_ID.name}, ${ID.name} ) ) AS ${ENTITY_KEY_IDS.name}, ${PROPERTY_TYPE_ID.name}, $dataTypesAsArrays " +
             "FROM ${DATA.name} " +
-            "WHERE ${VERSION.name} > 0 AND ${ENTITY_SET_ID.name} = ? AND ${PARTITION.name} = ANY( ? ) " +
+            "WHERE ${VERSION.name} > 0 AND ${ENTITY_SET_ID.name} = $entitySetIdValue AND ${PARTITION.name} = $partitionsArrayValue " +
             "GROUP BY ( ${ENTITY_SET_ID.name}, ${ID.name}, ${PROPERTY_TYPE_ID.name} )"
 }
 
