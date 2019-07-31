@@ -603,16 +603,21 @@ fun selectPropertyTypesOfEntitySetColumnar(authorizedPropertyTypes: Map<UUID, Pr
 
     val selectColumns = joinColumns +
             (authorizedPropertyTypes.map { propertyColumnName(it.value) }).joinToString()
-    val propertyJoins = authorizedPropertyTypes.map { buildSelectPropertyTypeColumnar(it.value, allData, joinColumns) }
-            .joinToString(" INNER JOIN ", postfix = " USING ($joinColumns) ")
+    val idJoin = "( SELECT $joinColumns FROM $allData ) AS metadata"
+    val propertyJoins = if(authorizedPropertyTypes.isNotEmpty()) {
+        authorizedPropertyTypes.map { buildSelectPropertyTypeColumnar(it.value, allData, joinColumns) }
+                .joinToString(" USING ($joinColumns) INNER JOIN ", " INNER JOIN ", " USING ($joinColumns) ")
+    } else {
+        ""
+    }
 
-    return "$withDataClause SELECT $selectColumns FROM $propertyJoins"
+    return "$withDataClause SELECT $selectColumns FROM $idJoin $propertyJoins"
 }
 
 private fun buildSelectDataFromEntitySetAsArray(): String {
     val dataTypesAsArrays = PostgresDataTables.dataColumns.map { buildSelectDataTypeAsArray(it.key, it.value.first, it.value.second) }
             .joinToString()
-    return "SELECT ${ENTITY_SET_ID.name}, ${ID.name}, array_agg( COALESCE( ${ORIGIN_ID.name}, ${ID.name} ) ) AS ${ENTITY_KEY_IDS.name}, ${PROPERTY_TYPE_ID.name}, $dataTypesAsArrays" +
+    return "SELECT ${ENTITY_SET_ID.name}, ${ID.name}, array_agg( COALESCE( ${ORIGIN_ID.name}, ${ID.name} ) ) AS ${ENTITY_KEY_IDS.name}, ${PROPERTY_TYPE_ID.name}, $dataTypesAsArrays " +
             "FROM ${DATA.name} " +
             "WHERE ${VERSION.name} > 0 AND ${ENTITY_SET_ID.name} = ? AND ${PARTITION.name} = ANY( ? ) " +
             "GROUP BY ( ${ENTITY_SET_ID.name}, ${ID.name}, ${PROPERTY_TYPE_ID.name} )"
