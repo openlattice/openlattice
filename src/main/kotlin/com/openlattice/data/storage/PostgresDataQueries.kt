@@ -598,7 +598,7 @@ fun selectPropertyTypesOfEntitySetColumnar(
         authorizedPropertyTypes: Map<UUID, PropertyType>,
         partitions: Set<Int>
 ): String {
-    val joinColumns = setOf(ENTITY_SET_ID.name, ID.name, ENTITY_KEY_IDS.name).joinToString()
+    val joinColumns = setOf(ENTITY_SET_ID.name, ID.name, ENTITY_KEY_IDS_COL.name).joinToString()
     val allData = "all_data"
     val withDataClause = "WITH $allData AS (${buildSelectDataFromEntitySetAsArray(entitySetId, partitions)})"
 
@@ -621,7 +621,7 @@ private fun buildSelectDataFromEntitySetAsArray(entitySetId: UUID, partitions: S
     val entitySetIdValue = "'$entitySetId'::uuid"
     val partitionsArrayValue = " ANY ('{${partitions.joinToString()}}')"
 
-    return "SELECT ${ENTITY_SET_ID.name}, ${ID.name}, array_agg( COALESCE( ${ORIGIN_ID.name}, ${ID.name} ) ) AS ${ENTITY_KEY_IDS.name}, ${PROPERTY_TYPE_ID.name}, $dataTypesAsArrays " +
+    return "SELECT ${ENTITY_SET_ID.name}, ${ID.name}, array_agg( COALESCE( ${ORIGIN_ID.name}, ${ID.name} ) ) AS ${ENTITY_KEY_IDS_COL.name}, ${PROPERTY_TYPE_ID.name}, $dataTypesAsArrays " +
             "FROM ${DATA.name} " +
             "WHERE ${VERSION.name} > 0 AND ${ENTITY_SET_ID.name} = $entitySetIdValue AND ${PARTITION.name} = $partitionsArrayValue " +
             "GROUP BY ( ${ENTITY_SET_ID.name}, ${ID.name}, ${PROPERTY_TYPE_ID.name} )"
