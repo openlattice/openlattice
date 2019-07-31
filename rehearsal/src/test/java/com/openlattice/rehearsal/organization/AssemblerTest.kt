@@ -617,8 +617,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                     Assert.fail("Should have thrown Exception but did not!")
                 } catch (e: PSQLException) {
                     Assert.assertTrue(
-                            e.message!!
-                                    .contains("permission denied for materialized view ${es.name}", true)
+                            e.message!!.contains("permission denied for relation ${es.name}", true)
                     )
                 }
             }
@@ -642,8 +641,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                     Assert.fail("Should have thrown Exception but did not!")
                 } catch (e: PSQLException) {
                     Assert.assertTrue(
-                            e.message!!
-                                    .contains("permission denied for materialized view ${es.name}", true)
+                            e.message!!.contains("permission denied for relation ${es.name}", true)
                     )
                 }
             }
@@ -682,8 +680,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                     Assert.fail("Should have thrown Exception but did not!")
                 } catch (e: PSQLException) {
                     Assert.assertTrue(
-                            e.message!!
-                                    .contains("permission denied for materialized view ${es.name}", true)
+                            e.message!!.contains("permission denied for relation ${es.name}", true)
                     )
                 }
             }
