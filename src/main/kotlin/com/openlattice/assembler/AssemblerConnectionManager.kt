@@ -456,7 +456,7 @@ class AssemblerConnectionManager(
         val onProperties = if (columns.isEmpty()) {
             ""
         } else {
-            "(${columns.joinToString(",") { quote(it) }}) "
+            "( ${columns.joinToString(",")} )"
         }
 
         return "GRANT SELECT $onProperties " +
