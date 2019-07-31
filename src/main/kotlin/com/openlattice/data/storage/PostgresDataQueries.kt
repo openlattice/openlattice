@@ -598,12 +598,12 @@ fun selectPropertyTypesOfEntitySetColumnar(
         authorizedPropertyTypes: Map<UUID, PropertyType>,
         partitions: Set<Int>
 ): String {
-    val joinColumns = setOf(ENTITY_SET_ID.name, ID.name, ENTITY_KEY_IDS_COL.name).joinToString()
+    val joinColumnsList = listOf(ENTITY_SET_ID.name, ID.name, ENTITY_KEY_IDS_COL.name)
+    val joinColumns = joinColumnsList.joinToString()
     val allData = "all_data"
     val withDataClause = "WITH $allData AS (${buildSelectDataFromEntitySetAsArray(entitySetId, partitions)})"
 
-    val selectColumns = joinColumns +
-            (authorizedPropertyTypes.map { propertyColumnName(it.value) }).joinToString()
+    val selectColumns = (joinColumnsList + (authorizedPropertyTypes.map { propertyColumnName(it.value) })).joinToString()
     val idJoin = "( SELECT DISTINCT $joinColumns FROM $allData ) AS metadata"
     val propertyJoins = if(authorizedPropertyTypes.isNotEmpty()) {
         authorizedPropertyTypes.map { buildSelectPropertyTypeColumnar(it.value, allData, joinColumns) }
