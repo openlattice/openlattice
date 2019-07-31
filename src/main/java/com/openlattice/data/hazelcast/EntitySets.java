@@ -33,6 +33,7 @@ import java.util.stream.Collectors;
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
+@Deprecated
 public final class EntitySets {
 
     private EntitySets() {
