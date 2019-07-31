@@ -18,22 +18,8 @@
  *
  *
  */
+package com.openlattice.assembler.events
 
-package com.openlattice.auditing
+import java.util.UUID
 
-import com.fasterxml.jackson.annotation.JsonProperty
-import com.kryptnostic.rhizome.configuration.annotation.ReloadableConfiguration
-import com.openlattice.aws.AwsS3ClientConfiguration
-import java.util.*
-
-/**
- * Configuration class for auditing.
- */
-@ReloadableConfiguration(uri = "auditing.yaml")
-data class AuditingConfiguration(
-        @JsonProperty("entity-type") val entityTypeFqn: String,
-        @JsonProperty("edge-entity-type") val edgeEntityTypeFqn: String,
-        @JsonProperty("fqns") val fqns: Map<AuditProperty, String>,
-        @JsonProperty("aws") val awsS3ClientConfiguration: Optional<AwsS3ClientConfiguration>,
-        @JsonProperty("partitions") val partitions: Int = 257
-)
+data class MaterializedEntitySetDataChangeEvent(val entitySetId: UUID)

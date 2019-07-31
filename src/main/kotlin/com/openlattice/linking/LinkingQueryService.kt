@@ -60,7 +60,6 @@ interface LinkingQueryService {
      */
     fun getClusters(clusterIds: Collection<UUID>): Map<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>>
 
-
     fun deleteEntitySetNeighborhood(entitySetId: UUID): Int
 
     fun updateLinkingTable(clusterId: UUID, newMember: EntityDataKey): Int
@@ -75,6 +74,8 @@ interface LinkingQueryService {
 
     fun getIdsOfClustersContaining(dataKeys: Set<EntityDataKey>): PostgresIterable<UUID>
     fun lockClustersForUpdates(clusters: Set<UUID>): Connection
+
+    fun getEntityKeyIdsOfLinkingIds(linkingIds: Set<UUID>): PostgresIterable<Pair<UUID, Set<UUID>>>
 }
 
 
