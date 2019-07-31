@@ -30,6 +30,9 @@ import com.openlattice.postgres.ResultSetAdapters
 import org.slf4j.LoggerFactory
 import java.util.*
 
+const val EXPANDED_VERSIONS = "expanded_versions"
+const val FETCH_SIZE = 100000
+
 /**
  * Handles reading data from linked entity sets.
  */

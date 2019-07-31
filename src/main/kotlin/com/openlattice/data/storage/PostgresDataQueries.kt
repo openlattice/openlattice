@@ -625,7 +625,7 @@ private fun buildSelectDataTypeAsArray(
     val nonIndexedColumnName = nonIndexedColumnDefinition.name
     val btreeIndexedColumnName = btreeIndexedColumnDefinition.name
     val mergedName = getMergedDataColumnName(dataType)
-    
+
     return "COALESCE(array_agg( $btreeIndexedColumnName ) FILTER ( WHERE $btreeIndexedColumnName IS NOT NULL),'{}') || " +
             "COALESCE(array_agg( $nonIndexedColumnName ) FILTER ( WHERE $nonIndexedColumnName IS NOT NULL),'{}') " +
             "AS $mergedName"
