@@ -440,23 +440,27 @@ class Assembler(
     }
 
     private fun createOrUpdateProductionViewOfEntitySet(entitySetId: UUID) {
+        val entitySet = entitySets.getValue(entitySetId)
         val entitySetPartitions = partitionManager.getEntitySetPartitionsInfo(entitySetId).partitions
         val authorizedPropertyTypes = propertyTypes
                 .getAll(entityTypes.getValue(entitySets.getValue(entitySetId).entityTypeId).properties)
                 .filter { it.key != IdConstants.ID_ID.id } //filter out @id
 
+        val selectPropertiesSql = selectPropertyTypesOfEntitySetColumnar(authorizedPropertyTypes, entitySet.isLinking)
+        // Since the sql is a preparable statement, but create statements don't allow them, we need to replace ?
+        val entitySetIdClause = " '{$entitySetId}' "
+        val partitionsClause = " '{${entitySetPartitions.joinToString()}}' "
+        val preparedSelectPropertiesSql = selectPropertiesSql
+                .replaceFirst("?", entitySetIdClause)
+                .replaceFirst("?", partitionsClause)
+
         val entitySetViewName = entitySetViewName(entitySetId)
-        val selectPropertiesSql = selectPropertyTypesOfEntitySetColumnar(
-                entitySetId,
-                authorizedPropertyTypes,
-                entitySetPartitions
-        )
 
         //Drop and recreate the view with the latest schema
         hds.connection.use { conn ->
             conn.createStatement().use { stmt ->
                 stmt.execute("DROP VIEW IF EXISTS $entitySetViewName")
-                stmt.execute("CREATE OR REPLACE VIEW $entitySetViewName AS $selectPropertiesSql")
+                stmt.execute("CREATE OR REPLACE VIEW $entitySetViewName AS $preparedSelectPropertiesSql")
             }
         }
 
@@ -472,7 +476,7 @@ class Assembler(
         logger.info("Dropped view of entity set  $entitySetId in ${AssemblerConnectionManager.PRODUCTION_VIEWS_SCHEMA}")
     }
 
-    private fun entitySetViewName(entitySetId: UUID) : String {
+    private fun entitySetViewName(entitySetId: UUID): String {
         return "${AssemblerConnectionManager.PRODUCTION_VIEWS_SCHEMA}.${DataTables.quote(entitySetId.toString())}"
     }
 
