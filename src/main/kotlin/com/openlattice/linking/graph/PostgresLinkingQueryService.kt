@@ -405,7 +405,7 @@ private val LINKABLE_ENTITY_SET_IDS = "SELECT ${ID.name} " +
 
 private val LOCK_CLUSTERS_SQL = "SELECT 1 FROM ${MATCHED_ENTITIES.name} WHERE ${LINKING_ID.name} = ? FOR UPDATE"
 
-private val ENTITY_KEY_IDS_OF_LINKING_IDS_SQL = "SELECT ${LINKING_ID.name}, array_agg(${ID.name}) AS ${ENTITY_KEY_IDS.name} " +
+private val ENTITY_KEY_IDS_OF_LINKING_IDS_SQL = "SELECT ${LINKING_ID.name}, array_agg(${ID.name}) AS ${ENTITY_KEY_IDS_COL.name} " +
         "FROM ${IDS.name} " +
         "WHERE ${VERSION.name} > 0 AND ${LINKING_ID.name} IS NOT NULL AND  ${LINKING_ID.name} = ANY( ? ) " +
         "GROUP BY ${LINKING_ID.name}"
