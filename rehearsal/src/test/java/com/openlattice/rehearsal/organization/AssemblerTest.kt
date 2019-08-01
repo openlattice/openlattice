@@ -283,7 +283,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                 do {
                     val id = ResultSetAdapters.id(rs)
                     Assert.assertTrue(ids.contains(id))
-                    propertyFqns.forEach { propertyId, fqn ->
+                    propertyFqns.forEach { (propertyId, fqn) ->
                         Assert.assertEquals(
                                 testDataWithIds.getValue(id).getValue(propertyId).first(),
                                 getStringResult(rs, fqn)
