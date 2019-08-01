@@ -54,11 +54,13 @@ private val ALLOWED_NON_LINKING_METADATA_OPTIONS = EnumSet.allOf(MetadataOption:
         )
 )
 
+@Deprecated("old class")
 internal class PostgresQueries
 
 /**
  *
  */
+@Deprecated("old query")
 fun selectEntitySetWithCurrentVersionOfPropertyTypes(
         entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
         propertyTypes: Map<UUID, String>,
@@ -118,7 +120,7 @@ fun selectEntitySetWithCurrentVersionOfPropertyTypes(
     return fullQuery
 }
 
-// todo delete entire thing, after Assembler is fixed for new data table
+@Deprecated("old query")
 private fun buildWithClauseOld(linking: Boolean, entitiesClause: String): String {
     val joinColumns = if (linking) {
         listOf(ENTITY_SET_ID.name, ID_VALUE.name, LINKING_ID.name)
@@ -136,6 +138,7 @@ private fun buildWithClauseOld(linking: Boolean, entitiesClause: String): String
 /**
  *
  */
+@Deprecated("old query")
 fun selectEntitySetWithPropertyTypesAndVersionSql(
         entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
         propertyTypes: Map<UUID, String>,
@@ -207,6 +210,7 @@ fun selectEntitySetWithPropertyTypesAndVersionSql(
  *
  * @return A SQL subquery statement that will return all
  */
+@Deprecated("old query")
 internal fun selectVersionOfPropertyTypeInEntitySetSql(
         entitiesClause: String,
         propertyTypeId: UUID,
@@ -248,6 +252,7 @@ internal fun selectVersionOfPropertyTypeInEntitySetSql(
             "GROUP BY($selectColumns)) as $propertyTable "
 }
 
+@Deprecated("old query")
 internal fun selectCurrentVersionOfPropertyTypeSql(
         entitiesClause: String,
         propertyTypeId: UUID,
@@ -284,6 +289,7 @@ internal fun selectCurrentVersionOfPropertyTypeSql(
  *
  * @return A named SQL subquery fragment consisting of all entity key satisfying the provided clauses.
  */
+@Deprecated("old query")
 internal fun selectPropertyTypeDataKeysFilteredByVersionSubquerySql(
         entitiesClause: String,
         filtersClause: String,
@@ -321,6 +327,7 @@ internal fun selectPropertyTypeDataKeysFilteredByVersionSubquerySql(
  * @return A named SQL subquery fragment consisting of all entity key satisfying the provided clauses from the
  * ids table.
  */
+@Deprecated("old query")
 internal fun selectEntityKeyIdsFilteredByVersionSubquerySql(
         entitiesClause: String,
         version: Long,
@@ -354,6 +361,7 @@ internal fun selectEntityKeyIdsFilteredByVersionSubquerySql(
     }
 }
 
+@Deprecated("old query")
 internal fun selectLinkingIdsFilteredByVersionSubquerySql(
         entitiesClause: String,
         version: Long,
@@ -383,6 +391,7 @@ internal fun selectLinkingIdsFilteredByVersionSubquerySql(
  * @return A named SQL subquery fragment consisting of all entity key satisfying the provided clauses from the
  * ids table.
  */
+@Deprecated("old query")
 internal fun selectEntityKeyIdsWithCurrentVersionSubquerySql(
         entitiesClause: String,
         metadataOptions: Set<MetadataOption>,
@@ -438,10 +447,12 @@ internal fun selectEntityKeyIdsWithCurrentVersionSubquerySql(
     return "( SELECT $selectColumns FROM ${ENTITY_KEY_IDS.name} INNER JOIN $FILTERED_ENTITY_KEY_IDS USING($joinColumnsSql) WHERE true $entitiesClause $groupBy ) as $ENTITIES_TABLE_ALIAS"
 }
 
+@Deprecated("old query")
 internal fun arrayAggSql(fqn: String): String {
     return " array_agg($fqn) as $fqn "
 }
 
+@Deprecated("old query")
 internal fun buildEntitiesClause(entityKeyIds: Map<UUID, Optional<Set<UUID>>>, linking: Boolean): String {
     if (entityKeyIds.isEmpty()) return ""
 
@@ -457,6 +468,7 @@ internal fun buildEntitiesClause(entityKeyIds: Map<UUID, Optional<Set<UUID>>>, l
     } + ")"
 }
 
+@Deprecated("old query")
 internal fun buildPropertyTypeEntitiesClause(
         entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
         propertyTypeId: UUID,
@@ -474,12 +486,13 @@ internal fun buildPropertyTypeEntitiesClause(
     return if (authorizedEntitySetIds.isNotEmpty()) "AND ${ENTITY_SET_ID.name} IN ($authorizedEntitySetIds)" else ""
 }
 
-
+@Deprecated("old query")
 internal fun buildFilterClause(fqn: String, filter: Set<Filter>): String {
     if (filter.isEmpty()) return ""
     return filter.joinToString(" AND ", prefix = " AND ") { it.asSql(fqn) }
 }
 
+@Deprecated("old query")
 internal fun selectEntityKeyIdsByLinkingIds(linkingIds: Set<UUID>): String {
     val linkingEntitiesClause = buildLinkingEntitiesClause(linkingIds)
     return "SELECT ${LINKING_ID.name}, array_agg(${ID_VALUE.name}) AS ${ENTITY_KEY_IDS.name} " +
@@ -488,10 +501,12 @@ internal fun selectEntityKeyIdsByLinkingIds(linkingIds: Set<UUID>): String {
             "GROUP BY ${LINKING_ID.name} "
 }
 
+@Deprecated("old query")
 internal fun buildLinkingEntitiesClause(linkingIds: Set<UUID>): String {
     return " AND ${LINKING_ID.name} IN ( ${linkingIds.joinToString(",") { "'$it'" }} ) "
 }
 
+@Deprecated("old query")
 private fun getJoinColumns(linking: Boolean, omitEntitySetId: Boolean): List<String> {
     return if (linking) {
         if (omitEntitySetId) {
@@ -504,6 +519,7 @@ private fun getJoinColumns(linking: Boolean, omitEntitySetId: Boolean): List<Str
     }
 }
 
+@Deprecated("old query")
 private fun getMetadataOptions(metadataOptions: Set<MetadataOption>, linking: Boolean): List<String> {
     val allowedMetadataOptions = if (linking)
         metadataOptions.intersect(ALLOWED_LINKING_METADATA_OPTIONS)
