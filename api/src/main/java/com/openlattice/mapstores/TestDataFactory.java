@@ -18,15 +18,7 @@
 
 package com.openlattice.mapstores;
 
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.LinkedHashMultimap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Multimaps;
-import com.google.common.collect.SetMultimap;
-import com.google.common.collect.Sets;
+import com.google.common.collect.*;
 import com.openlattice.authorization.Ace;
 import com.openlattice.authorization.AceValue;
 import com.openlattice.authorization.Acl;
@@ -570,9 +562,9 @@ public final class TestDataFactory {
     public static CollectionTemplateType collectionTemplateType() {
         return new CollectionTemplateType(
                 UUID.randomUUID(),
-                RandomStringUtils.randomAlphanumeric( 5 ),
-                RandomStringUtils.randomAlphanumeric( 5 ),
-                Optional.of( RandomStringUtils.randomAlphanumeric( 5 ) ),
+                randomAlphanumeric( 5 ),
+                randomAlphanumeric( 5 ),
+                Optional.of( randomAlphanumeric( 5 ) ),
                 UUID.randomUUID()
         );
     }
@@ -581,8 +573,8 @@ public final class TestDataFactory {
         return new EntityTypeCollection(
                 UUID.randomUUID(),
                 fqn(),
-                RandomStringUtils.randomAlphanumeric( 5 ),
-                Optional.of( RandomStringUtils.randomAlphanumeric( 5 ) ),
+                randomAlphanumeric( 5 ),
+                Optional.of( randomAlphanumeric( 5 ) ),
                 ImmutableSet.of( fqn(), fqn(), fqn() ),
                 Stream.of( collectionTemplateType(), collectionTemplateType(), collectionTemplateType() ).collect(
                         Collectors.toCollection( Sets::newLinkedHashSet ) )
@@ -592,9 +584,9 @@ public final class TestDataFactory {
     public static EntitySetCollection entitySetCollection() {
         return new EntitySetCollection(
                 UUID.randomUUID(),
-                RandomStringUtils.randomAlphanumeric( 5 ),
-                RandomStringUtils.randomAlphanumeric( 5 ),
-                Optional.of( RandomStringUtils.randomAlphanumeric( 5 ) ),
+                randomAlphanumeric( 5 ),
+                randomAlphanumeric( 5 ),
+                Optional.of( randomAlphanumeric( 5 ) ),
                 UUID.randomUUID(),
                 ImmutableMap.of( UUID.randomUUID(),
                         UUID.randomUUID(),
@@ -602,9 +594,9 @@ public final class TestDataFactory {
                         UUID.randomUUID(),
                         UUID.randomUUID(),
                         UUID.randomUUID() ),
-                ImmutableSet.of( RandomStringUtils.randomAlphanumeric( 5 ),
-                        RandomStringUtils.randomAlphanumeric( 5 ),
-                        RandomStringUtils.randomAlphanumeric( 5 ) ),
+                ImmutableSet.of( randomAlphanumeric( 5 ),
+                        randomAlphanumeric( 5 ),
+                        randomAlphanumeric( 5 ) ),
                 Optional.of( UUID.randomUUID() )
         );
     }
