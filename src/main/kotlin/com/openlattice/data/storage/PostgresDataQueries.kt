@@ -55,21 +55,25 @@ val jsonValueColumnsSql = PostgresDataTables.dataColumns.entries
  * 3. partition(s) (array)
  *
  */
-fun buildPreparableFiltersClauseForLinkedEntities(
+fun buildPreparableFiltersSqlForLinkedEntities(
         startIndex: Int,
         propertyTypes: Map<UUID, PropertyType>,
         propertyTypeFilters: Map<UUID, Set<Filter>>,
         idsPresent: Boolean,
-        partitionsPresent: Boolean
+        partitionsPresent: Boolean,
+        selectOriginIds: Boolean = false
 ): Pair<String, Set<SqlBinder>> {
     val filtersClauses = buildPreparableFiltersClause(startIndex, propertyTypes, propertyTypeFilters)
-    val filtersClause = filtersClauses.first
+    val filtersClause = if (filtersClauses.first.isNotEmpty()) " AND ${filtersClauses.first} " else ""
 
-    val innerSql = selectEntitiesGroupedByIdAndPropertyTypeId(idsPresent = idsPresent, partitionsPresent = partitionsPresent)
+    val innerSql = selectEntitiesGroupedByIdAndPropertyTypeId(
+            idsPresent = idsPresent, partitionsPresent = partitionsPresent, selectOriginIds = selectOriginIds
+    ) + " AND ${ORIGIN_ID.name} IS NOT NULL " + filtersClause + GROUP_BY_ESID_EKID_PART_PTID
 
-    val sql = "$innerSql AND ${ORIGIN_ID.name} IS NOT NULL AND ${VERSION.name} > 0" +
-            " ${if (filtersClause.isNotEmpty()) "AND $filtersClause " else ""}" +
-            "GROUP BY (${ENTITY_SET_ID.name},${LINKING_ID.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
+    val entityKeyIds = if (selectOriginIds) ",${ENTITY_KEY_IDS_COL.name}" else ""
+    val groupBy = if (selectOriginIds) GROUP_BY_ESID_EKID_PART_EKIDS else GROUP_BY_ESID_EKID_PART
+    val sql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name}$entityKeyIds,$jsonValueColumnsSql " +
+            "FROM ($innerSql) entities $groupBy"
 
     return sql to filtersClauses.second
 
@@ -91,18 +95,20 @@ fun buildPreparableFiltersSqlForEntities(
         propertyTypes: Map<UUID, PropertyType>,
         propertyTypeFilters: Map<UUID, Set<Filter>>,
         idsPresent: Boolean,
-        partitionsPresent: Boolean
+        partitionsPresent: Boolean,
+        selectOriginIds: Boolean = false
 ): Pair<String, Set<SqlBinder>> {
     val filtersClauses = buildPreparableFiltersClause(startIndex, propertyTypes, propertyTypeFilters)
-    //TODO: I'm pretty sure if propertyTypeFilters are entity this won't work properly.
-    val filtersClause = filtersClauses.first
-    val innerSql = selectEntitiesGroupedByIdAndPropertyTypeId(
-            idsPresent = idsPresent, partitionsPresent = partitionsPresent
-    ) +
-            " ${if (filtersClause.isNotEmpty()) "AND $filtersClause " else ""}" +
-            GROUP_BY_ESID_EKID_PART_PTID
+    val filtersClause = if (filtersClauses.first.isNotEmpty()) " AND ${filtersClauses.first} " else ""
 
-    val sql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name},$jsonValueColumnsSql FROM ($innerSql) entities $GROUP_BY_ESID_EKID_PART"
+    val innerSql = selectEntitiesGroupedByIdAndPropertyTypeId(
+            idsPresent = idsPresent, partitionsPresent = partitionsPresent, selectOriginIds = selectOriginIds
+    ) + filtersClause + GROUP_BY_ESID_EKID_PART_PTID
+
+    val entityKeyIds = if (selectOriginIds) ",${ENTITY_KEY_IDS_COL.name}" else ""
+    val groupBy = if (selectOriginIds) GROUP_BY_ESID_EKID_PART_EKIDS else GROUP_BY_ESID_EKID_PART
+    val sql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name}$entityKeyIds,$jsonValueColumnsSql " +
+            "FROM ($innerSql) entities $groupBy"
 
     return sql to filtersClauses.second
 
@@ -191,17 +197,9 @@ internal fun doBind(ps: PreparedStatement, info: SqlBindInfo) {
     }
 }
 
-internal val GROUP_BY_ESID_EKID_PART_PTID = "GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
-internal val GROUP_BY_ESID_EKID_PART = "GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name})"
-internal val GROUP_BY_ID_PT_ID_HASH = "GROUP BY (${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name}, ${HASH.name})"
-internal val GROUP_BY_ID = "GROUP BY (${ID_VALUE.name}, ${PARTITION.name})"
-//TODO: This was in case we needed to filter entity_set_ids, but we don't since for entity_set_id to show up it must
-//be in at least one (id, pt_id, hash) pair
-//internal val DATA_COLULMNS_NOT_NULL = PostgresDataTables.dataTableValueColumns.joinToString(" AND ") {
-//  "${it.name} IS NOT NULL"
-//}
-//internal val FILTERED_ENTITY_SET_IDS = "array_agg(${ENTITY_SET_ID.name}) FILTER ( ) as ${ENTITY_SET_IDS.name}"
-
+internal val GROUP_BY_ESID_EKID_PART = "GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name})"
+internal val GROUP_BY_ESID_EKID_PART_PTID = "GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name},${PROPERTY_TYPE_ID.name})"
+internal val GROUP_BY_ESID_EKID_PART_EKIDS = "GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name},${ENTITY_KEY_IDS_COL.name})"
 
 /**
  * Preparable SQL that selects entities across multiple entity sets grouping by id and property type id from the [DATA]
@@ -230,14 +228,15 @@ fun optionalWhereClauses(
 internal fun selectEntitiesGroupedByIdAndPropertyTypeId(
         idsPresent: Boolean = true,
         partitionsPresent: Boolean = true,
-        entitySetsPresent: Boolean = true
+        entitySetsPresent: Boolean = true,
+        selectOriginIds: Boolean = false
 ): String {
-    return "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name},${PROPERTY_TYPE_ID.name},$valuesColumnsSql " +
+    val entityKeyIds = if (selectOriginIds) "array_agg(COALESCE(${ORIGIN_ID.name},${ID.name})) as ${ENTITY_KEY_IDS_COL.name}" else ""
+    return "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name},${PROPERTY_TYPE_ID.name},$entityKeyIds,$valuesColumnsSql " +
             "FROM ${DATA.name} ${optionalWhereClauses(idsPresent, partitionsPresent, entitySetsPresent)}"
 }
 
 
-//"GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name}, ${PROPERTY_TYPE_ID.name})"
 /**
  * Preparable SQL that selects entire entity sets grouping by id and property type id from the [DATA] table with the
  * following bind order:
@@ -591,67 +590,44 @@ fun upsertPropertyValueSql(propertyType: PropertyType): String {
 /* For materialized views */
 
 /**
- * This function generates prepared sql for selecting property values columnar for a given entity set.
+ * This function generates preparable sql for selecting property values columnar for a given entity set.
+ * Bind order is the following:
+ * 1. entity set ids (uuid array)
+ * 2. partitions (int array)
  */
 fun selectPropertyTypesOfEntitySetColumnar(
-        entitySetId: UUID,
         authorizedPropertyTypes: Map<UUID, PropertyType>,
-        partitions: Set<Int>
+        linking: Boolean
 ): String {
-    val joinColumnsList = listOf(ENTITY_SET_ID.name, ID.name, ENTITY_KEY_IDS_COL.name)
-    val joinColumns = joinColumnsList.joinToString()
-    val allData = "all_data"
-    val withDataClause = "WITH $allData AS (${buildSelectDataFromEntitySetAsArray(entitySetId, partitions)})"
-
-    val selectColumns = (joinColumnsList + (authorizedPropertyTypes.map { propertyColumnName(it.value) })).joinToString()
-    val idJoin = "( SELECT DISTINCT $joinColumns FROM $allData ) AS metadata"
-    val propertyJoins = if(authorizedPropertyTypes.isNotEmpty()) {
-        authorizedPropertyTypes.map { buildSelectPropertyTypeColumnar(it.value, allData, joinColumns) }
-                .joinToString(" USING ($joinColumns) INNER JOIN ", " INNER JOIN ", " USING ($joinColumns) ")
+    val idColumnsList = listOf(ENTITY_SET_ID.name, ID.name, ENTITY_KEY_IDS_COL.name)
+    val (allData, _) = if (linking) {
+        buildPreparableFiltersSqlForLinkedEntities(
+                3, authorizedPropertyTypes, mapOf(), idsPresent = false, partitionsPresent = true, selectOriginIds = true
+        )
     } else {
-        ""
+        buildPreparableFiltersSqlForEntities(
+                3, authorizedPropertyTypes, mapOf(), idsPresent = false, partitionsPresent = true, selectOriginIds = true
+        )
     }
 
-    return "$withDataClause SELECT $selectColumns FROM $idJoin $propertyJoins"
-}
-
-private fun buildSelectDataFromEntitySetAsArray(entitySetId: UUID, partitions: Set<Int>): String {
-    val dataTypesAsArrays = PostgresDataTables.dataColumns.map { buildSelectDataTypeAsArray(it.key, it.value.first, it.value.second) }
+    val selectColumns = (idColumnsList +
+            (authorizedPropertyTypes.map { selectPropertyColumn(it.value) }))
             .joinToString()
-    val entitySetIdValue = "'$entitySetId'::uuid"
-    val partitionsArrayValue = " ANY ('{${partitions.joinToString()}}')"
+    val groupByColumns = (idColumnsList +
+            (authorizedPropertyTypes.map { getMergedDataColumnName(PostgresEdmTypeConverter.map(it.value.datatype)) })
+                    .toSet())
+            .joinToString()
 
-    return "SELECT ${ENTITY_SET_ID.name}, ${ID.name}, array_agg( COALESCE( ${ORIGIN_ID.name}, ${ID.name} ) ) AS ${ENTITY_KEY_IDS_COL.name}, ${PROPERTY_TYPE_ID.name}, $dataTypesAsArrays " +
-            "FROM ${DATA.name} " +
-            "WHERE ${VERSION.name} > 0 AND ${ENTITY_SET_ID.name} = $entitySetIdValue AND ${PARTITION.name} = $partitionsArrayValue " +
-            "GROUP BY ( ${ENTITY_SET_ID.name}, ${ID.name}, ${PROPERTY_TYPE_ID.name} )"
+    return "SELECT $selectColumns FROM ($allData) as all_data GROUP BY ($groupByColumns)"
 }
 
-private fun buildSelectDataTypeAsArray(
-        dataType: PostgresDatatype,
-        nonIndexedColumnDefinition: PostgresColumnDefinition,
-        btreeIndexedColumnDefinition: PostgresColumnDefinition): String {
-    val nonIndexedColumnName = nonIndexedColumnDefinition.name
-    val btreeIndexedColumnName = btreeIndexedColumnDefinition.name
+
+private fun selectPropertyColumn(propertyType: PropertyType): String {
+    val dataType = PostgresEdmTypeConverter.map(propertyType.datatype)
     val mergedName = getMergedDataColumnName(dataType)
-
-    return "COALESCE(array_agg( $btreeIndexedColumnName ) FILTER ( WHERE $btreeIndexedColumnName IS NOT NULL),'{}') || " +
-            "COALESCE(array_agg( $nonIndexedColumnName ) FILTER ( WHERE $nonIndexedColumnName IS NOT NULL),'{}') " +
-            "AS $mergedName"
-}
-
-private fun buildSelectPropertyTypeColumnar(propertyType: PropertyType, tableName: String, joinColumns: String): String {
-    val propertyDataType = getMergedDataColumnName(PostgresEdmTypeConverter.map(propertyType.datatype))
     val propertyColumnName = propertyColumnName(propertyType)
-    val propertyTableName = propertyTableName(propertyType)
 
-    return " ( SELECT $joinColumns, $propertyDataType AS $propertyColumnName " +
-            "FROM $tableName " +
-            "WHERE ${PROPERTY_TYPE_ID.name} = '${propertyType.id}' ) AS $propertyTableName "
-}
-
-private fun propertyTableName(propertyType: PropertyType): String {
-    return DataTables.quote("pt_${propertyType.id}")
+    return " $mergedName -> '${propertyType.id}' AS $propertyColumnName "
 }
 
 private fun propertyColumnName(propertyType: PropertyType): String {
