@@ -600,7 +600,7 @@ fun selectPropertyTypesOfEntitySetColumnar(
         linking: Boolean
 ): String {
     val idColumnsList = listOf(ENTITY_SET_ID.name, ID.name, ENTITY_KEY_IDS_COL.name)
-    val (allData, _) = if (linking) {
+    val (entitySetData, _) = if (linking) {
         buildPreparableFiltersSqlForLinkedEntities(
                 3, authorizedPropertyTypes, mapOf(), idsPresent = false, partitionsPresent = true, selectOriginIds = true
         )
@@ -613,12 +613,12 @@ fun selectPropertyTypesOfEntitySetColumnar(
     val selectColumns = (idColumnsList +
             (authorizedPropertyTypes.map { selectPropertyColumn(it.value) }))
             .joinToString()
-    val groupByColumns = (idColumnsList +
-            (authorizedPropertyTypes.map { getMergedDataColumnName(PostgresEdmTypeConverter.map(it.value.datatype)) })
-                    .toSet())
+    val groupByColumns = idColumnsList.joinToString()
+    val selectArrayColumns = (idColumnsList +
+            (authorizedPropertyTypes.map { selectPropertyArray(it.value) }))
             .joinToString()
 
-    return "SELECT $selectColumns FROM ($allData) as all_data GROUP BY ($groupByColumns)"
+    return "SELECT $selectArrayColumns FROM (SELECT $selectColumns FROM ($entitySetData) as entity_set_data) as grouped_data GROUP BY ($groupByColumns)"
 }
 
 
@@ -627,7 +627,12 @@ private fun selectPropertyColumn(propertyType: PropertyType): String {
     val mergedName = getMergedDataColumnName(dataType)
     val propertyColumnName = propertyColumnName(propertyType)
 
-    return " $mergedName -> '${propertyType.id}' AS $propertyColumnName "
+    return "jsonb_array_elements_text($mergedName -> '${propertyType.id}') AS $propertyColumnName"
+}
+
+private fun selectPropertyArray(propertyType: PropertyType): String {
+    val propertyColumnName = propertyColumnName(propertyType)
+    return "array_agg($propertyColumnName)  as $propertyColumnName"
 }
 
 private fun propertyColumnName(propertyType: PropertyType): String {
