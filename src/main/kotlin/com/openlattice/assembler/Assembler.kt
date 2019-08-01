@@ -448,7 +448,7 @@ class Assembler(
 
         val selectPropertiesSql = selectPropertyTypesOfEntitySetColumnar(authorizedPropertyTypes, entitySet.isLinking)
         // Since the sql is a preparable statement, but create statements don't allow them, we need to replace ?
-        val entitySetIdClause = " '{$entitySetId}' "
+        val entitySetIdClause = if(entitySet.isLinking) " '{${entitySet.linkedEntitySets.joinToString()}}' " else " '{$entitySetId}' "
         val partitionsClause = " '{${entitySetPartitions.joinToString()}}' "
         val preparedSelectPropertiesSql = selectPropertiesSql
                 .replaceFirst("?", entitySetIdClause)
