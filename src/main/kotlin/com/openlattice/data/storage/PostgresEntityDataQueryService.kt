@@ -797,7 +797,7 @@ class PostgresEntityDataQueryService(
         val propertyTypeIdsArr = PostgresArrays.createUuidArray(conn, propertyTypesToTombstone.map { it.id })
         val entityKeyIdsArr = PostgresArrays.createUuidArray(conn, entityKeyIds)
         val partitionsArr = PostgresArrays.createIntArray(conn, entityKeyIds.map { getPartition(it, partitions) })
-        val partitionsVersion = partitionManager.getEntitySetPartitionsInfo(entitySetId).partitionsVersion
+        val partitionsVersion = partitionsInfo.partitionsVersion
         val numUpdated = conn.prepareStatement(updateVersionsForPropertyTypesInEntitiesInEntitySet).use { ps ->
             ps.setLong(1, tombstoneVersion)
             ps.setLong(2, tombstoneVersion)
