@@ -29,6 +29,7 @@ import com.google.common.eventbus.Subscribe
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
+import com.openlattice.IdConstants
 import com.openlattice.assembler.PostgresRoles.Companion.buildOrganizationUserId
 import com.openlattice.assembler.events.MaterializedEntitySetDataChangeEvent
 import com.openlattice.assembler.events.MaterializedEntitySetEdmChangeEvent
@@ -36,8 +37,8 @@ import com.openlattice.assembler.processors.*
 import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.controllers.exceptions.ResourceNotFoundException
-import com.openlattice.data.storage.MetadataOption
-import com.openlattice.data.storage.selectEntitySetWithCurrentVersionOfPropertyTypes
+import com.openlattice.data.storage.partitions.PartitionManager
+import com.openlattice.data.storage.selectPropertyTypesOfEntitySetColumnar
 import com.openlattice.datastore.util.Util
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.events.*
@@ -61,7 +62,6 @@ import com.openlattice.tasks.HazelcastTaskDependencies
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies.PostConstructInitializerTask
 import com.openlattice.tasks.Task
 import com.zaxxer.hikari.HikariDataSource
-import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.slf4j.LoggerFactory
 import java.util.*
 
@@ -79,6 +79,7 @@ class Assembler(
         private val authorizationManager: AuthorizationManager,
         private val edmAuthorizationHelper: EdmAuthorizationHelper,
         private val securePrincipalsManager: SecurePrincipalsManager,
+        private val partitionManager: PartitionManager,
         metricRegistry: MetricRegistry,
         hazelcast: HazelcastInstance,
         eventBus: EventBus
@@ -439,50 +440,44 @@ class Assembler(
     }
 
     private fun createOrUpdateProductionViewOfEntitySet(entitySetId: UUID) {
-        logger.debug("Create or update view of $entitySetId in ${AssemblerConnectionManager.PRODUCTION_VIEWS_SCHEMA}")
         val entitySet = entitySets.getValue(entitySetId)
-        val entitySetIds = if (entitySet.isLinking) entitySet.linkedEntitySets else setOf(entitySetId)
+        val entitySetPartitions = partitionManager.getEntitySetPartitionsInfo(entitySetId).partitions
         val authorizedPropertyTypes = propertyTypes
                 .getAll(entityTypes.getValue(entitySets.getValue(entitySetId).entityTypeId).properties)
-        val propertyFqns = authorizedPropertyTypes.mapValues {
-            DataTables.quote(it.value.type.fullQualifiedNameAsString)
-        }
+                .filter { it.key != IdConstants.ID_ID.id } //filter out @id
 
-        val sql = selectEntitySetWithCurrentVersionOfPropertyTypes(
-                entitySetIds.associate { it to Optional.empty<Set<UUID>>() },
-                propertyFqns,
-                authorizedPropertyTypes.values.map(PropertyType::getId),
-                entitySetIds.associateWith { authorizedPropertyTypes.keys },
-                mapOf(),
-                EnumSet.of(MetadataOption.ENTITY_KEY_IDS),
-                authorizedPropertyTypes.mapValues { it.value.datatype == EdmPrimitiveTypeKind.Binary },
-                entitySet.isLinking,
-                false //Always provide entity set id
-        )
+        val selectPropertiesSql = selectPropertyTypesOfEntitySetColumnar(authorizedPropertyTypes, entitySet.isLinking)
+        // Since the sql is a preparable statement, but create statements don't allow them, we need to replace ?
+        val entitySetIdClause = if(entitySet.isLinking) " '{${entitySet.linkedEntitySets.joinToString()}}' " else " '{$entitySetId}' "
+        val partitionsClause = " '{${entitySetPartitions.joinToString()}}' "
+        val preparedSelectPropertiesSql = selectPropertiesSql
+                .replaceFirst("?", entitySetIdClause)
+                .replaceFirst("?", partitionsClause)
+
+        val entitySetViewName = entitySetViewName(entitySetId)
 
         //Drop and recreate the view with the latest schema
         hds.connection.use { conn ->
             conn.createStatement().use { stmt ->
-                stmt.execute(
-                        "DROP VIEW IF EXISTS ${AssemblerConnectionManager.PRODUCTION_VIEWS_SCHEMA}.\"$entitySetId\""
-                )
-                stmt.execute(
-                        "CREATE OR REPLACE VIEW ${AssemblerConnectionManager.PRODUCTION_VIEWS_SCHEMA}.\"$entitySetId\" AS $sql"
-                )
-                return@use
+                stmt.execute("DROP VIEW IF EXISTS $entitySetViewName")
+                stmt.execute("CREATE OR REPLACE VIEW $entitySetViewName AS $preparedSelectPropertiesSql")
             }
         }
+
+        logger.info("Created or updated view of $entitySetId in ${AssemblerConnectionManager.PRODUCTION_VIEWS_SCHEMA}")
     }
 
     private fun dropProductionViewOfEntitySet(entitySetId: UUID) {
         hds.connection.use { conn ->
             conn.createStatement().use { stmt ->
-                stmt.execute(
-                        "DROP VIEW IF EXISTS ${AssemblerConnectionManager.PRODUCTION_VIEWS_SCHEMA}.\"$entitySetId\""
-                )
+                stmt.execute("DROP VIEW IF EXISTS ${entitySetViewName(entitySetId)}")
             }
         }
-        logger.info("Dropped production view of entity set {}", entitySetId)
+        logger.info("Dropped view of entity set  $entitySetId in ${AssemblerConnectionManager.PRODUCTION_VIEWS_SCHEMA}")
+    }
+
+    private fun entitySetViewName(entitySetId: UUID): String {
+        return "${AssemblerConnectionManager.PRODUCTION_VIEWS_SCHEMA}.${DataTables.quote(entitySetId.toString())}"
     }
 
     fun getOrganizationIntegrationAccount(organizationId: UUID): OrganizationIntegrationAccount {

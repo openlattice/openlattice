@@ -31,9 +31,6 @@ import com.openlattice.assembler.PostgresRoles.Companion.buildOrganizationUserId
 import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresRoleName
 import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresUsername
 import com.openlattice.authorization.*
-import com.openlattice.data.storage.MetadataOption
-import com.openlattice.data.storage.entityKeyIdColumnsList
-import com.openlattice.data.storage.linkingEntityKeyIdColumnsList
 import com.openlattice.directory.MaterializedViewAccount
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
@@ -275,7 +272,7 @@ class AssemblerConnectionManager(
 
         connect(buildOrganizationDatabaseName(organizationId)).use { datasource ->
             // re-import foreign view edges before creating materialized view
-            updatePublicTables(datasource, setOf(EDGES.name))
+            updatePublicTables(datasource, setOf(E.name))
             materializeEdges(datasource, entitySetIds, authorizedPrincipals)
         }
     }
@@ -293,11 +290,11 @@ class AssemblerConnectionManager(
                 connection.createStatement().use { stmt ->
                     val clause = entitySetIds.joinToString { entitySetId -> "'$entitySetId'" }
 
-                    val tableName = "$MATERIALIZED_VIEWS_SCHEMA.${EDGES.name}"
+                    val tableName = "$MATERIALIZED_VIEWS_SCHEMA.${E.name}"
                     stmt.execute("DROP MATERIALIZED VIEW IF EXISTS $tableName CASCADE")
                     stmt.execute(
                             "CREATE MATERIALIZED VIEW IF NOT EXISTS $tableName AS " +
-                                    "SELECT * FROM $PRODUCTION_FOREIGN_SCHEMA.${EDGES.name} " +
+                                    "SELECT * FROM $PRODUCTION_FOREIGN_SCHEMA.${E.name} " +
                                     "WHERE ${SRC_ENTITY_SET_ID.name} IN ($clause) " +
                                     "OR ${DST_ENTITY_SET_ID.name} IN ($clause) " +
                                     "OR ${EDGE_ENTITY_SET_ID.name} IN ($clause) "
@@ -367,9 +364,7 @@ class AssemblerConnectionManager(
     ) {
         materializeEntitySetsTimer.time().use {
 
-            val selectColumns = ((if (entitySet.isLinking) linkingEntityKeyIdColumnsList else entityKeyIdColumnsList) +
-                    ResultSetAdapters.mapMetadataOptionToPostgresColumn(MetadataOption.ENTITY_KEY_IDS) +
-                    materializablePropertyTypes.values.map { quote(it.type.fullQualifiedNameAsString) })
+            val selectColumns = getSelectColumnsForMaterializedView(materializablePropertyTypes.values)
                     .joinToString(",")
 
             val sql = "SELECT $selectColumns FROM $PRODUCTION_FOREIGN_SCHEMA.${entitySetIdTableName(entitySet.id)} "
@@ -398,6 +393,12 @@ class AssemblerConnectionManager(
         }
     }
 
+    private fun getSelectColumnsForMaterializedView(propertyTypes: Collection<PropertyType>): List<String> {
+        return listOf(ENTITY_SET_ID.name, ID_VALUE.name, ENTITY_KEY_IDS_COL.name) + propertyTypes.map {
+            quote(it.type.fullQualifiedNameAsString)
+        }
+    }
+
     private fun grantSelectForEntitySet(
             connection: Connection,
             tableName: String,
@@ -407,9 +408,7 @@ class AssemblerConnectionManager(
         // prepare batch queries
         return connection.createStatement().use { stmt ->
             authorizedPropertyTypesOfPrincipals.forEach { (principal, propertyTypes) ->
-                val columns = (if (entitySet.isLinking) linkingEntityKeyIdColumnsList else entityKeyIdColumnsList) +
-                        ResultSetAdapters.mapMetadataOptionToPostgresColumn(MetadataOption.ENTITY_KEY_IDS) +
-                        propertyTypes.map { it.type.fullQualifiedNameAsString }
+                val columns = getSelectColumnsForMaterializedView(propertyTypes)
                 try {
                     val grantSelectSql = grantSelectSql(tableName, principal, columns)
                     logger.info("AssemblerConnectionManager.grantSelectForEntitySet grant query: $grantSelectSql")
@@ -457,7 +456,7 @@ class AssemblerConnectionManager(
         val onProperties = if (columns.isEmpty()) {
             ""
         } else {
-            "(${columns.joinToString(",") { quote(it) }}) "
+            "( ${columns.joinToString(",")} )"
         }
 
         return "GRANT SELECT $onProperties " +
@@ -497,7 +496,7 @@ class AssemblerConnectionManager(
 
     fun dropMaterializedEntitySet(datasource: HikariDataSource, entitySetId: UUID) {
         // we drop materialized view of entity set from organization database, update edges and entity_sets table
-        updatePublicTables(datasource, setOf(ENTITY_SETS.name, EDGES.name))
+        updatePublicTables(datasource, setOf(ENTITY_SETS.name, E.name))
 
         datasource.connection.createStatement().use { stmt ->
             stmt.execute(dropProductionForeignSchemaSql(entitySetIdTableName(entitySetId)))
@@ -742,7 +741,7 @@ class AssemblerConnectionManager(
 }
 
 val MEMBER_ORG_DATABASE_PERMISSIONS = setOf("CREATE", "CONNECT", "TEMPORARY", "TEMP")
-val PUBLIC_TABLES = setOf(EDGES.name, PROPERTY_TYPES.name, ENTITY_TYPES.name, ENTITY_SETS.name)
+val PUBLIC_TABLES = setOf(E.name, PROPERTY_TYPES.name, ENTITY_TYPES.name, ENTITY_SETS.name)
 
 
 private val PRINCIPALS_SQL = "SELECT acl_key FROM principals WHERE ${PRINCIPAL_TYPE.name} = ?"

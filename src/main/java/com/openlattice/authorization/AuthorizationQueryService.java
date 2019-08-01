@@ -143,29 +143,6 @@ public class AuthorizationQueryService {
     }
 
     /**
-     * get all authorized acl keys for a principal, of a fixed object type, with desired permissions.
-     */
-    public Stream<AclKey> getAuthorizedAclKeys(
-            Principal principal,
-            SecurableObjectType objectType,
-            EnumSet<Permission> desiredPermissions ) {
-        return getAuthorizedAclKeysForPrincipals( ImmutableSet.of( principal ),
-                desiredPermissions,
-                Optional.of( objectType ) );
-    }
-
-    /**
-     * get all authorized acl keys for a set of principals, of a fixed object type, with desired permissions.
-     */
-    public Set<AclKey> getAuthorizedAclKeys(
-            Set<Principal> principals,
-            SecurableObjectType objectType,
-            EnumSet<Permission> desiredPermissions ) {
-        return getAuthorizedAclKeysForPrincipals( principals, desiredPermissions, Optional.of( objectType ) )
-                .collect( Collectors.toSet() );
-    }
-
-    /**
      * get all authorized acl keys for a set of principals, of a fixed object type, with specified permission, starting from a page given from paging state.
      */
     public AuthorizedObjectsSearchResult getAuthorizedAclKeys(
