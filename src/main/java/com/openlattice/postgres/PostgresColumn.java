@@ -20,21 +20,9 @@
 
 package com.openlattice.postgres;
 
-import static com.openlattice.postgres.PostgresDatatype.BIGINT;
-import static com.openlattice.postgres.PostgresDatatype.BIGINT_ARRAY;
-import static com.openlattice.postgres.PostgresDatatype.BOOLEAN;
-import static com.openlattice.postgres.PostgresDatatype.BYTEA;
-import static com.openlattice.postgres.PostgresDatatype.DECIMAL;
-import static com.openlattice.postgres.PostgresDatatype.INTEGER;
-import static com.openlattice.postgres.PostgresDatatype.INTEGER_ARRAY;
-import static com.openlattice.postgres.PostgresDatatype.JSONB;
-import static com.openlattice.postgres.PostgresDatatype.TEXT;
-import static com.openlattice.postgres.PostgresDatatype.TEXT_ARRAY;
-import static com.openlattice.postgres.PostgresDatatype.TIMESTAMPTZ;
-import static com.openlattice.postgres.PostgresDatatype.UUID;
-import static com.openlattice.postgres.PostgresDatatype.UUID_ARRAY;
-
 import com.openlattice.edm.type.Analyzer;
+
+import static com.openlattice.postgres.PostgresDatatype.*;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -230,13 +218,12 @@ public final class PostgresColumn {
     public static final String                   HASH_FIELD                        = "hash";
     public static final PostgresColumnDefinition HASH                              =
             new PostgresColumnDefinition( HASH_FIELD, BYTEA ).notNull();
+    public static final String                   ID_MAP_FIELD                      = "ids_map";
+    public static final PostgresColumnDefinition ID_MAP                            =
+            new PostgresColumnDefinition( ID_MAP_FIELD, JSONB );
     public static final String                   ID_FIELD                          = "id";
     public static final PostgresColumnDefinition ID                                =
             new PostgresColumnDefinition( ID_FIELD, UUID ).primaryKey().notNull();
-    public static final String                   ID_TYPE_FIELD                     = "id_type";
-    public static final PostgresColumnDefinition ID_TYPE                           =
-            new PostgresColumnDefinition( ID_TYPE_FIELD, INTEGER )
-                    .notNull();
     public static final PostgresColumnDefinition ID_VALUE                          =
             new PostgresColumnDefinition( ID_FIELD, UUID );
     public static final String                   INDEX_TYPE_FIELD                  = "index_type";

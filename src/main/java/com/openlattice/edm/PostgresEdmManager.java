@@ -20,7 +20,6 @@
 
 package com.openlattice.edm;
 
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
@@ -48,18 +47,15 @@ import static com.openlattice.postgres.PostgresTable.*;
  */
 public class PostgresEdmManager {
     private static final String getAllEntitySets = "SELECT * FROM " + PostgresTable.ENTITY_SETS.getName();
-    private static final Logger logger           = LoggerFactory.getLogger( PostgresEdmManager.class );
+    private static final Logger logger = LoggerFactory.getLogger( PostgresEdmManager.class );
 
-    private final PostgresTableManager ptm;
-    private final HikariDataSource     hds;
+    private final HikariDataSource hds;
 
     private final IMap<UUID, EntitySet> entitySets;
 
 
-    public PostgresEdmManager( HikariDataSource hds, PostgresTableManager ptm, HazelcastInstance hazelcastInstance ) {
-        this.ptm = ptm;//new PostgresTableManager( hds );
+    public PostgresEdmManager( HikariDataSource hds, HazelcastInstance hazelcastInstance ) {
         this.hds = hds;
-
         this.entitySets = hazelcastInstance.getMap( HazelcastMap.ENTITY_SETS.name() );
     }
 
@@ -88,35 +84,9 @@ public class PostgresEdmManager {
                 }
         );
     }
-    public Set<EntitySet> getAllLinkingEntitySetsForEntitySet( UUID entitySetId ) {
-        return ImmutableSet.copyOf( entitySets
-                .values( Predicates.equal( EntitySetMapstore.LINKED_ENTITY_SET_INDEX, entitySetId ) ) );
-    }
 
-    public Map<UUID, Set<UUID>> getLinkingIdsByEntitySetIds( Set<UUID> entitySetIds ) {
-        String query =
-                "SELECT " + ENTITY_SET_ID.getName() + ", array_agg(" + LINKING_ID.getName() + ") AS " + LINKING_ID
-                        .getName() +
-                        " FROM " + ENTITY_KEY_IDS.getName() +
-                        " WHERE " + LINKING_ID.getName() + " IS NOT NULL AND " + ENTITY_SET_ID.getName()
-                        + " = ANY( ? ) " +
-                        " GROUP BY " + ENTITY_SET_ID.getName();
-
-        try ( Connection connection = hds.getConnection();
-                PreparedStatement ps = connection.prepareStatement( query ) ) {
-            Map<UUID, Set<UUID>> result = Maps.newHashMap();
-            Array arr = PostgresArrays.createUuidArray( connection, entitySetIds );
-            ps.setArray( 1, arr );
-            ResultSet rs = ps.executeQuery();
-            while ( rs.next() ) {
-                result.put( ResultSetAdapters.entitySetId( rs ), ResultSetAdapters.linkingIds( rs ) );
-            }
-
-            return result;
-        } catch ( SQLException e ) {
-            logger.debug( "Unable to load linking ids by entity sets ids for entity sets {}", entitySetIds, e );
-            return Map.of();
-        }
+    public Set<UUID> getAllLinkingEntitySetIdsForEntitySet( UUID entitySetId ) {
+        return entitySets.keySet( Predicates.equal( EntitySetMapstore.LINKED_ENTITY_SET_INDEX, entitySetId ) );
     }
 
     public Iterable<PropertyUsageSummary> getPropertyUsageSummary( UUID propertyTypeId ) {
@@ -163,7 +133,7 @@ public class PostgresEdmManager {
                 "SELECT " + ENTITY_TYPE_ID.getName() + ", COUNT(*) FROM " + ENTITY_SETS.getName() + " WHERE " + ENTITY_TYPE_ID
                         .getName() + " = ANY( ? ) GROUP BY " + ENTITY_TYPE_ID.getName();
         try ( Connection connection = hds.getConnection();
-                PreparedStatement ps = connection.prepareStatement( query ) ) {
+              PreparedStatement ps = connection.prepareStatement( query ) ) {
             Map<UUID, Long> result = Maps.newHashMap();
             Array arr = PostgresArrays.createUuidArray( connection, entityTypeIds );
             ps.setArray( 1, arr );

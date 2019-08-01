@@ -22,8 +22,6 @@
 package com.openlattice.linking.graph
 
 import com.openlattice.data.EntityDataKey
-import com.openlattice.data.storage.MetadataOption
-import com.openlattice.edm.type.PropertyType
 import com.openlattice.linking.EntityKeyPair
 import com.openlattice.linking.LinkingQueryService
 import com.openlattice.postgres.DataTables.*
@@ -299,6 +297,24 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQu
             }
         }
     }
+
+    override fun getEntityKeyIdsOfLinkingIds(linkingIds: Set<UUID>): PostgresIterable<Pair<UUID, Set<UUID>>> {
+        return PostgresIterable(
+                Supplier {
+                    val connection = hds.connection
+                    val ps = connection.prepareStatement(ENTITY_KEY_IDS_OF_LINKING_IDS_SQL)
+                    val linkingIdsArray = PostgresArrays.createUuidArray(connection, linkingIds)
+
+                    ps.setObject(1, linkingIdsArray)
+                    val rs = ps.executeQuery()
+                    StatementHolder(connection, ps, rs)
+                },
+                Function<ResultSet, Pair<UUID, Set<UUID>>> {
+                    val linkingId = ResultSetAdapters.linkingId(it)
+                    val entityKeyIds = ResultSetAdapters.entityKeyIds(it)
+                    linkingId to entityKeyIds
+                })
+    }
 }
 
 internal fun buildIdsOfClusterContainingSql(dataKeys: Set<EntityDataKey>): String {
@@ -387,4 +403,9 @@ private val LINKABLE_ENTITY_SET_IDS = "SELECT ${ID.name} " +
         "WHERE ${ENTITY_TYPE_ID.name} = ANY(?) AND NOT ${ID.name} = ANY(?) AND ${ID.name} = ANY(?) "
 
 private val LOCK_CLUSTERS_SQL = "SELECT 1 FROM ${MATCHED_ENTITIES.name} WHERE ${LINKING_ID.name} = ? FOR UPDATE"
+
+private val ENTITY_KEY_IDS_OF_LINKING_IDS_SQL = "SELECT ${LINKING_ID.name}, array_agg(${ID.name}) AS ${ENTITY_KEY_IDS.name} " +
+        "FROM ${IDS.name} " +
+        "WHERE ${VERSION.name} > 0 AND ${LINKING_ID.name} IS NOT NULL AND  ${LINKING_ID.name} = ANY( ? ) " +
+        "GROUP BY ${LINKING_ID.name}"
 

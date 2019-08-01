@@ -145,9 +145,9 @@ open class DataGraphService(
         return graphService.getEdgeKeysOfEntitySet(entitySetId)
     }
 
-    override fun getEdgesConnectedToEntities(entitySetId: UUID, entityKeyIds: Set<UUID>)
+    override fun getEdgesConnectedToEntities(entitySetId: UUID, entityKeyIds: Set<UUID>, includeClearedEdges: Boolean)
             : PostgresIterable<DataEdgeKey> {
-        return graphService.getEdgeKeysContainingEntities(entitySetId, entityKeyIds)
+        return graphService.getEdgeKeysContainingEntities(entitySetId, entityKeyIds, includeClearedEdges)
     }
 
 
@@ -187,7 +187,7 @@ open class DataGraphService(
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): WriteEvent {
         // clear edges
-        val dataEdgeKeys = getEdgesConnectedToEntities(entitySetId, entityKeyIds)
+        val dataEdgeKeys = getEdgesConnectedToEntities(entitySetId, entityKeyIds, false)
         val verticesCount = graphService.clearEdges(dataEdgeKeys)
 
         //clear entities
@@ -282,7 +282,7 @@ open class DataGraphService(
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): WriteEvent {
         // delete edges
-        val dataEdgeKeys = getEdgesConnectedToEntities(entitySetId, entityKeyIds)
+        val dataEdgeKeys = getEdgesConnectedToEntities(entitySetId, entityKeyIds, true)
         val verticesCount = graphService.deleteEdges(dataEdgeKeys).numUpdates
 
         // delete entities
