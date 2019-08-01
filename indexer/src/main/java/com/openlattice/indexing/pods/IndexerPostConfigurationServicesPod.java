@@ -111,7 +111,7 @@ public class IndexerPostConfigurationServicesPod {
 
     @Bean
     public LinkingQueryService lqs() {
-        return new PostgresLinkingQueryService( hikariDataSource, partitionManager );
+        return new PostgresLinkingQueryService( hikariDataSource, partitionManager() );
     }
 
     @Bean
