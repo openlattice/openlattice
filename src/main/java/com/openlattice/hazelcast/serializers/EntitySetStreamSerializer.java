@@ -29,15 +29,13 @@ import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.set.EntitySetFlag;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
+import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.util.EnumSet;
 import java.util.LinkedHashSet;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-
-import org.springframework.stereotype.Component;
 
 @Component
 public class EntitySetStreamSerializer implements SelfRegisteringStreamSerializer<EntitySet> {
@@ -61,13 +59,16 @@ public class EntitySetStreamSerializer implements SelfRegisteringStreamSerialize
             out.writeUTF( flag.toString() );
         }
 
-        var partitions = new int[object.getPartitions().size()];
+        var partitions = new int[ object.getPartitions().size() ];
         var index = 0;
         for ( var partition : object.getPartitions() ) {
-            partitions[index++] = partition;
+            partitions[ index++ ] = partition;
         }
 
         out.writeIntArray( partitions );
+
+        out.writeInt( object.getPartitionsVersion() );
+
     }
 
     @Override
@@ -76,13 +77,13 @@ public class EntitySetStreamSerializer implements SelfRegisteringStreamSerialize
     }
 
     public static EntitySet deserialize( ObjectDataInput in ) throws IOException {
-        Optional<UUID> id = Optional.of( UUIDStreamSerializer.deserialize( in ) );
+        UUID id = UUIDStreamSerializer.deserialize( in );
         UUID entityTypeId = UUIDStreamSerializer.deserialize( in );
         String name = in.readUTF();
         String title = in.readUTF();
-        Optional<String> description = Optional.of( in.readUTF() );
+        String description = in.readUTF();
         Set<String> contacts = SetStreamSerializers.deserialize( in, ObjectDataInput::readUTF );
-        Optional<Set<UUID>> linkedEntitySets = Optional.of( SetStreamSerializers.fastUUIDSetDeserialize( in ) );
+        Set<UUID> linkedEntitySets = SetStreamSerializers.fastUUIDSetDeserialize( in );
         UUID organizationId = UUIDStreamSerializer.deserialize( in );
 
         int numFlags = in.readInt();
@@ -98,6 +99,8 @@ public class EntitySetStreamSerializer implements SelfRegisteringStreamSerialize
             partitions.add( p );
         }
 
+        int partitionsVersion = in.readInt();
+
         EntitySet es = new EntitySet(
                 id,
                 entityTypeId,
@@ -106,9 +109,10 @@ public class EntitySetStreamSerializer implements SelfRegisteringStreamSerialize
                 description,
                 contacts,
                 linkedEntitySets,
-                Optional.of( organizationId ),
-                Optional.of( flags ),
-                Optional.of( partitions ) );
+                organizationId,
+                flags,
+                partitions,
+                partitionsVersion );
 
         return es;
     }
