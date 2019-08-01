@@ -376,7 +376,8 @@ class CollectionsManager(
                 setOf(),
                 Optional.empty(),
                 Optional.of(entitySetCollection.organizationId),
-                Optional.of(flags))
+                Optional.of(flags),
+                Optional.empty())
         edmManager.createEntitySet(principal, entitySet)
         return entitySet.id
     }
