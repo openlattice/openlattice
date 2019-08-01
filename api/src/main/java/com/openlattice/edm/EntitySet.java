@@ -231,7 +231,7 @@ public class EntitySet extends AbstractSecurableObject {
     }
 
     @JsonIgnore
-    void setPartitions( Collection<Integer> partitions ) {
+    public void setPartitions( Collection<Integer> partitions ) {
         this.partitions.clear();
         addPartitions( partitions );
     }
@@ -249,7 +249,7 @@ public class EntitySet extends AbstractSecurableObject {
         this.flags.remove( flag );
     }
 
-    public void addPartitions( Collection<Integer> partitions ) {
+    void addPartitions( Collection<Integer> partitions ) {
         this.partitions.addAll( partitions );
         partitionsVersion++;
     }
