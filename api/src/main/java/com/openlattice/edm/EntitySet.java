@@ -90,7 +90,7 @@ public class EntitySet extends AbstractSecurableObject {
         this.entityTypeId = checkNotNull( entityTypeId );
         this.contacts = Sets.newHashSet( contacts );
         this.organizationId = organizationId.orElse( IdConstants.GLOBAL_ORGANIZATION_ID.getId() );
-        partitions.ifPresent( this::setPartitions );
+        partitions.ifPresent( this.partitions::addAll );
     }
 
     //Constructor for serialization
@@ -249,7 +249,7 @@ public class EntitySet extends AbstractSecurableObject {
         this.flags.remove( flag );
     }
 
-    public void addPartitions( Collection<Integer> partitions ) {
+    void addPartitions( Collection<Integer> partitions ) {
         this.partitions.addAll( partitions );
         partitionsVersion++;
     }
