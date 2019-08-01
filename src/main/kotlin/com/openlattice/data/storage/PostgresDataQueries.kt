@@ -231,8 +231,8 @@ internal fun selectEntitiesGroupedByIdAndPropertyTypeId(
         entitySetsPresent: Boolean = true,
         selectOriginIds: Boolean = false
 ): String {
-    val entityKeyIds = if (selectOriginIds) "array_agg(COALESCE(${ORIGIN_ID.name},${ID.name})) as ${ENTITY_KEY_IDS_COL.name}" else ""
-    return "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name},${PROPERTY_TYPE_ID.name},$entityKeyIds,$valuesColumnsSql " +
+    val entityKeyIds = if (selectOriginIds) ",array_agg(COALESCE(${ORIGIN_ID.name},${ID.name})) as ${ENTITY_KEY_IDS_COL.name}" else ""
+    return "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name},${PROPERTY_TYPE_ID.name}$entityKeyIds,$valuesColumnsSql " +
             "FROM ${DATA.name} ${optionalWhereClauses(idsPresent, partitionsPresent, entitySetsPresent)}"
 }
 
