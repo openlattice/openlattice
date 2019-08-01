@@ -7,7 +7,6 @@ import com.openlattice.data.DataEdgeKey
 import com.openlattice.data.DeleteType
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.UpdateType
-import com.openlattice.data.storage.MetadataOption
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.mapstores.TestDataFactory
@@ -15,7 +14,9 @@ import com.openlattice.organization.Organization
 import com.openlattice.organization.OrganizationEntitySetFlag
 import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresArrays
-import com.openlattice.postgres.PostgresColumn
+import com.openlattice.postgres.PostgresColumn.ENTITY_KEY_IDS_COL
+import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.ID
 import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
@@ -242,9 +243,8 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                 // all columns are there
                 (1..rs.metaData.columnCount).forEach {
                     val columnName = rs.metaData.getColumnName(it)
-                    if (columnName != PostgresColumn.ID.name && columnName != PostgresColumn.ENTITY_SET_ID.name
-                            && columnName != ResultSetAdapters
-                                    .mapMetadataOptionToPostgresColumn(MetadataOption.ENTITY_KEY_IDS)) {
+                    if (columnName != ID.name && columnName != ENTITY_SET_ID.name
+                            && columnName != ENTITY_KEY_IDS_COL.name) {
                         Assert.assertTrue(propertyFqns.values.contains(columnName))
                     }
                 }
@@ -283,7 +283,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                 do {
                     val id = ResultSetAdapters.id(rs)
                     Assert.assertTrue(ids.contains(id))
-                    propertyFqns.forEach { propertyId, fqn ->
+                    propertyFqns.forEach { (propertyId, fqn) ->
                         Assert.assertEquals(
                                 testDataWithIds.getValue(id).getValue(propertyId).first(),
                                 getStringResult(rs, fqn)
@@ -440,7 +440,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                     index++
                 } while (rs.next())
 
-                Assert.assertEquals(numberOfEntities * 3, index)
+                Assert.assertEquals(numberOfEntities, index)
             }
         }
 
@@ -467,7 +467,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                     index++
                 } while (rs.next())
 
-                Assert.assertEquals(numberOfEntities * 3, index)
+                Assert.assertEquals(numberOfEntities, index)
             }
         }
 
@@ -559,12 +559,9 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
                 val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es))
-                Assert.assertEquals(PostgresColumn.ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
-                Assert.assertEquals(PostgresColumn.ID.name, rs.metaData.getColumnName(2))
-                Assert.assertEquals(
-                        ResultSetAdapters.mapMetadataOptionToPostgresColumn(MetadataOption.ENTITY_KEY_IDS),
-                        rs.metaData.getColumnName(3)
-                )
+                Assert.assertEquals(ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
+                Assert.assertEquals(ID.name, rs.metaData.getColumnName(2))
+                Assert.assertEquals(ENTITY_KEY_IDS_COL.name, rs.metaData.getColumnName(3))
                 Assert.assertEquals(propertyType.type.fullQualifiedNameAsString, rs.metaData.getColumnName(4))
             }
         }
@@ -586,12 +583,9 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
                 val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es))
-                Assert.assertEquals(PostgresColumn.ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
-                Assert.assertEquals(PostgresColumn.ID.name, rs.metaData.getColumnName(2))
-                Assert.assertEquals(
-                        ResultSetAdapters.mapMetadataOptionToPostgresColumn(MetadataOption.ENTITY_KEY_IDS),
-                        rs.metaData.getColumnName(3)
-                )
+                Assert.assertEquals(ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
+                Assert.assertEquals(ID.name, rs.metaData.getColumnName(2))
+                Assert.assertEquals(ENTITY_KEY_IDS_COL.name, rs.metaData.getColumnName(3))
                 val columnNames = TestAssemblerConnectionManager.getColumnNames(rs)
                 et.properties.forEach {
                     Assert.assertTrue(columnNames.contains(edmApi.getPropertyType(it).type.fullQualifiedNameAsString))
@@ -623,8 +617,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                     Assert.fail("Should have thrown Exception but did not!")
                 } catch (e: PSQLException) {
                     Assert.assertTrue(
-                            e.message!!
-                                    .contains("permission denied for materialized view ${es.name}", true)
+                            e.message!!.contains("permission denied for relation ${es.name}", true)
                     )
                 }
             }
@@ -648,8 +641,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                     Assert.fail("Should have thrown Exception but did not!")
                 } catch (e: PSQLException) {
                     Assert.assertTrue(
-                            e.message!!
-                                    .contains("permission denied for materialized view ${es.name}", true)
+                            e.message!!.contains("permission denied for relation ${es.name}", true)
                     )
                 }
             }
@@ -664,21 +656,12 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                         TestAssemblerConnectionManager
                                 .selectFromEntitySetSql(
                                         es,
-                                        setOf(
-                                                PostgresColumn.ENTITY_SET_ID.name,
-                                                PostgresColumn.ID.name,
-                                                ResultSetAdapters.mapMetadataOptionToPostgresColumn(
-                                                        MetadataOption.ENTITY_KEY_IDS
-                                                )
-                                        )
+                                        setOf(ENTITY_SET_ID.name, ID.name, ENTITY_KEY_IDS_COL.name)
                                 )
                 )
-                Assert.assertEquals(PostgresColumn.ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
-                Assert.assertEquals(PostgresColumn.ID.name, rs.metaData.getColumnName(2))
-                Assert.assertEquals(
-                        ResultSetAdapters.mapMetadataOptionToPostgresColumn(MetadataOption.ENTITY_KEY_IDS),
-                        rs.metaData.getColumnName(3)
-                )
+                Assert.assertEquals(ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
+                Assert.assertEquals(ID.name, rs.metaData.getColumnName(2))
+                Assert.assertEquals(ENTITY_KEY_IDS_COL.name, rs.metaData.getColumnName(3))
             }
         }
 
@@ -697,8 +680,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                     Assert.fail("Should have thrown Exception but did not!")
                 } catch (e: PSQLException) {
                     Assert.assertTrue(
-                            e.message!!
-                                    .contains("permission denied for materialized view ${es.name}", true)
+                            e.message!!.contains("permission denied for relation ${es.name}", true)
                     )
                 }
             }
@@ -711,21 +693,16 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                         TestAssemblerConnectionManager
                                 .selectFromEntitySetSql(
                                         es, setOf(
-                                        PostgresColumn.ENTITY_SET_ID.name,
-                                        PostgresColumn.ID.name,
-                                        ResultSetAdapters.mapMetadataOptionToPostgresColumn(
-                                                MetadataOption.ENTITY_KEY_IDS
-                                        ),
+                                        ENTITY_SET_ID.name,
+                                        ID.name,
+                                        ENTITY_KEY_IDS_COL.name,
                                         propertyType.type.fullQualifiedNameAsString
                                 )
                                 )
                 )
-                Assert.assertEquals(PostgresColumn.ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
-                Assert.assertEquals(PostgresColumn.ID.name, rs.metaData.getColumnName(2))
-                Assert.assertEquals(
-                        ResultSetAdapters.mapMetadataOptionToPostgresColumn(MetadataOption.ENTITY_KEY_IDS),
-                        rs.metaData.getColumnName(3)
-                )
+                Assert.assertEquals(ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
+                Assert.assertEquals(ID.name, rs.metaData.getColumnName(2))
+                Assert.assertEquals(ENTITY_KEY_IDS_COL.name, rs.metaData.getColumnName(3))
                 Assert.assertEquals(propertyType.type.fullQualifiedNameAsString, rs.metaData.getColumnName(4))
             }
         }
@@ -742,12 +719,9 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         user1OrganizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
                 val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es))
-                Assert.assertEquals(PostgresColumn.ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
-                Assert.assertEquals(PostgresColumn.ID.name, rs.metaData.getColumnName(2))
-                Assert.assertEquals(
-                        ResultSetAdapters.mapMetadataOptionToPostgresColumn(MetadataOption.ENTITY_KEY_IDS),
-                        rs.metaData.getColumnName(3)
-                )
+                Assert.assertEquals(ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
+                Assert.assertEquals(ID.name, rs.metaData.getColumnName(2))
+                Assert.assertEquals(ENTITY_KEY_IDS_COL.name, rs.metaData.getColumnName(3))
                 val columns = TestAssemblerConnectionManager.getColumnNames(rs)
                 et.properties.forEach {
                     Assert.assertTrue(columns.contains(edmApi.getPropertyType(it).type.fullQualifiedNameAsString))
@@ -815,9 +789,8 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                 // all columns are there
                 (1..rs.metaData.columnCount).forEach {
                     val columnName = rs.metaData.getColumnName(it)
-                    if (columnName != PostgresColumn.ID.name && columnName != PostgresColumn.ENTITY_SET_ID.name
-                            && columnName != ResultSetAdapters
-                                    .mapMetadataOptionToPostgresColumn(MetadataOption.ENTITY_KEY_IDS)) {
+                    if (columnName != ID.name && columnName != ENTITY_SET_ID.name
+                            && columnName != ENTITY_KEY_IDS_COL.name) {
                         Assert.assertTrue(propertyFqns.values.contains(columnName))
                     }
                 }
@@ -873,9 +846,8 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                 // all columns are there
                 (1..rs.metaData.columnCount).forEach {
                     val columnName = rs.metaData.getColumnName(it)
-                    if (columnName != PostgresColumn.ID.name && columnName != PostgresColumn.ENTITY_SET_ID.name
-                            && columnName != ResultSetAdapters
-                                    .mapMetadataOptionToPostgresColumn(MetadataOption.ENTITY_KEY_IDS)) {
+                    if (columnName != ID.name && columnName != ENTITY_SET_ID.name
+                            && columnName != ENTITY_KEY_IDS_COL.name) {
                         Assert.assertTrue(propertyFqns.values.contains(columnName))
                     }
                 }
@@ -901,9 +873,8 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                 // all columns are there
                 (1..rs.metaData.columnCount).forEach {
                     val columnName = rs.metaData.getColumnName(it)
-                    if (columnName != PostgresColumn.ID.name && columnName != PostgresColumn.ENTITY_SET_ID.name
-                            && columnName != ResultSetAdapters
-                                    .mapMetadataOptionToPostgresColumn(MetadataOption.ENTITY_KEY_IDS)) {
+                    if (columnName != ID.name && columnName != ENTITY_SET_ID.name
+                            && columnName != ENTITY_KEY_IDS_COL.name) {
                         Assert.assertTrue(propertyFqns.values.contains(columnName))
                     }
                 }
@@ -965,9 +936,8 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                 // all columns are there
                 (1..rs.metaData.columnCount).forEach {
                     val columnName = rs.metaData.getColumnName(it)
-                    if (columnName != PostgresColumn.ID.name && columnName != PostgresColumn.ENTITY_SET_ID.name
-                            && columnName != ResultSetAdapters
-                                    .mapMetadataOptionToPostgresColumn(MetadataOption.ENTITY_KEY_IDS)) {
+                    if (columnName != ID.name && columnName != ENTITY_SET_ID.name
+                            && columnName != ENTITY_KEY_IDS_COL.name) {
                         Assert.assertTrue(srcPropertyFqns.values.contains(columnName))
                     }
                 }
@@ -1046,7 +1016,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                             .contains("permission denied for schema prod", true))
                 }
                 try {
-                    stmt.executeQuery("SELECT * FROM ${AssemblerConnectionManager.PRODUCTION_FOREIGN_SCHEMA}.${PostgresTable.EDGES.name}")
+                    stmt.executeQuery("SELECT * FROM ${AssemblerConnectionManager.PRODUCTION_FOREIGN_SCHEMA}.${PostgresTable.E.name}")
                     Assert.fail("Should have thrown Exception but did not!")
                 } catch (e: PSQLException) {
                     Assert.assertTrue(e.message!!
