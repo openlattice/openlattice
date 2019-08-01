@@ -632,7 +632,7 @@ private fun selectPropertyColumn(propertyType: PropertyType): String {
 
 private fun selectPropertyArray(propertyType: PropertyType): String {
     val propertyColumnName = propertyColumnName(propertyType)
-    return "array_agg($propertyColumnName)  as $propertyColumnName"
+    return "array_agg($propertyColumnName) FILTER (WHERE $propertyColumnName IS NOT NULL) as $propertyColumnName"
 }
 
 private fun propertyColumnName(propertyType: PropertyType): String {
