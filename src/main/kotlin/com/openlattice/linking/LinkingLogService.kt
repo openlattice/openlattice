@@ -3,11 +3,13 @@ package com.openlattice.linking
 import java.util.*
 
 interface LinkingLogService {
-    fun createOrUpdateForLinks( linkingId: UUID, linkedEntities: Map<UUID, Set<UUID>> )
+    fun updateCluster(linkingId: UUID, linkedEntities: Map<UUID, Set<UUID>>)
 
-    fun clearLink(linkingId: UUID, linkedEntities: Map<UUID, Set<UUID>>)
+    fun clearEntitiesFromCluster(linkingId: UUID, linkedEntities: Map<UUID, Set<UUID>>)
 
-    fun deleteLink(linkingId: UUID, entitySetId: UUID)
+    fun createCluster(linkingId: UUID, linkedEntities: Map<UUID, Set<UUID>>)
 
-    fun deleteEntitiesFromLink(linkingId: UUID, entitySetIdToEntityKeyIds: Map<UUID, Set<UUID>> )
+    fun readLatestLinkLog(linkingId: UUID): Map<UUID, Set<UUID>>
+
+    fun readVersion(linkingId: UUID, version: Long): Map<UUID, Set<UUID>>
 }

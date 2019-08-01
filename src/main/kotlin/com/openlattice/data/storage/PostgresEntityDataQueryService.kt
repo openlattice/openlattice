@@ -1,7 +1,6 @@
 package com.openlattice.data.storage
 
 import com.google.common.collect.Multimaps
-import com.hazelcast.core.HazelcastInstance
 import com.openlattice.analysis.SqlBindInfo
 import com.openlattice.analysis.requests.Filter
 import com.openlattice.data.WriteEvent
@@ -9,7 +8,6 @@ import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.data.storage.partitions.PartitionsInfo
 import com.openlattice.data.util.PostgresDataHasher
 import com.openlattice.edm.type.PropertyType
-import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.postgres.*
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.IDS
@@ -188,7 +186,7 @@ class PostgresEntityDataQueryService(
         }
 
         val (sql, binders) = if (linking) {
-            buildPreparableFiltersClauseForLinkedEntities(
+            buildPreparableFiltersSqlForLinkedEntities(
                     startIndex, propertyTypes, propertyTypeFilters, ids.isNotEmpty(), partitions.isNotEmpty()
             )
         } else {
@@ -797,7 +795,7 @@ class PostgresEntityDataQueryService(
         val propertyTypeIdsArr = PostgresArrays.createUuidArray(conn, propertyTypesToTombstone.map { it.id })
         val entityKeyIdsArr = PostgresArrays.createUuidArray(conn, entityKeyIds)
         val partitionsArr = PostgresArrays.createIntArray(conn, entityKeyIds.map { getPartition(it, partitions) })
-        val partitionsVersion = partitionManager.getEntitySetPartitionsInfo(entitySetId).partitionsVersion
+        val partitionsVersion = partitionsInfo.partitionsVersion
         val numUpdated = conn.prepareStatement(updateVersionsForPropertyTypesInEntitiesInEntitySet).use { ps ->
             ps.setLong(1, tombstoneVersion)
             ps.setLong(2, tombstoneVersion)

@@ -225,8 +225,11 @@ public final class PostgresColumn {
     public static final String                   HASH_FIELD                      = "hash";
     public static final PostgresColumnDefinition HASH                            =
             new PostgresColumnDefinition( HASH_FIELD, BYTEA ).notNull();
-    public static final String                   ID_FIELD                        = "id";
-    public static final PostgresColumnDefinition ID                              =
+    public static final String                   ID_MAP_FIELD                      = "ids_map";
+    public static final PostgresColumnDefinition ID_MAP                            =
+            new PostgresColumnDefinition( ID_MAP_FIELD, JSONB );
+    public static final String                   ID_FIELD                          = "id";
+    public static final PostgresColumnDefinition ID                                =
             new PostgresColumnDefinition( ID_FIELD, UUID ).primaryKey().notNull();
     public static final PostgresColumnDefinition ID_VALUE                        =
             new PostgresColumnDefinition( ID_FIELD, UUID );
