@@ -1,7 +1,6 @@
 package com.openlattice.data.storage
 
 import com.google.common.collect.Multimaps
-import com.hazelcast.core.HazelcastInstance
 import com.openlattice.analysis.SqlBindInfo
 import com.openlattice.analysis.requests.Filter
 import com.openlattice.data.WriteEvent
@@ -9,7 +8,6 @@ import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.data.storage.partitions.PartitionsInfo
 import com.openlattice.data.util.PostgresDataHasher
 import com.openlattice.edm.type.PropertyType
-import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.postgres.*
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.IDS
