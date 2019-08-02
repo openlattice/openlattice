@@ -22,6 +22,7 @@
 package com.openlattice.linking.graph
 
 import com.openlattice.data.EntityDataKey
+import com.openlattice.data.storage.getPartitionsInfo
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.linking.EntityKeyPair
 import com.openlattice.linking.LinkingQueryService
@@ -313,7 +314,9 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource, private val
                     val ps = connection.prepareStatement(ENTITY_KEY_IDS_OF_LINKING_IDS_SQL)
                     val linkingIdsArray = PostgresArrays.createUuidArray(connection, linkingIds)
 
-                    ps.setObject(1, linkingIdsArray)
+                    val partitions = PostgresArrays.createIntArray( connection, getPartitionsInfo( linkingIds, partitionManager.getAllPartitions() ))
+                    ps.setArray(1, partitions)
+                    ps.setObject(2, linkingIdsArray)
                     val rs = ps.executeQuery()
                     StatementHolder(connection, ps, rs)
                 },
