@@ -17,9 +17,9 @@ import com.openlattice.collections.CollectionsApi.Companion.TYPE_ID_PATH
 import com.openlattice.collections.CollectionsManager
 import com.openlattice.controllers.exceptions.ForbiddenException
 import com.openlattice.edm.PostgresEdmManager
-import com.openlattice.edm.collection.CollectionTemplateType
-import com.openlattice.edm.collection.EntitySetCollection
-import com.openlattice.edm.collection.EntityTypeCollection
+import com.openlattice.collections.CollectionTemplateType
+import com.openlattice.collections.EntitySetCollection
+import com.openlattice.collections.EntityTypeCollection
 import com.openlattice.edm.requests.MetadataUpdate
 import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.*
