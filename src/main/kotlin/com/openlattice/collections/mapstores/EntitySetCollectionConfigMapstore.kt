@@ -3,7 +3,7 @@ package com.openlattice.collections.mapstores
 import com.hazelcast.config.InMemoryFormat
 import com.hazelcast.config.MapConfig
 import com.hazelcast.config.MapIndexConfig
-import com.openlattice.edm.collection.CollectionTemplateKey
+import com.openlattice.collections.CollectionTemplateKey
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.ResultSetAdapters

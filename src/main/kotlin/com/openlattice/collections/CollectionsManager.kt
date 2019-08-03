@@ -24,6 +24,7 @@ import com.openlattice.controllers.exceptions.ForbiddenException
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.collection.*
+import com.openlattice.collections.CollectionTemplateType
 import com.openlattice.edm.events.EntitySetCollectionCreatedEvent
 import com.openlattice.edm.events.EntitySetCollectionDeletedEvent
 import com.openlattice.edm.events.EntityTypeCollectionCreatedEvent

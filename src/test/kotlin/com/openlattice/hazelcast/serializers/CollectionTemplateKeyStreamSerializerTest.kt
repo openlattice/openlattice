@@ -1,7 +1,7 @@
 package com.openlattice.hazelcast.serializers
 
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest
-import com.openlattice.edm.collection.CollectionTemplateKey
+import com.openlattice.collections.CollectionTemplateKey
 import java.util.*
 
 class CollectionTemplateKeyStreamSerializerTest : AbstractStreamSerializerTest<CollectionTemplateKeyStreamSerializer, CollectionTemplateKey>() {

@@ -1,7 +1,7 @@
 package com.openlattice.collections.processors
 
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
-import com.openlattice.edm.collection.EntitySetCollection
+import com.openlattice.collections.EntitySetCollection
 import com.openlattice.edm.requests.MetadataUpdate
 import java.util.*
 

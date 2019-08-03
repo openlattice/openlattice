@@ -1,8 +1,8 @@
 package com.openlattice.collections.aggregators
 
 import com.hazelcast.aggregation.Aggregator
-import com.openlattice.edm.collection.CollectionTemplates
-import com.openlattice.edm.collection.CollectionTemplateKey
+import com.openlattice.collections.CollectionTemplates
+import com.openlattice.collections.CollectionTemplateKey
 import java.util.*
 
 data class EntitySetCollectionConfigAggregator(

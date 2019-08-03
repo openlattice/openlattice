@@ -2,7 +2,7 @@ package com.openlattice.collections.mapstores
 
 import com.dataloom.mappers.ObjectMappers
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.openlattice.edm.collection.EntityTypeCollection
+import com.openlattice.collections.EntityTypeCollection
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.postgres.PostgresArrays

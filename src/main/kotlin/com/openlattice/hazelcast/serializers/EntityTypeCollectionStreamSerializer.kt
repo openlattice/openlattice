@@ -4,8 +4,8 @@ import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
-import com.openlattice.edm.collection.CollectionTemplateType
-import com.openlattice.edm.collection.EntityTypeCollection
+import com.openlattice.collections.CollectionTemplateType
+import com.openlattice.collections.EntityTypeCollection
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import org.springframework.stereotype.Component
 import java.util.*
