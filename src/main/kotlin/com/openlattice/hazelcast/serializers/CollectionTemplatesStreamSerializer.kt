@@ -30,7 +30,7 @@ class CollectionTemplatesStreamSerializer : SelfRegisteringStreamSerializer<Coll
         fun deserialize(`in`: ObjectDataInput): CollectionTemplates {
             val size = `in`.readInt()
 
-            val templates = mutableMapOf<UUID, Map<UUID, UUID>>()
+            val templates = mutableMapOf<UUID, MutableMap<UUID, UUID>>()
 
             for (i in 0 until size) {
 

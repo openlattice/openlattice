@@ -4,7 +4,7 @@ import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcesso
 import com.openlattice.collections.EntitySetCollection
 import java.util.*
 
-class UpdateEntitySetCollectionTemplateProcessor(val template: Map<UUID, UUID>) : AbstractRhizomeEntryProcessor<UUID, EntitySetCollection, EntitySetCollection?>() {
+class UpdateEntitySetCollectionTemplateProcessor(val template: MutableMap<UUID, UUID>) : AbstractRhizomeEntryProcessor<UUID, EntitySetCollection, EntitySetCollection?>() {
 
     override fun process(entry: MutableMap.MutableEntry<UUID, EntitySetCollection>?): EntitySetCollection? {
         val collection = entry?.value ?: return null

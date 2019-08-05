@@ -23,7 +23,7 @@ import com.openlattice.collections.processors.UpdateEntityTypeCollectionMetadata
 import com.openlattice.controllers.exceptions.ForbiddenException
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.EntitySet
-import com.openlattice.edm.collection.*
+import com.openlattice.edm.*
 import com.openlattice.collections.CollectionTemplateType
 import com.openlattice.edm.events.EntitySetCollectionCreatedEvent
 import com.openlattice.edm.events.EntitySetCollectionDeletedEvent
@@ -67,7 +67,7 @@ class CollectionsManager(
         val entitySetCollection = entitySetCollections[id]
                 ?: throw IllegalStateException("EntitySetCollection $id does not exist")
 
-        entitySetCollection.template = getTemplatesForIds(setOf(id))[id]
+        entitySetCollection.template = getTemplatesForIds(setOf(id))[id] ?: mutableMapOf()
 
         return entitySetCollection
     }
@@ -75,7 +75,7 @@ class CollectionsManager(
     fun getEntitySetCollections(ids: Set<UUID>): Map<UUID, EntitySetCollection> {
         val templates = getTemplatesForIds(ids)
         val collections = entitySetCollections.getAll(ids)
-        collections.mapValues { it.value.template = templates[it.key].orEmpty() }
+        collections.mapValues { it.value.template = templates[it.key] ?: mutableMapOf() }
 
         return collections
     }
@@ -83,7 +83,7 @@ class CollectionsManager(
     fun getEntitySetCollectionsOfType(ids: Set<UUID>, entityTypeCollectionId: UUID): Iterable<EntitySetCollection> {
         val templates = getTemplatesForIds(ids)
         val collections = entitySetCollections.values(Predicates.and(idsPredicate(ids), entityTypeCollectionIdPredicate(entityTypeCollectionId)))
-        collections.map { it.template = templates[it.id].orEmpty() }
+        collections.map { it.template = templates[it.id] ?: mutableMapOf() }
 
         return collections
     }
@@ -129,7 +129,7 @@ class CollectionsManager(
 
         validateEntitySetCollectionTemplate(entitySetCollection.name, entitySetCollection.template, template)
 
-        aclKeyReservations.reserveIdAndValidateType(entitySetCollection, entitySetCollection::getName)
+        aclKeyReservations.reserveIdAndValidateType(entitySetCollection, entitySetCollection::name)
         checkState(entitySetCollections.putIfAbsent(entitySetCollection.id, entitySetCollection) == null,
                 "EntitySetCollection ${entitySetCollection.name} already exists.")
 
@@ -393,7 +393,7 @@ class CollectionsManager(
         return nameAttempt
     }
 
-    private fun getTemplatesForIds(ids: Set<UUID>): Map<UUID, Map<UUID, UUID>> {
+    private fun getTemplatesForIds(ids: Set<UUID>): MutableMap<UUID, MutableMap<UUID, UUID>> {
         return entitySetCollectionConfig.aggregate(
                 EntitySetCollectionConfigAggregator(CollectionTemplates()),
                 entitySetCollectionIdsPredicate(ids) as Predicate<CollectionTemplateKey, UUID>).templates
