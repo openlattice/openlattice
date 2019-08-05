@@ -20,8 +20,6 @@
 
 package com.openlattice.datastore.edm.controllers;
 
-import static com.kryptnostic.rhizome.configuration.ConfigurationConstants.Environments.TEST_PROFILE;
-
 import com.auth0.spring.security.api.authentication.PreAuthenticatedAuthenticationJsonWebToken;
 import com.codahale.metrics.annotation.Timed;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -30,17 +28,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.openlattice.auditing.AuditEventType;
-import com.openlattice.auditing.AuditRecordEntitySetsManager;
-import com.openlattice.auditing.AuditableEvent;
-import com.openlattice.auditing.AuditingComponent;
-import com.openlattice.authorization.AclKey;
-import com.openlattice.authorization.AuthorizationManager;
-import com.openlattice.authorization.AuthorizingComponent;
-import com.openlattice.authorization.EdmAuthorizationHelper;
-import com.openlattice.authorization.Permission;
-import com.openlattice.authorization.Principals;
-import com.openlattice.authorization.SecurableObjectResolveTypeService;
+import com.openlattice.auditing.*;
+import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.controllers.exceptions.BadRequestException;
 import com.openlattice.controllers.exceptions.ForbiddenException;
@@ -49,13 +38,7 @@ import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.data.requests.FileType;
 import com.openlattice.data.storage.EntityDatastore;
 import com.openlattice.datastore.services.EdmManager;
-import com.openlattice.edm.EdmApi;
-import com.openlattice.edm.EdmDetails;
-import com.openlattice.edm.EntityDataModel;
-import com.openlattice.edm.EntityDataModelDiff;
-import com.openlattice.edm.EntitySet;
-import com.openlattice.edm.PostgresEdmManager;
-import com.openlattice.edm.Schema;
+import com.openlattice.edm.*;
 import com.openlattice.edm.requests.EdmDetailsSelector;
 import com.openlattice.edm.requests.EdmRequest;
 import com.openlattice.edm.requests.MetadataUpdate;
@@ -66,17 +49,6 @@ import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.web.mediatypes.CustomMediaType;
-import java.time.OffsetDateTime;
-import java.util.EnumSet;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
-import javax.inject.Inject;
-import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
@@ -87,14 +59,15 @@ import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import javax.inject.Inject;
+import javax.servlet.http.HttpServletResponse;
+import java.time.OffsetDateTime;
+import java.util.*;
+import java.util.stream.Collectors;
+
+import static com.kryptnostic.rhizome.configuration.ConfigurationConstants.Environments.TEST_PROFILE;
 
 @RestController
 @RequestMapping( EdmApi.CONTROLLER )
@@ -138,6 +111,9 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
 
     @Inject
     private AuditRecordEntitySetsManager auditRecordEntitySetsManager;
+
+    @Inject
+    private AuditingManager auditingManager;
 
     @RequestMapping(
             path = CLEAR_PATH,
@@ -1053,16 +1029,8 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return spm.getPrincipal( Principals.getCurrentUser().getId() ).getId();
     }
 
-    @NotNull
-    @Override
-    public AuditRecordEntitySetsManager getAuditRecordEntitySetsManager() {
-        return auditRecordEntitySetsManager;
-    }
-
-    @NotNull
-    @Override
-    public DataGraphManager getDataGraphService() {
-        return dgm;
+    @NotNull @Override public AuditingManager getAuditingManager() {
+        return auditingManager;
     }
 
     private static void setDownloadContentType( HttpServletResponse response, FileType fileType ) {

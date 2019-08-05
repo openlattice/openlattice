@@ -25,9 +25,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicates;
 import com.google.common.collect.*;
 import com.openlattice.auditing.AuditEventType;
-import com.openlattice.auditing.AuditRecordEntitySetsManager;
 import com.openlattice.auditing.AuditableEvent;
 import com.openlattice.auditing.AuditingComponent;
+import com.openlattice.auditing.AuditingManager;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.authorization.util.AuthorizationUtils;
@@ -85,7 +85,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
     private ObjectMapper mapper;
 
     @Inject
-    private AuditRecordEntitySetsManager auditRecordEntitySetsManager;
+    private AuditingManager auditingManager;
 
     @Inject
     private DataGraphManager dgm;
@@ -153,7 +153,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
         DataSearchResult results = new DataSearchResult( 0, Lists.newArrayList() );
 
         // if user has read access on all normal entity sets
-        if ( authorizedEntitySetIds.size() == searchConstraints.getEntitySetIds().length) {
+        if ( authorizedEntitySetIds.size() == searchConstraints.getEntitySetIds().length ) {
             final var authorizedPropertyTypesByEntitySet = authorizationsHelper.getAuthorizedPropertiesOnEntitySets(
                     authorizedEntitySetIds, READ_PERMISSION, Principals.getCurrentPrincipals() );
 
@@ -176,6 +176,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
         }
 
         recordEvents( searchEvents );
+
         return results;
     }
 
@@ -206,7 +207,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
 
         return searchEntitySetData(
                 SearchConstraints.simpleSearchConstraints(
-                        new UUID[]{ entitySetId },
+                        new UUID[] { entitySetId },
                         searchTerm.getStart(),
                         searchTerm.getMaxHits(),
                         searchTerm.getSearchTerm(),
@@ -226,7 +227,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
 
         return searchEntitySetData(
                 SearchConstraints.advancedSearchConstraints(
-                        new UUID[]{ entitySetId },
+                        new UUID[] { entitySetId },
                         search.getStart(),
                         search.getMaxHits(),
                         search.getSearches() )
@@ -550,8 +551,9 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
                                         EnumSet.of( Permission.READ ) ) )
                         .collect( Collectors.toSet() );
                 if ( authorizedEntitySets.size() != es.getLinkedEntitySets().size() ) {
-                    logger.warn( "Read authorization failed some of the normal entity sets of linking entity set or it " +
-                            "is empty." );
+                    logger.warn(
+                            "Read authorization failed some of the normal entity sets of linking entity set or it " +
+                                    "is empty." );
                 } else {
                     result = searchService
                             .executeLinkingEntityNeighborIdsSearch( authorizedEntitySets, filter, principals );
@@ -618,10 +620,10 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
     @Timed
     public Void triggerEdmIndex() {
         ensureAdminAccess();
+        searchService.triggerEntitySetIndex();
         searchService.triggerPropertyTypeIndex( Lists.newArrayList( edm.getPropertyTypes() ) );
         searchService.triggerEntityTypeIndex( Lists.newArrayList( edm.getEntityTypes() ) );
         searchService.triggerAssociationTypeIndex( Lists.newArrayList( edm.getAssociationTypes() ) );
-        searchService.triggerEntitySetIndex();
         searchService.triggerAppIndex( Lists.newArrayList( appService.getApps() ) );
         searchService.triggerAppTypeIndex( Lists.newArrayList( appService.getAppTypes() ) );
         return null;
@@ -682,23 +684,15 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
         return spm.getPrincipal( Principals.getCurrentUser().getId() ).getId();
     }
 
+    @NotNull @Override public AuditingManager getAuditingManager() {
+        return auditingManager;
+    }
+
     private static Set<UUID> getEntityKeyIdsFromSearchResult( DataSearchResult searchResult ) {
         return searchResult.getHits().stream().map( SearchController::getEntityKeyId ).collect( Collectors.toSet() );
     }
 
     private static UUID getEntityKeyId( Map<FullQualifiedName, Set<Object>> entity ) {
         return UUID.fromString( entity.get( ID_FQN ).iterator().next().toString() );
-    }
-
-    @NotNull
-    @Override
-    public AuditRecordEntitySetsManager getAuditRecordEntitySetsManager() {
-        return auditRecordEntitySetsManager;
-    }
-
-    @NotNull
-    @Override
-    public DataGraphManager getDataGraphService() {
-        return dgm;
     }
 }
