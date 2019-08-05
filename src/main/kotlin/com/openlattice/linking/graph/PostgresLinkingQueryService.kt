@@ -77,9 +77,9 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource, private val
             val entityTypeArr = PostgresArrays.createUuidArray(connection, linkableEntityTypeIds)
             val blackListArr = PostgresArrays.createUuidArray(connection, entitySetBlacklist)
             val whitelistArr = PostgresArrays.createUuidArray(connection, whitelist)
-            ps.setObject(1, entityTypeArr)
-            ps.setObject(2, blackListArr)
-            ps.setObject(3, whitelistArr)
+            ps.setArray(1, entityTypeArr)
+            ps.setArray(2, blackListArr)
+            ps.setArray(3, whitelistArr)
             val rs = ps.executeQuery()
             StatementHolder(connection, ps, rs)
         }, Function { ResultSetAdapters.id(it) })
@@ -92,7 +92,7 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource, private val
             val arr = PostgresArrays.createUuidArray(connection, entitySetIds)
             val partitions = getPartitionsAsPGArray(connection, entitySetIds)
             ps.setArray(1, partitions)
-            ps.setObject(2, arr)
+            ps.setArray(2, arr)
             ps.setObject(3, limit)
             val rs = ps.executeQuery()
             StatementHolder(connection, ps, rs)
@@ -149,7 +149,7 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource, private val
                     val connection = hds.connection
                     val ps = connection.prepareStatement(CLUSTER_CONTAINING_SQL)
                     val arr = PostgresArrays.createUuidArray(connection, clusterIds)
-                    ps.setObject(1, arr)
+                    ps.setArray(1, arr)
                     val rs = ps.executeQuery()
                     StatementHolder(connection, ps, rs)
                 },
@@ -433,4 +433,3 @@ private val ENTITY_KEY_IDS_OF_LINKING_IDS_SQL = "SELECT ${LINKING_ID.name}, arra
         "FROM ${IDS.name} " +
         "WHERE ${PARTITION.name} = ANY(?) AND ${VERSION.name} > 0 AND ${LINKING_ID.name} IS NOT NULL AND ${LINKING_ID.name} = ANY( ? ) " +
         "GROUP BY ${LINKING_ID.name}"
-
