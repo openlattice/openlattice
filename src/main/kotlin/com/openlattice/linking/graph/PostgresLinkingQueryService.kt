@@ -316,7 +316,7 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource, private val
 
                     val partitions = PostgresArrays.createIntArray( connection, getPartitionsInfo( linkingIds, partitionManager.getAllPartitions() ))
                     ps.setArray(1, partitions)
-                    ps.setObject(2, linkingIdsArray)
+                    ps.setArray(2, linkingIdsArray)
                     val rs = ps.executeQuery()
                     StatementHolder(connection, ps, rs)
                 },
@@ -420,7 +420,7 @@ private val ENTITY_KEY_IDS_NEEDING_LINKING = "SELECT ${ENTITY_SET_ID.name},${ID.
 
 private val ENTITY_KEY_IDS_NOT_LINKED = "SELECT ${ENTITY_SET_ID.name},${ID.name} " +
         "FROM ${IDS.name} " +
-        "WHERE ${PARTITION.name} = ? AND ${ENTITY_SET_ID.name} = ANY(?) AND ${LAST_LINK.name} < ${LAST_WRITE.name} " +
+        "WHERE ${PARTITION.name} = ANY(?) AND ${ENTITY_SET_ID.name} = ANY(?) AND ${LAST_LINK.name} < ${LAST_WRITE.name} " +
         "AND ${VERSION.name} > 0 LIMIT ?"
 
 private val LINKABLE_ENTITY_SET_IDS = "SELECT ${ID.name} " +
@@ -431,6 +431,6 @@ private val LOCK_CLUSTERS_SQL = "SELECT 1 FROM ${MATCHED_ENTITIES.name} WHERE ${
 
 private val ENTITY_KEY_IDS_OF_LINKING_IDS_SQL = "SELECT ${LINKING_ID.name}, array_agg(${ID.name}) AS ${ENTITY_KEY_IDS_COL.name} " +
         "FROM ${IDS.name} " +
-        "WHERE ${PARTITION.name} = ? AND ${VERSION.name} > 0 AND ${LINKING_ID.name} IS NOT NULL AND ${LINKING_ID.name} = ANY( ? ) " +
+        "WHERE ${PARTITION.name} = ANY(?) AND ${VERSION.name} > 0 AND ${LINKING_ID.name} IS NOT NULL AND ${LINKING_ID.name} = ANY( ? ) " +
         "GROUP BY ${LINKING_ID.name}"
 
