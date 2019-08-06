@@ -471,8 +471,8 @@ class Graph(
             val ps = connection.prepareStatement(query)
             ps.use {
                 val entitySetIdsArr = PostgresArrays.createUuidArray(connection, entitySetIds)
-                ps.setObject(1, entitySetIdsArr)
-                ps.setObject(2, entitySetIdsArr)
+                ps.setArray(1, entitySetIdsArr)
+                ps.setArray(2, entitySetIdsArr)
                 val rs = ps.executeQuery()
                 while (rs.next()) {
                     val srcEntitySetId = rs.getObject(SRC_ENTITY_SET_ID.name) as UUID

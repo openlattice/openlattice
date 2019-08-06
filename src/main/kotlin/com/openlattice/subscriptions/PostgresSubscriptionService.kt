@@ -92,7 +92,7 @@ class PostgresSubscriptionService(
                                               { ps: PreparedStatement, conn: Connection ->
                                                   val arr = PostgresArrays.createUuidArray(conn, ekIds)
                                                   ps.setObject(1, user.id)
-                                                  ps.setObject(2, arr)
+                                                  ps.setArray(2, arr)
                                                   print(ps.toString())
                                                   ps
                                               }
