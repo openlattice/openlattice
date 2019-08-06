@@ -48,7 +48,7 @@ class EntitySetCollectionStreamSerializer : SelfRegisteringStreamSerializer<Enti
         val description = Optional.of(input.readUTF())
         val entityTypeCollectionId = UUIDStreamSerializer.deserialize(input)
         val contacts = SetStreamSerializers.deserialize(input, ObjectDataInput::readUTF)
-        val organizationId = Optional.of(UUIDStreamSerializer.deserialize(input))
+        val organizationId = UUIDStreamSerializer.deserialize(input)
 
         val templateSize = input.readInt()
         val template = mutableMapOf<UUID, UUID>()

@@ -35,14 +35,14 @@ import com.openlattice.assembler.MaterializedEntitySet;
 import com.openlattice.auditing.AuditRecordEntitySetConfiguration;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
-import com.openlattice.data.*;
-import com.openlattice.data.storage.ByteBlobDataManager;
-import com.openlattice.data.storage.MetadataOption;
-import com.openlattice.edm.EntitySet;
 import com.openlattice.collections.CollectionTemplateKey;
 import com.openlattice.collections.CollectionTemplateType;
 import com.openlattice.collections.EntitySetCollection;
 import com.openlattice.collections.EntityTypeCollection;
+import com.openlattice.data.*;
+import com.openlattice.data.storage.ByteBlobDataManager;
+import com.openlattice.data.storage.MetadataOption;
+import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.set.EntitySetFlag;
 import com.openlattice.edm.set.EntitySetPropertyKey;
 import com.openlattice.edm.set.EntitySetPropertyMetadata;
@@ -90,9 +90,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.openlattice.edm.EdmConstants.ID_FQN;
-import static com.openlattice.edm.EdmConstants.LAST_INDEX_FQN;
-import static com.openlattice.edm.EdmConstants.LAST_WRITE_FQN;
+import static com.openlattice.edm.EdmConstants.*;
 import static com.openlattice.postgres.DataTables.*;
 import static com.openlattice.postgres.PostgresArrays.getTextArray;
 import static com.openlattice.postgres.PostgresColumn.*;
@@ -1144,7 +1142,7 @@ public final class ResultSetAdapters {
         Optional<String> description = Optional.ofNullable( description( rs ) );
         UUID entityTypeCollectionId = entityTypeCollectionId( rs );
         Set<String> contacts = contacts( rs );
-        Optional<UUID> organizationId = Optional.ofNullable( organizationId( rs ) );
+        UUID organizationId = organizationId( rs );
 
         return new EntitySetCollection( id,
                 name,
