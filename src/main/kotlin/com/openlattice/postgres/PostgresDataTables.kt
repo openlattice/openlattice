@@ -94,7 +94,7 @@ class PostgresDataTables {
 
             val tableDefinition = CitusDistributedTableDefinition("data")
                     .addColumns(*columns)
-                    .primaryKey(ENTITY_SET_ID, ID_VALUE, PARTITION, PROPERTY_TYPE_ID, HASH)
+                    .primaryKey(ENTITY_SET_ID, ID_VALUE, PARTITION, PROPERTY_TYPE_ID, HASH, PARTITIONS_VERSION)
                     .distributionColumn(PARTITION)
 
             tableDefinition.addIndexes(
