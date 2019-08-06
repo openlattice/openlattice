@@ -19,26 +19,18 @@
 package com.openlattice.mapstores;
 
 import com.google.common.collect.*;
-import com.openlattice.authorization.Ace;
-import com.openlattice.authorization.AceValue;
-import com.openlattice.authorization.Acl;
-import com.openlattice.authorization.AclData;
-import com.openlattice.authorization.AclKey;
-import com.openlattice.authorization.Action;
-import com.openlattice.authorization.Permission;
-import com.openlattice.authorization.Principal;
-import com.openlattice.authorization.PrincipalType;
+import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.AbstractSecurableType;
 import com.openlattice.authorization.securable.SecurableObjectType;
-import com.openlattice.data.EntityDataKey;
-import com.openlattice.data.EntityKey;
-import com.openlattice.edm.EdmDetails;
-import com.openlattice.edm.EntitySet;
 import com.openlattice.collections.CollectionTemplateType;
 import com.openlattice.collections.CollectionTemplates;
 import com.openlattice.collections.EntitySetCollection;
 import com.openlattice.collections.EntityTypeCollection;
+import com.openlattice.data.EntityDataKey;
+import com.openlattice.data.EntityKey;
+import com.openlattice.edm.EdmDetails;
+import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.edm.type.Analyzer;
 import com.openlattice.edm.type.AssociationType;
@@ -56,24 +48,16 @@ import com.openlattice.search.requests.PersistentSearch;
 import com.openlattice.search.requests.SearchConstraints;
 import com.openlattice.search.requests.SearchDetails;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import org.apache.commons.text.RandomStringGenerator;
-import org.apache.commons.text.CharacterPredicates;
-import java.time.OffsetDateTime;
-import java.util.Arrays;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Random;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import org.apache.commons.lang3.RandomUtils;
+import org.apache.commons.text.CharacterPredicates;
+import org.apache.commons.text.RandomStringGenerator;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
+
+import java.time.OffsetDateTime;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @SuppressFBWarnings( value = "SECPR", justification = "Only used for testing." )
 public final class TestDataFactory {
@@ -85,17 +69,17 @@ public final class TestDataFactory {
     private static final IndexType[]           INDEX_TYPES          = IndexType.values();
     private static final Random                r                    = new Random();
 
-    private static final char [][] allowedLetters                   = {{'a','z'},{'A','Z'}};
-    private static final char [][] allowedDigitsAndLetters          = {{'a','z'},{'A','Z'},{'0','9'}};
-    private static final RandomStringGenerator random               = new RandomStringGenerator.Builder()
+    private static final char[][]              allowedLetters          = { { 'a', 'z' }, { 'A', 'Z' } };
+    private static final char[][]              allowedDigitsAndLetters = { { 'a', 'z' }, { 'A', 'Z' }, { '0', '9' } };
+    private static final RandomStringGenerator random                  = new RandomStringGenerator.Builder()
             .build();
-    private static final RandomStringGenerator randomAlpha          = new RandomStringGenerator.Builder()
+    private static final RandomStringGenerator randomAlpha             = new RandomStringGenerator.Builder()
             .withinRange( allowedLetters )
             .filteredBy( CharacterPredicates.LETTERS )
             .build();
-    private static final RandomStringGenerator randomAlphaNumeric   = new RandomStringGenerator.Builder()
+    private static final RandomStringGenerator randomAlphaNumeric      = new RandomStringGenerator.Builder()
             .withinRange( allowedDigitsAndLetters )
-            .filteredBy(CharacterPredicates.LETTERS, CharacterPredicates.DIGITS)
+            .filteredBy( CharacterPredicates.LETTERS, CharacterPredicates.DIGITS )
             .build();
 
     private TestDataFactory() {
@@ -113,15 +97,15 @@ public final class TestDataFactory {
         return r.nextInt();
     }
 
-    public static String random(int length) {
+    public static String random( int length ) {
         return random.generate( length );
     }
 
-    public static String randomAlphabetic(int length) {
+    public static String randomAlphabetic( int length ) {
         return randomAlpha.generate( length );
     }
 
-    public static String randomAlphanumeric(int length) {
+    public static String randomAlphanumeric( int length ) {
         return randomAlphaNumeric.generate( length );
     }
 
@@ -536,7 +520,7 @@ public final class TestDataFactory {
                 Optional.of( randomAlphanumeric( 4 ) ),
                 Optional.of( propertyTags ),
                 Optional.of( UUID.randomUUID() ),
-                Optional.of(new LinkedHashSet<>( Arrays.asList(1,2,3,4) )) );
+                Optional.of( new LinkedHashSet<>( Arrays.asList( 1, 2, 3, 4 ) ) ) );
     }
 
     public static SearchDetails searchDetails() {
@@ -597,23 +581,23 @@ public final class TestDataFactory {
                 ImmutableSet.of( randomAlphanumeric( 5 ),
                         randomAlphanumeric( 5 ),
                         randomAlphanumeric( 5 ) ),
-                Optional.of( UUID.randomUUID() )
+                UUID.randomUUID()
         );
     }
 
     public static CollectionTemplates collectionTemplates() {
         Map<UUID, Map<UUID, UUID>> templates = Maps.newHashMap();
 
-        for (int i = 0; i < 5; i++) {
+        for ( int i = 0; i < 5; i++ ) {
 
             int size = RandomUtils.nextInt( 1, 5 );
             Map<UUID, UUID> map = Maps.newHashMap();
 
-            for (int j = 0; j < size; j++) {
+            for ( int j = 0; j < size; j++ ) {
                 map.put( UUID.randomUUID(), UUID.randomUUID() );
             }
 
-            templates.put(UUID.randomUUID(), map);
+            templates.put( UUID.randomUUID(), map );
         }
 
         return new CollectionTemplates( templates );
