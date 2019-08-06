@@ -58,6 +58,7 @@ import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.DataGraphService;
 import com.openlattice.data.EntityKeyIdService;
+import com.openlattice.data.graph.DataGraphServiceHelper;
 import com.openlattice.data.ids.PostgresEntityKeyIdService;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.openlattice.data.storage.ByteBlobDataManager;
@@ -364,13 +365,12 @@ public class DatastoreServicesPod {
 
     @Bean
     public DataGraphManager dataGraphService() {
-        return new DataGraphService(
-                eventBus,
-                graphApi(),
-                idService(),
-                entityDatastore(),
-                dataModelService(),
-                postgresEntitySetSizeCacheManager() );
+        return new DataGraphService( graphApi(), idService(), entityDatastore(), postgresEntitySetSizeCacheManager() );
+    }
+
+    @Bean
+    public DataGraphServiceHelper dataGraphServiceHelper() {
+        return new DataGraphServiceHelper( dataModelService() );
     }
 
     @Bean
