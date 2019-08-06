@@ -93,7 +93,7 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource, private val
             val partitions = getPartitionsAsPGArray(connection, entitySetIds)
             ps.setArray(1, partitions)
             ps.setArray(2, arr)
-            ps.setObject(3, limit)
+            ps.setInt(3, limit)
             val rs = ps.executeQuery()
             StatementHolder(connection, ps, rs)
         }, Function { ResultSetAdapters.entitySetId(it) to ResultSetAdapters.id(it) })
@@ -107,13 +107,13 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource, private val
             val partitions = getPartitionsAsPGArray(connection, entitySetIds)
             ps.setArray(1, partitions)
             ps.setArray(2, arr)
-            ps.setObject(3, limit)
+            ps.setInt(3, limit)
             val rs = ps.executeQuery()
             StatementHolder(connection, ps, rs)
         }, Function { ResultSetAdapters.entitySetId(it) to ResultSetAdapters.id(it) })
     }
 
-    override fun updateLinkingTable(clusterId: UUID, newMember: EntityDataKey): Int {
+    override fun updateIDsTable(clusterId: UUID, newMember: EntityDataKey): Int {
         hds.connection.use { connection ->
             connection.prepareStatement(UPDATE_LINKED_ENTITIES_SQL).use { ps ->
                 val partitions = getPartitionsAsPGArray(connection, newMember.entitySetId)
@@ -247,7 +247,7 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource, private val
                         ps.setObject(3, srcEntityDataKey.entityKeyId)
                         ps.setObject(4, dstEntityDataKey.entitySetId)
                         ps.setObject(5, dstEntityDataKey.entityKeyId)
-                        ps.setObject(6, score)
+                        ps.setDouble(6, score)
                         ps.addBatch()
                     }
                 }
@@ -387,14 +387,16 @@ private val DELETE_NEIGHBORHOODS_SQL = "DELETE FROM ${MATCHED_ENTITIES.name} WHE
         "(${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ANY(?)) OR " +
         "(${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} = ANY(?)) "
 
-private val DELETE_ENTITY_SET_NEIGHBORHOOD_SQL = "DELETE FROM ${MATCHED_ENTITIES.name} WHERE " +
-        "${SRC_ENTITY_SET_ID.name} = ? OR ${DST_ENTITY_SET_ID.name} = ? "
+private val DELETE_ENTITY_SET_NEIGHBORHOOD_SQL = "DELETE FROM ${MATCHED_ENTITIES.name} " +
+        "WHERE ${SRC_ENTITY_SET_ID.name} = ? OR ${DST_ENTITY_SET_ID.name} = ? "
 
-private val NEIGHBORHOOD_SQL = "SELECT * FROM ${MATCHED_ENTITIES.name} " +
+private val NEIGHBORHOOD_SQL = "SELECT * " +
+        "FROM ${MATCHED_ENTITIES.name} " +
         "WHERE (${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ?) "
 
 private val INSERT_SQL = "INSERT INTO ${MATCHED_ENTITIES.name} ($COLUMNS) VALUES (?,?,?,?,?,?) " +
-        "ON CONFLICT ON CONSTRAINT matched_entities_pkey DO UPDATE SET ${SCORE.name} = EXCLUDED.${SCORE.name}"
+        "ON CONFLICT ON CONSTRAINT matched_entities_pkey " +
+        "DO UPDATE SET ${SCORE.name} = EXCLUDED.${SCORE.name}"
 
 private val BLOCKS_BY_AVG_SCORE_SQL =
         "SELECT  ${SRC_ENTITY_SET_ID.name} as entity_set_id, " +

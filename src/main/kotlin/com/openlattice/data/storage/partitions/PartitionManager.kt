@@ -175,7 +175,7 @@ class PartitionManager @JvmOverloads constructor(
         return BasePostgresIterable(
                 PreparedStatementHolderSupplier(hds, EMPTIEST_PARTITIONS) { ps ->
                     ps.setArray(1, PostgresArrays.createIntArray(ps.connection, partitionList))
-                    ps.setObject(2, desiredPartitions)
+                    ps.setInt(2, desiredPartitions)
                 }) { it.getInt(PARTITION.name) to it.getLong(COUNT) }
     }
 
