@@ -27,7 +27,6 @@ import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking
 import com.openlattice.analysis.requests.FilteredNeighborsRankingAggregation
 import com.openlattice.data.integration.Association
 import com.openlattice.data.integration.Entity
-import com.openlattice.edm.type.AssociationType
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.core.NeighborSets
 import com.openlattice.graph.edge.Edge
@@ -157,13 +156,7 @@ interface DataGraphManager {
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): WriteEvent
 
-    fun createAssociations(
-            associations: Set<DataEdgeKey>,
-            srcAssociationEntitySetIds: Map<UUID, Set<UUID>>,
-            dstAssociationEntitySetIds: Map<UUID, Set<UUID>>,
-            bidirectionalEntitySetIds: Map<UUID, Set<Pair<UUID, UUID>>>,
-            associationTypes: Map<UUID, AssociationType>
-    ): WriteEvent
+    fun createAssociations(associations: Set<DataEdgeKey>): WriteEvent
 
     fun createAssociations(
             associations: ListMultimap<UUID, DataEdge>,
