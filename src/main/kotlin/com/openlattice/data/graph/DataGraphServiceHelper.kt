@@ -34,18 +34,12 @@ class DataGraphServiceHelper(private val edmManager: EdmManager) {
         //Create graph structure and check entity types
         val srcAssociationEntitySetIds = mutableMapOf<UUID, MutableSet<UUID>>() // edge-src
         val dstAssociationEntitySetIds = mutableMapOf<UUID, MutableSet<UUID>>() // edge-dst
-        val associationTypes = mutableMapOf<UUID, AssociationType>()
 
         edges.stream().forEach { association ->
             val srcEsId = association.src.entitySetId
             val dstEsId = association.dst.entitySetId
             val edgeEsId = association.edge.entitySetId
 
-            val edgeAssociationType = edmManager.getAssociationTypeByEntitySetId(edgeEsId)
-            associationTypes[edgeEsId] = edgeAssociationType
-
-
-
             if (srcAssociationEntitySetIds.putIfAbsent(edgeEsId, mutableSetOf(srcEsId)) != null) {
                 srcAssociationEntitySetIds.getValue(edgeEsId).add(srcEsId)
             }
@@ -55,27 +49,18 @@ class DataGraphServiceHelper(private val edmManager: EdmManager) {
             }
         }
 
-        checkAssociationEntityTypes(
-                srcAssociationEntitySetIds,
-                dstAssociationEntitySetIds,
-                associationTypes)
+        checkAssociationEntityTypes(srcAssociationEntitySetIds, dstAssociationEntitySetIds)
     }
 
     fun checkAssociationEntityTypes(associations: Set<Association>) {
         //Create graph structure and check entity types
         val srcAssociationEntitySetIds = mutableMapOf<UUID, MutableSet<UUID>>() // edge-src
         val dstAssociationEntitySetIds = mutableMapOf<UUID, MutableSet<UUID>>() // edge-dst
-        val associationTypes = mutableMapOf<UUID, AssociationType>()
 
         associations.stream().forEach { association ->
             val srcEsId = association.src.entitySetId
             val dstEsId = association.dst.entitySetId
             val edgeEsId = association.key.entitySetId
-
-            val edgeAssociationType = edmManager.getAssociationTypeByEntitySetId(edgeEsId)
-            associationTypes[edgeEsId] = edgeAssociationType
-
-
 
             if (srcAssociationEntitySetIds.putIfAbsent(edgeEsId, mutableSetOf(srcEsId)) != null) {
                 srcAssociationEntitySetIds.getValue(edgeEsId).add(srcEsId)
@@ -87,10 +72,7 @@ class DataGraphServiceHelper(private val edmManager: EdmManager) {
 
         }
 
-        checkAssociationEntityTypes(
-                srcAssociationEntitySetIds,
-                dstAssociationEntitySetIds,
-                associationTypes)
+        checkAssociationEntityTypes(srcAssociationEntitySetIds, dstAssociationEntitySetIds)
     }
 
 
@@ -98,13 +80,12 @@ class DataGraphServiceHelper(private val edmManager: EdmManager) {
      * Checks entity types of associations against the allowed src and dst entity types in association type.
      * @param srcAssociationEntitySetIds The entity set ids of the src entities in associations mapped by their association entity set id.
      * @param dstAssociationEntitySetIds The entity set ids of the dst entities in associations mapped by their association entity set id.
-     * @param associationTypes Map of association entity set ids and their association types.
      */
     private fun checkAssociationEntityTypes(
             srcAssociationEntitySetIds: Map<UUID, Set<UUID>>,
-            dstAssociationEntitySetIds: Map<UUID, Set<UUID>>,
-            associationTypes: Map<UUID, AssociationType> // entityset id - associationtype
+            dstAssociationEntitySetIds: Map<UUID, Set<UUID>>
     ) {
+        val associationTypes = edmManager.getAssociationTypeDetailsByEntitySetIds(srcAssociationEntitySetIds.keys)
         associationTypes.keys.forEach { edgeEntitySetId ->
             val srcEntitySetIds = srcAssociationEntitySetIds.getValue(edgeEntitySetId)
             val dstEntitySetIds = dstAssociationEntitySetIds.getValue(edgeEntitySetId)
