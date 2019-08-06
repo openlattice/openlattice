@@ -15,6 +15,20 @@ data class CollectionTemplateType(
         val description: String,
         val entityTypeId: UUID
 ) {
+
+    /**
+     * Creates an collection template type with provided parameters and will automatically generate a UUID if not provided.
+     *
+     * A collection template type wraps an entity type with additional metadata to describe a
+     * particular function within an app or common workflow.
+     *
+     *
+     * @param id An optional UUID for the collection template type.
+     * @param name The unique name of the collection template type.
+     * @param title The friendly name for the collection template type.
+     * @param description A description of the collection template type.
+     * @param entityTypeId The id of the entity type that this collection template type wraps.
+     */
     @JsonCreator
     constructor(
         @JsonProperty(SerializationConstants.ID_FIELD) id: Optional<UUID>,

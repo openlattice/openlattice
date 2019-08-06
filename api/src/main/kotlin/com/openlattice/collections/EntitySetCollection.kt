@@ -21,6 +21,18 @@ class EntitySetCollection(
         var organizationId: UUID
 ) : AbstractSecurableObject(id, title, description) {
 
+    /**
+     * Creates an entity set collection with provided parameters and will automatically generate a UUID if not provided.
+     *
+     * @param id An optional UUID for the entity set collection.
+     * @param name The unique name of the entity set collection.
+     * @param title The friendly name for the entity set collection.
+     * @param description A description of the entity set collection.
+     * @param entityTypeCollectionId The id of the entity type collection that this entity set collection maps to.
+     * @param template A mapping from collection template type ids to entity set ids.
+     * @param contacts A set of contact methods for the owners of this entity set collection.
+     * @param organizationId The id of the organization that this entity set collection belongs to.
+     */
     @JsonCreator
     constructor(
             @JsonProperty(SerializationConstants.ID_FIELD) id: Optional<UUID>,

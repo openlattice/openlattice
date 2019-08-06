@@ -15,6 +15,17 @@ import com.google.common.base.Preconditions.checkArgument
 
 class EntityTypeCollection
 
+/**
+ * Creates an entity type collection with provided parameters and will automatically generate a UUID if not provided.
+ *
+ * @param id An optional UUID for the entity type collection.
+ * @param type The FQN of the entity type collection.
+ * @param title The friendly name for the entity type collection.
+ * @param description A description of the entity type collection.
+ * @param schemas A list of schemas the entity type collection should belong to.
+ * @param template A set of CollectionTemplateType objects, which describe the entity types involved in the
+ * entity type collection and the purposes they serve
+ */
 @JsonCreator
 constructor(
         @JsonProperty(SerializationConstants.ID_FIELD) id: Optional<UUID>,

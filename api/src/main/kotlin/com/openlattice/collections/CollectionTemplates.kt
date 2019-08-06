@@ -4,6 +4,13 @@ package com.openlattice.collections
 import com.google.common.collect.Maps
 import java.util.UUID
 
+/**
+ * A Hazelcast-serializable wrapper around a MutableMap<UUID, MutableMap<UUID, UUID>>
+ * for processing entity set collection templates.
+ *
+ * @param templates A map from entity set collection ids to their templates,
+ * where their templates are maps from collection template type ids to entity set ids
+ */
 data class CollectionTemplates(
         val templates: MutableMap<UUID, MutableMap<UUID, UUID>> = Maps.newHashMap()
 ) {
