@@ -248,18 +248,23 @@ class BackgroundLinkingService
 
     private fun insertMatches(clusterUpdate: ClusterUpdate, conn: Connection, newCluster: Boolean) {
         lqs.insertMatchScores(conn, clusterUpdate.clusterId, clusterUpdate.scores)
-        lqs.updateLinkingTable(clusterUpdate.clusterId, clusterUpdate.newMember)
-        val clusterFunc = if ( newCluster ) linkingLogService::createCluster else linkingLogService::updateCluster
+        lqs.updateIDsTable(clusterUpdate.clusterId, clusterUpdate.newMember)
+        // call upsertEntities
 
-        clusterFunc(
-                clusterUpdate.clusterId, //clusterUpdate.scores
-                clusterUpdate.scores.flatMap { entry ->
-                    return@flatMap Sets.union(entry.value.keys, setOf(entry.key))
-                }.groupBy { edk -> edk.entitySetId
-                }.mapValues { entry ->
-                    Sets.newLinkedHashSet(entry.value.map { it.entityKeyId })
-                }
-        )
+        val id = clusterUpdate.clusterId
+
+        val scores = clusterUpdate.scores.flatMap { entry ->
+            return@flatMap Sets.union(entry.value.keys, setOf(entry.key))
+        }.groupBy { edk -> edk.entitySetId
+        }.mapValues { entry ->
+            Sets.newLinkedHashSet(entry.value.map { it.entityKeyId })
+        }
+
+        if ( newCluster ) {
+            linkingLogService.createCluster( id, scores )
+        } else {
+            linkingLogService.updateCluster( id, scores )
+        }
     }
 
     @Timed
