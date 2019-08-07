@@ -30,6 +30,10 @@ import java.util.UUID
 
 class DataGraphServiceHelper(private val edmManager: EdmManager) {
 
+    /**
+     * Checks whether the entity type of the src and dst entity sets in each edge are part of allowed src and dst
+     * entity types of the association entity type.
+     */
     fun checkEdgeEntityTypes(edges: Set<DataEdgeKey>) {
         //Create graph structure and check entity types
         val srcAssociationEntitySetIds = mutableMapOf<UUID, MutableSet<UUID>>() // edge-src
@@ -52,6 +56,10 @@ class DataGraphServiceHelper(private val edmManager: EdmManager) {
         checkAssociationEntityTypes(srcAssociationEntitySetIds, dstAssociationEntitySetIds)
     }
 
+    /**
+     * Checks whether the entity type of the src and dst entity sets in each association are part of allowed src and dst
+     * entity types of the association entity type.
+     */
     fun checkAssociationEntityTypes(associations: Set<Association>) {
         //Create graph structure and check entity types
         val srcAssociationEntitySetIds = mutableMapOf<UUID, MutableSet<UUID>>() // edge-src
@@ -78,21 +86,28 @@ class DataGraphServiceHelper(private val edmManager: EdmManager) {
 
     /**
      * Checks entity types of associations against the allowed src and dst entity types in association type.
-     * @param srcAssociationEntitySetIds The entity set ids of the src entities in associations mapped by their association entity set id.
-     * @param dstAssociationEntitySetIds The entity set ids of the dst entities in associations mapped by their association entity set id.
+     * @param srcAssociationEntitySetIds The entity set ids of the src entities in associations mapped by their
+     * association entity set id.
+     * @param dstAssociationEntitySetIds The entity set ids of the dst entities in associations mapped by their
+     * association entity set id.
      */
     private fun checkAssociationEntityTypes(
             srcAssociationEntitySetIds: Map<UUID, Set<UUID>>,
             dstAssociationEntitySetIds: Map<UUID, Set<UUID>>
     ) {
         val associationTypes = edmManager.getAssociationTypeDetailsByEntitySetIds(srcAssociationEntitySetIds.keys)
+        val allSrcEntityTypes = edmManager
+                .getEntityTypeIdsByEntitySetIds(srcAssociationEntitySetIds.values.flatten().toSet())
+        val allDstEntityTypes = edmManager
+                .getEntityTypeIdsByEntitySetIds(dstAssociationEntitySetIds.values.flatten().toSet())
+
         associationTypes.keys.forEach { edgeEntitySetId ->
             val srcEntitySetIds = srcAssociationEntitySetIds.getValue(edgeEntitySetId)
             val dstEntitySetIds = dstAssociationEntitySetIds.getValue(edgeEntitySetId)
 
             val edgeAssociationType = associationTypes.getValue(edgeEntitySetId)
-            val srcEntityTypes = edmManager.getEntityTypeIdsByEntitySetIds(srcEntitySetIds).values
-            val dstEntityTypes = edmManager.getEntityTypeIdsByEntitySetIds(dstEntitySetIds).values
+            val srcEntityTypes = srcEntitySetIds.map { allSrcEntityTypes.getValue(it) }
+            val dstEntityTypes = dstEntitySetIds.map { allDstEntityTypes.getValue(it) }
 
             // ensure, that src and dst entity types are part of src and dst entity types of AssociationType
             checkAllowedEntityTypesOfAssociation(
@@ -106,37 +121,32 @@ class DataGraphServiceHelper(private val edmManager: EdmManager) {
         }
     }
 
-    fun checkAssociationEntityTypes(associations: ListMultimap<UUID, DataEdge>) {
-        associations.asMap().forEach {
-            // check entity types of associations before creation
-            checkAssociationEntityTypes(it.key, it.value)
-        }
-    }
-
-    // TODO improve perf
     /**
      * Checks whether the entity type of the src and dst entity sets in each association are part of allowed src and dst
      * entity types of the association entity type.
      */
-    private fun checkAssociationEntityTypes(associationEntitySetId: UUID, associations: Collection<DataEdge>) {
-        val associationType = edmManager.getAssociationTypeByEntitySetId(associationEntitySetId)
-        if (associationType.associationEntityType.id == edmManager.auditRecordEntitySetsManager.auditingTypes.auditingEdgeEntityTypeId) {
-            return
+    fun checkAssociationEntityTypes(associations: ListMultimap<UUID, DataEdge>) {
+        //Create graph structure and check entity types
+        val srcAssociationEntitySetIds = mutableMapOf<UUID, MutableSet<UUID>>() // edge-src
+        val dstAssociationEntitySetIds = mutableMapOf<UUID, MutableSet<UUID>>() // edge-dst
+
+        associations.asMap().forEach { (edgeEsId, edges) ->
+            edges.forEach { edge ->
+                val srcEsId = edge.src.entitySetId
+                val dstEsId = edge.dst.entitySetId
+
+                if (srcAssociationEntitySetIds.putIfAbsent(edgeEsId, mutableSetOf(srcEsId)) != null) {
+                    srcAssociationEntitySetIds.getValue(edgeEsId).add(srcEsId)
+                }
+
+                if (dstAssociationEntitySetIds.putIfAbsent(edgeEsId, mutableSetOf(dstEsId)) != null) {
+                    dstAssociationEntitySetIds.getValue(edgeEsId).add(dstEsId)
+                }
+            }
         }
 
-        associations.forEach {
-            // ensure, that DataEdge src and dst entity types are part of src and dst entity types of AssociationType
-            val srcEntityType = edmManager.getEntityTypeByEntitySetId(it.src.entitySetId)
-            val dstEntityType = edmManager.getEntityTypeByEntitySetId(it.dst.entitySetId)
-
-            checkAllowedEntityTypesOfAssociation(
-                    associationType,
-                    associationEntitySetId,
-                    setOf(srcEntityType.id),
-                    setOf(it.src.entitySetId),
-                    setOf(dstEntityType.id),
-                    setOf(it.dst.entitySetId))
-        }
+        // ensure, that src and dst entity types are part of src and dst entity types of AssociationType
+        checkAssociationEntityTypes(srcAssociationEntitySetIds, dstAssociationEntitySetIds)
     }
 
     private fun checkAllowedEntityTypesOfAssociation(
@@ -150,7 +160,8 @@ class DataGraphServiceHelper(private val edmManager: EdmManager) {
         val isSrcNotAllowed = !associationType.src.containsAll(srcEntityTypes)
         val isDstNotAllowed = !associationType.dst.containsAll(dstEntityTypes)
 
-        val isSrcDstNotAllowed = !(associationType.src + associationType.dst).containsAll(srcEntityTypes + dstEntityTypes)
+        val isSrcDstNotAllowed = !(associationType.src + associationType.dst)
+                .containsAll(srcEntityTypes + dstEntityTypes)
 
         if (associationType.isBidirectional) {
             if (isSrcDstNotAllowed) {
