@@ -111,13 +111,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         ensureRead( organizationId );
         //TODO: Re-visit roles within an organization being defined as roles which have read on that organization.
         Organization org = organizations.getOrganization( organizationId );
-
-        Set<AclKey> authorizedRoleAclKeys = authorizations
-                .accessChecksForPrincipals( org.getRoles().stream()
-                        .map( role -> new AccessCheck( role.getAclKey(), EnumSet.of( Permission.READ ) ) )
-                        .collect( Collectors.toSet() ), Principals.getCurrentPrincipals() )
-                .filter( authorization -> authorization.getPermissions().get( Permission.READ ) )
-                .map( Authorization::getAclKey ).collect( Collectors.toSet() );
+        Set<AclKey> authorizedRoleAclKeys = getAuthorizedRoleAclKeys( org.getRoles() );
 
         return filterRolesOfOrganization( org, authorizedRoleAclKeys );
     }
@@ -510,13 +504,18 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             produces = MediaType.APPLICATION_JSON_VALUE )
     public Set<Role> getRoles( @PathVariable( ID ) UUID organizationId ) {
         ensureRead( organizationId );
-        return getAuthorizedRoles( organizationId, Permission.READ );
+        Set<Role> roles = organizations.getRoles( organizationId );
+        Set<AclKey> authorizedRoleAclKeys = getAuthorizedRoleAclKeys( roles );
+        return Sets.filter( roles, role -> authorizedRoleAclKeys.contains( role.getAclKey() ) );
     }
 
-    private Set<Role> getAuthorizedRoles( UUID organizationId, Permission permission ) {
-        return StreamUtil.stream( organizations.getRoles( organizationId ) )
-                .filter( role -> isAuthorized( permission ).test( role.getAclKey() ) )
-                .collect( Collectors.toSet() );
+    private Set<AclKey> getAuthorizedRoleAclKeys( Set<Role> roles ) {
+        return authorizations
+                .accessChecksForPrincipals( roles.stream()
+                        .map( role -> new AccessCheck( role.getAclKey(), EnumSet.of( Permission.READ ) ) )
+                        .collect( Collectors.toSet() ), Principals.getCurrentPrincipals() )
+                .filter( authorization -> authorization.getPermissions().get( Permission.READ ) )
+                .map( Authorization::getAclKey ).collect( Collectors.toSet() );
     }
 
     private static Organization filterRolesOfOrganization( Organization org, Set<AclKey> authorizedRoleAclKeys ) {
