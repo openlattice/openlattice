@@ -426,7 +426,7 @@ public final class PostgresTable {
                         .name( "ids_last_link_index_idx" )
                         .ifNotExists(),
                 new PostgresExpressionIndexDefinition( IDS,
-                        IDS.getName()
+                        ENTITY_SET_ID.getName()
                                 + ",(" + LAST_INDEX.getName() + " < " + LAST_WRITE.getName() + ")"
                                 + ",(" + VERSION.getName() + " > 0)" )
                         .name( "ids_needing_indexing_idx" )
