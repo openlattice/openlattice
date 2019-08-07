@@ -459,7 +459,7 @@ public class AppService {
 
     private void ensureAppTypesAreValid( Set<UUID> appTypeIds ) {
         Set<UUID> missingAppTypes = Sets.difference( appTypeIds,
-                appTypes.keySet( Predicates.in( "__key", appTypeIds.toArray( new UUID[] {} ) ) ) );
+                appTypes.keySet( Predicates.in( "__#key", appTypeIds.toArray( new UUID[] {} ) ) ) );
 
         Preconditions.checkArgument( missingAppTypes.isEmpty(),
                 "The following app types do not exist: " + appTypeIds.toString() );
