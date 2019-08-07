@@ -281,17 +281,25 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
     public static AssociationType createAssociationType(
             EntityType aet,
             Set<EntityType> src,
-            Set<EntityType> dst ) {
+            Set<EntityType> dst,
+            boolean bidirectional ) {
 
         AssociationType expected = new AssociationType( Optional.of( aet ),
                 src.stream().map( EntityType::getId ).collect( Collectors.toCollection( LinkedHashSet::new ) ),
                 dst.stream().map( EntityType::getId ).collect( Collectors.toCollection( LinkedHashSet::new ) ),
-                false );
+                bidirectional );
 
         UUID associationTypeId = edmApi.createAssociationType( expected );
         Assert.assertNotNull( "Assert association type shouldn't return null UUID.", associationTypeId );
 
         return expected;
+    }
+
+    public static AssociationType createAssociationType(
+            EntityType aet,
+            Set<EntityType> src,
+            Set<EntityType> dst ) {
+        return createAssociationType( aet, src, dst, false );
     }
 
     public static EntitySet createEntitySet() {
