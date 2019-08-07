@@ -206,7 +206,20 @@ public class AppController implements AppApi, AuthorizingComponent {
         appService.installApp( appId, organizationId, prefix, Principals.getCurrentUser() );
     }
 
-    private Iterable<Organization>  getAvailableOrgs() {
+    @Timed
+    @Override
+    @RequestMapping(
+            path = INSTALL_PATH + ID_PATH + ORGANIZATION_ID_PATH,
+            method = RequestMethod.DELETE )
+    @ResponseStatus( HttpStatus.OK )
+    public void uninstallApp(
+            @PathVariable( ID ) UUID appId,
+            @PathVariable( ORGANIZATION_ID ) UUID organizationId ) {
+        ensureOwnerAccess( new AclKey( organizationId ) );
+        appService.uninstallApp( appId, organizationId );
+    }
+
+    private Iterable<Organization> getAvailableOrgs() {
         return getAccessibleObjects( SecurableObjectType.Organization,
                 EnumSet.of( Permission.READ ) )
                 .filter( Predicates.notNull()::apply ).map( AuthorizationUtils::getLastAclKeySafely )
