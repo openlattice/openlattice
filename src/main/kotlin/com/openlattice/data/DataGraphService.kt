@@ -25,15 +25,12 @@ import com.google.common.base.Stopwatch
 import com.google.common.collect.ListMultimap
 import com.google.common.collect.Multimaps
 import com.google.common.collect.SetMultimap
-import com.google.common.eventbus.EventBus
-import com.google.common.util.concurrent.ListenableFuture
 import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking
 import com.openlattice.analysis.requests.FilteredNeighborsRankingAggregation
 import com.openlattice.data.integration.Association
 import com.openlattice.data.integration.Entity
 import com.openlattice.data.storage.EntityDatastore
 import com.openlattice.data.storage.PostgresEntitySetSizesTask
-import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.core.GraphService
 import com.openlattice.graph.core.NeighborSets
@@ -44,7 +41,6 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import java.nio.ByteBuffer
 import java.util.*
-import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
 import java.util.stream.Stream
 import kotlin.collections.HashMap
@@ -57,11 +53,9 @@ import kotlin.collections.HashSet
 private val logger = LoggerFactory.getLogger(DataGraphService::class.java)
 
 open class DataGraphService(
-        private val eventBus: EventBus,
         private val graphService: GraphService,
         private val idService: EntityKeyIdService,
         private val eds: EntityDatastore,
-        private val edmManager: EdmManager,
         private val entitySetSizesTask: PostgresEntitySetSizesTask
 
 ) : DataGraphManager {
@@ -69,21 +63,7 @@ open class DataGraphService(
         return idService.reserveEntityKeyIds(entityKeys)
     }
 
-
-    //TODO: Move to a utility class
     companion object {
-
-        @JvmStatic
-        fun tryGetAndLogErrors(f: ListenableFuture<*>) {
-            try {
-                f.get()
-            } catch (e: InterruptedException) {
-                logger.error("Future execution failed.", e)
-            } catch (e: ExecutionException) {
-                logger.error("Future execution failed.", e)
-            }
-        }
-
         const val ASSOCIATION_SIZE = 30000
     }
 
@@ -419,12 +399,7 @@ open class DataGraphService(
         return eds.replacePropertiesInEntities(entitySetId, replacementProperties, authorizedPropertyTypes)
     }
 
-    override fun createAssociations(
-            associations: Set<DataEdgeKey>,
-            srcAssociationEntitySetIds: Map<UUID, Set<UUID>>,
-            dstAssociationEntitySetIds: Map<UUID, Set<UUID>>
-    ): WriteEvent {
-        checkAssociationEntityTypes(srcAssociationEntitySetIds, dstAssociationEntitySetIds)
+    override fun createAssociations(associations: Set<DataEdgeKey>): WriteEvent {
         return graphService.createEdges(associations)
     }
 
@@ -439,9 +414,6 @@ open class DataGraphService(
                 .asMap(associations)
                 .forEach {
                     val entitySetId = it.key
-
-                    // check entity types of associations before creation
-                    // checkAssociationEntityTypes(entitySetId, it.value) TODO
 
                     val entities = it.value.map(DataEdge::getData)
                     val (ids, entityWrite) = createEntities(
@@ -469,32 +441,11 @@ open class DataGraphService(
         val entityKeys = HashSet<EntityKey>(3 * associations.size)
         val entityKeyIds = HashMap<EntityKey, UUID>(3 * associations.size)
 
-        //Create graph structure and check entity types
-        val srcAssociationEntitySetIds = mutableMapOf<UUID, MutableSet<UUID>>() // edge-src
-        val dstAssociationEntitySetIds = mutableMapOf<UUID, MutableSet<UUID>>() // edge-dst
-        associations
-                .asSequence()
-                .forEach { association ->
-                    val srcEsId = association.src.entitySetId
-                    val dstEsId = association.dst.entitySetId
-                    val edgeEsId = association.key.entitySetId
-
-                    if (srcAssociationEntitySetIds.putIfAbsent(edgeEsId, mutableSetOf(srcEsId)) != null) {
-                        srcAssociationEntitySetIds.getValue(edgeEsId).add(srcEsId)
-                    }
-
-                    if (dstAssociationEntitySetIds.putIfAbsent(edgeEsId, mutableSetOf(dstEsId)) != null) {
-                        dstAssociationEntitySetIds.getValue(edgeEsId).add(dstEsId)
-                    }
-                }
-        checkAssociationEntityTypes(srcAssociationEntitySetIds, dstAssociationEntitySetIds)
-
         //Create the entities for the association and build list of required entity keys
         val integrationResults = associationsByEntitySet
                 .asSequence()
-                .map {
-                    val entitySetId = it.key
-                    val entities = it.value.asSequence()
+                .map { (entitySetId, entitySetAssociations) ->
+                    val entities = entitySetAssociations.asSequence()
                             .map { association ->
                                 entityKeys.add(association.src)
                                 entityKeys.add(association.dst)
@@ -544,78 +495,23 @@ open class DataGraphService(
             val entitiesToCreate = entitiesByEntitySet.getOrPut(entity.entitySetId) { mutableMapOf() }
             val entityDetails = entitiesToCreate.getOrPut(entity.entityId) { entity.details }
             if (entityDetails !== entity.details) {
-                entity.details.forEach { propertyTypeId, values ->
+                entity.details.forEach { (propertyTypeId, values) ->
                     entityDetails.getOrPut(propertyTypeId) { mutableSetOf() }.addAll(values)
                 }
             }
         }
 
         entitiesByEntitySet
-                .forEach { entitySetId, entitySet ->
+                .forEach { (entitySetId, entitySet) ->
                     integrateEntities(
                             entitySetId,
                             entitySet,
-                            authorizedPropertiesByEntitySetId[entitySetId]!!
+                            authorizedPropertiesByEntitySetId.getValue(entitySetId)
                     )
                 }
 
         integrateAssociations(associations, authorizedPropertiesByEntitySetId)
         return null
-    }
-
-    private fun checkAssociationEntityTypes(
-            srcAssociationEntitySetIds: Map<UUID, Set<UUID>>, dstAssociationEntitySetIds: Map<UUID, Set<UUID>>
-    ) {
-        val edgeEntitySetIds = srcAssociationEntitySetIds.keys
-        val associationTypeDetails = edmManager.getAssociationTypeDetailsByEntitySetIds(edgeEntitySetIds)
-
-        edgeEntitySetIds.forEach { edgeEntitySetId ->
-            val srcEntitySetIds = srcAssociationEntitySetIds.getValue(edgeEntitySetId)
-            val dstEntitySetIds = dstAssociationEntitySetIds.getValue(edgeEntitySetId)
-
-            val edgeAssociationType = associationTypeDetails.getValue(edgeEntitySetId)
-            val srcEntityTypes = edmManager.getEntityTypeIdsByEntitySetIds(srcEntitySetIds).values
-            val dstEntityTypes = edmManager.getEntityTypeIdsByEntitySetIds(dstEntitySetIds).values
-
-            // ensure, that src and dst entity types are part of src and dst entity types of AssociationType
-            if (!edgeAssociationType.src.containsAll(srcEntityTypes)) {
-                throw IllegalArgumentException(
-                        "One or more entity types of src entity sets $srcEntitySetIds differs " +
-                                "from allowed entity types (${edgeAssociationType.src}) in association type of entity set " +
-                                edgeEntitySetId
-                )
-            }
-
-            if (!edgeAssociationType.dst.containsAll(dstEntityTypes)) {
-                throw IllegalArgumentException(
-                        "One or more entity types of dst entity sets $dstEntitySetIds differs " +
-                                "from allowed entity types (${edgeAssociationType.dst}) in association type of entity set " +
-                                edgeEntitySetId
-                )
-            }
-        }
-    }
-
-    // TODO improve perf
-    private fun checkAssociationEntityTypes(associationEntitySetId: UUID, associations: List<DataEdge>) {
-        val associationType = edmManager.getAssociationTypeByEntitySetId(associationEntitySetId)
-        if (associationType.associationEntityType.id == edmManager.auditRecordEntitySetsManager.auditingTypes.auditingEdgeEntityTypeId) {
-            return
-        }
-
-        associations.forEach {
-            // ensure, that DataEdge src and dst entity types are part of src and dst entity types of AssociationType
-            val srcEntityType = edmManager.getEntityTypeByEntitySetId(it.src.entitySetId)
-            val dstEntityType = edmManager.getEntityTypeByEntitySetId(it.dst.entitySetId)
-            if (!(associationType.src.contains(srcEntityType.id)
-                            && associationType.dst.contains(dstEntityType.id))) {
-                throw IllegalArgumentException(
-                        "Entity type of src/dst entity set in data keys {src(${it.src}), " +
-                                "dst(${it.dst})} differs from allowed entity types in association type " +
-                                associationType.associationEntityType.id
-                )
-            }
-        }
     }
 
     /* Top utilizers */
