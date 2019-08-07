@@ -182,7 +182,7 @@ class EdmTest : MultipleAuthenticatedUsersBase() {
     }
 
     @Test
-    fun testEdmChangesToEntityTypeTables() {
+    fun testEdmChangesToEntityType() {
         val pt1 = createPropertyType()
         val et = createEntityType(pt1.id)
         val es = createEntitySet(et)
