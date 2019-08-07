@@ -240,6 +240,21 @@ public class AppService {
         organizationService.addAppToOrg( organizationId, appId );
     }
 
+    public void uninstallApp( UUID appId, UUID organizationId ) {
+        App app = getApp( appId );
+        Preconditions.checkNotNull( app, "The requested app with id %s does not exists.", appId.toString() );
+
+        AclKey appPrincipal = principalsService.lookup( new Principal( PrincipalType.APP,
+                AppConfig.getAppPrincipalId( appId, organizationId ) ) );
+
+        principalsService.deletePrincipal( appPrincipal );
+
+        appConfigs.removeAll( Predicates.and( Predicates.equal( AppConfigMapstore.APP_ID, appId ),
+                Predicates.equal( AppConfigMapstore.ORGANIZATION_ID, organizationId ) ) );
+
+        organizationService.removeAppFromOrg( organizationId, appId );
+    }
+
     public UUID createAppType( AppType appType ) {
         reservations.reserveIdAndValidateType( appType );
         appTypes.putIfAbsent( appType.getId(), appType );
@@ -459,7 +474,7 @@ public class AppService {
 
     private void ensureAppTypesAreValid( Set<UUID> appTypeIds ) {
         Set<UUID> missingAppTypes = Sets.difference( appTypeIds,
-                appTypes.keySet( Predicates.in( "__#key", appTypeIds.toArray( new UUID[] {} ) ) ) );
+                appTypes.keySet( Predicates.in( "__key", appTypeIds.toArray( new UUID[] {} ) ) ) );
 
         Preconditions.checkArgument( missingAppTypes.isEmpty(),
                 "The following app types do not exist: " + appTypeIds.toString() );
