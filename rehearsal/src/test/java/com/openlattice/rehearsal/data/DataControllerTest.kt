@@ -389,7 +389,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
     @Test
     fun testCreateBidirectionalEdgesWithDifferentEntityTypes() {
-        // Test for createAssociations( ListMultimap<UUID, DataEdge> associations )
+        // Test for createAssociations
         val edge = createEdgeEntityType()
         val esEdge = createEntitySet(edge)
         val src = createEntityType()
@@ -402,6 +402,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         val testDataSrc = TestDataFactory.randomStringEntityData(numberOfEntries, src.properties)
         val testDataDst = TestDataFactory.randomStringEntityData(numberOfEntries, dst.properties)
+        val testDataEdge = TestDataFactory.randomStringEntityData(numberOfEntries, edge.properties)
 
         val entriesSrc = ImmutableList.copyOf(testDataSrc.values)
         val idsSrc = dataApi.createEntities(esSrc.id, entriesSrc)
@@ -409,13 +410,14 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         val entriesDst = ImmutableList.copyOf(testDataDst.values)
         val idsDst = dataApi.createEntities(esDst.id, entriesDst)
 
+        val entriesEdge = ImmutableList.copyOf(testDataEdge.values)
+        val idsEdge = dataApi.createEntities(esEdge.id, entriesEdge)
+
 
         val edgesToBeCreated1: ListMultimap<UUID, DataEdge> = ArrayListMultimap.create()
         val edgeData1 = createDataEdges(esEdge.id, edge.properties, esSrc.id, idsSrc, esDst.id, idsDst)
         edgesToBeCreated1.putAll(edgeData1.first, edgeData1.second)
-        val edgesToBeCreated2: ListMultimap<UUID, DataEdge> = ArrayListMultimap.create()
-        val edgeData2 = createDataEdges(esEdge.id, edge.properties, esDst.id, idsDst, esSrc.id, idsSrc)
-        edgesToBeCreated2.putAll(edgeData2.first, edgeData2.second)
+        val edgesToBeCreated2 = createDataEdgeKeys(esEdge.id, idsEdge, esDst.id, idsDst, esSrc.id, idsSrc)
 
         // try to create edges
         try {
@@ -423,8 +425,8 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
             Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!
-                    .contains("differs from allowed entity types (src: [${src.id}], dst: []) " +
-                            "in bidirectional association type of entity set ${esEdge.id}", true))
+                    .contains("differs from allowed entity types src=[${src.id}], dst=[] in bidirectional " +
+                            "association type of entity set ${esEdge.id}", true))
         }
 
         // try to create edges opposite direction
@@ -433,12 +435,11 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
             Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!
-                    .contains("differs from allowed entity types (src: [${src.id}], dst: []) " +
-                            "in bidirectional association type of entity set ${esEdge.id}", true))
+                    .contains("differs from allowed entity types src=[${src.id}], dst=[] in bidirectional " +
+                            "association type of entity set ${esEdge.id}", true))
         }
 
-        // add src and dst to association type
-        edmApi.addSrcEntityTypeToAssociationType(edge.id, src.id)
+        // add dst to association type
         edmApi.addDstEntityTypeToAssociationType(edge.id, dst.id)
 
         // create edges
@@ -471,6 +472,22 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         }
 
         return entitySetId to edges
+    }
+
+    private fun createDataEdgeKeys(
+            edgeEntitySetId: UUID,
+            edgeIds: List<UUID>,
+            srcEntitySetId: UUID,
+            srcIds: List<UUID>,
+            dstEntitySetId: UUID,
+            dstIds: List<UUID>
+    ): Set<DataEdgeKey> {
+        return srcIds.mapIndexed { index, _ ->
+            val srcDataKey = EntityDataKey(srcEntitySetId, srcIds[index])
+            val dstDataKey = EntityDataKey(dstEntitySetId, dstIds[index])
+            val edgeDataKey = EntityDataKey(edgeEntitySetId, edgeIds[index])
+            DataEdgeKey(srcDataKey, dstDataKey, edgeDataKey)
+        }.toSet()
     }
 
     private fun keyByFqn(data: Map<UUID, Set<Any>>): SetMultimap<FullQualifiedName, Any> {
