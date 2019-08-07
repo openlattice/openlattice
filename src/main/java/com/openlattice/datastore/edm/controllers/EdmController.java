@@ -622,6 +622,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
     @ResponseStatus( HttpStatus.OK )
     public Void deleteEntityType( @PathVariable( ID ) UUID entityTypeId ) {
         ensureAdminAccess();
+        ensureObjectCanBeDeleted( entityTypeId );
         modelService.deleteEntityType( entityTypeId );
 
         recordEvent( new AuditableEvent(
@@ -683,6 +684,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
     public Void deletePropertyType(
             @PathVariable( ID ) UUID propertyTypeId ) {
         ensureAdminAccess();
+        ensureObjectCanBeDeleted( propertyTypeId );
         modelService.deletePropertyType( propertyTypeId );
 
         recordEvent( new AuditableEvent(
@@ -708,6 +710,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
     public Void forceDeletePropertyType(
             @PathVariable( ID ) UUID propertyTypeId ) {
         ensureAdminAccess();
+        ensureObjectCanBeDeleted( propertyTypeId );
         modelService.forceDeletePropertyType( propertyTypeId );
 
         recordEvent( new AuditableEvent(
@@ -879,6 +882,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
             produces = MediaType.APPLICATION_JSON_VALUE )
     public Void deleteAssociationType( @PathVariable( ID ) UUID associationTypeId ) {
         ensureAdminAccess();
+        ensureObjectCanBeDeleted( associationTypeId );
         modelService.deleteAssociationType( associationTypeId );
 
         recordEvent( new AuditableEvent(

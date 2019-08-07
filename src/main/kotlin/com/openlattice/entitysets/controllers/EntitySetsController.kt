@@ -530,14 +530,11 @@ constructor(
     private fun ensureEntitySetCanBeDeleted(entitySet: EntitySet) {
         val entitySetId = entitySet.id
 
+        ensureObjectCanBeDeleted(entitySetId)
+
         if (entitySet.flags.contains(EntitySetFlag.AUDIT)) {
             throw ForbiddenException("You cannot delete entity set $entitySetId because it is an audit entity set.")
         }
-
-        if (internalIds.contains(entitySetId)) {
-            throw ForbiddenException("You cannot delete entity set $entitySetId because deletes are blocked to this id.")
-        }
-
 
     }
 }
