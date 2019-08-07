@@ -23,8 +23,7 @@ package com.openlattice.controllers;
 import com.codahale.metrics.annotation.Timed;
 import com.dataloom.streams.StreamUtil;
 import com.google.common.base.Predicates;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
+import com.google.common.collect.*;
 import com.openlattice.assembler.Assembler;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
@@ -77,12 +76,18 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             value = { "", "/" },
             produces = MediaType.APPLICATION_JSON_VALUE )
     public Iterable<Organization> getOrganizations() {
-        return organizations.getOrganizations(
+
+        Set<AclKey> authorizedRoles = getAccessibleObjects( SecurableObjectType.Role, EnumSet.of( Permission.READ ) )
+                .filter( Predicates.notNull()::apply ).collect( Collectors.toSet() );
+
+        Iterable<Organization> orgs = organizations.getOrganizations(
                 getAccessibleObjects( SecurableObjectType.Organization, EnumSet.of( Permission.READ ) )
                         .parallel()
                         .filter( Predicates.notNull()::apply )
                         .map( AuthorizationUtils::getLastAclKeySafely )
         );
+
+        return Iterables.transform( orgs, org -> filterRolesOfOrganization( org, authorizedRoles ) );
     }
 
     @Timed
@@ -106,15 +111,15 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         ensureRead( organizationId );
         //TODO: Re-visit roles within an organization being defined as roles which have read on that organization.
         Organization org = organizations.getOrganization( organizationId );
-        Set<Role> authorizedRoles = getAuthorizedRoles( organizationId, Permission.READ );
-        return new Organization(
-                org.getSecurablePrincipal(),
-                org.getAutoApprovedEmails(),
-                org.getMembers(),
-                authorizedRoles,
-                org.getApps(),
-                org.getSmsEntitySetInfo(),
-                org.getPartitions() );
+
+        Set<AclKey> authorizedRoleAclKeys = authorizations
+                .accessChecksForPrincipals( org.getRoles().stream()
+                        .map( role -> new AccessCheck( role.getAclKey(), EnumSet.of( Permission.READ ) ) )
+                        .collect( Collectors.toSet() ), Principals.getCurrentPrincipals() )
+                .filter( authorization -> authorization.getPermissions().get( Permission.READ ) )
+                .map( Authorization::getAclKey ).collect( Collectors.toSet() );
+
+        return filterRolesOfOrganization( org, authorizedRoleAclKeys );
     }
 
     @Timed
@@ -512,6 +517,18 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         return StreamUtil.stream( organizations.getRoles( organizationId ) )
                 .filter( role -> isAuthorized( permission ).test( role.getAclKey() ) )
                 .collect( Collectors.toSet() );
+    }
+
+    private static Organization filterRolesOfOrganization( Organization org, Set<AclKey> authorizedRoleAclKeys ) {
+        return new Organization(
+                org.getSecurablePrincipal(),
+                org.getAutoApprovedEmails(),
+                org.getMembers(),
+                Sets.filter( org.getRoles(), role -> authorizedRoleAclKeys.contains( role.getAclKey() ) ),
+                org.getApps(),
+                org.getSmsEntitySetInfo(),
+                org.getPartitions()
+        );
     }
 
     @Timed
