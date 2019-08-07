@@ -98,7 +98,7 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
     protected static LinkingFeedbackApi linkingFeedbackApi;
     protected static PrincipalApi       principalApi;
 
-    protected static OkHttpClient currentHttpClient;
+    protected static OkHttpClient       currentHttpClient;
 
     static {
         retrofitMap.put( "admin", retrofit );

@@ -21,9 +21,11 @@
 
 package com.openlattice.rehearsal.edm
 
+import com.google.common.collect.ImmutableList
 import com.openlattice.data.requests.EntitySetSelection
 import com.openlattice.data.requests.FileType
 import com.openlattice.edm.type.AssociationType
+import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
 import org.apache.commons.lang.RandomStringUtils
 import org.apache.olingo.commons.api.edm.FullQualifiedName
@@ -107,7 +109,7 @@ class EdmTest : MultipleAuthenticatedUsersBase() {
 
     @Test
     fun testAssociationTypeCreationWrongCategory() {
-        val et = MultipleAuthenticatedUsersBase.createEntityType()
+        val et = createEntityType()
         val at = AssociationType(Optional.of(et), LinkedHashSet(), LinkedHashSet(), false)
 
         try {
@@ -177,5 +179,59 @@ class EdmTest : MultipleAuthenticatedUsersBase() {
                 mapOf(es1.name to es1.id, es2.name to es2.id, es3.name to es3.id),
                 entitySetsApi.getEntitySetIds(setOf(es1.name, es2.name, es3.name))
         )
+    }
+
+    @Test
+    fun testEdmChangesToEntityType() {
+        val pt1 = createPropertyType()
+        val et = createEntityType(pt1.id)
+        val es = createEntitySet(et)
+
+        val testData1 = TestDataFactory.randomStringEntityData(1, et.properties)
+        val ids1 = dataApi.createEntities(es.id, ImmutableList.copyOf(testData1.values)).toSet()
+
+        val ess1 = EntitySetSelection(Optional.empty(), Optional.of(ids1))
+        Assert.assertEquals(3, dataApi.loadEntitySetData(es.id, ess1, FileType.json).first().keySet().size)
+        Assert.assertEquals(2, edmApi.getEntityType(et.id).properties.size)
+
+        val pt2 = createPropertyType()
+        edmApi.addPropertyTypeToEntityType(et.id, pt2.id)
+        Assert.assertEquals((et.properties + pt2.id), edmApi.getEntityType(et.id).properties)
+        Assert.assertEquals(3, dataApi.loadEntitySetData(es.id, ess1, FileType.json).first().keySet().size)
+
+        val testData2 = TestDataFactory.randomStringEntityData(1, (et.properties + pt2.id))
+        val ids2 = dataApi.createEntities(es.id, ImmutableList.copyOf(testData2.values)).toSet()
+        val ess2 = EntitySetSelection(Optional.empty(), Optional.of(ids1 + ids2))
+        Assert.assertEquals(
+                4,
+                dataApi.loadEntitySetData(es.id, ess2, FileType.json).map { it.keySet() }.flatten().toSet().size
+        )
+
+        (et.properties + pt2.id).forEach {
+            edmApi.forceRemovePropertyTypeFromEntityType(et.id, it)
+        }
+        Assert.assertEquals(0, edmApi.getEntityType(et.id).properties.size)
+        val esData = dataApi.loadEntitySetData(es.id, ess2, FileType.json)
+        Assert.assertEquals(1, esData.first().size())
+
+        try {
+            edmApi.deleteEntityType(et.id)
+            Assert.fail("Should have thrown Exception but did not!")
+        } catch (e: UndeclaredThrowableException) {
+            Assert.assertTrue(e.undeclaredThrowable.message!!
+                    .contains("Unable to delete entity type because it is associated with an entity set.",
+                            true))
+        }
+
+        entitySetsApi.deleteEntitySet(es.id)
+        edmApi.deleteEntityType(et.id)
+
+        try {
+            edmApi.getEntityType(et.id)
+            Assert.fail("Should have thrown Exception but did not!")
+        } catch (e: UndeclaredThrowableException) {
+            Assert.assertTrue(e.undeclaredThrowable.message!!
+                    .contains("Entity type of id ${et.id} does not exists.", true))
+        }
     }
 }
