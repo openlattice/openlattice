@@ -2,10 +2,8 @@ package com.openlattice.rehearsal.organization
 
 import com.openlattice.authorization.*
 import com.openlattice.mapstores.TestDataFactory
-import com.openlattice.organization.OrganizationsApi
 import com.openlattice.rehearsal.GeneralException
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
-import okhttp3.RequestBody
 import org.junit.Assert
 import org.junit.BeforeClass
 import org.junit.Test
@@ -23,7 +21,7 @@ class OrganizationsControllerTest : MultipleAuthenticatedUsersBase() {
             loginAs("admin")
 
             //create organization, role
-            organizationID = organizationsApi.createOrganizationIfNotExists(TestDataFactory.organization())
+            organizationID = createOrganization().id
             val role = TestDataFactory.role(organizationID)
             roleId = role.id
             organizationsApi.createRole(role)

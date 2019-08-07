@@ -23,15 +23,14 @@ package com.openlattice.rehearsal.linking
 
 import com.google.common.collect.ImmutableSet
 import com.openlattice.data.EntityDataKey
+import com.openlattice.edm.EdmConstants
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.EntityType
 import com.openlattice.linking.FeedbackType
 import com.openlattice.linking.LinkingFeedback
-import com.openlattice.postgres.DataTables
 import com.openlattice.rehearsal.SetupTestData
 import com.openlattice.rehearsal.edm.EdmTestConstants
 import com.openlattice.search.requests.SearchConstraints
-import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.junit.*
 import org.junit.runners.MethodSorters
 import org.slf4j.LoggerFactory
@@ -76,10 +75,10 @@ class LinkingFeedbackTest : SetupTestData() {
             linkingEntitySet = createEntitySet(
                     personEt,
                     true,
-                    setOf(edmApi.getEntitySetId(importedEntitySetKeysIterator.next()),
-                            edmApi.getEntitySetId(importedEntitySetKeysIterator.next()),
-                            edmApi.getEntitySetId(importedEntitySetKeysIterator.next()),
-                            edmApi.getEntitySetId(importedEntitySetKeysIterator.next()))
+                    setOf(entitySetsApi.getEntitySetId(importedEntitySetKeysIterator.next()),
+                            entitySetsApi.getEntitySetId(importedEntitySetKeysIterator.next()),
+                            entitySetsApi.getEntitySetId(importedEntitySetKeysIterator.next()),
+                            entitySetsApi.getEntitySetId(importedEntitySetKeysIterator.next()))
             )
 
             waitForBackgroundServices()
@@ -91,7 +90,7 @@ class LinkingFeedbackTest : SetupTestData() {
             // delete all created entity sets
             (importedEntitySets.keys + linkingEntitySet.name).forEach {
                 try {
-                    edmApi.deleteEntitySet(edmApi.getEntitySetId(it))
+                    entitySetsApi.deleteEntitySet(entitySetsApi.getEntitySetId(it))
                 } catch (e: UndeclaredThrowableException) {
                 }
             }
@@ -122,7 +121,7 @@ class LinkingFeedbackTest : SetupTestData() {
                 SearchConstraints.simpleSearchConstraints(
                         arrayOf(linkingEntitySet.id), 0, 100, "*")).hits
         linkingId = linkedData.map {
-            UUID.fromString(it[DataTables.ID_FQN].first() as String)
+            UUID.fromString(it.getValue(EdmConstants.ID_FQN).first() as String)
         }.toSet().first()
         val matchedEntities = realtimeLinkingApi.getMatchedEntitiesForLinkingId(linkingId)
 
@@ -207,7 +206,7 @@ class LinkingFeedbackTest : SetupTestData() {
         val linkedDataProperties = searchApi.searchEntitySetData(
                 SearchConstraints.simpleSearchConstraints(
                         arrayOf(linkingEntitySet.id), 0, 100, "*")).hits
-                .flatMap { it.asMap().map { it.key.fullQualifiedNameAsString } }
+                .flatMap { hit -> hit.map { it.key.fullQualifiedNameAsString } }
         logger.info("$linkedDataProperties")
         val feedbackFeatures = feedbacksWithFeatures.map { it.features.filter { it.value > 0.0 } }
                 .flatMap { it.keys }.toSet()
