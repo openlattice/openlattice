@@ -171,17 +171,6 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource, private val
                 }
     }
 
-    /**
-     * Insert INTO:
-     * 1. ID_VALUE: linkingId
-     * 2. VERSION: system.currentTime
-     *
-     * Select From WHERE:
-     * 3. ENTITY_SET: entity set id
-     * 4. ID_VALUE: entity key id
-     * 5. PARTITION: partition(s) (array)
-     *
-     */
     override fun createOrUpdateLink( linkingId: UUID, entitySetId: UUID, entityKeyId: UUID ) {
         hds.connection.use { connection ->
             connection.prepareStatement( addLinkForSingleEntitySql() ).use { ps ->

@@ -606,6 +606,19 @@ fun upsertPropertyValueSql(propertyType: PropertyType): String {
             "ELSE ${DATA.name}.${VERSION.name} END"
 }
 
+/**
+ * This function generates preparable sql with the following bind order:
+ *
+ * Insert into:
+ * 1. ID_VALUE: linkingId
+ * 2. VERSION: system.currentTime
+ *
+ * Select ƒrom where:
+ * 3. ENTITY_SET: entity set id
+ * 4. ID_VALUE: entity key id
+ * 5. PARTITION: partition(s) (array)
+ *
+ */
 fun addLinkForSingleEntitySql(): String {
     val dataTableSelectColumnsWithParameterizedVersionIdAndOriginIdMappedAndLastWriteUpdatedLongestNameInTheUniverse = PostgresDataTables.dataTableColumns.joinToString(",") {
         when( it ) {
