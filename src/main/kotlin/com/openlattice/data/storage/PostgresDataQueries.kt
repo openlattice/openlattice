@@ -226,6 +226,20 @@ fun optionalWhereClauses(
     return "WHERE ${optionalClauses.joinToString(" AND ")}"
 }
 
+fun optionalWhereClausesSingleEdk(
+        idsPresent: Boolean = true,
+        partitionsPresent: Boolean = true,
+        entitySetsPresent: Boolean = true
+): String {
+    val entitySetClause = if (entitySetsPresent) "${ENTITY_SET_ID.name} = ?" else ""
+    val idsClause = if (idsPresent) "${ID_VALUE.name} = ?" else ""
+    val partitionClause = if (partitionsPresent) "${PARTITION.name} = ANY(?)" else ""
+    val versionsClause = "${VERSION.name} > 0 "
+
+    val optionalClauses = listOf(entitySetClause, idsClause, partitionClause, versionsClause).filter { it.isNotBlank() }
+    return "WHERE ${optionalClauses.joinToString(" AND ")}"
+}
+
 internal fun selectEntitiesGroupedByIdAndPropertyTypeId(
         idsPresent: Boolean = true,
         partitionsPresent: Boolean = true,
@@ -629,7 +643,6 @@ fun upsertLinkedEntityPropertyValueSql(propertyType: PropertyType): String {
             "${VERSION.name} = CASE WHEN abs(${DATA.name}.${VERSION.name}) < EXCLUDED.${VERSION.name} THEN EXCLUDED.${VERSION.name} " +
             "ELSE ${DATA.name}.${VERSION.name} END"
 }
-
 
 /* For materialized views */
 
