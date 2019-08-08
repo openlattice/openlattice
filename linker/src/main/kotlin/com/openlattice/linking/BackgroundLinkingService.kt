@@ -36,7 +36,6 @@ import com.openlattice.edm.EntitySet
 import com.openlattice.edm.PostgresEdmManager
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.HazelcastQueue
-import com.openlattice.linking.clustering.ClusterUpdate
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
@@ -137,9 +136,7 @@ class BackgroundLinkingService
                         )
                     }
 
-                    val clusterUpdate = ClusterUpdate(scoredCluster.clusterId, candidate, scoredCluster.cluster)
-
-                    insertMatches(clusterUpdate, conn, false)
+                    insertMatches(conn, scoredCluster.clusterId, candidate, scoredCluster.cluster, false)
                 }
             } catch (ex: Exception) {
                 logger.error("An error occurred while performing linking.", ex)
@@ -177,21 +174,19 @@ class BackgroundLinkingService
                 val clusters = getClusters(dataKeys)
                 lqs.lockClustersForUpdates(clusters.keys).use { conn ->
                     val maybeBestCluster = clusters
-                            .asSequence()
-                            .map { cluster -> cluster(candidate, cluster, ::completeLinkCluster) }
-                            .filter { scoredCluster -> scoredCluster.score > MINIMUM_SCORE }
-                            .maxBy { scoredCluster -> scoredCluster.score }
+                        .asSequence()
+                        .map { cluster -> cluster(candidate, cluster, ::completeLinkCluster) }
+                        .filter { scoredCluster -> scoredCluster.score > MINIMUM_SCORE }
+                        .maxBy { scoredCluster -> scoredCluster.score }
 
                     //TODO: When creating new cluster do we really need to re-match or can we assume score of 1.0?
                     if (maybeBestCluster == null) {
                         val clusterId = ids.reserveIds(IdConstants.LINKING_ENTITY_SET_ID.id, 1).first()
                         val block = candidate to mapOf(candidate to elem)
-                        val clusterUpdate = ClusterUpdate(clusterId, candidate, matcher.match(block).second)
-                        insertMatches(clusterUpdate, conn, true)
-                    } else {
-                        val clusterUpdate = ClusterUpdate(maybeBestCluster.clusterId, candidate, maybeBestCluster.cluster)
-                        insertMatches(clusterUpdate, conn, false)
+                        return@use insertMatches( conn,clusterId, candidate, matcher.match(block).second, true )
                     }
+
+                    return@use insertMatches( conn, maybeBestCluster.clusterId, candidate, maybeBestCluster.cluster, false )
                 }
             } catch (ex: Exception) {
                 logger.error("An error occurred while performing linking.", ex)
@@ -246,25 +241,24 @@ class BackgroundLinkingService
         return lqs.getClusters(lqs.getIdsOfClustersContaining(dataKeys).toList())
     }
 
-    private fun insertMatches(clusterUpdate: ClusterUpdate, conn: Connection, newCluster: Boolean) {
-        lqs.insertMatchScores(conn, clusterUpdate.clusterId, clusterUpdate.scores)
-        lqs.updateIDsTable(clusterUpdate.clusterId, clusterUpdate.newMember)
-        // call upsertEntities
+    private fun insertMatches( conn: Connection,
+                               clusterId: UUID,
+                               newMember: EntityDataKey,
+                               scores: Map<EntityDataKey, Map<EntityDataKey, Double>>,
+                               newCluster: Boolean ) {
+        lqs.insertMatchScores( conn, clusterId, scores )
+        lqs.updateIdsTable( clusterId, newMember )
+        lqs.createOrUpdateLink( clusterId, newMember.entitySetId, newMember.entityKeyId )
 
-        val id = clusterUpdate.clusterId
-
-        val scores = clusterUpdate.scores.flatMap { entry ->
-            return@flatMap Sets.union(entry.value.keys, setOf(entry.key))
-        }.groupBy { edk -> edk.entitySetId
-        }.mapValues { entry ->
-            Sets.newLinkedHashSet(entry.value.map { it.entityKeyId })
+        val scoresAsEsidToEkids = scores.flatMap { (edk, linkedScore) ->
+            return@flatMap Sets.union(linkedScore.keys, setOf(edk))
+        }.groupBy { edk ->
+            edk.entitySetId
+        }.mapValues { ( _, edks ) -> // esid, edks
+            Sets.newLinkedHashSet( edks.map { it.entityKeyId } )
         }
 
-        if ( newCluster ) {
-            linkingLogService.createCluster( id, scores )
-        } else {
-            linkingLogService.updateCluster( id, scores )
-        }
+        linkingLogService.createOrUpdateCluster( clusterId, scoresAsEsidToEkids, newCluster )
     }
 
     @Timed
