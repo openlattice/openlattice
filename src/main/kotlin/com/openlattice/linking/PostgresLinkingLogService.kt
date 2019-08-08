@@ -14,7 +14,15 @@ class PostgresLinkingLogService(
         val mapper: ObjectMapper
 ) : LinkingLogService {
 
-    override fun createCluster(linkingId: UUID, linkedEntities: Map<UUID, Set<UUID>>) {
+    override fun createOrUpdateCluster(linkingId: UUID, linkedEntities: Map<UUID, Set<UUID>>, newCluster: Boolean) {
+        if ( newCluster ) {
+            createCluster( linkingId, linkedEntities )
+        } else {
+            updateCluster( linkingId, linkedEntities )
+        }
+    }
+
+    private fun createCluster(linkingId: UUID, linkedEntities: Map<UUID, Set<UUID>>) {
         hds.connection.use { conn ->
             conn.prepareStatement(INSERT_LOG_SQL).use { ps ->
                 ps.setObject(1, linkingId)
@@ -25,7 +33,7 @@ class PostgresLinkingLogService(
         }
     }
 
-    override fun updateCluster(linkingId: UUID, linkedEntities: Map<UUID, Set<UUID>>) {
+    private fun updateCluster(linkingId: UUID, linkedEntities: Map<UUID, Set<UUID>>) {
         hds.connection.use { conn ->
             conn.prepareStatement(ADD_LINK_SQL).use { ps ->
                 linkedEntities.forEach { esid, ekids ->
