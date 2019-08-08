@@ -45,7 +45,6 @@ import com.openlattice.edm.events.*
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap.*
-import com.openlattice.hazelcast.serializers.AssemblerConnectionManagerDependent
 import com.openlattice.organization.Organization
 import com.openlattice.organization.OrganizationEntitySetFlag
 import com.openlattice.organization.OrganizationIntegrationAccount
@@ -84,7 +83,7 @@ class Assembler(
         hazelcast: HazelcastInstance,
         eventBus: EventBus
 
-) : HazelcastTaskDependencies, AssemblerConnectionManagerDependent {
+) : HazelcastTaskDependencies, AssemblerConnectionManagerDependent<Void?> {
 
     private val entitySets = hazelcast.getMap<UUID, EntitySet>(ENTITY_SETS.name)
     private val entityTypes = hazelcast.getMap<UUID, EntityType>(ENTITY_TYPES.name)
@@ -104,8 +103,9 @@ class Assembler(
         eventBus.register(this)
     }
 
-    override fun init(assemblerConnectionManager: AssemblerConnectionManager) {
-        this.acm = assemblerConnectionManager
+    override fun init(acm: AssemblerConnectionManager): Void? {
+        this.acm = acm
+        return null
     }
 
     fun getMaterializedEntitySetsInOrganization(organizationId: UUID): Map<UUID, Set<OrganizationEntitySetFlag>> {
@@ -204,6 +204,16 @@ class Assembler(
                             RemoveMaterializedEntitySetsFromOrganizationProcessor(entitySetIds)
                     )
                 }
+    }
+
+    @Subscribe
+    fun handleEntitySetNameUpdated(entitySetNameUpdatedEvent: EntitySetNameUpdatedEvent) {
+        materializedEntitySets.executeOnEntries(
+                RenameMaterializedEntitySetProcessor(
+                        entitySetNameUpdatedEvent.newName, entitySetNameUpdatedEvent.oldName
+                ).init(acm),
+                entitySetIdPredicate(entitySetNameUpdatedEvent.entitySetId)
+        )
     }
 
     @Subscribe

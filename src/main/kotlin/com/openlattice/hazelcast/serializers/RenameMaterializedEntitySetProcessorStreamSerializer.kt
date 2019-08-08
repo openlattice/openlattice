@@ -18,7 +18,6 @@
  *
  *
  */
-
 package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
@@ -26,31 +25,35 @@ import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.AssemblerConnectionManagerDependent
-import com.openlattice.assembler.processors.MaterializeEdgesProcessor
+import com.openlattice.assembler.processors.RenameMaterializedEntitySetProcessor
 import com.openlattice.hazelcast.StreamSerializerTypeIds
-import com.openlattice.organizations.PrincipalSet
 import org.springframework.stereotype.Component
 
 @Component
-class MaterializeEdgesProcessorStreamSerializer
-    : SelfRegisteringStreamSerializer<MaterializeEdgesProcessor>, AssemblerConnectionManagerDependent<Void?> {
+class RenameMaterializedEntitySetProcessorStreamSerializer :
+        SelfRegisteringStreamSerializer<RenameMaterializedEntitySetProcessor>,
+        AssemblerConnectionManagerDependent<Void?> {
+
     private lateinit var acm: AssemblerConnectionManager
 
     override fun getTypeId(): Int {
-        return StreamSerializerTypeIds.MATERIALIZE_EDGES_PROCESSOR.ordinal
+        return StreamSerializerTypeIds.RENAME_MATERIALIZED_ENTITY_SET_PROCESSOR.ordinal
     }
 
-    override fun getClazz(): Class<out MaterializeEdgesProcessor> {
-        return MaterializeEdgesProcessor::class.java
+    override fun getClazz(): Class<out RenameMaterializedEntitySetProcessor> {
+        return RenameMaterializedEntitySetProcessor::class.java
     }
 
-    override fun write(out: ObjectDataOutput, obj: MaterializeEdgesProcessor) {
-        PrincipalSetStreamSerializer().write(out, PrincipalSet(obj.authorizedPrincipals))
+    override fun write(output: ObjectDataOutput, obj: RenameMaterializedEntitySetProcessor) {
+        output.writeUTF(obj.oldName)
+        output.writeUTF(obj.newName)
     }
 
-    override fun read(input: ObjectDataInput): MaterializeEdgesProcessor {
-        val principals = PrincipalSetStreamSerializer().read(input).unwrap()
-        return MaterializeEdgesProcessor(principals).init(acm)
+    override fun read(input: ObjectDataInput): RenameMaterializedEntitySetProcessor {
+        val oldName = input.readUTF()
+        val newName = input.readUTF()
+
+        return RenameMaterializedEntitySetProcessor(oldName, newName)
     }
 
     override fun init(acm: AssemblerConnectionManager): Void? {

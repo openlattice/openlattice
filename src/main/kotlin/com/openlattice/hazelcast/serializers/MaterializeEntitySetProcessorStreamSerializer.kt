@@ -25,6 +25,7 @@ import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.assembler.AssemblerConnectionManager
+import com.openlattice.assembler.AssemblerConnectionManagerDependent
 import com.openlattice.assembler.processors.MaterializeEntitySetProcessor
 import com.openlattice.authorization.Principal
 import com.openlattice.edm.type.PropertyType
@@ -37,7 +38,7 @@ import org.springframework.stereotype.Component
  */
 @Component
 class MaterializeEntitySetProcessorStreamSerializer
-    : SelfRegisteringStreamSerializer<MaterializeEntitySetProcessor>, AssemblerConnectionManagerDependent {
+    : SelfRegisteringStreamSerializer<MaterializeEntitySetProcessor>, AssemblerConnectionManagerDependent<Void?> {
 
     companion object {
         @JvmStatic
@@ -111,7 +112,8 @@ class MaterializeEntitySetProcessorStreamSerializer
         ).init(acm)
     }
 
-    override fun init(assemblerConnectionManager: AssemblerConnectionManager) {
-        this.acm = assemblerConnectionManager
+    override fun init(acm: AssemblerConnectionManager): Void? {
+        this.acm = acm
+        return null
     }
 }

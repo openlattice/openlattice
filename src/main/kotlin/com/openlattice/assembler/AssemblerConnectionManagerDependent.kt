@@ -19,14 +19,12 @@
  *
  */
 
-package com.openlattice.hazelcast.serializers
-
-import com.openlattice.assembler.AssemblerConnectionManager
+package com.openlattice.assembler
 
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-interface AssemblerConnectionManagerDependent {
-    fun init( assemblerConnectionManager: AssemblerConnectionManager)
+interface AssemblerConnectionManagerDependent<T> {
+    fun init(acm: AssemblerConnectionManager): T
 }

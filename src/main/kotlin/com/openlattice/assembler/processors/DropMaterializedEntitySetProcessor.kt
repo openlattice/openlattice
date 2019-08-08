@@ -24,13 +24,16 @@ import com.hazelcast.core.Offloadable
 import com.hazelcast.spi.ExecutionService
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.assembler.AssemblerConnectionManager
+import com.openlattice.assembler.AssemblerConnectionManagerDependent
 import com.openlattice.assembler.EntitySetAssemblyKey
 import com.openlattice.assembler.MaterializedEntitySet
 
 private const val NOT_INITIALIZED = "Assembler Connection Manager not initialized."
 
 class DropMaterializedEntitySetProcessor
-    : AbstractRhizomeEntryProcessor<EntitySetAssemblyKey, MaterializedEntitySet, Void?>(), Offloadable {
+    : AbstractRhizomeEntryProcessor<EntitySetAssemblyKey, MaterializedEntitySet, Void?>(),
+        AssemblerConnectionManagerDependent<DropMaterializedEntitySetProcessor>,
+        Offloadable {
 
     @Transient
     private var acm: AssemblerConnectionManager? = null
@@ -55,7 +58,7 @@ class DropMaterializedEntitySetProcessor
         return ExecutionService.OFFLOADABLE_EXECUTOR
     }
 
-    fun init(acm: AssemblerConnectionManager): DropMaterializedEntitySetProcessor {
+    override fun init(acm: AssemblerConnectionManager): DropMaterializedEntitySetProcessor {
         this.acm = acm
         return this
     }

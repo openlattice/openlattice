@@ -24,6 +24,7 @@ import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.assembler.AssemblerConnectionManager
+import com.openlattice.assembler.AssemblerConnectionManagerDependent
 import com.openlattice.assembler.processors.RemoveMembersFromOrganizationAssemblyProcessor
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.organizations.SecurablePrincipalList
@@ -32,7 +33,7 @@ import org.springframework.stereotype.Component
 @Component
 class RemoveMembersFromOrganizationAssemblyProcessorStreamSerializer
     : SelfRegisteringStreamSerializer<RemoveMembersFromOrganizationAssemblyProcessor>,
-        AssemblerConnectionManagerDependent {
+        AssemblerConnectionManagerDependent<Void?> {
     private lateinit var acm: AssemblerConnectionManager
 
     override fun getTypeId(): Int {
@@ -53,7 +54,8 @@ class RemoveMembersFromOrganizationAssemblyProcessorStreamSerializer
                 .init(acm)
     }
 
-    override fun init(assemblerConnectionManager: AssemblerConnectionManager) {
-        this.acm = assemblerConnectionManager
+    override fun init(acm: AssemblerConnectionManager): Void? {
+        this.acm = acm
+        return null
     }
 }

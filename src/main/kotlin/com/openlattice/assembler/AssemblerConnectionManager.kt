@@ -369,7 +369,7 @@ class AssemblerConnectionManager(
 
             val sql = "SELECT $selectColumns FROM $PRODUCTION_FOREIGN_SCHEMA.${entitySetIdTableName(entitySet.id)} "
 
-            val tableName = "$MATERIALIZED_VIEWS_SCHEMA.${quote(entitySet.name)}"
+            val tableName = entitySetNameTableName(entitySet.name)
 
             datasource.connection.use { connection ->
                 val dropMaterializedEntitySet = "DROP MATERIALIZED VIEW IF EXISTS $tableName"
@@ -480,6 +480,23 @@ class AssemblerConnectionManager(
 
             // re-materialize entity set
             materialize(datasource, entitySet, materializablePropertyTypes, authorizedPropertyTypesOfPrincipals)
+        }
+    }
+
+    /**
+     * Renames a materialized view in the requested organization.
+     * @param organizationId The id of the organization in which the entity set is materialized and should be renamed.
+     * @param newName The new name of the entity set.
+     * @param oldName The old name of the entity set.
+     */
+    fun renameMaterializedEntitySet(organizationId: UUID, newName: String, oldName: String) {
+        connect(buildOrganizationDatabaseName(organizationId)).use { dataSource ->
+            dataSource.connection.createStatement().use { stmt ->
+                val newTableName = entitySetNameTableName(newName)
+                val oldTableName = entitySetNameTableName(oldName)
+
+                stmt.executeUpdate("ALTER MATERIALIZED VIEW IF EXISTS $oldTableName RENAME TO $newTableName")
+            }
         }
     }
 
@@ -737,6 +754,10 @@ class AssemblerConnectionManager(
 
     private fun entitySetIdTableName(entitySetId: UUID): String {
         return quote(entitySetId.toString())
+    }
+
+    private fun entitySetNameTableName(entitySetName: String): String {
+        return "$MATERIALIZED_VIEWS_SCHEMA.${quote(entitySetName)}"
     }
 }
 

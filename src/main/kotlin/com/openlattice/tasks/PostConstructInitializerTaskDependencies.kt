@@ -22,7 +22,7 @@
 package com.openlattice.tasks
 
 import com.openlattice.assembler.AssemblerConnectionManager
-import com.openlattice.hazelcast.serializers.AssemblerConnectionManagerDependent
+import com.openlattice.assembler.AssemblerConnectionManagerDependent
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import javax.inject.Inject
@@ -39,7 +39,7 @@ class PostConstructInitializerTaskDependencies : HazelcastTaskDependencies {
     private lateinit var accessConnectionManager: AssemblerConnectionManager
 
     @Inject
-    private lateinit var acmDependentStreamSerializers: Set<AssemblerConnectionManagerDependent>
+    private lateinit var acmDependentStreamSerializers: Set<AssemblerConnectionManagerDependent<out Any>>
 
 
     @Component

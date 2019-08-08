@@ -18,7 +18,6 @@
  *
  *
  */
-
 package com.openlattice.assembler.processors
 
 import com.hazelcast.core.Offloadable
@@ -26,33 +25,29 @@ import com.hazelcast.core.ReadOnly
 import com.hazelcast.spi.ExecutionService
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.assembler.AssemblerConnectionManager
-import com.openlattice.assembler.OrganizationAssembly
-import com.openlattice.assembler.PostgresDatabases
-import com.openlattice.authorization.SecurablePrincipal
+import com.openlattice.assembler.EntitySetAssemblyKey
+import com.openlattice.assembler.MaterializedEntitySet
 import com.openlattice.assembler.AssemblerConnectionManagerDependent
-import java.lang.IllegalStateException
-import java.util.*
+import org.slf4j.LoggerFactory
 
-data class AddMembersToOrganizationAssemblyProcessor(val newPrincipals: Collection<SecurablePrincipal>)
-    : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(false),
-        AssemblerConnectionManagerDependent<AddMembersToOrganizationAssemblyProcessor>,
-        Offloadable,
-        ReadOnly {
+private val logger = LoggerFactory.getLogger(RenameMaterializedEntitySetProcessor::class.java)
+private const val NOT_INITIALIZED = "Assembler Connection Manager not initialized."
 
+data class RenameMaterializedEntitySetProcessor(val oldName: String, val newName: String)
+    : AbstractRhizomeEntryProcessor<EntitySetAssemblyKey, MaterializedEntitySet?, Void?>(false),
+        AssemblerConnectionManagerDependent<RenameMaterializedEntitySetProcessor>,
+        Offloadable, ReadOnly {
     @Transient
-    private lateinit var acm: AssemblerConnectionManager
+    private var acm: AssemblerConnectionManager? = null
 
-    override fun process(entry: MutableMap.MutableEntry<UUID, OrganizationAssembly?>): Void? {
-        val organizationId = entry.key
-        val assembly = entry.value
-        if (assembly == null) {
-            throw IllegalStateException("Encountered null assembly while trying to add new principals $newPrincipals " +
-                    "to organization $organizationId.")
+    override fun process(entry: MutableMap.MutableEntry<EntitySetAssemblyKey, MaterializedEntitySet?>): Void? {
+        val organizationId = entry.key.organizationId
+        if (entry.value == null) {
+            logger.error("Encountered null assembly while trying to rename entity set materialized view.")
         } else {
-            val dbName = PostgresDatabases.buildOrganizationDatabaseName(organizationId)
-            acm.connect(dbName).use { dataSource -> acm.configureNewUsersInDatabase(dbName, dataSource, newPrincipals) }
+            acm?.renameMaterializedEntitySet(organizationId, oldName, newName)
+                    ?: throw IllegalStateException(NOT_INITIALIZED)
         }
-
         return null
     }
 
@@ -60,7 +55,7 @@ data class AddMembersToOrganizationAssemblyProcessor(val newPrincipals: Collecti
         return ExecutionService.OFFLOADABLE_EXECUTOR
     }
 
-    override fun init(acm: AssemblerConnectionManager): AddMembersToOrganizationAssemblyProcessor {
+    override fun init(acm: AssemblerConnectionManager): RenameMaterializedEntitySetProcessor {
         this.acm = acm
         return this
     }
