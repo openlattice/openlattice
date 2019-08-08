@@ -303,8 +303,7 @@ class PostgresEntityDataQueryService(
             version: Long,
             partitionsInfo: PartitionsInfo,
             partition: Int,
-            awsPassthrough: Boolean,
-            linkingId: UUID?=null
+            awsPassthrough: Boolean
     ): Pair<Int, Int> {
 
         //Update the versions of all entities.
@@ -329,9 +328,9 @@ class PostgresEntityDataQueryService(
         //Update metadata
         val upsertEntities = connection.prepareStatement(upsertEntitiesSql)
 
-        upsertEntities.setArray(1, versionsArrays)
-        upsertEntities.setLong(2, version)
-        upsertEntities.setLong(3, version)
+        upsertEntities.setObject(1, versionsArrays)
+        upsertEntities.setObject(2, version)
+        upsertEntities.setObject(3, version)
         upsertEntities.setObject(4, entitySetId)
         upsertEntities.setArray(5, entityKeyIdsArr)
         upsertEntities.setInt(6, partition)
@@ -346,35 +345,9 @@ class PostgresEntityDataQueryService(
             logger.debug("Entity key ids: {}", entities.keys)
         }
 
-        val updatedProperties = upsertPropertyValues( connection, entitySetId, entities, authorizedPropertyTypes,
-                partitionsInfo, partition, awsPassthrough, version, versionsArrays )
-
-        val updatedLinkedProperties = if ( linkingId == null ){
-            0
-        } else {
-            upsertPropertyValues( connection, entitySetId, entities, authorizedPropertyTypes, partitionsInfo, partition,
-                    awsPassthrough, version, versionsArrays, linkingId )
-        }
-
-        return updatedEntityCount to ( updatedProperties + updatedLinkedProperties )
-    }
-
-    private fun upsertPropertyValues(
-            connection: Connection,
-            entitySetId: UUID,
-            entities: Map<UUID, Map<UUID, Set<Any>>>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>,
-            partitionsInfo: PartitionsInfo,
-            partition: Int,
-            awsPassthrough: Boolean,
-            version: Long,
-            versionsArrays: java.sql.Array,
-            linkingId: UUID?=null
-    ): Int {
         //Update property values. We use multiple prepared statements in batch while re-using ARRAY[version].
         val upsertPropertyValues = mutableMapOf<UUID, PreparedStatement>()
-        val isLinking = linkingId != null
-        return entities.entries.map { (entityKeyId, rawValue) ->
+        val updatedPropertyCounts = entities.entries.map { (entityKeyId, rawValue) ->
             val entityData = if (awsPassthrough) {
                 rawValue
             } else {
@@ -386,12 +359,7 @@ class PostgresEntityDataQueryService(
             entityData.map { (propertyTypeId, values) ->
                 val upsertPropertyValue = upsertPropertyValues.getOrPut(propertyTypeId) {
                     val pt = authorizedPropertyTypes[propertyTypeId] ?: abortInsert(entitySetId, entityKeyId)
-                    val sql = if ( isLinking ) {
-                        upsertLinkedEntityPropertyValueSql(pt)
-                    } else {
-                        upsertPropertyValueSql(pt)
-                    }
-                    connection.prepareStatement( sql )
+                    connection.prepareStatement(upsertPropertyValueSql(pt))
                 }
 
                 //TODO: Keep track of collisions here. We can detect when hashes collide for an entity
@@ -402,59 +370,55 @@ class PostgresEntityDataQueryService(
                 values.map { value ->
                     //Binary data types get stored in S3 bucket
                     val (propertyHash, insertValue) =
-                        if (authorizedPropertyTypes.getValue(propertyTypeId).datatype == EdmPrimitiveTypeKind.Binary) {
-                            if (awsPassthrough) {
-                                //Data is being stored in AWS directly the value will be the url fragment
-                                //of where the data will be stored in AWS.
-                                PostgresDataHasher.hashObject(
-                                    value,
-                                    EdmPrimitiveTypeKind.String
-                                ) to value
+                            if (authorizedPropertyTypes
+                                            .getValue(propertyTypeId).datatype == EdmPrimitiveTypeKind.Binary) {
+                                if (awsPassthrough) {
+                                    //Data is being stored in AWS directly the value will be the url fragment
+                                    //of where the data will be stored in AWS.
+                                    PostgresDataHasher.hashObject(
+                                            value,
+                                            EdmPrimitiveTypeKind.String
+                                    ) to value
+                                } else {
+                                    //Data is expected to be of a specific type so that it can be stored in
+                                    //s3 bucket
+
+                                    val binaryData = value as BinaryDataWithContentType
+
+                                    val digest = PostgresDataHasher
+                                            .hashObjectToHex(binaryData.data, EdmPrimitiveTypeKind.Binary)
+                                    //store entity set id/entity key id/property type id/property hash as key in S3
+                                    val s3Key = "$entitySetId/$entityKeyId/$propertyTypeId/$digest"
+                                    byteBlobDataManager
+                                            .putObject(s3Key, binaryData.data, binaryData.contentType)
+                                    PostgresDataHasher
+                                            .hashObject(s3Key, EdmPrimitiveTypeKind.String) to s3Key
+                                }
                             } else {
-                                //Data is expected to be of a specific type so that it can be stored in
-                                //s3 bucket
+                                PostgresDataHasher.hashObject(
+                                        value,
+                                        authorizedPropertyTypes.getValue(propertyTypeId).datatype
+                                ) to value
 
-                                val binaryData = value as BinaryDataWithContentType
-
-                                val digest = PostgresDataHasher
-                                    .hashObjectToHex(binaryData.data, EdmPrimitiveTypeKind.Binary)
-                                //store entity set id/entity key id/property type id/property hash as key in S3
-                                val s3Key = "$entitySetId/$entityKeyId/$propertyTypeId/$digest"
-                                byteBlobDataManager
-                                    .putObject(s3Key, binaryData.data, binaryData.contentType)
-                                PostgresDataHasher
-                                    .hashObject(s3Key, EdmPrimitiveTypeKind.String) to s3Key
                             }
-                        } else {
-                            PostgresDataHasher.hashObject(
-                                value,
-                                authorizedPropertyTypes.getValue(propertyTypeId).datatype
-                            ) to value
-                        }
 
                     upsertPropertyValue.setObject(1, entitySetId)
-                    if ( isLinking ){
-                        upsertPropertyValue.setObject(2, linkingId) // ID_VALUE
-                    } else {
-                        upsertPropertyValue.setObject(2, entityKeyId)
-                    }
+                    upsertPropertyValue.setObject(2, entityKeyId)
                     upsertPropertyValue.setInt(3, partition)
                     upsertPropertyValue.setObject(4, propertyTypeId)
                     upsertPropertyValue.setObject(5, propertyHash)
-                    upsertPropertyValue.setLong(6, version)
+                    upsertPropertyValue.setObject(6, version)
                     upsertPropertyValue.setArray(7, versionsArrays)
                     upsertPropertyValue.setInt(8, partitionsInfo.partitionsVersion)
                     upsertPropertyValue.setObject(9, insertValue)
-                    if ( isLinking ){
-                        upsertPropertyValue.setObject(10, entityKeyId) // ORIGIN_ID
-                    }
                     upsertPropertyValue.addBatch()
                 }
             }
             upsertPropertyValues.values.map { it.executeBatch().sum() }.sum()
         }.sum()
-    }
 
+        return updatedEntityCount to updatedPropertyCounts
+    }
 
     fun replaceEntities(
             entitySetId: UUID,
