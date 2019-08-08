@@ -317,6 +317,7 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
      *
      * @param entitySetIds The entity set ids for which to get the authorized property types.
      * @param requiredPermissions The set of required permissions to check for.
+     * @param principals The set of pricipals to check the permissions against.
      * @return A Map with keys for each of the requested entity set id and values of authorized property types by their
      * id.
      */
@@ -331,6 +332,15 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
                         Function.identity(),
                         entitySetId -> getAuthorizedPropertyTypes( entitySetId, requiredPermissions, principals )
                 ) );
+    }
+
+    @Timed
+    public Map<UUID, Map<UUID, PropertyType>> getAuthorizedPropertiesOnEntitySets(
+            Set<UUID> entitySetIds,
+            EnumSet<Permission> requiredPermissions) {
+        return getAuthorizedPropertiesOnEntitySets(
+                entitySetIds, requiredPermissions, Principals.getCurrentPrincipals()
+        );
     }
 
     @Timed
