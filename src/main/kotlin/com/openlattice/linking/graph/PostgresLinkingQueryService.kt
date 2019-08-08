@@ -23,6 +23,7 @@ package com.openlattice.linking.graph
 
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.storage.getPartitionsInfo
+import com.openlattice.data.storage.optionalWhereClausesSingleEdk
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.linking.EntityKeyPair
 import com.openlattice.linking.LinkingQueryService
@@ -30,6 +31,7 @@ import com.openlattice.postgres.DataTables.*
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresColumnDefinition
+import com.openlattice.postgres.PostgresDataTables
 import com.openlattice.postgres.PostgresTable.*
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.PostgresIterable
@@ -113,7 +115,7 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource, private val
         }, Function { ResultSetAdapters.entitySetId(it) to ResultSetAdapters.id(it) })
     }
 
-    override fun updateIDsTable(clusterId: UUID, newMember: EntityDataKey): Int {
+    override fun updateIdsTable(clusterId: UUID, newMember: EntityDataKey): Int {
         hds.connection.use { connection ->
             connection.prepareStatement(UPDATE_LINKED_ENTITIES_SQL).use { ps ->
                 val partitions = getPartitionsAsPGArray(connection, newMember.entitySetId)
@@ -168,6 +170,48 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource, private val
                                     { dstScore -> dstScore.second })
                             .mapValues { dstScores -> dstScores.value.toMap() }
                 }
+    }
+
+    /**
+     * Insert INTO:
+     * 1. ID_VALUE: linkingId
+     * 2. VERSION: system.currentTime
+     *
+     * Select From WHERE:
+     * 3. ENTITY_SET: entity set id
+     * 4. ID_VALUE: entity key id
+     * 5. PARTITION: partition(s) (array)
+     *
+     */
+    override fun createOrUpdateLink( linkingId: UUID, entitySetId: UUID, entityKeyId: UUID ) {
+        val dataTableColumnsNewVersion = PostgresDataTables.dataTableColumns.joinToString(",") {
+            if ( it.name == VERSION.name || it.name == ID_VALUE.name ){
+                return@joinToString "?"
+            }
+            if ( it.name == ORIGIN_ID.name ){
+                return@joinToString "id"
+            }
+            if ( it.name == LAST_WRITE.name ){
+                return@joinToString "now()"
+            }
+            it.name
+        }
+
+        val dataTableColumnsSql = PostgresDataTables.dataTableColumns.joinToString(",") { it.name }
+        val ADD_LINK_SQL = "INSERT INTO ${DATA.name} ($dataTableColumnsSql) " +
+                "SELECT $dataTableColumnsNewVersion " +
+                "FROM ${DATA.name} ${optionalWhereClausesSingleEdk(true, true, true)}"
+
+        hds.connection.use { connection ->
+            connection.prepareStatement( ADD_LINK_SQL ).use { ps ->
+                ps.setObject(1, linkingId )
+                ps.setLong(2, System.currentTimeMillis() )
+                ps.setObject( 3, entitySetId )
+                ps.setObject( 4, entityKeyId )
+                ps.setArray( 5, getPartitionsAsPGArray( connection, entitySetId ))
+                ps.executeUpdate()
+            }
+        }
     }
 
     override fun getClustersBySize(): PostgresIterable<Pair<EntityDataKey, Double>> {
@@ -373,6 +417,11 @@ internal fun uuidString(id: UUID): String {
 private val COLUMNS = MATCHED_ENTITIES.columns
         .joinToString(",", transform = PostgresColumnDefinition::getName)
 
+/**
+ * MATCHED_ENTITIES Queries
+ */
+private val LOCK_CLUSTERS_SQL = "SELECT 1 FROM ${MATCHED_ENTITIES.name} WHERE ${LINKING_ID.name} = ? FOR UPDATE"
+
 private val CLUSTER_CONTAINING_SQL = "SELECT * FROM ${MATCHED_ENTITIES.name} WHERE ${LINKING_ID.name} = ANY(?)"
 
 private val DELETE_SQL = "DELETE FROM ${MATCHED_ENTITIES.name} " +
@@ -411,6 +460,9 @@ private val BLOCKS_BY_SIZE_SQL = "SELECT ${SRC_ENTITY_SET_ID.name} as entity_set
         "GROUP BY (${SRC_ENTITY_SET_ID.name},${SRC_ENTITY_KEY_ID.name}) " +
         "ORDER BY $BLOCK_SIZE_FIELD DESC"
 
+/**
+ * IDS queries
+ */
 private val UPDATE_LINKED_ENTITIES_SQL = "UPDATE ${IDS.name} " +
         "SET ${LINKING_ID.name} = ?, ${LAST_LINK.name} = now() " +
         "WHERE ${PARTITION.name} = ANY(?) AND ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name}= ?"
@@ -428,8 +480,6 @@ private val ENTITY_KEY_IDS_NOT_LINKED = "SELECT ${ENTITY_SET_ID.name},${ID.name}
 private val LINKABLE_ENTITY_SET_IDS = "SELECT ${ID.name} " +
         "FROM ${ENTITY_SETS.name} " +
         "WHERE ${ENTITY_TYPE_ID.name} = ANY(?) AND NOT ${ID.name} = ANY(?) AND ${ID.name} = ANY(?) "
-
-private val LOCK_CLUSTERS_SQL = "SELECT 1 FROM ${MATCHED_ENTITIES.name} WHERE ${LINKING_ID.name} = ? FOR UPDATE"
 
 private val ENTITY_KEY_IDS_OF_LINKING_IDS_SQL = "SELECT ${LINKING_ID.name}, array_agg(${ID.name}) AS ${ENTITY_KEY_IDS_COL.name} " +
         "FROM ${IDS.name} " +
