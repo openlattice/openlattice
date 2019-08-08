@@ -22,8 +22,8 @@
 package com.openlattice.linking.graph
 
 import com.openlattice.data.EntityDataKey
+import com.openlattice.data.storage.addLinkForSingleEntitySql
 import com.openlattice.data.storage.getPartitionsInfo
-import com.openlattice.data.storage.optionalWhereClausesSingleEdk
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.linking.EntityKeyPair
 import com.openlattice.linking.LinkingQueryService
@@ -31,7 +31,6 @@ import com.openlattice.postgres.DataTables.*
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresColumnDefinition
-import com.openlattice.postgres.PostgresDataTables
 import com.openlattice.postgres.PostgresTable.*
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.PostgresIterable
@@ -184,26 +183,8 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource, private val
      *
      */
     override fun createOrUpdateLink( linkingId: UUID, entitySetId: UUID, entityKeyId: UUID ) {
-        val dataTableColumnsNewVersion = PostgresDataTables.dataTableColumns.joinToString(",") {
-            if ( it.name == VERSION.name || it.name == ID_VALUE.name ){
-                return@joinToString "?"
-            }
-            if ( it.name == ORIGIN_ID.name ){
-                return@joinToString "id"
-            }
-            if ( it.name == LAST_WRITE.name ){
-                return@joinToString "now()"
-            }
-            it.name
-        }
-
-        val dataTableColumnsSql = PostgresDataTables.dataTableColumns.joinToString(",") { it.name }
-        val ADD_LINK_SQL = "INSERT INTO ${DATA.name} ($dataTableColumnsSql) " +
-                "SELECT $dataTableColumnsNewVersion " +
-                "FROM ${DATA.name} ${optionalWhereClausesSingleEdk(true, true, true)}"
-
         hds.connection.use { connection ->
-            connection.prepareStatement( ADD_LINK_SQL ).use { ps ->
+            connection.prepareStatement( addLinkForSingleEntitySql() ).use { ps ->
                 ps.setObject(1, linkingId )
                 ps.setLong(2, System.currentTimeMillis() )
                 ps.setObject( 3, entitySetId )

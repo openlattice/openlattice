@@ -606,42 +606,28 @@ fun upsertPropertyValueSql(propertyType: PropertyType): String {
             "ELSE ${DATA.name}.${VERSION.name} END"
 }
 
-/**
- * This function generates preparable sql with the following bind order:
- *
- * 1.  ENTITY_SET_ID
- * 2.  ID_VALUE
- * 3.  PARTITION
- * 4.  PROPERTY_TYPE_ID
- * 5.  HASH
- *     LAST_WRITE = now()
- * 6.  VERSION,
- * 7.  VERSIONS
- * 8.  PARTITIONS_VERSION
- * 9. Value Column
- * 10. ORIGIN_ID,
- */
-fun upsertLinkedEntityPropertyValueSql(propertyType: PropertyType): String {
-    val insertColumn = getColumnDefinition(propertyType.postgresIndexType, propertyType.datatype)
-    val metadataColumnsSql = listOf(
-            ENTITY_SET_ID,
-            ID_VALUE,
-            PARTITION,
-            PROPERTY_TYPE_ID,
-            HASH,
-            LAST_WRITE,
-            VERSION,
-            VERSIONS,
-            PARTITIONS_VERSION
-    ).joinToString(",") { it.name }
-    return "INSERT INTO ${DATA.name} ($metadataColumnsSql,${insertColumn.name},${ORIGIN_ID.name}) " +
-            "VALUES (?,?,?,?,?,now(),?,?,?,?,?) " +
-            "ON CONFLICT (${PARTITION.name},${ENTITY_SET_ID.name},${PROPERTY_TYPE_ID.name},${ID_VALUE.name}, ${HASH.name}, ${PARTITIONS_VERSION.name}) " +
-            "DO UPDATE SET ${VERSIONS.name} = ${DATA.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
-            "${LAST_WRITE.name} = GREATEST(${DATA.name}.${LAST_WRITE.name},EXCLUDED.${LAST_WRITE.name}), " +
-            "${PARTITIONS_VERSION.name} = EXCLUDED.${PARTITIONS_VERSION.name}, " +
-            "${VERSION.name} = CASE WHEN abs(${DATA.name}.${VERSION.name}) < EXCLUDED.${VERSION.name} THEN EXCLUDED.${VERSION.name} " +
-            "ELSE ${DATA.name}.${VERSION.name} END"
+fun addLinkForSingleEntitySql(): String {
+    val dataTableSelectColumnsWithParameterizedVersionIdAndOriginIdMappedAndLastWriteUpdatedLongestNameInTheUniverse = PostgresDataTables.dataTableColumns.joinToString(",") {
+        when( it ) {
+            VERSION, ID_VALUE   -> "?"
+            ORIGIN_ID           -> "id"
+            LAST_WRITE          -> "now()"
+            else                -> it.name
+        }
+    }
+
+    return "INSERT INTO ${DATA.name} ($dataTableColumnsSql) " +
+            "SELECT $dataTableSelectColumnsWithParameterizedVersionIdAndOriginIdMappedAndLastWriteUpdatedLongestNameInTheUniverse " +
+            "FROM ${DATA.name} ${optionalWhereClausesSingleEdk(true, true, true)} "
+
+//    Integrate this pliz
+//  "ON CONFLICT (${PARTITION.name},${ENTITY_SET_ID.name},${PROPERTY_TYPE_ID.name},${ID_VALUE.name}, ${HASH.name}, ${PARTITIONS_VERSION.name},${ORIGIN_ID.name}) " +
+//  "DO UPDATE SET ${VERSIONS.name} = ${DATA.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
+//  "${LAST_WRITE.name} = GREATEST(${DATA.name}.${LAST_WRITE.name},EXCLUDED.${LAST_WRITE.name}), " +
+//  "${PARTITIONS_VERSION.name} = EXCLUDED.${PARTITIONS_VERSION.name}, " +
+//  "${VERSION.name} = CASE WHEN abs(${DATA.name}.${VERSION.name}) < EXCLUDED.${VERSION.name} THEN EXCLUDED.${VERSION.name} " +
+//  "ELSE ${DATA.name}.${VERSION.name} END"
+
 }
 
 /* For materialized views */
