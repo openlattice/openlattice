@@ -30,7 +30,6 @@ import com.openlattice.linking.LinkingQueryService
 import com.openlattice.postgres.DataTables.*
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
-import com.openlattice.postgres.PostgresColumnDefinition
 import com.openlattice.postgres.PostgresTable.*
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.PostgresIterable
@@ -249,13 +248,9 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource, private val
             scores: Map<EntityDataKey, Map<EntityDataKey, Double>>
     ): Int {
         connection.use { conn ->
-            conn.prepareStatement(INSERT_SQL).use {
-                val ps = it
-                scores.forEach {
-                    val srcEntityDataKey = it.key
-                    it.value.forEach {
-                        val dstEntityDataKey = it.key
-                        val score = it.value
+            conn.prepareStatement(INSERT_SQL).use { ps ->
+                scores.forEach { ( srcEntityDataKey, dst ) ->
+                    dst.forEach { ( dstEntityDataKey, score ) ->
                         ps.setObject(1, clusterId)
                         ps.setObject(2, srcEntityDataKey.entitySetId)
                         ps.setObject(3, srcEntityDataKey.entityKeyId)
@@ -354,6 +349,15 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource, private val
     }
 }
 
+internal fun uuidString(id: UUID): String {
+    return "'$id'::uuid"
+}
+
+/**
+ * MATCHED_ENTITIES Queries
+ */
+private val COLUMNS = MATCHED_ENTITIES.columns.joinToString("," ) { it.name }
+
 internal fun buildIdsOfClusterContainingSql(dataKeys: Set<EntityDataKey>): String {
     val dataKeysSql = dataKeys.joinToString(",") { "('${it.entitySetId}','${it.entityKeyId}')" }
     return "SELECT distinct linking_id " +
@@ -380,16 +384,6 @@ internal fun buildFilterEntityKeyPairs(entityKeyPairs: List<EntityKeyPair>): Str
     }
 }
 
-internal fun uuidString(id: UUID): String {
-    return "'$id'::uuid"
-}
-
-private val COLUMNS = MATCHED_ENTITIES.columns
-        .joinToString(",", transform = PostgresColumnDefinition::getName)
-
-/**
- * MATCHED_ENTITIES Queries
- */
 private val LOCK_CLUSTERS_SQL = "SELECT 1 FROM ${MATCHED_ENTITIES.name} WHERE ${LINKING_ID.name} = ? FOR UPDATE"
 
 private val CLUSTER_CONTAINING_SQL = "SELECT * FROM ${MATCHED_ENTITIES.name} WHERE ${LINKING_ID.name} = ANY(?)"
