@@ -368,39 +368,11 @@ class PostgresEntityDataQueryService(
                 // from the backend before performing operations.
 
                 values.map { value ->
-                    //Binary data types get stored in S3 bucket
-                    val (propertyHash, insertValue) =
-                            if (authorizedPropertyTypes
-                                            .getValue(propertyTypeId).datatype == EdmPrimitiveTypeKind.Binary) {
-                                if (awsPassthrough) {
-                                    //Data is being stored in AWS directly the value will be the url fragment
-                                    //of where the data will be stored in AWS.
-                                    PostgresDataHasher.hashObject(
-                                            value,
-                                            EdmPrimitiveTypeKind.String
-                                    ) to value
-                                } else {
-                                    //Data is expected to be of a specific type so that it can be stored in
-                                    //s3 bucket
 
-                                    val binaryData = value as BinaryDataWithContentType
+                    val dataType = authorizedPropertyTypes.getValue(propertyTypeId).datatype
 
-                                    val digest = PostgresDataHasher
-                                            .hashObjectToHex(binaryData.data, EdmPrimitiveTypeKind.Binary)
-                                    //store entity set id/entity key id/property type id/property hash as key in S3
-                                    val s3Key = "$entitySetId/$entityKeyId/$propertyTypeId/$digest"
-                                    byteBlobDataManager
-                                            .putObject(s3Key, binaryData.data, binaryData.contentType)
-                                    PostgresDataHasher
-                                            .hashObject(s3Key, EdmPrimitiveTypeKind.String) to s3Key
-                                }
-                            } else {
-                                PostgresDataHasher.hashObject(
-                                        value,
-                                        authorizedPropertyTypes.getValue(propertyTypeId).datatype
-                                ) to value
-
-                            }
+                    val ( propertyHash, insertValue ) = getPropertyHash( entitySetId, entityKeyId, propertyTypeId,
+                            value, dataType, awsPassthrough )
 
                     upsertPropertyValue.setObject(1, entitySetId)
                     upsertPropertyValue.setObject(2, entityKeyId)
@@ -418,6 +390,34 @@ class PostgresEntityDataQueryService(
         }.sum()
 
         return updatedEntityCount to updatedPropertyCounts
+    }
+
+    private fun getPropertyHash( entitySetId: UUID,
+                                 entityKeyId: UUID,
+                                 propertyTypeId: UUID,
+                                 value: Any,
+                                 dataType: EdmPrimitiveTypeKind,
+                                 awsPassthrough: Boolean ): Pair<ByteArray, Any> {
+        if ( dataType != EdmPrimitiveTypeKind.Binary) {
+            return PostgresDataHasher.hashObject( value, dataType ) to value
+        }
+        //Binary data types get stored in S3 bucket
+        if ( awsPassthrough ) {
+            //Data is being stored in AWS directly the value will be the url fragment
+            //of where the data will be stored in AWS.
+            return PostgresDataHasher.hashObject( value, EdmPrimitiveTypeKind.String ) to value
+        }
+
+        //Data is expected to be of a specific type so that it can be stored in s3 bucket
+        val binaryData = value as BinaryDataWithContentType
+
+        val digest = PostgresDataHasher.hashObjectToHex(binaryData.data, EdmPrimitiveTypeKind.Binary)
+
+        //store entity set id/entity key id/property type id/property hash as key in S3
+        val s3Key = "$entitySetId/$entityKeyId/$propertyTypeId/$digest"
+        byteBlobDataManager.putObject(s3Key, binaryData.data, binaryData.contentType)
+
+        return PostgresDataHasher.hashObject(s3Key, EdmPrimitiveTypeKind.String) to s3Key
     }
 
     fun replaceEntities(
