@@ -180,13 +180,12 @@ class BackgroundLinkingService
                         .maxBy { scoredCluster -> scoredCluster.score }
 
                     //TODO: When creating new cluster do we really need to re-match or can we assume score of 1.0?
-                    if (maybeBestCluster == null) {
-                        val clusterId = ids.reserveIds(IdConstants.LINKING_ENTITY_SET_ID.id, 1).first()
-                        val block = candidate to mapOf(candidate to elem)
-                        return@use insertMatches( conn,clusterId, candidate, matcher.match(block).second, true )
+                    if (maybeBestCluster != null) {
+                        return@use insertMatches(conn, maybeBestCluster.clusterId, candidate, maybeBestCluster.cluster, false)
                     }
-
-                    return@use insertMatches( conn, maybeBestCluster.clusterId, candidate, maybeBestCluster.cluster, false )
+                    val clusterId = ids.reserveIds(IdConstants.LINKING_ENTITY_SET_ID.id, 1).first()
+                    val block = candidate to mapOf(candidate to elem)
+                    return@use insertMatches( conn, clusterId, candidate, matcher.match(block).second, true )
                 }
             } catch (ex: Exception) {
                 logger.error("An error occurred while performing linking.", ex)
