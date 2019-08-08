@@ -59,6 +59,7 @@ import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.mapstores.AppConfigMapstore;
+
 import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -70,6 +71,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.inject.Inject;
+
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 public class AppService {
@@ -118,6 +120,7 @@ public class AppService {
     }
 
     public UUID createApp( App app ) {
+        ensureAppTypesAreValid( app.getAppTypeIds() );
         reservations.reserveIdAndValidateType( app, app::getName );
         apps.put( app.getId(), app );
         eventBus.post( new AppCreatedEvent( app ) );
@@ -237,6 +240,21 @@ public class AppService {
         organizationService.addAppToOrg( organizationId, appId );
     }
 
+    public void uninstallApp( UUID appId, UUID organizationId ) {
+        App app = getApp( appId );
+        Preconditions.checkNotNull( app, "The requested app with id %s does not exists.", appId.toString() );
+
+        AclKey appPrincipal = principalsService.lookup( new Principal( PrincipalType.APP,
+                AppConfig.getAppPrincipalId( appId, organizationId ) ) );
+
+        principalsService.deletePrincipal( appPrincipal );
+
+        appConfigs.removeAll( Predicates.and( Predicates.equal( AppConfigMapstore.APP_ID, appId ),
+                Predicates.equal( AppConfigMapstore.ORGANIZATION_ID, organizationId ) ) );
+
+        organizationService.removeAppFromOrg( organizationId, appId );
+    }
+
     public UUID createAppType( AppType appType ) {
         reservations.reserveIdAndValidateType( appType );
         appTypes.putIfAbsent( appType.getId(), appType );
@@ -332,6 +350,7 @@ public class AppService {
     }
 
     public void addAppTypesToApp( UUID appId, Set<UUID> appTypeIds ) {
+        ensureAppTypesAreValid( appTypeIds );
         apps.executeOnKey( appId, new AddAppTypesToAppProcessor( appTypeIds ) );
         updateAppConfigsForNewAppType( appId, appTypeIds );
         eventBus.post( new AppCreatedEvent( apps.get( appId ) ) );
@@ -451,5 +470,13 @@ public class AppService {
                 }
             } );
         } );
+    }
+
+    private void ensureAppTypesAreValid( Set<UUID> appTypeIds ) {
+        Set<UUID> missingAppTypes = Sets.difference( appTypeIds,
+                appTypes.keySet( Predicates.in( "__key", appTypeIds.toArray( new UUID[] {} ) ) ) );
+
+        Preconditions.checkArgument( missingAppTypes.isEmpty(),
+                "The following app types do not exist: " + appTypeIds.toString() );
     }
 }

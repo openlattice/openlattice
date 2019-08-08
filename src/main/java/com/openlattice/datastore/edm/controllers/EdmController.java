@@ -566,12 +566,58 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return null;
     }
 
-    @Override public Void addPrimaryKeyToEntityType( UUID entityTypeId, UUID propertyTypeId ) {
-        throw new NotImplementedException( "Not yet ported" );
+    @Timed
+    @Override
+    @RequestMapping(
+            path = ENTITY_TYPE_PATH + KEY_PATH + ENTITY_TYPE_ID_PATH + PROPERTY_TYPE_ID_PATH,
+            method = RequestMethod.PUT )
+    @ResponseStatus( HttpStatus.OK )
+    public Void addPrimaryKeyToEntityType(
+            @PathVariable( ENTITY_TYPE_ID ) UUID entityTypeId,
+            @PathVariable( PROPERTY_TYPE_ID ) UUID propertyTypeId ) {
+        ensureAdminAccess();
+
+        modelService.addPrimaryKeysToEntityType( entityTypeId, ImmutableSet.of( propertyTypeId ) );
+
+        recordEvent( new AuditableEvent(
+                getCurrentUserId(),
+                new AclKey( entityTypeId ), // TODO should this be written as an AclKey?
+                AuditEventType.UPDATE_ENTITY_TYPE,
+                "Primary key added to entity type through EdmApi.addPrimaryKeyToEntityType",
+                Optional.empty(),
+                ImmutableMap.of( "propertyTypeId", propertyTypeId ),
+                OffsetDateTime.now(),
+                Optional.empty()
+        ) );
+
+        return null;
     }
 
-    @Override public Void removePrimaryKeyFromEntityType( UUID entityTypeId, UUID propertyTypeId ) {
-        throw new NotImplementedException( "Not yet ported" );
+    @Timed
+    @Override
+    @RequestMapping(
+            path = ENTITY_TYPE_PATH + KEY_PATH + ENTITY_TYPE_ID_PATH + PROPERTY_TYPE_ID_PATH,
+            method = RequestMethod.DELETE )
+    @ResponseStatus( HttpStatus.OK )
+    public Void removePrimaryKeyFromEntityType(
+            @PathVariable( ENTITY_TYPE_ID ) UUID entityTypeId,
+            @PathVariable( PROPERTY_TYPE_ID ) UUID propertyTypeId ) {
+        ensureAdminAccess();
+
+        modelService.removePrimaryKeysFromEntityType( entityTypeId, ImmutableSet.of( propertyTypeId ) );
+
+        recordEvent( new AuditableEvent(
+                getCurrentUserId(),
+                new AclKey( entityTypeId ), // TODO should this be written as an AclKey?
+                AuditEventType.UPDATE_ENTITY_TYPE,
+                "Primary key removed from entity type through EdmApi.removePrimaryKeyFromEntityType",
+                Optional.empty(),
+                ImmutableMap.of( "propertyTypeId", propertyTypeId ),
+                OffsetDateTime.now(),
+                Optional.empty()
+        ) );
+
+        return null;
     }
 
     @Timed
@@ -622,6 +668,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
     @ResponseStatus( HttpStatus.OK )
     public Void deleteEntityType( @PathVariable( ID ) UUID entityTypeId ) {
         ensureAdminAccess();
+        ensureObjectCanBeDeleted( entityTypeId );
         modelService.deleteEntityType( entityTypeId );
 
         recordEvent( new AuditableEvent(
@@ -683,6 +730,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
     public Void deletePropertyType(
             @PathVariable( ID ) UUID propertyTypeId ) {
         ensureAdminAccess();
+        ensureObjectCanBeDeleted( propertyTypeId );
         modelService.deletePropertyType( propertyTypeId );
 
         recordEvent( new AuditableEvent(
@@ -708,6 +756,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
     public Void forceDeletePropertyType(
             @PathVariable( ID ) UUID propertyTypeId ) {
         ensureAdminAccess();
+        ensureObjectCanBeDeleted( propertyTypeId );
         modelService.forceDeletePropertyType( propertyTypeId );
 
         recordEvent( new AuditableEvent(
@@ -879,6 +928,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
             produces = MediaType.APPLICATION_JSON_VALUE )
     public Void deleteAssociationType( @PathVariable( ID ) UUID associationTypeId ) {
         ensureAdminAccess();
+        ensureObjectCanBeDeleted( associationTypeId );
         modelService.deleteAssociationType( associationTypeId );
 
         recordEvent( new AuditableEvent(

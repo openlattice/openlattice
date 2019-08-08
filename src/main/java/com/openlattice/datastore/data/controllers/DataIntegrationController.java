@@ -25,57 +25,64 @@ import com.google.common.cache.LoadingCache;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.SetMultimap;
-import com.google.common.collect.Sets;
-import com.openlattice.authorization.AclKey;
-import com.openlattice.authorization.AuthorizationManager;
-import com.openlattice.authorization.AuthorizingComponent;
-import com.openlattice.authorization.EdmAuthorizationHelper;
-import com.openlattice.authorization.Permission;
+import com.openlattice.authorization.*;
 import com.openlattice.data.*;
-import com.openlattice.data.integration.*;
+import com.openlattice.data.graph.DataGraphServiceHelper;
+import com.openlattice.data.integration.Association;
+import com.openlattice.data.integration.BulkDataCreation;
 import com.openlattice.data.integration.Entity;
-import com.openlattice.data.storage.aws.AwsDataSinkService;
+import com.openlattice.data.integration.S3EntityData;
 import com.openlattice.data.storage.PostgresDataSinkService;
+import com.openlattice.data.storage.aws.AwsDataSinkService;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.search.SearchService;
+import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.web.bind.annotation.*;
 
+import javax.inject.Inject;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import javax.inject.Inject;
 
-import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.web.bind.annotation.*;
+import static com.openlattice.authorization.EdmAuthorizationHelper.WRITE_PERMISSION;
+import static com.openlattice.authorization.EdmAuthorizationHelper.aclKeysForAccessCheck;
 
 @RestController
 @RequestMapping( DataIntegrationApi.CONTROLLER )
 public class DataIntegrationController implements DataIntegrationApi, AuthorizingComponent {
-    private static final Logger                                    logger           = LoggerFactory
-            .getLogger( DataIntegrationController.class );
-    private static final EnumSet<Permission>                       WRITE_PERMISSION = EnumSet.of( Permission.WRITE );
     @Inject
-    private              EdmService                                dms;
+    private EdmService dms;
+
     @Inject
-    private              DataGraphManager                          dgm;
+    private DataGraphManager dgm;
+
     @Inject
-    private              PostgresDataSinkService                   postgresDataSinkService;
+    private PostgresDataSinkService postgresDataSinkService;
+
     @Inject
-    private              AwsDataSinkService                        awsDataSinkService;
+    private AwsDataSinkService awsDataSinkService;
+
     @Inject
-    private              AuthorizationManager                      authz;
+    private AuthorizationManager authz;
+
     @Inject
-    private              EdmAuthorizationHelper                    authzHelper;
+    private EdmAuthorizationHelper authzHelper;
+
     @Inject
-    private              AuthenticationManager                     authProvider;
+    private AuthenticationManager authProvider;
+
     @Inject
-    private              SearchService                             searchService;
-    private              LoadingCache<UUID, EdmPrimitiveTypeKind>  primitiveTypeKinds;
-    private              LoadingCache<AuthorizationKey, Set<UUID>> authorizedPropertyCache;
+    private SearchService searchService;
+
+    @Inject
+    private DataGraphServiceHelper dataGraphServiceHelper;
+
+    private LoadingCache<UUID, EdmPrimitiveTypeKind> primitiveTypeKinds;
+
+    private LoadingCache<AuthorizationKey, Set<UUID>> authorizedPropertyCache;
 
     @Override
     public AuthorizationManager getAuthorizationManager() {
@@ -115,16 +122,18 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
                 .collect( Collectors.toSet() );
         //Ensure that we have read access to entity set metadata.
         associationEntitySets.forEach( entitySetId -> ensureReadAccess( new AclKey( entitySetId ) ) );
-        accessCheck( EdmAuthorizationHelper
-                .aclKeysForAccessCheck( requiredAssociationPropertyTypes( associations ), WRITE_PERMISSION ) );
+        accessCheck( aclKeysForAccessCheck( requiredAssociationPropertyTypes( associations ), WRITE_PERMISSION ) );
 
-        final Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySet =
-                associationEntitySets.stream()
-                        .collect( Collectors.toMap( Function.identity(),
-                                entitySetId -> authzHelper
-                                        .getAuthorizedPropertyTypes( entitySetId, EnumSet.of( Permission.WRITE ) ) ) );
+        final Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySet = authzHelper
+                .getAuthorizedPropertiesOnEntitySets(
+                        associationEntitySets,
+                        WRITE_PERMISSION ,
+                        Principals.getCurrentPrincipals()
+                );
 
-        //        checkAllAssociationsInEntitySet( entitySetId, associations );
+        // Check allowed src,dst entity types
+        dataGraphServiceHelper.checkAssociationEntityTypes( associations );
+
         final Map<UUID, Map<String, UUID>> entityKeyIds = dgm
                 .integrateAssociations( associations, authorizedPropertyTypesByEntitySet );
         final IntegrationResults results = new IntegrationResults( 0,
@@ -156,21 +165,20 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
         entitySets.forEach( entitySetId -> ensureReadAccess( new AclKey( entitySetId ) ) );
         associationEntitySets.forEach( entitySetId -> ensureReadAccess( new AclKey( entitySetId ) ) );
 
-        accessCheck( EdmAuthorizationHelper
-                .aclKeysForAccessCheck( requiredEntityPropertyTypes( entities ), WRITE_PERMISSION ) );
-        accessCheck( EdmAuthorizationHelper
-                .aclKeysForAccessCheck( requiredAssociationPropertyTypes( associations ), WRITE_PERMISSION ) );
+        accessCheck( aclKeysForAccessCheck( requiredEntityPropertyTypes( entities ), WRITE_PERMISSION ) );
+        accessCheck( aclKeysForAccessCheck( requiredAssociationPropertyTypes( associations ), WRITE_PERMISSION ) );
 
         final Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySet =
                 Stream.concat( entitySets.stream(), associationEntitySets.stream() )
                         .collect( Collectors.toMap( Function.identity(),
-                                entitySetId -> authzHelper
-                                        .getAuthorizedPropertyTypes( entitySetId, WRITE_PERMISSION ) ) );
-
+                                entitySetId -> authzHelper.getAuthorizedPropertyTypes(
+                                        entitySetId, WRITE_PERMISSION ) ) );
+        dataGraphServiceHelper.checkAssociationEntityTypes( associations );
         return dgm.integrateEntitiesAndAssociations( entities, associations, authorizedPropertyTypesByEntitySet );
     }
 
-    @Override public List<String> generatePresignedUrls( Collection<S3EntityData> data ) {
+    @Override
+    public List<String> generatePresignedUrls( Collection<S3EntityData> data ) {
         throw new UnsupportedOperationException( "This shouldn't be invoked. Just here for the interface and efficiency" );
     }
 
@@ -189,14 +197,13 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
         //Ensure that we have read access to entity set metadata.
         entitySetIds.forEach( entitySetId -> ensureReadAccess( new AclKey( entitySetId ) ) );
 
-        accessCheck( EdmAuthorizationHelper
-                .aclKeysForAccessCheck( propertyIdsByEntitySet, WRITE_PERMISSION ) );
+        accessCheck( aclKeysForAccessCheck( propertyIdsByEntitySet, WRITE_PERMISSION ) );
 
         final Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes =
                 entitySetIds.stream()
                         .collect( Collectors.toMap( Function.identity(),
-                                entitySetId -> authzHelper
-                                        .getAuthorizedPropertyTypes( entitySetId, WRITE_PERMISSION ) ) );
+                                entitySetId -> authzHelper.getAuthorizedPropertyTypes(
+                                        entitySetId, WRITE_PERMISSION ) ) );
 
         return awsDataSinkService.generatePresignedUrls( data, authorizedPropertyTypes );
     }
@@ -214,37 +221,23 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
 
     @Override
     @PutMapping( "/" + EDGES )
-    public int createEdges( @RequestBody Set<DataEdgeKey> edges ) {
-        final var srcAssociationEntitySetIds = new HashMap<UUID, Set<UUID>>(); // edge-src
-        final var dstAssociationEntitySetIds = new HashMap<UUID, Set<UUID>>(); // edge-dst
-
+    public int createEdges( @RequestBody Set<DataEdgeKey> associations ) {
         final var entitySetIdChecks = new HashMap<AclKey, EnumSet<Permission>>();
-        edges.forEach(
+        associations.forEach(
                 association -> {
-                    final var edgeEntitySetId = association.getEdge().getEntitySetId();
-                    final var srcEntitySetId = association.getSrc().getEntitySetId();
-                    final var dstEntitySetId = association.getDst().getEntitySetId();
-
-                    entitySetIdChecks.put( new AclKey( edgeEntitySetId ), WRITE_PERMISSION );
-                    entitySetIdChecks.put( new AclKey( srcEntitySetId ), WRITE_PERMISSION );
-                    entitySetIdChecks.put( new AclKey( dstEntitySetId ), WRITE_PERMISSION );
-
-                    if ( srcAssociationEntitySetIds
-                            .putIfAbsent( edgeEntitySetId, Sets.newHashSet( srcEntitySetId ) ) != null ) {
-                        srcAssociationEntitySetIds.get( edgeEntitySetId ).add( srcEntitySetId );
-                    }
-
-                    if ( dstAssociationEntitySetIds
-                            .putIfAbsent( edgeEntitySetId, Sets.newHashSet( dstEntitySetId ) ) != null ) {
-                        dstAssociationEntitySetIds.get( edgeEntitySetId ).add( dstEntitySetId );
-                    }
+                    entitySetIdChecks.put( new AclKey( association.getEdge().getEntitySetId() ), WRITE_PERMISSION );
+                    entitySetIdChecks.put( new AclKey( association.getSrc().getEntitySetId() ), WRITE_PERMISSION );
+                    entitySetIdChecks.put( new AclKey( association.getDst().getEntitySetId() ), WRITE_PERMISSION );
                 }
         );
 
         //Ensure that we have read access to entity sets.
         accessCheck( entitySetIdChecks );
 
-        return dgm.createAssociations( edges, srcAssociationEntitySetIds, dstAssociationEntitySetIds ).getNumUpdates();
+        //Allowed entity types check
+        dataGraphServiceHelper.checkEdgeEntityTypes( associations );
+
+        return dgm.createAssociations( associations ).getNumUpdates();
     }
 
     private static SetMultimap<UUID, UUID> requiredAssociationPropertyTypes( Set<Association> associations ) {
