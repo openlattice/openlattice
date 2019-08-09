@@ -497,7 +497,7 @@ class AssemblerConnectionManager(
     fun renameMaterializedEntitySet(organizationId: UUID, newName: String, oldName: String) {
         connect(buildOrganizationDatabaseName(organizationId)).use { dataSource ->
             dataSource.connection.createStatement().use { stmt ->
-                val newTableName = entitySetNameTableName(newName)
+                val newTableName = quote(newName)
                 val oldTableName = entitySetNameTableName(oldName)
 
                 stmt.executeUpdate("ALTER MATERIALIZED VIEW IF EXISTS $oldTableName RENAME TO $newTableName")
