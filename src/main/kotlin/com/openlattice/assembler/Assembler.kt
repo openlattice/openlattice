@@ -157,13 +157,15 @@ class Assembler(
         // when entity set is deleted, we drop it's view from both openlattice and organization databases and update
         // entity_sets and edges table in organization databases
         if (isEntitySetMaterialized(entitySetDeletedEvent.entitySetId)) {
+            logger.info("Removing materialized entity set ${entitySetDeletedEvent.entitySetId} from all " +
+                    "organizations because of entity set deletion")
+            
             val entitySetAssembliesToDelete = materializedEntitySets.keySet(
                     entitySetIdPredicate(entitySetDeletedEvent.entitySetId)
             )
-
             deleteEntitySetAssemblies(entitySetAssembliesToDelete)
-
         }
+
         dropProductionViewOfEntitySet(entitySetDeletedEvent.entitySetId)
     }
 
@@ -172,6 +174,8 @@ class Assembler(
         if (isEntitySetMaterialized(
                         entitySetOrganizationUpdatedEvent.oldOrganizationId,
                         entitySetOrganizationUpdatedEvent.entitySetId)) {
+            logger.info("Removing materialized entity set ${entitySetOrganizationUpdatedEvent.entitySetId}  from " +
+                    "organization ${entitySetOrganizationUpdatedEvent.oldOrganizationId} because of organization update")
             // when an entity set is moved to a new organization, we need to delete its assembly from old organization
             deleteEntitySetAssemblies(
                     setOf(
