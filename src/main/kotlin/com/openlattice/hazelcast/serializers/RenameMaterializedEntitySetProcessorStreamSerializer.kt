@@ -53,7 +53,7 @@ class RenameMaterializedEntitySetProcessorStreamSerializer :
         val oldName = input.readUTF()
         val newName = input.readUTF()
 
-        return RenameMaterializedEntitySetProcessor(oldName, newName)
+        return RenameMaterializedEntitySetProcessor(oldName, newName).init(acm)
     }
 
     override fun init(acm: AssemblerConnectionManager): Void? {
