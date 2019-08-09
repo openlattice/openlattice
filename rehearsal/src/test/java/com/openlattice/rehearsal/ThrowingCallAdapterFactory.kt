@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory
 import retrofit2.Call
 import retrofit2.CallAdapter
 import retrofit2.Retrofit
+import java.lang.reflect.UndeclaredThrowableException
 
 class ThrowingCallAdapterFactory : CallAdapter.Factory() {
     companion object {
@@ -70,6 +71,11 @@ internal fun assertException(fqn: () -> (Any), expectedMsg: String) {
         fqn()
         Assert.fail("Should have thrown Exception but did not!")
     } catch (e: Exception) {
-        Assert.assertTrue(e.message!!.contains(expectedMsg, true))
+        val actualMsg = if(e is UndeclaredThrowableException) {
+            e.undeclaredThrowable.message!!
+        } else {
+            e.message!!
+        }
+        Assert.assertTrue(actualMsg.contains(expectedMsg, true))
     }
 }
