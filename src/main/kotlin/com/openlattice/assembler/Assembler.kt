@@ -141,9 +141,10 @@ class Assembler(
      * Updates the refresh rate for a materialized entity set.
      */
     fun updateRefreshRate(organizationId: UUID, entitySetId: UUID, refreshRate: Long?) {
-        ensureEntitySetIsMaterialized(organizationId, entitySetId)
-
         val entitySetAssemblyKey = EntitySetAssemblyKey(entitySetId, organizationId)
+
+        ensureEntitySetIsMaterialized(entitySetAssemblyKey)
+
         materializedEntitySets.executeOnKey(entitySetAssemblyKey, UpdateRefreshRateProcessor(refreshRate))
     }
 
@@ -171,20 +172,15 @@ class Assembler(
 
     @Subscribe
     fun handleEntitySetOrganizationUpdated(entitySetOrganizationUpdatedEvent: EntitySetOrganizationUpdatedEvent) {
-        if (isEntitySetMaterialized(
-                        entitySetOrganizationUpdatedEvent.oldOrganizationId,
-                        entitySetOrganizationUpdatedEvent.entitySetId)) {
+        val entitySetAssemblyKey = EntitySetAssemblyKey(
+                entitySetOrganizationUpdatedEvent.entitySetId,
+                entitySetOrganizationUpdatedEvent.oldOrganizationId
+        )
+        if (isEntitySetMaterialized(entitySetAssemblyKey)) {
             logger.info("Removing materialized entity set ${entitySetOrganizationUpdatedEvent.entitySetId}  from " +
                     "organization ${entitySetOrganizationUpdatedEvent.oldOrganizationId} because of organization update")
             // when an entity set is moved to a new organization, we need to delete its assembly from old organization
-            deleteEntitySetAssemblies(
-                    setOf(
-                            EntitySetAssemblyKey(
-                                    entitySetOrganizationUpdatedEvent.entitySetId,
-                                    entitySetOrganizationUpdatedEvent.oldOrganizationId
-                            )
-                    )
-            )
+            deleteEntitySetAssemblies(setOf(entitySetAssemblyKey))
         }
     }
 
@@ -394,11 +390,13 @@ class Assembler(
             entitySetId: UUID,
             materializablePropertyTypes: Map<UUID, PropertyType>
     ) {
+        val entitySetAssemblyKey = EntitySetAssemblyKey(entitySetId, organizationId)
+
         ensureAssemblyInitialized(organizationId)
-        ensureEntitySetIsMaterialized(organizationId, entitySetId)
+        ensureEntitySetIsMaterialized(entitySetAssemblyKey)
 
         // check if it's not already in sync
-        if (materializedEntitySets[EntitySetAssemblyKey(entitySetId, organizationId)]!!.flags
+        if (materializedEntitySets[entitySetAssemblyKey]!!.flags
                         .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED)) {
             logger.info("Synchronizing materialized entity set $entitySetId")
 
@@ -407,7 +405,7 @@ class Assembler(
                     getAuthorizedPropertiesOfPrincipals(entitySet, materializablePropertyTypes)
 
             materializedEntitySets.executeOnKey(
-                    EntitySetAssemblyKey(entitySetId, organizationId),
+                    entitySetAssemblyKey,
                     SynchronizeMaterializedEntitySetProcessor(
                             entitySet, materializablePropertyTypes, authorizedPropertyTypesOfPrincipals
                     ).init(acm)
@@ -432,10 +430,10 @@ class Assembler(
     fun refreshMaterializedEntitySet(
             organizationId: UUID, entitySetId: UUID, materializablePropertyTypes: Map<UUID, PropertyType>
     ) {
-        ensureAssemblyInitialized(organizationId)
-        ensureEntitySetIsMaterialized(organizationId, entitySetId)
-
         val entitySetAssemblyKey = EntitySetAssemblyKey(entitySetId, organizationId)
+
+        ensureAssemblyInitialized(organizationId)
+        ensureEntitySetIsMaterialized(entitySetAssemblyKey)
 
         // Only allow refresh if edm is in sync and data is not already refreshed
         if (!materializedEntitySets[entitySetAssemblyKey]!!.flags.contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED)
@@ -535,12 +533,20 @@ class Assembler(
      * Returns true, if the entity set is materialized in the organization
      */
     private fun isEntitySetMaterialized(organizationId: UUID, entitySetId: UUID): Boolean {
-        return materializedEntitySets.containsKey(EntitySetAssemblyKey(entitySetId, organizationId))
+        return isEntitySetMaterialized(EntitySetAssemblyKey(entitySetId, organizationId))
     }
 
-    private fun ensureEntitySetIsMaterialized(organizationId: UUID, entitySetId: UUID) {
-        if (!isEntitySetMaterialized(organizationId, entitySetId)) {
-            throw IllegalStateException("Entity set $entitySetId is not materialized for organization $organizationId")
+    /**
+     * Returns true, if the entity set is materialized in the organization
+     */
+    private fun isEntitySetMaterialized(entitySetAssemblyKey: EntitySetAssemblyKey): Boolean {
+        return materializedEntitySets.containsKey(entitySetAssemblyKey)
+    }
+
+    private fun ensureEntitySetIsMaterialized(entitySetAssemblyKey: EntitySetAssemblyKey) {
+        if (!isEntitySetMaterialized(entitySetAssemblyKey)) {
+            throw IllegalStateException("Entity set ${entitySetAssemblyKey.entitySetId} is not materialized for " +
+                    "organization ${entitySetAssemblyKey.organizationId}")
         }
     }
 
