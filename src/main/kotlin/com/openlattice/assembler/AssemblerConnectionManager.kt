@@ -98,6 +98,11 @@ class AssemblerConnectionManager(
 
         @JvmStatic
         val PRODUCTION_SERVER = "olprod"
+
+        @JvmStatic
+        fun entitySetNameTableName(entitySetName: String): String {
+            return "$MATERIALIZED_VIEWS_SCHEMA.${quote(entitySetName)}"
+        }
     }
 
     fun connect(dbname: String): HikariDataSource {
@@ -754,10 +759,6 @@ class AssemblerConnectionManager(
 
     private fun entitySetIdTableName(entitySetId: UUID): String {
         return quote(entitySetId.toString())
-    }
-
-    private fun entitySetNameTableName(entitySetName: String): String {
-        return "$MATERIALIZED_VIEWS_SCHEMA.${quote(entitySetName)}"
     }
 }
 
