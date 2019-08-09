@@ -167,7 +167,7 @@ class AssemblerLinkingTest : SetupTestData() {
         // check if new column is there
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking1))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking1.name))
                 Assert.assertTrue(
                         TestAssemblerConnectionManager.getColumnNames(rs)
                                 .contains(newPropertyType.type.fullQualifiedNameAsString)
@@ -224,7 +224,7 @@ class AssemblerLinkingTest : SetupTestData() {
         // check if column has new name
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking2))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking2.name))
                 val columnNames = TestAssemblerConnectionManager.getColumnNames(rs)
                 Assert.assertTrue(columnNames.contains(newFqn.fullQualifiedNameAsString))
                 Assert.assertFalse(columnNames.contains(newPropertyType.type.fullQualifiedNameAsString))
@@ -281,7 +281,7 @@ class AssemblerLinkingTest : SetupTestData() {
         // check linking ids
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking.name))
 
                 val actualLinkingIds = mutableSetOf<UUID>()
                 while (rs.next()) {
@@ -317,7 +317,7 @@ class AssemblerLinkingTest : SetupTestData() {
 
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking.name))
                 val actualLinkingIds = mutableSetOf<UUID>()
                 while (rs.next()) {
                     actualLinkingIds.add(ResultSetAdapters.linkingId(rs))
@@ -352,7 +352,7 @@ class AssemblerLinkingTest : SetupTestData() {
 
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking.name))
                 val actualLinkingIds = mutableSetOf<UUID>()
                 while (rs.next()) {
                     actualLinkingIds.add(ResultSetAdapters.linkingId(rs))
@@ -381,7 +381,7 @@ class AssemblerLinkingTest : SetupTestData() {
         // data is not supposed to be there, only the columns
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking.name))
                 // all columns are there
                 val columns = TestAssemblerConnectionManager.getColumnNames(rs)
                 propertyFqns.forEach {
@@ -435,7 +435,7 @@ class AssemblerLinkingTest : SetupTestData() {
         // check if data is in org database
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking.name))
 
                 val materializedLinkingIds = mutableSetOf<UUID>()
                 Assert.assertTrue(rs.next())
@@ -497,7 +497,7 @@ class AssemblerLinkingTest : SetupTestData() {
         // check if data is updated in org database
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking.name))
 
                 val materializedLinkingIds = mutableSetOf<UUID>()
                 Assert.assertTrue(rs.next())
@@ -544,7 +544,7 @@ class AssemblerLinkingTest : SetupTestData() {
         // check if data is deleted in org database
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking.name))
                 // no data is there
                 Assert.assertFalse(rs.next())
             }
@@ -771,7 +771,7 @@ class AssemblerLinkingTest : SetupTestData() {
         val organizationDataSource = TestAssemblerConnectionManager.connect(organizationID)
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking.name))
                 Assert.assertEquals(PostgresColumn.ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
                 Assert.assertEquals(PostgresColumn.LINKING_ID.name, rs.metaData.getColumnName(2))
             }
@@ -793,7 +793,7 @@ class AssemblerLinkingTest : SetupTestData() {
 
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking.name))
                 Assert.assertEquals(PostgresColumn.ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
                 Assert.assertEquals(PostgresColumn.LINKING_ID.name, rs.metaData.getColumnName(2))
             }
@@ -813,7 +813,7 @@ class AssemblerLinkingTest : SetupTestData() {
 
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking.name))
                 Assert.assertEquals(PostgresColumn.ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
                 Assert.assertEquals(PostgresColumn.LINKING_ID.name, rs.metaData.getColumnName(2))
                 Assert.assertEquals(propertyType.type.fullQualifiedNameAsString, rs.metaData.getColumnName(3))
@@ -840,7 +840,7 @@ class AssemblerLinkingTest : SetupTestData() {
 
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking.name))
                 Assert.assertEquals(PostgresColumn.ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
                 Assert.assertEquals(PostgresColumn.LINKING_ID.name, rs.metaData.getColumnName(2))
                 val columnNames = TestAssemblerConnectionManager.getColumnNames(rs)
@@ -870,7 +870,7 @@ class AssemblerLinkingTest : SetupTestData() {
         user1OrganizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
                 try {
-                    stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking))
+                    stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking.name))
                     Assert.fail("Should have thrown Exception but did not!")
                 } catch (e: PSQLException) {
                     Assert.assertTrue(
@@ -893,7 +893,7 @@ class AssemblerLinkingTest : SetupTestData() {
         user1OrganizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
                 try {
-                    stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking))
+                    stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking.name))
                     Assert.fail("Should have thrown Exception but did not!")
                 } catch (e: PSQLException) {
                     Assert.assertTrue(
@@ -914,7 +914,7 @@ class AssemblerLinkingTest : SetupTestData() {
         user1OrganizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
                 try {
-                    stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking))
+                    stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking.name))
                     Assert.fail("Should have thrown Exception but did not!")
                 } catch (e: PSQLException) {
                     Assert.assertTrue(
@@ -936,7 +936,7 @@ class AssemblerLinkingTest : SetupTestData() {
         user1OrganizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
                 try {
-                    stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking))
+                    stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking.name))
                     Assert.fail("Should have thrown Exception but did not!")
                 } catch (e: PSQLException) {
                     Assert.assertTrue(
@@ -954,7 +954,7 @@ class AssemblerLinkingTest : SetupTestData() {
                 stmt.executeQuery(TestAssemblerConnectionManager.selectEdgesOfEntitySetsSql())
                 val rs = stmt.executeQuery(
                         TestAssemblerConnectionManager.selectFromEntitySetSql(
-                                esLinking, setOf(PostgresColumn.ENTITY_SET_ID.name, PostgresColumn.LINKING_ID.name)
+                                esLinking.name, setOf(PostgresColumn.ENTITY_SET_ID.name, PostgresColumn.LINKING_ID.name)
                         )
                 )
                 Assert.assertEquals(PostgresColumn.ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
@@ -975,7 +975,7 @@ class AssemblerLinkingTest : SetupTestData() {
                 try {
                     stmt.executeQuery(
                             TestAssemblerConnectionManager.selectFromEntitySetSql(
-                                    esLinking, setOf(propertyType.type.fullQualifiedNameAsString)
+                                    esLinking.name, setOf(propertyType.type.fullQualifiedNameAsString)
                             )
                     )
                     Assert.fail("Should have thrown Exception but did not!")
@@ -999,7 +999,7 @@ class AssemblerLinkingTest : SetupTestData() {
         user1OrganizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
                 try {
-                    stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking))
+                    stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking.name))
                     Assert.fail("Should have thrown Exception but did not!")
                 } catch (e: PSQLException) {
                     Assert.assertTrue(
@@ -1016,11 +1016,12 @@ class AssemblerLinkingTest : SetupTestData() {
                 val rs = stmt.executeQuery(
                         TestAssemblerConnectionManager
                                 .selectFromEntitySetSql(
-                                        esLinking, setOf(
-                                        PostgresColumn.ENTITY_SET_ID.name,
-                                        PostgresColumn.LINKING_ID.name,
-                                        propertyType.type.fullQualifiedNameAsString
-                                )
+                                        esLinking.name,
+                                        setOf(
+                                                PostgresColumn.ENTITY_SET_ID.name,
+                                                PostgresColumn.LINKING_ID.name,
+                                                propertyType.type.fullQualifiedNameAsString
+                                        )
                                 )
                 )
                 Assert.assertEquals(PostgresColumn.ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
@@ -1042,7 +1043,7 @@ class AssemblerLinkingTest : SetupTestData() {
 
         user1OrganizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking.name))
                 Assert.assertEquals(PostgresColumn.ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
                 Assert.assertEquals(PostgresColumn.LINKING_ID.name, rs.metaData.getColumnName(2))
                 val columns = TestAssemblerConnectionManager.getColumnNames(rs)

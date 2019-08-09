@@ -145,7 +145,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         // check if new column is there
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es1))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es1.name))
                 Assert.assertEquals(pt.type.fullQualifiedNameAsString, rs.metaData.getColumnName(4))
             }
         }
@@ -194,7 +194,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
             connection.createStatement().use { stmt ->
                 val rs = stmt.executeQuery(
                         TestAssemblerConnectionManager.selectFromEntitySetSql(
-                                es2,
+                                es2.name,
                                 setOf(edmApi.getPropertyType(propertyToChange).type.fullQualifiedNameAsString)
                         )
                 )
@@ -220,7 +220,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         // check if old column is deleted
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es1))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es1.name))
                 Assert.assertEquals(3, rs.metaData.columnCount)
             }
         }
@@ -239,7 +239,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         // data is not supposed to be there, only the columns
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name))
                 // all columns are there
                 (1..rs.metaData.columnCount).forEach {
                     val columnName = rs.metaData.getColumnName(it)
@@ -275,7 +275,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         // check if data is in org database
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name))
 
                 var index = 0
                 Assert.assertTrue(rs.next())
@@ -315,7 +315,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         // check if data is updated in org database
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name))
 
                 var index = 0
                 Assert.assertTrue(rs.next())
@@ -352,7 +352,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         // check if data is deleted in org database
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name))
                 // no data is there
                 Assert.assertFalse(rs.next())
             }
@@ -558,7 +558,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         val organizationDataSource = TestAssemblerConnectionManager.connect(organizationID)
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name))
                 Assert.assertEquals(ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
                 Assert.assertEquals(ID.name, rs.metaData.getColumnName(2))
                 Assert.assertEquals(ENTITY_KEY_IDS_COL.name, rs.metaData.getColumnName(3))
@@ -582,7 +582,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
 
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name))
                 Assert.assertEquals(ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
                 Assert.assertEquals(ID.name, rs.metaData.getColumnName(2))
                 Assert.assertEquals(ENTITY_KEY_IDS_COL.name, rs.metaData.getColumnName(3))
@@ -613,7 +613,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         user1OrganizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
                 try {
-                    stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es))
+                    stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name))
                     Assert.fail("Should have thrown Exception but did not!")
                 } catch (e: PSQLException) {
                     Assert.assertTrue(
@@ -637,7 +637,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         user1OrganizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
                 try {
-                    stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es))
+                    stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name))
                     Assert.fail("Should have thrown Exception but did not!")
                 } catch (e: PSQLException) {
                     Assert.assertTrue(
@@ -655,7 +655,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                 val rs = stmt.executeQuery(
                         TestAssemblerConnectionManager
                                 .selectFromEntitySetSql(
-                                        es,
+                                        es.name,
                                         setOf(ENTITY_SET_ID.name, ID.name, ENTITY_KEY_IDS_COL.name)
                                 )
                 )
@@ -676,7 +676,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         user1OrganizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
                 try {
-                    stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es))
+                    stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name))
                     Assert.fail("Should have thrown Exception but did not!")
                 } catch (e: PSQLException) {
                     Assert.assertTrue(
@@ -692,12 +692,13 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                 val rs = stmt.executeQuery(
                         TestAssemblerConnectionManager
                                 .selectFromEntitySetSql(
-                                        es, setOf(
-                                        ENTITY_SET_ID.name,
-                                        ID.name,
-                                        ENTITY_KEY_IDS_COL.name,
-                                        propertyType.type.fullQualifiedNameAsString
-                                )
+                                        es.name,
+                                        setOf(
+                                                ENTITY_SET_ID.name,
+                                                ID.name,
+                                                ENTITY_KEY_IDS_COL.name,
+                                                propertyType.type.fullQualifiedNameAsString
+                                        )
                                 )
                 )
                 Assert.assertEquals(ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
@@ -718,7 +719,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
 
         user1OrganizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name))
                 Assert.assertEquals(ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
                 Assert.assertEquals(ID.name, rs.metaData.getColumnName(2))
                 Assert.assertEquals(ENTITY_KEY_IDS_COL.name, rs.metaData.getColumnName(3))
@@ -785,7 +786,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         // data is not supposed to be there, only the columns until automatic refresh
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name))
                 // all columns are there
                 (1..rs.metaData.columnCount).forEach {
                     val columnName = rs.metaData.getColumnName(it)
@@ -806,7 +807,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         // check if data is in org database
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name))
 
                 var index = 0
                 Assert.assertTrue(rs.next())
@@ -842,7 +843,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         // data is not supposed to be there, only the columns
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name))
                 // all columns are there
                 (1..rs.metaData.columnCount).forEach {
                     val columnName = rs.metaData.getColumnName(it)
@@ -869,7 +870,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         // data is still not supposed to be there, only the columns
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name))
                 // all columns are there
                 (1..rs.metaData.columnCount).forEach {
                     val columnName = rs.metaData.getColumnName(it)
@@ -932,7 +933,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
 
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esSrc))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esSrc.name))
                 // all columns are there
                 (1..rs.metaData.columnCount).forEach {
                     val columnName = rs.metaData.getColumnName(it)
@@ -957,7 +958,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
                 try {
-                    stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esSrc))
+                    stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esSrc.name))
                     Assert.fail("Should have thrown Exception but did not!")
                 } catch (e: PSQLException) {
                     Assert.assertTrue(e.message!!
@@ -1005,8 +1006,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
 
         user1OrganizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                stmt.executeQuery("SELECT * FROM " +
-                        "${AssemblerConnectionManager.MATERIALIZED_VIEWS_SCHEMA}.${quote(es.name)}")
+                stmt.executeQuery("SELECT * FROM ${AssemblerConnectionManager.entitySetNameTableName(es.name)}")
 
                 try {
                     stmt.executeQuery("SELECT * FROM ${AssemblerConnectionManager.PRODUCTION_FOREIGN_SCHEMA}.${PostgresTable.ENTITY_TYPES.name}")
@@ -1033,6 +1033,70 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         }
 
         loginAs("admin")
+    }
+
+    @Test
+    fun testNameUpdateInEntitySet() {
+        val et = createEntityType()
+        val es = createEntitySet(et)
+
+        // add data
+        val testData = TestDataFactory.randomStringEntityData(numberOfEntities, et.properties)
+        val entities = ImmutableList.copyOf(testData.values)
+        dataApi.createEntities(es.id, entities)
+
+        // materialize entity set
+        grantMaterializePermissions(organization, es, setOf())
+        organizationsApi.assembleEntitySets(organizationID, mapOf(es.id to null))
+
+        organizationDataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name))
+                Assert.assertTrue(rs.next())
+            }
+        }
+
+        // rename entity set
+        val newName = TestDataFactory.randomAlphabetic(5)
+        entitySetsApi.updateEntitySetMetadata(
+                es.id,
+                MetadataUpdate(
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.of(newName),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty()
+                )
+        )
+
+        // try to select with old name
+        organizationDataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                try {
+                    stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name))
+                    Assert.fail("Should have thrown Exception but did not!")
+                } catch (e: PSQLException) {
+                    Assert.assertTrue(e.message!!
+                            .contains("relation \"${AssemblerConnectionManager.MATERIALIZED_VIEWS_SCHEMA}.${es.name}\" does not exist", true))
+                }
+            }
+        }
+
+
+        // try to select with new name
+        organizationDataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(newName))
+                Assert.assertTrue(rs.next())
+            }
+        }
     }
 
 
