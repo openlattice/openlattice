@@ -64,8 +64,6 @@ import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import java.util.*
 
-const val SCHEMA = "openlattice"
-
 private val logger = LoggerFactory.getLogger(Assembler::class.java)
 
 /**

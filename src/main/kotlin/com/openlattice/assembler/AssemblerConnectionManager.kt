@@ -170,6 +170,18 @@ class AssemblerConnectionManager(
         }
     }
 
+    private fun createSchema(datasource: HikariDataSource, schema: String) {
+        datasource.connection.use { connection ->
+            connection.createStatement().use { statement ->
+                statement.execute("CREATE SCHEMA IF NOT EXISTS $schema")
+            }
+        }
+    }
+
+    private fun createOpenlatticeSchema(datasource: HikariDataSource) {
+        createSchema(datasource, MATERIALIZED_VIEWS_SCHEMA)
+    }
+
     fun addMembersToOrganization(dbName: String, dataSource: HikariDataSource, members: Set<Principal>) {
         logger.info("Configuring members for organization database {}", dbName)
         val validUserPrincipals = members
@@ -767,18 +779,6 @@ val PUBLIC_TABLES = setOf(E.name, PROPERTY_TYPES.name, ENTITY_TYPES.name, ENTITY
 
 
 private val PRINCIPALS_SQL = "SELECT acl_key FROM principals WHERE ${PRINCIPAL_TYPE.name} = ?"
-
-internal fun createSchema(datasource: HikariDataSource, schema: String) {
-    datasource.connection.use { connection ->
-        connection.createStatement().use { statement ->
-            statement.execute("CREATE SCHEMA IF NOT EXISTS $schema")
-        }
-    }
-}
-
-internal fun createOpenlatticeSchema(datasource: HikariDataSource) {
-    createSchema(datasource, SCHEMA)
-}
 
 
 internal fun createRoleIfNotExistsSql(dbRole: String): String {
