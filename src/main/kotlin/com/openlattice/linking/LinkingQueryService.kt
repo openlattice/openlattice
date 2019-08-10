@@ -58,7 +58,8 @@ interface LinkingQueryService {
      * @param clusterIds The ids for the clusters to load.
      * @return The graph of scores for each cluster requested.
      */
-    fun getClusters(clusterIds: Collection<UUID>): Map<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>>
+    fun getClustersForIds(dataKeys: Set<EntityDataKey>): Map<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>>
+    fun getClustersForId( dataKey: EntityDataKey ): Map<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>>
 
     fun deleteEntitySetNeighborhood(entitySetId: UUID): Int
 
@@ -72,7 +73,6 @@ interface LinkingQueryService {
             whitelist: Set<UUID>
     ): PostgresIterable<UUID>
 
-    fun getIdsOfClustersContaining(dataKeys: Set<EntityDataKey>): PostgresIterable<UUID>
     fun lockClustersForUpdates(clusters: Set<UUID>): Connection
 
     fun getEntityKeyIdsOfLinkingIds(linkingIds: Set<UUID>): PostgresIterable<Pair<UUID, Set<UUID>>>

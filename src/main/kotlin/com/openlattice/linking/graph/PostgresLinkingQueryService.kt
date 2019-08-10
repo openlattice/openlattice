@@ -126,38 +126,20 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource, private val
         }
     }
 
-    override fun getIdsOfClustersContaining(dataKeys: Set<EntityDataKey>): PostgresIterable<UUID> {
-        return PostgresIterable(
-                Supplier {
-                    val connection = hds.connection
-                    val stmt = connection.createStatement()
-                    val rs = stmt.executeQuery(buildIdsOfClusterContainingSql(dataKeys))
-                    StatementHolder(connection, stmt, rs)
-                },
-                Function {
-                    ResultSetAdapters.clusterId(it)
-                })
-    }
-
-    //TODO: Possible optimization is to avoid copying of array when invoking this function
-    override fun getClusters(
-            clusterIds: Collection<UUID>
-    ): Map<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>> {
+    override fun getClustersForId( dataKey: EntityDataKey ): Map<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>> {
         return PostgresIterable<Pair<UUID, Pair<EntityDataKey, Pair<EntityDataKey, Double>>>>(
                 Supplier {
                     val connection = hds.connection
-                    val ps = connection.prepareStatement(CLUSTER_CONTAINING_SQL)
-                    val arr = PostgresArrays.createUuidArray(connection, clusterIds)
-                    ps.setArray(1, arr)
+                    val ps = connection.prepareStatement(buildDataKeySql( dataKey ))
                     val rs = ps.executeQuery()
                     StatementHolder(connection, ps, rs)
                 },
                 Function {
-                    val clusterId = ResultSetAdapters.clusterId(it)
+                    val linkingId = ResultSetAdapters.linkingId(it)
                     val src = ResultSetAdapters.srcEntityDataKey(it)
                     val dst = ResultSetAdapters.dstEntityDataKey(it)
                     val score = ResultSetAdapters.score(it)
-                    clusterId to (src to (dst to score))
+                    linkingId to (src to (dst to score))
                 })
                 .groupBy({ it.first }, { it.second })
                 .mapValues {
@@ -166,6 +148,31 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource, private val
                                     { src -> src.first },
                                     { dstScore -> dstScore.second })
                             .mapValues { dstScores -> dstScores.value.toMap() }
+                }
+    }
+
+    override fun getClustersForIds( dataKeys: Set<EntityDataKey> ): Map<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>> {
+        return PostgresIterable<Pair<UUID, Pair<EntityDataKey, Pair<EntityDataKey, Double>>>>(
+                Supplier {
+                    val connection = hds.connection
+                    val ps = connection.prepareStatement(buildClusterContainingSql( dataKeys ))
+                    val rs = ps.executeQuery()
+                    StatementHolder(connection, ps, rs)
+                },
+                Function {
+                    val linkingId = ResultSetAdapters.linkingId(it)
+                    val src = ResultSetAdapters.srcEntityDataKey(it)
+                    val dst = ResultSetAdapters.dstEntityDataKey(it)
+                    val score = ResultSetAdapters.score(it)
+                    linkingId to (src to (dst to score))
+                })
+                .groupBy({ it.first }, { it.second })
+                .mapValues {
+                    it.value
+                        .groupBy(
+                            { src -> src.first },
+                            { dstScore -> dstScore.second })
+                        .mapValues { dstScores -> dstScores.value.toMap() }
                 }
     }
 
@@ -364,12 +371,19 @@ internal fun uuidString(id: UUID): String {
  */
 private val COLUMNS = MATCHED_ENTITIES.columns.joinToString("," ) { it.name }
 
-internal fun buildIdsOfClusterContainingSql(dataKeys: Set<EntityDataKey>): String {
+internal fun buildClusterContainingSql(dataKeys: Set<EntityDataKey>): String {
     val dataKeysSql = dataKeys.joinToString(",") { "('${it.entitySetId}','${it.entityKeyId}')" }
-    return "SELECT distinct ${LINKING_ID.name} " +
+    return "SELECT * " +
             "FROM ${MATCHED_ENTITIES.name} " +
             "WHERE ((${SRC_ENTITY_SET_ID.name},${SRC_ENTITY_KEY_ID.name}) IN ($dataKeysSql)) " +
             "OR ((${DST_ENTITY_SET_ID.name},${DST_ENTITY_KEY_ID.name}) IN ($dataKeysSql))"
+}
+
+internal fun buildDataKeySql( dataKey: EntityDataKey ): String {
+    return "SELECT * " +
+            "FROM ${MATCHED_ENTITIES.name} " +
+            "WHERE ((${SRC_ENTITY_SET_ID.name},${SRC_ENTITY_KEY_ID.name}) IN (('${dataKey.entitySetId}','${dataKey.entityKeyId}'))) " +
+            "OR ((${DST_ENTITY_SET_ID.name},${DST_ENTITY_KEY_ID.name}) IN (('${dataKey.entitySetId}','${dataKey.entityKeyId}')))"
 }
 
 internal fun buildFilterEntityKeyPairs(entityKeyPairs: List<EntityKeyPair>): String {
