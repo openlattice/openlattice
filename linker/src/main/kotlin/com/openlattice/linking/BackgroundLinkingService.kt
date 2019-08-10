@@ -121,7 +121,7 @@ class BackgroundLinkingService
             try {
                 // only linking id of entity should remain, since we cleared neighborhood, except the ones
                 // with positive feedback
-                val clusters = getClusters(setOf(candidate))
+                val clusters = lqs.getClusters(lqs.getIdsOfClustersContaining(setOf(candidate)).toList())
                 val cluster = clusters.entries.first()
                 val clusterId = cluster.key
 
@@ -171,7 +171,7 @@ class BackgroundLinkingService
             //Decision that needs to be made is whether to start new cluster or merge into existing cluster.
             //No locks are required since any items that block to this element will be skipped.
             try {
-                val clusters = getClusters(dataKeys)
+                val clusters = lqs.getClusters(lqs.getIdsOfClustersContaining(dataKeys).toList())
                 lqs.lockClustersForUpdates(clusters.keys).use { conn ->
                     val maybeBestCluster = clusters
                         .asSequence()
@@ -179,12 +179,12 @@ class BackgroundLinkingService
                         .filter { scoredCluster -> scoredCluster.score > MINIMUM_SCORE }
                         .maxBy { scoredCluster -> scoredCluster.score }
 
-                    //TODO: When creating new cluster do we really need to re-match or can we assume score of 1.0?
                     if (maybeBestCluster != null) {
                         return@use insertMatches(conn, maybeBestCluster.clusterId, candidate, maybeBestCluster.cluster, false)
                     }
                     val clusterId = ids.reserveIds(IdConstants.LINKING_ENTITY_SET_ID.id, 1).first()
                     val block = candidate to mapOf(candidate to elem)
+                    //TODO: When creating new cluster do we really need to re-match or can we assume score of 1.0?
                     return@use insertMatches( conn, clusterId, candidate, matcher.match(block).second, true )
                 }
             } catch (ex: Exception) {
@@ -231,33 +231,27 @@ class BackgroundLinkingService
         logger.debug("Cleared {} neighbors from neighborhood of {}", clearedCount, candidate)
     }
 
-    /**
-     * Retrieve the clusters containing any of the provided data keys.
-     * @param dataKeys The entity data keys used to determine which clusters to return.
-     * @return A map of pre-scored clusters associated with the given data keys.
-     */
-    private fun getClusters(dataKeys: Set<EntityDataKey>): Map<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>> {
-        return lqs.getClusters(lqs.getIdsOfClustersContaining(dataKeys).toList())
-    }
-
-    private fun insertMatches( conn: Connection,
-                               clusterId: UUID,
-                               newMember: EntityDataKey,
-                               scores: Map<EntityDataKey, Map<EntityDataKey, Double>>,
-                               newCluster: Boolean ) {
-        lqs.insertMatchScores( conn, clusterId, scores )
-        lqs.updateIdsTable( clusterId, newMember )
-        lqs.createOrUpdateLink( clusterId, newMember.entitySetId, newMember.entityKeyId )
+    private fun insertMatches(conn: Connection,
+                              linkingId: UUID,
+                              newMember: EntityDataKey,
+                              scores: Map<EntityDataKey, Map<EntityDataKey, Double>>,
+                              newCluster: Boolean ) {
+        lqs.insertMatchScores( conn, linkingId, scores )
+        lqs.updateIdsTable( linkingId, newMember )
 
         val scoresAsEsidToEkids = scores.flatMap { (edk, linkedScore) ->
-            return@flatMap Sets.union(linkedScore.keys, setOf(edk))
+            Sets.union(linkedScore.keys, setOf(edk))
         }.groupBy { edk ->
             edk.entitySetId
         }.mapValues { ( _, edks ) -> // esid, edks
             Sets.newLinkedHashSet( edks.map { it.entityKeyId } )
         }
 
-        linkingLogService.createOrUpdateCluster( clusterId, scoresAsEsidToEkids, newCluster )
+        /* TODO: we do an upsert into data table for every member in the cluster regardless of score
+         *   Need to remove links that no longer pass minimum threshold
+         */
+        lqs.createOrUpdateLink( linkingId, newMember.entitySetId, newMember.entityKeyId, scoresAsEsidToEkids )
+        linkingLogService.createOrUpdateCluster( linkingId, scoresAsEsidToEkids, newCluster )
     }
 
     @Timed
