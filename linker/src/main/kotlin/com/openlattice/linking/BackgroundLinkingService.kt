@@ -121,7 +121,7 @@ class BackgroundLinkingService
             try {
                 // only linking id of entity should remain, since we cleared neighborhood, except the ones
                 // with positive feedback
-                val clusters = lqs.getClustersForId( candidate )
+                val clusters = lqs.getClustersForIds(setOf( candidate ))
                 val cluster = clusters.entries.first()
                 val clusterId = cluster.key
 
