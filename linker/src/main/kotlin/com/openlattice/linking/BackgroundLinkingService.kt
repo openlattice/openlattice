@@ -121,7 +121,7 @@ class BackgroundLinkingService
             try {
                 // only linking id of entity should remain, since we cleared neighborhood, except the ones
                 // with positive feedback
-                val clusters = lqs.getClusters(lqs.getIdsOfClustersContaining(setOf(candidate)).toList())
+                val clusters = lqs.getClustersForId( candidate )
                 val cluster = clusters.entries.first()
                 val clusterId = cluster.key
 
@@ -171,7 +171,7 @@ class BackgroundLinkingService
             //Decision that needs to be made is whether to start new cluster or merge into existing cluster.
             //No locks are required since any items that block to this element will be skipped.
             try {
-                val clusters = lqs.getClusters(lqs.getIdsOfClustersContaining(dataKeys).toList())
+                val clusters = lqs.getClustersForIds(dataKeys)
                 lqs.lockClustersForUpdates(clusters.keys).use { conn ->
                     val maybeBestCluster = clusters
                         .asSequence()
