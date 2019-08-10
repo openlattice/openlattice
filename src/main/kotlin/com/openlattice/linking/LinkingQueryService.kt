@@ -59,7 +59,6 @@ interface LinkingQueryService {
      * @return The graph of scores for each cluster requested.
      */
     fun getClustersForIds(dataKeys: Set<EntityDataKey>): Map<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>>
-    fun getClustersForId( dataKey: EntityDataKey ): Map<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>>
 
     fun deleteEntitySetNeighborhood(entitySetId: UUID): Int
 

@@ -126,31 +126,6 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource, private val
         }
     }
 
-    override fun getClustersForId( dataKey: EntityDataKey ): Map<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>> {
-        return PostgresIterable<Pair<UUID, Pair<EntityDataKey, Pair<EntityDataKey, Double>>>>(
-                Supplier {
-                    val connection = hds.connection
-                    val ps = connection.prepareStatement(buildDataKeySql( dataKey ))
-                    val rs = ps.executeQuery()
-                    StatementHolder(connection, ps, rs)
-                },
-                Function {
-                    val linkingId = ResultSetAdapters.linkingId(it)
-                    val src = ResultSetAdapters.srcEntityDataKey(it)
-                    val dst = ResultSetAdapters.dstEntityDataKey(it)
-                    val score = ResultSetAdapters.score(it)
-                    linkingId to (src to (dst to score))
-                })
-                .groupBy({ it.first }, { it.second })
-                .mapValues {
-                    it.value
-                            .groupBy(
-                                    { src -> src.first },
-                                    { dstScore -> dstScore.second })
-                            .mapValues { dstScores -> dstScores.value.toMap() }
-                }
-    }
-
     override fun getClustersForIds( dataKeys: Set<EntityDataKey> ): Map<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>> {
         return PostgresIterable<Pair<UUID, Pair<EntityDataKey, Pair<EntityDataKey, Double>>>>(
                 Supplier {
@@ -168,11 +143,8 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource, private val
                 })
                 .groupBy({ it.first }, { it.second })
                 .mapValues {
-                    it.value
-                        .groupBy(
-                            { src -> src.first },
-                            { dstScore -> dstScore.second })
-                        .mapValues { dstScores -> dstScores.value.toMap() }
+                    it.value.groupBy( { src -> src.first }, { dstScore -> dstScore.second })
+                            .mapValues { dstScores -> dstScores.value.toMap() }
                 }
     }
 
@@ -377,13 +349,6 @@ internal fun buildClusterContainingSql(dataKeys: Set<EntityDataKey>): String {
             "FROM ${MATCHED_ENTITIES.name} " +
             "WHERE ((${SRC_ENTITY_SET_ID.name},${SRC_ENTITY_KEY_ID.name}) IN ($dataKeysSql)) " +
             "OR ((${DST_ENTITY_SET_ID.name},${DST_ENTITY_KEY_ID.name}) IN ($dataKeysSql))"
-}
-
-internal fun buildDataKeySql( dataKey: EntityDataKey ): String {
-    return "SELECT * " +
-            "FROM ${MATCHED_ENTITIES.name} " +
-            "WHERE ((${SRC_ENTITY_SET_ID.name},${SRC_ENTITY_KEY_ID.name}) IN (('${dataKey.entitySetId}','${dataKey.entityKeyId}'))) " +
-            "OR ((${DST_ENTITY_SET_ID.name},${DST_ENTITY_KEY_ID.name}) IN (('${dataKey.entitySetId}','${dataKey.entityKeyId}')))"
 }
 
 internal fun buildFilterEntityKeyPairs(entityKeyPairs: List<EntityKeyPair>): String {
