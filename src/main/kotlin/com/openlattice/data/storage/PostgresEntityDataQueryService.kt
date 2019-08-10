@@ -366,7 +366,6 @@ class PostgresEntityDataQueryService(
                 //and read the existing value to determine which colliding values need to be assigned new
                 // hashes. This is fine because hashes are immutable and the front-end always requests them
                 // from the backend before performing operations.
-
                 values.map { value ->
 
                     val dataType = authorizedPropertyTypes.getValue(propertyTypeId).datatype
@@ -401,7 +400,7 @@ class PostgresEntityDataQueryService(
         if ( dataType != EdmPrimitiveTypeKind.Binary) {
             return PostgresDataHasher.hashObject( value, dataType ) to value
         }
-        //Binary data types get stored in S3 bucket
+        //Binary data types get stored in S3 bucket:
         if ( awsPassthrough ) {
             //Data is being stored in AWS directly the value will be the url fragment
             //of where the data will be stored in AWS.
@@ -410,13 +409,12 @@ class PostgresEntityDataQueryService(
 
         //Data is expected to be of a specific type so that it can be stored in s3 bucket
         val binaryData = value as BinaryDataWithContentType
-
         val digest = PostgresDataHasher.hashObjectToHex(binaryData.data, EdmPrimitiveTypeKind.Binary)
 
         //store entity set id/entity key id/property type id/property hash as key in S3
         val s3Key = "$entitySetId/$entityKeyId/$propertyTypeId/$digest"
-        byteBlobDataManager.putObject(s3Key, binaryData.data, binaryData.contentType)
 
+        byteBlobDataManager.putObject(s3Key, binaryData.data, binaryData.contentType)
         return PostgresDataHasher.hashObject(s3Key, EdmPrimitiveTypeKind.String) to s3Key
     }
 
