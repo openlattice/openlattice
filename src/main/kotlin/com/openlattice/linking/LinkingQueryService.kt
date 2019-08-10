@@ -77,7 +77,7 @@ interface LinkingQueryService {
 
     fun getEntityKeyIdsOfLinkingIds(linkingIds: Set<UUID>): PostgresIterable<Pair<UUID, Set<UUID>>>
 
-    fun createOrUpdateLink( linkingId: UUID, entitySetId: UUID, entityKeyId: UUID )
+    fun createOrUpdateLink(linkingId: UUID, entitySetId: UUID, entityKeyId: UUID, cluster: Map<UUID, LinkedHashSet<UUID>>)
 }
 
 

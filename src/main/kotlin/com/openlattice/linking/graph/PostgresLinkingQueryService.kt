@@ -137,7 +137,6 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource, private val
                 Function {
                     ResultSetAdapters.clusterId(it)
                 })
-
     }
 
     //TODO: Possible optimization is to avoid copying of array when invoking this function
@@ -170,14 +169,21 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource, private val
                 }
     }
 
-    override fun createOrUpdateLink( linkingId: UUID, entitySetId: UUID, entityKeyId: UUID ) {
+    override fun createOrUpdateLink( linkingId: UUID, entitySetId: UUID, entityKeyId: UUID, cluster: Map<UUID, LinkedHashSet<UUID>> ) {
+        val version = System.currentTimeMillis()
         hds.connection.use { connection ->
             connection.prepareStatement( addLinkForSingleEntitySql() ).use { ps ->
-                ps.setObject(1, linkingId )
-                ps.setLong(2, System.currentTimeMillis() )
-                ps.setObject( 3, entitySetId )
-                ps.setObject( 4, entityKeyId )
-                ps.setArray( 5, getPartitionsAsPGArray( connection, entitySetId ))
+                cluster.forEach { (esid, ekids ) ->
+                    val partitionsForEsid = getPartitionsAsPGArray( connection, esid )
+                    ekids.forEach { ekid ->
+                        ps.setObject(1, linkingId )
+                        ps.setLong(2, version )
+                        ps.setObject( 3, esid )
+                        ps.setObject( 4, ekid )
+                        ps.setArray( 5, partitionsForEsid )
+                        ps.addBatch()
+                    }
+                }
                 ps.executeUpdate()
             }
         }
@@ -360,7 +366,7 @@ private val COLUMNS = MATCHED_ENTITIES.columns.joinToString("," ) { it.name }
 
 internal fun buildIdsOfClusterContainingSql(dataKeys: Set<EntityDataKey>): String {
     val dataKeysSql = dataKeys.joinToString(",") { "('${it.entitySetId}','${it.entityKeyId}')" }
-    return "SELECT distinct linking_id " +
+    return "SELECT distinct ${LINKING_ID.name} " +
             "FROM ${MATCHED_ENTITIES.name} " +
             "WHERE ((${SRC_ENTITY_SET_ID.name},${SRC_ENTITY_KEY_ID.name}) IN ($dataKeysSql)) " +
             "OR ((${DST_ENTITY_SET_ID.name},${DST_ENTITY_KEY_ID.name}) IN ($dataKeysSql))"
@@ -387,6 +393,16 @@ internal fun buildFilterEntityKeyPairs(entityKeyPairs: List<EntityKeyPair>): Str
 private val LOCK_CLUSTERS_SQL = "SELECT 1 FROM ${MATCHED_ENTITIES.name} WHERE ${LINKING_ID.name} = ? FOR UPDATE"
 
 private val CLUSTER_CONTAINING_SQL = "SELECT * FROM ${MATCHED_ENTITIES.name} WHERE ${LINKING_ID.name} = ANY(?)"
+
+// If this is efficient then this should probably be
+// future getClusters call instead of two round-trips
+internal fun getClustersSql( dataKeys: Set<EntityDataKey> ): String {
+    val dataKeysSql = dataKeys.joinToString(",") { "('${it.entitySetId}','${it.entityKeyId}')" }
+    return "SELECT * " +
+        "FROM ${MATCHED_ENTITIES.name} " +
+        "WHERE ((${SRC_ENTITY_SET_ID.name},${SRC_ENTITY_KEY_ID.name}) IN ($dataKeysSql)) " +
+        "OR ((${DST_ENTITY_SET_ID.name},${DST_ENTITY_KEY_ID.name}) IN ($dataKeysSql)) "
+}
 
 private val DELETE_SQL = "DELETE FROM ${MATCHED_ENTITIES.name} " +
         "WHERE ${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ? " +
