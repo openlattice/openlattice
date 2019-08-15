@@ -8,6 +8,7 @@ import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
 import com.openlattice.codex.CodexApi
 import com.openlattice.codex.MessageRequest
+import com.openlattice.collections.CollectionsManager
 import com.openlattice.controllers.exceptions.BadRequestException
 import com.openlattice.data.DataApi
 import com.openlattice.data.DataEdgeKey
@@ -40,7 +41,8 @@ constructor(
         private val appService: AppService,
         private val appConfigMS: AppConfigMapstore,
         private val hazelcastInstance: HazelcastInstance,
-        private val configuration: TwilioConfiguration
+        private val configuration: TwilioConfiguration,
+        private val collectionsManager: CollectionsManager
 ) : CodexApi, AuthorizingComponent {
 
     private val textingExecutor = Executors.newSingleThreadExecutor()
@@ -114,11 +116,12 @@ constructor(
         createAssociationsFromMessage()
     }
 
-    fun createEntitiesFromMessage(msg: Message, organizationId: UUID, appTypeId: UUID) {
+    fun createEntitiesFromMessage(msg: Message, organizationId: UUID, configTypeId: UUID) {
         val entities = mutableListOf<Map<UUID, Set<Any>>>()
         val app = appService.getApp("codex")
-        val ack = AppConfigKey(app.id, organizationId, appTypeId)
-        val esid = appConfigMS.load(ack).entitySetId
+        val ack = AppConfigKey(app.id, organizationId)
+        val collection = collectionsManager.getEntitySetCollection(appConfigMS.load(ack).entitySetCollectionId)
+        val esid = collection.template.getValue(configTypeId)
 
         val createEntities = dataApi.createEntities(esid, entities)
     }
