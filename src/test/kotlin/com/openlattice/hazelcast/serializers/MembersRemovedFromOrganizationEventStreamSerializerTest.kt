@@ -21,11 +21,7 @@
 package com.openlattice.hazelcast.serializers
 
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest
-import com.openlattice.authorization.Principal
-import com.openlattice.authorization.PrincipalType
-import com.openlattice.organizations.PrincipalSet
 import com.openlattice.organizations.events.MembersRemovedFromOrganizationEvent
-import org.apache.commons.lang3.RandomStringUtils
 import java.util.UUID
 
 class MembersRemovedFromOrganizationEventStreamSerializerTest
@@ -37,6 +33,7 @@ class MembersRemovedFromOrganizationEventStreamSerializerTest
     override fun createInput(): MembersRemovedFromOrganizationEvent {
         return MembersRemovedFromOrganizationEvent(
                 UUID.randomUUID(),
-                PrincipalSet(setOf(Principal(PrincipalType.USER, RandomStringUtils.randomAlphabetic(5)))))
+                SecurablePrincipalListStreamSerializerTest.createSecurablePrincipalList()
+        )
     }
 }

@@ -1,8 +1,10 @@
 package com.openlattice.auditing
 
+import com.openlattice.aws.AwsS3ClientConfiguration
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer
 import com.openlattice.serializer.AbstractJacksonYamlSerializationTest
 import org.junit.BeforeClass
+import java.util.*
 
 /**
  *
@@ -23,7 +25,9 @@ class AuditingConfigurationJacksonSerializationTest : AbstractJacksonYamlSeriali
         FullQualifiedNameJacksonSerializer.registerWithMapper(yaml)
         return AuditingConfiguration(
                 "ol.audit",
-                mapOf(AuditProperty.ID to "ol.id")
+                "ol.audited",
+                mapOf(AuditProperty.ID to "ol.id"),
+                Optional.of(AwsS3ClientConfiguration("blah", "us-gov-east-1", "blah", "blah"))
         )
     }
 

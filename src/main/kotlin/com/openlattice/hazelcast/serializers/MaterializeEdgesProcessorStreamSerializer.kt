@@ -27,6 +27,7 @@ import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.processors.MaterializeEdgesProcessor
 import com.openlattice.hazelcast.StreamSerializerTypeIds
+import com.openlattice.organizations.PrincipalSet
 import org.springframework.stereotype.Component
 
 @Component
@@ -43,10 +44,12 @@ class MaterializeEdgesProcessorStreamSerializer
     }
 
     override fun write(out: ObjectDataOutput, obj: MaterializeEdgesProcessor) {
+        PrincipalSetStreamSerializer().write(out, PrincipalSet(obj.authorizedPrincipals))
     }
 
     override fun read(input: ObjectDataInput): MaterializeEdgesProcessor {
-        return MaterializeEdgesProcessor().init(acm)
+        val principals = PrincipalSetStreamSerializer().read(input).unwrap()
+        return MaterializeEdgesProcessor(principals).init(acm)
     }
 
     override fun init(assemblerConnectionManager: AssemblerConnectionManager) {

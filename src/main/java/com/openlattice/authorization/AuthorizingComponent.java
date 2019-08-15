@@ -25,22 +25,24 @@ package com.openlattice.authorization;
 import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION;
 import static com.openlattice.authorization.EdmAuthorizationHelper.WRITE_PERMISSION;
 
+import com.openlattice.IdConstants;
 import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.controllers.exceptions.ForbiddenException;
 import com.openlattice.edm.type.PropertyType;
-import java.util.EnumMap;
-import java.util.EnumSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+
+import java.util.*;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public interface AuthorizingComponent {
     Logger logger = LoggerFactory.getLogger( AuthorizingComponent.class );
+
+    Set<UUID> internalIds = Arrays.stream( IdConstants.values() ).map( IdConstants::getId )
+            .collect( Collectors.toSet() );
 
     AuthorizationManager getAuthorizationManager();
 
@@ -138,5 +140,13 @@ public interface AuthorizingComponent {
                 Principals.getCurrentPrincipals(),
                 securableObjectType,
                 requiredPermissions );
+    }
+
+
+    default void ensureObjectCanBeDeleted( UUID objectId ) {
+        if ( internalIds.contains( objectId ) ) {
+            throw new ForbiddenException(
+                    "Object " + objectId.toString() + " cannot be deleted because this id is reserved." );
+        }
     }
 }

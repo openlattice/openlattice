@@ -80,7 +80,7 @@ class GraphProcessingService(
     }
 
     private fun markPropagated(rootProp: Propagation): Int {
-        val entitySetIds = edm.getEntitySetsOfType(rootProp.entityTypeId).map { it.id }
+        val entitySetIds = edm.getEntitySetIdsOfType(rootProp.entityTypeId)
         val propertyTypes = this.propertyTypes.getAll(setOf(rootProp.propertyTypeId))
 
         try {
@@ -125,9 +125,9 @@ class GraphProcessingService(
     }
 
     private fun markIfNeedsPropagation(input: Propagation, outputs: Set<Propagation>, isSelf: Boolean): Int {
-        val entitySetIds = edm.getEntitySetsOfType(input.entityTypeId).map { it.id }
+        val entitySetIds = edm.getEntitySetIdsOfType(input.entityTypeId)
         val propertyTypes = this.propertyTypes.getAll(setOf(input.propertyTypeId))
-        val outputEntitySetIds = outputs.flatMap { edm.getEntitySetsOfType(it.entityTypeId) }.map { it.id }
+        val outputEntitySetIds = outputs.flatMap { edm.getEntitySetIdsOfType(it.entityTypeId) }
         val outputPropertyType = outputs.map { it.propertyTypeId }.toSet()
         val associationType = edm.getAssociationTypeSafe(input.entityTypeId) != null
 
@@ -254,8 +254,7 @@ class GraphProcessingService(
         return inputs.keys
                 .map(edm::getEntityType)
                 .map(EntityType::getId)
-                .flatMap(edm::getEntitySetsOfType)
-                .map(EntitySet::getId)
+                .flatMap(edm::getEntitySetIdsOfType)
                 .toSet()
     }
 
@@ -490,7 +489,7 @@ internal fun buildGetActivePropertiesSql(
             propertyTypes.mapValues{ it.value.datatype == EdmPrimitiveTypeKind.Binary }.toMap(),
             false,
             false,
-            " AND last_propagate >= last_write ")
+            " AND ${LAST_PROPAGATE.name} >= ${LAST_WRITE.name} ")
 
     return " SELECT $columns FROM ($selectEntities) as entities "
 }
@@ -517,7 +516,7 @@ internal fun buildGetBlockedPropertiesSql(
             propertyTypeIds.mapValues { it.value.datatype == EdmPrimitiveTypeKind.Binary },
             false,
             false,
-            " AND last_propagate < last_write "
+            " AND ${LAST_PROPAGATE.name} < ${LAST_WRITE.name} "
     )
 }
 

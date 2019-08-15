@@ -62,13 +62,13 @@ interface DataGraphManager {
             entitySetId: UUID,
             entityKeyId: UUID,
             authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): SetMultimap<FullQualifiedName, Any>
+    ): Map<FullQualifiedName, Set<Any>>
 
     fun getLinkingEntity(
             entitySetIds: Set<UUID>,
             entityKeyId: UUID,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
-    ): SetMultimap<FullQualifiedName, Any>
+    ): Map<FullQualifiedName, Set<Any>>
 
     //Soft deletes
     fun clearEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent
@@ -85,7 +85,7 @@ interface DataGraphManager {
      */
     fun clearAssociationsBatch(
             entitySetId: UUID,
-            associationsEdgeKeys: PostgresIterable<DataEdgeKey>,
+            associationsEdgeKeys: Iterable<DataEdgeKey>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
     ): List<WriteEvent>
 
@@ -152,15 +152,11 @@ interface DataGraphManager {
 
     fun replacePropertiesInEntities(
             entitySetId: UUID,
-            replacementProperties: Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Any>>>,
+            replacementProperties: Map<UUID, Map<UUID, Set<Map<ByteBuffer, Any>>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): WriteEvent
 
-    fun createAssociations(
-            associations: Set<DataEdgeKey>,
-            srcAssociationEntitySetIds: Map<UUID, Set<UUID>>,
-            dstAssociationEntitySetIds: Map<UUID, Set<UUID>>
-    ): WriteEvent
+    fun createAssociations(associations: Set<DataEdgeKey>): WriteEvent
 
     fun createAssociations(
             associations: ListMultimap<UUID, DataEdge>,
@@ -212,5 +208,5 @@ interface DataGraphManager {
 
     fun getEdgesAndNeighborsForVertex(entitySetId: UUID, entityKeyId: UUID): Stream<Edge>
     fun getEdgeKeysOfEntitySet(entitySetId: UUID): PostgresIterable<DataEdgeKey>
-    fun getEdgesConnectedToEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): PostgresIterable<DataEdgeKey>
+    fun getEdgesConnectedToEntities(entitySetId: UUID, entityKeyIds: Set<UUID>, includeClearedEdges: Boolean): PostgresIterable<DataEdgeKey>
 }

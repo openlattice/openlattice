@@ -26,15 +26,19 @@ import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcesso
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.EntitySetAssemblyKey
 import com.openlattice.assembler.MaterializedEntitySet
+import com.openlattice.authorization.Principal
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.organization.OrganizationEntitySetFlag
+import java.time.OffsetDateTime
 import java.util.*
 
 private const val NOT_INITIALIZED = "Assembler Connection Manager not initialized."
 
 data class RefreshMaterializedEntitySetProcessor(
-        val entitySet: EntitySet, val authorizedPropertyTypes: Map<UUID, PropertyType>
+        val entitySet: EntitySet,
+        val materializablePropertyTypes: Map<UUID, PropertyType>,
+        val authorizedPropertyTypesOfPrincipals: Map<Principal, Set<PropertyType>>
 ) : AbstractRhizomeEntryProcessor<EntitySetAssemblyKey, MaterializedEntitySet, Void?>(), Offloadable {
 
     @Transient
@@ -47,11 +51,15 @@ data class RefreshMaterializedEntitySetProcessor(
             throw IllegalStateException("Encountered null materialized entity set while trying to refresh data in " +
                     "materialized view for entity set ${entitySet.id} in organization $organizationId.")
         } else {
-            acm?.refreshEntitySet(organizationId, entitySet, authorizedPropertyTypes)
-                    ?: throw IllegalStateException(NOT_INITIALIZED)
+            acm?.refreshEntitySet(
+                    organizationId, entitySet, materializablePropertyTypes, authorizedPropertyTypesOfPrincipals
+            ) ?: throw IllegalStateException(NOT_INITIALIZED)
 
             // Clear data unsync flag
             materializedEntitySet.flags.remove(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED)
+            // Update last refresh
+            materializedEntitySet.lastRefresh = OffsetDateTime.now()
+
             entry.setValue(materializedEntitySet)
         }
 

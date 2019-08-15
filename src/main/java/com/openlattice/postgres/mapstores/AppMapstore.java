@@ -6,21 +6,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openlattice.apps.App;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.mapstores.TestDataFactory;
-import com.openlattice.postgres.PostgresArrays;
 import com.openlattice.postgres.PostgresTable;
 import com.openlattice.postgres.ResultSetAdapters;
 import com.zaxxer.hikari.HikariDataSource;
 
 import java.io.IOException;
-import java.util.Optional;
-
-import org.apache.commons.lang3.RandomStringUtils;
-
-import java.sql.Array;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.LinkedHashSet;
 import java.util.UUID;
 
 public class AppMapstore extends AbstractBasePostgresMapstore<UUID, App> {

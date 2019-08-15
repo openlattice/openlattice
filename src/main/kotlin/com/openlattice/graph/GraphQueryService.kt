@@ -21,6 +21,8 @@
 
 package com.openlattice.graph
 
+import com.openlattice.analysis.requests.Filter
+import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.query.GraphQuery
 import com.openlattice.graph.query.GraphQueryState
 import com.openlattice.graph.query.GraphQueryState.Option
@@ -31,10 +33,19 @@ import java.util.*
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 interface GraphQueryService {
-    fun submitQuery(query: GraphQuery): GraphQueryState
-    fun getQuery(queryId: UUID): GraphQuery
-    fun getQueryState(queryId: UUID, options: Set<Option> = setOf()): GraphQueryState
-    fun abortQuery(queryId: UUID)
-    fun getResult(queryId: UUID): Optional<SubGraph>
+    fun submitQuery(
+            query: NeighborhoodQuery,
+            propertyTypes: Map<UUID, PropertyType>,
+            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
+            filter: Optional<Filter> = Optional.empty()
+    ): Neighborhood
 
+    /**
+     * Looks up the entity sets of a set of entity key ids.
+     * @param ids The entity key ids to lookup
+     * @return Returns a map of entity key id to entity set id.
+     */
+    fun getEntitySetForIds(ids: Set<UUID>): Map<UUID, UUID>
+
+    fun getEntitySets(entityTypeIds: Optional<Set<UUID>>): List<UUID>
 }

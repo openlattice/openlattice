@@ -20,7 +20,6 @@
 
 package com.openlattice.hazelcast.serializers;
 
-import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializer;
 import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.hazelcast.nio.ObjectDataInput;

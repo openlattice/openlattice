@@ -56,7 +56,9 @@ import com.openlattice.hazelcast.HazelcastQueue;
 import com.openlattice.ids.IdGenerationMapstore;
 import com.openlattice.ids.Range;
 import com.openlattice.linking.mapstores.LinkingFeedbackMapstore;
+import com.openlattice.notifications.sms.SmsInformationMapstore;
 import com.openlattice.organizations.PrincipalSet;
+import com.openlattice.organizations.mapstores.OrganizationDefaultPartitionsMapstore;
 import com.openlattice.postgres.PostgresPod;
 import com.openlattice.postgres.PostgresTableManager;
 import com.openlattice.postgres.mapstores.*;
@@ -231,6 +233,11 @@ public class MapstoresPod {
     }
 
     @Bean
+    public QueueConfigurer twilioQueueConfigurer() {
+        return config -> config.setName( HazelcastQueue.TWILIO.name() ).setMaxSize( 100000 ).setBackupCount( 1 );
+    }
+
+    @Bean
     public QueueConfigurer indexingQueueConfigurer() {
         return config -> config.setName( HazelcastQueue.INDEXING.name() ).setMaxSize( 100000 ).setBackupCount( 1 );
     }
@@ -240,6 +247,14 @@ public class MapstoresPod {
         return config -> config
                 .setName( HazelcastQueue.LINKING_CANDIDATES.name() )
                 .setMaxSize( 1000 )
+                .setBackupCount( 1 );
+    }
+
+    @Bean
+    public QueueConfigurer linkingIndexingQueueConfigurer() {
+        return config -> config
+                .setName( HazelcastQueue.LINKING_INDEXING.name() )
+                .setMaxSize( 10000 )
                 .setBackupCount( 1 );
     }
 
@@ -286,5 +301,15 @@ public class MapstoresPod {
     @Bean
     public LinkingFeedbackMapstore linkingFeedbackMapstore() {
         return new LinkingFeedbackMapstore( hikariDataSource );
+    }
+
+    @Bean
+    public SmsInformationMapstore smsInformationMapstore() {
+        return new SmsInformationMapstore( hikariDataSource );
+    }
+
+    @Bean
+    public OrganizationDefaultPartitionsMapstore organizationDefaultPartitionsMapstore() {
+        return new OrganizationDefaultPartitionsMapstore( hikariDataSource );
     }
 }

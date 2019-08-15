@@ -24,6 +24,7 @@ package com.openlattice.hazelcast.serializers
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.processors.MaterializeEdgesProcessor
+import com.openlattice.mapstores.TestDataFactory
 import org.mockito.Mockito
 
 class MaterializeEdgesProcessorStreamSerializerTest : AbstractStreamSerializerTest
@@ -36,6 +37,9 @@ class MaterializeEdgesProcessorStreamSerializerTest : AbstractStreamSerializerTe
     }
 
     override fun createInput(): MaterializeEdgesProcessor {
-        return MaterializeEdgesProcessor()
+        val principals = setOf(
+                TestDataFactory.rolePrincipal(), TestDataFactory.userPrincipal(), TestDataFactory.rolePrincipal()
+        )
+        return MaterializeEdgesProcessor(principals)
     }
 }

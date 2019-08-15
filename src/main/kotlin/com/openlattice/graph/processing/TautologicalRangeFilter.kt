@@ -21,6 +21,7 @@
 
 package com.openlattice.graph.processing
 
+import com.openlattice.analysis.SqlBindInfo
 import com.openlattice.analysis.requests.RangeFilter
 
 /**
@@ -46,5 +47,9 @@ class TautologicalRangeFilter : RangeFilter<Int> {
 
     override fun asSql(field: String): String {
         return " true "
+    }
+
+    override fun bindInfo(base: Int): LinkedHashSet<SqlBindInfo> {
+        return linkedSetOf()
     }
 }

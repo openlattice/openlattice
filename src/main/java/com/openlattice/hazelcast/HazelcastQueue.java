@@ -26,8 +26,11 @@ package com.openlattice.hazelcast;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public enum HazelcastQueue {
+    AUDITING,
     EMAIL_SPOOL,
     INDEXING,
     LINKING_CANDIDATES,
+    LINKING_INDEXING,
+    TWILIO,
     SIGNAL
 }

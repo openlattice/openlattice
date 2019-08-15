@@ -22,16 +22,19 @@
 package com.openlattice.assembler.processors
 
 import com.hazelcast.core.Offloadable
+import com.hazelcast.core.ReadOnly
 import com.hazelcast.spi.ExecutionService
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.OrganizationAssembly
+import com.openlattice.authorization.Principal
 import java.util.UUID
 
 
 private const val NOT_INITIALIZED = "Assembler Connection Manager not initialized."
 
-class MaterializeEdgesProcessor : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(), Offloadable {
+data class MaterializeEdgesProcessor(val authorizedPrincipals: Set<Principal>)
+    : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(false), Offloadable, ReadOnly {
     @Transient
     private var acm: AssemblerConnectionManager? = null
 
@@ -42,7 +45,7 @@ class MaterializeEdgesProcessor : AbstractRhizomeEntryProcessor<UUID, Organizati
             throw IllegalStateException("Encountered null assembly while trying to materialize edges for " +
                     "organization $organizationId.")
         } else {
-            acm?.materializeEdges(organizationId, assembly.materializedEntitySets.keys)
+            acm?.materializeEdges(organizationId, assembly.materializedEntitySets.keys, authorizedPrincipals)
                     ?: throw IllegalStateException(NOT_INITIALIZED)
         }
 
@@ -57,13 +60,4 @@ class MaterializeEdgesProcessor : AbstractRhizomeEntryProcessor<UUID, Organizati
         this.acm = acm
         return this
     }
-
-    override fun equals(other: Any?): Boolean {
-        return (other != null && other is MaterializeEdgesProcessor)
-    }
-
-    override fun hashCode(): Int {
-        return super.hashCode()
-    }
-
 }

@@ -29,7 +29,6 @@ import java.util.Map;
 import java.util.UUID;
 
 import com.openlattice.organization.OrganizationEntitySetFlag;
-import org.apache.commons.lang3.RandomStringUtils;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -43,7 +42,6 @@ public class OrganizationAssemblyStreamSerializerTest
     @Override protected OrganizationAssembly createInput() {
         return new OrganizationAssembly(
                 UUID.randomUUID(),
-                RandomStringUtils.randomAlphanumeric( 10 ),
                 false,
                 Map.of( UUID.randomUUID(), EnumSet.noneOf( OrganizationEntitySetFlag.class ) ) );
     }

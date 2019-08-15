@@ -57,8 +57,8 @@ class AlprAlertEmailRenderer {
                 TimeZone.getTimeZone("America/Los_Angeles").toZoneId()
         )
 
-        private fun getFirstValue(entity: SetMultimap<FullQualifiedName, Any>, fqn: FullQualifiedName): String? {
-            val values = entity.get(fqn)
+        private fun getFirstValue(entity: Map<FullQualifiedName, Set<Any>>, fqn: FullQualifiedName): String? {
+            val values = entity[fqn] ?: emptySet()
             return if (values.isEmpty()) {
                 null
             } else values.iterator().next().toString()
@@ -115,11 +115,11 @@ class AlprAlertEmailRenderer {
             return getImage(url, PNG)
         }
 
-        private fun extractVehicleInfo(vehicleRead: SetMultimap<FullQualifiedName, Any>): Map<String, Any> {
+        private fun extractVehicleInfo(vehicleRead: Map<FullQualifiedName, Set<Any>>): Map<String, Any> {
 
             val values = Maps.newHashMap<String, Any>()
 
-            val readDateTimeList = vehicleRead.get(READ_TIMESTAMP_FQN)
+            val readDateTimeList = vehicleRead[READ_TIMESTAMP_FQN] ?: emptySet()
 
             values["readDateTime"] = if (readDateTimeList.isEmpty()) "" else OffsetDateTime.parse(
                     readDateTimeList.first().toString()
@@ -137,7 +137,7 @@ class AlprAlertEmailRenderer {
             return values.filterValues { it != null }
         }
 
-        private fun extractVehicleImages(vehicleRead: SetMultimap<FullQualifiedName, Any>, mapboxToken: String): List<EmailAttachment<*>> {
+        private fun extractVehicleImages(vehicleRead: Map<FullQualifiedName, Set<Any>>, mapboxToken: String): List<EmailAttachment<*>> {
 
             val licenseImageUrl = getFirstValue(vehicleRead, LICENSE_PLATE_IMAGE_FQN)
             val vehicleImageUrl = getFirstValue(vehicleRead, VEHICLE_IMAGE_FQN)
@@ -182,7 +182,7 @@ class AlprAlertEmailRenderer {
 
         fun renderEmail(
                 persistentSearch: PersistentSearch,
-                vehicle: SetMultimap<FullQualifiedName, Any>,
+                vehicle: Map<FullQualifiedName, Set<Any>>,
                 userEmail: String,
                 mapboxToken: String
         ): RenderableEmailRequest {
@@ -192,7 +192,7 @@ class AlprAlertEmailRenderer {
 
             val subject = "New ALPR read for case $caseNum -- $licensePlate"
 
-            val templateObjects: MutableMap<String, Any> = Maps.newHashMap<String, Any>()
+            val templateObjects: MutableMap<String, Any> = mutableMapOf()
             templateObjects.putAll(persistentSearch.alertMetadata)
             templateObjects.putAll(extractVehicleInfo(vehicle))
             templateObjects["expiration"] = persistentSearch.expiration.format(dateTimeFormatter)

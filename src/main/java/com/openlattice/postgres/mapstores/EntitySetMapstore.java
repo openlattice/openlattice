@@ -12,6 +12,7 @@ import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.postgres.PostgresArrays;
 import com.openlattice.postgres.ResultSetAdapters;
 import com.zaxxer.hikari.HikariDataSource;
+
 import java.sql.Array;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -23,6 +24,7 @@ public class EntitySetMapstore extends AbstractBasePostgresMapstore<UUID, Entity
     public static final String ID_INDEX                = "id";
     public static final String LINKED_ENTITY_SET_INDEX = "linkedEntitySets[any]";
     public static final String ORGANIZATION_INDEX      = "organizationId";
+    public static final String FLAGS_INDEX             = "flags[any]";
 
     public EntitySetMapstore( HikariDataSource hds ) {
         super( HazelcastMap.ENTITY_SETS.name(), ENTITY_SETS, hds );
@@ -34,6 +36,7 @@ public class EntitySetMapstore extends AbstractBasePostgresMapstore<UUID, Entity
                 .createUuidArray( ps.getConnection(), value.getLinkedEntitySets().stream() );
         Array flags = PostgresArrays
                 .createTextArray( ps.getConnection(), value.getFlags().stream().map( EntitySetFlag::toString ) );
+        Array partitions = PostgresArrays.createIntArray( ps.getConnection(), value.getPartitions() );
 
         bind( ps, key, 1 );
         ps.setString( 2, value.getName() );
@@ -44,16 +47,20 @@ public class EntitySetMapstore extends AbstractBasePostgresMapstore<UUID, Entity
         ps.setArray( 7, linkedEntitySets );
         ps.setObject( 8, value.getOrganizationId() );
         ps.setArray( 9, flags );
+        ps.setArray( 10, partitions );
+        ps.setInt( 11, value.getPartitionsVersion() );
 
         // UPDATE
-        ps.setString( 10, value.getName() );
-        ps.setObject( 11, value.getEntityTypeId() );
-        ps.setString( 12, value.getTitle() );
-        ps.setString( 13, value.getDescription() );
-        ps.setArray( 14, contacts );
-        ps.setArray( 15, linkedEntitySets );
-        ps.setObject( 16, value.getOrganizationId() );
-        ps.setArray( 17, flags );
+        ps.setString( 12, value.getName() );
+        ps.setObject( 13, value.getEntityTypeId() );
+        ps.setString( 14, value.getTitle() );
+        ps.setString( 15, value.getDescription() );
+        ps.setArray( 16, contacts );
+        ps.setArray( 17, linkedEntitySets );
+        ps.setObject( 18, value.getOrganizationId() );
+        ps.setArray( 19, flags );
+        ps.setArray( 20, partitions );
+        ps.setInt( 21, value.getPartitionsVersion() );
     }
 
     @Override protected int bind( PreparedStatement ps, UUID key, int parameterIndex ) throws SQLException {
@@ -84,6 +91,7 @@ public class EntitySetMapstore extends AbstractBasePostgresMapstore<UUID, Entity
                 .addMapIndexConfig( new MapIndexConfig( ENTITY_TYPE_ID_INDEX, false ) )
                 .addMapIndexConfig( new MapIndexConfig( ID_INDEX, false ) )
                 .addMapIndexConfig( new MapIndexConfig( LINKED_ENTITY_SET_INDEX, false ) )
-                .addMapIndexConfig( new MapIndexConfig( ORGANIZATION_INDEX, false ) );
+                .addMapIndexConfig( new MapIndexConfig( ORGANIZATION_INDEX, false ) )
+                .addMapIndexConfig( new MapIndexConfig( FLAGS_INDEX, false ) );
     }
 }

@@ -30,7 +30,6 @@ import com.google.common.collect.SetMultimap;
 import com.google.common.eventbus.EventBus;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
-import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.query.Predicate;
 import com.hazelcast.query.Predicates;
 import com.openlattice.authorization.AclKey;
@@ -246,6 +245,13 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
     }
 
     @Override
+    public void removePrincipalsFromPrincipals( Collection<AclKey> source, Set<AclKey> target ) {
+        ensurePrincipalsExist( target );
+        ensurePrincipalsExist( source );
+        principalTrees.executeOnKeys( target, new NestedPrincipalRemover( source ) );
+    }
+
+    @Override
     public void removePrincipalFromPrincipals( AclKey source, Predicate targetFilter ) {
         principalTrees.executeOnEntries( new NestedPrincipalRemover( ImmutableSet.of( source ) ), targetFilter );
     }
@@ -253,10 +259,9 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
     @Override
     public Collection<SecurablePrincipal> getAllPrincipalsWithPrincipal( AclKey aclKey ) {
         //We start from the bottom layer and use predicates to sweep up the tree and enumerate all roles with this role.
-        final Set<AclKey> principalsWithPrincipal = new HashSet<>();
-        Set<AclKey> parentLayer = principalTrees
-                .keySet( hasSecurablePrincipal( aclKey ) );
-        principalsWithPrincipal.addAll( parentLayer );
+        Set<AclKey> parentLayer = principalTrees.keySet( hasSecurablePrincipal( aclKey ) );
+        final Set<AclKey> principalsWithPrincipal = new HashSet<>(parentLayer);
+
         while ( !parentLayer.isEmpty() ) {
             parentLayer = parentLayer
                     .parallelStream()
@@ -296,13 +301,6 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
     }
 
     @Override
-    public Map<AclKey, Object> executeOnPrincipal(
-            EntryProcessor<AclKey, SecurablePrincipal> ep,
-            Predicate p ) {
-        return principals.executeOnEntries( ep, p );
-    }
-
-    @Override
     public Collection<SecurablePrincipal> getSecurablePrincipals( Predicate p ) {
         return principals.values( p );
     }
@@ -313,9 +311,8 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
     }
 
     @Override
-    public Collection<SecurablePrincipal> getSecurablePrincipals( Set<Principal> members ) {
-        Predicate p = Predicates
-                .in( "principal", members.toArray( new Principal[ 0 ] ) );
+    public Collection<SecurablePrincipal> getSecurablePrincipals( Collection<Principal> members ) {
+        final var p = findPrincipals( members );
         return principals.values( p );
     }
 
@@ -364,14 +361,18 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
     }
 
     private void ensurePrincipalsExist( AclKey... aclKeys ) {
-        ensurePrincipalsExist( "All principals must exists!", aclKeys );
+        ensurePrincipalsExist( Stream.of( aclKeys ) );
     }
 
-    private void ensurePrincipalsExist( String msg, AclKey... aclKeys ) {
-        checkState( Stream.of( aclKeys )
+    private void ensurePrincipalsExist( Collection<AclKey> aclKeys ) {
+        ensurePrincipalsExist( aclKeys.stream() );
+    }
+
+    private void ensurePrincipalsExist( Stream<AclKey> aclKeys ) {
+        checkState( aclKeys
                 .filter( aclKey -> !principals.containsKey( aclKey ) )
                 .peek( aclKey -> logger.error( "Principal with acl key {} does not exists!", aclKey ) )
-                .count() == 0, msg );
+                .count() == 0, "All principals must exists!" );
     }
 
     @Override
@@ -380,7 +381,11 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
     }
 
     private static Predicate findPrincipal( Principal p ) {
-        return Predicates.equal( "principal", p );
+        return Predicates.equal( PrincipalMapstore.PRINCIPAL_INDEX, p );
+    }
+
+    private static Predicate findPrincipals( Collection<Principal> principals ) {
+        return Predicates.in( PrincipalMapstore.PRINCIPAL_INDEX, principals.toArray( new Principal[] {} ) );
     }
 
     private static Predicate findPrincipals( Set<Principal> p ) {
