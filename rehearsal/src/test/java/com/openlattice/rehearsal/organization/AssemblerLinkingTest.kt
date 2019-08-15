@@ -41,6 +41,7 @@ import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.rehearsal.SetupTestData
+import com.openlattice.rehearsal.assertException
 import com.openlattice.rehearsal.edm.EdmTestConstants
 import org.apache.commons.lang.RandomStringUtils
 import org.junit.AfterClass
@@ -678,20 +679,12 @@ class AssemblerLinkingTest : SetupTestData() {
         OrganizationControllerCallHelper.addMemberToOrganization(organizationID, user1.id)
 
         // user is not owner of organization
-        try {
-            loginAs("user1")
-            organizationsApi.assembleEntitySets(organizationID, mapOf(esLinking.id to 5))
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(
-                    e.undeclaredThrowable.message!!.contains(
-                            "Object [$organizationID] is not accessible.", true
-                    )
-            )
-        } finally {
-            loginAs("admin")
-        }
-
+        loginAs("user1")
+        assertException(
+                { organizationsApi.assembleEntitySets(organizationID, mapOf(esLinking.id to 5)) },
+                "Object [$organizationID] is not accessible."
+        )
+        loginAs("admin")
 
         // org principal has no permission on linking entityset
         val organizationAcl = Acl(
@@ -700,19 +693,12 @@ class AssemblerLinkingTest : SetupTestData() {
         )
         permissionsApi.updateAcl(AclData(organizationAcl, Action.ADD))
 
-        try {
-            loginAs("user1")
-            organizationsApi.assembleEntitySets(organizationID, mapOf(esLinking.id to 1000))
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(
-                    e.undeclaredThrowable.message!!.contains(
-                            "EntitySet [${esLinking.id}] is not accessible by organization principal", true
-                    )
-            )
-        } finally {
-            loginAs("admin")
-        }
+        loginAs("user1")
+        assertException(
+                { organizationsApi.assembleEntitySets(organizationID, mapOf(esLinking.id to 1000)) },
+                "EntitySet [${esLinking.id}] is not accessible by organization principal"
+        )
+        loginAs("admin")
 
 
         // org principal has only permission on linking entityset
@@ -742,19 +728,12 @@ class AssemblerLinkingTest : SetupTestData() {
         )
         permissionsApi.updateAcl(AclData(es1MaterializationAcl, Action.ADD))
 
-        try {
-            loginAs("user1")
-            organizationsApi.assembleEntitySets(organizationID, mapOf(esLinking.id to 2341))
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(
-                    e.undeclaredThrowable.message!!.contains(
-                            "EntitySet [$esId2] is not accessible by organization principal", true
-                    )
-            )
-        } finally {
-            loginAs("admin")
-        }
+        loginAs("user1")
+        assertException(
+                { organizationsApi.assembleEntitySets(organizationID, mapOf(esLinking.id to 2341)) },
+                "EntitySet [$esId2] is not accessible by organization principal"
+        )
+        loginAs("admin")
 
 
         // org principal has permission on both normal entity sets
@@ -869,15 +848,10 @@ class AssemblerLinkingTest : SetupTestData() {
 
         user1OrganizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                try {
-                    stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking.name))
-                    Assert.fail("Should have thrown Exception but did not!")
-                } catch (e: PSQLException) {
-                    Assert.assertTrue(
-                            e.message!!
-                                    .contains("permission denied for materialized view ${esLinking.name}", true)
-                    )
-                }
+                assertException(
+                        { stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking.name)) },
+                        "permission denied for materialized view ${esLinking.name}"
+                )
             }
         }
 
@@ -892,15 +866,10 @@ class AssemblerLinkingTest : SetupTestData() {
 
         user1OrganizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                try {
-                    stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking.name))
-                    Assert.fail("Should have thrown Exception but did not!")
-                } catch (e: PSQLException) {
-                    Assert.assertTrue(
-                            e.message!!
-                                    .contains("permission denied for materialized view ${esLinking.name}", true)
-                    )
-                }
+                assertException(
+                        { stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking.name)) },
+                        "permission denied for materialized view ${esLinking.name}"
+                )
             }
         }
 
@@ -913,15 +882,10 @@ class AssemblerLinkingTest : SetupTestData() {
 
         user1OrganizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                try {
-                    stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking.name))
-                    Assert.fail("Should have thrown Exception but did not!")
-                } catch (e: PSQLException) {
-                    Assert.assertTrue(
-                            e.message!!
-                                    .contains("permission denied for materialized view ${esLinking.name}", true)
-                    )
-                }
+                assertException(
+                        { stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking.name)) },
+                        "permission denied for materialized view ${esLinking.name}"
+                )
             }
         }
 
@@ -935,15 +899,10 @@ class AssemblerLinkingTest : SetupTestData() {
         // try to select all columns
         user1OrganizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                try {
-                    stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking.name))
-                    Assert.fail("Should have thrown Exception but did not!")
-                } catch (e: PSQLException) {
-                    Assert.assertTrue(
-                            e.message!!
-                                    .contains("permission denied for materialized view ${esLinking.name}", true)
-                    )
-                }
+                assertException(
+                        { stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking.name)) },
+                        "permission denied for materialized view ${esLinking.name}"
+                )
             }
         }
 
@@ -972,19 +931,16 @@ class AssemblerLinkingTest : SetupTestData() {
         // try to select property column
         user1OrganizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                try {
-                    stmt.executeQuery(
-                            TestAssemblerConnectionManager.selectFromEntitySetSql(
-                                    esLinking.name, setOf(propertyType.type.fullQualifiedNameAsString)
+                assertException(
+                        {
+                            stmt.executeQuery(
+                                    TestAssemblerConnectionManager.selectFromEntitySetSql(
+                                            esLinking.name, setOf(propertyType.type.fullQualifiedNameAsString)
+                                    )
                             )
-                    )
-                    Assert.fail("Should have thrown Exception but did not!")
-                } catch (e: PSQLException) {
-                    Assert.assertTrue(
-                            e.message!!
-                                    .contains("permission denied for materialized view ${esLinking.name}", true)
-                    )
-                }
+                        },
+                        "permission denied for materialized view ${esLinking.name}"
+                )
             }
         }
 
@@ -998,15 +954,10 @@ class AssemblerLinkingTest : SetupTestData() {
         // try to select all columns
         user1OrganizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                try {
-                    stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking.name))
-                    Assert.fail("Should have thrown Exception but did not!")
-                } catch (e: PSQLException) {
-                    Assert.assertTrue(
-                            e.message!!
-                                    .contains("permission denied for materialized view ${esLinking.name}", true)
-                    )
-                }
+                assertException(
+                        { stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking.name)) },
+                        "permission denied for materialized view ${esLinking.name}"
+                )
             }
         }
 

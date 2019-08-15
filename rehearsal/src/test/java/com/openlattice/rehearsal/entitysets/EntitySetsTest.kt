@@ -1,7 +1,10 @@
 package com.openlattice.rehearsal.entitysets
 
+import com.openlattice.rehearsal.assertException
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
 import com.openlattice.rehearsal.edm.EdmTestConstants
+import com.openlattice.rehearsal.organization.OrganizationControllerCallHelper
+import com.openlattice.rehearsal.organization.OrganizationsControllerTest
 import org.junit.Assert
 import org.junit.BeforeClass
 import org.junit.Test
@@ -40,34 +43,24 @@ class EntitySetsTest : MultipleAuthenticatedUsersBase() {
         val et = createEntityType(pt.id)
         val nonLinkingEs = createEntitySet(et, false, setOf())
         val es = createEntitySet(et)
-        try {
-            entitySetsApi.addEntitySetsToLinkingEntitySet(nonLinkingEs.id, setOf<UUID>(es.id))
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(e.undeclaredThrowable.message!!
-                    .contains("Can't add linked entity sets to a not linking entity set", true))
-        }
+
+        assertException(
+                { entitySetsApi.addEntitySetsToLinkingEntitySet(nonLinkingEs.id, setOf<UUID>(es.id)) },
+                "Can't add linked entity sets to a not linking entity set"
+        )
 
         // add non-person entity set
         val linkingEs = createEntitySet(et, true, setOf())
-        try {
-            entitySetsApi.addEntitySetsToLinkingEntitySet(linkingEs.id, setOf<UUID>(es.id))
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(e.undeclaredThrowable.message!!
-                    .contains(
-                            "Linked entity sets are of differing entity types than " +
-                                    EdmTestConstants.personEt.type.fullQualifiedNameAsString,
-                            true))
-        }
+        assertException(
+                { entitySetsApi.addEntitySetsToLinkingEntitySet(linkingEs.id, setOf<UUID>(es.id)) },
+                "Linked entity sets are of differing entity types than " +
+                        EdmTestConstants.personEt.type.fullQualifiedNameAsString
+        )
 
         // remove empty
-        try {
-            entitySetsApi.removeEntitySetsFromLinkingEntitySet(linkingEs.id, setOf())
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(e.undeclaredThrowable.message!!
-                    .contains("Linked entity sets is empty", true))
-        }
+        assertException(
+                { entitySetsApi.removeEntitySetsFromLinkingEntitySet(linkingEs.id, setOf()) },
+                "Linked entity sets is empty"
+        )
     }
 }

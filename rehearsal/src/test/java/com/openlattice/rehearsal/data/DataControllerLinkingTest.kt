@@ -30,6 +30,7 @@ import com.openlattice.data.requests.FileType
 import com.openlattice.edm.EdmConstants
 import com.openlattice.edm.type.EntityType
 import com.openlattice.rehearsal.SetupTestData
+import com.openlattice.rehearsal.assertException
 import com.openlattice.rehearsal.edm.EdmTestConstants
 import org.apache.commons.lang.RandomStringUtils
 import org.apache.olingo.commons.api.edm.FullQualifiedName
@@ -229,21 +230,12 @@ class DataControllerLinkingTest : SetupTestData() {
         }
 
         // try to read data with no permissions on it
-        try {
-            loginAs("user1")
-            dataApi.loadEntitySetData(esLinking.id, ess, FileType.json)
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(
-                    e.undeclaredThrowable.message!!
-                            .contains(
-                                    "Insufficient permissions to read the entity set ${esLinking.id} or it doesn't " +
-                                            "exists.", true
-                            )
-            )
-        } finally {
-            loginAs("admin")
-        }
+        loginAs("user1")
+        assertException(
+                { dataApi.loadEntitySetData(esLinking.id, ess, FileType.json) },
+                "Insufficient permissions to read the entity set ${esLinking.id} or it doesn't exists."
+        )
+        loginAs("admin")
 
         // add permission to read entityset but none of the properties nor its normal entity sets
         permissionsApi.updateAcl(AclData(esReadAcl, Action.ADD))
@@ -335,28 +327,16 @@ class DataControllerLinkingTest : SetupTestData() {
         val id = linkingIds.first()
 
         // try to read data with no permissions on it
-        try {
-            loginAs("user1")
-            dataApi.getEntity(esLinking.id, id)
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(
-                    e.undeclaredThrowable.message!!
-                            .contains("Object [${esLinking.id}] is not accessible.", true)
-            )
-        }
-
-        try {
-            dataApi.getEntity(esLinking.id, id, EdmTestConstants.personGivenNameId)
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(
-                    e.undeclaredThrowable.message!!
-                            .contains("Object [${esLinking.id}] is not accessible.", true)
-            )
-        } finally {
-            loginAs("admin")
-        }
+        loginAs("user1")
+        assertException(
+                { dataApi.getEntity(esLinking.id, id) },
+                "Object [${esLinking.id}] is not accessible."
+        )
+        assertException(
+                { dataApi.getEntity(esLinking.id, id, EdmTestConstants.personGivenNameId) },
+                "Object [${esLinking.id}] is not accessible."
+        )
+        loginAs("admin")
 
         // add permission to read linking entityset but none of the properties nor its normal entity sets
         val es2ReadAcl = Acl(AclKey(esLinking.id), setOf(Ace(user1, readPermission, OffsetDateTime.MAX)))
@@ -393,21 +373,12 @@ class DataControllerLinkingTest : SetupTestData() {
         Assert.assertEquals(1, noData2.size)
         noData2.forEach { Assert.assertEquals(EdmConstants.ID_FQN, it.key) }
 
-        try {
-            dataApi.getEntity(esLinking.id, id, EdmTestConstants.personGivenNameId)
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(
-                    e.undeclaredThrowable.message!!
-                            .contains(
-                                    "Not authorized to read property type ${EdmTestConstants.personGivenNameId} in " +
-                                            "one or more normal entity sets of linking entity set ${esLinking.id}",
-                                    true
-                            )
-            )
-        } finally {
-            loginAs("admin")
-        }
+        assertException(
+                { dataApi.getEntity(esLinking.id, id, EdmTestConstants.personGivenNameId) },
+                "Not authorized to read property type ${EdmTestConstants.personGivenNameId} in " +
+                        "one or more normal entity sets of linking entity set ${esLinking.id}"
+        )
+        loginAs("admin")
 
 
         // add permission on personGivenNamePropertyId
