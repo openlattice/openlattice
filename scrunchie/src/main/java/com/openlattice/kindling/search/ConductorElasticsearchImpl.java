@@ -79,6 +79,8 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static com.openlattice.IdConstants.ENTITY_SET_ID_KEY_ID;
+import static com.openlattice.IdConstants.LAST_WRITE_KEY_ID;
 import static java.util.stream.Collectors.toSet;
 
 public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
@@ -199,7 +201,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             	        .startObject( ANALYZER )
                 	        .startObject( METAPHONE_ANALYZER )
                 	            .field( TOKENIZER, LOWERCASE )
-                	            .field( FILTER, Lists.newArrayList( STANDARD, LOWERCASE, SHINGLE_FILTER, METAPHONE_FILTER ) )
+                	            .field( FILTER, Lists.newArrayList( LOWERCASE, SHINGLE_FILTER, METAPHONE_FILTER ) )
                 	        .endObject()
                 	    .endObject()
         	        .endObject()
@@ -436,8 +438,8 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         Map<String, Object> entityMapping = Maps.newHashMap();
         Map<String, Object> entityPropertiesMapping = Maps.newHashMap();
 
-        entityPropertiesMapping.put( ENTITY_SET_ID_KEY.toString(), keywordMapping );
-        entityPropertiesMapping.put( LAST_WRITE.toString(), keywordMapping );
+        entityPropertiesMapping.put( ENTITY_SET_ID_KEY_ID.getId().toString(), keywordMapping );
+        entityPropertiesMapping.put( LAST_WRITE_KEY_ID.getId().toString(), keywordMapping );
 
         for ( PropertyType propertyType : propertyTypes ) {
 
@@ -501,7 +503,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
         client.prepareDelete( ENTITY_SET_DATA_MODEL, ENTITY_SET_TYPE, entitySetId.toString() ).execute().actionGet();
 
-        BulkByScrollResponse response = DeleteByQueryAction.INSTANCE.newRequestBuilder( client )
+        BulkByScrollResponse response = new DeleteByQueryRequestBuilder( client, DeleteByQueryAction.INSTANCE )
                 .filter( QueryBuilders.termQuery( ENTITY_SET_ID_FIELD, entitySetId.toString() ) )
                 .source( getIndexName( entityTypeId ) )
                 .get();
@@ -528,7 +530,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
             Map<Object, Object> values = new HashMap<>( entity.size() + 1 );
             entity.entrySet().forEach( entry -> values.put( entry.getKey(), entry.getValue() ) );
-            values.put( ENTITY_SET_ID_KEY, entitySetId );
+            values.put( ENTITY_SET_ID_KEY_ID.getId(), entitySetId );
 
             return values;
         } ).collect( Collectors.toList() );
@@ -546,7 +548,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
         Map<Object, Object> values = new HashMap<>( entity.size() + 1 );
         entity.entrySet().forEach( entry -> values.put( entry.getKey(), entry.getValue() ) );
-        values.put( ENTITY_SET_ID_KEY, entitySetId );
+        values.put( ENTITY_SET_ID_KEY_ID.getId(), entitySetId );
 
         try {
             return mapper.writeValueAsBytes( ImmutableMap.of( ENTITY, values, ENTITY_SET_ID_FIELD, entitySetId ) );
@@ -600,7 +602,15 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 }
             }
 
-            requestBuilder.execute().actionGet();
+            BulkResponse resp = requestBuilder.execute().actionGet();
+
+            if ( resp.hasFailures() ) {
+                logger.info( "At least one failure observed when attempting to index {} entities for entity set {}: {}",
+                        entitiesById.size(),
+                        entitySetId,
+                        resp.buildFailureMessage() );
+                return false;
+            }
 
         }
         return true;
@@ -609,7 +619,6 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     @Override
     public boolean createBulkLinkedData(
             UUID entityTypeId,
-            UUID linkingEntitySetId,
             Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> entitiesByLinkingId ) { // linking_id/entity_set_id/property_id
         if ( !verifyElasticsearchConnection() ) { return false; }
 
@@ -694,7 +703,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 entityDataKeys.add( new EntityDataKey( getEntitySetIdFromHit( hit ),
                         UUID.fromString( hit.getId() ) ) );
             }
-            totalHits += item.getResponse().getHits().totalHits;
+            totalHits += item.getResponse().getHits().getTotalHits().value;
         }
         return new EntityDataKeySearchResult( totalHits, entityDataKeys );
     }
@@ -810,7 +819,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         BoolQueryBuilder query = QueryBuilders.boolQuery().minimumShouldMatch( 1 );
 
         for ( int i = 0; i < entitySetIds.length; i++ ) {
-            RangeQueryBuilder rangeQuery = QueryBuilders.rangeQuery( getFieldName( LAST_WRITE ) );
+            RangeQueryBuilder rangeQuery = QueryBuilders.rangeQuery( getFieldName( LAST_WRITE_KEY_ID.getId() ) );
 
             if ( constraint.getStartDate().isPresent() ) {
                 rangeQuery.gt( constraint.getStartDate().get().toString() );
@@ -886,8 +895,10 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
         BoolQueryBuilder entitySetQuery = QueryBuilders.boolQuery().minimumShouldMatch( 1 );
         entitySetIds.forEach( entitySetId -> {
-            entitySetQuery
-                    .should( QueryBuilders.termQuery( getFieldName( ENTITY_SET_ID_KEY ), entitySetId.toString() ) );
+            entitySetQuery.should(
+                    QueryBuilders.termQuery( getFieldName( ENTITY_SET_ID_KEY_ID.getId() ),
+                            entitySetId.toString() )
+            );
         } );
 
         query.must( QueryBuilders.nestedQuery( ENTITY, entitySetQuery, ScoreMode.Max ) );
@@ -1149,7 +1160,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         for ( SearchHit hit : response.getHits() ) {
             hits.add( hit.getSourceAsMap() );
         }
-        return new SearchResult( response.getHits().getTotalHits(), hits );
+        return new SearchResult( response.getHits().getTotalHits().value, hits );
     }
 
     @Override
@@ -1180,7 +1191,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         for ( SearchHit hit : response.getHits() ) {
             hits.add( hit.getSourceAsMap() );
         }
-        return new SearchResult( response.getHits().getTotalHits(), hits );
+        return new SearchResult( response.getHits().getTotalHits().value, hits );
     }
 
     @Override public SearchResult executeEntitySetCollectionSearch(
@@ -1222,7 +1233,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             hits.add( hitMap );
         }
 
-        return new SearchResult( response.getHits().getTotalHits(), hits );
+        return new SearchResult( response.getHits().getTotalHits().value, hits );
     }
 
     @SuppressWarnings( "unchecked" )
@@ -1278,7 +1289,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
         List<Map<String, Object>> hits = Lists.newArrayList();
         response.getHits().forEach( hit -> hits.add( hit.getSourceAsMap() ) );
-        return new SearchResult( response.getHits().getTotalHits(), hits );
+        return new SearchResult( response.getHits().getTotalHits().value, hits );
     }
 
     /*** RE-INDEXING ***/
@@ -1339,7 +1350,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     public boolean clearAllData() {
         client.admin().indices()
                 .delete( new DeleteIndexRequest( DATA_INDEX_PREFIX + "*" ) );
-        DeleteByQueryAction.INSTANCE.newRequestBuilder( client )
+        new DeleteByQueryRequestBuilder( client, DeleteByQueryAction.INSTANCE )
                 .filter( QueryBuilders.matchAllQuery() ).source( ENTITY_SET_DATA_MODEL,
                 ENTITY_TYPE_INDEX,
                 PROPERTY_TYPE_INDEX,
@@ -1440,35 +1451,27 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             Function<Object, String> idFn ) {
         if ( !verifyElasticsearchConnection() ) { return false; }
 
-        BoolQueryBuilder deleteQuery = QueryBuilders.boolQuery();
         BulkRequestBuilder bulkRequest = client.prepareBulk();
 
-        client.delete( new DeleteRequest( index ) ).actionGet();
+        client.admin().indices().delete( new DeleteIndexRequest( index ) ).actionGet();
         createIndex( index );
 
         objects.forEach( object -> {
             try {
                 String id = idFn.apply( object );
                 String s = ObjectMappers.getJsonMapper().writeValueAsString( object );
-                deleteQuery.mustNot( QueryBuilders.matchQuery( "_id", id ) );
                 bulkRequest
                         .add( client.prepareIndex( index, type, id )
                                 .setSource( s, XContentType.JSON ) );
             } catch ( JsonProcessingException e ) {
-                logger.debug( "Error re-indexing securable object types" );
+                logger.error( "Error re-indexing securable object type to index {}", index );
             }
         } );
-
-        new DeleteByQueryRequestBuilder( client, DeleteByQueryAction.INSTANCE )
-                .filter( deleteQuery )
-                .source( index )
-                .execute()
-                .actionGet();
 
         BulkResponse bulkResponse = bulkRequest.get();
         if ( bulkResponse.hasFailures() ) {
             bulkResponse.forEach( item -> logger
-                    .debug( "Failure during attempted re-index: {}", item.getFailureMessage() ) );
+                    .error( "Failure during attempted re-index: {}", item.getFailureMessage() ) );
         }
 
         return true;
