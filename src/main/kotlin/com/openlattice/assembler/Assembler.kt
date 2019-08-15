@@ -532,13 +532,6 @@ class Assembler(
     /**
      * Returns true, if the entity set is materialized in the organization
      */
-    private fun isEntitySetMaterialized(organizationId: UUID, entitySetId: UUID): Boolean {
-        return isEntitySetMaterialized(EntitySetAssemblyKey(entitySetId, organizationId))
-    }
-
-    /**
-     * Returns true, if the entity set is materialized in the organization
-     */
     private fun isEntitySetMaterialized(entitySetAssemblyKey: EntitySetAssemblyKey): Boolean {
         return materializedEntitySets.containsKey(entitySetAssemblyKey)
     }
