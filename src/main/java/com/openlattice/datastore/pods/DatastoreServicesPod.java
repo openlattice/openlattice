@@ -53,6 +53,7 @@ import com.openlattice.authorization.HazelcastSecurableObjectResolveTypeService;
 import com.openlattice.authorization.PostgresUserApi;
 import com.openlattice.authorization.Principals;
 import com.openlattice.authorization.SecurableObjectResolveTypeService;
+import com.openlattice.collections.CollectionsManager;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.DataGraphService;
