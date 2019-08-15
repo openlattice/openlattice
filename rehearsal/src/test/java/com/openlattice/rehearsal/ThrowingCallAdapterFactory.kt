@@ -66,7 +66,7 @@ class ThrowingCallAdapterFactory : CallAdapter.Factory() {
 
 class GeneralException(message: String) : java.lang.Exception(message)
 
-internal fun assertException(fqn: () -> (Any), expectedMsg: String) {
+inline fun assertException(fqn: () -> Any, expectedMsg: String) {
     try {
         fqn()
         Assert.fail("Should have thrown Exception but did not!")
