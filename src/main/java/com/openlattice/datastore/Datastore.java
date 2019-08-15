@@ -33,6 +33,7 @@ import com.openlattice.datastore.pods.ByteBlobServicePod;
 import com.openlattice.datastore.pods.DatastoreSecurityPod;
 import com.openlattice.datastore.pods.DatastoreServicesPod;
 import com.openlattice.datastore.pods.DatastoreServletsPod;
+import com.openlattice.hazelcast.pods.MapstoresPod;
 import com.openlattice.hazelcast.pods.SharedStreamSerializersPod;
 import com.openlattice.jdbc.JdbcPod;
 import com.openlattice.postgres.PostgresPod;
@@ -40,18 +41,21 @@ import com.openlattice.tasks.pods.TaskSchedulerPod;
 
 public class Datastore extends BaseRhizomeServer {
     private static final Class<?>[] datastorePods = new Class<?>[] {
+            AuditingConfigurationPod.class,
+            AwsS3Pod.class,
             ByteBlobServicePod.class,
             DatastoreServicesPod.class,
-            SharedStreamSerializersPod.class,
-            AwsS3Pod.class,
             JdbcPod.class,
+            MapstoresPod.class,
             PostgresPod.class,
-            AuditingConfigurationPod.class,
+            SharedStreamSerializersPod.class,
             TaskSchedulerPod.class
     };
+
     private static final Class<?>[] rhizomePods   = new Class<?>[] {
             RegistryBasedHazelcastInstanceConfigurationPod.class,
             Auth0Pod.class };
+
     private static final Class<?>[] webPods       = new Class<?>[] {
             DatastoreServletsPod.class,
             DatastoreSecurityPod.class, };

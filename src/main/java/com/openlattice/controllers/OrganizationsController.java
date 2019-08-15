@@ -23,51 +23,27 @@ package com.openlattice.controllers;
 import com.codahale.metrics.annotation.Timed;
 import com.dataloom.streams.StreamUtil;
 import com.google.common.base.Predicates;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
+import com.google.common.collect.*;
 import com.openlattice.assembler.Assembler;
-import com.openlattice.authorization.SecurableObjectResolveTypeService;
-import com.openlattice.authorization.AclKey;
-import com.openlattice.authorization.AuthorizationManager;
-import com.openlattice.authorization.AuthorizingComponent;
-import com.openlattice.authorization.EdmAuthorizationHelper;
-import com.openlattice.authorization.Permission;
-import com.openlattice.authorization.Principal;
-import com.openlattice.authorization.PrincipalType;
-import com.openlattice.authorization.Principals;
-import com.openlattice.authorization.SecurablePrincipal;
+import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.authorization.util.AuthorizationUtils;
 import com.openlattice.controllers.exceptions.ForbiddenException;
 import com.openlattice.controllers.exceptions.ResourceNotFoundException;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.directory.pojo.Auth0UserBasic;
-import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organization.*;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
-import java.util.Collection;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
-import javax.inject.Inject;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import javax.inject.Inject;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping( OrganizationsApi.CONTROLLER )
@@ -100,12 +76,18 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             value = { "", "/" },
             produces = MediaType.APPLICATION_JSON_VALUE )
     public Iterable<Organization> getOrganizations() {
-        return organizations.getOrganizations(
+
+        Set<AclKey> authorizedRoles = getAccessibleObjects( SecurableObjectType.Role, EnumSet.of( Permission.READ ) )
+                .filter( Predicates.notNull()::apply ).collect( Collectors.toSet() );
+
+        Iterable<Organization> orgs = organizations.getOrganizations(
                 getAccessibleObjects( SecurableObjectType.Organization, EnumSet.of( Permission.READ ) )
                         .parallel()
                         .filter( Predicates.notNull()::apply )
                         .map( AuthorizationUtils::getLastAclKeySafely )
         );
+
+        return Iterables.transform( orgs, org -> filterRolesOfOrganization( org, authorizedRoles ) );
     }
 
     @Timed
@@ -129,13 +111,9 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         ensureRead( organizationId );
         //TODO: Re-visit roles within an organization being defined as roles which have read on that organization.
         Organization org = organizations.getOrganization( organizationId );
-        Set<Role> authorizedRoles = getAuthorizedRoles( organizationId, Permission.READ );
-        return new Organization(
-                org.getSecurablePrincipal(),
-                org.getAutoApprovedEmails(),
-                org.getMembers(),
-                authorizedRoles,
-                org.getApps() );
+        Set<AclKey> authorizedRoleAclKeys = getAuthorizedRoleAclKeys( org.getRoles() );
+
+        return filterRolesOfOrganization( org, authorizedRoleAclKeys );
     }
 
     @Timed
@@ -144,6 +122,8 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     @ResponseStatus( HttpStatus.OK )
     public Void destroyOrganization( @PathVariable( ID ) UUID organizationId ) {
         AclKey aclKey = ensureOwner( organizationId );
+
+        ensureObjectCanBeDeleted( organizationId );
 
         organizations.destroyOrganization( organizationId );
         authorizations.deletePermissions( aclKey );
@@ -244,10 +224,27 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             produces = MediaType.APPLICATION_JSON_VALUE )
     public Map<UUID, Set<OrganizationEntitySetFlag>> assembleEntitySets(
             @PathVariable( ID ) UUID organizationId,
-            @RequestBody Set<UUID> entitySetIds ) {
+            @RequestBody Map<UUID, Integer> refreshRatesOfEntitySets ) {
         final var authorizedPropertyTypesByEntitySet =
-                getAuthorizedPropertiesForMaterialization( organizationId, entitySetIds );
-        return assembler.materializeEntitySets( organizationId, authorizedPropertyTypesByEntitySet );
+                getAuthorizedPropertiesForMaterialization( organizationId, refreshRatesOfEntitySets.keySet() );
+
+        // convert mins to millisecs
+        final Map<UUID, Long> refreshRatesInMilliSecsOfEntitySets = new HashMap<>( refreshRatesOfEntitySets.size() );
+        refreshRatesOfEntitySets.forEach(
+                ( entitySetId, refreshRateInMins ) -> {
+                    Long value = null;
+                    if ( refreshRateInMins != null ) {
+                        value = getRefreshRateMillisFromMins( refreshRateInMins );
+                    }
+
+                    refreshRatesInMilliSecsOfEntitySets.put( entitySetId, value );
+                }
+        );
+
+        return assembler.materializeEntitySets(
+                organizationId,
+                authorizedPropertyTypesByEntitySet,
+                refreshRatesInMilliSecsOfEntitySets );
     }
 
     @Timed
@@ -285,6 +282,29 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         return null;
     }
 
+    @Override
+    @PutMapping( ID_PATH + SET_ID_PATH + REFRESH_RATE )
+    public Void updateRefreshRate(
+            @PathVariable( ID ) UUID organizationId,
+            @PathVariable( SET_ID ) UUID entitySetId,
+            @RequestBody Integer refreshRate ) {
+        ensureOwner( organizationId );
+
+        final var refreshRateInMilliSecs = getRefreshRateMillisFromMins( refreshRate );
+
+        assembler.updateRefreshRate( organizationId, entitySetId, refreshRateInMilliSecs );
+        return null;
+    }
+
+    @Override
+    @DeleteMapping( ID_PATH + SET_ID_PATH + REFRESH_RATE )
+    public Void deleteRefreshRate( @PathVariable( ID ) UUID organizationId, @PathVariable( SET_ID ) UUID entitySetId ) {
+        ensureOwner( organizationId );
+
+        assembler.updateRefreshRate( organizationId, entitySetId, null );
+        return null;
+    }
+
     private Map<UUID, Map<UUID, PropertyType>> getAuthorizedPropertiesForMaterialization(
             UUID organizationId,
             Set<UUID> entitySetIds ) {
@@ -316,6 +336,15 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         // check materialization on normal entity sets and get the intersection of their authorized property types
         return authzHelper.getAuthorizedPropertiesOnEntitySets(
                 entitySetIds, EnumSet.of( Permission.MATERIALIZE ), Set.of( organizationPrincipal.getPrincipal() ) );
+    }
+
+    private Long getRefreshRateMillisFromMins( Integer refreshRateInMins ) {
+        if ( refreshRateInMins < 1 ) {
+            throw new IllegalArgumentException( "Minimum refresh rate is 1 minute." );
+        }
+
+        // convert mins to millisecs
+        return refreshRateInMins.longValue() * 3600L;
     }
 
     @Timed
@@ -475,13 +504,30 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             produces = MediaType.APPLICATION_JSON_VALUE )
     public Set<Role> getRoles( @PathVariable( ID ) UUID organizationId ) {
         ensureRead( organizationId );
-        return getAuthorizedRoles( organizationId, Permission.READ );
+        Set<Role> roles = organizations.getRoles( organizationId );
+        Set<AclKey> authorizedRoleAclKeys = getAuthorizedRoleAclKeys( roles );
+        return Sets.filter( roles, role -> authorizedRoleAclKeys.contains( role.getAclKey() ) );
     }
 
-    private Set<Role> getAuthorizedRoles( UUID organizationId, Permission permission ) {
-        return StreamUtil.stream( organizations.getRoles( organizationId ) )
-                .filter( role -> isAuthorized( permission ).test( role.getAclKey() ) )
-                .collect( Collectors.toSet() );
+    private Set<AclKey> getAuthorizedRoleAclKeys( Set<Role> roles ) {
+        return authorizations
+                .accessChecksForPrincipals( roles.stream()
+                        .map( role -> new AccessCheck( role.getAclKey(), EnumSet.of( Permission.READ ) ) )
+                        .collect( Collectors.toSet() ), Principals.getCurrentPrincipals() )
+                .filter( authorization -> authorization.getPermissions().get( Permission.READ ) )
+                .map( Authorization::getAclKey ).collect( Collectors.toSet() );
+    }
+
+    private static Organization filterRolesOfOrganization( Organization org, Set<AclKey> authorizedRoleAclKeys ) {
+        return new Organization(
+                org.getSecurablePrincipal(),
+                org.getAutoApprovedEmails(),
+                org.getMembers(),
+                Sets.filter( org.getRoles(), role -> authorizedRoleAclKeys.contains( role.getAclKey() ) ),
+                org.getApps(),
+                org.getSmsEntitySetInfo(),
+                org.getPartitions()
+        );
     }
 
     @Timed
@@ -533,6 +579,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             value = ID_PATH + PRINCIPALS + ROLES + ROLE_ID_PATH )
     public Void deleteRole( @PathVariable( ID ) UUID organizationId, @PathVariable( ROLE_ID ) UUID roleId ) {
         ensureRoleAdminAccess( organizationId, roleId );
+        ensureObjectCanBeDeleted( roleId );
         principalService.deletePrincipal( new AclKey( organizationId, roleId ) );
         return null;
     }
@@ -560,7 +607,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         ensureOwnerAccess( new AclKey( organizationId, roleId ) );
 
         organizations.addRoleToPrincipalInOrganization( organizationId, roleId,
-                        new Principal( PrincipalType.USER, userId ) );
+                new Principal( PrincipalType.USER, userId ) );
         return null;
     }
 
@@ -597,24 +644,20 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         return aclKey;
     }
 
-    private AclKey ensureRead( UUID organizationId ) {
-        AclKey aclKey = new AclKey( organizationId );
-        accessCheck( aclKey, EnumSet.of( Permission.READ ) );
-        return aclKey;
+    private void ensureRead( UUID organizationId ) {
+        ensureReadAccess( new AclKey( organizationId ) );
     }
 
-    private AclKey ensureMaterialize ( UUID entitySetId, OrganizationPrincipal principal ) {
+    private void ensureMaterialize( UUID entitySetId, OrganizationPrincipal principal ) {
         AclKey aclKey = new AclKey( entitySetId );
 
         if ( !getAuthorizationManager().checkIfHasPermissions(
                 aclKey,
-                Set.of(principal.getPrincipal()),
+                Set.of( principal.getPrincipal() ),
                 EnumSet.of( Permission.MATERIALIZE ) ) ) {
             throw new ForbiddenException( "EntitySet " + aclKey.toString() + " is not accessible by organization " +
-                    "principal " + principal.getPrincipal().getId()  + " ." );
+                    "principal " + principal.getPrincipal().getId() + " ." );
         }
-
-        return aclKey;
     }
 
 }

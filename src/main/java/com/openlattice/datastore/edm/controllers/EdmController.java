@@ -24,31 +24,30 @@ import com.auth0.spring.security.api.authentication.PreAuthenticatedAuthenticati
 import com.codahale.metrics.annotation.Timed;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.*;
-import com.openlattice.auditing.AuditEventType;
-import com.openlattice.auditing.AuditRecordEntitySetsManager;
-import com.openlattice.auditing.AuditableEvent;
-import com.openlattice.auditing.AuditingComponent;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
+import com.openlattice.auditing.*;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
-import com.openlattice.authorization.util.AuthorizationUtils;
 import com.openlattice.controllers.exceptions.BadRequestException;
 import com.openlattice.controllers.exceptions.ForbiddenException;
-import com.openlattice.controllers.exceptions.wrappers.BatchException;
-import com.openlattice.controllers.exceptions.wrappers.ErrorsDTO;
-import com.openlattice.controllers.util.ApiExceptions;
-import com.openlattice.data.*;
+import com.openlattice.data.DataGraphManager;
+import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.data.requests.FileType;
+import com.openlattice.data.storage.EntityDatastore;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.edm.*;
 import com.openlattice.edm.requests.EdmDetailsSelector;
 import com.openlattice.edm.requests.EdmRequest;
 import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
-import com.openlattice.edm.set.EntitySetPropertyMetadata;
-import com.openlattice.edm.type.*;
+import com.openlattice.edm.type.AssociationDetails;
+import com.openlattice.edm.type.AssociationType;
+import com.openlattice.edm.type.EntityType;
+import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
-import com.openlattice.postgres.streams.PostgresIterable;
 import com.openlattice.web.mediatypes.CustomMediaType;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
@@ -112,6 +111,9 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
 
     @Inject
     private AuditRecordEntitySetsManager auditRecordEntitySetsManager;
+
+    @Inject
+    private AuditingManager auditingManager;
 
     @RequestMapping(
             path = CLEAR_PATH,
@@ -368,64 +370,6 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
     @Timed
     @Override
     @RequestMapping(
-            path = ENTITY_SETS_PATH,
-            method = RequestMethod.POST,
-            consumes = MediaType.APPLICATION_JSON_VALUE,
-            produces = MediaType.APPLICATION_JSON_VALUE )
-    @ResponseStatus( HttpStatus.OK )
-    public Map<String, UUID> createEntitySets( @RequestBody Set<EntitySet> entitySets ) {
-        ErrorsDTO dto = new ErrorsDTO();
-
-        Map<String, UUID> createdEntitySets = Maps.newHashMapWithExpectedSize( entitySets.size() );
-        List<AuditableEvent> auditableEvents = Lists.newArrayList();
-
-        // TODO: Add access check to make sure user can create entity sets.
-        for ( EntitySet entitySet : entitySets ) {
-            try {
-                ensureValidEntitySet( entitySet );
-                modelService.createEntitySet( Principals.getCurrentUser(), entitySet );
-                createdEntitySets.put( entitySet.getName(), entitySet.getId() );
-
-                auditableEvents.add( new AuditableEvent(
-                        getCurrentUserId(),
-                        new AclKey( entitySet.getId() ),
-                        AuditEventType.CREATE_ENTITY_SET,
-                        "Created entity set through EdmApi.createEntitySets",
-                        Optional.empty(),
-                        ImmutableMap.of( "entitySet", entitySet ),
-                        OffsetDateTime.now(),
-                        Optional.empty()
-                ) );
-            } catch ( Exception e ) {
-                dto.addError( ApiExceptions.OTHER_EXCEPTION, entitySet.getName() + ": " + e.getMessage() );
-            }
-        }
-
-        recordEvents( auditableEvents );
-
-        if ( !dto.isEmpty() ) {
-            throw new BatchException( dto );
-        }
-        return createdEntitySets;
-    }
-
-    @Timed
-    @Override
-    @RequestMapping(
-            path = ENTITY_SETS_PATH,
-            method = RequestMethod.GET )
-    public Iterable<EntitySet> getEntitySets() {
-        return authorizations.getAuthorizedObjectsOfType(
-                Principals.getCurrentPrincipals(),
-                SecurableObjectType.EntitySet,
-                EnumSet.of( Permission.READ ) )
-                .map( AuthorizationUtils::getLastAclKeySafely )
-                .map( modelService::getEntitySet )::iterator;
-    }
-
-    @Timed
-    @Override
-    @RequestMapping(
             path = SUMMARY_PATH,
             method = RequestMethod.GET )
     public Map<UUID, Iterable<PropertyUsageSummary>> getAllPropertyUsageSummaries() {
@@ -447,112 +391,6 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
     public Iterable<PropertyUsageSummary> getPropertyUsageSummary( @PathVariable( ID ) UUID propertyTypeId ) {
         ensureAdminAccess();
         return modelService.getPropertyUsageSummary( propertyTypeId );
-    }
-
-    @Timed
-    @Override
-    @RequestMapping(
-            path = ENTITY_SETS_PATH + ID_PATH,
-            method = RequestMethod.GET )
-    public EntitySet getEntitySet( @PathVariable( ID ) UUID entitySetId ) {
-        ensureReadAccess( new AclKey( entitySetId ) );
-
-        recordEvent( new AuditableEvent(
-                getCurrentUserId(),
-                new AclKey( entitySetId ),
-                AuditEventType.READ_ENTITY_SET,
-                "Entity set read through EdmApi.getEntitySet",
-                Optional.empty(),
-                ImmutableMap.of(),
-                OffsetDateTime.now(),
-                Optional.empty()
-        ) );
-        return modelService.getEntitySet( entitySetId );
-    }
-
-    @Timed
-    @Override
-    @RequestMapping(
-            path = ENTITY_SETS_PATH + ID_PATH,
-            method = RequestMethod.DELETE )
-    @ResponseStatus( HttpStatus.OK )
-    public Void deleteEntitySet( @PathVariable( ID ) UUID entitySetId ) {
-        ensureOwnerAccess( new AclKey( entitySetId ) );
-        final EntitySet entitySet = modelService.getEntitySet( entitySetId );
-        final EntityType entityType = modelService.getEntityType( entitySet.getEntityTypeId() );
-        final Map<UUID, PropertyType> authorizedPropertyTypes = authzHelper
-                .getAuthorizedPropertyTypes( entitySetId, EnumSet.of( Permission.OWNER ) );
-        if ( !authorizedPropertyTypes.keySet().containsAll( entityType.getProperties() ) ) {
-            throw new ForbiddenException( "You shall not pass!" );
-        }
-
-        // linking entitysets have no entities or associations
-        if(!entitySet.isLinking()) {
-            // associations need to be deleted first, because edges are deleted in DataGraphManager.deleteEntitySet call
-            deleteAssociationsOfEntitySet( entitySetId );
-            dgm.deleteEntitySet( entitySetId, authorizedPropertyTypes );
-        }
-
-        modelService.deleteEntitySet( entitySetId );
-        securableObjectTypes.deleteSecurableObjectType( new AclKey( entitySetId ) );
-
-        recordEvent( new AuditableEvent(
-                getCurrentUserId(),
-                new AclKey( entitySetId ),
-                AuditEventType.DELETE_ENTITY_SET,
-                "Entity set deleted through EdmApi.deleteEntitySet",
-                Optional.empty(),
-                ImmutableMap.of(),
-                OffsetDateTime.now(),
-                Optional.empty()
-        ) );
-
-        return null;
-    }
-
-    private List<WriteEvent> deleteAssociationsOfEntitySet( UUID entitySetId ) {
-        // collect association entity key ids
-        final PostgresIterable<DataEdgeKey> associationsEdgeKeys = dgm.getEdgeKeysOfEntitySet( entitySetId );
-
-        // access checks
-        final Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes = new HashMap<>();
-        associationsEdgeKeys.stream().forEach( edgeKey -> {
-                    if ( !authorizedPropertyTypes.containsKey( edgeKey.getEdge().getEntitySetId() ) ) {
-                        Map<UUID, PropertyType> authorizedPropertyTypesOfAssociation =
-                                getAuthorizedPropertyTypesForDelete(
-                                        edgeKey.getEdge().getEntitySetId(), Optional.empty() );
-                        authorizedPropertyTypes.put(
-                                edgeKey.getEdge().getEntitySetId(), authorizedPropertyTypesOfAssociation );
-                    }
-                }
-        );
-
-        // delete associations of entity set
-        return dgm.deleteAssociationsBatch( entitySetId, associationsEdgeKeys, authorizedPropertyTypes );
-    }
-
-    private Map<UUID, PropertyType> getAuthorizedPropertyTypesForDelete(
-            UUID entitySetId,
-            Optional<Set<UUID>> properties ) {
-        ensureOwnerAccess( new AclKey( entitySetId ) );
-        final EntitySet entitySet = getEntitySet( entitySetId );
-        if ( entitySet.isLinking() ) {
-            throw new IllegalArgumentException( "You cannot delete entities from a linking entity set." );
-        }
-
-        final EntityType entityType = getEntityType( entitySet.getEntityTypeId() );
-        final Set<UUID> requiredProperties = properties.orElse( entityType.getProperties() );
-        final Map<UUID, PropertyType> authorizedPropertyTypes = authzHelper
-                .getAuthorizedPropertyTypes( ImmutableSet.of( entitySetId ),
-                        requiredProperties,
-                        EnumSet.of( Permission.OWNER ) )
-                .get( entitySetId );
-        if ( !authorizedPropertyTypes.keySet().containsAll( requiredProperties ) ) {
-            throw new ForbiddenException(
-                    "You must be an owner of all required entity set properties to delete entities from it." );
-        }
-
-        return authorizedPropertyTypes;
     }
 
     @Timed
@@ -622,7 +460,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
                 getCurrentUserId(),
                 new AclKey( entityType.getId() ), // TODO should this be written as an AclKey?
                 AuditEventType.CREATE_ENTITY_TYPE,
-                "Entity type deleted through EdmApi.createEntityType",
+                "Entity type created through EdmApi.createEntityType",
                 Optional.empty(),
                 ImmutableMap.of( "entityType", entityType ),
                 OffsetDateTime.now(),
@@ -728,12 +566,58 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return null;
     }
 
-    @Override public Void addPrimaryKeyToEntityType( UUID entityTypeId, UUID propertyTypeId ) {
-        throw new NotImplementedException( "Not yet ported" );
+    @Timed
+    @Override
+    @RequestMapping(
+            path = ENTITY_TYPE_PATH + KEY_PATH + ENTITY_TYPE_ID_PATH + PROPERTY_TYPE_ID_PATH,
+            method = RequestMethod.PUT )
+    @ResponseStatus( HttpStatus.OK )
+    public Void addPrimaryKeyToEntityType(
+            @PathVariable( ENTITY_TYPE_ID ) UUID entityTypeId,
+            @PathVariable( PROPERTY_TYPE_ID ) UUID propertyTypeId ) {
+        ensureAdminAccess();
+
+        modelService.addPrimaryKeysToEntityType( entityTypeId, ImmutableSet.of( propertyTypeId ) );
+
+        recordEvent( new AuditableEvent(
+                getCurrentUserId(),
+                new AclKey( entityTypeId ), // TODO should this be written as an AclKey?
+                AuditEventType.UPDATE_ENTITY_TYPE,
+                "Primary key added to entity type through EdmApi.addPrimaryKeyToEntityType",
+                Optional.empty(),
+                ImmutableMap.of( "propertyTypeId", propertyTypeId ),
+                OffsetDateTime.now(),
+                Optional.empty()
+        ) );
+
+        return null;
     }
 
-    @Override public Void removePrimaryKeyFromEntityType( UUID entityTypeId, UUID propertyTypeId ) {
-        throw new NotImplementedException( "Not yet ported" );
+    @Timed
+    @Override
+    @RequestMapping(
+            path = ENTITY_TYPE_PATH + KEY_PATH + ENTITY_TYPE_ID_PATH + PROPERTY_TYPE_ID_PATH,
+            method = RequestMethod.DELETE )
+    @ResponseStatus( HttpStatus.OK )
+    public Void removePrimaryKeyFromEntityType(
+            @PathVariable( ENTITY_TYPE_ID ) UUID entityTypeId,
+            @PathVariable( PROPERTY_TYPE_ID ) UUID propertyTypeId ) {
+        ensureAdminAccess();
+
+        modelService.removePrimaryKeysFromEntityType( entityTypeId, ImmutableSet.of( propertyTypeId ) );
+
+        recordEvent( new AuditableEvent(
+                getCurrentUserId(),
+                new AclKey( entityTypeId ), // TODO should this be written as an AclKey?
+                AuditEventType.UPDATE_ENTITY_TYPE,
+                "Primary key removed from entity type through EdmApi.removePrimaryKeyFromEntityType",
+                Optional.empty(),
+                ImmutableMap.of( "propertyTypeId", propertyTypeId ),
+                OffsetDateTime.now(),
+                Optional.empty()
+        ) );
+
+        return null;
     }
 
     @Timed
@@ -784,6 +668,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
     @ResponseStatus( HttpStatus.OK )
     public Void deleteEntityType( @PathVariable( ID ) UUID entityTypeId ) {
         ensureAdminAccess();
+        ensureObjectCanBeDeleted( entityTypeId );
         modelService.deleteEntityType( entityTypeId );
 
         recordEvent( new AuditableEvent(
@@ -845,6 +730,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
     public Void deletePropertyType(
             @PathVariable( ID ) UUID propertyTypeId ) {
         ensureAdminAccess();
+        ensureObjectCanBeDeleted( propertyTypeId );
         modelService.deletePropertyType( propertyTypeId );
 
         recordEvent( new AuditableEvent(
@@ -870,6 +756,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
     public Void forceDeletePropertyType(
             @PathVariable( ID ) UUID propertyTypeId ) {
         ensureAdminAccess();
+        ensureObjectCanBeDeleted( propertyTypeId );
         modelService.forceDeletePropertyType( propertyTypeId );
 
         recordEvent( new AuditableEvent(
@@ -904,31 +791,6 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
             produces = MediaType.APPLICATION_JSON_VALUE )
     public Iterable<PropertyType> getPropertyTypesInNamespace( @PathVariable( NAMESPACE ) String namespace ) {
         return modelService.getPropertyTypesInNamespace( namespace );
-    }
-
-    @Timed
-    @Override
-    @RequestMapping(
-            path = IDS_PATH + ENTITY_SETS_PATH + NAME_PATH,
-            method = RequestMethod.GET,
-            produces = MediaType.APPLICATION_JSON_VALUE )
-    public UUID getEntitySetId( @PathVariable( NAME ) String entitySetName ) {
-        EntitySet es = modelService.getEntitySet( entitySetName );
-        ensureReadAccess( new AclKey( es.getId() ) );
-        Preconditions.checkNotNull( es, "Entity Set %s does not exists.", entitySetName );
-        return es.getId();
-    }
-
-    @Timed
-    @Override
-    @RequestMapping(
-            path = IDS_PATH + ENTITY_SETS_PATH,
-            method = RequestMethod.POST,
-            produces = MediaType.APPLICATION_JSON_VALUE )
-    public Map<String, UUID> getEntitySetIds( @RequestBody Set<String> entitySetNames ) {
-        final Map<String, UUID> entitySetIds = modelService.getAclKeyIds( entitySetNames );
-        entitySetIds.values().forEach( entitySetId -> ensureReadAccess( new AclKey( entitySetId ) ) );
-        return entitySetIds;
     }
 
     @Timed
@@ -1017,30 +879,6 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return null;
     }
 
-    @Timed
-    @Override
-    @RequestMapping(
-            path = ENTITY_SETS_PATH + ID_PATH,
-            method = RequestMethod.PATCH,
-            consumes = MediaType.APPLICATION_JSON_VALUE )
-    public Void updateEntitySetMetadata( @PathVariable( ID ) UUID entitySetId, @RequestBody MetadataUpdate update ) {
-        ensureOwnerAccess( new AclKey( entitySetId ) );
-        modelService.updateEntitySetMetadata( entitySetId, update );
-
-        recordEvent( new AuditableEvent(
-                getCurrentUserId(),
-                new AclKey( entitySetId ),
-                AuditEventType.UPDATE_ENTITY_SET,
-                "Entity set metadata updated through EdmApi.updateEntitySetMetadata",
-                Optional.empty(),
-                ImmutableMap.of( "update", update ),
-                OffsetDateTime.now(),
-                Optional.empty()
-        ) );
-
-        return null;
-    }
-
     @Override
     public AuthorizationManager getAuthorizationManager() {
         return authorizations;
@@ -1049,23 +887,6 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
     private void ensureValidEntityType( EntityType entityType ) {
         Preconditions.checkArgument( modelService.checkPropertyTypesExist( entityType.getProperties() ),
                 "Some properties do not exists" );
-    }
-
-    private void ensureValidEntitySet( EntitySet entitySet ) {
-        Preconditions.checkArgument( modelService.checkEntityTypeExists( entitySet.getEntityTypeId() ),
-                "Entity Set Type does not exists." );
-
-        if ( entitySet.isLinking() ) {
-            entitySet.getLinkedEntitySets().forEach( linkedEntitySetId -> {
-                Preconditions.checkArgument(
-                        modelService.getEntityTypeByEntitySetId( linkedEntitySetId ).getId()
-                                .equals( entitySet.getEntityTypeId() ),
-                        "Entity type of linked entity sets must be the same as of the linking entity set" );
-                Preconditions.checkArgument(
-                        !modelService.getEntitySet( linkedEntitySetId ).isLinking(),
-                        "Cannot add linking entity set as linked entity set." );
-            } );
-        }
     }
 
     @Timed
@@ -1107,6 +928,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
             produces = MediaType.APPLICATION_JSON_VALUE )
     public Void deleteAssociationType( @PathVariable( ID ) UUID associationTypeId ) {
         ensureAdminAccess();
+        ensureObjectCanBeDeleted( associationTypeId );
         modelService.deleteAssociationType( associationTypeId );
 
         recordEvent( new AuditableEvent(
@@ -1253,88 +1075,12 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return modelService.getAvailableAssociationTypesForEntityType( entityTypeId );
     }
 
-    @Timed
-    @Override
-    @RequestMapping(
-            path = ENTITY_SETS_PATH + PROPERTY_TYPE_PATH,
-            method = RequestMethod.POST,
-            produces = MediaType.APPLICATION_JSON_VALUE )
-    public Map<UUID, Map<UUID, EntitySetPropertyMetadata>> getPropertyMetadataForEntitySets(
-            @RequestBody Set<UUID> entitySetIds ) {
-        Set<AccessCheck> accessChecks = entitySetIds.stream()
-                .map( id -> new AccessCheck( new AclKey( id ), EnumSet.of( Permission.READ ) ) )
-                .collect( Collectors.toSet() );
-        authorizations.accessChecksForPrincipals( accessChecks, Principals.getCurrentPrincipals() )
-                .forEach( authorization -> {
-                    if ( !authorization.getPermissions().get( Permission.READ ) ) {
-                        throw new ForbiddenException(
-                                "AclKey " + authorization.getAclKey().toString() + " is not authorized." );
-                    }
-                } );
-
-        return modelService.getAllEntitySetPropertyMetadataForIds( entitySetIds );
+    private UUID getCurrentUserId() {
+        return spm.getPrincipal( Principals.getCurrentUser().getId() ).getId();
     }
 
-    @Timed
-    @Override
-    @RequestMapping(
-            path = ENTITY_SETS_PATH + ID_PATH + PROPERTY_TYPE_PATH,
-            method = RequestMethod.GET,
-            produces = MediaType.APPLICATION_JSON_VALUE )
-    public Map<UUID, EntitySetPropertyMetadata> getAllEntitySetPropertyMetadata(
-            @PathVariable( ID ) UUID entitySetId ) {
-        //You should be able to get properties without having read access
-        ensureReadAccess( new AclKey( entitySetId ) );
-        return modelService.getAllEntitySetPropertyMetadata( entitySetId );
-    }
-
-    @Timed
-    @Override
-    @RequestMapping(
-            path = ENTITY_SETS_PATH + ID_PATH + PROPERTY_TYPE_PATH + PROPERTY_TYPE_ID_PATH,
-            method = RequestMethod.GET,
-            produces = MediaType.APPLICATION_JSON_VALUE )
-    public EntitySetPropertyMetadata getEntitySetPropertyMetadata(
-            @PathVariable( ID ) UUID entitySetId,
-            @PathVariable( PROPERTY_TYPE_ID ) UUID propertyTypeId ) {
-        ensureReadAccess( new AclKey( entitySetId, propertyTypeId ) );
-        return modelService.getEntitySetPropertyMetadata( entitySetId, propertyTypeId );
-    }
-
-    @Timed
-    @Override
-    @GetMapping( value = ENTITY_SETS_PATH + ID_PATH + PROPERTIES_PATH, produces = MediaType.APPLICATION_JSON_VALUE )
-    public Map<UUID, PropertyType> getPropertyTypesForEntitySet( @PathVariable( ID ) UUID entitySetId ) {
-        //We only check for entity set metadata read access.
-        ensureReadAccess( new AclKey( entitySetId ) );
-        return modelService.getPropertyTypesForEntitySet( entitySetId );
-    }
-
-    @Timed
-    @Override
-    @RequestMapping(
-            path = ENTITY_SETS_PATH + ID_PATH + PROPERTY_TYPE_PATH + PROPERTY_TYPE_ID_PATH,
-            method = RequestMethod.POST,
-            produces = MediaType.APPLICATION_JSON_VALUE )
-    public Void updateEntitySetPropertyMetadata(
-            @PathVariable( ID ) UUID entitySetId,
-            @PathVariable( PROPERTY_TYPE_ID ) UUID propertyTypeId,
-            @RequestBody MetadataUpdate update ) {
-        ensureOwnerAccess( new AclKey( entitySetId, propertyTypeId ) );
-        modelService.updateEntitySetPropertyMetadata( entitySetId, propertyTypeId, update );
-
-        recordEvent( new AuditableEvent(
-                getCurrentUserId(),
-                new AclKey( entitySetId, propertyTypeId ),
-                AuditEventType.UPDATE_ENTITY_SET_PROPERTY_METADATA,
-                "Entity set property metadata updated through EdmApi.updateEntitySetPropertyMetadata",
-                Optional.empty(),
-                ImmutableMap.of( "update", update ),
-                OffsetDateTime.now(),
-                Optional.empty()
-        ) );
-
-        return null;
+    @NotNull @Override public AuditingManager getAuditingManager() {
+        return auditingManager;
     }
 
     private static void setDownloadContentType( HttpServletResponse response, FileType fileType ) {
@@ -1368,21 +1114,5 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
                     "attachment; filename=" + fileName + "." + fileType.toString()
             );
         }
-    }
-
-    private UUID getCurrentUserId() {
-        return spm.getPrincipal( Principals.getCurrentUser().getId() ).getId();
-    }
-
-    @NotNull
-    @Override
-    public AuditRecordEntitySetsManager getAuditRecordEntitySetsManager() {
-        return auditRecordEntitySetsManager;
-    }
-
-    @NotNull
-    @Override
-    public DataGraphManager getDataGraphService() {
-        return dgm;
     }
 }

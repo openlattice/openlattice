@@ -1,66 +1,42 @@
-/*
- * Copyright (C) 2018. OpenLattice, Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- * You can contact the owner of the copyright at support@openlattice.com
- *
- *
- */
-
-package com.openlattice.graph.controllers
+package com.openlattice.subscriptions.controllers
 
 import com.codahale.metrics.annotation.Timed
-import com.google.common.base.Preconditions.checkArgument
 import com.openlattice.authorization.*
+import com.openlattice.controllers.exceptions.BadRequestException
 import com.openlattice.controllers.exceptions.ForbiddenException
-import com.openlattice.data.requests.NeighborEntityDetails
-import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.type.PropertyType
-import com.openlattice.graph.*
-import org.springframework.http.MediaType
+import com.openlattice.graph.GraphQueryService
+import com.openlattice.graph.NeighborhoodQuery
+import com.openlattice.graph.NeighborhoodSelection
+import com.openlattice.subscriptions.Subscription
+import com.openlattice.subscriptions.SubscriptionApi
+import com.openlattice.subscriptions.SubscriptionService
+import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.*
 import java.util.*
 import javax.inject.Inject
 
-/**
- *
- */
 @RestController
-@RequestMapping(CONTROLLER)
-class GraphController
+@RequestMapping(SubscriptionApi.CONTROLLER)
+class SubscriptionController
 @Inject
 constructor(
-        private val graphQueryService: GraphQueryService,
         private val authorizationManager: AuthorizationManager,
-        private val edm: EdmManager,
+        private val graphQueryService: GraphQueryService,
+        private val subscriptionService: SubscriptionService,
         private val edmAuthorizationHelper: EdmAuthorizationHelper
-) : GraphApi, AuthorizingComponent {
+) : SubscriptionApi, AuthorizingComponent {
+    companion object {
+        private val logger = LoggerFactory.getLogger(SubscriptionController::class.java)!!
+    }
+
     @Timed
-    @PostMapping(
-            value = [NEIGHBORS + ENTITY_SET_ID_PATH],
-            consumes = [MediaType.APPLICATION_JSON_VALUE],
-            produces = [MediaType.APPLICATION_JSON_VALUE]
-    )
-    override fun neighborhoodQuery(
-            @PathVariable(ENTITY_SET_ID) entitySetId: UUID,
-            @RequestBody query: NeighborhoodQuery
-    ): Neighborhood {
-        checkArgument(
-                query.ids.values.all { maybeIds -> maybeIds.map { ids -> ids.isNotEmpty() }.orElse(true) },
-                "Cannot specify an empty set of entity key ids."
-        )
+    @RequestMapping(path = ["", "/"], method = [RequestMethod.PUT])
+    override fun createOrUpdateSubscriptionContactInfo(@RequestBody subscription: Subscription) {
+        val query = subscription.query
+        if (query.ids.isEmpty()) {
+            throw BadRequestException("Must specify entity key ids to subscribe to")
+        }
 
         val entitySetsById = graphQueryService.getEntitySetForIds(
                 query.ids.values.flatMap { it.orElse(emptySet()) }.toSet()
@@ -91,10 +67,6 @@ constructor(
                 entitySetsById.values
         )
 
-        /*
-         * We need to figure out what property types are authorized for all entity sets
-         */
-
         val authorizedPropertyTypes = edmAuthorizationHelper.getAuthorizedPropertiesOnEntitySets(
                 allEntitySetIds,
                 EnumSet.of(Permission.READ),
@@ -102,15 +74,25 @@ constructor(
         )
 
         ensureReadOnRequired(authorizedPropertyTypes, requiredPropertyTypes)
-
-        val propertyTypes = authorizedPropertyTypes.values.flatMap { it.values }.associateBy { it.id }
-        return graphQueryService.submitQuery(query, propertyTypes, authorizedPropertyTypes)
-
+        subscriptionService.createOrUpdateSubscription(subscription, Principals.getCurrentUser())
     }
 
-    private fun getRequiredAuthorizations(selection: NeighborhoodSelection): Map<UUID, Set<UUID>> {
-        return selection.entityFilters.map { filters -> filters.mapValues { it.value.keys } }.orElseGet { emptyMap() } +
-                selection.associationFilters.map { filters -> filters.mapValues { it.value.keys } }.orElseGet { emptyMap() }
+    @Timed
+    @RequestMapping(path = [SubscriptionApi.ENTITY_KEY_ID_PATH], method = [RequestMethod.DELETE])
+    override fun deleteSubscription(@PathVariable(SubscriptionApi.ENTITY_KEY_ID) subscriptionId: UUID) {
+        subscriptionService.deleteSubscription(subscriptionId, Principals.getCurrentUser())
+    }
+
+    @Timed
+    @RequestMapping(path = ["", "/"], method = [RequestMethod.GET])
+    override fun getAllSubscriptions(): Iterable<Subscription> {
+        return subscriptionService.getAllSubscriptions(Principals.getCurrentUser())
+    }
+
+    @Timed
+    @RequestMapping(path = ["", "/"], method = [RequestMethod.POST])
+    override fun getSubscriptions(@RequestBody entityKeyIds: List<UUID>): Iterable<Subscription> {
+        return subscriptionService.getSubscriptions(entityKeyIds, Principals.getCurrentUser())
     }
 
     private fun resolveEntitySetIdsAndRequiredAuthorizations(
@@ -145,8 +127,13 @@ constructor(
         }
     }
 
+    private fun getRequiredAuthorizations(selection: NeighborhoodSelection): Map<UUID, Set<UUID>> {
+        return selection.entityFilters.map { filters -> filters.mapValues { it.value.keys } }.orElseGet { emptyMap() } +
+                selection.associationFilters.map { filters -> filters.mapValues { it.value.keys } }.orElseGet { emptyMap() }
+    }
 
     override fun getAuthorizationManager(): AuthorizationManager {
         return authorizationManager
     }
 }
+

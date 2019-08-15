@@ -37,9 +37,8 @@ import com.openlattice.data.DataGraphManager
 import com.openlattice.data.requests.FileType
 import com.openlattice.web.mediatypes.CustomMediaType
 import com.openlattice.datastore.services.EdmService
-import com.openlattice.edm.EntitySet
-import com.openlattice.postgres.DataTables.COUNT_FQN
-import com.openlattice.postgres.DataTables.ID_FQN
+import com.openlattice.edm.EdmConstants.Companion.COUNT_FQN
+import com.openlattice.edm.EdmConstants.Companion.ID_FQN
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.*
@@ -175,14 +174,12 @@ class AnalysisController : AnalysisApi, AuthorizingComponent {
             val authorizedEntitySetPropertyTypes =
                     edm.getPropertyTypesAsMap(edm.getEntityType(filteredRanking.neighborTypeId).properties)
             val authorizedAssociations =
-                    edm.getEntitySetsOfType(filteredRanking.associationTypeId)
-                            .map(EntitySet::getId)
+                    edm.getEntitySetIdsOfType(filteredRanking.associationTypeId)
                             .filter { entitySetIsAuthorized(it) }
                             .map { accessCheckAndReturnAuthorizedPropetyTypes(filteredRanking.associationFilters, it) }
                             .toMap()
             val authorizedNeighbors =
-                    edm.getEntitySetsOfType(filteredRanking.neighborTypeId)
-                            .map(EntitySet::getId)
+                    edm.getEntitySetIdsOfType(filteredRanking.neighborTypeId)
                             .filter { entitySetIsAuthorized(it) }
                             .map { accessCheckAndReturnAuthorizedPropetyTypes(filteredRanking.neighborFilters, it) }
                             .toMap()

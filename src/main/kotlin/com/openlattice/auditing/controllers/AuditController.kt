@@ -22,7 +22,6 @@
 package com.openlattice.auditing.controllers
 
 import com.openlattice.auditing.*
-import com.openlattice.data.DataGraphService
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestMapping
@@ -42,14 +41,10 @@ class AuditController : AuditApi, AuditingComponent {
     private lateinit var auditRecordEntitySetsManager: AuditRecordEntitySetsManager
 
     @Inject
-    private lateinit var dataGraphService: DataGraphService
+    private lateinit var auditingManager: AuditingManager
 
-    override fun getAuditRecordEntitySetsManager(): AuditRecordEntitySetsManager {
-        return auditRecordEntitySetsManager
-    }
-
-    override fun getDataGraphService(): DataGraphService {
-        return dataGraphService
+    override fun getAuditingManager(): AuditingManager {
+        return auditingManager
     }
 
     override fun audit(audit: Audit): List<Map<UUID, Set<Any>>> {
