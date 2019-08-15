@@ -22,6 +22,7 @@ package com.openlattice.hazelcast.serializers;
 
 import com.openlattice.apps.App;
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest;
+import com.openlattice.mapstores.TestDataFactory;
 
 import java.util.LinkedHashSet;
 import java.util.Optional;
@@ -33,10 +34,6 @@ public class AppStreamSerializerTest extends AbstractStreamSerializerTest<AppStr
     }
 
     @Override protected App createInput() {
-        LinkedHashSet<UUID> configIds = new LinkedHashSet<>();
-        configIds.add( UUID.randomUUID() );
-        configIds.add( UUID.randomUUID() );
-        configIds.add( UUID.randomUUID() );
-        return new App( UUID.randomUUID(), "name", "title", Optional.of( "description" ), configIds, "https://openlattice.com/app" );
+        return TestDataFactory.app();
     }
 }
