@@ -30,17 +30,9 @@ import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.hazelcast.query.Predicates;
 import com.openlattice.apps.*;
-import com.openlattice.apps.AppType;
-import com.openlattice.apps.processors.AddAppTypesToAppProcessor;
-import com.openlattice.apps.processors.RemoveAppTypesFromAppProcessor;
-import com.openlattice.apps.processors.UpdateAppConfigEntitySetProcessor;
-import com.openlattice.apps.processors.UpdateAppConfigPermissionsProcessor;
-import com.openlattice.apps.processors.UpdateAppMetadataProcessor;
-import com.openlattice.apps.processors.UpdateAppTypeMetadataProcessor;
+import com.openlattice.apps.processors.*;
 import com.openlattice.authorization.*;
 import com.openlattice.collections.CollectionsManager;
-import com.openlattice.authorization.util.AuthorizationUtils;
-import com.openlattice.controllers.exceptions.BadRequestException;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.util.Util;
 import com.openlattice.edm.EntitySet;
@@ -50,7 +42,6 @@ import com.openlattice.edm.collection.EntityTypeCollection;
 import com.openlattice.edm.events.AppCreatedEvent;
 import com.openlattice.edm.events.AppDeletedEvent;
 import com.openlattice.edm.requests.MetadataUpdate;
-import com.openlattice.edm.set.EntitySetFlag;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.organization.roles.Role;
@@ -60,19 +51,8 @@ import com.openlattice.postgres.mapstores.AppConfigMapstore;
 
 import javax.inject.Inject;
 import java.util.*;
-import java.util.EnumSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import javax.inject.Inject;
-
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 public class AppService {
     private final IMap<UUID, App>                    apps;
@@ -122,7 +102,6 @@ public class AppService {
     }
 
     public UUID createApp( App app ) {
-        ensureAppTypesAreValid( app.getAppTypeIds() );
         reservations.reserveIdAndValidateType( app, app::getName );
         apps.put( app.getId(), app );
         eventBus.post( new AppCreatedEvent( app ) );
@@ -149,9 +128,8 @@ public class AppService {
     }
 
     public UUID createNewAppRole( UUID appId, AppRole role ) {
-        App app = getApp( appId );
-
         apps.executeOnKey( appId, new AddRoleToAppProcessor( role ) );
+        return role.getId();
     }
 
     public void deleteRoleFromApp( UUID appId, UUID roleId ) {
@@ -162,28 +140,6 @@ public class AppService {
 
     private Set<AppConfigKey> getAppConfigKeysForApp( UUID appId ) {
         return appConfigs.keySet( Predicates.equal( AppConfigMapstore.APP_ID, appId ) );
-    }
-
-    private UUID generateEntitySet( UUID organizationId, UUID appTypeId, String prefix, Principal principal ) {
-        AppType appType = getAppType( appTypeId );
-        String name = formatEntitySetName( prefix, appType.getType() );
-        String title = appType.getTitle() + " (" + prefix + ")";
-        String description =
-                "Auto-generated for organization" + organizationId.toString() + "\n\n" + appType.getDescription();
-        EnumSet<EntitySetFlag> flags = EnumSet.noneOf( EntitySetFlag.class );
-
-        EntitySet entitySet = new EntitySet( Optional.empty(),
-                appType.getEntityTypeId(),
-                name,
-                title,
-                Optional.of( description ),
-                ImmutableSet.of(),
-                Optional.empty(),
-                Optional.of( organizationId ),
-                Optional.of( flags ),
-                Optional.of( new LinkedHashSet<>( organizationService.getDefaultPartitions( organizationId ) ) ) );
-        edmService.createEntitySet( principal, entitySet );
-        return entitySet.getId();
     }
 
     private Map<UUID, AclKey> createRolesForApp(
