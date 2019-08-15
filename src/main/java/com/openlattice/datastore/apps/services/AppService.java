@@ -29,11 +29,8 @@ import com.google.common.eventbus.EventBus;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.hazelcast.query.Predicates;
-import com.openlattice.apps.App;
-import com.openlattice.apps.AppConfig;
-import com.openlattice.apps.AppConfigKey;
+import com.openlattice.apps.*;
 import com.openlattice.apps.AppType;
-import com.openlattice.apps.AppTypeSetting;
 import com.openlattice.apps.processors.AddAppTypesToAppProcessor;
 import com.openlattice.apps.processors.RemoveAppTypesFromAppProcessor;
 import com.openlattice.apps.processors.UpdateAppConfigEntitySetProcessor;
@@ -447,5 +444,5 @@ public class AppService {
                 new UpdateAppConfigSettingsProcessor( newAppSettings, ImmutableSet.of() ) );
 
     }
-    
+
 }
