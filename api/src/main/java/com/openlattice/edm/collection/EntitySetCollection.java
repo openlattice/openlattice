@@ -3,6 +3,7 @@ package com.openlattice.edm.collection;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.openlattice.IdConstants;
 import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.client.serialization.SerializationConstants;
@@ -33,7 +34,7 @@ public class EntitySetCollection extends AbstractSecurableObject {
         this.entityTypeCollectionId = entityTypeCollectionId;
         this.template = template;
         this.contacts = contacts;
-        this.organizationId = organizationId.orElse( OrganizationConstants.GLOBAL_ORGANIZATION_ID );
+        this.organizationId = organizationId.orElse( IdConstants.GLOBAL_ORGANIZATION_ID.getId() );
     }
 
     public EntitySetCollection(
