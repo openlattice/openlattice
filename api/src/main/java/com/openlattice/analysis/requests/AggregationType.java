@@ -28,5 +28,6 @@ public enum AggregationType {
     SUM,
     AVG,
     MIN,
-    MAX
+    MAX,
+    COUNT
 }

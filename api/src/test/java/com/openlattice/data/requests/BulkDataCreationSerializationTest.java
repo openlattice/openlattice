@@ -51,7 +51,6 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.*;
 
-import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.RandomUtils;
 import org.joda.time.DateTime;
 import org.junit.Assert;
@@ -87,7 +86,7 @@ public class BulkDataCreationSerializationTest {
                 UUID.randomUUID(),
                 Sets.newHashSet( DateTime.now() ),
                 UUID.randomUUID(),
-                Sets.newHashSet( RandomStringUtils.random( 10 ) ),
+                Sets.newHashSet( TestDataFactory.random( 10 ) ),
                 UUID.randomUUID(),
                 Sets.newHashSet( RandomUtils.nextInt( 0, 10000 ) ),
                 UUID.randomUUID(),

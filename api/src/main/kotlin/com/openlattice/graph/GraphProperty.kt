@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018. OpenLattice, Inc.
+ * Copyright (C) 2019. OpenLattice, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,21 +19,11 @@
  *
  */
 
-package com.openlattice.upload;
-
-import java.util.List;
+package com.openlattice.graph
 
 /**
+ *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public interface UploadApi {
-    // @formatter:off
-    String SERVICE               = "/datastore";
-    String CONTROLLER            = "/upload";
-    String BASE                  = SERVICE + CONTROLLER;
-    // @formatter:on
-
-
-    List<String> getExistingFiles();
-    Integer uploadFiles();
+class GraphProperty( ) {
 }

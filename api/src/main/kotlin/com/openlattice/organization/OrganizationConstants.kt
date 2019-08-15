@@ -18,30 +18,17 @@
  *
  *
  */
-
 package com.openlattice.organization
 
 import com.openlattice.authorization.Principal
 import com.openlattice.authorization.PrincipalType
-import java.util.*
-
 
 class OrganizationConstants {
     companion object {
-        @JvmField
-        val OPENLATTICE_ORGANIZATION_ID = UUID(0, 0)
-
-        @JvmField
-        val ROOT_PRINCIPAL_ID = UUID(0, 1)
-
-        @JvmField
-        val GLOBAL_ORGANIZATION_ID = UUID(1, 0)
-
         @JvmField
         val GLOBAL_ORG_PRINCIPAL = Principal(PrincipalType.ORGANIZATION, "globalOrg")
 
         @JvmField
         val OPENLATTICE_ORG_PRINCIPAL = Principal(PrincipalType.ORGANIZATION, "openlatticeOrg")
-
     }
 }

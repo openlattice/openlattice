@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018. OpenLattice, Inc.
+ * Copyright (C) 2019. OpenLattice, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,21 +16,21 @@
  * You can contact the owner of the copyright at support@openlattice.com
  */
 
-package com.openlattice.datasource;
+package com.openlattice.analysis.assembler
 
-import java.util.UUID;
+import retrofit2.http.Body
+import retrofit2.http.POST
 
-public class UUIDs {
-    public static enum Syncs {
-        BASE( new UUID( 0, 0 ) );
-        private final UUID syncId;
 
-        private Syncs( UUID syncId ) {
-            this.syncId = syncId;
-        }
+const val SERVICE = "/datastore"
+const val CONTROLLER = "/assembly-analysis"
+const val BASE = SERVICE + CONTROLLER
 
-        public UUID getSyncId() {
-            return syncId;
-        }
-    }
+const val SIMPLE_AGGREGATION = "/simple-aggregation"
+
+interface AssemblyAnalyzationApi {
+
+    @POST(BASE + SIMPLE_AGGREGATION)
+    fun getSimpleAssemblyAggregates(@Body assemblyAggregationFilter: AssemblyAggregationFilter): Iterable<Map<String, Any?>>
+
 }
