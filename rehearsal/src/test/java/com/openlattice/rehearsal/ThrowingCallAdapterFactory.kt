@@ -25,41 +25,57 @@ import com.google.common.base.Charsets
 import java.io.IOException
 import java.lang.reflect.Type
 import org.apache.commons.io.IOUtils
+import org.junit.Assert
 import org.slf4j.LoggerFactory
 import retrofit2.Call
 import retrofit2.CallAdapter
 import retrofit2.Retrofit
+import java.lang.reflect.UndeclaredThrowableException
 
-class ThrowingCallAdapterFactory: CallAdapter.Factory() {
+class ThrowingCallAdapterFactory : CallAdapter.Factory() {
     companion object {
-        private val logger = LoggerFactory.getLogger( ThrowingCallAdapterFactory::class.java )
+        private val logger = LoggerFactory.getLogger(ThrowingCallAdapterFactory::class.java)
     }
 
-    override fun get(returnType: Type, annotations: Array<kotlin.Annotation>, retrofit: Retrofit): CallAdapter<*, *> =
-        object : CallAdapter<Any,Any>  {
-            override fun  responseType():Type {
-                return returnType
-            }
-
-            override fun adapt( call:Call<Any> ):Any? {
-                try {
-                    val response = call.execute()
-                    if ( response.code() >= 400 ) {
-                        val errorBody = IOUtils.toString( response.errorBody()!!.byteStream(), Charsets.UTF_8 )
-                        logger.error( "Call failed with code {} and message {} and error body {}",
-                                response.code(),
-                                response.message(),
-                                errorBody )
-                        throw GeneralException( errorBody )
-                    }
-                    return response.body()
-                } catch ( e:IOException ) {
-                    logger.error( "Call failed.", e )
-                    return null
+    override fun get(returnType: Type, annotations: Array<Annotation>, retrofit: Retrofit): CallAdapter<*, *> =
+            object : CallAdapter<Any, Any> {
+                override fun responseType(): Type {
+                    return returnType
                 }
-            }
 
-        }
+                override fun adapt(call: Call<Any>): Any? {
+                    return try {
+                        val response = call.execute()
+                        if (response.code() >= 400) {
+                            val errorBody = IOUtils.toString(response.errorBody()!!.byteStream(), Charsets.UTF_8)
+                            logger.error("Call failed with code {} and message {} and error body {}",
+                                    response.code(),
+                                    response.message(),
+                                    errorBody)
+                            throw GeneralException(errorBody)
+                        }
+                        response.body()
+                    } catch (e: IOException) {
+                        logger.error("Call failed.", e)
+                        null
+                    }
+                }
+
+            }
 }
 
-class GeneralException(message: String):java.lang.Exception(message)
+class GeneralException(message: String) : java.lang.Exception(message)
+
+inline fun assertException(fqn: () -> Any, expectedMsg: String) {
+    try {
+        fqn()
+        Assert.fail("Should have thrown Exception but did not!")
+    } catch (e: Exception) {
+        val actualMsg = if(e is UndeclaredThrowableException) {
+            e.undeclaredThrowable.message!!
+        } else {
+            e.message!!
+        }
+        Assert.assertTrue(actualMsg.contains(expectedMsg, true))
+    }
+}

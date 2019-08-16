@@ -81,24 +81,24 @@ import org.junit.Assert;
 import retrofit2.Retrofit;
 
 public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
-    private final static Map<String, Retrofit>     retrofitMap       = new HashMap<>();
-    private final static Map<String, Retrofit>     linkerRetrofitMap = new HashMap<>();
-    private final static Map<String, OkHttpClient> httpClientMap     = new HashMap<>();
+    private final static Map<String, Retrofit> retrofitMap = new HashMap<>();
+    private final static Map<String, Retrofit> linkerRetrofitMap = new HashMap<>();
+    private final static Map<String, OkHttpClient> httpClientMap = new HashMap<>();
 
-    protected static EdmApi             edmApi;
-    protected static PermissionsApi     permissionsApi;
-    protected static AuthorizationsApi  authorizationsApi;
-    protected static RequestsApi        requestsApi;
-    protected static DataApi            dataApi;
-    protected static SearchApi          searchApi;
-    protected static OrganizationsApi   organizationsApi;
-    protected static EntitySetsApi      entitySetsApi;
+    protected static EdmApi edmApi;
+    protected static PermissionsApi permissionsApi;
+    protected static AuthorizationsApi authorizationsApi;
+    protected static RequestsApi requestsApi;
+    protected static DataApi dataApi;
+    protected static SearchApi searchApi;
+    protected static OrganizationsApi organizationsApi;
+    protected static EntitySetsApi entitySetsApi;
     protected static RealtimeLinkingApi realtimeLinkingApi;
-    protected static AnalysisApi        analysisApi;
+    protected static AnalysisApi analysisApi;
     protected static LinkingFeedbackApi linkingFeedbackApi;
-    protected static PrincipalApi       principalApi;
+    protected static PrincipalApi principalApi;
 
-    protected static OkHttpClient       currentHttpClient;
+    protected static OkHttpClient currentHttpClient;
 
     static {
         retrofitMap.put( "admin", retrofit );
@@ -307,13 +307,26 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
         return createEntitySet( entityType );
     }
 
+    public static EntitySet createEntitySet( EntityType entityType ) {
+        return createEntitySet( entityType, false, new HashSet<>() );
+    }
+
+    public static EntitySet createEntitySet( EntityType entityType, UUID organizationId ) {
+        return createEntitySet( UUID.randomUUID(), entityType, Optional.of( organizationId ), false, new HashSet<>() );
+    }
+
+    public static EntitySet createEntitySet( UUID entitySetId, EntityType entityType ) {
+        return createEntitySet( entitySetId, entityType, Optional.empty(), false, new HashSet<>() );
+    }
+
     public static EntitySet createEntitySet( EntityType entityType, boolean linking, Set<UUID> linkedEntitySetIds ) {
-        return createEntitySet( UUID.randomUUID(), entityType, linking, linkedEntitySetIds );
+        return createEntitySet( UUID.randomUUID(), entityType, Optional.empty(), linking, linkedEntitySetIds );
     }
 
     public static EntitySet createEntitySet(
             UUID entitySetId,
             EntityType entityType,
+            Optional<UUID> organizationId,
             boolean linking,
             Set<UUID> linkedEntitySetIds ) {
         EnumSet<EntitySetFlag> flags = EnumSet.of( EntitySetFlag.EXTERNAL );
@@ -328,9 +341,9 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
                 Optional.of( "barred" ),
                 ImmutableSet.of( "foo@bar.com", "foobar@foo.net" ),
                 Optional.of( linkedEntitySetIds ),
-                Optional.empty(),
-                Optional.of(flags),
-                Optional.empty());
+                organizationId,
+                Optional.of( flags ),
+                Optional.empty() );
 
         Map<String, UUID> entitySetIds = entitySetsApi.createEntitySets( Set.of( newES ) );
 
@@ -338,14 +351,6 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
                 entitySetIds.values().contains( newES.getId() ) );
 
         return newES;
-    }
-
-    public static EntitySet createEntitySet( EntityType entityType ) {
-        return createEntitySet( entityType, false, new HashSet<>() );
-    }
-
-    public static EntitySet createEntitySet( UUID entitySetId, EntityType entityType ) {
-        return createEntitySet( entitySetId, entityType, false, new HashSet<>() );
     }
 
     public static Pair<UUID, List<DataEdge>> createDataEdges(
@@ -363,7 +368,7 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
                 .mapWithIndex(
                         Stream.of( srcIds.toArray() ),
                         ( data, index ) -> {
-                            int idx = (int) index;
+                            int idx = ( int ) index;
                             EntityDataKey srcDataKey = new EntityDataKey( srcEntitySetId, srcIds.get( idx ) );
                             EntityDataKey dstDataKey = new EntityDataKey( dstEntitySetId, dstIds.get( idx ) );
                             return new DataEdge( srcDataKey, dstDataKey, edgeData.get( idx ) );

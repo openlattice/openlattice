@@ -41,6 +41,7 @@ import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.rehearsal.SetupTestData
+import com.openlattice.rehearsal.assertException
 import com.openlattice.rehearsal.edm.EdmTestConstants
 import org.apache.commons.lang.RandomStringUtils
 import org.junit.AfterClass
@@ -167,7 +168,7 @@ class AssemblerLinkingTest : SetupTestData() {
         // check if new column is there
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking1))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking1.name))
                 Assert.assertTrue(
                         TestAssemblerConnectionManager.getColumnNames(rs)
                                 .contains(newPropertyType.type.fullQualifiedNameAsString)
@@ -224,7 +225,7 @@ class AssemblerLinkingTest : SetupTestData() {
         // check if column has new name
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking2))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking2.name))
                 val columnNames = TestAssemblerConnectionManager.getColumnNames(rs)
                 Assert.assertTrue(columnNames.contains(newFqn.fullQualifiedNameAsString))
                 Assert.assertFalse(columnNames.contains(newPropertyType.type.fullQualifiedNameAsString))
@@ -281,7 +282,7 @@ class AssemblerLinkingTest : SetupTestData() {
         // check linking ids
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking.name))
 
                 val actualLinkingIds = mutableSetOf<UUID>()
                 while (rs.next()) {
@@ -317,7 +318,7 @@ class AssemblerLinkingTest : SetupTestData() {
 
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking.name))
                 val actualLinkingIds = mutableSetOf<UUID>()
                 while (rs.next()) {
                     actualLinkingIds.add(ResultSetAdapters.linkingId(rs))
@@ -352,7 +353,7 @@ class AssemblerLinkingTest : SetupTestData() {
 
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking.name))
                 val actualLinkingIds = mutableSetOf<UUID>()
                 while (rs.next()) {
                     actualLinkingIds.add(ResultSetAdapters.linkingId(rs))
@@ -381,7 +382,7 @@ class AssemblerLinkingTest : SetupTestData() {
         // data is not supposed to be there, only the columns
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking.name))
                 // all columns are there
                 val columns = TestAssemblerConnectionManager.getColumnNames(rs)
                 propertyFqns.forEach {
@@ -435,7 +436,7 @@ class AssemblerLinkingTest : SetupTestData() {
         // check if data is in org database
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking.name))
 
                 val materializedLinkingIds = mutableSetOf<UUID>()
                 Assert.assertTrue(rs.next())
@@ -497,7 +498,7 @@ class AssemblerLinkingTest : SetupTestData() {
         // check if data is updated in org database
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking.name))
 
                 val materializedLinkingIds = mutableSetOf<UUID>()
                 Assert.assertTrue(rs.next())
@@ -544,7 +545,7 @@ class AssemblerLinkingTest : SetupTestData() {
         // check if data is deleted in org database
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking.name))
                 // no data is there
                 Assert.assertFalse(rs.next())
             }
@@ -678,20 +679,12 @@ class AssemblerLinkingTest : SetupTestData() {
         OrganizationControllerCallHelper.addMemberToOrganization(organizationID, user1.id)
 
         // user is not owner of organization
-        try {
-            loginAs("user1")
-            organizationsApi.assembleEntitySets(organizationID, mapOf(esLinking.id to 5))
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(
-                    e.undeclaredThrowable.message!!.contains(
-                            "Object [$organizationID] is not accessible.", true
-                    )
-            )
-        } finally {
-            loginAs("admin")
-        }
-
+        loginAs("user1")
+        assertException(
+                { organizationsApi.assembleEntitySets(organizationID, mapOf(esLinking.id to 5)) },
+                "Object [$organizationID] is not accessible."
+        )
+        loginAs("admin")
 
         // org principal has no permission on linking entityset
         val organizationAcl = Acl(
@@ -700,19 +693,12 @@ class AssemblerLinkingTest : SetupTestData() {
         )
         permissionsApi.updateAcl(AclData(organizationAcl, Action.ADD))
 
-        try {
-            loginAs("user1")
-            organizationsApi.assembleEntitySets(organizationID, mapOf(esLinking.id to 1000))
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(
-                    e.undeclaredThrowable.message!!.contains(
-                            "EntitySet [${esLinking.id}] is not accessible by organization principal", true
-                    )
-            )
-        } finally {
-            loginAs("admin")
-        }
+        loginAs("user1")
+        assertException(
+                { organizationsApi.assembleEntitySets(organizationID, mapOf(esLinking.id to 1000)) },
+                "EntitySet [${esLinking.id}] is not accessible by organization principal"
+        )
+        loginAs("admin")
 
 
         // org principal has only permission on linking entityset
@@ -742,19 +728,12 @@ class AssemblerLinkingTest : SetupTestData() {
         )
         permissionsApi.updateAcl(AclData(es1MaterializationAcl, Action.ADD))
 
-        try {
-            loginAs("user1")
-            organizationsApi.assembleEntitySets(organizationID, mapOf(esLinking.id to 2341))
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(
-                    e.undeclaredThrowable.message!!.contains(
-                            "EntitySet [$esId2] is not accessible by organization principal", true
-                    )
-            )
-        } finally {
-            loginAs("admin")
-        }
+        loginAs("user1")
+        assertException(
+                { organizationsApi.assembleEntitySets(organizationID, mapOf(esLinking.id to 2341)) },
+                "EntitySet [$esId2] is not accessible by organization principal"
+        )
+        loginAs("admin")
 
 
         // org principal has permission on both normal entity sets
@@ -771,7 +750,7 @@ class AssemblerLinkingTest : SetupTestData() {
         val organizationDataSource = TestAssemblerConnectionManager.connect(organizationID)
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking.name))
                 Assert.assertEquals(PostgresColumn.ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
                 Assert.assertEquals(PostgresColumn.LINKING_ID.name, rs.metaData.getColumnName(2))
             }
@@ -793,7 +772,7 @@ class AssemblerLinkingTest : SetupTestData() {
 
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking.name))
                 Assert.assertEquals(PostgresColumn.ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
                 Assert.assertEquals(PostgresColumn.LINKING_ID.name, rs.metaData.getColumnName(2))
             }
@@ -813,7 +792,7 @@ class AssemblerLinkingTest : SetupTestData() {
 
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking.name))
                 Assert.assertEquals(PostgresColumn.ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
                 Assert.assertEquals(PostgresColumn.LINKING_ID.name, rs.metaData.getColumnName(2))
                 Assert.assertEquals(propertyType.type.fullQualifiedNameAsString, rs.metaData.getColumnName(3))
@@ -840,7 +819,7 @@ class AssemblerLinkingTest : SetupTestData() {
 
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking.name))
                 Assert.assertEquals(PostgresColumn.ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
                 Assert.assertEquals(PostgresColumn.LINKING_ID.name, rs.metaData.getColumnName(2))
                 val columnNames = TestAssemblerConnectionManager.getColumnNames(rs)
@@ -869,15 +848,10 @@ class AssemblerLinkingTest : SetupTestData() {
 
         user1OrganizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                try {
-                    stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking))
-                    Assert.fail("Should have thrown Exception but did not!")
-                } catch (e: PSQLException) {
-                    Assert.assertTrue(
-                            e.message!!
-                                    .contains("permission denied for materialized view ${esLinking.name}", true)
-                    )
-                }
+                assertException(
+                        { stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking.name)) },
+                        "permission denied for materialized view ${esLinking.name}"
+                )
             }
         }
 
@@ -892,15 +866,10 @@ class AssemblerLinkingTest : SetupTestData() {
 
         user1OrganizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                try {
-                    stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking))
-                    Assert.fail("Should have thrown Exception but did not!")
-                } catch (e: PSQLException) {
-                    Assert.assertTrue(
-                            e.message!!
-                                    .contains("permission denied for materialized view ${esLinking.name}", true)
-                    )
-                }
+                assertException(
+                        { stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking.name)) },
+                        "permission denied for materialized view ${esLinking.name}"
+                )
             }
         }
 
@@ -913,15 +882,10 @@ class AssemblerLinkingTest : SetupTestData() {
 
         user1OrganizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                try {
-                    stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking))
-                    Assert.fail("Should have thrown Exception but did not!")
-                } catch (e: PSQLException) {
-                    Assert.assertTrue(
-                            e.message!!
-                                    .contains("permission denied for materialized view ${esLinking.name}", true)
-                    )
-                }
+                assertException(
+                        { stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking.name)) },
+                        "permission denied for materialized view ${esLinking.name}"
+                )
             }
         }
 
@@ -935,15 +899,10 @@ class AssemblerLinkingTest : SetupTestData() {
         // try to select all columns
         user1OrganizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                try {
-                    stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking))
-                    Assert.fail("Should have thrown Exception but did not!")
-                } catch (e: PSQLException) {
-                    Assert.assertTrue(
-                            e.message!!
-                                    .contains("permission denied for materialized view ${esLinking.name}", true)
-                    )
-                }
+                assertException(
+                        { stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking.name)) },
+                        "permission denied for materialized view ${esLinking.name}"
+                )
             }
         }
 
@@ -954,7 +913,7 @@ class AssemblerLinkingTest : SetupTestData() {
                 stmt.executeQuery(TestAssemblerConnectionManager.selectEdgesOfEntitySetsSql())
                 val rs = stmt.executeQuery(
                         TestAssemblerConnectionManager.selectFromEntitySetSql(
-                                esLinking, setOf(PostgresColumn.ENTITY_SET_ID.name, PostgresColumn.LINKING_ID.name)
+                                esLinking.name, setOf(PostgresColumn.ENTITY_SET_ID.name, PostgresColumn.LINKING_ID.name)
                         )
                 )
                 Assert.assertEquals(PostgresColumn.ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
@@ -972,19 +931,16 @@ class AssemblerLinkingTest : SetupTestData() {
         // try to select property column
         user1OrganizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                try {
-                    stmt.executeQuery(
-                            TestAssemblerConnectionManager.selectFromEntitySetSql(
-                                    esLinking, setOf(propertyType.type.fullQualifiedNameAsString)
+                assertException(
+                        {
+                            stmt.executeQuery(
+                                    TestAssemblerConnectionManager.selectFromEntitySetSql(
+                                            esLinking.name, setOf(propertyType.type.fullQualifiedNameAsString)
+                                    )
                             )
-                    )
-                    Assert.fail("Should have thrown Exception but did not!")
-                } catch (e: PSQLException) {
-                    Assert.assertTrue(
-                            e.message!!
-                                    .contains("permission denied for materialized view ${esLinking.name}", true)
-                    )
-                }
+                        },
+                        "permission denied for materialized view ${esLinking.name}"
+                )
             }
         }
 
@@ -998,15 +954,10 @@ class AssemblerLinkingTest : SetupTestData() {
         // try to select all columns
         user1OrganizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                try {
-                    stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking))
-                    Assert.fail("Should have thrown Exception but did not!")
-                } catch (e: PSQLException) {
-                    Assert.assertTrue(
-                            e.message!!
-                                    .contains("permission denied for materialized view ${esLinking.name}", true)
-                    )
-                }
+                assertException(
+                        { stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking.name)) },
+                        "permission denied for materialized view ${esLinking.name}"
+                )
             }
         }
 
@@ -1016,11 +967,12 @@ class AssemblerLinkingTest : SetupTestData() {
                 val rs = stmt.executeQuery(
                         TestAssemblerConnectionManager
                                 .selectFromEntitySetSql(
-                                        esLinking, setOf(
-                                        PostgresColumn.ENTITY_SET_ID.name,
-                                        PostgresColumn.LINKING_ID.name,
-                                        propertyType.type.fullQualifiedNameAsString
-                                )
+                                        esLinking.name,
+                                        setOf(
+                                                PostgresColumn.ENTITY_SET_ID.name,
+                                                PostgresColumn.LINKING_ID.name,
+                                                propertyType.type.fullQualifiedNameAsString
+                                        )
                                 )
                 )
                 Assert.assertEquals(PostgresColumn.ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
@@ -1042,7 +994,7 @@ class AssemblerLinkingTest : SetupTestData() {
 
         user1OrganizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking.name))
                 Assert.assertEquals(PostgresColumn.ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
                 Assert.assertEquals(PostgresColumn.LINKING_ID.name, rs.metaData.getColumnName(2))
                 val columns = TestAssemblerConnectionManager.getColumnNames(rs)

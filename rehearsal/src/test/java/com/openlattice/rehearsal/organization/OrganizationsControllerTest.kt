@@ -3,6 +3,7 @@ package com.openlattice.rehearsal.organization
 import com.openlattice.authorization.*
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.rehearsal.GeneralException
+import com.openlattice.rehearsal.assertException
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
 import org.junit.Assert
 import org.junit.BeforeClass
@@ -41,12 +42,10 @@ class OrganizationsControllerTest : MultipleAuthenticatedUsersBase() {
 
         // try to add role to user2 with user1
         loginAs("user1")
-        try {
-            OrganizationControllerCallHelper.addRoleToUser(organizationID, roleId, user2.id)
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: GeneralException) {
-            Assert.assertTrue(e.message!!.contains("Object [$organizationID, $roleId] is not accessible"))
-        }
+        assertException(
+                { OrganizationControllerCallHelper.addRoleToUser(organizationID, roleId, user2.id) },
+                "Object [$organizationID, $roleId] is not accessible"
+        )
     }
 
     @Test
@@ -62,27 +61,20 @@ class OrganizationsControllerTest : MultipleAuthenticatedUsersBase() {
 
         // try to remove role1 from user1 with user2
         loginAs("user2")
-
-        try {
-            OrganizationControllerCallHelper.removeRoleFromUser(organizationID, roleId, user1.id)
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: GeneralException) {
-            Assert.assertTrue(e.message!!.contains("Object [$organizationID, $roleId] is not accessible"))
-        }
+        assertException(
+                { OrganizationControllerCallHelper.removeRoleFromUser(organizationID, roleId, user1.id) },
+                "Object [$organizationID, $roleId] is not accessible"
+        )
     }
 
     @Test
     fun testAddMembersToOrganiztion() {
         // test owner access check
         loginAs("user1")
-
-        try {
-            OrganizationControllerCallHelper.addMemberToOrganization(organizationID, user2.id)
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: GeneralException) {
-            Assert.assertTrue(e.message!!.contains("Object [$organizationID] is not accessible"))
-        }
-
+        assertException(
+                { OrganizationControllerCallHelper.addMemberToOrganization(organizationID, user2.id) },
+                "Object [$organizationID] is not accessible"
+        )
 
         // test normal behavior
         loginAs("admin")
@@ -109,14 +101,10 @@ class OrganizationsControllerTest : MultipleAuthenticatedUsersBase() {
 
         // test owner access check
         loginAs("user1")
-
-        try {
-            OrganizationControllerCallHelper.removeMemberFromOrganization(organizationID, user2.id)
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: GeneralException) {
-            Assert.assertTrue(e.message!!.contains("Object [$organizationID] is not accessible"))
-        }
-
+        assertException(
+                { OrganizationControllerCallHelper.removeMemberFromOrganization(organizationID, user2.id) },
+                "Object [$organizationID] is not accessible"
+        )
 
         // test normal behavior
         loginAs("admin")

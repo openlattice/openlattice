@@ -26,6 +26,7 @@ import com.openlattice.data.requests.EntitySetSelection
 import com.openlattice.data.requests.FileType
 import com.openlattice.edm.type.AssociationType
 import com.openlattice.mapstores.TestDataFactory
+import com.openlattice.rehearsal.assertException
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
 import org.apache.commons.lang.RandomStringUtils
 import org.apache.olingo.commons.api.edm.FullQualifiedName
@@ -69,56 +70,14 @@ class EdmTest : MultipleAuthenticatedUsersBase() {
     }
 
     @Test
-    fun testChecksOnAddAndRemoveLinkedEntitySets() {
-        // entity set is not linking
-        val pt = createPropertyType()
-        val et = createEntityType(pt.id)
-        val nonLinkingEs = createEntitySet(et, false, setOf())
-        val es = createEntitySet(et)
-        try {
-            entitySetsApi.addEntitySetsToLinkingEntitySet(nonLinkingEs.id, setOf<UUID>(es.id))
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(e.undeclaredThrowable.message!!
-                    .contains("Can't add linked entity sets to a not linking entity set", true))
-        }
-
-        // add non-person entity set
-        val linkingEs = createEntitySet(et, true, setOf())
-        try {
-            entitySetsApi.addEntitySetsToLinkingEntitySet(linkingEs.id, setOf<UUID>(es.id))
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(e.undeclaredThrowable.message!!
-                    .contains(
-                            "Linked entity sets are of differing entity types than " +
-                                    EdmTestConstants.personEt.type.fullQualifiedNameAsString,
-                            true))
-        }
-
-        // remove empty
-        try {
-            entitySetsApi.removeEntitySetsFromLinkingEntitySet(linkingEs.id, setOf())
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(e.undeclaredThrowable.message!!
-                    .contains("Linked entity sets is empty", true))
-        }
-
-    }
-
-    @Test
     fun testAssociationTypeCreationWrongCategory() {
         val et = createEntityType()
         val at = AssociationType(Optional.of(et), LinkedHashSet(), LinkedHashSet(), false)
 
-        try {
-            edmApi.createAssociationType(at)
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(e.undeclaredThrowable.message!!
-                    .contains("You cannot create an edge type with not an AssociationType category", true))
-        }
+        assertException(
+                { edmApi.createAssociationType(at) },
+                "You cannot create an edge type with not an AssociationType category"
+        )
     }
 
     @Test
@@ -153,13 +112,10 @@ class EdmTest : MultipleAuthenticatedUsersBase() {
 
         entitySetsApi.deleteEntitySet(es1.id)
 
-        try {
-            entitySetsApi.getEntitySet(es1.id)
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(e.undeclaredThrowable.message!!
-                    .contains("Object [${es1.id}] is not accessible.", true))
-        }
+        assertException(
+                { entitySetsApi.getEntitySet(es1.id) },
+                "Object [${es1.id}] is not accessible."
+        )
 
         val updatedLinkedEs = entitySetsApi.getEntitySet(linkedEs.id)
         Assert.assertTrue(updatedLinkedEs.linkedEntitySets.isEmpty())
@@ -214,24 +170,17 @@ class EdmTest : MultipleAuthenticatedUsersBase() {
         val esData = dataApi.loadEntitySetData(es.id, ess2, FileType.json)
         Assert.assertEquals(1, esData.first().size())
 
-        try {
-            edmApi.deleteEntityType(et.id)
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(e.undeclaredThrowable.message!!
-                    .contains("Unable to delete entity type because it is associated with an entity set.",
-                            true))
-        }
+        assertException(
+                { edmApi.deleteEntityType(et.id) },
+                "Unable to delete entity type because it is associated with an entity set."
+        )
 
         entitySetsApi.deleteEntitySet(es.id)
         edmApi.deleteEntityType(et.id)
 
-        try {
-            edmApi.getEntityType(et.id)
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(e.undeclaredThrowable.message!!
-                    .contains("Entity type of id ${et.id} does not exists.", true))
-        }
+        assertException(
+                { edmApi.getEntityType(et.id) },
+                "Entity type of id ${et.id} does not exists."
+        )
     }
 }

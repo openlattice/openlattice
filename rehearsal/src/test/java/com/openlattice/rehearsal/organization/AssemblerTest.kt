@@ -19,12 +19,11 @@ import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
 import com.openlattice.postgres.PostgresColumn.ID
 import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.ResultSetAdapters
+import com.openlattice.rehearsal.assertException
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
 import org.junit.Assert
 import org.junit.BeforeClass
 import org.junit.Test
-import org.postgresql.util.PSQLException
-import java.lang.reflect.UndeclaredThrowableException
 import java.sql.ResultSet
 import java.time.OffsetDateTime
 import java.util.*
@@ -145,7 +144,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         // check if new column is there
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es1))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es1.name))
                 Assert.assertEquals(pt.type.fullQualifiedNameAsString, rs.metaData.getColumnName(4))
             }
         }
@@ -194,7 +193,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
             connection.createStatement().use { stmt ->
                 val rs = stmt.executeQuery(
                         TestAssemblerConnectionManager.selectFromEntitySetSql(
-                                es2,
+                                es2.name,
                                 setOf(edmApi.getPropertyType(propertyToChange).type.fullQualifiedNameAsString)
                         )
                 )
@@ -220,7 +219,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         // check if old column is deleted
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es1))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es1.name))
                 Assert.assertEquals(3, rs.metaData.columnCount)
             }
         }
@@ -239,7 +238,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         // data is not supposed to be there, only the columns
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name))
                 // all columns are there
                 (1..rs.metaData.columnCount).forEach {
                     val columnName = rs.metaData.getColumnName(it)
@@ -275,7 +274,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         // check if data is in org database
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name))
 
                 var index = 0
                 Assert.assertTrue(rs.next())
@@ -315,7 +314,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         // check if data is updated in org database
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name))
 
                 var index = 0
                 Assert.assertTrue(rs.next())
@@ -352,7 +351,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         // check if data is deleted in org database
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name))
                 // no data is there
                 Assert.assertFalse(rs.next())
             }
@@ -492,19 +491,12 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         OrganizationControllerCallHelper.addMemberToOrganization(organizationID, user1.id)
 
         // user is not owner of organization
-        try {
-            loginAs("user1")
-            organizationsApi.assembleEntitySets(organizationID, mapOf(es.id to 100))
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(
-                    e.undeclaredThrowable.message!!.contains(
-                            "Object [$organizationID] is not accessible.", true
-                    )
-            )
-        } finally {
-            loginAs("admin")
-        }
+        loginAs("user1")
+        assertException(
+                { organizationsApi.assembleEntitySets(organizationID, mapOf(es.id to 100)) },
+                "Object [$organizationID] is not accessible."
+        )
+        loginAs("admin")
 
 
         // org principal has no permission on entityset
@@ -514,19 +506,12 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         )
         permissionsApi.updateAcl(AclData(organizationAcl, Action.ADD))
 
-        try {
-            loginAs("user1")
-            organizationsApi.assembleEntitySets(organizationID, mapOf(es.id to 100))
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(
-                    e.undeclaredThrowable.message!!.contains(
-                            "EntitySet [${es.id}] is not accessible by organization principal", true
-                    )
-            )
-        } finally {
-            loginAs("admin")
-        }
+        loginAs("user1")
+        assertException(
+                { organizationsApi.assembleEntitySets(organizationID, mapOf(es.id to 100)) },
+                "EntitySet [${es.id}] is not accessible by organization principal"
+        )
+        loginAs("admin")
 
 
         // org principal has only permission on entityset
@@ -558,7 +543,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         val organizationDataSource = TestAssemblerConnectionManager.connect(organizationID)
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name))
                 Assert.assertEquals(ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
                 Assert.assertEquals(ID.name, rs.metaData.getColumnName(2))
                 Assert.assertEquals(ENTITY_KEY_IDS_COL.name, rs.metaData.getColumnName(3))
@@ -582,7 +567,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
 
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name))
                 Assert.assertEquals(ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
                 Assert.assertEquals(ID.name, rs.metaData.getColumnName(2))
                 Assert.assertEquals(ENTITY_KEY_IDS_COL.name, rs.metaData.getColumnName(3))
@@ -612,14 +597,10 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
 
         user1OrganizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                try {
-                    stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es))
-                    Assert.fail("Should have thrown Exception but did not!")
-                } catch (e: PSQLException) {
-                    Assert.assertTrue(
-                            e.message!!.contains("permission denied for relation ${es.name}", true)
-                    )
-                }
+                assertException(
+                        { stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name)) },
+                        "permission denied for materialized view ${es.name}"
+                )
             }
         }
 
@@ -636,14 +617,10 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         // try to select all columns
         user1OrganizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                try {
-                    stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es))
-                    Assert.fail("Should have thrown Exception but did not!")
-                } catch (e: PSQLException) {
-                    Assert.assertTrue(
-                            e.message!!.contains("permission denied for relation ${es.name}", true)
-                    )
-                }
+                assertException(
+                        { stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name)) },
+                        "permission denied for materialized view ${es.name}"
+                )
             }
         }
 
@@ -655,7 +632,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                 val rs = stmt.executeQuery(
                         TestAssemblerConnectionManager
                                 .selectFromEntitySetSql(
-                                        es,
+                                        es.name,
                                         setOf(ENTITY_SET_ID.name, ID.name, ENTITY_KEY_IDS_COL.name)
                                 )
                 )
@@ -675,14 +652,10 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         // try to select all columns
         user1OrganizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                try {
-                    stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es))
-                    Assert.fail("Should have thrown Exception but did not!")
-                } catch (e: PSQLException) {
-                    Assert.assertTrue(
-                            e.message!!.contains("permission denied for relation ${es.name}", true)
-                    )
-                }
+                assertException(
+                        { stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name)) },
+                        "permission denied for materialized view ${es.name}"
+                )
             }
         }
 
@@ -692,12 +665,13 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                 val rs = stmt.executeQuery(
                         TestAssemblerConnectionManager
                                 .selectFromEntitySetSql(
-                                        es, setOf(
-                                        ENTITY_SET_ID.name,
-                                        ID.name,
-                                        ENTITY_KEY_IDS_COL.name,
-                                        propertyType.type.fullQualifiedNameAsString
-                                )
+                                        es.name,
+                                        setOf(
+                                                ENTITY_SET_ID.name,
+                                                ID.name,
+                                                ENTITY_KEY_IDS_COL.name,
+                                                propertyType.type.fullQualifiedNameAsString
+                                        )
                                 )
                 )
                 Assert.assertEquals(ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
@@ -718,7 +692,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
 
         user1OrganizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name))
                 Assert.assertEquals(ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
                 Assert.assertEquals(ID.name, rs.metaData.getColumnName(2))
                 Assert.assertEquals(ENTITY_KEY_IDS_COL.name, rs.metaData.getColumnName(3))
@@ -742,27 +716,15 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         grantMaterializePermissions(organization, es, et.properties)
 
         // try to add < 1 refresh rates
-        try {
-            organizationsApi.assembleEntitySets(organizationID, mapOf(es.id to 0))
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(
-                    e.undeclaredThrowable.message!!.contains(
-                            "Minimum refresh rate is 1 minute.", true
-                    )
-            )
-        }
-
-        try {
-            organizationsApi.assembleEntitySets(organizationID, mapOf(es.id to -12))
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(
-                    e.undeclaredThrowable.message!!.contains(
-                            "Minimum refresh rate is 1 minute.", true
-                    )
-            )
-        }
+        val errorMsg = "Minimum refresh rate is 1 minute."
+        assertException(
+                { organizationsApi.assembleEntitySets(organizationID, mapOf(es.id to 0)) },
+                errorMsg
+        )
+        assertException(
+                { organizationsApi.assembleEntitySets(organizationID, mapOf(es.id to -12)) },
+                errorMsg
+        )
 
         // materialize with 2 min refresh rate
         var refreshRate = 2
@@ -785,7 +747,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         // data is not supposed to be there, only the columns until automatic refresh
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name))
                 // all columns are there
                 (1..rs.metaData.columnCount).forEach {
                     val columnName = rs.metaData.getColumnName(it)
@@ -806,7 +768,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         // check if data is in org database
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name))
 
                 var index = 0
                 Assert.assertTrue(rs.next())
@@ -842,7 +804,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         // data is not supposed to be there, only the columns
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name))
                 // all columns are there
                 (1..rs.metaData.columnCount).forEach {
                     val columnName = rs.metaData.getColumnName(it)
@@ -869,7 +831,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         // data is still not supposed to be there, only the columns
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name))
                 // all columns are there
                 (1..rs.metaData.columnCount).forEach {
                     val columnName = rs.metaData.getColumnName(it)
@@ -932,7 +894,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
 
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esSrc))
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esSrc.name))
                 // all columns are there
                 (1..rs.metaData.columnCount).forEach {
                     val columnName = rs.metaData.getColumnName(it)
@@ -956,13 +918,10 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         // materialized entity set shouldn't be there anymore
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                try {
-                    stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esSrc))
-                    Assert.fail("Should have thrown Exception but did not!")
-                } catch (e: PSQLException) {
-                    Assert.assertTrue(e.message!!
-                            .contains("relation ${quote("${AssemblerConnectionManager.MATERIALIZED_VIEWS_SCHEMA}.${esSrc.name}")} does not exist", true))
-                }
+                assertException(
+                        { stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esSrc.name)) },
+                        "relation ${quote("${AssemblerConnectionManager.MATERIALIZED_VIEWS_SCHEMA}.${esSrc.name}")} does not exist"
+                )
             }
         }
     }
@@ -1005,34 +964,139 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
 
         user1OrganizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                stmt.executeQuery("SELECT * FROM " +
-                        "${AssemblerConnectionManager.MATERIALIZED_VIEWS_SCHEMA}.${quote(es.name)}")
+                stmt.executeQuery("SELECT * FROM ${AssemblerConnectionManager.entitySetNameTableName(es.name)}")
 
-                try {
-                    stmt.executeQuery("SELECT * FROM ${AssemblerConnectionManager.PRODUCTION_FOREIGN_SCHEMA}.${PostgresTable.ENTITY_TYPES.name}")
-                    Assert.fail("Should have thrown Exception but did not!")
-                } catch (e: PSQLException) {
-                    Assert.assertTrue(e.message!!
-                            .contains("permission denied for schema prod", true))
-                }
-                try {
-                    stmt.executeQuery("SELECT * FROM ${AssemblerConnectionManager.PRODUCTION_FOREIGN_SCHEMA}.${PostgresTable.E.name}")
-                    Assert.fail("Should have thrown Exception but did not!")
-                } catch (e: PSQLException) {
-                    Assert.assertTrue(e.message!!
-                            .contains("permission denied for schema prod", true))
-                }
-                try {
-                    stmt.executeQuery("SELECT * FROM ${AssemblerConnectionManager.PRODUCTION_FOREIGN_SCHEMA}.${quote(es.name)}")
-                    Assert.fail("Should have thrown Exception but did not!")
-                } catch (e: PSQLException) {
-                    Assert.assertTrue(e.message!!
-                            .contains("permission denied for schema prod", true))
-                }
+                val exceptionMsg = "permission denied for schema prod"
+                assertException(
+                        { stmt.executeQuery("SELECT * FROM ${AssemblerConnectionManager.PRODUCTION_FOREIGN_SCHEMA}.${PostgresTable.ENTITY_TYPES.name}") },
+                        exceptionMsg
+                )
+                assertException(
+                        { stmt.executeQuery("SELECT * FROM ${AssemblerConnectionManager.PRODUCTION_FOREIGN_SCHEMA}.${PostgresTable.E.name}") },
+                        exceptionMsg
+                )
+                assertException(
+                        { stmt.executeQuery("SELECT * FROM ${AssemblerConnectionManager.PRODUCTION_FOREIGN_SCHEMA}.${quote(es.name)}") },
+                        exceptionMsg
+                )
             }
         }
 
         loginAs("admin")
+    }
+
+    @Test
+    fun testNameUpdateInEntitySet() {
+        val et = createEntityType()
+        val es = createEntitySet(et)
+
+        // add data
+        val testData = TestDataFactory.randomStringEntityData(numberOfEntities, et.properties)
+        val entities = ImmutableList.copyOf(testData.values)
+        dataApi.createEntities(es.id, entities)
+
+        // materialize entity set
+        grantMaterializePermissions(organization, es, setOf())
+        organizationsApi.assembleEntitySets(organizationID, mapOf(es.id to null))
+
+        organizationDataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name))
+                Assert.assertTrue(rs.next())
+            }
+        }
+
+        // rename entity set
+        val newName = TestDataFactory.randomAlphabetic(5)
+        entitySetsApi.updateEntitySetMetadata(
+                es.id,
+                MetadataUpdate(
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.of(newName),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty()
+                )
+        )
+
+        // try to select with old name
+        organizationDataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                assertException(
+                        { stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name)) },
+                        "relation \"${AssemblerConnectionManager.MATERIALIZED_VIEWS_SCHEMA}.${es.name}\" does not exist"
+                )
+            }
+        }
+
+
+        // try to select with new name
+        organizationDataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(newName))
+                Assert.assertTrue(rs.next())
+            }
+        }
+    }
+
+    @Test
+    fun testOrganizationUpdateInEntitySet() {
+        // create entity set and materialize in organization
+        val et = createEntityType()
+        val es = createEntitySet(et, organizationID)
+
+        val testData = TestDataFactory.randomStringEntityData(numberOfEntities, et.properties)
+        val entities = ImmutableList.copyOf(testData.values)
+        dataApi.createEntities(es.id, entities)
+
+        grantMaterializePermissions(organization, es, setOf())
+        organizationsApi.assembleEntitySets(organizationID, mapOf(es.id to null))
+
+        // check if entity set is materialized in organization
+        organizationDataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name))
+                Assert.assertTrue(rs.next())
+            }
+        }
+
+        // move entity set to new organization
+        val organization2 = createOrganization()
+        entitySetsApi.updateEntitySetMetadata(
+                es.id,
+                MetadataUpdate(
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.of(organization2.id),
+                        Optional.empty()
+                )
+        )
+
+        // entity set should not be present anymore in original organization
+        organizationDataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                assertException(
+                        { stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name)) },
+                        "relation \"${AssemblerConnectionManager.MATERIALIZED_VIEWS_SCHEMA}.${es.name}\" does not exist"
+                )
+            }
+        }
+
     }
 
 

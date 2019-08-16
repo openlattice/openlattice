@@ -33,6 +33,7 @@ import com.openlattice.edm.EdmConstants
 import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.edm.type.EntityType
 import com.openlattice.mapstores.TestDataFactory
+import com.openlattice.rehearsal.assertException
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
 import com.openlattice.rehearsal.edm.EdmTestConstants
 import com.openlattice.search.requests.EntityNeighborsFilter
@@ -242,16 +243,12 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         permissionsApi.updateAcl(AclData(newAcl1, Action.ADD))
         permissionsApi.updateAcl(AclData(newAcl2, Action.ADD))
 
-        try {
-            loginAs("user1")
-            dataApi.createAssociations(edges)
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(e.undeclaredThrowable.message!!
-                    .contains("Insufficient permissions to perform operation."))
-        } finally {
-            loginAs("admin")
-        }
+        loginAs("user1")
+        assertException(
+                { dataApi.createAssociations(edges) },
+                "Insufficient permissions to perform operation."
+        )
+        loginAs("admin")
 
         val newAcl3 = Acl(AclKey(esEdge.id), setOf(Ace(user1, add, OffsetDateTime.now(ZoneOffset.UTC))))
         permissionsApi.updateAcl(AclData(newAcl3, Action.ADD))
@@ -339,13 +336,10 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         val edgeData = createDataEdges(esEdge1.id, edge1.properties, esSrc.id, idsSrc, esDst.id, idsDst)
         edgesToBeCreated.putAll(edgeData.first, edgeData.second)
 
-        try {
-            dataApi.createAssociations(edgesToBeCreated)
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(e.undeclaredThrowable.message!!
-                    .contains("differs from allowed entity types ([]) in association type of entity set ${esEdge1.id}", true))
-        }
+        assertException(
+                { dataApi.createAssociations(edgesToBeCreated) },
+                "differs from allowed entity types ([]) in association type of entity set ${esEdge1.id}"
+        )
 
         // add src and dst to association type
         edmApi.addSrcEntityTypeToAssociationType(edge1.id, src.id)
@@ -372,13 +366,10 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
             )
         }.toSet()
 
-        try {
-            dataApi.createAssociations(edges)
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(e.undeclaredThrowable.message!!
-                    .contains("differs from allowed entity types ([]) in association type of entity set ${esEdge2.id}", true))
-        }
+        assertException(
+                { dataApi.createAssociations(edges) },
+                "differs from allowed entity types ([]) in association type of entity set ${esEdge2.id}"
+        )
 
         // add src and dst to association type
         edmApi.addSrcEntityTypeToAssociationType(edge2.id, src.id)
@@ -420,24 +411,18 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         val edgesToBeCreated2 = createDataEdgeKeys(esEdge.id, idsEdge, esDst.id, idsDst, esSrc.id, idsSrc)
 
         // try to create edges
-        try {
-            dataApi.createAssociations(edgesToBeCreated1)
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(e.undeclaredThrowable.message!!
-                    .contains("differs from allowed entity types src=[${src.id}], dst=[] in bidirectional " +
-                            "association type of entity set ${esEdge.id}", true))
-        }
+        assertException(
+                { dataApi.createAssociations(edgesToBeCreated1) },
+                "differs from allowed entity types src=[${src.id}], dst=[] in bidirectional association type of " +
+                        "entity set ${esEdge.id}"
+        )
 
         // try to create edges opposite direction
-        try {
-            dataApi.createAssociations(edgesToBeCreated2)
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(e.undeclaredThrowable.message!!
-                    .contains("differs from allowed entity types src=[${src.id}], dst=[] in bidirectional " +
-                            "association type of entity set ${esEdge.id}", true))
-        }
+        assertException(
+                { dataApi.createAssociations(edgesToBeCreated2) },
+                "differs from allowed entity types src=[${src.id}], dst=[] in bidirectional association type of " +
+                        "entity set ${esEdge.id}"
+        )
 
         // add dst to association type
         edmApi.addDstEntityTypeToAssociationType(edge.id, dst.id)
@@ -657,17 +642,12 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         /* loadEntitySetData */
 
         // try to read data with no permissions on it
-        try {
-            loginAs("user1")
-            dataApi.loadEntitySetData(es.id, ess, FileType.json)
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(e.undeclaredThrowable.message!!
-                    .contains("Insufficient permissions to read the entity set ${es.id} or it doesn't exists.",
-                            true))
-        } finally {
-            loginAs("admin")
-        }
+        loginAs("user1")
+        assertException(
+                { dataApi.loadEntitySetData(es.id, ess, FileType.json) },
+                "Insufficient permissions to read the entity set ${es.id} or it doesn't exists."
+        )
+        loginAs("admin")
 
         // add permission to read entityset but none of the properties
         val readPermission = EnumSet.of(Permission.READ)
@@ -725,24 +705,16 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         val property = et2.properties.first()
 
         // try to read data with no permissions on it
-        try {
-            loginAs("user1")
-            dataApi.getEntity(es2.id, id)
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(e.undeclaredThrowable.message!!
-                    .contains("Object [${es2.id}] is not accessible.", true))
-        }
-
-        try {
-            dataApi.getEntity(es2.id, id, property)
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(e.undeclaredThrowable.message!!
-                    .contains("Object [${es2.id}] is not accessible.", true))
-        } finally {
-            loginAs("admin")
-        }
+        loginAs("user1")
+        assertException(
+                { dataApi.getEntity(es2.id, id) },
+                "Object [${es2.id}] is not accessible."
+        )
+        assertException(
+                { dataApi.getEntity(es2.id, id, property) },
+                "Object [${es2.id}] is not accessible."
+        )
+        loginAs("admin")
 
         // add permission to read entityset but none of the properties
         val es2ReadAcl = Acl(AclKey(es2.id), setOf(Ace(user1, readPermission, OffsetDateTime.MAX)))
@@ -753,15 +725,11 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         Assert.assertEquals(1, noData2.size)
         noData2.forEach { Assert.assertEquals(EdmConstants.ID_FQN, it.key) }
 
-        try {
-            dataApi.getEntity(es2.id, id, property)
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(e.undeclaredThrowable.message!!
-                    .contains("Object [${es2.id}, $property] is not accessible.", true))
-        } finally {
-            loginAs("admin")
-        }
+        assertException(
+                { dataApi.getEntity(es2.id, id, property) },
+                "Object [${es2.id}, $property] is not accessible."
+        )
+        loginAs("admin")
 
 
         // add permission on 1 property
@@ -840,33 +808,24 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
 
         /*   HARD DELETE   */
-
-        try {
-            loginAs("user1")
-            dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Hard)
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(e.undeclaredThrowable.message!!
-                    .contains("Object [${es.id}] is not accessible.", true))
-        } finally {
-            loginAs("admin")
-        }
+        loginAs("user1")
+        assertException(
+                { dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Hard) },
+                "Object [${es.id}] is not accessible."
+        )
+        loginAs("admin")
 
         // add user1 as owner of entityset
         val ownerPermissions = EnumSet.of(Permission.OWNER)
         val esOwnerAcl = Acl(AclKey(es.id), setOf(Ace(user1, ownerPermissions, OffsetDateTime.MAX)))
         permissionsApi.updateAcl(AclData(esOwnerAcl, Action.ADD))
 
-        try {
-            loginAs("user1")
-            dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Hard)
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(e.undeclaredThrowable.message!!
-                    .contains("You must have OWNER permission of all required entity set ${es.id} properties to delete entities from it.", true))
-        } finally {
-            loginAs("admin")
-        }
+        loginAs("user1")
+        assertException(
+                { dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Hard) },
+                "You must have OWNER permission of all required entity set ${es.id} properties to delete entities from it."
+        )
+        loginAs("admin")
 
         // add user1 as owner for all property types in entityset
         personEt.properties.forEach {
@@ -874,84 +833,72 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
             permissionsApi.updateAcl(AclData(acl, Action.ADD))
         }
 
-        try {
-            loginAs("user1")
-            dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Hard)
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(e.undeclaredThrowable.message!!
-                    .contains("Object [${esEdge.id}] is not accessible.", true))
-        } finally {
-            loginAs("admin")
-        }
+        loginAs("user1")
+        assertException(
+                { dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Hard) },
+                "Object [${esEdge.id}] is not accessible."
+        )
+        loginAs("admin")
 
         // try to delete also neighbors
-        try {
-            loginAs("user1")
-            dataApi.deleteEntitiesAndNeighbors(
-                    es.id,
-                    EntityNeighborsFilter(
-                            newEntityIds.toSet(),
-                            Optional.empty(), Optional.of(setOf(esDst.id)), Optional.empty()),
-                    DeleteType.Hard)
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(e.undeclaredThrowable.message!!
-                    .contains("Object [${esEdge.id}] is not accessible.", true))
-        } finally {
-            loginAs("admin")
-        }
+        loginAs("user1")
+        assertException(
+                {
+                    dataApi.deleteEntitiesAndNeighbors(
+                            es.id,
+                            EntityNeighborsFilter(
+                                    newEntityIds.toSet(),
+                                    Optional.empty(), Optional.of(setOf(esDst.id)), Optional.empty()
+                            ),
+                            DeleteType.Hard
+                    )
+                },
+                "Object [${esEdge.id}] is not accessible."
+        )
+        loginAs("admin")
 
         // add user1 as owner of edge entity set
         val dstOwnerAcl = Acl(AclKey(esEdge.id), setOf(Ace(user1, ownerPermissions, OffsetDateTime.MAX)))
         permissionsApi.updateAcl(AclData(dstOwnerAcl, Action.ADD))
 
-        try {
-            loginAs("user1")
-            dataApi.deleteEntitiesAndNeighbors(
-                    es.id,
-                    EntityNeighborsFilter(
-                            newEntityIds.toSet(),
-                            Optional.empty(), Optional.of(setOf(esDst.id)), Optional.of(setOf(esEdge.id))),
-                    DeleteType.Hard)
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(e.undeclaredThrowable.message!!
-                    .contains("You must have OWNER permission of all required entity set ${esEdge.id} properties to delete entities from it.", true))
-        } finally {
-            loginAs("admin")
-        }
+        loginAs("user1")
+        assertException(
+                {
+                    dataApi.deleteEntitiesAndNeighbors(
+                            es.id,
+                            EntityNeighborsFilter(
+                                    newEntityIds.toSet(),
+                                    Optional.empty(), Optional.of(setOf(esDst.id)), Optional.of(setOf(esEdge.id))
+                            ),
+                            DeleteType.Hard
+                    )
+                },
+                "You must have OWNER permission of all required entity set ${esEdge.id} properties to delete entities from it."
+        )
+        loginAs("admin")
 
 
         /*   SOFT DELETE   */
 
-        try {
-            loginAs("user1")
-            dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Soft)
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(e.undeclaredThrowable.message!!
-                    .contains("Object [${es.id}] is not accessible.", true))
-        } finally {
-            loginAs("admin")
-        }
+        loginAs("user1")
+        assertException(
+                { dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Soft) },
+                "Object [${es.id}] is not accessible."
+        )
+        loginAs("admin")
 
         // add read to user1 for entityset
         val readPermissions = EnumSet.of(Permission.READ)
         val esAcl = Acl(AclKey(es.id), setOf(Ace(user1, readPermissions, OffsetDateTime.MAX)))
         permissionsApi.updateAcl(AclData(esAcl, Action.ADD))
 
+        loginAs("user1")
+        assertException(
+                { dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Soft) },
+                "You must have WRITE permission of all required entity set ${es.id} properties to delete entities from it."
+        )
+        loginAs("admin")
 
-        try {
-            loginAs("user1")
-            dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Soft)
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(e.undeclaredThrowable.message!!
-                    .contains("You must have WRITE permission of all required entity set ${es.id} properties to delete entities from it.", true))
-        } finally {
-            loginAs("admin")
-        }
 
         // add write to user1 for all property types in entityset
         val writePermissions = EnumSet.of(Permission.WRITE)
@@ -960,36 +907,35 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
             permissionsApi.updateAcl(AclData(acl, Action.ADD))
         }
 
-        try {
-            loginAs("user1")
-            dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Soft)
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(e.undeclaredThrowable.message!!
-                    .contains("Object [${esEdge.id}] is not accessible.", true))
-        } finally {
-            loginAs("admin")
-        }
+        loginAs("user1")
+        assertException(
+                { dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Soft) },
+                "Object [${esEdge.id}] is not accessible."
+        )
+        loginAs("admin")
+
 
         // try to delete also neighbors
         // add read to user1 for edge entity set
         val edgeAcl = Acl(AclKey(esEdge.id), setOf(Ace(user1, readPermissions, OffsetDateTime.MAX)))
         permissionsApi.updateAcl(AclData(edgeAcl, Action.ADD))
-        try {
-            loginAs("user1")
-            dataApi.deleteEntitiesAndNeighbors(
-                    es.id,
-                    EntityNeighborsFilter(
-                            newEntityIds.toSet(),
-                            Optional.empty(), Optional.of(setOf(esDst.id)), Optional.empty()),
-                    DeleteType.Soft)
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(e.undeclaredThrowable.message!!
-                    .contains("You must have WRITE permission of all required entity set ${esEdge.id} properties to delete entities from it.", true))
-        } finally {
-            loginAs("admin")
-        }
+
+        loginAs("user1")
+        assertException(
+                {
+                    dataApi.deleteEntitiesAndNeighbors(
+                            es.id,
+                            EntityNeighborsFilter(
+                                    newEntityIds.toSet(),
+                                    Optional.empty(), Optional.of(setOf(esDst.id)), Optional.empty()
+                            ),
+                            DeleteType.Soft
+                    )
+                },
+                "You must have WRITE permission of all required entity set ${esEdge.id} properties to delete entities from it."
+        )
+        loginAs("admin")
+
 
         // add write to user1 for all property types in edge entityset
         edge.properties.forEach {
@@ -997,41 +943,42 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
             permissionsApi.updateAcl(AclData(acl, Action.ADD))
         }
 
-        try {
-            loginAs("user1")
-            dataApi.deleteEntitiesAndNeighbors(
-                    es.id,
-                    EntityNeighborsFilter(
-                            newEntityIds.toSet(),
-                            Optional.empty(), Optional.of(setOf(esDst.id)), Optional.empty()),
-                    DeleteType.Soft)
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(e.undeclaredThrowable.message!!
-                    .contains("Object [${esDst.id}] is not accessible.", true))
-        } finally {
-            loginAs("admin")
-        }
+        loginAs("user1")
+        assertException(
+                {
+                    dataApi.deleteEntitiesAndNeighbors(
+                            es.id,
+                            EntityNeighborsFilter(
+                                    newEntityIds.toSet(),
+                                    Optional.empty(), Optional.of(setOf(esDst.id)), Optional.empty()
+                            ),
+                            DeleteType.Soft
+                    )
+                },
+                "Object [${esDst.id}] is not accessible."
+        )
+        loginAs("admin")
+
 
         // add read to user1 for dst entity set
         val dstAcl = Acl(AclKey(esDst.id), setOf(Ace(user1, readPermissions, OffsetDateTime.MAX)))
         permissionsApi.updateAcl(AclData(dstAcl, Action.ADD))
 
-        try {
-            loginAs("user1")
-            dataApi.deleteEntitiesAndNeighbors(
-                    es.id,
-                    EntityNeighborsFilter(
-                            newEntityIds.toSet(),
-                            Optional.empty(), Optional.of(setOf(esDst.id)), Optional.empty()),
-                    DeleteType.Soft)
-            Assert.fail("Should have thrown Exception but did not!")
-        } catch (e: UndeclaredThrowableException) {
-            Assert.assertTrue(e.undeclaredThrowable.message!!
-                    .contains("You must have WRITE permission of all required entity set ${esDst.id} properties to delete entities from it.", true))
-        } finally {
-            loginAs("admin")
-        }
+        loginAs("user1")
+        assertException(
+                {
+                    dataApi.deleteEntitiesAndNeighbors(
+                            es.id,
+                            EntityNeighborsFilter(
+                                    newEntityIds.toSet(),
+                                    Optional.empty(), Optional.of(setOf(esDst.id)), Optional.empty()
+                            ),
+                            DeleteType.Soft
+                    )
+                },
+                "You must have WRITE permission of all required entity set ${esDst.id} properties to delete entities from it."
+        )
+        loginAs("admin")
     }
 
     @Test
