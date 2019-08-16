@@ -98,6 +98,11 @@ class AssemblerConnectionManager(
 
         @JvmStatic
         val PRODUCTION_SERVER = "olprod"
+
+        @JvmStatic
+        fun entitySetNameTableName(entitySetName: String): String {
+            return "$MATERIALIZED_VIEWS_SCHEMA.${quote(entitySetName)}"
+        }
     }
 
     fun connect(dbname: String): HikariDataSource {
@@ -163,6 +168,18 @@ class AssemblerConnectionManager(
 //                materializePropertyTypes(datasource)
 //                materialzieEntityTypes(datasource)
         }
+    }
+
+    private fun createSchema(datasource: HikariDataSource, schema: String) {
+        datasource.connection.use { connection ->
+            connection.createStatement().use { statement ->
+                statement.execute("CREATE SCHEMA IF NOT EXISTS $schema")
+            }
+        }
+    }
+
+    private fun createOpenlatticeSchema(datasource: HikariDataSource) {
+        createSchema(datasource, MATERIALIZED_VIEWS_SCHEMA)
     }
 
     fun addMembersToOrganization(dbName: String, dataSource: HikariDataSource, members: Set<Principal>) {
@@ -369,7 +386,7 @@ class AssemblerConnectionManager(
 
             val sql = "SELECT $selectColumns FROM $PRODUCTION_FOREIGN_SCHEMA.${entitySetIdTableName(entitySet.id)} "
 
-            val tableName = "$MATERIALIZED_VIEWS_SCHEMA.${quote(entitySet.name)}"
+            val tableName = entitySetNameTableName(entitySet.name)
 
             datasource.connection.use { connection ->
                 val dropMaterializedEntitySet = "DROP MATERIALIZED VIEW IF EXISTS $tableName"
@@ -480,6 +497,23 @@ class AssemblerConnectionManager(
 
             // re-materialize entity set
             materialize(datasource, entitySet, materializablePropertyTypes, authorizedPropertyTypesOfPrincipals)
+        }
+    }
+
+    /**
+     * Renames a materialized view in the requested organization.
+     * @param organizationId The id of the organization in which the entity set is materialized and should be renamed.
+     * @param newName The new name of the entity set.
+     * @param oldName The old name of the entity set.
+     */
+    fun renameMaterializedEntitySet(organizationId: UUID, newName: String, oldName: String) {
+        connect(buildOrganizationDatabaseName(organizationId)).use { dataSource ->
+            dataSource.connection.createStatement().use { stmt ->
+                val newTableName = quote(newName)
+                val oldTableName = entitySetNameTableName(oldName)
+
+                stmt.executeUpdate("ALTER MATERIALIZED VIEW IF EXISTS $oldTableName RENAME TO $newTableName")
+            }
         }
     }
 
@@ -745,18 +779,6 @@ val PUBLIC_TABLES = setOf(E.name, PROPERTY_TYPES.name, ENTITY_TYPES.name, ENTITY
 
 
 private val PRINCIPALS_SQL = "SELECT acl_key FROM principals WHERE ${PRINCIPAL_TYPE.name} = ?"
-
-internal fun createSchema(datasource: HikariDataSource, schema: String) {
-    datasource.connection.use { connection ->
-        connection.createStatement().use { statement ->
-            statement.execute("CREATE SCHEMA IF NOT EXISTS $schema")
-        }
-    }
-}
-
-internal fun createOpenlatticeSchema(datasource: HikariDataSource) {
-    createSchema(datasource, SCHEMA)
-}
 
 
 internal fun createRoleIfNotExistsSql(dbRole: String): String {

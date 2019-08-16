@@ -195,9 +195,9 @@ class AssemblerQueryService(private val edmService: EdmManager) {
                                  cols: String, groupingColAliases: String, aggregateCols: String, calculationCols: String,
                                  filtersSql: String): String {
         return "SELECT $cols, $aggregateCols $calculationCols FROM ${AssemblerConnectionManager.MATERIALIZED_VIEWS_SCHEMA}.${PostgresTable.EDGES.name} " +
-                "INNER JOIN ${AssemblerConnectionManager.MATERIALIZED_VIEWS_SCHEMA}.\"$srcEntitySetName\" AS $SRC_TABLE_ALIAS USING( ${PostgresColumn.ID.name} ) " +
-                "INNER JOIN ${AssemblerConnectionManager.MATERIALIZED_VIEWS_SCHEMA}.\"$edgeEntitySetName\" AS $EDGE_TABLE_ALIAS ON( $EDGE_TABLE_ALIAS.${PostgresColumn.ID.name} = ${PostgresColumn.EDGE_COMP_2.name} ) " +
-                "INNER JOIN ${AssemblerConnectionManager.MATERIALIZED_VIEWS_SCHEMA}.\"$dstEntitySetName\" AS $DST_TABLE_ALIAS ON( $DST_TABLE_ALIAS.${PostgresColumn.ID.name} = ${PostgresColumn.EDGE_COMP_1.name} ) " +
+                "INNER JOIN ${AssemblerConnectionManager.entitySetNameTableName(srcEntitySetName)} AS $SRC_TABLE_ALIAS USING( ${PostgresColumn.ID.name} ) " +
+                "INNER JOIN ${AssemblerConnectionManager.entitySetNameTableName(edgeEntitySetName)} AS $EDGE_TABLE_ALIAS ON( $EDGE_TABLE_ALIAS.${PostgresColumn.ID.name} = ${PostgresColumn.EDGE_COMP_2.name} ) " +
+                "INNER JOIN ${AssemblerConnectionManager.entitySetNameTableName(dstEntitySetName)} AS $DST_TABLE_ALIAS ON( $DST_TABLE_ALIAS.${PostgresColumn.ID.name} = ${PostgresColumn.EDGE_COMP_1.name} ) " +
                 "WHERE ${PostgresColumn.COMPONENT_TYPES.name} = 0 $filtersSql " +
                 "GROUP BY ($groupingColAliases)"
     }
