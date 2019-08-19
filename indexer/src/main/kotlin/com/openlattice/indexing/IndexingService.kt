@@ -239,7 +239,7 @@ class IndexingService(
         }) { ResultSetAdapters.id(it) to ResultSetAdapters.lastWriteTyped(it) }
     }
 
-    //TODO: This is unecessary. If someone requests a re-index of a particular set of entity key ids, we should forcibly index those keys.
+    //TODO: This is unnecessary. If someone requests a re-index of a particular set of entity key ids, we should forcibly index those keys.
     private fun getEntitiesWithLastWrite(
             entitySetId: UUID,
             partitions: List<Int>,
