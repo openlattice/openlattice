@@ -219,7 +219,8 @@ class IndexingService(
             ""
         }
 
-        return "SELECT ${ID.name}, ${LAST_WRITE.name} FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${PARTITION.name} = ? $lowerBoundSql " +
+        return "SELECT ${ID.name}, ${LAST_WRITE.name} FROM ${IDS.name} " +
+                "WHERE ${ENTITY_SET_ID.name} = ? AND ${PARTITION.name} = ? AND ${VERSION.name} > 0 $lowerBoundSql " +
                 "ORDER BY ${ID.name} LIMIT $BATCH_LIMIT"
     }
 
