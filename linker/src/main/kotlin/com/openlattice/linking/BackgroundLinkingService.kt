@@ -80,7 +80,6 @@ class BackgroundLinkingService
     private val blacklist: Set<UUID> = configuration.blacklist
     private val whitelist: Optional<Set<UUID>> = configuration.whitelist
 
-
     private val entitySets = hazelcastInstance.getMap<UUID, EntitySet>(HazelcastMap.ENTITY_SETS.name)
     private val linkingLocks = hazelcastInstance.getMap<UUID, String>(HazelcastMap.LINKING_LOCKS.name)
 
@@ -88,7 +87,6 @@ class BackgroundLinkingService
 
     private val cursors = hazelcastInstance.getMap<UUID, DelegatedUUIDSet>(HazelcastMap.LINKING_CURSORS.name)
     private val candidates = hazelcastInstance.getQueue<EntityDataKey>(HazelcastQueue.LINKING_CANDIDATES.name)
-
 
     private val linkingWorker = executor.submit {
         Stream.generate { candidates.take() }
@@ -171,8 +169,8 @@ class BackgroundLinkingService
             //Decision that needs to be made is whether to start new cluster or merge into existing cluster.
             //No locks are required since any items that block to this element will be skipped.
             try {
-                val clusters = lqs.getClustersForIds(dataKeys)
-                lqs.lockClustersForUpdates(clusters.keys).use { conn ->
+                val clusters = lqs.getClustersForIds( dataKeys )
+                lqs.lockClustersForUpdates( clusters.keys ).use { conn ->
                     val maybeBestCluster = clusters
                         .asSequence()
                         .map { cluster -> cluster(candidate, cluster, ::completeLinkCluster) }
@@ -180,7 +178,7 @@ class BackgroundLinkingService
                         .maxBy { scoredCluster -> scoredCluster.score }
 
                     if (maybeBestCluster != null) {
-                        return@use insertMatches(conn, maybeBestCluster.clusterId, candidate, maybeBestCluster.cluster, false)
+                        return@use insertMatches( conn, maybeBestCluster.clusterId, candidate, maybeBestCluster.cluster, false )
                     }
                     val clusterId = ids.reserveIds(IdConstants.LINKING_ENTITY_SET_ID.id, 1).first()
                     val block = candidate to mapOf(candidate to elem)
@@ -239,18 +237,17 @@ class BackgroundLinkingService
         lqs.insertMatchScores( conn, linkingId, scores )
         lqs.updateIdsTable( linkingId, newMember )
 
-        val scoresAsEsidToEkids = scores.flatMap { (edk, linkedScore) ->
-            Sets.union(linkedScore.keys, setOf(edk))
-        }.groupBy { edk ->
-            edk.entitySetId
-        }.mapValues { ( _, edks ) -> // esid, edks
-            Sets.newLinkedHashSet( edks.map { it.entityKeyId } )
-        }
+        val scoresAsEsidToEkids = (collectKeys(scores) + newMember)
+            .groupBy { edk -> edk.entitySetId }
+            .mapValues { (_, edks) ->
+                // esid, edks
+                Sets.newLinkedHashSet( edks.map { it.entityKeyId } )
+            }
 
         /* TODO: we do an upsert into data table for every member in the cluster regardless of score
          *   Need to remove links that no longer pass minimum threshold
          */
-        lqs.createOrUpdateLink( linkingId, newMember.entitySetId, newMember.entityKeyId, scoresAsEsidToEkids )
+        lqs.createOrUpdateLink( linkingId, scoresAsEsidToEkids )
         linkingLogService.createOrUpdateCluster( linkingId, scoresAsEsidToEkids, newCluster )
     }
 
@@ -269,27 +266,26 @@ class BackgroundLinkingService
     @Scheduled(fixedRate = 30000)
     fun updateCandidateList() {
         logger.info("Updating linking candidates list.")
-        if (running.tryLock()) {
-            try {
-                pgEdmManager.allEntitySets.asSequence()
-                        .filter { linkableTypes.contains(it.entityTypeId) }
-                        .filterNot { blacklist.contains(it.id) }
-                        .filter { entitySet -> whitelist.map { it.contains(entitySet.id) }.orElse(true) }
-                        .filter {
-                            //Filter any entity sets that are currently locked for a call to entities needing linking.
-                            val ownerId = linkingLocks.putIfAbsent(
-                                    it.id,
-                                    hazelcastInstance.localEndpoint.uuid
-                            ) ?: hazelcastInstance.localEndpoint.uuid
-                            return@filter ownerId == hazelcastInstance.localEndpoint.uuid
-                        }.forEach {
-                            updateCandidateList(it.id)
-                        }
-            } catch (ex: Exception) {
-                logger.info("Encountered error while updating candidates for linking.", ex)
-            } finally {
-                running.unlock()
-            }
+        if (!running.tryLock()) {
+            return
+        }
+        try {
+            pgEdmManager.allEntitySets.asSequence()
+                .filter { linkableTypes.contains(it.entityTypeId) }
+                .filter { es ->
+                    //Filter any entity sets that are currently locked for a call to entities needing linking.
+                    val ownerId = linkingLocks.putIfAbsent(
+                        es.id,
+                        hazelcastInstance.localEndpoint.uuid
+                    ) ?: hazelcastInstance.localEndpoint.uuid
+                    return@filter ownerId == hazelcastInstance.localEndpoint.uuid
+                }.forEach { es ->
+                    updateCandidateList(es.id)
+                }
+        } catch (ex: Exception) {
+            logger.info("Encountered error while updating candidates for linking.", ex)
+        } finally {
+            running.unlock()
         }
     }
 
@@ -301,13 +297,14 @@ class BackgroundLinkingService
         )
 
         executor.submit {
+            val esid = setOf(entitySetId)
             var entitiesNeedingLinking =
-                    lqs.getEntitiesNeedingLinking(setOf(entitySetId), configuration.loadSize)
+                    lqs.getEntitiesNeedingLinking( esid, configuration.loadSize )
                             .map { EntityDataKey(it.first, it.second) }
-            entitiesNeedingLinking.forEach(candidates::put)
+            entitiesNeedingLinking.forEach( candidates::put )
             while (entitiesNeedingLinking.isNotEmpty()) {
                 val stillNotLinked = lqs
-                        .getEntitiesNeedingLinking(setOf(entitySetId), configuration.loadSize)
+                        .getEntitiesNeedingLinking( esid, configuration.loadSize )
                         .map { EntityDataKey(it.first, it.second) }
                         .filterNot { entitiesNeedingLinking.contains(it) }
                 stillNotLinked.forEach (candidates::put)
