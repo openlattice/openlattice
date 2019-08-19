@@ -161,15 +161,16 @@ class BackgroundIndexingService(
 
     private fun getDirtyEntitiesWithLastWriteQuery(entitySet: EntitySet, getTombstoned: Boolean = false): String {
         return "SELECT ${ID.name}, ${LAST_WRITE.name} FROM ${IDS.name} " +
-                "WHERE ${entitySetClause(entitySet)} AND " +
-                "${LAST_INDEX.name} < ${LAST_WRITE.name} AND ${versionClause(getTombstoned)} " +
+                "WHERE ${entitySetClause(entitySet)} " +
+                "AND ${LAST_INDEX.name} < ${LAST_WRITE.name} " +
+                "AND ${versionClause(getTombstoned)} " +
                 "LIMIT $FETCH_SIZE"
     }
 
     private fun entitySetClause(entitySet: EntitySet): String {
-        return "${ENTITY_SET_ID.name} = '${entitySet.id}' AND " +
-                "${PARTITION.name} = ANY('{${entitySet.partitions.joinToString(",")}}') AND " +
-                "${PARTITIONS_VERSION.name} = ${entitySet.partitionsVersion}"
+        return "${ENTITY_SET_ID.name} = '${entitySet.id}' " +
+                "AND ${PARTITION.name} = ANY('{${entitySet.partitions.joinToString(",")}}') " +
+                "AND ${PARTITIONS_VERSION.name} = ${entitySet.partitionsVersion}"
     }
 
     private fun versionClause(getTombstoned: Boolean): String {
