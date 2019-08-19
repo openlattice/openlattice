@@ -22,7 +22,7 @@
 package com.openlattice.linking.graph
 
 import com.openlattice.data.EntityDataKey
-import com.openlattice.data.storage.addLinkForSingleEntitySql
+import com.openlattice.data.storage.createOrUpdateLinkFromEntity
 import com.openlattice.data.storage.getPartitionsInfo
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.linking.EntityKeyPair
@@ -89,10 +89,10 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource, private val
         return PostgresIterable(Supplier {
             val connection = hds.connection
             val ps = connection.prepareStatement(ENTITY_KEY_IDS_NEEDING_LINKING)
-            val arr = PostgresArrays.createUuidArray(connection, entitySetIds)
+            val esidsArr = PostgresArrays.createUuidArray(connection, entitySetIds)
             val partitions = getPartitionsAsPGArray(connection, entitySetIds)
             ps.setArray(1, partitions)
-            ps.setArray(2, arr)
+            ps.setArray(2, esidsArr)
             ps.setInt(3, limit)
             val rs = ps.executeQuery()
             StatementHolder(connection, ps, rs)
@@ -148,11 +148,11 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource, private val
                 }
     }
 
-    override fun createOrUpdateLink( linkingId: UUID, entitySetId: UUID, entityKeyId: UUID, cluster: Map<UUID, LinkedHashSet<UUID>> ) {
+    override fun createOrUpdateLink( linkingId: UUID, cluster: Map<UUID, LinkedHashSet<UUID>> ) {
         val version = System.currentTimeMillis()
         hds.connection.use { connection ->
-            connection.prepareStatement( addLinkForSingleEntitySql() ).use { ps ->
-                cluster.forEach { (esid, ekids ) ->
+            connection.prepareStatement( createOrUpdateLinkFromEntity() ).use { ps ->
+                cluster.forEach { ( esid, ekids ) ->
                     val partitionsForEsid = getPartitionsAsPGArray( connection, esid )
                     ekids.forEach { ekid ->
                         ps.setObject(1, linkingId )

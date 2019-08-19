@@ -227,12 +227,12 @@ fun optionalWhereClauses(
 }
 
 fun optionalWhereClausesSingleEdk(
-        idsPresent: Boolean = true,
+        idPresent: Boolean = true,
         partitionsPresent: Boolean = true,
-        entitySetsPresent: Boolean = true
+        entitySetPresent: Boolean = true
 ): String {
-    val entitySetClause = if (entitySetsPresent) "${ENTITY_SET_ID.name} = ?" else ""
-    val idsClause = if (idsPresent) "${ID_VALUE.name} = ?" else ""
+    val entitySetClause = if (entitySetPresent) "${ENTITY_SET_ID.name} = ?" else ""
+    val idsClause = if (idPresent) "${ID_VALUE.name} = ?" else ""
     val partitionClause = if (partitionsPresent) "${PARTITION.name} = ANY(?)" else ""
     val versionsClause = "${VERSION.name} > 0 "
 
@@ -578,11 +578,11 @@ fun getMergedDataColumnName(datatype: PostgresDatatype): String {
  * 3.  PARTITION
  * 4.  PROPERTY_TYPE_ID
  * 5.  HASH
- * 6.  LAST_WRITE
- * 7.  VERSION,
- * 8.  VERSIONS
- * 9.  PARTITIONS_VERSION
- * 10. Value Column
+ *     LAST_WRITE = now()
+ * 6.  VERSION,
+ * 7.  VERSIONS
+ * 8.  PARTITIONS_VERSION
+ * 9.  Value Column
  */
 fun upsertPropertyValueSql(propertyType: PropertyType): String {
     val insertColumn = getColumnDefinition(propertyType.postgresIndexType, propertyType.datatype)
@@ -598,15 +598,20 @@ fun upsertPropertyValueSql(propertyType: PropertyType): String {
             PARTITIONS_VERSION
     ).joinToString(",") { it.name }
     return "INSERT INTO ${DATA.name} ($metadataColumnsSql,${insertColumn.name}) VALUES (?,?,?,?,?,now(),?,?,?,?) " +
-            "ON CONFLICT (${PARTITION.name},${ENTITY_SET_ID.name},${PROPERTY_TYPE_ID.name},${ID_VALUE.name}, ${HASH.name}, ${PARTITIONS_VERSION.name}) DO UPDATE " +
-            "SET ${VERSIONS.name} = ${DATA.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
+            "ON CONFLICT (${PARTITION.name},${ENTITY_SET_ID.name},${PROPERTY_TYPE_ID.name},${ID_VALUE.name}, ${HASH.name}, ${PARTITIONS_VERSION.name}) " +
+            "DO UPDATE SET " +
+            "${VERSIONS.name} = ${DATA.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
             "${LAST_WRITE.name} = GREATEST(${DATA.name}.${LAST_WRITE.name},EXCLUDED.${LAST_WRITE.name}), " +
             "${PARTITIONS_VERSION.name} = EXCLUDED.${PARTITIONS_VERSION.name}, " +
-            "${VERSION.name} = CASE WHEN abs(${DATA.name}.${VERSION.name}) < EXCLUDED.${VERSION.name} THEN EXCLUDED.${VERSION.name} " +
-            "ELSE ${DATA.name}.${VERSION.name} END"
+            "${VERSION.name} = CASE " +
+                "WHEN abs(${DATA.name}.${VERSION.name}) < EXCLUDED.${VERSION.name} " +
+                "THEN EXCLUDED.${VERSION.name} " +
+                "ELSE ${DATA.name}.${VERSION.name} " +
+            "END"
 }
 
 /**
+ * Used to upsert a link from linker
  * This function generates preparable sql with the following bind order:
  *
  * Insert into:
@@ -619,18 +624,19 @@ fun upsertPropertyValueSql(propertyType: PropertyType): String {
  * 5. PARTITION: partition(s) (array)
  *
  */
-fun addLinkForSingleEntitySql(): String {
+fun createOrUpdateLinkFromEntity(): String {
     val existingColumnsUpdatedForLinking = PostgresDataTables.dataTableColumns.joinToString(",") {
         when( it ) {
             VERSION, ID_VALUE   -> "?"
-            ORIGIN_ID           -> "id"
+            ORIGIN_ID           -> ID_VALUE.name
             LAST_WRITE          -> "now()"
             else                -> it.name
         }
     }
     return "INSERT INTO ${DATA.name} ($dataTableColumnsSql) " +
             "SELECT $existingColumnsUpdatedForLinking " +
-            "FROM ${DATA.name} ${optionalWhereClausesSingleEdk( idsPresent = true, partitionsPresent = true, entitySetsPresent = true )} " +
+            "FROM ${DATA.name} " +
+            "${optionalWhereClausesSingleEdk( idPresent = true, partitionsPresent = true, entitySetPresent = true )} " +
             "ON CONFLICT (${ENTITY_SET_ID.name},${ID_VALUE.name},${ORIGIN_ID.name},${PARTITION.name},${PROPERTY_TYPE_ID.name},${HASH.name},${PARTITIONS_VERSION.name})" +
                 "DO UPDATE SET " +
                 "${VERSIONS.name} = ${DATA.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
