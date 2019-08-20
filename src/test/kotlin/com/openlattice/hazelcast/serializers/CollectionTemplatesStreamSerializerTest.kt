@@ -2,7 +2,8 @@ package com.openlattice.hazelcast.serializers
 
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest
 import com.openlattice.collections.CollectionTemplates
-import com.openlattice.mapstores.TestDataFactory
+import org.apache.commons.lang3.RandomUtils
+import java.util.*
 
 class CollectionTemplatesStreamSerializerTest : AbstractStreamSerializerTest<CollectionTemplatesStreamSerializer, CollectionTemplates>() {
 
@@ -11,6 +12,20 @@ class CollectionTemplatesStreamSerializerTest : AbstractStreamSerializerTest<Col
     }
 
     override fun createInput(): CollectionTemplates {
-        return TestDataFactory.collectionTemplates()
+        val templates = mutableMapOf<UUID, MutableMap<UUID, UUID>>()
+
+        for (i in 0..4) {
+
+            val size = RandomUtils.nextInt(1, 5)
+            val map = mutableMapOf<UUID, UUID>()
+
+            for (j in 0 until size) {
+                map[UUID.randomUUID()] = UUID.randomUUID()
+            }
+
+            templates[UUID.randomUUID()] = map
+        }
+
+        return CollectionTemplates(templates)
     }
 }

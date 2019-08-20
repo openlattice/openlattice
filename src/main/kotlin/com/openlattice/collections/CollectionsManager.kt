@@ -14,7 +14,6 @@ import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.collections.aggregators.EntitySetCollectionConfigAggregator
 import com.openlattice.collections.mapstores.ENTITY_SET_COLLECTION_ID_INDEX
 import com.openlattice.collections.mapstores.ENTITY_TYPE_COLLECTION_ID_INDEX
-import com.openlattice.collections.mapstores.EntitySetCollectionConfigMapstore
 import com.openlattice.collections.mapstores.ID_INDEX
 import com.openlattice.collections.processors.AddPairToEntityTypeCollectionTemplateProcessor
 import com.openlattice.collections.processors.RemoveKeyFromEntityTypeCollectionTemplateProcessor
@@ -23,8 +22,6 @@ import com.openlattice.collections.processors.UpdateEntityTypeCollectionMetadata
 import com.openlattice.controllers.exceptions.ForbiddenException
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.EntitySet
-import com.openlattice.edm.*
-import com.openlattice.collections.CollectionTemplateType
 import com.openlattice.edm.events.EntitySetCollectionCreatedEvent
 import com.openlattice.edm.events.EntitySetCollectionDeletedEvent
 import com.openlattice.edm.events.EntityTypeCollectionCreatedEvent
@@ -35,7 +32,6 @@ import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.hazelcast.HazelcastMap
 import org.springframework.stereotype.Service
 import java.util.*
-import javax.inject.Inject
 
 @Service
 class CollectionsManager(
