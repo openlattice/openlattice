@@ -382,6 +382,25 @@ internal val updateVersionsForEntitySet = "UPDATE ${IDS.name} " +
         "WHERE ${ENTITY_SET_ID.name} = ? "
 
 /**
+ * Preparable SQL that upserts a version for all entities in a given entity set in [IDS]
+ *
+ * The following bind order is expected:
+ *
+ * 1. version
+ * 2. version
+ * 3. version
+ * 4. entity set id
+ * 5. entity key ids
+ * 6. partition
+ * 7. partition version
+ */
+internal val updateVersionsForEntitiesInEntitySet = "$updateVersionsForEntitySet " +
+        "AND ${ID_VALUE.name} = ANY(?) " +
+        "AND ${PARTITION.name} = ANY(?) " +
+        "AND ${PARTITIONS_VERSION.name} = ? "
+
+
+/**
  * Preparable SQL that updates a version for all properties in a given entity set in [DATA]
  *
  * The following bind order is expected:
@@ -400,25 +419,6 @@ internal val updateVersionsForPropertiesInEntitySet = "UPDATE ${DATA.name} " +
                 "ELSE ${DATA.name}.${VERSION.name} " +
             "END " +
         "WHERE ${ENTITY_SET_ID.name} = ? "
-
-
-/**
- * Preparable SQL that upserts a version for all entities in a given entity set in [IDS]
- *
- * The following bind order is expected:
- *
- * 1. version
- * 2. version
- * 3. version
- * 4. entity set id
- * 5. entity key ids
- * 6. partition
- * 7. partition version
- */
-internal val updateVersionsForEntitiesInEntitySet = "$updateVersionsForEntitySet " +
-        "AND ${ID_VALUE.name} = ANY(?) " +
-        "AND ${PARTITION.name} = ANY(?) " +
-        "AND ${PARTITIONS_VERSION.name} = ?"
 
 /**
  * Preparable SQL thatupserts a version for all properties in a given entity set in [PostgresTable.DATA]
@@ -445,13 +445,22 @@ internal val updateVersionsForPropertyTypesInEntitySet = "$updateVersionsForProp
  * 4. entity set id
  * 5. property type ids
  * 6. entity key ids
+ *    IF LINKING    checks against ORIGIN_ID
+ *    ELSE          checks against ID column
  * 7. partitions
  * 8. partition version
  */
-internal val updateVersionsForPropertyTypesInEntitiesInEntitySet = "$updateVersionsForPropertyTypesInEntitySet " +
-        "AND ${ID_VALUE.name} = ANY(?) " +
-        "AND ${PARTITION.name} = ANY(?) " +
-        "AND ${PARTITIONS_VERSION.name} = ? "
+internal fun updateVersionsForPropertyTypesInEntitiesInEntitySet( linking: Boolean = false ): String {
+    val idCol = if ( linking ){
+        ORIGIN_ID.name
+    } else {
+        ID_VALUE.name
+    }
+    return "$updateVersionsForPropertyTypesInEntitySet " +
+            "AND $idCol = ANY(?) " +
+            "AND ${PARTITION.name} = ANY(?) " +
+            "AND ${PARTITIONS_VERSION.name} = ? "
+}
 
 /**
  * Preparable SQL updates a version for all property values in a given entity set in [PostgresTable.DATA]
@@ -464,13 +473,15 @@ internal val updateVersionsForPropertyTypesInEntitiesInEntitySet = "$updateVersi
  * 4. entity set id
  * 5. property type id
  * 6. entity key ids
+ *    IF LINKING    checks against ORIGIN_ID
+ *    ELSE          checks against ID column
  * 7. partitions
  * 8. partition version
  * 9. value
  */
-internal val updateVersionsForPropertyValuesInEntitiesInEntitySet = "$updateVersionsForPropertyTypesInEntitiesInEntitySet " +
-        "AND ${HASH.name} = ?"
-
+internal fun updateVersionsForPropertyValuesInEntitiesInEntitySet( linking: Boolean = false ): String {
+    return "${updateVersionsForPropertyTypesInEntitiesInEntitySet( linking )} AND ${HASH.name} = ? "
+}
 
 /**
  * Preparable SQL deletes a given property in a given entity set in [PostgresTable.IDS]
