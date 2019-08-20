@@ -32,6 +32,7 @@ import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.hazelcast.HazelcastMap
 import org.springframework.stereotype.Service
 import java.util.*
+import java.util.concurrent.ConcurrentMap
 
 @Service
 class CollectionsManager(
@@ -389,7 +390,7 @@ class CollectionsManager(
         return nameAttempt
     }
 
-    private fun getTemplatesForIds(ids: Set<UUID>): MutableMap<UUID, MutableMap<UUID, UUID>> {
+    private fun getTemplatesForIds(ids: Set<UUID>): ConcurrentMap<UUID, ConcurrentMap<UUID, UUID>> {
         return entitySetCollectionConfig.aggregate(
                 EntitySetCollectionConfigAggregator(CollectionTemplates()),
                 entitySetCollectionIdsPredicate(ids) as Predicate<CollectionTemplateKey, UUID>).templates
