@@ -92,9 +92,7 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
                     " can access other users' access rights." );
         }
 
-        requestsByActionType.entrySet().forEach( entry -> {
-            Action action = entry.getKey();
-            List<Acl> acls = entry.getValue();
+        requestsByActionType.forEach( ( action, acls ) -> {
 
             switch ( action ) {
                 case ADD:
