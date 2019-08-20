@@ -104,31 +104,32 @@ class AssemblerConnectionManager(
         fun entitySetNameTableName(entitySetName: String): String {
             return "$MATERIALIZED_VIEWS_SCHEMA.${quote(entitySetName)}"
         }
+
+        @JvmStatic
+        fun connect(dbName: String, config: Properties, useSsl: Boolean): HikariDataSource {
+            config.computeIfPresent("jdbcUrl") { _, jdbcUrl ->
+                "${(jdbcUrl as String).removeSuffix(
+                        "/"
+                )}/$dbName" + if (useSsl) {
+                    "?sslmode=require"
+                } else {
+                    ""
+                }
+            }
+            return HikariDataSource(HikariConfig(config))
+        }
     }
 
-    fun connect(dbname: String): HikariDataSource {
-        return connect(dbname, assemblerConfiguration.server.clone() as Properties)
+    fun connect(dbName: String): HikariDataSource {
+        return connect(dbName, assemblerConfiguration.server.clone() as Properties, assemblerConfiguration.ssl)
     }
 
-    fun connect(dbname: String, account: MaterializedViewAccount): HikariDataSource {
+    fun connect(dbName: String, account: MaterializedViewAccount): HikariDataSource {
         val config = assemblerConfiguration.server.clone() as Properties
         config["username"] = account.username
         config["password"] = account.credential
 
-        return connect(dbname, config)
-    }
-
-    fun connect(dbname: String, config: Properties): HikariDataSource {
-        config.computeIfPresent("jdbcUrl") { _, jdbcUrl ->
-            "${(jdbcUrl as String).removeSuffix(
-                    "/"
-            )}/$dbname" + if (assemblerConfiguration.ssl) {
-                "?sslmode=require"
-            } else {
-                ""
-            }
-        }
-        return HikariDataSource(HikariConfig(config))
+        return connect(dbName, config, assemblerConfiguration.ssl)
     }
 
     @Subscribe
@@ -181,8 +182,7 @@ class AssemblerConnectionManager(
     }
 
     private fun configureOrganizationUser(organizationId: UUID, dataSource: HikariDataSource) {
-        val unquotedDbAdminUser = buildOrganizationUserId(organizationId)
-        val dbOrgUser = quote(unquotedDbAdminUser)
+        val dbOrgUser = quote(buildOrganizationUserId(organizationId))
         dataSource.connection.createStatement().use { statement ->
             //Allow usage and create on schema openlattice to organization user
             statement.execute("GRANT USAGE, CREATE ON SCHEMA $MATERIALIZED_VIEWS_SCHEMA TO $dbOrgUser")
