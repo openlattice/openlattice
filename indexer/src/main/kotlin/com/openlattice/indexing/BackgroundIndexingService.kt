@@ -278,28 +278,25 @@ class BackgroundIndexingService(
             )
         }
 
-        val indexCount: Int
-
-        if (entitiesById.isNotEmpty() &&
-                elasticsearchApi.createBulkEntityData(entitySet.entityTypeId, entitySet.id, entitiesById)) {
-            indexCount = if (markAsIndexed) {
-                dataManager.markAsIndexed(mapOf(entitySet.id to batchToIndex), false)
-            } else {
-                batchToIndex.size
-            }
-
-            logger.info(
-                    "Indexed batch of {} elements for {} ({}) in {} ms",
-                    indexCount,
-                    entitySet.name,
-                    entitySet.id,
-                    esb.elapsed(TimeUnit.MILLISECONDS)
-            )
-        } else {
-            indexCount = 0
+        if (entitiesById.isEmpty() || !elasticsearchApi.createBulkEntityData(entitySet.entityTypeId, entitySet.id, entitiesById)) {
             logger.error("Failed to index elements with entitiesById: {}", entitiesById)
-
+            return 0
         }
+
+        val indexCount = if (markAsIndexed) {
+            dataManager.markAsIndexed(mapOf(entitySet.id to batchToIndex), false)
+        } else {
+            batchToIndex.size
+        }
+
+        logger.info(
+                "Indexed batch of {} elements for {} ({}) in {} ms",
+                indexCount,
+                entitySet.name,
+                entitySet.id,
+                esb.elapsed(TimeUnit.MILLISECONDS)
+        )
+
         return indexCount
 
     }
