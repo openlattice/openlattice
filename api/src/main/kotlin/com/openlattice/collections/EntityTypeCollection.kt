@@ -4,14 +4,12 @@ package com.openlattice.collections
 import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.google.common.base.Preconditions.checkArgument
 import com.openlattice.authorization.securable.AbstractSchemaAssociatedSecurableType
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.client.serialization.SerializationConstants
 import org.apache.olingo.commons.api.edm.FullQualifiedName
-
 import java.util.*
-
-import com.google.common.base.Preconditions.checkArgument
 
 class EntityTypeCollection
 
@@ -41,14 +39,14 @@ constructor(
         /** Validate template objects  */
         val idsSeen = HashSet<UUID>(template.size)
         val namesSeen = HashSet<String>(template.size)
-        template.forEach { (id1, name) ->
-            checkArgument(!idsSeen.contains(id1),
+        template.forEach {
+            checkArgument(!idsSeen.contains(it.id),
                     "EntityTypeCollection template type ids must be distinct.")
-            checkArgument(!namesSeen.contains(name),
+            checkArgument(!namesSeen.contains(it.name),
                     "EntityTypeCollection template type names must be distinct.")
 
-            idsSeen.add(id1)
-            namesSeen.add(name)
+            idsSeen.add(it.id)
+            namesSeen.add(it.name)
         }
     }
 
@@ -66,11 +64,11 @@ constructor(
     }
 
     fun removeTemplateTypeFromTemplate(id: UUID) {
-        template.removeIf { (id1) -> id1 == id }
+        template.removeIf { it.id == id }
     }
 
     fun removeTemplateTypeFromTemplate(name: String) {
-        template.removeIf { (_, name1) -> name1 == name }
+        template.removeIf { it.name == name }
     }
 
     @JsonIgnore
