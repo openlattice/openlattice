@@ -66,6 +66,15 @@ public interface AuthorizationManager {
             OffsetDateTime expirationDate );
 
     @Timed
+    void addPermissions( List<Acl> acls );
+
+    @Timed
+    void removePermissions( List<Acl> acls );
+
+    @Timed
+    void setPermissions( List<Acl> acls );
+
+    @Timed
     void removePermission(
             AclKey aclKeys,
             Principal principal,
@@ -132,7 +141,8 @@ public interface AuthorizationManager {
 
     /**
      * Returns all Principals, which have all the specified permissions on the securable object
-     * @param key The securable object
+     *
+     * @param key         The securable object
      * @param permissions Set of permission to check for
      */
     Set<Principal> getAuthorizedPrincipalsOnSecurableObject( AclKey key, EnumSet<Permission> permissions );
