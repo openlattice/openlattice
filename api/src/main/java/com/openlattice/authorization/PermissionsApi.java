@@ -40,19 +40,18 @@ public interface PermissionsApi {
     String UPDATE = "/update";
 
     /**
-     * Add, removes, or sets the ace for a particular acl key. Successful only if user is the owner of acl key.
+     * Adds, removes, or sets the ace for a particular acl key. Successful only if user is the owner of acl key.
      *
      * @param req The acl key, the principals, and the aces to set for that particular ace key.
-     * @return The aces for the acl key, after applying the request changes.
      */
     @PATCH( BASE )
     Void updateAcl( @Body AclData req );
 
     /**
-     * Add, removes, or sets the ace for a particular set of acl keys. Successful only if user is the owner of all acl keys.
+     * Adds, removes, or sets the ace for a particular set of acl keys. Successful only if user is the owner of all acl keys.
      *
      * @param req The acl key, the principals, and the aces to set for that particular ace key.
-     * @return The aces for the acl key, after applying the request changes.
+     * @return Void
      */
     @PATCH( BASE + UPDATE )
     Void updateAcls( @Body List<AclData> req );
@@ -61,7 +60,6 @@ public interface PermissionsApi {
      * Retrieves the acl for a particular acl key. Only return if user is the owner of acl key.
      *
      * @param aclKey The acl key.
-     * @return The aces for the requested acl key.
      */
     @POST( BASE )
     Acl getAcl( @Body AclKey aclKey );
