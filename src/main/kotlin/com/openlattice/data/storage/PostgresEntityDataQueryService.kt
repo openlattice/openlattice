@@ -718,15 +718,9 @@ class PostgresEntityDataQueryService(
             propertyTypesToTombstone: Collection<PropertyType>
     ): WriteEvent {
         val tombstoneVersion = -System.currentTimeMillis()
-        val propertyTypeIdsArr = PostgresArrays.createUuidArray(conn, propertyTypesToTombstone.map { it.id })
 
         val numUpdated = conn.prepareStatement(updateVersionsForPropertyTypesInEntitySet).use { ps ->
-            ps.setLong(1, tombstoneVersion)
-            ps.setLong(2, tombstoneVersion)
-            ps.setLong(3, tombstoneVersion)
-            ps.setObject(4, entitySetId)
-            ps.setArray(5, propertyTypeIdsArr)
-            ps.executeUpdate()
+            buildTombstoneQuery( conn, ps, entitySetId, propertyTypesToTombstone.map{ it.id }, tombstoneVersion ).executeUpdate()
         }
 
         return WriteEvent(tombstoneVersion, numUpdated)
@@ -784,25 +778,13 @@ class PostgresEntityDataQueryService(
             conn: Connection,
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
-            propertyTypesToTombstone: Collection<PropertyType>,
-            partitionsInfo: PartitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
+            propertyTypesToTombstone: Collection<PropertyType>
     ): WriteEvent {
-        val partitions = partitionsInfo.partitions.toList()
         val tombstoneVersion = -System.currentTimeMillis()
-        val propertyTypeIdsArr = PostgresArrays.createUuidArray(conn, propertyTypesToTombstone.map { it.id })
-        val entityKeyIdsArr = PostgresArrays.createUuidArray(conn, entityKeyIds)
-        val partitionsArr = PostgresArrays.createIntArray(conn, entityKeyIds.map { getPartition(it, partitions) })
-        val partitionsVersion = partitionsInfo.partitionsVersion
+
         val numUpdated = conn.prepareStatement(updateVersionsForPropertyTypesInEntitiesInEntitySet).use { ps ->
-            ps.setLong(1, tombstoneVersion)
-            ps.setLong(2, tombstoneVersion)
-            ps.setLong(3, tombstoneVersion)
-            ps.setObject(4, entitySetId)
-            ps.setArray(5, entityKeyIdsArr)
-            ps.setArray(6, partitionsArr)
-            ps.setInt(7, partitionsVersion)
-            ps.setArray(8, propertyTypeIdsArr)
-            ps.executeUpdate()
+            val prepStatement = buildTombstoneQuery( conn, ps, entitySetId, propertyTypesToTombstone.map{ it.id }, tombstoneVersion )
+            withEkidsAndPartitions( conn, prepStatement, entityKeyIds, entitySetId ).executeUpdate()
         }
 
         return WriteEvent(tombstoneVersion, numUpdated)
@@ -827,14 +809,10 @@ class PostgresEntityDataQueryService(
     private fun tombstone(
             connection: Connection,
             entitySetId: UUID,
-            entities: Map<UUID, Map<UUID, Set<Map<ByteBuffer, Any>>>>,
-            partitionsInfo: PartitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
+            entities: Map<UUID, Map<UUID, Set<Map<ByteBuffer, Any>>>>
     ): WriteEvent {
         val entityKeyIds = entities.keys
-        val partitions = partitionsInfo.partitions.toList()
         val tombstoneVersion = -System.currentTimeMillis()
-        val entityKeyIdsArr = PostgresArrays.createUuidArray(connection, entityKeyIds)
-        val partitionsArr = PostgresArrays.createIntArray(connection, entityKeyIds.map { getPartition(it, partitions) })
 
         val updatePropertyValueVersion = connection.prepareStatement(
                 updateVersionsForPropertyValuesInEntitiesInEntitySet
@@ -842,35 +820,63 @@ class PostgresEntityDataQueryService(
 
         entities.forEach { (_, entity) ->
             entity.forEach { (propertyTypeId, updates) ->
+                val propertyTypeIdsArr = PostgresArrays.createUuidArray(connection, propertyTypeId)
                 //TODO: https://github.com/pgjdbc/pgjdbc/issues/936
                 //TODO: https://github.com/pgjdbc/pgjdbc/pull/1194
                 //TODO: https://github.com/pgjdbc/pgjdbc/pull/1044
                 //Once above issues are resolved this can be done as a single query WHERE HASH = ANY(?)
+
                 updates
                         .flatMap { it.keys }
                         .forEach { update ->
-                            updatePropertyValueVersion.setLong(1, tombstoneVersion)
-                            updatePropertyValueVersion.setLong(2, tombstoneVersion)
-                            updatePropertyValueVersion.setLong(3, tombstoneVersion)
-                            updatePropertyValueVersion.setObject(4, entitySetId)
-                            updatePropertyValueVersion.setArray(5, entityKeyIdsArr)
-                            updatePropertyValueVersion.setArray(6, partitionsArr)
-                            updatePropertyValueVersion.setInt(7, partitionsInfo.partitionsVersion)
-                            updatePropertyValueVersion.setObject(8, propertyTypeId)
-                            updatePropertyValueVersion.setBytes(9, update.array())
-                            updatePropertyValueVersion.addBatch()
+                            var prepStatement = buildTombstoneQuery( connection, updatePropertyValueVersion, entitySetId, listOf(propertyTypeId), tombstoneVersion )
+                            prepStatement = withEkidsAndPartitions( connection, prepStatement, entityKeyIds, entitySetId )
+                            prepStatement.setBytes(9, update.array())
+                            prepStatement.addBatch()
                         }
-
-
             }
         }
         val numUpdated = updatePropertyValueVersion.executeUpdate()
 
-
-
-
         return WriteEvent(tombstoneVersion, numUpdated)
     }
+
+    private fun buildTombstoneQuery(
+            connection: Connection,
+            ps: PreparedStatement,
+            entitySetId: UUID,
+            propertyTypesToTombstone: Collection<UUID>,
+            tombstoneVersion: Long
+    ): PreparedStatement {
+        val propertyTypeIdsArr = PostgresArrays.createUuidArray(connection, propertyTypesToTombstone )
+
+        ps.setLong(1, tombstoneVersion)
+        ps.setLong(2, tombstoneVersion)
+        ps.setLong(3, tombstoneVersion)
+        ps.setObject(4, entitySetId)
+        ps.setArray(5, propertyTypeIdsArr)
+        return ps
+    }
+
+    private fun withEkidsAndPartitions(
+            connection: Connection,
+            ps: PreparedStatement,
+            entityKeyIds: Set<UUID>,
+            entitySetId: UUID,
+            partitionsInfo: PartitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
+    ): PreparedStatement {
+        val partitions = partitionsInfo.partitions.toList()
+        val partitionsVersion = partitionsInfo.partitionsVersion
+        val entityKeyIdsArr = PostgresArrays.createUuidArray(connection, entityKeyIds)
+        val partitionsArr = PostgresArrays.createIntArray(connection, entityKeyIds.map { getPartition(it, partitions) })
+
+        ps.setArray(6, entityKeyIdsArr)
+        ps.setArray(7, partitionsArr)
+        ps.setInt(8, partitionsVersion)
+
+        return ps
+    }
+
 }
 
 
