@@ -24,7 +24,6 @@ import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.AbstractSecurableType;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.collections.CollectionTemplateType;
-import com.openlattice.collections.CollectionTemplates;
 import com.openlattice.collections.EntitySetCollection;
 import com.openlattice.collections.EntityTypeCollection;
 import com.openlattice.data.EntityDataKey;
@@ -583,24 +582,6 @@ public final class TestDataFactory {
                         randomAlphanumeric( 5 ) ),
                 UUID.randomUUID()
         );
-    }
-
-    public static CollectionTemplates collectionTemplates() {
-        Map<UUID, Map<UUID, UUID>> templates = Maps.newHashMap();
-
-        for ( int i = 0; i < 5; i++ ) {
-
-            int size = RandomUtils.nextInt( 1, 5 );
-            Map<UUID, UUID> map = Maps.newHashMap();
-
-            for ( int j = 0; j < size; j++ ) {
-                map.put( UUID.randomUUID(), UUID.randomUUID() );
-            }
-
-            templates.put( UUID.randomUUID(), map );
-        }
-
-        return new CollectionTemplates( templates );
     }
 
 }
