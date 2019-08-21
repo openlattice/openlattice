@@ -752,7 +752,7 @@ class PostgresEntityDataQueryService(
         val partitionsVersion = partitionsInfo.partitionsVersion
         val partitionsArr = PostgresArrays.createIntArray(conn, entityKeyIds.map { getPartition(it, partitionsInfo.partitions.toList()) })
 
-        val numUpdated = conn.prepareStatement(updateVersionsForEntitiesInEntitySet).use { ps ->
+        val numUpdated = conn.prepareStatement(updateVersionsForEntitiesInEntitySet ).use { ps ->
             ps.setLong(1, tombstoneVersion)
             ps.setLong(2, tombstoneVersion)
             ps.setLong(3, tombstoneVersion)
@@ -763,7 +763,7 @@ class PostgresEntityDataQueryService(
             ps.executeUpdate()
         }
 
-        return WriteEvent(tombstoneVersion, numUpdated)
+        return WriteEvent(tombstoneVersion, numUpdated )
     }
 
     /**
@@ -791,7 +791,6 @@ class PostgresEntityDataQueryService(
         val propertyTypeIdsArr = PostgresArrays.createUuidArray(conn, propertyTypesToTombstone.map{ it.id } )
         val entityKeyIdsArr = PostgresArrays.createUuidArray(conn, entityKeyIds)
 
-        val partitionsVersion = partitionsInfo.partitionsVersion
         val partitionsArr = PostgresArrays.createIntArray(conn, entityKeyIds.map { getPartition(it, partitionsInfo.partitions.toList() ) })
 
         val numUpdated = conn.prepareStatement( updateVersionsForPropertyTypesInEntitiesInEntitySet() ).use { ps ->
@@ -802,7 +801,7 @@ class PostgresEntityDataQueryService(
             ps.setArray(5, propertyTypeIdsArr)
             ps.setArray(6, entityKeyIdsArr)
             ps.setArray(7, partitionsArr)
-            ps.setInt(8, partitionsVersion)
+            ps.setInt(8, partitionsInfo.partitionsVersion)
             ps.executeUpdate()
         }
 
@@ -814,7 +813,7 @@ class PostgresEntityDataQueryService(
             ps.setArray(5, propertyTypeIdsArr)
             ps.setArray(6, entityKeyIdsArr)
             ps.setArray(7, partitionsArr)
-            ps.setInt(8, partitionsVersion)
+            ps.setInt(8, partitionsInfo.partitionsVersion)
             ps.executeUpdate()
         }
 
