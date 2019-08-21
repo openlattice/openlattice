@@ -1,8 +1,6 @@
 package com.openlattice.search
 
-import com.google.common.collect.ImmutableList
 import com.google.common.collect.ImmutableSet
-import org.apache.olingo.commons.api.edm.EdmPrimitiveType
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 
 private val ALLOWED_FIELD_DATATYPES = ImmutableSet.of(
