@@ -41,9 +41,7 @@ class UpdateEntitySetCollectionMetadataProcessor(val update: MetadataUpdate):
 
         other as UpdateEntitySetCollectionMetadataProcessor
 
-        if (update != other.update) return false
-
-        return true
+        return update == other.update
     }
 
     override fun hashCode(): Int {

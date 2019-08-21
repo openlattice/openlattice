@@ -21,9 +21,7 @@ class UpdateEntitySetCollectionTemplateProcessor(val template: MutableMap<UUID, 
 
         other as UpdateEntitySetCollectionTemplateProcessor
 
-        if (template != other.template) return false
-
-        return true
+        return template == other.template
     }
 
     override fun hashCode(): Int {
