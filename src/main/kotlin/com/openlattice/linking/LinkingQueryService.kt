@@ -32,6 +32,15 @@ import java.util.*
  */
 interface LinkingQueryService {
 
+    @Deprecated("Unused")
+    fun getNeighborhoodScores(blockKey: EntityDataKey): Map<EntityDataKey, Double>
+    @Deprecated("Unused")
+    fun deleteMatchScore(blockKey: EntityDataKey, blockElement: EntityDataKey): Int
+    @Deprecated("Unused")
+    fun getOrderedBlocks(): PostgresIterable<Pair<EntityDataKey, Long>>
+    @Deprecated("Unused")
+    fun getClustersBySize(): PostgresIterable<Pair<EntityDataKey, Double>>
+
     /**
      * Inserts the results scoring pairs of elements within a cluster to persistent storage. The initial cluster usually
      * consists of all scored pairs within a single block returned by the [Blocker].
@@ -45,14 +54,11 @@ interface LinkingQueryService {
             clusterId: UUID,
             scores: Map<EntityDataKey, Map<EntityDataKey, Double>>): Int
 
-    fun getNeighborhoodScores(blockKey: EntityDataKey): Map<EntityDataKey, Double>
-    fun deleteMatchScore(blockKey: EntityDataKey, blockElement: EntityDataKey): Int
 
     fun getClusterFromLinkingId(linkingId: UUID): Map<EntityDataKey, Map<EntityDataKey, Double>>
 
-    fun getOrderedBlocks(): PostgresIterable<Pair<EntityDataKey, Long>>
-    fun getClustersBySize(): PostgresIterable<Pair<EntityDataKey, Double>>
     fun deleteNeighborhood(entity: EntityDataKey, positiveFeedbacks: List<EntityKeyPair>): Int
+
     fun deleteNeighborhoods(entitySetId: UUID, entityKeyIds: Set<UUID>): Int
 
     /**
@@ -67,7 +73,9 @@ interface LinkingQueryService {
     fun updateIdsTable(clusterId: UUID, newMember: EntityDataKey): Int
 
     fun getEntitiesNeedingLinking(entitySetId: UUID, limit: Int = 10_000): PostgresIterable<EntityDataKey>
+
     fun getEntitiesNotLinked(entitySetIds: Set<UUID>, limit: Int = 10_000): PostgresIterable<Pair<UUID, UUID>>
+
     fun getLinkableEntitySets(
             linkableEntityTypeIds: Set<UUID>,
             entitySetBlacklist: Set<UUID>,
