@@ -108,13 +108,10 @@ public class SearchConstraintsStreamSerializer extends Serializer<SearchConstrai
         SortDefinition sortDefinition = object.getSortDefinition();
         out.writeString( sortDefinition.getSortType().toString() );
         out.writeBoolean( sortDefinition.isDescending() );
-        OptionalStreamSerializers.kryoSerialize( out,
-                Optional.ofNullable( sortDefinition.getPropertyTypeId() ),
-                SearchConstraintsStreamSerializer::writeUUID );
         OptionalStreamSerializers
-                .kryoSerialize( out, Optional.ofNullable( sortDefinition.getLatitude() ), Output::writeDouble );
-        OptionalStreamSerializers
-                .kryoSerialize( out, Optional.ofNullable( sortDefinition.getLongitude() ), Output::writeDouble );
+                .kryoSerialize( out, sortDefinition.getPropertyTypeId(), SearchConstraintsStreamSerializer::writeUUID );
+        OptionalStreamSerializers.kryoSerialize( out, sortDefinition.getLatitude(), Output::writeDouble );
+        OptionalStreamSerializers.kryoSerialize( out, sortDefinition.getLongitude(), Output::writeDouble );
     }
 
     public static SearchConstraints deserialize( Input in ) {
@@ -218,10 +215,10 @@ public class SearchConstraintsStreamSerializer extends Serializer<SearchConstrai
 
         SortType sortType = SortType.valueOf( in.readString() );
         boolean isDescending = in.readBoolean();
-        UUID propertyTypeId = OptionalStreamSerializers
-                .kryoDeserialize( in, SearchConstraintsStreamSerializer::readUUID ).orElse( null );
-        Double latitude = OptionalStreamSerializers.kryoDeserialize( in, Input::readDouble ).orElse( null );
-        Double longitude = OptionalStreamSerializers.kryoDeserialize( in, Input::readDouble ).orElse( null );
+        Optional<UUID> propertyTypeId = OptionalStreamSerializers
+                .kryoDeserialize( in, SearchConstraintsStreamSerializer::readUUID );
+        Optional<Double> latitude = OptionalStreamSerializers.kryoDeserialize( in, Input::readDouble );
+        Optional<Double> longitude = OptionalStreamSerializers.kryoDeserialize( in, Input::readDouble );
 
         Optional<SortDefinition> sortDefinition = Optional
                 .of( new SortDefinition( sortType, isDescending, propertyTypeId, latitude, longitude ) );
