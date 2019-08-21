@@ -31,7 +31,6 @@ import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.query.Predicates;
-import com.openlattice.assembler.events.MaterializedEntitySetDataChangeEvent;
 import com.openlattice.assembler.events.MaterializedEntitySetEdmChangeEvent;
 import com.openlattice.auditing.AuditRecordEntitySetsManager;
 import com.openlattice.auditing.AuditingConfiguration;
@@ -391,7 +390,7 @@ public class EdmService implements EdmManager {
         final int startSize = linkingEntitySet.getLinkedEntitySets().size();
         final EntitySet updatedLinkingEntitySet = (EntitySet) entitySets.executeOnKey(
                 linkingEntitySetId, new AddEntitySetsToLinkingEntitySetProcessor( newLinkedEntitySets ) );
-        markMaterializedEntitySetDirtyWithDataChanges( linkingEntitySet.getId() );
+        markMaterializedEntitySetDirtyWithEdmChanges( linkingEntitySet.getId() );
 
         eventBus.post( new LinkedEntitySetAddedEvent( linkingEntitySetId ) );
 
@@ -405,7 +404,7 @@ public class EdmService implements EdmManager {
         final EntitySet updatedLinkingEntitySet = (EntitySet) entitySets.executeOnKey(
                 linkingEntitySetId, new RemoveEntitySetsFromLinkingEntitySetProcessor( linkedEntitySets ) );
 
-        markMaterializedEntitySetDirtyWithDataChanges( linkingEntitySet.getId() );
+        markMaterializedEntitySetDirtyWithEdmChanges( linkingEntitySet.getId() );
         eventBus.post( new LinkedEntitySetRemovedEvent( linkingEntitySetId ) );
 
         return startSize - updatedLinkingEntitySet.getLinkedEntitySets().size();
@@ -998,10 +997,6 @@ public class EdmService implements EdmManager {
 
     private void markMaterializedEntitySetDirtyWithEdmChanges( UUID entitySetId ) {
         eventBus.post( new MaterializedEntitySetEdmChangeEvent( entitySetId ) );
-    }
-
-    private void markMaterializedEntitySetDirtyWithDataChanges( UUID entitySetId ) {
-        eventBus.post( new MaterializedEntitySetDataChangeEvent( entitySetId ) );
     }
 
     /**************
