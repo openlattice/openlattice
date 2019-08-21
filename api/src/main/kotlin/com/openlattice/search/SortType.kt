@@ -24,22 +24,10 @@ private val ALLOWED_GEO_DATATYPES = ImmutableSet.of(
 
 private val ALLOWED_SCORE_DATATYPES = EdmPrimitiveTypeKind.values().toSet()
 
-enum class SortType {
-    field,
-    score,
-    geoDistance;
-
-    companion object {
-
-        @JvmStatic
-        fun getAllowedDatatypes(sortType: SortType): Set<EdmPrimitiveTypeKind> {
-            return when (sortType) {
-                field -> ALLOWED_FIELD_DATATYPES
-                geoDistance -> ALLOWED_GEO_DATATYPES
-                score -> ALLOWED_SCORE_DATATYPES
-            }
-        }
-    }
+enum class SortType(val allowedDatatypes: Set<EdmPrimitiveTypeKind>) {
+    field(ALLOWED_FIELD_DATATYPES),
+    score(ALLOWED_SCORE_DATATYPES),
+    geoDistance(ALLOWED_GEO_DATATYPES);
 }
 
 
