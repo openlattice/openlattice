@@ -48,6 +48,8 @@ interface LinkingQueryService {
     fun getNeighborhoodScores(blockKey: EntityDataKey): Map<EntityDataKey, Double>
     fun deleteMatchScore(blockKey: EntityDataKey, blockElement: EntityDataKey): Int
 
+    fun getClusterFromLinkingId(linkingId: UUID): Map<EntityDataKey, Map<EntityDataKey, Double>>
+
     fun getOrderedBlocks(): PostgresIterable<Pair<EntityDataKey, Long>>
     fun getClustersBySize(): PostgresIterable<Pair<EntityDataKey, Double>>
     fun deleteNeighborhood(entity: EntityDataKey, positiveFeedbacks: List<EntityKeyPair>): Int

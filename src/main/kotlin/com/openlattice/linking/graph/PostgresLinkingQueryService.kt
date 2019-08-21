@@ -227,6 +227,27 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource, private val
                 }).toMap()
     }
 
+    override fun getClusterFromLinkingId( linkingId: UUID ): Map<EntityDataKey, Map<EntityDataKey, Double>> {
+        return PostgresIterable(
+                Supplier {
+                    val connection = hds.connection
+                    val ps = connection.prepareStatement( CLUSTER_CONTAINING_SQL)
+                    ps.setObject(1, linkingId )
+                    val rs = ps.executeQuery()
+                    StatementHolder(connection, ps, rs)
+                },
+                Function {
+                    val src = ResultSetAdapters.srcEntityDataKey(it)
+                    val dst = ResultSetAdapters.dstEntityDataKey(it)
+                    val score = ResultSetAdapters.score(it)
+                    src to (dst to score)
+                })
+                .groupBy({ it.first }, { it.second })
+                .mapValues {
+                    it.value.toMap()
+                }
+    }
+
     override fun insertMatchScores(
             connection: Connection,
             clusterId: UUID,
