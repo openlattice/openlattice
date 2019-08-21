@@ -36,6 +36,7 @@ import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
 import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
+import com.openlattice.IdConstants;
 import com.openlattice.apps.App;
 import com.openlattice.apps.AppType;
 import com.openlattice.authorization.AccessCheck;
@@ -94,6 +95,7 @@ import com.openlattice.search.requests.EntityNeighborsFilter;
 import com.openlattice.search.requests.SearchConstraints;
 import com.openlattice.search.requests.SearchResult;
 import com.openlattice.search.requests.SearchTerm;
+
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -107,6 +109,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
+
 import kotlin.Pair;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
@@ -184,7 +187,6 @@ public class SearchService {
                         EntitySet::getId,
                         linkingEntitySet -> DelegatedUUIDSet.wrap( linkingEntitySet.getLinkedEntitySets() ) ) );
 
-
         final Map<UUID, DelegatedUUIDSet> authorizedPropertiesByEntitySet = authorizedPropertyTypesByEntitySet
                 .entrySet().stream().collect( Collectors.toMap( Map.Entry::getKey,
                         entry -> DelegatedUUIDSet.wrap( entry.getValue().keySet() ) ) );
@@ -208,14 +210,17 @@ public class SearchService {
         result.getEntityDataKeys()
                 .forEach( edk -> entityKeyIdsByEntitySetId.put( edk.getEntitySetId(), edk.getEntityKeyId() ) );
 
-        List<Map<FullQualifiedName, Set<Object>>> results = entityKeyIdsByEntitySetId.keySet().parallelStream()
+        Map<UUID, Map<FullQualifiedName, Set<Object>>> entitiesById = entityKeyIdsByEntitySetId.keySet()
+                .parallelStream()
                 .map( entitySetId -> getResults(
                         entitySetsById.get( entitySetId ),
                         entityKeyIdsByEntitySetId.get( entitySetId ),
                         authorizedPropertyTypesByEntitySet,
-                        entitySetsById.get( entitySetId ).isLinking() ) )
-                .flatMap( List::stream )
-                .collect( Collectors.toList() );
+                        entitySetsById.get( entitySetId ).isLinking() ) ).flatMap( List::stream ).collect( Collectors
+                        .toMap( SearchService::getEntityKeyId, Function.identity() ) );
+
+        List<Map<FullQualifiedName, Set<Object>>> results = result.getEntityDataKeys().stream()
+                .map( edk -> entitiesById.get( edk.getEntityKeyId() ) ).collect( Collectors.toList() );
 
         return new DataSearchResult( result.getNumHits(), results );
     }
@@ -572,9 +577,7 @@ public class SearchService {
 
         Map<UUID, Map<FullQualifiedName, Set<Object>>> entities = Maps.newHashMap();
         entitiesByEntitySetId.entries().forEach( entry -> entities
-                .put( UUID.fromString( entry.getValue().get( EdmConstants.ID_FQN ).iterator()
-                                .next().toString() ),
-                        entry.getValue() ) );
+                .put( getEntityKeyId( entry.getValue() ), entry.getValue() ) );
 
         Map<UUID, List<NeighborEntityDetails>> entityNeighbors = Maps.newConcurrentMap();
 
@@ -599,12 +602,12 @@ public class SearchService {
         logger.info( "Neighbor entity details collected in {} ms", sw1.elapsed( TimeUnit.MILLISECONDS ) );
 
         /* Map linkingIds to the collection of neighbors for all entityKeyIds in the cluster */
-        entityKeyIdsByLinkingId.forEach( (linkingId, normalEntityKeyIds) ->
-            entityNeighbors.put( linkingId,
-                    normalEntityKeyIds.stream()
-                            .flatMap( entityKeyId -> entityNeighbors
-                                    .getOrDefault( entityKeyId, Lists.newArrayList() ).stream() )
-                            .collect( Collectors.toList() ) )
+        entityKeyIdsByLinkingId.forEach( ( linkingId, normalEntityKeyIds ) ->
+                entityNeighbors.put( linkingId,
+                        normalEntityKeyIds.stream()
+                                .flatMap( entityKeyId -> entityNeighbors
+                                        .getOrDefault( entityKeyId, Lists.newArrayList() ).stream() )
+                                .collect( Collectors.toList() ) )
         );
 
         entityNeighbors.entrySet().removeIf( entry -> !filter.getEntityKeyIds().contains( entry.getKey() ) );
@@ -806,6 +809,10 @@ public class SearchService {
     private PostgresIterable<Pair<UUID, Set<UUID>>> getEntityKeyIdsByLinkingIds(
             Set<UUID> linkingIds ) {
         return dataManager.getEntityKeyIdsOfLinkingIds( linkingIds );
+    }
+
+    private static UUID getEntityKeyId( Map<FullQualifiedName, Set<Object>> entity ) {
+        return UUID.fromString( entity.get( EdmConstants.ID_FQN ).iterator().next().toString() );
     }
 
     @Subscribe

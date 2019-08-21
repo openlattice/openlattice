@@ -5,6 +5,8 @@ import com.esotericsoftware.kryo.Serializer;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 import com.google.common.collect.ImmutableList;
+import com.openlattice.search.SortDefinition;
+import com.openlattice.search.SortType;
 import com.openlattice.search.requests.*;
 
 import java.time.LocalDateTime;
@@ -102,6 +104,17 @@ public class SearchConstraintsStreamSerializer extends Serializer<SearchConstrai
                 } );
             }
         }
+
+        SortDefinition sortDefinition = object.getSortDefinition();
+        out.writeString( sortDefinition.getSortType().toString() );
+        out.writeBoolean( sortDefinition.isDescending() );
+        OptionalStreamSerializers.kryoSerialize( out,
+                Optional.ofNullable( sortDefinition.getPropertyTypeId() ),
+                SearchConstraintsStreamSerializer::writeUUID );
+        OptionalStreamSerializers
+                .kryoSerialize( out, Optional.ofNullable( sortDefinition.getLatitude() ), Output::writeDouble );
+        OptionalStreamSerializers
+                .kryoSerialize( out, Optional.ofNullable( sortDefinition.getLongitude() ), Output::writeDouble );
     }
 
     public static SearchConstraints deserialize( Input in ) {
@@ -203,7 +216,17 @@ public class SearchConstraintsStreamSerializer extends Serializer<SearchConstrai
 
         }
 
-        return new SearchConstraints( entitySetIds, start, maxHits, constraintGroups );
+        SortType sortType = SortType.valueOf( in.readString() );
+        boolean isDescending = in.readBoolean();
+        UUID propertyTypeId = OptionalStreamSerializers
+                .kryoDeserialize( in, SearchConstraintsStreamSerializer::readUUID ).orElse( null );
+        Double latitude = OptionalStreamSerializers.kryoDeserialize( in, Input::readDouble ).orElse( null );
+        Double longitude = OptionalStreamSerializers.kryoDeserialize( in, Input::readDouble ).orElse( null );
+
+        Optional<SortDefinition> sortDefinition = Optional
+                .of( new SortDefinition( sortType, isDescending, propertyTypeId, latitude, longitude ) );
+
+        return new SearchConstraints( entitySetIds, start, maxHits, constraintGroups, sortDefinition );
     }
 
 }
