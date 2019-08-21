@@ -608,8 +608,9 @@ fun upsertPropertyValueSql(propertyType: PropertyType): String {
             VERSIONS,
             PARTITIONS_VERSION
     ).joinToString(",") { it.name }
-    return "INSERT INTO ${DATA.name} ($metadataColumnsSql,${insertColumn.name}) VALUES (?,?,?,?,?,now(),?,?,?,?) " +
-            "ON CONFLICT (${PARTITION.name},${ENTITY_SET_ID.name},${PROPERTY_TYPE_ID.name},${ID_VALUE.name}, ${HASH.name}, ${PARTITIONS_VERSION.name}) " +
+    return "INSERT INTO ${DATA.name} ($metadataColumnsSql,${insertColumn.name}) " +
+            "VALUES (?,?,?,?,?,now(),?,?,?,?) " +
+            "ON CONFLICT (${PARTITION.name},${ENTITY_SET_ID.name},${PROPERTY_TYPE_ID.name},${ID_VALUE.name},${HASH.name},${PARTITIONS_VERSION.name}) " +
             "DO UPDATE SET " +
             "${VERSIONS.name} = ${DATA.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
             "${LAST_WRITE.name} = GREATEST(${DATA.name}.${LAST_WRITE.name},EXCLUDED.${LAST_WRITE.name}), " +
@@ -649,7 +650,7 @@ fun createOrUpdateLinkFromEntity(): String {
             "FROM ${DATA.name} " +
             "${optionalWhereClausesSingleEdk( idPresent = true, partitionsPresent = true, entitySetPresent = true )} " +
             "ON CONFLICT (${ENTITY_SET_ID.name},${ID_VALUE.name},${ORIGIN_ID.name},${PARTITION.name},${PROPERTY_TYPE_ID.name},${HASH.name},${PARTITIONS_VERSION.name})" +
-                "DO UPDATE SET " +
+            "DO UPDATE SET " +
                 "${VERSIONS.name} = ${DATA.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
                 "${LAST_WRITE.name} = GREATEST(${DATA.name}.${LAST_WRITE.name},EXCLUDED.${LAST_WRITE.name}), " +
                 "${PARTITIONS_VERSION.name} = EXCLUDED.${PARTITIONS_VERSION.name}, " +

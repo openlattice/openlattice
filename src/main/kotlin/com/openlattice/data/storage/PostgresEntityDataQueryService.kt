@@ -478,7 +478,7 @@ class PostgresEntityDataQueryService(
     }
 
     private fun extractValues(propertyValues: Map<UUID, Set<Map<ByteBuffer, Any>>>): Map<UUID, Set<Any>> {
-        return propertyValues.mapValues { (entityKeyId, replacements) -> replacements.flatMap { it.values }.toSet() }
+        return propertyValues.mapValues { (_, replacements) -> replacements.flatMap { it.values }.toSet() }
     }
 
     /**
