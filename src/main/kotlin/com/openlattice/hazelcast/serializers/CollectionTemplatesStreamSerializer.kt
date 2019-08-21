@@ -3,6 +3,7 @@ package com.openlattice.hazelcast.serializers
 import com.google.common.collect.Maps
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
+import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.collections.CollectionTemplates
 import com.openlattice.hazelcast.StreamSerializerTypeIds
@@ -16,16 +17,12 @@ class CollectionTemplatesStreamSerializer : SelfRegisteringStreamSerializer<Coll
     companion object {
 
         fun serialize(out: ObjectDataOutput, `object`: CollectionTemplates) {
+
             out.writeInt(`object`.templates.size)
-
             `object`.templates.forEach {
-                UUIDStreamSerializer.serialize(out, it.key)
-                out.writeInt(it.value.size)
 
-                it.value.forEach  {
-                    UUIDStreamSerializer.serialize(out, it.key)
-                    UUIDStreamSerializer.serialize(out, it.value)
-                }
+                UUIDStreamSerializer.serialize(out, it.key)
+                MapStreamSerializers.writeUUIDUUIDMap(out, it.value)
             }
         }
 
@@ -37,16 +34,7 @@ class CollectionTemplatesStreamSerializer : SelfRegisteringStreamSerializer<Coll
             for (i in 0 until size) {
 
                 val entitySetCollectionId = UUIDStreamSerializer.deserialize(`in`)
-                val templateSize = `in`.readInt()
-
-                val templateMap = Maps.newConcurrentMap<UUID, UUID>()
-
-                for (j in 0 until templateSize) {
-                    val templateTypeId = UUIDStreamSerializer.deserialize(`in`)
-                    val entitySetId = UUIDStreamSerializer.deserialize(`in`)
-
-                    templateMap[templateTypeId] = entitySetId
-                }
+                val templateMap = MapStreamSerializers.readUUIDUUIDMap(`in`, Maps.newConcurrentMap()) as ConcurrentMap<UUID, UUID>
 
                 templates[entitySetCollectionId] = templateMap
             }
