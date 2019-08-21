@@ -8,9 +8,9 @@ import java.util.*
 data class SortDefinition(
         @JsonProperty(SerializationConstants.TYPE_FIELD) val sortType: SortType = SortType.score,
         @JsonProperty(SerializationConstants.IS_DESCENDING) val isDescending: Boolean = true,
-        @JsonProperty(SerializationConstants.PROPERTY_TYPE_ID) val propertyTypeId: UUID? = null,
-        @JsonProperty(SerializationConstants.LATITUDE) val latitude: Double? = null,
-        @JsonProperty(SerializationConstants.LONGITUDE) val longitude: Double? = null
+        @JsonProperty(SerializationConstants.PROPERTY_TYPE_ID) val propertyTypeId: Optional<UUID> = Optional.empty(),
+        @JsonProperty(SerializationConstants.LATITUDE) val latitude: Optional<Double> = Optional.empty(),
+        @JsonProperty(SerializationConstants.LONGITUDE) val longitude: Optional<Double> = Optional.empty()
 ) {
 
     init {
@@ -22,14 +22,14 @@ data class SortDefinition(
                     "The sort type field requires a propertyTypeId to be present.")
 
             SortType.geoDistance -> {
-                Preconditions.checkNotNull(
-                        propertyTypeId,
+                Preconditions.checkArgument(
+                        propertyTypeId.isPresent,
                         "The sort type geoDistance requires a propertyTypeId to be present.")
-                Preconditions.checkNotNull(
-                        latitude,
+                Preconditions.checkArgument(
+                        latitude.isPresent,
                         "The sort type geoDistance requires a latitude to be present.")
-                Preconditions.checkNotNull(
-                        longitude,
+                Preconditions.checkArgument(
+                        longitude.isPresent,
                         "The sort type geoDistance requires a longitude to be present.")
             }
         }
