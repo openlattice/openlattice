@@ -85,18 +85,19 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource, private val
         }, Function { ResultSetAdapters.id(it) })
     }
 
-    override fun getEntitiesNeedingLinking(entitySetIds: Set<UUID>, limit: Int): PostgresIterable<Pair<UUID, UUID>> {
+    override fun getEntitiesNeedingLinking(entitySetId: UUID, limit: Int): PostgresIterable<EntityDataKey> {
         return PostgresIterable(Supplier {
             val connection = hds.connection
             val ps = connection.prepareStatement(ENTITY_KEY_IDS_NEEDING_LINKING)
-            val esidsArr = PostgresArrays.createUuidArray(connection, entitySetIds)
-            val partitions = getPartitionsAsPGArray(connection, entitySetIds)
+            val partitions = getPartitionsAsPGArray(connection, entitySetId)
             ps.setArray(1, partitions)
-            ps.setArray(2, esidsArr)
+            ps.setObject(2, entitySetId)
             ps.setInt(3, limit)
             val rs = ps.executeQuery()
             StatementHolder(connection, ps, rs)
-        }, Function { ResultSetAdapters.entitySetId(it) to ResultSetAdapters.id(it) })
+        }, Function {
+            EntityDataKey(ResultSetAdapters.entitySetId(it), ResultSetAdapters.id(it))
+        })
     }
 
     override fun getEntitiesNotLinked(entitySetIds: Set<UUID>, limit: Int): PostgresIterable<Pair<UUID, UUID>> {
@@ -439,7 +440,11 @@ private val UPDATE_LINKED_ENTITIES_SQL = "UPDATE ${IDS.name} " +
 
 private val ENTITY_KEY_IDS_NEEDING_LINKING = "SELECT ${ENTITY_SET_ID.name},${ID.name} " +
         "FROM ${IDS.name} " +
-        "WHERE ${PARTITION.name} = ANY(?) AND ${ENTITY_SET_ID.name} = ANY(?) AND ${LAST_LINK.name} < ${LAST_WRITE.name} AND ( ${LAST_INDEX.name} >= ${LAST_WRITE.name}) AND ( ${LAST_INDEX.name} > '-infinity'::timestamptz) " +
+        "WHERE ${PARTITION.name} = ANY(?) " +
+        "AND ${ENTITY_SET_ID.name} = ? " +
+        "AND ${LAST_LINK.name} < ${LAST_WRITE.name} " +
+        "AND ( ${LAST_INDEX.name} >= ${LAST_WRITE.name}) " +
+        "AND ( ${LAST_INDEX.name} > '-infinity'::timestamptz) " +
         "AND ${VERSION.name} > 0 LIMIT ?"
 
 private val ENTITY_KEY_IDS_NOT_LINKED = "SELECT ${ENTITY_SET_ID.name},${ID.name} " +
