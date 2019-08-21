@@ -1516,14 +1516,14 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         switch ( sortDefinition.getSortType() ) {
 
             case field:
-                sort = new FieldSortBuilder( getFieldName( sortDefinition.getPropertyTypeId() ) )
+                sort = new FieldSortBuilder( getFieldName( sortDefinition.getPropertyTypeId().get() ) )
                         .setNestedSort( new NestedSortBuilder( ENTITY ) );
                 break;
 
             case geoDistance:
-                sort = new GeoDistanceSortBuilder( getFieldName( sortDefinition.getPropertyTypeId() ),
-                        sortDefinition.getLatitude(),
-                        sortDefinition.getLongitude() );
+                sort = new GeoDistanceSortBuilder( getFieldName( sortDefinition.getPropertyTypeId().get() ),
+                        sortDefinition.getLatitude().get(),
+                        sortDefinition.getLongitude().get() );
                 break;
 
             case score:
