@@ -25,6 +25,7 @@ import com.hazelcast.core.ReadOnly
 import com.hazelcast.spi.ExecutionService
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.assembler.AssemblerConnectionManager
+import com.openlattice.assembler.AssemblerConnectionManagerDependent
 import com.openlattice.assembler.OrganizationAssembly
 import com.openlattice.assembler.PostgresDatabases
 import com.openlattice.authorization.SecurablePrincipal
@@ -35,7 +36,10 @@ private val logger = LoggerFactory.getLogger(RemoveMembersFromOrganizationAssemb
 private const val NOT_INITIALIZED = "Assembler Connection Manager not initialized."
 
 data class RemoveMembersFromOrganizationAssemblyProcessor(val principals: Collection<SecurablePrincipal>)
-    : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(false), Offloadable, ReadOnly {
+    : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(false),
+        AssemblerConnectionManagerDependent<RemoveMembersFromOrganizationAssemblyProcessor>,
+        Offloadable,
+        ReadOnly {
 
     @Transient
     private var acm: AssemblerConnectionManager? = null
@@ -51,8 +55,8 @@ data class RemoveMembersFromOrganizationAssemblyProcessor(val principals: Collec
                 throw IllegalStateException(NOT_INITIALIZED)
             }
             val dbName = PostgresDatabases.buildOrganizationDatabaseName(organizationId)
-            acm!!.connect(dbName).use {
-                dataSource -> acm!!.removeMembersFromOrganization(dbName, dataSource, principals)
+            acm!!.connect(dbName).use { dataSource ->
+                acm!!.removeMembersFromOrganization(dbName, dataSource, principals)
             }
         }
 
@@ -63,7 +67,7 @@ data class RemoveMembersFromOrganizationAssemblyProcessor(val principals: Collec
         return ExecutionService.OFFLOADABLE_EXECUTOR
     }
 
-    fun init(acm: AssemblerConnectionManager): RemoveMembersFromOrganizationAssemblyProcessor {
+    override fun init(acm: AssemblerConnectionManager): RemoveMembersFromOrganizationAssemblyProcessor {
         this.acm = acm
         return this
     }

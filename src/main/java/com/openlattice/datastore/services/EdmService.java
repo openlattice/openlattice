@@ -62,7 +62,6 @@ import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.hazelcast.HazelcastUtils;
 import com.openlattice.hazelcast.processors.AddEntitySetsToLinkingEntitySetProcessor;
 import com.openlattice.hazelcast.processors.RemoveEntitySetsFromLinkingEntitySetProcessor;
-import com.openlattice.postgres.DataTables;
 import com.openlattice.postgres.PostgresQuery;
 import com.openlattice.postgres.PostgresTablesPod;
 import com.openlattice.postgres.mapstores.EntitySetMapstore;
@@ -952,41 +951,57 @@ public class EdmService implements EdmManager {
 
     @Override
     public void updateEntitySetMetadata( UUID entitySetId, MetadataUpdate update ) {
-        if ( update.getName().isPresent() ) {
-            aclKeyReservations.renameReservation( entitySetId, update.getName().get() );
+        if ( update.getName().isPresent() || update.getOrganizationId().isPresent() ) {
+            final var oldEntitySet = getEntitySet( entitySetId );
+
+            if ( update.getName().isPresent() ) {
+                aclKeyReservations.renameReservation( entitySetId, update.getName().get() );
+
+                // If entity set name is changed, change also name of materialized view
+                eventBus.post(
+                        new EntitySetNameUpdatedEvent( entitySetId, update.getName().get(), oldEntitySet.getName() )
+                );
+            }
+
+            if ( update.getOrganizationId().isPresent() ) {
+                // If an entity set is being moved across organizations, its audit entity sets should also be moved to
+                // the new organization
+                AclKey aclKey = new AclKey( entitySetId );
+
+                Set<UUID> auditEntitySetIds = Sets.union( aresManager.getAuditRecordEntitySets( aclKey ),
+                        aresManager.getAuditEdgeEntitySets( aclKey ) );
+
+                entitySets.executeOnKeys( auditEntitySetIds,
+                        new UpdateEntitySetMetadataProcessor( new MetadataUpdate( Optional.empty(),
+                                Optional.empty(),
+                                Optional.empty(),
+                                Optional.empty(),
+                                Optional.empty(),
+                                Optional.empty(),
+                                Optional.empty(),
+                                Optional.empty(),
+                                Optional.empty(),
+                                update.getOrganizationId(),
+                                Optional.empty() ) ) );
+
+                // If an entity set is being moved across organizations, its materialized entity set should be deleted
+                // from old organization assembly
+                eventBus.post( new EntitySetOrganizationUpdatedEvent( entitySetId, oldEntitySet.getOrganizationId() ) );
+            }
         }
-        entitySets.executeOnKey( entitySetId, new UpdateEntitySetMetadataProcessor( update ) );
-        eventBus.post( new EntitySetMetadataUpdatedEvent( getEntitySet( entitySetId ) ) );
 
-        /* If an entity set is being moved across organizations, its audit entity sets should also be moved to the new organization */
-        if ( update.getOrganizationId().isPresent() ) {
-
-            AclKey aclKey = new AclKey( entitySetId );
-
-            Set<UUID> auditEntitySetIds = Sets.union( aresManager.getAuditRecordEntitySets( aclKey ),
-                    aresManager.getAuditEdgeEntitySets( aclKey ) );
-
-            entitySets.executeOnKeys( auditEntitySetIds,
-                    new UpdateEntitySetMetadataProcessor( new MetadataUpdate( Optional.empty(),
-                            Optional.empty(),
-                            Optional.empty(),
-                            Optional.empty(),
-                            Optional.empty(),
-                            Optional.empty(),
-                            Optional.empty(),
-                            Optional.empty(),
-                            Optional.empty(),
-                            update.getOrganizationId(),
-                            Optional.empty() ) ) );
-        }
+        final var newEntitySet = ( EntitySet ) entitySets.executeOnKey(
+                entitySetId, new UpdateEntitySetMetadataProcessor( update )
+        );
+        eventBus.post( new EntitySetMetadataUpdatedEvent( newEntitySet ) );
     }
 
     private void markMaterializedEntitySetDirtyWithEdmChanges( UUID entitySetId ) {
-        eventBus.post( new MaterializedEntitySetEdmChangeEvent(entitySetId) );
+        eventBus.post( new MaterializedEntitySetEdmChangeEvent( entitySetId ) );
     }
 
     private void markMaterializedEntitySetDirtyWithDataChanges( UUID entitySetId ) {
-        eventBus.post( new MaterializedEntitySetDataChangeEvent(entitySetId) );
+        eventBus.post( new MaterializedEntitySetDataChangeEvent( entitySetId ) );
     }
 
     /**************
