@@ -32,7 +32,6 @@ import com.openlattice.edm.EdmConstants
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.edm.type.EntityType
-import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.mapstores.TestDataFactory.fqn
 import com.openlattice.mapstores.TestDataFactory.randomStringEntityData
 import com.openlattice.organization.Organization
@@ -48,7 +47,6 @@ import org.junit.AfterClass
 import org.junit.Assert
 import org.junit.BeforeClass
 import org.junit.Test
-import org.postgresql.util.PSQLException
 import java.lang.reflect.UndeclaredThrowableException
 import java.sql.ResultSet
 import java.time.OffsetDateTime
@@ -276,7 +274,7 @@ class AssemblerLinkingTest : SetupTestData() {
 
         Assert.assertFalse(
                 organizationsApi.getOrganizationEntitySets(organizationID)[esLinking.id]!!
-                        .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED)
+                        .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED)
         )
 
         // check linking ids
@@ -299,17 +297,17 @@ class AssemblerLinkingTest : SetupTestData() {
 
         Assert.assertTrue(
                 organizationsApi.getOrganizationEntitySets(organizationID)[esLinking.id]!!
-                        .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED)
+                        .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED)
         )
 
         // grant materialize again with new entity set included
         grantMaterializePermissions(organization, esLinking, personEt.properties)
 
         // refresh
-        organizationsApi.refreshDataChanges(organizationID, esLinking.id)
+        organizationsApi.synchronizeEdmChanges(organizationID, esLinking.id)
         Assert.assertFalse(
                 organizationsApi.getOrganizationEntitySets(organizationID)[esLinking.id]!!
-                        .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED)
+                        .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED)
         )
 
         // check linking ids
@@ -334,17 +332,17 @@ class AssemblerLinkingTest : SetupTestData() {
 
         Assert.assertTrue(
                 organizationsApi.getOrganizationEntitySets(organizationID)[esLinking.id]!!
-                        .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED)
+                        .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED)
         )
 
         // grant materialize again with new entity set included
         grantMaterializePermissions(organization, esLinking, personEt.properties)
 
         // refresh
-        organizationsApi.refreshDataChanges(organizationID, esLinking.id)
+        organizationsApi.synchronizeEdmChanges(organizationID, esLinking.id)
         Assert.assertFalse(
                 organizationsApi.getOrganizationEntitySets(organizationID)[esLinking.id]!!
-                        .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED)
+                        .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED)
         )
 
         // check linking ids
