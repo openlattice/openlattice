@@ -42,7 +42,10 @@ import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.search.SearchApi;
 import com.openlattice.search.SearchService;
+import com.openlattice.search.SortDefinition;
+import com.openlattice.search.SortType;
 import com.openlattice.search.requests.*;
+import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.http.MediaType;
@@ -146,6 +149,9 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
     @Override
     @Timed
     public DataSearchResult searchEntitySetData( @RequestBody SearchConstraints searchConstraints ) {
+
+        validateSearch( searchConstraints );
+
         // check read on entity sets
         final var authorizedEntitySetIds = authorizationsHelper
                 .getAuthorizedEntitySets( Set.of( searchConstraints.getEntitySetIds() ), READ_PERMISSION );
@@ -695,4 +701,27 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
     private static UUID getEntityKeyId( Map<FullQualifiedName, Set<Object>> entity ) {
         return UUID.fromString( entity.get( ID_FQN ).iterator().next().toString() );
     }
+
+    private void validateSearch( SearchConstraints searchConstraints ) {
+
+        /* Check sort is valid */
+        SortDefinition sort = searchConstraints.getSortDefinition();
+        UUID sortPropertyTypeId = sort.getPropertyTypeId();
+        switch ( sort.getSortType() ) {
+
+            case field:
+            case geoDistance: {
+                EdmPrimitiveTypeKind datatype = edm.getPropertyType( sortPropertyTypeId ).getDatatype();
+                Set<EdmPrimitiveTypeKind> allowedDatatypes = SortType.getAllowedDatatypes( sort.getSortType() );
+                if ( !allowedDatatypes.contains( datatype ) ) {
+                    throw new IllegalArgumentException(
+                            "SortType " + sort.getSortType() + " cannot be executed on property type "
+                                    + sortPropertyTypeId
+                                    + " because it is of datatype " + datatype + ". Allowed datatypes are: "
+                                    + allowedDatatypes );
+                }
+            }
+        }
+    }
+
 }
