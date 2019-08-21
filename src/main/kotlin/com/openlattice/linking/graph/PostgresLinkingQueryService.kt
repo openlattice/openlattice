@@ -228,7 +228,7 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource, private val
     }
 
     override fun getClusterFromLinkingId( linkingId: UUID ): Map<EntityDataKey, Map<EntityDataKey, Double>> {
-        return PostgresIterable(
+        return PostgresIterable<Pair<EntityDataKey, Pair<EntityDataKey, Double>>>(
                 Supplier {
                     val connection = hds.connection
                     val ps = connection.prepareStatement( CLUSTER_CONTAINING_SQL)
@@ -393,16 +393,6 @@ internal fun buildFilterEntityKeyPairs(entityKeyPairs: List<EntityKeyPair>): Str
 private val LOCK_CLUSTERS_SQL = "SELECT 1 FROM ${MATCHED_ENTITIES.name} WHERE ${LINKING_ID.name} = ? FOR UPDATE"
 
 private val CLUSTER_CONTAINING_SQL = "SELECT * FROM ${MATCHED_ENTITIES.name} WHERE ${LINKING_ID.name} = ANY(?)"
-
-// If this is efficient then this should probably be
-// future getClusters call instead of two round-trips
-internal fun getClustersSql( dataKeys: Set<EntityDataKey> ): String {
-    val dataKeysSql = dataKeys.joinToString(",") { "('${it.entitySetId}','${it.entityKeyId}')" }
-    return "SELECT * " +
-        "FROM ${MATCHED_ENTITIES.name} " +
-        "WHERE ((${SRC_ENTITY_SET_ID.name},${SRC_ENTITY_KEY_ID.name}) IN ($dataKeysSql)) " +
-        "OR ((${DST_ENTITY_SET_ID.name},${DST_ENTITY_KEY_ID.name}) IN ($dataKeysSql)) "
-}
 
 private val DELETE_SQL = "DELETE FROM ${MATCHED_ENTITIES.name} " +
         "WHERE ${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ? " +
