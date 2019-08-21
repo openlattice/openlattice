@@ -427,9 +427,7 @@ class Assembler(
         }
     }
 
-    fun refreshMaterializedEntitySet(
-            organizationId: UUID, entitySetId: UUID, materializablePropertyTypes: Map<UUID, PropertyType>
-    ) {
+    fun refreshMaterializedEntitySet(organizationId: UUID, entitySetId: UUID) {
         val entitySetAssemblyKey = EntitySetAssemblyKey(entitySetId, organizationId)
 
         ensureAssemblyInitialized(organizationId)
@@ -443,14 +441,10 @@ class Assembler(
             logger.info("Refreshing materialized entity set $entitySetId")
 
             val entitySet = entitySets.getValue(entitySetId)
-            val authorizedPropertyTypesOfPrincipals =
-                    getAuthorizedPropertiesOfPrincipals(entitySet, materializablePropertyTypes)
 
             materializedEntitySets.executeOnKey(
                     entitySetAssemblyKey,
-                    RefreshMaterializedEntitySetProcessor(
-                            entitySet, materializablePropertyTypes, authorizedPropertyTypesOfPrincipals
-                    ).init(acm)
+                    RefreshMaterializedEntitySetProcessor(entitySet).init(acm)
             )
             // remove flag also from organization entity sets
             assemblies.executeOnKey(

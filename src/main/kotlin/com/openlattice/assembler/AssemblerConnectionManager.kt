@@ -490,19 +490,16 @@ class AssemblerConnectionManager(
     /**
      * Synchronize data changes in entity set materialized view in organization database.
      */
-    fun refreshEntitySet(
-            organizationId: UUID,
-            entitySet: EntitySet,
-            materializablePropertyTypes: Map<UUID, PropertyType>,
-            authorizedPropertyTypesOfPrincipals: Map<Principal, Set<PropertyType>>
-    ) {
+    fun refreshEntitySet(organizationId: UUID, entitySet: EntitySet) {
         logger.info("Refreshing entity set ${entitySet.id} in organization $organizationId database")
-        connect(buildOrganizationDatabaseName(organizationId)).use { datasource ->
-            // re-import materialized view of entity set
-            updateProductionViewTables(datasource, setOf(entitySetIdTableName(entitySet.id)))
+        val tableName = entitySetNameTableName(entitySet.name)
 
-            // re-materialize entity set
-            materialize(datasource, entitySet, materializablePropertyTypes, authorizedPropertyTypesOfPrincipals)
+        connect(buildOrganizationDatabaseName(organizationId)).use { dataSource ->
+            dataSource.connection.use { connection ->
+                connection.createStatement().use {
+                    it.execute("REFRESH MATERIALIZED VIEW $tableName")
+                }
+            }
         }
     }
 
