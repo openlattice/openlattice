@@ -706,11 +706,11 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
 
         /* Check sort is valid */
         SortDefinition sort = searchConstraints.getSortDefinition();
-        UUID sortPropertyTypeId = sort.getPropertyTypeId();
         switch ( sort.getSortType() ) {
 
             case field:
             case geoDistance: {
+                UUID sortPropertyTypeId = sort.getPropertyTypeId().get();
                 EdmPrimitiveTypeKind datatype = edm.getPropertyType( sortPropertyTypeId ).getDatatype();
                 Set<EdmPrimitiveTypeKind> allowedDatatypes = SortType.getAllowedDatatypes( sort.getSortType() );
                 if ( !allowedDatatypes.contains( datatype ) ) {
