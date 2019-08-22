@@ -487,6 +487,12 @@ class AssemblerConnectionManager(
                 "TO ${quote(postgresUserName)}"
     }
 
+    fun updateMaterializedEntitySet(
+            organizationId: UUID, entitySet: EntitySet, materializablePropertyTypes: Map<UUID, PropertyType>
+    ) {
+
+    }
+
     /**
      * Synchronize data changes in entity set materialized view in organization database.
      */

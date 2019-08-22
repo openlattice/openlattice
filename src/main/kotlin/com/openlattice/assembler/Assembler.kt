@@ -302,13 +302,13 @@ class Assembler(
         authorizedPropertyTypesByEntitySet.forEach { (entitySetId, materializablePropertyTypes) ->
             // even if we re-materialize, we would clear all flags
             val materializedEntitySetKey = EntitySetAssemblyKey(entitySetId, organizationId)
-            val entitySet = entitySets.getValue(entitySetId)
-            val authorizedPropertyTypesOfPrincipals =
-                    getAuthorizedPropertiesOfPrincipals(entitySet, materializablePropertyTypes)
-
             materializedEntitySets.set(
                     materializedEntitySetKey,
                     MaterializedEntitySet(materializedEntitySetKey, refreshRatesOfEntitySets.getValue(entitySetId)))
+
+            val entitySet = entitySets.getValue(entitySetId)
+            val authorizedPropertyTypesOfPrincipals =
+                    getAuthorizedPropertiesOfPrincipals(entitySet, materializablePropertyTypes)
             materializedEntitySets.executeOnKey(
                     materializedEntitySetKey,
                     MaterializeEntitySetProcessor(
@@ -328,6 +328,32 @@ class Assembler(
         return getMaterializedEntitySetIdsInOrganization(organizationId).map {
             it to (setOf(OrganizationEntitySetFlag.MATERIALIZED) + getInternalEntitySetFlag(organizationId, it))
         }.toMap()
+    }
+
+    /**
+     * Re-creates the materialized view of an entity using the set of authorized property types within the given
+     * organizations database.
+     * Note: this re-materialization does not update grants on the materialized view and does not materialize edges.
+     */
+    fun updateMaterializeEntitySet(
+            organizationId: UUID, entitySetId: UUID, materializablePropertyTypes: Map<UUID, PropertyType>
+    ) {
+        val entitySetAssemblyKey = EntitySetAssemblyKey(entitySetId, organizationId)
+
+        // check if organization and entity set assembly are initialized
+        ensureAssemblyInitialized(organizationId)
+        ensureEntitySetIsMaterialized(entitySetAssemblyKey)
+
+        logger.info("Re-creating materialized view of entity set $entitySetId")
+
+        val entitySet = entitySets.getValue(entitySetId)
+        val authorizedPropertyTypesOfPrincipals =
+                getAuthorizedPropertiesOfPrincipals(entitySet, materializablePropertyTypes)
+
+        materializedEntitySets.executeOnKey(
+                entitySetAssemblyKey,
+                UpdateMaterializedEntitySetProcessor(entitySet, materializablePropertyTypes).init(acm)
+        )
     }
 
     private fun materializeEdges(organizationId: UUID) {
