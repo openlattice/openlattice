@@ -177,7 +177,7 @@ class Assembler(
                 entitySetOrganizationUpdatedEvent.oldOrganizationId
         )
         if (isEntitySetMaterialized(entitySetAssemblyKey)) {
-            logger.info("Removing materialized entity set ${entitySetOrganizationUpdatedEvent.entitySetId}  from " +
+            logger.info("Removing materialized entity set ${entitySetOrganizationUpdatedEvent.entitySetId} from " +
                     "organization ${entitySetOrganizationUpdatedEvent.oldOrganizationId} because of organization update")
             // when an entity set is moved to a new organization, we need to delete its assembly from old organization
             deleteEntitySetAssemblies(setOf(entitySetAssemblyKey))
@@ -335,7 +335,7 @@ class Assembler(
      * organizations database.
      * Note: this re-materialization does not update grants on the materialized view and does not materialize edges.
      */
-    fun updateMaterializeEntitySet(
+    fun updateMaterializedEntitySet(
             organizationId: UUID, entitySetId: UUID, materializablePropertyTypes: Map<UUID, PropertyType>
     ) {
         val entitySetAssemblyKey = EntitySetAssemblyKey(entitySetId, organizationId)
@@ -347,9 +347,6 @@ class Assembler(
         logger.info("Re-creating materialized view of entity set $entitySetId")
 
         val entitySet = entitySets.getValue(entitySetId)
-        val authorizedPropertyTypesOfPrincipals =
-                getAuthorizedPropertiesOfPrincipals(entitySet, materializablePropertyTypes)
-
         materializedEntitySets.executeOnKey(
                 entitySetAssemblyKey,
                 UpdateMaterializedEntitySetProcessor(entitySet, materializablePropertyTypes).init(acm)
