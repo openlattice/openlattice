@@ -712,7 +712,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             case geoDistance: {
                 UUID sortPropertyTypeId = sort.getPropertyTypeId().get();
                 EdmPrimitiveTypeKind datatype = edm.getPropertyType( sortPropertyTypeId ).getDatatype();
-                Set<EdmPrimitiveTypeKind> allowedDatatypes = SortType.getAllowedDatatypes( sort.getSortType() );
+                Set<EdmPrimitiveTypeKind> allowedDatatypes = sort.getSortType().getAllowedDatatypes();
                 if ( !allowedDatatypes.contains( datatype ) ) {
                     throw new IllegalArgumentException(
                             "SortType " + sort.getSortType() + " cannot be executed on property type "
