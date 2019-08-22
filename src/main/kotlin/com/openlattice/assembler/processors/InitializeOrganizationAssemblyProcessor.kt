@@ -31,7 +31,6 @@ import org.slf4j.LoggerFactory
 import java.util.*
 
 private val logger = LoggerFactory.getLogger(InitializeOrganizationAssemblyProcessor::class.java)
-private const val NOT_INITIALIZED = "Assembler Connection Manager not initialized."
 
 /**
  *
@@ -50,14 +49,15 @@ class InitializeOrganizationAssemblyProcessor :
         val assembly = entry.value
         when {
             assembly == null -> {
-                logger.error("Assembly for organization id {} was not initialized properly.")
+                logger.error("Assembly for organization id {} was not initialized properly.", organizationId)
             }
             assembly.initialized -> logger.info(
                     "The database for organization {} has already been initialized",
                     organizationId
             )
             else -> {
-                acm?.createOrganizationDatabase(organizationId) ?: throw IllegalStateException(NOT_INITIALIZED)
+                acm?.createOrganizationDatabase(organizationId)
+                        ?: throw IllegalStateException(AssemblerConnectionManagerDependent.NOT_INITIALIZED)
                 assembly.initialized = true
                 entry.setValue(assembly)
             }

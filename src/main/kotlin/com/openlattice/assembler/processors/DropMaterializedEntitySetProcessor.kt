@@ -28,7 +28,6 @@ import com.openlattice.assembler.AssemblerConnectionManagerDependent
 import com.openlattice.assembler.EntitySetAssemblyKey
 import com.openlattice.assembler.MaterializedEntitySet
 
-private const val NOT_INITIALIZED = "Assembler Connection Manager not initialized."
 
 class DropMaterializedEntitySetProcessor
     : AbstractRhizomeEntryProcessor<EntitySetAssemblyKey, MaterializedEntitySet, Void?>(),
@@ -47,7 +46,7 @@ class DropMaterializedEntitySetProcessor
                     "${entitySetAssemblyKey.organizationId}.")
         } else {
             acm?.dematerializeEntitySets(entitySetAssemblyKey.organizationId, setOf(entitySetAssemblyKey.entitySetId))
-                    ?: throw IllegalStateException(NOT_INITIALIZED)
+                    ?: throw IllegalStateException(AssemblerConnectionManagerDependent.NOT_INITIALIZED)
             entry.setValue(null)
         }
 

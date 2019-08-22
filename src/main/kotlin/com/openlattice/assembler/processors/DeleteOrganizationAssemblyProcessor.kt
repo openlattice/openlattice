@@ -33,7 +33,6 @@ import java.lang.IllegalStateException
 import java.util.UUID
 
 private val logger = LoggerFactory.getLogger(DeleteOrganizationAssemblyProcessor::class.java)
-private const val NOT_INITIALIZED = "Assembler Connection Manager not initialized."
 
 class DeleteOrganizationAssemblyProcessor
     : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(false),
@@ -48,7 +47,8 @@ class DeleteOrganizationAssemblyProcessor
         if (assembly == null) {
             logger.error("Encountered null assembly while trying to delete organization assembly.")
         } else {
-            acm?.dropOrganizationDatabase(organizationId) ?: throw IllegalStateException(NOT_INITIALIZED)
+            acm?.dropOrganizationDatabase(organizationId)
+                    ?: throw IllegalStateException(AssemblerConnectionManagerDependent.NOT_INITIALIZED)
         }
 
         return null

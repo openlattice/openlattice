@@ -38,7 +38,6 @@ import java.util.*
 
 
 private val logger = LoggerFactory.getLogger(MaterializeEntitySetProcessor::class.java)
-private const val NOT_INITIALIZED = "Assembler Connection Manager not initialized."
 
 /**
  * An offloadable entity processor that materializes an entity set.
@@ -60,13 +59,14 @@ data class MaterializeEntitySetProcessor(
         val entitySetAssemblyKey = entry.key
         val materializedEntitySet = entry.value
         if (materializedEntitySet == null) {
-            logger.error("Materialized entity set with id {} for organization id {} was not initialized properly.")
+            logger.error("Materialized entity set with id ${entitySetAssemblyKey.entitySetId} for organization id " +
+                    "${entitySetAssemblyKey.organizationId} was not initialized properly.")
         } else {
             acm?.materializeEntitySets(
                     entitySetAssemblyKey.organizationId,
                     mapOf(entitySet to materializablePropertyTypes),
                     mapOf(entitySet.id to authorizedPropertyTypesOfPrincipals)
-            ) ?: throw IllegalStateException(NOT_INITIALIZED)
+            ) ?: throw IllegalStateException(AssemblerConnectionManagerDependent.NOT_INITIALIZED)
         }
 
         return null

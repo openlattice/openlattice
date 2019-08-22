@@ -33,7 +33,6 @@ import org.slf4j.LoggerFactory
 import java.util.*
 
 private val logger = LoggerFactory.getLogger(RemoveMembersFromOrganizationAssemblyProcessor::class.java)
-private const val NOT_INITIALIZED = "Assembler Connection Manager not initialized."
 
 data class RemoveMembersFromOrganizationAssemblyProcessor(val principals: Collection<SecurablePrincipal>)
     : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(false),
@@ -52,7 +51,7 @@ data class RemoveMembersFromOrganizationAssemblyProcessor(val principals: Collec
                     "$organizationId.")
         } else {
             if (acm == null) {
-                throw IllegalStateException(NOT_INITIALIZED)
+                throw IllegalStateException(AssemblerConnectionManagerDependent.NOT_INITIALIZED)
             }
             val dbName = PostgresDatabases.buildOrganizationDatabaseName(organizationId)
             acm!!.connect(dbName).use { dataSource ->

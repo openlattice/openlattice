@@ -31,8 +31,6 @@ import com.openlattice.edm.EntitySet
 import com.openlattice.organization.OrganizationEntitySetFlag
 import java.time.OffsetDateTime
 
-private const val NOT_INITIALIZED = "Assembler Connection Manager not initialized."
-
 data class RefreshMaterializedEntitySetProcessor(val entitySet: EntitySet)
     : AbstractRhizomeEntryProcessor<EntitySetAssemblyKey, MaterializedEntitySet, Void?>(),
         AssemblerConnectionManagerDependent<RefreshMaterializedEntitySetProcessor>,
@@ -48,7 +46,8 @@ data class RefreshMaterializedEntitySetProcessor(val entitySet: EntitySet)
             throw IllegalStateException("Encountered null materialized entity set while trying to refresh data in " +
                     "materialized view for entity set ${entitySet.id} in organization $organizationId.")
         } else {
-            acm?.refreshEntitySet(organizationId, entitySet) ?: throw IllegalStateException(NOT_INITIALIZED)
+            acm?.refreshEntitySet(organizationId, entitySet)
+                    ?: throw IllegalStateException(AssemblerConnectionManagerDependent.NOT_INITIALIZED)
 
             // Clear data unsync flag
             materializedEntitySet.flags.remove(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED)
