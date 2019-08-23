@@ -240,8 +240,9 @@ class PostgresEntityDataQueryService(
             authorizedPropertyTypes: Map<UUID, PropertyType>,
             awsPassthrough: Boolean = false
     ): WriteEvent {
+        val entityKeyIdsToLinkingIds = getLinkingIdsOfEntityKeyIds(entities.keys)
         return hds.connection.use { connection ->
-            val writeEvent = upsertEntities(connection, entitySetId, entities, authorizedPropertyTypes, awsPassthrough)
+            val writeEvent = upsertEntities(connection, entitySetId, entities, entityKeyIdsToLinkingIds, authorizedPropertyTypes, awsPassthrough)
 //            connection.commit()
 //            connection.autoCommit = true
             return@use writeEvent
@@ -262,6 +263,7 @@ class PostgresEntityDataQueryService(
             connection: Connection,
             entitySetId: UUID,
             entities: Map<UUID, Map<UUID, Set<Any>>>, // ekids ->
+            entityKeyIdsToLinkingIds: Map<UUID, UUID>,
             authorizedPropertyTypes: Map<UUID, PropertyType>,
             awsPassthrough: Boolean = false
     ): WriteEvent {
@@ -282,6 +284,7 @@ class PostgresEntityDataQueryService(
                             connection,
                             entitySetId,
                             entities,
+                            entityKeyIdsToLinkingIds,
                             authorizedPropertyTypes,
                             version,
                             partitionsInfo,
@@ -301,6 +304,7 @@ class PostgresEntityDataQueryService(
             connection: Connection,
             entitySetId: UUID,
             entities: Map<UUID, Map<UUID, Set<Any>>>,
+            entityKeyIdsToLinkingIds: Map<UUID, UUID>,
             authorizedPropertyTypes: Map<UUID, PropertyType>,
             version: Long,
             partitionsInfo: PartitionsInfo,
@@ -311,6 +315,7 @@ class PostgresEntityDataQueryService(
         //Update the versions of all entities.
 
         connection.autoCommit = true
+
         val entityKeyIdsArr = PostgresArrays.createUuidArray(connection, entities.keys)
         val versionsArrays = PostgresArrays.createLongArray(connection, arrayOf(version))
 
@@ -353,6 +358,7 @@ class PostgresEntityDataQueryService(
         //Update property values. We use multiple prepared statements in batch while re-using ARRAY[version].
         val upsertPropertyValues = mutableMapOf<UUID, Pair<PreparedStatement, PreparedStatement>>()
         val updatedPropertyCounts = entities.entries.map { (entityKeyId, rawValue) ->
+            // select from ids to find out if it's linking
             val entityData = if (awsPassthrough) {
                 rawValue
             } else {
@@ -365,7 +371,7 @@ class PostgresEntityDataQueryService(
                 val upsertPropertyValue = upsertPropertyValues.getOrPut(propertyTypeId) {
                     val pt = authorizedPropertyTypes[propertyTypeId] ?: abortInsert(entitySetId, entityKeyId)
                     connection.prepareStatement(upsertPropertyValueSql( pt )) to
-                            connection.prepareStatement(upsertPropertyValueSql( pt ))
+                            connection.prepareStatement(updateLinkRowFromSelect())
                 }
 
                 //TODO: Keep track of collisions here. We can detect when hashes collide for an entity
@@ -390,17 +396,20 @@ class PostgresEntityDataQueryService(
                     upsertPropertyValue.first.setObject(9, insertValue)
                     upsertPropertyValue.first.addBatch()
 
-                    // update for linked rows
-                    upsertPropertyValue.second.setObject(1, entitySetId)
-                    upsertPropertyValue.second.setObject(2, entityKeyId)
-                    upsertPropertyValue.second.setInt(3, partition)
-                    upsertPropertyValue.second.setObject(4, propertyTypeId)
-                    upsertPropertyValue.second.setObject(5, propertyHash)
-                    upsertPropertyValue.second.setObject(6, version)
-                    upsertPropertyValue.second.setArray(7, versionsArrays)
-                    upsertPropertyValue.second.setInt(8, partitionsInfo.partitionsVersion)
-                    upsertPropertyValue.second.setObject(9, insertValue)
-                    upsertPropertyValue.second.addBatch()
+                    if (entityKeyIdsToLinkingIds.containsKey(entityKeyId)) {
+
+                        // update for linked rows
+                        upsertPropertyValue.second.setObject(1, entitySetId)
+                        upsertPropertyValue.second.setObject(2, entityKeyId)
+                        upsertPropertyValue.second.setInt(3, partition)
+                        upsertPropertyValue.second.setObject(4, propertyTypeId)
+                        upsertPropertyValue.second.setObject(5, propertyHash)
+                        upsertPropertyValue.second.setObject(6, version)
+                        upsertPropertyValue.second.setArray(7, versionsArrays)
+                        upsertPropertyValue.second.setInt(8, partitionsInfo.partitionsVersion)
+                        upsertPropertyValue.second.setObject(9, insertValue)
+                        upsertPropertyValue.second.addBatch()
+                    }
 //
                 }
             }
@@ -444,10 +453,12 @@ class PostgresEntityDataQueryService(
             entities: Map<UUID, Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): WriteEvent {
+        val entityKeyIdsToLinkingIds = getLinkingIdsOfEntityKeyIds(entities.keys)
+
         return hds.connection.use { connection ->
             connection.autoCommit = false
             tombstone(connection, entitySetId, entities.keys, authorizedPropertyTypes.values)
-            val event = upsertEntities(connection, entitySetId, entities, authorizedPropertyTypes)
+            val event = upsertEntities(connection, entitySetId, entities, entityKeyIdsToLinkingIds, authorizedPropertyTypes)
             connection.autoCommit = true
             event
         }
@@ -458,6 +469,8 @@ class PostgresEntityDataQueryService(
             entities: Map<UUID, Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): WriteEvent {
+        val entityKeyIdsToLinkingIds = getLinkingIdsOfEntityKeyIds(entities.keys)
+
         //Only tombstone properties being replaced.
         return hds.connection.use { connection ->
             connection.autoCommit = false
@@ -470,7 +483,7 @@ class PostgresEntityDataQueryService(
                         entity.keys.map { authorizedPropertyTypes.getValue(it) }.toSet()
                 )
             }
-            val event = upsertEntities(connection, entitySetId, entities, authorizedPropertyTypes)
+            val event = upsertEntities(connection, entitySetId, entities, entityKeyIdsToLinkingIds, authorizedPropertyTypes)
             connection.autoCommit = true
             event
         }
@@ -919,4 +932,8 @@ private fun abortInsert(entitySetId: UUID, entityKeyId: UUID): Nothing {
     throw InvalidParameterException(
             "Cannot insert property type not in authorized property types for entity $entityKeyId from entity set $entitySetId."
     )
+}
+
+fun getLinkingIdsOfEntityKeyIds(entityKeyIds: Set<UUID>): Map<UUID, UUID> {
+    // TODO
 }
