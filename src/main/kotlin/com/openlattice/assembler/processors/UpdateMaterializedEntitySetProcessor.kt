@@ -52,8 +52,13 @@ data class UpdateMaterializedEntitySetProcessor(
             acm?.updateMaterializedEntitySet(organizationId, entitySet, materializablePropertyTypes)
                     ?: throw IllegalStateException(AssemblerConnectionManagerDependent.NOT_INITIALIZED)
 
-            // Clear data unsync flag
-            materializedEntitySet.flags.remove(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED)
+            // Clear data and permission unsync flag
+            materializedEntitySet.flags.removeAll(
+                    listOf(
+                            OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED,
+                            OrganizationEntitySetFlag.MATERIALIZE_PERMISSION_UNSYNCHRONIZED
+                    )
+            )
 
             // Update last refresh
             materializedEntitySet.lastRefresh = OffsetDateTime.now()

@@ -31,6 +31,7 @@ import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.hazelcast.query.Predicate;
 import com.hazelcast.query.Predicates;
+import com.openlattice.assembler.events.MaterializePermissionChangeEvent;
 import com.openlattice.authorization.aggregators.AuthorizationAggregator;
 import com.openlattice.authorization.aggregators.AuthorizationSetAggregator;
 import com.openlattice.authorization.aggregators.PrincipalAggregator;
@@ -81,6 +82,20 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
         aces.executeOnEntries( new SecurableObjectTypeUpdater( objectType ), hasAclKey( aclKey ) );
     }
 
+    private void checkMaterializationPermissionChange(
+            AclKey key,
+            Principal principal,
+            EnumSet<Permission> permissions,
+            SecurableObjectType securableObjectType
+    ) {
+        // if there was a change in materialization permission for organization principal, we need to flag it
+        if ( permissions.contains( Permission.MATERIALIZE )
+                && principal.getType().equals( PrincipalType.ORGANIZATION )
+                && securableObjectType.equals( SecurableObjectType.PropertyTypeInEntitySet ) ) {
+            eventBus.post( new MaterializePermissionChangeEvent( principal, key.get( 0 ) ) );
+        }
+    }
+
     @Override
     public void addPermission(
             AclKey key,
@@ -100,6 +115,7 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
         if ( securableObjectType == SecurableObjectType.Unknown ) {
             logger.warn( "Unrecognized object type for acl key {} key ", key );
         }
+        checkMaterializationPermissionChange( key, principal, permissions, securableObjectType );
         aces.executeOnKey( new AceKey( key, principal ),
                 new PermissionMerger( permissions, securableObjectType, expirationDate ) );
     }
@@ -132,7 +148,9 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
         if ( permissions.contains( Permission.OWNER ) ) {
             ensureAclKeysHaveOtherUserOwners( ImmutableSet.of( key ), ImmutableSet.of( principal ) );
         }
-
+        checkMaterializationPermissionChange(
+                key, principal, permissions, securableObjectTypes.getOrDefault( key, SecurableObjectType.Unknown )
+        );
         aces.executeOnKey( new AceKey( key, principal ), new PermissionRemover( permissions ) );
     }
 
@@ -154,14 +172,16 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
             ensureAclKeysHaveOtherUserOwners( ImmutableSet.of( key ), ImmutableSet.of( principal ) );
         //This should be a rare call to overwrite all permissions, so it's okay to do a read before write.
         SecurableObjectType securableObjectType = securableObjectTypes.getOrDefault( key, SecurableObjectType.Unknown );
+        checkMaterializationPermissionChange( key, principal, permissions, securableObjectType );
         aces.set( new AceKey( key, principal ), new AceValue( permissions, securableObjectType, expirationDate ) );
     }
 
     @Override
     public void setPermission( Set<AclKey> aclKeys, Set<Principal> principals, EnumSet<Permission> permissions ) {
         //This should be a rare call to overwrite all permissions, so it's okay to do a read before write.
-        if ( !permissions.contains( Permission.OWNER ) )
+        if ( !permissions.contains( Permission.OWNER ) ) {
             ensureAclKeysHaveOtherUserOwners( aclKeys, principals );
+        }
 
         Map<AclKey, SecurableObjectType> securableObjectTypesForAclKeys = securableObjectTypes.getAll( aclKeys );
 
@@ -174,6 +194,7 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
 
             for ( Principal principal : principals ) {
                 newPermissions.put( new AceKey( aclKey, principal ), aceValue );
+                checkMaterializationPermissionChange( aclKey, principal, permissions, objectType );
             }
         }
 

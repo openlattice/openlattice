@@ -18,20 +18,9 @@
  *
  *
  */
-package com.openlattice.assembler
+package com.openlattice.assembler.events
 
-import com.hazelcast.core.IMap
-import com.openlattice.authorization.EdmAuthorizationHelper
-import com.openlattice.datastore.services.EdmManager
-import com.openlattice.organizations.HazelcastOrganizationService
-import com.openlattice.tasks.HazelcastTaskDependencies
-import com.zaxxer.hikari.HikariDataSource
+import com.openlattice.authorization.Principal
+import java.util.UUID
 
-data class MaterializedEntitySetsDependencies(
-        val assembler: Assembler,
-        val materializedEntitySets: IMap<EntitySetAssemblyKey, MaterializedEntitySet>,
-        val organizations: HazelcastOrganizationService,
-        val edm: EdmManager,
-        val authzHelper: EdmAuthorizationHelper,
-        val hds: HikariDataSource
-) : HazelcastTaskDependencies
+data class MaterializePermissionChangeEvent(val organizationPrincipal: Principal, val entitySetId: UUID)
