@@ -1,6 +1,7 @@
 package com.openlattice.data.storage
 
 
+import com.openlattice.IdConstants
 import com.openlattice.analysis.SqlBindInfo
 import com.openlattice.analysis.requests.Filter
 import com.openlattice.edm.PostgresEdmTypeConverter
@@ -22,11 +23,15 @@ import java.util.*
 internal class PostgresDataQueries
 
 const val VALUES = "values"
+@Deprecated("Unused")
 val dataMetadataColumnsParametersSql = PostgresDataTables.dataTableMetadataColumns.joinToString(",") { "?" }
+@Deprecated("Unused")
 val dataMetadataColumnsSql = PostgresDataTables.dataTableMetadataColumns.joinToString { "," }
 val dataTableColumnsSql = PostgresDataTables.dataTableColumns.joinToString(",") { it.name }
+@Deprecated("Unused")
 val dataTableColumnsBindSql = PostgresDataTables.dataTableColumns.joinToString(",") { "?" }
 
+@Deprecated("Unused")
 val dataTableColumnsConflictSetSql = PostgresDataTables.dataTableColumns.joinToString(",") {
     "${it.name} = EXCLUDED.${it.name}"
 }
@@ -35,6 +40,7 @@ val valuesColumnsSql = PostgresDataTables.dataTableValueColumns.joinToString(","
     "array_agg(${it.name}) FILTER (where ${it.name} IS NOT NULL) as ${it.name}"
 }
 
+@Deprecated("Unused")
 val jsonValueColumnNamesAsString = PostgresDataTables.dataColumns.keys.map { getMergedDataColumnName(it) }.joinToString(",")
 
 val jsonValueColumnsSql = PostgresDataTables.dataColumns.entries
@@ -69,11 +75,11 @@ fun buildPreparableFiltersSqlForLinkedEntities(
 
     val innerSql = selectEntitiesGroupedByIdAndPropertyTypeId(
             idsPresent = idsPresent, partitionsPresent = partitionsPresent, selectOriginIds = selectOriginIds
-    ) + " AND ${ORIGIN_ID.name} IS NOT NULL " + filtersClause + GROUP_BY_ESID_EKID_PART_PTID
+    ) + " AND ${ORIGIN_ID.name} != '${IdConstants.EMPTY_UUID}' " + filtersClause + GROUP_BY_ESID_EKID_PART_PTID
 
-    val entityKeyIds = if (selectOriginIds) ",${ENTITY_KEY_IDS_COL.name}" else ""
+    val maybeEntityKeyIds = if (selectOriginIds) ",${ENTITY_KEY_IDS_COL.name}" else ""
     val groupBy = if (selectOriginIds) GROUP_BY_ESID_EKID_PART_EKIDS else GROUP_BY_ESID_EKID_PART
-    val sql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name}$entityKeyIds,$jsonValueColumnsSql " +
+    val sql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name}$maybeEntityKeyIds,$jsonValueColumnsSql " +
             "FROM ($innerSql) entities $groupBy"
 
     return sql to filtersClauses.second
@@ -623,7 +629,7 @@ fun upsertPropertyValueSql(propertyType: PropertyType): String {
 }
 
 /**
- * Used to upsert a link from linker
+ * Used to C(~RUD~) a link from linker
  * This function generates preparable sql with the following bind order:
  *
  * Insert into:

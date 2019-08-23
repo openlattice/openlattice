@@ -139,7 +139,28 @@ class PostgresDataTables {
                     .ifNotExists()
                     .desc()
 
-            tableDefinition.addIndexes(
+//                PostgresExpressionIndexDefinition(IDS,
+//                        ENTITY_SET_ID.name
+//                        + ",(" + LINKING_ID.name + " IS NOT NULL" + ")"
+//                        + ",(" + LAST_LINK.getName() + " >= " + LAST_WRITE.name + ")"
+//                        + ",(" + LAST_INDEX.getName() + " >= " + LAST_WRITE.name + ")"
+//                        + ",(" + LAST_LINK_INDEX.name + " < " + LAST_WRITE.name + ")"
+//                        + ",(" + VERSION.name + " > 0)")
+//                .name("ids_needing_linking_indexing_idx")
+//                .ifNotExists(),
+
+
+//            val linkingRows = PostgresColumnsIndexDefinition(tableDefinition, ID_VALUE, VERSION)
+//                    .name(quote(prefix + ""))
+//                    .ifNotExists()
+//                    .desc()
+
+//            val nonLinkingRows = PostgresColumnsIndexDefinition(tableDefinition, ID_VALUE, VERSION)
+//                    .name(quote(prefix + ""))
+//                    .ifNotExists()
+//                    .desc()
+
+                    tableDefinition.addIndexes(
                     idIndex,
                     entitySetIdIndex,
                     versionIndex,
