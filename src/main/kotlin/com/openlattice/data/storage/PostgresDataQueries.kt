@@ -578,6 +578,7 @@ fun getPartitionsInfo(entityKeyIds: Set<UUID>, partitions: List<Int>): List<Int>
  *
  * @return A map of entity key ids to partitions.
  */
+@Deprecated("Unused")
 fun getPartitionsInfoMap(entityKeyIds: Set<UUID>, partitions: List<Int>): Map<UUID, Int> {
     return entityKeyIds.associateWith { entityKeyId -> getPartition(entityKeyId, partitions) }
 }
@@ -586,6 +587,49 @@ fun getMergedDataColumnName(datatype: PostgresDatatype): String {
     return "v_${datatype.name}"
 }
 
+/**
+ * Preparable SQL that updates an existing linked rows per entity or does nothing if there is no linked row
+ *
+ * The following bind order is expected:
+ *
+ * 1. hash
+ * 2. version
+ * 3. esid
+ * 4. partition
+ * 5. ekid
+ * 6. property type id
+ * 7. partitions version
+ *
+ */
+internal fun updateLinkRowFromSelect() : String {
+    val existingColumnsUpdatedForLinking = PostgresDataTables.dataTableColumns.joinToString(",") {
+        when( it ) {
+            HASH, VERSION   -> "?"
+            LAST_WRITE      -> "now()"
+            else            -> it.name
+        }
+    }
+
+    return "INSERT INTO ${DATA.name} ($dataTableColumnsSql) " +
+            // SELECT existing *linking rows* which will be updated
+            "SELECT $existingColumnsUpdatedForLinking " +
+                "FROM ${DATA.name} " +
+                "${optionalWhereClausesSingleEdk( idPresent = false, partitionsPresent = true, entitySetPresent = true )} " +
+                "AND ${ORIGIN_ID.name} = ? " +
+                "AND ${PROPERTY_TYPE_ID.name} = ? " +
+                "AND ${PARTITIONS_VERSION.name} = ? " +
+            "ON CONFLICT (${ENTITY_SET_ID.name},${ID_VALUE.name},${ORIGIN_ID.name},${PARTITION.name},${PROPERTY_TYPE_ID.name},${PARTITIONS_VERSION.name}) " +
+            "DO UPDATE SET " +
+                "${VERSIONS.name} = ${DATA.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
+                "${LAST_WRITE.name} = GREATEST(${DATA.name}.${LAST_WRITE.name},EXCLUDED.${LAST_WRITE.name}), " +
+                "${ORIGIN_ID.name} = EXCLUDED.${ORIGIN_ID.name}, " +
+                "${PARTITIONS_VERSION.name} = EXCLUDED.${PARTITIONS_VERSION.name}, " +
+                "${VERSION.name} = CASE " +
+                    "WHEN abs(${DATA.name}.${VERSION.name}) < EXCLUDED.${VERSION.name} " +
+                    "THEN EXCLUDED.${VERSION.name} " +
+                    "ELSE ${DATA.name}.${VERSION.name} " +
+                "END"
+}
 
 /**
  * This function generates preparable sql with the following bind order:

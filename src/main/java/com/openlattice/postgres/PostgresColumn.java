@@ -325,7 +325,7 @@ public final class PostgresColumn {
             new PostgresColumnDefinition( ORGANIZATION_ID_FIELD, UUID ).notNull();
     public static final String                   ORIGIN_ID_FIELD                   = "origin_id";
     public static final PostgresColumnDefinition ORIGIN_ID                         =
-            new PostgresColumnDefinition( ORIGIN_ID_FIELD, UUID );
+            new PostgresColumnDefinition( ORIGIN_ID_FIELD, UUID ).notNull();
     public static final String                   PARTITIONS_FIELD                  = "partitions";
     public static final PostgresColumnDefinition PARTITIONS                        = new PostgresColumnDefinition(
             PARTITIONS_FIELD,

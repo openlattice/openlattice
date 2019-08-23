@@ -314,6 +314,9 @@ class PostgresEntityDataQueryService(
         val entityKeyIdsArr = PostgresArrays.createUuidArray(connection, entities.keys)
         val versionsArrays = PostgresArrays.createLongArray(connection, arrayOf(version))
 
+        val partitions = partitionManager.getEntitySetPartitionsInfo(entitySetId).partitions
+        val partitionsArrays = PostgresArrays.createIntArray(connection, partitions)
+
         /*
          * Our approach is to use entity level locking that takes advantage of the router executor to avoid deadlocks.
          *
@@ -348,7 +351,7 @@ class PostgresEntityDataQueryService(
         }
 
         //Update property values. We use multiple prepared statements in batch while re-using ARRAY[version].
-        val upsertPropertyValues = mutableMapOf<UUID, PreparedStatement>()
+        val upsertPropertyValues = mutableMapOf<UUID, Pair<PreparedStatement, PreparedStatement>>()
         val updatedPropertyCounts = entities.entries.map { (entityKeyId, rawValue) ->
             val entityData = if (awsPassthrough) {
                 rawValue
@@ -361,7 +364,8 @@ class PostgresEntityDataQueryService(
             entityData.map { (propertyTypeId, values) ->
                 val upsertPropertyValue = upsertPropertyValues.getOrPut(propertyTypeId) {
                     val pt = authorizedPropertyTypes[propertyTypeId] ?: abortInsert(entitySetId, entityKeyId)
-                    connection.prepareStatement(upsertPropertyValueSql(pt))
+                    connection.prepareStatement(upsertPropertyValueSql( pt )) to
+                            connection.prepareStatement(upsertPropertyValueSql( pt ))
                 }
 
                 //TODO: Keep track of collisions here. We can detect when hashes collide for an entity
@@ -375,19 +379,34 @@ class PostgresEntityDataQueryService(
                     val ( propertyHash, insertValue ) = getPropertyHash( entitySetId, entityKeyId, propertyTypeId,
                             value, dataType, awsPassthrough )
 
-                    upsertPropertyValue.setObject(1, entitySetId)
-                    upsertPropertyValue.setObject(2, entityKeyId)
-                    upsertPropertyValue.setInt(3, partition)
-                    upsertPropertyValue.setObject(4, propertyTypeId)
-                    upsertPropertyValue.setObject(5, propertyHash)
-                    upsertPropertyValue.setObject(6, version)
-                    upsertPropertyValue.setArray(7, versionsArrays)
-                    upsertPropertyValue.setInt(8, partitionsInfo.partitionsVersion)
-                    upsertPropertyValue.setObject(9, insertValue)
-                    upsertPropertyValue.addBatch()
+                    upsertPropertyValue.first.setObject(1, entitySetId)
+                    upsertPropertyValue.first.setObject(2, entityKeyId)
+                    upsertPropertyValue.first.setInt(3, partition)
+                    upsertPropertyValue.first.setObject(4, propertyTypeId)
+                    upsertPropertyValue.first.setObject(5, propertyHash)
+                    upsertPropertyValue.first.setObject(6, version)
+                    upsertPropertyValue.first.setArray(7, versionsArrays)
+                    upsertPropertyValue.first.setInt(8, partitionsInfo.partitionsVersion)
+                    upsertPropertyValue.first.setObject(9, insertValue)
+                    upsertPropertyValue.first.addBatch()
+
+                    // update for linked rows
+                    upsertPropertyValue.second.setObject(1, entitySetId)
+                    upsertPropertyValue.second.setObject(2, entityKeyId)
+                    upsertPropertyValue.second.setInt(3, partition)
+                    upsertPropertyValue.second.setObject(4, propertyTypeId)
+                    upsertPropertyValue.second.setObject(5, propertyHash)
+                    upsertPropertyValue.second.setObject(6, version)
+                    upsertPropertyValue.second.setArray(7, versionsArrays)
+                    upsertPropertyValue.second.setInt(8, partitionsInfo.partitionsVersion)
+                    upsertPropertyValue.second.setObject(9, insertValue)
+                    upsertPropertyValue.second.addBatch()
+//
                 }
             }
-            upsertPropertyValues.values.map { it.executeBatch().sum() }.sum()
+            upsertPropertyValues.values.map { ( entity, link ) ->
+                entity.executeBatch().sum() + link.executeBatch().sum()
+            }.sum()
         }.sum()
 
         return updatedEntityCount to updatedPropertyCounts
