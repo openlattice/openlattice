@@ -63,6 +63,7 @@ class ElasticsearchBlocker(
             Predicates.equal(EntityTypeMapstore.FULLQUALIFIED_NAME_PREDICATE, PersonProperties.PERSON_TYPE_FQN.fullQualifiedNameAsString)
     ).first()
 
+    @Deprecated("Unused")
     private val entitySetsCache = Suppliers
             .memoizeWithExpiration({
                 entitySets.values.filter { it.entityTypeId == personEntityType.id }
