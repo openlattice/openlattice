@@ -86,14 +86,7 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
             AclKey key,
             Principal principal,
             EnumSet<Permission> permissions ) {
-        //TODO: We should do something better than reading the securable object type.
-        OffsetDateTime expirationDate = OffsetDateTime.MAX;
-        SecurableObjectType securableObjectType = securableObjectTypes.getOrDefault( key, SecurableObjectType.Unknown );
-        if ( securableObjectType == SecurableObjectType.Unknown ) {
-            logger.warn( "Unrecognized object type for acl key {} key ", key );
-        }
-        aces.executeOnKey( new AceKey( key, principal ),
-                new PermissionMerger( permissions, securableObjectType, expirationDate ) );
+        addPermission( key, principal, permissions, OffsetDateTime.MAX );
     }
 
     @Override
@@ -136,7 +129,10 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
             AclKey key,
             Principal principal,
             EnumSet<Permission> permissions ) {
-        ensureAclKeysHaveOtherUserOwners( ImmutableSet.of( key ), ImmutableSet.of( principal ) );
+        if ( permissions.contains( Permission.OWNER ) ) {
+            ensureAclKeysHaveOtherUserOwners( ImmutableSet.of( key ), ImmutableSet.of( principal ) );
+        }
+
         aces.executeOnKey( new AceKey( key, principal ), new PermissionRemover( permissions ) );
     }
 
@@ -145,12 +141,7 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
             AclKey key,
             Principal principal,
             EnumSet<Permission> permissions ) {
-        if ( !permissions.contains( Permission.OWNER ) )
-            ensureAclKeysHaveOtherUserOwners( ImmutableSet.of( key ), ImmutableSet.of( principal ) );
-        //This should be a rare call to overwrite all permissions, so it's okay to do a read before write.
-        OffsetDateTime expirationDate = OffsetDateTime.MAX;
-        SecurableObjectType securableObjectType = securableObjectTypes.getOrDefault( key, SecurableObjectType.Unknown );
-        aces.set( new AceKey( key, principal ), new AceValue( permissions, securableObjectType, expirationDate ) );
+        setPermission( key, principal, permissions, OffsetDateTime.MAX );
     }
 
     @Override
