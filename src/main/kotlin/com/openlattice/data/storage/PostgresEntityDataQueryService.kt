@@ -12,7 +12,9 @@ import com.openlattice.postgres.*
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.streams.BasePostgresIterable
+import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
+import com.openlattice.postgres.streams.StatementHolder
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.commons.lang3.NotImplementedException
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
@@ -25,6 +27,8 @@ import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.util.*
 import java.util.concurrent.atomic.AtomicLong
+import java.util.function.Function
+import java.util.function.Supplier
 import kotlin.streams.asStream
 
 const val S3_DELETE_BATCH_SIZE = 10000
@@ -47,17 +51,17 @@ class PostgresEntityDataQueryService(
             entitySetId: UUID,
             version: Optional<Long> = Optional.empty()
     ): BasePostgresIterable<UUID> {
-        return if (version.isPresent) {
+        if (version.isPresent) {
             throw NotImplementedException("BLAME MTR. Not yet implemented.")
-        } else {
-            BasePostgresIterable(
-                    PreparedStatementHolderSupplier(
-                            hds,
-                            "SELECT ${ID_VALUE.name} FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${VERSION.name} > 0",
-                            FETCH_SIZE
-                    ) { ps -> ps.setObject(1, entitySetId) }
-            ) { rs -> ResultSetAdapters.id(rs) }
         }
+
+        return BasePostgresIterable(
+                PreparedStatementHolderSupplier(
+                        hds,
+                        "SELECT ${ID_VALUE.name} FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${VERSION.name} > 0",
+                        FETCH_SIZE
+                ) { ps -> ps.setObject(1, entitySetId) }
+        ) { rs -> ResultSetAdapters.id(rs) }
     }
 
     /**
@@ -925,15 +929,31 @@ class PostgresEntityDataQueryService(
 
         return WriteEvent(tombstoneVersion, numUpdated + linksUpdated)
     }
-}
+
+    fun getLinkingIdsOfEntityKeyIds(entityKeyIds: Set<UUID>): Map<UUID, UUID> {
+        val sql = "SELECT ${ID.name}, ${LINKING_ID.name} FROM ${IDS.name} WHERE ${ID.name} = ANY(?) AND ${LINKING_ID.name} IS NOT NULL"
+
+        return PostgresIterable(
+                Supplier {
+                    val connection = hds.connection
+                    val stmt = connection.prepareStatement(sql)
+
+                    stmt.setArray(1, PostgresArrays.createUuidArray(connection, entityKeyIds))
+                    val rs = stmt.executeQuery()
+                    StatementHolder(connection, stmt, rs)
+                },
+                Function<ResultSet, Pair<UUID, UUID>> { rs ->
+                    val entityKeyId = ResultSetAdapters.id(rs)
+                    val linkingId = ResultSetAdapters.linkingId(rs)
+
+                    entityKeyId to linkingId
+                }
+        ).asSequence().toMap()
+    }
 
 
-private fun abortInsert(entitySetId: UUID, entityKeyId: UUID): Nothing {
-    throw InvalidParameterException(
-            "Cannot insert property type not in authorized property types for entity $entityKeyId from entity set $entitySetId."
-    )
-}
-
-fun getLinkingIdsOfEntityKeyIds(entityKeyIds: Set<UUID>): Map<UUID, UUID> {
-    // TODO
-}
+    private fun abortInsert(entitySetId: UUID, entityKeyId: UUID): Nothing {
+        throw InvalidParameterException(
+                "Cannot insert property type not in authorized property types for entity $entityKeyId from entity set $entitySetId."
+        )
+    }
