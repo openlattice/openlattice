@@ -400,9 +400,12 @@ class PostgresEntityDataQueryService(
                     upsertPropertyValue.first.setObject(9, insertValue)
                     upsertPropertyValue.first.addBatch()
 
-                    if (entityKeyIdsToLinkingIds.containsKey(entityKeyId)) {
+                    val maybeLinkingId = entityKeyIdsToLinkingIds.get(entityKeyId)
+                    if ( maybeLinkingId != null ) {
 
                         // update for linked rows
+                        // TODO: update SQL to use linkingId / make just one *add-row* SQL for linking rows and use it here and in BLS
+                        upsertPropertyValue.second.setObject(1, maybeLinkingId)
                         upsertPropertyValue.second.setObject(1, entitySetId)
                         upsertPropertyValue.second.setObject(2, entityKeyId)
                         upsertPropertyValue.second.setInt(3, partition)
@@ -461,7 +464,7 @@ class PostgresEntityDataQueryService(
 
         return hds.connection.use { connection ->
             connection.autoCommit = false
-            tombstone(connection, entitySetId, entities.keys, authorizedPropertyTypes.values)
+            tombstone(connection, entitySetId, entities.keys, entityKeyIdsToLinkingIds, authorizedPropertyTypes.values)
             val event = upsertEntities(connection, entitySetId, entities, entityKeyIdsToLinkingIds, authorizedPropertyTypes)
             connection.autoCommit = true
             event
@@ -822,6 +825,7 @@ class PostgresEntityDataQueryService(
             conn: Connection,
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
+            entityKeyIdsToLinkingIds: Map<UUID, UUID>,
             propertyTypesToTombstone: Collection<PropertyType>,
             partitionsInfo: PartitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
     ): WriteEvent {
@@ -849,9 +853,8 @@ class PostgresEntityDataQueryService(
             ps.setLong(3, tombstoneVersion)
             ps.setObject(4, entitySetId)
             ps.setArray(5, propertyTypeIdsArr)
-            ps.setArray(6, entityKeyIdsArr)
-            ps.setArray(7, partitionsArr)
-            ps.setInt(8, partitionsInfo.partitionsVersion)
+            ps.setArray(6, PostgresArrays.createUuidArray( conn, entityKeyIdsToLinkingIds.values ))
+            ps.setArray(7, entityKeyIdsArr)
             ps.executeUpdate()
         }
 
@@ -950,7 +953,6 @@ class PostgresEntityDataQueryService(
                 }
         ).asSequence().toMap()
     }
-
 
     private fun abortInsert(entitySetId: UUID, entityKeyId: UUID): Nothing {
         throw InvalidParameterException(

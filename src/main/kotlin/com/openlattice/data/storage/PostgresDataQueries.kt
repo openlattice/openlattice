@@ -457,15 +457,15 @@ internal val updateVersionsForPropertyTypesInEntitySet = "$updateVersionsForProp
  * 8. partition version
  */
 internal fun updateVersionsForPropertyTypesInEntitiesInEntitySet( linking: Boolean = false ): String {
-    val idCol = if ( linking ){
-        ORIGIN_ID.name
+    val maybeLinking = if ( linking ){
+        "AND ${ORIGIN_ID.name} = ANY(?) "
     } else {
-        ID_VALUE.name
+        "AND ${PARTITION.name} = ANY(?) AND ${PARTITIONS_VERSION.name} = ? "
     }
+
     return "$updateVersionsForPropertyTypesInEntitySet " +
-            "AND $idCol = ANY(?) " +
-            "AND ${PARTITION.name} = ANY(?) " +
-            "AND ${PARTITIONS_VERSION.name} = ? "
+            "AND ${ID_VALUE.name} = ANY(?) " +
+            maybeLinking
 }
 
 /**
@@ -645,7 +645,7 @@ internal fun updateLinkRowFromSelect() : String {
  * 8.  PARTITIONS_VERSION
  * 9.  Value Column
  */
-fun upsertPropertyValueSql(propertyType: PropertyType): String {
+fun upsertPropertyValueSql(propertyType: PropertyType, linking: Boolean=false): String {
     val insertColumn = getColumnDefinition(propertyType.postgresIndexType, propertyType.datatype)
     val metadataColumnsSql = listOf(
             ENTITY_SET_ID,
