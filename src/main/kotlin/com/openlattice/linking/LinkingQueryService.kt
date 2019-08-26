@@ -32,15 +32,6 @@ import java.util.*
  */
 interface LinkingQueryService {
 
-    @Deprecated("Unused")
-    fun getNeighborhoodScores(blockKey: EntityDataKey): Map<EntityDataKey, Double>
-    @Deprecated("Unused")
-    fun deleteMatchScore(blockKey: EntityDataKey, blockElement: EntityDataKey): Int
-    @Deprecated("Unused")
-    fun getOrderedBlocks(): PostgresIterable<Pair<EntityDataKey, Long>>
-    @Deprecated("Unused")
-    fun getClustersBySize(): PostgresIterable<Pair<EntityDataKey, Double>>
-
     /**
      * Inserts the results scoring pairs of elements within a cluster to persistent storage. The initial cluster usually
      * consists of all scored pairs within a single block returned by the [Blocker].

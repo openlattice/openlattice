@@ -601,7 +601,7 @@ fun getMergedDataColumnName(datatype: PostgresDatatype): String {
  * 7. partitions version
  *
  */
-internal fun updateLinkRowFromSelect() : String {
+internal fun updateLinkRowFromSelect(): String {
     val existingColumnsUpdatedForLinking = PostgresDataTables.dataTableColumns.joinToString(",") {
         when( it ) {
             HASH, VERSION   -> "?"
@@ -645,7 +645,7 @@ internal fun updateLinkRowFromSelect() : String {
  * 8.  PARTITIONS_VERSION
  * 9.  Value Column
  */
-fun upsertPropertyValueSql(propertyType: PropertyType, linking: Boolean=false): String {
+fun upsertPropertyValueSql(propertyType: PropertyType): String {
     val insertColumn = getColumnDefinition(propertyType.postgresIndexType, propertyType.datatype)
     val metadataColumnsSql = listOf(
             ENTITY_SET_ID,
@@ -658,8 +658,52 @@ fun upsertPropertyValueSql(propertyType: PropertyType, linking: Boolean=false): 
             VERSIONS,
             PARTITIONS_VERSION
     ).joinToString(",") { it.name }
+
     return "INSERT INTO ${DATA.name} ($metadataColumnsSql,${insertColumn.name}) " +
             "VALUES (?,?,?,?,?,now(),?,?,?,?) " +
+            "ON CONFLICT (${PARTITION.name},${ENTITY_SET_ID.name},${PROPERTY_TYPE_ID.name},${ID_VALUE.name},${HASH.name},${PARTITIONS_VERSION.name}) " +
+            "DO UPDATE SET " +
+            "${VERSIONS.name} = ${DATA.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
+            "${LAST_WRITE.name} = GREATEST(${DATA.name}.${LAST_WRITE.name},EXCLUDED.${LAST_WRITE.name}), " +
+            "${PARTITIONS_VERSION.name} = EXCLUDED.${PARTITIONS_VERSION.name}, " +
+            "${VERSION.name} = CASE " +
+                "WHEN abs(${DATA.name}.${VERSION.name}) < EXCLUDED.${VERSION.name} " +
+                "THEN EXCLUDED.${VERSION.name} " +
+                "ELSE ${DATA.name}.${VERSION.name} " +
+            "END"
+}
+
+/**
+ * This function generates preparable sql with the following bind order:
+ *
+ * 1.  ENTITY_SET_ID
+ * 2.  ID_VALUE         --> expects linking ID
+ * 3.  PARTITION
+ * 4.  PROPERTY_TYPE_ID
+ * 5.  HASH
+ *     LAST_WRITE = now()
+ * 6.  VERSION,
+ * 7.  VERSIONS
+ * 8.  PARTITIONS_VERSION
+ * 9.  Value Column
+ * 10. ORIGIN ID        --> expects entity key id
+ */
+fun upsertPropertyValueLinkingRowSql(propertyType: PropertyType ): String {
+    val insertColumn = getColumnDefinition(propertyType.postgresIndexType, propertyType.datatype)
+    val metadataColumnsSql = listOf(
+            ENTITY_SET_ID,
+            ID_VALUE,
+            PARTITION,
+            PROPERTY_TYPE_ID,
+            HASH,
+            LAST_WRITE,
+            VERSION,
+            VERSIONS,
+            PARTITIONS_VERSION
+    ).joinToString(",") { it.name }
+
+    return "INSERT INTO ${DATA.name} ($metadataColumnsSql,${insertColumn.name},${ORIGIN_ID.name}) " +
+            "VALUES (?,?,?,?,?,now(),?,?,?,?,?) " +
             "ON CONFLICT (${PARTITION.name},${ENTITY_SET_ID.name},${PROPERTY_TYPE_ID.name},${ID_VALUE.name},${HASH.name},${PARTITIONS_VERSION.name}) " +
             "DO UPDATE SET " +
             "${VERSIONS.name} = ${DATA.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +

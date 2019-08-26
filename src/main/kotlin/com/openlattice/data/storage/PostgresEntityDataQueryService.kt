@@ -375,7 +375,7 @@ class PostgresEntityDataQueryService(
                 val upsertPropertyValue = upsertPropertyValues.getOrPut(propertyTypeId) {
                     val pt = authorizedPropertyTypes[propertyTypeId] ?: abortInsert(entitySetId, entityKeyId)
                     connection.prepareStatement(upsertPropertyValueSql(pt)) to
-                            connection.prepareStatement(updateLinkRowFromSelect())
+                            connection.prepareStatement(upsertPropertyValueLinkingRowSql(pt))
                 }
 
                 //TODO: Keep track of collisions here. We can detect when hashes collide for an entity
@@ -402,12 +402,9 @@ class PostgresEntityDataQueryService(
 
                     val maybeLinkingId = entityKeyIdsToLinkingIds.get(entityKeyId)
                     if (maybeLinkingId != null) {
-
                         // update for linked rows
-                        // TODO: LINKING update SQL to use linkingId / make just one *add-row* SQL for linking rows and use it here and in BLS
-                        upsertPropertyValue.second.setObject(1, maybeLinkingId)
                         upsertPropertyValue.second.setObject(1, entitySetId)
-                        upsertPropertyValue.second.setObject(2, entityKeyId)
+                        upsertPropertyValue.second.setObject(2, maybeLinkingId)
                         upsertPropertyValue.second.setInt(3, partition)
                         upsertPropertyValue.second.setObject(4, propertyTypeId)
                         upsertPropertyValue.second.setObject(5, propertyHash)
@@ -415,6 +412,7 @@ class PostgresEntityDataQueryService(
                         upsertPropertyValue.second.setArray(7, versionsArrays)
                         upsertPropertyValue.second.setInt(8, partitionsInfo.partitionsVersion)
                         upsertPropertyValue.second.setObject(9, insertValue)
+                        upsertPropertyValue.second.setObject(10, entityKeyId)
                         upsertPropertyValue.second.addBatch()
                     }
 //
