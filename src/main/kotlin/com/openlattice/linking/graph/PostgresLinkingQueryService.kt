@@ -169,65 +169,6 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource, private val
         }
     }
 
-    override fun getClustersBySize(): PostgresIterable<Pair<EntityDataKey, Double>> {
-        return PostgresIterable(
-                Supplier {
-                    val connection = hds.connection
-                    val stmt = connection.createStatement()
-                    val rs = stmt.executeQuery(BLOCKS_BY_AVG_SCORE_SQL)
-                    StatementHolder(connection, stmt, rs)
-                },
-                Function {
-                    val edk = ResultSetAdapters.entityDataKey(it)
-                    val avgMatch = it.getDouble(AVG_SCORE_FIELD)
-                    edk to avgMatch
-                }
-        )
-    }
-
-    override fun getOrderedBlocks(): PostgresIterable<Pair<EntityDataKey, Long>> {
-        return PostgresIterable(
-                Supplier {
-                    val connection = hds.connection
-                    val stmt = connection.createStatement()
-                    val rs = stmt.executeQuery(BLOCKS_BY_SIZE_SQL)
-                    StatementHolder(connection, stmt, rs)
-                },
-                Function {
-                    val edk = ResultSetAdapters.entityDataKey(it)
-                    val blockSize = it.getLong(BLOCK_SIZE_FIELD)
-                    edk to blockSize
-                }
-        )
-    }
-
-    override fun getNeighborhoodScores(blockKey: EntityDataKey): Map<EntityDataKey, Double> {
-        return PostgresIterable(
-                Supplier {
-                    val connection = hds.connection
-                    val ps = connection.prepareStatement(NEIGHBORHOOD_SQL)
-
-                    ps.setObject(1, blockKey.entitySetId)
-                    ps.setObject(2, blockKey.entityKeyId)
-                    ps.setObject(3, blockKey.entitySetId)
-                    ps.setObject(4, blockKey.entityKeyId)
-                    val rs = ps.executeQuery()
-                    StatementHolder(connection, ps, rs)
-                },
-                Function<ResultSet, Pair<EntityDataKey, Double>> {
-                    /*
-                     * We are storing it as computed from blocks. In the future we may want to include values where
-                     * entity data key is in destination as well, but for now we keep it simple. If changing this
-                     * make sure to update the NEIGHBORHOOD_SQL statement as well.
-                     *
-                     */
-
-                    val dstEntityDataKey = ResultSetAdapters.dstEntityDataKey(it)
-                    val score = ResultSetAdapters.score(it)
-                    dstEntityDataKey to score
-                }).toMap()
-    }
-
     override fun getClusterFromLinkingId( linkingId: UUID ): Map<EntityDataKey, Map<EntityDataKey, Double>> {
         return PostgresIterable<Pair<EntityDataKey, Pair<EntityDataKey, Double>>>(
                 Supplier {
@@ -270,18 +211,6 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource, private val
                 val insertCount = ps.executeBatch().sum()
                 conn.commit()
                 return insertCount
-            }
-        }
-    }
-
-    override fun deleteMatchScore(blockKey: EntityDataKey, blockElement: EntityDataKey): Int {
-        hds.connection.use {
-            it.prepareStatement(DELETE_SQL).use {
-                it.setObject(1, blockKey.entitySetId)
-                it.setObject(2, blockKey.entityKeyId)
-                it.setObject(3, blockElement.entitySetId)
-                it.setObject(4, blockElement.entityKeyId)
-                return it.executeUpdate()
             }
         }
     }
@@ -395,10 +324,6 @@ private val LOCK_CLUSTERS_SQL = "SELECT 1 FROM ${MATCHED_ENTITIES.name} WHERE ${
 
 private val CLUSTER_CONTAINING_SQL = "SELECT * FROM ${MATCHED_ENTITIES.name} WHERE ${LINKING_ID.name} = ANY(?)"
 
-private val DELETE_SQL = "DELETE FROM ${MATCHED_ENTITIES.name} " +
-        "WHERE ${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ? " +
-        "AND ${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} = ?"
-
 private val DELETE_NEIGHBORHOOD_SQL = "DELETE FROM ${MATCHED_ENTITIES.name} " +
         "WHERE ( (${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ?) " +
         "OR (${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} = ?) )"
@@ -410,26 +335,9 @@ private val DELETE_NEIGHBORHOODS_SQL = "DELETE FROM ${MATCHED_ENTITIES.name} WHE
 private val DELETE_ENTITY_SET_NEIGHBORHOOD_SQL = "DELETE FROM ${MATCHED_ENTITIES.name} " +
         "WHERE ${SRC_ENTITY_SET_ID.name} = ? OR ${DST_ENTITY_SET_ID.name} = ? "
 
-private val NEIGHBORHOOD_SQL = "SELECT * " +
-        "FROM ${MATCHED_ENTITIES.name} " +
-        "WHERE (${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ?) "
-
 private val INSERT_SQL = "INSERT INTO ${MATCHED_ENTITIES.name} ($COLUMNS) VALUES (?,?,?,?,?,?) " +
         "ON CONFLICT ON CONSTRAINT matched_entities_pkey " +
         "DO UPDATE SET ${SCORE.name} = EXCLUDED.${SCORE.name}"
-
-private val BLOCKS_BY_AVG_SCORE_SQL =
-        "SELECT  ${SRC_ENTITY_SET_ID.name} as entity_set_id, " +
-                "${SRC_ENTITY_KEY_ID.name} as id, " +
-                "avg(score) as $AVG_SCORE_FIELD " +
-                "FROM ${MATCHED_ENTITIES.name} " +
-                "GROUP BY (${SRC_ENTITY_SET_ID.name},${SRC_ENTITY_KEY_ID.name}) " +
-                "ORDER BY $AVG_SCORE_FIELD ASC"
-
-private val BLOCKS_BY_SIZE_SQL = "SELECT ${SRC_ENTITY_SET_ID.name} as entity_set_id, $SRC_ENTITY_KEY_ID as id, count(*) as $BLOCK_SIZE_FIELD" +
-        "FROM ${MATCHED_ENTITIES.name} " +
-        "GROUP BY (${SRC_ENTITY_SET_ID.name},${SRC_ENTITY_KEY_ID.name}) " +
-        "ORDER BY $BLOCK_SIZE_FIELD DESC"
 
 /**
  * IDS queries
