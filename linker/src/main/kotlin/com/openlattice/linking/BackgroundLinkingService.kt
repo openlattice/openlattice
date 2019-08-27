@@ -225,18 +225,40 @@ class BackgroundLinkingService
         lqs.insertMatchScores( conn, linkingId, scores )
         lqs.updateIdsTable( linkingId, newMember )
 
-        val scoresAsEsidToEkids = (collectKeys(scores) + newMember)
+        var toRemove = setOf<EntityDataKey>()
+        var toAdd = setOf<EntityDataKey>()
+        val oldCluster = if ( newCluster ) {
+            mapOf()
+        } else {
+            linkingLogService.readLatestLinkLog(linkingId)
+        }
+
+        val scoresAsEsidToEkids = ( collectKeys(scores) + newMember )
             .groupBy { edk -> edk.entitySetId }
-            .mapValues { (_, edks) ->
-                // esid, edks
+            .mapValues { (esid, edks ) ->
+                val newEdks = edks.toSet()
+                val oldEdks = (oldCluster[esid] ?: setOf()).mapTo( mutableSetOf(), { EntityDataKey( esid, it ) } )
+
+                toAdd = Sets.union( toAdd, Sets.difference( newEdks, oldEdks ))
+                toRemove = Sets.union( toRemove, Sets.difference( oldEdks, newEdks ))
+
                 Sets.newLinkedHashSet( edks.map { it.entityKeyId } )
             }
 
-        /* TODO: we do an upsert into data table for every member in the cluster regardless of score
-         *   Need to remove links that no longer pass minimum threshold
-         */
-        lqs.createOrUpdateLink( linkingId, scoresAsEsidToEkids )
-        linkingLogService.createOrUpdateCluster( linkingId, scoresAsEsidToEkids, newCluster )
+    /* TODO: we do an upsert into data table for every member in the cluster regardless of score
+     *   Need to Diff this cluster against current cluster for linkingID
+     *      and perform the appropriate CRUD
+     */
+        if ( newCluster ){
+            lqs.createOrUpdateLink( linkingId, scoresAsEsidToEkids )
+            linkingLogService.createOrUpdateCluster( linkingId, scoresAsEsidToEkids, newCluster )
+        } else {
+            logger.debug("Writing ${toAdd.size} new links")
+            logger.debug("Removing ${toRemove.size} old links")
+
+            lqs.createLinks( linkingId, toAdd )
+            lqs.tombstoneLinks( linkingId, toRemove )
+        }
     }
 
     @Timed
