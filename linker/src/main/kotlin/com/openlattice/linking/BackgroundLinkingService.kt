@@ -251,7 +251,6 @@ class BackgroundLinkingService
      */
         if ( newCluster ){
             lqs.createOrUpdateLink( linkingId, scoresAsEsidToEkids )
-            linkingLogService.createOrUpdateCluster( linkingId, scoresAsEsidToEkids, newCluster )
         } else {
             logger.debug("Writing ${toAdd.size} new links")
             logger.debug("Removing ${toRemove.size} old links")
@@ -259,6 +258,7 @@ class BackgroundLinkingService
             lqs.createLinks( linkingId, toAdd )
             lqs.tombstoneLinks( linkingId, toRemove )
         }
+        linkingLogService.createOrUpdateCluster( linkingId, scoresAsEsidToEkids, newCluster )
     }
 
     @Timed
