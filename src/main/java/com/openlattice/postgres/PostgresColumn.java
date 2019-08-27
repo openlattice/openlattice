@@ -20,6 +20,7 @@
 
 package com.openlattice.postgres;
 
+import com.openlattice.IdConstants;
 import com.openlattice.edm.type.Analyzer;
 
 import static com.openlattice.postgres.PostgresDatatype.*;
@@ -325,7 +326,9 @@ public final class PostgresColumn {
             new PostgresColumnDefinition( ORGANIZATION_ID_FIELD, UUID ).notNull();
     public static final String                   ORIGIN_ID_FIELD                   = "origin_id";
     public static final PostgresColumnDefinition ORIGIN_ID                         =
-            new PostgresColumnDefinition( ORIGIN_ID_FIELD, UUID );
+            new PostgresColumnDefinition( ORIGIN_ID_FIELD, UUID )
+                    .withDefault( IdConstants.EMPTY_UUID )
+                    .notNull();
     public static final String                   PARTITIONS_FIELD                  = "partitions";
     public static final PostgresColumnDefinition PARTITIONS                        = new PostgresColumnDefinition(
             PARTITIONS_FIELD,
