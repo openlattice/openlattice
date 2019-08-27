@@ -57,15 +57,15 @@ enum class IdConstants(val id: UUID) {
     CONTACT_INFO_ENTITY_SET_ID(UUID(8L, 20L)),
     LINKING_PERSON_ENTITY_SET_ID(UUID(9L, 20L)),
 
-    // empty origin ID
-    EMPTY_UUID(UUID(0L, 0L)),
-
     /* Linker */
 
     /**
      * Entity sets ids are assigned by calling [UUID.randomUUID] as a result we know that this can never be accidentally
      * assigned to any real entity set.
      */
-    LINKING_ENTITY_SET_ID(UUID(0L, 40L))
+    LINKING_ENTITY_SET_ID(UUID(0L, 40L)),
+
+    // empty origin ID
+    EMPTY_ORIGIN_ID(UUID(1L, 40L)),
 
 }
