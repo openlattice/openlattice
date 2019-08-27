@@ -21,9 +21,9 @@
 
 package com.openlattice.linking.graph
 
+import com.openlattice.admin.SQL
 import com.openlattice.data.EntityDataKey
-import com.openlattice.data.storage.createOrUpdateLinkFromEntity
-import com.openlattice.data.storage.getPartitionsInfo
+import com.openlattice.data.storage.*
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.linking.EntityKeyPair
 import com.openlattice.linking.LinkingQueryService
@@ -151,9 +151,10 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource, private val
     }
 
     override fun createOrUpdateLink( linkingId: UUID, cluster: Map<UUID, LinkedHashSet<UUID>> ) {
-        val version = System.currentTimeMillis()
         hds.connection.use { connection ->
             connection.prepareStatement( createOrUpdateLinkFromEntity() ).use { ps ->
+                val version = System.currentTimeMillis()
+
                 cluster.forEach { ( esid, ekids ) ->
                     val partitionsForEsid = getPartitionsAsPGArray( connection, esid )
                     ekids.forEach { ekid ->
@@ -172,8 +173,17 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource, private val
 
     override fun createLinks(linkingId: UUID, toAdd: Set<EntityDataKey>): Int {
         hds.connection.use { connection ->
-            connection.prepareStatement( SQL ).use { ps ->
+            connection.prepareStatement( createOrUpdateLinkFromEntity() ).use { ps ->
+                val version = System.currentTimeMillis()
+
                 toAdd.forEach { edk ->
+                    val partitions = getPartitionsAsPGArray( connection, edk.entitySetId )
+                    ps.setObject(1, linkingId) // ID value
+                    ps.setLong(2, version)
+                    ps.setObject(3, edk.entitySetId) // esid
+                    ps.setObject(4, edk.entityKeyId) // origin id
+                    ps.setArray(5, partitions)
+                    ps.addBatch()
                 }
                 return ps.executeUpdate()
             }
@@ -182,8 +192,18 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource, private val
 
     override fun tombstoneLinks(linkingId: UUID, toRemove: Set<EntityDataKey>): Int {
         hds.connection.use { connection ->
-            connection.prepareStatement( SQL ).use { ps ->
+            connection.prepareStatement( tombstoneLinkForEntity ).use { ps ->
+                val version = System.currentTimeMillis()
                 toRemove.forEach { edk ->
+                    val partitions = getPartitionsAsPGArray( connection, edk.entitySetId )
+                    ps.setLong(1, version)
+                    ps.setLong(2, version)
+                    ps.setLong(3, version)
+                    ps.setObject(4, linkingId) // ID value
+                    ps.setObject(5, edk.entitySetId) // esid
+                    ps.setObject(6, edk.entityKeyId) // origin id
+                    ps.setArray(7, partitions)
+                    ps.addBatch()
                 }
                 return ps.executeUpdate()
             }
