@@ -37,6 +37,7 @@ import com.openlattice.postgres.streams.StatementHolder
 import com.zaxxer.hikari.HikariDataSource
 import java.sql.Array
 import java.sql.Connection
+import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.util.*
 import java.util.function.Function
@@ -165,6 +166,26 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource, private val
                     }
                 }
                 ps.executeUpdate()
+            }
+        }
+    }
+
+    override fun createLinks(linkingId: UUID, toAdd: Set<EntityDataKey>): Int {
+        hds.connection.use { connection ->
+            connection.prepareStatement( SQL ).use { ps ->
+                toAdd.forEach { edk ->
+                }
+                return ps.executeUpdate()
+            }
+        }
+    }
+
+    override fun tombstoneLinks(linkingId: UUID, toRemove: Set<EntityDataKey>): Int {
+        hds.connection.use { connection ->
+            connection.prepareStatement( SQL ).use { ps ->
+                toRemove.forEach { edk ->
+                }
+                return ps.executeUpdate()
             }
         }
     }

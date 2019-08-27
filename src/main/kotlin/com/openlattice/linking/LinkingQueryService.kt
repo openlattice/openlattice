@@ -46,6 +46,10 @@ interface LinkingQueryService {
             scores: Map<EntityDataKey, Map<EntityDataKey, Double>>): Int
 
 
+    fun createLinks(linkingId: UUID, toAdd: Set<EntityDataKey>): Int
+
+    fun tombstoneLinks(linkingId: UUID, toRemove: Set<EntityDataKey>): Int
+
     fun getClusterFromLinkingId(linkingId: UUID): Map<EntityDataKey, Map<EntityDataKey, Double>>
 
     fun deleteNeighborhood(entity: EntityDataKey, positiveFeedbacks: List<EntityKeyPair>): Int
