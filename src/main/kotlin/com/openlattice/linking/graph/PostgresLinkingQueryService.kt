@@ -154,7 +154,6 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource, private val
         hds.connection.use { connection ->
             connection.prepareStatement( createOrUpdateLinkFromEntity() ).use { ps ->
                 val version = System.currentTimeMillis()
-
                 cluster.forEach { ( esid, ekids ) ->
                     val partitionsForEsid = getPartitionsAsPGArray( connection, esid )
                     ekids.forEach { ekid ->
