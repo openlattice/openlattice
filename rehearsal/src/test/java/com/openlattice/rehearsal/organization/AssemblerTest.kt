@@ -1099,6 +1099,141 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
 
     }
 
+    @Test
+    fun testEntitySetMaterializePermissionChanges() {
+        val organization = createOrganization()
+        val organizationId = organization.id
+
+        val et = createEntityType()
+        val es = createEntitySet(et, organizationId)
+        grantMaterializePermissions(organization, es, et.properties)
+        organizationsApi.assembleEntitySets(organizationId, mapOf(es.id to null))
+
+        val organizationDataSource = TestAssemblerConnectionManager.connect(organizationId)
+        organizationDataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name))
+                Assert.assertEquals(ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
+                Assert.assertEquals(ID.name, rs.metaData.getColumnName(2))
+                Assert.assertEquals(ENTITY_KEY_IDS_COL.name, rs.metaData.getColumnName(3))
+            }
+        }
+
+
+        /* Revoke materialize permission on entity set itself */
+        val esAcl = Acl(
+                listOf(es.id),
+                listOf(Ace(organization.principal, EnumSet.of(Permission.MATERIALIZE), OffsetDateTime.MAX))
+        )
+        permissionsApi.updateAcl(AclData(esAcl, Action.REMOVE))
+
+        // wait for background task
+        Thread.sleep(5000L)
+
+        // materialized entityset should be removed by this time
+        organizationDataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                assertException(
+                        { stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name)) },
+                        "relation \"${AssemblerConnectionManager.MATERIALIZED_VIEWS_SCHEMA}.${es.name}\" does not exist"
+                )
+            }
+        }
+
+
+        /* Re-add materialize permission on entity set */
+        permissionsApi.updateAcl(AclData(esAcl, Action.ADD))
+
+        // materialized entity set should still not be there
+        organizationDataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                assertException(
+                        { stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name)) },
+                        "relation \"${AssemblerConnectionManager.MATERIALIZED_VIEWS_SCHEMA}.${es.name}\" does not exist"
+                )
+            }
+        }
+
+
+        /* Revoke permission on 1 property in entity set */
+        val propertyFqns = et.properties.map { edmApi.getPropertyType(it).type.fullQualifiedNameAsString }
+
+        organizationsApi.assembleEntitySets(organizationId, mapOf(es.id to null))
+        organizationDataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name))
+                Assert.assertEquals(ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
+                Assert.assertEquals(ID.name, rs.metaData.getColumnName(2))
+                Assert.assertEquals(ENTITY_KEY_IDS_COL.name, rs.metaData.getColumnName(3))
+
+                // not permitted column is not there anymore
+                (1..rs.metaData.columnCount).forEach {
+                    val columnName = rs.metaData.getColumnName(it)
+                    if (columnName != ID.name
+                            && columnName != ENTITY_SET_ID.name
+                            && columnName != ENTITY_KEY_IDS_COL.name) {
+                        Assert.assertTrue(propertyFqns.contains(columnName))
+                    }
+                }
+            }
+        }
+
+        val ptAcl = Acl(
+                listOf(es.id, et.properties.first()),
+                listOf(Ace(organization.principal, EnumSet.of(Permission.MATERIALIZE), OffsetDateTime.MAX))
+        )
+        permissionsApi.updateAcl(AclData(ptAcl, Action.REMOVE))
+
+        // wait for background task
+        Thread.sleep(5000L)
+
+        organizationDataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name))
+                Assert.assertEquals(ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
+                Assert.assertEquals(ID.name, rs.metaData.getColumnName(2))
+                Assert.assertEquals(ENTITY_KEY_IDS_COL.name, rs.metaData.getColumnName(3))
+
+                // all columns are there
+                (1..rs.metaData.columnCount).forEach {
+                    val columnName = rs.metaData.getColumnName(it)
+                    if (columnName != ID.name
+                            && columnName != ENTITY_SET_ID.name
+                            && columnName != ENTITY_KEY_IDS_COL.name) {
+                        Assert.assertNotEquals(propertyFqns.first(), columnName)
+                    }
+                }
+            }
+        }
+
+
+        /* Re-add permission on 1 property in entity set */
+        permissionsApi.updateAcl(AclData(ptAcl, Action.ADD))
+
+        // wait for background task
+        Thread.sleep(5000L)
+
+        organizationsApi.assembleEntitySets(organizationId, mapOf(es.id to null))
+        organizationDataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name))
+                Assert.assertEquals(ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
+                Assert.assertEquals(ID.name, rs.metaData.getColumnName(2))
+                Assert.assertEquals(ENTITY_KEY_IDS_COL.name, rs.metaData.getColumnName(3))
+
+                // all columns are there
+                (1..rs.metaData.columnCount).forEach {
+                    val columnName = rs.metaData.getColumnName(it)
+                    if (columnName != ID.name
+                            && columnName != ENTITY_SET_ID.name
+                            && columnName != ENTITY_KEY_IDS_COL.name) {
+                        Assert.assertTrue(propertyFqns.contains(columnName))
+                    }
+                }
+            }
+        }
+    }
+
 
     /**
      * Add permission to materialize entity set and it's properties to organization principal

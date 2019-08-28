@@ -26,7 +26,7 @@ class PermissionsControllerTest : MultipleAuthenticatedUsersBase() {
         @BeforeClass
         fun init() {
             loginAs("admin")
-            val es = MultipleAuthenticatedUsersBase.createEntitySet()
+            val es = createEntitySet()
             entitySetAclKey = AclKey(es.id)
 
             //create roles
@@ -127,7 +127,7 @@ class PermissionsControllerTest : MultipleAuthenticatedUsersBase() {
     @Test
     fun testGetAclExplanation() {
         loginAs("admin")
-        val es2 = MultipleAuthenticatedUsersBase.createEntitySet()
+        val es2 = createEntitySet()
         val aclKey = AclKey(es2.id)
 
         //add Permissions
