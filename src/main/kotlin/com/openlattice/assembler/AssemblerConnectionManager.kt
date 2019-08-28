@@ -508,6 +508,7 @@ class AssemblerConnectionManager(
                 dropAndCreateMaterializedView(connection, tableName, entitySet.id, materializablePropertyTypes)
             }
         }
+        logger.info("Updated materialized view of entity set ${entitySet.id} in organization $organizationId")
     }
 
     /**
@@ -541,6 +542,8 @@ class AssemblerConnectionManager(
                 stmt.executeUpdate("ALTER MATERIALIZED VIEW IF EXISTS $oldTableName RENAME TO $newTableName")
             }
         }
+        logger.info("Renamed materialized view of entity set with old name $oldName to name name $newName in " +
+                "organization $organizationId")
     }
 
     /**
@@ -551,7 +554,7 @@ class AssemblerConnectionManager(
         connect(dbName).use { dataSource ->
             entitySetIds.forEach { dropMaterializedEntitySet(dataSource, it) }
         }
-        logger.info("Materialized entity sets $entitySetIds removed from organization $organizationId")
+        logger.info("Removed materialized entity sets $entitySetIds from organization $organizationId")
     }
 
     fun dropMaterializedEntitySet(dataSource: HikariDataSource, entitySetId: UUID) {
