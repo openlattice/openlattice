@@ -414,8 +414,7 @@ class AssemblerConnectionManager(
         val selectColumns = getSelectColumnsForMaterializedView(materializablePropertyTypes.values)
                 .joinToString(",")
 
-        val sql = "SELECT $selectColumns FROM $PRODUCTION_FOREIGN_SCHEMA.${entitySetIdTableName(entitySetId)} "
-
+        val sql = "SELECT $selectColumns FROM $PRODUCTION_FOREIGN_SCHEMA.${entitySetIdTableName(entitySetId)}"
 
         val dropMaterializedEntitySet = "DROP MATERIALIZED VIEW IF EXISTS $tableName"
         val createMaterializedViewSql = "CREATE MATERIALIZED VIEW IF NOT EXISTS $tableName AS $sql"
