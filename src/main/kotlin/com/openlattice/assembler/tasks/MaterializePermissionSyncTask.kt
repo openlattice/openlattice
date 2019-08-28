@@ -45,7 +45,7 @@ import java.util.function.Supplier
 
 
 private val selectUnauthorizedEntitySetAssemblies =
-        "SELECT ${ENTITY_SET_ID.name}, $ORGANIZATION_ID FROM ${MATERIALIZED_ENTITY_SETS.name} " +
+        "SELECT ${ENTITY_SET_ID.name}, ${ORGANIZATION_ID.name} FROM ${MATERIALIZED_ENTITY_SETS.name} " +
                 "WHERE not exists " +
                 "(SELECT 1 FROM ${PERMISSIONS.name} " +
                 "WHERE ${PRINCIPAL_TYPE.name} = '${PrincipalType.ORGANIZATION.name}' " +
