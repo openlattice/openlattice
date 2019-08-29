@@ -29,7 +29,10 @@ import com.openlattice.IdConstants;
 import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.client.serialization.SerializationConstants;
+import com.openlattice.data.DataExpiration;
 import com.openlattice.edm.set.EntitySetFlag;
+
+
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -38,7 +41,12 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+
+import com.openlattice.edm.set.ExpirationType;
+import com.openlattice.graph.query.GraphQueryState;
 import org.apache.commons.lang3.StringUtils;
+
+import javax.swing.*;
 
 /**
  * Describes an entity set and associated metadata, including the active audit record entity set.
@@ -56,7 +64,7 @@ public class EntitySet extends AbstractSecurableObject {
     private       Set<String>            contacts;
     private       UUID                   organizationId;
     private       int                    partitionsVersion = 0;
-
+    private       DataExpiration         expiration;
     /**
      * Creates an entity set with provided parameters and will automatically generate a UUID if not provided.
      *
@@ -76,7 +84,8 @@ public class EntitySet extends AbstractSecurableObject {
             @JsonProperty( SerializationConstants.LINKED_ENTITY_SETS ) Optional<Set<UUID>> linkedEntitySets,
             @JsonProperty( SerializationConstants.ORGANIZATION_ID ) Optional<UUID> organizationId,
             @JsonProperty( SerializationConstants.FLAGS_FIELD ) Optional<EnumSet<EntitySetFlag>> flags,
-            @JsonProperty( SerializationConstants.PARTITIONS ) Optional<LinkedHashSet<Integer>> partitions ) {
+            @JsonProperty( SerializationConstants.PARTITIONS ) Optional<LinkedHashSet<Integer>> partitions,
+            @JsonProperty( SerializationConstants.EXPIRATION )Optional<DataExpiration> expiration) {
         super( id, title, description );
         this.linkedEntitySets = linkedEntitySets.orElse( new HashSet<>() );
         this.flags = flags.orElse( EnumSet.of( EntitySetFlag.EXTERNAL ) );
@@ -91,6 +100,7 @@ public class EntitySet extends AbstractSecurableObject {
         this.contacts = Sets.newHashSet( contacts );
         this.organizationId = organizationId.orElse( IdConstants.GLOBAL_ORGANIZATION_ID.getId() );
         partitions.ifPresent( this.partitions::addAll );
+        this.expiration = expiration.orElse(null); //This is not right but we'll fix it later
     }
 
     //Constructor for serialization
@@ -140,7 +150,8 @@ public class EntitySet extends AbstractSecurableObject {
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
-                Optional.empty() );
+                Optional.empty(),
+                Optional.empty());
     }
 
     public EntitySet(
@@ -158,7 +169,8 @@ public class EntitySet extends AbstractSecurableObject {
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
-                Optional.empty() );
+                Optional.empty(),
+                Optional.empty());
     }
 
     public EntitySet(
@@ -180,7 +192,8 @@ public class EntitySet extends AbstractSecurableObject {
                 linkedEntitySets,
                 organizationId,
                 flags,
-                partitions );
+                partitions,
+                Optional.empty());
     }
 
     @JsonProperty( SerializationConstants.ORGANIZATION_ID )
@@ -230,6 +243,36 @@ public class EntitySet extends AbstractSecurableObject {
         return partitions;
     }
 
+    public DataExpiration getExpiration() {
+        return expiration;
+    }
+
+    public void setExpiration(DataExpiration expiration) {
+        this.expiration = expiration;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        if (!super.equals(o)) return false;
+        EntitySet entitySet = (EntitySet) o;
+        return partitionsVersion == entitySet.partitionsVersion &&
+                Objects.equals(entityTypeId, entitySet.entityTypeId) &&
+                Objects.equals(linkedEntitySets, entitySet.linkedEntitySets) &&
+                Objects.equals(flags, entitySet.flags) &&
+                Objects.equals(partitions, entitySet.partitions) &&
+                Objects.equals(name, entitySet.name) &&
+                Objects.equals(contacts, entitySet.contacts) &&
+                Objects.equals(organizationId, entitySet.organizationId) &&
+                Objects.equals(expiration, entitySet.expiration);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(super.hashCode(), entityTypeId, linkedEntitySets, flags, partitions, name, contacts, organizationId, partitionsVersion, expiration);
+    }
+
     @JsonIgnore
     public void setPartitions( Collection<Integer> partitions ) {
         this.partitions.clear();
@@ -262,23 +305,6 @@ public class EntitySet extends AbstractSecurableObject {
     @JsonIgnore
     public boolean isLinking() {
         return flags.contains( EntitySetFlag.LINKING );
-    }
-
-    @Override public boolean equals( Object o ) {
-        if ( this == o ) { return true; }
-        if ( o == null || getClass() != o.getClass() ) { return false; }
-        if ( !super.equals( o ) ) { return false; }
-        EntitySet entitySet = (EntitySet) o;
-        return Objects.equals( entityTypeId, entitySet.entityTypeId ) &&
-                Objects.equals( linkedEntitySets, entitySet.linkedEntitySets ) &&
-                Objects.equals( name, entitySet.name ) &&
-                Objects.equals( contacts, entitySet.contacts ) &&
-                Objects.equals( organizationId, entitySet.organizationId ) &&
-                Objects.equals( flags, entitySet.flags );
-    }
-
-    @Override public int hashCode() {
-        return Objects.hash( super.hashCode(), entityTypeId, linkedEntitySets, name, contacts, organizationId, flags );
     }
 
     @Override
