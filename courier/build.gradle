@@ -133,7 +133,7 @@ install {
 eclipse {
     ext.downloadSources = true
     ext.downloadJavadoc = true
-    ext.sourceCompatibility=JavaVersion.VERSION_1_8
+    ext.sourceCompatibility=JavaVersion.VERSION_11
 }
 
 compileKotlin {
