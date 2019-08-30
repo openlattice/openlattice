@@ -42,6 +42,7 @@ import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.set.EntitySetFlag;
 import com.openlattice.edm.set.EntitySetPropertyKey;
 import com.openlattice.edm.set.EntitySetPropertyMetadata;
+import com.openlattice.edm.set.ExpirationType;
 import com.openlattice.edm.type.Analyzer;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
@@ -77,6 +78,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.sql.Date;
 import java.sql.*;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
@@ -629,6 +631,11 @@ public final class ResultSetAdapters {
         final var flags = entitySetFlags( rs );
         final var partitions = partitions( rs );
         final var partitionVersion = partitionVersions( rs );
+        final var timeToExpiration = timeToExpiration( rs );
+        final var expirationFlag = expirationFlag( rs );
+        final var startDateProperty = startDateProperty( rs );
+        final var expirationData = new DataExpiration(timeToExpiration, expirationFlag, Optional.ofNullable(startDateProperty));
+        Optional<DataExpiration> expiration = Optional.of(expirationData);
         return new EntitySet( id,
                 entityTypeId,
                 name,
@@ -639,7 +646,8 @@ public final class ResultSetAdapters {
                 organization,
                 flags,
                 new LinkedHashSet<>( Arrays.asList( partitions ) ),
-                partitionVersion );
+                partitionVersion,
+                expiration);
     }
 
     public static int partitionVersions( ResultSet rs ) throws SQLException {
@@ -648,6 +656,19 @@ public final class ResultSetAdapters {
 
     public static Integer[] partitions( ResultSet rs ) throws SQLException {
         return PostgresArrays.getIntArray( rs, PARTITIONS_FIELD );
+    }
+
+    public static long timeToExpiration( ResultSet rs) throws SQLException {
+        return rs.getLong( TIME_TO_EXPIRATION_FIELD );
+    }
+
+    public static ExpirationType expirationFlag( ResultSet rs ) throws SQLException {
+        String expirationFlag = rs.getString( EXPIRATION_FLAG_FIELD );
+        return ExpirationType.valueOf(expirationFlag);
+    }
+
+    public static UUID startDateProperty( ResultSet rs ) throws SQLException {
+        return rs.getObject( EXPIRATION_START_ID_FIELD, UUID.class );
     }
 
     public static AssociationType associationType( ResultSet rs ) throws SQLException {

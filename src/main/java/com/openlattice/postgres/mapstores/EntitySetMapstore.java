@@ -49,18 +49,25 @@ public class EntitySetMapstore extends AbstractBasePostgresMapstore<UUID, Entity
         ps.setArray( 9, flags );
         ps.setArray( 10, partitions );
         ps.setInt( 11, value.getPartitionsVersion() );
+        //TODO figure out where ps query is written
+        ps.setLong( 12, value.getExpiration().getTimeToExpiration() );
+        ps.setString( 13, value.getExpiration().getExpirationFlag().toString() );
+        ps.setObject( 14, value.getExpiration().getStartDateProperty() );
 
         // UPDATE
-        ps.setString( 12, value.getName() );
-        ps.setObject( 13, value.getEntityTypeId() );
-        ps.setString( 14, value.getTitle() );
-        ps.setString( 15, value.getDescription() );
-        ps.setArray( 16, contacts );
-        ps.setArray( 17, linkedEntitySets );
-        ps.setObject( 18, value.getOrganizationId() );
-        ps.setArray( 19, flags );
-        ps.setArray( 20, partitions );
-        ps.setInt( 21, value.getPartitionsVersion() );
+        ps.setString( 15, value.getName() );
+        ps.setObject( 16, value.getEntityTypeId() );
+        ps.setString( 17, value.getTitle() );
+        ps.setString( 18, value.getDescription() );
+        ps.setArray( 19, contacts );
+        ps.setArray( 20, linkedEntitySets );
+        ps.setObject( 21, value.getOrganizationId() );
+        ps.setArray( 22, flags );
+        ps.setArray( 23, partitions );
+        ps.setInt( 24, value.getPartitionsVersion() );
+        ps.setLong( 25, value.getExpiration().getTimeToExpiration() );
+        ps.setString( 26, value.getExpiration().getExpirationFlag().toString() );
+        ps.setObject( 27, value.getExpiration().getStartDateProperty() );
     }
 
     @Override protected int bind( PreparedStatement ps, UUID key, int parameterIndex ) throws SQLException {
