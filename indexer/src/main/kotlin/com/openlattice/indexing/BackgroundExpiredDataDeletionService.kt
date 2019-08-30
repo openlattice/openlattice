@@ -43,9 +43,8 @@ import java.util.function.Supplier
 
 const val MAX_DURATION_MILLIS = 60000L
 const val DATA_DELETION_RATE = 30000L
-//const val FETCH_SIZE = 128000
 
-class BackgroundExpirationIndexingService(
+class BackgroundExpiredDataDeletionService(
         hazelcastInstance: HazelcastInstance,
         private val indexerConfiguration: IndexerConfiguration,
         private val hds: HikariDataSource,
@@ -54,8 +53,8 @@ class BackgroundExpirationIndexingService(
         private val dataManager: IndexingMetadataManager
 ) {
     companion object {
-        private val logger = LoggerFactory.getLogger(BackgroundExpirationIndexingService::class.java)!!
-        const val INDEX_SIZE = 1000
+        private val logger = LoggerFactory.getLogger(BackgroundExpiredDataDeletionService::class.java)!!
+        const val INDEX_SIZE = 1000 // necessary???
     }
 
     private val propertyTypes: IMap<UUID, PropertyType> = hazelcastInstance.getMap(HazelcastMap.PROPERTY_TYPES.name)
@@ -88,36 +87,40 @@ class BackgroundExpirationIndexingService(
         //Keep number of indexing jobs under control
         if (taskLock.tryLock()) {
             try {
-                ensureAllEntityTypeIndicesExist()
+                ensureAllEntityTypeIndicesExist() //do we need this functionality? Need to look into elasticsearch more
                 if (indexerConfiguration.backgroundExpiredDataDeletionEnabled) {
                     val w = Stopwatch.createStarted()
                     //We shuffle entity sets to make sure we have a chance to work share and index everything
+
+                    //lock entity sets we are working on
                     val lockedEntitySets = entitySets.values
                             .shuffled()
-                            .filter { tryLockEntitySet(it) }
+                            .filter { tryLockEntitySet(it) } //filters out entitysets that are already locked, and the entitysets we're working on are now locked in the IMap
                             .filter { it.name != "OpenLattice Audit Entity Set" } //TODO: Clean out audit entity set from prod
-
-                    val totalIndexed = lockedEntitySets
+\
+                    //delete expired data
+                    val totalDeleted = lockedEntitySets
                             .parallelStream()
                             .filter { !it.isLinking }
-                            .mapToInt { indexEntitySetExpirations(it) }
+                            .mapToInt { deleteExpiredData(it) }
                             .sum()
 
+                    //unlock the entitysets we were working on
                     lockedEntitySets.forEach(this::deleteIndexingLock)
 
                     logger.info(
-                            "Completed indexing {} elements in {} ms",
-                            totalIndexed,
+                            "Completed deleting {} expired elements in {} ms",
+                            totalDeleted,
                             w.elapsed(TimeUnit.MILLISECONDS)
                     )
                 } else {
-                    logger.info("Skipping background indexing as it is not enabled.")
+                    logger.info("Skipping expired data deletion as it is not enabled.")
                 }
             } finally {
                 taskLock.unlock()
             }
         } else {
-            logger.info("Not starting new indexing job as an existing one is running.")
+            logger.info("Not starting new expiration job as an existing one is running.")
         }
     }
 
@@ -137,7 +140,7 @@ class BackgroundExpirationIndexingService(
             }
         }
     }
-
+    /*
     private fun getEntityDataKeysQuery(entitySetId: UUID): String {
         return "SELECT ${ID.name}, ${LAST_WRITE.name} FROM ${IDS.name} " +
                 "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${VERSION.name} > 0"
@@ -180,8 +183,8 @@ class BackgroundExpirationIndexingService(
                 .getAll(entityTypes[entityTypeId]?.properties ?: setOf())
                 .filter { it.value.datatype != EdmPrimitiveTypeKind.Binary }
     }
-
-    private fun indexEntitySetExpirations(entitySet: EntitySet): Int {
+    */
+    private fun deleteExpiredData(entitySet: EntitySet): Int {
         logger.info(
                 "Starting indexing expired data for entity set {} with id {}",
                 entitySet.name,
@@ -226,6 +229,7 @@ class BackgroundExpirationIndexingService(
             else -> logger.info( "No data has expired.")
         }
 
+        /*
         val entityKeyIdsWithLastWrite = if (reindexAll) {
             getEntityDataKeys(entitySet.id)
         } else {
@@ -252,8 +256,9 @@ class BackgroundExpirationIndexingService(
                 entitySet.name,
                 esw.elapsed(TimeUnit.MILLISECONDS)
         )
+        */
 
-        return indexCount
+        return deletionCount
     }
 
     private fun deleteExpiredDataByDate(entitySetId: UUID, propertyTypeId: UUID, elapsedTime: LocalDate): Int {
@@ -296,65 +301,25 @@ class BackgroundExpirationIndexingService(
         return "DELETE FROM DATA WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${VERSIONS.name}[1] < $elapsedTime"
     }
 
-    internal fun indexEntities(
-            entitySet: EntitySet,
-            batchToIndex: Map<UUID, OffsetDateTime>,
-            propertyTypeMap: Map<UUID, PropertyType>,
-            markAsIndexed: Boolean = true
-    ): Int {
-        val esb = Stopwatch.createStarted()
-        val entitiesById = dataQueryService.getEntitiesWithPropertyTypeIds(
-                mapOf(entitySet.id to Optional.of(batchToIndex.keys)),
-                mapOf(entitySet.id to propertyTypeMap)).toMap()
-
-        logger.info("Loading data for indexEntities took {} ms", esb.elapsed(TimeUnit.MILLISECONDS))
-
-        if (entitiesById.size != batchToIndex.size) {
-            logger.error(
-                    "Expected {} items to index but received {}. Marking as indexed to prevent infinite loop.",
-                    batchToIndex.size,
-                    entitiesById.size
-            )
-        }
-
-        val indexCount: Int
-
-        if (entitiesById.isNotEmpty() &&
-                elasticsearchApi.createBulkEntityData(entitySet.entityTypeId, entitySet.id, entitiesById)) {
-            indexCount = if (markAsIndexed) {
-                dataManager.markAsIndexed(mapOf(entitySet.id to batchToIndex), false)
-            } else {
-                batchToIndex.size
-            }
-
-            logger.info(
-                    "Indexed batch of {} elements for {} ({}) in {} ms",
-                    indexCount,
-                    entitySet.name,
-                    entitySet.id,
-                    esb.elapsed(TimeUnit.MILLISECONDS)
-            )
-        } else {
-            indexCount = 0
-            logger.error("Failed to index elements with entitiesById: {}", entitiesById)
-
-        }
-        return indexCount
-
-    }
 
     private fun tryLockEntitySet(entitySet: EntitySet): Boolean {
         return expirationLocks.putIfAbsent(entitySet.id, System.currentTimeMillis() + MAX_DURATION_MILLIS) == null
+        //putifabsent returns null if there was no value in the map. ie entityset was not locked
+        //method will return true if the entity set was not locked, and means the entityset is now locked
+        //method will return false if the entityset was already locked
     }
 
     private fun deleteIndexingLock(entitySet: EntitySet) {
         expirationLocks.delete(entitySet.id)
     }
 
+    /*
     private fun updateExpiration(entitySet: EntitySet) {
         expirationLocks.set(entitySet.id, System.currentTimeMillis() + MAX_DURATION_MILLIS)
     }
+    */
 
+    /*
     private fun getBatch(entityKeyIdStream: Iterator<Pair<UUID, OffsetDateTime>>): Map<UUID, OffsetDateTime> {
         val entityKeyIds = HashMap<UUID, OffsetDateTime>(INDEX_SIZE)
 
@@ -367,4 +332,5 @@ class BackgroundExpirationIndexingService(
 
         return entityKeyIds
     }
+    */
 }
