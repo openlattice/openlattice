@@ -46,6 +46,7 @@ public enum HazelcastMap {
     ENTITY_SET_TICKETS,
     ENTITY_SETS,
     ENTITY_TYPES,
+    EXPIRATION_LOCKS,
     IDS,
     ID_GENERATION,
     ID_REF_COUNTS,
