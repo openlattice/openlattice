@@ -305,7 +305,7 @@ class BackgroundExpiredDataDeletionService(
         connection.autoCommit = false
         val deleteStmt = connection.createStatement()
         val idQueryStmt = connection.createStatement()
-        val expiredEntityKeyIds = ResultSetAdapters.entityKeyIds(idQueryStmt.executeQuery(getExpiredEntityKeyIdsByLastWrite(entitySetId, elapsedTime)))
+        val expiredEntityKeyIds = ResultSetAdapters.entityKeyIds(idQueryStmt.executeQuery(getExpiredEntityKeyIdsByLastWrite(entitySetId, elapsedTime.toString())))
         val deleteCount = deleteStmt.executeUpdate(deleteExpiredDataByLastWriteQuery(entitySetId, elapsedTime.toString()))
         return Pair(expiredEntityKeyIds, deleteCount)
     }
@@ -326,7 +326,7 @@ class BackgroundExpiredDataDeletionService(
         return "SELECT ${ID.name} FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${VERSIONS.name}[1] < $elapsedTime"
     }
 
-    private fun getExpiredEntityKeyIdsByLastWrite(entitySetId: UUID, elapsedTime: Long): String {
+    private fun getExpiredEntityKeyIdsByLastWrite(entitySetId: UUID, elapsedTime: String): String {
         "SELECT ${ID.name} FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${LAST_WRITE.name} < '$elapsedTime'"
     }
 
