@@ -11,14 +11,14 @@ import java.util.concurrent.TimeUnit
  */
 
 class DataExpiration (
-        @JsonProperty( SerializationConstants.EXPIRATION ) timeToExpiration: TimeUnit,
+        @JsonProperty( SerializationConstants.EXPIRATION ) timeToExpiration: Long,
         @JsonProperty( SerializationConstants.FLAGS_FIELD ) expirationFlag: ExpirationType,
-        @JsonProperty( SerializationConstants.PROPERTY_TYPE_ID ) startDate: Optional<UUID> = Optional.empty()
+        @JsonProperty( SerializationConstants.PROPERTY_TYPE_ID ) startDateProperty: Optional<UUID> = Optional.empty()
 ) {
-    val tTE = timeToExpiration
-    val expFlag = expirationFlag
-    val start = startDate
+    val timeToExpiration = timeToExpiration
+    val expirationFlag = expirationFlag
+    val startDateProperty = startDateProperty
     init {
-        check(expFlag == ExpirationType.DATE_PROPERTY && start.isEmpty) { "Must provide property type for expiration calculation" }
+        if (expirationFlag == ExpirationType.DATE_PROPERTY) check(startDateProperty.isPresent) {"Must provide property type for expiration calculation"}
     }
 }

@@ -115,7 +115,8 @@ public class EntitySet extends AbstractSecurableObject {
             UUID organizationId,
             EnumSet<EntitySetFlag> flags,
             LinkedHashSet<Integer> partitions,
-            int partitionsVersion
+            int partitionsVersion,
+            Optional<DataExpiration> expiration
     ) {
         super( id, title, description);
         this.linkedEntitySets = linkedEntitySets;
