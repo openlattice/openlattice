@@ -23,25 +23,13 @@ import java.util.*
 internal class PostgresDataQueries
 
 const val VALUES = "values"
-@Deprecated("Unused")
-val dataMetadataColumnsParametersSql = PostgresDataTables.dataTableMetadataColumns.joinToString(",") { "?" }
-@Deprecated("Unused")
-val dataMetadataColumnsSql = PostgresDataTables.dataTableMetadataColumns.joinToString { "," }
 val dataTableColumnsSql = PostgresDataTables.dataTableColumns.joinToString(",") { it.name }
-@Deprecated("Unused")
-val dataTableColumnsBindSql = PostgresDataTables.dataTableColumns.joinToString(",") { "?" }
-
-@Deprecated("Unused")
-val dataTableColumnsConflictSetSql = PostgresDataTables.dataTableColumns.joinToString(",") {
-    "${it.name} = EXCLUDED.${it.name}"
-}
 
 val valuesColumnsSql = PostgresDataTables.dataTableValueColumns.joinToString(",") {
     "array_agg(${it.name}) FILTER (where ${it.name} IS NOT NULL) as ${it.name}"
 }
 
-@Deprecated("Unused")
-val jsonValueColumnNamesAsString = PostgresDataTables.dataColumns.keys.map { getMergedDataColumnName(it) }.joinToString(",")
+val primaryKeyColumnNamesAsString = PostgresDataTables.buildDataTableDefinition().primaryKey.joinToString(",") { it.name }
 
 val jsonValueColumnsSql = PostgresDataTables.dataColumns.entries
         .joinToString(",") { (datatype, cols) ->
@@ -75,7 +63,7 @@ fun buildPreparableFiltersSqlForLinkedEntities(
 
     val innerSql = selectEntitiesGroupedByIdAndPropertyTypeId(
             idsPresent = idsPresent, partitionsPresent = partitionsPresent, selectOriginIds = selectOriginIds
-    ) + " AND ${ORIGIN_ID.name} != '${IdConstants.EMPTY_UUID}' " + filtersClause + GROUP_BY_ESID_EKID_PART_PTID
+    ) + " AND ${ORIGIN_ID.name} IS NOT NULL AND ${ORIGIN_ID.name} != '${IdConstants.EMPTY_ORIGIN_ID.id}' " + filtersClause + GROUP_BY_ESID_EKID_PART_PTID
 
     val maybeEntityKeyIds = if (selectOriginIds) ",${ENTITY_KEY_IDS_COL.name}" else ""
     val groupBy = if (selectOriginIds) GROUP_BY_ESID_EKID_PART_EKIDS else GROUP_BY_ESID_EKID_PART
@@ -634,7 +622,7 @@ fun upsertPropertyValueSql(propertyType: PropertyType): String {
 
     return "INSERT INTO ${DATA.name} ($metadataColumnsSql,${insertColumn.name}) " +
             "VALUES (?,?,?,?,?,now(),?,?,?,?) " +
-            "ON CONFLICT (${PARTITION.name},${ENTITY_SET_ID.name},${PROPERTY_TYPE_ID.name},${ID_VALUE.name},${HASH.name},${PARTITIONS_VERSION.name}) " +
+            "ON CONFLICT ($primaryKeyColumnNamesAsString) " +
             "DO UPDATE SET " +
             "${VERSIONS.name} = ${DATA.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
             "${LAST_WRITE.name} = GREATEST(${DATA.name}.${LAST_WRITE.name},EXCLUDED.${LAST_WRITE.name}), " +
@@ -677,7 +665,7 @@ fun upsertPropertyValueLinkingRowSql(propertyType: PropertyType ): String {
 
     return "INSERT INTO ${DATA.name} ($metadataColumnsSql,${insertColumn.name},${ORIGIN_ID.name}) " +
             "VALUES (?,?,?,?,?,now(),?,?,?,?,?) " +
-            "ON CONFLICT (${PARTITION.name},${ENTITY_SET_ID.name},${PROPERTY_TYPE_ID.name},${ID_VALUE.name},${HASH.name},${PARTITIONS_VERSION.name}) " +
+            "ON CONFLICT ($primaryKeyColumnNamesAsString) " +
             "DO UPDATE SET " +
             "${VERSIONS.name} = ${DATA.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
             "${LAST_WRITE.name} = GREATEST(${DATA.name}.${LAST_WRITE.name},EXCLUDED.${LAST_WRITE.name}), " +
@@ -716,7 +704,7 @@ fun createOrUpdateLinkFromEntity(): String {
             "SELECT $existingColumnsUpdatedForLinking " +
             "FROM ${DATA.name} " +
             "${optionalWhereClausesSingleEdk( idPresent = true, partitionsPresent = true, entitySetPresent = true )} " +
-            "ON CONFLICT (${ENTITY_SET_ID.name},${ID_VALUE.name},${ORIGIN_ID.name},${PARTITION.name},${PROPERTY_TYPE_ID.name},${HASH.name},${PARTITIONS_VERSION.name})" +
+            "ON CONFLICT ($primaryKeyColumnNamesAsString) " +
             "DO UPDATE SET " +
                 "${VERSIONS.name} = ${DATA.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
                 "${LAST_WRITE.name} = GREATEST(${DATA.name}.${LAST_WRITE.name},EXCLUDED.${LAST_WRITE.name}), " +

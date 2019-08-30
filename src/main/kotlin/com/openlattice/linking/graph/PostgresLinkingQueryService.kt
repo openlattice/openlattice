@@ -198,10 +198,11 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource, private val
                     ps.setLong(1, version)
                     ps.setLong(2, version)
                     ps.setLong(3, version)
-                    ps.setObject(4, linkingId) // ID value
-                    ps.setObject(5, edk.entitySetId) // esid
+                    ps.setObject(4, edk.entitySetId) // esid
+                    ps.setObject(5, linkingId) // ID value
                     ps.setObject(6, edk.entityKeyId) // origin id
                     ps.setArray(7, partitions)
+                    println(ps.toString())
                     ps.addBatch()
                 }
                 return ps.executeUpdate()

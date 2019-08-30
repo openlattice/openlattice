@@ -2,10 +2,12 @@ package com.openlattice.postgres
 
 import com.google.common.cache.CacheBuilder
 import com.google.common.cache.CacheLoader
+import com.openlattice.IdConstants
 import com.openlattice.edm.PostgresEdmTypeConverter
 import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresColumn.*
+import com.openlattice.postgres.PostgresTable.DATA
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 
 /**
@@ -139,28 +141,11 @@ class PostgresDataTables {
                     .ifNotExists()
                     .desc()
 
-//                PostgresExpressionIndexDefinition(IDS,
-//                        ENTITY_SET_ID.name
-//                        + ",(" + LINKING_ID.name + " IS NOT NULL" + ")"
-//                        + ",(" + LAST_LINK.getName() + " >= " + LAST_WRITE.name + ")"
-//                        + ",(" + LAST_INDEX.getName() + " >= " + LAST_WRITE.name + ")"
-//                        + ",(" + LAST_LINK_INDEX.name + " < " + LAST_WRITE.name + ")"
-//                        + ",(" + VERSION.name + " > 0)")
-//                .name("ids_needing_linking_indexing_idx")
-//                .ifNotExists(),
+            val originIdNotNullIndex = PostgresExpressionIndexDefinition(tableDefinition, "(${ORIGIN_ID.name} != '${IdConstants.EMPTY_ORIGIN_ID.id}')" )
+                .name("origin_id_not_equal_empty_idx")
+                .ifNotExists()
 
-
-//            val linkingRows = PostgresColumnsIndexDefinition(tableDefinition, ID_VALUE, VERSION)
-//                    .name(quote(prefix + ""))
-//                    .ifNotExists()
-//                    .desc()
-
-//            val nonLinkingRows = PostgresColumnsIndexDefinition(tableDefinition, ID_VALUE, VERSION)
-//                    .name(quote(prefix + ""))
-//                    .ifNotExists()
-//                    .desc()
-
-                    tableDefinition.addIndexes(
+            tableDefinition.addIndexes(
                     idIndex,
                     entitySetIdIndex,
                     versionIndex,
@@ -168,7 +153,8 @@ class PostgresDataTables {
                     propertyTypeIdIndex,
                     partitionsVersionIndex,
                     currentPropertiesForEntitySetIndex,
-                    currentPropertiesForEntityIndex
+                    currentPropertiesForEntityIndex,
+                    originIdNotNullIndex
             )
 
             return tableDefinition

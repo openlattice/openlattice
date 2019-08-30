@@ -30,6 +30,7 @@ import com.openlattice.data.EntityKey
 import com.openlattice.data.EntityKeyIdService
 import com.openlattice.data.storage.getPartition
 import com.openlattice.data.storage.partitions.PartitionManager
+import com.openlattice.data.storage.partitions.PartitionsInfo
 import com.openlattice.data.util.PostgresDataHasher
 import com.openlattice.hazelcast.HazelcastClient
 import com.openlattice.hazelcast.HazelcastMap
@@ -86,9 +87,7 @@ class PostgresEntityKeyIdService(
         return entityIds.zip(ids).toMap()
     }
 
-    private fun storeEntityKeyIdReservations(entitySetId: UUID, entityKeyIds: Set<UUID>) {
-        val partitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
-
+    private fun storeEntityKeyIdReservations(entitySetId: UUID, entityKeyIds: Set<UUID>, partitionsInfo: PartitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)) {
         hds.connection.use { connection ->
             connection.autoCommit = false
 
@@ -232,6 +231,12 @@ class PostgresEntityKeyIdService(
 
         return entityKeys.asSequence().map { existing[it] ?: missingMap.getValue(it) }.toSet()
 
+    }
+
+    override fun reserveLinkingIds( count: Int ): List<UUID> {
+        val ids = idGenerationService.getNextIds(count)
+        storeEntityKeyIdReservations(IdConstants.LINKING_ENTITY_SET_ID.id, ids, PartitionsInfo( partitionManager.getAllPartitions().toSet(),0))
+        return ids.toList()
     }
 
     override fun reserveIds(entitySetId: UUID, count: Int): List<UUID> {
