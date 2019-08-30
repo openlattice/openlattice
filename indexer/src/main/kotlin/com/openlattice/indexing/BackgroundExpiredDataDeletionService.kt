@@ -232,8 +232,8 @@ class BackgroundExpiredDataDeletionService(
             else -> logger.info( "No data has expired.")
         }
         val dataTableDeleteCount = pair.second
-        var idTableDeleteCount = 0
-        if (pair.first.isNotEmpty()) { idTableDeleteCount = deleteExpiredDataFromIdTable(pair.first) }
+        var idsTableDeleteCount = 0
+        if (pair.first.isNotEmpty()) { idsTableDeleteCount = deleteExpiredDataFromIdTable(pair.first) }
 
         /*
         val entityKeyIdsWithLastWrite = if (reindexAll) {
@@ -265,8 +265,9 @@ class BackgroundExpiredDataDeletionService(
         */
 
         //compare deletion from data table and ids table and whatever is going on in elasticsearch
+        check(dataTableDeleteCount == idsTableDeleteCount) { "Number of entities deleted from data and ids table are not the same. UH OH." } //do something better
 
-        return pair.second
+        return dataTableDeleteCount
     }
 
     //TODO for all deletion functions: add a sql query to pull out all ids (entitykeyids) where data are expired and return them as a set
@@ -327,7 +328,7 @@ class BackgroundExpiredDataDeletionService(
     }
 
     private fun getExpiredEntityKeyIdsByLastWrite(entitySetId: UUID, elapsedTime: String): String {
-        "SELECT ${ID.name} FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${LAST_WRITE.name} < '$elapsedTime'"
+        return "SELECT ${ID.name} FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${LAST_WRITE.name} < '$elapsedTime'"
     }
 
     private fun deleteExpiredDataByDatePropertyQuery(entitySetId: UUID, propertyTypeId: UUID, elapsedTime: String): String {
