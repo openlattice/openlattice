@@ -47,6 +47,7 @@ public interface SearchApi {
     String ORGANIZATIONS     = "/organizations";
     String ENTITY_SETS       = "/entity_sets";
     String ENTITY_TYPES      = "/entity_types";
+    String COLLECTIONS       = "/collections";
     String ASSOCIATION_TYPES = "/association_types";
     String PROPERTY_TYPES    = "/property_types";
     String APP               = "/app";
@@ -216,6 +217,28 @@ public interface SearchApi {
      */
     @POST( BASE + APP_TYPES )
     SearchResult executeAppTypeSearch( @Body SearchTerm searchTerm );
+
+    /**
+     * Executes a search over all EntityTypeCollections to find ones that match the given search term
+     *
+     * @param searchTerm A JSON object that contains three parameters: "start", which specifies the hit number to start
+     *                   returning results on for paging, "maxHits", which specifies the maximum number of hits to return, and
+     *                   "searchTerm", which is the search term results will match on.
+     * @return A search result object, containing the total number of hits for the given query, and the hits themselves
+     */
+    @POST( BASE + ENTITY_TYPES + COLLECTIONS )
+    SearchResult executeEntityTypeCollectionSearch( @Body SearchTerm searchTerm );
+
+    /**
+     * Executes a search over all authorized EntitySetCollections to find ones that match the given search term
+     *
+     * @param searchTerm A JSON object that contains three parameters: "start", which specifies the hit number to start
+     *                   returning results on for paging, "maxHits", which specifies the maximum number of hits to return, and
+     *                   "searchTerm", which is the search term results will match on.
+     * @return A search result object, containing the total number of hits for the given query, and the hits themselves
+     */
+    @POST( BASE + ENTITY_SETS + COLLECTIONS )
+    SearchResult executeEntitySetCollectionSearch( @Body SearchTerm searchTerm );
 
     /**
      * Executes a search over all entity types to find ones that match the given name and namespace, including partial
