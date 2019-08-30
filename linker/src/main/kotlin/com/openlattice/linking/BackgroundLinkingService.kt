@@ -175,7 +175,7 @@ class BackgroundLinkingService
                     if (maybeBestCluster != null) {
                         return@use insertMatches( conn, maybeBestCluster.clusterId, candidate, maybeBestCluster.cluster, false )
                     }
-                    val clusterId = ids.reserveIds(IdConstants.LINKING_ENTITY_SET_ID.id, 1).first()
+                    val clusterId = ids.reserveLinkingIds(1).first()
                     val block = candidate to mapOf(candidate to elem)
                     //TODO: When creating new cluster do we really need to re-match or can we assume score of 1.0?
                     return@use insertMatches( conn, clusterId, candidate, matcher.match(block).second, true )
@@ -245,18 +245,19 @@ class BackgroundLinkingService
                 Sets.newLinkedHashSet( edks.map { it.entityKeyId } )
             }
 
-    /* TODO: we do an upsert into data table for every member in the cluster regardless of score
-     *   Need to Diff this cluster against current cluster for linkingID
-     *      and perform the appropriate CRUD
-     */
+    /* TODO: we do an upsert into data table for every member in the cluster regardless of score */
         if ( newCluster ){
             lqs.createOrUpdateLink( linkingId, scoresAsEsidToEkids )
         } else {
             logger.debug("Writing ${toAdd.size} new links")
             logger.debug("Removing ${toRemove.size} old links")
 
-            lqs.createLinks( linkingId, toAdd )
-            lqs.tombstoneLinks( linkingId, toRemove )
+            if ( toAdd.isNotEmpty() ) {
+                lqs.createLinks( linkingId, toAdd )
+            }
+            if ( toRemove.isNotEmpty() ) {
+                lqs.tombstoneLinks( linkingId, toRemove )
+            }
         }
         linkingLogService.createOrUpdateCluster( linkingId, scoresAsEsidToEkids, newCluster )
     }
@@ -277,6 +278,7 @@ class BackgroundLinkingService
     fun updateCandidateList() {
         logger.info("Updating linking candidates list.")
         if (!running.tryLock()) {
+            logger.info("Couldn't get a lock, will try again later")
             return
         }
         try {
