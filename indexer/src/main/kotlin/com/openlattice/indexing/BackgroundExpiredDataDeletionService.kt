@@ -191,42 +191,8 @@ class BackgroundExpiredDataDeletionService(
         val esw = Stopwatch.createStarted()
         var pair = Pair(setOf<UUID>(), 0)
 
-        deleteExpiredDataFromDataTable(entitySet.id, entitySet.expiration)
-
-
-        when(entitySet.expiration.expirationFlag) {
-            //TODO also delete entity key id from ids table and entity from elasticsearch
-            //TODO add check that same number of items were deleted from all locations
-            //if provided datetime property was longer ago than timeUntilExpiration, delete it
-            ExpirationType.DATE_PROPERTY -> {
-                val propertyTypeId: UUID = entitySet.expiration.startDateProperty.get()
-                val propertyType = propertyTypes[propertyTypeId]
-                when {
-                    propertyType!!.datatype == EdmPrimitiveTypeKind.Date -> {
-                        val elapsedTime = OffsetDateTime.ofInstant(Instant.now().minusMillis(timeUntilExpiration), ZoneId.systemDefault()).toLocalDate()
-                        pair = deleteExpiredDataByDate(entitySet.id, propertyTypeId, elapsedTime)
-                    }
-                    propertyType!!.datatype == EdmPrimitiveTypeKind.DateTimeOffset -> {
-                        val elapsedTime = OffsetDateTime.ofInstant(Instant.now().minusMillis(timeUntilExpiration), ZoneId.systemDefault())
-                        pair = deleteExpiredDataByDateTimeOffset(entitySet.id, propertyTypeId, elapsedTime)
-                    }
-                    else -> {
-                        logger.error("Something terrible has happened.")
-                    }
-                }
-            }
-            //if the initial write was longer ago than timeUntilExpiration, delete it
-            ExpirationType.FIRST_WRITE -> {
-                val elapsedTime = Instant.now().minusMillis(timeUntilExpiration).toEpochMilli()
-                pair = deleteExpiredDataByFirstWrite(entitySet.id, elapsedTime)
-            }
-            //if it hasn't been updated in longer than the timeUntilExpiration, delete it
-            ExpirationType.LAST_WRITE -> {
-                val elapsedTime = OffsetDateTime.ofInstant(Instant.now().minusMillis(timeUntilExpiration), ZoneId.systemDefault())
-                pair = deleteExpiredDataByLastWrite(entitySet.id, elapsedTime)
-                }
-            else -> logger.info( "No data has expired.")
-        }
+        pair = deleteExpiredDataFromDataTable(entitySet.id, entitySet.expiration)
+        
         val dataTableDeleteCount = pair.second
         var idsTableDeleteCount = 0
         if (pair.first.isNotEmpty()) { idsTableDeleteCount = deleteExpiredDataFromIdTable(pair.first) }
