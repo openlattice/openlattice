@@ -44,16 +44,13 @@ class BackgroundExpiredDataDeletionService(
         hazelcastInstance: HazelcastInstance,
         private val indexerConfiguration: IndexerConfiguration,
         private val hds: HikariDataSource,
-        private val dataQueryService: PostgresEntityDataQueryService,
-        private val elasticsearchApi: ConductorElasticsearchApi,
-        private val dataManager: IndexingMetadataManager
+        private val elasticsearchApi: ConductorElasticsearchApi
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(BackgroundExpiredDataDeletionService::class.java)!!
     }
 
     private val propertyTypes: IMap<UUID, PropertyType> = hazelcastInstance.getMap(HazelcastMap.PROPERTY_TYPES.name)
-    private val entityTypes: IMap<UUID, EntityType> = hazelcastInstance.getMap(HazelcastMap.ENTITY_TYPES.name)
     private val entitySets: IMap<UUID, EntitySet> = hazelcastInstance.getMap(HazelcastMap.ENTITY_SETS.name)
     private val expirationLocks: IMap<UUID, Long> = hazelcastInstance.getMap(HazelcastMap.EXPIRATION_LOCKS.name)
 
@@ -79,14 +76,12 @@ class BackgroundExpiredDataDeletionService(
     @Scheduled(fixedRate = DATA_DELETION_RATE)
     fun deleteExpiredDataFromEntitySets() {
         logger.info("Starting background expired data deletion task.")
-        //Keep number of indexing jobs under control
+        //Keep number of expired data deletion jobs under control
         if (taskLock.tryLock()) {
             try {
-                ensureAllEntityTypeIndicesExist() //do we need this functionality? Need to look into elasticsearch more
                 if (indexerConfiguration.backgroundExpiredDataDeletionEnabled) {
                     val w = Stopwatch.createStarted()
                     //We shuffle entity sets to make sure we have a chance to work share and index everything
-
                     //lock entity sets we are working on
                     val lockedEntitySets = entitySets.values
                             .shuffled()
@@ -115,26 +110,10 @@ class BackgroundExpiredDataDeletionService(
                 taskLock.unlock()
             }
         } else {
-            logger.info("Not starting new expiration job as an existing one is running.")
+            logger.info("Not starting new expired data deletion job as an existing one is running.")
         }
     }
 
-    private fun ensureAllEntityTypeIndicesExist() {
-        val existingIndices = elasticsearchApi.entityTypesWithIndices
-        val missingIndices = entityTypes.keys - existingIndices
-        if (missingIndices.isNotEmpty()) {
-            val missingEntityTypes = entityTypes.getAll(missingIndices)
-            logger.info("The following entity types were missing indices: {}", missingEntityTypes.keys)
-            missingEntityTypes.values.forEach { et ->
-                val missingEntityTypePropertyTypes = propertyTypes.getAll(et.properties)
-                elasticsearchApi.saveEntityTypeToElasticsearch(
-                        et,
-                        missingEntityTypePropertyTypes.values.toList()
-                )
-                logger.info("Created missing index for entity type ${et.type} with id ${et.id}")
-            }
-        }
-    }
     /*
     private fun getEntityDataKeysQuery(entitySetId: UUID): String {
         return "SELECT ${ID.name}, ${LAST_WRITE.name} FROM ${IDS.name} " +
@@ -189,13 +168,16 @@ class BackgroundExpiredDataDeletionService(
         )
 
         val esw = Stopwatch.createStarted()
-        var pair = Pair(setOf<UUID>(), 0)
+        val pair: Pair<Set<UUID>, Int> = deleteExpiredDataFromDataTable(entitySet.id, entitySet.expiration)
 
-        pair = deleteExpiredDataFromDataTable(entitySet.id, entitySet.expiration)
-        
         val dataTableDeleteCount = pair.second
+        val expiredEntityKeyIds = pair.first
+        var elasticsearchDataDeleted = false
         var idsTableDeleteCount = 0
-        if (pair.first.isNotEmpty()) { idsTableDeleteCount = deleteExpiredDataFromIdTable(pair.first) }
+        if (expiredEntityKeyIds.isNotEmpty()) {
+            elasticsearchDataDeleted = delteExpiredDataFromElasticSearch(entitySet.id, entitySet.entityTypeId, expiredEntityKeyIds)
+            idsTableDeleteCount = deleteExpiredDataFromIdTable(expiredEntityKeyIds)
+        }
 
         /*
         val entityKeyIdsWithLastWrite = if (reindexAll) {
@@ -228,6 +210,7 @@ class BackgroundExpiredDataDeletionService(
 
         //compare deletion from data table and ids table and whatever is going on in elasticsearch
         check(dataTableDeleteCount == idsTableDeleteCount) { "Number of entities deleted from data and ids table are not the same. UH OH." } //do something better
+        check(elasticsearchDataDeleted) { "Expired data not deleted from elasticsearch. UH OH." } // also do something better
 
         return dataTableDeleteCount
     }
@@ -281,20 +264,24 @@ class BackgroundExpiredDataDeletionService(
         return Pair(expiredEntityKeyIds, deleteCount)
     }
 
+    private fun delteExpiredDataFromElasticSearch(entitySetId: UUID, entityTypeId: UUID, expiredEntityKeyIds: Set<UUID>): Boolean {
+        return elasticsearchApi.deleteEntityDataBulk(entitySetId, entityTypeId, expiredEntityKeyIds)
+    }
+
+    private fun deleteExpiredDataFromIdTable(expiredEntityKeyIds: Set<UUID>): Int {
+        hds.connection.use { conn ->
+            val stmt = conn.createStatement()
+            val expiredIdsAsString = expiredEntityKeyIds.joinToString(prefix = "('", postfix = "')", separator = "', '") { it.toString() }
+            return stmt.executeUpdate(deleteExpiredDataFromIdTableQuery(expiredIdsAsString))
+        }
+    }
+
     private fun getDeleteQuery(entitySetId: UUID): String {
         return "DELETE FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ? < ?"
     }
 
     private fun getExpiredIdsQuery(entitySetId: UUID): String {
         return "SELECT ${ID.name} FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ? < ?"
-    }
-
-    private fun deleteExpiredDataFromIdTable(expiredEntityKeyIds: Set<UUID>): Int {
-        val connection = hds.connection
-        connection.autoCommit = false
-        val stmt = connection.createStatement()
-        val expiredIdsAsString = expiredEntityKeyIds.joinToString(prefix = "('", postfix = "')", separator = "', '") { it.toString() }
-        return stmt.executeUpdate(deleteExpiredDataFromIdTableQuery(expiredIdsAsString))
     }
 
     private fun deleteExpiredDataFromIdTableQuery(expiredIds: String): String {
