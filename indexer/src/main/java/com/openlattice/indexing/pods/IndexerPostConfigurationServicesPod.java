@@ -37,6 +37,7 @@ import com.openlattice.datastore.pods.ByteBlobServicePod;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.edm.PostgresEdmManager;
 import com.openlattice.ids.HazelcastIdGenerationService;
+import com.openlattice.indexing.BackgroundExpiredDataDeletionService;
 import com.openlattice.indexing.BackgroundIndexingService;
 import com.openlattice.indexing.BackgroundLinkingIndexingService;
 import com.openlattice.indexing.IndexingService;
@@ -150,6 +151,15 @@ public class IndexerPostConfigurationServicesPod {
                 indexingMetadataManager(),
                 entityDatastore(),
                 indexerConfiguration );
+    }
+
+    @Bean
+    public BackgroundExpiredDataDeletionService backgroundExpiredDataDeletionService() {
+        return new BackgroundExpiredDataDeletionService(
+                hazelcastInstance,
+                indexerConfiguration,
+                hikariDataSource,
+                elasticsearchApi );
     }
 
     @Bean
