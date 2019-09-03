@@ -21,10 +21,15 @@ import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.DATA
 import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.ResultSetAdapters
+import com.openlattice.postgres.streams.PostgresIterable
+import com.openlattice.postgres.streams.StatementHolder
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
+import java.sql.Types
+import java.sql.PreparedStatement
+import java.sql.ResultSet
 import java.time.Instant
 import java.time.LocalDate
 import java.time.OffsetDateTime
@@ -32,6 +37,8 @@ import java.time.ZoneId
 import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
+import java.util.function.Function
+import java.util.function.Supplier
 
 /**
  *
@@ -114,55 +121,10 @@ class BackgroundExpiredDataDeletionService(
         }
     }
 
-    /*
-    private fun getEntityDataKeysQuery(entitySetId: UUID): String {
-        return "SELECT ${ID.name}, ${LAST_WRITE.name} FROM ${IDS.name} " +
-                "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${VERSION.name} > 0"
-    }
-
-    private fun getDirtyEntitiesWithLastWriteQuery(entitySetId: UUID): String {
-        return "SELECT ${ID.name}, ${LAST_WRITE.name} FROM ${IDS.name} " +
-                "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND " +
-                "${LAST_INDEX.name} < ${LAST_WRITE.name} AND " +
-                "${VERSION.name} > 0 " +
-                "LIMIT $FETCH_SIZE"
-    }
-
-    private fun getEntityDataKeys(entitySetId: UUID): PostgresIterable<Pair<UUID, OffsetDateTime>> {
-        return PostgresIterable(Supplier<StatementHolder> {
-            val connection = hds.connection
-            connection.autoCommit = false
-            val stmt = connection.createStatement()
-            stmt.fetchSize = 64_000
-            val rs = stmt.executeQuery(getEntityDataKeysQuery(entitySetId))
-            StatementHolder(connection, stmt, rs)
-        }, Function<ResultSet, Pair<UUID, OffsetDateTime>> {
-            ResultSetAdapters.id(it) to ResultSetAdapters.lastWriteTyped(it)
-        })
-    }
-
-    private fun getDirtyEntityKeyIds(entitySetId: UUID): PostgresIterable<Pair<UUID, OffsetDateTime>> {
-        return PostgresIterable(Supplier<StatementHolder> {
-            val connection = hds.connection
-            val stmt = connection.createStatement()
-            val rs = stmt.executeQuery(getDirtyEntitiesWithLastWriteQuery(entitySetId))
-            StatementHolder(connection, stmt, rs)
-        }, Function<ResultSet, Pair<UUID, OffsetDateTime>> {
-            ResultSetAdapters.id(it) to ResultSetAdapters.lastWriteTyped(it)
-        })
-    }
-
-    private fun getPropertyTypeForEntityType(entityTypeId: UUID): Map<UUID, PropertyType> {
-        return propertyTypes
-                .getAll(entityTypes[entityTypeId]?.properties ?: setOf())
-                .filter { it.value.datatype != EdmPrimitiveTypeKind.Binary }
-    }
-    */
-
     //deletes expired data from data and ids table in postgres and elasticsearch
     private fun deleteExpiredData(entitySet: EntitySet): Int {
         logger.info(
-                "Starting indexing expired data for entity set {} with id {}",
+                "Starting deletion of expired data for entity set {} with id {}",
                 entitySet.name,
                 entitySet.id
         )
@@ -171,47 +133,19 @@ class BackgroundExpiredDataDeletionService(
         val pair: Pair<Set<UUID>, Int> = deleteExpiredDataFromDataTable(entitySet.id, entitySet.expiration)
 
         val dataTableDeleteCount = pair.second
-        val expiredEntityKeyIds = pair.first
-        var elasticsearchDataDeleted = false
-        var idsTableDeleteCount = 0
-        if (expiredEntityKeyIds.isNotEmpty()) {
-            elasticsearchDataDeleted = delteExpiredDataFromElasticSearch(entitySet.id, entitySet.entityTypeId, expiredEntityKeyIds)
-            idsTableDeleteCount = deleteExpiredDataFromIdTable(expiredEntityKeyIds)
-        }
-
-        /*
-        val entityKeyIdsWithLastWrite = if (reindexAll) {
-            getEntityDataKeys(entitySet.id)
-        } else {
-            getDirtyEntityKeyIds(entitySet.id)
-        }
-
-        val propertyTypes = getPropertyTypeForEntityType(entitySet.entityTypeId)
-
-        var indexCount = 0
-        var entityKeyIdsIterator = entityKeyIdsWithLastWrite.iterator()
-
-        while (entityKeyIdsIterator.hasNext()) {
-            updateExpiration(entitySet)
-            while (entityKeyIdsIterator.hasNext()) {
-                val batch = getBatch(entityKeyIdsIterator)
-                indexCount += indexEntities(entitySet, batch, propertyTypes, !reindexAll)
+        if (dataTableDeleteCount > 0) {
+            val expiredEntityKeyIds = pair.first
+            var elasticsearchDataDeleted = false
+            var idsTableDeleteCount = 0
+            if (expiredEntityKeyIds.isNotEmpty()) {
+                elasticsearchDataDeleted = deleteExpiredDataFromElasticSearch(entitySet.id, entitySet.entityTypeId, expiredEntityKeyIds)
+                idsTableDeleteCount = deleteExpiredDataFromIdsTable(expiredEntityKeyIds)
             }
-            entityKeyIdsIterator = entityKeyIdsWithLastWrite.iterator()
+
+            //compare deletion from data table and ids table and whether data was deleted from elasticsearch
+            check(dataTableDeleteCount == idsTableDeleteCount) { "Number of entities deleted from data and ids table are not the same. UH OH." } //do something better
+            check(elasticsearchDataDeleted) { "Expired data not deleted from elasticsearch. UH OH." } // also do something better
         }
-
-        logger.info(
-                "Finished indexing {} elements from entity set {} in {} ms",
-                deletionCount,
-                entitySet.name,
-                esw.elapsed(TimeUnit.MILLISECONDS)
-        )
-        */
-
-        //compare deletion from data table and ids table and whatever is going on in elasticsearch
-        check(dataTableDeleteCount == idsTableDeleteCount) { "Number of entities deleted from data and ids table are not the same. UH OH." } //do something better
-        check(elasticsearchDataDeleted) { "Expired data not deleted from elasticsearch. UH OH." } // also do something better
-
         return dataTableDeleteCount
     }
 
@@ -219,60 +153,68 @@ class BackgroundExpiredDataDeletionService(
         val connection = hds.connection
         connection.autoCommit = false
         val dataTableDeleteStmt = connection.prepareStatement(getDeleteQuery(entitySetId))
-        val expiredIdsStmt = connection.prepareStatement(getExpiredIdsQuery(entitySetId))
+        val comparisonField: Any
+        val expirationField: Any
+        val expirationFieldSQLType: Int
         when (expiration.expirationFlag) {
             ExpirationType.DATE_PROPERTY -> {
                 val propertyTypeId: UUID = expiration.startDateProperty.get()
                 val propertyType = propertyTypes[propertyTypeId]
                 dataTableDeleteStmt.setObject(1, propertyTypeId)
-                expiredIdsStmt.setObject(1, propertyTypeId)
-                when {
-                    propertyType!!.datatype == EdmPrimitiveTypeKind.Date -> {
-                        val elapsedTime = OffsetDateTime.ofInstant(Instant.now().minusMillis(expiration.timeToExpiration), ZoneId.systemDefault()).toLocalDate()
-                        dataTableDeleteStmt.setObject(2, elapsedTime)
-                        expiredIdsStmt.setObject(2, elapsedTime)
-                    }
-                    propertyType!!.datatype == EdmPrimitiveTypeKind.DateTimeOffset -> {
-                        val elapsedTime = OffsetDateTime.ofInstant(Instant.now().minusMillis(expiration.timeToExpiration), ZoneId.systemDefault())
-                        dataTableDeleteStmt.setObject(2, elapsedTime)
-                        expiredIdsStmt.setObject(2, elapsedTime)
-                    }
-                    else -> {
-                        logger.error("Something terrible has happened.")
-                    }
+                comparisonField = propertyTypeId
+                if (propertyType!!.datatype == EdmPrimitiveTypeKind.Date) {
+                    expirationField = OffsetDateTime.ofInstant(Instant.now().minusMillis(expiration.timeToExpiration), ZoneId.systemDefault()).toLocalDate()
+                    expirationFieldSQLType = Types.DATE
+                    dataTableDeleteStmt.setObject(2, expirationField, expirationFieldSQLType)
+                } else {  //only other TypeKind for date is OffsetDateTime
+                    expirationField = OffsetDateTime.ofInstant(Instant.now().minusMillis(expiration.timeToExpiration), ZoneId.systemDefault())
+                    expirationFieldSQLType = Types.TIMESTAMP_WITH_TIMEZONE
+                    dataTableDeleteStmt.setObject(2, expirationField, expirationFieldSQLType)
                 }
             }
             ExpirationType.FIRST_WRITE -> {
-                val elapsedTime = Instant.now().minusMillis(expiration.timeToExpiration).toEpochMilli()
+                expirationField = Instant.now().minusMillis(expiration.timeToExpiration).toEpochMilli()
+                expirationFieldSQLType = Types.BIGINT
                 dataTableDeleteStmt.setObject(1, "${VERSIONS.name}[1]")
-                dataTableDeleteStmt.setObject(2, elapsedTime)
-                expiredIdsStmt.setObject(1, "${VERSIONS.name}[1]")
-                expiredIdsStmt.setObject(2, elapsedTime)
+                dataTableDeleteStmt.setObject(2, expirationField, expirationFieldSQLType)
+                comparisonField = "${VERSIONS.name}[1]"
             }
             ExpirationType.LAST_WRITE -> {
-                val elapsedTime = OffsetDateTime.ofInstant(Instant.now().minusMillis(expiration.timeToExpiration), ZoneId.systemDefault())
+                expirationField = OffsetDateTime.ofInstant(Instant.now().minusMillis(expiration.timeToExpiration), ZoneId.systemDefault())
+                expirationFieldSQLType = Types.TIMESTAMP_WITH_TIMEZONE
                 dataTableDeleteStmt.setObject(1, "${LAST_WRITE.name}")
-                dataTableDeleteStmt.setObject(2, elapsedTime)
-                expiredIdsStmt.setObject(1, "${LAST_WRITE.name}")
-                expiredIdsStmt.setObject(2, elapsedTime)
+                dataTableDeleteStmt.setObject(2, expirationField, expirationFieldSQLType)
+                comparisonField = "${LAST_WRITE.name}"
             }
-            else -> logger.info( "No data has expired.")
         }
-        val expiredEntityKeyIds = ResultSetAdapters.entityKeyIds(expiredIdsStmt.executeQuery())
+        val expiredEntityKeyIds = getExpiredIds(comparisonField, expirationField, expirationFieldSQLType, entitySetId)
         val deleteCount = dataTableDeleteStmt.executeUpdate()
         connection.commit()
-        return Pair(expiredEntityKeyIds, deleteCount)
+        return Pair(expiredEntityKeyIds.toSet(), deleteCount)
     }
 
-    private fun delteExpiredDataFromElasticSearch(entitySetId: UUID, entityTypeId: UUID, expiredEntityKeyIds: Set<UUID>): Boolean {
+    private fun getExpiredIds(comparisonField: Any, expirationField: Any, expirationFieldSQLType: Int, entitySetId: UUID): PostgresIterable<UUID> {
+        return PostgresIterable(
+                Supplier {
+                    val connection = hds.connection
+                    val stmt = connection.prepareStatement(getExpiredIdsQuery(entitySetId))
+                    stmt.setObject(1, comparisonField)
+                    stmt.setObject(2, expirationField, expirationFieldSQLType)
+                    StatementHolder(connection, stmt, stmt.executeQuery())
+                },
+                Function<ResultSet, UUID> { ResultSetAdapters.id(it) }
+        )
+    }
+
+    private fun deleteExpiredDataFromElasticSearch(entitySetId: UUID, entityTypeId: UUID, expiredEntityKeyIds: Set<UUID>): Boolean {
         return elasticsearchApi.deleteEntityDataBulk(entitySetId, entityTypeId, expiredEntityKeyIds)
     }
 
-    private fun deleteExpiredDataFromIdTable(expiredEntityKeyIds: Set<UUID>): Int {
+    private fun deleteExpiredDataFromIdsTable(expiredEntityKeyIds: Set<UUID>): Int {
         hds.connection.use { conn ->
             val stmt = conn.createStatement()
             val expiredIdsAsString = expiredEntityKeyIds.joinToString(prefix = "('", postfix = "')", separator = "', '") { it.toString() }
-            return stmt.executeUpdate(deleteExpiredDataFromIdTableQuery(expiredIdsAsString))
+            return stmt.executeUpdate(deleteExpiredDataFromIdsTableQuery(expiredIdsAsString))
         }
     }
 
@@ -284,7 +226,7 @@ class BackgroundExpiredDataDeletionService(
         return "SELECT ${ID.name} FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ? < ?"
     }
 
-    private fun deleteExpiredDataFromIdTableQuery(expiredIds: String): String {
+    private fun deleteExpiredDataFromIdsTableQuery(expiredIds: String): String {
         return "DELETE FROM ${IDS.name} WHERE ${ID.name} IN $expiredIds"
     }
 
