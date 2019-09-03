@@ -982,7 +982,8 @@ public class EdmService implements EdmManager {
                                 Optional.empty(),
                                 Optional.empty(),
                                 update.getOrganizationId(),
-                                Optional.empty() ) ) );
+                                Optional.empty(),
+                                Optional.empty()) ) );
 
                 // If an entity set is being moved across organizations, its materialized entity set should be deleted
                 // from old organization assembly
@@ -1279,7 +1280,8 @@ public class EdmService implements EdmManager {
                     Optional.empty(),
                     Optional.empty(),
                     Optional.empty(),
-                    Optional.empty() ) );
+                    Optional.empty(),
+                    Optional.empty()) );
         }
     }
 
@@ -1310,7 +1312,8 @@ public class EdmService implements EdmManager {
                     Optional.empty(),
                     optionalPropertyTagsUpdate,
                     Optional.empty(),
-                    Optional.empty() ) );
+                    Optional.empty(),
+                    Optional.empty()) );
             if ( !et.getProperties().equals( existing.getProperties() ) ) {
                 addPropertyTypesToEntityType( existing.getId(), et.getProperties() );
             }
