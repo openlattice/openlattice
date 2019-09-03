@@ -152,16 +152,16 @@ class BackgroundExpiredDataDeletionService(
     private fun deleteExpiredDataFromDataTable(entitySetId: UUID, expiration: DataExpiration): Pair<Set<UUID>, Int> {
         val connection = hds.connection
         connection.autoCommit = false
-        val dataTableDeleteStmt = connection.prepareStatement(getDeleteQuery(entitySetId))
-        val comparisonField: Any
+        val dataTableDeleteStmt = connection.prepareStatement(deleteExpiredDataFromDataTableQuery(entitySetId))
+        val comparisonField: String
         val expirationField: Any
         val expirationFieldSQLType: Int
         when (expiration.expirationFlag) {
             ExpirationType.DATE_PROPERTY -> {
                 val propertyTypeId: UUID = expiration.startDateProperty.get()
                 val propertyType = propertyTypes[propertyTypeId]
-                dataTableDeleteStmt.setObject(1, propertyTypeId)
-                comparisonField = propertyTypeId
+                comparisonField = "'$propertyTypeId'"
+                dataTableDeleteStmt.setObject(1, comparisonField)
                 if (propertyType!!.datatype == EdmPrimitiveTypeKind.Date) {
                     expirationField = OffsetDateTime.ofInstant(Instant.now().minusMillis(expiration.timeToExpiration), ZoneId.systemDefault()).toLocalDate()
                     expirationFieldSQLType = Types.DATE
@@ -193,12 +193,12 @@ class BackgroundExpiredDataDeletionService(
         return Pair(expiredEntityKeyIds.toSet(), deleteCount)
     }
 
-    private fun getExpiredIds(comparisonField: Any, expirationField: Any, expirationFieldSQLType: Int, entitySetId: UUID): PostgresIterable<UUID> {
+    private fun getExpiredIds(comparisonField: String, expirationField: Any, expirationFieldSQLType: Int, entitySetId: UUID): PostgresIterable<UUID> {
         return PostgresIterable(
                 Supplier {
                     val connection = hds.connection
                     val stmt = connection.prepareStatement(getExpiredIdsQuery(entitySetId))
-                    stmt.setObject(1, comparisonField)
+                    stmt.setString(1, comparisonField)
                     stmt.setObject(2, expirationField, expirationFieldSQLType)
                     StatementHolder(connection, stmt, stmt.executeQuery())
                 },
@@ -218,7 +218,7 @@ class BackgroundExpiredDataDeletionService(
         }
     }
 
-    private fun getDeleteQuery(entitySetId: UUID): String {
+    private fun deleteExpiredDataFromDataTableQuery(entitySetId: UUID): String {
         return "DELETE FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ? < ?"
     }
 
