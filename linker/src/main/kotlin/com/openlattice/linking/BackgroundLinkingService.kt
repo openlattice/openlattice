@@ -110,7 +110,7 @@ class BackgroundLinkingService
     private fun link(candidate: EntityDataKey) {
         clearNeighborhoods(candidate)
         // if we have positive feedbacks on entity, we use its linking id and match them together
-        if ( getPositiveFeedbacks(candidate).iterator().hasNext() ) {
+        if ( linkingFeedbackService.hasFeedbacks( FeedbackType.Positive, candidate )) {
             try {
                 // only linking id of entity should remain, since we cleared neighborhood, except the ones
                 // with positive feedback
@@ -205,13 +205,9 @@ class BackgroundLinkingService
         return m.keys + m.values.flatMap { it.keys }
     }
 
-    private fun getPositiveFeedbacks(entity: EntityDataKey): Iterable<EntityLinkingFeedback> {
-        return linkingFeedbackService.getLinkingFeedbackOnEntity(FeedbackType.Positive, entity)
-    }
-
     private fun clearNeighborhoods(candidate: EntityDataKey) {
         logger.debug("Starting neighborhood cleanup of {}", candidate)
-        val positiveFeedbacks = getPositiveFeedbacks(candidate).map(EntityLinkingFeedback::entityPair)
+        val positiveFeedbacks = linkingFeedbackService.getLinkingFeedbackEntityKeyPairs(FeedbackType.Positive, candidate)
 
         val clearedCount = lqs.deleteNeighborhood(candidate, positiveFeedbacks)
         logger.debug("Cleared {} neighbors from neighborhood of {}", clearedCount, candidate)
