@@ -26,19 +26,18 @@ import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
+import com.openlattice.data.DataExpiration;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.set.EntitySetFlag;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.util.EnumSet;
-import java.util.LinkedHashSet;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 @Component
 public class EntitySetStreamSerializer implements SelfRegisteringStreamSerializer<EntitySet> {
+    private static DataExpirationStreamSerializer dataExpirationStreamSerializer;
 
     @Override
     public void write( ObjectDataOutput out, EntitySet object ) throws IOException {
@@ -69,6 +68,12 @@ public class EntitySetStreamSerializer implements SelfRegisteringStreamSerialize
 
         out.writeInt( object.getPartitionsVersion() );
 
+        if (object.getExpiration() != null) {
+            out.writeBoolean(true);
+            dataExpirationStreamSerializer.write(out, object.getExpiration());
+        } else {
+            out.writeBoolean(false);
+        }
     }
 
     @Override
@@ -101,6 +106,16 @@ public class EntitySetStreamSerializer implements SelfRegisteringStreamSerialize
 
         int partitionsVersion = in.readInt();
 
+        DataExpiration expiration;
+        boolean hasExpiration = in.readBoolean();
+        if (hasExpiration) {
+            expiration = dataExpirationStreamSerializer.read(in);
+        } else {
+            expiration = null;
+        }
+
+
+
         EntitySet es = new EntitySet(
                 id,
                 entityTypeId,
@@ -112,7 +127,8 @@ public class EntitySetStreamSerializer implements SelfRegisteringStreamSerialize
                 organizationId,
                 flags,
                 partitions,
-                partitionsVersion );
+                partitionsVersion,
+                expiration);
 
         return es;
     }
