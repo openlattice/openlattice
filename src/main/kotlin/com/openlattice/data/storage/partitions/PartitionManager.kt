@@ -60,7 +60,7 @@ class PartitionManager @JvmOverloads constructor(
         val update = MetadataUpdate(
                 Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
                 Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
-                Optional.empty(), Optional.of(LinkedHashSet(partitions))
+                Optional.empty(), Optional.of(LinkedHashSet(partitions)), Optional.empty()
         )
         entitySets.executeOnKey(entitySetId, UpdateEntitySetMetadataProcessor(update))
     }
