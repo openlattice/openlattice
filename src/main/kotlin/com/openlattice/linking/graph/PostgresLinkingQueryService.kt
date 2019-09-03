@@ -256,7 +256,7 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource, private val
         }
     }
 
-    override fun deleteNeighborhood(entity: EntityDataKey, positiveFeedbacks: List<EntityKeyPair>): Int {
+    override fun deleteNeighborhood(entity: EntityDataKey, positiveFeedbacks: Collection<EntityKeyPair>): Int {
         val deleteNeighborHoodSql = DELETE_NEIGHBORHOOD_SQL +
                 if (positiveFeedbacks.isNotEmpty()) " AND NOT ( ${buildFilterEntityKeyPairs(positiveFeedbacks)} )" else ""
         hds.connection.use {

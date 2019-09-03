@@ -52,7 +52,7 @@ interface LinkingQueryService {
 
     fun getClusterFromLinkingId(linkingId: UUID): Map<EntityDataKey, Map<EntityDataKey, Double>>
 
-    fun deleteNeighborhood(entity: EntityDataKey, positiveFeedbacks: List<EntityKeyPair>): Int
+    fun deleteNeighborhood(entity: EntityDataKey, positiveFeedbacks: Collection<EntityKeyPair>): Int
 
     fun deleteNeighborhoods(entitySetId: UUID, entityKeyIds: Set<UUID>): Int
 

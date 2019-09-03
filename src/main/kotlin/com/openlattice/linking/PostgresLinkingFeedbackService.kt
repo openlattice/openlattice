@@ -1,12 +1,14 @@
 package com.openlattice.linking
 
+import com.hazelcast.aggregation.Aggregators
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
+import com.openlattice.authorization.AceKey
+import com.openlattice.authorization.AceValue
 import com.openlattice.data.EntityDataKey
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.linking.mapstores.*
-import com.openlattice.linking.mapstores.processors.LinkingFeedbackEntryProcessor
 import com.openlattice.postgres.PostgresTable.LINKING_FEEDBACK
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.PostgresIterable
@@ -45,31 +47,40 @@ class PostgresLinkingFeedbackService(private val hds: HikariDataSource, hazelcas
         )
     }
 
-    @SuppressWarnings("unchecked")
+    fun hasFeedbacks(feedbackType: FeedbackType, entity: EntityDataKey): Boolean {
+        val predicates = buildPredicatesForQueries( feedbackType, entity )
+        return linkingFeedbacks.aggregate(Aggregators.count(), predicates) > 0
+    }
+
+    fun getLinkingFeedbackEntityKeyPairs(feedbackType: FeedbackType, entity: EntityDataKey): Set<EntityKeyPair> {
+        val predicates = buildPredicatesForQueries( feedbackType, entity )
+        return linkingFeedbacks.keySet( predicates )
+    }
+
     fun getLinkingFeedbackOnEntity(feedbackType: FeedbackType, entity: EntityDataKey): Iterable<EntityLinkingFeedback> {
+        val predicates = buildPredicatesForQueries( feedbackType, entity )
+        return linkingFeedbacks.project(LinkingFeedbackProjection(), predicates)
+    }
+
+    fun buildPredicatesForQueries(feedbackType: FeedbackType, entity: EntityDataKey) : Predicate<EntityKeyPair, Boolean> {
         val entityPredicate = Predicates.or(
                 Predicates.equal(FIRST_ENTITY_INDEX, entity),
                 Predicates.equal(SECOND_ENTITY_INDEX, entity))
-        val feedbackTypePredicate = if (feedbackType == FeedbackType.Positive) {
-            Predicates.equal(FEEDBACK_INDEX, true)
-        } else if (feedbackType == FeedbackType.Negative) {
-            Predicates.equal(FEEDBACK_INDEX, false)
-        } else {
-            Predicates.alwaysTrue<EntityKeyPair, Boolean>()
-        }
 
-        return linkingFeedbacks.executeOnEntries(
-                LinkingFeedbackEntryProcessor(),
-                Predicates.and(entityPredicate, feedbackTypePredicate)).values as Iterable<EntityLinkingFeedback>
+        return when( feedbackType ) {
+            FeedbackType.Positive -> Predicates.and( entityPredicate, Predicates.equal(FEEDBACK_INDEX, true) ) as Predicate<EntityKeyPair, Boolean>
+            FeedbackType.Negative -> Predicates.and( entityPredicate, Predicates.equal(FEEDBACK_INDEX, false) ) as Predicate<EntityKeyPair, Boolean>
+            FeedbackType.All -> Predicates.and( entityPredicate, Predicates.alwaysTrue<EntityKeyPair, Boolean>() ) as Predicate<EntityKeyPair, Boolean>
+        }
     }
 
     fun getLinkingFeedback(entityPair: EntityKeyPair): EntityLinkingFeedback? {
         val feedback = linkingFeedbacks[entityPair]
 
-        return if (feedback == null) {
-            null
+        if (feedback == null) {
+            return null
         } else {
-            EntityLinkingFeedback(entityPair, feedback)
+            return EntityLinkingFeedback(entityPair, feedback)
         }
     }
 
