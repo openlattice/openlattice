@@ -11,6 +11,6 @@ import java.util.*
 data class SmsEntitySetInformation(
         @JsonProperty(SerializationConstants.PHONE_NUMBER) val phoneNumber: String,
         @JsonProperty(SerializationConstants.ORGANIZATION_ID) val organizationId: UUID,
-        @JsonProperty(SerializationConstants.ENTITY_SET_ID) val entitySetIds: Set<UUID>,
+        @JsonProperty(SerializationConstants.ENTITY_SET_IDS) val entitySetIds: Set<UUID>,
         @JsonProperty(SerializationConstants.TAGS) val tags: Set<String>
 )
