@@ -65,7 +65,7 @@ class PostgresLinkingFeedbackService(private val hds: HikariDataSource, hazelcas
         }
     }
 
-    private inline fun <R> buildPredicatesForQueryAndRun(
+    private fun <R> buildPredicatesForQueryAndRun(
             feedbackType: FeedbackType,
             entity: EntityDataKey,
             operation: ( predicates: Predicate<EntityKeyPair, Boolean> ) -> R ): R {
@@ -90,13 +90,9 @@ class PostgresLinkingFeedbackService(private val hds: HikariDataSource, hazelcas
     }
 
     fun getLinkingFeedback(entityPair: EntityKeyPair): EntityLinkingFeedback? {
-        val feedback = linkingFeedbacks[entityPair]
+        val feedback = linkingFeedbacks[entityPair] ?: return null
 
-        if (feedback == null) {
-            return null
-        } else {
-            return EntityLinkingFeedback(entityPair, feedback)
-        }
+        return EntityLinkingFeedback(entityPair, feedback)
     }
 
     @SuppressWarnings("unchecked")
