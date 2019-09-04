@@ -166,7 +166,7 @@ class BackgroundExpiredDataDeletionService(
                     expirationField = OffsetDateTime.ofInstant(Instant.now().minusMillis(expiration.timeToExpiration), ZoneId.systemDefault()).toLocalDate()
                     expirationFieldSQLType = Types.DATE
                     dataTableDeleteStmt.setObject(2, expirationField, expirationFieldSQLType)
-                } else {  //only other TypeKind for date is OffsetDateTime
+                } else {  //only other TypeKind for date property type is OffsetDateTime
                     expirationField = OffsetDateTime.ofInstant(Instant.now().minusMillis(expiration.timeToExpiration), ZoneId.systemDefault())
                     expirationFieldSQLType = Types.TIMESTAMP_WITH_TIMEZONE
                     dataTableDeleteStmt.setObject(2, expirationField, expirationFieldSQLType)
