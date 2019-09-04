@@ -343,7 +343,7 @@ internal fun buildClusterContainingSql(dataKeys: Set<EntityDataKey>): String {
             "OR ((${DST_ENTITY_SET_ID.name},${DST_ENTITY_KEY_ID.name}) IN ($dataKeysSql))"
 }
 
-internal fun buildFilterEntityKeyPairs(entityKeyPairs: List<EntityKeyPair>): String {
+internal fun buildFilterEntityKeyPairs(entityKeyPairs: Collection<EntityKeyPair>): String {
     return entityKeyPairs.joinToString(" OR ") {
         "( (${SRC_ENTITY_SET_ID.name} = ${uuidString(
                 it.first.entitySetId
