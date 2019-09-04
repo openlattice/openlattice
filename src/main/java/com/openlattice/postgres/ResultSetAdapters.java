@@ -1011,12 +1011,12 @@ public final class ResultSetAdapters {
     }
 
     public static EntityLinkingFeedback entityLinkingFeedback( ResultSet rs ) throws SQLException {
-        boolean linked = linked( rs );
+        boolean linked = isLinked( rs );
 
         return new EntityLinkingFeedback( entityKeyPair( rs ), linked );
     }
 
-    public static Boolean linked( ResultSet rs ) throws SQLException {
+    public static Boolean isLinked( ResultSet rs ) throws SQLException {
         return rs.getBoolean( LINKED_FIELD );
     }
 

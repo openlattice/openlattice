@@ -50,7 +50,7 @@ open class LinkingFeedbackMapstore(
     }
 
     override fun mapToValue(rs: ResultSet?): Boolean {
-        return ResultSetAdapters.linked(rs)
+        return ResultSetAdapters.isLinked(rs)
     }
 
     override fun getMapConfig(): MapConfig {
