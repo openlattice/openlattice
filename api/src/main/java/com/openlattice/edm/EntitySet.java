@@ -85,7 +85,7 @@ public class EntitySet extends AbstractSecurableObject {
             @JsonProperty( SerializationConstants.ORGANIZATION_ID ) Optional<UUID> organizationId,
             @JsonProperty( SerializationConstants.FLAGS_FIELD ) Optional<EnumSet<EntitySetFlag>> flags,
             @JsonProperty( SerializationConstants.PARTITIONS ) Optional<LinkedHashSet<Integer>> partitions,
-            @JsonProperty( SerializationConstants.EXPIRATION )Optional<DataExpiration> expiration) {
+            @JsonProperty( SerializationConstants.EXPIRATION ) Optional<DataExpiration> expiration) {
         super( id, title, description );
         this.linkedEntitySets = linkedEntitySets.orElse( new HashSet<>() );
         this.flags = flags.orElse( EnumSet.of( EntitySetFlag.EXTERNAL ) );
@@ -100,7 +100,7 @@ public class EntitySet extends AbstractSecurableObject {
         this.contacts = Sets.newHashSet( contacts );
         this.organizationId = organizationId.orElse( IdConstants.GLOBAL_ORGANIZATION_ID.getId() );
         partitions.ifPresent( this.partitions::addAll );
-        this.expiration = expiration.orElse(null); //This is not right but we'll fix it later
+        this.expiration = expiration.orElse( null );
     }
 
     //Constructor for serialization
@@ -116,7 +116,7 @@ public class EntitySet extends AbstractSecurableObject {
             EnumSet<EntitySetFlag> flags,
             LinkedHashSet<Integer> partitions,
             int partitionsVersion,
-            Optional<DataExpiration> expiration
+            DataExpiration expiration
     ) {
         super( id, title, description);
         this.linkedEntitySets = linkedEntitySets;
