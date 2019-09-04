@@ -97,15 +97,16 @@ class BackgroundLinkingIndexingService(
         Stream.generate { candidates.take() }
                 .parallel()
                 .forEach { candidate ->
-                    if (indexerConfiguration.backgroundLinkingIndexingEnabled) {
-                        try {
-                            lock(candidate.first)
-                            index(candidate.first, candidate.second)
-                        } catch (ex: Exception) {
-                            logger.error("Unable to index linking entity with linking_id ${candidate.first}.", ex)
-                        } finally {
-                            unLock(candidate.first)
-                        }
+                    if (!indexerConfiguration.backgroundLinkingIndexingEnabled) {
+                        return@forEach
+                    }
+                    try {
+                        lock(candidate.first)
+                        index(candidate.first, candidate.second)
+                    } catch (ex: Exception) {
+                        logger.error("Unable to index linking entity with linking_id ${candidate.first}.", ex)
+                    } finally {
+                        unLock(candidate.first)
                     }
                 }
     }
