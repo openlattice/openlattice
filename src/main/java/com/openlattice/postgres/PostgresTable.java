@@ -144,7 +144,10 @@ public final class PostgresTable {
                             ORGANIZATION_ID,
                             ENTITY_SET_FLAGS,
                             PARTITIONS,
-                            PARTITIONS_VERSION );
+                            PARTITIONS_VERSION,
+                            TIME_TO_EXPIRATION,
+                            EXPIRATION_FLAG,
+                            EXPIRATION_START_ID);
     public static final PostgresTableDefinition        ENTITY_SET_PROPERTY_METADATA =
             new PostgresTableDefinition( "entity_set_property_metadata" )
                     .addColumns( ENTITY_SET_ID, PROPERTY_TYPE_ID, TITLE, DESCRIPTION, TAGS, SHOW )
