@@ -48,18 +48,28 @@ class PostgresLinkingFeedbackService(private val hds: HikariDataSource, hazelcas
     }
 
     fun hasFeedbacks(feedbackType: FeedbackType, entity: EntityDataKey): Boolean {
-        val predicates = buildPredicatesForQueries( feedbackType, entity )
-        return linkingFeedbacks.aggregate(Aggregators.count(), predicates) > 0
+        return buildPredicatesForQueryAndRun(feedbackType, entity) {
+            linkingFeedbacks.aggregate( Aggregators.count(), it ) > 0
+        }
     }
 
     fun getLinkingFeedbackEntityKeyPairs(feedbackType: FeedbackType, entity: EntityDataKey): Set<EntityKeyPair> {
-        val predicates = buildPredicatesForQueries( feedbackType, entity )
-        return linkingFeedbacks.keySet( predicates )
+        return buildPredicatesForQueryAndRun(feedbackType, entity) {
+            linkingFeedbacks.keySet( it )
+        }
     }
 
     fun getLinkingFeedbackOnEntity(feedbackType: FeedbackType, entity: EntityDataKey): Iterable<EntityLinkingFeedback> {
-        val predicates = buildPredicatesForQueries( feedbackType, entity )
-        return linkingFeedbacks.project(LinkingFeedbackProjection(), predicates)
+        return buildPredicatesForQueryAndRun(feedbackType, entity) {
+            linkingFeedbacks.project(LinkingFeedbackProjection(), it)
+        }
+    }
+
+    private inline fun <R> buildPredicatesForQueryAndRun(
+            feedbackType: FeedbackType,
+            entity: EntityDataKey,
+            operation: ( predicates: Predicate<EntityKeyPair, Boolean> ) -> R ): R {
+        return operation( buildPredicatesForQueries( feedbackType, entity ))
     }
 
     @SuppressWarnings("unchecked")
