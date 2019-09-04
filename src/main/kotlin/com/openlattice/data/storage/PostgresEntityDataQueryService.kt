@@ -31,7 +31,7 @@ import java.util.function.Function
 import java.util.function.Supplier
 import kotlin.streams.asStream
 
-const val S3_DELETE_BATCH_SIZE = 10000
+const val S3_DELETE_BATCH_SIZE = 10_000
 
 /**
  *
@@ -64,9 +64,6 @@ class PostgresEntityDataQueryService(
         ) { rs -> ResultSetAdapters.id(rs) }
     }
 
-    /**
-     *
-     */
     @JvmOverloads
     fun getEntitiesWithPropertyTypeIds(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
