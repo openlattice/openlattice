@@ -634,8 +634,10 @@ public final class ResultSetAdapters {
         final var timeToExpiration = timeToExpiration( rs );
         final var expirationFlag = expirationFlag( rs );
         final var startDateProperty = startDateProperty( rs );
-        final var expirationData = new DataExpiration(timeToExpiration, expirationFlag, Optional.ofNullable(startDateProperty));
-        Optional<DataExpiration> expiration = Optional.of(expirationData);
+        final DataExpiration expirationData;
+        if (timeToExpiration != null) {
+            expirationData = new DataExpiration(timeToExpiration, expirationFlag, Optional.ofNullable(startDateProperty));
+        } else { expirationData = null; }
         return new EntitySet( id,
                 entityTypeId,
                 name,
@@ -647,7 +649,7 @@ public final class ResultSetAdapters {
                 flags,
                 new LinkedHashSet<>( Arrays.asList( partitions ) ),
                 partitionVersion,
-                expiration);
+                expirationData);
     }
 
     public static int partitionVersions( ResultSet rs ) throws SQLException {
@@ -658,13 +660,16 @@ public final class ResultSetAdapters {
         return PostgresArrays.getIntArray( rs, PARTITIONS_FIELD );
     }
 
-    public static long timeToExpiration( ResultSet rs) throws SQLException {
-        return rs.getLong( TIME_TO_EXPIRATION_FIELD );
+    public static Long timeToExpiration( ResultSet rs) throws SQLException {
+        return (Long) rs.getObject( TIME_TO_EXPIRATION_FIELD);
     }
 
     public static ExpirationType expirationFlag( ResultSet rs ) throws SQLException {
         String expirationFlag = rs.getString( EXPIRATION_FLAG_FIELD );
-        return ExpirationType.valueOf(expirationFlag);
+        if (expirationFlag != null) { return ExpirationType.valueOf(expirationFlag); }
+        return null;
+        //TODO add a check for if the value is null. if it is null then we know there is no expiration on the entity set.
+        //probably need to figure this out for all of the expiration fields
     }
 
     public static UUID startDateProperty( ResultSet rs ) throws SQLException {
