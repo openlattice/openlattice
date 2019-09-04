@@ -65,7 +65,7 @@ class PostgresLinkingFeedbackService(private val hds: HikariDataSource, hazelcas
         }
     }
 
-    private fun <R> buildPredicatesForQueryAndRun(
+    private inline fun <R> buildPredicatesForQueryAndRun(
             feedbackType: FeedbackType,
             entity: EntityDataKey,
             operation: ( predicates: Predicate<EntityKeyPair, Boolean> ) -> R ): R {
