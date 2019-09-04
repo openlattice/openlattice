@@ -110,18 +110,19 @@ class BackgroundLinkingIndexingService(
                 }
     }
 
-    @Suppress("UNUSED")
     @Timed
+    @Suppress("UNUSED")
     @Scheduled(fixedRate = LINKING_INDEX_RATE)
     fun updateCandidateList() {
-        if (indexerConfiguration.backgroundLinkingIndexingEnabled) {
-            executor.submit {
-                logger.info("Registering linking ids needing indexing.")
-                var dirtyLinkingIds = getDirtyLinkingIds()
-                while (dirtyLinkingIds.iterator().hasNext()) {
-                    dirtyLinkingIds.forEach(candidates::put)
-                    dirtyLinkingIds = getDirtyLinkingIds()
-                }
+        if ( !indexerConfiguration.backgroundLinkingIndexingEnabled ) {
+            return
+        }
+        executor.submit {
+            logger.info("Registering linking ids needing indexing.")
+            var dirtyLinkingIds = getDirtyLinkingIds()
+            while (dirtyLinkingIds.iterator().hasNext()) {
+                dirtyLinkingIds.forEach(candidates::put)
+                dirtyLinkingIds = getDirtyLinkingIds()
             }
         }
     }
