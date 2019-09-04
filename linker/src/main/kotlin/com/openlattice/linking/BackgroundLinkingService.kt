@@ -295,7 +295,9 @@ class BackgroundLinkingService
                             es.id
                     )
                     executor.submit {
-                        lqs.getEntitiesNeedingLinking( es.id, configuration.loadSize ).forEach( candidates::put )
+                        val needLinking = lqs.getEntitiesNeedingLinking( es.id, configuration.loadSize )
+
+                        candidates.addAll( needLinking )
 
                         //Allow other nodes to link this entity set.
                         linkingLocks.delete( es.id )
