@@ -60,8 +60,8 @@ fun getEntityPropertiesByPropertyTypeId2(
 
     val entity = dataTypes.map { datatype ->
         val json = rs.getString("v_$datatype")
-        mapper.readValue<MutableMap<UUID, MutableSet<Any>>>(json)
-    }.fold(mutableMapOf(IdConstants.ID_ID.id to mutableSetOf<Any>(id))) { acc, mutableMap ->
+        return@map mapper.readValue<MutableMap<UUID, MutableSet<Any>>>(json)
+    }.fold( mutableMapOf( IdConstants.ID_ID.id to mutableSetOf<Any>( id )) ) { acc, mutableMap ->
         acc.putAll(mutableMap)
         return@fold acc
     }
