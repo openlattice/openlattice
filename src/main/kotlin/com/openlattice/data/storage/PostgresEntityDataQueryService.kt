@@ -3,11 +3,13 @@ package com.openlattice.data.storage
 import com.google.common.collect.Multimaps
 import com.openlattice.analysis.SqlBindInfo
 import com.openlattice.analysis.requests.Filter
+import com.openlattice.data.EntityDataKey
 import com.openlattice.data.WriteEvent
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.data.storage.partitions.PartitionsInfo
 import com.openlattice.data.util.PostgresDataHasher
 import com.openlattice.edm.type.PropertyType
+import com.openlattice.linking.EntityKeyPair
 import com.openlattice.postgres.*
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.IDS
@@ -77,10 +79,21 @@ class PostgresEntityDataQueryService(
                 entityKeyIds,
                 authorizedPropertyTypes,
                 propertyTypeFilters,
-                metadataOptions,
-                version,
                 linking
         ) { rs -> getEntityPropertiesByPropertyTypeId2(rs, authorizedPropertyTypes, byteBlobDataManager) }
+    }
+
+    fun aMethodToReplaceTheAboveMethodBecauseIDoNotUnderstandIt(
+            entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
+            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
+            linking: Boolean = false
+    ): BasePostgresIterable<Pair<EntityDataKey, MutableMap<UUID, MutableSet<Any>>>> {
+        return getEntitySetIterable(
+                entityKeyIds,
+                authorizedPropertyTypes,
+                mapOf(),
+                linking
+        ) { rs -> yetAnotherReplacementMethod(rs, authorizedPropertyTypes, byteBlobDataManager) }
     }
 
     @JvmOverloads
@@ -97,8 +110,6 @@ class PostgresEntityDataQueryService(
                 entityKeyIds,
                 authorizedPropertyTypes,
                 propertyTypeFilters,
-                metadataOptions,
-                version,
                 linking
         ) { rs -> getEntityPropertiesByPropertyTypeId(rs, authorizedPropertyTypes, byteBlobDataManager) }.toMap()
     }
@@ -116,8 +127,6 @@ class PostgresEntityDataQueryService(
                 entityKeyIds,
                 authorizedPropertyTypes,
                 propertyTypeFilters,
-                metadataOptions,
-                version,
                 linking
         ) { rs -> getEntityPropertiesByFullQualifiedName(rs, authorizedPropertyTypes, byteBlobDataManager) }.toMap()
     }
@@ -141,8 +150,6 @@ class PostgresEntityDataQueryService(
                 entityKeyIds,
                 authorizedPropertyTypes,
                 propertyTypeFilters,
-                metadataOptions,
-                version,
                 linking,
                 adapter
         ).asSequence()
@@ -150,10 +157,9 @@ class PostgresEntityDataQueryService(
 
     fun getEntitySetWithPropertyTypeIdsIterable(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
-            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
-            metadataOptions: Set<MetadataOption> = EnumSet.noneOf(MetadataOption::class.java)
+            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
     ): BasePostgresIterable<Pair<UUID, Map<UUID, Set<Any>>>> {
-        return getEntitySetIterable(entityKeyIds, authorizedPropertyTypes, mapOf(), metadataOptions) { rs ->
+        return getEntitySetIterable(entityKeyIds, authorizedPropertyTypes, mapOf() ) { rs ->
             getEntityPropertiesByPropertyTypeId2(rs, authorizedPropertyTypes, byteBlobDataManager)
 //            getEntityPropertiesByPropertyTypeId(rs, authorizedPropertyTypes, byteBlobDataManager)
         }
@@ -166,8 +172,6 @@ class PostgresEntityDataQueryService(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
             propertyTypeFilters: Map<UUID, Set<Filter>> = mapOf(),
-            metadataOptions: Set<MetadataOption> = EnumSet.noneOf(MetadataOption::class.java),
-            version: Optional<Long> = Optional.empty(),
             linking: Boolean = false,
             adapter: (ResultSet) -> T
     ): BasePostgresIterable<T> {
