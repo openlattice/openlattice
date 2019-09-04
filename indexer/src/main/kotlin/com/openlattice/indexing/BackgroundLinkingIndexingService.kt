@@ -56,9 +56,10 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.function.Function
 import java.util.stream.Stream
+import kotlin.system.exitProcess
 
-internal const val LINKING_INDEXING_TIMEOUT_MILLIS = 120000L
-internal const val LINKING_INDEX_RATE = 30000L
+internal const val LINKING_INDEXING_TIMEOUT_MILLIS = 120_000L
+internal const val LINKING_INDEX_RATE = 30_000L
 
 @Component
 class BackgroundLinkingIndexingService(
@@ -198,10 +199,11 @@ class BackgroundLinkingIndexingService(
         return "SELECT ${LINKING_ID.name}, ${DataTables.LAST_WRITE.name} " +
                 "FROM ${IDS.name} " +
                 "WHERE ${LINKING_ID.name} IS NOT NULL " +
-                "AND ${LAST_INDEX.name} >= ${LAST_WRITE.name} " +
-                "AND ${LAST_LINK.name} >= ${LAST_WRITE.name} " +
-                "AND ${LAST_LINK_INDEX.name} < ${LAST_WRITE.name} " +
-                "AND ${VERSION.name} > 0 AND ${LINKING_ID.name} IS NOT NULL " +
+                    "AND ${LAST_INDEX.name} >= ${LAST_WRITE.name} " +
+                    "AND ${LAST_LINK.name} >= ${LAST_WRITE.name} " +
+                    "AND ${LAST_LINK_INDEX.name} < ${LAST_WRITE.name} " +
+                    "AND ${VERSION.name} > 0 " +
+                    "AND ${LINKING_ID.name} IS NOT NULL " +
                 "LIMIT $FETCH_SIZE"
     }
 
