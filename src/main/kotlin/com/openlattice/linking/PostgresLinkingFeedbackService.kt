@@ -62,16 +62,21 @@ class PostgresLinkingFeedbackService(private val hds: HikariDataSource, hazelcas
         return linkingFeedbacks.project(LinkingFeedbackProjection(), predicates)
     }
 
+    @SuppressWarnings("unchecked")
     fun buildPredicatesForQueries(feedbackType: FeedbackType, entity: EntityDataKey) : Predicate<EntityKeyPair, Boolean> {
         val entityPredicate = Predicates.or(
                 Predicates.equal(FIRST_ENTITY_INDEX, entity),
                 Predicates.equal(SECOND_ENTITY_INDEX, entity))
 
-        return when( feedbackType ) {
-            FeedbackType.Positive -> Predicates.and( entityPredicate, Predicates.equal(FEEDBACK_INDEX, true) ) as Predicate<EntityKeyPair, Boolean>
-            FeedbackType.Negative -> Predicates.and( entityPredicate, Predicates.equal(FEEDBACK_INDEX, false) ) as Predicate<EntityKeyPair, Boolean>
-            FeedbackType.All -> Predicates.and( entityPredicate, Predicates.alwaysTrue<EntityKeyPair, Boolean>() ) as Predicate<EntityKeyPair, Boolean>
-        }
+        val predicates = Predicates.and( entityPredicate,
+            when( feedbackType ) {
+                FeedbackType.Positive -> Predicates.equal(FEEDBACK_INDEX, true)
+                FeedbackType.Negative -> Predicates.equal(FEEDBACK_INDEX, false)
+                FeedbackType.All ->  Predicates.alwaysTrue<EntityKeyPair, Boolean>()
+            }
+        ) as Predicate<EntityKeyPair, Boolean>
+
+        return predicates
     }
 
     fun getLinkingFeedback(entityPair: EntityKeyPair): EntityLinkingFeedback? {
