@@ -120,11 +120,8 @@ class BackgroundLinkingIndexingService(
         }
         executor.submit {
             logger.info("Registering linking ids needing indexing.")
-            var dirtyLinkingIds = getDirtyLinkingIds()
-            while (dirtyLinkingIds.iterator().hasNext()) {
-                dirtyLinkingIds.forEach(candidates::put)
-                dirtyLinkingIds = getDirtyLinkingIds()
-            }
+
+            candidates.addAll( getDirtyLinkingIds() )
         }
     }
 
