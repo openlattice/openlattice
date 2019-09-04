@@ -132,18 +132,18 @@ class BackgroundLinkingIndexingService(
         // get data for linking id by entity set ids and property ids
         val dirtyLinkingIdsByEntitySetId = getEntitySetIdsOfLinkingId(linkingId) // entity_set_id/linking_id
                 .toMap()
+
         val propertyTypesOfEntitySets = dirtyLinkingIdsByEntitySetId // entity_set_id/property_type_id/property_type
                 .map { it.key to personPropertyTypes }
                 .toMap()
-        val linkedEntityData = dataStore // linking_id/entity_set_id/property_type_id
-                .getLinkedEntityDataByLinkingIdWithMetadata(
+
+        // linking_id/(normal)entity_set_id/property_type_id
+        val linkedEntityData = dataStore.getLinkedEntityDataByLinkingIdWithMetadata(
                         dirtyLinkingIdsByEntitySetId,
                         propertyTypesOfEntitySets,
                         EnumSet.of(MetadataOption.LAST_WRITE))
 
-        val indexCount = indexLinkedEntity(
-                linkingId, lastWrite, personEntityType.id, linkedEntityData.getValue(linkingId)
-        )
+        val indexCount = indexLinkedEntity( linkingId, lastWrite, personEntityType.id, linkedEntityData )
 
         logger.info(
                 "Finished linked indexing {} elements with linking id {} in {} ms",
@@ -157,16 +157,15 @@ class BackgroundLinkingIndexingService(
             linkingId: UUID,
             lastWrite: OffsetDateTime,
             entityTypeId: UUID,
-            dataByEntitySetId: Map<UUID, Map<UUID, Set<Any>>>
+            dataByLinkingIdByEntitySetId: Map<UUID, Map<UUID, Map<UUID, Set<Any>>>> //linkingId -> es -> ekid -> dataz
     ): Int {
-        return if (elasticsearchApi.createBulkLinkedData(entityTypeId, mapOf(linkingId to dataByEntitySetId))) {
-            dataManager.markAsIndexed(
-                    dataByEntitySetId.keys.map { it to mapOf(linkingId to lastWrite).toMap() }.toMap(),
-                    true
-            )
-        } else {
-            0
+        if ( elasticsearchApi.createBulkLinkedData( entityTypeId, dataByLinkingIdByEntitySetId )) {
+            return 0
         }
+        return dataManager.markAsIndexed(
+                dataByLinkingIdByEntitySetId.keys.map { it to mapOf(linkingId to lastWrite) }.toMap(),
+                true
+        )
     }
 
     private fun lock(linkingId: UUID) {
