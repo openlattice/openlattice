@@ -164,6 +164,10 @@ public class IndexerPostConfigurationServicesPod {
 
     @Bean
     public IndexingService indexingService() {
-        return new IndexingService( hikariDataSource, backgroundIndexingService(), partitionManager(), executor, hazelcastInstance );
+        return new IndexingService( hikariDataSource,
+                backgroundIndexingService(),
+                partitionManager(),
+                executor,
+                hazelcastInstance );
     }
 }
