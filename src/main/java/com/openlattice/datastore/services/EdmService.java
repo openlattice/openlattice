@@ -983,7 +983,7 @@ public class EdmService implements EdmManager {
                                 Optional.empty(),
                                 update.getOrganizationId(),
                                 Optional.empty(),
-                                Optional.empty()) ) );
+                                Optional.empty() ) ) );
 
                 // If an entity set is being moved across organizations, its materialized entity set should be deleted
                 // from old organization assembly
@@ -991,7 +991,7 @@ public class EdmService implements EdmManager {
             }
         }
 
-        final var newEntitySet = ( EntitySet ) entitySets.executeOnKey(
+        final var newEntitySet = (EntitySet) entitySets.executeOnKey(
                 entitySetId, new UpdateEntitySetMetadataProcessor( update )
         );
         eventBus.post( new EntitySetMetadataUpdatedEvent( newEntitySet ) );
@@ -1281,7 +1281,7 @@ public class EdmService implements EdmManager {
                     Optional.empty(),
                     Optional.empty(),
                     Optional.empty(),
-                    Optional.empty()) );
+                    Optional.empty() ) );
         }
     }
 
@@ -1313,7 +1313,7 @@ public class EdmService implements EdmManager {
                     optionalPropertyTagsUpdate,
                     Optional.empty(),
                     Optional.empty(),
-                    Optional.empty()) );
+                    Optional.empty() ) );
             if ( !et.getProperties().equals( existing.getProperties() ) ) {
                 addPropertyTypesToEntityType( existing.getId(), et.getProperties() );
             }
