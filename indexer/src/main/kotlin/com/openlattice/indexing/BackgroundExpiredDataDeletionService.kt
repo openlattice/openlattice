@@ -149,8 +149,9 @@ class BackgroundExpiredDataDeletionService(
                 logger.info("Completed deleting {} expired elements from entity set {}.",
                         idsTableDeleteCount,
                         entitySet.name)
+            } else {
+                logger.info("Entity set {} has no expired data", entitySet.name)
             }
-
         } else {
             logger.info(
                     "Entity set {} does not have a data expiration policy.",
