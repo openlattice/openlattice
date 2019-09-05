@@ -47,6 +47,8 @@ import com.openlattice.datastore.util.Util;
 import com.openlattice.edm.*;
 import com.openlattice.edm.events.*;
 import com.openlattice.edm.processors.EntitySetsFlagFilteringAggregator;
+import com.openlattice.edm.processors.GetEntityTypeFromEntitySetEntryProcessor;
+import com.openlattice.edm.processors.GetPropertiesFromEntityTypeEntryProcessor;
 import com.openlattice.edm.properties.PostgresTypeManager;
 import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
@@ -680,20 +682,20 @@ public class EdmService implements EdmManager {
     @Timed
     @Override
     public Map<UUID, PropertyType> getPropertyTypesForEntitySet( UUID entitySetId ) {
-        //TODO: Use a projection to retrieve just the entity type.
-        EntitySet entitySet = Util.getSafely( entitySets, entitySetId );
-        if ( entitySet == null ) {
+
+        Optional<UUID> maybeEtId = (Optional<UUID>) entitySets.executeOnKey( entitySetId, new GetEntityTypeFromEntitySetEntryProcessor() );
+        if ( maybeEtId.isEmpty() ) {
             throw new ResourceNotFoundException( "Entity set " + entitySetId.toString() + " does not exist." );
         }
 
-        //TODO: Use a project tio retrieve just the property type ids.
-        UUID entityTypeId = entitySet.getEntityTypeId();
-        EntityType entityType = Util.getSafely( entityTypes, entityTypeId );
-
-        if ( entityType == null ) {
+        UUID entityTypeId = maybeEtId.get();
+        
+        Optional<Set<UUID>> maybeEtProps = (Optional<Set<UUID>>) entityTypes.executeOnKey( entityTypeId, new GetPropertiesFromEntityTypeEntryProcessor() );
+        if ( maybeEtProps.isEmpty() ) {
             throw new ResourceNotFoundException( "Entity type " + entityTypeId.toString() + " does not exist." );
         }
-        return propertyTypes.getAll( entityType.getProperties() );
+
+        return propertyTypes.getAll( maybeEtProps.get() );
     }
 
     @Override
