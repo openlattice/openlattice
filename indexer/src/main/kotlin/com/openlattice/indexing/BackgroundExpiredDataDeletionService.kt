@@ -144,10 +144,10 @@ class BackgroundExpiredDataDeletionService(
                 }
 
                 //compare deletion from data table and ids table and whether data was deleted from elasticsearch
-                check(dataTableDeleteCount == idsTableDeleteCount) { "Number of entities deleted from data and ids table are not the same. UH OH." } //do something better
+                check(expiredEntityKeyIds.size == idsTableDeleteCount) { "Number of entities deleted from data and ids table are not the same. UH OH." } //do something better
                 check(elasticsearchDataDeleted) { "Expired data not deleted from elasticsearch. UH OH." } // also do something better
                 logger.info("Completed deleting {} expired elements from entity set {}.",
-                        dataTableDeleteCount,
+                        idsTableDeleteCount,
                         entitySet.name)
             }
 
@@ -162,8 +162,7 @@ class BackgroundExpiredDataDeletionService(
 
     private fun deleteExpiredDataFromDataTable(entitySetId: UUID, expiration: DataExpiration): Pair<Set<UUID>, Int> {
         val connection = hds.connection
-        connection.autoCommit = false
-        val dataTableDeleteStmt = connection.prepareStatement(deleteExpiredDataFromDataTableQuery(entitySetId))
+        //connection.autoCommit = false
         val comparisonField: String
         val expirationField: Any
         val expirationFieldSQLType: Int
@@ -172,45 +171,39 @@ class BackgroundExpiredDataDeletionService(
                 val propertyTypeId: UUID = expiration.startDateProperty.get()
                 val propertyType = propertyTypes[propertyTypeId]
                 comparisonField = "'$propertyTypeId'"
-                dataTableDeleteStmt.setObject(1, comparisonField)
                 if (propertyType!!.datatype == EdmPrimitiveTypeKind.Date) {
                     expirationField = OffsetDateTime.ofInstant(Instant.now().minusMillis(expiration.timeToExpiration), ZoneId.systemDefault()).toLocalDate()
                     expirationFieldSQLType = Types.DATE
-                    dataTableDeleteStmt.setObject(2, expirationField, expirationFieldSQLType)
                 } else {  //only other TypeKind for date property type is OffsetDateTime
                     expirationField = OffsetDateTime.ofInstant(Instant.now().minusMillis(expiration.timeToExpiration), ZoneId.systemDefault())
                     expirationFieldSQLType = Types.TIMESTAMP_WITH_TIMEZONE
-                    dataTableDeleteStmt.setObject(2, expirationField, expirationFieldSQLType)
                 }
             }
             ExpirationType.FIRST_WRITE -> {
                 expirationField = Instant.now().minusMillis(expiration.timeToExpiration).toEpochMilli()
                 expirationFieldSQLType = Types.BIGINT
-                dataTableDeleteStmt.setObject(1, "${VERSIONS.name}[1]")
-                dataTableDeleteStmt.setObject(2, expirationField, expirationFieldSQLType)
                 comparisonField = "${VERSIONS.name}[1]"
             }
             ExpirationType.LAST_WRITE -> {
                 expirationField = OffsetDateTime.ofInstant(Instant.now().minusMillis(expiration.timeToExpiration), ZoneId.systemDefault())
                 expirationFieldSQLType = Types.TIMESTAMP_WITH_TIMEZONE
-                dataTableDeleteStmt.setObject(1, "${LAST_WRITE.name}")
-                dataTableDeleteStmt.setObject(2, expirationField, expirationFieldSQLType)
-                comparisonField = "${LAST_WRITE.name}"
+                comparisonField = LAST_WRITE.name
             }
         }
-        val expiredEntityKeyIds = getExpiredIds(comparisonField, expirationField, expirationFieldSQLType, entitySetId)
+        val expiredEntityKeyIds = getExpiredIds(comparisonField, expirationField, expirationFieldSQLType, entitySetId).toSet()
+        val dataTableDeleteStmt = connection.prepareStatement(deleteExpiredDataFromDataTableQuery(entitySetId, comparisonField))
+        dataTableDeleteStmt.setObject(1, expirationField, expirationFieldSQLType)
         val deleteCount = dataTableDeleteStmt.executeUpdate()
-        connection.commit()
-        return Pair(expiredEntityKeyIds.toSet(), deleteCount)
+        //connection.commit()
+        return Pair(expiredEntityKeyIds, deleteCount)
     }
 
     private fun getExpiredIds(comparisonField: String, expirationField: Any, expirationFieldSQLType: Int, entitySetId: UUID): PostgresIterable<UUID> {
         return PostgresIterable(
                 Supplier {
                     val connection = hds.connection
-                    val stmt = connection.prepareStatement(getExpiredIdsQuery(entitySetId))
-                    stmt.setString(1, comparisonField)
-                    stmt.setObject(2, expirationField, expirationFieldSQLType)
+                    val stmt = connection.prepareStatement(getExpiredIdsQuery(entitySetId, comparisonField))
+                    stmt.setObject(1, expirationField, expirationFieldSQLType)
                     StatementHolder(connection, stmt, stmt.executeQuery())
                 },
                 Function<ResultSet, UUID> { ResultSetAdapters.id(it) }
@@ -229,12 +222,12 @@ class BackgroundExpiredDataDeletionService(
         }
     }
 
-    private fun deleteExpiredDataFromDataTableQuery(entitySetId: UUID): String {
-        return "DELETE FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ? < ?"
+    private fun deleteExpiredDataFromDataTableQuery(entitySetId: UUID, comparisonField: String): String {
+        return "DELETE FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND $comparisonField < ?"
     }
 
-    private fun getExpiredIdsQuery(entitySetId: UUID): String {
-        return "SELECT ${ID.name} FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ? < ?"
+    private fun getExpiredIdsQuery(entitySetId: UUID, comparisonField: String): String {
+        return "SELECT ${ID.name} FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND $comparisonField < ?"
     }
 
     private fun deleteExpiredDataFromIdsTableQuery(expiredIds: String): String {
