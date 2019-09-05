@@ -9,7 +9,7 @@ class GetPropertiesFromEntityTypeEntryProcessor: AbstractRhizomeEntryProcessor<U
 
     override fun process(entry: MutableMap.MutableEntry<UUID, EntityType>?): Optional<Set<UUID>>? {
         val et = entry?.value ?: return Optional.empty()
-        return Optional.of(et.properties)
+        return Optional.of( et.properties )
     }
 }
 
