@@ -40,31 +40,27 @@ import com.openlattice.postgres.PostgresTablesPod;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class Indexer extends BaseRhizomeServer {
-    public static final Class<?>[] rhizomePods = new Class<?>[]{
-            RegistryBasedHazelcastInstanceConfigurationPod.class,
-            Auth0Pod.class };
 
     public static final Class<?>[] conductorPods = new Class<?>[]{
-            IndexerPostConfigurationServicesPod.class,
-            IndexerServicesPod.class,
-            SharedStreamSerializersPod.class,
-            PlasmaCoupling.class,
-            MailServicePod.class,
-            Auth0Pod.class,
-            MapstoresPod.class,
-            JdbcPod.class,
-            PostgresTablesPod.class,
-            PostgresPod.class,
+            AuditingConfigurationPod.class,
             Auth0Pod.class,
             AwsS3Pod.class,
             GraphProcessorPod.class,
-            AuditingConfigurationPod.class
+            IndexerPostConfigurationServicesPod.class,
+            IndexerServicesPod.class,
+            JdbcPod.class,
+            MailServicePod.class,
+            MapstoresPod.class,
+            PlasmaCoupling.class,
+            PostgresPod.class,
+            PostgresTablesPod.class,
+            SharedStreamSerializersPod.class
     };
 
     public static final Class<?>[] webPods = new Class<?>[]{ IndexerServletsPod.class, IndexerSecurityPod.class };
 
     public Indexer() {
-        super( Pods.concatenate( RhizomeApplicationServer.DEFAULT_PODS, webPods, rhizomePods, conductorPods ) );
+        super( Pods.concatenate( RhizomeApplicationServer.DEFAULT_PODS, webPods, conductorPods ) );
     }
 
     @Override
