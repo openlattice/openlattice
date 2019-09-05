@@ -102,38 +102,38 @@ class BackgroundIndexingService(
     fun indexUpdatedEntitySets() {
         logger.info("Starting background indexing task.")
         //Keep number of indexing jobs under control
-        if (taskLock.tryLock()) {
-            try {
-                ensureAllEntityTypeIndicesExist()
-                if (indexerConfiguration.backgroundIndexingEnabled) {
-                    val w = Stopwatch.createStarted()
-                    //We shuffle entity sets to make sure we have a chance to work share and index everything
-                    val lockedEntitySets = entitySets.values
-                            .shuffled()
-                            .filter { tryLockEntitySet(it) }
-                            .filter { it.name != "OpenLattice Audit Entity Set" } //TODO: Clean out audit entity set from prod
-
-                    val totalIndexed = lockedEntitySets
-                            .parallelStream()
-                            .filter { !it.isLinking }
-                            .mapToInt { indexEntitySet(it) }
-                            .sum()
-
-                    lockedEntitySets.forEach(this::deleteIndexingLock)
-
-                    logger.info(
-                            "Completed indexing {} elements in {} ms",
-                            totalIndexed,
-                            w.elapsed(TimeUnit.MILLISECONDS)
-                    )
-                } else {
-                    logger.info("Skipping background indexing as it is not enabled.")
-                }
-            } finally {
-                taskLock.unlock()
-            }
-        } else {
+        if (!taskLock.tryLock()) {
             logger.info("Not starting new indexing job as an existing one is running.")
+            return
+        }
+        try {
+            ensureAllEntityTypeIndicesExist()
+            if (!indexerConfiguration.backgroundIndexingEnabled) {
+                logger.info("Skipping background indexing as it is not enabled.")
+                return
+            }
+            val w = Stopwatch.createStarted()
+            //We shuffle entity sets to make sure we have a chance to work share and index everything
+            val lockedEntitySets = entitySets.values
+                    .shuffled()
+                    .filter { tryLockEntitySet(it) }
+                    .filter { it.name != "OpenLattice Audit Entity Set" } //TODO: Clean out audit entity set from prod
+
+            val totalIndexed = lockedEntitySets
+                    .parallelStream()
+                    .filter { !it.isLinking }
+                    .mapToInt { indexEntitySet(it) }
+                    .sum()
+
+            lockedEntitySets.forEach(this::deleteIndexingLock)
+
+            logger.info(
+                    "Completed indexing {} elements in {} ms",
+                    totalIndexed,
+                    w.elapsed(TimeUnit.MILLISECONDS)
+            )
+        } finally {
+            taskLock.unlock()
         }
     }
 
