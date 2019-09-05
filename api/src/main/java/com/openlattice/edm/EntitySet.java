@@ -42,8 +42,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-import com.openlattice.edm.set.ExpirationType;
-import com.openlattice.graph.query.GraphQueryState;
 import org.apache.commons.lang3.StringUtils;
 
 import javax.swing.*;
@@ -133,6 +131,7 @@ public class EntitySet extends AbstractSecurableObject {
         this.organizationId = organizationId;
         this.partitions.addAll( partitions );
         this.partitionsVersion = partitionsVersion;
+        this.expiration = expiration;
     }
 
     public EntitySet(
@@ -244,6 +243,7 @@ public class EntitySet extends AbstractSecurableObject {
         return partitions;
     }
 
+    @JsonProperty
     public DataExpiration getExpiration() {
         return expiration;
     }
