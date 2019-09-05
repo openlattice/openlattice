@@ -37,7 +37,6 @@ import java.util.*;
 
 @Component
 public class EntitySetStreamSerializer implements SelfRegisteringStreamSerializer<EntitySet> {
-    private static DataExpirationStreamSerializer dataExpirationStreamSerializer;
 
     @Override
     public void write( ObjectDataOutput out, EntitySet object ) throws IOException {
@@ -70,7 +69,7 @@ public class EntitySetStreamSerializer implements SelfRegisteringStreamSerialize
 
         if (object.getExpiration() != null) {
             out.writeBoolean(true);
-            dataExpirationStreamSerializer.write(out, object.getExpiration());
+            DataExpirationStreamSerializer.serialize(out, object.getExpiration());
         } else {
             out.writeBoolean(false);
         }
@@ -109,7 +108,7 @@ public class EntitySetStreamSerializer implements SelfRegisteringStreamSerialize
         DataExpiration expiration;
         boolean hasExpiration = in.readBoolean();
         if (hasExpiration) {
-            expiration = dataExpirationStreamSerializer.read(in);
+            expiration = DataExpirationStreamSerializer.deserialize(in);
         } else {
             expiration = null;
         }

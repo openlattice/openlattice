@@ -19,7 +19,6 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class MetadataUpdateStreamSerializer implements SelfRegisteringStreamSerializer<MetadataUpdate> {
-    private static DataExpirationStreamSerializer dataExpirationStreamSerializer;
 
     @Override
     public void write( ObjectDataOutput out, MetadataUpdate object ) throws IOException {
@@ -60,9 +59,9 @@ public class MetadataUpdateStreamSerializer implements SelfRegisteringStreamSeri
         OptionalStreamSerializers.serialize( out,
                 object.getPartitions(),
                 ( output, elem ) -> output.writeIntArray( elem.stream().mapToInt( e -> e ).toArray() ) );
-        if (object.getDataExpiration() != null) {
+        if (object.getDataExpiration().isPresent()) {
             out.writeBoolean(true);
-            OptionalStreamSerializers.serialize( out, object.getDataExpiration(), (output, expiration) -> dataExpirationStreamSerializer.write(output, expiration));
+            OptionalStreamSerializers.serialize( out, object.getDataExpiration(), DataExpirationStreamSerializer::serialize);
         } else {
             out.writeBoolean(false);
         }
@@ -87,7 +86,7 @@ public class MetadataUpdateStreamSerializer implements SelfRegisteringStreamSeri
         Optional<DataExpiration> dataExpiration;
         boolean hasExpiration = in.readBoolean();
         if (hasExpiration) {
-            dataExpiration = Optional.of(dataExpirationStreamSerializer.read(in));
+            dataExpiration = OptionalStreamSerializers.deserialize(in, DataExpirationStreamSerializer::deserialize);
         } else {
             dataExpiration = Optional.empty();
         }

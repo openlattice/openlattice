@@ -16,18 +16,21 @@ class DataExpirationStreamSerializer : SelfRegisteringStreamSerializer<DataExpir
     companion object {
         private val expirationTypes = ExpirationType.values()
 
+        @JvmStatic
         fun serialize(out: ObjectDataOutput, obj: DataExpiration) {
             out.writeLong(obj.timeToExpiration)
             out.writeInt(obj.expirationFlag.ordinal)
             OptionalStreamSerializers.serialize(out, obj.startDateProperty, UUIDStreamSerializer::serialize)
         }
 
+        @JvmStatic
         fun deserialize(input: ObjectDataInput): DataExpiration {
             val timeToExpiration = input.readLong()
             val expirationType = expirationTypes[input.readInt()]
             val startDateProperty = OptionalStreamSerializers.deserialize(input, UUIDStreamSerializer::deserialize)
             return DataExpiration(timeToExpiration, expirationType, startDateProperty)
         }
+
     }
 
     override fun getTypeId(): Int {
