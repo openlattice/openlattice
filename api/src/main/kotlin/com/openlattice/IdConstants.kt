@@ -21,7 +21,7 @@
 
 package com.openlattice
 
-import java.util.*
+import java.util.UUID
 
 enum class IdConstants(val id: UUID) {
 
