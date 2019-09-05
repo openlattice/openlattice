@@ -322,7 +322,7 @@ class PostgresEntityDataQueryService(
         connection.autoCommit = true
 
         val entityKeyIdsArr = PostgresArrays.createUuidArray(connection, entities.keys)
-        val versionsArrays = PostgresArrays.createLongArray(connection, arrayOf(version))
+        val versionsArrays = PostgresArrays.createLongArray(connection, version)
 
         val partitions = partitionManager.getEntitySetPartitionsInfo(entitySetId).partitions
         val partitionsArrays = PostgresArrays.createIntArray(connection, partitions)
