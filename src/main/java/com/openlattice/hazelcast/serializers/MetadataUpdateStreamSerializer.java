@@ -60,9 +60,12 @@ public class MetadataUpdateStreamSerializer implements SelfRegisteringStreamSeri
         OptionalStreamSerializers.serialize( out,
                 object.getPartitions(),
                 ( output, elem ) -> output.writeIntArray( elem.stream().mapToInt( e -> e ).toArray() ) );
-        OptionalStreamSerializers.serialize( out, object.getDataExpiration(), (output, expiration) -> {
-            dataExpirationStreamSerializer.write(output, expiration);
-        });
+        if (object.getDataExpiration() != null) {
+            out.writeBoolean(true);
+            OptionalStreamSerializers.serialize( out, object.getDataExpiration(), (output, expiration) -> dataExpirationStreamSerializer.write(output, expiration));
+        } else {
+            out.writeBoolean(false);
+        }
     }
 
     public static MetadataUpdate deserialize( ObjectDataInput in ) throws IOException {
@@ -81,8 +84,14 @@ public class MetadataUpdateStreamSerializer implements SelfRegisteringStreamSeri
                 .deserialize( in, UUIDStreamSerializer::deserialize );
         Optional<LinkedHashSet<Integer>> partitions = OptionalStreamSerializers
                 .deserialize( in, input -> toLinkedHashSet( input.readIntArray() ) );
-        Optional<DataExpiration> dataExpiration = OptionalStreamSerializers
-                .deserialize( in, input -> dataExpirationStreamSerializer.read(input));
+        Optional<DataExpiration> dataExpiration;
+        boolean hasExpiration = in.readBoolean();
+        if (hasExpiration) {
+            dataExpiration = Optional.of(dataExpirationStreamSerializer.read(in));
+        } else {
+            dataExpiration = Optional.empty();
+        }
+
         return new MetadataUpdate( title,
                 description,
                 name,

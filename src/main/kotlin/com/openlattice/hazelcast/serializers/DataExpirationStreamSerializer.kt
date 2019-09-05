@@ -12,7 +12,23 @@ import java.util.*
 
 @Component
 class DataExpirationStreamSerializer : SelfRegisteringStreamSerializer<DataExpiration> {
-    val expirationTypes = ExpirationType.values()
+
+    companion object {
+        private val expirationTypes = ExpirationType.values()
+
+        fun serialize(out: ObjectDataOutput, obj: DataExpiration) {
+            out.writeLong(obj.timeToExpiration)
+            out.writeInt(obj.expirationFlag.ordinal)
+            OptionalStreamSerializers.serialize(out, obj.startDateProperty, UUIDStreamSerializer::serialize)
+        }
+
+        fun deserialize(input: ObjectDataInput): DataExpiration {
+            val timeToExpiration = input.readLong()
+            val expirationType = expirationTypes[input.readInt()]
+            val startDateProperty = OptionalStreamSerializers.deserialize(input, UUIDStreamSerializer::deserialize)
+            return DataExpiration(timeToExpiration, expirationType, startDateProperty)
+        }
+    }
 
     override fun getTypeId(): Int {
         return StreamSerializerTypeIds.DATA_EXPIRATION.ordinal
@@ -25,15 +41,10 @@ class DataExpirationStreamSerializer : SelfRegisteringStreamSerializer<DataExpir
     }
 
     override fun write(out: ObjectDataOutput, obj: DataExpiration) {
-        out.writeLong(obj.timeToExpiration)
-        out.writeInt(obj.expirationFlag.ordinal)
-        OptionalStreamSerializers.serialize(out, obj.startDateProperty, UUIDStreamSerializer::serialize)
+        serialize(out, obj)
     }
 
     override fun read(input: ObjectDataInput): DataExpiration {
-        val timeToExpiration = input.readLong()
-        val expirationType = expirationTypes[input.readInt()]
-        val startDateProperty = OptionalStreamSerializers.deserialize(input, UUIDStreamSerializer::deserialize)
-        return DataExpiration(timeToExpiration, expirationType, startDateProperty)
+        return deserialize(input)
     }
 }
