@@ -52,7 +52,7 @@ class PartitionManager @JvmOverloads constructor(
         partitionList.addAll(partitionList.size until partitions)
     }
 
-    fun getAllPartitions() : List<Int> {
+    fun getAllPartitions(): List<Int> {
         return partitionList
     }
 

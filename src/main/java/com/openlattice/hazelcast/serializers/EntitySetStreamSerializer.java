@@ -67,11 +67,11 @@ public class EntitySetStreamSerializer implements SelfRegisteringStreamSerialize
 
         out.writeInt( object.getPartitionsVersion() );
 
-        if (object.getExpiration() != null) {
-            out.writeBoolean(true);
-            DataExpirationStreamSerializer.serialize(out, object.getExpiration());
+        if ( object.getExpiration() != null ) {
+            out.writeBoolean( true );
+            DataExpirationStreamSerializer.serialize( out, object.getExpiration() );
         } else {
-            out.writeBoolean(false);
+            out.writeBoolean( false );
         }
     }
 
@@ -107,13 +107,11 @@ public class EntitySetStreamSerializer implements SelfRegisteringStreamSerialize
 
         DataExpiration expiration;
         boolean hasExpiration = in.readBoolean();
-        if (hasExpiration) {
-            expiration = DataExpirationStreamSerializer.deserialize(in);
+        if ( hasExpiration ) {
+            expiration = DataExpirationStreamSerializer.deserialize( in );
         } else {
             expiration = null;
         }
-
-
 
         EntitySet es = new EntitySet(
                 id,
@@ -127,7 +125,7 @@ public class EntitySetStreamSerializer implements SelfRegisteringStreamSerialize
                 flags,
                 partitions,
                 partitionsVersion,
-                expiration);
+                expiration );
 
         return es;
     }

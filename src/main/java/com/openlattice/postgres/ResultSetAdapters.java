@@ -635,8 +635,10 @@ public final class ResultSetAdapters {
         final var expirationFlag = expirationFlag( rs );
         final var startDateProperty = startDateProperty( rs );
         final DataExpiration expirationData;
-        if (timeToExpiration != null) {
-            expirationData = new DataExpiration(timeToExpiration, expirationFlag, Optional.ofNullable(startDateProperty));
+        if ( timeToExpiration != null ) {
+            expirationData = new DataExpiration( timeToExpiration,
+                    expirationFlag,
+                    Optional.ofNullable( startDateProperty ) );
         } else { expirationData = null; }
         return new EntitySet( id,
                 entityTypeId,
@@ -649,7 +651,7 @@ public final class ResultSetAdapters {
                 flags,
                 new LinkedHashSet<>( Arrays.asList( partitions ) ),
                 partitionVersion,
-                expirationData);
+                expirationData );
     }
 
     public static int partitionVersions( ResultSet rs ) throws SQLException {
@@ -660,13 +662,13 @@ public final class ResultSetAdapters {
         return PostgresArrays.getIntArray( rs, PARTITIONS_FIELD );
     }
 
-    public static Long timeToExpiration( ResultSet rs) throws SQLException {
-        return (Long) rs.getObject( TIME_TO_EXPIRATION_FIELD);
+    public static Long timeToExpiration( ResultSet rs ) throws SQLException {
+        return (Long) rs.getObject( TIME_TO_EXPIRATION_FIELD );
     }
 
     public static ExpirationType expirationFlag( ResultSet rs ) throws SQLException {
         String expirationFlag = rs.getString( EXPIRATION_FLAG_FIELD );
-        if (expirationFlag != null) { return ExpirationType.valueOf(expirationFlag); }
+        if ( expirationFlag != null ) { return ExpirationType.valueOf( expirationFlag ); }
         return null;
         //TODO add a check for if the value is null. if it is null then we know there is no expiration on the entity set.
         //probably need to figure this out for all of the expiration fields

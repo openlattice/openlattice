@@ -47,20 +47,19 @@ public class EntitySetMapstore extends AbstractBasePostgresMapstore<UUID, Entity
         ps.setArray( 9, flags );
         ps.setArray( 10, partitions );
         ps.setInt( 11, value.getPartitionsVersion() );
-        if (value.getExpiration() == null) {
-            ps.setNull(12, Types.NULL);
-            ps.setNull(13, Types.NULL);
-            ps.setNull(14, Types.NULL);
+        if ( value.getExpiration() == null ) {
+            ps.setNull( 12, Types.NULL );
+            ps.setNull( 13, Types.NULL );
+            ps.setNull( 14, Types.NULL );
         } else {
             ps.setObject( 12, value.getExpiration().getTimeToExpiration() );
             ps.setString( 13, value.getExpiration().getExpirationFlag().toString() );
-            if (value.getExpiration().getStartDateProperty().isPresent()) {
-                 ps.setObject(14, value.getExpiration().getStartDateProperty().get() );
+            if ( value.getExpiration().getStartDateProperty().isPresent() ) {
+                ps.setObject( 14, value.getExpiration().getStartDateProperty().get() );
             } else {
-                ps.setNull( 14, Types.NULL);
+                ps.setNull( 14, Types.NULL );
             }
         }
-
 
         // UPDATE
         ps.setString( 15, value.getName() );
@@ -73,17 +72,17 @@ public class EntitySetMapstore extends AbstractBasePostgresMapstore<UUID, Entity
         ps.setArray( 22, flags );
         ps.setArray( 23, partitions );
         ps.setInt( 24, value.getPartitionsVersion() );
-        if (value.getExpiration() == null) {
-            ps.setNull(25, Types.NULL);
-            ps.setNull(26, Types.NULL);
-            ps.setNull(27, Types.NULL);
+        if ( value.getExpiration() == null ) {
+            ps.setNull( 25, Types.NULL );
+            ps.setNull( 26, Types.NULL );
+            ps.setNull( 27, Types.NULL );
         } else {
             ps.setObject( 25, value.getExpiration().getTimeToExpiration() );
             ps.setString( 26, value.getExpiration().getExpirationFlag().toString() );
-            if (value.getExpiration().getStartDateProperty().isPresent()) {
-                ps.setObject(27, value.getExpiration().getStartDateProperty().get() );
+            if ( value.getExpiration().getStartDateProperty().isPresent() ) {
+                ps.setObject( 27, value.getExpiration().getStartDateProperty().get() );
             } else {
-                ps.setNull( 27, Types.NULL);
+                ps.setNull( 27, Types.NULL );
             }
         }
     }
