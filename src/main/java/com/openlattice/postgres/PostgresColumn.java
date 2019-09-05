@@ -207,7 +207,7 @@ public final class PostgresColumn {
             new PostgresColumnDefinition( EXPIRATION_FLAG_FIELD, TEXT );
     public static final String                   EXPIRATION_START_ID_FIELD         = "expiration_start_id";
     public static final PostgresColumnDefinition EXPIRATION_START_ID               =
-            new PostgresColumnDefinition( EXPIRATION_START_ID_FIELD, TEXT );
+            new PostgresColumnDefinition( EXPIRATION_START_ID_FIELD, UUID );
     public static final String                   EXTERNAL_FIELD                    = "external";
     public static final PostgresColumnDefinition EXTERNAL                          =
             new PostgresColumnDefinition( EXTERNAL_FIELD, BOOLEAN );
@@ -327,7 +327,7 @@ public final class PostgresColumn {
             new PostgresColumnDefinition( NULLABLE_TITLE_FIELD, TEXT );
     public static final String                   TIME_TO_EXPIRATION_FIELD          = "time_to_expiration";
     public static final PostgresColumnDefinition TIME_TO_EXPIRATION                =
-            new PostgresColumnDefinition( TIME_TO_EXPIRATION_FIELD, TEXT );
+            new PostgresColumnDefinition( TIME_TO_EXPIRATION_FIELD, BIGINT );
     public static final String                   ORGANIZATION_ID_FIELD             = "organization_id";
     public static final PostgresColumnDefinition ORGANIZATION_ID                   =
             new PostgresColumnDefinition( ORGANIZATION_ID_FIELD, UUID ).notNull();
