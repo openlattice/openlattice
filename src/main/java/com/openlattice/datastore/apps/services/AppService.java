@@ -177,7 +177,7 @@ public class AppService {
                 Optional.of( organizationId ),
                 Optional.of( flags ),
                 Optional.of( new LinkedHashSet<>( organizationService.getDefaultPartitions( organizationId ) ) ),
-                Optional.empty());
+                Optional.empty() );
         edmService.createEntitySet( principal, entitySet );
         return entitySet.getId();
     }
