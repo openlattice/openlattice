@@ -4,10 +4,10 @@ import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.assembler.AssemblerConnectionManager
+import com.openlattice.assembler.AssemblerConnectionManagerDependent
 import com.openlattice.assembler.processors.InitializeOrganizationAssemblyProcessor
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import org.springframework.stereotype.Component
-import javax.inject.Inject
 
 /**
  *
@@ -15,7 +15,9 @@ import javax.inject.Inject
  */
 
 @Component
-class InitializeOrganizationAssemblyProcessorStreamSerializer : SelfRegisteringStreamSerializer<InitializeOrganizationAssemblyProcessor>, AssemblerConnectionManagerDependent {
+class InitializeOrganizationAssemblyProcessorStreamSerializer
+    : SelfRegisteringStreamSerializer<InitializeOrganizationAssemblyProcessor>,
+        AssemblerConnectionManagerDependent<Void?> {
     private lateinit var acm: AssemblerConnectionManager
 
     override fun getClazz(): Class<InitializeOrganizationAssemblyProcessor> {
@@ -34,7 +36,8 @@ class InitializeOrganizationAssemblyProcessorStreamSerializer : SelfRegisteringS
         return StreamSerializerTypeIds.INITIALIZE_ORGANIZATION_ASSEMBLY_PROCESSOR.ordinal
     }
 
-    override fun init(assemblerConnectionManager: AssemblerConnectionManager) {
-        this.acm = assemblerConnectionManager
+    override fun init(acm: AssemblerConnectionManager): Void? {
+        this.acm = acm
+        return null
     }
 }
