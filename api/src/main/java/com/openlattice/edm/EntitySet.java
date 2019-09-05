@@ -32,7 +32,6 @@ import com.openlattice.client.serialization.SerializationConstants;
 import com.openlattice.data.DataExpiration;
 import com.openlattice.edm.set.EntitySetFlag;
 
-
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -63,12 +62,13 @@ public class EntitySet extends AbstractSecurableObject {
     private       UUID                   organizationId;
     private       int                    partitionsVersion = 0;
     private       DataExpiration         expiration;
+
     /**
      * Creates an entity set with provided parameters and will automatically generate a UUID if not provided.
      *
-     * @param id An optional UUID for the entity set.
-     * @param name The name of the entity set.
-     * @param title The friendly name for the entity set.
+     * @param id          An optional UUID for the entity set.
+     * @param name        The name of the entity set.
+     * @param title       The friendly name for the entity set.
      * @param description A description of the entity set.
      */
     @JsonCreator
@@ -83,7 +83,7 @@ public class EntitySet extends AbstractSecurableObject {
             @JsonProperty( SerializationConstants.ORGANIZATION_ID ) Optional<UUID> organizationId,
             @JsonProperty( SerializationConstants.FLAGS_FIELD ) Optional<EnumSet<EntitySetFlag>> flags,
             @JsonProperty( SerializationConstants.PARTITIONS ) Optional<LinkedHashSet<Integer>> partitions,
-            @JsonProperty( SerializationConstants.EXPIRATION ) Optional<DataExpiration> expiration) {
+            @JsonProperty( SerializationConstants.EXPIRATION ) Optional<DataExpiration> expiration ) {
         super( id, title, description );
         this.linkedEntitySets = linkedEntitySets.orElse( new HashSet<>() );
         this.flags = flags.orElse( EnumSet.of( EntitySetFlag.EXTERNAL ) );
@@ -116,7 +116,7 @@ public class EntitySet extends AbstractSecurableObject {
             int partitionsVersion,
             DataExpiration expiration
     ) {
-        super( id, title, description);
+        super( id, title, description );
         this.linkedEntitySets = linkedEntitySets;
         this.flags = flags;
         checkArgument( StringUtils.isNotBlank( name ), "Entity set name cannot be blank." );
@@ -151,7 +151,7 @@ public class EntitySet extends AbstractSecurableObject {
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
-                Optional.empty());
+                Optional.empty() );
     }
 
     public EntitySet(
@@ -170,7 +170,7 @@ public class EntitySet extends AbstractSecurableObject {
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
-                Optional.empty());
+                Optional.empty() );
     }
 
     public EntitySet(
@@ -193,7 +193,7 @@ public class EntitySet extends AbstractSecurableObject {
                 organizationId,
                 flags,
                 partitions,
-                Optional.empty());
+                Optional.empty() );
     }
 
     @JsonProperty( SerializationConstants.ORGANIZATION_ID )
@@ -248,30 +248,42 @@ public class EntitySet extends AbstractSecurableObject {
         return expiration;
     }
 
-    public void setExpiration(DataExpiration expiration) {
+    public void setExpiration( DataExpiration expiration ) {
         this.expiration = expiration;
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        if (!super.equals(o)) return false;
+    public boolean equals( Object o ) {
+        if ( this == o )
+            return true;
+        if ( o == null || getClass() != o.getClass() )
+            return false;
+        if ( !super.equals( o ) )
+            return false;
         EntitySet entitySet = (EntitySet) o;
         return partitionsVersion == entitySet.partitionsVersion &&
-                Objects.equals(entityTypeId, entitySet.entityTypeId) &&
-                Objects.equals(linkedEntitySets, entitySet.linkedEntitySets) &&
-                Objects.equals(flags, entitySet.flags) &&
-                Objects.equals(partitions, entitySet.partitions) &&
-                Objects.equals(name, entitySet.name) &&
-                Objects.equals(contacts, entitySet.contacts) &&
-                Objects.equals(organizationId, entitySet.organizationId) &&
-                Objects.equals(expiration, entitySet.expiration);
+                Objects.equals( entityTypeId, entitySet.entityTypeId ) &&
+                Objects.equals( linkedEntitySets, entitySet.linkedEntitySets ) &&
+                Objects.equals( flags, entitySet.flags ) &&
+                Objects.equals( partitions, entitySet.partitions ) &&
+                Objects.equals( name, entitySet.name ) &&
+                Objects.equals( contacts, entitySet.contacts ) &&
+                Objects.equals( organizationId, entitySet.organizationId ) &&
+                Objects.equals( expiration, entitySet.expiration );
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), entityTypeId, linkedEntitySets, flags, partitions, name, contacts, organizationId, partitionsVersion, expiration);
+        return Objects.hash( super.hashCode(),
+                entityTypeId,
+                linkedEntitySets,
+                flags,
+                partitions,
+                name,
+                contacts,
+                organizationId,
+                partitionsVersion,
+                expiration );
     }
 
     @JsonIgnore

@@ -77,7 +77,7 @@ public class MetadataUpdate {
             @JsonProperty( SerializationConstants.INDEX_TYPE ) Optional<IndexType> indexType,
             @JsonProperty( SerializationConstants.ORGANIZATION_ID ) Optional<UUID> organizationId,
             @JsonProperty( SerializationConstants.PARTITIONS ) Optional<LinkedHashSet<Integer>> partitions,
-            @JsonProperty( SerializationConstants.EXPIRATION ) Optional<DataExpiration> dataExpiration) {
+            @JsonProperty( SerializationConstants.EXPIRATION ) Optional<DataExpiration> dataExpiration ) {
         // WARNING These checks have to be consistent with the same check elsewhere.
         Preconditions.checkArgument( !title.isPresent() || StringUtils.isNotBlank( title.get() ),
                 "Title cannot be blank." );
@@ -116,7 +116,7 @@ public class MetadataUpdate {
             Optional<LinkedHashMultimap<UUID, String>> propertyTags,
             Optional<UUID> organizationId,
             Optional<LinkedHashSet<Integer>> partitions,
-            Optional<DataExpiration> dataExpiration) {
+            Optional<DataExpiration> dataExpiration ) {
         this( title,
                 description,
                 name,
@@ -129,7 +129,7 @@ public class MetadataUpdate {
                 Optional.empty(),
                 organizationId,
                 partitions,
-                dataExpiration);
+                dataExpiration );
     }
 
     @JsonProperty( SerializationConstants.TITLE_FIELD )
@@ -193,7 +193,9 @@ public class MetadataUpdate {
     }
 
     @JsonProperty( SerializationConstants.EXPIRATION )
-    public Optional<DataExpiration> getDataExpiration() { return dataExpiration; }
+    public Optional<DataExpiration> getDataExpiration() {
+        return dataExpiration;
+    }
 
     @Override public String toString() {
         return "MetadataUpdate{" +
@@ -264,7 +266,7 @@ public class MetadataUpdate {
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
-                Optional.empty());
+                Optional.empty() );
     }
 
     public static MetadataUpdate trimToEntityTypeUpdate( MetadataUpdate update ) {
@@ -280,7 +282,7 @@ public class MetadataUpdate {
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
-                Optional.empty());
+                Optional.empty() );
     }
 
     public static MetadataUpdate trimToEntitySetUpdate( MetadataUpdate update ) {
@@ -296,7 +298,7 @@ public class MetadataUpdate {
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
-                Optional.empty());
+                Optional.empty() );
     }
 
     public static MetadataUpdate trimToEntitySetPropertyMetadataUpdate( MetadataUpdate update ) {
@@ -312,7 +314,7 @@ public class MetadataUpdate {
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
-                Optional.empty());
+                Optional.empty() );
     }
 
     public static MetadataUpdate trimToAppUpdate( MetadataUpdate update ) {
@@ -328,7 +330,7 @@ public class MetadataUpdate {
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
-                Optional.empty());
+                Optional.empty() );
     }
 
     public static MetadataUpdate trimToAppTypeUpdate( MetadataUpdate update ) {

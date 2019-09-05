@@ -520,7 +520,7 @@ public final class TestDataFactory {
                 Optional.of( propertyTags ),
                 Optional.of( UUID.randomUUID() ),
                 Optional.of( new LinkedHashSet<>( Arrays.asList( 1, 2, 3, 4 ) ) ),
-                Optional.empty());
+                Optional.empty() );
     }
 
     public static SearchDetails searchDetails() {
