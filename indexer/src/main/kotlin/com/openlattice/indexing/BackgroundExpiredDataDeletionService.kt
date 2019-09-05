@@ -163,10 +163,10 @@ class BackgroundExpiredDataDeletionService(
 
     private fun deleteExpiredDataFromDataTable(entitySetId: UUID, expiration: DataExpiration): Pair<Set<UUID>, Int> {
         val connection = hds.connection
-        //connection.autoCommit = false
         val comparisonField: String
         val expirationField: Any
         val expirationFieldSQLType: Int
+        var deleteCount = 0;
         when (expiration.expirationFlag) {
             ExpirationType.DATE_PROPERTY -> {
                 val propertyTypeId: UUID = expiration.startDateProperty.get()
@@ -192,10 +192,11 @@ class BackgroundExpiredDataDeletionService(
             }
         }
         val expiredEntityKeyIds = getExpiredIds(comparisonField, expirationField, expirationFieldSQLType, entitySetId).toSet()
-        val dataTableDeleteStmt = connection.prepareStatement(deleteExpiredDataFromDataTableQuery(entitySetId, comparisonField))
-        dataTableDeleteStmt.setObject(1, expirationField, expirationFieldSQLType)
-        val deleteCount = dataTableDeleteStmt.executeUpdate()
-        //connection.commit()
+        if (expiredEntityKeyIds.isNotEmpty()) {
+            val dataTableDeleteStmt = connection.prepareStatement(deleteExpiredDataFromDataTableQuery(entitySetId, comparisonField))
+            dataTableDeleteStmt.setObject(1, expirationField, expirationFieldSQLType)
+            deleteCount = dataTableDeleteStmt.executeUpdate()
+        }
         return Pair(expiredEntityKeyIds, deleteCount)
     }
 
