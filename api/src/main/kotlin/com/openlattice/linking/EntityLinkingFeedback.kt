@@ -31,4 +31,6 @@ import com.openlattice.data.EntityDataKey
 data class EntityLinkingFeedback(
         @JsonProperty(SerializationConstants.ENTITY_KEY_IDS) val entityPair: EntityKeyPair,
         @JsonProperty(SerializationConstants.LINKED) val linked: Boolean
-)
+) {
+    constructor( ent: Map.Entry<EntityKeyPair, Boolean> ) : this( ent.key, ent.value )
+}
