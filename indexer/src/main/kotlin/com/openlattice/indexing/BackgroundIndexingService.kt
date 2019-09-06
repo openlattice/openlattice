@@ -54,13 +54,9 @@ import java.util.concurrent.locks.ReentrantLock
 import java.util.function.Function
 import java.util.function.Supplier
 
-/**
- *
- */
-
-const val EXPIRATION_MILLIS = 60000L
-const val INDEX_RATE = 30000L
-const val FETCH_SIZE = 128000
+const val EXPIRATION_MILLIS = 60_000L
+const val INDEX_RATE = 30_000L
+const val FETCH_SIZE = 128_000
 
 class BackgroundIndexingService(
         hazelcastInstance: HazelcastInstance,
@@ -78,6 +74,7 @@ class BackgroundIndexingService(
     private val propertyTypes: IMap<UUID, PropertyType> = hazelcastInstance.getMap(HazelcastMap.PROPERTY_TYPES.name)
     private val entityTypes: IMap<UUID, EntityType> = hazelcastInstance.getMap(HazelcastMap.ENTITY_TYPES.name)
     private val entitySets: IMap<UUID, EntitySet> = hazelcastInstance.getMap(HazelcastMap.ENTITY_SETS.name)
+
     private val indexingLocks: IMap<UUID, Long> = hazelcastInstance.getMap(HazelcastMap.INDEXING_LOCKS.name)
 
     init {

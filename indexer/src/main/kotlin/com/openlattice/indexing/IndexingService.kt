@@ -53,12 +53,11 @@ import java.util.stream.Stream
 private val logger = LoggerFactory.getLogger(IndexingService::class.java)
 
 
-private const val BATCH_LIMIT = 1000
+private const val BATCH_LIMIT = 1_000
 private val LB_UUID = UUID(0, 0)
 private val IDS_WITH_LAST_WRITE = "SELECT ${ID.name}, ${LAST_WRITE.name} FROM ${IDS.name} " +
         "WHERE ${ENTITY_SET_ID.name} = ? AND ${PARTITION.name} = ? AND ${ID.name} = ANY(?) " +
         "ORDER BY ${ID.name} LIMIT $BATCH_LIMIT"
-
 
 /**
  *
@@ -71,9 +70,10 @@ class IndexingService(
         executor: ListeningExecutorService,
         hazelcastInstance: HazelcastInstance
 ) {
-    private val entitySets: IMap<UUID, EntitySet> = hazelcastInstance.getMap(HazelcastMap.ENTITY_SETS.name)
     private val propertyTypes = hazelcastInstance.getMap<UUID, PropertyType>(HazelcastMap.PROPERTY_TYPES.name)
     private val entityTypes = hazelcastInstance.getMap<UUID, EntityType>(HazelcastMap.ENTITY_TYPES.name)
+    private val entitySets: IMap<UUID, EntitySet> = hazelcastInstance.getMap(HazelcastMap.ENTITY_SETS.name)
+
     private val indexingJobs = hazelcastInstance.getMap<UUID, DelegatedUUIDSet>(HazelcastMap.INDEXING_JOBS.name)
     private val indexingProgress = hazelcastInstance.getMap<UUID, UUID>(HazelcastMap.INDEXING_PROGRESS.name)
     private val indexingPartitionProgress = hazelcastInstance.getMap<UUID, Int>(
@@ -95,7 +95,7 @@ class IndexingService(
         logger.info("Re-adding the following jobs that were registered but not in the queue: {}", jobIds)
         if (jobIds.isNotEmpty()) {
             //If jobIds is empty it will add all entity sets for indexing.
-            queueForIndexing(jobIds.map { it to emptySet<UUID>() }.toMap())
+            queueForIndexing( jobIds.map { it to emptySet<UUID>() }.toMap() )
         }
     }
 
@@ -106,15 +106,17 @@ class IndexingService(
                         val entitySet = entitySets.getValue(entitySetId)
                         var cursor = indexingProgress.getOrPut(entitySetId) { LB_UUID }
                         val currentPartitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
-                        val partitionsVersion = indexingPartitionsVersion.getOrPut(
+
+                        indexingPartitionsVersion.getOrPut(
                                 entitySetId
                         ) { currentPartitionsInfo.partitionsVersion }
+
                         val partitions = indexingPartitionList.getOrPut(entitySetId) {
                             DelegatedIntList(
                                     currentPartitionsInfo.partitions.toList()
                             )
                         }
-                        var partitionCursor = indexingPartitionProgress.getOrPut(entitySetId) { 0 }
+                        val partitionCursor = indexingPartitionProgress.getOrPut(entitySetId) { 0 }
 
                         val propertyTypeMap = propertyTypes.getAll(
                                 entityTypes.getValue(entitySet.entityTypeId).properties

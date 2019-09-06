@@ -56,7 +56,6 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.function.Function
 import java.util.stream.Stream
-import kotlin.system.exitProcess
 
 internal const val LINKING_INDEXING_TIMEOUT_MILLIS = 120_000L
 internal const val LINKING_INDEX_RATE = 30_000L
