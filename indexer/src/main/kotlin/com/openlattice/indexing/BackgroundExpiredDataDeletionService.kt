@@ -130,7 +130,6 @@ class BackgroundExpiredDataDeletionService(
         )
         var dataTableDeleteCount = 0
         if (entitySet.expiration != null) {
-            val esw = Stopwatch.createStarted()
             val pair: Pair<Set<UUID>, Int> = deleteExpiredDataFromDataTable(entitySet.id, entitySet.expiration)
 
             dataTableDeleteCount = pair.second
@@ -248,24 +247,4 @@ class BackgroundExpiredDataDeletionService(
         expirationLocks.delete(entitySet.id)
     }
 
-    /*
-    private fun updateExpiration(entitySet: EntitySet) {
-        expirationLocks.set(entitySet.id, System.currentTimeMillis() + MAX_DURATION_MILLIS)
-    }
-    */
-
-    /*
-    private fun getBatch(entityKeyIdStream: Iterator<Pair<UUID, OffsetDateTime>>): Map<UUID, OffsetDateTime> {
-        val entityKeyIds = HashMap<UUID, OffsetDateTime>(INDEX_SIZE)
-
-        var i = 0
-        while (entityKeyIdStream.hasNext() && i < INDEX_SIZE) {
-            val entityWithLastWrite = entityKeyIdStream.next()
-            entityKeyIds[entityWithLastWrite.first] = entityWithLastWrite.second
-            ++i
-        }
-
-        return entityKeyIds
-    }
-    */
 }
