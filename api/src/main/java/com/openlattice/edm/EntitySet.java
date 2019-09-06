@@ -320,6 +320,11 @@ public class EntitySet extends AbstractSecurableObject {
         return flags.contains( EntitySetFlag.LINKING );
     }
 
+    @JsonIgnore
+    public boolean hasExpirationPolicy() {
+        return expiration != null;
+    }
+
     @Override
     @JsonIgnore
     public SecurableObjectType getCategory() {
