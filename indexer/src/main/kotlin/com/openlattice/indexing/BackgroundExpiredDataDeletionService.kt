@@ -91,7 +91,6 @@ class BackgroundExpiredDataDeletionService(
                 if (indexerConfiguration.backgroundExpiredDataDeletionEnabled) {
                     val w = Stopwatch.createStarted()
                     //We shuffle entity sets to make sure we have a chance to work share and index everything
-                    //lock entity sets we are working on
                     val lockedEntitySets = entitySets.values
                             .shuffled()
                             .filter { it.hasExpirationPolicy() }
@@ -100,14 +99,12 @@ class BackgroundExpiredDataDeletionService(
                     val propertyTypeIds = lockedEntitySets.map { it.expiration.startDateProperty.get() }.toSet()
                     propertyTypeIdToDataType = propertyTypes.executeOnKeys(propertyTypeIds, EdmPrimitiveTypeKindGetter()) as Map<UUID, EdmPrimitiveTypeKind>
 
-                    //delete expired data
                     val totalDeleted = lockedEntitySets
                             .parallelStream()
                             .filter { !it.isLinking }
                             .mapToInt { deleteExpiredData(it) }
                             .sum()
 
-                    //unlock the entitysets we were working on
                     lockedEntitySets.forEach(this::deleteIndexingLock)
 
                     logger.info(
@@ -164,28 +161,29 @@ class BackgroundExpiredDataDeletionService(
         val comparisonField: String
         val expirationField: Any
         val expirationFieldSQLType: Int
+        val expirationInstant = Instant.now().minusMillis(expiration.timeToExpiration)
         var deleteCount = 0
         var expiredIdsAsString = ""
         when (expiration.expirationFlag) {
             ExpirationType.DATE_PROPERTY -> {
                 val dataType = propertyTypeIdToDataType[expiration.startDateProperty.get()]
                 if (dataType == EdmPrimitiveTypeKind.Date) {
-                    expirationField = OffsetDateTime.ofInstant(Instant.now().minusMillis(expiration.timeToExpiration), ZoneId.systemDefault()).toLocalDate()
+                    expirationField = OffsetDateTime.ofInstant(expirationInstant, ZoneId.systemDefault()).toLocalDate()
                     expirationFieldSQLType = Types.DATE
                     comparisonField = "n_date" // figure out where this is set
                 } else {  //only other TypeKind for date property type is OffsetDateTime
-                    expirationField = OffsetDateTime.ofInstant(Instant.now().minusMillis(expiration.timeToExpiration), ZoneId.systemDefault())
+                    expirationField = OffsetDateTime.ofInstant(expirationInstant, ZoneId.systemDefault())
                     expirationFieldSQLType = Types.TIMESTAMP_WITH_TIMEZONE
                     comparisonField = "n_timestamptz" // figure out where this is set
                 }
             }
             ExpirationType.FIRST_WRITE -> {
-                expirationField = Instant.now().minusMillis(expiration.timeToExpiration).toEpochMilli()
+                expirationField = expirationInstant.toEpochMilli()
                 expirationFieldSQLType = Types.BIGINT
                 comparisonField = "${VERSIONS.name}[1]"
             }
             ExpirationType.LAST_WRITE -> {
-                expirationField = OffsetDateTime.ofInstant(Instant.now().minusMillis(expiration.timeToExpiration), ZoneId.systemDefault())
+                expirationField = OffsetDateTime.ofInstant(expirationInstant, ZoneId.systemDefault())
                 expirationFieldSQLType = Types.TIMESTAMP_WITH_TIMEZONE
                 comparisonField = LAST_WRITE.name
             }
