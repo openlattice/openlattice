@@ -229,7 +229,7 @@ class BackgroundExpiredDataDeletionService(
     }
 
     private fun getExpiredIdsQuery(entitySetId: UUID, comparisonField: String): String {
-        return "SELECT ${ID.name} FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND $comparisonField < ?"
+        return "SELECT ${ID.name} FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND $comparisonField < ? AND versions[1] >= 0"
     }
 
     private fun deleteExpiredDataFromIdsTableQuery(expiredIds: String): String {
