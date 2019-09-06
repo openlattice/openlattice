@@ -38,7 +38,7 @@ class OrganizationDefaultPartitionsMapstore(
     @Throws(SQLException::class)
     public override fun bind(ps: PreparedStatement, key: UUID, value: DelegatedIntList) {
         bind(ps, key, 1)
-        val valueArr = PostgresArrays.createIntArray(ps.connection, value.toTypedArray())
+        val valueArr = PostgresArrays.createIntArray(ps.connection, value)
         ps.setArray(2, valueArr)
 
         // UPDATE
