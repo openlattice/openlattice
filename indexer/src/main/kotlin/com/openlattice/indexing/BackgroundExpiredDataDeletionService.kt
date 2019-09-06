@@ -130,19 +130,19 @@ class BackgroundExpiredDataDeletionService(
         )
         var dataTableDeleteCount = 0
         if (entitySet.expiration != null) {
-            val pair: Pair<Set<UUID>, Int> = deleteExpiredDataFromDataTable(entitySet.id, entitySet.expiration)
+            val dataTableDeletionResults: Triple<Set<UUID>, String, Int> = deleteExpiredDataFromDataTable(entitySet.id, entitySet.expiration)
 
-            dataTableDeleteCount = pair.second
+            dataTableDeleteCount = dataTableDeletionResults.third
             if (dataTableDeleteCount <= 0) {
                 logger.info("Entity set {} has no expired data", entitySet.name)
                 return dataTableDeleteCount
             }
-            val expiredEntityKeyIds = pair.first
+            val expiredEntityKeyIds = dataTableDeletionResults.first
             var elasticsearchDataDeleted = false
             var idsTableDeleteCount = 0
             if (expiredEntityKeyIds.isNotEmpty()) {
                 elasticsearchDataDeleted = deleteExpiredDataFromElasticSearch(entitySet.id, entitySet.entityTypeId, expiredEntityKeyIds)
-                idsTableDeleteCount = deleteExpiredDataFromIdsTable(expiredEntityKeyIds)
+                idsTableDeleteCount = deleteExpiredDataFromIdsTable(dataTableDeletionResults.second)
             }
 
             //compare deletion from data table and ids table and whether data was deleted from elasticsearch
@@ -160,23 +160,25 @@ class BackgroundExpiredDataDeletionService(
         return dataTableDeleteCount
     }
 
-    private fun deleteExpiredDataFromDataTable(entitySetId: UUID, expiration: DataExpiration): Pair<Set<UUID>, Int> {
+    private fun deleteExpiredDataFromDataTable(entitySetId: UUID, expiration: DataExpiration): Triple<Set<UUID>, String, Int> {
         val connection = hds.connection
         val comparisonField: String
         val expirationField: Any
         val expirationFieldSQLType: Int
-        var deleteCount = 0;
+        var deleteCount = 0
+        var expiredIdsAsString = ""
         when (expiration.expirationFlag) {
             ExpirationType.DATE_PROPERTY -> {
                 val propertyTypeId: UUID = expiration.startDateProperty.get()
                 val propertyType = propertyTypes[propertyTypeId]
-                comparisonField = "'$propertyTypeId'"
                 if (propertyType!!.datatype == EdmPrimitiveTypeKind.Date) {
                     expirationField = OffsetDateTime.ofInstant(Instant.now().minusMillis(expiration.timeToExpiration), ZoneId.systemDefault()).toLocalDate()
                     expirationFieldSQLType = Types.DATE
+                    comparisonField = "n_date" // figure out where this is set
                 } else {  //only other TypeKind for date property type is OffsetDateTime
                     expirationField = OffsetDateTime.ofInstant(Instant.now().minusMillis(expiration.timeToExpiration), ZoneId.systemDefault())
                     expirationFieldSQLType = Types.TIMESTAMP_WITH_TIMEZONE
+                    comparisonField = "n_timestamptz" // figure out where this is set
                 }
             }
             ExpirationType.FIRST_WRITE -> {
@@ -192,11 +194,12 @@ class BackgroundExpiredDataDeletionService(
         }
         val expiredEntityKeyIds = getExpiredIds(comparisonField, expirationField, expirationFieldSQLType, entitySetId).toSet()
         if (expiredEntityKeyIds.isNotEmpty()) {
-            val dataTableDeleteStmt = connection.prepareStatement(deleteExpiredDataFromDataTableQuery(entitySetId, comparisonField))
+            expiredIdsAsString = expiredEntityKeyIds.joinToString(prefix = "('", postfix = "')", separator = "', '") { it.toString() }
+            val dataTableDeleteStmt = connection.prepareStatement(deleteExpiredDataFromDataTableQuery(entitySetId, comparisonField, expiredIdsAsString))
             dataTableDeleteStmt.setObject(1, expirationField, expirationFieldSQLType)
             deleteCount = dataTableDeleteStmt.executeUpdate()
         }
-        return Pair(expiredEntityKeyIds, deleteCount)
+        return Triple(expiredEntityKeyIds, expiredIdsAsString, deleteCount)
     }
 
     private fun getExpiredIds(comparisonField: String, expirationField: Any, expirationFieldSQLType: Int, entitySetId: UUID): PostgresIterable<UUID> {
@@ -215,16 +218,16 @@ class BackgroundExpiredDataDeletionService(
         return elasticsearchApi.deleteEntityDataBulk(entitySetId, entityTypeId, expiredEntityKeyIds)
     }
 
-    private fun deleteExpiredDataFromIdsTable(expiredEntityKeyIds: Set<UUID>): Int {
+    private fun deleteExpiredDataFromIdsTable(expiredIdsAsString: String): Int {
         hds.connection.use { conn ->
             val stmt = conn.createStatement()
-            val expiredIdsAsString = expiredEntityKeyIds.joinToString(prefix = "('", postfix = "')", separator = "', '") { it.toString() }
             return stmt.executeUpdate(deleteExpiredDataFromIdsTableQuery(expiredIdsAsString))
         }
     }
 
-    private fun deleteExpiredDataFromDataTableQuery(entitySetId: UUID, comparisonField: String): String {
-        return "DELETE FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND $comparisonField < ?"
+    private fun deleteExpiredDataFromDataTableQuery(entitySetId: UUID, comparisonField: String, expiredIds: String): String {
+        //return "DELETE FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND $comparisonField < ?"
+        return "DELETE FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${ID.name} IN $expiredIds";
     }
 
     private fun getExpiredIdsQuery(entitySetId: UUID, comparisonField: String): String {
