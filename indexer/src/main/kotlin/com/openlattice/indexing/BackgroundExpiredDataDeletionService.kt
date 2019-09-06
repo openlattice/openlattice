@@ -195,7 +195,7 @@ class BackgroundExpiredDataDeletionService(
         val expiredEntityKeyIds = getExpiredIds(comparisonField, expirationField, expirationFieldSQLType, entitySetId).toSet()
         if (expiredEntityKeyIds.isNotEmpty()) {
             expiredIdsAsString = expiredEntityKeyIds.joinToString(prefix = "('", postfix = "')", separator = "', '") { it.toString() }
-            val dataTableDeleteStmt = connection.prepareStatement(deleteExpiredDataFromDataTableQuery(entitySetId, comparisonField, expiredIdsAsString))
+            val dataTableDeleteStmt = connection.prepareStatement(deleteExpiredDataFromDataTableQuery(entitySetId, expiredIdsAsString))
             deleteCount = dataTableDeleteStmt.executeUpdate()
         }
         return Triple(expiredEntityKeyIds, expiredIdsAsString, deleteCount)
@@ -224,7 +224,7 @@ class BackgroundExpiredDataDeletionService(
         }
     }
 
-    private fun deleteExpiredDataFromDataTableQuery(entitySetId: UUID, comparisonField: String, expiredIds: String): String {
+    private fun deleteExpiredDataFromDataTableQuery(entitySetId: UUID, expiredIds: String): String {
         return "DELETE FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${ID.name} IN $expiredIds"
     }
 
