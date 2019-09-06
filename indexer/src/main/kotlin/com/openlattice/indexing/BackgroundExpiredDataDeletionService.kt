@@ -128,11 +128,11 @@ class BackgroundExpiredDataDeletionService(
                 entitySet.name,
                 entitySet.id
         )
-        var dataTableDeleteCount = 0
+        var deletedEntitiesCount = 0
         if (entitySet.expiration != null) {
             val dataTableDeletionResults: Triple<Set<UUID>, String, Int> = deleteExpiredDataFromDataTable(entitySet.id, entitySet.expiration)
 
-            dataTableDeleteCount = dataTableDeletionResults.third
+            val dataTableDeleteCount = dataTableDeletionResults.third
             if (dataTableDeleteCount <= 0) {
                 logger.info("Entity set {} has no expired data", entitySet.name)
                 return dataTableDeleteCount
@@ -148,6 +148,7 @@ class BackgroundExpiredDataDeletionService(
             //compare deletion from data table and ids table and whether data was deleted from elasticsearch
             check(expiredEntityKeyIds.size == idsTableDeleteCount) { "Number of entities deleted from data and ids table are not the same. UH OH." } //do something better
             check(elasticsearchDataDeleted) { "Expired data not deleted from elasticsearch. UH OH." } // also do something better
+            deletedEntitiesCount = idsTableDeleteCount
             logger.info("Completed deleting {} expired elements from entity set {}.",
                     idsTableDeleteCount,
                     entitySet.name)
@@ -157,7 +158,7 @@ class BackgroundExpiredDataDeletionService(
                     entitySet.name
             )
         }
-        return dataTableDeleteCount
+        return deletedEntitiesCount
     }
 
     private fun deleteExpiredDataFromDataTable(entitySetId: UUID, expiration: DataExpiration): Triple<Set<UUID>, String, Int> {
