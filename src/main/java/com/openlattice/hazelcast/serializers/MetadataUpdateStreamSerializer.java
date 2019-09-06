@@ -52,6 +52,7 @@ public class MetadataUpdateStreamSerializer implements SelfRegisteringStreamSeri
         OptionalStreamSerializers.serialize( out, object.getPii(), ObjectDataOutput::writeBoolean );
         OptionalStreamSerializers.serialize( out, object.getDefaultShow(), ObjectDataOutput::writeBoolean );
         OptionalStreamSerializers.serialize( out, object.getUrl(), ObjectDataOutput::writeUTF );
+        // TODO: get rid of this setmultimap
         OptionalStreamSerializers
                 .serialize( out, object.getPropertyTags(), GuavaStreamSerializersKt::serializeSetMultimap );
         OptionalStreamSerializers.serialize( out, object.getOrganizationId(), UUIDStreamSerializer::serialize );
