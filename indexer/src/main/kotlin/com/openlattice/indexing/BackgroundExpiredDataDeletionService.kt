@@ -93,7 +93,6 @@ class BackgroundExpiredDataDeletionService(
                     val w = Stopwatch.createStarted()
                     //We shuffle entity sets to make sure we have a chance to work share and index everything
                     val lockedEntitySets = entitySets.values
-                            .shuffled()
                             .filter { it.hasExpirationPolicy() }
                             .filter { tryLockEntitySet(it) } //filters out entitysets that are already locked, and the entitysets we're working on are now locked in the IMap
 
