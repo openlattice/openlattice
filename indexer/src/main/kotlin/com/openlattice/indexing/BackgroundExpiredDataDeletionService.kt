@@ -133,29 +133,27 @@ class BackgroundExpiredDataDeletionService(
                 entitySet.id
         )
         var deletedEntitiesCount = 0
-        val dataTableDeletionResults: Triple<Set<UUID>, String, Int> = deleteExpiredDataFromDataTable(entitySet.id, entitySet.expiration)
+        var dataTableDeletionResults: Triple<Set<UUID>, String, Int> = deleteExpiredDataFromDataTable(entitySet.id, entitySet.expiration)
+        var dataTableDeleteCount = dataTableDeletionResults.third
+        while (dataTableDeleteCount > 0) {
+            val expiredEntityKeyIds = dataTableDeletionResults.first
+            var elasticsearchDataDeleted = false
+            var idsTableDeleteCount = 0
+            if (expiredEntityKeyIds.isNotEmpty()) {
+                elasticsearchDataDeleted = deleteExpiredDataFromElasticSearch(entitySet.id, entitySet.entityTypeId, expiredEntityKeyIds)
+                idsTableDeleteCount = deleteExpiredDataFromIdsTable(dataTableDeletionResults.second)
+            }
 
-        val dataTableDeleteCount = dataTableDeletionResults.third
-        //perhaps add a while loop here so the entire job is done. or something similar to make it atomic
-        if (dataTableDeleteCount <= 0) {
-            logger.debug("Entity set {} has no expired data", entitySet.name)
-            return dataTableDeleteCount
+            //compare deletion from data table and ids table and whether data was deleted from elasticsearch
+            check(expiredEntityKeyIds.size == idsTableDeleteCount) { "Number of entities deleted from data and ids table are not the same. UH OH." } //do something better
+            check(elasticsearchDataDeleted) { "Expired data not deleted from elasticsearch. UH OH." } // also do something better
+            deletedEntitiesCount += idsTableDeleteCount
+            logger.info("Completed deleting {} expired elements from entity set {}.",
+                    idsTableDeleteCount,
+                    entitySet.name)
+            dataTableDeletionResults = deleteExpiredDataFromDataTable(entitySet.id, entitySet.expiration)
+            dataTableDeleteCount = dataTableDeletionResults.third
         }
-        val expiredEntityKeyIds = dataTableDeletionResults.first
-        var elasticsearchDataDeleted = false
-        var idsTableDeleteCount = 0
-        if (expiredEntityKeyIds.isNotEmpty()) {
-            elasticsearchDataDeleted = deleteExpiredDataFromElasticSearch(entitySet.id, entitySet.entityTypeId, expiredEntityKeyIds)
-            idsTableDeleteCount = deleteExpiredDataFromIdsTable(dataTableDeletionResults.second)
-        }
-
-        //compare deletion from data table and ids table and whether data was deleted from elasticsearch
-        check(expiredEntityKeyIds.size == idsTableDeleteCount) { "Number of entities deleted from data and ids table are not the same. UH OH." } //do something better
-        check(elasticsearchDataDeleted) { "Expired data not deleted from elasticsearch. UH OH." } // also do something better
-        deletedEntitiesCount = idsTableDeleteCount
-        logger.info("Completed deleting {} expired elements from entity set {}.",
-                idsTableDeleteCount,
-                entitySet.name)
         return deletedEntitiesCount
     }
 
@@ -208,6 +206,7 @@ class BackgroundExpiredDataDeletionService(
                     val connection = hds.connection
                     val stmt = connection.prepareStatement(getExpiredIdsQuery(entitySetId, comparisonField, paritions))
                     stmt.setObject(1, expirationField, expirationFieldSQLType)
+                    stmt.fetchSize = FETCH_SIZE
                     StatementHolder(connection, stmt, stmt.executeQuery())
                 },
                 Function<ResultSet, UUID> { ResultSetAdapters.id(it) }
