@@ -61,6 +61,7 @@ class BackgroundExpiredDataDeletionService(
     private val propertyTypes: IMap<UUID, PropertyType> = hazelcastInstance.getMap(HazelcastMap.PROPERTY_TYPES.name)
     private val entitySets: IMap<UUID, EntitySet> = hazelcastInstance.getMap(HazelcastMap.ENTITY_SETS.name)
     private val expirationLocks: IMap<UUID, Long> = hazelcastInstance.getMap(HazelcastMap.EXPIRATION_LOCKS.name)
+    private var entitySetToPartition: Map<UUID, Set<Int>> = mapOf()
     private var propertyTypeIdToDataType: Map<UUID, EdmPrimitiveTypeKind> = mapOf()
 
     //necessary??????
@@ -96,6 +97,7 @@ class BackgroundExpiredDataDeletionService(
                             .filter { it.hasExpirationPolicy() }
                             .filter { tryLockEntitySet(it) } //filters out entitysets that are already locked, and the entitysets we're working on are now locked in the IMap
 
+                    entitySetToPartition = lockedEntitySets.map{ it.id to it.partitions }.toMap()
                     val propertyTypeIds = lockedEntitySets.map { it.expiration.startDateProperty.get() }.toSet()
                     propertyTypeIdToDataType = propertyTypes.executeOnKeys(propertyTypeIds, EdmPrimitiveTypeKindGetter()) as Map<UUID, EdmPrimitiveTypeKind>
 
@@ -134,6 +136,7 @@ class BackgroundExpiredDataDeletionService(
         val dataTableDeletionResults: Triple<Set<UUID>, String, Int> = deleteExpiredDataFromDataTable(entitySet.id, entitySet.expiration)
 
         val dataTableDeleteCount = dataTableDeletionResults.third
+        //perhaps add a while loop here so the entire job is done. or something similar to make it atomic
         if (dataTableDeleteCount <= 0) {
             logger.debug("Entity set {} has no expired data", entitySet.name)
             return dataTableDeleteCount
@@ -162,6 +165,7 @@ class BackgroundExpiredDataDeletionService(
         val expirationField: Any
         val expirationFieldSQLType: Int
         val expirationInstant = Instant.now().minusMillis(expiration.timeToExpiration)
+        val partitions = entitySetToPartition[entitySetId]!!.joinToString(prefix = "('", postfix = "')", separator = "', '") { it.toString() }
         var deleteCount = 0
         var expiredIdsAsString = ""
         when (expiration.expirationFlag) {
@@ -188,20 +192,20 @@ class BackgroundExpiredDataDeletionService(
                 comparisonField = LAST_WRITE.name
             }
         }
-        val expiredEntityKeyIds = getExpiredIds(comparisonField, expirationField, expirationFieldSQLType, entitySetId).toSet()
+        val expiredEntityKeyIds = getExpiredIds(comparisonField, expirationField, expirationFieldSQLType, entitySetId, partitions).toSet()
         if (expiredEntityKeyIds.isNotEmpty()) {
             expiredIdsAsString = expiredEntityKeyIds.joinToString(prefix = "('", postfix = "')", separator = "', '") { it.toString() }
-            val dataTableDeleteStmt = connection.prepareStatement(deleteExpiredDataFromDataTableQuery(entitySetId, expiredIdsAsString))
+            val dataTableDeleteStmt = connection.prepareStatement(deleteExpiredDataFromDataTableQuery(entitySetId, expiredIdsAsString, partitions))
             deleteCount = dataTableDeleteStmt.executeUpdate()
         }
         return Triple(expiredEntityKeyIds, expiredIdsAsString, deleteCount)
     }
 
-    private fun getExpiredIds(comparisonField: String, expirationField: Any, expirationFieldSQLType: Int, entitySetId: UUID): PostgresIterable<UUID> {
+    private fun getExpiredIds(comparisonField: String, expirationField: Any, expirationFieldSQLType: Int, entitySetId: UUID, paritions: String): PostgresIterable<UUID> {
         return PostgresIterable(
                 Supplier {
                     val connection = hds.connection
-                    val stmt = connection.prepareStatement(getExpiredIdsQuery(entitySetId, comparisonField))
+                    val stmt = connection.prepareStatement(getExpiredIdsQuery(entitySetId, comparisonField, paritions))
                     stmt.setObject(1, expirationField, expirationFieldSQLType)
                     StatementHolder(connection, stmt, stmt.executeQuery())
                 },
@@ -220,12 +224,12 @@ class BackgroundExpiredDataDeletionService(
         }
     }
 
-    private fun deleteExpiredDataFromDataTableQuery(entitySetId: UUID, expiredIds: String): String {
-        return "DELETE FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${ID.name} IN $expiredIds"
+    private fun deleteExpiredDataFromDataTableQuery(entitySetId: UUID, expiredIds: String, partitions: String): String {
+        return "DELETE FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${PARTITION.name} IN $partitions AND ${ID.name} IN $expiredIds"
     }
 
-    private fun getExpiredIdsQuery(entitySetId: UUID, comparisonField: String): String {
-        return "SELECT ${ID.name} FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND $comparisonField < ? AND versions[1] >= 0"
+    private fun getExpiredIdsQuery(entitySetId: UUID, comparisonField: String, partitions: String): String {
+        return "SELECT ${ID.name} FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${PARTITION.name} IN $partitions AND $comparisonField < ? AND versions[1] >= 0"
     }
 
     private fun deleteExpiredDataFromIdsTableQuery(expiredIds: String): String {
