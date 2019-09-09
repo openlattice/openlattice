@@ -42,7 +42,8 @@ import java.util.function.Function
 import java.util.function.Supplier
 
 /**
- *
+ * This is a background task that periodically searches for data that has surpassed its prescribed expiration date
+ * and removes expired data from postgres and elasticsearch
  */
 
 const val MAX_DURATION_MILLIS = 60_000L
@@ -64,7 +65,6 @@ class BackgroundExpiredDataDeletionService(
     private var entitySetToPartition: Map<UUID, Set<Int>> = mapOf()
     private var propertyTypeIdToDataType: Map<UUID, EdmPrimitiveTypeKind> = mapOf()
 
-    //necessary??????
     init {
         expirationLocks.addIndex(QueryConstants.THIS_ATTRIBUTE_NAME.value(), true)
     }
@@ -73,7 +73,7 @@ class BackgroundExpiredDataDeletionService(
 
     @Suppress("UNCHECKED_CAST", "UNUSED")
     @Scheduled(fixedRate = MAX_DURATION_MILLIS)
-    fun scavengeIndexingLocks() {
+    fun scavengeExpirationLocks() {
         expirationLocks.removeAll(
                 Predicates.lessThan(
                         QueryConstants.THIS_ATTRIBUTE_NAME.value(),
@@ -94,7 +94,8 @@ class BackgroundExpiredDataDeletionService(
                     //We shuffle entity sets to make sure we have a chance to work share and index everything
                     val lockedEntitySets = entitySets.values
                             .filter { it.hasExpirationPolicy() }
-                            .filter { tryLockEntitySet(it) } //filters out entitysets that are already locked, and the entitysets we're working on are now locked in the IMap
+                            .filter { tryLockEntitySet(it) }
+                            .shuffled()
 
                     entitySetToPartition = lockedEntitySets.map { it.id to it.partitions }.toMap()
                     val propertyTypeIds = lockedEntitySets.filter { it.expiration.startDateProperty.isPresent }.map { it.expiration.startDateProperty.get() }.toSet()
@@ -124,7 +125,6 @@ class BackgroundExpiredDataDeletionService(
         }
     }
 
-    //deletes expired data from data and ids table in postgres and elasticsearch
     private fun deleteExpiredData(entitySet: EntitySet): Int {
         logger.info(
                 "Starting deletion of expired data for entity set {} with id {}",
@@ -143,9 +143,10 @@ class BackgroundExpiredDataDeletionService(
                 idsTableDeleteCount = deleteExpiredDataFromIdsTable(dataTableDeletionResults.second)
             }
 
-            //compare deletion from data table and ids table and whether data was deleted from elasticsearch
+            //compare deletion count from data table and ids table and check whether data was deleted from elasticsearch
             check(expiredEntityKeyIds.size == idsTableDeleteCount) { "Number of entities deleted from data and ids table are not the same. UH OH." } //do something better
             check(elasticsearchDataDeleted) { "Expired data not deleted from elasticsearch. UH OH." } // also do something better
+
             deletedEntitiesCount += idsTableDeleteCount
             logger.info("Completed deleting {} expired elements from entity set {}.",
                     idsTableDeleteCount,
