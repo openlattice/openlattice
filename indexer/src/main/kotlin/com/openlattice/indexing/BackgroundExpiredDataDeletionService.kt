@@ -206,7 +206,6 @@ class BackgroundExpiredDataDeletionService(
                     val connection = hds.connection
                     val stmt = connection.prepareStatement(getExpiredIdsQuery(entitySetId, comparisonField, paritions))
                     stmt.setObject(1, expirationField, expirationFieldSQLType)
-                    stmt.fetchSize = FETCH_SIZE
                     StatementHolder(connection, stmt, stmt.executeQuery())
                 },
                 Function<ResultSet, UUID> { ResultSetAdapters.id(it) }
@@ -225,11 +224,19 @@ class BackgroundExpiredDataDeletionService(
     }
 
     private fun deleteExpiredDataFromDataTableQuery(entitySetId: UUID, expiredIds: String, partitions: String): String {
-        return "DELETE FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${PARTITION.name} IN $partitions AND ${ID.name} IN $expiredIds"
+        return "DELETE FROM ${DATA.name} " +
+                "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' " +
+                "AND ${PARTITION.name} IN $partitions " +
+                "AND ${ID.name} IN $expiredIds"
     }
 
     private fun getExpiredIdsQuery(entitySetId: UUID, comparisonField: String, partitions: String): String {
-        return "SELECT ${ID.name} FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${PARTITION.name} IN $partitions AND $comparisonField < ? AND versions[1] >= 0"
+        return "SELECT ${ID.name} FROM ${DATA.name} " +
+                "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' " +
+                "AND ${PARTITION.name} IN $partitions " +
+                "AND $comparisonField < ? " +
+                "AND versions[1] >= 0 " +
+                "LIMIT $FETCH_SIZE"
     }
 
     private fun deleteExpiredDataFromIdsTableQuery(expiredIds: String): String {
@@ -239,9 +246,6 @@ class BackgroundExpiredDataDeletionService(
 
     private fun tryLockEntitySet(entitySet: EntitySet): Boolean {
         return expirationLocks.putIfAbsent(entitySet.id, System.currentTimeMillis() + MAX_DURATION_MILLIS) == null
-        //putifabsent returns null if there was no value in the map. ie entityset was not locked
-        //method will return true if the entity set was not locked, and means the entityset is now locked
-        //method will return false if the entityset was already locked
     }
 
     private fun deleteIndexingLock(entitySet: EntitySet) {
