@@ -97,9 +97,9 @@ class BackgroundExpiredDataDeletionService(
                             .filter { it.hasExpirationPolicy() }
                             .filter { tryLockEntitySet(it) } //filters out entitysets that are already locked, and the entitysets we're working on are now locked in the IMap
 
-                    entitySetToPartition = lockedEntitySets.map{ it.id to it.partitions }.toMap()
-                    val propertyTypeIds = lockedEntitySets.map { it.expiration.startDateProperty.get() }.toSet()
-                    propertyTypeIdToDataType = propertyTypes.executeOnKeys(propertyTypeIds, EdmPrimitiveTypeKindGetter()) as Map<UUID, EdmPrimitiveTypeKind>
+                    entitySetToPartition = lockedEntitySets.map { it.id to it.partitions }.toMap()
+                    val propertyTypeIds = lockedEntitySets.filter { it.expiration.startDateProperty.isPresent }.map { it.expiration.startDateProperty.get() }.toSet()
+                    if (propertyTypeIds.isNotEmpty()) propertyTypeIdToDataType = propertyTypes.executeOnKeys(propertyTypeIds, EdmPrimitiveTypeKindGetter()) as Map<UUID, EdmPrimitiveTypeKind>
 
                     val totalDeleted = lockedEntitySets
                             .parallelStream()
@@ -165,7 +165,8 @@ class BackgroundExpiredDataDeletionService(
         val expirationField: Any
         val expirationFieldSQLType: Int
         val expirationInstant = Instant.now().minusMillis(expiration.timeToExpiration)
-        val partitions = entitySetToPartition[entitySetId]!!.joinToString(prefix = "('", postfix = "')", separator = "', '") { it.toString() }
+        val partitions = (entitySetToPartition[entitySetId]
+                ?: error("No partitions assigned")).joinToString(prefix = "('", postfix = "')", separator = "', '") { it.toString() }
         var deleteCount = 0
         var expiredIdsAsString = ""
         when (expiration.expirationFlag) {
