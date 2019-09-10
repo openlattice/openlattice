@@ -23,16 +23,13 @@ package com.openlattice.indexing.pods;
 import com.geekbeast.hazelcast.HazelcastClientProvider;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
+import com.openlattice.auditing.*;
 import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.ids.PostgresEntityKeyIdService;
+import com.openlattice.data.storage.*;
 import com.openlattice.data.storage.partitions.PartitionManager;
-import com.openlattice.data.storage.ByteBlobDataManager;
-import com.openlattice.data.storage.EntityDatastore;
-import com.openlattice.data.storage.IndexingMetadataManager;
-import com.openlattice.data.storage.PostgresEntityDataQueryService;
-import com.openlattice.data.storage.PostgresEntityDatastore;
 import com.openlattice.datastore.pods.ByteBlobServicePod;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.edm.PostgresEdmManager;
@@ -46,9 +43,7 @@ import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.linking.PostgresLinkingFeedbackService;
 import com.openlattice.linking.graph.PostgresLinkingQueryService;
 import com.zaxxer.hikari.HikariDataSource;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.*;
 
 import javax.inject.Inject;
 
@@ -85,6 +80,9 @@ public class IndexerPostConfigurationServicesPod {
 
     @Inject
     private PostgresEdmManager pgEdmManager;
+
+    @Inject
+    private AuditingManager auditingManager;
 
     @Bean
     public HazelcastIdGenerationService idGeneration() {
@@ -159,7 +157,8 @@ public class IndexerPostConfigurationServicesPod {
                 hazelcastInstance,
                 indexerConfiguration,
                 hikariDataSource,
-                elasticsearchApi );
+                elasticsearchApi,
+                auditingManager);
     }
 
     @Bean
