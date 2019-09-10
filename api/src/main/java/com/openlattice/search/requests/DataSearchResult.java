@@ -24,16 +24,18 @@ import com.google.common.collect.SetMultimap;
 import com.openlattice.client.serialization.SerializationConstants;
 import java.io.Serializable;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 public class DataSearchResult implements Serializable {
     private final long                                         numHits;
-    private final List<SetMultimap<FullQualifiedName, Object>> hits;
+    private final List<Map<FullQualifiedName, Set<Object>>> hits;
 
     @JsonCreator
     public DataSearchResult(
             @JsonProperty( SerializationConstants.NUM_HITS ) long numHits,
-            @JsonProperty( SerializationConstants.HITS ) List<SetMultimap<FullQualifiedName, Object>> hits ) {
+            @JsonProperty( SerializationConstants.HITS ) List<Map<FullQualifiedName, Set<Object>>> hits ) {
         this.numHits = numHits;
         this.hits = hits;
     }
@@ -44,7 +46,7 @@ public class DataSearchResult implements Serializable {
     }
 
     @JsonProperty( SerializationConstants.HITS )
-    public List<SetMultimap<FullQualifiedName, Object>> getHits() {
+    public List<Map<FullQualifiedName, Set<Object>>> getHits() {
         return hits;
     }
 

@@ -315,44 +315,12 @@ public interface EdmApi {
     @PATCH( ENTITY_TYPE_BASE_PATH + ENTITY_TYPE_ID_PATH + PROPERTY_TYPE_PATH )
     Void reorderPropertyTypesInEntityType( @Path( ID ) UUID entityTypeId, @Body LinkedHashSet<UUID> propertyTypeIds );
 
-    /**
-     * Gets all entity sets available to the calling user.
-     *
-     * @return Iterable containing entity sets available to the calling user.
-     */
-    @GET( ENTITY_SETS_BASE_PATH )
-    Iterable<EntitySet> getEntitySets();
 
     @GET( SUMMARY_BASE_PATH )
     Map<UUID, Iterable<PropertyUsageSummary>> getAllPropertyUsageSummaries();
 
     @GET( SUMMARY_BASE_PATH + ID_PATH )
     Iterable<PropertyUsageSummary> getPropertyUsageSummary( @Path( ID ) UUID propertyTypeId );
-
-    /**
-     * Creates multiple entity sets if they do not exist.
-     *
-     * @param entitySets The entity sets to create.
-     * @return The entity sets created with UUIDs.
-     */
-    @POST( ENTITY_SETS_BASE_PATH )
-    Map<String, UUID> createEntitySets( @Body Set<EntitySet> entitySets );
-
-    /**
-     * Get entity set ID, entity type ID, name, title, description, and contacts list for a given entity set.
-     *
-     * @param entitySetId The ID for the entity set.
-     */
-    @GET( ENTITY_SETS_BASE_PATH + ID_PATH )
-    EntitySet getEntitySet( @Path( ID ) UUID entitySetId );
-
-    /**
-     * Hard deletes the entity set
-     *
-     * @param entitySetId the ID for the entity set
-     */
-    @DELETE( ENTITY_SETS_BASE_PATH + ID_PATH )
-    Void deleteEntitySet( @Path( ID ) UUID entitySetId );
 
     /**
      * Creates an empty schema, if it doesn't exist. If schema exists then no action is taken.
@@ -421,23 +389,7 @@ public interface EdmApi {
             @Path( NAME ) String name,
             @Body EdmRequest request );
 
-    /**
-     * Get ID for entity set with given name.
-     *
-     * @param entitySetName The name of the entity set.
-     * @return ID for entity set.
-     */
-    @GET( BASE + IDS_PATH + ENTITY_SETS_PATH + NAME_PATH )
-    UUID getEntitySetId( @Path( NAME ) String entitySetName );
 
-    /**
-     * Get IDs for entity sets given their names.
-     *
-     * @param entitySetNames The names of the entity sets.
-     * @return Ids of entity sets.
-     */
-    @POST( BASE + IDS_PATH + ENTITY_SETS_PATH )
-    Map<String, UUID> getEntitySetIds( @Body Set<String> entitySetNames );
 
     /**
      * Get ID for property type with given namespace and name.
@@ -486,15 +438,7 @@ public interface EdmApi {
     @PATCH( ENTITY_TYPE_BASE_PATH + ID_PATH )
     Void updateEntityTypeMetadata( @Path( ID ) UUID entityTypeId, @Body MetadataUpdate update );
 
-    /**
-     * Edit entity set metadata for a given entity set.
-     *
-     * @param entitySetId ID for entity set.
-     * @param update      Only title, description, contacts and name fields are accepted. Other fields are ignored. This is
-     *                    somewhat out of date.
-     */
-    @PATCH( ENTITY_SETS_BASE_PATH + ID_PATH )
-    Void updateEntitySetMetadata( @Path( ID ) UUID entitySetId, @Body MetadataUpdate update );
+
 
     /**
      * Get all association entity types.
@@ -591,25 +535,7 @@ public interface EdmApi {
     @GET( ASSOCIATION_TYPE_BASE_PATH + ID_PATH + AVAILABLE_PATH )
     Iterable<EntityType> getAvailableAssociationTypesForEntityType( @Path( ID ) UUID entityTypeId );
 
-    @POST( ENTITY_SETS_BASE_PATH + PROPERTY_TYPE_PATH )
-    Map<UUID, Map<UUID, EntitySetPropertyMetadata>> getPropertyMetadataForEntitySets( @Body Set<UUID> entitySetIds );
 
-    @GET( ENTITY_SETS_PATH + ID_PATH + PROPERTY_TYPE_PATH )
-    Map<UUID, EntitySetPropertyMetadata> getAllEntitySetPropertyMetadata( @Path( ID ) UUID entitySetId );
-
-    @GET( ENTITY_SETS_BASE_PATH + ID_PATH + PROPERTIES_PATH )
-    Map<UUID, PropertyType> getPropertyTypesForEntitySet( @Path( ID ) UUID entitySetId );
-
-    @GET( ENTITY_SETS_PATH + ID_PATH + PROPERTY_TYPE_PATH + PROPERTY_TYPE_ID_PATH )
-    EntitySetPropertyMetadata getEntitySetPropertyMetadata(
-            @Path( ID ) UUID entitySetId,
-            @Path( PROPERTY_TYPE_ID ) UUID propertyTypeId );
-
-    @POST( ENTITY_SETS_PATH + ID_PATH + PROPERTY_TYPE_PATH + PROPERTY_TYPE_ID_PATH )
-    Void updateEntitySetPropertyMetadata(
-            @Path( ID ) UUID entitySetId,
-            @Path( PROPERTY_TYPE_ID ) UUID propertyTypeId,
-            @Body MetadataUpdate update );
 
     @GET( ENTITY_TYPE_BASE_PATH + ID_PATH + PROPERTY_TYPE_PATH )
     Map<UUID, EntityTypePropertyMetadata> getAllEntityTypePropertyMetadata( @Path( ID ) UUID entityTypeId );

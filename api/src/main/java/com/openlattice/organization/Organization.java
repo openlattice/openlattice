@@ -18,30 +18,36 @@
 
 package com.openlattice.organization;
 
-import com.openlattice.authorization.Principal;
-import com.openlattice.authorization.PrincipalType;
-import com.openlattice.client.serialization.SerializationConstants;
-import com.openlattice.organization.roles.Role;
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
-import com.openlattice.authorization.*;
-
+import com.openlattice.authorization.AclKey;
+import com.openlattice.authorization.Principal;
+import com.openlattice.authorization.PrincipalType;
+import com.openlattice.client.serialization.SerializationConstants;
+import com.openlattice.notifications.sms.SmsEntitySetInformation;
+import com.openlattice.organization.roles.Role;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
-
 public class Organization {
-    private final OrganizationPrincipal securablePrincipal;
-    private final Set<String>        autoApprovedEmails;
-    private final Set<Principal>     members;
-    private final Set<Role>          roles;
-    private final Set<UUID>          apps;
-    private final String             phoneNumber;
+    private final OrganizationPrincipal        securablePrincipal;
+    private final Set<String>                  autoApprovedEmails;
+    private final Set<Principal>               members;
+    private final Set<Role>                    roles;
+    private final Set<UUID>                    apps;
+    private final Set<SmsEntitySetInformation> smsEntitySetInfo;
+    private final List<Integer>                partitions;
 
     private transient int h = 0;
 
@@ -55,8 +61,16 @@ public class Organization {
             @JsonProperty( SerializationConstants.MEMBERS_FIELD ) Set<Principal> members,
             @JsonProperty( SerializationConstants.ROLES ) Set<Role> roles,
             @JsonProperty( SerializationConstants.APPS ) Set<UUID> apps,
-            @JsonProperty( SerializationConstants.PHONE_NUMBER ) Optional<String> phoneNumber ) {
-        this( new OrganizationPrincipal( id, principal, title, description ), autoApprovedEmails, members, roles, apps, phoneNumber.orElse("" ));
+            @JsonProperty( SerializationConstants.SMS_ENTITY_SET_INFO )
+                    Optional<Set<SmsEntitySetInformation>> smsEntitySetInfo,
+            @JsonProperty( SerializationConstants.PARTITIONS ) Optional<List<Integer>> partitions ) {
+        this( new OrganizationPrincipal( id, principal, title, description ),
+                autoApprovedEmails,
+                members,
+                roles,
+                apps,
+                smsEntitySetInfo.orElse( new HashSet<>() ),
+                partitions.orElse( new ArrayList<>( 0 ) ) );
     }
 
     public Organization(
@@ -65,14 +79,16 @@ public class Organization {
             Set<Principal> members,
             Set<Role> roles,
             Set<UUID> apps,
-            String phoneNumber ) {
+            Set<SmsEntitySetInformation> smsEntitySetInfo,
+            List<Integer> partitions ) {
         checkArgument( securablePrincipal.getPrincipalType().equals( PrincipalType.ORGANIZATION ) );
         this.securablePrincipal = securablePrincipal;
         this.autoApprovedEmails = checkNotNull( autoApprovedEmails );
         this.members = checkNotNull( members );
         this.roles = checkNotNull( roles );
         this.apps = checkNotNull( apps );
-        this.phoneNumber = phoneNumber;
+        this.smsEntitySetInfo = smsEntitySetInfo;
+        this.partitions = partitions;
     }
 
     public Organization(
@@ -80,7 +96,7 @@ public class Organization {
             Set<String> autoApprovedEmails,
             Set<Principal> members,
             Set<Role> roles ) {
-        this( principal, autoApprovedEmails, members, roles, ImmutableSet.of(), "" );
+        this( principal, autoApprovedEmails, members, roles, ImmutableSet.of(), new HashSet<>(), new ArrayList<>( 0 ) );
     }
 
     public Organization(
@@ -91,7 +107,37 @@ public class Organization {
             Set<String> autoApprovedEmails,
             Set<Principal> members,
             Set<Role> roles ) {
-        this( id, principal, title, description, autoApprovedEmails, members, roles, ImmutableSet.of(), Optional.empty() );
+        this( id,
+                principal,
+                title,
+                description,
+                autoApprovedEmails,
+                members,
+                roles,
+                ImmutableSet.of(),
+                Optional.empty(),
+                Optional.empty() );
+    }
+
+    public Organization(
+            Optional<UUID> id,
+            Principal principal,
+            String title,
+            Optional<String> description,
+            Set<String> autoApprovedEmails,
+            Set<Principal> members,
+            Set<Role> roles,
+            List<Integer> partitions ) {
+        this( id,
+                principal,
+                title,
+                description,
+                autoApprovedEmails,
+                members,
+                roles,
+                ImmutableSet.of(),
+                Optional.empty(),
+                Optional.of( partitions ) );
     }
 
     @JsonIgnore
@@ -129,9 +175,9 @@ public class Organization {
         return members;
     }
 
-    @JsonProperty( SerializationConstants.PHONE_NUMBER)
-    public String getPhoneNumber() {
-        return phoneNumber;
+    @JsonProperty( SerializationConstants.SMS_ENTITY_SET_INFO )
+    public Set<SmsEntitySetInformation> getSmsEntitySetInfo() {
+        return smsEntitySetInfo;
     }
 
     @JsonProperty( SerializationConstants.ROLES )
@@ -144,39 +190,34 @@ public class Organization {
         return apps;
     }
 
+    @JsonProperty( SerializationConstants.PARTITIONS )
+    public List<Integer> getPartitions() {
+        return Collections.unmodifiableList(partitions);
+    }
+
+    @JsonIgnore
+    public void setPartitions( List<Integer> partitions ) {
+        this.partitions.clear();
+        this.partitions.addAll( partitions );
+    }
+
     @Override public boolean equals( Object o ) {
-        if ( this == o )
-            return true;
-        if ( o == null || getClass() != o.getClass() )
-            return false;
-
+        if ( this == o ) { return true; }
+        if ( !( o instanceof Organization ) ) { return false; }
         Organization that = (Organization) o;
-
-        if ( h != that.h )
-            return false;
-        if ( securablePrincipal != null ?
-                !securablePrincipal.equals( that.securablePrincipal ) :
-                that.securablePrincipal != null )
-            return false;
-        if ( autoApprovedEmails != null ?
-                !autoApprovedEmails.equals( that.autoApprovedEmails ) :
-                that.autoApprovedEmails != null )
-            return false;
-        if ( members != null ? !members.equals( that.members ) : that.members != null )
-            return false;
-        if ( roles != null ? !roles.equals( that.roles ) : that.roles != null )
-            return false;
-        return apps != null ? apps.equals( that.apps ) : that.apps == null;
+        return h == that.h &&
+                securablePrincipal.equals( that.securablePrincipal ) &&
+                autoApprovedEmails.equals( that.autoApprovedEmails ) &&
+                members.equals( that.members ) &&
+                roles.equals( that.roles ) &&
+                apps.equals( that.apps ) &&
+                smsEntitySetInfo.equals( that.smsEntitySetInfo ) &&
+                partitions.equals( that.partitions );
     }
 
     @Override public int hashCode() {
-        int result = securablePrincipal != null ? securablePrincipal.hashCode() : 0;
-        result = 31 * result + ( autoApprovedEmails != null ? autoApprovedEmails.hashCode() : 0 );
-        result = 31 * result + ( members != null ? members.hashCode() : 0 );
-        result = 31 * result + ( roles != null ? roles.hashCode() : 0 );
-        result = 31 * result + ( apps != null ? apps.hashCode() : 0 );
-        result = 31 * result + h;
-        return result;
+        return Objects
+                .hash( securablePrincipal, autoApprovedEmails, members, roles, apps, smsEntitySetInfo, partitions, h );
     }
 
     @Override public String toString() {

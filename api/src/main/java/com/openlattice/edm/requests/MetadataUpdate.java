@@ -24,13 +24,15 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.LinkedHashMultimap;
 import com.openlattice.client.serialization.SerializationConstants;
 import com.openlattice.postgres.IndexType;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
+import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 /**
  * Used for updating metadata of property type, entity type, or entity set. Non-existent fields for the specific object
@@ -54,6 +56,7 @@ public class MetadataUpdate {
     private Optional<String>                           url;
     private Optional<LinkedHashMultimap<UUID, String>> propertyTags;
     private Optional<UUID>                             organizationId;
+    private Optional<LinkedHashSet<Integer>>           partitions;
 
     @JsonCreator
     public MetadataUpdate(
@@ -68,7 +71,8 @@ public class MetadataUpdate {
             @JsonProperty( SerializationConstants.PROPERTY_TAGS )
                     Optional<LinkedHashMultimap<UUID, String>> propertyTags,
             @JsonProperty( SerializationConstants.INDEX_TYPE ) Optional<IndexType> indexType,
-            @JsonProperty( SerializationConstants.ORGANIZATION_ID ) Optional<UUID> organizationId ) {
+            @JsonProperty( SerializationConstants.ORGANIZATION_ID ) Optional<UUID> organizationId,
+            @JsonProperty( SerializationConstants.PARTITIONS ) Optional<LinkedHashSet<Integer>> partitions ) {
         // WARNING These checks have to be consistent with the same check elsewhere.
         Preconditions.checkArgument( !title.isPresent() || StringUtils.isNotBlank( title.get() ),
                 "Title cannot be blank." );
@@ -91,20 +95,33 @@ public class MetadataUpdate {
         this.propertyTags = propertyTags;
         this.indexType = indexType;
         this.organizationId = organizationId;
+        this.partitions = partitions;
     }
 
     public MetadataUpdate(
-             Optional<String> title,
-             Optional<String> description,
-             Optional<String> name,
-             Optional<Set<String>> contacts,
-             Optional<FullQualifiedName> type,
-             Optional<Boolean> pii,
-             Optional<Boolean> defaultShow,
-             Optional<String> url,
-             Optional<LinkedHashMultimap<UUID, String>> propertyTags,
-             Optional<UUID> organizationId ) {
-        this(title, description, name, contacts, type, pii, defaultShow, url, propertyTags, Optional.empty(), organizationId);
+            Optional<String> title,
+            Optional<String> description,
+            Optional<String> name,
+            Optional<Set<String>> contacts,
+            Optional<FullQualifiedName> type,
+            Optional<Boolean> pii,
+            Optional<Boolean> defaultShow,
+            Optional<String> url,
+            Optional<LinkedHashMultimap<UUID, String>> propertyTags,
+            Optional<UUID> organizationId,
+            Optional<LinkedHashSet<Integer>> partitions ) {
+        this( title,
+                description,
+                name,
+                contacts,
+                type,
+                pii,
+                defaultShow,
+                url,
+                propertyTags,
+                Optional.empty(),
+                organizationId,
+                partitions );
     }
 
     @JsonProperty( SerializationConstants.TITLE_FIELD )
@@ -157,15 +174,21 @@ public class MetadataUpdate {
         return organizationId;
     }
 
-    @JsonProperty( SerializationConstants.INDEX_TYPE)
+    @JsonProperty( SerializationConstants.INDEX_TYPE )
     public Optional<IndexType> getIndexType() {
         return indexType;
+    }
+
+    @JsonProperty( SerializationConstants.PARTITIONS )
+    public Optional<LinkedHashSet<Integer>> getPartitions() {
+        return partitions;
     }
 
     @Override public String toString() {
         return "MetadataUpdate{" +
                 "title=" + title +
                 ", description=" + description +
+                ", indexType=" + indexType +
                 ", name=" + name +
                 ", contacts=" + contacts +
                 ", type=" + type +
@@ -173,8 +196,8 @@ public class MetadataUpdate {
                 ", defaultShow=" + defaultShow +
                 ", url=" + url +
                 ", propertyTags=" + propertyTags +
-                ", indexType=" + indexType +
-                ", organization=" + organizationId +
+                ", organizationId=" + organizationId +
+                ", partitions=" + partitions +
                 '}';
     }
 
@@ -182,22 +205,33 @@ public class MetadataUpdate {
         if ( this == o ) { return true; }
         if ( !( o instanceof MetadataUpdate ) ) { return false; }
         MetadataUpdate that = (MetadataUpdate) o;
-        return Objects.equals( title, that.title ) &&
-                Objects.equals( description, that.description ) &&
-                Objects.equals( name, that.name ) &&
-                Objects.equals( contacts, that.contacts ) &&
-                Objects.equals( type, that.type ) &&
-                Objects.equals( pii, that.pii ) &&
-                Objects.equals( defaultShow, that.defaultShow ) &&
-                Objects.equals( url, that.url ) &&
-                Objects.equals( propertyTags, that.propertyTags ) &&
-                Objects.equals( indexType, that.indexType ) &&
-                Objects.equals( organizationId, that.organizationId );
+        return title.equals( that.title ) &&
+                description.equals( that.description ) &&
+                indexType.equals( that.indexType ) &&
+                name.equals( that.name ) &&
+                contacts.equals( that.contacts ) &&
+                type.equals( that.type ) &&
+                pii.equals( that.pii ) &&
+                defaultShow.equals( that.defaultShow ) &&
+                url.equals( that.url ) &&
+                propertyTags.equals( that.propertyTags ) &&
+                organizationId.equals( that.organizationId ) &&
+                partitions.equals( that.partitions );
     }
 
     @Override public int hashCode() {
-        return Objects
-                .hash( title, description, name, contacts, type, pii, defaultShow, url, propertyTags, indexType, organizationId );
+        return Objects.hash( title,
+                description,
+                indexType,
+                name,
+                contacts,
+                type,
+                pii,
+                defaultShow,
+                url,
+                propertyTags,
+                organizationId,
+                partitions );
     }
 
     //TODO: Delete the code below as it doesn't seem to be used.
@@ -211,6 +245,7 @@ public class MetadataUpdate {
                 Optional.empty(),
                 update.getType(),
                 update.getPii(),
+                Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
@@ -228,6 +263,7 @@ public class MetadataUpdate {
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
+                Optional.empty(),
                 Optional.empty() );
     }
 
@@ -237,6 +273,7 @@ public class MetadataUpdate {
                 update.getDescription(),
                 update.getName(),
                 update.getContacts(),
+                Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
@@ -256,6 +293,7 @@ public class MetadataUpdate {
                 update.getDefaultShow(),
                 Optional.empty(),
                 Optional.empty(),
+                Optional.empty(),
                 Optional.empty() );
     }
 
@@ -269,6 +307,7 @@ public class MetadataUpdate {
                 Optional.empty(),
                 Optional.empty(),
                 update.getUrl(),
+                Optional.empty(),
                 Optional.empty(),
                 Optional.empty() );
     }
@@ -284,6 +323,37 @@ public class MetadataUpdate {
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
+                Optional.empty(),
+                Optional.empty() );
+    }
+
+    public static MetadataUpdate trimToEntityTypeCollectionUpdate( MetadataUpdate update ) {
+        return new MetadataUpdate(
+                update.getTitle(),
+                update.getDescription(),
+                Optional.empty(),
+                Optional.empty(),
+                update.getType(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty() );
+    }
+
+    public static MetadataUpdate trimToEntitySetCollectionUpdate( MetadataUpdate update ) {
+        return new MetadataUpdate(
+                update.getTitle(),
+                update.getDescription(),
+                update.getName(),
+                update.getContacts(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                update.getOrganizationId(),
                 Optional.empty() );
     }
 }
