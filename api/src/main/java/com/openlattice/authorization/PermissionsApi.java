@@ -18,9 +18,7 @@
 
 package com.openlattice.authorization;
 
-import retrofit2.http.Body;
-import retrofit2.http.PATCH;
-import retrofit2.http.POST;
+import retrofit2.http.*;
 
 import java.util.Collection;
 import java.util.List;
@@ -38,22 +36,30 @@ public interface PermissionsApi {
     String CONTROLLER = "/permissions";
     String BASE       = SERVICE + CONTROLLER;
 
-    String EXPLAIN    = "/explain";
+    String EXPLAIN = "/explain";
+    String UPDATE = "/update";
 
     /**
-     * Add, removes, or sets the ace for a particular acl key. Successful only if user is the owner of acl key.
-     * 
+     * Adds, removes, or sets the ace for a particular acl key. Successful only if user is the owner of acl key.
+     *
      * @param req The acl key, the principals, and the aces to set for that particular ace key.
-     * @return The aces for the acl key, after applying the request changes.
      */
     @PATCH( BASE )
     Void updateAcl( @Body AclData req );
 
     /**
+     * Adds, removes, or sets the ace for a particular set of acl keys. Successful only if user is the owner of all acl keys.
+     *
+     * @param req The acl key, the principals, and the aces to set for that particular ace key.
+     * @return Void
+     */
+    @PATCH( BASE + UPDATE )
+    Void updateAcls( @Body List<AclData> req );
+
+    /**
      * Retrieves the acl for a particular acl key. Only return if user is the owner of acl key.
-     * 
+     *
      * @param aclKey The acl key.
-     * @return The aces for the requested acl key.
      */
     @POST( BASE )
     Acl getAcl( @Body AclKey aclKey );
@@ -61,7 +67,7 @@ public interface PermissionsApi {
     /**
      * Retrieves the acl for a particular acl key, with explanation of where the permissions come from. Only return if
      * user is the owner of acl key.
-     * 
+     *
      * @param aclKey The acl key.
      * @return The aces for the requested acl key, together with the explanation.
      */
