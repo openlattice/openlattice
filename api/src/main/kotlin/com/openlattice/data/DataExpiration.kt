@@ -8,14 +8,14 @@ import java.util.*
 /**
  * Holds information about the expiration parameters of data within an entity set.
  *
- * timeToExpiration holds the duration in ms that data will live before expiring.
+ * @param timeToExpiration holds the duration in ms that data will live before expiring.
  *
- * expirationBase is a flag for what will be used as a base date to calculate
+ * @param expirationBase is a flag for what will be used as a base date to calculate
  * expiration date. It may be an entity's first write, last write, or a datetime
  * property type within the entity. Thus, an entity's expiration datetime is calculated
- * as expirationBase + timeToExpire
+ * as expirationBase + timeToExpire.
  *
- * If the expirationBase is a datetime property type, startDateProperty will hold the
+ * @param startDateProperty If the expirationBase is a datetime property type, startDateProperty will hold the
  * UUID of that property type. Otherwise, it will remain empty.
  */
 
