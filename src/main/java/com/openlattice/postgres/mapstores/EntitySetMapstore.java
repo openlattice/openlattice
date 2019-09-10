@@ -14,7 +14,6 @@ import com.openlattice.postgres.ResultSetAdapters;
 import com.zaxxer.hikari.HikariDataSource;
 
 import java.sql.*;
-import java.util.Optional;
 import java.util.UUID;
 
 public class EntitySetMapstore extends AbstractBasePostgresMapstore<UUID, EntitySet> {
@@ -53,7 +52,7 @@ public class EntitySetMapstore extends AbstractBasePostgresMapstore<UUID, Entity
             ps.setNull( 14, Types.NULL );
         } else {
             ps.setObject( 12, value.getExpiration().getTimeToExpiration() );
-            ps.setString( 13, value.getExpiration().getExpirationFlag().toString() );
+            ps.setString( 13, value.getExpiration().getExpirationBase().toString() );
             if ( value.getExpiration().getStartDateProperty().isPresent() ) {
                 ps.setObject( 14, value.getExpiration().getStartDateProperty().get() );
             } else {
@@ -78,7 +77,7 @@ public class EntitySetMapstore extends AbstractBasePostgresMapstore<UUID, Entity
             ps.setNull( 27, Types.NULL );
         } else {
             ps.setObject( 25, value.getExpiration().getTimeToExpiration() );
-            ps.setString( 26, value.getExpiration().getExpirationFlag().toString() );
+            ps.setString( 26, value.getExpiration().getExpirationBase().toString() );
             if ( value.getExpiration().getStartDateProperty().isPresent() ) {
                 ps.setObject( 27, value.getExpiration().getStartDateProperty().get() );
             } else {

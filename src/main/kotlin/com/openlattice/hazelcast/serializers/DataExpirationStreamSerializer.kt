@@ -3,23 +3,21 @@ package com.openlattice.hazelcast.serializers
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
-import com.openlattice.authorization.Permission
 import com.openlattice.data.DataExpiration
-import com.openlattice.edm.set.ExpirationType
+import com.openlattice.edm.set.ExpirationBase
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import org.springframework.stereotype.Component
-import java.util.*
 
 @Component
 class DataExpirationStreamSerializer : SelfRegisteringStreamSerializer<DataExpiration> {
 
     companion object {
-        private val expirationTypes = ExpirationType.values()
+        private val expirationTypes = ExpirationBase.values()
 
         @JvmStatic
         fun serialize(out: ObjectDataOutput, obj: DataExpiration) {
             out.writeLong(obj.timeToExpiration)
-            out.writeInt(obj.expirationFlag.ordinal)
+            out.writeInt(obj.expirationBase.ordinal)
             OptionalStreamSerializers.serialize(out, obj.startDateProperty, UUIDStreamSerializer::serialize)
         }
 

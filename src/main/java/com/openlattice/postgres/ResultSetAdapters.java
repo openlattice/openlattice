@@ -42,7 +42,7 @@ import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.set.EntitySetFlag;
 import com.openlattice.edm.set.EntitySetPropertyKey;
 import com.openlattice.edm.set.EntitySetPropertyMetadata;
-import com.openlattice.edm.set.ExpirationType;
+import com.openlattice.edm.set.ExpirationBase;
 import com.openlattice.edm.type.Analyzer;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
@@ -78,7 +78,6 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.sql.Date;
 import java.sql.*;
-import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
@@ -666,9 +665,9 @@ public final class ResultSetAdapters {
         return (Long) rs.getObject( TIME_TO_EXPIRATION_FIELD );
     }
 
-    public static ExpirationType expirationFlag( ResultSet rs ) throws SQLException {
+    public static ExpirationBase expirationFlag( ResultSet rs ) throws SQLException {
         String expirationFlag = rs.getString( EXPIRATION_FLAG_FIELD );
-        if ( expirationFlag != null ) { return ExpirationType.valueOf( expirationFlag ); }
+        if ( expirationFlag != null ) { return ExpirationBase.valueOf( expirationFlag ); }
         return null;
         //TODO add a check for if the value is null. if it is null then we know there is no expiration on the entity set.
         //probably need to figure this out for all of the expiration fields
