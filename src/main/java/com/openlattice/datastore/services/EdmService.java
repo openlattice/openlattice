@@ -991,7 +991,7 @@ public class EdmService implements EdmManager {
             }
         }
 
-        final var newEntitySet = (EntitySet) entitySets.executeOnKey(
+        final var newEntitySet = ( EntitySet ) entitySets.executeOnKey(
                 entitySetId, new UpdateEntitySetMetadataProcessor( update )
         );
         eventBus.post( new EntitySetMetadataUpdatedEvent( newEntitySet ) );
