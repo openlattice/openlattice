@@ -18,7 +18,9 @@ import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.indexing.configuration.IndexerConfiguration
 import com.openlattice.postgres.DataTables.LAST_WRITE
+import com.openlattice.postgres.IndexType
 import com.openlattice.postgres.PostgresColumn.*
+import com.openlattice.postgres.PostgresDataTables
 import com.openlattice.postgres.PostgresTable.DATA
 import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.ResultSetAdapters
@@ -63,7 +65,7 @@ class BackgroundExpiredDataDeletionService(
     private val entitySets: IMap<UUID, EntitySet> = hazelcastInstance.getMap(HazelcastMap.ENTITY_SETS.name)
     private val expirationLocks: IMap<UUID, Long> = hazelcastInstance.getMap(HazelcastMap.EXPIRATION_LOCKS.name)
     private var entitySetToPartition: Map<UUID, Set<Int>> = mapOf()
-    private var propertyTypeIdToDataType: Map<UUID, EdmPrimitiveTypeKind> = mapOf()
+    private var propertyTypeIdToColumnData: Map<UUID, Pair<IndexType,EdmPrimitiveTypeKind>> = mapOf()
 
     init {
         expirationLocks.addIndex(QueryConstants.THIS_ATTRIBUTE_NAME.value(), true)
@@ -99,7 +101,11 @@ class BackgroundExpiredDataDeletionService(
 
                     entitySetToPartition = lockedEntitySets.map { it.id to it.partitions }.toMap()
                     val propertyTypeIds = lockedEntitySets.filter { it.expiration.startDateProperty.isPresent }.map { it.expiration.startDateProperty.get() }.toSet()
-                    if (propertyTypeIds.isNotEmpty()) propertyTypeIdToDataType = propertyTypes.executeOnKeys(propertyTypeIds, EdmPrimitiveTypeKindGetter()) as Map<UUID, EdmPrimitiveTypeKind>
+                    //if (propertyTypeIds.isNotEmpty()) propertyTypeIdToDataType = propertyTypes.executeOnKeys(propertyTypeIds, EdmPrimitiveTypeKindGetter()) as Map<UUID, EdmPrimitiveTypeKind>
+                    if (propertyTypeIds.isNotEmpty()) {
+                        propertyTypeIdToColumnData = propertyTypes.map{it.key to Pair(it.value.postgresIndexType, it.value.datatype)}.toMap()
+                    }
+
 
                     val totalDeleted = lockedEntitySets
                             .parallelStream()
@@ -169,15 +175,14 @@ class BackgroundExpiredDataDeletionService(
         var expiredIdsAsString = ""
         when (expiration.expirationFlag) {
             ExpirationType.DATE_PROPERTY -> {
-                val dataType = propertyTypeIdToDataType[expiration.startDateProperty.get()]
-                if (dataType == EdmPrimitiveTypeKind.Date) {
+                val columnData = propertyTypeIdToColumnData.getValue(expiration.startDateProperty.get())
+                comparisonField = PostgresDataTables.getColumnDefinition(columnData.first, columnData.second).name
+                if (columnData.second == EdmPrimitiveTypeKind.Date) {
                     expirationField = OffsetDateTime.ofInstant(expirationInstant, ZoneId.systemDefault()).toLocalDate()
                     expirationFieldSQLType = Types.DATE
-                    comparisonField = "n_date" // figure out where this is set
                 } else {  //only other TypeKind for date property type is OffsetDateTime
                     expirationField = OffsetDateTime.ofInstant(expirationInstant, ZoneId.systemDefault())
                     expirationFieldSQLType = Types.TIMESTAMP_WITH_TIMEZONE
-                    comparisonField = "n_timestamptz" // figure out where this is set
                 }
             }
             ExpirationType.FIRST_WRITE -> {
