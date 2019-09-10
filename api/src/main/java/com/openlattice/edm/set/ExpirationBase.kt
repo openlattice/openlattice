@@ -1,6 +1,6 @@
 package com.openlattice.edm.set
 
-enum class ExpirationType {
+enum class ExpirationBase {
     DATE_PROPERTY,
     FIRST_WRITE,
     LAST_WRITE
