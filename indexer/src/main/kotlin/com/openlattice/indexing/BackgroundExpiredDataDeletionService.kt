@@ -14,12 +14,8 @@ import com.openlattice.auditing.AuditingComponent
 import com.openlattice.authorization.AclKey
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi
 import com.openlattice.data.DataExpiration
-import com.openlattice.data.storage.IndexingMetadataManager
-import com.openlattice.data.storage.PostgresEntityDataQueryService
 import com.openlattice.edm.EntitySet
-import com.openlattice.edm.processors.EdmPrimitiveTypeKindGetter
-import com.openlattice.edm.set.ExpirationType
-import com.openlattice.edm.type.EntityType
+import com.openlattice.edm.set.ExpirationBase
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.indexing.configuration.IndexerConfiguration
@@ -37,10 +33,8 @@ import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import java.sql.Types
-import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.time.Instant
-import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.util.*
@@ -172,7 +166,7 @@ class BackgroundExpiredDataDeletionService(
             dataTableDeletionResults = deleteExpiredDataFromDataTable(entitySet.id, entitySet.expiration)
             dataTableDeleteCount = dataTableDeletionResults.third
         }
-        
+
         auditingComponent.recordEvent(
                 AuditableEvent(
                         IdConstants.SYSTEM_ID.id,
@@ -194,13 +188,17 @@ class BackgroundExpiredDataDeletionService(
         val comparisonField: String
         val expirationField: Any
         val expirationFieldSQLType: Int
+        /*
+        * To check if data have expired, we check if the expirationInstant (i.e. now - timeToExpire) is a later date
+        * than the expirationBase. If it is, the data have expired. 
+        */
         val expirationInstant = Instant.now().minusMillis(expiration.timeToExpiration)
         val partitions = (entitySetToPartition[entitySetId]
                 ?: error("No partitions assigned")).joinToString(prefix = "('", postfix = "')", separator = "', '") { it.toString() }
         var deleteCount = 0
         var expiredIdsAsString = ""
-        when (expiration.expirationFlag) {
-            ExpirationType.DATE_PROPERTY -> {
+        when (expiration.expirationBase) {
+            ExpirationBase.DATE_PROPERTY -> {
                 val columnData = propertyTypeIdToColumnData.getValue(expiration.startDateProperty.get())
                 comparisonField = PostgresDataTables.getColumnDefinition(columnData.first, columnData.second).name
                 if (columnData.second == EdmPrimitiveTypeKind.Date) {
@@ -211,12 +209,12 @@ class BackgroundExpiredDataDeletionService(
                     expirationFieldSQLType = Types.TIMESTAMP_WITH_TIMEZONE
                 }
             }
-            ExpirationType.FIRST_WRITE -> {
+            ExpirationBase.FIRST_WRITE -> {
                 expirationField = expirationInstant.toEpochMilli()
                 expirationFieldSQLType = Types.BIGINT
                 comparisonField = "${VERSIONS.name}[1]"
             }
-            ExpirationType.LAST_WRITE -> {
+            ExpirationBase.LAST_WRITE -> {
                 expirationField = OffsetDateTime.ofInstant(expirationInstant, ZoneId.systemDefault())
                 expirationFieldSQLType = Types.TIMESTAMP_WITH_TIMEZONE
                 comparisonField = LAST_WRITE.name
