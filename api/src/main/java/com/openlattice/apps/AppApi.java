@@ -79,6 +79,9 @@ public interface AppApi {
             @Path( ORGANIZATION_ID ) UUID organizationId,
             @Path( PREFIX ) String prefix );
 
+    @DELETE( BASE + INSTALL_PATH + ID_PATH + ORGANIZATION_ID_PATH )
+    void uninstallApp( @Path( ID ) UUID appId, @Path( ORGANIZATION_ID ) UUID organizationId );
+
     @GET( BASE + CONFIG_PATH + ID_PATH )
     List<AppConfig> getAvailableAppConfigs( @Path( ID ) UUID appId );
 
