@@ -190,7 +190,7 @@ class BackgroundExpiredDataDeletionService(
         val expirationFieldSQLType: Int
         /*
         * To check if data have expired, we check if the expirationInstant (i.e. now - timeToExpire) is a later date
-        * than the expirationBase. If it is, the data have expired. 
+        * than the expirationBase. If it is, the data have expired.
         */
         val expirationInstant = Instant.now().minusMillis(expiration.timeToExpiration)
         val partitions = (entitySetToPartition[entitySetId]
