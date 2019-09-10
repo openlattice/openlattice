@@ -1,11 +1,17 @@
 package com.openlattice.indexing
 
 import com.google.common.base.Stopwatch
+import com.google.common.collect.ImmutableMap
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.hazelcast.query.QueryConstants
+import com.openlattice.IdConstants
+import com.openlattice.auditing.AuditEventType
+import com.openlattice.auditing.AuditableEvent
+import com.openlattice.auditing.AuditingComponent
+import com.openlattice.authorization.AclKey
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi
 import com.openlattice.data.DataExpiration
 import com.openlattice.data.storage.IndexingMetadataManager
@@ -55,7 +61,8 @@ class BackgroundExpiredDataDeletionService(
         hazelcastInstance: HazelcastInstance,
         private val indexerConfiguration: IndexerConfiguration,
         private val hds: HikariDataSource,
-        private val elasticsearchApi: ConductorElasticsearchApi
+        private val elasticsearchApi: ConductorElasticsearchApi,
+        private val auditingComponent: AuditingComponent
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(BackgroundExpiredDataDeletionService::class.java)!!
@@ -137,7 +144,10 @@ class BackgroundExpiredDataDeletionService(
                 entitySet.name,
                 entitySet.id
         )
+
         var deletedEntitiesCount = 0
+        val deletedEntityKeyIds: MutableSet<UUID> = mutableSetOf()
+
         var dataTableDeletionResults: Triple<Set<UUID>, String, Int> = deleteExpiredDataFromDataTable(entitySet.id, entitySet.expiration)
         var dataTableDeleteCount = dataTableDeletionResults.third
         while (dataTableDeleteCount > 0) {
@@ -157,9 +167,25 @@ class BackgroundExpiredDataDeletionService(
             logger.info("Completed deleting {} expired elements from entity set {}.",
                     idsTableDeleteCount,
                     entitySet.name)
+            deletedEntityKeyIds.addAll(expiredEntityKeyIds)
+
             dataTableDeletionResults = deleteExpiredDataFromDataTable(entitySet.id, entitySet.expiration)
             dataTableDeleteCount = dataTableDeletionResults.third
         }
+        
+        auditingComponent.recordEvent(
+                AuditableEvent(
+                        IdConstants.SYSTEM_ID.id,
+                        AclKey( entitySet.id ),
+                        AuditEventType.DELETE_EXPIRED_ENTITIES,
+                        "Expired entities deleted through BackgroundExpiredDataDeletionService",
+                        Optional.of(deletedEntityKeyIds),
+                        ImmutableMap.of(),
+                        OffsetDateTime.now(),
+                        Optional.empty()
+                )
+        )
+
         return deletedEntitiesCount
     }
 
