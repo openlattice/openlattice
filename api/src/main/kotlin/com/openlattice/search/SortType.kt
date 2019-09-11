@@ -1,9 +1,8 @@
 package com.openlattice.search
 
-import com.google.common.collect.ImmutableSet
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 
-private val ALLOWED_FIELD_DATATYPES = ImmutableSet.of(
+private val ALLOWED_FIELD_DATATYPES = setOf(
         /* dates and times */
         EdmPrimitiveTypeKind.Date,
         EdmPrimitiveTypeKind.DateTimeOffset,
@@ -18,7 +17,7 @@ private val ALLOWED_FIELD_DATATYPES = ImmutableSet.of(
         EdmPrimitiveTypeKind.Duration
 )
 
-private val ALLOWED_GEO_DATATYPES = ImmutableSet.of(
+private val ALLOWED_GEO_DATATYPES = setOf(
         EdmPrimitiveTypeKind.GeographyPoint
 )
 
