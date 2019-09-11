@@ -35,6 +35,10 @@ import com.openlattice.assembler.MaterializedEntitySet;
 import com.openlattice.auditing.AuditRecordEntitySetConfiguration;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
+import com.openlattice.collections.CollectionTemplateKey;
+import com.openlattice.collections.CollectionTemplateType;
+import com.openlattice.collections.EntitySetCollection;
+import com.openlattice.collections.EntityTypeCollection;
 import com.openlattice.data.*;
 import com.openlattice.data.storage.ByteBlobDataManager;
 import com.openlattice.data.storage.MetadataOption;
@@ -87,9 +91,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.openlattice.edm.EdmConstants.ID_FQN;
-import static com.openlattice.edm.EdmConstants.LAST_INDEX_FQN;
-import static com.openlattice.edm.EdmConstants.LAST_WRITE_FQN;
+import static com.openlattice.edm.EdmConstants.*;
 import static com.openlattice.postgres.DataTables.*;
 import static com.openlattice.postgres.PostgresArrays.getTextArray;
 import static com.openlattice.postgres.PostgresColumn.*;
@@ -99,11 +101,15 @@ import static com.openlattice.postgres.PostgresColumn.*;
  */
 public final class ResultSetAdapters {
 
-    private static final Logger                             logger               = LoggerFactory
+    private static final Logger                                               logger               = LoggerFactory
             .getLogger( ResultSetAdapters.class );
-    private static final Decoder                            DECODER              = Base64.getMimeDecoder();
-    private static final ObjectMapper                       mapper               = ObjectMappers.newJsonMapper();
-    private static final TypeReference<Map<String, Object>> alertMetadataTypeRef = new TypeReference<Map<String, Object>>() {
+    private static final Decoder                                              DECODER              = Base64
+            .getMimeDecoder();
+    private static final ObjectMapper                                         mapper               = ObjectMappers
+            .newJsonMapper();
+    private static final TypeReference<Map<String, Object>>                   alertMetadataTypeRef = new TypeReference<Map<String, Object>>() {
+    };
+    private static final TypeReference<LinkedHashSet<CollectionTemplateType>> templateTypeRef      = new TypeReference<LinkedHashSet<CollectionTemplateType>>() {
     };
 
     @NotNull public static SmsInformationKey smsInformationKey(
@@ -1127,5 +1133,58 @@ public final class ResultSetAdapters {
 
     public static Boolean initialized( ResultSet rs ) throws SQLException {
         return rs.getBoolean( INITIALIZED.getName() );
+    }
+
+    public static LinkedHashSet<CollectionTemplateType> template( ResultSet rs ) throws SQLException, IOException {
+        return mapper.readValue( rs.getString( TEMPLATE.getName() ), templateTypeRef );
+    }
+
+    public static UUID entityTypeCollectionId( ResultSet rs ) throws SQLException {
+        return rs.getObject( ENTITY_TYPE_COLLECTION_ID.getName(), UUID.class );
+    }
+
+    public static UUID entitySetCollectionId( ResultSet rs ) throws SQLException {
+        return rs.getObject( ENTITY_SET_COLLECTION_ID.getName(), UUID.class );
+    }
+
+    public static UUID templateTypeid( ResultSet rs ) throws SQLException {
+        return rs.getObject( TEMPLATE_TYPE_ID.getName(), UUID.class );
+    }
+
+    public static EntityTypeCollection entityTypeCollection( ResultSet rs ) throws SQLException, IOException {
+        UUID id = id( rs );
+        FullQualifiedName type = fqn( rs );
+        String title = title( rs );
+        Optional<String> description = Optional.ofNullable( description( rs ) );
+        Set<FullQualifiedName> schemas = schemas( rs );
+        LinkedHashSet<CollectionTemplateType> template = template( rs );
+
+        return new EntityTypeCollection( id, type, title, description, schemas, template );
+    }
+
+    public static EntitySetCollection entitySetCollection( ResultSet rs ) throws SQLException {
+        UUID id = id( rs );
+        String name = name( rs );
+        String title = title( rs );
+        Optional<String> description = Optional.ofNullable( description( rs ) );
+        UUID entityTypeCollectionId = entityTypeCollectionId( rs );
+        Set<String> contacts = contacts( rs );
+        UUID organizationId = organizationId( rs );
+
+        return new EntitySetCollection( id,
+                name,
+                title,
+                description,
+                entityTypeCollectionId,
+                Maps.newHashMap(),
+                contacts,
+                organizationId );
+    }
+
+    public static CollectionTemplateKey collectionTemplateKey( ResultSet rs ) throws SQLException {
+        UUID entitySetCollectionId = entitySetCollectionId( rs );
+        UUID templateTypeId = templateTypeid( rs );
+
+        return new CollectionTemplateKey( entitySetCollectionId, templateTypeId );
     }
 }
