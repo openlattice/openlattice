@@ -14,8 +14,6 @@ import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.util.*
 
-private val mapper: ObjectMapper = ObjectMappers.getJsonMapper()
-
 open class EntityTypeCollectionMapstore(
         hds: HikariDataSource
 ) : AbstractBasePostgresMapstore<UUID, EntityTypeCollection>
@@ -28,7 +26,7 @@ open class EntityTypeCollectionMapstore(
         val schemas = PostgresArrays.createTextArray(
                 ps.connection,
                 value.schemas.map { it.fullQualifiedNameAsString })
-        val templateString = mapper.writeValueAsString(value.template)
+        val templateString = ObjectMappers.getJsonMapper().writeValueAsString(value.template)
 
         // Create
         ps.setString(index++, fqn.namespace)
