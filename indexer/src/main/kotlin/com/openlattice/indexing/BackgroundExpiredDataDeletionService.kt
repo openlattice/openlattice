@@ -138,35 +138,42 @@ class BackgroundExpiredDataDeletionService (
                 entitySet.id
         )
 
-        var deletedEntitiesCount = 0
+        //var deletedEntitiesCount = 0
         val deletedEntityKeyIds: MutableSet<UUID> = mutableSetOf()
-
-        /* Better idea:
-            get expirationField and comparison field as a return from one function
-            get expired entity key ids from another function
-            a function for deleting from data and ids tables atomically and then deleting from elasticsearch
-            (^check how this is done in the deleteEntities function)
-            then record audit events
-         */
-
 
         ///////NEW CODE
         //TODO need to make sure this works with fetch size
-        val totalDeletedEntities = 0
-        var elasticsearchDataDeleted = false
-        var idsTableDeleteCount = 0
-        var dataTableDeleteCount = 0
+        var totalDeletedEntitiesCount = 0
         val sqlParams = getSqlParameters(entitySet.expiration)
         val partitions = (entitySetToPartition[entitySet.id]
                 ?: error("No partitions assigned")).joinToString(prefix = "('", postfix = "')", separator = "', '") { it.toString() }
-        val entityKeyIds = getExpiredIds(entitySet.id, sqlParams, partitions).toSet()
+        var entityKeyIds = getExpiredIds(entitySet.id, sqlParams, partitions).toSet()
         if ( entityKeyIds.isNotEmpty() ) {
             while ( entityKeyIds.isNotEmpty() ) {
-                dataTableDeleteCount = deleteExpiredEntities(entitySet.id, entityKeyIds, sqlParams, partitions)
-                idsTableDeleteCount = //WE STOPPED HERE. I THINK THIS SHOULD ALL HAPPEN IN DELETE EXPIRED ENTITIES
-                //getExpiredIds
+                val thisDeletedEntitiesCount = deleteExpiredEntities(entitySet, entityKeyIds, sqlParams, partitions)
+                logger.info("Completed deleting {} expired elements from entity set {}.",
+                        thisDeletedEntitiesCount,
+                        entitySet.name)
+                totalDeletedEntitiesCount += thisDeletedEntitiesCount
+                deletedEntityKeyIds.addAll(entityKeyIds)
+                entityKeyIds = getExpiredIds(entitySet.id, sqlParams, partitions).toSet()
             }
+
+            auditingManager.recordEvents(
+                    listOf(AuditableEvent(
+                            IdConstants.SYSTEM_ID.id,
+                            AclKey(entitySet.id),
+                            AuditEventType.DELETE_EXPIRED_ENTITIES,
+                            "Expired entities deleted through BackgroundExpiredDataDeletionService",
+                            Optional.of(deletedEntityKeyIds),
+                            ImmutableMap.of(),
+                            OffsetDateTime.now(),
+                            Optional.empty())
+                    )
+            )
         }
+
+        return totalDeletedEntitiesCount
 
 
 
@@ -175,7 +182,7 @@ class BackgroundExpiredDataDeletionService (
 
 
         //////ORIGINAL CODE
-        var dataTableDeletionResults: Triple<Set<UUID>, String, Int> = deleteExpiredDataFromDataTable(entitySet.id, entitySet.expiration)
+        /*var dataTableDeletionResults: Triple<Set<UUID>, String, Int> = deleteExpiredDataFromDataTable(entitySet.id, entitySet.expiration)
         var dataTableDeleteCount = dataTableDeletionResults.third
         if ( dataTableDeleteCount > 0 ) {
             while ( dataTableDeleteCount > 0 ) {
@@ -216,6 +223,7 @@ class BackgroundExpiredDataDeletionService (
         }
 
         return deletedEntitiesCount
+         */
     }
 
     private fun getSqlParameters(expiration: DataExpiration) : Triple<String, Any, Int> {
@@ -261,15 +269,24 @@ class BackgroundExpiredDataDeletionService (
         )
     }
 
-    private fun deleteExpiredEntities(entitySetId: UUID, entityKeyIds: Set<UUID>, sqlParams: Triple<String, Any, Int>, partitions: String) : Int {
+    private fun deleteExpiredEntities(entitySet: EntitySet, entityKeyIds: Set<UUID>, sqlParams: Triple<String, Any, Int>, partitions: String) : Int {
+        var elasticsearchDataDeleted = false
         val expiredIdsAsString = entityKeyIds.joinToString(prefix = "('", postfix = "')", separator = "', '") { it.toString() }
         val connection = hds.connection
         connection.autoCommit = false
-        val dataTableDeleteStmt = connection.prepareStatement(deleteExpiredDataFromDataTableQuery(entitySetId, expiredIdsAsString, partitions))
+        val dataTableDeleteStmt = connection.prepareStatement(deleteExpiredDataFromDataTableQuery(entitySet.id, expiredIdsAsString, partitions))
         val deleteCount = dataTableDeleteStmt.executeUpdate()
+        val idsTableDeleteStmt = connection.prepareStatement(deleteExpiredDataFromIdsTableQuery(expiredIdsAsString))
+        val idsTableDeleteCount = idsTableDeleteStmt.executeUpdate()
         connection.commit()
+
+        elasticsearchDataDeleted = deleteExpiredDataFromElasticSearch(entitySet.id, entitySet.entityTypeId, entityKeyIds)
+        check(elasticsearchDataDeleted) { "Expired data not deleted from elasticsearch. UH OH." } // also do something better
+
+        return idsTableDeleteCount
     }
 
+    /*
     private fun deleteExpiredDataFromDataTable(entitySetId: UUID, expiration: DataExpiration): Triple<Set<UUID>, String, Int> {
         val connection = hds.connection
         val comparisonField: String
@@ -315,17 +332,20 @@ class BackgroundExpiredDataDeletionService (
         }
         return Triple(expiredEntityKeyIds, expiredIdsAsString, deleteCount)
     }
+     */
 
     private fun deleteExpiredDataFromElasticSearch(entitySetId: UUID, entityTypeId: UUID, expiredEntityKeyIds: Set<UUID>): Boolean {
         return elasticsearchApi.deleteEntityDataBulk(entitySetId, entityTypeId, expiredEntityKeyIds)
     }
 
+    /*
     private fun deleteExpiredDataFromIdsTable(expiredIdsAsString: String): Int {
         hds.connection.use { conn ->
             val stmt = conn.createStatement()
             return stmt.executeUpdate(deleteExpiredDataFromIdsTableQuery(expiredIdsAsString))
         }
     }
+     */
 
     private fun deleteExpiredDataFromDataTableQuery(entitySetId: UUID, expiredIds: String, partitions: String): String {
         return "DELETE FROM ${DATA.name} " +
