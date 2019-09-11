@@ -102,7 +102,6 @@ class BackgroundExpiredDataDeletionService (
 
                     entitySetToPartition = lockedEntitySets.map { it.id to it.partitions }.toMap()
                     val propertyTypeIds = lockedEntitySets.filter { it.expiration.startDateProperty.isPresent }.map { it.expiration.startDateProperty.get() }.toSet()
-                    //if (propertyTypeIds.isNotEmpty()) propertyTypeIdToDataType = propertyTypes.executeOnKeys(propertyTypeIds, EdmPrimitiveTypeKindGetter()) as Map<UUID, EdmPrimitiveTypeKind>
                     if (propertyTypeIds.isNotEmpty()) {
                         propertyTypeIdToColumnData = propertyTypes.map{it.key to Pair(it.value.postgresIndexType, it.value.datatype)}.toMap()
                     }
