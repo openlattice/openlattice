@@ -108,8 +108,14 @@ public class SearchConstraintsStreamSerializer extends Serializer<SearchConstrai
         SortDefinition sortDefinition = object.getSortDefinition();
         out.writeString( sortDefinition.getSortType().toString() );
         out.writeBoolean( sortDefinition.isDescending() );
-        OptionalStreamSerializers
-                .kryoSerialize( out, sortDefinition.getPropertyTypeId(), SearchConstraintsStreamSerializer::writeUUID );
+
+        if (sortDefinition.getPropertyTypeId() != null) {
+            out.writeBoolean( true );
+            writeUUID( out, sortDefinition.getPropertyTypeId() );
+        } else {
+            out.writeBoolean( false );
+        }
+
         OptionalStreamSerializers.kryoSerialize( out, sortDefinition.getLatitude(), Output::writeDouble );
         OptionalStreamSerializers.kryoSerialize( out, sortDefinition.getLongitude(), Output::writeDouble );
     }
@@ -215,8 +221,11 @@ public class SearchConstraintsStreamSerializer extends Serializer<SearchConstrai
 
         SortType sortType = SortType.valueOf( in.readString() );
         boolean isDescending = in.readBoolean();
-        Optional<UUID> propertyTypeId = OptionalStreamSerializers
-                .kryoDeserialize( in, SearchConstraintsStreamSerializer::readUUID );
+
+        UUID propertyTypeId = null;
+        if (in.readBoolean()) {
+            propertyTypeId = readUUID( in );
+        }
         Optional<Double> latitude = OptionalStreamSerializers.kryoDeserialize( in, Input::readDouble );
         Optional<Double> longitude = OptionalStreamSerializers.kryoDeserialize( in, Input::readDouble );
 
