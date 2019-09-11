@@ -141,6 +141,40 @@ class BackgroundExpiredDataDeletionService (
         var deletedEntitiesCount = 0
         val deletedEntityKeyIds: MutableSet<UUID> = mutableSetOf()
 
+        /* Better idea:
+            get expirationField and comparison field as a return from one function
+            get expired entity key ids from another function
+            a function for deleting from data and ids tables atomically and then deleting from elasticsearch
+            (^check how this is done in the deleteEntities function)
+            then record audit events
+         */
+
+
+        ///////NEW CODE
+        //TODO need to make sure this works with fetch size
+        val totalDeletedEntities = 0
+        var elasticsearchDataDeleted = false
+        var idsTableDeleteCount = 0
+        var dataTableDeleteCount = 0
+        val sqlParams = getSqlParameters(entitySet.expiration)
+        val partitions = (entitySetToPartition[entitySet.id]
+                ?: error("No partitions assigned")).joinToString(prefix = "('", postfix = "')", separator = "', '") { it.toString() }
+        val entityKeyIds = getExpiredIds(entitySet.id, sqlParams, partitions).toSet()
+        if ( entityKeyIds.isNotEmpty() ) {
+            while ( entityKeyIds.isNotEmpty() ) {
+                dataTableDeleteCount = deleteExpiredEntities(entitySet.id, entityKeyIds, sqlParams, partitions)
+                idsTableDeleteCount = //WE STOPPED HERE. I THINK THIS SHOULD ALL HAPPEN IN DELETE EXPIRED ENTITIES
+                //getExpiredIds
+            }
+        }
+
+
+
+
+
+
+
+        //////ORIGINAL CODE
         var dataTableDeletionResults: Triple<Set<UUID>, String, Int> = deleteExpiredDataFromDataTable(entitySet.id, entitySet.expiration)
         var dataTableDeleteCount = dataTableDeletionResults.third
         if ( dataTableDeleteCount > 0 ) {
@@ -182,6 +216,58 @@ class BackgroundExpiredDataDeletionService (
         }
 
         return deletedEntitiesCount
+    }
+
+    private fun getSqlParameters(expiration: DataExpiration) : Triple<String, Any, Int> {
+        val comparisonField: String
+        val expirationField: Any
+        val expirationFieldSQLType: Int
+        val expirationInstant = Instant.now().minusMillis(expiration.timeToExpiration)
+        when (expiration.expirationBase) {
+            ExpirationBase.DATE_PROPERTY -> {
+                val columnData = propertyTypeIdToColumnData.getValue(expiration.startDateProperty.get())
+                comparisonField = PostgresDataTables.getColumnDefinition(columnData.first, columnData.second).name
+                if (columnData.second == EdmPrimitiveTypeKind.Date) {
+                    expirationField = OffsetDateTime.ofInstant(expirationInstant, ZoneId.systemDefault()).toLocalDate()
+                    expirationFieldSQLType = Types.DATE
+                } else {  //only other TypeKind for date property type is OffsetDateTime
+                    expirationField = OffsetDateTime.ofInstant(expirationInstant, ZoneId.systemDefault())
+                    expirationFieldSQLType = Types.TIMESTAMP_WITH_TIMEZONE
+                }
+            }
+            ExpirationBase.FIRST_WRITE -> {
+                expirationField = expirationInstant.toEpochMilli()
+                expirationFieldSQLType = Types.BIGINT
+                comparisonField = "${VERSIONS.name}[1]"
+            }
+            ExpirationBase.LAST_WRITE -> {
+                expirationField = OffsetDateTime.ofInstant(expirationInstant, ZoneId.systemDefault())
+                expirationFieldSQLType = Types.TIMESTAMP_WITH_TIMEZONE
+                comparisonField = LAST_WRITE.name
+            }
+        }
+        return Triple(comparisonField, expirationField, expirationFieldSQLType)
+    }
+
+    private fun getExpiredIds(entitySetId: UUID, sqlParams: Triple<String, Any, Int>, partitions: String): PostgresIterable<UUID> {
+        return PostgresIterable(
+                Supplier {
+                    val connection = hds.connection
+                    val stmt = connection.prepareStatement(getExpiredIdsQuery(entitySetId, sqlParams.first, partitions))
+                    stmt.setObject(1, sqlParams.second, sqlParams.third)
+                    StatementHolder(connection, stmt, stmt.executeQuery())
+                },
+                Function<ResultSet, UUID> { ResultSetAdapters.id(it) }
+        )
+    }
+
+    private fun deleteExpiredEntities(entitySetId: UUID, entityKeyIds: Set<UUID>, sqlParams: Triple<String, Any, Int>, partitions: String) : Int {
+        val expiredIdsAsString = entityKeyIds.joinToString(prefix = "('", postfix = "')", separator = "', '") { it.toString() }
+        val connection = hds.connection
+        connection.autoCommit = false
+        val dataTableDeleteStmt = connection.prepareStatement(deleteExpiredDataFromDataTableQuery(entitySetId, expiredIdsAsString, partitions))
+        val deleteCount = dataTableDeleteStmt.executeUpdate()
+        connection.commit()
     }
 
     private fun deleteExpiredDataFromDataTable(entitySetId: UUID, expiration: DataExpiration): Triple<Set<UUID>, String, Int> {
@@ -228,18 +314,6 @@ class BackgroundExpiredDataDeletionService (
             deleteCount = dataTableDeleteStmt.executeUpdate()
         }
         return Triple(expiredEntityKeyIds, expiredIdsAsString, deleteCount)
-    }
-
-    private fun getExpiredIds(comparisonField: String, expirationField: Any, expirationFieldSQLType: Int, entitySetId: UUID, paritions: String): PostgresIterable<UUID> {
-        return PostgresIterable(
-                Supplier {
-                    val connection = hds.connection
-                    val stmt = connection.prepareStatement(getExpiredIdsQuery(entitySetId, comparisonField, paritions))
-                    stmt.setObject(1, expirationField, expirationFieldSQLType)
-                    StatementHolder(connection, stmt, stmt.executeQuery())
-                },
-                Function<ResultSet, UUID> { ResultSetAdapters.id(it) }
-        )
     }
 
     private fun deleteExpiredDataFromElasticSearch(entitySetId: UUID, entityTypeId: UUID, expiredEntityKeyIds: Set<UUID>): Boolean {
