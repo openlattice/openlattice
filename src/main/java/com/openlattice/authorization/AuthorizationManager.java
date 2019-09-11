@@ -23,6 +23,7 @@
 package com.openlattice.authorization;
 
 import com.codahale.metrics.annotation.Timed;
+import com.google.common.collect.SetMultimap;
 import com.openlattice.authorization.paging.AuthorizedObjectsSearchResult;
 import com.openlattice.authorization.securable.SecurableObjectType;
 
@@ -97,6 +98,9 @@ public interface AuthorizationManager {
     void setPermission( Set<AclKey> aclKeys, Set<Principal> principals, EnumSet<Permission> permissions );
 
     @Timed
+    void setPermissions( Map<AceKey, EnumSet<Permission>> permissions );
+
+    @Timed
     void deletePermissions( AclKey aclKey );
 
     @Timed
@@ -169,6 +173,9 @@ public interface AuthorizationManager {
     Stream<AclKey> getAuthorizedObjects( Set<Principal> principal, EnumSet<Permission> permissions );
 
     Iterable<Principal> getSecurableObjectOwners( AclKey key );
+
+    @Timed
+    SetMultimap<AclKey, Principal> getOwnersForSecurableObjects( Collection<AclKey> aclKeys );
 
     Map<AceKey, AceValue> getPermissionMap( Set<AclKey> aclKeys, Set<Principal> principals );
 }
