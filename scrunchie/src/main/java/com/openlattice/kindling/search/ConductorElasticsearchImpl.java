@@ -976,7 +976,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             Map<UUID, DelegatedUUIDSet> authorizedPropertyTypesByEntitySet,
             Map<UUID, DelegatedUUIDSet> linkingEntitySets ) {
         if ( !verifyElasticsearchConnection() ) {
-            return new EntityDataKeySearchResult( 0, Lists.newArrayList(  ) );
+            return new EntityDataKeySearchResult( 0, ImmutableList.of() );
         }
 
         SortBuilder sort = buildSort( searchConstraints.getSortDefinition() );
@@ -1018,7 +1018,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         }
 
         if ( requests.requests().isEmpty() ) {
-            return new EntityDataKeySearchResult( 0, Lists.newArrayList(  ) );
+            return new EntityDataKeySearchResult( 0, ImmutableList.of() );
         }
 
         MultiSearchResponse response = client.multiSearch( requests ).actionGet();
