@@ -990,7 +990,7 @@ public class EdmService implements EdmManager {
             }
         }
 
-        final var newEntitySet = ( EntitySet ) entitySets.executeOnKey(
+        final var newEntitySet = (EntitySet) entitySets.executeOnKey(
                 entitySetId, new UpdateEntitySetMetadataProcessor( update )
         );
         eventBus.post( new EntitySetMetadataUpdatedEvent( newEntitySet ) );
@@ -1346,26 +1346,17 @@ public class EdmService implements EdmManager {
             SecurableObjectType objectType,
             Map<UUID, PropertyType> propertyTypesById,
             Map<UUID, EntityType> entityTypesById,
-            Map<UUID, AssociationType> associationTypesById,
-            boolean useTempFqn ) {
-        FullQualifiedName tempFqn = new FullQualifiedName(
-                UUID.randomUUID().toString(),
-                UUID.randomUUID().toString() );
+            Map<UUID, AssociationType> associationTypesById ) {
+
         switch ( objectType ) {
             case PropertyTypeInEntitySet:
-                if ( useTempFqn ) { createOrUpdatePropertyTypeWithFqn( propertyTypesById.get( id ), tempFqn ); } else {
-                    createOrUpdatePropertyType( propertyTypesById.get( id ) );
-                }
+                createOrUpdatePropertyType( propertyTypesById.get( id ) );
                 break;
             case EntityType:
-                if ( useTempFqn ) { createOrUpdateEntityTypeWithFqn( entityTypesById.get( id ), tempFqn ); } else {
-                    createOrUpdateEntityType( entityTypesById.get( id ) );
-                }
+                createOrUpdateEntityType( entityTypesById.get( id ) );
                 break;
             case AssociationType:
-                if ( useTempFqn ) {
-                    createOrUpdateAssociationTypeWithFqn( associationTypesById.get( id ), tempFqn );
-                } else { createOrUpdateAssociationType( associationTypesById.get( id ) ); }
+                createOrUpdateAssociationType( associationTypesById.get( id ) );
                 break;
             default:
                 break;
@@ -1697,16 +1688,7 @@ public class EdmService implements EdmManager {
                         idToType.get( id ),
                         propertyTypesById,
                         entityTypesById,
-                        associationTypesById,
-                        true );
-            } );
-            cycle.forEach( id -> {
-                resolveFqnCycles( id,
-                        idToType.get( id ),
-                        propertyTypesById,
-                        entityTypesById,
-                        associationTypesById,
-                        false );
+                        associationTypesById );
                 updatedIds.add( id );
             } );
 
