@@ -114,7 +114,7 @@ class IndexingService(
                                     currentPartitionsInfo.partitions.toList()
                             )
                         }
-                        var partitionCursor = indexingPartitionProgress.getOrPut(entitySetId) { 0 }
+                        val partitionCursor = indexingPartitionProgress.getOrPut(entitySetId) { 0 }
 
                         val propertyTypeMap = propertyTypes.getAll(
                                 entityTypes.getValue(entitySet.entityTypeId).properties
@@ -202,7 +202,7 @@ class IndexingService(
             entities
         }
 
-        entitiesForIndexing.forEach { entitySetId, entityKeyIds ->
+        entitiesForIndexing.forEach { (entitySetId, entityKeyIds) ->
             logger.info("Creating job to index entity set {} for the following entities {}", entitySetId, entityKeyIds)
             indexingJobs.putIfAbsent(entitySetId, DelegatedUUIDSet.wrap(HashSet()))
             indexingJobs.executeOnKey(entitySetId, UUIDKeyToUUIDSetMerger(entityKeyIds))
