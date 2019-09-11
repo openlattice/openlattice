@@ -23,6 +23,7 @@
 package com.openlattice.authorization;
 
 import com.codahale.metrics.annotation.Timed;
+import com.dataloom.streams.StreamUtil;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.*;
 import com.google.common.eventbus.EventBus;
@@ -42,6 +43,7 @@ import com.openlattice.authorization.processors.SecurableObjectTypeUpdater;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.organizations.PrincipalSet;
+import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -86,14 +88,7 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
             AclKey key,
             Principal principal,
             EnumSet<Permission> permissions ) {
-        //TODO: We should do something better than reading the securable object type.
-        OffsetDateTime expirationDate = OffsetDateTime.MAX;
-        SecurableObjectType securableObjectType = securableObjectTypes.getOrDefault( key, SecurableObjectType.Unknown );
-        if ( securableObjectType == SecurableObjectType.Unknown ) {
-            logger.warn( "Unrecognized object type for acl key {} key ", key );
-        }
-        aces.executeOnKey( new AceKey( key, principal ),
-                new PermissionMerger( permissions, securableObjectType, expirationDate ) );
+        addPermission( key, principal, permissions, OffsetDateTime.MAX );
     }
 
     @Override
@@ -109,6 +104,88 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
         }
         aces.executeOnKey( new AceKey( key, principal ),
                 new PermissionMerger( permissions, securableObjectType, expirationDate ) );
+    }
+
+    @Override
+    public void addPermissions( List<Acl> acls ) {
+        SetMultimap<AceValue, AceKey> updates = getAceValueToAceKeyMap( acls );
+
+        updates.keySet().forEach( aceValue -> {
+
+            Set<AceKey> aceKeys = updates.get( aceValue );
+            aces.executeOnKeys( aceKeys,
+                    new PermissionMerger( aceValue.getPermissions(),
+                            aceValue.getSecurableObjectType(),
+                            aceValue.getExpirationDate() ) );
+        } );
+    }
+
+    @Override
+    public void removePermissions( List<Acl> acls ) {
+
+        acls.stream().map( acl -> Pair.of( new AclKey( acl.getAclKey() ),
+                StreamUtil.stream( acl.getAces() ).filter( ace -> ace.getPermissions().contains( Permission.OWNER ) )
+                        .map( Ace::getPrincipal ).collect( Collectors.toSet() ) ) )
+                .filter( pair -> !pair.getValue().isEmpty() )
+                .forEach( pair ->
+                        ensureAclKeysHaveOtherUserOwners( ImmutableSet.of( pair.getKey() ), pair.getValue() )
+                );
+
+        SetMultimap<AceValue, AceKey> updates = getAceValueToAceKeyMap( acls );
+
+        updates.keySet().forEach( aceValue -> {
+
+            Set<AceKey> aceKeys = updates.get( aceValue );
+            aces.executeOnKeys( aceKeys, new PermissionRemover( aceValue.getPermissions() ) );
+        } );
+    }
+
+    private SetMultimap<AceValue, AceKey> getAceValueToAceKeyMap( List<Acl> acls ) {
+        Map<AclKey, SecurableObjectType> types = securableObjectTypes
+                .getAll( acls.stream().map( acl -> new AclKey( acl.getAclKey() ) ).collect( Collectors.toSet() ) );
+
+        SetMultimap<AceValue, AceKey> map = HashMultimap.create();
+
+        acls.forEach( acl -> {
+            AclKey aclKey = new AclKey( acl.getAclKey() );
+            SecurableObjectType securableObjectType = types.getOrDefault( aclKey, SecurableObjectType.Unknown );
+
+            if ( securableObjectType.equals( SecurableObjectType.Unknown ) ) {
+                logger.warn( "Unrecognized object type for acl key {} key ", aclKey );
+            }
+
+            acl.getAces().forEach( ace ->
+                    map.put( new AceValue( ace.getPermissions(), securableObjectType, ace.getExpirationDate() ),
+                            new AceKey( aclKey, ace.getPrincipal() ) )
+            );
+        } );
+
+        return map;
+    }
+
+    @Override
+    public void setPermissions( List<Acl> acls ) {
+        Map<AclKey, SecurableObjectType> types = securableObjectTypes
+                .getAll( acls.stream().map( acl -> new AclKey( acl.getAclKey() ) ).collect( Collectors.toSet() ) );
+
+        Map<AceKey, AceValue> updates = Maps.newHashMap();
+
+        acls.forEach( acl -> {
+            AclKey aclKey = new AclKey( acl.getAclKey() );
+            SecurableObjectType securableObjectType = securableObjectTypes
+                    .getOrDefault( aclKey, SecurableObjectType.Unknown );
+
+            if ( securableObjectType.equals( SecurableObjectType.Unknown ) ) {
+                logger.warn( "Unrecognized object type for acl key {} key ", aclKey );
+            }
+
+            acl.getAces().forEach( ace ->
+                    updates.put( new AceKey( aclKey, ace.getPrincipal() ),
+                            new AceValue( ace.getPermissions(), securableObjectType, ace.getExpirationDate() ) )
+            );
+        } );
+
+        aces.putAll( updates );
     }
 
     private void ensureAclKeysHaveOtherUserOwners( Set<AclKey> aclKeys, Set<Principal> principals ) {
@@ -145,12 +222,7 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
             AclKey key,
             Principal principal,
             EnumSet<Permission> permissions ) {
-        if ( !permissions.contains( Permission.OWNER ) )
-            ensureAclKeysHaveOtherUserOwners( ImmutableSet.of( key ), ImmutableSet.of( principal ) );
-        //This should be a rare call to overwrite all permissions, so it's okay to do a read before write.
-        OffsetDateTime expirationDate = OffsetDateTime.MAX;
-        SecurableObjectType securableObjectType = securableObjectTypes.getOrDefault( key, SecurableObjectType.Unknown );
-        aces.set( new AceKey( key, principal ), new AceValue( permissions, securableObjectType, expirationDate ) );
+        setPermission( key, principal, permissions, OffsetDateTime.MAX );
     }
 
     @Override
@@ -187,6 +259,34 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
         }
 
         aces.putAll( newPermissions );
+    }
+
+    @Override
+    public void setPermissions( Map<AceKey, EnumSet<Permission>> permissions ) {
+
+        permissions.entrySet().stream().filter( entry -> !entry.getValue().contains( Permission.OWNER ) )
+                .collect( Collectors.groupingBy( e -> e.getKey().getAclKey(),
+                        Collectors.mapping( e -> e.getKey().getPrincipal(), Collectors.toSet() ) ) )
+                .entrySet()
+                .forEach( entry -> ensureAclKeysHaveOtherUserOwners( ImmutableSet.of( entry.getKey() ),
+                        entry.getValue() ) );
+
+        Map<AclKey, SecurableObjectType> securableObjectTypesForAclKeys = securableObjectTypes
+                .getAll( permissions.keySet().stream().map( AceKey::getAclKey ).collect(
+                        Collectors.toSet() ) );
+
+        Map<AceKey, AceValue> newPermissions = Maps.newHashMap();
+
+        for ( Map.Entry<AceKey, EnumSet<Permission>> entry : permissions.entrySet() ) {
+
+            SecurableObjectType objectType = securableObjectTypesForAclKeys
+                    .getOrDefault( entry.getKey().getAclKey(), SecurableObjectType.Unknown );
+
+            newPermissions.put( entry.getKey(), new AceValue( entry.getValue(), objectType, OffsetDateTime.MAX ) );
+        }
+
+        aces.putAll( newPermissions );
+
     }
 
     @Override
@@ -456,6 +556,17 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
     @Override
     public Iterable<Principal> getSecurableObjectOwners( AclKey key ) {
         return aqs.getOwnersForSecurableObject( key );
+    }
+
+    @Timed
+    @Override
+    public SetMultimap<AclKey, Principal> getOwnersForSecurableObjects( Collection<AclKey> aclKeys ) {
+        SetMultimap<AclKey, Principal> result = HashMultimap.create();
+
+        aces.keySet( Predicates.and( hasAnyAclKeys( aclKeys ), hasExactPermissions( EnumSet.of( Permission.OWNER ) ) ) )
+                .forEach( aceKey -> result.put( aceKey.getAclKey(), aceKey.getPrincipal() ) );
+
+        return result;
     }
 
     @Timed
