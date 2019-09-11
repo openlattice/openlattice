@@ -710,7 +710,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
 
             case field:
             case geoDistance: {
-                UUID sortPropertyTypeId = sort.getPropertyTypeId().get();
+                UUID sortPropertyTypeId = sort.getPropertyTypeId();
                 EdmPrimitiveTypeKind datatype = edm.getPropertyType( sortPropertyTypeId ).getDatatype();
                 Set<EdmPrimitiveTypeKind> allowedDatatypes = sort.getSortType().getAllowedDatatypes();
                 if ( !allowedDatatypes.contains( datatype ) ) {
