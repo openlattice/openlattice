@@ -51,7 +51,7 @@ import java.util.function.Supplier
 const val MAX_DURATION_MILLIS = 60_000L
 const val DATA_DELETION_RATE = 30_000L
 
-class BackgroundExpiredDataDeletionService (
+class BackgroundExpiredDataDeletionService(
         hazelcastInstance: HazelcastInstance,
         private val indexerConfiguration: IndexerConfiguration,
         private val hds: HikariDataSource,
@@ -66,7 +66,7 @@ class BackgroundExpiredDataDeletionService (
     private val entitySets: IMap<UUID, EntitySet> = hazelcastInstance.getMap(HazelcastMap.ENTITY_SETS.name)
     private val expirationLocks: IMap<UUID, Long> = hazelcastInstance.getMap(HazelcastMap.EXPIRATION_LOCKS.name)
     private var entitySetToPartition: Map<UUID, Set<Int>> = mapOf()
-    private var propertyTypeIdToColumnData: Map<UUID, Pair<IndexType,EdmPrimitiveTypeKind>> = mapOf()
+    private var propertyTypeIdToColumnData: Map<UUID, Pair<IndexType, EdmPrimitiveTypeKind>> = mapOf()
 
     init {
         expirationLocks.addIndex(QueryConstants.THIS_ATTRIBUTE_NAME.value(), true)
@@ -101,11 +101,16 @@ class BackgroundExpiredDataDeletionService (
                             .shuffled()
 
                     entitySetToPartition = lockedEntitySets.map { it.id to it.partitions }.toMap()
-                    val propertyTypeIds = lockedEntitySets.filter { it.expiration.startDateProperty.isPresent }.map { it.expiration.startDateProperty.get() }.toSet()
+                    val propertyTypeIds = lockedEntitySets
+                            .filter { it.expiration.startDateProperty.isPresent }
+                            .map { it.expiration.startDateProperty.get() }
+                            .toSet()
                     if (propertyTypeIds.isNotEmpty()) {
-                        propertyTypeIdToColumnData = propertyTypes.map{it.key to Pair(it.value.postgresIndexType, it.value.datatype)}.toMap()
+                        propertyTypeIdToColumnData = propertyTypes
+                                .map { it.key to Pair(it.value.postgresIndexType, it.value.datatype) }
+                                .toMap()
                     }
-                    
+
                     val totalDeleted = lockedEntitySets
                             .parallelStream()
                             .filter { !it.isLinking }
@@ -139,13 +144,15 @@ class BackgroundExpiredDataDeletionService (
 
         val deletedEntityKeyIds: MutableSet<UUID> = mutableSetOf()
         var totalDeletedEntitiesCount = 0
+
         val sqlParams = getSqlParameters(entitySet.expiration)
         val partitions = (entitySetToPartition[entitySet.id]
-                ?: error("No partitions assigned")).joinToString(prefix = "('", postfix = "')", separator = "', '") { it.toString() }
+                ?: error("No partitions assigned to entity set ${entitySet.id}"))
+                .joinToString(prefix = "('", postfix = "')", separator = "', '") { it.toString() }
 
         var entityKeyIds = getExpiredIds(entitySet.id, sqlParams, partitions).toSet()
-        if ( entityKeyIds.isNotEmpty() ) {  //if no data have expired let's not waste our time
-            while ( entityKeyIds.isNotEmpty() ) {
+        if (entityKeyIds.isNotEmpty()) {  //if no data have expired let's not waste our time
+            while (entityKeyIds.isNotEmpty()) { //loops until all expired entities have been removed from entity set
                 val thisDeletedEntitiesCount = deleteExpiredEntities(entitySet, entityKeyIds, partitions)
                 logger.info("Completed deleting {} expired elements from entity set {}.",
                         thisDeletedEntitiesCount,
@@ -167,11 +174,11 @@ class BackgroundExpiredDataDeletionService (
                             Optional.empty())
                     )
             )
-        }
+        } else { logger.debug("Entity set {} has no expired data", entitySet.name) }
         return totalDeletedEntitiesCount
     }
 
-    private fun getSqlParameters(expiration: DataExpiration) : Triple<String, Any, Int> {
+    private fun getSqlParameters(expiration: DataExpiration): Triple<String, Any, Int> {
         val comparisonField: String
         val expirationField: Any
         val expirationFieldSQLType: Int
@@ -214,8 +221,7 @@ class BackgroundExpiredDataDeletionService (
         )
     }
 
-    private fun deleteExpiredEntities(entitySet: EntitySet, entityKeyIds: Set<UUID>, partitions: String) : Int {
-        var elasticsearchDataDeleted = false
+    private fun deleteExpiredEntities(entitySet: EntitySet, entityKeyIds: Set<UUID>, partitions: String): Int {
         val expiredIdsAsString = entityKeyIds.joinToString(prefix = "('", postfix = "')", separator = "', '") { it.toString() }
         val connection = hds.connection
         connection.autoCommit = false
@@ -225,8 +231,8 @@ class BackgroundExpiredDataDeletionService (
         val idsTableDeleteCount = idsTableDeleteStmt.executeUpdate()
         connection.commit()
 
-        elasticsearchDataDeleted = deleteExpiredDataFromElasticSearch(entitySet.id, entitySet.entityTypeId, entityKeyIds)
-        check(elasticsearchDataDeleted) { "Expired data not deleted from elasticsearch. UH OH." } // also do something better
+        val elasticsearchDataDeleted = deleteExpiredDataFromElasticSearch(entitySet.id, entitySet.entityTypeId, entityKeyIds)
+        check(elasticsearchDataDeleted) { "Expired data not deleted from elasticsearch. UH OH." } // do something better
 
         return idsTableDeleteCount
     }
