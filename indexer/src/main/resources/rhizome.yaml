@@ -29,7 +29,7 @@ postgres:
         jdbcUrl: jdbc:postgresql://localhost:5432/openlattice
         username: "oltest"
         password: "test"
-        maximumPoolSize: 98
+        maximumPoolSize: 20
         connectionTimeout: 12000000 #20 minutes
 
 #graphite:
