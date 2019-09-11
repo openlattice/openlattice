@@ -9,8 +9,8 @@ class AddPairToEntityTypeCollectionTemplateProcessor(
         val collectionTemplateType: CollectionTemplateType
 ) : AbstractRhizomeEntryProcessor<UUID, EntityTypeCollection, EntityTypeCollection?>() {
 
-    override fun process(entry: MutableMap.MutableEntry<UUID, EntityTypeCollection>?): EntityTypeCollection? {
-        val collection = entry?.value ?: return null
+    override fun process(entry: MutableMap.MutableEntry<UUID, EntityTypeCollection>): EntityTypeCollection? {
+        val collection = entry.value
 
         collection.addTypeToTemplate(collectionTemplateType)
         entry.setValue(collection)

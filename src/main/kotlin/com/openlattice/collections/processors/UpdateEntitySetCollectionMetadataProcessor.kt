@@ -8,8 +8,8 @@ import java.util.*
 class UpdateEntitySetCollectionMetadataProcessor(val update: MetadataUpdate):
         AbstractRhizomeEntryProcessor<UUID, EntitySetCollection, EntitySetCollection?>() {
 
-    override fun process(entry: MutableMap.MutableEntry<UUID, EntitySetCollection>?): EntitySetCollection? {
-        val collection = entry?.value ?: return null
+    override fun process(entry: MutableMap.MutableEntry<UUID, EntitySetCollection>): EntitySetCollection? {
+        val collection = entry.value
 
         if (update.title.isPresent) {
             collection.title = update.title.get()

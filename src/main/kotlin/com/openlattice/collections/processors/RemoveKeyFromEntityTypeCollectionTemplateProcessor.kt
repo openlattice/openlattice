@@ -8,8 +8,8 @@ class RemoveKeyFromEntityTypeCollectionTemplateProcessor(
         val templateTypeId: UUID
 ) : AbstractRhizomeEntryProcessor<UUID, EntityTypeCollection, EntityTypeCollection?>() {
 
-    override fun process(entry: MutableMap.MutableEntry<UUID, EntityTypeCollection>?): EntityTypeCollection? {
-        val collection = entry?.value ?: return null
+    override fun process(entry: MutableMap.MutableEntry<UUID, EntityTypeCollection>): EntityTypeCollection? {
+        val collection = entry.value
 
         collection.removeTemplateTypeFromTemplate(templateTypeId)
         entry.setValue(collection)

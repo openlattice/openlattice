@@ -6,8 +6,8 @@ import java.util.*
 
 class UpdateEntitySetCollectionTemplateProcessor(val template: MutableMap<UUID, UUID>) : AbstractRhizomeEntryProcessor<UUID, EntitySetCollection, EntitySetCollection?>() {
 
-    override fun process(entry: MutableMap.MutableEntry<UUID, EntitySetCollection>?): EntitySetCollection? {
-        val collection = entry?.value ?: return null
+    override fun process(entry: MutableMap.MutableEntry<UUID, EntitySetCollection>): EntitySetCollection? {
+        val collection = entry.value
 
         collection.template = template
         entry.setValue(collection)
