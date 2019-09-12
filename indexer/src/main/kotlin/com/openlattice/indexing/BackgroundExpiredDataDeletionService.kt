@@ -13,7 +13,9 @@ import com.openlattice.auditing.AuditableEvent
 import com.openlattice.auditing.AuditingManager
 import com.openlattice.authorization.AclKey
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi
-import com.openlattice.data.DataExpiration
+import com.openlattice.data.*
+import com.openlattice.data.DataApi.MAX_BATCH_SIZE
+import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.ExpirationBase
 import com.openlattice.edm.type.PropertyType
@@ -24,7 +26,6 @@ import com.openlattice.postgres.IndexType
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresDataTables
 import com.openlattice.postgres.PostgresTable.DATA
-import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
@@ -56,7 +57,9 @@ class BackgroundExpiredDataDeletionService(
         private val indexerConfiguration: IndexerConfiguration,
         private val hds: HikariDataSource,
         private val elasticsearchApi: ConductorElasticsearchApi,
-        private val auditingManager: AuditingManager
+        private val auditingManager: AuditingManager,
+        private val dataGraphService: DataGraphService,
+        private val edm: EdmManager
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(BackgroundExpiredDataDeletionService::class.java)!!
@@ -100,6 +103,10 @@ class BackgroundExpiredDataDeletionService(
                             .filter { tryLockEntitySet(it) }
                             .shuffled()
 
+                    val propertiesOfLockedEntitySets = lockedEntitySets
+                            .map{it.id to edm.getPropertyTypesAsMap(edm.getEntityType(it.entityTypeId).properties)}
+                            .toMap()
+
                     entitySetToPartition = lockedEntitySets.map { it.id to it.partitions }.toMap()
                     val propertyTypeIds = lockedEntitySets
                             .filter { it.expiration.startDateProperty.isPresent }
@@ -114,7 +121,7 @@ class BackgroundExpiredDataDeletionService(
                     val totalDeleted = lockedEntitySets
                             .parallelStream()
                             .filter { !it.isLinking }
-                            .mapToInt { deleteExpiredData(it) }
+                            .mapToInt { deleteExpiredData(it, propertiesOfLockedEntitySets[it.id]!!) }
                             .sum()
 
                     lockedEntitySets.forEach(this::deleteIndexingLock)
@@ -135,7 +142,7 @@ class BackgroundExpiredDataDeletionService(
         }
     }
 
-    private fun deleteExpiredData(entitySet: EntitySet): Int {
+    private fun deleteExpiredData(entitySet: EntitySet, propertyTypes: Map<UUID, PropertyType>): Int {
         logger.info(
                 "Starting deletion of expired data for entity set {} with id {}",
                 entitySet.name,
@@ -153,13 +160,26 @@ class BackgroundExpiredDataDeletionService(
         var entityKeyIds = getExpiredIds(entitySet.id, sqlParams, partitions).toSet()
         if (entityKeyIds.isNotEmpty()) {  //if no data have expired let's not waste our time
             while (entityKeyIds.isNotEmpty()) { //loops until all expired entities have been removed from entity set
-                val thisDeletedEntitiesCount = deleteExpiredEntities(entitySet, entityKeyIds, partitions)
-                logger.info("Completed deleting {} expired elements from entity set {}.",
-                        thisDeletedEntitiesCount,
-                        entitySet.name)
-                totalDeletedEntitiesCount += thisDeletedEntitiesCount
-                deletedEntityKeyIds.addAll(entityKeyIds)
-                entityKeyIds = getExpiredIds(entitySet.id, sqlParams, partitions).toSet()
+                val chunkedEntityKeyIds = entityKeyIds.chunked(MAX_BATCH_SIZE)
+                for (idsChunk in chunkedEntityKeyIds) {
+                    val ids = idsChunk.toSet()
+
+                    if (!edm.isAssociationEntitySet(entitySet.id)) {
+                        deleteAssociationsOfExpiredEntities(entitySet.id, ids)
+                    }
+                    val writeEvent = dataGraphService.deleteEntities(
+                            entitySet.id,
+                            ids,
+                            propertyTypes)
+
+                    logger.info("Completed deleting {} expired elements from entity set {}.",
+                            writeEvent.numUpdates,
+                            entitySet.name)
+
+                    totalDeletedEntitiesCount += writeEvent.numUpdates
+                    deletedEntityKeyIds.addAll(entityKeyIds)
+                    entityKeyIds = getExpiredIds(entitySet.id, sqlParams, partitions).toSet()
+                }
             }
 
             auditingManager.recordEvents(
@@ -221,20 +241,15 @@ class BackgroundExpiredDataDeletionService(
         )
     }
 
-    private fun deleteExpiredEntities(entitySet: EntitySet, entityKeyIds: Set<UUID>, partitions: String): Int {
-        val expiredIdsAsString = entityKeyIds.joinToString(prefix = "('", postfix = "')", separator = "', '") { it.toString() }
-        val connection = hds.connection
-        connection.autoCommit = false
-        val dataTableDeleteStmt = connection.prepareStatement(deleteExpiredDataFromDataTableQuery(entitySet.id, expiredIdsAsString, partitions))
-        val deleteCount = dataTableDeleteStmt.executeUpdate()
-        val idsTableDeleteStmt = connection.prepareStatement(deleteExpiredDataFromIdsTableQuery(expiredIdsAsString))
-        val idsTableDeleteCount = idsTableDeleteStmt.executeUpdate()
-        connection.commit()
-
-        val elasticsearchDataDeleted = deleteExpiredDataFromElasticSearch(entitySet.id, entitySet.entityTypeId, entityKeyIds)
-        check(elasticsearchDataDeleted) { "Expired data not deleted from elasticsearch. UH OH." } // do something better
-
-        return idsTableDeleteCount
+    private fun deleteAssociationsOfExpiredEntities(entitySetId: UUID, ids: Set<UUID>) : List<WriteEvent> {
+        val associationEdgeKeys : PostgresIterable<DataEdgeKey> = dataGraphService.getEdgesConnectedToEntities(entitySetId, ids, true)
+        val associationPropertyTypes = associationEdgeKeys
+                .map{it.edge.entitySetId to
+                        edm.getPropertyTypesAsMap(
+                                edm.getEntityType(edm.getEntitySet(it.edge.entitySetId).entityTypeId
+                        ).properties
+                )}.toMap()
+        return dataGraphService.deleteAssociationsBatch(entitySetId, associationEdgeKeys, associationPropertyTypes)
     }
 
     private fun deleteExpiredDataFromElasticSearch(entitySetId: UUID, entityTypeId: UUID, expiredEntityKeyIds: Set<UUID>): Boolean {
@@ -248,17 +263,6 @@ class BackgroundExpiredDataDeletionService(
                 "AND $comparisonField < ? " +
                 "AND versions[1] >= 0 " +
                 "LIMIT $FETCH_SIZE"
-    }
-
-    private fun deleteExpiredDataFromDataTableQuery(entitySetId: UUID, expiredIds: String, partitions: String): String {
-        return "DELETE FROM ${DATA.name} " +
-                "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' " +
-                "AND ${PARTITION.name} IN $partitions " +
-                "AND ${ID.name} IN $expiredIds"
-    }
-
-    private fun deleteExpiredDataFromIdsTableQuery(expiredIds: String): String {
-        return "DELETE FROM ${IDS.name} WHERE ${ID.name} IN $expiredIds"
     }
 
     private fun tryLockEntitySet(entitySet: EntitySet): Boolean {
