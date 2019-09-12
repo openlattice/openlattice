@@ -487,7 +487,7 @@ internal val deleteEntitySetEntityKeys = "DELETE FROM ${IDS.name} WHERE ${ENTITY
  * 5. property type ids
  */
 internal val deletePropertiesOfEntitiesInEntitySet = "DELETE FROM ${DATA.name} " +
-        "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ? AND ${PARTITIONS_VERSION.name} = ? AND ${PROPERTY_TYPE_ID.name} = ANY(?) "
+        "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ? AND ${PARTITIONS_VERSION.name} = ? "
 
 /**
  * Preparable SQL deletes all entities in a given entity set in [PostgresTable.IDS]

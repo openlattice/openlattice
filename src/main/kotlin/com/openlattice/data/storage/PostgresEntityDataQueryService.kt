@@ -576,7 +576,7 @@ class PostgresEntityDataQueryService(
         val numUpdates = entityKeyIds
                 .groupBy { getPartition(it, partitions) }
                 .map { (partition, entities) ->
-                    deleteEntities(entitySetId, entities, authorizedPropertyTypes, partition, partitionVersion)
+                    deleteEntities(entitySetId, entities, partition, partitionVersion)
                 }.sum()
 
         return WriteEvent(System.currentTimeMillis(), numUpdates)
@@ -585,14 +585,11 @@ class PostgresEntityDataQueryService(
     private fun deleteEntities(
             entitySetId: UUID,
             entities: Collection<UUID>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>,
             partition: Int,
             partitionVersion: Int
     ): Int {
         return hds.connection.use { connection ->
             connection.autoCommit = false
-
-            val propertyTypesArr = PostgresArrays.createUuidArray(connection, authorizedPropertyTypes.keys)
 
             val idsArr = PostgresArrays.createUuidArray(connection, entities)
 
@@ -608,7 +605,6 @@ class PostgresEntityDataQueryService(
             ps.setArray(2, idsArr)
             ps.setInt(3, partition)
             ps.setInt(4, partitionVersion)
-            ps.setArray(5, propertyTypesArr)
 
             val count = ps.executeUpdate()
             connection.commit()
