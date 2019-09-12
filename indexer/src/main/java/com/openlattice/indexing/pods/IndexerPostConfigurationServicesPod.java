@@ -26,6 +26,7 @@ import com.hazelcast.core.HazelcastInstance;
 import com.openlattice.auditing.*;
 import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
+import com.openlattice.data.DataGraphService;
 import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.ids.PostgresEntityKeyIdService;
 import com.openlattice.data.storage.*;
@@ -83,6 +84,9 @@ public class IndexerPostConfigurationServicesPod {
 
     @Inject
     private AuditingManager auditingManager;
+
+    @Inject
+    private DataGraphService dataGraphService;
 
     @Bean
     public HazelcastIdGenerationService idGeneration() {
@@ -158,7 +162,9 @@ public class IndexerPostConfigurationServicesPod {
                 indexerConfiguration,
                 hikariDataSource,
                 elasticsearchApi,
-                auditingManager);
+                auditingManager,
+                dataGraphService,
+                edm);
     }
 
     @Bean
