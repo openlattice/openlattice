@@ -20,6 +20,7 @@
 
 package com.openlattice.graph.core.objects;
 
+import com.hazelcast.core.ReadOnly;
 import com.openlattice.graph.core.Neighborhood;
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor;
 
@@ -30,7 +31,8 @@ import java.util.UUID;
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class EdgeCountEntryProcessor extends AbstractRhizomeEntryProcessor<UUID, Neighborhood, Integer> {
+public class EdgeCountEntryProcessor extends AbstractRhizomeEntryProcessor<UUID, Neighborhood, Integer>
+        implements ReadOnly {
     private final UUID associationTypeId;
     private final Set<UUID> neighborTypeIds;
 
