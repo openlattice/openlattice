@@ -443,7 +443,7 @@ class PostgresEntityDatastore(
     ): WriteEvent {
 
         val (_, numUpdates) = dataQueryService
-                .deleteEntityData(entitySetId, entityKeyIds, authorizedPropertyTypes)
+                .deleteEntityDataAndEntity(entitySetId, entityKeyIds, authorizedPropertyTypes)
         val writeEvent = dataQueryService.deleteEntities(entitySetId, entityKeyIds)
         signalDeletedEntities(entitySetId, entityKeyIds)
 
