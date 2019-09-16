@@ -61,6 +61,7 @@ import com.openlattice.edm.types.processors.*;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.hazelcast.HazelcastUtils;
 import com.openlattice.hazelcast.processors.AddEntitySetsToLinkingEntitySetProcessor;
+import com.openlattice.hazelcast.processors.RemoveDataExpirationPolicyProcessor;
 import com.openlattice.hazelcast.processors.RemoveEntitySetsFromLinkingEntitySetProcessor;
 import com.openlattice.postgres.PostgresQuery;
 import com.openlattice.postgres.PostgresTablesPod;
@@ -1771,6 +1772,11 @@ public class EdmService implements EdmManager {
     @Override
     public AuditRecordEntitySetsManager getAuditRecordEntitySetsManager() {
         return aresManager;
+    }
+
+    @Override public void removeDataExpirationPolicy( UUID entitySetId ) {
+        entitySets.executeOnKey( entitySetId, new RemoveDataExpirationPolicyProcessor() );
+        return;
     }
 
 }
