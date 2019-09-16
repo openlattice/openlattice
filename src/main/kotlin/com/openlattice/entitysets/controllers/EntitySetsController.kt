@@ -416,6 +416,19 @@ constructor(
     ): Int {
         ensureOwnerAccess(AclKey(entitySetId))
         edmManager.removeDataExpirationPolicy(entitySetId)
+
+        recordEvent(
+                AuditableEvent(
+                        getCurrentUserId(),
+                        AclKey(entitySetId),
+                        AuditEventType.UPDATE_ENTITY_SET,
+                        "Entity set data expiration policy removed through EntitySetApi.removeDataExpirationPolicy",
+                        Optional.empty(),
+                        ImmutableMap.of("entitySetId", entitySetId),
+                        OffsetDateTime.now(),
+                        Optional.empty()
+                )
+        )
         return 1
     }
 
