@@ -51,6 +51,7 @@ import com.openlattice.entitysets.EntitySetsApi.Companion.ALL
 import com.openlattice.entitysets.EntitySetsApi.Companion.ID
 import com.openlattice.entitysets.EntitySetsApi.Companion.IDS_PATH
 import com.openlattice.entitysets.EntitySetsApi.Companion.ID_PATH
+import com.openlattice.entitysets.EntitySetsApi.Companion.EXPIRATION_PATH
 import com.openlattice.entitysets.EntitySetsApi.Companion.LINKING
 import com.openlattice.entitysets.EntitySetsApi.Companion.METADATA_PATH
 import com.openlattice.entitysets.EntitySetsApi.Companion.NAME
@@ -62,6 +63,8 @@ import com.openlattice.linking.util.PersonProperties
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.*
+import retrofit2.http.PUT
+import retrofit2.http.Path
 import java.time.OffsetDateTime
 import java.util.*
 import javax.inject.Inject
@@ -399,6 +402,20 @@ constructor(
         )
 
         //TODO: Makes this return something more useful.
+        return 1
+    }
+
+    @Timed
+    @RequestMapping(
+            path = [ALL + ID_PATH + EXPIRATION_PATH],
+            method = [RequestMethod.PATCH],
+            produces = [MediaType.APPLICATION_JSON_VALUE]
+    )
+    override fun removeDataExpirationPolicy(
+            @PathVariable(ID) entitySetId: UUID
+    ): Int {
+        ensureOwnerAccess(AclKey(entitySetId))
+        edmManager.removeDataExpirationPolicy(entitySetId)
         return 1
     }
 
