@@ -51,6 +51,7 @@ interface EntitySetsApi {
         const val NAME_PATH = "/{$NAME}"
         const val PROPERTIES_PATH = "/properties"
         const val METADATA_PATH = "/metadata"
+        const val EXPIRATION_PATH = "/expiration"
 
         const val PROPERTY_TYPE_ID = "propertyTypeId"
         const val PROPERTY_TYPE_ID_PATH = "/{$PROPERTY_TYPE_ID}"
@@ -180,5 +181,8 @@ interface EntitySetsApi {
      */
     @HTTP(method = "DELETE", path = BASE + LINKING, hasBody = true)
     fun removeEntitySetsFromLinkingEntitySets(@Body entitySetIds: Map<UUID, Set<UUID>>): Int
+
+    @PATCH(BASE + ALL + ID_PATH + EXPIRATION_PATH)
+    fun removeDataExpirationPolicy(@Path(ID) entitySetId: UUID): Int
 
 }
