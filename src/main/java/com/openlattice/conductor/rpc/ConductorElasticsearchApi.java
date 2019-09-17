@@ -22,24 +22,21 @@
 
 package com.openlattice.conductor.rpc;
 
-import com.openlattice.apps.App;
-import com.openlattice.apps.AppType;
+import com.openlattice.authorization.AclKey;
+import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.data.EntityDataKey;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organization.Organization;
-import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
-import com.openlattice.search.requests.*;
-import com.openlattice.authorization.AclKey;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
+import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
+import com.openlattice.search.requests.EntityDataKeySearchResult;
+import com.openlattice.search.requests.SearchConstraints;
+import com.openlattice.search.requests.SearchResult;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 public interface ConductorElasticsearchApi {
 
@@ -90,7 +87,6 @@ public interface ConductorElasticsearchApi {
     String ORGANIZATIONS     = "organizations";
     String ORGANIZATION      = "com/openlattice/organization";
     String ORGANIZATION_TYPE = "organizationType";
-    String ORGANIZATION_ID   = "organizationId";
 
     String DATA_INDEX_PREFIX = "entity_data_";
     String DATA_TYPE_PREFIX  = "data_type_";
@@ -106,7 +102,6 @@ public interface ConductorElasticsearchApi {
     // association_type_index setup consts
     String ASSOCIATION_TYPE_INDEX = "association_type_index";
     String ASSOCIATION_TYPE       = "association_type";
-    String ENTITY_TYPE_FIELD      = "entityType";
 
     // app_index setup consts
     String APP_INDEX = "app_index";
@@ -117,21 +112,20 @@ public interface ConductorElasticsearchApi {
     String APP_TYPE       = "app_type";
 
     // entity set field consts
-    String TYPE_FIELD     = "_type";
     String ENTITY_SET     = "entitySet";
     String PROPERTY_TYPES = "propertyTypes";
-    String ACLS           = "acls";
-    String NAME           = "name";
-    String NAMESPACE      = "namespace";
-    String TITLE          = "title";
-    String DESCRIPTION    = "description";
-    String ENTITY_TYPE_ID = "entityTypeId";
-    String ID             = "id";
-    String URL            = "url";
 
     // entity type data nested fields
     String ENTITY              = "entity";
     String ENTITY_SET_ID_FIELD = "entitySetId";
+
+    // entity_type_collection_index setup consts
+    String ENTITY_TYPE_COLLECTION_INDEX = "entity_type_collection_index";
+    String ENTITY_TYPE_COLLECTION       = "entity_type_collection";
+
+    // entity_set_collection_index setup consts
+    String ENTITY_SET_COLLECTION_INDEX = "entity_set_collection_index";
+    String ENTITY_SET_COLLECTION       = "entity_set_collection";
 
     Set<UUID> getEntityTypesWithIndices();
 
@@ -208,52 +202,40 @@ public interface ConductorElasticsearchApi {
     /* Organizations */
     boolean createOrganization( Organization organization );
 
-    boolean deleteOrganization( UUID organizationId );
-
     boolean updateOrganization( UUID id, Optional<String> optionalTitle, Optional<String> optionalDescription );
 
-    /* Entity Types */
+    /* Entity/Association Type Creation */
     boolean saveEntityTypeToElasticsearch( EntityType entityType, List<PropertyType> propertyTypes );
 
-    boolean deleteEntityType( UUID entityTypeId );
-
-    /* Association Types */
     boolean saveAssociationTypeToElasticsearch( AssociationType associationType, List<PropertyType> propertyTypes );
 
-    boolean deleteAssociationType( UUID associationTypeId );
+    /* Default SecurableObject create and delete */
+    boolean saveSecurableObjectToElasticsearch( SecurableObjectType securableObjectType, Object securableObject );
 
-    /* Property Types */
-    boolean savePropertyTypeToElasticsearch( PropertyType propertyType );
-
-    boolean deletePropertyType( UUID propertyTypeId );
-
-    /* App Types */
-    boolean saveAppTypeToElasticsearch( AppType appType );
-
-    boolean deleteAppType( UUID appTypeId );
-
-    /* Apps */
-    boolean saveAppToElasticsearch( App app );
-
-    boolean deleteApp( UUID appId );
+    boolean deleteSecurableObjectFromElasticsearch( SecurableObjectType securableObjectType, UUID objectId );
 
     /**
      * EDM / SecurableObject Metadata Searches
      **/
 
-    SearchResult executeEntityTypeSearch( String searchTerm, int start, int maxHits );
+    SearchResult executeSecurableObjectSearch(
+            SecurableObjectType securableObjectType,
+            String searchTerm,
+            int start,
+            int maxHits );
 
-    SearchResult executeAssociationTypeSearch( String searchTerm, int start, int maxHits );
+    SearchResult executeSecurableObjectFQNSearch(
+            SecurableObjectType securableObjectType,
+            String namespace,
+            String name,
+            int start,
+            int maxHits );
 
-    SearchResult executePropertyTypeSearch( String searchTerm, int start, int maxHits );
-
-    SearchResult executeFQNEntityTypeSearch( String namespace, String name, int start, int maxHits );
-
-    SearchResult executeFQNPropertyTypeSearch( String namespace, String name, int start, int maxHits );
-
-    SearchResult executeAppSearch( String searchTerm, int start, int maxHits );
-
-    SearchResult executeAppTypeSearch( String searchTerm, int start, int maxHits );
+    SearchResult executeEntitySetCollectionSearch(
+            String searchTerm,
+            Set<AclKey> authorizedEntitySetCollectionIds,
+            int start,
+            int maxHits );
 
     SearchResult executeEntitySetMetadataSearch(
             Optional<String> optionalSearchTerm,
@@ -275,18 +257,12 @@ public interface ConductorElasticsearchApi {
 
     boolean clearAllData();
 
-    boolean triggerPropertyTypeIndex( List<PropertyType> propertyTypes );
-
-    boolean triggerEntityTypeIndex( List<EntityType> entityTypes );
-
-    boolean triggerAssociationTypeIndex( List<AssociationType> associationTypes );
-
     boolean triggerEntitySetIndex( Map<EntitySet, Set<UUID>> entitySets, Map<UUID, PropertyType> propertyTypes );
 
-    boolean triggerAppIndex( List<App> apps );
-
-    boolean triggerAppTypeIndex( List<AppType> appTypes );
-
     boolean triggerOrganizationIndex( List<Organization> organizations );
+
+    boolean triggerSecurableObjectIndex(
+            SecurableObjectType securableObjectType,
+            Iterable<?> securableObjects );
 
 }

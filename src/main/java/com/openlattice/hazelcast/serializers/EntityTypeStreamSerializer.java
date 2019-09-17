@@ -80,6 +80,7 @@ public class EntityTypeStreamSerializer implements SelfRegisteringStreamSerializ
             UUIDStreamSerializer.serialize( out, property );
         } );
 
+        // TODO: get rid of this setmultimap
         GuavaStreamSerializersKt.serializeSetMultimap( out, object.getPropertyTags() );
 
         final Optional<UUID> baseType = object.getBaseType();
