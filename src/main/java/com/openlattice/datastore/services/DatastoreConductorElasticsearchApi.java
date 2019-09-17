@@ -20,9 +20,9 @@
 
 package com.openlattice.datastore.services;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.durableexecutor.DurableExecutorService;
 import com.openlattice.authorization.AclKey;
@@ -333,7 +333,7 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
 
         } catch ( InterruptedException | ExecutionException e ) {
             logger.debug( "unable to execute entity set data search with constraints" );
-            return new EntityDataKeySearchResult( 0, Sets.newHashSet() );
+            return new EntityDataKeySearchResult( 0, ImmutableList.of() );
         }
     }
 
