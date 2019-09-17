@@ -1,9 +1,11 @@
 package com.openlattice.rehearsal.entitysets
 
+import com.google.common.collect.ImmutableList
 import com.openlattice.data.DataExpiration
 import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.edm.set.ExpirationBase
 import com.openlattice.graph.query.GraphQueryState
+import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.rehearsal.assertException
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
 import com.openlattice.rehearsal.edm.EdmTestConstants
@@ -86,6 +88,11 @@ class EntitySetsTest : MultipleAuthenticatedUsersBase() {
         Assert.assertEquals(es2.expiration.expirationBase, ExpirationBase.FIRST_WRITE)
         Assert.assertTrue(es2.expiration.startDateProperty.isEmpty)
 
+        //set expiration policy with negative duration of time until data expires
+        val badTTL = -10L
+        assertException( {DataExpiration(badTTL, ExpirationBase.LAST_WRITE)},
+                "Time until data expiration must not be negative")
+
         //set expiration policy without required start date
        assertException( {DataExpiration(tTL, ExpirationBase.DATE_PROPERTY)},
                "Must provide property type for expiration calculation" )
@@ -97,7 +104,7 @@ class EntitySetsTest : MultipleAuthenticatedUsersBase() {
 
         //set an expiration policy
         val tTL = 10L
-        val expirationPolicy = DataExpiration(tTL, ExpirationBase.FIRST_WRITE)
+        val expirationPolicy = DataExpiration(tTL, ExpirationBase.LAST_WRITE)
         val update = MetadataUpdate(Optional.empty(), Optional.empty(), Optional.empty(),
                 Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
                 Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
