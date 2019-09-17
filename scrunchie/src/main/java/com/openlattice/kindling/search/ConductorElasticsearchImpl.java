@@ -970,7 +970,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
             BoolQueryBuilder fieldQuery = new BoolQueryBuilder();
             entry.getValue().stream().forEach( searchTerm -> fieldQuery.should(
-                    QueryBuilders.matchQuery( getFieldName( entry.getKey() ), searchTerm ).fuzziness( Fuzziness.AUTO )
+                    mustMatchQuery( getFieldName( entry.getKey() ), searchTerm ).fuzziness( Fuzziness.AUTO )
                             .lenient( true ) ) );
             fieldQuery.minimumShouldMatch( 1 );
             valuesQuery.should( QueryBuilders.nestedQuery( ENTITY, fieldQuery, ScoreMode.Avg ) );
@@ -1203,9 +1203,9 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         if ( !verifyElasticsearchConnection() ) { return new SearchResult( 0, Lists.newArrayList() ); }
 
         BoolQueryBuilder query = new BoolQueryBuilder()
-                .should( QueryBuilders.matchQuery( SerializationConstants.TITLE_FIELD, searchTerm )
+                .should( mustMatchQuery( SerializationConstants.TITLE_FIELD, searchTerm )
                         .fuzziness( Fuzziness.AUTO ) )
-                .should( QueryBuilders.matchQuery( SerializationConstants.DESCRIPTION_FIELD, searchTerm )
+                .should( mustMatchQuery( SerializationConstants.DESCRIPTION_FIELD, searchTerm )
                         .fuzziness( Fuzziness.AUTO ) )
                 .minimumShouldMatch( 1 );
 
@@ -1258,14 +1258,12 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
         if ( optionalEntityType.isPresent() ) {
             UUID eid = optionalEntityType.get();
-            query.must( QueryBuilders
-                    .matchQuery( ENTITY_SET + "." + SerializationConstants.ENTITY_TYPE_ID, eid.toString() ) );
+            query.must( mustMatchQuery( ENTITY_SET + "." + SerializationConstants.ENTITY_TYPE_ID, eid.toString() ) );
         } else if ( optionalPropertyTypes.isPresent() ) {
             Set<UUID> propertyTypes = optionalPropertyTypes.get();
             for ( UUID pid : propertyTypes ) {
                 query.must( QueryBuilders.nestedQuery( PROPERTY_TYPES,
-                        QueryBuilders
-                                .matchQuery( PROPERTY_TYPES + "." + SerializationConstants.ID_FIELD, pid.toString() ),
+                        mustMatchQuery( PROPERTY_TYPES + "." + SerializationConstants.ID_FIELD, pid.toString() ),
                         ScoreMode.Avg ) );
             }
         }
@@ -1386,6 +1384,10 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
         client.prepareDelete( index, type, id ).execute().actionGet();
         return true;
+    }
+
+    private MatchQueryBuilder mustMatchQuery( String field, Object value ) {
+        return QueryBuilders.matchQuery( field, value ).operator( Operator.AND );
     }
 
     private Map<String, Float> getFieldsMap( SecurableObjectType objectType ) {
