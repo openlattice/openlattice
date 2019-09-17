@@ -26,6 +26,7 @@ data class DataExpiration(
 ) {
 
     init {
+        check(timeToExpiration >= 0) { "Time until data expiration must not be negative" }
         if (expirationBase == ExpirationBase.DATE_PROPERTY) check(startDateProperty.isPresent) { "Must provide property type for expiration calculation" }
     }
 }
