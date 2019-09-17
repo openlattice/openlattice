@@ -182,6 +182,10 @@ interface EntitySetsApi {
     @HTTP(method = "DELETE", path = BASE + LINKING, hasBody = true)
     fun removeEntitySetsFromLinkingEntitySets(@Body entitySetIds: Map<UUID, Set<UUID>>): Int
 
+    /**
+     * Removes a data expiration policy previously set on an entity set.
+     * @param entitySetId The id of the entity set.
+     */
     @PATCH(BASE + ALL + ID_PATH + EXPIRATION_PATH)
     fun removeDataExpirationPolicy(@Path(ID) entitySetId: UUID): Int
 
