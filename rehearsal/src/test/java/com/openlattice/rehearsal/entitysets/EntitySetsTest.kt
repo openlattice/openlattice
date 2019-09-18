@@ -71,6 +71,19 @@ class EntitySetsTest : MultipleAuthenticatedUsersBase() {
     }
 
     @Test
+    fun testCreateBadDataExpiration() {
+        //set expiration policy with negative duration of time until data expires
+        val badTTL = -10L
+        assertException( {DataExpiration(badTTL, ExpirationBase.LAST_WRITE)},
+                "Time until data expiration must not be negative")
+
+        //set expiration policy without required start date
+        val tTL = 10L
+        assertException( {DataExpiration(tTL, ExpirationBase.DATE_PROPERTY)},
+                "Must provide property type for expiration calculation" )
+    }
+
+    @Test
     fun testAddExpirationPolicy() {
         val es = createEntitySet()
         Assert.assertNull(es.expiration) // default entity set has no expiration policy
@@ -87,15 +100,6 @@ class EntitySetsTest : MultipleAuthenticatedUsersBase() {
         Assert.assertEquals(es2.expiration.timeToExpiration, tTL)
         Assert.assertEquals(es2.expiration.expirationBase, ExpirationBase.FIRST_WRITE)
         Assert.assertTrue(es2.expiration.startDateProperty.isEmpty)
-
-        //set expiration policy with negative duration of time until data expires
-        val badTTL = -10L
-        assertException( {DataExpiration(badTTL, ExpirationBase.LAST_WRITE)},
-                "Time until data expiration must not be negative")
-
-        //set expiration policy without required start date
-       assertException( {DataExpiration(tTL, ExpirationBase.DATE_PROPERTY)},
-               "Must provide property type for expiration calculation" )
     }
 
     @Test
