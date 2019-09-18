@@ -114,7 +114,7 @@ class IndexingService(
                                     currentPartitionsInfo.partitions.toList()
                             )
                         }
-                        var partitionCursor = indexingPartitionProgress.getOrPut(entitySetId) { 0 }
+                        val partitionCursor = indexingPartitionProgress.getOrPut(entitySetId) { 0 }
 
                         val propertyTypeMap = propertyTypes.getAll(
                                 entityTypes.getValue(entitySet.entityTypeId).properties
@@ -202,7 +202,7 @@ class IndexingService(
             entities
         }
 
-        entitiesForIndexing.forEach { entitySetId, entityKeyIds ->
+        entitiesForIndexing.forEach { (entitySetId, entityKeyIds) ->
             logger.info("Creating job to index entity set {} for the following entities {}", entitySetId, entityKeyIds)
             indexingJobs.putIfAbsent(entitySetId, DelegatedUUIDSet.wrap(HashSet()))
             indexingJobs.executeOnKey(entitySetId, UUIDKeyToUUIDSetMerger(entityKeyIds))
@@ -219,7 +219,8 @@ class IndexingService(
             ""
         }
 
-        return "SELECT ${ID.name}, ${LAST_WRITE.name} FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${PARTITION.name} = ? $lowerBoundSql " +
+        return "SELECT ${ID.name}, ${LAST_WRITE.name} FROM ${IDS.name} " +
+                "WHERE ${ENTITY_SET_ID.name} = ? AND ${PARTITION.name} = ? AND ${VERSION.name} > 0 $lowerBoundSql " +
                 "ORDER BY ${ID.name} LIMIT $BATCH_LIMIT"
     }
 
@@ -238,7 +239,7 @@ class IndexingService(
         }) { ResultSetAdapters.id(it) to ResultSetAdapters.lastWriteTyped(it) }
     }
 
-    //TODO: This is unecessary. If someone requests a re-index of a particular set of entity key ids, we should forcibly index those keys.
+    //TODO: This is unnecessary. If someone requests a re-index of a particular set of entity key ids, we should forcibly index those keys.
     private fun getEntitiesWithLastWrite(
             entitySetId: UUID,
             partitions: List<Int>,
