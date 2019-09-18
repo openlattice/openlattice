@@ -6,16 +6,15 @@ import com.openlattice.data.EntityDataKey;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 
 public class EntityDataKeySearchResult {
 
-    private final long               numHits;
-    private final Set<EntityDataKey> entityDataKeys;
+    private final long                numHits;
+    private final List<EntityDataKey> entityDataKeys;
 
     public EntityDataKeySearchResult(
             @JsonProperty( SerializationConstants.NUM_HITS ) long numHits,
-            @JsonProperty( SerializationConstants.HITS ) Set<EntityDataKey> entityDataKeys ) {
+            @JsonProperty( SerializationConstants.HITS ) List<EntityDataKey> entityDataKeys ) {
         this.numHits = numHits;
         this.entityDataKeys = entityDataKeys;
     }
@@ -26,7 +25,7 @@ public class EntityDataKeySearchResult {
     }
 
     @JsonProperty( SerializationConstants.HITS )
-    public Set<EntityDataKey> getEntityDataKeys() {
+    public List<EntityDataKey> getEntityDataKeys() {
         return entityDataKeys;
     }
 
