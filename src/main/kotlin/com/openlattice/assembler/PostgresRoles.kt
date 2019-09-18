@@ -29,5 +29,10 @@ class PostgresRoles private constructor() {
             return "$INTERNAL_PREFIX|role|${role.id}"
         }
 
+        @JvmStatic
+        fun buildOrganizationRoleName(organizationDbName: String): String {
+            return "${organizationDbName}_role"
+        }
+
     }
 }

@@ -20,33 +20,18 @@
 
 package com.openlattice.search;
 
-import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION;
-
 import com.codahale.metrics.annotation.Timed;
 import com.dataloom.streams.StreamUtil;
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ListMultimap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.SetMultimap;
-import com.google.common.collect.Sets;
+import com.google.common.collect.*;
 import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
-import com.openlattice.IdConstants;
 import com.openlattice.apps.App;
 import com.openlattice.apps.AppType;
-import com.openlattice.authorization.AccessCheck;
-import com.openlattice.authorization.AclKey;
-import com.openlattice.authorization.AuthorizationManager;
-import com.openlattice.authorization.Permission;
-import com.openlattice.authorization.Principal;
-import com.openlattice.authorization.Principals;
-import com.openlattice.authorization.SecurableObjectResolveTypeService;
+import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
+import com.openlattice.collections.EntitySetCollection;
+import com.openlattice.collections.EntityTypeCollection;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.EntityDataKey;
 import com.openlattice.data.EntityKeyIdService;
@@ -61,23 +46,7 @@ import com.openlattice.data.storage.MetadataOption;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.edm.EdmConstants;
 import com.openlattice.edm.EntitySet;
-import com.openlattice.edm.events.AppCreatedEvent;
-import com.openlattice.edm.events.AppDeletedEvent;
-import com.openlattice.edm.events.AppTypeCreatedEvent;
-import com.openlattice.edm.events.AppTypeDeletedEvent;
-import com.openlattice.edm.events.AssociationTypeCreatedEvent;
-import com.openlattice.edm.events.AssociationTypeDeletedEvent;
-import com.openlattice.edm.events.ClearAllDataEvent;
-import com.openlattice.edm.events.EntitySetCreatedEvent;
-import com.openlattice.edm.events.EntitySetDataDeletedEvent;
-import com.openlattice.edm.events.EntitySetDeletedEvent;
-import com.openlattice.edm.events.EntitySetMetadataUpdatedEvent;
-import com.openlattice.edm.events.EntityTypeCreatedEvent;
-import com.openlattice.edm.events.EntityTypeDeletedEvent;
-import com.openlattice.edm.events.PropertyTypeCreatedEvent;
-import com.openlattice.edm.events.PropertyTypeDeletedEvent;
-import com.openlattice.edm.events.PropertyTypesAddedToEntityTypeEvent;
-import com.openlattice.edm.events.PropertyTypesInEntitySetUpdatedEvent;
+import com.openlattice.edm.events.*;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
@@ -89,31 +58,19 @@ import com.openlattice.organizations.events.OrganizationDeletedEvent;
 import com.openlattice.organizations.events.OrganizationUpdatedEvent;
 import com.openlattice.postgres.streams.PostgresIterable;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
-import com.openlattice.search.requests.DataSearchResult;
-import com.openlattice.search.requests.EntityDataKeySearchResult;
-import com.openlattice.search.requests.EntityNeighborsFilter;
-import com.openlattice.search.requests.SearchConstraints;
-import com.openlattice.search.requests.SearchResult;
-import com.openlattice.search.requests.SearchTerm;
-
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import javax.inject.Inject;
-
+import com.openlattice.search.requests.*;
 import kotlin.Pair;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION;
 
 public class SearchService {
     private static final Logger logger = LoggerFactory.getLogger( SearchService.class );
@@ -170,6 +127,27 @@ public class SearchService {
                 optionalEntityType,
                 optionalPropertyTypes,
                 authorizedEntitySetIds,
+                start,
+                maxHits );
+    }
+
+    @Timed
+    public SearchResult executeEntitySetCollectionQuery(
+            String searchTerm,
+            int start,
+            int maxHits ) {
+
+        Set<AclKey> authorizedEntitySetCollectionIds = authorizations
+                .getAuthorizedObjectsOfType( Principals.getCurrentPrincipals(),
+                        SecurableObjectType.EntitySetCollection,
+                        READ_PERMISSION ).collect( Collectors.toSet() );
+        if ( authorizedEntitySetCollectionIds.size() == 0 ) {
+            return new SearchResult( 0, Lists.newArrayList() );
+        }
+
+        return elasticsearchApi.executeEntitySetCollectionSearch(
+                searchTerm,
+                authorizedEntitySetCollectionIds,
                 start,
                 maxHits );
     }
@@ -303,7 +281,8 @@ public class SearchService {
 
     @Subscribe
     public void deleteOrganization( OrganizationDeletedEvent event ) {
-        elasticsearchApi.deleteOrganization( event.getOrganizationId() );
+        elasticsearchApi
+                .deleteSecurableObjectFromElasticsearch( SecurableObjectType.Organization, event.getOrganizationId() );
     }
 
     /**
@@ -372,31 +351,63 @@ public class SearchService {
     @Subscribe
     public void createPropertyType( PropertyTypeCreatedEvent event ) {
         PropertyType propertyType = event.getPropertyType();
-        elasticsearchApi.savePropertyTypeToElasticsearch( propertyType );
+        elasticsearchApi
+                .saveSecurableObjectToElasticsearch( SecurableObjectType.PropertyTypeInEntitySet, propertyType );
     }
 
     @Subscribe
     public void createApp( AppCreatedEvent event ) {
         App app = event.getApp();
-        elasticsearchApi.saveAppToElasticsearch( app );
+        elasticsearchApi.saveSecurableObjectToElasticsearch( SecurableObjectType.App, app );
     }
 
     @Subscribe
     public void createAppType( AppTypeCreatedEvent event ) {
         AppType appType = event.getAppType();
-        elasticsearchApi.saveAppTypeToElasticsearch( appType );
+        elasticsearchApi.saveSecurableObjectToElasticsearch( SecurableObjectType.AppType, appType );
     }
 
     @Subscribe
     public void deleteEntityType( EntityTypeDeletedEvent event ) {
         UUID entityTypeId = event.getEntityTypeId();
-        elasticsearchApi.deleteEntityType( entityTypeId );
+        elasticsearchApi.deleteSecurableObjectFromElasticsearch( SecurableObjectType.EntityType, entityTypeId );
     }
 
     @Subscribe
     public void deleteAssociationType( AssociationTypeDeletedEvent event ) {
         UUID associationTypeId = event.getAssociationTypeId();
-        elasticsearchApi.deleteAssociationType( associationTypeId );
+        elasticsearchApi
+                .deleteSecurableObjectFromElasticsearch( SecurableObjectType.AssociationType, associationTypeId );
+    }
+
+    @Subscribe
+    public void createEntityTypeCollection( EntityTypeCollectionCreatedEvent event ) {
+        EntityTypeCollection entityTypeCollection = event.getEntityTypeCollection();
+        elasticsearchApi
+                .saveSecurableObjectToElasticsearch( SecurableObjectType.EntityTypeCollection, entityTypeCollection );
+    }
+
+    @Subscribe
+    public void deleteEntityTypeCollection( EntityTypeCollectionDeletedEvent event ) {
+        UUID entityTypeCollectionId = event.getEntityTypeCollectionId();
+        elasticsearchApi
+                .deleteSecurableObjectFromElasticsearch( SecurableObjectType.EntityTypeCollection,
+                        entityTypeCollectionId );
+    }
+
+    @Subscribe
+    public void createEntitySetCollection( EntitySetCollectionCreatedEvent event ) {
+        EntitySetCollection entitySetCollection = event.getEntitySetCollection();
+        elasticsearchApi
+                .saveSecurableObjectToElasticsearch( SecurableObjectType.EntitySetCollection, entitySetCollection );
+    }
+
+    @Subscribe
+    public void deleteEntitySetCollection( EntitySetCollectionDeletedEvent event ) {
+        UUID entitySetCollectionId = event.getEntitySetCollectionId();
+        elasticsearchApi
+                .deleteSecurableObjectFromElasticsearch( SecurableObjectType.EntitySetCollection,
+                        entitySetCollectionId );
     }
 
     /**
@@ -407,47 +418,65 @@ public class SearchService {
     @Subscribe
     public void deletePropertyType( PropertyTypeDeletedEvent event ) {
         UUID propertyTypeId = event.getPropertyTypeId();
-        elasticsearchApi.deletePropertyType( propertyTypeId );
+        elasticsearchApi
+                .deleteSecurableObjectFromElasticsearch( SecurableObjectType.PropertyTypeInEntitySet, propertyTypeId );
     }
 
     @Subscribe
     public void deleteApp( AppDeletedEvent event ) {
         UUID appId = event.getAppId();
-        elasticsearchApi.deleteApp( appId );
+        elasticsearchApi.deleteSecurableObjectFromElasticsearch( SecurableObjectType.App, appId );
     }
 
     @Subscribe
     public void deleteAppType( AppTypeDeletedEvent event ) {
         UUID appTypeId = event.getAppTypeId();
-        elasticsearchApi.deleteAppType( appTypeId );
+        elasticsearchApi.deleteSecurableObjectFromElasticsearch( SecurableObjectType.AppType, appTypeId );
     }
 
     public SearchResult executeEntityTypeSearch( String searchTerm, int start, int maxHits ) {
-        return elasticsearchApi.executeEntityTypeSearch( searchTerm, start, maxHits );
+        return elasticsearchApi
+                .executeSecurableObjectSearch( SecurableObjectType.EntityType, searchTerm, start, maxHits );
     }
 
     public SearchResult executeAssociationTypeSearch( String searchTerm, int start, int maxHits ) {
-        return elasticsearchApi.executeAssociationTypeSearch( searchTerm, start, maxHits );
+        return elasticsearchApi
+                .executeSecurableObjectSearch( SecurableObjectType.AssociationType, searchTerm, start, maxHits );
     }
 
     public SearchResult executePropertyTypeSearch( String searchTerm, int start, int maxHits ) {
-        return elasticsearchApi.executePropertyTypeSearch( searchTerm, start, maxHits );
+        return elasticsearchApi.executeSecurableObjectSearch( SecurableObjectType.PropertyTypeInEntitySet,
+                searchTerm,
+                start,
+                maxHits );
     }
 
     public SearchResult executeAppSearch( String searchTerm, int start, int maxHits ) {
-        return elasticsearchApi.executeAppSearch( searchTerm, start, maxHits );
+        return elasticsearchApi.executeSecurableObjectSearch( SecurableObjectType.App, searchTerm, start, maxHits );
     }
 
     public SearchResult executeAppTypeSearch( String searchTerm, int start, int maxHits ) {
-        return elasticsearchApi.executeAppTypeSearch( searchTerm, start, maxHits );
+        return elasticsearchApi.executeSecurableObjectSearch( SecurableObjectType.AppType, searchTerm, start, maxHits );
+    }
+
+    public SearchResult executeEntityTypeCollectionSearch( String searchTerm, int start, int maxHits ) {
+        return elasticsearchApi.executeSecurableObjectSearch( SecurableObjectType.EntityTypeCollection,
+                searchTerm,
+                start,
+                maxHits );
     }
 
     public SearchResult executeFQNEntityTypeSearch( String namespace, String name, int start, int maxHits ) {
-        return elasticsearchApi.executeFQNEntityTypeSearch( namespace, name, start, maxHits );
+        return elasticsearchApi
+                .executeSecurableObjectFQNSearch( SecurableObjectType.EntityType, namespace, name, start, maxHits );
     }
 
     public SearchResult executeFQNPropertyTypeSearch( String namespace, String name, int start, int maxHits ) {
-        return elasticsearchApi.executeFQNPropertyTypeSearch( namespace, name, start, maxHits );
+        return elasticsearchApi.executeSecurableObjectFQNSearch( SecurableObjectType.PropertyTypeInEntitySet,
+                namespace,
+                name,
+                start,
+                maxHits );
     }
 
     @Timed
@@ -821,15 +850,15 @@ public class SearchService {
     }
 
     public void triggerPropertyTypeIndex( List<PropertyType> propertyTypes ) {
-        elasticsearchApi.triggerPropertyTypeIndex( propertyTypes );
+        elasticsearchApi.triggerSecurableObjectIndex( SecurableObjectType.PropertyTypeInEntitySet, propertyTypes );
     }
 
     public void triggerEntityTypeIndex( List<EntityType> entityTypes ) {
-        elasticsearchApi.triggerEntityTypeIndex( entityTypes );
+        elasticsearchApi.triggerSecurableObjectIndex( SecurableObjectType.EntityType, entityTypes );
     }
 
     public void triggerAssociationTypeIndex( List<AssociationType> associationTypes ) {
-        elasticsearchApi.triggerAssociationTypeIndex( associationTypes );
+        elasticsearchApi.triggerSecurableObjectIndex( SecurableObjectType.AssociationType, associationTypes );
     }
 
     public void triggerEntitySetIndex() {
@@ -862,11 +891,11 @@ public class SearchService {
     }
 
     public void triggerAppIndex( List<App> apps ) {
-        elasticsearchApi.triggerAppIndex( apps );
+        elasticsearchApi.triggerSecurableObjectIndex( SecurableObjectType.App, apps );
     }
 
     public void triggerAppTypeIndex( List<AppType> appTypes ) {
-        elasticsearchApi.triggerAppTypeIndex( appTypes );
+        elasticsearchApi.triggerSecurableObjectIndex( SecurableObjectType.AppType, appTypes );
     }
 
     public void triggerAllOrganizationsIndex( List<Organization> allOrganizations ) {
