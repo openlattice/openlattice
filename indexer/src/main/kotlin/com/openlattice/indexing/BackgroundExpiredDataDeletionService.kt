@@ -291,7 +291,7 @@ class BackgroundExpiredDataDeletionService(
                 "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' " +
                 "AND ${PARTITION.name} IN $partitions " +
                 "AND $comparisonField < ? " +
-                "AND versions[array_upper(versions,1)] >= 0 " +
+                "AND versions[1] != -1 " +
                 "LIMIT $FETCH_SIZE"
     }
 
