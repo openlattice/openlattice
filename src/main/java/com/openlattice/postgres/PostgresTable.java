@@ -146,7 +146,8 @@ public final class PostgresTable {
                             PARTITIONS,
                             PARTITIONS_VERSION,
                             TIME_TO_EXPIRATION,
-                            EXPIRATION_FLAG,
+                            EXPIRATION_BASE_FLAG,
+                            EXPIRATION_DELETE_FLAG,
                             EXPIRATION_START_ID );
     public static final PostgresTableDefinition        ENTITY_SET_PROPERTY_METADATA =
             new PostgresTableDefinition( "entity_set_property_metadata" )
