@@ -23,7 +23,7 @@ package com.openlattice.hazelcast.serializers;
 import com.google.common.collect.LinkedHashMultimap;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.kryptnostic.rhizome.hazelcast.serializers.GuavaStreamSerializersKt;
+import com.openlattice.hazelcast.serializers.GuavaStreamSerializersKt;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.edm.types.processors.UpdateEntitySetPropertyMetadataProcessor;

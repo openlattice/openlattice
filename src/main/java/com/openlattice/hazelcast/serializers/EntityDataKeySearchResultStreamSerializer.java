@@ -9,8 +9,7 @@ import com.openlattice.search.requests.EntityDataKeySearchResult;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 @Component
 public class EntityDataKeySearchResultStreamSerializer implements
@@ -31,7 +30,7 @@ public class EntityDataKeySearchResultStreamSerializer implements
     @Override public EntityDataKeySearchResult read( ObjectDataInput in ) throws IOException {
         long numHits = in.readLong();
         int numIds = in.readInt();
-        Set<EntityDataKey> entityDataKeys = new HashSet<>( numIds );
+        List<EntityDataKey> entityDataKeys = new ArrayList<>( numIds );
         for ( int i = 0; i < numIds; i++ ) {
             entityDataKeys.add( EntityDataKeyStreamSerializer.deserialize( in ) );
         }
