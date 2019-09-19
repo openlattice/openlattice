@@ -4,6 +4,7 @@ import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.data.DataExpiration
+import com.openlattice.data.DeleteType
 import com.openlattice.edm.set.ExpirationBase
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import org.springframework.stereotype.Component
@@ -13,11 +14,13 @@ class DataExpirationStreamSerializer : SelfRegisteringStreamSerializer<DataExpir
 
     companion object {
         private val expirationTypes = ExpirationBase.values()
+        private val deleteTypes = DeleteType.values()
 
         @JvmStatic
         fun serialize(out: ObjectDataOutput, obj: DataExpiration) {
             out.writeLong(obj.timeToExpiration)
             out.writeInt(obj.expirationBase.ordinal)
+            out.writeInt(obj.deleteType.ordinal)
             OptionalStreamSerializers.serialize(out, obj.startDateProperty, UUIDStreamSerializer::serialize)
         }
 
@@ -25,8 +28,9 @@ class DataExpirationStreamSerializer : SelfRegisteringStreamSerializer<DataExpir
         fun deserialize(input: ObjectDataInput): DataExpiration {
             val timeToExpiration = input.readLong()
             val expirationType = expirationTypes[input.readInt()]
+            val deleteType = deleteTypes[input.readInt()]
             val startDateProperty = OptionalStreamSerializers.deserialize(input, UUIDStreamSerializer::deserialize)
-            return DataExpiration(timeToExpiration, expirationType, startDateProperty)
+            return DataExpiration(timeToExpiration, expirationType, deleteType, startDateProperty)
         }
 
     }
