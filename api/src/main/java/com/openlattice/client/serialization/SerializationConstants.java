@@ -137,6 +137,7 @@ public final class SerializationConstants {
     public static final String INCLUDE_FIELD                    = "include";
     public static final String INDEXING                         = "indexing";
     public static final String INDEX_TYPE                       = "indexType";
+    public static final String IS_DESCENDING                    = "isDescending";
     public static final String IS_DST                           = "isDst";
     public static final String IS_OWNER                         = "isOwner";
     public static final String KEYWORD                          = "kw";
@@ -217,6 +218,7 @@ public final class SerializationConstants {
     public static final String SECOND                           = "second";
     public static final String SELF_AGGREGATIONS                = "selfAggregations";
     public static final String SHARDS                           = "shards";
+    public static final String SORT                             = "sort";
     public static final String SMS_ENTITY_SET_INFO              = "smsEntitySetInfo";
     public static final String SRC                              = "src";
     public static final String SRC_ENTITY_INDEX                 = "srcEntityIndex";
