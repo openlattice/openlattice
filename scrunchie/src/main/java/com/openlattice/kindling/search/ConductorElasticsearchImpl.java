@@ -43,6 +43,7 @@ import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
 import com.openlattice.search.SortDefinition;
 import com.openlattice.search.requests.*;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.lucene.search.join.ScoreMode;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
@@ -1393,6 +1394,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         return true;
     }
 
+    @SuppressFBWarnings( value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE", justification = "propertyTypeId cannot be null")
     private SortBuilder buildSort( SortDefinition sortDefinition ) {
 
         SortBuilder sort;
@@ -1450,6 +1452,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 fields.add( SerializationConstants.TEMPLATE + "." + SerializationConstants.NAME_FIELD );
                 fields.add( SerializationConstants.TEMPLATE + "." + SerializationConstants.TITLE_FIELD );
                 fields.add( SerializationConstants.TEMPLATE + "." + SerializationConstants.DESCRIPTION_FIELD );
+                break;
             }
 
             case EntitySetCollection: {
@@ -1458,6 +1461,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 fields.add( SerializationConstants.CONTACTS );
                 fields.add( SerializationConstants.TEMPLATE );
                 fields.add( SerializationConstants.ORGANIZATION_ID );
+                break;
             }
 
             default: {
