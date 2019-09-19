@@ -946,6 +946,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 SearchRequestBuilder request = client
                         .prepareSearch( getIndexName( entityTypesByEntitySetId.get( entitySetId ) ) )
                         .setQuery( query )
+                        .setTrackTotalHits( true )
                         .setFrom( searchConstraints.getStart() )
                         .setSize( searchConstraints.getMaxHits() )
                         .addSort( sort )
@@ -1394,7 +1395,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         return true;
     }
 
-    @SuppressFBWarnings( value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE", justification = "propertyTypeId cannot be null")
+    @SuppressFBWarnings( value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE", justification = "propertyTypeId cannot be null" )
     private SortBuilder buildSort( SortDefinition sortDefinition ) {
 
         SortBuilder sort;
