@@ -22,6 +22,7 @@ import java.util.*
 data class DataExpiration(
         @JsonProperty(SerializationConstants.EXPIRATION) val timeToExpiration: Long,
         @JsonProperty(SerializationConstants.FLAGS_FIELD) val expirationBase: ExpirationBase,
+        @JsonProperty(SerializationConstants.DELETE_TYPE) val deleteType: DeleteType,
         @JsonProperty(SerializationConstants.PROPERTY_TYPE_ID) val startDateProperty: Optional<UUID> = Optional.empty()
 ) {
 
