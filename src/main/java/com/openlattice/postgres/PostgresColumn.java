@@ -116,6 +116,9 @@ public final class PostgresColumn {
     public static final String                   DATA_ID_FIELD                     = "data_id";
     public static final PostgresColumnDefinition DATA_ID                           =
             new PostgresColumnDefinition( DATA_ID_FIELD, UUID );
+    public static final String                   EXPIRATION_DELETE_FLAG_FIELD      = "expiration_delete_flag";
+    public static final PostgresColumnDefinition EXPIRATION_DELETE_FLAG            =
+            new PostgresColumnDefinition( EXPIRATION_DELETE_FLAG_FIELD, TEXT );
     public static final String                   DESCRIPTION_FIELD                 = "description";
     public static final PostgresColumnDefinition DESCRIPTION                       =
             new PostgresColumnDefinition( DESCRIPTION_FIELD, TEXT );
@@ -210,9 +213,9 @@ public final class PostgresColumn {
     public static final String                   EXPIRATION_FIELD                  = "expiration";
     public static final PostgresColumnDefinition EXPIRATION                        =
             new PostgresColumnDefinition( EXPIRATION_FIELD, BIGINT );
-    public static final String                   EXPIRATION_FLAG_FIELD             = "expiration_flag";
-    public static final PostgresColumnDefinition EXPIRATION_FLAG                   =
-            new PostgresColumnDefinition( EXPIRATION_FLAG_FIELD, TEXT );
+    public static final String                   EXPIRATION_BASE_FLAG_FIELD        = "expiration_base_flag";
+    public static final PostgresColumnDefinition EXPIRATION_BASE_FLAG              =
+            new PostgresColumnDefinition( EXPIRATION_BASE_FLAG_FIELD, TEXT );
     public static final String                   EXPIRATION_START_ID_FIELD         = "expiration_start_id";
     public static final PostgresColumnDefinition EXPIRATION_START_ID               =
             new PostgresColumnDefinition( EXPIRATION_START_ID_FIELD, UUID );
