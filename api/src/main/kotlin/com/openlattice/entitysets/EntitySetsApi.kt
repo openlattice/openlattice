@@ -24,6 +24,7 @@ import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.edm.set.EntitySetPropertyMetadata
 import com.openlattice.edm.type.PropertyType
 import retrofit2.http.*
+import java.time.OffsetDateTime
 import java.util.*
 
 
@@ -188,5 +189,16 @@ interface EntitySetsApi {
      */
     @PATCH(BASE + ALL + ID_PATH + EXPIRATION_PATH)
     fun removeDataExpirationPolicy(@Path(ID) entitySetId: UUID): Int
+
+    /**
+     * Gets data from an entity set that will expire before a specified date
+     * @param entitySetId The id of the entity set to check
+     * @param dateTime The date time to check against (i.e. what entities will expire before this date time)
+     *
+     * @return Set of entity key ids that will expire before the specified date time
+     */
+    @POST(BASE + ALL + ID_PATH + EXPIRATION_PATH )
+    fun getExpiringEntitiesFromEntitySet(@Path(ID) entitySetId: UUID,
+                                         @Body dateTime: OffsetDateTime): Set<UUID>
 
 }
