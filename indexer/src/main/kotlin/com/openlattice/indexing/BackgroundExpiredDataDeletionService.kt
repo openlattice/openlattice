@@ -17,6 +17,7 @@ import com.openlattice.data.*
 import com.openlattice.data.DataApi.MAX_BATCH_SIZE
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.EntitySet
+import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.edm.set.ExpirationBase
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
@@ -164,13 +165,24 @@ class BackgroundExpiredDataDeletionService(
                 for (idsChunk in chunkedEntityKeyIds) {
                     val ids = idsChunk.toSet()
 
-                    if (!edm.isAssociationEntitySet(entitySet.id)) {
-                        deleteAssociationsOfExpiredEntities(entitySet.id, ids)
+                    val writeEvent = if (entitySet.expiration.deleteType == DeleteType.Hard) {
+                        if (!edm.isAssociationEntitySet(entitySet.id)) {
+                            deleteAssociationsOfExpiredEntities(entitySet.id, ids)
+                        }
+                        dataGraphService.deleteEntities(
+                                entitySet.id,
+                                ids,
+                                propertyTypes)
+
+                    } else {
+                        if (!edm.isAssociationEntitySet(entitySet.id)) {
+                            clearAssociationsOfExpiredEntities(entitySet.id, ids)
+                        }
+                        dataGraphService.clearEntities(
+                                entitySet.id,
+                                ids,
+                                propertyTypes)
                     }
-                    val writeEvent = dataGraphService.deleteEntities(
-                            entitySet.id,
-                            ids,
-                            propertyTypes)
 
                     logger.info("Completed deleting {} expired elements from entity set {}.",
                             writeEvent.numUpdates,
@@ -218,7 +230,7 @@ class BackgroundExpiredDataDeletionService(
             ExpirationBase.FIRST_WRITE -> {
                 expirationField = expirationInstant.toEpochMilli()
                 expirationFieldSQLType = Types.BIGINT
-                comparisonField = "${VERSIONS.name}[1]"
+                comparisonField = "${VERSIONS.name}[array_upper(${VERSIONS.name},1)]" //gets the latest version
             }
             ExpirationBase.LAST_WRITE -> {
                 expirationField = OffsetDateTime.ofInstant(expirationInstant, ZoneId.systemDefault())
@@ -252,6 +264,24 @@ class BackgroundExpiredDataDeletionService(
         return dataGraphService.deleteAssociationsBatch(entitySetId, associationEdgeKeys, associationPropertyTypes)
     }
 
+    private fun clearAssociationsOfExpiredEntities(entitySetId: UUID, ids: Set<UUID>) : List<WriteEvent> {
+        val associationEdgeKeys : PostgresIterable<DataEdgeKey> = dataGraphService.getEdgesConnectedToEntities(entitySetId, ids, false)
+
+        //filter out audit entity set edges from association edges to clear
+        val associationEdgeESIds = associationEdgeKeys.map{ it.edge.entitySetId}.toSet()
+        val auditEdgeEntitySetIds = edm.getEntitySetIdsWithFlags(associationEdgeESIds, setOf(EntitySetFlag.AUDIT))
+        val filteredAssociationEdgeKeys = associationEdgeKeys
+                .filter{ auditEdgeEntitySetIds.contains(it.edge.entitySetId)}
+                .toSet()
+
+        val associationPropertyTypes = filteredAssociationEdgeKeys
+                .map{it.edge.entitySetId to
+                        edm.getPropertyTypesAsMap(
+                                edm.getEntityType(edm.getEntitySet(it.edge.entitySetId).entityTypeId
+                                ).properties
+                        )}.toMap()
+        return dataGraphService.clearAssociationsBatch(entitySetId, associationEdgeKeys, associationPropertyTypes)
+    }
     private fun deleteExpiredDataFromElasticSearch(entitySetId: UUID, entityTypeId: UUID, expiredEntityKeyIds: Set<UUID>): Boolean {
         return elasticsearchApi.deleteEntityDataBulk(entitySetId, entityTypeId, expiredEntityKeyIds)
     }
@@ -261,7 +291,7 @@ class BackgroundExpiredDataDeletionService(
                 "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' " +
                 "AND ${PARTITION.name} IN $partitions " +
                 "AND $comparisonField < ? " +
-                "AND versions[1] >= 0 " +
+                "AND versions[array_upper(versions,1)] >= 0 " +
                 "LIMIT $FETCH_SIZE"
     }
 
