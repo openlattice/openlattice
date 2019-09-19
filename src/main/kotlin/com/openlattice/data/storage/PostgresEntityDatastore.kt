@@ -12,6 +12,7 @@ import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.PostgresEdmManager
 import com.openlattice.edm.events.EntitySetDataDeletedEvent
 import com.openlattice.edm.set.EntitySetFlag
+import com.openlattice.edm.set.ExpirationBase
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.linking.LinkingQueryService
 import com.openlattice.linking.PostgresLinkingFeedbackService
@@ -22,6 +23,7 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.nio.ByteBuffer
+import java.time.OffsetDateTime
 import java.util.*
 import java.util.stream.Stream
 import javax.inject.Inject
@@ -486,6 +488,11 @@ class PostgresEntityDatastore(
         )
 
         return propertyWriteEvent
+    }
+
+    override fun getExpiringEntitiesFromEntitySet(entitySetId: UUID, sqlParams: Triple<String, Any, Int>) : Set<UUID> {
+        return dataQueryService
+                .getExpringEntitiesFromEntitySet(entitySetId, sqlParams).toSet()
     }
 
 }
