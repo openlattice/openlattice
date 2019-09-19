@@ -637,12 +637,14 @@ public final class ResultSetAdapters {
         final var partitions = partitions( rs );
         final var partitionVersion = partitionVersions( rs );
         final var timeToExpiration = timeToExpiration( rs );
-        final var expirationFlag = expirationFlag( rs );
+        final var expirationBase = expirationBase( rs );
+        final var deleteType = deleteType( rs );
         final var startDateProperty = startDateProperty( rs );
         final DataExpiration expirationData;
         if ( timeToExpiration != null ) {
             expirationData = new DataExpiration( timeToExpiration,
-                    expirationFlag,
+                    expirationBase,
+                    deleteType,
                     Optional.ofNullable( startDateProperty ) );
         } else { expirationData = null; }
         return new EntitySet( id,
@@ -671,12 +673,16 @@ public final class ResultSetAdapters {
         return (Long) rs.getObject( TIME_TO_EXPIRATION_FIELD );
     }
 
-    public static ExpirationBase expirationFlag( ResultSet rs ) throws SQLException {
-        String expirationFlag = rs.getString( EXPIRATION_FLAG_FIELD );
+    public static ExpirationBase expirationBase( ResultSet rs ) throws SQLException {
+        String expirationFlag = rs.getString( EXPIRATION_BASE_FLAG_FIELD );
         if ( expirationFlag != null ) { return ExpirationBase.valueOf( expirationFlag ); }
         return null;
-        //TODO add a check for if the value is null. if it is null then we know there is no expiration on the entity set.
-        //probably need to figure this out for all of the expiration fields
+    }
+
+    public static DeleteType deleteType( ResultSet rs ) throws SQLException {
+        String deleteType = rs.getString( EXPIRATION_DELETE_FLAG_FIELD );
+        if ( deleteType != null) { return DeleteType.valueOf( deleteType ); }
+        return null;
     }
 
     public static UUID startDateProperty( ResultSet rs ) throws SQLException {
