@@ -1,5 +1,6 @@
 package com.openlattice.hazelcast.serializers;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest;
 import com.openlattice.mapstores.TestDataFactory;
@@ -17,7 +18,7 @@ public class EntityDataKeySearchResultStreamSerializerTest extends
 
     @Override protected EntityDataKeySearchResult createInput() {
         return new EntityDataKeySearchResult( RandomUtils.nextLong( 0, 99999 ),
-                ImmutableSet.of( TestDataFactory.entityDataKey(),
+                ImmutableList.of( TestDataFactory.entityDataKey(),
                         TestDataFactory.entityDataKey(),
                         TestDataFactory.entityDataKey(),
                         TestDataFactory.entityDataKey(),

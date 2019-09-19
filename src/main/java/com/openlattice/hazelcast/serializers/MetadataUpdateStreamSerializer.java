@@ -3,7 +3,7 @@ package com.openlattice.hazelcast.serializers;
 import com.google.common.collect.LinkedHashMultimap;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.kryptnostic.rhizome.hazelcast.serializers.GuavaStreamSerializersKt;
+import com.openlattice.hazelcast.serializers.GuavaStreamSerializersKt;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
@@ -52,6 +52,7 @@ public class MetadataUpdateStreamSerializer implements SelfRegisteringStreamSeri
         OptionalStreamSerializers.serialize( out, object.getPii(), ObjectDataOutput::writeBoolean );
         OptionalStreamSerializers.serialize( out, object.getDefaultShow(), ObjectDataOutput::writeBoolean );
         OptionalStreamSerializers.serialize( out, object.getUrl(), ObjectDataOutput::writeUTF );
+        // TODO: get rid of this setmultimap
         OptionalStreamSerializers
                 .serialize( out, object.getPropertyTags(), GuavaStreamSerializersKt::serializeSetMultimap );
         OptionalStreamSerializers.serialize( out, object.getOrganizationId(), UUIDStreamSerializer::serialize );

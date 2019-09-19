@@ -1,6 +1,7 @@
 package com.openlattice.data.storage
 
 
+import com.openlattice.IdConstants
 import com.openlattice.analysis.SqlBindInfo
 import com.openlattice.analysis.requests.Filter
 import com.openlattice.edm.PostgresEdmTypeConverter
@@ -66,9 +67,10 @@ fun buildPreparableFiltersSqlForLinkedEntities(
     val filtersClauses = buildPreparableFiltersClause(startIndex, propertyTypes, propertyTypeFilters)
     val filtersClause = if (filtersClauses.first.isNotEmpty()) " AND ${filtersClauses.first} " else ""
 
+    // TODO: remove IS NOT NULL post-migration
     val innerSql = selectEntitiesGroupedByIdAndPropertyTypeId(
             idsPresent = idsPresent, partitionsPresent = partitionsPresent, selectOriginIds = selectOriginIds
-    ) + " AND ${ORIGIN_ID.name} IS NOT NULL " + filtersClause + GROUP_BY_ESID_EKID_PART_PTID
+    ) + " AND ${ORIGIN_ID.name} IS NOT NULL AND ${ORIGIN_ID.name} IS NOT '${IdConstants.EMPTY_ORIGIN_ID.id}' " + filtersClause + GROUP_BY_ESID_EKID_PART_PTID
 
     val entityKeyIds = if (selectOriginIds) ",${ENTITY_KEY_IDS_COL.name}" else ""
     val groupBy = if (selectOriginIds) GROUP_BY_ESID_EKID_PART_EKIDS else GROUP_BY_ESID_EKID_PART

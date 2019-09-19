@@ -22,7 +22,7 @@
 
 package com.openlattice.hazelcast.serializers;
 
-import com.kryptnostic.rhizome.hazelcast.serializers.GuavaStreamSerializersKt;
+import com.openlattice.hazelcast.serializers.GuavaStreamSerializersKt;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -80,6 +80,7 @@ public class EntityTypeStreamSerializer implements SelfRegisteringStreamSerializ
             UUIDStreamSerializer.serialize( out, property );
         } );
 
+        // TODO: get rid of this setmultimap
         GuavaStreamSerializersKt.serializeSetMultimap( out, object.getPropertyTags() );
 
         final Optional<UUID> baseType = object.getBaseType();
