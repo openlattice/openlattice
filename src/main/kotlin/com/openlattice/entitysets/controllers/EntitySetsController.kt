@@ -38,6 +38,7 @@ import com.openlattice.controllers.exceptions.ForbiddenException
 import com.openlattice.controllers.exceptions.wrappers.BatchException
 import com.openlattice.controllers.exceptions.wrappers.ErrorsDTO
 import com.openlattice.controllers.util.ApiExceptions
+import com.openlattice.data.DataExpiration
 import com.openlattice.data.DataGraphManager
 import com.openlattice.data.WriteEvent
 import com.openlattice.datastore.services.EdmManager
@@ -45,6 +46,7 @@ import com.openlattice.edm.EntitySet
 import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.edm.set.EntitySetPropertyMetadata
+import com.openlattice.edm.set.ExpirationBase
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.entitysets.EntitySetsApi
 import com.openlattice.entitysets.EntitySetsApi.Companion.ALL
@@ -61,11 +63,17 @@ import com.openlattice.entitysets.EntitySetsApi.Companion.PROPERTY_TYPE_ID
 import com.openlattice.entitysets.EntitySetsApi.Companion.PROPERTY_TYPE_ID_PATH
 import com.openlattice.linking.util.PersonProperties
 import com.openlattice.organizations.roles.SecurePrincipalsManager
+import com.openlattice.postgres.DataTables.LAST_WRITE
+import com.openlattice.postgres.PostgresColumn.VERSIONS
+import com.openlattice.postgres.PostgresDataTables
+import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.*
 import retrofit2.http.PUT
 import retrofit2.http.Path
+import java.sql.Types
 import java.time.OffsetDateTime
+import java.time.ZoneId
 import java.util.*
 import javax.inject.Inject
 import kotlin.streams.asSequence
@@ -430,6 +438,55 @@ constructor(
                 )
         )
         return 1
+    }
+
+    @Timed
+    @RequestMapping(
+            path = [ALL + ID_PATH + EXPIRATION_PATH],
+            method = [RequestMethod.POST]
+    )
+    override fun getExpiringEntitiesFromEntitySet(
+            @PathVariable(ID) entitySetId: UUID,
+            @RequestBody dateTime: OffsetDateTime): Set<UUID> {
+        ensureReadAccess(AclKey(entitySetId))
+        val es = getEntitySet(entitySetId)
+        check(es.hasExpirationPolicy()) { "Entity set ${es.name} does not have an expiration policy" }
+
+        val expirationPolicy = es.expiration
+        val sqlParams = getSqlParameters(expirationPolicy, dateTime)
+        return dgm.getExpiringEntitiesFromEntitySet(entitySetId, sqlParams)
+    }
+
+    private fun getSqlParameters(expirationPolicy: DataExpiration, dateTime: OffsetDateTime) : Triple<String, Any, Int> {
+        val expirationBaseColumn: String
+        val formattedDateMinusTTE: Any
+        val sqlFormat: Int
+        val dateMinusTTEAsInstant = dateTime.toInstant().minusMillis(expirationPolicy.timeToExpiration)
+        when (expirationPolicy.expirationBase) {
+            ExpirationBase.DATE_PROPERTY -> {
+                val expirationPropertyType = edmManager.getPropertyType(expirationPolicy.startDateProperty.get())
+                val columnData = Pair(expirationPropertyType.postgresIndexType, expirationPropertyType.datatype)
+                expirationBaseColumn = PostgresDataTables.getColumnDefinition(columnData.first, columnData.second).name
+                if (columnData.second == EdmPrimitiveTypeKind.Date) {
+                    formattedDateMinusTTE = OffsetDateTime.ofInstant(dateMinusTTEAsInstant, ZoneId.systemDefault()).toLocalDate()
+                    sqlFormat = Types.DATE
+                } else { //only other TypeKind for date property type is OffsetDateTime
+                    formattedDateMinusTTE = OffsetDateTime.ofInstant(dateMinusTTEAsInstant, ZoneId.systemDefault())
+                    sqlFormat = Types.TIMESTAMP_WITH_TIMEZONE
+                }
+            }
+            ExpirationBase.FIRST_WRITE -> {
+                expirationBaseColumn = "${VERSIONS.name}[array_upper(${VERSIONS.name},1)]" //gets the latest version from the versions column
+                formattedDateMinusTTE = dateMinusTTEAsInstant.toEpochMilli()
+                sqlFormat = Types.BIGINT
+            }
+            ExpirationBase.LAST_WRITE -> {
+                expirationBaseColumn = LAST_WRITE.name
+                formattedDateMinusTTE = OffsetDateTime.ofInstant(dateMinusTTEAsInstant, ZoneId.systemDefault())
+                sqlFormat = Types.TIMESTAMP_WITH_TIMEZONE
+            }
+        }
+        return Triple(expirationBaseColumn, formattedDateMinusTTE, sqlFormat)
     }
 
     private fun removeEntitySets(linkingEntitySetId: UUID, entitySetIds: Set<UUID>): Int {
