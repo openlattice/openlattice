@@ -4,6 +4,7 @@ import com.codahale.metrics.annotation.Timed
 import com.google.common.collect.*
 import com.google.common.eventbus.EventBus
 import com.openlattice.assembler.events.MaterializedEntitySetDataChangeEvent
+import com.openlattice.data.DeleteType
 import com.openlattice.data.EntitySetData
 import com.openlattice.data.WriteEvent
 import com.openlattice.data.events.EntitiesDeletedEvent
@@ -490,9 +491,9 @@ class PostgresEntityDatastore(
         return propertyWriteEvent
     }
 
-    override fun getExpiringEntitiesFromEntitySet(entitySetId: UUID, sqlParams: Triple<String, Any, Int>) : Set<UUID> {
+    override fun getExpiringEntitiesFromEntitySet(entitySetId: UUID, sqlParams: Triple<String, Any, Int>, deletedType: DeleteType) : Set<UUID> {
         return dataQueryService
-                .getExpringEntitiesFromEntitySet(entitySetId, sqlParams).toSet()
+                .getExpiringEntitiesFromEntitySet(entitySetId, sqlParams, deletedType).toSet()
     }
 
 }

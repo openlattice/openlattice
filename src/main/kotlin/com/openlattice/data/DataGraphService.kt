@@ -618,7 +618,7 @@ open class DataGraphService(
         return Stream.empty()
     }
 
-    override fun getExpiringEntitiesFromEntitySet(entitySetId: UUID, sqlParams: Triple<String, Any, Int>) : Set<UUID> {
-        return eds.getExpiringEntitiesFromEntitySet(entitySetId, sqlParams)
+    override fun getExpiringEntitiesFromEntitySet(entitySetId: UUID, sqlParams: Triple<String, Any, Int>, deleteType: DeleteType) : Set<UUID> {
+        return eds.getExpiringEntitiesFromEntitySet(entitySetId, sqlParams, deleteType)
     }
 }

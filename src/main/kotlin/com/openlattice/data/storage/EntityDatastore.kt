@@ -2,6 +2,7 @@ package com.openlattice.data.storage
 
 import com.google.common.collect.ListMultimap
 import com.google.common.collect.SetMultimap
+import com.openlattice.data.DeleteType
 import com.openlattice.data.EntitySetData
 import com.openlattice.data.WriteEvent
 import com.openlattice.edm.set.ExpirationBase
@@ -198,6 +199,6 @@ interface EntityDatastore {
             entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
     ): WriteEvent
 
-    fun getExpiringEntitiesFromEntitySet(entitySetId: UUID, sqlParams: Triple<String, Any, Int>) : Set<UUID>
+    fun getExpiringEntitiesFromEntitySet(entitySetId: UUID, sqlParams: Triple<String, Any, Int>, deleteType: DeleteType) : Set<UUID>
 
 }

@@ -211,5 +211,5 @@ interface DataGraphManager {
     fun getEdgesAndNeighborsForVertex(entitySetId: UUID, entityKeyId: UUID): Stream<Edge>
     fun getEdgeKeysOfEntitySet(entitySetId: UUID): PostgresIterable<DataEdgeKey>
     fun getEdgesConnectedToEntities(entitySetId: UUID, entityKeyIds: Set<UUID>, includeClearedEdges: Boolean): PostgresIterable<DataEdgeKey>
-    fun getExpiringEntitiesFromEntitySet(entitySetId: UUID, sqlParams: Triple<String, Any, Int>) : Set<UUID>
+    fun getExpiringEntitiesFromEntitySet(entitySetId: UUID, sqlParams: Triple<String, Any, Int>, deleteType: DeleteType) : Set<UUID>
 }

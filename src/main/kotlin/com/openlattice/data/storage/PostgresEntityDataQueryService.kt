@@ -3,6 +3,7 @@ package com.openlattice.data.storage
 import com.google.common.collect.Multimaps
 import com.openlattice.analysis.SqlBindInfo
 import com.openlattice.analysis.requests.Filter
+import com.openlattice.data.DeleteType
 import com.openlattice.data.WriteEvent
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.data.storage.partitions.PartitionsInfo
@@ -882,24 +883,35 @@ class PostgresEntityDataQueryService(
         return WriteEvent(tombstoneVersion, numUpdated)
     }
 
-    fun getExpringEntitiesFromEntitySet(entitySetId: UUID, sqlParams: Triple<String, Any, Int>) : PostgresIterable<UUID> {
+    fun getExpiringEntitiesFromEntitySet(entitySetId: UUID, sqlParams: Triple<String, Any, Int>, deleteType: DeleteType) : PostgresIterable<UUID> {
+        val partitionsInfo: PartitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
+        val partitions = partitionsInfo.partitions.joinToString(prefix = "('", postfix = "')", separator = "', '") { it.toString() }
+        val partitionVersion = partitionsInfo.partitionsVersion
         return PostgresIterable(
                 Supplier {
                     val connection = hds.connection
-                    val stmt = connection.prepareStatement(getExpiringEntitiesQuery(entitySetId, sqlParams.first))
-                    stmt.setObject(1, sqlParams.second, sqlParams.third)
+                    val stmt = connection.prepareStatement(getExpiringEntitiesQuery(entitySetId, sqlParams.first, deleteType))
+                    stmt.setString(1, partitions)
+                    stmt.setInt(2, partitionVersion)
+                    stmt.setObject(3, sqlParams.second, sqlParams.third)
                     StatementHolder(connection, stmt, stmt.executeQuery())
                 },
                 Function<ResultSet, UUID> {ResultSetAdapters.id(it)}
         )
     }
 
-    fun getExpiringEntitiesQuery(entitySetId: UUID, expirationBaseColumn: String) : String {
+    private fun getExpiringEntitiesQuery(entitySetId: UUID, expirationBaseColumn: String, deleteType: DeleteType) : String {
+        var ignoredClearedEntitiesClause = ""
+        if (deleteType == DeleteType.Soft) {
+            ignoredClearedEntitiesClause = "AND ${VERSION.name} >= 0 "
+        }
         return "SELECT ${ID.name} FROM ${PostgresTable.DATA.name} " +
                 "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' " +
-                //"AND ${PARTITION.name} IN $partitions " +
-                "AND $expirationBaseColumn >= ? " +
+                "AND ${PARTITION.name} IN ? " +
+                "AND ${PARTITIONS_VERSION.name} = ?" +
                 "AND ${PROPERTY_TYPE_ID.name} != '00000000-0000-0001-0000-000000000014' " +
+                "AND $expirationBaseColumn < ? " +
+                ignoredClearedEntitiesClause + // this clause ignores entities that have already been cleared
                 "LIMIT $FETCH_SIZE"
     }
 }
