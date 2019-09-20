@@ -199,6 +199,6 @@ interface EntityDatastore {
             entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
     ): WriteEvent
 
-    fun getExpiringEntitiesFromEntitySet(entitySetId: UUID, sqlParams: Triple<String, Any, Int>, deleteType: DeleteType) : Set<UUID>
+    fun getExpiringEntitiesFromEntitySet(entitySetId: UUID, sqlParams: Triple<String, Any, Int>, deleteType: DeleteType) : BasePostgresIterable<UUID>
 
 }

@@ -36,6 +36,7 @@ import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.core.GraphService
 import com.openlattice.graph.core.NeighborSets
 import com.openlattice.graph.edge.Edge
+import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PostgresIterable
 import org.apache.commons.lang3.tuple.Pair
 import org.apache.olingo.commons.api.edm.FullQualifiedName
@@ -618,7 +619,7 @@ open class DataGraphService(
         return Stream.empty()
     }
 
-    override fun getExpiringEntitiesFromEntitySet(entitySetId: UUID, sqlParams: Triple<String, Any, Int>, deleteType: DeleteType) : Set<UUID> {
+    override fun getExpiringEntitiesFromEntitySet(entitySetId: UUID, sqlParams: Triple<String, Any, Int>, deleteType: DeleteType) : BasePostgresIterable<UUID> {
         return eds.getExpiringEntitiesFromEntitySet(entitySetId, sqlParams, deleteType)
     }
 }

@@ -491,9 +491,9 @@ class PostgresEntityDatastore(
         return propertyWriteEvent
     }
 
-    override fun getExpiringEntitiesFromEntitySet(entitySetId: UUID, sqlParams: Triple<String, Any, Int>, deletedType: DeleteType) : Set<UUID> {
+    override fun getExpiringEntitiesFromEntitySet(entitySetId: UUID, sqlParams: Triple<String, Any, Int>, deletedType: DeleteType) : BasePostgresIterable<UUID> {
         return dataQueryService
-                .getExpiringEntitiesFromEntitySet(entitySetId, sqlParams, deletedType).toSet()
+                .getExpiringEntitiesFromEntitySet(entitySetId, sqlParams, deletedType)
     }
 
 }

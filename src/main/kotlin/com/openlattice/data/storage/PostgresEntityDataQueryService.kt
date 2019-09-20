@@ -883,20 +883,19 @@ class PostgresEntityDataQueryService(
         return WriteEvent(tombstoneVersion, numUpdated)
     }
 
-    fun getExpiringEntitiesFromEntitySet(entitySetId: UUID, sqlParams: Triple<String, Any, Int>, deleteType: DeleteType) : PostgresIterable<UUID> {
+    fun getExpiringEntitiesFromEntitySet(entitySetId: UUID, sqlParams: Triple<String, Any, Int>, deleteType: DeleteType) : BasePostgresIterable<UUID> {
         val partitionsInfo: PartitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
         val partitions = partitionsInfo.partitions.joinToString(prefix = "('", postfix = "')", separator = "', '") { it.toString() }
         val partitionVersion = partitionsInfo.partitionsVersion
-        return PostgresIterable(
-                Supplier {
-                    val connection = hds.connection
-                    val stmt = connection.prepareStatement(getExpiringEntitiesQuery(entitySetId, sqlParams.first, deleteType, partitions))
-                    stmt.setInt(1, partitionVersion)
-                    stmt.setObject(2, sqlParams.second, sqlParams.third)
-                    StatementHolder(connection, stmt, stmt.executeQuery())
-                },
-                Function<ResultSet, UUID> {ResultSetAdapters.id(it)}
-        )
+        return BasePostgresIterable(
+                PreparedStatementHolderSupplier(
+                        hds,
+                        getExpiringEntitiesQuery(entitySetId, sqlParams.first, deleteType, partitions),
+                        FETCH_SIZE,
+                        false
+                ) {stmt -> stmt.setInt(1, partitionVersion)
+                    stmt.setObject(2, sqlParams.second, sqlParams.third)}
+        ) { rs -> ResultSetAdapters.id(rs)}
     }
 
     private fun getExpiringEntitiesQuery(entitySetId: UUID, expirationBaseColumn: String, deleteType: DeleteType, partitions: String) : String {
@@ -910,8 +909,7 @@ class PostgresEntityDataQueryService(
                 "AND ${PARTITIONS_VERSION.name} = ? " +
                 "AND ${PROPERTY_TYPE_ID.name} != '00000000-0000-0001-0000-000000000014' " +
                 "AND $expirationBaseColumn < ? " +
-                ignoredClearedEntitiesClause + // this clause ignores entities that have already been cleared
-                "LIMIT $FETCH_SIZE"
+                ignoredClearedEntitiesClause // this clause ignores entities that have already been cleared
     }
 }
 
