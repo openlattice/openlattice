@@ -168,7 +168,7 @@ constructor(
     }
 
     @GetMapping(path = [LinkingFeedbackApi.ALL], produces = [MediaType.APPLICATION_JSON_VALUE])
-    override fun getAllLinkingFeedbacks(): Iterable<EntityLinkingFeedback> {
+    override fun getAllLinkingFeedback(): Iterable<EntityLinkingFeedback> {
         return feedbackService.getLinkingFeedbacks()
     }
 
