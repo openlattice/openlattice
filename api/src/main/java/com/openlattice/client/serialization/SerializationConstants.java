@@ -100,6 +100,7 @@ public final class SerializationConstants {
     public static final String ENTITY_ID_GENERATOR              = "entityIdGenerator";
     public static final String ENTITY_KEY_ID                    = "entityKeyId";
     public static final String ENTITY_KEY_IDS                   = "entityKeyIds";
+    public static final String ENTITY_LINKING_FEEDBACK          = "entityLinkingFeedback";
     public static final String ENTITY_QUERIES                   = "entityQueries";
     public static final String ENTITY_SETS_ENTITY_KEY_MAPPINGS  = "entitySetsEntityKeyMappings";
     public static final String ENTITY_SETS_FIELD                = "entitySets";
