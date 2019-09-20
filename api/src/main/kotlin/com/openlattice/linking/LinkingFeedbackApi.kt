@@ -50,7 +50,7 @@ interface LinkingFeedbackApi {
      * Returns positive/negative/all linking feedbacks on the given entity.
      */
     @POST(BASE + ENTITY)
-    fun getLinkingFeedbacksOnEntity(@Query(FEEDBACK_TYPE) feedbackType: FeedbackType, @Body entity: EntityDataKey
+    fun getLinkingFeedbackOnEntity(@Query(FEEDBACK_TYPE) feedbackType: FeedbackType, @Body entity: EntityDataKey
     ): Iterable<EntityLinkingFeedback>
 
     /**
@@ -69,7 +69,7 @@ interface LinkingFeedbackApi {
      * Returns all feedbacks submitted along with the features of pairwise entities
      */
     @GET(BASE + FEATURES + ALL)
-    fun getAllLinkingFeedbacksWithFeatures(): Iterable<EntityLinkingFeatures>
+    fun getAllLinkingFeedbackWithFeatures(): Iterable<EntityLinkingFeatures>
 
 
     @HTTP(method = "DELETE", path = BASE, hasBody = true)
