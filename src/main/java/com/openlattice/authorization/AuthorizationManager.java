@@ -23,6 +23,7 @@
 package com.openlattice.authorization;
 
 import com.codahale.metrics.annotation.Timed;
+import com.google.common.collect.SetMultimap;
 import com.openlattice.authorization.paging.AuthorizedObjectsSearchResult;
 import com.openlattice.authorization.securable.SecurableObjectType;
 
@@ -66,6 +67,15 @@ public interface AuthorizationManager {
             OffsetDateTime expirationDate );
 
     @Timed
+    void addPermissions( List<Acl> acls );
+
+    @Timed
+    void removePermissions( List<Acl> acls );
+
+    @Timed
+    void setPermissions( List<Acl> acls );
+
+    @Timed
     void removePermission(
             AclKey aclKeys,
             Principal principal,
@@ -86,6 +96,9 @@ public interface AuthorizationManager {
 
     @Timed
     void setPermission( Set<AclKey> aclKeys, Set<Principal> principals, EnumSet<Permission> permissions );
+
+    @Timed
+    void setPermissions( Map<AceKey, EnumSet<Permission>> permissions );
 
     @Timed
     void deletePermissions( AclKey aclKey );
@@ -132,7 +145,8 @@ public interface AuthorizationManager {
 
     /**
      * Returns all Principals, which have all the specified permissions on the securable object
-     * @param key The securable object
+     *
+     * @param key         The securable object
      * @param permissions Set of permission to check for
      */
     Set<Principal> getAuthorizedPrincipalsOnSecurableObject( AclKey key, EnumSet<Permission> permissions );
@@ -159,6 +173,9 @@ public interface AuthorizationManager {
     Stream<AclKey> getAuthorizedObjects( Set<Principal> principal, EnumSet<Permission> permissions );
 
     Iterable<Principal> getSecurableObjectOwners( AclKey key );
+
+    @Timed
+    SetMultimap<AclKey, Principal> getOwnersForSecurableObjects( Collection<AclKey> aclKeys );
 
     Map<AceKey, AceValue> getPermissionMap( Set<AclKey> aclKeys, Set<Principal> principals );
 }
