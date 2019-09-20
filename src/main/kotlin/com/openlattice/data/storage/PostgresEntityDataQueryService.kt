@@ -582,7 +582,7 @@ class PostgresEntityDataQueryService(
         return WriteEvent(System.currentTimeMillis(), numUpdates)
     }
 
-    fun deleteEntityDataAndEntity(
+    fun deleteEntityDataAndEntities(
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
             authorizedPropertyTypes: Map<UUID, PropertyType>,
