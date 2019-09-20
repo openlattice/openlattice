@@ -63,7 +63,7 @@ interface LinkingFeedbackApi {
      * Returns all feedbacks submitted
      */
     @GET(BASE + ALL)
-    fun getAllLinkingFeedbacks(): Iterable<EntityLinkingFeedback>
+    fun getAllLinkingFeedback(): Iterable<EntityLinkingFeedback>
 
     /**
      * Returns all feedbacks submitted along with the features of pairwise entities
