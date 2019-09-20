@@ -890,25 +890,24 @@ class PostgresEntityDataQueryService(
         return PostgresIterable(
                 Supplier {
                     val connection = hds.connection
-                    val stmt = connection.prepareStatement(getExpiringEntitiesQuery(entitySetId, sqlParams.first, deleteType))
-                    stmt.setString(1, partitions)
-                    stmt.setInt(2, partitionVersion)
-                    stmt.setObject(3, sqlParams.second, sqlParams.third)
+                    val stmt = connection.prepareStatement(getExpiringEntitiesQuery(entitySetId, sqlParams.first, deleteType, partitions))
+                    stmt.setInt(1, partitionVersion)
+                    stmt.setObject(2, sqlParams.second, sqlParams.third)
                     StatementHolder(connection, stmt, stmt.executeQuery())
                 },
                 Function<ResultSet, UUID> {ResultSetAdapters.id(it)}
         )
     }
 
-    private fun getExpiringEntitiesQuery(entitySetId: UUID, expirationBaseColumn: String, deleteType: DeleteType) : String {
+    private fun getExpiringEntitiesQuery(entitySetId: UUID, expirationBaseColumn: String, deleteType: DeleteType, partitions: String) : String {
         var ignoredClearedEntitiesClause = ""
         if (deleteType == DeleteType.Soft) {
             ignoredClearedEntitiesClause = "AND ${VERSION.name} >= 0 "
         }
         return "SELECT ${ID.name} FROM ${PostgresTable.DATA.name} " +
                 "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' " +
-                "AND ${PARTITION.name} IN ? " +
-                "AND ${PARTITIONS_VERSION.name} = ?" +
+                "AND ${PARTITION.name} IN $partitions " +
+                "AND ${PARTITIONS_VERSION.name} = ? " +
                 "AND ${PROPERTY_TYPE_ID.name} != '00000000-0000-0001-0000-000000000014' " +
                 "AND $expirationBaseColumn < ? " +
                 ignoredClearedEntitiesClause + // this clause ignores entities that have already been cleared
