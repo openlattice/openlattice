@@ -144,7 +144,7 @@ constructor(
     }
 
     @PostMapping(path = [LinkingFeedbackApi.ENTITY], produces = [MediaType.APPLICATION_JSON_VALUE])
-    override fun getLinkingFeedbacksOnEntity(
+    override fun getLinkingFeedbackOnEntity(
             @RequestParam(value = LinkingFeedbackApi.FEEDBACK_TYPE, required = false) feedbackType: FeedbackType,
             @RequestBody entity: EntityDataKey): Iterable<EntityLinkingFeedback> {
         return feedbackService.getLinkingFeedbackOnEntity(feedbackType, entity)
@@ -175,7 +175,7 @@ constructor(
     @GetMapping(
             path = [LinkingFeedbackApi.FEATURES + LinkingFeedbackApi.ALL],
             produces = [MediaType.APPLICATION_JSON_VALUE])
-    override fun getAllLinkingFeedbacksWithFeatures(): Iterable<EntityLinkingFeatures> {
+    override fun getAllLinkingFeedbackWithFeatures(): Iterable<EntityLinkingFeatures> {
         return feedbackService.getLinkingFeedbacks().map {
             val entities = dataLoader.getEntities(setOf(it.entityPair.first, it.entityPair.second))
             EntityLinkingFeatures(
