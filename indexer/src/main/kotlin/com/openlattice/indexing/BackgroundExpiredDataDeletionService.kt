@@ -154,11 +154,7 @@ class BackgroundExpiredDataDeletionService(
         var totalDeletedEntitiesCount = 0
 
         val sqlParams = getSqlParameters(entitySet.expiration)
-        val partitions = (entitySetToPartition[entitySet.id]
-                ?: error("No partitions assigned to entity set ${entitySet.id}"))
-                .joinToString(prefix = "('", postfix = "')", separator = "', '") { it.toString() }
-
-        var entityKeyIds = getExpiredIds(entitySet.id, sqlParams, partitions, entitySet.expiration.deleteType).toSet()
+        var entityKeyIds = dataGraphService.getExpiringEntitiesFromEntitySet(entitySet.id, sqlParams, entitySet.expiration.deleteType)
         if (entityKeyIds.isNotEmpty()) {  //if no data have expired let's not waste our time
             while (entityKeyIds.isNotEmpty()) { //loops until all expired entities have been removed from entity set
                 val chunkedEntityKeyIds = entityKeyIds.chunked(MAX_BATCH_SIZE)
@@ -190,7 +186,7 @@ class BackgroundExpiredDataDeletionService(
 
                     totalDeletedEntitiesCount += writeEvent.numUpdates
                     deletedEntityKeyIds.addAll(entityKeyIds)
-                    entityKeyIds = getExpiredIds(entitySet.id, sqlParams, partitions, entitySet.expiration.deleteType).toSet()
+                    dataGraphService.getExpiringEntitiesFromEntitySet(entitySet.id, sqlParams, entitySet.expiration.deleteType)
                 }
             }
 
@@ -241,19 +237,6 @@ class BackgroundExpiredDataDeletionService(
         return Triple(comparisonField, expirationField, expirationFieldSQLType)
     }
 
-    private fun getExpiredIds(entitySetId: UUID, sqlParams: Triple<String, Any, Int>, partitions: String, deleteType: DeleteType): PostgresIterable<UUID> {
-        val getExpiredIdsQuery = getExpiredIdsQuery(entitySetId, sqlParams.first, partitions, deleteType)
-        return PostgresIterable(
-                Supplier {
-                    val connection = hds.connection
-                    val stmt = connection.prepareStatement(getExpiredIdsQuery(entitySetId, sqlParams.first, partitions, deleteType))
-                    stmt.setObject(1, sqlParams.second, sqlParams.third)
-                    StatementHolder(connection, stmt, stmt.executeQuery())
-                },
-                Function<ResultSet, UUID> { ResultSetAdapters.id(it) }
-        )
-    }
-
     private fun deleteAssociationsOfExpiredEntities(entitySetId: UUID, ids: Set<UUID>) : List<WriteEvent> {
         val associationEdgeKeys : PostgresIterable<DataEdgeKey> = dataGraphService.getEdgesConnectedToEntities(entitySetId, ids, true)
         val associationPropertyTypes = associationEdgeKeys
@@ -285,20 +268,6 @@ class BackgroundExpiredDataDeletionService(
     }
     private fun deleteExpiredDataFromElasticSearch(entitySetId: UUID, entityTypeId: UUID, expiredEntityKeyIds: Set<UUID>): Boolean {
         return elasticsearchApi.deleteEntityDataBulk(entitySetId, entityTypeId, expiredEntityKeyIds)
-    }
-
-    private fun getExpiredIdsQuery(entitySetId: UUID, comparisonField: String, partitions: String, deleteType: DeleteType): String {
-        var ignoredClearedEntitiesClause = ""
-        if (deleteType == DeleteType.Soft) {
-            ignoredClearedEntitiesClause = "AND ${VERSION.name} >= 0 "
-        }
-        return "SELECT ${ID.name} FROM ${DATA.name} " +
-                "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' " +
-                "AND ${PARTITION.name} IN $partitions " +
-                "AND $comparisonField < ? " +
-                "AND ${PROPERTY_TYPE_ID.name} != '00000000-0000-0001-0000-000000000014' " +
-                ignoredClearedEntitiesClause + // this clause prevents re-clearing of cleared entities
-                "LIMIT $FETCH_SIZE"
     }
 
     private fun tryLockEntitySet(entitySet: EntitySet): Boolean {
