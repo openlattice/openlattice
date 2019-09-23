@@ -194,11 +194,12 @@ interface EntitySetsApi {
      * Gets data from an entity set that will expire before a specified date
      * @param entitySetId The id of the entity set to check
      * @param dateTime The date time to check against (i.e. what entities will expire before this date time)
+     * The dateTime is expected in the format "yyyy-MM-dd'T'HH:mm:ss.SSS-ZZ:ZZ"
      *
      * @return Set of entity key ids that will expire before the specified date time
      */
     @POST(BASE + ALL + ID_PATH + EXPIRATION_PATH )
     fun getExpiringEntitiesFromEntitySet(@Path(ID) entitySetId: UUID,
-                                         @Body dateTime: OffsetDateTime): Set<UUID>
+                                         @Body dateTime: String): Set<UUID>
 
 }
