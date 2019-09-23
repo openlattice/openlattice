@@ -455,7 +455,7 @@ constructor(
         check(es.hasExpirationPolicy()) { "Entity set ${es.name} does not have an expiration policy" }
 
         val expirationPolicy = es.expiration
-         if (expirationPolicy != null) {
+        if (expirationPolicy != null) {
             val sqlParams = getSqlParameters(expirationPolicy, dateTime)
             return dgm.getExpiringEntitiesFromEntitySet(entitySetId, sqlParams, es.expiration.deleteType).toSet()
         }
@@ -463,7 +463,7 @@ constructor(
         return setOf()
     }
 
-    private fun getSqlParameters(expirationPolicy: DataExpiration, dateTime: OffsetDateTime) : Triple<String, Any, Int> {
+    private fun getSqlParameters(expirationPolicy: DataExpiration, dateTime: OffsetDateTime): Triple<String, Any, Int> {
         val expirationBaseColumn: String
         val formattedDateMinusTTE: Any
         val sqlFormat: Int
