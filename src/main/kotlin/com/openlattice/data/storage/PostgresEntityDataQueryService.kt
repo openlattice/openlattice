@@ -323,9 +323,7 @@ class PostgresEntityDataQueryService(
 
         val entityKeyIdsArr = PostgresArrays.createUuidArray(connection, entities.keys)
         val versionsArrays = PostgresArrays.createLongArray(connection, version)
-
         val partitions = partitionManager.getEntitySetPartitionsInfo(entitySetId).partitions
-        val partitionsArrays = PostgresArrays.createIntArray(connection, partitions)
 
         /*
          * Our approach is to use entity level locking that takes advantage of the router executor to avoid deadlocks.
