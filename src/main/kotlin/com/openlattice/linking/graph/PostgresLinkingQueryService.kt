@@ -21,7 +21,6 @@
 
 package com.openlattice.linking.graph
 
-import com.openlattice.admin.SQL
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.storage.*
 import com.openlattice.data.storage.partitions.PartitionManager
@@ -37,7 +36,6 @@ import com.openlattice.postgres.streams.StatementHolder
 import com.zaxxer.hikari.HikariDataSource
 import java.sql.Array
 import java.sql.Connection
-import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.util.*
 import java.util.function.Function
