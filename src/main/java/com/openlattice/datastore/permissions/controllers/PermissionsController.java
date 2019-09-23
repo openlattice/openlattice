@@ -29,7 +29,6 @@ import com.openlattice.controllers.exceptions.BadRequestException;
 import com.openlattice.controllers.exceptions.ForbiddenException;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 
-import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -38,10 +37,7 @@ import javax.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping( PermissionsApi.CONTROLLER )
@@ -64,62 +60,58 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
             method = RequestMethod.PATCH,
             consumes = MediaType.APPLICATION_JSON_VALUE )
     public Void updateAcl( @RequestBody AclData req ) {
+        return updateAcls( ImmutableList.of( req ) );
+    }
+
+    @Override
+    @Timed
+    @RequestMapping(
+            path = { UPDATE },
+            method = RequestMethod.PATCH,
+            consumes = MediaType.APPLICATION_JSON_VALUE )
+    public Void updateAcls( @RequestBody List<AclData> req ) {
+
+        Map<Action, List<Acl>> requestsByActionType = req.stream().collect( Collectors
+                .groupingBy( AclData::getAction, Collectors.mapping( AclData::getAcl, Collectors.toList() ) ) );
+
         /*
          * Ensure that the user has alter permissions on Acl permissions being modified
          */
-        final Acl acl = req.getAcl();
-        final AclKey aclKeys = new AclKey( acl.getAclKey() );
-        if ( isAuthorized( Permission.OWNER ).test( aclKeys ) ) {
-            switch ( req.getAction() ) {
-                case ADD:
-                    acl.getAces().forEach(
-                            ace -> {
-                                if ( ace.getExpirationDate().equals( OffsetDateTime.MAX ) ) {
-                                    authorizations.addPermission(
-                                            aclKeys,
-                                            ace.getPrincipal(),
-                                            ace.getPermissions() );
-                                } else {
-                                    authorizations.addPermission(
-                                            aclKeys,
-                                            ace.getPrincipal(),
-                                            ace.getPermissions(),
-                                            ace.getExpirationDate() );
-                                }
-                            } );
-                    break;
-                case REMOVE:
-                    acl.getAces().forEach(
-                            ace -> authorizations.removePermission(
-                                    aclKeys,
-                                    ace.getPrincipal(),
-                                    ace.getPermissions() ) );
-                    break;
-                case SET:
-                    acl.getAces().forEach(
-                            ace -> {
-                                if ( ace.getExpirationDate().equals( OffsetDateTime.MAX ) ) {
-                                    authorizations.setPermission(
-                                            aclKeys,
-                                            ace.getPrincipal(),
-                                            ace.getPermissions() );
-                                } else {
-                                    authorizations.setPermission(
-                                            aclKeys,
-                                            ace.getPrincipal(),
-                                            ace.getPermissions(),
-                                            ace.getExpirationDate() );
-                                }
-                            } );
-                    break;
-                default:
-                    logger.error( "Invalid action {} specified for request.", req.getAction() );
-                    throw new BadRequestException( "Invalid action specified: " + req.getAction() );
-            }
-        } else {
-            throw new ForbiddenException( "Only owner of securable object " + aclKeys +
+        Set<AclKey> unauthorizedAclKeys = authorizations
+                .accessChecksForPrincipals( requestsByActionType.entrySet().stream()
+                        .filter( entry -> !entry.getKey().equals( Action.REQUEST ) )
+                        .flatMap( entry -> entry.getValue().stream() )
+                        .map( acl -> new AccessCheck( new AclKey( acl.getAclKey() ), EnumSet.of( Permission.OWNER ) ) )
+                        .collect( Collectors.toSet() ), Principals.getCurrentPrincipals() )
+                .filter( authorization -> !authorization.getPermissions().get( Permission.OWNER ) )
+                .map( Authorization::getAclKey )
+                .collect( Collectors.toSet() );
+
+        if ( !unauthorizedAclKeys.isEmpty() ) {
+            throw new ForbiddenException( "Only owner of securable objects " + unauthorizedAclKeys +
                     " can access other users' access rights." );
         }
+
+        requestsByActionType.forEach( ( action, acls ) -> {
+
+            switch ( action ) {
+                case ADD:
+                    authorizations.addPermissions( acls );
+                    break;
+
+                case REMOVE:
+                    authorizations.removePermissions( acls );
+                    break;
+
+                case SET:
+                    authorizations.setPermissions( acls );
+                    break;
+                default:
+                    logger.error( "Invalid action {} specified for request.", action );
+                    throw new BadRequestException( "Invalid action specified: " + action );
+            }
+        } );
+
         return null;
     }
 
