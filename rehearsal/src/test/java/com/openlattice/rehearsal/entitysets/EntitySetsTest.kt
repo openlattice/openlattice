@@ -151,7 +151,6 @@ class EntitySetsTest : MultipleAuthenticatedUsersBase() {
                 Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
                 Optional.empty(), Optional.of(expirationPolicy))
         entitySetsApi.updateEntitySetMetadata(es.id, update)
-        val es2 = entitySetsApi.getEntitySet(es.id)
 
         //check expiring entities
         val noExpiringIds = entitySetsApi.getExpiringEntitiesFromEntitySet(es.id, OffsetDateTime.now().toString())
