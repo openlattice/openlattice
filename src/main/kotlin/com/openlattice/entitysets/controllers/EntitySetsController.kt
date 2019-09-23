@@ -67,6 +67,7 @@ import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.PostgresColumn.VERSIONS
 import com.openlattice.postgres.PostgresDataTables
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
+import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.*
 import retrofit2.http.PUT
@@ -447,14 +448,15 @@ constructor(
     )
     override fun getExpiringEntitiesFromEntitySet(
             @PathVariable(ID) entitySetId: UUID,
-            @RequestBody dateTime: OffsetDateTime): Set<UUID> {
+            @RequestBody dateTimeAsString: String): Set<UUID> {
         ensureReadAccess(AclKey(entitySetId))
+        val dateTime = OffsetDateTime.parse(dateTimeAsString)
         val es = getEntitySet(entitySetId)
         check(es.hasExpirationPolicy()) { "Entity set ${es.name} does not have an expiration policy" }
 
         val expirationPolicy = es.expiration
         val sqlParams = getSqlParameters(expirationPolicy, dateTime)
-        return dgm.getExpiringEntitiesFromEntitySet(entitySetId, sqlParams)
+        return dgm.getExpiringEntitiesFromEntitySet(entitySetId, sqlParams, es.expiration.deleteType).toSet()
     }
 
     private fun getSqlParameters(expirationPolicy: DataExpiration, dateTime: OffsetDateTime) : Triple<String, Any, Int> {
