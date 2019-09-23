@@ -28,15 +28,6 @@ import java.util.*
 class EntitySetsTest : MultipleAuthenticatedUsersBase() {
 
     companion object {
-        val fqnCache: LoadingCache<UUID, FullQualifiedName> = CacheBuilder.newBuilder()
-                .build(
-                        object : CacheLoader<UUID, FullQualifiedName>() {
-                            override fun load(key: UUID?): FullQualifiedName {
-                                return edmApi.getPropertyType(key!!).type
-                            }
-
-                        }
-                )
 
         lateinit var personEt: EntityType
 
