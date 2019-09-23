@@ -81,8 +81,7 @@ class EdmCachingDataLoader(
     ): BasePostgresIterable<Pair<UUID, Map<UUID, Set<Any>>>> {
         return dataQueryService.getEntitySetWithPropertyTypeIdsIterable(
                 mapOf(entitySetId to Optional.of(entityKeyIds)),
-                mapOf( entitySetId to authorizedPropertyTypesCache.get() ),
-                EnumSet.noneOf(MetadataOption::class.java)
+                mapOf( entitySetId to authorizedPropertyTypesCache.get() )
         )
     }
 
