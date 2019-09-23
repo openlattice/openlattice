@@ -150,10 +150,10 @@ class EntitySetsTest : MultipleAuthenticatedUsersBase() {
         val es = createEntitySet(personEt)
         val entries = (1..10)
                 .map { mapOf(EdmTestConstants.personGivenNameId to setOf(RandomStringUtils.randomAscii(5))) }
-        val newEntityIds = dataApi.createEntities(es.id, entries)
+        dataApi.createEntities(es.id, entries)
 
         //set expiration policy
-        val tTL = 10L
+        val tTL: Long = 24*60*60*1000 //one day
         val expirationPolicy = DataExpiration(tTL, ExpirationBase.FIRST_WRITE, DeleteType.Hard)
         val update = MetadataUpdate(Optional.empty(), Optional.empty(), Optional.empty(),
                 Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
@@ -163,7 +163,10 @@ class EntitySetsTest : MultipleAuthenticatedUsersBase() {
         val es2 = entitySetsApi.getEntitySet(es.id)
 
         //check expiring entities
-        val expiringIds = entitySetsApi.getExpiringEntitiesFromEntitySet(es.id, OffsetDateTime.now().toString())
+        val noExpiringIds = entitySetsApi.getExpiringEntitiesFromEntitySet(es.id, OffsetDateTime.now().toString())
+        Assert.assertEquals(0, noExpiringIds.size)
+        val expiringIds = entitySetsApi.getExpiringEntitiesFromEntitySet(
+                es.id, OffsetDateTime.now().plusDays(1).toString())
         Assert.assertEquals(10, expiringIds.size)
     }
 
