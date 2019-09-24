@@ -57,7 +57,6 @@ const val DATA_DELETION_RATE = 30_000L
 class BackgroundExpiredDataDeletionService(
         hazelcastInstance: HazelcastInstance,
         private val indexerConfiguration: IndexerConfiguration,
-        private val hds: HikariDataSource,
         private val elasticsearchApi: ConductorElasticsearchApi,
         private val auditingManager: AuditingManager,
         private val dataGraphService: DataGraphService,
@@ -104,6 +103,11 @@ class BackgroundExpiredDataDeletionService(
                             .filter { it.hasExpirationPolicy() }
                             .filter { tryLockEntitySet(it) }
                             .shuffled()
+
+                    val propertyTypeIds = lockedEntitySets.filter { it.expiration.startDateProperty.isPresent }.map { it.expiration.startDateProperty.get() }.toSet()
+                    if (propertyTypeIds.isNotEmpty()) {
+                        propertyTypeIdToColumnData = propertyTypes.map{it.key to Pair(it.value.postgresIndexType, it.value.datatype)}.toMap()
+                    }
 
                     val propertiesOfLockedEntitySets = lockedEntitySets
                             .map { it.id to edm.getPropertyTypesAsMap(edm.getEntityType(it.entityTypeId).properties) }
