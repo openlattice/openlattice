@@ -456,7 +456,11 @@ constructor(
 
         val expirationPolicy = es.expiration
         val sqlParams = getSqlParameters(expirationPolicy, dateTime)
-        return dgm.getExpiringEntitiesFromEntitySet(entitySetId, sqlParams, es.expiration.deleteType).toSet()
+        val expirationBaseColumn = sqlParams.first
+        val formattedDateMinusTTE = sqlParams.second
+        val sqlFormat = sqlParams.third
+        return dgm.getExpiringEntitiesFromEntitySet(entitySetId, expirationBaseColumn, formattedDateMinusTTE,
+                sqlFormat, es.expiration.deleteType).toSet()
     }
 
     private fun getSqlParameters(expirationPolicy: DataExpiration, dateTime: OffsetDateTime): Triple<String, Any, Int> {
