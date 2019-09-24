@@ -350,8 +350,8 @@ class Assembler(
     }
 
     /**
-     * Re-creates the materialized view of an entity using the set of authorized property types within the given
-     * organizations database.
+     * Re-creates the materialized view of an entity set within the given organizations database using the set of
+     * authorized property types.
      * Note: this re-materialization does not update grants on the materialized view and does not materialize edges.
      */
     fun updateMaterializedEntitySet(
@@ -431,6 +431,11 @@ class Assembler(
                 .filter { it.type == PrincipalType.USER || it.type == PrincipalType.ROLE }
     }
 
+    /**
+     * Synchronizes the materialized view of the requested entity set in the organization database using the
+     * authorized property types.
+     * It drops and re-creates the materialized view, resets authorizations and re-materializes the edges table too.
+     */
     fun synchronizeMaterializedEntitySet(
             organizationId: UUID,
             entitySetId: UUID,
@@ -473,6 +478,10 @@ class Assembler(
         }
     }
 
+    /**
+     * Refreshes the materialized view of the requested entity set in the organization database.
+     * Note: this refresh does not update grants on the materialized view.
+     */
     fun refreshMaterializedEntitySet(organizationId: UUID, entitySetId: UUID) {
         val entitySetAssemblyKey = EntitySetAssemblyKey(entitySetId, organizationId)
 
