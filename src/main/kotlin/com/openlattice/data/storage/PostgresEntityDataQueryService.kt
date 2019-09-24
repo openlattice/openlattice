@@ -884,18 +884,19 @@ class PostgresEntityDataQueryService(
         return WriteEvent(tombstoneVersion, numUpdated)
     }
 
-    fun getExpiringEntitiesFromEntitySet(entitySetId: UUID, sqlParams: Triple<String, Any, Int>, deleteType: DeleteType) : BasePostgresIterable<UUID> {
+    fun getExpiringEntitiesFromEntitySet(entitySetId: UUID, expirationBaseColumn: String, formattedDateMinusTTE: Any,
+                                         sqlFormat: Int, deleteType: DeleteType) : BasePostgresIterable<UUID> {
         val partitionsInfo: PartitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
         val partitions = partitionsInfo.partitions.joinToString(prefix = "('", postfix = "')", separator = "', '") { it.toString() }
         val partitionVersion = partitionsInfo.partitionsVersion
         return BasePostgresIterable(
                 PreparedStatementHolderSupplier(
                         hds,
-                        getExpiringEntitiesQuery(entitySetId, sqlParams.first, deleteType, partitions),
+                        getExpiringEntitiesQuery(entitySetId, expirationBaseColumn, deleteType, partitions),
                         FETCH_SIZE,
                         false
                 ) {stmt -> stmt.setInt(1, partitionVersion)
-                    stmt.setObject(2, sqlParams.second, sqlParams.third)}
+                    stmt.setObject(2, formattedDateMinusTTE, sqlFormat)}
         ) { rs -> ResultSetAdapters.id(rs)}
     }
 
