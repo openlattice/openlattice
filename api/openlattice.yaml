@@ -2985,11 +2985,9 @@ components:
         description:
           type: string
         propertyTags:
-          type: object
-          additionalProperties:
-            type: array
-            items:
-              type: string
+          type: array
+          items:
+            type: string
         defaultShow:
           type: boolean
 
