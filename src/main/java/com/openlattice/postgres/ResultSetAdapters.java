@@ -636,17 +636,7 @@ public final class ResultSetAdapters {
         final var flags = entitySetFlags( rs );
         final var partitions = partitions( rs );
         final var partitionVersion = partitionVersions( rs );
-        final var timeToExpiration = timeToExpiration( rs );
-        final var expirationBase = expirationBase( rs );
-        final var deleteType = deleteType( rs );
-        final var startDateProperty = startDateProperty( rs );
-        final DataExpiration expirationData;
-        if ( timeToExpiration != null ) {
-            expirationData = new DataExpiration( timeToExpiration,
-                    expirationBase,
-                    deleteType,
-                    Optional.ofNullable( startDateProperty ) );
-        } else { expirationData = null; }
+        final var expirationData = dataExpiration( rs );
         return new EntitySet( id,
                 entityTypeId,
                 name,
@@ -667,6 +657,21 @@ public final class ResultSetAdapters {
 
     public static Integer[] partitions( ResultSet rs ) throws SQLException {
         return PostgresArrays.getIntArray( rs, PARTITIONS_FIELD );
+    }
+
+    public static DataExpiration dataExpiration( ResultSet rs ) throws SQLException {
+        final var timeToExpiration = timeToExpiration( rs );
+        final var expirationBase = expirationBase( rs );
+        final var deleteType = deleteType( rs );
+        final var startDateProperty = startDateProperty( rs );
+        final DataExpiration expirationData;
+        if ( timeToExpiration != null ) {
+            expirationData = new DataExpiration( timeToExpiration,
+                    expirationBase,
+                    deleteType,
+                    Optional.ofNullable( startDateProperty ) );
+        } else { expirationData = null; }
+        return expirationData;
     }
 
     public static Long timeToExpiration( ResultSet rs ) throws SQLException {
