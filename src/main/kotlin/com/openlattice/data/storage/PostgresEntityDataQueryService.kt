@@ -636,7 +636,6 @@ class PostgresEntityDataQueryService(
 
             val count = ps.executeUpdate()
             connection.commit()
-            connection.autoCommit = true
             count
         }
     }
@@ -667,7 +666,6 @@ class PostgresEntityDataQueryService(
 
             val count = ps.executeUpdate()
             connection.commit()
-            connection.autoCommit = true
             count
         }
     }
