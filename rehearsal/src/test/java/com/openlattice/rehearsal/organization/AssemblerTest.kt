@@ -1166,7 +1166,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                 Assert.assertEquals(ID.name, rs.metaData.getColumnName(2))
                 Assert.assertEquals(ENTITY_KEY_IDS_COL.name, rs.metaData.getColumnName(3))
 
-                // not permitted column is not there anymore
+                // all columns are there
                 (1..rs.metaData.columnCount).forEach {
                     val columnName = rs.metaData.getColumnName(it)
                     if (columnName != ID.name
@@ -1194,7 +1194,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                 Assert.assertEquals(ID.name, rs.metaData.getColumnName(2))
                 Assert.assertEquals(ENTITY_KEY_IDS_COL.name, rs.metaData.getColumnName(3))
 
-                // all columns are there
+                // not permitted column is not there anymore
                 (1..rs.metaData.columnCount).forEach {
                     val columnName = rs.metaData.getColumnName(it)
                     if (columnName != ID.name
@@ -1209,6 +1209,123 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
 
         /* Re-add permission on 1 property in entity set */
         permissionsApi.updateAcl(AclData(ptAcl, Action.ADD))
+
+        // wait for background task
+        Thread.sleep(5000L)
+
+        organizationsApi.assembleEntitySets(organizationId, mapOf(es.id to null))
+        organizationDataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name))
+                Assert.assertEquals(ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
+                Assert.assertEquals(ID.name, rs.metaData.getColumnName(2))
+                Assert.assertEquals(ENTITY_KEY_IDS_COL.name, rs.metaData.getColumnName(3))
+
+                // all columns are there
+                (1..rs.metaData.columnCount).forEach {
+                    val columnName = rs.metaData.getColumnName(it)
+                    if (columnName != ID.name
+                            && columnName != ENTITY_SET_ID.name
+                            && columnName != ENTITY_KEY_IDS_COL.name) {
+                        Assert.assertTrue(propertyFqns.contains(columnName))
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun testEntitySetMaterializePermissionChangesBulk() {
+        val organization = createOrganization()
+        val organizationId = organization.id
+
+        val et = createEntityType()
+        val es = createEntitySet(et, organizationId)
+        grantMaterializePermissions(organization, es, et.properties)
+        organizationsApi.assembleEntitySets(organizationId, mapOf(es.id to null))
+
+        val organizationDataSource = TestAssemblerConnectionManager.connect(organizationId)
+
+        /* Revoke permission on 1 property in entity set */
+        val propertyFqns = et.properties.map { edmApi.getPropertyType(it).type.fullQualifiedNameAsString }
+
+        organizationsApi.assembleEntitySets(organizationId, mapOf(es.id to null))
+        organizationDataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name))
+                Assert.assertEquals(ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
+                Assert.assertEquals(ID.name, rs.metaData.getColumnName(2))
+                Assert.assertEquals(ENTITY_KEY_IDS_COL.name, rs.metaData.getColumnName(3))
+
+                // all columns are there
+                (1..rs.metaData.columnCount).forEach {
+                    val columnName = rs.metaData.getColumnName(it)
+                    if (columnName != ID.name
+                            && columnName != ENTITY_SET_ID.name
+                            && columnName != ENTITY_KEY_IDS_COL.name) {
+                        Assert.assertTrue(propertyFqns.contains(columnName))
+                    }
+                }
+            }
+        }
+
+        val ptAcl = Acl(
+                listOf(es.id, et.properties.first()),
+                listOf(Ace(organization.principal, EnumSet.of(Permission.MATERIALIZE), OffsetDateTime.MAX))
+        )
+        permissionsApi.updateAcls(listOf(AclData(ptAcl, Action.REMOVE)))
+
+        // wait for background task
+        Thread.sleep(5000L)
+
+        organizationDataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name))
+                Assert.assertEquals(ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
+                Assert.assertEquals(ID.name, rs.metaData.getColumnName(2))
+                Assert.assertEquals(ENTITY_KEY_IDS_COL.name, rs.metaData.getColumnName(3))
+
+                // not permitted column should not be there
+                (1..rs.metaData.columnCount).forEach {
+                    val columnName = rs.metaData.getColumnName(it)
+                    if (columnName != ID.name
+                            && columnName != ENTITY_SET_ID.name
+                            && columnName != ENTITY_KEY_IDS_COL.name) {
+                        Assert.assertNotEquals(propertyFqns.first(), columnName)
+                    }
+                }
+            }
+        }
+
+
+        /* Re-add permission on 1 property in entity set */
+        permissionsApi.updateAcls(listOf(AclData(ptAcl, Action.ADD)))
+
+        // wait for background task
+        Thread.sleep(5000L)
+
+        organizationsApi.assembleEntitySets(organizationId, mapOf(es.id to null))
+        organizationDataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name))
+                Assert.assertEquals(ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
+                Assert.assertEquals(ID.name, rs.metaData.getColumnName(2))
+                Assert.assertEquals(ENTITY_KEY_IDS_COL.name, rs.metaData.getColumnName(3))
+
+                // all columns are there
+                (1..rs.metaData.columnCount).forEach {
+                    val columnName = rs.metaData.getColumnName(it)
+                    if (columnName != ID.name
+                            && columnName != ENTITY_SET_ID.name
+                            && columnName != ENTITY_KEY_IDS_COL.name) {
+                        Assert.assertTrue(propertyFqns.contains(columnName))
+                    }
+                }
+            }
+        }
+
+        /* Set permission on 1 property in entity set */
+        permissionsApi.updateAcls(listOf(AclData(ptAcl, Action.SET)))
 
         // wait for background task
         Thread.sleep(5000L)
