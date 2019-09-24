@@ -84,17 +84,36 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
         aces.executeOnEntries( new SecurableObjectTypeUpdater( objectType ), hasAclKey( aclKey ) );
     }
 
-    private void checkMaterializationPermissionChange(
+    private void signalMaterializationPermissionChange(
             AclKey key,
             Principal principal,
             EnumSet<Permission> permissions,
             SecurableObjectType securableObjectType
     ) {
-        // if there was a change in materialization permission for organization principal, we need to flag it
+        // if there is a change in materialization permission for a property type for an organization principal,
+        // we need to flag it
         if ( permissions.contains( Permission.MATERIALIZE )
                 && principal.getType().equals( PrincipalType.ORGANIZATION )
                 && securableObjectType.equals( SecurableObjectType.PropertyTypeInEntitySet ) ) {
             eventBus.post( new MaterializePermissionChangeEvent( principal, key.get( 0 ) ) );
+        }
+    }
+
+    private void signalMaterializationPermissionChangeBulk(
+            Set<AceKey> aceKeys,
+            EnumSet<Permission> permissions,
+            SecurableObjectType securableObjectType
+    ) {
+        // if there is a change in materialization permission for a property type for an organization principal,
+        // we need to flag it
+        if ( permissions.contains( Permission.MATERIALIZE )
+                && securableObjectType.equals( SecurableObjectType.PropertyTypeInEntitySet ) ) {
+            aceKeys.forEach( aceKey -> {
+                var principal = aceKey.getPrincipal();
+                if ( principal.getType().equals( PrincipalType.ORGANIZATION ) ) {
+                    eventBus.post( new MaterializePermissionChangeEvent( principal, aceKey.getAclKey().get( 0 ) ) );
+                }
+            } );
         }
     }
 
@@ -117,7 +136,7 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
         if ( securableObjectType == SecurableObjectType.Unknown ) {
             logger.warn( "Unrecognized object type for acl key {} key ", key );
         }
-        checkMaterializationPermissionChange( key, principal, permissions, securableObjectType );
+        signalMaterializationPermissionChange( key, principal, permissions, securableObjectType );
         aces.executeOnKey( new AceKey( key, principal ),
                 new PermissionMerger( permissions, securableObjectType, expirationDate ) );
     }
@@ -127,12 +146,13 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
         SetMultimap<AceValue, AceKey> updates = getAceValueToAceKeyMap( acls );
 
         updates.keySet().forEach( aceValue -> {
+            final var permissions = aceValue.getPermissions();
+            final var securableObjectType = aceValue.getSecurableObjectType();
+            final var expirationDate = aceValue.getExpirationDate();
 
             Set<AceKey> aceKeys = updates.get( aceValue );
-            aces.executeOnKeys( aceKeys,
-                    new PermissionMerger( aceValue.getPermissions(),
-                            aceValue.getSecurableObjectType(),
-                            aceValue.getExpirationDate() ) );
+            aces.executeOnKeys( aceKeys, new PermissionMerger( permissions, securableObjectType, expirationDate ) );
+            signalMaterializationPermissionChangeBulk( aceKeys, permissions, securableObjectType );
         } );
     }
 
@@ -150,9 +170,12 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
         SetMultimap<AceValue, AceKey> updates = getAceValueToAceKeyMap( acls );
 
         updates.keySet().forEach( aceValue -> {
+            final var permissions = aceValue.getPermissions();
 
             Set<AceKey> aceKeys = updates.get( aceValue );
-            aces.executeOnKeys( aceKeys, new PermissionRemover( aceValue.getPermissions() ) );
+            aces.executeOnKeys( aceKeys, new PermissionRemover( permissions ) );
+
+            signalMaterializationPermissionChangeBulk( aceKeys, permissions, aceValue.getSecurableObjectType() );
         } );
     }
 
@@ -188,17 +211,22 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
 
         acls.forEach( acl -> {
             AclKey aclKey = new AclKey( acl.getAclKey() );
-            SecurableObjectType securableObjectType = securableObjectTypes
-                    .getOrDefault( aclKey, SecurableObjectType.Unknown );
+            SecurableObjectType securableObjectType = types.getOrDefault( aclKey, SecurableObjectType.Unknown );
 
             if ( securableObjectType.equals( SecurableObjectType.Unknown ) ) {
                 logger.warn( "Unrecognized object type for acl key {} key ", aclKey );
             }
 
-            acl.getAces().forEach( ace ->
-                    updates.put( new AceKey( aclKey, ace.getPrincipal() ),
-                            new AceValue( ace.getPermissions(), securableObjectType, ace.getExpirationDate() ) )
-            );
+            acl.getAces().forEach( ace -> {
+                final var principal = ace.getPrincipal();
+                final var permissions = ace.getPermissions();
+
+                updates.put(
+                        new AceKey( aclKey, principal ),
+                        new AceValue( permissions, securableObjectType, ace.getExpirationDate() )
+                );
+                signalMaterializationPermissionChange( aclKey, principal, permissions, securableObjectType );
+            } );
         } );
 
         aces.putAll( updates );
@@ -232,7 +260,7 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
         if ( permissions.contains( Permission.OWNER ) ) {
             ensureAclKeysHaveOtherUserOwners( ImmutableSet.of( key ), ImmutableSet.of( principal ) );
         }
-        checkMaterializationPermissionChange(
+        signalMaterializationPermissionChange(
                 key, principal, permissions, securableObjectTypes.getOrDefault( key, SecurableObjectType.Unknown )
         );
         aces.executeOnKey( new AceKey( key, principal ), new PermissionRemover( permissions ) );
@@ -256,7 +284,7 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
             ensureAclKeysHaveOtherUserOwners( ImmutableSet.of( key ), ImmutableSet.of( principal ) );
         //This should be a rare call to overwrite all permissions, so it's okay to do a read before write.
         SecurableObjectType securableObjectType = securableObjectTypes.getOrDefault( key, SecurableObjectType.Unknown );
-        checkMaterializationPermissionChange( key, principal, permissions, securableObjectType );
+        signalMaterializationPermissionChange( key, principal, permissions, securableObjectType );
         aces.set( new AceKey( key, principal ), new AceValue( permissions, securableObjectType, expirationDate ) );
     }
 
@@ -278,7 +306,7 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
 
             for ( Principal principal : principals ) {
                 newPermissions.put( new AceKey( aclKey, principal ), aceValue );
-                checkMaterializationPermissionChange( aclKey, principal, permissions, objectType );
+                signalMaterializationPermissionChange( aclKey, principal, permissions, objectType );
             }
         }
 
@@ -291,9 +319,8 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
         permissions.entrySet().stream().filter( entry -> !entry.getValue().contains( Permission.OWNER ) )
                 .collect( Collectors.groupingBy( e -> e.getKey().getAclKey(),
                         Collectors.mapping( e -> e.getKey().getPrincipal(), Collectors.toSet() ) ) )
-                .entrySet()
-                .forEach( entry -> ensureAclKeysHaveOtherUserOwners( ImmutableSet.of( entry.getKey() ),
-                        entry.getValue() ) );
+                .forEach( ( aclKey, principals ) ->
+                        ensureAclKeysHaveOtherUserOwners( ImmutableSet.of( aclKey ), principals ) );
 
         Map<AclKey, SecurableObjectType> securableObjectTypesForAclKeys = securableObjectTypes
                 .getAll( permissions.keySet().stream().map( AceKey::getAclKey ).collect(
@@ -301,16 +328,16 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
 
         Map<AceKey, AceValue> newPermissions = Maps.newHashMap();
 
-        for ( Map.Entry<AceKey, EnumSet<Permission>> entry : permissions.entrySet() ) {
+        permissions.forEach( ( aceKey, acePermissions ) -> {
+            final var aclKey = aceKey.getAclKey();
+            final var objectType = securableObjectTypesForAclKeys.getOrDefault( aclKey, SecurableObjectType.Unknown );
 
-            SecurableObjectType objectType = securableObjectTypesForAclKeys
-                    .getOrDefault( entry.getKey().getAclKey(), SecurableObjectType.Unknown );
+            newPermissions.put( aceKey, new AceValue( acePermissions, objectType, OffsetDateTime.MAX ) );
 
-            newPermissions.put( entry.getKey(), new AceValue( entry.getValue(), objectType, OffsetDateTime.MAX ) );
-        }
+            signalMaterializationPermissionChange( aclKey, aceKey.getPrincipal(), acePermissions, objectType );
+        } );
 
         aces.putAll( newPermissions );
-
     }
 
     @Override
