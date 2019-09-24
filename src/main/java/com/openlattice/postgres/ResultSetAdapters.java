@@ -660,22 +660,21 @@ public final class ResultSetAdapters {
     }
 
     public static DataExpiration dataExpiration( ResultSet rs ) throws SQLException {
-        final var timeToExpiration = timeToExpiration( rs );
         final var expirationBase = expirationBase( rs );
+        if ( expirationBase == null ) {
+            return null;
+        }
+        final var timeToExpiration = timeToExpiration( rs );
         final var deleteType = deleteType( rs );
         final var startDateProperty = startDateProperty( rs );
-        final DataExpiration expirationData;
-        if ( timeToExpiration != null ) {
-            expirationData = new DataExpiration( timeToExpiration,
+        return new DataExpiration( timeToExpiration,
                     expirationBase,
                     deleteType,
                     Optional.ofNullable( startDateProperty ) );
-        } else { expirationData = null; }
-        return expirationData;
     }
 
     public static Long timeToExpiration( ResultSet rs ) throws SQLException {
-        return (Long) rs.getObject( TIME_TO_EXPIRATION_FIELD );
+        return rs.getLong( TIME_TO_EXPIRATION_FIELD );
     }
 
     public static ExpirationBase expirationBase( ResultSet rs ) throws SQLException {
