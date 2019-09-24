@@ -492,6 +492,19 @@ internal val deletePropertiesOfEntitiesInEntitySet = "DELETE FROM ${DATA.name} "
         "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ? AND ${PARTITIONS_VERSION.name} = ? AND ${PROPERTY_TYPE_ID.name} = ANY(?) "
 
 /**
+ * Preparable SQL deletes all property values of entities and entity key id in a given entity set in [PostgresTable.DATA]
+ *
+ * The following bind order is expected:
+ *
+ * 1. entity set id
+ * 2. entity key ids
+ * 3. partition
+ * 4. partition version
+ */
+internal val deleteEntitiesInEntitySet = "DELETE FROM ${DATA.name} " +
+        "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ? AND ${PARTITIONS_VERSION.name} = ? "
+
+/**
  * Preparable SQL deletes all entities in a given entity set in [PostgresTable.IDS]
  *
  * The following bind order is expected:
