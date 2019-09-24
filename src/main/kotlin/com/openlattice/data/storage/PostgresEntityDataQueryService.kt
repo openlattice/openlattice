@@ -1,6 +1,7 @@
 package com.openlattice.data.storage
 
 import com.google.common.collect.Multimaps
+import com.openlattice.IdConstants
 import com.openlattice.analysis.SqlBindInfo
 import com.openlattice.analysis.requests.Filter
 import com.openlattice.data.DeleteType
@@ -907,8 +908,8 @@ class PostgresEntityDataQueryService(
                 "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' " +
                 "AND ${PARTITION.name} IN $partitions " +
                 "AND ${PARTITIONS_VERSION.name} = ? " +
-                "AND ${PROPERTY_TYPE_ID.name} != '00000000-0000-0001-0000-000000000014' " +
-                "AND $expirationBaseColumn < ? " +
+                "AND ${PROPERTY_TYPE_ID.name} != '${IdConstants.ID_ID.id}' " +
+                "AND $expirationBaseColumn <= ? " +
                 ignoredClearedEntitiesClause // this clause ignores entities that have already been cleared
     }
 }
