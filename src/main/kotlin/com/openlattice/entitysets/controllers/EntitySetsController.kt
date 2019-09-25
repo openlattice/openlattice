@@ -455,45 +455,14 @@ constructor(
         check(es.hasExpirationPolicy()) { "Entity set ${es.name} does not have an expiration policy" }
 
         val expirationPolicy = es.expiration
-        val sqlParams = getSqlParameters(expirationPolicy, dateTime)
-        val expirationBaseColumn = sqlParams.first
-        val formattedDateMinusTTE = sqlParams.second
-        val sqlFormat = sqlParams.third
-        return dgm.getExpiringEntitiesFromEntitySet(entitySetId, expirationBaseColumn, formattedDateMinusTTE,
-                sqlFormat, es.expiration.deleteType).toSet()
+        var expirationPT = Optional.empty<PropertyType>()
+        if (expirationPolicy.startDateProperty.isPresent) {
+            expirationPT = Optional.of(edmManager.getPropertyType(expirationPolicy.startDateProperty.get()))
+        }
+        return dgm.getExpiringEntitiesFromEntitySet(entitySetId, expirationPolicy, dateTime, es.expiration.deleteType, expirationPT).toSet()
     }
 
-    private fun getSqlParameters(expirationPolicy: DataExpiration, dateTime: OffsetDateTime): Triple<String, Any, Int> {
-        val expirationBaseColumn: String
-        val formattedDateMinusTTE: Any
-        val sqlFormat: Int
-        val dateMinusTTEAsInstant = dateTime.toInstant().minusMillis(expirationPolicy.timeToExpiration)
-        when (expirationPolicy.expirationBase) {
-            ExpirationBase.DATE_PROPERTY -> {
-                val expirationPropertyType = edmManager.getPropertyType(expirationPolicy.startDateProperty.get())
-                val columnData = Pair(expirationPropertyType.postgresIndexType, expirationPropertyType.datatype)
-                expirationBaseColumn = PostgresDataTables.getColumnDefinition(columnData.first, columnData.second).name
-                if (columnData.second == EdmPrimitiveTypeKind.Date) {
-                    formattedDateMinusTTE = OffsetDateTime.ofInstant(dateMinusTTEAsInstant, ZoneId.systemDefault()).toLocalDate()
-                    sqlFormat = Types.DATE
-                } else { //only other TypeKind for date property type is OffsetDateTime
-                    formattedDateMinusTTE = OffsetDateTime.ofInstant(dateMinusTTEAsInstant, ZoneId.systemDefault())
-                    sqlFormat = Types.TIMESTAMP_WITH_TIMEZONE
-                }
-            }
-            ExpirationBase.FIRST_WRITE -> {
-                expirationBaseColumn = "${VERSIONS.name}[array_upper(${VERSIONS.name},1)]" //gets the latest version from the versions column
-                formattedDateMinusTTE = dateMinusTTEAsInstant.toEpochMilli()
-                sqlFormat = Types.BIGINT
-            }
-            ExpirationBase.LAST_WRITE -> {
-                expirationBaseColumn = LAST_WRITE.name
-                formattedDateMinusTTE = OffsetDateTime.ofInstant(dateMinusTTEAsInstant, ZoneId.systemDefault())
-                sqlFormat = Types.TIMESTAMP_WITH_TIMEZONE
-            }
-        }
-        return Triple(expirationBaseColumn, formattedDateMinusTTE, sqlFormat)
-    }
+
 
     private fun removeEntitySets(linkingEntitySetId: UUID, entitySetIds: Set<UUID>): Int {
         ensureOwnerAccess(AclKey(linkingEntitySetId))
