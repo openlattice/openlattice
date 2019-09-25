@@ -541,7 +541,7 @@ class AssemblerConnectionManager(
                 stmt.executeUpdate("ALTER MATERIALIZED VIEW IF EXISTS $oldTableName RENAME TO $newTableName")
             }
         }
-        logger.info("Renamed materialized view of entity set with old name $oldName to name name $newName in " +
+        logger.info("Renamed materialized view of entity set with old name $oldName to new name $newName in " +
                 "organization $organizationId")
     }
 
