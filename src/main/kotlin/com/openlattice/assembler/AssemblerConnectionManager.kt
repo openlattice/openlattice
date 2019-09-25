@@ -417,7 +417,7 @@ class AssemblerConnectionManager(
         val sql = "SELECT $selectColumns FROM $PRODUCTION_FOREIGN_SCHEMA.${entitySetIdTableName(entitySetId)}"
 
         val dropMaterializedEntitySet = "DROP MATERIALIZED VIEW IF EXISTS $tableName"
-        val createMaterializedViewSql = "CREATE MATERIALIZED VIEW IF NOT EXISTS $tableName AS $sql"
+        val createMaterializedViewSql = "CREATE MATERIALIZED VIEW $tableName AS $sql"
 
         logger.info("Executing create materialize view sql: {}", createMaterializedViewSql)
         connection.createStatement().use { stmt ->
