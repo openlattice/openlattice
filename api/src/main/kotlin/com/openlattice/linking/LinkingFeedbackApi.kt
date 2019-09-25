@@ -25,7 +25,7 @@ import com.openlattice.data.EntityDataKey
 import retrofit2.http.*
 
 /**
- * This API is for managing manual feedbacks on linked people
+ * This API is for managing manual feedback on linked people
  */
 interface LinkingFeedbackApi {
     companion object {
@@ -41,13 +41,13 @@ interface LinkingFeedbackApi {
     }
 
     /**
-     * Submits feedbacks for a given linking entity set and linking id in a batch format.
+     * Submits feedback for a given linking entity set and linking id in a batch format.
      */
     @PUT(BASE)
     fun addLinkingFeedback(@Body feedback: LinkingFeedback): Int
 
     /**
-     * Returns positive/negative/all linking feedbacks on the given entity.
+     * Returns positive/negative/all linking feedback on the given entity.
      */
     @POST(BASE + ENTITY)
     fun getLinkingFeedbackOnEntity(@Query(FEEDBACK_TYPE) feedbackType: FeedbackType, @Body entity: EntityDataKey
@@ -60,13 +60,13 @@ interface LinkingFeedbackApi {
     fun getLinkingFeedbackWithFeatures(@Body entityPair: EntityKeyPair): EntityLinkingFeatures?
 
     /**
-     * Returns all feedbacks submitted
+     * Returns all feedback submitted
      */
     @GET(BASE + ALL)
     fun getAllLinkingFeedback(): Iterable<EntityLinkingFeedback>
 
     /**
-     * Returns all feedbacks submitted along with the features of pairwise entities
+     * Returns all feedback submitted along with the features of pairwise entities
      */
     @GET(BASE + FEATURES + ALL)
     fun getAllLinkingFeedbackWithFeatures(): Iterable<EntityLinkingFeatures>
