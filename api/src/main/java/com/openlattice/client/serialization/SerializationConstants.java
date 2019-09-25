@@ -151,7 +151,6 @@ public final class SerializationConstants {
     public static final String LINKED_ENTITY_SETS               = "linkedEntitySets";
     public static final String LINKING                          = "linking";
     public static final String LINKING_ENTITY                   = "linkingEntity";
-    public static final String LINKING_FEEDBACK                 = "linkingFeedback";
     public static final String LINKING_PROPERTIES_FIELD         = "linkingProperties";
     public static final String LONGITUDE                        = "longitude";
     public static final String LOWERBOUND                       = "lowerbound";
