@@ -887,29 +887,34 @@ class PostgresEntityDataQueryService(
     fun getExpiringEntitiesFromEntitySet(entitySetId: UUID, expirationBaseColumn: String, formattedDateMinusTTE: Any,
                                          sqlFormat: Int, deleteType: DeleteType) : BasePostgresIterable<UUID> {
         val partitionsInfo: PartitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
-        val partitions = partitionsInfo.partitions.joinToString(prefix = "('", postfix = "')", separator = "', '") { it.toString() }
+        val partitions = PostgresArrays.createIntArray(hds.connection, partitionsInfo.partitions)
         val partitionVersion = partitionsInfo.partitionsVersion
         return BasePostgresIterable(
                 PreparedStatementHolderSupplier(
                         hds,
-                        getExpiringEntitiesQuery(entitySetId, expirationBaseColumn, deleteType, partitions),
+                        getExpiringEntitiesQuery(expirationBaseColumn, deleteType),
                         FETCH_SIZE,
                         false
-                ) {stmt -> stmt.setInt(1, partitionVersion)
-                    stmt.setObject(2, formattedDateMinusTTE, sqlFormat)}
+                ) {stmt ->
+                    stmt.setObject(1, entitySetId)
+                    stmt.setArray(2, partitions)
+                    stmt.setInt(3, partitionVersion)
+                    stmt.setObject(4, IdConstants.ID_ID.id)
+                    stmt.setObject(5, formattedDateMinusTTE, sqlFormat)
+                }
         ) { rs -> ResultSetAdapters.id(rs)}
     }
 
-    private fun getExpiringEntitiesQuery(entitySetId: UUID, expirationBaseColumn: String, deleteType: DeleteType, partitions: String) : String {
+    private fun getExpiringEntitiesQuery(expirationBaseColumn: String, deleteType: DeleteType) : String {
         var ignoredClearedEntitiesClause = ""
         if (deleteType == DeleteType.Soft) {
             ignoredClearedEntitiesClause = "AND ${VERSION.name} >= 0 "
         }
         return "SELECT ${ID.name} FROM ${PostgresTable.DATA.name} " +
-                "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' " +
-                "AND ${PARTITION.name} IN $partitions " +
+                "WHERE ${ENTITY_SET_ID.name} = ? " +
+                "AND ${PARTITION.name} = ANY(?) " +
                 "AND ${PARTITIONS_VERSION.name} = ? " +
-                "AND ${PROPERTY_TYPE_ID.name} != '${IdConstants.ID_ID.id}' " +
+                "AND ${PROPERTY_TYPE_ID.name} != ? " +
                 "AND $expirationBaseColumn <= ? " +
                 ignoredClearedEntitiesClause // this clause ignores entities that have already been cleared
     }
