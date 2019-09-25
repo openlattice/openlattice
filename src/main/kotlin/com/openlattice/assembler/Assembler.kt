@@ -63,6 +63,8 @@ import com.openlattice.tasks.Task
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import java.util.*
+import java.util.stream.Collectors
+import kotlin.streams.toList
 
 private val logger = LoggerFactory.getLogger(Assembler::class.java)
 
@@ -160,7 +162,7 @@ class Assembler(
         if (isEntitySetMaterialized(entitySetDeletedEvent.entitySetId)) {
             logger.info("Removing materialized entity set ${entitySetDeletedEvent.entitySetId} from all " +
                     "organizations because of entity set deletion")
-            
+
             val entitySetAssembliesToDelete = materializedEntitySets.keySet(
                     entitySetIdPredicate(entitySetDeletedEvent.entitySetId)
             )
@@ -274,14 +276,38 @@ class Assembler(
 
     @Subscribe
     fun handleAddMembersToOrganization(event: MembersAddedToOrganizationEvent) {
+        // check if organization is initialized
+        ensureAssemblyInitialized(event.organizationId)
+
+        val authorizedPropertyTypesOfEntitySetsByNewMembers = event.newMembers.associateWith { principal ->
+            val authorizedPropertyTypeAcls = authorizationManager.getAuthorizedObjectsOfType(
+                    principal.principal,
+                    SecurableObjectType.PropertyTypeInEntitySet,
+                    EdmAuthorizationHelper.READ_PERMISSION
+            )
+
+            val allEntitySets = entitySets
+                    .getAll(authorizedPropertyTypeAcls.map { it[0] }.collect(Collectors.toSet()))
+            val allPropertyTypes = propertyTypes
+                    .getAll(authorizedPropertyTypeAcls.map { it[1] }.collect(Collectors.toSet()))
+
+
+            return@associateWith authorizedPropertyTypeAcls.toList()
+                    .groupBy { it[0] }
+                    .map { allEntitySets.getValue(it.key) to it.value.map { allPropertyTypes.getValue(it[1]) } }
+                    .toMap()
+        }
         assemblies.executeOnKey(
                 event.organizationId,
-                AddMembersToOrganizationAssemblyProcessor(event.newMembers).init(acm)
+                AddMembersToOrganizationAssemblyProcessor(authorizedPropertyTypesOfEntitySetsByNewMembers).init(acm)
         )
     }
 
     @Subscribe
     fun removeMembersFromOrganization(event: MembersRemovedFromOrganizationEvent) {
+        // check if organization is initialized
+        ensureAssemblyInitialized(event.organizationId)
+
         assemblies.executeOnKey(
                 event.organizationId,
                 RemoveMembersFromOrganizationAssemblyProcessor(event.members).init(acm)
