@@ -77,6 +77,7 @@ public final class SerializationConstants {
     public static final String DATATYPE_FIELD                   = "datatype";
     public static final String DATA_ID                          = "dataId";
     public static final String DEFAULT_SHOW                     = "defaultShow";
+    public static final String DELETE_TYPE                      = "deleteType";
     public static final String DEIDENTIFIED                     = "deidentified";
     public static final String DESCRIPTION_FIELD                = "description";
     public static final String DETAILS_FIELD                    = "details";
