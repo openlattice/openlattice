@@ -310,7 +310,7 @@ class PostgresEntityDataQueryService(
 
         connection.autoCommit = true
         val entityKeyIdsArr = PostgresArrays.createUuidArray(connection, entities.keys)
-        val versionsArrays = PostgresArrays.createLongArray(connection, arrayOf(version))
+        val versionsArrays = PostgresArrays.createLongArray(connection, version)
 
         /*
          * Our approach is to use entity level locking that takes advantage of the router executor to avoid deadlocks.
@@ -492,18 +492,18 @@ class PostgresEntityDataQueryService(
 
 
         val numUpdated = conn.prepareStatement(updateVersionsForEntitySet).use { ps ->
-            ps.setObject(1, tombstoneVersion)
-            ps.setObject(2, tombstoneVersion)
-            ps.setObject(3, tombstoneVersion)
+            ps.setLong(1, tombstoneVersion)
+            ps.setLong(2, tombstoneVersion)
+            ps.setLong(3, tombstoneVersion)
             ps.setObject(4, entitySetId)
             ps.executeUpdate()
         }
 
         //We don't count property type updates.
         conn.prepareStatement(updateVersionsForPropertiesInEntitySet).use { ps ->
-            ps.setObject(1, tombstoneVersion)
-            ps.setObject(2, tombstoneVersion)
-            ps.setObject(3, tombstoneVersion)
+            ps.setLong(1, tombstoneVersion)
+            ps.setLong(2, tombstoneVersion)
+            ps.setLong(3, tombstoneVersion)
             ps.setObject(4, entitySetId)
             ps.executeUpdate()
         }
@@ -576,13 +576,37 @@ class PostgresEntityDataQueryService(
         val numUpdates = entityKeyIds
                 .groupBy { getPartition(it, partitions) }
                 .map { (partition, entities) ->
-                    deleteEntities(entitySetId, entities, authorizedPropertyTypes, partition, partitionVersion)
+                    deletePropertiesFromEntities(entitySetId, entities, authorizedPropertyTypes, partition, partitionVersion)
                 }.sum()
 
         return WriteEvent(System.currentTimeMillis(), numUpdates)
     }
 
-    private fun deleteEntities(
+    fun deleteEntityDataAndEntities(
+            entitySetId: UUID,
+            entityKeyIds: Set<UUID>,
+            authorizedPropertyTypes: Map<UUID, PropertyType>,
+            partitionsInfo: PartitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
+    ): WriteEvent {
+        // Delete properties from S3
+        authorizedPropertyTypes.map { property ->
+            if (property.value.datatype == EdmPrimitiveTypeKind.Binary) {
+                deletePropertyOfEntityFromS3(entitySetId, entityKeyIds, property.key)
+            }
+        }
+
+        val partitions = partitionsInfo.partitions.toList()
+        val partitionVersion = partitionsInfo.partitionsVersion
+        val numUpdates = entityKeyIds
+                .groupBy { getPartition(it, partitions) }
+                .map { (partition, entities) ->
+                    deleteEntities(entitySetId, entities, partition, partitionVersion)
+                }.sum()
+
+        return WriteEvent(System.currentTimeMillis(), numUpdates)
+    }
+
+    private fun deletePropertiesFromEntities(
             entitySetId: UUID,
             entities: Collection<UUID>,
             authorizedPropertyTypes: Map<UUID, PropertyType>,
@@ -609,6 +633,36 @@ class PostgresEntityDataQueryService(
             ps.setInt(3, partition)
             ps.setInt(4, partitionVersion)
             ps.setArray(5, propertyTypesArr)
+
+            val count = ps.executeUpdate()
+            connection.commit()
+            count
+        }
+    }
+
+    private fun deleteEntities(
+            entitySetId: UUID,
+            entities: Collection<UUID>,
+            partition: Int,
+            partitionVersion: Int
+    ): Int {
+        return hds.connection.use { connection ->
+            connection.autoCommit = false
+
+            val idsArr = PostgresArrays.createUuidArray(connection, entities)
+
+            // Acquire entity key id locks
+            val rowLocks = connection.prepareStatement(lockEntitiesSql)
+            rowLocks.setArray(1, idsArr)
+            rowLocks.setInt(2, partition)
+            rowLocks.executeQuery()
+
+            // Delete entity properties from data table
+            val ps = connection.prepareStatement(deleteEntitiesInEntitySet)
+            ps.setObject(1, entitySetId)
+            ps.setArray(2, idsArr)
+            ps.setInt(3, partition)
+            ps.setInt(4, partitionVersion)
 
             val count = ps.executeUpdate()
             connection.commit()
@@ -648,7 +702,7 @@ class PostgresEntityDataQueryService(
                     val entitySetIdsArr = PostgresArrays.createUuidArray(connection, setOf(entitySetId))
                     val propertyTypeIdsArr = PostgresArrays.createUuidArray(connection, setOf(propertyTypeId))
                     val entityKeyIdsArr = PostgresArrays.createUuidArray(connection, entityKeyIds)
-                    ps.setObject(1, entitySetIdsArr)
+                    ps.setArray(1, entitySetIdsArr)
                     ps.setArray(2, propertyTypeIdsArr)
                     ps.setArray(3, entityKeyIdsArr)
                 }
@@ -724,11 +778,11 @@ class PostgresEntityDataQueryService(
         val propertyTypeIdsArr = PostgresArrays.createUuidArray(conn, propertyTypesToTombstone.map { it.id })
 
         val numUpdated = conn.prepareStatement(updateVersionsForPropertyTypesInEntitySet).use { ps ->
-            ps.setObject(1, tombstoneVersion)
-            ps.setObject(2, tombstoneVersion)
-            ps.setObject(3, tombstoneVersion)
+            ps.setLong(1, tombstoneVersion)
+            ps.setLong(2, tombstoneVersion)
+            ps.setLong(3, tombstoneVersion)
             ps.setObject(4, entitySetId)
-            ps.setObject(5, propertyTypeIdsArr)
+            ps.setArray(5, propertyTypeIdsArr)
             ps.executeUpdate()
         }
 
@@ -756,9 +810,9 @@ class PostgresEntityDataQueryService(
         val partitionsArr = PostgresArrays.createIntArray(conn, entityKeyIds.map { getPartition(it, partitions) })
 
         val numUpdated = conn.prepareStatement(updateVersionsForEntitiesInEntitySet).use { ps ->
-            ps.setObject(1, tombstoneVersion)
-            ps.setObject(2, tombstoneVersion)
-            ps.setObject(3, tombstoneVersion)
+            ps.setLong(1, tombstoneVersion)
+            ps.setLong(2, tombstoneVersion)
+            ps.setLong(3, tombstoneVersion)
             ps.setObject(4, entitySetId)
             ps.setArray(5, entityKeyIdsArr)
             ps.setArray(6, partitionsArr)

@@ -29,11 +29,15 @@ import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.OrganizationAssembly
 import com.openlattice.assembler.PostgresDatabases
 import com.openlattice.authorization.SecurablePrincipal
+import com.openlattice.assembler.AssemblerConnectionManagerDependent
 import java.lang.IllegalStateException
 import java.util.*
 
 data class AddMembersToOrganizationAssemblyProcessor(val newPrincipals: Collection<SecurablePrincipal>)
-    : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(false), Offloadable, ReadOnly {
+    : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(false),
+        AssemblerConnectionManagerDependent<AddMembersToOrganizationAssemblyProcessor>,
+        Offloadable,
+        ReadOnly {
 
     @Transient
     private lateinit var acm: AssemblerConnectionManager
@@ -56,9 +60,8 @@ data class AddMembersToOrganizationAssemblyProcessor(val newPrincipals: Collecti
         return ExecutionService.OFFLOADABLE_EXECUTOR
     }
 
-    fun init(acm: AssemblerConnectionManager): AddMembersToOrganizationAssemblyProcessor {
+    override fun init(acm: AssemblerConnectionManager): AddMembersToOrganizationAssemblyProcessor {
         this.acm = acm
         return this
     }
-
 }

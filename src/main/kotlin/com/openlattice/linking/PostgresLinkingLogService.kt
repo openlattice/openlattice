@@ -66,7 +66,7 @@ class PostgresLinkingLogService(
         hds.connection.use { conn ->
             conn.prepareStatement(READ_VERSION_LINKED_SQL).use { ps ->
                 ps.setObject(1, linkingId)
-                ps.setObject(2, version)
+                ps.setLong(2, version)
                 ps.executeQuery().use { rs->
                     rs.next()
                     val searchConstraintsJson = rs.getString( ID_MAP_FIELD )

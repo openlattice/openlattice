@@ -24,13 +24,15 @@ import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.assembler.AssemblerConnectionManager
+import com.openlattice.assembler.AssemblerConnectionManagerDependent
 import com.openlattice.assembler.processors.RefreshMaterializedEntitySetProcessor
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import org.springframework.stereotype.Component
 
 @Component
 class RefreshMaterializedEntitySetProcessorStreamSerializer
-    : SelfRegisteringStreamSerializer<RefreshMaterializedEntitySetProcessor>, AssemblerConnectionManagerDependent {
+    : SelfRegisteringStreamSerializer<RefreshMaterializedEntitySetProcessor>,
+        AssemblerConnectionManagerDependent<Void?> {
 
     private lateinit var acm: AssemblerConnectionManager
 
@@ -72,7 +74,8 @@ class RefreshMaterializedEntitySetProcessorStreamSerializer
         ).init(acm)
     }
 
-    override fun init(assemblerConnectionManager: AssemblerConnectionManager) {
-        this.acm = assemblerConnectionManager
+    override fun init(acm: AssemblerConnectionManager): Void? {
+        this.acm = acm
+        return null
     }
 }

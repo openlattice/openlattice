@@ -96,9 +96,9 @@ fun getEntityPropertiesByPropertyTypeId3(
     val entity = dataTypes.map { datatype ->
         val json = rs.getString("v_$datatype")
         mapper.readValue<MutableMap<UUID, MutableSet<Any>>>(json)
-    }.reduce { acc, mutableMap ->
+    }.fold(mutableMapOf<UUID, MutableSet<Any>>()) { acc, mutableMap ->
         acc.putAll(mutableMap)
-        acc
+        return@fold acc
     }
 
     (entity.keys - propertyTypes.keys).forEach { entity.remove(it) }

@@ -214,8 +214,10 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
         ensurePrincipalsExist( aclKey );
         authorizations.deletePrincipalPermissions( principals.get( aclKey ).getPrincipal() );
         removePrincipalFromPrincipals( aclKey, hasSecurablePrincipal( aclKey ) );
+        reservations.release( aclKey.get( aclKey.getSize() - 1 ) );
         Util.deleteSafely( principalTrees, aclKey );
         Util.deleteSafely( principals, aclKey );
+        Util.deleteSafely( securableObjectTypes, aclKey );
     }
 
     @Override

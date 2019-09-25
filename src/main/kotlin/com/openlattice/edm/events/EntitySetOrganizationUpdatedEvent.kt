@@ -18,15 +18,8 @@
  *
  *
  */
+package com.openlattice.edm.events
 
-package com.openlattice.hazelcast.serializers
+import java.util.UUID
 
-import com.openlattice.assembler.AssemblerConnectionManager
-
-/**
- *
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
- */
-interface AssemblerConnectionManagerDependent {
-    fun init( assemblerConnectionManager: AssemblerConnectionManager)
-}
+data class EntitySetOrganizationUpdatedEvent(val entitySetId: UUID, val oldOrganizationId: UUID)
