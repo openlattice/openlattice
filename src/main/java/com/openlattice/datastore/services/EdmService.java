@@ -1676,26 +1676,26 @@ public class EdmService implements EdmManager {
 
         Set<UUID> updatedIds = Sets.newHashSet();
 
-        fqnCycles.forEach( cycle -> {
-            cycle.forEach( id -> {
-                resolveFqnCycles( id,
-                        idToType.get( id ),
-                        propertyTypesById,
-                        entityTypesById,
-                        associationTypesById,
-                        true );
-            } );
-            cycle.forEach( id -> {
-                resolveFqnCycles( id,
-                        idToType.get( id ),
-                        propertyTypesById,
-                        entityTypesById,
-                        associationTypesById,
-                        false );
-                updatedIds.add( id );
-            } );
-
-        } );
+//        fqnCycles.forEach( cycle -> {
+//            cycle.forEach( id -> {
+//                resolveFqnCycles( id,
+//                        idToType.get( id ),
+//                        propertyTypesById,
+//                        entityTypesById,
+//                        associationTypesById,
+//                        true );
+//            } );
+//            cycle.forEach( id -> {
+//                resolveFqnCycles( id,
+//                        idToType.get( id ),
+//                        propertyTypesById,
+//                        entityTypesById,
+//                        associationTypesById,
+//                        false );
+//                updatedIds.add( id );
+//            } );
+//
+//        } );
 
         diff.getDiff().getSchemas().forEach( schema -> {
             schemaManager.createOrUpdateSchemas( schema );

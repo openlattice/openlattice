@@ -21,14 +21,14 @@ const val FETCH_SIZE = 100_000
 
 class PostgresLinkingFeedbackService(private val hds: HikariDataSource, hazelcastInstance: HazelcastInstance) {
 
-    private val linkingFeedbacks = hazelcastInstance.getMap<EntityKeyPair, Boolean>(HazelcastMap.LINKING_FEEDBACKS.name)
+    private val linkingFeedback = hazelcastInstance.getMap<EntityKeyPair, Boolean>(HazelcastMap.LINKING_FEEDBACK.name)
 
     fun addLinkingFeedback(entityLinkingFeedback: EntityLinkingFeedback) {
-        linkingFeedbacks.set(entityLinkingFeedback.entityPair, entityLinkingFeedback.linked)
+        linkingFeedback.set(entityLinkingFeedback.entityPair, entityLinkingFeedback.linked)
     }
 
-    fun getLinkingFeedbacks(): Iterable<EntityLinkingFeedback> {
-        // since we are not using an entryprocessor after retriveing all the feedbacks, it's easier to just query them
+    fun getLinkingFeedback(): Iterable<EntityLinkingFeedback> {
+        // since we are not using an entryprocessor after retriveing all the feedback, it's easier to just query them
         return PostgresIterable(
                 Supplier<StatementHolder> {
                     val connection = hds.connection
@@ -58,13 +58,13 @@ class PostgresLinkingFeedbackService(private val hds: HikariDataSource, hazelcas
             Predicates.alwaysTrue<EntityKeyPair, Boolean>()
         }
 
-        return linkingFeedbacks.executeOnEntries(
+        return linkingFeedback.executeOnEntries(
                 LinkingFeedbackEntryProcessor(),
                 Predicates.and(entityPredicate, feedbackTypePredicate)).values as Iterable<EntityLinkingFeedback>
     }
 
     fun getLinkingFeedback(entityPair: EntityKeyPair): EntityLinkingFeedback? {
-        val feedback = linkingFeedbacks[entityPair]
+        val feedback = linkingFeedback[entityPair]
 
         return if (feedback == null) {
             null
@@ -74,7 +74,7 @@ class PostgresLinkingFeedbackService(private val hds: HikariDataSource, hazelcas
     }
 
     @SuppressWarnings("unchecked")
-    fun deleteLinkingFeedbacks(entitySetId: UUID, entityKeyIds: Optional<Set<UUID>>): Int {
+    fun deleteLinkingFeedback(entitySetId: UUID, entityKeyIds: Optional<Set<UUID>>): Int {
         val firstEntitySetPredicate = Predicates.equal(FIRST_ENTITY_SET_INDEX, entitySetId)
         val secondEntitySetPredicate = Predicates.equal(SECOND_ENTITY_SET_INDEX, entitySetId)
 
@@ -94,14 +94,14 @@ class PostgresLinkingFeedbackService(private val hds: HikariDataSource, hazelcas
             secondEntitySetPredicate
         }
 
-        val feedbackCount = linkingFeedbacks.count()
-        linkingFeedbacks.removeAll(
+        val feedbackCount = linkingFeedback.count()
+        linkingFeedback.removeAll(
                 Predicates.or(firstPredicate, secondPredicate) as Predicate<EntityKeyPair, Boolean>)
-        return feedbackCount - linkingFeedbacks.count()
+        return feedbackCount - linkingFeedback.count()
     }
 
     fun deleteLinkingFeedback(entityPair: EntityKeyPair): Int {
-        linkingFeedbacks.remove(entityPair)
+        linkingFeedback.remove(entityPair)
         return 1
     }
 }
