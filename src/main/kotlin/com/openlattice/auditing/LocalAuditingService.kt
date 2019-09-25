@@ -20,52 +20,52 @@ class LocalAuditingService(
 
     override fun recordEvents(events: List<AuditableEvent>): Int {
 
-//        val auditingConfiguration = ares.auditingTypes
-//
-//        if (!auditingConfiguration.isAuditingInitialized()) {
-//            return 0
-//        }
-//
-//        return events
-//                .groupBy { ares.getActiveAuditEntitySetIds(it.aclKey, it.eventType) }
-//                .filter { (auditEntitySetConfiguration, _) ->
-//                    auditEntitySetConfiguration.auditRecordEntitySet != null
-//                }
-//                .map { (auditEntitySetConfiguration, auditableEvents) ->
-//                    val auditEntitySet = auditEntitySetConfiguration.auditRecordEntitySet
-//                    val (entityKeyIds, _) = dataGraphService.createEntities(
-//                            auditEntitySet!!,
-//                            mapAuditableEventsToEntities(auditableEvents),
-//                            auditingConfiguration.propertyTypes
-//                    )
-//
-//                    if (auditEntitySetConfiguration.auditEdgeEntitySet != null) {
-//                        val auditEdgeEntitySet = auditEntitySetConfiguration.auditEdgeEntitySet
-//
-//                        val lm = ArrayListMultimap.create<UUID, DataEdge>()
-//                        entityKeyIds.asSequence().zip(auditableEvents.asSequence())
-//                                .filter { it.second.entities.isPresent }
-//                                .forEach { (auditEntityKeyId, ae) ->
-//                                    val aeEntitySetId = ae.aclKey[0]
-//                                    val aeEntityKeyIds = ae.entities.get()
-//                                    aeEntityKeyIds.forEach { id ->
-//                                        lm.put(
-//                                                auditEdgeEntitySet,
-//                                                DataEdge(
-//                                                        EntityDataKey(aeEntitySetId, id),
-//                                                        EntityDataKey(auditEntitySet, auditEntityKeyId),
-//                                                        ImmutableMap.of()
-//                                                )
-//                                        )
-//                                        return@forEach
-//                                    }
-//                                }
-//                        dataGraphService
-//                                .createAssociations(lm, ImmutableMap.of(auditEdgeEntitySet, emptyMap()))
-//
-//                    }
-//                    entityKeyIds.size
-//                }.sum()
+        val auditingConfiguration = ares.auditingTypes
+
+        if (!auditingConfiguration.isAuditingInitialized()) {
+            return 0
+        }
+
+        return events
+                .groupBy { ares.getActiveAuditEntitySetIds(it.aclKey, it.eventType) }
+                .filter { (auditEntitySetConfiguration, _) ->
+                    auditEntitySetConfiguration.auditRecordEntitySet != null
+                }
+                .map { (auditEntitySetConfiguration, auditableEvents) ->
+                    val auditEntitySet = auditEntitySetConfiguration.auditRecordEntitySet
+                    val (entityKeyIds, _) = dataGraphService.createEntities(
+                            auditEntitySet!!,
+                            mapAuditableEventsToEntities(auditableEvents),
+                            auditingConfiguration.propertyTypes
+                    )
+
+                    if (auditEntitySetConfiguration.auditEdgeEntitySet != null) {
+                        val auditEdgeEntitySet = auditEntitySetConfiguration.auditEdgeEntitySet
+
+                        val lm = ArrayListMultimap.create<UUID, DataEdge>()
+                        entityKeyIds.asSequence().zip(auditableEvents.asSequence())
+                                .filter { it.second.entities.isPresent }
+                                .forEach { (auditEntityKeyId, ae) ->
+                                    val aeEntitySetId = ae.aclKey[0]
+                                    val aeEntityKeyIds = ae.entities.get()
+                                    aeEntityKeyIds.forEach { id ->
+                                        lm.put(
+                                                auditEdgeEntitySet,
+                                                DataEdge(
+                                                        EntityDataKey(aeEntitySetId, id),
+                                                        EntityDataKey(auditEntitySet, auditEntityKeyId),
+                                                        ImmutableMap.of()
+                                                )
+                                        )
+                                        return@forEach
+                                    }
+                                }
+                        dataGraphService
+                                .createAssociations(lm, ImmutableMap.of(auditEdgeEntitySet, emptyMap()))
+
+                    }
+                    entityKeyIds.size
+                }.sum()
         return 0
     }
 
