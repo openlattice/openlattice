@@ -284,15 +284,12 @@ class Assembler(
                     principal.principal,
                     SecurableObjectType.PropertyTypeInEntitySet,
                     EdmAuthorizationHelper.READ_PERMISSION
-            )
+            ).toList()
 
-            val allEntitySets = entitySets
-                    .getAll(authorizedPropertyTypeAcls.map { it[0] }.collect(Collectors.toSet()))
-            val allPropertyTypes = propertyTypes
-                    .getAll(authorizedPropertyTypeAcls.map { it[1] }.collect(Collectors.toSet()))
+            val allEntitySets = entitySets.getAll(authorizedPropertyTypeAcls.map { it[0] }.toSet())
+            val allPropertyTypes = propertyTypes.getAll(authorizedPropertyTypeAcls.map { it[1] }.toSet())
 
-
-            return@associateWith authorizedPropertyTypeAcls.toList()
+            return@associateWith authorizedPropertyTypeAcls
                     .groupBy { it[0] }
                     .map { allEntitySets.getValue(it.key) to it.value.map { allPropertyTypes.getValue(it[1]) } }
                     .toMap()
