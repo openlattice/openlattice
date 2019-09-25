@@ -64,7 +64,7 @@ fun buildPreparableFiltersSqlForLinkedEntities(
     // TODO: remove IS NOT NULL post-migration
     val innerSql = selectEntitiesGroupedByIdAndPropertyTypeId(
             idsPresent = idsPresent, partitionsPresent = partitionsPresent, selectOriginIds = selectOriginIds
-    ) + " AND ${ORIGIN_ID.name} IS NOT NULL AND ${ORIGIN_ID.name} IS NOT '${IdConstants.EMPTY_ORIGIN_ID.id}' " +
+    ) + " AND ${ORIGIN_ID.name} IS NOT NULL AND ${ORIGIN_ID.name} != '${IdConstants.EMPTY_ORIGIN_ID.id}' " +
             filtersClause + GROUP_BY_ESID_EKID_PART_PTID
 
     val maybeEntityKeyIds = if (selectOriginIds) ",${ENTITY_KEY_IDS_COL.name}" else ""
