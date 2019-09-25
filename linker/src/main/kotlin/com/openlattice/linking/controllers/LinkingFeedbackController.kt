@@ -79,7 +79,7 @@ constructor(
                 feedback.linkingEntityDataKey)
 
 
-        // add feedbacks
+        // add feedback
         val linkingEntitiesList = feedback.link.toList()
         val nonLinkingEntitiesList = feedback.unlink.toList()
 
@@ -101,7 +101,7 @@ constructor(
         dataManager.markAsNeedsToBeLinked(feedback.link + feedback.unlink)
 
 
-        logger.info("Submitted $positiveFeedbackCount positive and $negativeFeedbackCount negative feedbacks for " +
+        logger.info("Submitted $positiveFeedbackCount positive and $negativeFeedbackCount negative feedback for " +
                 "linking id ${feedback.linkingEntityDataKey.entityKeyId}")
 
         return positiveFeedbackCount + negativeFeedbackCount
