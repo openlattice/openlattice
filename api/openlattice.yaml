@@ -2560,7 +2560,7 @@ paths:
   ## LINKING APIs ##
   ##################
   
-  /datastore/linker/linkingfeedback:
+  /linker/linkingfeedback:
     put:
       summary: Submits feedbacks for a given linking entity set and linking id in a batch format.
       operationId: addLinkingFeedback
@@ -2596,7 +2596,7 @@ paths:
           application/json:
             schema:
               $ref: "#/components/entityKeyPair"
-  /datastore/linker/linkingfeedback/entity:
+  /linker/linkingfeedback/entity:
     post:
       summary: Returns positive/negative/all linking feedbacks on the given entity.
       operationId: getLinkingFeedbacksOnEntity
@@ -2626,7 +2626,7 @@ paths:
               schema:
                 type: array
                 $ref: "#/components/entityLinkingFeedback"
-  /datastore/linker/linkingfeedback/features:
+  /linker/linkingfeedback/features:
     post:
       summary: Returns the feedback on the given entity pair along with their features
       operationId: getLinkingFeedbackWithFeatures
@@ -2649,7 +2649,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/entityLinkingFeatures"
-  /datastore/linker/linkingfeedback/all:
+  /linker/linkingfeedback/all:
     get:
       summary: Returns all feedback submitted
       operationId: getAllLinkingFeedback
@@ -2667,7 +2667,7 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/entityLinkingFeedback"
-  /datastore/linker/linkingfeedback/features/all:
+  /linker/linkingfeedback/features/all:
     get:
       summary: Returns all feedback submitted walong with the features of pairwise entities
       operationId: getAllLinkingFeedbackWithFeatures
