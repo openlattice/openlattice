@@ -419,7 +419,7 @@ class PostgresEntityDatastore(
         signalEntitySetDataDeleted(entitySetId)
 
         // delete entities from linking feedbacks
-        val deleteFeedbackCount = feedbackQueryService.deleteLinkingFeedbacks(entitySetId, Optional.empty())
+        val deleteFeedbackCount = feedbackQueryService.deleteLinkingFeedback(entitySetId, Optional.empty())
 
         // Delete all neighboring entries from matched entities
         val deleteMatchCount = linkingQueryService.deleteEntitySetNeighborhood(entitySetId)
@@ -448,7 +448,7 @@ class PostgresEntityDatastore(
         signalDeletedEntities(entitySetId, entityKeyIds)
 
         // delete entities from linking feedbacks too
-        val deleteFeedbackCount = feedbackQueryService.deleteLinkingFeedbacks(entitySetId, Optional.of(entityKeyIds))
+        val deleteFeedbackCount = feedbackQueryService.deleteLinkingFeedback(entitySetId, Optional.of(entityKeyIds))
 
         // Delete all neighboring entries from matched entities
         val deleteMatchCount = linkingQueryService.deleteNeighborhoods(entitySetId, entityKeyIds)
