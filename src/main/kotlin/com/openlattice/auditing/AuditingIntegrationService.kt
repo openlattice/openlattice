@@ -89,7 +89,7 @@ class AuditingIntegrationService(
                         entityKeyIds.size
                     }.sum()
         } else {
-            return 0
+            0
         }
     }
 

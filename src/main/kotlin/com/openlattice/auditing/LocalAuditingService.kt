@@ -66,7 +66,7 @@ class LocalAuditingService(
                     }
                     entityKeyIds.size
                 }.sum()
-        0
+        return 0
     }
 
     private fun mapAuditableEventsToEntities(events: List<AuditableEvent>): List<Map<UUID, Set<Any>>> {
