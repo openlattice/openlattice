@@ -55,11 +55,11 @@ private val selectUnauthorizedEntitySetAssemblies =
 class MaterializePermissionSyncTask : HazelcastFixedRateTask<MaterializedEntitySetsDependencies> {
 
     override fun getInitialDelay(): Long {
-        return 30000L // wait until AssemblerConnectionManager can be initialized
+        return 60_000L // wait until AssemblerConnectionManager can be initialized
     }
 
     override fun getPeriod(): Long {
-        return 3600L // 1 min
+        return 60_000L // 1 min
     }
 
     override fun getTimeUnit(): TimeUnit {
