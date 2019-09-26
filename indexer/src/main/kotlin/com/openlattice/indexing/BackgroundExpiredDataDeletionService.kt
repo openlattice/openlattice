@@ -69,8 +69,6 @@ class BackgroundExpiredDataDeletionService(
     private val propertyTypes: IMap<UUID, PropertyType> = hazelcastInstance.getMap(HazelcastMap.PROPERTY_TYPES.name)
     private val entitySets: IMap<UUID, EntitySet> = hazelcastInstance.getMap(HazelcastMap.ENTITY_SETS.name)
     private val expirationLocks: IMap<UUID, Long> = hazelcastInstance.getMap(HazelcastMap.EXPIRATION_LOCKS.name)
-    private var entitySetToPartition: Map<UUID, Set<Int>> = mapOf()
-    private var propertyTypeIdToColumnData: Map<UUID, Pair<IndexType, EdmPrimitiveTypeKind>> = mapOf()
 
     init {
         expirationLocks.addIndex(QueryConstants.THIS_ATTRIBUTE_NAME.value(), true)
@@ -103,11 +101,6 @@ class BackgroundExpiredDataDeletionService(
                             .filter { it.hasExpirationPolicy() }
                             .filter { tryLockEntitySet(it) }
                             .shuffled()
-
-                    val propertyTypeIds = lockedEntitySets.filter { it.expiration.startDateProperty.isPresent }.map { it.expiration.startDateProperty.get() }.toSet()
-                    if (propertyTypeIds.isNotEmpty()) {
-                        propertyTypeIdToColumnData = propertyTypes.map{it.key to Pair(it.value.postgresIndexType, it.value.datatype)}.toMap()
-                    }
 
                     val propertiesOfLockedEntitySets = lockedEntitySets
                             .map { it.id to edm.getPropertyTypesAsMap(edm.getEntityType(it.entityTypeId).properties) }
@@ -147,11 +140,8 @@ class BackgroundExpiredDataDeletionService(
         val deletedEntityKeyIds: MutableSet<UUID> = mutableSetOf()
         var totalDeletedEntitiesCount = 0
 
-        var expirationPT = Optional.empty<PropertyType>()
-        if (entitySet.expiration.startDateProperty.isPresent) {
-            expirationPT = Optional.of(propertyTypes[entitySet.expiration.startDateProperty.get()]!!)
-        }
-        var entityKeyIds = dataGraphService.getExpiringEntitiesFromEntitySet(
+        val expirationPT = entitySet.expiration.startDateProperty.map { propertyTypes[it]!! }
+        val entityKeyIds = dataGraphService.getExpiringEntitiesFromEntitySet(
                 entitySet.id, entitySet.expiration, OffsetDateTime.now(), entitySet.expiration.deleteType, expirationPT
         )
         while (entityKeyIds.iterator().hasNext()) {
@@ -234,10 +224,6 @@ class BackgroundExpiredDataDeletionService(
                             )
                 }.toMap()
         return dataGraphService.clearAssociationsBatch(entitySetId, associationEdgeKeys, associationPropertyTypes)
-    }
-
-    private fun deleteExpiredDataFromElasticSearch(entitySetId: UUID, entityTypeId: UUID, expiredEntityKeyIds: Set<UUID>): Boolean {
-        return elasticsearchApi.deleteEntityDataBulk(entitySetId, entityTypeId, expiredEntityKeyIds)
     }
 
     private fun tryLockEntitySet(entitySet: EntitySet): Boolean {
