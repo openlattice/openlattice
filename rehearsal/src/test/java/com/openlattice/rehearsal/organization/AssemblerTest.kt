@@ -1128,7 +1128,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         permissionsApi.updateAcl(AclData(esAcl, Action.REMOVE))
 
         // wait for background task
-        Thread.sleep(5000L)
+        Thread.sleep(60_000L)
 
         // materialized entityset should be removed by this time
         organizationDataSource.connection.use { connection ->
@@ -1185,7 +1185,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         permissionsApi.updateAcl(AclData(ptAcl, Action.REMOVE))
 
         // wait for background task
-        Thread.sleep(5000L)
+        Thread.sleep(60_000L)
 
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
@@ -1211,7 +1211,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         permissionsApi.updateAcl(AclData(ptAcl, Action.ADD))
 
         // wait for background task
-        Thread.sleep(5000L)
+        Thread.sleep(60_000L)
 
         organizationsApi.assembleEntitySets(organizationId, mapOf(es.id to null))
         organizationDataSource.connection.use { connection ->
