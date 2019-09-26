@@ -147,8 +147,13 @@ class BackgroundExpiredDataDeletionService(
         val deletedEntityKeyIds: MutableSet<UUID> = mutableSetOf()
         var totalDeletedEntitiesCount = 0
 
-        val sqlParams = getSqlParameters(entitySet.expiration)
-        var entityKeyIds = dataGraphService.getExpiringEntitiesFromEntitySet(entitySet.id, sqlParams, entitySet.expiration.deleteType)
+        var expirationPT = Optional.empty<PropertyType>()
+        if (entitySet.expiration.startDateProperty.isPresent) {
+            expirationPT = Optional.of(propertyTypes[entitySet.expiration.startDateProperty.get()]!!)
+        }
+        var entityKeyIds = dataGraphService.getExpiringEntitiesFromEntitySet(
+                entitySet.id, entitySet.expiration, OffsetDateTime.now(), entitySet.expiration.deleteType, expirationPT
+        )
         while (entityKeyIds.iterator().hasNext()) {
             val chunkedEntityKeyIds = Iterables.partition(entityKeyIds, MAX_BATCH_SIZE)
             for (idsChunk in chunkedEntityKeyIds) {
@@ -195,37 +200,6 @@ class BackgroundExpiredDataDeletionService(
             )
         }
         return totalDeletedEntitiesCount
-    }
-
-    private fun getSqlParameters(expiration: DataExpiration): Triple<String, Any, Int> {
-        val comparisonField: String
-        val expirationField: Any
-        val expirationFieldSQLType: Int
-        val expirationInstant = Instant.now().minusMillis(expiration.timeToExpiration)
-        when (expiration.expirationBase) {
-            ExpirationBase.DATE_PROPERTY -> {
-                val columnData = propertyTypeIdToColumnData.getValue(expiration.startDateProperty.get())
-                comparisonField = PostgresDataTables.getColumnDefinition(columnData.first, columnData.second).name
-                if (columnData.second == EdmPrimitiveTypeKind.Date) {
-                    expirationField = OffsetDateTime.ofInstant(expirationInstant, ZoneId.systemDefault()).toLocalDate()
-                    expirationFieldSQLType = Types.DATE
-                } else {  //only other TypeKind for date property type is OffsetDateTime
-                    expirationField = OffsetDateTime.ofInstant(expirationInstant, ZoneId.systemDefault())
-                    expirationFieldSQLType = Types.TIMESTAMP_WITH_TIMEZONE
-                }
-            }
-            ExpirationBase.FIRST_WRITE -> {
-                expirationField = expirationInstant.toEpochMilli()
-                expirationFieldSQLType = Types.BIGINT
-                comparisonField = "${VERSIONS.name}[array_upper(${VERSIONS.name},1)]" //gets the latest version
-            }
-            ExpirationBase.LAST_WRITE -> {
-                expirationField = OffsetDateTime.ofInstant(expirationInstant, ZoneId.systemDefault())
-                expirationFieldSQLType = Types.TIMESTAMP_WITH_TIMEZONE
-                comparisonField = LAST_WRITE.name
-            }
-        }
-        return Triple(comparisonField, expirationField, expirationFieldSQLType)
     }
 
     private fun deleteAssociationsOfExpiredEntities(entitySetId: UUID, ids: Set<UUID>): List<WriteEvent> {
