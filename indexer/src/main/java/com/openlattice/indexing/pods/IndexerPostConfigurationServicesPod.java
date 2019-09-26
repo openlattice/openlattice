@@ -160,7 +160,6 @@ public class IndexerPostConfigurationServicesPod {
         return new BackgroundExpiredDataDeletionService(
                 hazelcastInstance,
                 indexerConfiguration,
-                elasticsearchApi,
                 auditingManager,
                 dataGraphService,
                 edm);
