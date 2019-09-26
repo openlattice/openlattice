@@ -283,7 +283,7 @@ open class DataGraphService(
 
     override fun deleteAssociationsBatch(
             entitySetId: UUID,
-            associationsEdgeKeys: PostgresIterable<DataEdgeKey>,
+            associationsEdgeKeys: Iterable<DataEdgeKey>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
     ): List<WriteEvent> {
         var associationDeleteCount = 0
