@@ -1145,6 +1145,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
             connection.createStatement().use { stmt ->
                 stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es1.name))
                 stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es2.name))
+                stmt.executeQuery(TestAssemblerConnectionManager.selectEdgesOfEntitySetsSql())
             }
         }
 
@@ -1158,10 +1159,11 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         OrganizationControllerCallHelper.addMemberToOrganization(organizationID, user1.id)
         Thread.sleep(5000L) // wait for configuring the user
 
-        // only entity set 2 should be selectable by user1
+        // only entity set 2 and edges should be selectable by user1
         user1OrganizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
                 stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es2.name))
+                stmt.executeQuery(TestAssemblerConnectionManager.selectEdgesOfEntitySetsSql())
                 assertException(
                         { stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es1.name)) },
                         "permission denied for materialized view ${es1.name}"
