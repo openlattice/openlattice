@@ -218,7 +218,7 @@ class AssemblerConnectionManager(
     ) {
         if (authorizedPropertyTypesOfEntitySetsByPrincipal.isNotEmpty()) {
             val authorizedPropertyTypesOfEntitySetsByPostgresUser = authorizedPropertyTypesOfEntitySetsByPrincipal
-                    .mapKeys { quote(buildPostgresUsername(it.key)) }
+                    .mapKeys { buildPostgresUsername(it.key) }
             val userNames = authorizedPropertyTypesOfEntitySetsByPostgresUser.keys
             configureUsersInDatabase(dataSource, dbName, userNames)
             dataSource.connection.use { connection ->
