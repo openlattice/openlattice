@@ -474,7 +474,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
 
     @Test
     fun testMaterializeAuthorizations() {
-        // TODO: after automatic permission change handling, remove extra calls of re-materialization
+        // TODO: after automatic entity set permission change handling, remove extra calls of re-materialization
 
         // create new organization
         val organization = createOrganization()
@@ -536,10 +536,9 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                 setOf(Ace(organization.principal, materializePermissions, OffsetDateTime.MAX))
         )
         permissionsApi.updateAcl(AclData(ptMaterializationAcl, Action.ADD))
+        Thread.sleep(60_000L)
 
         loginAs("user1")
-        organizationsApi.assembleEntitySets(organizationID, mapOf(es.id to 100))
-
         val organizationDataSource = TestAssemblerConnectionManager.connect(organizationID)
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
@@ -561,10 +560,9 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
             )
             permissionsApi.updateAcl(AclData(acl, Action.ADD))
         }
+        Thread.sleep(60_000L)
 
         loginAs("user1")
-        organizationsApi.assembleEntitySets(organizationID, mapOf(es.id to 100))
-
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
                 val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name))
