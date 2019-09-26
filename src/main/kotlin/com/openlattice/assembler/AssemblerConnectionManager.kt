@@ -218,7 +218,7 @@ class AssemblerConnectionManager(
     ) {
         if (authorizedPropertyTypesOfEntitySetsByPrincipal.isNotEmpty()) {
             val authorizedPropertyTypesOfEntitySetsByPostgresUser = authorizedPropertyTypesOfEntitySetsByPrincipal
-                    .mapKeys { buildPostgresUsername(it.key) }
+                    .mapKeys { quote(buildPostgresUsername(it.key)) }
             val userNames = authorizedPropertyTypesOfEntitySetsByPostgresUser.keys
             configureUsersInDatabase(dataSource, dbName, userNames)
             dataSource.connection.use { connection ->
@@ -497,13 +497,14 @@ class AssemblerConnectionManager(
             principal: Principal,
             columns: List<String>
     ): String {
-        val postgresUserName = if (principal.type == PrincipalType.USER) {
-            buildPostgresUsername(securePrincipalsManager.getPrincipal(principal.id))
-        } else {
-            buildPostgresRoleName(securePrincipalsManager.lookupRole(principal))
-        }
+        val postgresUserName =
+                if (principal.type == PrincipalType.USER) {
+                    buildPostgresUsername(securePrincipalsManager.getPrincipal(principal.id))
+                } else {
+                    buildPostgresRoleName(securePrincipalsManager.lookupRole(principal))
+                }
 
-        return grantSelectSql(entitySetTableName, postgresUserName, columns)
+        return grantSelectSql(entitySetTableName, quote(postgresUserName), columns)
     }
 
     /**
@@ -523,7 +524,7 @@ class AssemblerConnectionManager(
 
         return "GRANT SELECT $onProperties " +
                 "ON $entitySetTableName " +
-                "TO ${quote(postgresUserName)}"
+                "TO $postgresUserName"
     }
 
     /**
