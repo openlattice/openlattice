@@ -475,13 +475,18 @@ class AssemblerConnectionManager(
             authorizedPropertyTypesOfEntitySetsByPostgresUser
                     .forEach { (postgresUserName, authorizedPropertyTypesOfEntitySets) ->
 
+                        // grant select on authorized tables and their properties
                         authorizedPropertyTypesOfEntitySets.forEach { (entitySet, propertyTypes) ->
-
                             val tableName = entitySetNameTableName(entitySet.name)
                             val columns = getSelectColumnsForMaterializedView(propertyTypes)
                             val grantSelectSql = grantSelectSql(tableName, postgresUserName, columns)
                             stmt.addBatch(grantSelectSql)
                         }
+
+                        // also grant select on edges
+                        val edgesTableName = "$MATERIALIZED_VIEWS_SCHEMA.${E.name}"
+                        val grantSelectSql = grantSelectSql(edgesTableName, postgresUserName, listOf())
+                        stmt.addBatch(grantSelectSql)
                     }
             stmt.executeBatch()
         }
@@ -512,7 +517,7 @@ class AssemblerConnectionManager(
      * If properties (columns) are left empty, it will grant select on whole table.
      */
     private fun grantSelectSql(
-            entitySetTableName: String,
+            tableName: String,
             postgresUserName: String,
             columns: List<String>
     ): String {
@@ -523,7 +528,7 @@ class AssemblerConnectionManager(
         }
 
         return "GRANT SELECT $onProperties " +
-                "ON $entitySetTableName " +
+                "ON $tableName " +
                 "TO $postgresUserName"
     }
 
