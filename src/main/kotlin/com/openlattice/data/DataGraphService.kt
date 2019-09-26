@@ -627,8 +627,8 @@ open class DataGraphService(
 
     override fun getExpiringEntitiesFromEntitySet(entitySetId: UUID, expirationPolicy: DataExpiration,
                                                   dateTime: OffsetDateTime, deleteType: DeleteType,
-                                                  expirationPT: Optional<PropertyType>): BasePostgresIterable<UUID> {
-        val sqlParams = getSqlParameters(expirationPolicy, dateTime, expirationPT)
+                                                  expirationPropertyType: Optional<PropertyType>): BasePostgresIterable<UUID> {
+        val sqlParams = getSqlParameters(expirationPolicy, dateTime, expirationPropertyType)
         val expirationBaseColumn = sqlParams.first
         val formattedDateMinusTTE = sqlParams.second
         val sqlFormat = sqlParams.third
