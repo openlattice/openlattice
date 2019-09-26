@@ -8,11 +8,11 @@ class RemoveDataExpirationPolicyProcessor() :
         AbstractRhizomeEntryProcessor<UUID, EntitySet, EntitySet>() {
 
     companion object {
-        private const val serialVersionUID = -6602384557982347L //TODO ????
+        private const val serialVersionUID = -6602384557982347L
     }
 
-    override fun process(entry: MutableMap.MutableEntry<UUID, EntitySet>?): EntitySet {
-        val entitySet = entry!!.value
+    override fun process(entry: MutableMap.MutableEntry<UUID, EntitySet?>): EntitySet? {
+        val entitySet = entry.value!!
         entitySet.expiration = null
         entry.setValue(entitySet)
         return entitySet
