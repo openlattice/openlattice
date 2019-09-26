@@ -45,26 +45,25 @@ data class UpdateMaterializedEntitySetProcessor(
     override fun process(entry: MutableMap.MutableEntry<EntitySetAssemblyKey, MaterializedEntitySet?>): Void? {
         val organizationId = entry.key.organizationId
         val materializedEntitySet = entry.value
-        if (materializedEntitySet == null) {
-            throw IllegalStateException("Encountered null materialized entity set while trying to update " +
-                    "materialized view for entity set ${entitySet.id} in organization $organizationId.")
-        } else {
-            acm?.updateMaterializedEntitySet(organizationId, entitySet, materializablePropertyTypes)
-                    ?: throw IllegalStateException(AssemblerConnectionManagerDependent.NOT_INITIALIZED)
+        materializedEntitySet ?: throw IllegalStateException("Encountered null materialized entity set while trying " +
+                "to update materialized view for entity set ${entitySet.id} in organization $organizationId.")
 
-            // Clear data and permission unsync flag
-            materializedEntitySet.flags.removeAll(
-                    listOf(
-                            OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED,
-                            OrganizationEntitySetFlag.MATERIALIZE_PERMISSION_UNSYNCHRONIZED
-                    )
-            )
+        acm?.updateMaterializedEntitySet(organizationId, entitySet, materializablePropertyTypes)
+                ?: throw IllegalStateException(AssemblerConnectionManagerDependent.NOT_INITIALIZED)
 
-            // Update last refresh
-            materializedEntitySet.lastRefresh = OffsetDateTime.now()
+        // Clear data and permission unsync flag
+        materializedEntitySet.flags.removeAll(
+                listOf(
+                        OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED,
+                        OrganizationEntitySetFlag.MATERIALIZE_PERMISSION_UNSYNCHRONIZED
+                )
+        )
 
-            entry.setValue(materializedEntitySet)
-        }
+        // Update last refresh
+        materializedEntitySet.lastRefresh = OffsetDateTime.now()
+
+        entry.setValue(materializedEntitySet)
+
 
         return null
     }
