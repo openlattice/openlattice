@@ -57,7 +57,6 @@ const val DATA_DELETION_RATE = 30_000L
 class BackgroundExpiredDataDeletionService(
         hazelcastInstance: HazelcastInstance,
         private val indexerConfiguration: IndexerConfiguration,
-        private val elasticsearchApi: ConductorElasticsearchApi,
         private val auditingManager: AuditingManager,
         private val dataGraphService: DataGraphService,
         private val edm: EdmManager
@@ -65,8 +64,7 @@ class BackgroundExpiredDataDeletionService(
     companion object {
         private val logger = LoggerFactory.getLogger(BackgroundExpiredDataDeletionService::class.java)!!
     }
-
-    private val propertyTypes: IMap<UUID, PropertyType> = hazelcastInstance.getMap(HazelcastMap.PROPERTY_TYPES.name)
+    
     private val entitySets: IMap<UUID, EntitySet> = hazelcastInstance.getMap(HazelcastMap.ENTITY_SETS.name)
     private val expirationLocks: IMap<UUID, Long> = hazelcastInstance.getMap(HazelcastMap.EXPIRATION_LOCKS.name)
 
