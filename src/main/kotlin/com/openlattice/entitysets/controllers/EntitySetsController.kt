@@ -455,10 +455,7 @@ constructor(
         check(es.hasExpirationPolicy()) { "Entity set ${es.name} does not have an expiration policy" }
 
         val expirationPolicy = es.expiration
-        var expirationPT = Optional.empty<PropertyType>()
-        if (expirationPolicy.startDateProperty.isPresent) {
-            expirationPT = Optional.of(edmManager.getPropertyType(expirationPolicy.startDateProperty.get()))
-        }
+        val expirationPT = expirationPolicy.startDateProperty.map { edmManager.getPropertyType(it) }
         return dgm.getExpiringEntitiesFromEntitySet(entitySetId, expirationPolicy, dateTime, es.expiration.deleteType, expirationPT).toSet()
     }
 
