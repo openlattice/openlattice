@@ -52,7 +52,7 @@ public class EntitySetMapstore extends AbstractBasePostgresMapstore<UUID, Entity
             ps.setNull( 14, Types.NULL );
             ps.setNull( 15, Types.NULL );
         } else {
-            ps.setObject( 12, value.getExpiration().getTimeToExpiration() );
+            ps.setLong( 12, value.getExpiration().getTimeToExpiration() );
             ps.setString( 13, value.getExpiration().getExpirationBase().toString() );
             ps.setString( 14, value.getExpiration().getDeleteType().toString() );
             if ( value.getExpiration().getStartDateProperty().isPresent() ) {
@@ -79,7 +79,7 @@ public class EntitySetMapstore extends AbstractBasePostgresMapstore<UUID, Entity
             ps.setNull( 28, Types.NULL );
             ps.setNull( 29, Types.NULL );
         } else {
-            ps.setObject( 26, value.getExpiration().getTimeToExpiration() );
+            ps.setLong( 26, value.getExpiration().getTimeToExpiration() );
             ps.setString( 27, value.getExpiration().getExpirationBase().toString() );
             ps.setString( 28, value.getExpiration().getDeleteType().toString() );
             if ( value.getExpiration().getStartDateProperty().isPresent() ) {
