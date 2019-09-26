@@ -94,8 +94,9 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
         // we need to flag it
         if ( permissions.contains( Permission.MATERIALIZE )
                 && principal.getType().equals( PrincipalType.ORGANIZATION )
-                && securableObjectType.equals( SecurableObjectType.PropertyTypeInEntitySet ) ) {
-            eventBus.post( new MaterializePermissionChangeEvent( principal, key.get( 0 ) ) );
+                && ( securableObjectType.equals( SecurableObjectType.PropertyTypeInEntitySet )
+                || securableObjectType.equals( SecurableObjectType.EntitySet ) ) ) {
+            eventBus.post( new MaterializePermissionChangeEvent( principal, key.get( 0 ), securableObjectType ) );
         }
     }
 
@@ -107,11 +108,16 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
         // if there is a change in materialization permission for a property type for an organization principal,
         // we need to flag it
         if ( permissions.contains( Permission.MATERIALIZE )
-                && securableObjectType.equals( SecurableObjectType.PropertyTypeInEntitySet ) ) {
+                && ( securableObjectType.equals( SecurableObjectType.PropertyTypeInEntitySet )
+                || securableObjectType.equals( SecurableObjectType.EntitySet ) ) ) {
             aceKeys.forEach( aceKey -> {
                 var principal = aceKey.getPrincipal();
                 if ( principal.getType().equals( PrincipalType.ORGANIZATION ) ) {
-                    eventBus.post( new MaterializePermissionChangeEvent( principal, aceKey.getAclKey().get( 0 ) ) );
+                    eventBus.post( new MaterializePermissionChangeEvent(
+                            principal,
+                            aceKey.getAclKey().get( 0 ),
+                            securableObjectType
+                    ) );
                 }
             } );
         }
@@ -648,38 +654,38 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
     }
 
     private static Predicate hasExactPermissions( EnumSet<Permission> permissions ) {
-        Predicate[] subPredicates = new Predicate[ permissions.size() ];
+        Predicate[] subPredicates = new Predicate[permissions.size()];
         int i = 0;
         for ( Permission p : permissions ) {
-            subPredicates[ i++ ] = Predicates.equal( PermissionMapstore.PERMISSIONS_INDEX, p );
+            subPredicates[i++] = Predicates.equal( PermissionMapstore.PERMISSIONS_INDEX, p );
         }
         return Predicates.and( subPredicates );
     }
 
     private static Predicate hasAnyPermissions( EnumSet<Permission> permissions ) {
-        return Predicates.in( PermissionMapstore.PERMISSIONS_INDEX, permissions.toArray( new Permission[ 0 ] ) );
+        return Predicates.in( PermissionMapstore.PERMISSIONS_INDEX, permissions.toArray( new Permission[0] ) );
     }
 
     private static Predicate hasExactAclKeys( Collection<AclKey> aclKeys ) {
-        Predicate[] subPredicates = new Predicate[ aclKeys.size() ];
+        Predicate[] subPredicates = new Predicate[aclKeys.size()];
         int i = 0;
         for ( AclKey aclKey : aclKeys ) {
-            subPredicates[ i++ ] = Predicates.equal( ACL_KEY_INDEX, aclKey );
+            subPredicates[i++] = Predicates.equal( ACL_KEY_INDEX, aclKey );
         }
         return Predicates.and( subPredicates );
     }
 
     private static Predicate hasExactPrincipals( Collection<Principal> principals ) {
-        Predicate[] subPredicates = new Predicate[ principals.size() ];
+        Predicate[] subPredicates = new Predicate[principals.size()];
         int i = 0;
         for ( Principal principal : principals ) {
-            subPredicates[ i++ ] = Predicates.equal( PermissionMapstore.PRINCIPAL_INDEX, principal );
+            subPredicates[i++] = Predicates.equal( PermissionMapstore.PRINCIPAL_INDEX, principal );
         }
         return Predicates.and( subPredicates );
     }
 
     private static Predicate hasAnyPrincipals( Collection<Principal> principals ) {
-        return Predicates.in( PermissionMapstore.PRINCIPAL_INDEX, principals.toArray( new Principal[ 0 ] ) );
+        return Predicates.in( PermissionMapstore.PRINCIPAL_INDEX, principals.toArray( new Principal[0] ) );
     }
 
     private static Predicate hasAnyAclKeys( Collection<AclKey> aclKeys ) {

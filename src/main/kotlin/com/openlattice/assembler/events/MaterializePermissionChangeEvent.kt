@@ -21,6 +21,11 @@
 package com.openlattice.assembler.events
 
 import com.openlattice.authorization.Principal
+import com.openlattice.authorization.securable.SecurableObjectType
 import java.util.UUID
 
-data class MaterializePermissionChangeEvent(val organizationPrincipal: Principal, val entitySetId: UUID)
+data class MaterializePermissionChangeEvent(
+        val organizationPrincipal: Principal,
+        val entitySetId: UUID,
+        val objectType: SecurableObjectType
+)

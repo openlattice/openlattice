@@ -25,12 +25,7 @@ import com.hazelcast.query.Predicates
 import com.openlattice.assembler.EntitySetAssemblyKey
 import com.openlattice.assembler.MaterializedEntitySetsDependencies
 import com.openlattice.authorization.Permission
-import com.openlattice.authorization.PrincipalType
 import com.openlattice.organization.OrganizationEntitySetFlag
-import com.openlattice.postgres.PostgresColumn
-import com.openlattice.postgres.PostgresColumn.*
-import com.openlattice.postgres.PostgresTable.MATERIALIZED_ENTITY_SETS
-import com.openlattice.postgres.PostgresTable.PERMISSIONS
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.mapstores.MaterializedEntitySetMapStore
 import com.openlattice.postgres.streams.PostgresIterable
@@ -43,14 +38,6 @@ import java.util.concurrent.TimeUnit
 import java.util.function.Function
 import java.util.function.Supplier
 
-
-private val selectUnauthorizedEntitySetAssemblies =
-        "SELECT ${ENTITY_SET_ID.name}, ${ORGANIZATION_ID.name} FROM ${MATERIALIZED_ENTITY_SETS.name} " +
-                "WHERE not exists " +
-                "(SELECT 1 FROM ${PERMISSIONS.name} " +
-                "WHERE ${PRINCIPAL_TYPE.name} = '${PrincipalType.ORGANIZATION.name}' " +
-                "AND '${Permission.MATERIALIZE}' = ANY(${PostgresColumn.PERMISSIONS.name}) " +
-                "AND array[${ENTITY_SET_ID.name}] = ${ACL_KEY.name})"
 
 class MaterializePermissionSyncTask : HazelcastFixedRateTask<MaterializedEntitySetsDependencies> {
 
@@ -69,7 +56,9 @@ class MaterializePermissionSyncTask : HazelcastFixedRateTask<MaterializedEntityS
     override fun runTask() {
         // first delete materialized views and their assemblies, where organization principal has no materialize
         // permission for them
-        getDependency().assembler.deleteEntitySetAssemblies(getDeletableMaterializedViews().toSet())
+        getDependency().assembler.deleteEntitySetAssemblies(
+                getDependency().materializedEntitySets.keySet(materializedPermissionRemovedPredicate())
+        )
 
         // after we update materialized views, where materialized permissions changed for properties
         getDependency().materializedEntitySets.keySet(materializedPermissionUnsynchronizedPredicate())
@@ -89,15 +78,10 @@ class MaterializePermissionSyncTask : HazelcastFixedRateTask<MaterializedEntityS
                 }
     }
 
-    private fun getDeletableMaterializedViews(): PostgresIterable<EntitySetAssemblyKey> {
-        return PostgresIterable(
-                Supplier {
-                    val connection = getDependency().hds.connection
-                    val stmt = connection.createStatement()
-                    val rs = stmt.executeQuery(selectUnauthorizedEntitySetAssemblies)
-                    StatementHolder(connection, stmt, rs)
-                },
-                Function<ResultSet, EntitySetAssemblyKey> { ResultSetAdapters.entitySetAssemblyKey(it) }
+    private fun materializedPermissionRemovedPredicate(): Predicate<*, *> {
+        return Predicates.equal(
+                MaterializedEntitySetMapStore.FLAGS_INDEX,
+                OrganizationEntitySetFlag.MATERIALIZE_PERMISSION_REMOVED
         )
     }
 

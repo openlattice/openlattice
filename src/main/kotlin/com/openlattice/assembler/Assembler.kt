@@ -141,17 +141,30 @@ class Assembler(
     @Subscribe
     fun handleMaterializePermissionChange(materializePermissionChangeEvent: MaterializePermissionChangeEvent) {
         val organizationId = securePrincipalsManager.lookup(materializePermissionChangeEvent.organizationPrincipal)[0]
-        flagMaterializedEntitySetWithPermissionChange(organizationId, materializePermissionChangeEvent.entitySetId)
+
+        flagMaterializedEntitySetWithPermissionChange(
+                organizationId,
+                materializePermissionChangeEvent.entitySetId,
+                materializePermissionChangeEvent.objectType
+        )
     }
 
-    private fun flagMaterializedEntitySetWithPermissionChange(organizationId: UUID, entitySetId: UUID) {
+    private fun flagMaterializedEntitySetWithPermissionChange(
+            organizationId: UUID,
+            entitySetId: UUID,
+            objectType: SecurableObjectType
+    ) {
         val entitySetAssemblyKey = EntitySetAssemblyKey(entitySetId, organizationId)
+
         if (isEntitySetMaterialized(entitySetAssemblyKey)) {
+            val flagToAdd = if(objectType == SecurableObjectType.EntitySet) {
+                OrganizationEntitySetFlag.MATERIALIZE_PERMISSION_REMOVED
+            } else {
+                OrganizationEntitySetFlag.MATERIALIZE_PERMISSION_UNSYNCHRONIZED
+            }
             materializedEntitySets.executeOnKey(
                     entitySetAssemblyKey,
-                    AddFlagsToMaterializedEntitySetProcessor(
-                            setOf(OrganizationEntitySetFlag.MATERIALIZE_PERMISSION_UNSYNCHRONIZED)
-                    )
+                    AddFlagsToMaterializedEntitySetProcessor(setOf(flagToAdd))
             )
         }
     }
