@@ -100,14 +100,12 @@ class BackgroundExpiredDataDeletionService(
                             .filter { tryLockEntitySet(it) }
                             .shuffled()
 
-                    val propertiesOfLockedEntitySets = lockedEntitySets
-                            .map { it.id to edm.getPropertyTypesAsMap(edm.getEntityType(it.entityTypeId).properties) }
-                            .toMap()
-
                     val totalDeleted = lockedEntitySets
                             .parallelStream()
-                            .filter { !it.isLinking }
-                            .mapToInt { deleteExpiredData(it, propertiesOfLockedEntitySets[it.id]!!) }
+                            .filter {!it.isLinking}
+                            .mapToInt {
+                                deleteExpiredData(it, edm.getPropertyTypesAsMap(edm.getEntityType(it.entityTypeId).properties))
+                            }
                             .sum()
 
                     lockedEntitySets.forEach(this::deleteIndexingLock)
