@@ -64,7 +64,7 @@ class BackgroundExpiredDataDeletionService(
     companion object {
         private val logger = LoggerFactory.getLogger(BackgroundExpiredDataDeletionService::class.java)!!
     }
-    
+
     private val entitySets: IMap<UUID, EntitySet> = hazelcastInstance.getMap(HazelcastMap.ENTITY_SETS.name)
     private val expirationLocks: IMap<UUID, Long> = hazelcastInstance.getMap(HazelcastMap.EXPIRATION_LOCKS.name)
 
@@ -102,7 +102,7 @@ class BackgroundExpiredDataDeletionService(
 
                     val totalDeleted = lockedEntitySets
                             .parallelStream()
-                            .filter {!it.isLinking}
+                            .filter { !it.isLinking }
                             .mapToInt {
                                 deleteExpiredData(it, edm.getPropertyTypesAsMap(edm.getEntityType(it.entityTypeId).properties))
                             }
@@ -207,15 +207,15 @@ class BackgroundExpiredDataDeletionService(
         //filter out audit entity set edges from association edges to clear
         val associationEdgeESIds = associationEdgeKeys.map { it.edge.entitySetId }.toSet()
         val auditEdgeEntitySetIds = edm.getEntitySetIdsWithFlags(associationEdgeESIds, setOf(EntitySetFlag.AUDIT))
-        val filteredAssociationEdgeKeys = associationEdgeKeys
-                .filter { auditEdgeEntitySetIds.contains(it.edge.entitySetId) }
+        val filteredAssociationEdgeKeys = associationEdgeESIds
+                .filter { auditEdgeEntitySetIds.contains(it) }
                 .toSet()
 
         val associationPropertyTypes = filteredAssociationEdgeKeys
                 .map {
-                    it.edge.entitySetId to
+                    it to
                             edm.getPropertyTypesAsMap(
-                                    edm.getEntityType(edm.getEntitySet(it.edge.entitySetId).entityTypeId
+                                    edm.getEntityType(edm.getEntitySet(it).entityTypeId
                                     ).properties
                             )
                 }.toMap()
