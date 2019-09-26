@@ -280,20 +280,36 @@ class Assembler(
         ensureAssemblyInitialized(event.organizationId)
 
         val authorizedPropertyTypesOfEntitySetsByNewMembers = event.newMembers.associateWith { principal ->
+            // we also grant select on entity sets, where no property type is authorized
+            val authorizedEntitySets = authorizationManager.getAuthorizedObjectsOfType(
+                    principal.principal,
+                    SecurableObjectType.EntitySet,
+                    EdmAuthorizationHelper.READ_PERMISSION
+            )
             val authorizedPropertyTypeAcls = authorizationManager.getAuthorizedObjectsOfType(
                     principal.principal,
                     SecurableObjectType.PropertyTypeInEntitySet,
                     EdmAuthorizationHelper.READ_PERMISSION
-            ).toList()
+            )
 
-            val allEntitySets = entitySets.getAll(authorizedPropertyTypeAcls.map { it[0] }.toSet())
-            val allPropertyTypes = propertyTypes.getAll(authorizedPropertyTypeAcls.map { it[1] }.toSet())
-
-            return@associateWith authorizedPropertyTypeAcls
+            val allEntitySets = entitySets
+                    .getAll(authorizedEntitySets.map { it[0] }.collect(Collectors.toSet()))
+                    .filter { materializedEntitySets.containsKey(EntitySetAssemblyKey(it.key, event.organizationId)) }
+            val authorizedPropertyTypesByEntitySets = authorizedPropertyTypeAcls.toList()
                     .groupBy { it[0] }
-                    .map { allEntitySets.getValue(it.key) to it.value.map { allPropertyTypes.getValue(it[1]) } }
+                    .map { it.key to it.value.map { it[1] } }
                     .toMap()
+
+            allEntitySets.values
+                    .associateWith {
+                        if (authorizedPropertyTypesByEntitySets.containsKey(it.id)) {
+                            propertyTypes.getAll(authorizedPropertyTypesByEntitySets.getValue(it.id).toSet()).values
+                        } else {
+                            listOf<PropertyType>()
+                        }
+                    }
         }
+
         assemblies.executeOnKey(
                 event.organizationId,
                 AddMembersToOrganizationAssemblyProcessor(authorizedPropertyTypesOfEntitySetsByNewMembers).init(acm)
