@@ -31,5 +31,6 @@ enum class OrganizationEntitySetFlag {
     MATERIALIZED,
     EDM_UNSYNCHRONIZED,
     DATA_UNSYNCHRONIZED,
-    MATERIALIZE_PERMISSION_UNSYNCHRONIZED
+    MATERIALIZE_PERMISSION_UNSYNCHRONIZED, // materialize permission changes on property type
+    MATERIALIZE_PERMISSION_REMOVED // materialize permission get's removed from entity set
 }
