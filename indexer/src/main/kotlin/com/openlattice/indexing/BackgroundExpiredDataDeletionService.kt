@@ -189,7 +189,7 @@ class BackgroundExpiredDataDeletionService(
     }
 
     private fun deleteAssociationsOfExpiredEntities(entitySetId: UUID, ids: Set<UUID>): List<WriteEvent> {
-        val associationEdgeKeys: Set<DataEdgeKey> = dataGraphService.getEdgesConnectedToEntities(entitySetId, ids, true).toSet()
+        val associationEdgeKeys: PostgresIterable<DataEdgeKey> = dataGraphService.getEdgesConnectedToEntities(entitySetId, ids, true)
         val associationPropertyTypes = associationEdgeKeys
                 .map {
                     it.edge.entitySetId to
@@ -202,7 +202,7 @@ class BackgroundExpiredDataDeletionService(
     }
 
     private fun clearAssociationsOfExpiredEntities(entitySetId: UUID, ids: Set<UUID>): List<WriteEvent> {
-        val associationEdgeKeys: Set<DataEdgeKey> = dataGraphService.getEdgesConnectedToEntities(entitySetId, ids, false).toSet()
+        val associationEdgeKeys: PostgresIterable<DataEdgeKey> = dataGraphService.getEdgesConnectedToEntities(entitySetId, ids, false)
 
         //filter out audit entity set edges from association edges to clear
         val associationEdgeESIds = associationEdgeKeys.map { it.edge.entitySetId }.toSet()
