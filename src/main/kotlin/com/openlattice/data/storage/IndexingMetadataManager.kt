@@ -75,7 +75,7 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
                 stmt.setArray(1, entitySetIdsArray)
                 stmt.setArray(2, partitionsArray)
 
-                return stmt.executeUpdate()
+                stmt.executeUpdate()
             }
         }
     }
