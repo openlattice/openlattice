@@ -326,28 +326,23 @@ class PostgresEntityDatastore(
             authorizedPropertyTypesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>,
             metadataOptions: EnumSet<MetadataOption>
     ): Map<UUID, Map<UUID, Map<UUID, Set<Any>>>> {
-        // TODO: Do this less terribly
-        // iterable of: pair<linking_id, to property_data>
-        val linkedEntityDataStream = dataQueryService.getEntitiesWithPropertyTypeIds(
+        // pair<linking_id to pair<entity_set_id to property_data>>
+        val linkedEntityDataStream = dataQueryService.getEntitiesByEntitySetIdWithPropertyTypeIds(
                 linkingIdsByEntitySetId,
                 authorizedPropertyTypesByEntitySetId,
                 metadataOptions = metadataOptions,
                 linking = true
         )
 
-        val linkedEntityData = HashMap<UUID, MutableMap<UUID, MutableMap<UUID, Set<Any>>>>()
-//        linkedEntityDataStream.forEach { (first, second) ->
-//            val primaryId = first.first //linking_id
-//            val secondaryId = first.second //entity_set_id
-//
-//            linkedEntityData
-//                    .getOrPut(primaryId) { mutableMapOf() }
-//                    .getOrPut(secondaryId) { second.toMutableMap() }
-//
-//        }
-
         // linking_id/entity_set_id/property_type_id
-        return linkedEntityData
+        return linkedEntityDataStream
+                .groupBy { it.first } // linking_id
+                .mapValues {
+                    it.value.associateBy(
+                            { it.second.first }, // entity_set_id
+                            { it.second.second }
+                    )
+                }
     }
 
     //TODO: Can be made more efficient if we are getting across same type.

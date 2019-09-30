@@ -7,8 +7,7 @@ import com.openlattice.data.storage.ByteBlobDataManager
 import com.openlattice.edm.EdmConstants.Companion.ID_FQN
 import com.openlattice.edm.PostgresEdmTypeConverter
 import com.openlattice.edm.type.PropertyType
-import com.openlattice.postgres.ResultSetAdapters.entitySetId
-import com.openlattice.postgres.ResultSetAdapters.id
+import com.openlattice.postgres.ResultSetAdapters.*
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
@@ -44,6 +43,29 @@ fun getEntityPropertiesByPropertyTypeId(
     )
 
     return id to entity
+}
+
+/**
+ * Returns entity data from the [ResultSet] mapped by a pair its id and entity set id respectively.
+ */
+@Throws(SQLException::class)
+fun getEntityPropertiesByEntitySetIdAndPropertyTypeId(
+        rs: ResultSet,
+        authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
+        byteBlobDataManager: ByteBlobDataManager
+): Pair<UUID, Pair<UUID, MutableMap<UUID, MutableSet<Any>>>> {
+    val id = id(rs)
+    val entitySetId = entitySetId(rs)
+    val propertyTypes = authorizedPropertyTypes.getValue(entitySetId)
+
+    val entity = readJsonDataColumns(
+            rs,
+            propertyTypes,
+            byteBlobDataManager,
+            mutableMapOf(IdConstants.ID_ID.id to mutableSetOf<Any>(id))
+    )
+
+    return id to (entitySetId to entity)
 }
 
 
