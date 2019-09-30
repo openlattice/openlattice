@@ -22,7 +22,6 @@ package com.openlattice.indexing
 
 import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Stopwatch
-import com.google.common.base.Supplier
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
@@ -30,7 +29,6 @@ import com.hazelcast.query.Predicates
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi
 import com.openlattice.data.storage.EntityDatastore
 import com.openlattice.data.storage.IndexingMetadataManager
-import com.openlattice.data.storage.MetadataOption
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
@@ -43,22 +41,19 @@ import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.mapstores.EntityTypeMapstore
-import com.openlattice.postgres.streams.PostgresIterable
-import com.openlattice.postgres.streams.StatementHolder
+import com.openlattice.postgres.streams.*
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
-import java.sql.ResultSet
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.util.*
 import java.util.concurrent.TimeUnit
-import java.util.function.Function
 import java.util.stream.Stream
 
-internal const val LINKING_INDEXING_TIMEOUT_MILLIS = 120000L
-internal const val LINKING_INDEX_RATE = 30000L
+internal const val LINKING_INDEXING_TIMEOUT_MILLIS = 120_000L // 2 min
+internal const val LINKING_INDEX_RATE = 60_000L // 1 min
 
 @Component
 class BackgroundLinkingIndexingService(
@@ -82,6 +77,7 @@ class BackgroundLinkingIndexingService(
             Predicates.equal(EntityTypeMapstore.FULLQUALIFIED_NAME_PREDICATE, PersonProperties.PERSON_TYPE_FQN.fullQualifiedNameAsString)
     ).first()
 
+    // TODO if at any point there are more linkable entity types, this must change
     private val personPropertyTypes = propertyTypes.getAll(personEntityType.properties)
 
     private val linkingIndexingLocks: IMap<UUID, Long> = hazelcastInstance.getMap(HazelcastMap.LINKING_INDEXING_LOCKS.name)
@@ -130,16 +126,11 @@ class BackgroundLinkingIndexingService(
         val watch = Stopwatch.createStarted()
 
         // get data for linking id by entity set ids and property ids
-        val dirtyLinkingIdsByEntitySetId = getEntitySetIdsOfLinkingId(linkingId) // entity_set_id/linking_id
-                .toMap()
-        val propertyTypesOfEntitySets = dirtyLinkingIdsByEntitySetId // entity_set_id/property_type_id/property_type
-                .map { it.key to personPropertyTypes }
-                .toMap()
+        val dirtyLinkingIdByEntitySetIds = getEntitySetIdsOfLinkingId(linkingId)
+                .associateWith { Optional.of(setOf(linkingId)) } // entity_set_id/linking_id
+        val propertyTypesOfEntitySets = dirtyLinkingIdByEntitySetIds.keys.associateWith { personPropertyTypes } // entity_set_id/property_type_id/property_type
         val linkedEntityData = dataStore // linking_id/entity_set_id/property_type_id
-                .getLinkedEntityDataByLinkingIdWithMetadata(
-                        dirtyLinkingIdsByEntitySetId,
-                        propertyTypesOfEntitySets,
-                        EnumSet.of(MetadataOption.LAST_WRITE))
+                .getLinkedEntityDataByLinkingIdWithMetadata(dirtyLinkingIdByEntitySetIds, propertyTypesOfEntitySets)
 
         val indexCount = indexLinkedEntity(
                 linkingId, lastWrite, personEntityType.id, linkedEntityData.getValue(linkingId)
@@ -184,15 +175,10 @@ class BackgroundLinkingIndexingService(
     /**
      * Returns the linking ids, which are needing to be indexed.
      */
-    private fun getDirtyLinkingIds(): PostgresIterable<Pair<UUID, OffsetDateTime>> {
-        return PostgresIterable(Supplier<StatementHolder> {
-            val connection = hds.connection
-            val stmt = connection.prepareStatement(selectDirtyLinkingIds())
-            val rs = stmt.executeQuery()
-            StatementHolder(connection, stmt, rs)
-        }, Function<ResultSet, Pair<UUID, OffsetDateTime>> {
-            ResultSetAdapters.linkingId(it) to ResultSetAdapters.lastWriteTyped(it)
-        })
+    private fun getDirtyLinkingIds(): BasePostgresIterable<Pair<UUID, OffsetDateTime>> {
+        return BasePostgresIterable(
+                StatementHolderSupplier(hds, selectDirtyLinkingIds(), FETCH_SIZE)
+        ) { rs -> ResultSetAdapters.linkingId(rs) to ResultSetAdapters.lastWriteTyped(rs) }
     }
 
     private fun selectDirtyLinkingIds(): String {
@@ -202,26 +188,17 @@ class BackgroundLinkingIndexingService(
                 "AND ${LAST_INDEX.name} >= ${LAST_WRITE.name} " +
                 "AND ${LAST_LINK.name} >= ${LAST_WRITE.name} " +
                 "AND ${LAST_LINK_INDEX.name} < ${LAST_WRITE.name} " +
-                "AND ${VERSION.name} > 0 AND ${LINKING_ID.name} IS NOT NULL " +
-                "LIMIT $FETCH_SIZE"
+                "AND ${VERSION.name} > 0 AND ${LINKING_ID.name} IS NOT NULL"
     }
 
-    private fun getEntitySetIdsOfLinkingId(linkingId: UUID): PostgresIterable<Pair<UUID, Optional<Set<UUID>>>> {
-        return PostgresIterable(Supplier<StatementHolder> {
-            val connection = hds.connection
-            val stmt = connection.prepareStatement(selectLinkingIdsByEntitySetIds())
-            stmt.setObject(1, linkingId)
-            val rs = stmt.executeQuery()
-            StatementHolder(connection, stmt, rs)
-        }, Function<ResultSet, Pair<UUID, Optional<Set<UUID>>>> {
-            ResultSetAdapters.entitySetId(it) to Optional.of(ResultSetAdapters.linkingIds(it))
-        })
+    private fun getEntitySetIdsOfLinkingId(linkingId: UUID): BasePostgresIterable<UUID> {
+        return BasePostgresIterable(
+                PreparedStatementHolderSupplier(hds, selectLinkingIdsByEntitySetIds()) { ps ->
+                    ps.setObject(1, linkingId)
+                }) { ResultSetAdapters.entitySetId(it) }
     }
 
     private fun selectLinkingIdsByEntitySetIds(): String {
-        return "SELECT ${ENTITY_SET_ID.name}, array_agg(${LINKING_ID.name}) AS ${LINKING_ID.name} " +
-                "FROM ${IDS.name} " +
-                "WHERE ${LINKING_ID.name} = ? " +
-                "GROUP BY ${ENTITY_SET_ID.name}"
+        return "SELECT ${ENTITY_SET_ID.name} FROM ${IDS.name} WHERE ${LINKING_ID.name} = ? "
     }
 }
