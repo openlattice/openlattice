@@ -120,15 +120,6 @@ fun getEntityPropertiesByPropertyTypeId3(
 }
 
 @Throws(SQLException::class)
-fun getEntityPropertiesByPropertyTypeId(
-        rs: ResultSet,
-        authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
-        byteBlobDataManager: ByteBlobDataManager
-): Pair<UUID, MutableMap<UUID, MutableSet<Any>>> {
-    return getEntityPropertiesByPropertyTypeId2(rs, authorizedPropertyTypes, byteBlobDataManager)
-}
-
-@Throws(SQLException::class)
 fun getEntityPropertiesByFullQualifiedName(
         rs: ResultSet,
         authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,

@@ -83,25 +83,6 @@ class PostgresEntityDataQueryService(
     }
 
     @JvmOverloads
-    fun getEntitiesWithPropertyTypeIdsOld(
-            entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
-            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
-            propertyTypeFilters: Map<UUID, Set<Filter>> = mapOf(),
-            metadataOptions: Set<MetadataOption> = EnumSet.noneOf(MetadataOption::class.java),
-            version: Optional<Long> = Optional.empty(),
-            linking: Boolean = false
-    ): Map<UUID, MutableMap<UUID, MutableSet<Any>>> {
-        return getEntitySetIterable(
-                entityKeyIds,
-                authorizedPropertyTypes,
-                propertyTypeFilters,
-                metadataOptions,
-                version,
-                linking
-        ) { rs -> getEntityPropertiesByPropertyTypeId(rs, authorizedPropertyTypes, byteBlobDataManager) }.toMap()
-    }
-
-    @JvmOverloads
     fun getEntitiesWithPropertyTypeFqns(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
@@ -152,7 +133,6 @@ class PostgresEntityDataQueryService(
     ): BasePostgresIterable<Pair<UUID, Map<UUID, Set<Any>>>> {
         return getEntitySetIterable(entityKeyIds, authorizedPropertyTypes, mapOf(), metadataOptions) { rs ->
             getEntityPropertiesByPropertyTypeId2(rs, authorizedPropertyTypes,byteBlobDataManager )
-//            getEntityPropertiesByPropertyTypeId(rs, authorizedPropertyTypes, byteBlobDataManager)
         }
     }
 
@@ -480,7 +460,7 @@ class PostgresEntityDataQueryService(
     }
 
     private fun extractValues(propertyValues: Map<UUID, Set<Map<ByteBuffer, Any>>>): Map<UUID, Set<Any>> {
-        return propertyValues.mapValues { (entityKeyId, replacements) -> replacements.flatMap { it.values }.toSet() }
+        return propertyValues.mapValues { (_, replacements) -> replacements.flatMap { it.values }.toSet() }
     }
 
     /**
@@ -873,10 +853,10 @@ class PostgresEntityDataQueryService(
      * This version of tombstone only operates on the [PostgresTable.DATA] table and does not change the version of
      * entities in the [PostgresTable.IDS] table
      *
-     * @param conn A valid JDBC connection, ideally with autocommit disabled.
+     * @param connection A valid JDBC connection, ideally with autocommit disabled.
      * @param entitySetId The entity set id for which to tombstone entries
-     * @param entityKeyIds The entity key ids for which to tombstone entries.
-     * @param propertyTypesToTombstone A collection of property types to tombstone
+     * @param entities The entities with their properties for which to tombstone entries.
+     * @param partitionsInfoContains the partition info for the entity set of the entities.
      *
      * @return A write event object containing a summary of the operation useful for auditing purposes.
      *
