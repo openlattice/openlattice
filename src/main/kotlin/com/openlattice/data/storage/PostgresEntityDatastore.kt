@@ -318,20 +318,8 @@ class PostgresEntityDatastore(
      *
      * @param linkingIdsByEntitySetId map of linked(normal) entity set ids and their linking ids
      * @param authorizedPropertyTypesByEntitySetId map of authorized property types
+     * @param metadataOptions set of [MetadataOption]s to include in result
      */
-    @Timed
-    override fun getLinkedEntityDataByLinkingId(
-            linkingIdsByEntitySetId: Map<UUID, Optional<Set<UUID>>>,
-            authorizedPropertyTypesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>
-    ): Map<UUID, Map<UUID, Map<UUID, Set<Any>>>> {
-
-        return getLinkedEntityDataByLinkingIdWithMetadata(
-                linkingIdsByEntitySetId,
-                authorizedPropertyTypesByEntitySetId,
-                EnumSet.noneOf(MetadataOption::class.java)
-        )
-    }
-
     @Timed
     override fun getLinkedEntityDataByLinkingIdWithMetadata(
             linkingIdsByEntitySetId: Map<UUID, Optional<Set<UUID>>>,
@@ -339,7 +327,7 @@ class PostgresEntityDatastore(
             metadataOptions: EnumSet<MetadataOption>
     ): Map<UUID, Map<UUID, Map<UUID, Set<Any>>>> {
         // TODO: Do this less terribly
-        // map of: pair<linking_id, entity_set_id> to property_data
+        // iterable of: pair<linking_id, to property_data>
         val linkedEntityDataStream = dataQueryService.getEntitiesWithPropertyTypeIds(
                 linkingIdsByEntitySetId,
                 authorizedPropertyTypesByEntitySetId,

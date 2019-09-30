@@ -79,7 +79,7 @@ class PostgresEntityDataQueryService(
                 metadataOptions,
                 version,
                 linking
-        ) { rs -> getEntityPropertiesByPropertyTypeId2(rs, authorizedPropertyTypes, byteBlobDataManager) }
+        ) { rs -> getEntityPropertiesByPropertyTypeId(rs, authorizedPropertyTypes, byteBlobDataManager) }
     }
 
     @JvmOverloads
@@ -132,7 +132,7 @@ class PostgresEntityDataQueryService(
             metadataOptions: Set<MetadataOption> = EnumSet.noneOf(MetadataOption::class.java)
     ): BasePostgresIterable<Pair<UUID, Map<UUID, Set<Any>>>> {
         return getEntitySetIterable(entityKeyIds, authorizedPropertyTypes, mapOf(), metadataOptions) { rs ->
-            getEntityPropertiesByPropertyTypeId2(rs, authorizedPropertyTypes,byteBlobDataManager )
+            getEntityPropertiesByPropertyTypeId(rs, authorizedPropertyTypes,byteBlobDataManager )
         }
     }
 

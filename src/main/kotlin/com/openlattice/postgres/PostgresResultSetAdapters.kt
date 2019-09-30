@@ -3,7 +3,6 @@ package com.openlattice.postgres
 import com.dataloom.mappers.ObjectMappers
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.openlattice.IdConstants
-import com.openlattice.data.Property
 import com.openlattice.data.storage.ByteBlobDataManager
 import com.openlattice.edm.EdmConstants.Companion.ID_FQN
 import com.openlattice.edm.PostgresEdmTypeConverter
@@ -26,29 +25,9 @@ internal class PostgresResultSetAdapters
 private val logger = LoggerFactory.getLogger(PostgresResultSetAdapters::class.java)
 private val mapper = ObjectMappers.newJsonMapper()
 
-@Throws(SQLException::class)
-fun getJsonEntityPropertiesByPropertyTypeId(
-        rs: ResultSet,
-        authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
-        byteBlobDataManager: ByteBlobDataManager
-): Pair<UUID, MutableMap<UUID, MutableSet<Property>>> {
-    val id = id(rs)
-    val entitySetId = entitySetId(rs)
-    val propertyTypes = authorizedPropertyTypes.getValue(entitySetId)
-    return id to propertyTypes
-            .map { PostgresEdmTypeConverter.map(it.value.datatype) }
-            .mapNotNull { datatype ->
-                rs.getString("v_$datatype")
-            }
-            .map { mapper.readValue<MutableMap<UUID, MutableSet<Property>>>(it) }
-            .reduce { acc, mutableMap ->
-                acc.putAll(mutableMap)
-                return@reduce acc
-            }
-}
 
 @Throws(SQLException::class)
-fun getEntityPropertiesByPropertyTypeId2(
+fun getEntityPropertiesByPropertyTypeId(
         rs: ResultSet,
         authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
         byteBlobDataManager: ByteBlobDataManager
@@ -56,34 +35,20 @@ fun getEntityPropertiesByPropertyTypeId2(
     val id = id(rs)
     val entitySetId = entitySetId(rs)
     val propertyTypes = authorizedPropertyTypes.getValue(entitySetId)
-    val dataTypes = propertyTypes.map { (_, pt) -> PostgresEdmTypeConverter.map(pt.datatype) }.toSet()
 
-    val entity = dataTypes.map { datatype ->
-        val json = rs.getString("v_$datatype")
-        mapper.readValue<MutableMap<UUID, MutableSet<Any>>>(json)
-    }.fold(mutableMapOf(IdConstants.ID_ID.id to mutableSetOf<Any>(id))) { acc, mutableMap ->
-        acc.putAll(mutableMap)
-        return@fold acc
-    }
-
-    (entity.keys - propertyTypes.keys).forEach { entity.remove(it) }
-
-    propertyTypes.forEach { (_, propertyType) ->
-
-        if (propertyType.datatype == EdmPrimitiveTypeKind.Binary) {
-            val urls = entity.getOrElse(propertyType.id) { mutableSetOf() }
-            if (urls.isNotEmpty()) {
-                entity[propertyType.id] = byteBlobDataManager.getObjects(urls).toMutableSet()
-            }
-        }
-    }
+    val entity = readJsonDataColumns(
+            rs,
+            propertyTypes,
+            byteBlobDataManager,
+            mutableMapOf(IdConstants.ID_ID.id to mutableSetOf<Any>(id))
+    )
 
     return id to entity
 }
 
 
 @Throws(SQLException::class)
-fun getEntityPropertiesByPropertyTypeId3(
+fun getEntityPropertiesByFullQualifiedName(
         rs: ResultSet,
         authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
         byteBlobDataManager: ByteBlobDataManager
@@ -91,26 +56,8 @@ fun getEntityPropertiesByPropertyTypeId3(
     val id = id(rs)
     val entitySetId = entitySetId(rs)
     val propertyTypes = authorizedPropertyTypes.getValue(entitySetId)
-    val dataTypes = propertyTypes.map { (_, pt) -> PostgresEdmTypeConverter.map(pt.datatype) }.toSet()
 
-    val entity = dataTypes.map { datatype ->
-        val json = rs.getString("v_$datatype")
-        mapper.readValue<MutableMap<UUID, MutableSet<Any>>>(json)
-    }.fold(mutableMapOf<UUID, MutableSet<Any>>()) { acc, mutableMap ->
-        acc.putAll(mutableMap)
-        return@fold acc
-    }
-
-    (entity.keys - propertyTypes.keys).forEach { entity.remove(it) }
-
-    propertyTypes.forEach { (_, propertyType) ->
-        if (propertyType.datatype == EdmPrimitiveTypeKind.Binary) {
-            val urls = entity.getOrElse(propertyType.id) { mutableSetOf() }
-            if (urls.isNotEmpty()) {
-                entity[propertyType.id] = byteBlobDataManager.getObjects(urls).toMutableSet()
-            }
-        }
-    }
+    val entity = readJsonDataColumns(rs, propertyTypes, byteBlobDataManager)
 
     val entityByFqn = entity.mapKeys { propertyTypes.getValue(it.key).type }.toMutableMap()
     entityByFqn[ID_FQN] = mutableSetOf<Any>(id)
@@ -120,23 +67,35 @@ fun getEntityPropertiesByPropertyTypeId3(
 }
 
 @Throws(SQLException::class)
-fun getEntityPropertiesByFullQualifiedName(
+fun readJsonDataColumns(
         rs: ResultSet,
-        authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
-        byteBlobDataManager: ByteBlobDataManager
-): Pair<UUID, MutableMap<FullQualifiedName, MutableSet<Any>>> {
-    return getEntityPropertiesByPropertyTypeId3(
-            rs, authorizedPropertyTypes, byteBlobDataManager
-    )
-}
+        propertyTypes: Map<UUID, PropertyType>,
+        byteBlobDataManager: ByteBlobDataManager,
+        initialEntityDataMap: MutableMap<UUID, MutableSet<Any>> = mutableMapOf()
+): MutableMap<UUID, MutableSet<Any>> {
+    val dataTypes = propertyTypes.map { (_, pt) -> PostgresEdmTypeConverter.map(pt.datatype) }.toSet()
 
-@Throws(SQLException::class)
-fun getJsonColumnAsEsidEkidMap(
-        rs: ResultSet,
-        colName: String
-) : Map<UUID, Set<UUID>>{
-    val columnJson = rs.getString( colName )
-    return mapper.readValue(columnJson)
+    val entity = dataTypes.map { datatype ->
+        val json = rs.getString("v_$datatype")
+        mapper.readValue<MutableMap<UUID, MutableSet<Any>>>(json)
+    }.fold(initialEntityDataMap) { acc, mutableMap ->
+        acc.putAll(mutableMap)
+        return@fold acc
+    }
+
+    (entity.keys - propertyTypes.keys).forEach { entity.remove(it) }
+
+    propertyTypes.forEach { (_, propertyType) ->
+
+        if (propertyType.datatype == EdmPrimitiveTypeKind.Binary) {
+            val urls = entity.getOrElse(propertyType.id) { mutableSetOf() }
+            if (urls.isNotEmpty()) {
+                entity[propertyType.id] = byteBlobDataManager.getObjects(urls).toMutableSet()
+            }
+        }
+    }
+
+    return entity
 }
 
 //TODO: If we are getting NPEs on read we may have to do better filtering here.
