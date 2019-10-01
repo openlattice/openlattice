@@ -1,7 +1,5 @@
-
-
 /*
- * Copyright (C) 2018. OpenLattice, Inc.
+ * Copyright (C) 2019. OpenLattice, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,33 +16,10 @@
  *
  * You can contact the owner of the copyright at support@openlattice.com
  *
+ *
  */
+package com.openlattice.data.events
 
-package com.openlattice.data.events;
+import java.util.UUID
 
-import com.google.common.collect.SetMultimap;
-
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-
-public class EntitiesUpsertedEvent {
-
-    private UUID                                entitySetId;
-    private Map<UUID, Map<UUID, Set<Object>>> entities;
-
-    public EntitiesUpsertedEvent(
-            UUID entitySetId,
-            Map<UUID, Map<UUID, Set<Object>>> entities ) {
-        this.entitySetId = entitySetId;
-        this.entities = entities;
-    }
-
-    public UUID getEntitySetId() {
-        return entitySetId;
-    }
-
-    public Map<UUID, Map<UUID, Set<Object>>> getEntities() {
-        return entities;
-    }
-}
+data class EntitiesDeletedEvent(val entitySetId: UUID, val entityKeyIds: Set<UUID>)
