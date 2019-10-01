@@ -6,7 +6,7 @@ import java.util.function.Function
 
 data class BulkLinkedDataLambdas(
         val entityTypeId: UUID,
-        val entitiesByLinkingId: Map<UUID, Map<UUID, Map<UUID, Set<Any>>>>
+        val entitiesByLinkingId: Map<UUID, Map<UUID, Map<UUID, Map<UUID, Set<Object>>>>>
 ) : Function<ConductorElasticsearchApi, Boolean>, Serializable {
 
     override fun apply(conductorElasticsearchApi: ConductorElasticsearchApi): Boolean {

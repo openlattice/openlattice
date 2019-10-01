@@ -57,9 +57,8 @@ interface EntityDatastore {
 
     fun getLinkedEntityDataByLinkingIdWithMetadata(
             linkingIdsByEntitySetId: Map<UUID, Optional<Set<UUID>>>,
-            authorizedPropertyTypesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>,
-            metadataOptions: EnumSet<MetadataOption> = EnumSet.noneOf(MetadataOption::class.java)
-    ): Map<UUID, Map<UUID, Map<UUID, Set<Any>>>>
+            authorizedPropertyTypesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>
+    ): Map<UUID, Map<UUID, Map<UUID, Map<UUID, Set<Any>>>>>
 
     fun getEntities(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,

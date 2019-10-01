@@ -72,7 +72,8 @@ class PostgresLinkedEntityDataQueryServiceTest {
                         propertyTypes.associateBy { it.id },
                         mapOf(),
                         idsPresent = true,
-                        partitionsPresent = true
+                        partitionsPresent = true,
+                        selectOriginIds = true
                 ).first
         )
 

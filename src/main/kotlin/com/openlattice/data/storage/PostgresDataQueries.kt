@@ -21,22 +21,13 @@ import java.util.*
  */
 internal class PostgresDataQueries
 
-const val VALUES = "values"
-val dataMetadataColumnsParametersSql = PostgresDataTables.dataTableMetadataColumns.joinToString(",") { "?" }
-val dataMetadataColumnsSql = PostgresDataTables.dataTableMetadataColumns.joinToString { "," }
-val dataTableColumnsSql = PostgresDataTables.dataTableColumns.joinToString(",") { it.name }
-val dataTableColumnsBindSql = PostgresDataTables.dataTableColumns.joinToString(",") { "?" }
 
-val dataTableColumnsConflictSetSql = PostgresDataTables.dataTableColumns.joinToString(",") {
-    "${it.name} = EXCLUDED.${it.name}"
-}
+const val VALUES = "values"
+
 
 val valuesColumnsSql = PostgresDataTables.dataTableValueColumns.joinToString(",") {
     "array_agg(${it.name}) FILTER (where ${it.name} IS NOT NULL) as ${it.name}"
 }
-
-val jsonValueColumnNamesAsString = PostgresDataTables.dataColumns.keys.map { getMergedDataColumnName(it) }.joinToString(",")
-
 val jsonValueColumnsSql = PostgresDataTables.dataColumns.entries
         .joinToString(",") { (datatype, cols) ->
             val (ni, bt) = cols
@@ -62,23 +53,18 @@ fun buildPreparableFiltersSqlForLinkedEntities(
         propertyTypeFilters: Map<UUID, Set<Filter>>,
         idsPresent: Boolean,
         partitionsPresent: Boolean,
+        selectEntityKeyIds: Boolean = false,
         selectOriginIds: Boolean = false
 ): Pair<String, Set<SqlBinder>> {
-    val filtersClauses = buildPreparableFiltersClause(startIndex, propertyTypes, propertyTypeFilters)
-    val filtersClause = if (filtersClauses.first.isNotEmpty()) " AND ${filtersClauses.first} " else ""
-
-    // TODO: remove IS NOT NULL post-migration
-    val innerSql = selectEntitiesGroupedByIdAndPropertyTypeId(
-            idsPresent = idsPresent, partitionsPresent = partitionsPresent, selectOriginIds = selectOriginIds
-    ) + " AND ${ORIGIN_ID.name} IS NOT NULL AND ${ORIGIN_ID.name} != '${IdConstants.EMPTY_ORIGIN_ID.id}' " + filtersClause + GROUP_BY_ESID_EKID_PART_PTID
-
-    val entityKeyIds = if (selectOriginIds) ",${ENTITY_KEY_IDS_COL.name}" else ""
-    val groupBy = if (selectOriginIds) GROUP_BY_ESID_EKID_PART_EKIDS else GROUP_BY_ESID_EKID_PART
-    val sql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name}$entityKeyIds,$jsonValueColumnsSql " +
-            "FROM ($innerSql) entities $groupBy"
-
-    return sql to filtersClauses.second
-
+    return buildPreparableFiltersSql(
+            startIndex,
+            propertyTypes,
+            propertyTypeFilters,
+            true,
+            idsPresent,
+            partitionsPresent,
+            selectEntityKeyIds,
+            selectOriginIds)
 }
 
 /**
@@ -98,18 +84,61 @@ fun buildPreparableFiltersSqlForEntities(
         propertyTypeFilters: Map<UUID, Set<Filter>>,
         idsPresent: Boolean,
         partitionsPresent: Boolean,
+        selectEntityKeyIds: Boolean = false,
+        selectOriginIds: Boolean = false
+): Pair<String, Set<SqlBinder>> {
+    return buildPreparableFiltersSql(
+            startIndex,
+            propertyTypes,
+            propertyTypeFilters,
+            false,
+            idsPresent,
+            partitionsPresent,
+            selectEntityKeyIds,
+            selectOriginIds)
+
+}
+
+/**
+ * Builds a preparable SQL query for reading filterable data.
+ *
+ * The first three columns om
+ * @return A preparable sql query to read the data to a ordered set of [SqlBinder] objects. The prepared query
+ * must be have the first three parameters bound separately from the [SqlBinder] objects. The parameters are as follows:
+ * 1. entity set ids (array)
+ * 2. entity key ids (array)
+ * 3. partition(s) (array)
+ *
+ */
+fun buildPreparableFiltersSql(
+        startIndex: Int,
+        propertyTypes: Map<UUID, PropertyType>,
+        propertyTypeFilters: Map<UUID, Set<Filter>>,
+        linking: Boolean,
+        idsPresent: Boolean,
+        partitionsPresent: Boolean,
+        selectEntityKeyIds: Boolean = false,
         selectOriginIds: Boolean = false
 ): Pair<String, Set<SqlBinder>> {
     val filtersClauses = buildPreparableFiltersClause(startIndex, propertyTypes, propertyTypeFilters)
     val filtersClause = if (filtersClauses.first.isNotEmpty()) " AND ${filtersClauses.first} " else ""
 
     val innerSql = selectEntitiesGroupedByIdAndPropertyTypeId(
-            idsPresent = idsPresent, partitionsPresent = partitionsPresent, selectOriginIds = selectOriginIds
-    ) + filtersClause + GROUP_BY_ESID_EKID_PART_PTID
+            idsPresent = idsPresent,
+            partitionsPresent = partitionsPresent,
+            selectEntityKeyIds = selectEntityKeyIds,
+            selectOriginIds = selectOriginIds
+    ) +// TODO: remove IS NOT NULL post-migration
+            if (linking) " AND ${ORIGIN_ID.name} IS NOT NULL AND ${ORIGIN_ID.name} != '${IdConstants.EMPTY_ORIGIN_ID.id}' " else "" +
+                    filtersClause +
+                    groupBy(ESID_EKID_PART_PTID + if (selectOriginIds) ",${ORGANIZATION_ID.name}" else "")
 
-    val entityKeyIds = if (selectOriginIds) ",${ENTITY_KEY_IDS_COL.name}" else ""
-    val groupBy = if (selectOriginIds) GROUP_BY_ESID_EKID_PART_EKIDS else GROUP_BY_ESID_EKID_PART
-    val sql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name}$entityKeyIds,$jsonValueColumnsSql " +
+    val entityKeyIds = if (selectEntityKeyIds) ",${ENTITY_KEY_IDS_COL.name}" else ""
+    val originIds = if (selectOriginIds) ",${ORIGIN_ID.name}" else ""
+    val groupBy = groupBy(ESID_EKID_PART
+            + if (selectEntityKeyIds) ",${ENTITY_KEY_IDS_COL.name}" else ""
+            + if (selectOriginIds) ",${ORIGIN_ID.name}" else "")
+    val sql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name}$entityKeyIds$originIds,$jsonValueColumnsSql " +
             "FROM ($innerSql) entities $groupBy"
 
     return sql to filtersClauses.second
@@ -199,9 +228,12 @@ internal fun doBind(ps: PreparedStatement, info: SqlBindInfo) {
     }
 }
 
-internal val GROUP_BY_ESID_EKID_PART = "GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name})"
-internal val GROUP_BY_ESID_EKID_PART_PTID = "GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name},${PROPERTY_TYPE_ID.name})"
-internal val GROUP_BY_ESID_EKID_PART_EKIDS = "GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name},${ENTITY_KEY_IDS_COL.name})"
+internal val ESID_EKID_PART = "${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name}"
+internal val ESID_EKID_PART_PTID = "${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name},${PROPERTY_TYPE_ID.name}"
+
+internal fun groupBy(columns: String): String {
+    return "GROUP BY ($columns)"
+}
 
 /**
  * Preparable SQL that selects entities across multiple entity sets grouping by id and property type id from the [DATA]
@@ -231,94 +263,15 @@ internal fun selectEntitiesGroupedByIdAndPropertyTypeId(
         idsPresent: Boolean = true,
         partitionsPresent: Boolean = true,
         entitySetsPresent: Boolean = true,
+        selectEntityKeyIds: Boolean = false,
         selectOriginIds: Boolean = false
 ): String {
-    val entityKeyIds = if (selectOriginIds) ",array_agg(COALESCE(${ORIGIN_ID.name},${ID.name})) as ${ENTITY_KEY_IDS_COL.name}" else ""
-    return "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name},${PROPERTY_TYPE_ID.name}$entityKeyIds,$valuesColumnsSql " +
+    val entityKeyIds = if (selectEntityKeyIds) ",array_agg(COALESCE(${ORIGIN_ID.name},${ID.name})) as ${ENTITY_KEY_IDS_COL.name}" else ""
+    val originIds = if (selectOriginIds) ",${ORIGIN_ID.name}" else ""
+    return "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name},${PROPERTY_TYPE_ID.name}$entityKeyIds$originIds,$valuesColumnsSql " +
             "FROM ${DATA.name} ${optionalWhereClauses(idsPresent, partitionsPresent, entitySetsPresent)}"
 }
 
-
-/**
- * Preparable SQL that selects entire entity sets grouping by id and property type id from the [DATA] table with the
- * following bind order:
- *
- * 1. entity set ids (array)
- *
- */
-internal val selectEntitySetGroupedByIdAndPropertyTypeId =
-        "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name},${PROPERTY_TYPE_ID.name},$valuesColumnsSql " +
-                "FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = ANY(?) "
-
-/**
- * Preparable SQL that selects entities across multiple entity sets grouping by id and property type id from the [DATA]
- * table with the following bind order:
- *
- * 1. entity set ids (array)
- * 2. entity key ids (array)
- * 3. partition (array)
- *
- */
-internal val selectEntitiesSql =
-        "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},$jsonValueColumnsSql FROM (${selectEntitiesGroupedByIdAndPropertyTypeId()}) entities " +
-                GROUP_BY_ESID_EKID_PART
-
-/**
- * Preparable SQL that selects entire entity sets grouping by id and property type id from the [DATA] table with the
- * following bind order:
- *
- * 1. entity set ids (array)
- *
- */
-internal val selectEntitySetsSql =
-        "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},$jsonValueColumnsSql FROM ($selectEntitySetGroupedByIdAndPropertyTypeId) entity_set " +
-                GROUP_BY_ESID_EKID_PART
-
-
-/**
- * Preparable SQL that selects linking entities across multiple entity sets grouping by linking id and property type id
- * from the  [DATA] table with the following bind order:
- *
- * 1. normal entity set ids (array)
- * 2. linking ids (array)
- * 3. partition (array)
- *
- */
-internal val selectLinkingEntitiesByNormalEntitySetIdsSql =
-        "SELECT ${ENTITY_SET_ID.name},${LINKING_ID.name},$jsonValueColumnsSql FROM (${selectEntitiesGroupedByIdAndPropertyTypeId()} entities " +
-                "GROUP BY (${ENTITY_SET_ID.name},${LINKING_ID.name}, ${PARTITION.name})"
-
-/**
- * Preparable SQL that selects linking entities across multiple entity sets grouping by linking id and property type id
- * from the  [DATA] table with the following bind order:
- *
- * 1. normal entity set ids (array)
- * 2. linking ids (array)
- * 3. partition (array)
- *
- * Note: It's only selecting from 1 linking entity set
- *
- */
-// todo: what if we want to select multiple linking entity sets?
-internal fun selectLinkingEntitiesByLinkingEntitySetIdSql(linkingEntitySetId: UUID): String {
-    return "SELECT '$linkingEntitySetId' AS ${ENTITY_SET_ID.name},${LINKING_ID.name},$jsonValueColumnsSql FROM (${selectEntitiesGroupedByIdAndPropertyTypeId()}) entities " +
-            "GROUP BY (${ENTITY_SET_ID.name},${LINKING_ID.name}, ${PARTITION.name})"
-}
-
-/**
- * Preparable SQL that selects an entire linking entity set grouping by linking id and property type id from the [DATA]
- * table with the following bind order:
- *
- * 1. normal entity set ids (array)
- *
- * Note: It's only selecting from 1 linking entity set
- *
- */
-// todo: what if we want to select multiple linking entity sets?
-internal fun selectLinkingEntitySetSql(linkingEntitySetId: UUID): String {
-    return "SELECT '$linkingEntitySetId' AS ${ENTITY_SET_ID.name},${ID.name},$jsonValueColumnsSql FROM ($selectEntitySetGroupedByIdAndPropertyTypeId) entity_set " +
-            "GROUP BY (${ENTITY_SET_ID.name},${ID.name}, ${PARTITION.name})"
-}
 
 /**
  * 1 - versions
@@ -330,11 +283,11 @@ internal fun selectLinkingEntitySetSql(linkingEntitySetId: UUID): String {
  */
 internal val upsertEntitiesSql = "UPDATE ${IDS.name} " +
         "SET ${VERSIONS.name} = ${VERSIONS.name} || ?, " +
-            "${DataTables.LAST_WRITE.name} = now(), " +
-            "${VERSION.name} = CASE " +
-                "WHEN abs(${IDS.name}.${VERSION.name}) < abs(?) THEN ? " +
-                "ELSE ${IDS.name}.${VERSION.name} " +
-            "END " +
+        "${DataTables.LAST_WRITE.name} = now(), " +
+        "${VERSION.name} = CASE " +
+        "WHEN abs(${IDS.name}.${VERSION.name}) < abs(?) THEN ? " +
+        "ELSE ${IDS.name}.${VERSION.name} " +
+        "END " +
         "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ?"
 
 

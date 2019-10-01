@@ -314,35 +314,25 @@ class PostgresEntityDatastore(
     }
 
     /**
-     * Retrieves the authorized, linked property data for the given linking ids of entity sets.
+     * Retrieves the authorized, property data mapped by entity key ids as the origins of the data for each entity set
+     * for the given linking ids.
      *
      * @param linkingIdsByEntitySetId map of linked(normal) entity set ids and their linking ids
      * @param authorizedPropertyTypesByEntitySetId map of authorized property types
-     * @param metadataOptions set of [MetadataOption]s to include in result
      */
     @Timed
     override fun getLinkedEntityDataByLinkingIdWithMetadata(
             linkingIdsByEntitySetId: Map<UUID, Optional<Set<UUID>>>,
-            authorizedPropertyTypesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>,
-            metadataOptions: EnumSet<MetadataOption>
-    ): Map<UUID, Map<UUID, Map<UUID, Set<Any>>>> {
-        // pair<linking_id to pair<entity_set_id to property_data>>
-        val linkedEntityDataStream = dataQueryService.getEntitiesByEntitySetIdWithPropertyTypeIds(
+            authorizedPropertyTypesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>
+    ): Map<UUID, Map<UUID, Map<UUID, Map<UUID, Set<Any>>>>> {
+        // pair<linking_id to pair<entity_set_id to pair<entity_key_id to property_data>>>
+        val linkedEntityDataStream = dataQueryService.getLinkedEntitiesByEntitySetIdWithOriginIds(
                 linkingIdsByEntitySetId,
-                authorizedPropertyTypesByEntitySetId,
-                metadataOptions = metadataOptions,
-                linking = true
+                authorizedPropertyTypesByEntitySetId
         )
 
-        // linking_id/entity_set_id/property_type_id
-        return linkedEntityDataStream
-                .groupBy { it.first } // linking_id
-                .mapValues {
-                    it.value.associateBy(
-                            { it.second.first }, // entity_set_id
-                            { it.second.second }
-                    )
-                }
+        // linking_id/entity_set_id/entity_key_id/property_type_id
+        return linkedEntityDataStream.toMap().mapValues { mapOf(it.value).mapValues { mapOf(it.value) } }
     }
 
     //TODO: Can be made more efficient if we are getting across same type.

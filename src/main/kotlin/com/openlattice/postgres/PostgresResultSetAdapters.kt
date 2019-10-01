@@ -46,16 +46,18 @@ fun getEntityPropertiesByPropertyTypeId(
 }
 
 /**
- * Returns entity data from the [ResultSet] mapped by a pair its id and entity set id respectively.
+ * Returns linked entity data from the [ResultSet] mapped respectively by its id, entity set, origin id and property
+ * type id.
  */
 @Throws(SQLException::class)
-fun getEntityPropertiesByEntitySetIdAndPropertyTypeId(
+fun getEntityPropertiesByEntitySetIdOriginIdAndPropertyTypeId(
         rs: ResultSet,
         authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
         byteBlobDataManager: ByteBlobDataManager
-): Pair<UUID, Pair<UUID, MutableMap<UUID, MutableSet<Any>>>> {
+): Pair<UUID, Pair<UUID, Pair<UUID, MutableMap<UUID, MutableSet<Any>>>>> {
     val id = id(rs)
     val entitySetId = entitySetId(rs)
+    val originId = originId(rs)
     val propertyTypes = authorizedPropertyTypes.getValue(entitySetId)
 
     val entity = readJsonDataColumns(
@@ -65,7 +67,7 @@ fun getEntityPropertiesByEntitySetIdAndPropertyTypeId(
             mutableMapOf(IdConstants.ID_ID.id to mutableSetOf<Any>(id))
     )
 
-    return id to (entitySetId to entity)
+    return id to (entitySetId to (originId to entity))
 }
 
 

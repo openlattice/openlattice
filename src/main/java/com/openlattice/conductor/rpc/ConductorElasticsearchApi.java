@@ -143,7 +143,8 @@ public interface ConductorElasticsearchApi {
 
     boolean createBulkLinkedData(
             UUID entityTypeId,
-            Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> entitiesByLinkingId );
+            Map<UUID, Map<UUID, Map<UUID, Map<UUID, Set<Object>>>>> entitiesByLinkingId
+    );
 
     /* Delete */
     boolean deleteEntitySet( UUID entitySetId, UUID entityTypeId );

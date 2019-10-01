@@ -295,24 +295,6 @@ public class SearchService {
         elasticsearchApi.createBulkEntityData( entityTypeId, event.getEntitySetId(), event.getEntities() );
     }
 
-    private void indexLinkedEntities(
-            UUID linkingEntitySetId, Map<UUID, Set<UUID>> linkingIds, Map<UUID, PropertyType> propertyTypes ) {
-        if ( !linkingIds.isEmpty() ) {
-            UUID entityTypeId = dataModelService.getEntityTypeByEntitySetId( linkingEntitySetId ).getId();
-
-            // linking_id/(normal)entity_set_id/property_type_id
-            Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> linkedData = dataManager
-                    .getLinkedEntityDataByLinkingIdWithMetadata(
-                            linkingIds.entrySet().stream().collect(
-                                    Collectors.toMap( Map.Entry::getKey, entry -> Optional.of( entry.getValue() ) ) ),
-                            linkingIds.keySet().stream().collect(
-                                    Collectors.toMap( Function.identity(), entitySetId -> propertyTypes ) ),
-                            EnumSet.of( MetadataOption.LAST_WRITE ) );
-
-            elasticsearchApi.createBulkLinkedData( entityTypeId, linkedData );
-        }
-    }
-
     @Subscribe
     public void updateEntitySetMetadata( EntitySetMetadataUpdatedEvent event ) {
         elasticsearchApi.updateEntitySetMetadata( event.getEntitySet() );

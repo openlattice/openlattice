@@ -83,22 +83,22 @@ class PostgresEntityDataQueryService(
     }
 
     @JvmOverloads
-    fun getEntitiesByEntitySetIdWithPropertyTypeIds(
+    fun getLinkedEntitiesByEntitySetIdWithOriginIds(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
             propertyTypeFilters: Map<UUID, Set<Filter>> = mapOf(),
-            metadataOptions: Set<MetadataOption> = EnumSet.noneOf(MetadataOption::class.java),
-            version: Optional<Long> = Optional.empty(),
-            linking: Boolean = false
-    ): BasePostgresIterable<Pair<UUID, Pair<UUID, MutableMap<UUID, MutableSet<Any>>>>> {
+            version: Optional<Long> = Optional.empty()
+    ): BasePostgresIterable<Pair<UUID, Pair<UUID, Pair<UUID, MutableMap<UUID, MutableSet<Any>>>>>> {
         return getEntitySetIterable(
                 entityKeyIds,
                 authorizedPropertyTypes,
                 propertyTypeFilters,
-                metadataOptions,
+                EnumSet.of(MetadataOption.ORIGIN_IDS),
                 version,
-                linking
-        ) { rs -> getEntityPropertiesByEntitySetIdAndPropertyTypeId(rs, authorizedPropertyTypes, byteBlobDataManager) }
+                true
+        ) { rs ->
+            getEntityPropertiesByEntitySetIdOriginIdAndPropertyTypeId(rs, authorizedPropertyTypes, byteBlobDataManager)
+        }
     }
 
     @JvmOverloads
@@ -185,11 +185,23 @@ class PostgresEntityDataQueryService(
 
         val (sql, binders) = if (linking) {
             buildPreparableFiltersSqlForLinkedEntities(
-                    startIndex, propertyTypes, propertyTypeFilters, ids.isNotEmpty(), partitions.isNotEmpty()
+                    startIndex,
+                    propertyTypes,
+                    propertyTypeFilters,
+                    ids.isNotEmpty(),
+                    partitions.isNotEmpty(),
+                    metadataOptions.contains(MetadataOption.ENTITY_KEY_IDS),
+                    metadataOptions.contains(MetadataOption.ORIGIN_IDS)
             )
         } else {
             buildPreparableFiltersSqlForEntities(
-                    startIndex, propertyTypes, propertyTypeFilters, ids.isNotEmpty(), partitions.isNotEmpty()
+                    startIndex,
+                    propertyTypes,
+                    propertyTypeFilters,
+                    ids.isNotEmpty(),
+                    partitions.isNotEmpty(),
+                    metadataOptions.contains(MetadataOption.ENTITY_KEY_IDS),
+                    metadataOptions.contains(MetadataOption.ORIGIN_IDS)
             )
         }
 
