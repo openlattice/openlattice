@@ -537,7 +537,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 final var entityKeyId = ekEntry.getKey();
                 final var propertyValues = ekEntry.getValue();
 
-                Map<Object, Object> values = new HashMap<>( propertyValues.size() + 1 );
+                Map<Object, Object> values = new HashMap<>( propertyValues.size() + 2 );
                 propertyValues.forEach( values::put );
                 values.put( ID_ID.getId(), entityKeyId );
                 values.put( ENTITY_SET_ID_KEY_ID.getId(), entitySetId );
