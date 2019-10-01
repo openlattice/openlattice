@@ -226,6 +226,7 @@ public class SearchService {
     @Timed
     @Subscribe
     public void deleteLinkedEntities( LinkedEntitiesDeletedEvent event ) {
+        // TODO figure how we handle deletion of entities which belong to a linking entity
         if ( event.getLinkedEntitySetIds().size() > 0 ) {
             Map<UUID, UUID> entitySetIdsToEntityTypeIds = dataModelService
                     .getEntitySetsAsMap( event.getLinkedEntitySetIds() ).values().stream()
