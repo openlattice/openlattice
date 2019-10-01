@@ -38,9 +38,9 @@ fun getEntityPropertiesByPropertyTypeId(
     val entity = readJsonDataColumns(
             rs,
             propertyTypes,
-            byteBlobDataManager,
-            mutableMapOf(IdConstants.ID_ID.id to mutableSetOf<Any>(id))
+            byteBlobDataManager
     )
+    entity[IdConstants.ID_ID.id] = mutableSetOf<Any>(id)
 
     return id to entity
 }
@@ -63,9 +63,9 @@ fun getEntityPropertiesByEntitySetIdOriginIdAndPropertyTypeId(
     val entity = readJsonDataColumns(
             rs,
             propertyTypes,
-            byteBlobDataManager,
-            mutableMapOf(IdConstants.ID_ID.id to mutableSetOf<Any>(id))
+            byteBlobDataManager
     )
+    entity[IdConstants.ID_ID.id] = mutableSetOf<Any>(id)
 
     return id to (entitySetId to (originId to entity))
 }
@@ -94,19 +94,19 @@ fun getEntityPropertiesByFullQualifiedName(
 fun readJsonDataColumns(
         rs: ResultSet,
         propertyTypes: Map<UUID, PropertyType>,
-        byteBlobDataManager: ByteBlobDataManager,
-        initialEntityDataMap: MutableMap<UUID, MutableSet<Any>> = mutableMapOf()
+        byteBlobDataManager: ByteBlobDataManager
 ): MutableMap<UUID, MutableSet<Any>> {
     val dataTypes = propertyTypes.map { (_, pt) -> PostgresEdmTypeConverter.map(pt.datatype) }.toSet()
 
     val entity = dataTypes.map { datatype ->
         val json = rs.getString("v_$datatype")
         mapper.readValue<MutableMap<UUID, MutableSet<Any>>>(json)
-    }.fold(initialEntityDataMap) { acc, mutableMap ->
+    }.fold(mutableMapOf<UUID, MutableSet<Any>>()) { acc, mutableMap ->
         acc.putAll(mutableMap)
         return@fold acc
     }
 
+    // Note: this call deletes all entries from result, which is not in propertyTypes (ID for example)
     (entity.keys - propertyTypes.keys).forEach { entity.remove(it) }
 
     propertyTypes.forEach { (_, propertyType) ->
