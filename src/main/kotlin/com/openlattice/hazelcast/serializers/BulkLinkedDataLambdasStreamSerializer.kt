@@ -8,10 +8,6 @@ import com.esotericsoftware.kryo.io.Output
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.google.common.collect.HashMultimap
-import com.google.common.collect.Maps
-import com.google.common.collect.Multimaps
-import com.google.common.collect.SetMultimap
 import com.openlattice.conductor.rpc.BulkLinkedDataLambdas
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -21,7 +17,7 @@ import java.util.UUID
 @Component
 class BulkLinkedDataLambdasStreamSerializer(
         private val mapper: ObjectMapper = ObjectMappers.getSmileMapper(),
-        private val ref: TypeReference<SetMultimap<UUID, Any>> = object : TypeReference<SetMultimap<UUID, Any>>() {}
+        private val ref: TypeReference<Map<UUID, Set<Any>>> = object : TypeReference<Map<UUID, Set<Any>>>() {}
 ) : Serializer<BulkLinkedDataLambdas>() {
 
     companion object {
@@ -56,7 +52,7 @@ class BulkLinkedDataLambdasStreamSerializer(
                 }
             }
         } catch (e: JsonProcessingException) {
-            logger.debug("Unable to serialize linking entities linking ids: {}", data.entitiesByLinkingId.keys)
+            logger.debug("Unable to serialize linking entities with linking ids: {}", data.entitiesByLinkingId.keys)
         }
     }
 
@@ -65,25 +61,31 @@ class BulkLinkedDataLambdasStreamSerializer(
         val entityTypeId = readUUID(input)
 
         val linkingIdsSize = input.readInt()
-        val entitiesByLinkingId = HashMap<UUID, Map<UUID, Map<UUID, Set<Any>>>>(linkingIdsSize)
+        val entitiesByLinkingId = HashMap<UUID, Map<UUID, Map<UUID, Map<UUID, Set<Any>>>>>(linkingIdsSize)
         for (i in 1..linkingIdsSize) {
             val linkingId = readUUID(input)
 
             val entitySetsSize = input.readInt()
-            val entitiesByEntitySetId = HashMap<UUID, SetMultimap<UUID, Any>>(entitySetsSize)
+            val entitiesByEntitySetId = HashMap<UUID, Map<UUID, Map<UUID, Set<Any>>>>(entitySetsSize)
             for (j in 1..entitySetsSize) {
                 val entitySetId = readUUID(input)
 
-                val numBytes = input.readInt()
-                var entityData: HashMultimap<UUID, Any>
-                try {
-                    entityData = mapper.readValue(input.readBytes(numBytes), ref)
-                    entitiesByEntitySetId[entitySetId] = entityData
-                } catch (e: IOException) {
-                    logger.debug("Unable to deserialize entities for linking id: {}", linkingId)
+                val originIdsSize = input.readInt()
+                val entitiesByOriginId = HashMap<UUID, Map<UUID, Set<Any>>>(originIdsSize)
+                for (k in 1..originIdsSize) {
+                    val originId = readUUID(input)
+
+                    val numBytes = input.readInt()
+                    try {
+                        val entityData: Map<UUID, Set<Any>> = mapper.readValue(input.readBytes(numBytes), ref)
+                        entitiesByOriginId[originId] = entityData
+                    } catch (e: IOException) {
+                        logger.debug("Unable to deserialize entities for linking id: {}", linkingId)
+                    }
                 }
+                entitiesByEntitySetId[entitySetId] = entitiesByOriginId
             }
-            entitiesByLinkingId[linkingId] = Maps.transformValues(entitiesByEntitySetId, Multimaps::asMap)
+            entitiesByLinkingId[linkingId] = entitiesByEntitySetId
         }
 
         return BulkLinkedDataLambdas(entityTypeId, entitiesByLinkingId)
