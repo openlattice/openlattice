@@ -129,7 +129,7 @@ class BackgroundLinkingIndexingService(
         val dirtyLinkingIdByEntitySetIds = getEntitySetIdsOfLinkingId(linkingId)
                 .associateWith { Optional.of(setOf(linkingId)) } // entity_set_id/linking_id
         val propertyTypesOfEntitySets = dirtyLinkingIdByEntitySetIds.keys.associateWith { personPropertyTypes } // entity_set_id/property_type_id/property_type
-        val linkedEntityData = dataStore // linking_id/entity_set_id/property_type_id
+        val linkedEntityData = dataStore // linking_id/entity_set_id/entity_key_id/property_type_id
                 .getLinkedEntityDataByLinkingIdWithMetadata(dirtyLinkingIdByEntitySetIds, propertyTypesOfEntitySets)
 
         val indexCount = indexLinkedEntity(
@@ -148,7 +148,7 @@ class BackgroundLinkingIndexingService(
             linkingId: UUID,
             lastWrite: OffsetDateTime,
             entityTypeId: UUID,
-            dataByEntitySetId: Map<UUID, Map<UUID, Set<Any>>>
+            dataByEntitySetId: Map<UUID, Map<UUID, Map<UUID, Set<Any>>>>
     ): Int {
         return if (elasticsearchApi.createBulkLinkedData(entityTypeId, mapOf(linkingId to dataByEntitySetId))) {
             dataManager.markAsIndexed(
