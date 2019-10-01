@@ -131,7 +131,7 @@ fun buildPreparableFiltersSql(
     ) +// TODO: remove IS NOT NULL post-migration
             if (linking) " AND ${ORIGIN_ID.name} IS NOT NULL AND ${ORIGIN_ID.name} != '${IdConstants.EMPTY_ORIGIN_ID.id}' " else "" +
                     filtersClause +
-                    groupBy(ESID_EKID_PART_PTID + if (selectOriginIds) ",${ORGANIZATION_ID.name}" else "")
+                    groupBy(ESID_EKID_PART_PTID + if (selectOriginIds) ",${ORIGIN_ID.name}" else "")
 
     val entityKeyIds = if (selectEntityKeyIds) ",${ENTITY_KEY_IDS_COL.name}" else ""
     val originIds = if (selectOriginIds) ",${ORIGIN_ID.name}" else ""
@@ -574,11 +574,11 @@ fun selectPropertyTypesOfEntitySetColumnar(
     val idColumnsList = listOf(ENTITY_SET_ID.name, ID.name, ENTITY_KEY_IDS_COL.name)
     val (entitySetData, _) = if (linking) {
         buildPreparableFiltersSqlForLinkedEntities(
-                3, authorizedPropertyTypes, mapOf(), idsPresent = false, partitionsPresent = true, selectOriginIds = true
+                3, authorizedPropertyTypes, mapOf(), idsPresent = false, partitionsPresent = true, selectEntityKeyIds = true
         )
     } else {
         buildPreparableFiltersSqlForEntities(
-                3, authorizedPropertyTypes, mapOf(), idsPresent = false, partitionsPresent = true, selectOriginIds = true
+                3, authorizedPropertyTypes, mapOf(), idsPresent = false, partitionsPresent = true, selectEntityKeyIds = true
         )
     }
 
