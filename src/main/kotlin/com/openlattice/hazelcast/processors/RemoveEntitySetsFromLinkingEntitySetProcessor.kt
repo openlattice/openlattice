@@ -11,8 +11,8 @@ class RemoveEntitySetsFromLinkingEntitySetProcessor(val entitySetIds: Set<UUID>)
         private const val serialVersionUID = -6602384557982347L
     }
 
-    override fun process(entry: MutableMap.MutableEntry<UUID, EntitySet>?): EntitySet {
-        val entitySet = entry!!.value
+    override fun process(entry: MutableMap.MutableEntry<UUID, EntitySet>): EntitySet {
+        val entitySet = entry.value
         entitySet.linkedEntitySets.removeAll(entitySetIds) // shouldn't be null at this point
         entry.setValue(entitySet)
         return entitySet

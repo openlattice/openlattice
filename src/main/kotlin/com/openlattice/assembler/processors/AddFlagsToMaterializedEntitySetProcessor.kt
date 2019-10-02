@@ -28,9 +28,9 @@ import com.openlattice.organization.OrganizationEntitySetFlag
 data class AddFlagsToMaterializedEntitySetProcessor(val flags: Set<OrganizationEntitySetFlag>)
     : AbstractRhizomeEntryProcessor<EntitySetAssemblyKey, MaterializedEntitySet, MaterializedEntitySet>() {
 
-    override fun process(entry: MutableMap.MutableEntry<EntitySetAssemblyKey, MaterializedEntitySet>?)
+    override fun process(entry: MutableMap.MutableEntry<EntitySetAssemblyKey, MaterializedEntitySet>)
             : MaterializedEntitySet {
-        val materializedEntitySet = entry!!.value
+        val materializedEntitySet = entry.value
         val flagsHaveBeenAdded = materializedEntitySet.flags.addAll(flags)
         if (flagsHaveBeenAdded) {
             entry.setValue(materializedEntitySet)
