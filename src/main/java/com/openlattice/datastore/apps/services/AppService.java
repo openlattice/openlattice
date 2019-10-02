@@ -44,6 +44,7 @@ import com.openlattice.apps.processors.UpdateAppTypeMetadataProcessor;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.util.AuthorizationUtils;
 import com.openlattice.controllers.exceptions.BadRequestException;
+import com.openlattice.data.DataExpiration;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.util.Util;
 import com.openlattice.edm.EntitySet;
@@ -175,7 +176,8 @@ public class AppService {
                 Optional.empty(),
                 Optional.of( organizationId ),
                 Optional.of( flags ),
-                Optional.of( new LinkedHashSet<>( organizationService.getDefaultPartitions( organizationId ) ) ) );
+                Optional.of( new LinkedHashSet<>( organizationService.getDefaultPartitions( organizationId ) ) ),
+                Optional.empty() );
         edmService.createEntitySet( principal, entitySet );
         return entitySet.getId();
     }
