@@ -61,6 +61,7 @@ import com.openlattice.edm.types.processors.*;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.hazelcast.HazelcastUtils;
 import com.openlattice.hazelcast.processors.AddEntitySetsToLinkingEntitySetProcessor;
+import com.openlattice.hazelcast.processors.RemoveDataExpirationPolicyProcessor;
 import com.openlattice.hazelcast.processors.RemoveEntitySetsFromLinkingEntitySetProcessor;
 import com.openlattice.postgres.PostgresQuery;
 import com.openlattice.postgres.PostgresTablesPod;
@@ -982,6 +983,7 @@ public class EdmService implements EdmManager {
                                 Optional.empty(),
                                 Optional.empty(),
                                 update.getOrganizationId(),
+                                Optional.empty(),
                                 Optional.empty() ) ) );
 
                 // If an entity set is being moved across organizations, its materialized entity set should be deleted
@@ -1279,6 +1281,7 @@ public class EdmService implements EdmManager {
                     Optional.empty(),
                     Optional.empty(),
                     Optional.empty(),
+                    Optional.empty(),
                     Optional.empty() ) );
         }
     }
@@ -1309,6 +1312,7 @@ public class EdmService implements EdmManager {
                     Optional.empty(),
                     Optional.empty(),
                     optionalPropertyTagsUpdate,
+                    Optional.empty(),
                     Optional.empty(),
                     Optional.empty() ) );
             if ( !et.getProperties().equals( existing.getProperties() ) ) {
@@ -1750,6 +1754,11 @@ public class EdmService implements EdmManager {
     @Override
     public AuditRecordEntitySetsManager getAuditRecordEntitySetsManager() {
         return aresManager;
+    }
+
+    @Override public void removeDataExpirationPolicy( UUID entitySetId ) {
+        entitySets.executeOnKey( entitySetId, new RemoveDataExpirationPolicyProcessor() );
+        return;
     }
 
 }

@@ -52,7 +52,7 @@ class PartitionManager @JvmOverloads constructor(
         partitionList.addAll(partitionList.size until partitions)
     }
 
-    fun getAllPartitions() : List<Int> {
+    fun getAllPartitions(): List<Int> {
         return partitionList
     }
 
@@ -60,7 +60,7 @@ class PartitionManager @JvmOverloads constructor(
         val update = MetadataUpdate(
                 Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
                 Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
-                Optional.empty(), Optional.of(LinkedHashSet(partitions))
+                Optional.empty(), Optional.of(LinkedHashSet(partitions)), Optional.empty()
         )
         entitySets.executeOnKey(entitySetId, UpdateEntitySetMetadataProcessor(update))
     }
