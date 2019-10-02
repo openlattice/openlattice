@@ -46,7 +46,7 @@ fun getEntityPropertiesByPropertyTypeId(
     )
 
     if (metadataOptions.contains(MetadataOption.LAST_WRITE)) {
-        entity[IdConstants.LAST_WRITE_ID.id] = mutableSetOf(lastWrite(rs))
+        entity[IdConstants.LAST_WRITE_ID.id] = mutableSetOf<Any>(lastWriteTyped(rs))
     }
 
     return id to entity
@@ -78,7 +78,7 @@ fun getEntityPropertiesByEntitySetIdOriginIdAndPropertyTypeId(
     )
 
     if (metadataOptions.contains(MetadataOption.LAST_WRITE)) {
-        entity[IdConstants.LAST_WRITE_ID.id] = mutableSetOf(lastWrite(rs))
+        entity[IdConstants.LAST_WRITE_ID.id] = mutableSetOf<Any>(lastWriteTyped(rs))
     }
 
     return id to (entitySetId to (originId to entity))
@@ -102,7 +102,7 @@ fun getEntityPropertiesByFullQualifiedName(
     entityByFqn[ID_FQN] = mutableSetOf<Any>(id.toString())
 
     if (metadataOptions.contains(MetadataOption.LAST_WRITE)) {
-        entityByFqn[LAST_WRITE_FQN] = mutableSetOf(lastWrite(rs))
+        entityByFqn[LAST_WRITE_FQN] = mutableSetOf<Any>(lastWriteTyped(rs))
     }
 
     return id to entityByFqn
