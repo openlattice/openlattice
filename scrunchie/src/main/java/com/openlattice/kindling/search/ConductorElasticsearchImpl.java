@@ -66,9 +66,7 @@ import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.index.query.*;
-import org.elasticsearch.index.reindex.BulkByScrollResponse;
-import org.elasticsearch.index.reindex.DeleteByQueryAction;
-import org.elasticsearch.index.reindex.DeleteByQueryRequestBuilder;
+import org.elasticsearch.index.reindex.*;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.sort.*;
 import org.slf4j.Logger;
@@ -700,9 +698,8 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 .execute()
                 .actionGet();
 
-        logger.info( "Deleted {} documents while deleting entity set data {}", resp.getDeleted(), entitySetId );
-
-        // TODO linked entity set data
+        logger.info( "Deleted {} normal entity documents while deleting entity set data {}", resp.getDeleted(),
+                entitySetId );
 
         return true;
     }
