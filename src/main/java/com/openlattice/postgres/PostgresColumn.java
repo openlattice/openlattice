@@ -107,9 +107,6 @@ public final class PostgresColumn {
     public static final String                   CREDENTIAL_FIELD                  = "cred";
     public static final PostgresColumnDefinition CREDENTIAL                        =
             new PostgresColumnDefinition( CREDENTIAL_FIELD, TEXT ).notNull();
-    public static final String                   CURRENT_SYNC_ID_FIELD             = "current_sync_id";
-    public static final PostgresColumnDefinition CURRENT_SYNC_ID                   =
-            new PostgresColumnDefinition( CURRENT_SYNC_ID_FIELD, UUID );
     public static final String                   DATATYPE_FIELD                    = "datatype";
     public static final PostgresColumnDefinition DATATYPE                          =
             new PostgresColumnDefinition( DATATYPE_FIELD, TEXT ).notNull();
@@ -136,12 +133,6 @@ public final class PostgresColumn {
     public static final PostgresColumnDefinition DST_SELECTS                       = new PostgresColumnDefinition(
             DST_SELECTS_FIELD,
             JSONB );
-    public static final String                   DST_SYNC_ID_FIELD                 = "dst_sync_id";
-    public static final PostgresColumnDefinition DST_SYNC_ID                       =
-            new PostgresColumnDefinition( DST_SYNC_ID_FIELD, UUID );
-    public static final String                   DST_TYPE_ID_FIELD                 = "dst_type_id";
-    public static final PostgresColumnDefinition DST_TYPE_ID                       =
-            new PostgresColumnDefinition( DST_TYPE_ID_FIELD, UUID );
     public static final String                   EDGE_COMP_1_FIELD                 = "edge_comp_1";
     public static final PostgresColumnDefinition EDGE_COMP_1                       =
             new PostgresColumnDefinition( EDGE_COMP_1_FIELD, UUID )
@@ -156,12 +147,6 @@ public final class PostgresColumn {
     public static final String                   EDGE_ENTITY_SET_ID_FIELD          = "edge_entity_set_id";
     public static final PostgresColumnDefinition EDGE_ENTITY_SET_ID                =
             new PostgresColumnDefinition( EDGE_ENTITY_SET_ID_FIELD, UUID );
-    public static final String                   EDGE_TYPE_ID_FIELD                = "edge_type_id";
-    public static final PostgresColumnDefinition EDGE_TYPE_ID                      =
-            new PostgresColumnDefinition( EDGE_TYPE_ID_FIELD, UUID );
-    public static final String                   EDGE_VALUE_FIELD                  = "edge_value";
-    public static final PostgresColumnDefinition EDGE_VALUE                        =
-            new PostgresColumnDefinition( EDGE_VALUE_FIELD, DECIMAL );
     public static final String                   ENTITY_ID_FIELD                   = "entity_id";
     public static final PostgresColumnDefinition ENTITY_ID                         =
             new PostgresColumnDefinition( ENTITY_ID_FIELD, TEXT );
@@ -181,10 +166,6 @@ public final class PostgresColumn {
     public static final String                   ENTITY_SET_NAME_FIELD             = "entity_set_name";
     public static final PostgresColumnDefinition ENTITY_SET_NAME                   =
             new PostgresColumnDefinition( ENTITY_SET_NAME_FIELD, UUID ).notNull();
-    public static final String                   ENTITY_TYPE_IDS_FIELD             = "entity_type_ids";
-    public static final PostgresColumnDefinition ENTITY_TYPE_IDS                   =
-            new PostgresColumnDefinition( ENTITY_TYPE_IDS_FIELD, UUID_ARRAY ).notNull();
-
     public static final String                   ENTITY_TYPE_COLLECTION_ID_FIELD = "entity_type_collection_id";
     public static final PostgresColumnDefinition ENTITY_TYPE_COLLECTION_ID       =
             new PostgresColumnDefinition( ENTITY_TYPE_COLLECTION_ID_FIELD, UUID ).notNull();
@@ -217,9 +198,6 @@ public final class PostgresColumn {
     public static final String                   FLAGS_FIELD                     = "flags";
     public static final PostgresColumnDefinition FLAGS                           =
             new PostgresColumnDefinition( FLAGS_FIELD, BOOLEAN ).notNull();
-    public static final String                   GRAPH_DIAMETER_FIELD            = "graph_diameter";
-    public static final PostgresColumnDefinition GRAPH_DIAMETER                  =
-            new PostgresColumnDefinition( GRAPH_DIAMETER_FIELD, DECIMAL );
     public static final String                   GRAPH_ID_FIELD                  = "graph_id";
     public static final PostgresColumnDefinition GRAPH_ID                        =
             new PostgresColumnDefinition( GRAPH_ID_FIELD, UUID );
@@ -395,9 +373,6 @@ public final class PostgresColumn {
     public static final String                   REFRESH_RATE_FIELD              = "refresh_rate";
     public static final PostgresColumnDefinition REFRESH_RATE                    =
             new PostgresColumnDefinition( REFRESH_RATE_FIELD, BIGINT );
-    public static final String                   ROLE_ID_FIELD                   = "role_id";
-    public static final PostgresColumnDefinition ROLE_ID                         =
-            new PostgresColumnDefinition( ROLE_ID_FIELD, UUID ).notNull();
     public static final String                   SCHEMAS_FIELD                   = "schemas";
     public static final PostgresColumnDefinition SCHEMAS                         =
             new PostgresColumnDefinition( SCHEMAS_FIELD, TEXT_ARRAY ).notNull();
@@ -444,12 +419,6 @@ public final class PostgresColumn {
     public static final PostgresColumnDefinition SRC_SELECTS                     = new PostgresColumnDefinition(
             SRC_SELECTS_FIELD,
             JSONB );
-    public static final String                   SRC_SYNC_ID_FIELD               = "src_sync_id";
-    public static final PostgresColumnDefinition SRC_SYNC_ID                     =
-            new PostgresColumnDefinition( SRC_SYNC_ID_FIELD, UUID );
-    public static final String                   SRC_TYPE_ID_FIELD               = "src_type_id";
-    public static final PostgresColumnDefinition SRC_TYPE_ID                     =
-            new PostgresColumnDefinition( SRC_TYPE_ID_FIELD, UUID );
     public static final PostgresColumnDefinition START_TIME                      = new PostgresColumnDefinition(
             "start_time",
             PostgresDatatype.BIGINT );
@@ -458,9 +427,6 @@ public final class PostgresColumn {
     public static final String                   STATUS_FIELD                    = "status";
     public static final PostgresColumnDefinition STATUS                          =
             new PostgresColumnDefinition( STATUS_FIELD, TEXT ).notNull();
-    public static final String                   SYNC_ID_FIELD                   = "sync_id";
-    public static final PostgresColumnDefinition SYNC_ID                         =
-            new PostgresColumnDefinition( SYNC_ID_FIELD, UUID ).notNull();
     public static final String                   TAGS_FIELD                      = "tags";
     public static final PostgresColumnDefinition TAGS                            = new PostgresColumnDefinition(
             TAGS_FIELD,
