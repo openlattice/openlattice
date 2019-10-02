@@ -29,6 +29,7 @@ import com.google.common.eventbus.Subscribe
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
+import com.hazelcast.query.QueryConstants
 import com.openlattice.IdConstants
 import com.openlattice.assembler.PostgresRoles.Companion.buildOrganizationUserId
 import com.openlattice.assembler.events.MaterializedEntitySetDataChangeEvent
@@ -294,7 +295,7 @@ class Assembler(
 
             val allEntitySets = entitySets
                     .getAll(authorizedEntitySets.map { it[0] }.collect(Collectors.toSet()))
-                    .filter { materializedEntitySets.containsKey(EntitySetAssemblyKey(it.key, event.organizationId)) }
+                    .filter { isEntitySetMaterialized(EntitySetAssemblyKey(it.key, event.organizationId)) }
             val authorizedPropertyTypesByEntitySets = authorizedPropertyTypeAcls.toList()
                     .groupBy { it[0] }
                     .map { it.key to it.value.map { it[1] } }
@@ -572,7 +573,7 @@ class Assembler(
      * Returns true, if the entity set is materialized in the organization
      */
     private fun isEntitySetMaterialized(entitySetAssemblyKey: EntitySetAssemblyKey): Boolean {
-        return materializedEntitySets.containsKey(entitySetAssemblyKey)
+        return materializedEntitySets.keySet(entitySetAssemblyKeyPredicate(entitySetAssemblyKey)).isNotEmpty()
     }
 
     private fun ensureEntitySetIsMaterialized(entitySetAssemblyKey: EntitySetAssemblyKey) {
@@ -600,6 +601,10 @@ class Assembler(
 
     private fun entitySetIdInOrganizationPredicate(entitySetId: UUID): Predicate<*, *> {
         return Predicates.equal(OrganizationAssemblyMapstore.MATERIALIZED_ENTITY_SETS_ID_INDEX, entitySetId)
+    }
+
+    private fun entitySetAssemblyKeyPredicate(entitySetAssemblyKey: EntitySetAssemblyKey): Predicate<*, *> {
+        return Predicates.equal(QueryConstants.KEY_ATTRIBUTE_NAME.value(), entitySetAssemblyKey)
     }
 
 
