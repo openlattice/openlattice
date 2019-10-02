@@ -4,7 +4,10 @@ import com.dataloom.mappers.ObjectMappers
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.openlattice.IdConstants
 import com.openlattice.data.storage.ByteBlobDataManager
+import com.openlattice.data.storage.MetadataOption
 import com.openlattice.edm.EdmConstants.Companion.ID_FQN
+import com.openlattice.edm.EdmConstants.Companion.LAST_INDEX_FQN
+import com.openlattice.edm.EdmConstants.Companion.LAST_WRITE_FQN
 import com.openlattice.edm.PostgresEdmTypeConverter
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.ResultSetAdapters.*
@@ -29,6 +32,7 @@ private val mapper = ObjectMappers.newJsonMapper()
 fun getEntityPropertiesByPropertyTypeId(
         rs: ResultSet,
         authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
+        metadataOptions: Set<MetadataOption>,
         byteBlobDataManager: ByteBlobDataManager
 ): Pair<UUID, MutableMap<UUID, MutableSet<Any>>> {
     val id = id(rs)
@@ -40,6 +44,10 @@ fun getEntityPropertiesByPropertyTypeId(
             propertyTypes,
             byteBlobDataManager
     )
+
+    if (metadataOptions.contains(MetadataOption.LAST_WRITE)) {
+        entity[IdConstants.LAST_WRITE_ID.id] = mutableSetOf(lastWrite(rs))
+    }
 
     return id to entity
 }
@@ -55,6 +63,7 @@ fun getEntityPropertiesByPropertyTypeId(
 fun getEntityPropertiesByEntitySetIdOriginIdAndPropertyTypeId(
         rs: ResultSet,
         authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
+        metadataOptions: Set<MetadataOption>,
         byteBlobDataManager: ByteBlobDataManager
 ): Pair<UUID, Pair<UUID, Pair<UUID, MutableMap<UUID, MutableSet<Any>>>>> {
     val id = id(rs)
@@ -68,6 +77,10 @@ fun getEntityPropertiesByEntitySetIdOriginIdAndPropertyTypeId(
             byteBlobDataManager
     )
 
+    if (metadataOptions.contains(MetadataOption.LAST_WRITE)) {
+        entity[IdConstants.LAST_WRITE_ID.id] = mutableSetOf(lastWrite(rs))
+    }
+
     return id to (entitySetId to (originId to entity))
 }
 
@@ -76,6 +89,7 @@ fun getEntityPropertiesByEntitySetIdOriginIdAndPropertyTypeId(
 fun getEntityPropertiesByFullQualifiedName(
         rs: ResultSet,
         authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
+        metadataOptions: Set<MetadataOption>,
         byteBlobDataManager: ByteBlobDataManager
 ): Pair<UUID, MutableMap<FullQualifiedName, MutableSet<Any>>> {
     val id = id(rs)
@@ -86,6 +100,10 @@ fun getEntityPropertiesByFullQualifiedName(
 
     val entityByFqn = entity.mapKeys { propertyTypes.getValue(it.key).type }.toMutableMap()
     entityByFqn[ID_FQN] = mutableSetOf<Any>(id.toString())
+
+    if (metadataOptions.contains(MetadataOption.LAST_WRITE)) {
+        entityByFqn[LAST_WRITE_FQN] = mutableSetOf(lastWrite(rs))
+    }
 
     return id to entityByFqn
 

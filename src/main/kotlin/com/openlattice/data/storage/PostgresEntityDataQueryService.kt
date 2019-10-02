@@ -79,7 +79,9 @@ class PostgresEntityDataQueryService(
                 metadataOptions,
                 version,
                 linking
-        ) { rs -> getEntityPropertiesByPropertyTypeId(rs, authorizedPropertyTypes, byteBlobDataManager) }
+        ) { rs ->
+            getEntityPropertiesByPropertyTypeId(rs, authorizedPropertyTypes, metadataOptions, byteBlobDataManager)
+        }
     }
 
     fun getEntitySetWithPropertyTypeIdsIterable(
@@ -94,18 +96,22 @@ class PostgresEntityDataQueryService(
     fun getLinkedEntitiesByEntitySetIdWithOriginIds(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
+            extraMetadataOptions: EnumSet<MetadataOption> = EnumSet.noneOf(MetadataOption::class.java),
             propertyTypeFilters: Map<UUID, Set<Filter>> = mapOf(),
             version: Optional<Long> = Optional.empty()
     ): BasePostgresIterable<Pair<UUID, Pair<UUID, Pair<UUID, MutableMap<UUID, MutableSet<Any>>>>>> {
+        val metadataOptions = extraMetadataOptions + MetadataOption.ORIGIN_IDS
         return getEntitySetIterable(
                 entityKeyIds,
                 authorizedPropertyTypes,
                 propertyTypeFilters,
-                EnumSet.of(MetadataOption.ORIGIN_IDS),
+                metadataOptions,
                 version,
                 true
         ) { rs ->
-            getEntityPropertiesByEntitySetIdOriginIdAndPropertyTypeId(rs, authorizedPropertyTypes, byteBlobDataManager)
+            getEntityPropertiesByEntitySetIdOriginIdAndPropertyTypeId(
+                    rs, authorizedPropertyTypes, metadataOptions, byteBlobDataManager
+            )
         }
     }
 
@@ -125,7 +131,7 @@ class PostgresEntityDataQueryService(
                 metadataOptions,
                 version,
                 linking
-        ) { rs -> getEntityPropertiesByFullQualifiedName(rs, authorizedPropertyTypes, byteBlobDataManager) }.toMap()
+        ) { rs -> getEntityPropertiesByFullQualifiedName(rs, authorizedPropertyTypes, metadataOptions, byteBlobDataManager) }.toMap()
     }
 
 
@@ -181,27 +187,15 @@ class PostgresEntityDataQueryService(
             startIndex++
         }
 
-        val (sql, binders) = if (linking) {
-            buildPreparableFiltersSqlForLinkedEntities(
-                    startIndex,
-                    propertyTypes,
-                    propertyTypeFilters,
-                    ids.isNotEmpty(),
-                    partitions.isNotEmpty(),
-                    metadataOptions.contains(MetadataOption.ENTITY_KEY_IDS),
-                    metadataOptions.contains(MetadataOption.ORIGIN_IDS)
-            )
-        } else {
-            buildPreparableFiltersSqlForEntities(
-                    startIndex,
-                    propertyTypes,
-                    propertyTypeFilters,
-                    ids.isNotEmpty(),
-                    partitions.isNotEmpty(),
-                    metadataOptions.contains(MetadataOption.ENTITY_KEY_IDS),
-                    metadataOptions.contains(MetadataOption.ORIGIN_IDS)
-            )
-        }
+        val (sql, binders) = buildPreparableFiltersSql(
+                startIndex,
+                propertyTypes,
+                propertyTypeFilters,
+                metadataOptions,
+                linking,
+                ids.isNotEmpty(),
+                partitions.isNotEmpty()
+        )
 
         return BasePostgresIterable(PreparedStatementHolderSupplier(hds, sql, FETCH_SIZE) { ps ->
             val metaBinders = linkedSetOf<SqlBinder>()

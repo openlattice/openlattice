@@ -67,13 +67,14 @@ class PostgresLinkedEntityDataQueryServiceTest {
 
         logger.info(
                 "Linking entity set query:\n{}",
-                buildPreparableFiltersSqlForLinkedEntities(
+                buildPreparableFiltersSql(
                         0,
                         propertyTypes.associateBy { it.id },
                         mapOf(),
+                        EnumSet.of(MetadataOption.ORIGIN_IDS),
+                        linking = true,
                         idsPresent = true,
-                        partitionsPresent = true,
-                        selectOriginIds = true
+                        partitionsPresent = true
                 ).first
         )
 

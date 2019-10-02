@@ -119,7 +119,9 @@ class PostgresEntityDatastore(
             val entities = dataQueryService
                     .getEntitiesWithPropertyTypeIds(
                             ImmutableMap.of(entitySetId, Optional.of(entityKeyIds)),
-                            ImmutableMap.of(entitySetId, edmManager.getPropertyTypesForEntitySet(entitySetId))
+                            ImmutableMap.of(entitySetId, edmManager.getPropertyTypesForEntitySet(entitySetId)),
+                            mapOf(),
+                            EnumSet.of(MetadataOption.LAST_WRITE)
                     )
             eventBus.post(EntitiesUpsertedEvent(entitySetId, entities.toMap()))
         }
@@ -308,19 +310,22 @@ class PostgresEntityDatastore(
      *
      * @param linkingIdsByEntitySetId map of linked(normal) entity set ids and their linking ids
      * @param authorizedPropertyTypesByEntitySetId map of authorized property types
+     * @param extraMetadataOptions set of [MetadataOption]s to include in result (besides the origin id)
      */
     @Timed
     override fun getLinkedEntityDataByLinkingIdWithMetadata(
             linkingIdsByEntitySetId: Map<UUID, Optional<Set<UUID>>>,
-            authorizedPropertyTypesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>
+            authorizedPropertyTypesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>,
+            extraMetadataOptions: EnumSet<MetadataOption>
     ): Map<UUID, Map<UUID, Map<UUID, Map<UUID, Set<Any>>>>> {
-        // pair<linking_id to pair<entity_set_id to pair<entity_key_id to property_data>>>
+        // pair<linking_id to pair<entity_set_id to pair<origin_id to property_data>>>
         val linkedEntityDataStream = dataQueryService.getLinkedEntitiesByEntitySetIdWithOriginIds(
                 linkingIdsByEntitySetId,
-                authorizedPropertyTypesByEntitySetId
+                authorizedPropertyTypesByEntitySetId,
+                extraMetadataOptions
         )
 
-        // linking_id/entity_set_id/entity_key_id/property_type_id
+        // linking_id/entity_set_id/origin_id/property_type_id
         return linkedEntityDataStream.toMap().mapValues { mapOf(it.value).mapValues { mapOf(it.value) } }
     }
 

@@ -47,102 +47,90 @@ val jsonValueColumnsSql = PostgresDataTables.dataColumns.entries
  * 3. partition(s) (array)
  *
  */
-fun buildPreparableFiltersSqlForLinkedEntities(
-        startIndex: Int,
-        propertyTypes: Map<UUID, PropertyType>,
-        propertyTypeFilters: Map<UUID, Set<Filter>>,
-        idsPresent: Boolean,
-        partitionsPresent: Boolean,
-        selectEntityKeyIds: Boolean = false,
-        selectOriginIds: Boolean = false
-): Pair<String, Set<SqlBinder>> {
-    return buildPreparableFiltersSql(
-            startIndex,
-            propertyTypes,
-            propertyTypeFilters,
-            true,
-            idsPresent,
-            partitionsPresent,
-            selectEntityKeyIds,
-            selectOriginIds)
-}
-
-/**
- * Builds a preparable SQL query for reading filterable data.
- *
- * The first three columns om
- * @return A preparable sql query to read the data to a ordered set of [SqlBinder] objects. The prepared query
- * must be have the first three parameters bound separately from the [SqlBinder] objects. The parameters are as follows:
- * 1. entity set ids (array)
- * 2. entity key ids (array)
- * 3. partition(s) (array)
- *
- */
-fun buildPreparableFiltersSqlForEntities(
-        startIndex: Int,
-        propertyTypes: Map<UUID, PropertyType>,
-        propertyTypeFilters: Map<UUID, Set<Filter>>,
-        idsPresent: Boolean,
-        partitionsPresent: Boolean,
-        selectEntityKeyIds: Boolean = false,
-        selectOriginIds: Boolean = false
-): Pair<String, Set<SqlBinder>> {
-    return buildPreparableFiltersSql(
-            startIndex,
-            propertyTypes,
-            propertyTypeFilters,
-            false,
-            idsPresent,
-            partitionsPresent,
-            selectEntityKeyIds,
-            selectOriginIds)
-
-}
-
-/**
- * Builds a preparable SQL query for reading filterable data.
- *
- * The first three columns om
- * @return A preparable sql query to read the data to a ordered set of [SqlBinder] objects. The prepared query
- * must be have the first three parameters bound separately from the [SqlBinder] objects. The parameters are as follows:
- * 1. entity set ids (array)
- * 2. entity key ids (array)
- * 3. partition(s) (array)
- *
- */
 fun buildPreparableFiltersSql(
         startIndex: Int,
         propertyTypes: Map<UUID, PropertyType>,
         propertyTypeFilters: Map<UUID, Set<Filter>>,
+        metadataOptions: Set<MetadataOption>,
         linking: Boolean,
         idsPresent: Boolean,
-        partitionsPresent: Boolean,
-        selectEntityKeyIds: Boolean = false,
-        selectOriginIds: Boolean = false
+        partitionsPresent: Boolean
 ): Pair<String, Set<SqlBinder>> {
     val filtersClauses = buildPreparableFiltersClause(startIndex, propertyTypes, propertyTypeFilters)
     val filtersClause = if (filtersClauses.first.isNotEmpty()) " AND ${filtersClauses.first} " else ""
 
-    val innerSql = selectEntitiesGroupedByIdAndPropertyTypeId(
-            idsPresent = idsPresent,
-            partitionsPresent = partitionsPresent,
-            selectEntityKeyIds = selectEntityKeyIds,
-            selectOriginIds = selectOriginIds
-    ) +// TODO: remove IS NOT NULL post-migration
-            if (linking) " AND ${ORIGIN_ID.name} IS NOT NULL AND ${ORIGIN_ID.name} != '${IdConstants.EMPTY_ORIGIN_ID.id}' " else "" +
-                    filtersClause +
-                    groupBy(ESID_EKID_PART_PTID + if (selectOriginIds) ",${ORIGIN_ID.name}" else "")
+    val metadataOptionColumns = metadataOptions.associateWith(::mapMetaDataToColumn)
+    val nonAggregatedMetadataSql = metadataOptionColumns.filter { isMetaDataAggregated(it.key) }.values.joinToString("")
+    val innerGroupBy = groupBy(ESID_EKID_PART_PTID + nonAggregatedMetadataSql)
+    // TODO: remove IS NOT NULL post-migration
+    val linkingClause = if (linking) " AND ${ORIGIN_ID.name} IS NOT NULL AND ${ORIGIN_ID.name} != '${IdConstants.EMPTY_ORIGIN_ID.id}' " else ""
 
-    val entityKeyIds = if (selectEntityKeyIds) ",${ENTITY_KEY_IDS_COL.name}" else ""
-    val originIds = if (selectOriginIds) ",${ORIGIN_ID.name}" else ""
-    val groupBy = groupBy(ESID_EKID_PART
-            + if (selectEntityKeyIds) ",${ENTITY_KEY_IDS_COL.name}" else ""
-            + if (selectOriginIds) ",${ORIGIN_ID.name}" else "")
-    val sql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name}$entityKeyIds$originIds,$jsonValueColumnsSql " +
-            "FROM ($innerSql) entities $groupBy"
+    val innerSql = selectEntitiesGroupedByIdAndPropertyTypeId(
+            metadataOptions,
+            idsPresent = idsPresent,
+            partitionsPresent = partitionsPresent
+    ) + linkingClause + filtersClause + innerGroupBy
+
+    val metadataOptionColumnsSql = metadataOptionColumns.values.joinToString("")
+    val outerGroupBy = groupBy(ESID_EKID_PART + metadataOptionColumnsSql)
+    val sql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name}$metadataOptionColumnsSql,$jsonValueColumnsSql " +
+            "FROM ($innerSql) entities $outerGroupBy"
 
     return sql to filtersClauses.second
 
+}
+
+internal fun selectEntitiesGroupedByIdAndPropertyTypeId(
+        metadataOptions: Set<MetadataOption>,
+        idsPresent: Boolean = true,
+        partitionsPresent: Boolean = true,
+        entitySetsPresent: Boolean = true
+): String {
+    val metadataOptionsSql = metadataOptions
+            .joinToString("") { mapMetaDataToSelector(it) } // they already have the comma prefix
+    return "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name},${PROPERTY_TYPE_ID.name}$metadataOptionsSql,$valuesColumnsSql " +
+            "FROM ${DATA.name} ${optionalWhereClauses(idsPresent, partitionsPresent, entitySetsPresent)}"
+}
+
+/**
+ * Returns the correspondent column name used for the metadata option with a comma prefix.
+ */
+private fun mapMetaDataToColumn(metadataOption: MetadataOption): String {
+    return ",${mapMetaDataToColumnName(metadataOption)}"
+}
+
+/**
+ * Returns the correspondent column name used for the metadata option.
+ */
+private fun mapMetaDataToColumnName(metadataOption: MetadataOption): String {
+    return when (metadataOption) {
+        MetadataOption.ORIGIN_IDS -> ORIGIN_ID.name
+        MetadataOption.LAST_WRITE -> LAST_WRITE.name
+        MetadataOption.ENTITY_KEY_IDS -> ENTITY_KEY_IDS_COL.name
+        else -> throw UnsupportedOperationException("No implementation yet for metadata option $metadataOption")
+    }
+}
+
+/**
+ * Returns the select sql snippet for the requested metadata option.
+ */
+private fun mapMetaDataToSelector(metadataOption: MetadataOption): String {
+    return when (metadataOption) {
+        MetadataOption.ORIGIN_IDS -> ORIGIN_ID.name
+        MetadataOption.LAST_WRITE -> "max(${LAST_WRITE.name} AS ${mapMetaDataToColumnName(metadataOption)}"
+        MetadataOption.ENTITY_KEY_IDS ->
+            ",array_agg(COALESCE(${ORIGIN_ID.name},${ID.name})) AS ${mapMetaDataToColumnName(metadataOption)}"
+        else -> throw UnsupportedOperationException("No implementation yet for metadata option $metadataOption")
+    }
+}
+
+private fun isMetaDataAggregated(metadataOption: MetadataOption): Boolean {
+    return when (metadataOption) {
+        MetadataOption.ORIGIN_IDS -> false
+        MetadataOption.LAST_WRITE -> true
+        MetadataOption.ENTITY_KEY_IDS -> true
+        else -> throw UnsupportedOperationException("No implementation yet for metadata option $metadataOption")
+    }
 }
 
 /*
@@ -257,19 +245,6 @@ fun optionalWhereClauses(
 
     val optionalClauses = listOf(entitySetClause, idsClause, partitionClause, versionsClause).filter { it.isNotBlank() }
     return "WHERE ${optionalClauses.joinToString(" AND ")}"
-}
-
-internal fun selectEntitiesGroupedByIdAndPropertyTypeId(
-        idsPresent: Boolean = true,
-        partitionsPresent: Boolean = true,
-        entitySetsPresent: Boolean = true,
-        selectEntityKeyIds: Boolean = false,
-        selectOriginIds: Boolean = false
-): String {
-    val entityKeyIds = if (selectEntityKeyIds) ",array_agg(COALESCE(${ORIGIN_ID.name},${ID.name})) as ${ENTITY_KEY_IDS_COL.name}" else ""
-    val originIds = if (selectOriginIds) ",${ORIGIN_ID.name}" else ""
-    return "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name},${PROPERTY_TYPE_ID.name}$entityKeyIds$originIds,$valuesColumnsSql " +
-            "FROM ${DATA.name} ${optionalWhereClauses(idsPresent, partitionsPresent, entitySetsPresent)}"
 }
 
 
@@ -572,15 +547,15 @@ fun selectPropertyTypesOfEntitySetColumnar(
         linking: Boolean
 ): String {
     val idColumnsList = listOf(ENTITY_SET_ID.name, ID.name, ENTITY_KEY_IDS_COL.name)
-    val (entitySetData, _) = if (linking) {
-        buildPreparableFiltersSqlForLinkedEntities(
-                3, authorizedPropertyTypes, mapOf(), idsPresent = false, partitionsPresent = true, selectEntityKeyIds = true
-        )
-    } else {
-        buildPreparableFiltersSqlForEntities(
-                3, authorizedPropertyTypes, mapOf(), idsPresent = false, partitionsPresent = true, selectEntityKeyIds = true
-        )
-    }
+    val (entitySetData, _) = buildPreparableFiltersSql(
+            3,
+            authorizedPropertyTypes,
+            mapOf(),
+            EnumSet.of(MetadataOption.ENTITY_KEY_IDS),
+            linking,
+            idsPresent = false,
+            partitionsPresent = true
+    )
 
     val selectColumns = (idColumnsList +
             (authorizedPropertyTypes.map { selectPropertyColumn(it.value) }))

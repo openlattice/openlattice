@@ -81,10 +81,12 @@ class PostgresEntityDataQueryServiceTest {
 
         logger.info(
                 "buildPreparableFiltersSqlForEntities query:\n{}",
-                buildPreparableFiltersSqlForEntities(
+                buildPreparableFiltersSql(
                         0,
                         propertyTypes.associateBy { it.id },
                         mapOf(),
+                        EnumSet.of(MetadataOption.LAST_WRITE),
+                        linking = false,
                         idsPresent = true,
                         partitionsPresent = true
                 ).first
