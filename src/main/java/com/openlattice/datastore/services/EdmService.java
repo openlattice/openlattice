@@ -31,6 +31,7 @@ import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.query.Predicates;
+import com.hazelcast.query.QueryConstants;
 import com.openlattice.assembler.events.MaterializedEntitySetDataChangeEvent;
 import com.openlattice.assembler.events.MaterializedEntitySetEdmChangeEvent;
 import com.openlattice.auditing.AuditRecordEntitySetsManager;
@@ -1743,7 +1744,7 @@ public class EdmService implements EdmManager {
     public Set<UUID> getEntitySetIdsWithFlags( Set<UUID> entitySetIds, Set<EntitySetFlag> filteringFlags ) {
         return entitySets.aggregate(
                 new EntitySetsFlagFilteringAggregator( filteringFlags ),
-                Predicates.in( "__key", entitySetIds.toArray( new UUID[] {} ) ) );
+                Predicates.in( QueryConstants.KEY_ATTRIBUTE_NAME.value(), entitySetIds.toArray( new UUID[] {} ) ) );
 
     }
 

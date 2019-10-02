@@ -154,8 +154,8 @@ class PostgresEntityDatastore(
     }
 
     private fun shouldIndexDirectly(entitySetId: UUID, entityKeyIds: Set<UUID>): Boolean {
-        return entityKeyIds.size < BATCH_INDEX_THRESHOLD && !edmManager.getEntitySet(entitySetId).flags
-                .contains(EntitySetFlag.AUDIT)
+        return entityKeyIds.size < BATCH_INDEX_THRESHOLD
+                && edmManager.getEntitySetIdsWithFlags(setOf(entitySetId), setOf(EntitySetFlag.AUDIT)).isEmpty()
     }
 
     private fun markMaterializedEntitySetDirty(entitySetId: UUID) {
