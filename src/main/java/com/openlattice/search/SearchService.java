@@ -26,6 +26,7 @@ import com.google.common.base.Stopwatch;
 import com.google.common.collect.*;
 import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
+import com.openlattice.IdConstants;
 import com.openlattice.apps.App;
 import com.openlattice.apps.AppType;
 import com.openlattice.authorization.*;
@@ -65,6 +66,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
+import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -293,7 +295,23 @@ public class SearchService {
     @Subscribe
     public void indexEntities( EntitiesUpsertedEvent event ) {
         UUID entityTypeId = dataModelService.getEntityTypeByEntitySetId( event.getEntitySetId() ).getId();
-        elasticsearchApi.createBulkEntityData( entityTypeId, event.getEntitySetId(), event.getEntities() );
+        if ( elasticsearchApi.createBulkEntityData( entityTypeId, event.getEntitySetId(), event.getEntities() ) ) {
+            // mark them as indexed
+            indexingMetadataManager.markAsIndexed(
+                    Map.of(
+                            event.getEntitySetId(),
+                            event.getEntities().entrySet().stream().collect( Collectors.toMap(
+                                    Map.Entry::getKey,
+                                    entity ->
+                                            ( OffsetDateTime ) entity.getValue()
+                                                    .get( IdConstants.LAST_WRITE_ID.getId() ).iterator().next()
+                            ) )
+                    ),
+                    false
+            );
+        }
+
+
     }
 
     @Subscribe
