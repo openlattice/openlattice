@@ -237,4 +237,6 @@ public interface EdmManager {
     Set<UUID> getEntitySetIdsWithFlags( Set<UUID> entitySetIds, Set<EntitySetFlag> filteringFlags );
 
     AuditRecordEntitySetsManager getAuditRecordEntitySetsManager();
+
+    void removeDataExpirationPolicy( UUID entitySetId );
 }

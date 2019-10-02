@@ -13,10 +13,7 @@ import com.openlattice.postgres.PostgresArrays;
 import com.openlattice.postgres.ResultSetAdapters;
 import com.zaxxer.hikari.HikariDataSource;
 
-import java.sql.Array;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.UUID;
 
 public class EntitySetMapstore extends AbstractBasePostgresMapstore<UUID, EntitySet> {
@@ -49,18 +46,48 @@ public class EntitySetMapstore extends AbstractBasePostgresMapstore<UUID, Entity
         ps.setArray( 9, flags );
         ps.setArray( 10, partitions );
         ps.setInt( 11, value.getPartitionsVersion() );
+        if ( value.getExpiration() == null ) {
+            ps.setNull( 12, Types.NULL );
+            ps.setNull( 13, Types.NULL );
+            ps.setNull( 14, Types.NULL );
+            ps.setNull( 15, Types.NULL );
+        } else {
+            ps.setLong( 12, value.getExpiration().getTimeToExpiration() );
+            ps.setString( 13, value.getExpiration().getExpirationBase().toString() );
+            ps.setString( 14, value.getExpiration().getDeleteType().toString() );
+            if ( value.getExpiration().getStartDateProperty().isPresent() ) {
+                ps.setObject( 15, value.getExpiration().getStartDateProperty().get() );
+            } else {
+                ps.setNull( 15, Types.NULL );
+            }
+        }
 
         // UPDATE
-        ps.setString( 12, value.getName() );
-        ps.setObject( 13, value.getEntityTypeId() );
-        ps.setString( 14, value.getTitle() );
-        ps.setString( 15, value.getDescription() );
-        ps.setArray( 16, contacts );
-        ps.setArray( 17, linkedEntitySets );
-        ps.setObject( 18, value.getOrganizationId() );
-        ps.setArray( 19, flags );
-        ps.setArray( 20, partitions );
-        ps.setInt( 21, value.getPartitionsVersion() );
+        ps.setString( 16, value.getName() );
+        ps.setObject( 17, value.getEntityTypeId() );
+        ps.setString( 18, value.getTitle() );
+        ps.setString( 19, value.getDescription() );
+        ps.setArray( 20, contacts );
+        ps.setArray( 21, linkedEntitySets );
+        ps.setObject( 22, value.getOrganizationId() );
+        ps.setArray( 23, flags );
+        ps.setArray( 24, partitions );
+        ps.setInt( 25, value.getPartitionsVersion() );
+        if ( value.getExpiration() == null ) {
+            ps.setNull( 26, Types.NULL );
+            ps.setNull( 27, Types.NULL );
+            ps.setNull( 28, Types.NULL );
+            ps.setNull( 29, Types.NULL );
+        } else {
+            ps.setLong( 26, value.getExpiration().getTimeToExpiration() );
+            ps.setString( 27, value.getExpiration().getExpirationBase().toString() );
+            ps.setString( 28, value.getExpiration().getDeleteType().toString() );
+            if ( value.getExpiration().getStartDateProperty().isPresent() ) {
+                ps.setObject( 29, value.getExpiration().getStartDateProperty().get() );
+            } else {
+                ps.setNull( 29, Types.NULL );
+            }
+        }
     }
 
     @Override protected int bind( PreparedStatement ps, UUID key, int parameterIndex ) throws SQLException {
