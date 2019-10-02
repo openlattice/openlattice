@@ -23,13 +23,16 @@ package com.openlattice.indexing.pods;
 import com.codahale.metrics.MetricRegistry;
 import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.geekbeast.hazelcast.HazelcastClientProvider;
 import com.google.common.eventbus.EventBus;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
+import com.kryptnostic.rhizome.configuration.ConfigurationConstants;
 import com.openlattice.assembler.Assembler;
 import com.openlattice.assembler.AssemblerConfiguration;
 import com.openlattice.assembler.AssemblerConnectionManager;
 import com.openlattice.assembler.pods.AssemblerConfigurationPod;
-import com.openlattice.auditing.AuditingConfiguration;
+import com.openlattice.auditing.*;
 import com.openlattice.auditing.pods.AuditingConfigurationPod;
 import com.openlattice.auth0.Auth0TokenProvider;
 import com.openlattice.authentication.Auth0Configuration;
@@ -44,6 +47,11 @@ import com.openlattice.authorization.PostgresUserApi;
 import com.openlattice.authorization.Principals;
 import com.openlattice.authorization.SecurableObjectResolveTypeService;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
+import com.openlattice.data.DataGraphManager;
+import com.openlattice.data.DataGraphService;
+import com.openlattice.data.EntityKeyIdService;
+import com.openlattice.data.ids.PostgresEntityKeyIdService;
+import com.openlattice.data.storage.*;
 import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.EdmService;
@@ -53,7 +61,11 @@ import com.openlattice.edm.properties.PostgresTypeManager;
 import com.openlattice.edm.schemas.SchemaQueryService;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
 import com.openlattice.edm.schemas.postgres.PostgresSchemaQueryService;
+import com.openlattice.graph.Graph;
+import com.openlattice.graph.core.GraphService;
 import com.openlattice.hazelcast.HazelcastQueue;
+import com.openlattice.ids.HazelcastIdGenerationService;
+import com.openlattice.ids.HazelcastLongIdService;
 import com.openlattice.indexing.configuration.IndexerConfiguration;
 import com.openlattice.kindling.search.ConductorElasticsearchImpl;
 import com.openlattice.mail.config.MailServiceRequirements;
@@ -65,9 +77,7 @@ import com.openlattice.postgres.PostgresTableManager;
 import com.zaxxer.hikari.HikariDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.*;
 
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
@@ -106,6 +116,18 @@ public class IndexerServicesPod {
 
     @Inject
     private MetricRegistry metricRegistry;
+
+    @Inject
+    ObjectMapper defaultObjectMapper;
+
+    @Inject
+    private HazelcastClientProvider hazelcastClientProvider;
+
+    @Inject
+    private ListeningExecutorService executor;
+
+    @Inject
+    private ByteBlobDataManager byteBlobDataManager;
 
     @Bean
     public ConductorElasticsearchApi elasticsearchApi() {
@@ -253,6 +275,72 @@ public class IndexerServicesPod {
                 partitionManager() );
     }
 
+    @Bean
+    public HazelcastIdGenerationService idGeneration() {
+        return new HazelcastIdGenerationService( hazelcastClientProvider );
+    }
+
+    @Bean
+    public EntityKeyIdService idService() {
+        return new PostgresEntityKeyIdService( hazelcastClientProvider,
+                executor,
+                hikariDataSource,
+                idGeneration(),
+                partitionManager() );
+    }
+
+    @Bean
+    public PostgresEntityDataQueryService dataQueryService() {
+        return new PostgresEntityDataQueryService( hikariDataSource, byteBlobDataManager, partitionManager() );
+    }
+
+    @Bean
+    public EntityDatastore entityDatastore() {
+        return new PostgresEntityDatastore( dataQueryService(), dataModelService(), edmManager() );
+    }
+
+    @Bean
+    public PostgresEntitySetSizesTask postgresEntitySetSizeCacheManager() {
+        return new PostgresEntitySetSizesTask();
+    }
+
+    @Bean
+    public GraphService graphApi() {
+        return new Graph( hikariDataSource, dataModelService(), partitionManager() );
+    }
+
+    @Bean
+    public HazelcastIdGenerationService idGenerationService() {
+        return new HazelcastIdGenerationService( hazelcastClientProvider );
+    }
+
+    @Bean
+    public HazelcastLongIdService longIdService() {
+        return new HazelcastLongIdService( hazelcastClientProvider, hazelcastInstance );
+    }
+
+    @Bean
+    public AuditRecordEntitySetsManager auditRecordEntitySetsManager() {
+        return dataModelService().getAuditRecordEntitySetsManager();
+    }
+
+    @Bean
+    public DataGraphManager dataGraphService() {
+        return new DataGraphService( graphApi(), idService(), entityDatastore(), postgresEntitySetSizeCacheManager() );
+    }
+
+    @Bean( name = "auditingManager" )
+    @Profile( { ConfigurationConstants.Profiles.AWS_CONFIGURATION_PROFILE,
+            ConfigurationConstants.Profiles.AWS_TESTING_PROFILE, AuditingProfiles.LOCAL_AWS_AUDITING_PROFILE } )
+    public AuditingManager s3AuditingService() {
+        return new S3AuditingService( auditingConfiguration, longIdService(), defaultObjectMapper );
+    }
+
+    @Bean( name = "auditingManager" )
+    @Profile( AuditingProfiles.LOCAL_AUDITING_PROFILE )
+    public AuditingManager localAuditingService() {
+        return new LocalAuditingService( dataGraphService(), auditRecordEntitySetsManager(), defaultObjectMapper );
+    }
 
     @PostConstruct
     void initPrincipals() {
