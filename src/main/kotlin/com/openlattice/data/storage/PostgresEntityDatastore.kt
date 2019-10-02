@@ -53,17 +53,6 @@ class PostgresEntityDatastore(
 
 
     @Timed
-    override fun getEntitySetData(
-            entitySetId: UUID,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): Map<UUID, Map<UUID, Set<Any>>> {
-        return dataQueryService.getEntitiesWithPropertyTypeIds(
-                ImmutableMap.of(entitySetId, Optional.empty()),
-                ImmutableMap.of(entitySetId, authorizedPropertyTypes)
-        ).toMap()
-    }
-
-    @Timed
     override fun getEntityKeyIdsInEntitySet(entitySetId: UUID): BasePostgresIterable<UUID> {
         return dataQueryService.getEntityKeyIdsInEntitySet(entitySetId)
     }

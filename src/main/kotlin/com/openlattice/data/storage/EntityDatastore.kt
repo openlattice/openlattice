@@ -18,11 +18,6 @@ import java.util.stream.Stream
  */
 interface EntityDatastore {
 
-    fun getEntitySetData(
-            entitySetId: UUID,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): Map<UUID, Map<UUID, Set<Any>>>
-
     fun getEntityKeyIdsInEntitySet(entitySetId: UUID): BasePostgresIterable<UUID>
 
     fun getEntities(

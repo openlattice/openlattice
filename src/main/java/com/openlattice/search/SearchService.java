@@ -823,7 +823,7 @@ public class SearchService {
         return dataManager.getEntityKeyIdsOfLinkingIds( linkingIds );
     }
 
-    private static UUID getEntityKeyId( Map<FullQualifiedName, Set<Object>> entity ) {
+    public static UUID getEntityKeyId( Map<FullQualifiedName, Set<Object>> entity ) {
         return UUID.fromString( entity.get( EdmConstants.ID_FQN ).iterator().next().toString() );
     }
 
