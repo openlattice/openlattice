@@ -79,7 +79,7 @@ constructor(
                 feedback.linkingEntityDataKey)
 
 
-        // add feedbacks
+        // add feedback
         val linkingEntitiesList = feedback.link.toList()
         val nonLinkingEntitiesList = feedback.unlink.toList()
 
@@ -101,7 +101,7 @@ constructor(
         dataManager.markAsNeedsToBeLinked(feedback.link + feedback.unlink)
 
 
-        logger.info("Submitted $positiveFeedbackCount positive and $negativeFeedbackCount negative feedbacks for " +
+        logger.info("Submitted $positiveFeedbackCount positive and $negativeFeedbackCount negative feedback for " +
                 "linking id ${feedback.linkingEntityDataKey.entityKeyId}")
 
         return positiveFeedbackCount + negativeFeedbackCount
@@ -144,7 +144,7 @@ constructor(
     }
 
     @PostMapping(path = [LinkingFeedbackApi.ENTITY], produces = [MediaType.APPLICATION_JSON_VALUE])
-    override fun getLinkingFeedbacksOnEntity(
+    override fun getLinkingFeedbackOnEntity(
             @RequestParam(value = LinkingFeedbackApi.FEEDBACK_TYPE, required = false) feedbackType: FeedbackType,
             @RequestBody entity: EntityDataKey): Iterable<EntityLinkingFeedback> {
         return feedbackService.getLinkingFeedbackOnEntity(feedbackType, entity)
@@ -168,14 +168,14 @@ constructor(
     }
 
     @GetMapping(path = [LinkingFeedbackApi.ALL], produces = [MediaType.APPLICATION_JSON_VALUE])
-    override fun getAllLinkingFeedbacks(): Iterable<EntityLinkingFeedback> {
+    override fun getAllLinkingFeedback(): Iterable<EntityLinkingFeedback> {
         return feedbackService.getLinkingFeedbacks()
     }
 
     @GetMapping(
             path = [LinkingFeedbackApi.FEATURES + LinkingFeedbackApi.ALL],
             produces = [MediaType.APPLICATION_JSON_VALUE])
-    override fun getAllLinkingFeedbacksWithFeatures(): Iterable<EntityLinkingFeatures> {
+    override fun getAllLinkingFeedbackWithFeatures(): Iterable<EntityLinkingFeatures> {
         return feedbackService.getLinkingFeedbacks().map {
             val entities = dataLoader.getEntities(setOf(it.entityPair.first, it.entityPair.second))
             EntityLinkingFeatures(
