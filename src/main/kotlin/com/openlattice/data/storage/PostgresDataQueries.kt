@@ -59,11 +59,16 @@ fun buildPreparableFiltersSql(
     val filtersClauses = buildPreparableFiltersClause(startIndex, propertyTypes, propertyTypeFilters)
     val filtersClause = if (filtersClauses.first.isNotEmpty()) " AND ${filtersClauses.first} " else ""
 
-    val metadataOptionColumns = metadataOptions.associateWith(::mapMetaDataToColumn)
-    val nonAggregatedMetadataSql = metadataOptionColumns.filter { isMetaDataAggregated(it.key) }.values.joinToString("")
+    val metadataOptionColumns = metadataOptions.associateWith(::mapMetaDataToColumnSql)
+    val nonAggregatedMetadataSql = metadataOptionColumns
+            .filter { !isMetaDataAggregated(it.key) }.values.joinToString("")
     val innerGroupBy = groupBy(ESID_EKID_PART_PTID + nonAggregatedMetadataSql)
     // TODO: remove IS NOT NULL post-migration
-    val linkingClause = if (linking) " AND ${ORIGIN_ID.name} IS NOT NULL AND ${ORIGIN_ID.name} != '${IdConstants.EMPTY_ORIGIN_ID.id}' " else ""
+    val linkingClause = if (linking) {
+        " AND ${ORIGIN_ID.name} IS NOT NULL AND ${ORIGIN_ID.name} != '${IdConstants.EMPTY_ORIGIN_ID.id}' "
+    } else {
+        ""
+    }
 
     val innerSql = selectEntitiesGroupedByIdAndPropertyTypeId(
             metadataOptions,
@@ -95,7 +100,7 @@ internal fun selectEntitiesGroupedByIdAndPropertyTypeId(
 /**
  * Returns the correspondent column name used for the metadata option with a comma prefix.
  */
-private fun mapMetaDataToColumn(metadataOption: MetadataOption): String {
+private fun mapMetaDataToColumnSql(metadataOption: MetadataOption): String {
     return ",${mapMetaDataToColumnName(metadataOption)}"
 }
 
