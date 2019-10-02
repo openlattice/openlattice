@@ -40,7 +40,6 @@ fun getEntityPropertiesByPropertyTypeId(
             propertyTypes,
             byteBlobDataManager
     )
-    entity[IdConstants.ID_ID.id] = mutableSetOf<Any>(id)
 
     return id to entity
 }
@@ -48,6 +47,9 @@ fun getEntityPropertiesByPropertyTypeId(
 /**
  * Returns linked entity data from the [ResultSet] mapped respectively by its id, entity set, origin id and property
  * type id.
+ * Note: Do not include the linking id for the [IdConstants.ID_ID] key as a property for this adapter, because it is
+ * used for linked entity indexing and we preserve that key for the origin id.
+ * @see ConductorElasticsearchImpl.formatLinkedEntity
  */
 @Throws(SQLException::class)
 fun getEntityPropertiesByEntitySetIdOriginIdAndPropertyTypeId(
@@ -65,7 +67,6 @@ fun getEntityPropertiesByEntitySetIdOriginIdAndPropertyTypeId(
             propertyTypes,
             byteBlobDataManager
     )
-    entity[IdConstants.ID_ID.id] = mutableSetOf<Any>(id)
 
     return id to (entitySetId to (originId to entity))
 }
@@ -84,7 +85,7 @@ fun getEntityPropertiesByFullQualifiedName(
     val entity = readJsonDataColumns(rs, propertyTypes, byteBlobDataManager)
 
     val entityByFqn = entity.mapKeys { propertyTypes.getValue(it.key).type }.toMutableMap()
-    entityByFqn[ID_FQN] = mutableSetOf<Any>(id)
+    entityByFqn[ID_FQN] = mutableSetOf<Any>(id.toString())
 
     return id to entityByFqn
 
