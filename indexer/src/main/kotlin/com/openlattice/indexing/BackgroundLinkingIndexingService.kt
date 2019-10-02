@@ -29,6 +29,7 @@ import com.hazelcast.query.Predicates
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi
 import com.openlattice.data.storage.EntityDatastore
 import com.openlattice.data.storage.IndexingMetadataManager
+import com.openlattice.data.storage.MetadataOption
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
@@ -130,7 +131,11 @@ class BackgroundLinkingIndexingService(
                 .associateWith { Optional.of(setOf(linkingId)) } // entity_set_id/linking_id
         val propertyTypesOfEntitySets = dirtyLinkingIdByEntitySetIds.keys.associateWith { personPropertyTypes } // entity_set_id/property_type_id/property_type
         val linkedEntityData = dataStore // linking_id/entity_set_id/entity_key_id/property_type_id
-                .getLinkedEntityDataByLinkingIdWithMetadata(dirtyLinkingIdByEntitySetIds, propertyTypesOfEntitySets)
+                .getLinkedEntityDataByLinkingIdWithMetadata(
+                        dirtyLinkingIdByEntitySetIds,
+                        propertyTypesOfEntitySets,
+                        EnumSet.of(MetadataOption.LAST_WRITE)
+                )
 
         val indexCount = indexLinkedEntity(
                 linkingId, lastWrite, personEntityType.id, linkedEntityData.getValue(linkingId)
