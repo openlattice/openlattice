@@ -1,18 +1,23 @@
 package com.openlattice.data.storage
 
 import com.google.common.collect.Multimaps
+import com.openlattice.IdConstants
 import com.openlattice.analysis.SqlBindInfo
 import com.openlattice.analysis.requests.Filter
+import com.openlattice.data.DeleteType
 import com.openlattice.data.WriteEvent
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.data.storage.partitions.PartitionsInfo
 import com.openlattice.data.util.PostgresDataHasher
+import com.openlattice.edm.set.ExpirationBase
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.*
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.streams.BasePostgresIterable
+import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
+import com.openlattice.postgres.streams.StatementHolder
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.commons.lang3.NotImplementedException
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
@@ -23,8 +28,12 @@ import java.security.InvalidParameterException
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
+import java.sql.Statement
+import java.time.OffsetDateTime
 import java.util.*
 import java.util.concurrent.atomic.AtomicLong
+import java.util.function.Function
+import java.util.function.Supplier
 import kotlin.streams.asStream
 
 const val S3_DELETE_BATCH_SIZE = 10000
@@ -927,6 +936,41 @@ class PostgresEntityDataQueryService(
 
 
         return WriteEvent(tombstoneVersion, numUpdated)
+    }
+
+    fun getExpiringEntitiesFromEntitySet(entitySetId: UUID, expirationBaseColumn: String, formattedDateMinusTTE: Any,
+                                         sqlFormat: Int, deleteType: DeleteType) : BasePostgresIterable<UUID> {
+        val partitionsInfo: PartitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
+        val partitions = PostgresArrays.createIntArray(hds.connection, partitionsInfo.partitions)
+        val partitionVersion = partitionsInfo.partitionsVersion
+        return BasePostgresIterable(
+                PreparedStatementHolderSupplier(
+                        hds,
+                        getExpiringEntitiesQuery(expirationBaseColumn, deleteType),
+                        FETCH_SIZE,
+                        false
+                ) {stmt ->
+                    stmt.setObject(1, entitySetId)
+                    stmt.setArray(2, partitions)
+                    stmt.setInt(3, partitionVersion)
+                    stmt.setObject(4, IdConstants.ID_ID.id)
+                    stmt.setObject(5, formattedDateMinusTTE, sqlFormat)
+                }
+        ) { rs -> ResultSetAdapters.id(rs)}
+    }
+
+    private fun getExpiringEntitiesQuery(expirationBaseColumn: String, deleteType: DeleteType) : String {
+        var ignoredClearedEntitiesClause = ""
+        if (deleteType == DeleteType.Soft) {
+            ignoredClearedEntitiesClause = "AND ${VERSION.name} >= 0 "
+        }
+        return "SELECT ${ID.name} FROM ${PostgresTable.DATA.name} " +
+                "WHERE ${ENTITY_SET_ID.name} = ? " +
+                "AND ${PARTITION.name} = ANY(?) " +
+                "AND ${PARTITIONS_VERSION.name} = ? " +
+                "AND ${PROPERTY_TYPE_ID.name} != ? " +
+                "AND $expirationBaseColumn <= ? " +
+                ignoredClearedEntitiesClause // this clause ignores entities that have already been cleared
     }
 }
 

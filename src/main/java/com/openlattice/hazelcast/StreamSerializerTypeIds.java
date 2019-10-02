@@ -44,6 +44,7 @@ public enum StreamSerializerTypeIds {
     CALLABLE,
     COMP_ACL_KEY,
     DATA_KEY,
+    DATA_EXPIRATION,
     EDGE_COUNT_ENTRY_PROCESSOR,
     EMPLOYEE,
     ENTITY_KEY,
