@@ -54,7 +54,8 @@ public class UpdateEntityTypeMetadataProcessorStreamSerializerTest extends
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
-                Optional.of( Sets.newLinkedHashSet( Arrays.asList(1,2,3))));
+                Optional.of( Sets.newLinkedHashSet( Arrays.asList(1,2,3))),
+                Optional.empty());
         return new UpdateEntityTypeMetadataProcessor( update );
     }
 
