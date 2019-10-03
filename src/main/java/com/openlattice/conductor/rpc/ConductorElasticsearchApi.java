@@ -141,6 +141,13 @@ public interface ConductorElasticsearchApi {
 
     boolean createBulkEntityData( UUID entityTypeId, UUID entitySetId, Map<UUID, Map<UUID, Set<Object>>> entitiesById );
 
+    /**
+     * Creates documents in elasticsearch for each of these linked entities.
+     * @param entityTypeId The entity type of the linked entities.
+     * @param entitiesByLinkingId Map of the linked entity data, mapped by (respectively) linking id, entity set id,
+     *                            origin id (as in the entity key id of the source entity) and property type id.
+     * @return true if indexing was successful
+     */
     boolean createBulkLinkedData(
             UUID entityTypeId,
             Map<UUID, Map<UUID, Map<UUID, Map<UUID, Set<Object>>>>> entitiesByLinkingId
