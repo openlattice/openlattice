@@ -12,9 +12,9 @@ class AddEntitySetsToLinkingEntitySetProcessor(val entitySetIds: Set<UUID>) :
         private const val serialVersionUID = 66023847982347L
     }
 
-    override fun process(entry: MutableMap.MutableEntry<UUID, EntitySet>?): EntitySet {
-        val entitySet = entry!!.value
-        entitySet.linkedEntitySets.addAll(entitySetIds) // shouldn't be null at this point
+    override fun process(entry: MutableMap.MutableEntry<UUID, EntitySet?>): EntitySet {
+        val entitySet = entry.value
+        entitySet!!.linkedEntitySets.addAll(entitySetIds) // shouldn't be null at this point
         entry.setValue(entitySet)
         return entitySet
     }
