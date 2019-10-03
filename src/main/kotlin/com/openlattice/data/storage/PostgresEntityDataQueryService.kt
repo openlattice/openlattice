@@ -618,7 +618,9 @@ class PostgresEntityDataQueryService(
                     tombstoneVersion,
                     partitionsInfo
             )
-            updateLastWrite(conn, entitySetId, entityKeyIds, partitionsInfo)
+            if (writeEvent.numUpdates > 0) {
+                updateLastWrite(conn, entitySetId, entityKeyIds, partitionsInfo)
+            }
             return@use writeEvent
         }
     }
@@ -646,8 +648,10 @@ class PostgresEntityDataQueryService(
                     )
                 }.sum()
 
-        hds.connection.use { conn ->
-            updateLastWrite(conn, entitySetId, entityKeyIds, partitionsInfo)
+        if (numUpdates > 0) {
+            hds.connection.use { conn ->
+                updateLastWrite(conn, entitySetId, entityKeyIds, partitionsInfo)
+            }
         }
 
         return WriteEvent(System.currentTimeMillis(), numUpdates)
