@@ -1,7 +1,7 @@
 package com.openlattice.hazelcast.serializers
 
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest
-import com.openlattice.edm.collection.EntityTypeCollection
+import com.openlattice.collections.EntityTypeCollection
 import com.openlattice.mapstores.TestDataFactory
 
 class EntityTypeCollectionStreamSerializerTest: AbstractStreamSerializerTest<EntityTypeCollectionStreamSerializer, EntityTypeCollection>() {

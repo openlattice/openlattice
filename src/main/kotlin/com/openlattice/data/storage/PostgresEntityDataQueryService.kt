@@ -310,7 +310,7 @@ class PostgresEntityDataQueryService(
 
         connection.autoCommit = true
         val entityKeyIdsArr = PostgresArrays.createUuidArray(connection, entities.keys)
-        val versionsArrays = PostgresArrays.createLongArray(connection, arrayOf(version))
+        val versionsArrays = PostgresArrays.createLongArray(connection, version)
 
         /*
          * Our approach is to use entity level locking that takes advantage of the router executor to avoid deadlocks.
@@ -576,13 +576,37 @@ class PostgresEntityDataQueryService(
         val numUpdates = entityKeyIds
                 .groupBy { getPartition(it, partitions) }
                 .map { (partition, entities) ->
-                    deleteEntities(entitySetId, entities, authorizedPropertyTypes, partition, partitionVersion)
+                    deletePropertiesFromEntities(entitySetId, entities, authorizedPropertyTypes, partition, partitionVersion)
                 }.sum()
 
         return WriteEvent(System.currentTimeMillis(), numUpdates)
     }
 
-    private fun deleteEntities(
+    fun deleteEntityDataAndEntities(
+            entitySetId: UUID,
+            entityKeyIds: Set<UUID>,
+            authorizedPropertyTypes: Map<UUID, PropertyType>,
+            partitionsInfo: PartitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
+    ): WriteEvent {
+        // Delete properties from S3
+        authorizedPropertyTypes.map { property ->
+            if (property.value.datatype == EdmPrimitiveTypeKind.Binary) {
+                deletePropertyOfEntityFromS3(entitySetId, entityKeyIds, property.key)
+            }
+        }
+
+        val partitions = partitionsInfo.partitions.toList()
+        val partitionVersion = partitionsInfo.partitionsVersion
+        val numUpdates = entityKeyIds
+                .groupBy { getPartition(it, partitions) }
+                .map { (partition, entities) ->
+                    deleteEntities(entitySetId, entities, partition, partitionVersion)
+                }.sum()
+
+        return WriteEvent(System.currentTimeMillis(), numUpdates)
+    }
+
+    private fun deletePropertiesFromEntities(
             entitySetId: UUID,
             entities: Collection<UUID>,
             authorizedPropertyTypes: Map<UUID, PropertyType>,
@@ -609,6 +633,36 @@ class PostgresEntityDataQueryService(
             ps.setInt(3, partition)
             ps.setInt(4, partitionVersion)
             ps.setArray(5, propertyTypesArr)
+
+            val count = ps.executeUpdate()
+            connection.commit()
+            count
+        }
+    }
+
+    private fun deleteEntities(
+            entitySetId: UUID,
+            entities: Collection<UUID>,
+            partition: Int,
+            partitionVersion: Int
+    ): Int {
+        return hds.connection.use { connection ->
+            connection.autoCommit = false
+
+            val idsArr = PostgresArrays.createUuidArray(connection, entities)
+
+            // Acquire entity key id locks
+            val rowLocks = connection.prepareStatement(lockEntitiesSql)
+            rowLocks.setArray(1, idsArr)
+            rowLocks.setInt(2, partition)
+            rowLocks.executeQuery()
+
+            // Delete entity properties from data table
+            val ps = connection.prepareStatement(deleteEntitiesInEntitySet)
+            ps.setObject(1, entitySetId)
+            ps.setArray(2, idsArr)
+            ps.setInt(3, partition)
+            ps.setInt(4, partitionVersion)
 
             val count = ps.executeUpdate()
             connection.commit()

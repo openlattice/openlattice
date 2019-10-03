@@ -4,7 +4,7 @@ import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
-import com.openlattice.edm.collection.EntitySetCollection
+import com.openlattice.collections.EntitySetCollection
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import org.springframework.stereotype.Component
 import java.util.*
@@ -48,7 +48,7 @@ class EntitySetCollectionStreamSerializer : SelfRegisteringStreamSerializer<Enti
         val description = Optional.of(input.readUTF())
         val entityTypeCollectionId = UUIDStreamSerializer.deserialize(input)
         val contacts = SetStreamSerializers.deserialize(input, ObjectDataInput::readUTF)
-        val organizationId = Optional.of(UUIDStreamSerializer.deserialize(input))
+        val organizationId = UUIDStreamSerializer.deserialize(input)
 
         val templateSize = input.readInt()
         val template = mutableMapOf<UUID, UUID>()

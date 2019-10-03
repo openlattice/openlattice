@@ -25,6 +25,7 @@ import com.hazelcast.core.Offloadable
 import com.hazelcast.spi.ExecutionService
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.assembler.AssemblerConnectionManager
+import com.openlattice.assembler.AssemblerConnectionManagerDependent
 import com.openlattice.assembler.EntitySetAssemblyKey
 import com.openlattice.assembler.MaterializedEntitySet
 import com.openlattice.authorization.Principal
@@ -39,7 +40,9 @@ data class SynchronizeMaterializedEntitySetProcessor(
         val entitySet: EntitySet,
         val materializablePropertyTypes: Map<UUID, PropertyType>,
         val authorizedPropertyTypesOfPrincipals: Map<Principal, Set<PropertyType>>
-) : AbstractRhizomeEntryProcessor<EntitySetAssemblyKey, MaterializedEntitySet, Void?>(), Offloadable {
+) : AbstractRhizomeEntryProcessor<EntitySetAssemblyKey, MaterializedEntitySet, Void?>(),
+        AssemblerConnectionManagerDependent<SynchronizeMaterializedEntitySetProcessor>,
+        Offloadable {
     @Transient
     private var acm: AssemblerConnectionManager? = null
 
@@ -72,7 +75,7 @@ data class SynchronizeMaterializedEntitySetProcessor(
         return ExecutionService.OFFLOADABLE_EXECUTOR
     }
 
-    fun init(acm: AssemblerConnectionManager): SynchronizeMaterializedEntitySetProcessor {
+    override fun init(acm: AssemblerConnectionManager): SynchronizeMaterializedEntitySetProcessor {
         this.acm = acm
         return this
     }

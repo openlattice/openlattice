@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.hazelcast.config.InMemoryFormat
 import com.hazelcast.config.MapConfig
 import com.hazelcast.config.MapIndexConfig
-import com.openlattice.edm.collection.EntitySetCollection
+import com.openlattice.collections.EntitySetCollection
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.postgres.PostgresArrays

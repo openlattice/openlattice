@@ -1,15 +1,15 @@
 package com.openlattice.collections.processors
 
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
-import com.openlattice.edm.collection.EntitySetCollection
+import com.openlattice.collections.EntitySetCollection
 import com.openlattice.edm.requests.MetadataUpdate
 import java.util.*
 
 class UpdateEntitySetCollectionMetadataProcessor(val update: MetadataUpdate):
         AbstractRhizomeEntryProcessor<UUID, EntitySetCollection, EntitySetCollection?>() {
 
-    override fun process(entry: MutableMap.MutableEntry<UUID, EntitySetCollection>?): EntitySetCollection? {
-        val collection = entry?.value ?: return null
+    override fun process(entry: MutableMap.MutableEntry<UUID, EntitySetCollection>): EntitySetCollection? {
+        val collection = entry.value
 
         if (update.title.isPresent) {
             collection.title = update.title.get()
@@ -41,9 +41,7 @@ class UpdateEntitySetCollectionMetadataProcessor(val update: MetadataUpdate):
 
         other as UpdateEntitySetCollectionMetadataProcessor
 
-        if (update != other.update) return false
-
-        return true
+        return update == other.update
     }
 
     override fun hashCode(): Int {

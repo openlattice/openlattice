@@ -67,6 +67,15 @@ public interface AuthorizationManager {
             OffsetDateTime expirationDate );
 
     @Timed
+    void addPermissions( List<Acl> acls );
+
+    @Timed
+    void removePermissions( List<Acl> acls );
+
+    @Timed
+    void setPermissions( List<Acl> acls );
+
+    @Timed
     void removePermission(
             AclKey aclKeys,
             Principal principal,

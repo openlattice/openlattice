@@ -1,16 +1,16 @@
 package com.openlattice.collections.processors
 
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
-import com.openlattice.edm.collection.CollectionTemplateType
-import com.openlattice.edm.collection.EntityTypeCollection
+import com.openlattice.collections.CollectionTemplateType
+import com.openlattice.collections.EntityTypeCollection
 import java.util.*
 
 class AddPairToEntityTypeCollectionTemplateProcessor(
         val collectionTemplateType: CollectionTemplateType
 ) : AbstractRhizomeEntryProcessor<UUID, EntityTypeCollection, EntityTypeCollection?>() {
 
-    override fun process(entry: MutableMap.MutableEntry<UUID, EntityTypeCollection>?): EntityTypeCollection? {
-        val collection = entry?.value ?: return null
+    override fun process(entry: MutableMap.MutableEntry<UUID, EntityTypeCollection>): EntityTypeCollection? {
+        val collection = entry.value
 
         collection.addTypeToTemplate(collectionTemplateType)
         entry.setValue(collection)

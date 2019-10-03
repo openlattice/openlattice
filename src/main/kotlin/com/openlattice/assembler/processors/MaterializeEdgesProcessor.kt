@@ -26,6 +26,7 @@ import com.hazelcast.core.ReadOnly
 import com.hazelcast.spi.ExecutionService
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.assembler.AssemblerConnectionManager
+import com.openlattice.assembler.AssemblerConnectionManagerDependent
 import com.openlattice.assembler.OrganizationAssembly
 import com.openlattice.authorization.Principal
 import java.util.UUID
@@ -34,7 +35,10 @@ import java.util.UUID
 private const val NOT_INITIALIZED = "Assembler Connection Manager not initialized."
 
 data class MaterializeEdgesProcessor(val authorizedPrincipals: Set<Principal>)
-    : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(false), Offloadable, ReadOnly {
+    : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(false),
+        AssemblerConnectionManagerDependent<MaterializeEdgesProcessor>,
+        Offloadable,
+        ReadOnly {
     @Transient
     private var acm: AssemblerConnectionManager? = null
 
@@ -56,7 +60,7 @@ data class MaterializeEdgesProcessor(val authorizedPrincipals: Set<Principal>)
         return ExecutionService.OFFLOADABLE_EXECUTOR
     }
 
-    fun init(acm: AssemblerConnectionManager): MaterializeEdgesProcessor {
+    override fun init(acm: AssemblerConnectionManager): MaterializeEdgesProcessor {
         this.acm = acm
         return this
     }

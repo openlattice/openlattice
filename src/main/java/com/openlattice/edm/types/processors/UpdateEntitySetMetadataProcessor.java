@@ -27,7 +27,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Map.Entry;
 import java.util.UUID;
 
-public class UpdateEntitySetMetadataProcessor extends AbstractRhizomeEntryProcessor<UUID, EntitySet, Object> {
+public class UpdateEntitySetMetadataProcessor extends AbstractRhizomeEntryProcessor<UUID, EntitySet, EntitySet> {
     private static final long           serialVersionUID = 5385727595860961157L;
     @SuppressFBWarnings( value = "SE_BAD_FIELD", justification = "Custom Stream Serializer is implemented" )
     private final        MetadataUpdate update;
@@ -37,7 +37,7 @@ public class UpdateEntitySetMetadataProcessor extends AbstractRhizomeEntryProces
     }
 
     @Override
-    public Object process( Entry<UUID, EntitySet> entry ) {
+    public EntitySet process( Entry<UUID, EntitySet> entry ) {
         EntitySet es = entry.getValue();
         if ( es != null ) {
             update.getTitle().ifPresent( es::setTitle );
@@ -48,7 +48,7 @@ public class UpdateEntitySetMetadataProcessor extends AbstractRhizomeEntryProces
             update.getPartitions().ifPresent( es::setPartitions );
             entry.setValue( es );
         }
-        return null;
+        return es;
     }
 
     public MetadataUpdate getUpdate() {

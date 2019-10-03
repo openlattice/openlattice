@@ -22,13 +22,9 @@ package com.openlattice.hazelcast.serializers;
 
 import java.io.Serializable;
 
-import com.openlattice.edm.EntitySet;
-import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.edm.types.processors.UpdateEntitySetMetadataProcessor;
 import com.openlattice.mapstores.TestDataFactory;
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest;
-import java.util.Optional;
-import org.junit.Test;
 
 public class UpdateEntitySetMetadataProcessorStreamSerializerTest extends
         AbstractStreamSerializerTest<UpdateEntitySetMetadataProcessorStreamSerializer, UpdateEntitySetMetadataProcessor>
@@ -43,18 +39,7 @@ public class UpdateEntitySetMetadataProcessorStreamSerializerTest extends
 
     @Override
     protected UpdateEntitySetMetadataProcessor createInput() {
-//        EntitySet es = TestDataFactory.entitySet();
-//        MetadataUpdate update = new MetadataUpdate(
-//                Optional.of( es.getTitle() ),
-//                Optional.of( es.getDescription() ),
-//                Optional.of( es.getName() ),
-//                Optional.of( es.getContacts() ),
-//                Optional.empty(),
-//                Optional.empty(),
-//                Optional.empty(),
-//                Optional.empty(),
-//                Optional.empty(),
-//                Optional.of( TestDataFactory.organizationPrincipal() ) );
+
         return new UpdateEntitySetMetadataProcessor( TestDataFactory.metadataUpdate() );
     }
 

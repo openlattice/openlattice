@@ -2,7 +2,7 @@ package com.openlattice.collections.mapstores
 
 import com.dataloom.mappers.ObjectMappers
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.openlattice.edm.collection.EntityTypeCollection
+import com.openlattice.collections.EntityTypeCollection
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.postgres.PostgresArrays
@@ -13,8 +13,6 @@ import com.zaxxer.hikari.HikariDataSource
 import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.util.*
-
-private val mapper: ObjectMapper = ObjectMappers.getJsonMapper()
 
 open class EntityTypeCollectionMapstore(
         hds: HikariDataSource
@@ -28,7 +26,7 @@ open class EntityTypeCollectionMapstore(
         val schemas = PostgresArrays.createTextArray(
                 ps.connection,
                 value.schemas.map { it.fullQualifiedNameAsString })
-        val templateString = mapper.writeValueAsString(value.template)
+        val templateString = ObjectMappers.getJsonMapper().writeValueAsString(value.template)
 
         // Create
         ps.setString(index++, fqn.namespace)

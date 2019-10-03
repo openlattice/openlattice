@@ -1,5 +1,5 @@
 package com.openlattice.edm.events
 
-import com.openlattice.edm.collection.EntitySetCollection
+import com.openlattice.collections.EntitySetCollection
 
 data class EntitySetCollectionCreatedEvent(val entitySetCollection: EntitySetCollection)

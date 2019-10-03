@@ -1,13 +1,13 @@
 package com.openlattice.collections.processors
 
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
-import com.openlattice.edm.collection.EntitySetCollection
+import com.openlattice.collections.EntitySetCollection
 import java.util.*
 
-class UpdateEntitySetCollectionTemplateProcessor(val template: Map<UUID, UUID>) : AbstractRhizomeEntryProcessor<UUID, EntitySetCollection, EntitySetCollection?>() {
+class UpdateEntitySetCollectionTemplateProcessor(val template: MutableMap<UUID, UUID>) : AbstractRhizomeEntryProcessor<UUID, EntitySetCollection, EntitySetCollection?>() {
 
-    override fun process(entry: MutableMap.MutableEntry<UUID, EntitySetCollection>?): EntitySetCollection? {
-        val collection = entry?.value ?: return null
+    override fun process(entry: MutableMap.MutableEntry<UUID, EntitySetCollection>): EntitySetCollection? {
+        val collection = entry.value
 
         collection.template = template
         entry.setValue(collection)
@@ -21,9 +21,7 @@ class UpdateEntitySetCollectionTemplateProcessor(val template: Map<UUID, UUID>) 
 
         other as UpdateEntitySetCollectionTemplateProcessor
 
-        if (template != other.template) return false
-
-        return true
+        return template == other.template
     }
 
     override fun hashCode(): Int {

@@ -188,8 +188,7 @@ public final class PostgresTable {
                             ENTITY_SET_COLLECTION_ID,
                             TEMPLATE_TYPE_ID,
                             ENTITY_SET_ID )
-                    .primaryKey( ENTITY_SET_COLLECTION_ID, TEMPLATE_TYPE_ID )
-                    .setUnique( ENTITY_SET_COLLECTION_ID, TEMPLATE_TYPE_ID );
+                    .primaryKey( ENTITY_SET_COLLECTION_ID, TEMPLATE_TYPE_ID );
     public static final PostgresTableDefinition        ENUM_TYPES                   =
             new PostgresTableDefinition( "enum_types" )
                     .addColumns( ID,

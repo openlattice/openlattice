@@ -26,6 +26,7 @@ import com.hazelcast.core.ReadOnly
 import com.hazelcast.spi.ExecutionService
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.assembler.AssemblerConnectionManager
+import com.openlattice.assembler.AssemblerConnectionManagerDependent
 import com.openlattice.assembler.EntitySetAssemblyKey
 import com.openlattice.assembler.MaterializedEntitySet
 import com.openlattice.authorization.Principal
@@ -49,6 +50,7 @@ data class MaterializeEntitySetProcessor(
         val materializablePropertyTypes: Map<UUID, PropertyType>,
         val authorizedPropertyTypesOfPrincipals: Map<Principal, Set<PropertyType>>
 ) : AbstractRhizomeEntryProcessor<EntitySetAssemblyKey, MaterializedEntitySet, Void?>(false),
+        AssemblerConnectionManagerDependent<MaterializeEntitySetProcessor>,
         Offloadable,
         ReadOnly {
     @Transient
@@ -70,7 +72,7 @@ data class MaterializeEntitySetProcessor(
         return null
     }
 
-    fun init(acm: AssemblerConnectionManager): MaterializeEntitySetProcessor {
+    override fun init(acm: AssemblerConnectionManager): MaterializeEntitySetProcessor {
         this.acm = acm
         return this
     }
