@@ -328,7 +328,7 @@ internal val updateVersionsForEntitiesInEntitySet = "$updateVersionsForEntitySet
         "AND ${PARTITION.name} = ANY(?) AND ${PARTITIONS_VERSION.name} = ?"
 
 /**
- * Preparable SQL thatupserts a version for all properties in a given entity set in [PostgresTable.DATA]
+ * Preparable SQL thatupserts a version for all properties in a given entity set in [DATA]
  *
  * The following bind order is expected:
  *
@@ -341,7 +341,7 @@ internal val updateVersionsForEntitiesInEntitySet = "$updateVersionsForEntitySet
 internal val updateVersionsForPropertyTypesInEntitySet = "$updateVersionsForPropertiesInEntitySet AND ${PROPERTY_TYPE_ID.name} = ANY(?)"
 
 /**
- * Preparable SQL that updates a version for all properties in a given entity set in [PostgresTable.DATA]
+ * Preparable SQL that updates a version for all properties in a given entity set in [DATA]
  *
  * The following bind order is expected:
  *
@@ -357,7 +357,7 @@ internal val updateVersionsForPropertiesInEntitiesInEntitySet = "$updateVersions
         "AND ${PARTITION.name} = ANY(?) AND ${PARTITIONS_VERSION.name} = ? "
 
 /**
- * Preparable SQL thatpserts a version for all properties in a given entity set in [PostgresTable.DATA]
+ * Preparable SQL thatpserts a version for all properties in a given entity set in [DATA]
  *
  * The following bind order is expected:
  *
@@ -373,7 +373,7 @@ internal val updateVersionsForPropertiesInEntitiesInEntitySet = "$updateVersions
 internal val updateVersionsForPropertyTypesInEntitiesInEntitySet = "$updateVersionsForPropertiesInEntitiesInEntitySet AND ${PROPERTY_TYPE_ID.name} = ANY(?)"
 
 /**
- * Preparable SQL updates a version for all property values in a given entity set in [PostgresTable.DATA]
+ * Preparable SQL updates a version for all property values in a given entity set in [DATA]
  *
  * The following bind order is expected:
  *
@@ -392,7 +392,7 @@ internal val updateVersionsForPropertyValuesInEntitiesInEntitySet = "$updateVers
 
 
 /**
- * Preparable SQL deletes a given property in a given entity set in [PostgresTable.IDS]
+ * Preparable SQL deletes a given property in a given entity set in [IDS]
  *
  * The following bind order is expected:
  *
@@ -402,7 +402,7 @@ internal val updateVersionsForPropertyValuesInEntitiesInEntitySet = "$updateVers
 internal val deletePropertyInEntitySet = "DELETE FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${PROPERTY_TYPE_ID.name} = ? "
 
 /**
- * Preparable SQL deletes all entity ids a given entity set in [PostgresTable.IDS]
+ * Preparable SQL deletes all entity ids a given entity set in [IDS]
  *
  * The following bind order is expected:
  *
@@ -411,7 +411,7 @@ internal val deletePropertyInEntitySet = "DELETE FROM ${DATA.name} WHERE ${ENTIT
 internal val deleteEntitySetEntityKeys = "DELETE FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = ? "
 
 /**
- * Preparable SQL deletes all property values of entities in a given entity set in [PostgresTable.DATA]
+ * Preparable SQL deletes all property values of entities in a given entity set in [DATA]
  *
  * The following bind order is expected:
  *
@@ -425,7 +425,7 @@ internal val deletePropertiesOfEntitiesInEntitySet = "DELETE FROM ${DATA.name} "
         "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ? AND ${PARTITIONS_VERSION.name} = ? AND ${PROPERTY_TYPE_ID.name} = ANY(?) "
 
 /**
- * Preparable SQL deletes all property values of entities and entity key id in a given entity set in [PostgresTable.DATA]
+ * Preparable SQL deletes all property values of entities and entity key id in a given entity set in [DATA]
  *
  * The following bind order is expected:
  *
@@ -438,7 +438,20 @@ internal val deleteEntitiesInEntitySet = "DELETE FROM ${DATA.name} " +
         "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ? AND ${PARTITIONS_VERSION.name} = ? "
 
 /**
- * Preparable SQL deletes all entities in a given entity set in [PostgresTable.IDS]
+ * Preparable SQL updates last write to current time for all entity ids a given entity set in [IDS]
+ *
+ * The following bind order is expected:
+ *
+ * 1. entity set id
+ * 2. entity key ids
+ * 3. partition
+ * 4. partition version
+ */
+internal val updateLastWriteForEntitiesInEntitySet = "UPDATE ${IDS.name} SET ${LAST_WRITE.name} = 'now()' " +
+        "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID.name} = ANY(?) AND ${PARTITION.name} = ANY(?) AND ${PARTITIONS_VERSION.name} = ?"
+
+/**
+ * Preparable SQL deletes all entities in a given entity set in [IDS]
  *
  * The following bind order is expected:
  *
