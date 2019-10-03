@@ -24,11 +24,13 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.LinkedHashMultimap;
 import com.openlattice.client.serialization.SerializationConstants;
 import com.openlattice.postgres.IndexType;
+
 import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
@@ -70,7 +72,7 @@ public class MetadataUpdate {
                     Optional<LinkedHashMultimap<UUID, String>> propertyTags,
             @JsonProperty( SerializationConstants.INDEX_TYPE ) Optional<IndexType> indexType,
             @JsonProperty( SerializationConstants.ORGANIZATION_ID ) Optional<UUID> organizationId,
-            @JsonProperty(SerializationConstants.PARTITIONS) Optional<LinkedHashSet<Integer>> partitions) {
+            @JsonProperty( SerializationConstants.PARTITIONS ) Optional<LinkedHashSet<Integer>> partitions ) {
         // WARNING These checks have to be consistent with the same check elsewhere.
         Preconditions.checkArgument( !title.isPresent() || StringUtils.isNotBlank( title.get() ),
                 "Title cannot be blank." );
@@ -107,7 +109,7 @@ public class MetadataUpdate {
             Optional<String> url,
             Optional<LinkedHashMultimap<UUID, String>> propertyTags,
             Optional<UUID> organizationId,
-            Optional<LinkedHashSet<Integer>> partitions) {
+            Optional<LinkedHashSet<Integer>> partitions ) {
         this( title,
                 description,
                 name,
@@ -177,7 +179,7 @@ public class MetadataUpdate {
         return indexType;
     }
 
-    @JsonProperty(SerializationConstants.PARTITIONS)
+    @JsonProperty( SerializationConstants.PARTITIONS )
     public Optional<LinkedHashSet<Integer>> getPartitions() {
         return partitions;
     }
@@ -322,7 +324,7 @@ public class MetadataUpdate {
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
-                Optional.empty());
+                Optional.empty() );
     }
 
     public static MetadataUpdate trimToEntityTypeCollectionUpdate( MetadataUpdate update ) {

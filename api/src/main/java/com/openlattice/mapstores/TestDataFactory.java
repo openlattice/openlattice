@@ -27,14 +27,13 @@ import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.AbstractSecurableType;
 import com.openlattice.authorization.securable.SecurableObjectType;
+import com.openlattice.collections.CollectionTemplateType;
+import com.openlattice.collections.EntitySetCollection;
+import com.openlattice.collections.EntityTypeCollection;
 import com.openlattice.data.EntityDataKey;
 import com.openlattice.data.EntityKey;
 import com.openlattice.edm.EdmDetails;
 import com.openlattice.edm.EntitySet;
-import com.openlattice.edm.collection.CollectionTemplateType;
-import com.openlattice.edm.collection.CollectionTemplates;
-import com.openlattice.edm.collection.EntitySetCollection;
-import com.openlattice.edm.collection.EntityTypeCollection;
 import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.edm.type.Analyzer;
 import com.openlattice.edm.type.AssociationType;
@@ -585,7 +584,7 @@ public final class TestDataFactory {
                 ImmutableSet.of( randomAlphanumeric( 5 ),
                         randomAlphanumeric( 5 ),
                         randomAlphanumeric( 5 ) ),
-                Optional.of( UUID.randomUUID() )
+                UUID.randomUUID()
         );
     }
 

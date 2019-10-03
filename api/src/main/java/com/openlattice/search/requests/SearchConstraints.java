@@ -6,6 +6,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.openlattice.client.serialization.SerializationConstants;
 import com.openlattice.search.SearchApi;
+import com.openlattice.search.SortDefinition;
 
 import java.time.OffsetDateTime;
 import java.util.*;
@@ -17,20 +18,22 @@ public class SearchConstraints {
     private final int                   start;
     private final int                   maxHits;
     private final List<ConstraintGroup> constraintGroups;
+    private final SortDefinition        sortDefinition;
 
     @JsonCreator
     public SearchConstraints(
             @JsonProperty( SerializationConstants.ENTITY_SET_IDS ) UUID[] entitySetIds,
             @JsonProperty( SerializationConstants.START ) int start,
             @JsonProperty( SerializationConstants.MAX_HITS ) int maxHits,
-            @JsonProperty( SerializationConstants.CONSTRAINTS ) List<ConstraintGroup> constraintGroups
-
+            @JsonProperty( SerializationConstants.CONSTRAINTS ) List<ConstraintGroup> constraintGroups,
+            @JsonProperty( SerializationConstants.SORT ) Optional<SortDefinition> sortDefinition
     ) {
 
         this.entitySetIds = Arrays.copyOf( entitySetIds, entitySetIds.length );
         this.start = start;
         this.maxHits = Math.min( maxHits, SearchApi.MAX_SEARCH_RESULTS );
         this.constraintGroups = constraintGroups;
+        this.sortDefinition = sortDefinition.orElse( new SortDefinition() );
 
         Preconditions.checkNotNull( entitySetIds, "entitySetIds cannot be null" );
         Preconditions.checkArgument( entitySetIds.length > 0, "entitySetIds cannot be empty" );
@@ -54,7 +57,8 @@ public class SearchConstraints {
             Optional<DistanceUnit> distanceUnit,
             Optional<List<List<List<Double>>>> zones,
             Optional<OffsetDateTime> startDate,
-            Optional<OffsetDateTime> endDate ) {
+            Optional<OffsetDateTime> endDate,
+            Optional<SortDefinition> sortDefinition ) {
         this( entitySetIds,
                 start,
                 maxHits,
@@ -71,7 +75,8 @@ public class SearchConstraints {
                         zones,
                         startDate,
                         endDate
-                ) ) ) ) );
+                ) ) ) ),
+                sortDefinition );
     }
 
     public static SearchConstraints simpleSearchConstraints(
@@ -103,7 +108,8 @@ public class SearchConstraints {
                         Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
-                        Optional.empty() ) ) ) ) );
+                        Optional.empty() ) ) ) ),
+                Optional.empty() );
     }
 
     public static SearchConstraints advancedSearchConstraints(
@@ -126,7 +132,8 @@ public class SearchConstraints {
                         Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
-                        Optional.empty() ) ) ) ) );
+                        Optional.empty() ) ) ) ),
+                Optional.empty() );
     }
 
     public static SearchConstraints geoDistanceSearchConstraints(
@@ -153,7 +160,8 @@ public class SearchConstraints {
                         Optional.of( distanceUnit ),
                         Optional.empty(),
                         Optional.empty(),
-                        Optional.empty() ) ) ) ) );
+                        Optional.empty() ) ) ) ),
+                Optional.empty() );
     }
 
     public static SearchConstraints geoPolygonSearchConstraints(
@@ -177,7 +185,8 @@ public class SearchConstraints {
                         Optional.empty(),
                         Optional.of( zones ),
                         Optional.empty(),
-                        Optional.empty() ) ) ) ) );
+                        Optional.empty() ) ) ) ),
+                Optional.empty() );
     }
 
     public static SearchConstraints writeDateTimeFilterConstraints(
@@ -203,7 +212,8 @@ public class SearchConstraints {
                         Optional.empty(),
                         startDate,
                         endDate
-                ) ) ) ) );
+                ) ) ) ),
+                Optional.empty() );
     }
 
     @JsonProperty( SerializationConstants.ENTITY_SET_IDS )
@@ -219,6 +229,11 @@ public class SearchConstraints {
     @JsonProperty( SerializationConstants.MAX_HITS )
     public int getMaxHits() {
         return maxHits;
+    }
+
+    @JsonProperty( SerializationConstants.SORT )
+    public SortDefinition getSortDefinition() {
+        return sortDefinition;
     }
 
     @JsonProperty( SerializationConstants.CONSTRAINTS )

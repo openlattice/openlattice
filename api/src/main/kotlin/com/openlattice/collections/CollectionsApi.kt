@@ -1,8 +1,8 @@
 package com.openlattice.collections
 
-import com.openlattice.edm.collection.CollectionTemplateType
-import com.openlattice.edm.collection.EntitySetCollection
-import com.openlattice.edm.collection.EntityTypeCollection
+import com.openlattice.collections.CollectionTemplateType
+import com.openlattice.collections.EntitySetCollection
+import com.openlattice.collections.EntityTypeCollection
 import com.openlattice.edm.requests.MetadataUpdate
 import retrofit2.http.*
 import java.util.*
@@ -71,7 +71,8 @@ interface CollectionsApi {
     fun createEntityTypeCollection(@Body entityTypeCollection: EntityTypeCollection): UUID
 
     /**
-     * Creates a new EntitySetCollection and creating any EntitySets missing from the template
+     * Creates a new EntitySetCollection.
+     * If autoCreate is true, any EntitySets missing from the template will be automatically generated.
      */
     @POST(BASE + ENTITY_SET_PATH)
     fun createEntitySetCollection(@Body entitySetCollection: EntitySetCollection, @Query(AUTO_CREATE) autoCreate: Boolean): UUID
