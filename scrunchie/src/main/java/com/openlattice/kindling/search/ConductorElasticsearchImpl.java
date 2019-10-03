@@ -41,7 +41,9 @@ import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organization.Organization;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
+import com.openlattice.search.SortDefinition;
 import com.openlattice.search.requests.*;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.lucene.search.join.ScoreMode;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
@@ -68,6 +70,7 @@ import org.elasticsearch.index.reindex.BulkByScrollResponse;
 import org.elasticsearch.index.reindex.DeleteByQueryAction;
 import org.elasticsearch.index.reindex.DeleteByQueryRequestBuilder;
 import org.elasticsearch.search.SearchHit;
+import org.elasticsearch.search.sort.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -691,7 +694,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     /*** ENTITY DATA SEARCH HELPERS ***/
 
     private EntityDataKeySearchResult getEntityDataKeySearchResult( MultiSearchResponse response ) {
-        Set<EntityDataKey> entityDataKeys = Sets.newHashSet();
+        List<EntityDataKey> entityDataKeys = Lists.newArrayList();
         var totalHits = 0;
         for ( MultiSearchResponse.Item item : response.getResponses() ) {
             for ( SearchHit hit : item.getResponse().getHits() ) {
@@ -910,8 +913,10 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             Map<UUID, DelegatedUUIDSet> authorizedPropertyTypesByEntitySet,
             Map<UUID, DelegatedUUIDSet> linkingEntitySets ) {
         if ( !verifyElasticsearchConnection() ) {
-            return new EntityDataKeySearchResult( 0, Sets.newHashSet() );
+            return new EntityDataKeySearchResult( 0, ImmutableList.of() );
         }
+
+        SortBuilder sort = buildSort( searchConstraints.getSortDefinition() );
 
         MultiSearchRequest requests = new MultiSearchRequest().maxConcurrentSearchRequests( MAX_CONCURRENT_SEARCHES );
 
@@ -941,15 +946,17 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 SearchRequestBuilder request = client
                         .prepareSearch( getIndexName( entityTypesByEntitySetId.get( entitySetId ) ) )
                         .setQuery( query )
+                        .setTrackTotalHits( true )
                         .setFrom( searchConstraints.getStart() )
                         .setSize( searchConstraints.getMaxHits() )
+                        .addSort( sort )
                         .setFetchSource( false );
                 requests.add( request );
             }
         }
 
         if ( requests.requests().isEmpty() ) {
-            return new EntityDataKeySearchResult( 0, Sets.newHashSet() );
+            return new EntityDataKeySearchResult( 0, ImmutableList.of() );
         }
 
         MultiSearchResponse response = client.multiSearch( requests ).actionGet();
@@ -1390,6 +1397,33 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         return QueryBuilders.matchQuery( field, value ).operator( Operator.AND );
     }
 
+    @SuppressFBWarnings( value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE", justification = "propertyTypeId cannot be null" )
+    private SortBuilder buildSort( SortDefinition sortDefinition ) {
+
+        SortBuilder sort;
+        switch ( sortDefinition.getSortType() ) {
+
+            case field:
+                sort = new FieldSortBuilder( getFieldName( sortDefinition.getPropertyTypeId() ) )
+                        .setNestedSort( new NestedSortBuilder( ENTITY ) );
+                break;
+
+            case geoDistance:
+                sort = new GeoDistanceSortBuilder( getFieldName( sortDefinition.getPropertyTypeId() ),
+                        sortDefinition.getLatitude().get(),
+                        sortDefinition.getLongitude().get() );
+                break;
+
+            case score:
+            default:
+                sort = new ScoreSortBuilder();
+                break;
+        }
+        sort.order( sortDefinition.isDescending() ? SortOrder.DESC : SortOrder.ASC );
+
+        return sort;
+    }
+
     private Map<String, Float> getFieldsMap( SecurableObjectType objectType ) {
         float f = 1F;
         Map<String, Float> fieldsMap = Maps.newHashMap();
@@ -1421,6 +1455,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 fields.add( SerializationConstants.TEMPLATE + "." + SerializationConstants.NAME_FIELD );
                 fields.add( SerializationConstants.TEMPLATE + "." + SerializationConstants.TITLE_FIELD );
                 fields.add( SerializationConstants.TEMPLATE + "." + SerializationConstants.DESCRIPTION_FIELD );
+                break;
             }
 
             case EntitySetCollection: {
@@ -1429,6 +1464,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 fields.add( SerializationConstants.CONTACTS );
                 fields.add( SerializationConstants.TEMPLATE );
                 fields.add( SerializationConstants.ORGANIZATION_ID );
+                break;
             }
 
             default: {

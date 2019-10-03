@@ -154,7 +154,6 @@ public class KindlingElasticsearchTests extends BaseElasticsearchTest {
     public static void deleteIndices() {
         elasticsearchApi.deleteEntitySet( chicagoEmployeesEntitySetId, ENTITY_TYPE_ID );
         elasticsearchApi.deleteEntitySet( entitySet2Id, ENTITY_TYPE_ID );
-        elasticsearchApi.deleteOrganization( organizationId );
     }
 
 }
