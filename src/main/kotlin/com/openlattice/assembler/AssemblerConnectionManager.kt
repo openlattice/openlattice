@@ -502,12 +502,12 @@ class AssemblerConnectionManager(
             principal: Principal,
             columns: List<String>
     ): String {
-        val postgresUserName =
-                if (principal.type == PrincipalType.USER) {
-                    buildPostgresUsername(securePrincipalsManager.getPrincipal(principal.id))
-                } else {
-                    buildPostgresRoleName(securePrincipalsManager.lookupRole(principal))
-                }
+        val postgresUserName = when (principal.type) {
+            PrincipalType.USER -> buildPostgresUsername(securePrincipalsManager.getPrincipal(principal.id))
+            PrincipalType.ROLE -> buildPostgresRoleName(securePrincipalsManager.lookupRole(principal))
+            else -> throw IllegalArgumentException("Only ${PrincipalType.USER} and ${PrincipalType.ROLE} principal " +
+                    "types can be granted select.")
+        }
 
         return grantSelectSql(entitySetTableName, quote(postgresUserName), columns)
     }
