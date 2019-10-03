@@ -29,11 +29,10 @@ data class UpdateRefreshRateProcessor(
         @Nullable val refreshRate: Long? = null
 ) : AbstractRhizomeEntryProcessor<EntitySetAssemblyKey, MaterializedEntitySet, Void?>() {
 
-    override fun process(entry: MutableMap.MutableEntry<EntitySetAssemblyKey, MaterializedEntitySet>): Void? {
+    override fun process(entry: MutableMap.MutableEntry<EntitySetAssemblyKey, MaterializedEntitySet?>): Void? {
         val materializedEntitySet = entry.value
-        materializedEntitySet.refreshRate = refreshRate
+        materializedEntitySet!!.refreshRate = refreshRate
         entry.setValue(materializedEntitySet)
-
         return null
     }
 }
