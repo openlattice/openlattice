@@ -1119,10 +1119,6 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         return new WriteEvent( maxVersion, numUpdates );
     }
 
-    private void performAssociationAccessChecksForDelete( UUID entitySetId, DeleteType deleteType ) {
-        // TODO
-    }
-
     @NotNull @Override public AuditingManager getAuditingManager() {
         return auditingManager;
     }
