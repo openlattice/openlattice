@@ -26,6 +26,6 @@ import java.util.UUID
 
 data class MaterializePermissionChangeEvent(
         val organizationPrincipal: Principal,
-        val entitySetId: UUID,
+        val entitySetIds: Set<UUID>,
         val objectType: SecurableObjectType
 )

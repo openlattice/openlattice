@@ -90,37 +90,50 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
             EnumSet<Permission> permissions,
             SecurableObjectType securableObjectType
     ) {
-        // if there is a change in materialization permission for a property type for an organization principal,
-        // we need to flag it
+        // if there is a change in materialization permission for a property type or an entity set for an organization
+        // principal, we need to flag it
         if ( permissions.contains( Permission.MATERIALIZE )
                 && principal.getType().equals( PrincipalType.ORGANIZATION )
                 && ( securableObjectType.equals( SecurableObjectType.PropertyTypeInEntitySet )
                 || securableObjectType.equals( SecurableObjectType.EntitySet ) ) ) {
-            eventBus.post( new MaterializePermissionChangeEvent( principal, key.get( 0 ), securableObjectType ) );
+            eventBus.post(
+                    new MaterializePermissionChangeEvent( principal, Set.of( key.get( 0 ) ), securableObjectType )
+            );
         }
     }
 
-    private void signalMaterializationPermissionChangeBulk(
-            Set<AceKey> aceKeys,
-            EnumSet<Permission> permissions,
-            SecurableObjectType securableObjectType
-    ) {
-        // if there is a change in materialization permission for a property type for an organization principal,
-        // we need to flag it
-        if ( permissions.contains( Permission.MATERIALIZE )
-                && ( securableObjectType.equals( SecurableObjectType.PropertyTypeInEntitySet )
-                || securableObjectType.equals( SecurableObjectType.EntitySet ) ) ) {
-            aceKeys.forEach( aceKey -> {
-                var principal = aceKey.getPrincipal();
-                if ( principal.getType().equals( PrincipalType.ORGANIZATION ) ) {
-                    eventBus.post( new MaterializePermissionChangeEvent(
-                            principal,
-                            aceKey.getAclKey().get( 0 ),
-                            securableObjectType
-                    ) );
-                }
-            } );
-        }
+    private void signalMaterializationPermissionChangeBulk( SetMultimap<AceValue, AceKey> updates ) {
+        // if there is a change in materialization permission for a property type or an entity set for an organization
+        // principal, we need to flag it
+
+        // filter entries relevant for materialize permission changes
+        updates.entries().stream()
+                .filter(
+                        aceEntry -> ( aceEntry.getKey().getSecurableObjectType().equals( SecurableObjectType.EntitySet )
+                                || aceEntry.getKey().getSecurableObjectType().equals( SecurableObjectType.PropertyTypeInEntitySet ) )
+                                && ( aceEntry.getKey().getPermissions().contains( Permission.MATERIALIZE )
+                                && ( aceEntry.getValue().getPrincipal().getType().equals( PrincipalType.ORGANIZATION ) ) )
+                )
+                // group by organization (principal)
+                .collect( Collectors.groupingBy( aceEntry -> aceEntry.getValue().getPrincipal() ) )
+                .forEach( ( principal, aceEntries ) ->
+                        aceEntries.stream()
+                                // group by object type
+                                .collect( Collectors.groupingBy( aceEnrty -> aceEnrty.getKey().getSecurableObjectType() ) )
+                                .forEach( ( securableObjectType, aceEntriesOfType ) -> {
+                                            final var entitySetIds = aceEntriesOfType.stream()
+                                                    .map( aceEntryOfType -> aceEntryOfType.getValue().getAclKey().get( 0 ) )
+                                                    .collect( Collectors.toSet() );
+                                            eventBus.post(
+                                                    new MaterializePermissionChangeEvent(
+                                                            principal,
+                                                            entitySetIds,
+                                                            securableObjectType )
+                                            );
+                                        }
+                                )
+                );
+
     }
 
     @Override
@@ -158,8 +171,9 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
 
             Set<AceKey> aceKeys = updates.get( aceValue );
             aces.executeOnKeys( aceKeys, new PermissionMerger( permissions, securableObjectType, expirationDate ) );
-            signalMaterializationPermissionChangeBulk( aceKeys, permissions, securableObjectType );
         } );
+
+        signalMaterializationPermissionChangeBulk( updates );
     }
 
     @Override
@@ -180,9 +194,8 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
 
             Set<AceKey> aceKeys = updates.get( aceValue );
             aces.executeOnKeys( aceKeys, new PermissionRemover( permissions ) );
-
-            signalMaterializationPermissionChangeBulk( aceKeys, permissions, aceValue.getSecurableObjectType() );
         } );
+        signalMaterializationPermissionChangeBulk( updates );
     }
 
     private SetMultimap<AceValue, AceKey> getAceValueToAceKeyMap( List<Acl> acls ) {
@@ -253,7 +266,8 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
 
             if ( allOtherUserOwnersCount == 0 ) {
                 throw new IllegalStateException(
-                        "Unable to remove owner permissions as a securable object will be left without an owner of type USER" );
+                        "Unable to remove owner permissions as a securable object will be left without an owner of " +
+                                "type USER" );
             }
         }
     }
@@ -533,7 +547,8 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
                 .getAll( aceKeys )
                 .values()
                 .stream()
-                //                .peek( ps -> logger.info( "Implementing class: {}", ps.getClass().getCanonicalName() ) )
+                //                .peek( ps -> logger.info( "Implementing class: {}", ps.getClass().getCanonicalName
+                //                () ) )
                 .map( AceValue::getPermissions )
                 .filter( permissions -> permissions != null )
                 .forEach( objectPermissions::addAll );

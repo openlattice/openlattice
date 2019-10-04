@@ -43,6 +43,7 @@ import com.openlattice.data.storage.selectPropertyTypesOfEntitySetColumnar
 import com.openlattice.datastore.util.Util
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.events.*
+import com.openlattice.assembler.processors.IsAssemblyInitializedEntryProcessor
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap.*
@@ -144,29 +145,30 @@ class Assembler(
 
         flagMaterializedEntitySetWithPermissionChange(
                 organizationId,
-                materializePermissionChangeEvent.entitySetId,
+                materializePermissionChangeEvent.entitySetIds,
                 materializePermissionChangeEvent.objectType
         )
     }
 
     private fun flagMaterializedEntitySetWithPermissionChange(
             organizationId: UUID,
-            entitySetId: UUID,
+            entitySetIds: Set<UUID>,
             objectType: SecurableObjectType
     ) {
-        val entitySetAssemblyKey = EntitySetAssemblyKey(entitySetId, organizationId)
+        val entitySetAssemblyKeys = entitySetIds
+                .map { EntitySetAssemblyKey(it, organizationId) }
+                .filter { isEntitySetMaterialized(it) }
+                .toSet()
 
-        if (isEntitySetMaterialized(entitySetAssemblyKey)) {
-            val flagToAdd = if(objectType == SecurableObjectType.EntitySet) {
-                OrganizationEntitySetFlag.MATERIALIZE_PERMISSION_REMOVED
-            } else {
-                OrganizationEntitySetFlag.MATERIALIZE_PERMISSION_UNSYNCHRONIZED
-            }
-            materializedEntitySets.executeOnKey(
-                    entitySetAssemblyKey,
-                    AddFlagsToMaterializedEntitySetProcessor(setOf(flagToAdd))
-            )
+        val flagToAdd = if (objectType == SecurableObjectType.EntitySet) {
+            OrganizationEntitySetFlag.MATERIALIZE_PERMISSION_REMOVED
+        } else {
+            OrganizationEntitySetFlag.MATERIALIZE_PERMISSION_UNSYNCHRONIZED
         }
+        materializedEntitySets.executeOnKeys(
+                entitySetAssemblyKeys,
+                AddFlagsToMaterializedEntitySetProcessor(setOf(flagToAdd))
+        )
     }
 
     /**
@@ -606,7 +608,9 @@ class Assembler(
     }
 
     private fun ensureAssemblyInitialized(organizationId: UUID) {
-        if (!assemblies.containsKey(organizationId) || !assemblies[organizationId]!!.initialized) {
+        val isAssemblyInitialized = assemblies
+                .executeOnKey(organizationId, IsAssemblyInitializedEntryProcessor()) as Boolean
+        if (!isAssemblyInitialized) {
             throw IllegalStateException("Organization assembly is not initialized for organization $organizationId")
         }
     }
