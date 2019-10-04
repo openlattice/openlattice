@@ -38,6 +38,7 @@ import com.openlattice.controllers.exceptions.ForbiddenException
 import com.openlattice.controllers.exceptions.wrappers.BatchException
 import com.openlattice.controllers.exceptions.wrappers.ErrorsDTO
 import com.openlattice.controllers.util.ApiExceptions
+import com.openlattice.data.DataExpiration
 import com.openlattice.data.DataGraphManager
 import com.openlattice.data.WriteEvent
 import com.openlattice.datastore.services.EdmManager
@@ -45,12 +46,14 @@ import com.openlattice.edm.EntitySet
 import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.edm.set.EntitySetPropertyMetadata
+import com.openlattice.edm.set.ExpirationBase
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.entitysets.EntitySetsApi
 import com.openlattice.entitysets.EntitySetsApi.Companion.ALL
 import com.openlattice.entitysets.EntitySetsApi.Companion.ID
 import com.openlattice.entitysets.EntitySetsApi.Companion.IDS_PATH
 import com.openlattice.entitysets.EntitySetsApi.Companion.ID_PATH
+import com.openlattice.entitysets.EntitySetsApi.Companion.EXPIRATION_PATH
 import com.openlattice.entitysets.EntitySetsApi.Companion.LINKING
 import com.openlattice.entitysets.EntitySetsApi.Companion.METADATA_PATH
 import com.openlattice.entitysets.EntitySetsApi.Companion.NAME
@@ -60,9 +63,18 @@ import com.openlattice.entitysets.EntitySetsApi.Companion.PROPERTY_TYPE_ID
 import com.openlattice.entitysets.EntitySetsApi.Companion.PROPERTY_TYPE_ID_PATH
 import com.openlattice.linking.util.PersonProperties
 import com.openlattice.organizations.roles.SecurePrincipalsManager
+import com.openlattice.postgres.DataTables.LAST_WRITE
+import com.openlattice.postgres.PostgresColumn.VERSIONS
+import com.openlattice.postgres.PostgresDataTables
+import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
+import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.*
+import retrofit2.http.PUT
+import retrofit2.http.Path
+import java.sql.Types
 import java.time.OffsetDateTime
+import java.time.ZoneId
 import java.util.*
 import javax.inject.Inject
 import kotlin.streams.asSequence
@@ -401,6 +413,53 @@ constructor(
         //TODO: Makes this return something more useful.
         return 1
     }
+
+    @Timed
+    @RequestMapping(
+            path = [ALL + ID_PATH + EXPIRATION_PATH],
+            method = [RequestMethod.PATCH],
+            produces = [MediaType.APPLICATION_JSON_VALUE]
+    )
+    override fun removeDataExpirationPolicy(
+            @PathVariable(ID) entitySetId: UUID
+    ): Int {
+        ensureOwnerAccess(AclKey(entitySetId))
+        edmManager.removeDataExpirationPolicy(entitySetId)
+
+        recordEvent(
+                AuditableEvent(
+                        getCurrentUserId(),
+                        AclKey(entitySetId),
+                        AuditEventType.UPDATE_ENTITY_SET,
+                        "Entity set data expiration policy removed through EntitySetApi.removeDataExpirationPolicy",
+                        Optional.empty(),
+                        ImmutableMap.of("entitySetId", entitySetId),
+                        OffsetDateTime.now(),
+                        Optional.empty()
+                )
+        )
+        return 1
+    }
+
+    @Timed
+    @RequestMapping(
+            path = [ALL + ID_PATH + EXPIRATION_PATH],
+            method = [RequestMethod.POST]
+    )
+    override fun getExpiringEntitiesFromEntitySet(
+            @PathVariable(ID) entitySetId: UUID,
+            @RequestBody dateTimeAsString: String): Set<UUID> {
+        ensureReadAccess(AclKey(entitySetId))
+        val dateTime = OffsetDateTime.parse(dateTimeAsString)
+        val es = getEntitySet(entitySetId)
+        check(es.hasExpirationPolicy()) { "Entity set ${es.name} does not have an expiration policy" }
+
+        val expirationPolicy = es.expiration
+        val expirationPT = expirationPolicy.startDateProperty.map { edmManager.getPropertyType(it) }
+        return dgm.getExpiringEntitiesFromEntitySet(entitySetId, expirationPolicy, dateTime, es.expiration.deleteType, expirationPT).toSet()
+    }
+
+
 
     private fun removeEntitySets(linkingEntitySetId: UUID, entitySetIds: Set<UUID>): Int {
         ensureOwnerAccess(AclKey(linkingEntitySetId))
