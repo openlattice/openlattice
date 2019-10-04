@@ -125,7 +125,7 @@ public class MapstoresPod {
 
     @Bean
     public PostgresUserApi pgUserApi() {
-        try ( Connection conn = hikariDataSource.getConnection(); Statement stmt = conn.createStatement(); ) {
+        try ( Connection conn = hikariDataSource.getConnection(); Statement stmt = conn.createStatement() ) {
             String createUserSql = Resources.toString( Resources.getResource( "create_user.sql" ), Charsets.UTF_8 );
             String alterUserSql = Resources.toString( Resources.getResource( "alter_user.sql" ), Charsets.UTF_8 );
             String deleteUserSql = Resources.toString( Resources.getResource( "delete_user.sql" ), Charsets.UTF_8 );
@@ -202,14 +202,12 @@ public class MapstoresPod {
 
     @Bean
     public SelfRegisteringMapStore<UUID, String> orgTitlesMapstore() {
-        OrganizationTitlesMapstore potm = new OrganizationTitlesMapstore( hikariDataSource );
-        return potm;
+        return new OrganizationTitlesMapstore( hikariDataSource );
     }
 
     @Bean
     public SelfRegisteringMapStore<UUID, String> orgDescsMapstore() {
-        OrganizationDescriptionsMapstore podm = new OrganizationDescriptionsMapstore( hikariDataSource );
-        return podm;
+        return new OrganizationDescriptionsMapstore( hikariDataSource );
     }
 
     @Bean
@@ -229,8 +227,7 @@ public class MapstoresPod {
 
     @Bean
     public SelfRegisteringMapStore<UUID, AssociationType> edgeTypeMapstore() {
-        AssociationTypeMapstore patm = new AssociationTypeMapstore( hikariDataSource );
-        return patm;
+        return new AssociationTypeMapstore( hikariDataSource );
     }
 
     @Bean
@@ -250,30 +247,29 @@ public class MapstoresPod {
 
     @Bean
     public SelfRegisteringMapStore<EntitySetPropertyKey, EntitySetPropertyMetadata> entitySetPropertyMetadataMapstore() {
-        EntitySetPropertyMetadataMapstore pespm = new EntitySetPropertyMetadataMapstore( hikariDataSource );
-        return pespm;
+        return new EntitySetPropertyMetadataMapstore( hikariDataSource );
     }
 
     @Bean
     public QueueConfigurer defaultQueueConfigurer() {
-        return config -> config.setMaxSize( 10000 ).setEmptyQueueTtl( 60 );
+        return config -> config.setMaxSize( 10_000 ).setEmptyQueueTtl( 60 );
     }
 
     @Bean
     public QueueConfigurer twilioQueueConfigurer() {
-        return config -> config.setName( HazelcastQueue.TWILIO.name() ).setMaxSize( 100000 ).setBackupCount( 1 );
+        return config -> config.setName( HazelcastQueue.TWILIO.name() ).setMaxSize( 100_000 ).setBackupCount( 1 );
     }
 
     @Bean
     public QueueConfigurer indexingQueueConfigurer() {
-        return config -> config.setName( HazelcastQueue.INDEXING.name() ).setMaxSize( 100000 ).setBackupCount( 1 );
+        return config -> config.setName( HazelcastQueue.INDEXING.name() ).setMaxSize( 100_000 ).setBackupCount( 1 );
     }
 
     @Bean
     public QueueConfigurer linkingQueueConfigurer() {
         return config -> config
                 .setName( HazelcastQueue.LINKING_CANDIDATES.name() )
-                .setMaxSize( 1000 )
+                .setMaxSize( 1_000 )
                 .setBackupCount( 1 );
     }
 
@@ -281,7 +277,7 @@ public class MapstoresPod {
     public QueueConfigurer linkingIndexingQueueConfigurer() {
         return config -> config
                 .setName( HazelcastQueue.LINKING_INDEXING.name() )
-                .setMaxSize( 10000 )
+                .setMaxSize( 10_000 )
                 .setBackupCount( 1 );
     }
 
