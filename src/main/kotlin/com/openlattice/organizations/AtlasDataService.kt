@@ -1,15 +1,22 @@
 package com.openlattice.organizations
 
 import com.openlattice.assembler.AssemblerConfiguration
+import com.openlattice.assembler.PostgresRoles.Companion.buildAtlasPostgresUsername
+import com.openlattice.authorization.AclData
+import com.openlattice.authorization.Action
+import com.openlattice.authorization.Principal
+import com.openlattice.authorization.PrincipalType
+import com.openlattice.organizations.roles.SecurePrincipalsManager
 
 import com.openlattice.postgres.DataTables.quote
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import java.util.*
 
-internal class AtlasDataService(
+class AtlasDataService(
         private val hds: HikariDataSource,
         private val assemblerConfiguration: AssemblerConfiguration //for now using this, may need to make a separate one
+        private val securePrincipalsManager: SecurePrincipalsManager
 ) {
     //lifted from assembly connection manager, likely will need to be customized
     companion object {
@@ -32,15 +39,41 @@ internal class AtlasDataService(
         return connect(dbName, assemblerConfiguration.server.clone() as Properties, assemblerConfiguration.ssl)
     }
 
-    fun grantPermissionsOnAtlastDatabase(dbName: String, tableName: String, ipAddress: String, columnNames: Optional<Set<String>>) {
+    fun updatePermissionsOnAtlas(dbName: String, ipAddress: String, req: List<AclData>) {
+        val permissions = req.map{it.action to mapOf(it.acl.aclKey to it.acl.aces)}.toMap()
+        permissions.entries.forEach {
+            when ( it.key ) {
+                Action.ADD -> {
+                    it.value.forEach {
+                        //get securable object from AclKey, know type from length of aclkey? ahhhhhhhhh not gooooood
+                        it.value.forEach{
+                            val sql = getGrantSql(it.principal,
+                        }
+                    }
+                }
+        }
+
+
+        }
+
+        //add/set? what's difference, does set remove permissions?
+        //remove
+        //request??
+
         connect(dbName).use {
-            getGrantSql(tableName, columnNames)
+            getGrantSql(principal, tableName, columnNames)
         }
     }
 
-    private fun getGrantSql(tableName: String, columnNames: Optional<Set<String>>): String {
-        //make a new username for each ip address?
-        val dbOrgUser = quote()
+    private fun getGrantSql(principal: Principal, tableName: String, columnNames: Optional<Set<String>>): String {
+        val securePrincipal = securePrincipalsManager.getPrincipal(principal.id)
+        val dbUser = quote(buildAtlasPostgresUsername(securePrincipal))
+
+        val columnsList = if (columnNames.isPresent) {
+            "( ${columnNames.get().joinToString(",") { it }} )"
+        } else { "" }
+
+        return "GRANT SELECT $columnsList ON $tableName TO $dbUser"
     }
 
 }
