@@ -35,11 +35,11 @@ import java.util.concurrent.TimeUnit
 
 class MaterializedEntitySetsDataRefreshTask : HazelcastFixedRateTask<MaterializedEntitySetsDependencies> {
     override fun getInitialDelay(): Long {
-        return 30000L // wait until AssemblerConnectionManager can be initialized
+        return 60_000L // wait until AssemblerConnectionManager can be initialized
     }
 
     override fun getPeriod(): Long {
-        return 3600L // minimum refresh rate is 1 min
+        return 60_000L // minimum refresh rate is 1 min
     }
 
     override fun getTimeUnit(): TimeUnit {
