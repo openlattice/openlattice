@@ -25,13 +25,12 @@ import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.search.requests.SearchResult
-import com.fasterxml.jackson.core.type.TypeReference
+import com.fasterxml.jackson.module.kotlin.readValue
 import com.openlattice.hazelcast.StreamSerializerTypeIds
+import org.springframework.stereotype.Component
 
-class SearchResultStreamSerializer(
-        private val hitType: TypeReference<List<Map<String, Any>>> = object : TypeReference<List<Map<String, Any>>>() {}
-) : SelfRegisteringStreamSerializer<SearchResult> {
-
+@Component
+class SearchResultStreamSerializer : SelfRegisteringStreamSerializer<SearchResult> {
 
     override fun getTypeId(): Int {
         return StreamSerializerTypeIds.SEARCH_RESULT.ordinal
@@ -48,7 +47,7 @@ class SearchResultStreamSerializer(
 
     override fun read(input: ObjectDataInput): SearchResult {
         val numHits = input.readLong()
-        val hits: List<Map<String, Any>> = ObjectMappers.getSmileMapper().readValue(input.readByteArray(), hitType)
+        val hits = ObjectMappers.getSmileMapper().readValue<List<Map<String, Any>>>(input.readByteArray())
         return SearchResult(numHits, hits)
     }
 }

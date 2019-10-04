@@ -6,8 +6,8 @@ import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.fasterxml.jackson.core.JsonProcessingException
-import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import com.openlattice.conductor.rpc.BulkLinkedDataLambdas
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -16,8 +16,7 @@ import java.util.UUID
 
 @Component
 class BulkLinkedDataLambdasStreamSerializer(
-        private val mapper: ObjectMapper = ObjectMappers.getSmileMapper(),
-        private val ref: TypeReference<Map<UUID, Set<Any>>> = object : TypeReference<Map<UUID, Set<Any>>>() {}
+        private val mapper: ObjectMapper = ObjectMappers.getSmileMapper()
 ) : Serializer<BulkLinkedDataLambdas>() {
 
     companion object {
@@ -77,7 +76,7 @@ class BulkLinkedDataLambdasStreamSerializer(
 
                     val numBytes = input.readInt()
                     try {
-                        val entityData: Map<UUID, Set<Any>> = mapper.readValue(input.readBytes(numBytes), ref)
+                        val entityData = mapper.readValue<Map<UUID, Set<Any>>>(input.readBytes(numBytes))
                         entitiesByOriginId[originId] = entityData
                     } catch (e: IOException) {
                         logger.debug("Unable to deserialize entities for linking id: {}", linkingId)
