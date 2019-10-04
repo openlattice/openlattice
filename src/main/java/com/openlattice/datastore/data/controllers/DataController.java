@@ -1085,9 +1085,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         // access checks for entity set and properties
         final Map<UUID, PropertyType> authorizedPropertyTypes =
                 getAuthorizedPropertyTypesForDelete( entitySetId, Optional.empty(), deleteType );
-
-
-
+        
         Iterable<List<UUID>> entityKeyIdChunks = Iterables.partition( entityKeyIds, MAX_BATCH_SIZE );
         for ( List<UUID> chunkList : entityKeyIdChunks ) {
             Set<UUID> chunk = Sets.newHashSet( chunkList );
