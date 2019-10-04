@@ -21,14 +21,13 @@
 package com.openlattice.assembler.processors
 
 import com.hazelcast.core.Offloadable
-import com.hazelcast.core.ReadOnly
 import com.hazelcast.spi.ExecutionService
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.AssemblerConnectionManagerDependent
 import com.openlattice.assembler.OrganizationAssembly
 import com.openlattice.assembler.PostgresDatabases
 import com.openlattice.authorization.SecurablePrincipal
+import com.openlattice.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor
 import org.slf4j.LoggerFactory
 import java.util.*
 
@@ -36,10 +35,9 @@ private val logger = LoggerFactory.getLogger(RemoveMembersFromOrganizationAssemb
 private const val NOT_INITIALIZED = "Assembler Connection Manager not initialized."
 
 data class RemoveMembersFromOrganizationAssemblyProcessor(val principals: Collection<SecurablePrincipal>)
-    : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(false),
+    : AbstractReadOnlyRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(),
         AssemblerConnectionManagerDependent<RemoveMembersFromOrganizationAssemblyProcessor>,
-        Offloadable,
-        ReadOnly {
+        Offloadable {
 
     @Transient
     private var acm: AssemblerConnectionManager? = null
