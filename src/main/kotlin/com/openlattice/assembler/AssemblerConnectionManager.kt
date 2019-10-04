@@ -483,10 +483,13 @@ class AssemblerConnectionManager(
                             stmt.addBatch(grantSelectSql)
                         }
 
-                        // also grant select on edges
-                        val edgesTableName = "$MATERIALIZED_VIEWS_SCHEMA.${E.name}"
-                        val grantSelectSql = grantSelectSql(edgesTableName, postgresUserName, listOf())
-                        stmt.addBatch(grantSelectSql)
+                        // also grant select on edges (if at least 1 entity set is materialized to make sure edges
+                        // materialized view exist)
+                        if (authorizedPropertyTypesOfEntitySets.isNotEmpty()) {
+                            val edgesTableName = "$MATERIALIZED_VIEWS_SCHEMA.${E.name}"
+                            val grantSelectSql = grantSelectSql(edgesTableName, postgresUserName, listOf())
+                            stmt.addBatch(grantSelectSql)
+                        }
                     }
             stmt.executeBatch()
         }
