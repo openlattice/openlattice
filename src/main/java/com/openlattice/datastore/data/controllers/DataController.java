@@ -1086,6 +1086,8 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         final Map<UUID, PropertyType> authorizedPropertyTypes =
                 getAuthorizedPropertyTypesForDelete( entitySetId, Optional.empty(), deleteType );
 
+
+
         Iterable<List<UUID>> entityKeyIdChunks = Iterables.partition( entityKeyIds, MAX_BATCH_SIZE );
         for ( List<UUID> chunkList : entityKeyIdChunks ) {
             Set<UUID> chunk = Sets.newHashSet( chunkList );
@@ -1115,6 +1117,10 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         }
 
         return new WriteEvent( maxVersion, numUpdates );
+    }
+
+    private void performAssociationAccessChecksForDelete( UUID entitySetId, DeleteType deleteType ) {
+        // TODO
     }
 
     @NotNull @Override public AuditingManager getAuditingManager() {
