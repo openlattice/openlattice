@@ -683,19 +683,16 @@ public class EdmService implements EdmManager {
     @Override
     public Map<UUID, PropertyType> getPropertyTypesForEntitySet( UUID entitySetId ) {
 
-        Optional<UUID> maybeEtId = (Optional<UUID>) entitySets.executeOnKey( entitySetId, new GetEntityTypeFromEntitySetEntryProcessor() );
-        if ( maybeEtId.isEmpty() ) {
+        UUID maybeEtId = (UUID) entitySets.executeOnKey( entitySetId, new GetEntityTypeFromEntitySetEntryProcessor());
+        if ( maybeEtId == null ) {
             throw new ResourceNotFoundException( "Entity set " + entitySetId.toString() + " does not exist." );
         }
-
-        UUID entityTypeId = maybeEtId.get();
-        
-        Optional<Set<UUID>> maybeEtProps = (Optional<Set<UUID>>) entityTypes.executeOnKey( entityTypeId, new GetPropertiesFromEntityTypeEntryProcessor() );
-        if ( maybeEtProps.isEmpty() ) {
-            throw new ResourceNotFoundException( "Entity type " + entityTypeId.toString() + " does not exist." );
+        Set<UUID> maybeEtProps = (Set<UUID>) entityTypes.executeOnKey( maybeEtId, new GetPropertiesFromEntityTypeEntryProcessor());
+        if ( maybeEtProps == null ) {
+            throw new ResourceNotFoundException( "Entity type " + maybeEtId.toString() + " does not exist." );
         }
 
-        return propertyTypes.getAll( maybeEtProps.get() );
+        return propertyTypes.getAll( maybeEtProps );
     }
 
     @Override
