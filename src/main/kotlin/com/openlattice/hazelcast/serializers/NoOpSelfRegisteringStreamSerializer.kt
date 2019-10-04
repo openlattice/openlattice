@@ -5,8 +5,9 @@ import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 
 abstract class NoOpSelfRegisteringStreamSerializer<T>: SelfRegisteringStreamSerializer<T> {
+
     override fun getTypeId(): Int {
-        return StreamSerializerTypeIds.NO_SERIALIZATION_ENTRY_PROCESSOR.ordinal
+        throw IllegalStateException("$clazz must override fun getTypeId() in NoOpSelfRegisteringStreamSerializer with a unique id from StreamSerializerTypeIds")
     }
 
     override fun write(out: ObjectDataOutput?, `object`: T) {
