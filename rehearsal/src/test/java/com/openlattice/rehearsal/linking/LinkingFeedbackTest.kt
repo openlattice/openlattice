@@ -95,8 +95,8 @@ class LinkingFeedbackTest : SetupTestData() {
                 }
             }
 
-            // delete all feedbacks
-            linkingFeedbackApi.getAllLinkingFeedbacks().forEach {
+            // delete all feedback
+            linkingFeedbackApi.getAllLinkingFeedback().forEach {
                 linkingFeedbackApi.deleteLinkingFeedback(it.entityPair)
             }
         }
@@ -192,47 +192,47 @@ class LinkingFeedbackTest : SetupTestData() {
     }
 
     @Test
-    fun testC_getAllFeedbacks() {
-        val feedbacks = linkingFeedbackApi.getAllLinkingFeedbacks().toSet()
-        val feedbacksWithFeatures = linkingFeedbackApi.getAllLinkingFeedbacksWithFeatures().toSet()
+    fun testC_getAllFeedback() {
+        val feedback = linkingFeedbackApi.getAllLinkingFeedback().toSet()
+        val feedbackWithFeatures = linkingFeedbackApi.getAllLinkingFeedbackWithFeatures().toSet()
 
-        logger.info("All feedbacks {}", feedbacks)
-        logger.info("All feedback features{}", feedbacksWithFeatures)
+        logger.info("All feedbacks {}", feedback)
+        logger.info("All feedback features{}", feedbackWithFeatures)
 
-        Assert.assertEquals(feedbacks.size, feedbacksWithFeatures.size)
-        Assert.assertEquals(6, feedbacks.size) // we have 3 pos and 1 neg: (2*3) / 2 + 3
-        Assert.assertEquals(feedbacks, feedbacksWithFeatures.map { it.entityLinkingFeedback }.toSet())
+        Assert.assertEquals(feedback.size, feedbackWithFeatures.size)
+        Assert.assertEquals(6, feedback.size) // we have 3 pos and 1 neg: (2*3) / 2 + 3
+        Assert.assertEquals(feedback, feedbackWithFeatures.map { it.entityLinkingFeedback }.toSet())
 
         val linkedDataProperties = searchApi.searchEntitySetData(
                 SearchConstraints.simpleSearchConstraints(
                         arrayOf(linkingEntitySet.id), 0, 100, "*")).hits
                 .flatMap { hit -> hit.map { it.key.fullQualifiedNameAsString } }
         logger.info("$linkedDataProperties")
-        val feedbackFeatures = feedbacksWithFeatures.map { it.features.filter { it.value > 0.0 } }
+        val feedbackFeatures = feedbackWithFeatures.map { it.features.filter { it.value > 0.0 } }
                 .flatMap { it.keys }.toSet()
         logger.info("$feedbackFeatures")
     }
 
     @Test
-    fun testD_getFeedbacksForEntity() {
+    fun testD_getFeedbackForEntity() {
         val matchedEntities = realtimeLinkingApi.getMatchedEntitiesForLinkingId(linkingId)
         val linkedEntities = (allEntities - nonLinkingEntity).toSet()
 
         // feedback on positive
         val matchedEntityPairs = matchedEntities.map { it.entityPair }.toSet()
         val linkingEntity = linkedEntities.toList()[Random.nextInt(linkedEntities.size)]
-        val positiveFeedbacks = linkingFeedbackApi
-                .getLinkingFeedbacksOnEntity(FeedbackType.Positive, linkingEntity).toList()
-        // 3 positive feedbacks, any of the entities is in 2 of them
-        Assert.assertEquals(2, positiveFeedbacks.size)
-        positiveFeedbacks.forEach {
+        val positiveFeedback = linkingFeedbackApi
+                .getLinkingFeedbackOnEntity(FeedbackType.Positive, linkingEntity).toList()
+        // 3 positive feedback, any of the entities is in 2 of them
+        Assert.assertEquals(2, positiveFeedback.size)
+        positiveFeedback.forEach {
             Assert.assertTrue(matchedEntityPairs.contains(it.entityPair))
             Assert.assertTrue(it.linked)
         }
 
         // feedback on negative
-        val negativeFeedbacks = linkingFeedbackApi.getLinkingFeedbacksOnEntity(FeedbackType.Negative, nonLinkingEntity)
-        val negativeFeedbackPair = negativeFeedbacks.map {
+        val negativeFeedback = linkingFeedbackApi.getLinkingFeedbackOnEntity(FeedbackType.Negative, nonLinkingEntity)
+        val negativeFeedbackPair = negativeFeedback.map {
             val otherEntity = if (it.entityPair.first == nonLinkingEntity) it.entityPair.second else it.entityPair.first
             Assert.assertFalse(it.linked)
             return@map otherEntity
@@ -242,11 +242,11 @@ class LinkingFeedbackTest : SetupTestData() {
         Assert.assertEquals(linkedEntities, negativeFeedbackPair)
 
         // feedback on random
-        val randomFeedbacks = linkingFeedbackApi.getLinkingFeedbacksOnEntity(
+        val randomFeedback = linkingFeedbackApi.getLinkingFeedbackOnEntity(
                 FeedbackType.All,
                 (linkedEntities + nonLinkingEntity).toList()[Random.nextInt(linkedEntities.size + 1)])
-        Assert.assertTrue(randomFeedbacks.map { it.linked }.contains(true))
-        Assert.assertTrue(randomFeedbacks.map { it.linked }.contains(false))
+        Assert.assertTrue(randomFeedback.map { it.linked }.contains(true))
+        Assert.assertTrue(randomFeedback.map { it.linked }.contains(false))
     }
 
     @Test
