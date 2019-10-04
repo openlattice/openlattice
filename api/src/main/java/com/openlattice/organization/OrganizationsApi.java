@@ -21,11 +21,9 @@ package com.openlattice.organization;
 import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.notifications.sms.SmsEntitySetInformation;
 import com.openlattice.organization.roles.Role;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+
+import java.util.*;
+
 import retrofit2.http.Body;
 import retrofit2.http.DELETE;
 import retrofit2.http.GET;
@@ -35,7 +33,7 @@ import retrofit2.http.PUT;
 import retrofit2.http.Path;
 
 public interface OrganizationsApi {
-    String ASSEMBLE     = "/assemble";
+    String ASSEMBLE          = "/assemble";
     String CONTROLLER        = "/organizations";
     String DESCRIPTION       = "/description";
     String EMAIL_DOMAIN      = "email-domain";
@@ -53,11 +51,11 @@ public interface OrganizationsApi {
     String PRINCIPALS        = "/principals";
     String PRINCIPAL_ID      = "pid";
     String PRINCIPAL_ID_PATH = "/{" + PRINCIPAL_ID + "}";
-    String REFRESH      = "/refresh";
-    String REFRESH_RATE = "/refresh-rate";
+    String REFRESH           = "/refresh";
+    String REFRESH_RATE      = "/refresh-rate";
     String ROLES             = "/roles";
-    String ROLE_ID      = "roleId";
-    String ROLE_ID_PATH = "/{" + ROLE_ID + "}";
+    String ROLE_ID           = "roleId";
+    String ROLE_ID_PATH      = "/{" + ROLE_ID + "}";
     /*
      * These determine the service routing for the LB
      */
@@ -72,6 +70,12 @@ public interface OrganizationsApi {
     String TYPE_PATH         = "/{" + TYPE + "}";
     String USER_ID      = "userId";
     String USER_ID_PATH = "/{" + USER_ID + ":.*}";
+
+    //for new atlas apis TODO maybe move to own api file, or else don't separate in this file
+    String TABLE        = "table";
+    String TABLE_PATH   = "/{" + TABLE + "}";
+    String IP_ADDRESS   = "ipAddress";
+    String IP_ADDRESS_PATH  = "/{" + IP_ADDRESS + "}";
 
     @GET( BASE )
     Iterable<Organization> getOrganizations();
@@ -257,5 +261,18 @@ public interface OrganizationsApi {
             @Path( ID ) UUID organizationId,
             @Path( ROLE_ID ) UUID roleId,
             @Path( USER_ID ) String userId );
+
+    //CRUD for raw data in atlas
+    //grant permissions
+    @POST(BASE + ID_PATH + TABLE_PATH + IP_ADDRESS_PATH)
+    Void grantPermissionsOnAtlasDatabase(
+            @Path(ID) UUID organizationId,
+            @Path(TABLE) String tableName,
+            @Path(IP_ADDRESS) String ipAddress,
+            @Body Optional<Set<String>> columnNames);
+
+    //remove permissions
+    //get permissions
+    //update permissions
 
 }
