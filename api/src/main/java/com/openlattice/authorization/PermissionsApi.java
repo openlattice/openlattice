@@ -20,9 +20,7 @@ package com.openlattice.authorization;
 
 import retrofit2.http.*;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * @author Ho Chung Siu
@@ -38,6 +36,14 @@ public interface PermissionsApi {
 
     String EXPLAIN = "/explain";
     String UPDATE = "/update";
+
+    //for new atlas apis TODO maybe move to own api file, or else don't separate in this file
+    String ID           = "id";
+    String ID_PATH      = "/{" + ID + "}";
+    String TABLE        = "table";
+    String TABLE_PATH   = "/{" + TABLE + "}";
+    String IP_ADDRESS   = "ipAddress";
+    String IP_ADDRESS_PATH  = "/{" + IP_ADDRESS + "}";
 
     /**
      * Adds, removes, or sets the ace for a particular acl key. Successful only if user is the owner of acl key.
@@ -55,6 +61,16 @@ public interface PermissionsApi {
      */
     @PATCH( BASE + UPDATE )
     Void updateAcls( @Body List<AclData> req );
+
+    //update permissions
+    //map keys are tables to be granted permissions, set will be either columns specific to the table or an empty set which means all columns.
+    // if map is not present, assume all tables
+    // TODO Make this better later, probably an object of some sort
+    @PATCH( BASE + UPDATE + ID_PATH + IP_ADDRESS_PATH )
+    Void updateAtlasAcls(
+            @Path(ID_PATH) UUID organizationId,
+            @Path(IP_ADDRESS) String ipAddress,
+            @Body List<AclData> req);
 
     /**
      * Retrieves the acl for a particular acl key. Only return if user is the owner of acl key.

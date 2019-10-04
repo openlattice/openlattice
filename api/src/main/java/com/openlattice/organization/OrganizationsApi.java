@@ -71,12 +71,6 @@ public interface OrganizationsApi {
     String USER_ID      = "userId";
     String USER_ID_PATH = "/{" + USER_ID + ":.*}";
 
-    //for new atlas apis TODO maybe move to own api file, or else don't separate in this file
-    String TABLE        = "table";
-    String TABLE_PATH   = "/{" + TABLE + "}";
-    String IP_ADDRESS   = "ipAddress";
-    String IP_ADDRESS_PATH  = "/{" + IP_ADDRESS + "}";
-
     @GET( BASE )
     Iterable<Organization> getOrganizations();
 
@@ -261,19 +255,5 @@ public interface OrganizationsApi {
             @Path( ID ) UUID organizationId,
             @Path( ROLE_ID ) UUID roleId,
             @Path( USER_ID ) String userId );
-
-    //CRUD for raw data in atlas
-    //grant permissions
-    @POST(BASE + ID_PATH + USER_ID_PATH + TABLE_PATH + IP_ADDRESS_PATH)
-    Void grantPermissionsOnAtlasDatabase(
-            @Path(ID) UUID organizationId,
-            @Path(USER_ID) String userId,
-            @Path(TABLE) String tableName,
-            @Path(IP_ADDRESS) String ipAddress,
-            @Body Optional<Set<String>> columnNames);
-
-    //remove permissions
-    //get permissions
-    //update permissions
 
 }

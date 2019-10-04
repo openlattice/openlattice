@@ -11,18 +11,29 @@ import java.util.*
 
 class OrganizationAtlasDatabase
 
-    @JsonCreator
+/**
+ * Creates a securable object for an organization's entire database in Atlas
+ *
+ * @param id An optional UUID that will be automatically generated if not provided
+ * @param name A unique name for the object, which should be identical to the database name
+ * @param title A title for the object
+ * @param description A description for the object
+ */
+
+@JsonCreator
     constructor(
             @JsonProperty(SerializationConstants.ID_FIELD) id: Optional<UUID>,
+            @JsonProperty(SerializationConstants.NAME_FIELD) var name: String,
             @JsonProperty(SerializationConstants.TITLE_FIELD) title: String,
             @JsonProperty(SerializationConstants.DESCRIPTION_FIELD) description: Optional<String>
     ) : AbstractSecurableObject(id, title, description) {
 
     constructor(
             id: UUID,
+            name: String,
             title: String,
             description: Optional<String>
-    ) : this(Optional.of(id), title, description)
+    ) : this(Optional.of(id), name, title, description)
 
     @JsonIgnore
     override fun getCategory(): SecurableObjectType {

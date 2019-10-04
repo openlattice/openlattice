@@ -65,6 +65,7 @@ public final class SerializationConstants {
     public static final String CHILD_CLAUSES                    = "childClauses";
     public static final String CHILD_QUERIES                    = "childQueries";
     public static final String CLAUSES                          = "clauses";
+    public static final String COLUMN_ID                        = "columnId";
     public static final String COMPARISON                       = "comparison";
     public static final String CONFIG                           = "config";
     public static final String CONFLICTS                        = "conflicts";
@@ -232,6 +233,7 @@ public final class SerializationConstants {
     public static final String SYNC_IDS                         = "syncIds";
     public static final String SYNC_TICKETS                     = "syncTickets";
     public static final String TAGS                             = "tags";
+    public static final String TABLE_ID                         = "tableId";
     public static final String TARGET                           = "target";
     public static final String TEMPLATE                         = "template";
     public static final String TIMESTAMP                        = "timestamp";
