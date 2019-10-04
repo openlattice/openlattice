@@ -264,9 +264,10 @@ public interface OrganizationsApi {
 
     //CRUD for raw data in atlas
     //grant permissions
-    @POST(BASE + ID_PATH + TABLE_PATH + IP_ADDRESS_PATH)
+    @POST(BASE + ID_PATH + USER_ID_PATH + TABLE_PATH + IP_ADDRESS_PATH)
     Void grantPermissionsOnAtlasDatabase(
             @Path(ID) UUID organizationId,
+            @Path(USER_ID) String userId,
             @Path(TABLE) String tableName,
             @Path(IP_ADDRESS) String ipAddress,
             @Body Optional<Set<String>> columnNames);

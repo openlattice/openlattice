@@ -36,5 +36,5 @@ public enum SecurableObjectType {
     Principal,
     Role,
     Unknown,
-    AtlasData
+    AtlasDatabase
 }
