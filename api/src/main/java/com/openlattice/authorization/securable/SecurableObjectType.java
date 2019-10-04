@@ -35,5 +35,6 @@ public enum SecurableObjectType {
     AppType,
     Principal,
     Role,
-    Unknown
+    Unknown,
+    AtlasData
 }
