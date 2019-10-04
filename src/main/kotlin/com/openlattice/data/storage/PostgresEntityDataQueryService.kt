@@ -710,10 +710,8 @@ class PostgresEntityDataQueryService(
             partitionsInfo: PartitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
     ): Int {
         val idsArr = PostgresArrays.createUuidArray(connection, entities)
-        val partitionsArr = PostgresArrays.createIntArray(
-                connection,
-                entities.map { getPartition(it, partitionsInfo.partitions.toList()) }
-        )
+        val partitions = partitionsInfo.partitions.toList()
+        val partitionsArr = PostgresArrays.createIntArray(connection, entities.map { getPartition(it, partitions) })
 
         return connection.prepareStatement(updateLastWriteForEntitiesInEntitySet).use { ps ->
             ps.setObject(1, entitySetId)
@@ -958,7 +956,8 @@ class PostgresEntityDataQueryService(
     ): WriteEvent {
         val propertyTypeIdsArr = PostgresArrays.createUuidArray(conn, propertyTypesToTombstone.map { it.id })
         val entityKeyIdsArr = PostgresArrays.createUuidArray(conn, entityKeyIds)
-        val partitionsArr = PostgresArrays.createIntArray(conn, entityKeyIds.map { getPartition(it, partitonsInfo.partitions.toList()) })
+        val partitions = partitonsInfo.partitions.toList()
+        val partitionsArr = PostgresArrays.createIntArray(conn, entityKeyIds.map { getPartition(it, partitions) })
 
         val numUpdated = conn.prepareStatement(updateVersionsForPropertyTypesInEntitiesInEntitySet).use { ps ->
             ps.setLong(1, tombstoneVersion)
@@ -1039,8 +1038,13 @@ class PostgresEntityDataQueryService(
         return WriteEvent(tombstoneVersion, numUpdated)
     }
 
-    fun getExpiringEntitiesFromEntitySet(entitySetId: UUID, expirationBaseColumn: String, formattedDateMinusTTE: Any,
-                                         sqlFormat: Int, deleteType: DeleteType) : BasePostgresIterable<UUID> {
+    fun getExpiringEntitiesFromEntitySet(
+            entitySetId: UUID,
+            expirationBaseColumn: String,
+            formattedDateMinusTTE: Any,
+            sqlFormat: Int,
+            deleteType: DeleteType
+    ): BasePostgresIterable<UUID> {
         val partitionsInfo: PartitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
         val partitions = PostgresArrays.createIntArray(hds.connection, partitionsInfo.partitions)
         val partitionVersion = partitionsInfo.partitionsVersion
@@ -1050,17 +1054,17 @@ class PostgresEntityDataQueryService(
                         getExpiringEntitiesQuery(expirationBaseColumn, deleteType),
                         FETCH_SIZE,
                         false
-                ) {stmt ->
+                ) { stmt ->
                     stmt.setObject(1, entitySetId)
                     stmt.setArray(2, partitions)
                     stmt.setInt(3, partitionVersion)
                     stmt.setObject(4, IdConstants.ID_ID.id)
                     stmt.setObject(5, formattedDateMinusTTE, sqlFormat)
                 }
-        ) { rs -> ResultSetAdapters.id(rs)}
+        ) { rs -> ResultSetAdapters.id(rs) }
     }
 
-    private fun getExpiringEntitiesQuery(expirationBaseColumn: String, deleteType: DeleteType) : String {
+    private fun getExpiringEntitiesQuery(expirationBaseColumn: String, deleteType: DeleteType): String {
         var ignoredClearedEntitiesClause = ""
         if (deleteType == DeleteType.Soft) {
             ignoredClearedEntitiesClause = "AND ${VERSION.name} >= 0 "
