@@ -4,6 +4,7 @@ import com.codahale.metrics.annotation.Timed
 import com.google.common.collect.*
 import com.google.common.eventbus.EventBus
 import com.openlattice.assembler.events.MaterializedEntitySetDataChangeEvent
+import com.openlattice.data.DeleteType
 import com.openlattice.data.EntitySetData
 import com.openlattice.data.WriteEvent
 import com.openlattice.data.events.EntitiesDeletedEvent
@@ -12,6 +13,7 @@ import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.PostgresEdmManager
 import com.openlattice.edm.events.EntitySetDataDeletedEvent
 import com.openlattice.edm.set.EntitySetFlag
+import com.openlattice.edm.set.ExpirationBase
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.linking.LinkingQueryService
 import com.openlattice.linking.PostgresLinkingFeedbackService
@@ -22,6 +24,7 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.nio.ByteBuffer
+import java.time.OffsetDateTime
 import java.util.*
 import java.util.stream.Stream
 import javax.inject.Inject
@@ -419,7 +422,7 @@ class PostgresEntityDatastore(
         signalEntitySetDataDeleted(entitySetId)
 
         // delete entities from linking feedbacks
-        val deleteFeedbackCount = feedbackQueryService.deleteLinkingFeedbacks(entitySetId, Optional.empty())
+        val deleteFeedbackCount = feedbackQueryService.deleteLinkingFeedback(entitySetId, Optional.empty())
 
         // Delete all neighboring entries from matched entities
         val deleteMatchCount = linkingQueryService.deleteEntitySetNeighborhood(entitySetId)
@@ -448,7 +451,7 @@ class PostgresEntityDatastore(
         signalDeletedEntities(entitySetId, entityKeyIds)
 
         // delete entities from linking feedbacks too
-        val deleteFeedbackCount = feedbackQueryService.deleteLinkingFeedbacks(entitySetId, Optional.of(entityKeyIds))
+        val deleteFeedbackCount = feedbackQueryService.deleteLinkingFeedback(entitySetId, Optional.of(entityKeyIds))
 
         // Delete all neighboring entries from matched entities
         val deleteMatchCount = linkingQueryService.deleteNeighborhoods(entitySetId, entityKeyIds)
@@ -486,6 +489,13 @@ class PostgresEntityDatastore(
         )
 
         return propertyWriteEvent
+    }
+
+    override fun getExpiringEntitiesFromEntitySet(entitySetId: UUID, expirationBaseColumn: String, formattedDateMinusTTE: Any,
+                                                  sqlFormat: Int, deletedType: DeleteType) : BasePostgresIterable<UUID> {
+        return dataQueryService
+                .getExpiringEntitiesFromEntitySet(entitySetId, expirationBaseColumn, formattedDateMinusTTE,
+                        sqlFormat, deletedType)
     }
 
 }

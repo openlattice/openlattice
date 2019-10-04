@@ -29,9 +29,9 @@ data class AddFlagsToOrganizationMaterializedEntitySetProcessor(
         val entitySetId: UUID,
         val flags: Set<OrganizationEntitySetFlag>) : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>() {
 
-    override fun process(entry: MutableMap.MutableEntry<UUID, OrganizationAssembly>?): Void? {
-        val assembly = entry!!.value
-        val flagsHaveBeenAdded = assembly.materializedEntitySets[entitySetId]!!.addAll(flags)
+    override fun process(entry: MutableMap.MutableEntry<UUID, OrganizationAssembly?>): Void? {
+        val assembly = entry.value
+        val flagsHaveBeenAdded = assembly!!.materializedEntitySets[entitySetId]!!.addAll(flags)
         if (flagsHaveBeenAdded) {
             entry.setValue(assembly)
         }
