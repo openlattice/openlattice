@@ -24,9 +24,11 @@ import com.codahale.metrics.annotation.Timed;
 import com.dataloom.streams.StreamUtil;
 import com.google.common.collect.*;
 import com.google.common.eventbus.EventBus;
+import com.openlattice.assembler.PostgresDatabases;
 import com.openlattice.authorization.*;
 import com.openlattice.controllers.exceptions.BadRequestException;
 import com.openlattice.controllers.exceptions.ForbiddenException;
+import com.openlattice.organizations.AtlasDataService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 
 import java.util.*;
@@ -52,6 +54,9 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
 
     @Inject
     private EventBus eventBus;
+
+    @Inject
+    private AtlasDataService ads;
 
     @Override
     @Timed
@@ -114,6 +119,24 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
 
         return null;
     }
+
+    @Timed
+    @Override
+    @PostMapping( value = BASE + UPDATE + ID_PATH + IP_ADDRESS_PATH )
+    public Void updateAtlasAcls(
+            @PathVariable(ID_PATH) UUID organizationId,
+            @PathVariable(IP_ADDRESS) String ipAddress,
+            @RequestBody List<AclData> req){
+
+        updateAcls( req );
+
+        String dbName = PostgresDatabases.buildOrganizationDatabaseName( organizationId );
+        ads.updatePermissionsOnAtlas( dbName, ipAddress, req );
+
+        return null;
+    }
+
+
 
     @Override
     @Timed
