@@ -1,7 +1,7 @@
 package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
-import com.openlattice.edm.processors.IsAssemblyInitializedEntryProcessor
+import com.openlattice.assembler.processors.IsAssemblyInitializedEntryProcessor
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import org.springframework.stereotype.Component
 

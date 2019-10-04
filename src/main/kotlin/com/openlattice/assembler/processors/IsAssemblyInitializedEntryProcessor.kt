@@ -1,4 +1,4 @@
-package com.openlattice.edm.processors
+package com.openlattice.assembler.processors
 
 import com.hazelcast.core.ReadOnly
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor

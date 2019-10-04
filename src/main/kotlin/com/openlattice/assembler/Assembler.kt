@@ -584,7 +584,9 @@ class Assembler(
     }
 
     private fun ensureAssemblyInitialized(organizationId: UUID) {
-        if (!assemblies.containsKey(organizationId) || !assemblies[organizationId]!!.initialized) {
+        val isAssemblyInitialized = assemblies
+                .executeOnKey(organizationId, IsAssemblyInitializedEntryProcessor()) as Boolean
+        if (!isAssemblyInitialized) {
             throw IllegalStateException("Organization assembly is not initialized for organization $organizationId")
         }
     }
