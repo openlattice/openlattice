@@ -1111,7 +1111,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
     @RequestMapping(
             path = ENTITY_TYPE_PATH + ID_PATH + PROPERTY_TYPE_PATH + PROPERTY_TYPE_ID_PATH,
             method = RequestMethod.POST,
-            produces = MediaType.APPLICATION_JSON_VALUE )
+            consumes = MediaType.APPLICATION_JSON_VALUE )
     public Void updateEntityTypePropertyMetadata(
             @PathVariable( ID ) UUID entityTypeId,
             @PathVariable( PROPERTY_TYPE_ID ) UUID propertyTypeId,
