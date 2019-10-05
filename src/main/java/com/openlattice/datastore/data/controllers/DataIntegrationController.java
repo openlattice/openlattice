@@ -21,7 +21,6 @@
 package com.openlattice.datastore.data.controllers;
 
 import com.codahale.metrics.annotation.Timed;
-import com.google.common.cache.LoadingCache;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.SetMultimap;
@@ -37,7 +36,6 @@ import com.openlattice.data.storage.aws.AwsDataSinkService;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.search.SearchService;
-import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.web.bind.annotation.*;
 
@@ -79,10 +77,6 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
 
     @Inject
     private DataGraphServiceHelper dataGraphServiceHelper;
-
-    private LoadingCache<UUID, EdmPrimitiveTypeKind> primitiveTypeKinds;
-
-    private LoadingCache<AuthorizationKey, Set<UUID>> authorizedPropertyCache;
 
     @Override
     public AuthorizationManager getAuthorizationManager() {

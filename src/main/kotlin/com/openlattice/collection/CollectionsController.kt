@@ -21,6 +21,7 @@ import com.openlattice.collections.CollectionTemplateType
 import com.openlattice.collections.EntitySetCollection
 import com.openlattice.collections.EntityTypeCollection
 import com.openlattice.edm.requests.MetadataUpdate
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.*
 import java.util.*
@@ -28,6 +29,9 @@ import java.util.stream.Collectors
 import javax.inject.Inject
 import kotlin.streams.toList
 
+@SuppressFBWarnings(
+        value = ["BC_BAD_CAST_TO_ABSTRACT_COLLECTION"],
+        justification = "Allowing kotlin collection mapping cast to List")
 @RestController
 @RequestMapping(CONTROLLER)
 class CollectionsController : CollectionsApi, AuthorizingComponent {
