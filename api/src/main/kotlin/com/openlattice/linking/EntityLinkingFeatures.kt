@@ -29,6 +29,6 @@ import com.openlattice.client.serialization.SerializationConstants
  * be linked or not.
  */
 data class EntityLinkingFeatures(
-        @JsonProperty(SerializationConstants.LINKING_FEEDBACK) val entityLinkingFeedback: EntityLinkingFeedback,
+        @JsonProperty(SerializationConstants.ENTITY_LINKING_FEEDBACK) val entityLinkingFeedback: EntityLinkingFeedback,
         @JsonProperty(SerializationConstants.FEATURES) val features: Map<String, Double>
 )
