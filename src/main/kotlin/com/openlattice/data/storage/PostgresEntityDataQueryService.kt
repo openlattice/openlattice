@@ -181,7 +181,7 @@ class PostgresEntityDataQueryService(
         val entitySetIds = entityKeyIds.keys
         val ids = entityKeyIds.values.flatMap { it.orElse(emptySet()) }.toSet()
         val partitions = entityKeyIds.flatMap { (entitySetId, maybeEntityKeyIds) ->
-            val entitySetPartitions = partitionManager.getEntitySetPartitionsInfo(entitySetId).partitions.toList()
+            val entitySetPartitions = if (linking) partitionManager.getAllPartitions() else partitionManager.getEntitySetPartitionsInfo(entitySetId).partitions.toList()
             maybeEntityKeyIds.map {
                 getPartitionsInfo(it, entitySetPartitions)
             }.orElse(entitySetPartitions)
@@ -326,6 +326,7 @@ class PostgresEntityDataQueryService(
         val entityKeyIdsArr = PostgresArrays.createUuidArray(connection, entities.keys)
         val versionsArrays = PostgresArrays.createLongArray(connection, version)
         val partitions = partitionManager.getEntitySetPartitionsInfo(entitySetId).partitions
+        val allPartitions = partitionManager.getAllPartitions()
 
         /*
          * Our approach is to use entity level locking that takes advantage of the router executor to avoid deadlocks.
@@ -406,7 +407,7 @@ class PostgresEntityDataQueryService(
                         // update for linked rows
                         upsertPropertyValue.second.setObject(1, entitySetId)
                         upsertPropertyValue.second.setObject(2, maybeLinkingId)
-                        upsertPropertyValue.second.setInt(3, partition)
+                        upsertPropertyValue.second.setInt(3, getPartition(maybeLinkingId, allPartitions))
                         upsertPropertyValue.second.setObject(4, propertyTypeId)
                         upsertPropertyValue.second.setObject(5, propertyHash)
                         upsertPropertyValue.second.setObject(6, version)

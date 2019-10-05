@@ -709,10 +709,10 @@ fun upsertPropertyValueLinkingRowSql(propertyType: PropertyType ): String {
 fun createOrUpdateLinkFromEntity(): String {
     val existingColumnsUpdatedForLinking = PostgresDataTables.dataTableColumns.joinToString(",") {
         when( it ) {
-            VERSION, ID_VALUE   -> "?"
-            ORIGIN_ID           -> ID_VALUE.name
-            LAST_WRITE          -> "now()"
-            else                -> it.name
+            VERSION, ID_VALUE, PARTITION   -> "?"
+            ORIGIN_ID                      -> ID_VALUE.name
+            LAST_WRITE                     -> "now()"
+            else                           -> it.name
         }
     }
     return "INSERT INTO ${DATA.name} ($dataTableColumnsSql) " +

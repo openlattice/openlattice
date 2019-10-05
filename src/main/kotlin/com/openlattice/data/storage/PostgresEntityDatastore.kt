@@ -312,7 +312,9 @@ class PostgresEntityDatastore(
                 entityKeyIds,
                 authorizedPropertyTypes,
                 emptyMap(),
-                metadataOptions
+                metadataOptions,
+                Optional.empty(),
+                true
         ).values.stream()
     }
 
