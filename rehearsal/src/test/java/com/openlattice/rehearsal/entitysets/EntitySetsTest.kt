@@ -1,23 +1,41 @@
 package com.openlattice.rehearsal.entitysets
 
+import com.openlattice.data.DataExpiration
+import com.openlattice.data.DeleteType
+import com.openlattice.edm.requests.MetadataUpdate
+import com.openlattice.edm.set.ExpirationBase
+import com.openlattice.edm.type.EntityType
 import com.openlattice.rehearsal.assertException
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
 import com.openlattice.rehearsal.edm.EdmTestConstants
-import com.openlattice.rehearsal.organization.OrganizationControllerCallHelper
-import com.openlattice.rehearsal.organization.OrganizationsControllerTest
+import org.apache.commons.lang.RandomStringUtils
 import org.junit.Assert
 import org.junit.BeforeClass
 import org.junit.Test
-import java.lang.reflect.UndeclaredThrowableException
+import java.time.LocalDate
+import java.time.OffsetDateTime
 import java.util.*
 
 class EntitySetsTest : MultipleAuthenticatedUsersBase() {
 
     companion object {
+
+        val tTLOneDay: Long = 24 * 60 * 60 * 1000
+        lateinit var personEt: EntityType
+
         @JvmStatic
         @BeforeClass
         fun init() {
             loginAs("admin")
+
+            personEt = EdmTestConstants.personEt
+        }
+
+        fun createExpirationUpdate(expiration: Optional<DataExpiration>) : MetadataUpdate {
+            return MetadataUpdate(Optional.empty(), Optional.empty(), Optional.empty(),
+                    Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
+                    Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
+                    Optional.empty(), expiration)
         }
     }
 
@@ -63,4 +81,117 @@ class EntitySetsTest : MultipleAuthenticatedUsersBase() {
                 "Linked entity sets is empty"
         )
     }
+
+    @Test
+    fun testCreateBadDataExpiration() {
+        //set expiration policy with negative duration of time until data expires
+        val badTTL = -10L
+        assertException({ DataExpiration(badTTL, ExpirationBase.LAST_WRITE, DeleteType.Hard) },
+                "Time until data expiration must not be negative")
+
+        //set expiration policy without required start date
+        val tTL = 10L
+        assertException({ DataExpiration(tTL, ExpirationBase.DATE_PROPERTY, DeleteType.Soft) },
+                "Must provide property type for expiration calculation")
+    }
+
+    @Test
+    fun testAddExpirationPolicy() {
+        val es = createEntitySet()
+        Assert.assertNull(es.expiration) // default entity set has no expiration policy
+
+        //set expiration policy
+        val tTL = 10L
+        val expirationPolicy = DataExpiration(tTL, ExpirationBase.FIRST_WRITE, DeleteType.Hard)
+        val update = createExpirationUpdate(Optional.of(expirationPolicy))
+        entitySetsApi.updateEntitySetMetadata(es.id, update)
+        val es2 = entitySetsApi.getEntitySet(es.id)
+        Assert.assertEquals(tTL, es2.expiration.timeToExpiration)
+        Assert.assertEquals(ExpirationBase.FIRST_WRITE, es2.expiration.expirationBase)
+        Assert.assertTrue(es2.expiration.startDateProperty.isEmpty)
+    }
+
+    @Test
+    fun testRemoveExpirationPolicy() {
+        val es = createEntitySet()
+
+        //set an expiration policy
+        val tTL = 10L
+        val expirationPolicy = DataExpiration(tTL, ExpirationBase.LAST_WRITE, DeleteType.Hard)
+        val update = createExpirationUpdate(Optional.of(expirationPolicy))
+        entitySetsApi.updateEntitySetMetadata(es.id, update)
+        val es2 = entitySetsApi.getEntitySet(es.id)
+
+        //remove expiration policy
+        entitySetsApi.removeDataExpirationPolicy(es2.id)
+        val es3 = entitySetsApi.getEntitySet(es.id)
+        Assert.assertNull(es3.expiration)
+    }
+
+    @Test
+    fun testGetExpiringEntitiesByFirstWrite() {
+        //create data to expire
+        val es = createEntitySet(personEt)
+        val entries = (1..10)
+                .map { mapOf(EdmTestConstants.personGivenNameId to setOf(RandomStringUtils.randomAscii(5))) }
+        dataApi.createEntities(es.id, entries)
+
+        //set first_write expiration policy
+        val tTL: Long = 24 * 60 * 60 * 1000 //one day
+        val expirationPolicy = DataExpiration(tTL, ExpirationBase.FIRST_WRITE, DeleteType.Hard)
+        val update = createExpirationUpdate(Optional.of(expirationPolicy))
+        entitySetsApi.updateEntitySetMetadata(es.id, update)
+
+        //check expiring entities
+        val noExpiringIds = entitySetsApi.getExpiringEntitiesFromEntitySet(es.id, OffsetDateTime.now().toString())
+        Assert.assertEquals(0, noExpiringIds.size)
+        val expiringIds = entitySetsApi.getExpiringEntitiesFromEntitySet(
+                es.id, OffsetDateTime.now().plusDays(1).toString())
+        Assert.assertEquals(10, expiringIds.size)
+    }
+
+    @Test
+    fun testGetExpiringEntitiesByLastWrite() {
+        //create data to expire
+        val es = createEntitySet(personEt)
+        val entries = (1..10)
+                .map { mapOf(EdmTestConstants.personGivenNameId to setOf(RandomStringUtils.randomAscii(5))) }
+        dataApi.createEntities(es.id, entries)
+
+        //set last_write expiration policy
+        val tTL: Long = 24 * 60 * 60 * 1000 //one day
+        val expirationPolicy = DataExpiration(tTL, ExpirationBase.LAST_WRITE, DeleteType.Hard)
+        val update = createExpirationUpdate(Optional.of(expirationPolicy))
+        entitySetsApi.updateEntitySetMetadata(es.id, update)
+
+        //check expiring entities
+        val noExpiringIds = entitySetsApi.getExpiringEntitiesFromEntitySet(es.id, OffsetDateTime.now().toString())
+        Assert.assertEquals(0, noExpiringIds.size)
+        val expiringIds = entitySetsApi.getExpiringEntitiesFromEntitySet(
+                es.id, OffsetDateTime.now().plusDays(1).toString())
+        Assert.assertEquals(10, expiringIds.size)
+    }
+
+    @Test
+    fun testGetExpiringEntitiesByDateProperty() {
+        //create entity set
+        val es = createEntitySet(personEt)
+        val entries = (1..10)
+                .map { mapOf(EdmTestConstants.personDateOfBirthId to setOf(LocalDate.now())) }
+        dataApi.createEntities(es.id, entries)
+
+        //set date_property expiration policy
+        val expirationPolicy = DataExpiration(tTLOneDay, ExpirationBase.DATE_PROPERTY, DeleteType.Hard, Optional.of(EdmTestConstants.personDateOfBirthId))
+        val update3 = createExpirationUpdate(Optional.of(expirationPolicy))
+        entitySetsApi.updateEntitySetMetadata(es.id, update3)
+
+        //check expiring entities
+        val noExpiringIds = entitySetsApi.getExpiringEntitiesFromEntitySet(es.id, OffsetDateTime.now().toString())
+        Assert.assertEquals(0, noExpiringIds.size)
+        val expiringIds = entitySetsApi.getExpiringEntitiesFromEntitySet(
+                es.id, OffsetDateTime.now().plusDays(1).toString())
+        Assert.assertEquals(10, expiringIds.size)
+    }
+
+
 }
