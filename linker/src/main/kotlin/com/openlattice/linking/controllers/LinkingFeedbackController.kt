@@ -21,6 +21,7 @@
 
 package com.openlattice.linking.controllers
 
+import com.google.common.collect.Sets
 import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
@@ -31,10 +32,11 @@ import com.openlattice.datastore.services.EdmManager
 import com.openlattice.linking.*
 import com.openlattice.linking.util.PersonMetric
 import com.openlattice.linking.util.PersonProperties
-import org.elasticsearch.common.util.set.Sets
+import com.sun.jna.platform.RasterRangesUtils
 import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.*
+import java.util.*
 import javax.inject.Inject
 
 @RestController
@@ -65,7 +67,7 @@ constructor(
                     "Cannot submit feedback for less than 2 entities or if no positively linking entity is provided")
         }
 
-        if(!Sets.haveEmptyIntersection(feedback.link, feedback.unlink)) {
+        if( Collections.disjoint( feedback.link, feedback.unlink )) {
             throw IllegalArgumentException("Cannot submit feedback with and entity being both linking and non-linking")
         }
 
@@ -78,23 +80,21 @@ constructor(
                 feedback.link + feedback.unlink,
                 feedback.linkingEntityDataKey)
 
-
-        // add feedback
-        val linkingEntitiesList = feedback.link.toList()
-        val nonLinkingEntitiesList = feedback.unlink.toList()
+        // add feedbacks
+        val linkingEntities = feedback.link.toTypedArray()
+        val nonLinkingEntities = feedback.unlink.toTypedArray()
 
         var positiveFeedbackCount = 0
         var negativeFeedbackCount = 0
 
-
-        linkingEntitiesList.forEachIndexed { index, linkingEntity ->
+        linkingEntities.forEachIndexed { index, linkingEntity ->
             // generate pairs between linking entities themselves
             positiveFeedbackCount += createLinkingFeedbackCombinations(
-                    linkingEntity, linkingEntitiesList, index + 1, true)
+                    linkingEntity, linkingEntities, index + 1, true)
 
             // generate pairs between linking and non-linking entities
             negativeFeedbackCount += createLinkingFeedbackCombinations(
-                    linkingEntity, nonLinkingEntitiesList, 0, false)
+                    linkingEntity, nonLinkingEntities, 0, false)
         }
 
         // mark entities as need to be linked
@@ -128,19 +128,15 @@ constructor(
     }
 
     private fun createLinkingFeedbackCombinations(
-            entityDataKey: EntityDataKey, entityList: List<EntityDataKey>, offset: Int, linked: Boolean): Int {
+            entityDataKey: EntityDataKey, entityList: Array<EntityDataKey>, offset: Int, linked: Boolean): Int {
         (offset until entityList.size).forEach {
-            addLinkingFeedback(EntityLinkingFeedback(EntityKeyPair(entityDataKey, entityList[it]), linked))
+            val elf = EntityLinkingFeedback(EntityKeyPair( entityDataKey, entityList[it] ), linked)
+
+            feedbackService.addLinkingFeedback(elf)
+
+            logger.info("Linking feedback submitted for entities: $entityDataKey - ${entityList[it]}, linked = $linked")
         }
         return entityList.size
-    }
-
-    private fun addLinkingFeedback(entityLinkingFeedback: EntityLinkingFeedback) {
-
-        feedbackService.addLinkingFeedback(entityLinkingFeedback)
-
-        logger.info("Linking feedback submitted for entities: ${entityLinkingFeedback.entityPair.first} - " +
-                "${entityLinkingFeedback.entityPair.second}, linked = ${entityLinkingFeedback.linked}")
     }
 
     @PostMapping(path = [LinkingFeedbackApi.ENTITY], produces = [MediaType.APPLICATION_JSON_VALUE])
@@ -189,7 +185,6 @@ constructor(
         }
     }
 
-
     @DeleteMapping(path = [], produces = [MediaType.APPLICATION_JSON_VALUE])
     override fun deleteLinkingFeedback(@RequestBody entityPair: EntityKeyPair): Int {
         ensureAdminAccess() // currently it's only used by tests
@@ -198,7 +193,6 @@ constructor(
         dataManager.markAsNeedsToBeLinked(setOf(entityPair.first, entityPair.second))
         return count
     }
-
 
     override fun getAuthorizationManager(): AuthorizationManager {
         return authorizationManager

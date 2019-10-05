@@ -63,6 +63,7 @@ class ElasticsearchBlocker(
             Predicates.equal(EntityTypeMapstore.FULLQUALIFIED_NAME_PREDICATE, PersonProperties.PERSON_TYPE_FQN.fullQualifiedNameAsString)
     ).first()
 
+    @Deprecated("Unused")
     private val entitySetsCache = Suppliers
             .memoizeWithExpiration({
                 entitySets.values.filter { it.entityTypeId == personEntityType.id }
@@ -143,8 +144,7 @@ class ElasticsearchBlocker(
     private fun removeNegativeFeedbackFromSearchResult(
             entity: EntityDataKey, searchResult: Map<UUID, Set<UUID>>
     ): Map<UUID, Set<UUID>> {
-        val negFeedbacks = linkingFeedbackService.getLinkingFeedbackOnEntity(FeedbackType.Negative, entity)
-                .map { it.entityPair }.toSet()
+        val negFeedbacks = linkingFeedbackService.getLinkingFeedbackEntityKeyPairs(FeedbackType.Negative, entity)
         return searchResult.mapValues {
             it.value.filter {
                 // remove pairs which have feedbacks for not matching this entity
