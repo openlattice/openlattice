@@ -57,6 +57,7 @@ import com.openlattice.edm.set.EntitySetPropertyMetadata;
 import com.openlattice.edm.type.AssociationDetails;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
+import com.openlattice.edm.type.EntityTypePropertyMetadata;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.edm.types.processors.*;
 import com.openlattice.hazelcast.HazelcastMap;
@@ -1753,6 +1754,20 @@ public class EdmService implements EdmManager {
     @Override public void removeDataExpirationPolicy( UUID entitySetId ) {
         entitySets.executeOnKey( entitySetId, new RemoveDataExpirationPolicyProcessor() );
         return;
+    }
+
+    @Override public void updateEntityTypePropertyMetadata(
+            UUID entityTypeId, UUID propertyTypeId, MetadataUpdate update ) {
+
+    }
+
+    @Override public EntityTypePropertyMetadata getEntityTypePropertyMetadata(
+            UUID entityTypeId, UUID propertyTypeId ) {
+        return null;
+    }
+
+    @Override public Map<UUID, EntityTypePropertyMetadata> getAllEntityTypePropertyMetadata( UUID entityTypeId ) {
+        return null;
     }
 
 }
