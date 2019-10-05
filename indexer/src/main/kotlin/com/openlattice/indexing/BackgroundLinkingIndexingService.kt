@@ -57,8 +57,8 @@ import java.util.concurrent.TimeUnit
 import java.util.function.Function
 import java.util.stream.Stream
 
-internal const val LINKING_INDEXING_TIMEOUT_MILLIS = 120000L
-internal const val LINKING_INDEX_RATE = 30000L
+internal const val LINKING_INDEXING_TIMEOUT_MILLIS = 120_000L
+internal const val LINKING_INDEX_RATE = 30_000L
 
 @Component
 class BackgroundLinkingIndexingService(
@@ -96,32 +96,31 @@ class BackgroundLinkingIndexingService(
         Stream.generate { candidates.take() }
                 .parallel()
                 .forEach { candidate ->
-                    if (indexerConfiguration.backgroundLinkingIndexingEnabled) {
-                        try {
-                            lock(candidate.first)
-                            index(candidate.first, candidate.second)
-                        } catch (ex: Exception) {
-                            logger.error("Unable to index linking entity with linking_id ${candidate.first}.", ex)
-                        } finally {
-                            unLock(candidate.first)
-                        }
+                    if (!indexerConfiguration.backgroundLinkingIndexingEnabled) {
+                        return@forEach
+                    }
+                    try {
+                        lock(candidate.first)
+                        index(candidate.first, candidate.second)
+                    } catch (ex: Exception) {
+                        logger.error("Unable to index linking entity with linking_id ${candidate.first}.", ex)
+                    } finally {
+                        unLock(candidate.first)
                     }
                 }
     }
 
-    @Suppress("UNUSED")
     @Timed
+    @Suppress("UNUSED")
     @Scheduled(fixedRate = LINKING_INDEX_RATE)
     fun updateCandidateList() {
-        if (indexerConfiguration.backgroundLinkingIndexingEnabled) {
-            executor.submit {
-                logger.info("Registering linking ids needing indexing.")
-                var dirtyLinkingIds = getDirtyLinkingIds()
-                while (dirtyLinkingIds.iterator().hasNext()) {
-                    dirtyLinkingIds.forEach(candidates::put)
-                    dirtyLinkingIds = getDirtyLinkingIds()
-                }
-            }
+        if ( !indexerConfiguration.backgroundLinkingIndexingEnabled ) {
+            return
+        }
+        executor.submit {
+            logger.info("Registering linking ids needing indexing.")
+
+            candidates.addAll( getDirtyLinkingIds() )
         }
     }
 
@@ -132,18 +131,18 @@ class BackgroundLinkingIndexingService(
         // get data for linking id by entity set ids and property ids
         val dirtyLinkingIdsByEntitySetId = getEntitySetIdsOfLinkingId(linkingId) // entity_set_id/linking_id
                 .toMap()
+
         val propertyTypesOfEntitySets = dirtyLinkingIdsByEntitySetId // entity_set_id/property_type_id/property_type
                 .map { it.key to personPropertyTypes }
                 .toMap()
-        val linkedEntityData = dataStore // linking_id/entity_set_id/property_type_id
-                .getLinkedEntityDataByLinkingIdWithMetadata(
+
+        // linking_id/(normal)entity_set_id/property_type_id
+        val linkedEntityData = dataStore.getLinkedEntityDataByLinkingIdWithMetadata(
                         dirtyLinkingIdsByEntitySetId,
                         propertyTypesOfEntitySets,
                         EnumSet.of(MetadataOption.LAST_WRITE))
 
-        val indexCount = indexLinkedEntity(
-                linkingId, lastWrite, personEntityType.id, linkedEntityData.getValue(linkingId)
-        )
+        val indexCount = indexLinkedEntity( linkingId, lastWrite, personEntityType.id, linkedEntityData )
 
         logger.info(
                 "Finished linked indexing {} elements with linking id {} in {} ms",
@@ -157,16 +156,15 @@ class BackgroundLinkingIndexingService(
             linkingId: UUID,
             lastWrite: OffsetDateTime,
             entityTypeId: UUID,
-            dataByEntitySetId: Map<UUID, Map<UUID, Set<Any>>>
+            dataByLinkingIdByEntitySetId: Map<UUID, Map<UUID, Map<UUID, Set<Any>>>> //linkingId -> es -> ekid -> dataz
     ): Int {
-        return if (elasticsearchApi.createBulkLinkedData(entityTypeId, mapOf(linkingId to dataByEntitySetId))) {
-            dataManager.markAsIndexed(
-                    dataByEntitySetId.keys.map { it to mapOf(linkingId to lastWrite).toMap() }.toMap(),
-                    true
-            )
-        } else {
-            0
+        if ( elasticsearchApi.createBulkLinkedData( entityTypeId, dataByLinkingIdByEntitySetId )) {
+            return 0
         }
+        return dataManager.markAsIndexed(
+                dataByLinkingIdByEntitySetId.keys.map { it to mapOf(linkingId to lastWrite) }.toMap(),
+                true
+        )
     }
 
     private fun lock(linkingId: UUID) {
@@ -199,10 +197,11 @@ class BackgroundLinkingIndexingService(
         return "SELECT ${LINKING_ID.name}, ${DataTables.LAST_WRITE.name} " +
                 "FROM ${IDS.name} " +
                 "WHERE ${LINKING_ID.name} IS NOT NULL " +
-                "AND ${LAST_INDEX.name} >= ${LAST_WRITE.name} " +
-                "AND ${LAST_LINK.name} >= ${LAST_WRITE.name} " +
-                "AND ${LAST_LINK_INDEX.name} < ${LAST_WRITE.name} " +
-                "AND ${VERSION.name} > 0 AND ${LINKING_ID.name} IS NOT NULL " +
+                    "AND ${LAST_INDEX.name} >= ${LAST_WRITE.name} " +
+                    "AND ${LAST_LINK.name} >= ${LAST_WRITE.name} " +
+                    "AND ${LAST_LINK_INDEX.name} < ${LAST_WRITE.name} " +
+                    "AND ${VERSION.name} > 0 " +
+                    "AND ${LINKING_ID.name} IS NOT NULL " +
                 "LIMIT $FETCH_SIZE"
     }
 
