@@ -18,57 +18,57 @@
  *
  *
  */
-
 package com.openlattice.assembler.processors
 
 import com.hazelcast.core.Offloadable
 import com.hazelcast.spi.ExecutionService
+import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.AssemblerConnectionManagerDependent
 import com.openlattice.assembler.EntitySetAssemblyKey
 import com.openlattice.assembler.MaterializedEntitySet
-import com.openlattice.authorization.Principal
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
-import com.openlattice.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor
-import org.slf4j.LoggerFactory
+import com.openlattice.organization.OrganizationEntitySetFlag
+import java.time.OffsetDateTime
 import java.util.*
 
+data class UpdateMaterializedEntitySetProcessor(
+        val entitySet: EntitySet, val materializablePropertyTypes: Map<UUID, PropertyType>
+) : AbstractRhizomeEntryProcessor<EntitySetAssemblyKey, MaterializedEntitySet, Void?>(),
+        AssemblerConnectionManagerDependent<UpdateMaterializedEntitySetProcessor>,
+        Offloadable {
 
-private val logger = LoggerFactory.getLogger(MaterializeEntitySetProcessor::class.java)
-
-/**
- * An offloadable entity processor that materializes an entity set.
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
- */
-
-data class MaterializeEntitySetProcessor(
-        val entitySet: EntitySet,
-        val materializablePropertyTypes: Map<UUID, PropertyType>,
-        val authorizedPropertyTypesOfPrincipals: Map<Principal, Set<PropertyType>>
-) : AbstractReadOnlyRhizomeEntryProcessor<EntitySetAssemblyKey, MaterializedEntitySet, Void?>(),
-        AssemblerConnectionManagerDependent<MaterializeEntitySetProcessor>, Offloadable {
     @Transient
     private var acm: AssemblerConnectionManager? = null
 
     override fun process(entry: MutableMap.MutableEntry<EntitySetAssemblyKey, MaterializedEntitySet?>): Void? {
-        val entitySetAssemblyKey = entry.key
+        val organizationId = entry.key.organizationId
         val materializedEntitySet = entry.value
-        if (materializedEntitySet == null) {
-            logger.error("Materialized entity set with id ${entitySetAssemblyKey.entitySetId} for organization id " +
-                    "${entitySetAssemblyKey.organizationId} was not initialized properly.")
-        } else {
-            acm?.materializeEntitySets(
-                    entitySetAssemblyKey.organizationId,
-                    mapOf(entitySet to materializablePropertyTypes),
-                    mapOf(entitySet.id to authorizedPropertyTypesOfPrincipals)
-            ) ?: throw IllegalStateException(AssemblerConnectionManagerDependent.NOT_INITIALIZED)
-        }
+        materializedEntitySet ?: throw IllegalStateException("Encountered null materialized entity set while trying " +
+                "to update materialized view for entity set ${entitySet.id} in organization $organizationId.")
+
+        acm?.updateMaterializedEntitySet(organizationId, entitySet, materializablePropertyTypes)
+                ?: throw IllegalStateException(AssemblerConnectionManagerDependent.NOT_INITIALIZED)
+
+        // Clear data and permission unsync flag
+        materializedEntitySet.flags.removeAll(
+                listOf(
+                        OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED,
+                        OrganizationEntitySetFlag.MATERIALIZE_PERMISSION_UNSYNCHRONIZED
+                )
+        )
+
+        // Update last refresh
+        materializedEntitySet.lastRefresh = OffsetDateTime.now()
+
+        entry.setValue(materializedEntitySet)
+
 
         return null
     }
 
-    override fun init(acm: AssemblerConnectionManager): MaterializeEntitySetProcessor {
+    override fun init(acm: AssemblerConnectionManager): UpdateMaterializedEntitySetProcessor {
         this.acm = acm
         return this
     }
@@ -76,4 +76,6 @@ data class MaterializeEntitySetProcessor(
     override fun getExecutorName(): String {
         return ExecutionService.OFFLOADABLE_EXECUTOR
     }
+
+
 }

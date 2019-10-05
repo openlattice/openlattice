@@ -18,16 +18,14 @@
  *
  *
  */
+package com.openlattice.assembler.events
 
-package com.openlattice.assembler
+import com.openlattice.authorization.Principal
+import com.openlattice.authorization.securable.SecurableObjectType
+import java.util.UUID
 
-/**
- *
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
- */
-interface AssemblerConnectionManagerDependent<T> {
-    companion object {
-        const val NOT_INITIALIZED = "Assembler Connection Manager not initialized."
-    }
-    fun init(acm: AssemblerConnectionManager): T
-}
+data class MaterializePermissionChangeEvent(
+        val organizationPrincipal: Principal,
+        val entitySetIds: Set<UUID>,
+        val objectType: SecurableObjectType
+)

@@ -394,23 +394,13 @@ class AssemblerConnectionManager(
             authorizedPropertyTypesOfPrincipals: Map<Principal, Set<PropertyType>>
     ) {
         materializeEntitySetsTimer.time().use {
-
-            val selectColumns = getSelectColumnsForMaterializedView(materializablePropertyTypes.values)
-                    .joinToString(",")
-
-            val sql = "SELECT $selectColumns FROM $PRODUCTION_FOREIGN_SCHEMA.${entitySetIdTableName(entitySet.id)} "
-
             val tableName = entitySetNameTableName(entitySet.name)
 
             dataSource.connection.use { connection ->
-                val dropMaterializedEntitySet = "DROP MATERIALIZED VIEW IF EXISTS $tableName"
-                val createMaterializedViewSql = "CREATE MATERIALIZED VIEW IF NOT EXISTS $tableName AS $sql"
+                // first drop and create materialized view
+                dropAndCreateMaterializedView(connection, tableName, entitySet.id, materializablePropertyTypes)
+                logger.info("Materialized entity set ${entitySet.id}")
 
-                logger.info("Executing create materialize view sql: {}", createMaterializedViewSql)
-                connection.createStatement().use { stmt ->
-                    stmt.execute(dropMaterializedEntitySet)
-                    stmt.execute(createMaterializedViewSql)
-                }
                 //Next we need to grant select on materialize view to everyone who has permission.
                 val selectGrantedResults = grantSelectForEntitySet(
                         connection,
@@ -421,6 +411,26 @@ class AssemblerConnectionManager(
                 logger.info("Granted select for ${selectGrantedResults.filter { it >= 0 }.size} users/roles " +
                         "on materialized view $tableName")
             }
+        }
+    }
+
+    private fun dropAndCreateMaterializedView(
+            connection: Connection,
+            tableName: String,
+            entitySetId: UUID,
+            materializablePropertyTypes: Map<UUID, PropertyType>) {
+        val selectColumns = getSelectColumnsForMaterializedView(materializablePropertyTypes.values)
+                .joinToString(",")
+
+        val sql = "SELECT $selectColumns FROM $PRODUCTION_FOREIGN_SCHEMA.${entitySetIdTableName(entitySetId)}"
+
+        val dropMaterializedEntitySet = "DROP MATERIALIZED VIEW IF EXISTS $tableName"
+        val createMaterializedViewSql = "CREATE MATERIALIZED VIEW $tableName AS $sql"
+
+        logger.info("Executing create materialize view sql: {}", createMaterializedViewSql)
+        connection.createStatement().use { stmt ->
+            stmt.execute(dropMaterializedEntitySet)
+            stmt.execute(createMaterializedViewSql)
         }
     }
 
@@ -535,22 +545,32 @@ class AssemblerConnectionManager(
                 "TO $postgresUserName"
     }
 
+    fun updateMaterializedEntitySet(
+            organizationId: UUID, entitySet: EntitySet, materializablePropertyTypes: Map<UUID, PropertyType>
+    ) {
+        val tableName = entitySetNameTableName(entitySet.name)
+
+        connect(buildOrganizationDatabaseName(organizationId)).use { dataSource ->
+            dataSource.connection.use { connection ->
+                dropAndCreateMaterializedView(connection, tableName, entitySet.id, materializablePropertyTypes)
+            }
+        }
+        logger.info("Updated materialized view of entity set ${entitySet.id} in organization $organizationId")
+    }
+
     /**
      * Synchronize data changes in entity set materialized view in organization database.
      */
-    fun refreshEntitySet(
-            organizationId: UUID,
-            entitySet: EntitySet,
-            materializablePropertyTypes: Map<UUID, PropertyType>,
-            authorizedPropertyTypesOfPrincipals: Map<Principal, Set<PropertyType>>
-    ) {
+    fun refreshEntitySet(organizationId: UUID, entitySet: EntitySet) {
         logger.info("Refreshing entity set ${entitySet.id} in organization $organizationId database")
-        connect(buildOrganizationDatabaseName(organizationId)).use { datasource ->
-            // re-import materialized view of entity set
-            updateProductionViewTables(datasource, setOf(entitySetIdTableName(entitySet.id)))
+        val tableName = entitySetNameTableName(entitySet.name)
 
-            // re-materialize entity set
-            materialize(datasource, entitySet, materializablePropertyTypes, authorizedPropertyTypesOfPrincipals)
+        connect(buildOrganizationDatabaseName(organizationId)).use { dataSource ->
+            dataSource.connection.use { connection ->
+                connection.createStatement().use {
+                    it.execute("REFRESH MATERIALIZED VIEW $tableName")
+                }
+            }
         }
     }
 
@@ -569,6 +589,8 @@ class AssemblerConnectionManager(
                 stmt.executeUpdate("ALTER MATERIALIZED VIEW IF EXISTS $oldTableName RENAME TO $newTableName")
             }
         }
+        logger.info("Renamed materialized view of entity set with old name $oldName to new name $newName in " +
+                "organization $organizationId")
     }
 
     /**
@@ -579,7 +601,7 @@ class AssemblerConnectionManager(
         connect(dbName).use { dataSource ->
             entitySetIds.forEach { dropMaterializedEntitySet(dataSource, it) }
         }
-        logger.info("Materialized entity sets $entitySetIds removed from organization $organizationId")
+        logger.info("Removed materialized entity sets $entitySetIds from organization $organizationId")
     }
 
     fun dropMaterializedEntitySet(dataSource: HikariDataSource, entitySetId: UUID) {

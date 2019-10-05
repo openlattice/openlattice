@@ -18,27 +18,30 @@
  *
  *
  */
-
 package com.openlattice.hazelcast.serializers
 
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest
 import com.openlattice.assembler.AssemblerConnectionManager
-import com.openlattice.assembler.processors.RefreshMaterializedEntitySetProcessor
+import com.openlattice.assembler.processors.UpdateMaterializedEntitySetProcessor
 import com.openlattice.mapstores.TestDataFactory
 import org.mockito.Mockito
 
-class RefreshMaterializedEntitySetProcessorStreamSerializerTest
-    : AbstractStreamSerializerTest<RefreshMaterializedEntitySetProcessorStreamSerializer,
-        RefreshMaterializedEntitySetProcessor>() {
-
-    override fun createSerializer(): RefreshMaterializedEntitySetProcessorStreamSerializer {
-        val processorSerializer = RefreshMaterializedEntitySetProcessorStreamSerializer()
+class UpdateMaterializedEntitySetProcessorStreamSerializerTest
+    : AbstractStreamSerializerTest<UpdateMaterializedEntitySetProcessorStreamSerializer,
+        UpdateMaterializedEntitySetProcessor>() {
+    override fun createSerializer(): UpdateMaterializedEntitySetProcessorStreamSerializer {
+        val processorSerializer = UpdateMaterializedEntitySetProcessorStreamSerializer()
         processorSerializer.init(Mockito.mock(AssemblerConnectionManager::class.java))
         return processorSerializer
     }
 
-    override fun createInput(): RefreshMaterializedEntitySetProcessor {
+    override fun createInput(): UpdateMaterializedEntitySetProcessor {
         val entitySet = TestDataFactory.entitySet()
-        return RefreshMaterializedEntitySetProcessor(entitySet)
+        val propertyTypes =
+                listOf(TestDataFactory.propertyType(), TestDataFactory.propertyType(), TestDataFactory.propertyType())
+                        .map { it.id to it }
+                        .toMap()
+
+        return UpdateMaterializedEntitySetProcessor(entitySet, propertyTypes)
     }
 }
