@@ -24,6 +24,7 @@ import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.edm.set.EntitySetPropertyMetadata
 import com.openlattice.edm.type.PropertyType
 import retrofit2.http.*
+import java.time.OffsetDateTime
 import java.util.*
 
 
@@ -51,6 +52,7 @@ interface EntitySetsApi {
         const val NAME_PATH = "/{$NAME}"
         const val PROPERTIES_PATH = "/properties"
         const val METADATA_PATH = "/metadata"
+        const val EXPIRATION_PATH = "/expiration"
 
         const val PROPERTY_TYPE_ID = "propertyTypeId"
         const val PROPERTY_TYPE_ID_PATH = "/{$PROPERTY_TYPE_ID}"
@@ -180,5 +182,24 @@ interface EntitySetsApi {
      */
     @HTTP(method = "DELETE", path = BASE + LINKING, hasBody = true)
     fun removeEntitySetsFromLinkingEntitySets(@Body entitySetIds: Map<UUID, Set<UUID>>): Int
+
+    /**
+     * Removes a data expiration policy previously set on an entity set.
+     * @param entitySetId The id of the entity set.
+     */
+    @PATCH(BASE + ALL + ID_PATH + EXPIRATION_PATH)
+    fun removeDataExpirationPolicy(@Path(ID) entitySetId: UUID): Int
+
+    /**
+     * Gets data from an entity set that will expire before a specified date
+     * @param entitySetId The id of the entity set to check
+     * @param dateTime The date time to check against (i.e. what entities will expire before this date time)
+     * The dateTime is expected in the format "yyyy-MM-dd'T'HH:mm:ss.SSS-ZZ:ZZ"
+     *
+     * @return Set of entity key ids that will expire before the specified date time
+     */
+    @POST(BASE + ALL + ID_PATH + EXPIRATION_PATH )
+    fun getExpiringEntitiesFromEntitySet(@Path(ID) entitySetId: UUID,
+                                         @Body dateTime: String): Set<UUID>
 
 }
