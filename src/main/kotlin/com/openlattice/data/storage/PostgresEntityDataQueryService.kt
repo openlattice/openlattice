@@ -4,14 +4,13 @@ import com.google.common.collect.Multimaps
 import com.openlattice.IdConstants
 import com.openlattice.analysis.SqlBindInfo
 import com.openlattice.analysis.requests.Filter
-import com.openlattice.data.EntityDataKey
 import com.openlattice.data.DeleteType
+import com.openlattice.data.EntityDataKey
 import com.openlattice.data.WriteEvent
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.data.storage.partitions.PartitionsInfo
 import com.openlattice.data.util.PostgresDataHasher
 import com.openlattice.edm.type.PropertyType
-import com.openlattice.linking.EntityKeyPair
 import com.openlattice.postgres.*
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.IDS
@@ -161,7 +160,7 @@ class PostgresEntityDataQueryService(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
     ): BasePostgresIterable<Pair<UUID, Map<UUID, Set<Any>>>> {
-        return getEntitySetIterable(entityKeyIds, authorizedPropertyTypes, mapOf() ) { rs ->
+        return getEntitySetIterable(entityKeyIds, authorizedPropertyTypes, mapOf()) { rs ->
             getEntityPropertiesByPropertyTypeId2(rs, authorizedPropertyTypes, byteBlobDataManager)
 //            getEntityPropertiesByPropertyTypeId(rs, authorizedPropertyTypes, byteBlobDataManager)
         }
@@ -503,7 +502,7 @@ class PostgresEntityDataQueryService(
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): WriteEvent {
         //We expect controller to have performed access control checks upstream.
-        val entityKeyIdsToLinkingIds = getLinkingIdsOfEntityKeyIds( replacementProperties.keys )
+        val entityKeyIdsToLinkingIds = getLinkingIdsOfEntityKeyIds(replacementProperties.keys)
 
         return hds.connection.use { connection ->
             connection.autoCommit = false
@@ -1015,7 +1014,7 @@ class PostgresEntityDataQueryService(
     }
 
     fun getExpiringEntitiesFromEntitySet(entitySetId: UUID, expirationBaseColumn: String, formattedDateMinusTTE: Any,
-                                         sqlFormat: Int, deleteType: DeleteType) : BasePostgresIterable<UUID> {
+                                         sqlFormat: Int, deleteType: DeleteType): BasePostgresIterable<UUID> {
         val partitionsInfo: PartitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
         val partitions = PostgresArrays.createIntArray(hds.connection, partitionsInfo.partitions)
         val partitionVersion = partitionsInfo.partitionsVersion
@@ -1025,17 +1024,17 @@ class PostgresEntityDataQueryService(
                         getExpiringEntitiesQuery(expirationBaseColumn, deleteType),
                         FETCH_SIZE,
                         false
-                ) {stmt ->
+                ) { stmt ->
                     stmt.setObject(1, entitySetId)
                     stmt.setArray(2, partitions)
                     stmt.setInt(3, partitionVersion)
                     stmt.setObject(4, IdConstants.ID_ID.id)
                     stmt.setObject(5, formattedDateMinusTTE, sqlFormat)
                 }
-        ) { rs -> ResultSetAdapters.id(rs)}
+        ) { rs -> ResultSetAdapters.id(rs) }
     }
 
-    private fun getExpiringEntitiesQuery(expirationBaseColumn: String, deleteType: DeleteType) : String {
+    private fun getExpiringEntitiesQuery(expirationBaseColumn: String, deleteType: DeleteType): String {
         var ignoredClearedEntitiesClause = ""
         if (deleteType == DeleteType.Soft) {
             ignoredClearedEntitiesClause = "AND ${VERSION.name} >= 0 "
