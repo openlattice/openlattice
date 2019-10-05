@@ -50,6 +50,8 @@ import java.util.*
 
 private const val numberOfEntities = 10
 
+// TODO: change column names in mat views
+
 class AssemblerLinkingTest : AssemblerTestBase() {
 
     private val organizationDataSource = TestAssemblerConnectionManager.connect(organizationID)
@@ -987,17 +989,7 @@ class AssemblerLinkingTest : AssemblerTestBase() {
 
         organizationsApi.assembleEntitySets(organizationID, mapOf(esLinking.id to 321))
 
-        user1OrganizationDataSource.connection.use { connection ->
-            connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking.name))
-                Assert.assertEquals(PostgresColumn.ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
-                Assert.assertEquals(PostgresColumn.LINKING_ID.name, rs.metaData.getColumnName(2))
-                val columns = TestAssemblerConnectionManager.getColumnNames(rs)
-                personEt.properties.forEach {
-                    Assert.assertTrue(columns.contains(edmApi.getPropertyType(it).type.fullQualifiedNameAsString))
-                }
-            }
-        }
+        checkMaterializedEntitySetColumns(user1OrganizationDataSource, esLinking, personEt)
 
         loginAs("admin")
     }

@@ -28,7 +28,6 @@ import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn
 import com.openlattice.rehearsal.SetupTestData
 import com.zaxxer.hikari.HikariDataSource
-import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.junit.Assert
 import java.sql.ResultSet
 import java.time.OffsetDateTime
@@ -62,11 +61,10 @@ open class AssemblerTestBase : SetupTestData() {
     }
 
     fun checkMaterializedEntitySetColumns(
+            organizationDataSource: HikariDataSource,
             entitySet: EntitySet,
-            entityType: EntityType,
-            propertyTypeFqns: List<String> = entityType.properties.map { edmApi.getPropertyType(it).type.fullQualifiedNameAsString },
-            organizationId: UUID,
-            organizationDataSource: HikariDataSource = TestAssemblerConnectionManager.connect(organizationId)
+            entityType: EntityType = edmApi.getEntityType(entitySet.entityTypeId),
+            propertyTypeFqns: List<String> = entityType.properties.map { edmApi.getPropertyType(it).type.fullQualifiedNameAsString }
     ) {
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->

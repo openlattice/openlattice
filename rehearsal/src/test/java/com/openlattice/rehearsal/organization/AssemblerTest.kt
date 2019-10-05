@@ -7,30 +7,26 @@ import com.openlattice.data.DataEdgeKey
 import com.openlattice.data.DeleteType
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.UpdateType
-import com.openlattice.edm.EntitySet
 import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.organization.Organization
 import com.openlattice.organization.OrganizationEntitySetFlag
 import com.openlattice.postgres.DataTables.quote
-import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.ENTITY_KEY_IDS_COL
 import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
 import com.openlattice.postgres.PostgresColumn.ID
 import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.rehearsal.assertException
-import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
 import org.junit.Assert
 import org.junit.BeforeClass
 import org.junit.Test
-import java.sql.ResultSet
 import java.time.OffsetDateTime
 import java.util.*
 
 private const val numberOfEntities = 10
 
-class AssemblerTest : MultipleAuthenticatedUsersBase() {
+class AssemblerTest : AssemblerTestBase() {
 
     private val organizationDataSource = TestAssemblerConnectionManager.connect(organizationID)
 
@@ -323,7 +319,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                 do {
                     val id = ResultSetAdapters.id(rs)
                     Assert.assertTrue(ids.contains(id))
-                    propertyFqns.forEach { propertyId, fqn ->
+                    propertyFqns.forEach { (propertyId, fqn) ->
                         Assert.assertEquals(
                                 newTestDataWithIds.getValue(id).getValue(propertyId).first(),
                                 getStringResult(rs, fqn)
@@ -540,7 +536,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
 
         loginAs("user1")
         organizationsApi.assembleEntitySets(organizationID, mapOf(es.id to 100))
-        
+
         val organizationDataSource = TestAssemblerConnectionManager.connect(organizationID)
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
@@ -690,19 +686,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         }
 
         organizationsApi.assembleEntitySets(organizationID, mapOf(es.id to 100))
-
-        user1OrganizationDataSource.connection.use { connection ->
-            connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name))
-                Assert.assertEquals(ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
-                Assert.assertEquals(ID.name, rs.metaData.getColumnName(2))
-                Assert.assertEquals(ENTITY_KEY_IDS_COL.name, rs.metaData.getColumnName(3))
-                val columns = TestAssemblerConnectionManager.getColumnNames(rs)
-                et.properties.forEach {
-                    Assert.assertTrue(columns.contains(edmApi.getPropertyType(it).type.fullQualifiedNameAsString))
-                }
-            }
-        }
+        checkMaterializedEntitySetColumns(user1OrganizationDataSource, es, et)
 
         loginAs("admin")
     }
@@ -892,20 +876,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
 
         // materialize src entity set
         organizationsApi.assembleEntitySets(organizationID, mapOf(esSrc.id to 100))
-
-        organizationDataSource.connection.use { connection ->
-            connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esSrc.name))
-                // all columns are there
-                (1..rs.metaData.columnCount).forEach {
-                    val columnName = rs.metaData.getColumnName(it)
-                    if (columnName != ID.name && columnName != ENTITY_SET_ID.name
-                            && columnName != ENTITY_KEY_IDS_COL.name) {
-                        Assert.assertTrue(srcPropertyFqns.values.contains(columnName))
-                    }
-                }
-            }
-        }
+        checkMaterializedEntitySetColumns(organizationDataSource, esSrc, src, srcPropertyFqns.values.toList())
 
         entitySetsApi.deleteEntitySet(esSrc.id)
 
@@ -1161,24 +1132,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         val propertyFqns = et.properties.map { edmApi.getPropertyType(it).type.fullQualifiedNameAsString }
 
         organizationsApi.assembleEntitySets(organizationId, mapOf(es.id to null))
-        organizationDataSource.connection.use { connection ->
-            connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name))
-                Assert.assertEquals(ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
-                Assert.assertEquals(ID.name, rs.metaData.getColumnName(2))
-                Assert.assertEquals(ENTITY_KEY_IDS_COL.name, rs.metaData.getColumnName(3))
-
-                // all columns are there
-                (1..rs.metaData.columnCount).forEach {
-                    val columnName = rs.metaData.getColumnName(it)
-                    if (columnName != ID.name
-                            && columnName != ENTITY_SET_ID.name
-                            && columnName != ENTITY_KEY_IDS_COL.name) {
-                        Assert.assertTrue(propertyFqns.contains(columnName))
-                    }
-                }
-            }
-        }
+        checkMaterializedEntitySetColumns(organizationDataSource, es, et, propertyFqns)
 
         val ptAcl = Acl(
                 listOf(es.id, et.properties.first()),
@@ -1216,80 +1170,93 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         Thread.sleep(60_000L)
 
         organizationsApi.assembleEntitySets(organizationId, mapOf(es.id to null))
-        organizationDataSource.connection.use { connection ->
-            connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name))
-                Assert.assertEquals(ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
-                Assert.assertEquals(ID.name, rs.metaData.getColumnName(2))
-                Assert.assertEquals(ENTITY_KEY_IDS_COL.name, rs.metaData.getColumnName(3))
-
-                // all columns are there
-                (1..rs.metaData.columnCount).forEach {
-                    val columnName = rs.metaData.getColumnName(it)
-                    if (columnName != ID.name
-                            && columnName != ENTITY_SET_ID.name
-                            && columnName != ENTITY_KEY_IDS_COL.name) {
-                        Assert.assertTrue(propertyFqns.contains(columnName))
-                    }
-                }
-            }
-        }
+        checkMaterializedEntitySetColumns(organizationDataSource, es, et, propertyFqns)
     }
 
     @Test
     fun testEntitySetMaterializePermissionChangesBulk() {
-        val organization = createOrganization()
-        val organizationId = organization.id
+        val organization1 = createOrganization()
+        val organizationId1 = organization1.id
+        val organization2 = createOrganization()
+        val organizationId2 = organization2.id
 
         val et = createEntityType()
-        val es = createEntitySet(et, organizationId)
-        grantMaterializePermissions(organization, es, et.properties)
-        organizationsApi.assembleEntitySets(organizationId, mapOf(es.id to null))
-
-        val organizationDataSource = TestAssemblerConnectionManager.connect(organizationId)
-
-        /* Revoke permission on 1 property in entity set */
         val propertyFqns = et.properties.map { edmApi.getPropertyType(it).type.fullQualifiedNameAsString }
 
-        organizationsApi.assembleEntitySets(organizationId, mapOf(es.id to null))
-        organizationDataSource.connection.use { connection ->
-            connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name))
-                Assert.assertEquals(ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
-                Assert.assertEquals(ID.name, rs.metaData.getColumnName(2))
-                Assert.assertEquals(ENTITY_KEY_IDS_COL.name, rs.metaData.getColumnName(3))
+        val es1 = createEntitySet(et, organizationId1)
+        grantMaterializePermissions(organization1, es1, et.properties)
+        organizationsApi.assembleEntitySets(organizationId1, mapOf(es1.id to null))
+        grantMaterializePermissions(organization2, es1, et.properties)
+        organizationsApi.assembleEntitySets(organizationId2, mapOf(es1.id to null))
 
-                // all columns are there
-                (1..rs.metaData.columnCount).forEach {
-                    val columnName = rs.metaData.getColumnName(it)
+        val es2 = createEntitySet(et, organizationId1)
+        grantMaterializePermissions(organization1, es2, et.properties)
+        organizationsApi.assembleEntitySets(organizationId1, mapOf(es2.id to null))
+
+        val organization1DataSource = TestAssemblerConnectionManager.connect(organizationId1)
+        val organization2DataSource = TestAssemblerConnectionManager.connect(organizationId2)
+
+        // pre-check: everything should be there in both org databases
+        checkMaterializedEntitySetColumns(organization1DataSource, es1, et, propertyFqns)
+        checkMaterializedEntitySetColumns(organization1DataSource, es2, et, propertyFqns)
+        checkMaterializedEntitySetColumns(organization2DataSource, es1, et, propertyFqns)
+
+
+        /* Revoke permission on 1 property in entity set1 and revoke from whole entity set2 in organization 1 */
+        /* Revoke permission on 1 property in entity set1 in organization 2 */
+        val ptEs1Org1Acl = Acl(
+                listOf(es1.id, et.properties.first()),
+                listOf(Ace(organization1.principal, EnumSet.of(Permission.MATERIALIZE), OffsetDateTime.MAX))
+        )
+        val es2Org1Acl = Acl(
+                listOf(es2.id),
+                listOf(Ace(organization1.principal, EnumSet.of(Permission.MATERIALIZE), OffsetDateTime.MAX))
+        )
+        val ptEs1Org2Acl = Acl(
+                listOf(es1.id, et.properties.first()),
+                listOf(Ace(organization2.principal, EnumSet.of(Permission.MATERIALIZE), OffsetDateTime.MAX))
+        )
+        permissionsApi.updateAcls(listOf(AclData(ptEs1Org1Acl, Action.REMOVE)))
+        permissionsApi.updateAcls(listOf(AclData(es2Org1Acl, Action.REMOVE)))
+        permissionsApi.updateAcls(listOf(AclData(ptEs1Org2Acl, Action.REMOVE)))
+
+        // wait for background task
+        Thread.sleep(60_000L)
+
+        organization1DataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                val rs1 = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es1.name))
+                Assert.assertEquals(ENTITY_SET_ID.name, rs1.metaData.getColumnName(1))
+                Assert.assertEquals(ID.name, rs1.metaData.getColumnName(2))
+                Assert.assertEquals(ENTITY_KEY_IDS_COL.name, rs1.metaData.getColumnName(3))
+
+                // not permitted column should not be there
+                (1..rs1.metaData.columnCount).forEach {
+                    val columnName = rs1.metaData.getColumnName(it)
                     if (columnName != ID.name
                             && columnName != ENTITY_SET_ID.name
                             && columnName != ENTITY_KEY_IDS_COL.name) {
-                        Assert.assertTrue(propertyFqns.contains(columnName))
+                        Assert.assertNotEquals(propertyFqns.first(), columnName)
                     }
                 }
+
+                assertException(
+                        { stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es2.name)) },
+                        "relation \"${AssemblerConnectionManager.MATERIALIZED_VIEWS_SCHEMA}.${es2.name}\" does not exist"
+                )
             }
         }
 
-        val ptAcl = Acl(
-                listOf(es.id, et.properties.first()),
-                listOf(Ace(organization.principal, EnumSet.of(Permission.MATERIALIZE), OffsetDateTime.MAX))
-        )
-        permissionsApi.updateAcls(listOf(AclData(ptAcl, Action.REMOVE)))
-
-        // wait for background task
-        Thread.sleep(5000L)
-
-        organizationDataSource.connection.use { connection ->
+        organization2DataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name))
-                Assert.assertEquals(ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
-                Assert.assertEquals(ID.name, rs.metaData.getColumnName(2))
-                Assert.assertEquals(ENTITY_KEY_IDS_COL.name, rs.metaData.getColumnName(3))
+                val rs1 = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es1.name))
+                Assert.assertEquals(ENTITY_SET_ID.name, rs1.metaData.getColumnName(1))
+                Assert.assertEquals(ID.name, rs1.metaData.getColumnName(2))
+                Assert.assertEquals(ENTITY_KEY_IDS_COL.name, rs1.metaData.getColumnName(3))
 
                 // not permitted column should not be there
-                (1..rs.metaData.columnCount).forEach {
-                    val columnName = rs.metaData.getColumnName(it)
+                (1..rs1.metaData.columnCount).forEach {
+                    val columnName = rs1.metaData.getColumnName(it)
                     if (columnName != ID.name
                             && columnName != ENTITY_SET_ID.name
                             && columnName != ENTITY_KEY_IDS_COL.name) {
@@ -1300,82 +1267,34 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         }
 
 
-        /* Re-add permission on 1 property in entity set */
-        permissionsApi.updateAcls(listOf(AclData(ptAcl, Action.ADD)))
+        /* Re-add permission on 1 property in entity set1 and for entity set2 in organization1 */
+        /* Re-add permission on 1 property in entity set1 in organization 2 */
+        permissionsApi.updateAcls(listOf(AclData(ptEs1Org1Acl, Action.ADD)))
+        permissionsApi.updateAcls(listOf(AclData(es2Org1Acl, Action.ADD)))
+        permissionsApi.updateAcls(listOf(AclData(ptEs1Org2Acl, Action.ADD)))
+
+        // wait for background task
+        Thread.sleep(60_000L)
+
+        checkMaterializedEntitySetColumns(organization1DataSource, es1, et, propertyFqns)
+        checkMaterializedEntitySetColumns(organization2DataSource, es1, et, propertyFqns)
+
+        //entity set2 should still not be there
+        organization1DataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                assertException(
+                        { stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es2.name)) },
+                        "relation \"${AssemblerConnectionManager.MATERIALIZED_VIEWS_SCHEMA}.${es2.name}\" does not exist"
+                )
+            }
+        }
+
+        /* Set permission on 1 property in entity set1 */
+        permissionsApi.updateAcls(listOf(AclData(ptEs1Org1Acl, Action.SET)))
 
         // wait for background task
         Thread.sleep(5000L)
 
-        organizationsApi.assembleEntitySets(organizationId, mapOf(es.id to null))
-        organizationDataSource.connection.use { connection ->
-            connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name))
-                Assert.assertEquals(ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
-                Assert.assertEquals(ID.name, rs.metaData.getColumnName(2))
-                Assert.assertEquals(ENTITY_KEY_IDS_COL.name, rs.metaData.getColumnName(3))
-
-                // all columns are there
-                (1..rs.metaData.columnCount).forEach {
-                    val columnName = rs.metaData.getColumnName(it)
-                    if (columnName != ID.name
-                            && columnName != ENTITY_SET_ID.name
-                            && columnName != ENTITY_KEY_IDS_COL.name) {
-                        Assert.assertTrue(propertyFqns.contains(columnName))
-                    }
-                }
-            }
-        }
-
-        /* Set permission on 1 property in entity set */
-        permissionsApi.updateAcls(listOf(AclData(ptAcl, Action.SET)))
-
-        // wait for background task
-        Thread.sleep(5000L)
-
-        organizationsApi.assembleEntitySets(organizationId, mapOf(es.id to null))
-        organizationDataSource.connection.use { connection ->
-            connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es.name))
-                Assert.assertEquals(ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
-                Assert.assertEquals(ID.name, rs.metaData.getColumnName(2))
-                Assert.assertEquals(ENTITY_KEY_IDS_COL.name, rs.metaData.getColumnName(3))
-
-                // all columns are there
-                (1..rs.metaData.columnCount).forEach {
-                    val columnName = rs.metaData.getColumnName(it)
-                    if (columnName != ID.name
-                            && columnName != ENTITY_SET_ID.name
-                            && columnName != ENTITY_KEY_IDS_COL.name) {
-                        Assert.assertTrue(propertyFqns.contains(columnName))
-                    }
-                }
-            }
-        }
-    }
-
-
-    /**
-     * Add permission to materialize entity set and it's properties to organization principal
-     */
-    private fun grantMaterializePermissions(organization: Organization, entitySet: EntitySet, properties: Set<UUID>) {
-        val newPermissions = EnumSet.of(Permission.MATERIALIZE)
-        val entitySetAcl = Acl(
-                AclKey(entitySet.id),
-                setOf(Ace(organization.principal, newPermissions, OffsetDateTime.MAX))
-        )
-        permissionsApi.updateAcl(AclData(entitySetAcl, Action.ADD))
-
-        // add permissions on properties
-        properties.forEach {
-            val propertyTypeAcl = Acl(
-                    AclKey(entitySet.id, it),
-                    setOf(Ace(organization.principal, newPermissions, OffsetDateTime.MAX))
-            )
-            permissionsApi.updateAcl(AclData(propertyTypeAcl, Action.ADD))
-        }
-    }
-
-    private fun getStringResult(rs: ResultSet, column: String): String {
-        return PostgresArrays.getTextArray(rs, column)[0]
+        checkMaterializedEntitySetColumns(organization1DataSource, es1, et, propertyFqns)
     }
 }
