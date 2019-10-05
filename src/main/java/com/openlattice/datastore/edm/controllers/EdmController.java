@@ -46,6 +46,7 @@ import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
 import com.openlattice.edm.type.AssociationDetails;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
+import com.openlattice.edm.type.EntityTypePropertyMetadata;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.web.mediatypes.CustomMediaType;
