@@ -18,33 +18,30 @@
  *
  *
  */
-
 package com.openlattice.hazelcast.serializers
 
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest
 import com.openlattice.assembler.AssemblerConnectionManager
-import com.openlattice.assembler.processors.AddMembersToOrganizationAssemblyProcessor
+import com.openlattice.assembler.processors.UpdateMaterializedEntitySetProcessor
 import com.openlattice.mapstores.TestDataFactory
 import org.mockito.Mockito
 
-class AddMembersToOrganizationAssemblyProcessorStreamSerializerTest
-    : AbstractStreamSerializerTest<AddMembersToOrganizationAssemblyProcessorStreamSerializer,
-        AddMembersToOrganizationAssemblyProcessor>() {
-
-    override fun createSerializer(): AddMembersToOrganizationAssemblyProcessorStreamSerializer {
-        val processorSerializer = AddMembersToOrganizationAssemblyProcessorStreamSerializer()
+class UpdateMaterializedEntitySetProcessorStreamSerializerTest
+    : AbstractStreamSerializerTest<UpdateMaterializedEntitySetProcessorStreamSerializer,
+        UpdateMaterializedEntitySetProcessor>() {
+    override fun createSerializer(): UpdateMaterializedEntitySetProcessorStreamSerializer {
+        val processorSerializer = UpdateMaterializedEntitySetProcessorStreamSerializer()
         processorSerializer.init(Mockito.mock(AssemblerConnectionManager::class.java))
         return processorSerializer
     }
 
-    override fun createInput(): AddMembersToOrganizationAssemblyProcessor {
-        val authorizedPropertyTypesOfEntitySetsByPrincipal =
-                SecurablePrincipalListStreamSerializerTest.createSecurablePrincipalList().associateWith {
-                    listOf(TestDataFactory.entitySet()).associateWith {
-                        listOf(TestDataFactory.propertyType(), TestDataFactory.propertyType())
-                    }
-                }
+    override fun createInput(): UpdateMaterializedEntitySetProcessor {
+        val entitySet = TestDataFactory.entitySet()
+        val propertyTypes =
+                listOf(TestDataFactory.propertyType(), TestDataFactory.propertyType(), TestDataFactory.propertyType())
+                        .map { it.id to it }
+                        .toMap()
 
-        return AddMembersToOrganizationAssemblyProcessor(authorizedPropertyTypesOfEntitySetsByPrincipal)
+        return UpdateMaterializedEntitySetProcessor(entitySet, propertyTypes)
     }
 }

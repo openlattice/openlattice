@@ -32,6 +32,7 @@ import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.hazelcast.query.Predicate;
 import com.hazelcast.query.Predicates;
+import com.openlattice.assembler.events.MaterializePermissionChangeEvent;
 import com.openlattice.authorization.aggregators.AuthorizationAggregator;
 import com.openlattice.authorization.aggregators.AuthorizationSetAggregator;
 import com.openlattice.authorization.aggregators.PrincipalAggregator;
@@ -83,6 +84,58 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
         aces.executeOnEntries( new SecurableObjectTypeUpdater( objectType ), hasAclKey( aclKey ) );
     }
 
+    private void signalMaterializationPermissionChange(
+            AclKey key,
+            Principal principal,
+            EnumSet<Permission> permissions,
+            SecurableObjectType securableObjectType
+    ) {
+        // if there is a change in materialization permission for a property type or an entity set for an organization
+        // principal, we need to flag it
+        if ( permissions.contains( Permission.MATERIALIZE )
+                && principal.getType().equals( PrincipalType.ORGANIZATION )
+                && ( securableObjectType.equals( SecurableObjectType.PropertyTypeInEntitySet )
+                || securableObjectType.equals( SecurableObjectType.EntitySet ) ) ) {
+            eventBus.post(
+                    new MaterializePermissionChangeEvent( principal, Set.of( key.get( 0 ) ), securableObjectType )
+            );
+        }
+    }
+
+    private void signalMaterializationPermissionChangeBulk( SetMultimap<AceValue, AceKey> updates ) {
+        // if there is a change in materialization permission for a property type or an entity set for an organization
+        // principal, we need to flag it
+
+        // filter entries relevant for materialize permission changes
+        updates.entries().stream()
+                .filter(
+                        aceEntry -> ( aceEntry.getKey().getSecurableObjectType().equals( SecurableObjectType.EntitySet )
+                                || aceEntry.getKey().getSecurableObjectType().equals( SecurableObjectType.PropertyTypeInEntitySet ) )
+                                && ( aceEntry.getKey().getPermissions().contains( Permission.MATERIALIZE )
+                                && ( aceEntry.getValue().getPrincipal().getType().equals( PrincipalType.ORGANIZATION ) ) )
+                )
+                // group by organization (principal)
+                .collect( Collectors.groupingBy( aceEntry -> aceEntry.getValue().getPrincipal() ) )
+                .forEach( ( principal, aceEntries ) ->
+                        aceEntries.stream()
+                                // group by object type
+                                .collect( Collectors.groupingBy( aceEnrty -> aceEnrty.getKey().getSecurableObjectType() ) )
+                                .forEach( ( securableObjectType, aceEntriesOfType ) -> {
+                                            final var entitySetIds = aceEntriesOfType.stream()
+                                                    .map( aceEntryOfType -> aceEntryOfType.getValue().getAclKey().get( 0 ) )
+                                                    .collect( Collectors.toSet() );
+                                            eventBus.post(
+                                                    new MaterializePermissionChangeEvent(
+                                                            principal,
+                                                            entitySetIds,
+                                                            securableObjectType )
+                                            );
+                                        }
+                                )
+                );
+
+    }
+
     @Override
     public void addPermission(
             AclKey key,
@@ -102,6 +155,7 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
         if ( securableObjectType == SecurableObjectType.Unknown ) {
             logger.warn( "Unrecognized object type for acl key {} key ", key );
         }
+        signalMaterializationPermissionChange( key, principal, permissions, securableObjectType );
         aces.executeOnKey( new AceKey( key, principal ),
                 new PermissionMerger( permissions, securableObjectType, expirationDate ) );
     }
@@ -111,13 +165,15 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
         SetMultimap<AceValue, AceKey> updates = getAceValueToAceKeyMap( acls );
 
         updates.keySet().forEach( aceValue -> {
+            final var permissions = aceValue.getPermissions();
+            final var securableObjectType = aceValue.getSecurableObjectType();
+            final var expirationDate = aceValue.getExpirationDate();
 
             Set<AceKey> aceKeys = updates.get( aceValue );
-            aces.executeOnKeys( aceKeys,
-                    new PermissionMerger( aceValue.getPermissions(),
-                            aceValue.getSecurableObjectType(),
-                            aceValue.getExpirationDate() ) );
+            aces.executeOnKeys( aceKeys, new PermissionMerger( permissions, securableObjectType, expirationDate ) );
         } );
+
+        signalMaterializationPermissionChangeBulk( updates );
     }
 
     @Override
@@ -134,10 +190,12 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
         SetMultimap<AceValue, AceKey> updates = getAceValueToAceKeyMap( acls );
 
         updates.keySet().forEach( aceValue -> {
+            final var permissions = aceValue.getPermissions();
 
             Set<AceKey> aceKeys = updates.get( aceValue );
-            aces.executeOnKeys( aceKeys, new PermissionRemover( aceValue.getPermissions() ) );
+            aces.executeOnKeys( aceKeys, new PermissionRemover( permissions ) );
         } );
+        signalMaterializationPermissionChangeBulk( updates );
     }
 
     private SetMultimap<AceValue, AceKey> getAceValueToAceKeyMap( List<Acl> acls ) {
@@ -172,17 +230,22 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
 
         acls.forEach( acl -> {
             AclKey aclKey = new AclKey( acl.getAclKey() );
-            SecurableObjectType securableObjectType = securableObjectTypes
-                    .getOrDefault( aclKey, SecurableObjectType.Unknown );
+            SecurableObjectType securableObjectType = types.getOrDefault( aclKey, SecurableObjectType.Unknown );
 
             if ( securableObjectType.equals( SecurableObjectType.Unknown ) ) {
                 logger.warn( "Unrecognized object type for acl key {} key ", aclKey );
             }
 
-            acl.getAces().forEach( ace ->
-                    updates.put( new AceKey( aclKey, ace.getPrincipal() ),
-                            new AceValue( ace.getPermissions(), securableObjectType, ace.getExpirationDate() ) )
-            );
+            acl.getAces().forEach( ace -> {
+                final var principal = ace.getPrincipal();
+                final var permissions = ace.getPermissions();
+
+                updates.put(
+                        new AceKey( aclKey, principal ),
+                        new AceValue( permissions, securableObjectType, ace.getExpirationDate() )
+                );
+                signalMaterializationPermissionChange( aclKey, principal, permissions, securableObjectType );
+            } );
         } );
 
         aces.putAll( updates );
@@ -203,7 +266,8 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
 
             if ( allOtherUserOwnersCount == 0 ) {
                 throw new IllegalStateException(
-                        "Unable to remove owner permissions as a securable object will be left without an owner of type USER" );
+                        "Unable to remove owner permissions as a securable object will be left without an owner of " +
+                                "type USER" );
             }
         }
     }
@@ -213,7 +277,12 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
             AclKey key,
             Principal principal,
             EnumSet<Permission> permissions ) {
-        ensureAclKeysHaveOtherUserOwners( ImmutableSet.of( key ), ImmutableSet.of( principal ) );
+        if ( permissions.contains( Permission.OWNER ) ) {
+            ensureAclKeysHaveOtherUserOwners( ImmutableSet.of( key ), ImmutableSet.of( principal ) );
+        }
+        signalMaterializationPermissionChange(
+                key, principal, permissions, securableObjectTypes.getOrDefault( key, SecurableObjectType.Unknown )
+        );
         aces.executeOnKey( new AceKey( key, principal ), new PermissionRemover( permissions ) );
     }
 
@@ -235,14 +304,16 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
             ensureAclKeysHaveOtherUserOwners( ImmutableSet.of( key ), ImmutableSet.of( principal ) );
         //This should be a rare call to overwrite all permissions, so it's okay to do a read before write.
         SecurableObjectType securableObjectType = securableObjectTypes.getOrDefault( key, SecurableObjectType.Unknown );
+        signalMaterializationPermissionChange( key, principal, permissions, securableObjectType );
         aces.set( new AceKey( key, principal ), new AceValue( permissions, securableObjectType, expirationDate ) );
     }
 
     @Override
     public void setPermission( Set<AclKey> aclKeys, Set<Principal> principals, EnumSet<Permission> permissions ) {
         //This should be a rare call to overwrite all permissions, so it's okay to do a read before write.
-        if ( !permissions.contains( Permission.OWNER ) )
+        if ( !permissions.contains( Permission.OWNER ) ) {
             ensureAclKeysHaveOtherUserOwners( aclKeys, principals );
+        }
 
         Map<AclKey, SecurableObjectType> securableObjectTypesForAclKeys = securableObjectTypes.getAll( aclKeys );
 
@@ -255,6 +326,7 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
 
             for ( Principal principal : principals ) {
                 newPermissions.put( new AceKey( aclKey, principal ), aceValue );
+                signalMaterializationPermissionChange( aclKey, principal, permissions, objectType );
             }
         }
 
@@ -267,9 +339,8 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
         permissions.entrySet().stream().filter( entry -> !entry.getValue().contains( Permission.OWNER ) )
                 .collect( Collectors.groupingBy( e -> e.getKey().getAclKey(),
                         Collectors.mapping( e -> e.getKey().getPrincipal(), Collectors.toSet() ) ) )
-                .entrySet()
-                .forEach( entry -> ensureAclKeysHaveOtherUserOwners( ImmutableSet.of( entry.getKey() ),
-                        entry.getValue() ) );
+                .forEach( ( aclKey, principals ) ->
+                        ensureAclKeysHaveOtherUserOwners( ImmutableSet.of( aclKey ), principals ) );
 
         Map<AclKey, SecurableObjectType> securableObjectTypesForAclKeys = securableObjectTypes
                 .getAll( permissions.keySet().stream().map( AceKey::getAclKey ).collect(
@@ -277,16 +348,16 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
 
         Map<AceKey, AceValue> newPermissions = Maps.newHashMap();
 
-        for ( Map.Entry<AceKey, EnumSet<Permission>> entry : permissions.entrySet() ) {
+        permissions.forEach( ( aceKey, acePermissions ) -> {
+            final var aclKey = aceKey.getAclKey();
+            final var objectType = securableObjectTypesForAclKeys.getOrDefault( aclKey, SecurableObjectType.Unknown );
 
-            SecurableObjectType objectType = securableObjectTypesForAclKeys
-                    .getOrDefault( entry.getKey().getAclKey(), SecurableObjectType.Unknown );
+            newPermissions.put( aceKey, new AceValue( acePermissions, objectType, OffsetDateTime.MAX ) );
 
-            newPermissions.put( entry.getKey(), new AceValue( entry.getValue(), objectType, OffsetDateTime.MAX ) );
-        }
+            signalMaterializationPermissionChange( aclKey, aceKey.getPrincipal(), acePermissions, objectType );
+        } );
 
         aces.putAll( newPermissions );
-
     }
 
     @Override
@@ -476,7 +547,8 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
                 .getAll( aceKeys )
                 .values()
                 .stream()
-                //                .peek( ps -> logger.info( "Implementing class: {}", ps.getClass().getCanonicalName() ) )
+                //                .peek( ps -> logger.info( "Implementing class: {}", ps.getClass().getCanonicalName
+                //                () ) )
                 .map( AceValue::getPermissions )
                 .filter( permissions -> permissions != null )
                 .forEach( objectPermissions::addAll );
@@ -597,38 +669,38 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
     }
 
     private static Predicate hasExactPermissions( EnumSet<Permission> permissions ) {
-        Predicate[] subPredicates = new Predicate[ permissions.size() ];
+        Predicate[] subPredicates = new Predicate[permissions.size()];
         int i = 0;
         for ( Permission p : permissions ) {
-            subPredicates[ i++ ] = Predicates.equal( PermissionMapstore.PERMISSIONS_INDEX, p );
+            subPredicates[i++] = Predicates.equal( PermissionMapstore.PERMISSIONS_INDEX, p );
         }
         return Predicates.and( subPredicates );
     }
 
     private static Predicate hasAnyPermissions( EnumSet<Permission> permissions ) {
-        return Predicates.in( PermissionMapstore.PERMISSIONS_INDEX, permissions.toArray( new Permission[ 0 ] ) );
+        return Predicates.in( PermissionMapstore.PERMISSIONS_INDEX, permissions.toArray( new Permission[0] ) );
     }
 
     private static Predicate hasExactAclKeys( Collection<AclKey> aclKeys ) {
-        Predicate[] subPredicates = new Predicate[ aclKeys.size() ];
+        Predicate[] subPredicates = new Predicate[aclKeys.size()];
         int i = 0;
         for ( AclKey aclKey : aclKeys ) {
-            subPredicates[ i++ ] = Predicates.equal( ACL_KEY_INDEX, aclKey );
+            subPredicates[i++] = Predicates.equal( ACL_KEY_INDEX, aclKey );
         }
         return Predicates.and( subPredicates );
     }
 
     private static Predicate hasExactPrincipals( Collection<Principal> principals ) {
-        Predicate[] subPredicates = new Predicate[ principals.size() ];
+        Predicate[] subPredicates = new Predicate[principals.size()];
         int i = 0;
         for ( Principal principal : principals ) {
-            subPredicates[ i++ ] = Predicates.equal( PermissionMapstore.PRINCIPAL_INDEX, principal );
+            subPredicates[i++] = Predicates.equal( PermissionMapstore.PRINCIPAL_INDEX, principal );
         }
         return Predicates.and( subPredicates );
     }
 
     private static Predicate hasAnyPrincipals( Collection<Principal> principals ) {
-        return Predicates.in( PermissionMapstore.PRINCIPAL_INDEX, principals.toArray( new Principal[ 0 ] ) );
+        return Predicates.in( PermissionMapstore.PRINCIPAL_INDEX, principals.toArray( new Principal[0] ) );
     }
 
     private static Predicate hasAnyAclKeys( Collection<AclKey> aclKeys ) {

@@ -116,6 +116,9 @@ public final class PostgresColumn {
     public static final String                   DATA_ID_FIELD                     = "data_id";
     public static final PostgresColumnDefinition DATA_ID                           =
             new PostgresColumnDefinition( DATA_ID_FIELD, UUID );
+    public static final String                   EXPIRATION_DELETE_FLAG_FIELD      = "expiration_delete_flag";
+    public static final PostgresColumnDefinition EXPIRATION_DELETE_FLAG            =
+            new PostgresColumnDefinition( EXPIRATION_DELETE_FLAG_FIELD, TEXT );
     public static final String                   DESCRIPTION_FIELD                 = "description";
     public static final PostgresColumnDefinition DESCRIPTION                       =
             new PostgresColumnDefinition( DESCRIPTION_FIELD, TEXT );
@@ -207,12 +210,17 @@ public final class PostgresColumn {
             new PostgresColumnDefinition( EXPIRATION_DATE_FIELD, TIMESTAMPTZ )
                     .withDefault( "'infinity'" )
                     .notNull();
-    public static final String                   EXPIRATION_FIELD                = "expiration";
-    public static final PostgresColumnDefinition EXPIRATION                      = new PostgresColumnDefinition(
-            EXPIRATION_FIELD,
-            BIGINT );
-    public static final String                   EXTERNAL_FIELD                  = "external";
-    public static final PostgresColumnDefinition EXTERNAL                        =
+    public static final String                   EXPIRATION_FIELD                  = "expiration";
+    public static final PostgresColumnDefinition EXPIRATION                        =
+            new PostgresColumnDefinition( EXPIRATION_FIELD, BIGINT );
+    public static final String                   EXPIRATION_BASE_FLAG_FIELD        = "expiration_base_flag";
+    public static final PostgresColumnDefinition EXPIRATION_BASE_FLAG              =
+            new PostgresColumnDefinition( EXPIRATION_BASE_FLAG_FIELD, TEXT );
+    public static final String                   EXPIRATION_START_ID_FIELD         = "expiration_start_id";
+    public static final PostgresColumnDefinition EXPIRATION_START_ID               =
+            new PostgresColumnDefinition( EXPIRATION_START_ID_FIELD, UUID );
+    public static final String                   EXTERNAL_FIELD                    = "external";
+    public static final PostgresColumnDefinition EXTERNAL                          =
             new PostgresColumnDefinition( EXTERNAL_FIELD, BOOLEAN );
     public static final String                   FLAGS_FIELD                     = "flags";
     public static final PostgresColumnDefinition FLAGS                           =
@@ -328,8 +336,11 @@ public final class PostgresColumn {
     public static final String                   NULLABLE_TITLE_FIELD            = "title";
     public static final PostgresColumnDefinition NULLABLE_TITLE                  =
             new PostgresColumnDefinition( NULLABLE_TITLE_FIELD, TEXT );
-    public static final String                   ORGANIZATION_ID_FIELD           = "organization_id";
-    public static final PostgresColumnDefinition ORGANIZATION_ID                 =
+    public static final String                   TIME_TO_EXPIRATION_FIELD          = "time_to_expiration";
+    public static final PostgresColumnDefinition TIME_TO_EXPIRATION                =
+            new PostgresColumnDefinition( TIME_TO_EXPIRATION_FIELD, BIGINT );
+    public static final String                   ORGANIZATION_ID_FIELD             = "organization_id";
+    public static final PostgresColumnDefinition ORGANIZATION_ID                   =
             new PostgresColumnDefinition( ORGANIZATION_ID_FIELD, UUID ).notNull();
     public static final String                   ORIGIN_ID_FIELD                   = "origin_id";
     public static final PostgresColumnDefinition ORIGIN_ID                         =

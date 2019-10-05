@@ -46,6 +46,7 @@ import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.set.EntitySetFlag;
 import com.openlattice.edm.set.EntitySetPropertyKey;
 import com.openlattice.edm.set.EntitySetPropertyMetadata;
+import com.openlattice.edm.set.ExpirationBase;
 import com.openlattice.edm.type.Analyzer;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
@@ -635,6 +636,7 @@ public final class ResultSetAdapters {
         final var flags = entitySetFlags( rs );
         final var partitions = partitions( rs );
         final var partitionVersion = partitionVersions( rs );
+        final var expirationData = dataExpiration( rs );
         return new EntitySet( id,
                 entityTypeId,
                 name,
@@ -645,7 +647,8 @@ public final class ResultSetAdapters {
                 organization,
                 flags,
                 new LinkedHashSet<>( Arrays.asList( partitions ) ),
-                partitionVersion );
+                partitionVersion,
+                expirationData );
     }
 
     public static int partitionVersions( ResultSet rs ) throws SQLException {
@@ -654,6 +657,40 @@ public final class ResultSetAdapters {
 
     public static Integer[] partitions( ResultSet rs ) throws SQLException {
         return PostgresArrays.getIntArray( rs, PARTITIONS_FIELD );
+    }
+
+    public static DataExpiration dataExpiration( ResultSet rs ) throws SQLException {
+        final var expirationBase = expirationBase( rs );
+        if ( expirationBase == null ) {
+            return null;
+        }
+        final var timeToExpiration = timeToExpiration( rs );
+        final var deleteType = deleteType( rs );
+        final var startDateProperty = startDateProperty( rs );
+        return new DataExpiration( timeToExpiration,
+                    expirationBase,
+                    deleteType,
+                    Optional.ofNullable( startDateProperty ) );
+    }
+
+    public static Long timeToExpiration( ResultSet rs ) throws SQLException {
+        return rs.getLong( TIME_TO_EXPIRATION_FIELD );
+    }
+
+    public static ExpirationBase expirationBase( ResultSet rs ) throws SQLException {
+        String expirationFlag = rs.getString( EXPIRATION_BASE_FLAG_FIELD );
+        if ( expirationFlag != null ) { return ExpirationBase.valueOf( expirationFlag ); }
+        return null;
+    }
+
+    public static DeleteType deleteType( ResultSet rs ) throws SQLException {
+        String deleteType = rs.getString( EXPIRATION_DELETE_FLAG_FIELD );
+        if ( deleteType != null) { return DeleteType.valueOf( deleteType ); }
+        return null;
+    }
+
+    public static UUID startDateProperty( ResultSet rs ) throws SQLException {
+        return rs.getObject( EXPIRATION_START_ID_FIELD, UUID.class );
     }
 
     public static AssociationType associationType( ResultSet rs ) throws SQLException {

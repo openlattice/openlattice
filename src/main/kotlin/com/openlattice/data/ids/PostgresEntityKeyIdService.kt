@@ -119,7 +119,7 @@ class PostgresEntityKeyIdService(
                 logger.warn("Expected ${entityKeyIds.size} entity key id writes. Only $totalWritten writes registered.")
             }
             if (totalDataRowsWritten != entityKeyIds.size) {
-                logger.warn("Expected ${entityKeyIds.size} entityKeyUd data writes. Only $totalDataRowsWritten writes registered.")
+                logger.warn("Expected ${entityKeyIds.size} entityKeyId data writes. Only $totalDataRowsWritten writes registered.")
             }
             connection.commit()
             connection.autoCommit = true
@@ -191,7 +191,7 @@ class PostgresEntityKeyIdService(
 
     private fun countDownEntityKeys(entityKeys: Set<EntityKey>) {
         idRefCounts.executeOnKeys(entityKeys, IdRefCountDecrementer())
-                .forEach { entityKey, count ->
+                .forEach { (entityKey, count) ->
                     if (count == 0) {
                         idMap.delete(entityKey)
                     }

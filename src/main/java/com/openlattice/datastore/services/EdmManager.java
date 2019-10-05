@@ -36,6 +36,7 @@ import com.openlattice.edm.set.EntitySetPropertyMetadata;
 import com.openlattice.edm.type.AssociationDetails;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
+import com.openlattice.edm.type.EntityTypePropertyMetadata;
 import com.openlattice.edm.type.PropertyType;
 
 import java.util.*;
@@ -237,4 +238,12 @@ public interface EdmManager {
     Set<UUID> getEntitySetIdsWithFlags( Set<UUID> entitySetIds, Set<EntitySetFlag> filteringFlags );
 
     AuditRecordEntitySetsManager getAuditRecordEntitySetsManager();
+
+    void removeDataExpirationPolicy( UUID entitySetId );
+
+    void updateEntityTypePropertyMetadata( UUID entityTypeId, UUID propertyTypeId, MetadataUpdate update );
+
+    EntityTypePropertyMetadata getEntityTypePropertyMetadata( UUID entityTypeId, UUID propertyTypeId );
+
+    Map<UUID, EntityTypePropertyMetadata> getAllEntityTypePropertyMetadata( UUID entityTypeId );
 }
