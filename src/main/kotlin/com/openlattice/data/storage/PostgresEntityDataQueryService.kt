@@ -9,15 +9,12 @@ import com.openlattice.data.WriteEvent
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.data.storage.partitions.PartitionsInfo
 import com.openlattice.data.util.PostgresDataHasher
-import com.openlattice.edm.set.ExpirationBase
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.*
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.streams.BasePostgresIterable
-import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
-import com.openlattice.postgres.streams.StatementHolder
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.commons.lang3.NotImplementedException
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
@@ -28,12 +25,8 @@ import java.security.InvalidParameterException
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
-import java.sql.Statement
-import java.time.OffsetDateTime
 import java.util.*
 import java.util.concurrent.atomic.AtomicLong
-import java.util.function.Function
-import java.util.function.Supplier
 import kotlin.streams.asStream
 
 const val S3_DELETE_BATCH_SIZE = 10000

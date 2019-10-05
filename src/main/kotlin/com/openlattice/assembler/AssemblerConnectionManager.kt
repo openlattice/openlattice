@@ -205,17 +205,25 @@ class AssemblerConnectionManager(
                 } //There are some bad principals in the member list some how-- probably from testing.
 
         val securablePrincipalsToAdd = securePrincipalsManager.getSecurablePrincipals(validUserPrincipals)
-        configureNewUsersInDatabase(dbName, dataSource, securablePrincipalsToAdd)
+        if (securablePrincipalsToAdd.isNotEmpty()) {
+            val userNames = securablePrincipalsToAdd.map { quote(buildPostgresUsername(it)) }
+            configureUsersInDatabase(dataSource, dbName, userNames)
+        }
     }
 
-    fun configureNewUsersInDatabase(
+    fun addMembersToOrganization(
             dbName: String,
             dataSource: HikariDataSource,
-            principals: Collection<SecurablePrincipal>
+            authorizedPropertyTypesOfEntitySetsByPrincipal: Map<SecurablePrincipal, Map<EntitySet, Collection<PropertyType>>>
     ) {
-        if (principals.isNotEmpty()) {
-            val userNames = principals.map { quote(buildPostgresUsername(it)) }
+        if (authorizedPropertyTypesOfEntitySetsByPrincipal.isNotEmpty()) {
+            val authorizedPropertyTypesOfEntitySetsByPostgresUser = authorizedPropertyTypesOfEntitySetsByPrincipal
+                    .mapKeys { quote(buildPostgresUsername(it.key)) }
+            val userNames = authorizedPropertyTypesOfEntitySetsByPostgresUser.keys
             configureUsersInDatabase(dataSource, dbName, userNames)
+            dataSource.connection.use { connection ->
+                grantSelectForNewMembers(connection, authorizedPropertyTypesOfEntitySetsByPostgresUser)
+            }
         }
     }
 
@@ -397,7 +405,7 @@ class AssemblerConnectionManager(
                 val selectGrantedResults = grantSelectForEntitySet(
                         connection,
                         tableName,
-                        entitySet,
+                        entitySet.id,
                         authorizedPropertyTypesOfPrincipals
                 )
                 logger.info("Granted select for ${selectGrantedResults.filter { it >= 0 }.size} users/roles " +
@@ -435,7 +443,7 @@ class AssemblerConnectionManager(
     private fun grantSelectForEntitySet(
             connection: Connection,
             tableName: String,
-            entitySet: EntitySet,
+            entitySetId: UUID,
             authorizedPropertyTypesOfPrincipals: Map<Principal, Set<PropertyType>>
     ): IntArray {
         // prepare batch queries
@@ -444,10 +452,9 @@ class AssemblerConnectionManager(
                 val columns = getSelectColumnsForMaterializedView(propertyTypes)
                 try {
                     val grantSelectSql = grantSelectSql(tableName, principal, columns)
-                    logger.info("AssemblerConnectionManager.grantSelectForEntitySet grant query: $grantSelectSql")
                     stmt.addBatch(grantSelectSql)
                 } catch (e: NoSuchElementException) {
-                    logger.error("Principal $principal does not exists but has permission on entity set ${entitySet.id}")
+                    logger.error("Principal $principal does not exists but has permission on entity set $entitySetId")
                 }
             }
             stmt.executeBatch()
@@ -460,7 +467,6 @@ class AssemblerConnectionManager(
         authorizedPrincipals.forEach {
             try {
                 val grantSelectSql = grantSelectSql(tableName, it, listOf())
-                logger.info("AssemblerConnectionManager.grantSelectForEdges grant query: $grantSelectSql")
                 stmt.addBatch(grantSelectSql)
             } catch (e: NoSuchElementException) {
                 logger.error("Principal $it does not exists but has permission on one of the entity sets $entitySetIds")
@@ -470,8 +476,37 @@ class AssemblerConnectionManager(
         return stmt.executeBatch()
     }
 
+    private fun grantSelectForNewMembers(
+            connection: Connection,
+            authorizedPropertyTypesOfEntitySetsByPostgresUser: Map<String, Map<EntitySet, Collection<PropertyType>>>
+    ): IntArray {
+        // prepare batch queries
+        return connection.createStatement().use { stmt ->
+            authorizedPropertyTypesOfEntitySetsByPostgresUser
+                    .forEach { (postgresUserName, authorizedPropertyTypesOfEntitySets) ->
+
+                        // grant select on authorized tables and their properties
+                        authorizedPropertyTypesOfEntitySets.forEach { (entitySet, propertyTypes) ->
+                            val tableName = entitySetNameTableName(entitySet.name)
+                            val columns = getSelectColumnsForMaterializedView(propertyTypes)
+                            val grantSelectSql = grantSelectSql(tableName, postgresUserName, columns)
+                            stmt.addBatch(grantSelectSql)
+                        }
+
+                        // also grant select on edges (if at least 1 entity set is materialized to make sure edges
+                        // materialized view exist)
+                        if (authorizedPropertyTypesOfEntitySets.isNotEmpty()) {
+                            val edgesTableName = "$MATERIALIZED_VIEWS_SCHEMA.${E.name}"
+                            val grantSelectSql = grantSelectSql(edgesTableName, postgresUserName, listOf())
+                            stmt.addBatch(grantSelectSql)
+                        }
+                    }
+            stmt.executeBatch()
+        }
+    }
+
     /**
-     * Build grant select sql statement for a given table and user with column level security.
+     * Build grant select sql statement for a given table and principal with column level security.
      * If properties (columns) are left empty, it will grant select on whole table.
      */
     @Throws(NoSuchElementException::class)
@@ -480,12 +515,25 @@ class AssemblerConnectionManager(
             principal: Principal,
             columns: List<String>
     ): String {
-        val postgresUserName = if (principal.type == PrincipalType.USER) {
-            buildPostgresUsername(securePrincipalsManager.getPrincipal(principal.id))
-        } else {
-            buildPostgresRoleName(securePrincipalsManager.lookupRole(principal))
+        val postgresUserName = when (principal.type) {
+            PrincipalType.USER -> buildPostgresUsername(securePrincipalsManager.getPrincipal(principal.id))
+            PrincipalType.ROLE -> buildPostgresRoleName(securePrincipalsManager.lookupRole(principal))
+            else -> throw IllegalArgumentException("Only ${PrincipalType.USER} and ${PrincipalType.ROLE} principal " +
+                    "types can be granted select.")
         }
 
+        return grantSelectSql(entitySetTableName, quote(postgresUserName), columns)
+    }
+
+    /**
+     * Build grant select sql statement for a given table and user with column level security.
+     * If properties (columns) are left empty, it will grant select on whole table.
+     */
+    private fun grantSelectSql(
+            tableName: String,
+            postgresUserName: String,
+            columns: List<String>
+    ): String {
         val onProperties = if (columns.isEmpty()) {
             ""
         } else {
@@ -493,8 +541,8 @@ class AssemblerConnectionManager(
         }
 
         return "GRANT SELECT $onProperties " +
-                "ON $entitySetTableName " +
-                "TO ${quote(postgresUserName)}"
+                "ON $tableName " +
+                "TO $postgresUserName"
     }
 
     fun updateMaterializedEntitySet(
@@ -673,10 +721,10 @@ class AssemblerConnectionManager(
         }
     }
 
-    private fun configureUsersInDatabase(dataSource: HikariDataSource, dbName: String, userIds: List<String>) {
+    private fun configureUsersInDatabase(dataSource: HikariDataSource, dbName: String, userIds: Collection<String>) {
         val userIdsSql = userIds.joinToString(", ")
 
-        logger.info("Configuring users {} in database {}", userIds, dbName)
+        logger.info("Configuring users $userIds in database $dbName")
         //First we will grant all privilege which for database is connect, temporary, and create schema
         target.connection.use { connection ->
             connection.createStatement().use { statement ->
@@ -687,11 +735,12 @@ class AssemblerConnectionManager(
 
         dataSource.connection.use { connection ->
             connection.createStatement().use { statement ->
+                logger.info("Granting usage on $MATERIALIZED_VIEWS_SCHEMA schema and revoking from $PUBLIC_SCHEMA schema for users: $userIds")
                 statement.execute("GRANT USAGE ON SCHEMA $MATERIALIZED_VIEWS_SCHEMA TO $userIdsSql")
                 //Don't allow users to access public schema which will contain foreign data wrapper tables.
-                logger.info("Revoking $PUBLIC_SCHEMA schema right from user: {}", userIds)
                 statement.execute("REVOKE USAGE ON SCHEMA $PUBLIC_SCHEMA FROM $userIdsSql")
                 //Set the search path for the user
+                logger.info("Setting search_path to $MATERIALIZED_VIEWS_SCHEMA for users $userIds")
                 userIds.forEach { userId ->
                     statement.addBatch("ALTER USER $userId SET search_path TO $MATERIALIZED_VIEWS_SCHEMA")
                 }
@@ -705,15 +754,14 @@ class AssemblerConnectionManager(
     private fun revokeConnectAndSchemaUsage(dataSource: HikariDataSource, dbName: String, userIds: List<String>) {
         val userIdsSql = userIds.joinToString(", ")
 
-        logger.info("Removing users {} from database {} and schema usage of $MATERIALIZED_VIEWS_SCHEMA",
-                userIds,
-                dbName)
+        logger.info("Removing users $userIds from database $dbName, schema usage and all privileges on all tables in schema $MATERIALIZED_VIEWS_SCHEMA")
 
         dataSource.connection.use { conn ->
             conn.createStatement().use { stmt ->
                 stmt.execute("REVOKE ${MEMBER_ORG_DATABASE_PERMISSIONS.joinToString(", ")} " +
                         "ON DATABASE ${quote(dbName)} FROM $userIdsSql")
                 stmt.execute("REVOKE ALL PRIVILEGES ON SCHEMA $MATERIALIZED_VIEWS_SCHEMA FROM $userIdsSql")
+                stmt.execute("REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA $MATERIALIZED_VIEWS_SCHEMA FROM $userIdsSql")
             }
         }
     }
