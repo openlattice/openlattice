@@ -70,6 +70,6 @@ enum class IdConstants(val id: UUID) {
     LINKING_ENTITY_SET_ID(UUID(0L, 40L)),
 
     // empty origin ID
-    EMPTY_ORIGIN_ID(UUID(1L, 40L)),
+    EMPTY_ORIGIN_ID(UUID(Long.MAX_VALUE, Long.MAX_VALUE)),
 
 }
