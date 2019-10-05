@@ -1767,8 +1767,10 @@ paths:
                   type: object
                   additionalProperties:
                     type: object
-                    items:
-                      $ref: "#/components/neighborEntityIds"
+                    additionalProperties:
+                      type: array
+                      items:
+                        $ref: "#/components/neighborEntityIds"
   
   ####################
   ## DIRECTORY APIs ##
