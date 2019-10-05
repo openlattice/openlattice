@@ -181,6 +181,7 @@ public class BaseElasticsearchTest {
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
+                Optional.empty(),
                 Optional.empty());
         entitySet2 = new EntitySet(
                 Optional.of( entitySet2Id ),
@@ -189,6 +190,7 @@ public class BaseElasticsearchTest {
                 "EntitySet2",
                 Optional.of( "this is the second entity set" ),
                 ImmutableSet.of( "foo@bar.com", "foobar@foo.net" ),
+                Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
