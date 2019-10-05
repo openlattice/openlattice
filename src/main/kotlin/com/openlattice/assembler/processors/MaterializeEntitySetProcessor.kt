@@ -22,9 +22,7 @@
 package com.openlattice.assembler.processors
 
 import com.hazelcast.core.Offloadable
-import com.hazelcast.core.ReadOnly
 import com.hazelcast.spi.ExecutionService
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.AssemblerConnectionManagerDependent
 import com.openlattice.assembler.EntitySetAssemblyKey
@@ -32,8 +30,8 @@ import com.openlattice.assembler.MaterializedEntitySet
 import com.openlattice.authorization.Principal
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
+import com.openlattice.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor
 import org.slf4j.LoggerFactory
-import java.lang.IllegalStateException
 import java.util.*
 
 
@@ -48,10 +46,8 @@ data class MaterializeEntitySetProcessor(
         val entitySet: EntitySet,
         val materializablePropertyTypes: Map<UUID, PropertyType>,
         val authorizedPropertyTypesOfPrincipals: Map<Principal, Set<PropertyType>>
-) : AbstractRhizomeEntryProcessor<EntitySetAssemblyKey, MaterializedEntitySet, Void?>(false),
-        AssemblerConnectionManagerDependent<MaterializeEntitySetProcessor>,
-        Offloadable,
-        ReadOnly {
+) : AbstractReadOnlyRhizomeEntryProcessor<EntitySetAssemblyKey, MaterializedEntitySet, Void?>(),
+        AssemblerConnectionManagerDependent<MaterializeEntitySetProcessor>, Offloadable {
     @Transient
     private var acm: AssemblerConnectionManager? = null
 
