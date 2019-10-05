@@ -21,22 +21,21 @@
 package com.openlattice.assembler.processors
 
 import com.hazelcast.core.Offloadable
-import com.hazelcast.core.ReadOnly
 import com.hazelcast.spi.ExecutionService
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.assembler.AssemblerConnectionManager
+import com.openlattice.assembler.AssemblerConnectionManagerDependent
 import com.openlattice.assembler.EntitySetAssemblyKey
 import com.openlattice.assembler.MaterializedEntitySet
-import com.openlattice.assembler.AssemblerConnectionManagerDependent
+import com.openlattice.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor
 import org.slf4j.LoggerFactory
 
 private val logger = LoggerFactory.getLogger(RenameMaterializedEntitySetProcessor::class.java)
 private const val NOT_INITIALIZED = "Assembler Connection Manager not initialized."
 
 data class RenameMaterializedEntitySetProcessor(val oldName: String, val newName: String)
-    : AbstractRhizomeEntryProcessor<EntitySetAssemblyKey, MaterializedEntitySet?, Void?>(false),
+    : AbstractReadOnlyRhizomeEntryProcessor<EntitySetAssemblyKey, MaterializedEntitySet?, Void?>(),
         AssemblerConnectionManagerDependent<RenameMaterializedEntitySetProcessor>,
-        Offloadable, ReadOnly {
+        Offloadable {
     @Transient
     private var acm: AssemblerConnectionManager? = null
 

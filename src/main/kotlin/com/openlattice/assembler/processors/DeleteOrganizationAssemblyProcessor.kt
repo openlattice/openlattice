@@ -28,6 +28,7 @@ import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcesso
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.OrganizationAssembly
 import com.openlattice.assembler.AssemblerConnectionManagerDependent
+import com.openlattice.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor
 import org.slf4j.LoggerFactory
 import java.lang.IllegalStateException
 import java.util.UUID
@@ -36,9 +37,9 @@ private val logger = LoggerFactory.getLogger(DeleteOrganizationAssemblyProcessor
 private const val NOT_INITIALIZED = "Assembler Connection Manager not initialized."
 
 class DeleteOrganizationAssemblyProcessor
-    : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(false),
+    : AbstractReadOnlyRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(),
         AssemblerConnectionManagerDependent<DeleteOrganizationAssemblyProcessor>,
-        Offloadable, ReadOnly {
+        Offloadable {
     @Transient
     private var acm: AssemblerConnectionManager? = null
 
