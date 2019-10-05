@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component
 class MaterializePermissionSyncTaskStreamSerializer : SelfRegisteringStreamSerializer<MaterializePermissionSyncTask> {
 
     override fun getTypeId(): Int {
-        return StreamSerializerTypeIds.APP.ordinal
+        return StreamSerializerTypeIds.MATERIALIZE_PERMISSIONS_SYNC_TASK.ordinal
     }
 
     override fun getClazz(): Class<out MaterializePermissionSyncTask> {
