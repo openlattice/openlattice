@@ -37,9 +37,9 @@ import com.openlattice.data.DataGraphManager
 import com.openlattice.data.requests.FileType
 import com.openlattice.web.mediatypes.CustomMediaType
 import com.openlattice.datastore.services.EdmService
-import com.openlattice.edm.EntitySet
-import com.openlattice.postgres.DataTables.COUNT_FQN
-import com.openlattice.postgres.DataTables.ID_FQN
+import com.openlattice.edm.EdmConstants.Companion.COUNT_FQN
+import com.openlattice.edm.EdmConstants.Companion.ID_FQN
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.*
@@ -54,6 +54,10 @@ private val mm = HashMultimap.create<FullQualifiedName, Any>(ImmutableSetMultima
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
+@SuppressFBWarnings(
+        value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE", "BC_BAD_CAST_TO_ABSTRACT_COLLECTION"],
+        justification = "Allowing redundant kotlin null check on lateinit variables, " +
+                "Allowing kotlin collection mapping cast to List")
 @RestController
 @RequestMapping(AnalysisApi.CONTROLLER)
 class AnalysisController : AnalysisApi, AuthorizingComponent {

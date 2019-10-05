@@ -10,6 +10,7 @@ import com.openlattice.graph.NeighborhoodSelection
 import com.openlattice.subscriptions.FeedsApi
 import com.openlattice.subscriptions.LastWriteRangeFilter
 import com.openlattice.subscriptions.SubscriptionService
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestMethod
@@ -17,6 +18,9 @@ import org.springframework.web.bind.annotation.RestController
 import java.util.*
 import javax.inject.Inject
 
+@SuppressFBWarnings(
+        value = ["BC_BAD_CAST_TO_ABSTRACT_COLLECTION"],
+        justification = "Allowing kotlin collection mapping cast to List")
 @RestController
 @RequestMapping(FeedsApi.CONTROLLER)
 class FeedsController

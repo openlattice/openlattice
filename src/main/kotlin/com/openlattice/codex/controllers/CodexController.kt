@@ -19,6 +19,7 @@ import com.openlattice.twilio.TwilioConfiguration
 import com.twilio.Twilio
 import com.twilio.rest.api.v2010.account.Message
 import com.twilio.type.PhoneNumber
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestMethod
@@ -29,6 +30,9 @@ import java.util.concurrent.Executors
 import java.util.stream.Stream
 import javax.inject.Inject
 
+@SuppressFBWarnings(
+        value = ["BC_BAD_CAST_TO_ABSTRACT_COLLECTION"],
+        justification = "Allowing kotlin collection mapping cast to List")
 @RestController
 @RequestMapping(CodexApi.CONTROLLER)
 class CodexController
@@ -63,18 +67,23 @@ constructor(
     }
 
     init {
-        Twilio.init( configuration.sid, configuration.token)
+        Twilio.init(configuration.sid, configuration.token)
 
         textingExecutor.execute {
-            Stream.generate { twilioQueue.take() }.forEach { (organizationId, messageContents, toPhoneNumber) ->
-                val phone = organizations.getOrganization(organizationId).phoneNumber
-                if ( phone == "" ){
+            Stream.generate { twilioQueue.take() }.forEach { (organizationId, messageEntitySetId, messageContents, toPhoneNumber) ->
+                //Not very efficient.
+                val phone = organizations.getOrganization(organizationId).smsEntitySetInfo
+                        .flatMap { (phoneNumber, _, entitySetIds, _) -> entitySetIds.map { it to phoneNumber } }
+                        .toMap()
+                        .getValue(messageEntitySetId)
+
+                if (phone == "") {
                     throw BadRequestException("No source phone number set for organization!")
                 }
-                val message = Message.creator(PhoneNumber(toPhoneNumber), PhoneNumber( phone ), messageContents)
+                val message = Message.creator(PhoneNumber(toPhoneNumber), PhoneNumber(phone), messageContents)
                         .setStatusCallback(URI.create("https://api.openlattice.com/datastore/kodex/status")).create()
-                pendingTexts.put(message.sid, message)
-                processQueueEntry(message, organizationId )
+                pendingTexts[message.sid] = message
+                processQueueEntry(message, organizationId)
             }
         }
     }
@@ -82,40 +91,40 @@ constructor(
     @Timed
     @RequestMapping(path = ["", "/"], method = [RequestMethod.POST])
     override fun sendOutgoingText(@RequestBody contents: MessageRequest) {
-        twilioQueue.put( contents )
+        twilioQueue.put(contents)
     }
 
-    override fun receiveIncomingText( @RequestBody message: Message  ) {
+    override fun receiveIncomingText(@RequestBody message: Message) {
 
     }
 
     @Timed
     @RequestMapping(path = [CodexApi.STATUS], method = [RequestMethod.POST])
-    override fun listenForTextStatus( @RequestBody message: Message ) {
-        if ( message.status == Message.Status.FAILED || message.status == Message.Status.UNDELIVERED ){
-            println( "Message not received or even failed to send!!! ")
+    override fun listenForTextStatus(@RequestBody message: Message) {
+        if (message.status == Message.Status.FAILED || message.status == Message.Status.UNDELIVERED) {
+            println("Message not received or even failed to send!!! ")
         } else {
-            pendingTexts.remove( message.sid )
+            pendingTexts.remove(message.sid)
         }
     }
 
     fun processQueueEntry(message: Message, organizationId: UUID) {
-        createEntitiesFromMessage( message, organizationId, peopleUUID)
-        createEntitiesFromMessage( message, organizationId, contactUUID)
-        createEntitiesFromMessage( message, organizationId, messagesUUID)
-        createEntitiesFromMessage( message, organizationId, toUUID)
-        createEntitiesFromMessage( message, organizationId, fromUUID)
+        createEntitiesFromMessage(message, organizationId, peopleUUID)
+        createEntitiesFromMessage(message, organizationId, contactUUID)
+        createEntitiesFromMessage(message, organizationId, messagesUUID)
+        createEntitiesFromMessage(message, organizationId, toUUID)
+        createEntitiesFromMessage(message, organizationId, fromUUID)
 
         createAssociationsFromMessage()
     }
 
-    fun createEntitiesFromMessage( msg: Message, organizationId: UUID, appTypeId: UUID ) {
+    fun createEntitiesFromMessage(msg: Message, organizationId: UUID, appTypeId: UUID) {
         val entities = mutableListOf<Map<UUID, Set<Any>>>()
         val app = appService.getApp("codex")
         val ack = AppConfigKey(app.id, organizationId, appTypeId)
         val esid = appConfigMS.load(ack).entitySetId
 
-        val createEntities = dataApi.createEntities( esid, entities )
+        val createEntities = dataApi.createEntities(esid, entities)
     }
 
     fun createAssociationsFromMessage() {

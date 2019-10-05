@@ -23,8 +23,7 @@ package com.openlattice.controllers;
 import com.codahale.metrics.annotation.Timed;
 import com.dataloom.streams.StreamUtil;
 import com.google.common.base.Predicates;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
+import com.google.common.collect.*;
 import com.openlattice.assembler.Assembler;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
@@ -77,12 +76,18 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             value = { "", "/" },
             produces = MediaType.APPLICATION_JSON_VALUE )
     public Iterable<Organization> getOrganizations() {
-        return organizations.getOrganizations(
+
+        Set<AclKey> authorizedRoles = getAccessibleObjects( SecurableObjectType.Role, EnumSet.of( Permission.READ ) )
+                .filter( Predicates.notNull()::apply ).collect( Collectors.toSet() );
+
+        Iterable<Organization> orgs = organizations.getOrganizations(
                 getAccessibleObjects( SecurableObjectType.Organization, EnumSet.of( Permission.READ ) )
                         .parallel()
                         .filter( Predicates.notNull()::apply )
                         .map( AuthorizationUtils::getLastAclKeySafely )
         );
+
+        return Iterables.transform( orgs, org -> filterRolesOfOrganization( org, authorizedRoles ) );
     }
 
     @Timed
@@ -106,14 +111,9 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         ensureRead( organizationId );
         //TODO: Re-visit roles within an organization being defined as roles which have read on that organization.
         Organization org = organizations.getOrganization( organizationId );
-        Set<Role> authorizedRoles = getAuthorizedRoles( organizationId, Permission.READ );
-        return new Organization(
-                org.getSecurablePrincipal(),
-                org.getAutoApprovedEmails(),
-                org.getMembers(),
-                authorizedRoles,
-                org.getApps(),
-                org.getPhoneNumber());
+        Set<AclKey> authorizedRoleAclKeys = getAuthorizedRoleAclKeys( org.getRoles() );
+
+        return filterRolesOfOrganization( org, authorizedRoleAclKeys );
     }
 
     @Timed
@@ -123,21 +123,11 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     public Void destroyOrganization( @PathVariable( ID ) UUID organizationId ) {
         AclKey aclKey = ensureOwner( organizationId );
 
+        ensureObjectCanBeDeleted( organizationId );
+
         organizations.destroyOrganization( organizationId );
         authorizations.deletePermissions( aclKey );
         securableObjectTypes.deleteSecurableObjectType( new AclKey( organizationId ) );
-        return null;
-    }
-
-    @Timed
-    @Override
-    @PostMapping(
-            value = OrganizationsApi.SET_PHONE_PATH,
-            consumes = MediaType.APPLICATION_JSON_VALUE )
-    public Void setOrganizationPhoneNumber( UUID organizationId, String phoneNumber ) {
-        ensureAdminAccess();
-
-        organizations.setPhoneNumber( organizationId, phoneNumber );
         return null;
     }
 
@@ -514,13 +504,30 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             produces = MediaType.APPLICATION_JSON_VALUE )
     public Set<Role> getRoles( @PathVariable( ID ) UUID organizationId ) {
         ensureRead( organizationId );
-        return getAuthorizedRoles( organizationId, Permission.READ );
+        Set<Role> roles = organizations.getRoles( organizationId );
+        Set<AclKey> authorizedRoleAclKeys = getAuthorizedRoleAclKeys( roles );
+        return Sets.filter( roles, role -> authorizedRoleAclKeys.contains( role.getAclKey() ) );
     }
 
-    private Set<Role> getAuthorizedRoles( UUID organizationId, Permission permission ) {
-        return StreamUtil.stream( organizations.getRoles( organizationId ) )
-                .filter( role -> isAuthorized( permission ).test( role.getAclKey() ) )
-                .collect( Collectors.toSet() );
+    private Set<AclKey> getAuthorizedRoleAclKeys( Set<Role> roles ) {
+        return authorizations
+                .accessChecksForPrincipals( roles.stream()
+                        .map( role -> new AccessCheck( role.getAclKey(), EnumSet.of( Permission.READ ) ) )
+                        .collect( Collectors.toSet() ), Principals.getCurrentPrincipals() )
+                .filter( authorization -> authorization.getPermissions().get( Permission.READ ) )
+                .map( Authorization::getAclKey ).collect( Collectors.toSet() );
+    }
+
+    private static Organization filterRolesOfOrganization( Organization org, Set<AclKey> authorizedRoleAclKeys ) {
+        return new Organization(
+                org.getSecurablePrincipal(),
+                org.getAutoApprovedEmails(),
+                org.getMembers(),
+                Sets.filter( org.getRoles(), role -> authorizedRoleAclKeys.contains( role.getAclKey() ) ),
+                org.getApps(),
+                org.getSmsEntitySetInfo(),
+                org.getPartitions()
+        );
     }
 
     @Timed
@@ -572,6 +579,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             value = ID_PATH + PRINCIPALS + ROLES + ROLE_ID_PATH )
     public Void deleteRole( @PathVariable( ID ) UUID organizationId, @PathVariable( ROLE_ID ) UUID roleId ) {
         ensureRoleAdminAccess( organizationId, roleId );
+        ensureObjectCanBeDeleted( roleId );
         principalService.deletePrincipal( new AclKey( organizationId, roleId ) );
         return null;
     }
@@ -599,7 +607,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         ensureOwnerAccess( new AclKey( organizationId, roleId ) );
 
         organizations.addRoleToPrincipalInOrganization( organizationId, roleId,
-                        new Principal( PrincipalType.USER, userId ) );
+                new Principal( PrincipalType.USER, userId ) );
         return null;
     }
 
@@ -640,15 +648,15 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         ensureReadAccess( new AclKey( organizationId ) );
     }
 
-    private void ensureMaterialize ( UUID entitySetId, OrganizationPrincipal principal ) {
+    private void ensureMaterialize( UUID entitySetId, OrganizationPrincipal principal ) {
         AclKey aclKey = new AclKey( entitySetId );
 
         if ( !getAuthorizationManager().checkIfHasPermissions(
                 aclKey,
-                Set.of(principal.getPrincipal()),
+                Set.of( principal.getPrincipal() ),
                 EnumSet.of( Permission.MATERIALIZE ) ) ) {
             throw new ForbiddenException( "EntitySet " + aclKey.toString() + " is not accessible by organization " +
-                    "principal " + principal.getPrincipal().getId()  + " ." );
+                    "principal " + principal.getPrincipal().getId() + " ." );
         }
     }
 

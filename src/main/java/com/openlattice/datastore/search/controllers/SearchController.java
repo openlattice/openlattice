@@ -25,9 +25,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicates;
 import com.google.common.collect.*;
 import com.openlattice.auditing.AuditEventType;
-import com.openlattice.auditing.AuditRecordEntitySetsManager;
 import com.openlattice.auditing.AuditableEvent;
 import com.openlattice.auditing.AuditingComponent;
+import com.openlattice.auditing.AuditingManager;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.authorization.util.AuthorizationUtils;
@@ -42,7 +42,10 @@ import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.search.SearchApi;
 import com.openlattice.search.SearchService;
+import com.openlattice.search.SortDefinition;
+import com.openlattice.search.SortType;
 import com.openlattice.search.requests.*;
+import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.http.MediaType;
@@ -54,7 +57,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION;
-import static com.openlattice.postgres.DataTables.ID_FQN;
+import static com.openlattice.edm.EdmConstants.ID_FQN;
 
 @RestController
 @RequestMapping( SearchApi.CONTROLLER )
@@ -85,7 +88,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
     private ObjectMapper mapper;
 
     @Inject
-    private AuditRecordEntitySetsManager auditRecordEntitySetsManager;
+    private AuditingManager auditingManager;
 
     @Inject
     private DataGraphManager dgm;
@@ -146,6 +149,9 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
     @Override
     @Timed
     public DataSearchResult searchEntitySetData( @RequestBody SearchConstraints searchConstraints ) {
+
+        validateSearch( searchConstraints );
+
         // check read on entity sets
         final var authorizedEntitySetIds = authorizationsHelper
                 .getAuthorizedEntitySets( Set.of( searchConstraints.getEntitySetIds() ), READ_PERMISSION );
@@ -153,7 +159,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
         DataSearchResult results = new DataSearchResult( 0, Lists.newArrayList() );
 
         // if user has read access on all normal entity sets
-        if ( authorizedEntitySetIds.size() == searchConstraints.getEntitySetIds().length) {
+        if ( authorizedEntitySetIds.size() == searchConstraints.getEntitySetIds().length ) {
             final var authorizedPropertyTypesByEntitySet = authorizationsHelper.getAuthorizedPropertiesOnEntitySets(
                     authorizedEntitySetIds, READ_PERMISSION, Principals.getCurrentPrincipals() );
 
@@ -176,6 +182,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
         }
 
         recordEvents( searchEvents );
+
         return results;
     }
 
@@ -206,7 +213,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
 
         return searchEntitySetData(
                 SearchConstraints.simpleSearchConstraints(
-                        new UUID[]{ entitySetId },
+                        new UUID[] { entitySetId },
                         searchTerm.getStart(),
                         searchTerm.getMaxHits(),
                         searchTerm.getSearchTerm(),
@@ -226,7 +233,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
 
         return searchEntitySetData(
                 SearchConstraints.advancedSearchConstraints(
-                        new UUID[]{ entitySetId },
+                        new UUID[] { entitySetId },
                         search.getStart(),
                         search.getMaxHits(),
                         search.getSearches() )
@@ -289,6 +296,30 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
     @Timed
     public SearchResult executeAppTypeSearch( @RequestBody SearchTerm searchTerm ) {
         return searchService.executeAppTypeSearch( searchTerm.getSearchTerm(),
+                searchTerm.getStart(),
+                searchTerm.getMaxHits() );
+    }
+
+    @RequestMapping(
+            path = { ENTITY_TYPES + COLLECTIONS },
+            method = RequestMethod.POST,
+            produces = { MediaType.APPLICATION_JSON_VALUE } )
+    @Override
+    @Timed
+    public SearchResult executeEntityTypeCollectionSearch( @RequestBody SearchTerm searchTerm ) {
+        return searchService.executeEntityTypeCollectionSearch( searchTerm.getSearchTerm(),
+                searchTerm.getStart(),
+                searchTerm.getMaxHits() );
+    }
+
+    @RequestMapping(
+            path = { ENTITY_SETS + COLLECTIONS },
+            method = RequestMethod.POST,
+            produces = { MediaType.APPLICATION_JSON_VALUE } )
+    @Override
+    @Timed
+    public SearchResult executeEntitySetCollectionSearch( @RequestBody SearchTerm searchTerm ) {
+        return searchService.executeEntitySetCollectionQuery( searchTerm.getSearchTerm(),
                 searchTerm.getStart(),
                 searchTerm.getMaxHits() );
     }
@@ -550,8 +581,9 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
                                         EnumSet.of( Permission.READ ) ) )
                         .collect( Collectors.toSet() );
                 if ( authorizedEntitySets.size() != es.getLinkedEntitySets().size() ) {
-                    logger.warn( "Read authorization failed some of the normal entity sets of linking entity set or it " +
-                            "is empty." );
+                    logger.warn(
+                            "Read authorization failed some of the normal entity sets of linking entity set or it " +
+                                    "is empty." );
                 } else {
                     result = searchService
                             .executeLinkingEntityNeighborIdsSearch( authorizedEntitySets, filter, principals );
@@ -618,10 +650,10 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
     @Timed
     public Void triggerEdmIndex() {
         ensureAdminAccess();
+        searchService.triggerEntitySetIndex();
         searchService.triggerPropertyTypeIndex( Lists.newArrayList( edm.getPropertyTypes() ) );
         searchService.triggerEntityTypeIndex( Lists.newArrayList( edm.getEntityTypes() ) );
         searchService.triggerAssociationTypeIndex( Lists.newArrayList( edm.getAssociationTypes() ) );
-        searchService.triggerEntitySetIndex();
         searchService.triggerAppIndex( Lists.newArrayList( appService.getApps() ) );
         searchService.triggerAppTypeIndex( Lists.newArrayList( appService.getAppTypes() ) );
         return null;
@@ -682,23 +714,38 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
         return spm.getPrincipal( Principals.getCurrentUser().getId() ).getId();
     }
 
+    @NotNull @Override public AuditingManager getAuditingManager() {
+        return auditingManager;
+    }
+
     private static Set<UUID> getEntityKeyIdsFromSearchResult( DataSearchResult searchResult ) {
         return searchResult.getHits().stream().map( SearchController::getEntityKeyId ).collect( Collectors.toSet() );
     }
 
-    private static UUID getEntityKeyId( SetMultimap<FullQualifiedName, Object> entity ) {
+    private static UUID getEntityKeyId( Map<FullQualifiedName, Set<Object>> entity ) {
         return UUID.fromString( entity.get( ID_FQN ).iterator().next().toString() );
     }
 
-    @NotNull
-    @Override
-    public AuditRecordEntitySetsManager getAuditRecordEntitySetsManager() {
-        return auditRecordEntitySetsManager;
+    private void validateSearch( SearchConstraints searchConstraints ) {
+
+        /* Check sort is valid */
+        SortDefinition sort = searchConstraints.getSortDefinition();
+        switch ( sort.getSortType() ) {
+
+            case field:
+            case geoDistance: {
+                UUID sortPropertyTypeId = sort.getPropertyTypeId();
+                EdmPrimitiveTypeKind datatype = edm.getPropertyType( sortPropertyTypeId ).getDatatype();
+                Set<EdmPrimitiveTypeKind> allowedDatatypes = sort.getSortType().getAllowedDatatypes();
+                if ( !allowedDatatypes.contains( datatype ) ) {
+                    throw new IllegalArgumentException(
+                            "SortType " + sort.getSortType() + " cannot be executed on property type "
+                                    + sortPropertyTypeId
+                                    + " because it is of datatype " + datatype + ". Allowed datatypes are: "
+                                    + allowedDatatypes );
+                }
+            }
+        }
     }
 
-    @NotNull
-    @Override
-    public DataGraphManager getDataGraphService() {
-        return dgm;
-    }
 }

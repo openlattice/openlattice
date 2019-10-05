@@ -30,12 +30,21 @@ import com.google.common.eventbus.EventBus;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.hazelcast.query.Predicates;
-import com.openlattice.apps.*;
-import com.openlattice.apps.processors.*;
+import com.openlattice.apps.App;
+import com.openlattice.apps.AppConfig;
+import com.openlattice.apps.AppConfigKey;
+import com.openlattice.apps.AppType;
+import com.openlattice.apps.AppTypeSetting;
+import com.openlattice.apps.processors.AddAppTypesToAppProcessor;
+import com.openlattice.apps.processors.RemoveAppTypesFromAppProcessor;
+import com.openlattice.apps.processors.UpdateAppConfigEntitySetProcessor;
+import com.openlattice.apps.processors.UpdateAppConfigPermissionsProcessor;
+import com.openlattice.apps.processors.UpdateAppMetadataProcessor;
+import com.openlattice.apps.processors.UpdateAppTypeMetadataProcessor;
 import com.openlattice.authorization.*;
-import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.authorization.util.AuthorizationUtils;
 import com.openlattice.controllers.exceptions.BadRequestException;
+import com.openlattice.data.DataExpiration;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.util.Util;
 import com.openlattice.edm.EntitySet;
@@ -51,13 +60,20 @@ import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.mapstores.AppConfigMapstore;
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
-import javax.inject.Inject;
-import java.util.*;
+import java.util.EnumSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.inject.Inject;
+
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 public class AppService {
     private final IMap<UUID, App>                    apps;
@@ -105,6 +121,7 @@ public class AppService {
     }
 
     public UUID createApp( App app ) {
+        ensureAppTypesAreValid( app.getAppTypeIds() );
         reservations.reserveIdAndValidateType( app, app::getName );
         apps.put( app.getId(), app );
         eventBus.post( new AppCreatedEvent( app ) );
@@ -158,7 +175,9 @@ public class AppService {
                 ImmutableSet.of(),
                 Optional.empty(),
                 Optional.of( organizationId ),
-                Optional.of( flags ) );
+                Optional.of( flags ),
+                Optional.of( new LinkedHashSet<>( organizationService.getDefaultPartitions( organizationId ) ) ),
+                Optional.empty() );
         edmService.createEntitySet( principal, entitySet );
         return entitySet.getId();
     }
@@ -202,6 +221,13 @@ public class AppService {
         Principal appPrincipal = new Principal( PrincipalType.APP,
                 AppConfig.getAppPrincipalId( appId, organizationId ) );
 
+        principalsService.createSecurablePrincipal( Principals.getCurrentUser(), new SecurablePrincipal(
+                new AclKey( appId, UUID.randomUUID() ),
+                appPrincipal,
+                app.getTitle() + " (" + organizationId.toString() + ")",
+                Optional.of( app.getDescription() + "\nInstalled for organization " + organizationId.toString() )
+        ) );
+
         Set<Principal> ownerPrincipals = Sets
                 .newHashSet( authorizations.getOwnersForSecurableObject( new AclKey( organizationId ) ) );
 
@@ -214,6 +240,21 @@ public class AppService {
                     ownerPrincipals );
         } );
         organizationService.addAppToOrg( organizationId, appId );
+    }
+
+    public void uninstallApp( UUID appId, UUID organizationId ) {
+        App app = getApp( appId );
+        Preconditions.checkNotNull( app, "The requested app with id %s does not exists.", appId.toString() );
+
+        AclKey appPrincipal = principalsService.lookup( new Principal( PrincipalType.APP,
+                AppConfig.getAppPrincipalId( appId, organizationId ) ) );
+
+        principalsService.deletePrincipal( appPrincipal );
+
+        appConfigs.removeAll( Predicates.and( Predicates.equal( AppConfigMapstore.APP_ID, appId ),
+                Predicates.equal( AppConfigMapstore.ORGANIZATION_ID, organizationId ) ) );
+
+        organizationService.removeAppFromOrg( organizationId, appId );
     }
 
     public UUID createAppType( AppType appType ) {
@@ -311,6 +352,7 @@ public class AppService {
     }
 
     public void addAppTypesToApp( UUID appId, Set<UUID> appTypeIds ) {
+        ensureAppTypesAreValid( appTypeIds );
         apps.executeOnKey( appId, new AddAppTypesToAppProcessor( appTypeIds ) );
         updateAppConfigsForNewAppType( appId, appTypeIds );
         eventBus.post( new AppCreatedEvent( apps.get( appId ) ) );
@@ -346,11 +388,19 @@ public class AppService {
     }
 
     public void updateAppMetadata( UUID appId, MetadataUpdate metadataUpdate ) {
+        if ( metadataUpdate.getName().isPresent() ) {
+            reservations.renameReservation( appId, metadataUpdate.getName().get() );
+        }
+
         apps.executeOnKey( appId, new UpdateAppMetadataProcessor( metadataUpdate ) );
         eventBus.post( new AppCreatedEvent( apps.get( appId ) ) );
     }
 
     public void updateAppTypeMetadata( UUID appTypeId, MetadataUpdate metadataUpdate ) {
+        if ( metadataUpdate.getType().isPresent() ) {
+            reservations.renameReservation( appTypeId, metadataUpdate.getType().get() );
+        }
+
         appTypes.executeOnKey( appTypeId, new UpdateAppTypeMetadataProcessor( metadataUpdate ) );
         eventBus.post( new AppTypeCreatedEvent( appTypes.get( appTypeId ) ) );
     }
@@ -430,5 +480,13 @@ public class AppService {
                 }
             } );
         } );
+    }
+
+    private void ensureAppTypesAreValid( Set<UUID> appTypeIds ) {
+        Set<UUID> missingAppTypes = Sets.difference( appTypeIds,
+                appTypes.keySet( Predicates.in( "__key", appTypeIds.toArray( new UUID[] {} ) ) ) );
+
+        Preconditions.checkArgument( missingAppTypes.isEmpty(),
+                "The following app types do not exist: " + appTypeIds.toString() );
     }
 }
