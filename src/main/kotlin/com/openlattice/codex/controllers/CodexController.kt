@@ -19,6 +19,7 @@ import com.openlattice.twilio.TwilioConfiguration
 import com.twilio.Twilio
 import com.twilio.rest.api.v2010.account.Message
 import com.twilio.type.PhoneNumber
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestMethod
@@ -29,6 +30,9 @@ import java.util.concurrent.Executors
 import java.util.stream.Stream
 import javax.inject.Inject
 
+@SuppressFBWarnings(
+        value = ["BC_BAD_CAST_TO_ABSTRACT_COLLECTION"],
+        justification = "Allowing kotlin collection mapping cast to List")
 @RestController
 @RequestMapping(CodexApi.CONTROLLER)
 class CodexController

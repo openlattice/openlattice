@@ -388,11 +388,19 @@ public class AppService {
     }
 
     public void updateAppMetadata( UUID appId, MetadataUpdate metadataUpdate ) {
+        if ( metadataUpdate.getName().isPresent() ) {
+            reservations.renameReservation( appId, metadataUpdate.getName().get() );
+        }
+
         apps.executeOnKey( appId, new UpdateAppMetadataProcessor( metadataUpdate ) );
         eventBus.post( new AppCreatedEvent( apps.get( appId ) ) );
     }
 
     public void updateAppTypeMetadata( UUID appTypeId, MetadataUpdate metadataUpdate ) {
+        if ( metadataUpdate.getType().isPresent() ) {
+            reservations.renameReservation( appTypeId, metadataUpdate.getType().get() );
+        }
+
         appTypes.executeOnKey( appTypeId, new UpdateAppTypeMetadataProcessor( metadataUpdate ) );
         eventBus.post( new AppTypeCreatedEvent( appTypes.get( appTypeId ) ) );
     }

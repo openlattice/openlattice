@@ -66,6 +66,7 @@ import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.PostgresColumn.VERSIONS
 import com.openlattice.postgres.PostgresDataTables
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.http.MediaType
@@ -79,6 +80,9 @@ import java.util.*
 import javax.inject.Inject
 import kotlin.streams.asSequence
 
+@SuppressFBWarnings(
+        value = ["BC_BAD_CAST_TO_ABSTRACT_COLLECTION"],
+        justification = "Allowing kotlin collection mapping cast to List")
 @RestController
 @RequestMapping(EntitySetsApi.CONTROLLER)
 class EntitySetsController @Inject
