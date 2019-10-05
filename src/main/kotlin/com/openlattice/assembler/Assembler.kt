@@ -29,6 +29,7 @@ import com.google.common.eventbus.Subscribe
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
+import com.hazelcast.query.QueryConstants
 import com.openlattice.IdConstants
 import com.openlattice.assembler.PostgresRoles.Companion.buildOrganizationUserId
 import com.openlattice.assembler.events.MaterializedEntitySetDataChangeEvent
@@ -63,6 +64,8 @@ import com.openlattice.tasks.Task
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import java.util.*
+import java.util.stream.Collectors
+import kotlin.streams.toList
 
 private val logger = LoggerFactory.getLogger(Assembler::class.java)
 
@@ -160,7 +163,7 @@ class Assembler(
         if (isEntitySetMaterialized(entitySetDeletedEvent.entitySetId)) {
             logger.info("Removing materialized entity set ${entitySetDeletedEvent.entitySetId} from all " +
                     "organizations because of entity set deletion")
-            
+
             val entitySetAssembliesToDelete = materializedEntitySets.keySet(
                     entitySetIdPredicate(entitySetDeletedEvent.entitySetId)
             )
@@ -274,14 +277,51 @@ class Assembler(
 
     @Subscribe
     fun handleAddMembersToOrganization(event: MembersAddedToOrganizationEvent) {
+        // check if organization is initialized
+        ensureAssemblyInitialized(event.organizationId)
+
+        val authorizedPropertyTypesOfEntitySetsByNewMembers = event.newMembers.associateWith { principal ->
+            // we also grant select on entity sets, where no property type is authorized
+            val authorizedEntitySets = authorizationManager.getAuthorizedObjectsOfType(
+                    principal.principal,
+                    SecurableObjectType.EntitySet,
+                    EdmAuthorizationHelper.READ_PERMISSION
+            )
+            val authorizedPropertyTypeAcls = authorizationManager.getAuthorizedObjectsOfType(
+                    principal.principal,
+                    SecurableObjectType.PropertyTypeInEntitySet,
+                    EdmAuthorizationHelper.READ_PERMISSION
+            )
+
+            val allEntitySets = entitySets
+                    .getAll(authorizedEntitySets.map { it[0] }.collect(Collectors.toSet()))
+                    .filter { isEntitySetMaterialized(EntitySetAssemblyKey(it.key, event.organizationId)) }
+            val authorizedPropertyTypesByEntitySets = authorizedPropertyTypeAcls.toList()
+                    .groupBy { it[0] }
+                    .map { it.key to it.value.map { it[1] } }
+                    .toMap()
+
+            allEntitySets.values
+                    .associateWith {
+                        if (authorizedPropertyTypesByEntitySets.containsKey(it.id)) {
+                            propertyTypes.getAll(authorizedPropertyTypesByEntitySets.getValue(it.id).toSet()).values
+                        } else {
+                            listOf<PropertyType>()
+                        }
+                    }
+        }
+
         assemblies.executeOnKey(
                 event.organizationId,
-                AddMembersToOrganizationAssemblyProcessor(event.newMembers).init(acm)
+                AddMembersToOrganizationAssemblyProcessor(authorizedPropertyTypesOfEntitySetsByNewMembers).init(acm)
         )
     }
 
     @Subscribe
     fun removeMembersFromOrganization(event: MembersRemovedFromOrganizationEvent) {
+        // check if organization is initialized
+        ensureAssemblyInitialized(event.organizationId)
+
         assemblies.executeOnKey(
                 event.organizationId,
                 RemoveMembersFromOrganizationAssemblyProcessor(event.members).init(acm)
@@ -533,7 +573,7 @@ class Assembler(
      * Returns true, if the entity set is materialized in the organization
      */
     private fun isEntitySetMaterialized(entitySetAssemblyKey: EntitySetAssemblyKey): Boolean {
-        return materializedEntitySets.containsKey(entitySetAssemblyKey)
+        return materializedEntitySets.keySet(entitySetAssemblyKeyPredicate(entitySetAssemblyKey)).isNotEmpty()
     }
 
     private fun ensureEntitySetIsMaterialized(entitySetAssemblyKey: EntitySetAssemblyKey) {
@@ -544,7 +584,9 @@ class Assembler(
     }
 
     private fun ensureAssemblyInitialized(organizationId: UUID) {
-        if (!assemblies.containsKey(organizationId) || !assemblies[organizationId]!!.initialized) {
+        val isAssemblyInitialized = assemblies
+                .executeOnKey(organizationId, IsAssemblyInitializedEntryProcessor()) as Boolean
+        if (!isAssemblyInitialized) {
             throw IllegalStateException("Organization assembly is not initialized for organization $organizationId")
         }
     }
@@ -561,6 +603,10 @@ class Assembler(
 
     private fun entitySetIdInOrganizationPredicate(entitySetId: UUID): Predicate<*, *> {
         return Predicates.equal(OrganizationAssemblyMapstore.MATERIALIZED_ENTITY_SETS_ID_INDEX, entitySetId)
+    }
+
+    private fun entitySetAssemblyKeyPredicate(entitySetAssemblyKey: EntitySetAssemblyKey): Predicate<*, *> {
+        return Predicates.equal(QueryConstants.KEY_ATTRIBUTE_NAME.value(), entitySetAssemblyKey)
     }
 
 

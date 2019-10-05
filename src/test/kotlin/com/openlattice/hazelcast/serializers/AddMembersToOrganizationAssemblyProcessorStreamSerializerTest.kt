@@ -24,6 +24,7 @@ package com.openlattice.hazelcast.serializers
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.processors.AddMembersToOrganizationAssemblyProcessor
+import com.openlattice.mapstores.TestDataFactory
 import org.mockito.Mockito
 
 class AddMembersToOrganizationAssemblyProcessorStreamSerializerTest
@@ -37,9 +38,13 @@ class AddMembersToOrganizationAssemblyProcessorStreamSerializerTest
     }
 
     override fun createInput(): AddMembersToOrganizationAssemblyProcessor {
-        return AddMembersToOrganizationAssemblyProcessor(
-                SecurablePrincipalListStreamSerializerTest.createSecurablePrincipalList()
-        )
-    }
+        val authorizedPropertyTypesOfEntitySetsByPrincipal =
+                SecurablePrincipalListStreamSerializerTest.createSecurablePrincipalList().associateWith {
+                    listOf(TestDataFactory.entitySet()).associateWith {
+                        listOf(TestDataFactory.propertyType(), TestDataFactory.propertyType())
+                    }
+                }
 
+        return AddMembersToOrganizationAssemblyProcessor(authorizedPropertyTypesOfEntitySetsByPrincipal)
+    }
 }
