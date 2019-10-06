@@ -20,20 +20,16 @@
 
 package com.openlattice.indexing.pods;
 
-import com.geekbeast.hazelcast.HazelcastClientProvider;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
 import com.openlattice.auditing.AuditingManager;
-import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.DataGraphService;
-import com.openlattice.data.EntityKeyIdService;
-import com.openlattice.data.ids.PostgresEntityKeyIdService;
-import com.openlattice.data.storage.*;
+import com.openlattice.data.storage.EntityDatastore;
+import com.openlattice.data.storage.IndexingMetadataManager;
+import com.openlattice.data.storage.PostgresEntityDataQueryService;
 import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.datastore.services.EdmManager;
-import com.openlattice.edm.PostgresEdmManager;
-import com.openlattice.ids.HazelcastIdGenerationService;
 import com.openlattice.indexing.BackgroundExpiredDataDeletionService;
 import com.openlattice.indexing.BackgroundIndexingService;
 import com.openlattice.indexing.BackgroundLinkingIndexingService;
@@ -67,19 +63,7 @@ public class IndexerPostConfigurationServicesPod {
     private ListeningExecutorService executor;
 
     @Inject
-    private ByteBlobDataManager byteBlobDataManager;
-
-    @Inject
-    private AuthorizationManager authz;
-
-    @Inject
     private ConductorElasticsearchApi elasticsearchApi;
-
-    @Inject
-    private HazelcastClientProvider hazelcastClientProvider;
-
-    @Inject
-    private PostgresEdmManager pgEdmManager;
 
     @Inject
     private AuditingManager auditingManager;
@@ -87,33 +71,18 @@ public class IndexerPostConfigurationServicesPod {
     @Inject
     private DataGraphService dataGraphService;
 
-    @Bean
-    public HazelcastIdGenerationService idGeneration() {
-        return new HazelcastIdGenerationService( hazelcastClientProvider );
-    }
+    @Inject
+    private PostgresEntityDataQueryService dataQueryService;
 
-    @Bean
-    public EntityKeyIdService idService() {
-        return new PostgresEntityKeyIdService( hazelcastClientProvider,
-                executor,
-                hikariDataSource,
-                idGeneration(),
-                partitionManager() );
-    }
+    @Inject
+    private EntityDatastore entityDatastore;
 
-    @Bean
-    public PartitionManager partitionManager() {
-        return new PartitionManager( hazelcastInstance, hikariDataSource );
-    }
-
-    @Bean
-    public PostgresEntityDataQueryService dataQueryService() {
-        return new PostgresEntityDataQueryService( hikariDataSource, byteBlobDataManager, partitionManager() );
-    }
+    @Inject
+    private PartitionManager partitionManager;
 
     @Bean
     public LinkingQueryService lqs() {
-        return new PostgresLinkingQueryService( hikariDataSource, partitionManager() );
+        return new PostgresLinkingQueryService( hikariDataSource, partitionManager );
     }
 
     @Bean
@@ -122,13 +91,8 @@ public class IndexerPostConfigurationServicesPod {
     }
 
     @Bean
-    public EntityDatastore entityDatastore() {
-        return new PostgresEntityDatastore( dataQueryService(), edm, pgEdmManager );
-    }
-
-    @Bean
     public IndexingMetadataManager indexingMetadataManager() {
-        return new IndexingMetadataManager( hikariDataSource, partitionManager() );
+        return new IndexingMetadataManager( hikariDataSource, partitionManager );
     }
 
     @Bean
@@ -137,7 +101,7 @@ public class IndexerPostConfigurationServicesPod {
                 hazelcastInstance,
                 indexerConfiguration,
                 hikariDataSource,
-                dataQueryService(),
+                dataQueryService,
                 elasticsearchApi,
                 indexingMetadataManager() );
     }
@@ -150,7 +114,7 @@ public class IndexerPostConfigurationServicesPod {
                 hikariDataSource,
                 elasticsearchApi,
                 indexingMetadataManager(),
-                entityDatastore(),
+                entityDatastore,
                 indexerConfiguration );
     }
 
@@ -161,14 +125,14 @@ public class IndexerPostConfigurationServicesPod {
                 indexerConfiguration,
                 auditingManager,
                 dataGraphService,
-                edm);
+                edm );
     }
 
     @Bean
     public IndexingService indexingService() {
         return new IndexingService( hikariDataSource,
                 backgroundIndexingService(),
-                partitionManager(),
+                partitionManager,
                 executor,
                 hazelcastInstance );
     }
