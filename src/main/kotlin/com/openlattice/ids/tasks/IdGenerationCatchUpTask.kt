@@ -35,7 +35,9 @@ class IdGenerationCatchUpTask : HazelcastInitializationTask<IdGenerationCatchupD
         return 0
     }
 
-    override fun initialize(dependencies: IdGenerationCatchupDependency) {
+    override fun initialize(dependencies: IdGenerationCatchupDependency) {}
+
+    fun initializeForReal(dependencies: IdGenerationCatchupDependency) {
         dependencies.idGenerationMap.executeOnEntries(IdCatchupEntryProcessor(dependencies.hds))
     }
 
