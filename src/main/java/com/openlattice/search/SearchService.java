@@ -198,7 +198,8 @@ public class SearchService {
                         .toMap( SearchService::getEntityKeyId, Function.identity() ) );
 
         List<Map<FullQualifiedName, Set<Object>>> results = result.getEntityDataKeys().stream()
-                .map( edk -> entitiesById.get( edk.getEntityKeyId() ) ).collect( Collectors.toList() );
+                .map( edk -> entitiesById.get( edk.getEntityKeyId() ) ).filter( Objects::nonNull )
+                .collect( Collectors.toList() );
 
         return new DataSearchResult( result.getNumHits(), results );
     }
