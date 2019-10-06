@@ -53,6 +53,7 @@ import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.ids.PostgresEntityKeyIdService;
 import com.openlattice.data.storage.*;
 import com.openlattice.data.storage.partitions.PartitionManager;
+import com.openlattice.datastore.pods.ByteBlobServicePod;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.directory.UserDirectoryService;
@@ -83,7 +84,8 @@ import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 
 @Configuration
-@Import( { IndexerConfigurationPod.class, AuditingConfigurationPod.class, AssemblerConfigurationPod.class } )
+@Import( { IndexerConfigurationPod.class, AuditingConfigurationPod.class, AssemblerConfigurationPod.class,
+        ByteBlobServicePod.class } )
 public class IndexerServicesPod {
     private static Logger logger = LoggerFactory.getLogger( IndexerServicesPod.class );
 
@@ -209,6 +211,7 @@ public class IndexerServicesPod {
     public PhoneNumberService phoneNumberService() {
         return new PhoneNumberService( hazelcastInstance );
     }
+
     @Bean
     public HazelcastOrganizationService organizationsManager() {
         return new HazelcastOrganizationService(
