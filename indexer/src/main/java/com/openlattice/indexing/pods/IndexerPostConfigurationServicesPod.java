@@ -24,6 +24,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
 import com.openlattice.auditing.AuditingManager;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
+import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.DataGraphService;
 import com.openlattice.data.storage.EntityDatastore;
 import com.openlattice.data.storage.IndexingMetadataManager;
@@ -69,7 +70,7 @@ public class IndexerPostConfigurationServicesPod {
     private AuditingManager auditingManager;
 
     @Inject
-    private DataGraphService dataGraphService;
+    private DataGraphManager dataGraphService;
 
     @Inject
     private PostgresEntityDataQueryService dataQueryService;

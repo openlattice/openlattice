@@ -13,38 +13,24 @@ import com.openlattice.auditing.AuditEventType
 import com.openlattice.auditing.AuditableEvent
 import com.openlattice.auditing.AuditingManager
 import com.openlattice.authorization.AclKey
-import com.openlattice.conductor.rpc.ConductorElasticsearchApi
-import com.openlattice.data.*
 import com.openlattice.data.DataApi.MAX_BATCH_SIZE
+import com.openlattice.data.DataEdgeKey
+import com.openlattice.data.DataGraphManager
+import com.openlattice.data.DeleteType
+import com.openlattice.data.WriteEvent
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetFlag
-import com.openlattice.edm.set.ExpirationBase
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.indexing.configuration.IndexerConfiguration
-import com.openlattice.postgres.DataTables.LAST_WRITE
-import com.openlattice.postgres.IndexType
-import com.openlattice.postgres.PostgresColumn.*
-import com.openlattice.postgres.PostgresDataTables
-import com.openlattice.postgres.PostgresTable.DATA
-import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.PostgresIterable
-import com.openlattice.postgres.streams.StatementHolder
-import com.zaxxer.hikari.HikariDataSource
-import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
-import java.sql.Types
-import java.sql.ResultSet
-import java.time.Instant
 import java.time.OffsetDateTime
-import java.time.ZoneId
 import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
-import java.util.function.Function
-import java.util.function.Supplier
 
 /**
  * This is a background task that periodically searches for data that has surpassed its prescribed expiration date
@@ -58,7 +44,7 @@ class BackgroundExpiredDataDeletionService(
         hazelcastInstance: HazelcastInstance,
         private val indexerConfiguration: IndexerConfiguration,
         private val auditingManager: AuditingManager,
-        private val dataGraphService: DataGraphService,
+        private val dataGraphService: DataGraphManager,
         private val edm: EdmManager
 ) {
     companion object {
