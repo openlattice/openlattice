@@ -78,12 +78,14 @@ public class IndexerPostConfigurationServicesPod {
     @Inject
     private EntityDatastore entityDatastore;
 
-    @Inject
-    private PartitionManager partitionManager;
+    @Bean
+    public PartitionManager partitionManager() {
+        return new PartitionManager( hazelcastInstance, hikariDataSource );
+    }
 
     @Bean
     public LinkingQueryService lqs() {
-        return new PostgresLinkingQueryService( hikariDataSource, partitionManager );
+        return new PostgresLinkingQueryService( hikariDataSource, partitionManager() );
     }
 
     @Bean
@@ -93,7 +95,7 @@ public class IndexerPostConfigurationServicesPod {
 
     @Bean
     public IndexingMetadataManager indexingMetadataManager() {
-        return new IndexingMetadataManager( hikariDataSource, partitionManager );
+        return new IndexingMetadataManager( hikariDataSource, partitionManager() );
     }
 
     @Bean
@@ -133,7 +135,7 @@ public class IndexerPostConfigurationServicesPod {
     public IndexingService indexingService() {
         return new IndexingService( hikariDataSource,
                 backgroundIndexingService(),
-                partitionManager,
+                partitionManager(),
                 executor,
                 hazelcastInstance );
     }
