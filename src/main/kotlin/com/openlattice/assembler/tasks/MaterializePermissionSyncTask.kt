@@ -54,6 +54,10 @@ class MaterializePermissionSyncTask : HazelcastFixedRateTask<MaterializedEntityS
     }
 
     override fun runTask() {
+     // TODO bring back
+    }
+
+    fun doTask() {
         // first delete materialized views and their assemblies, where organization principal has no materialize
         // permission for them
         getDependency().assembler.deleteEntitySetAssemblies(

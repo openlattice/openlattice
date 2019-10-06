@@ -53,6 +53,10 @@ class MaterializedEntitySetsDataRefreshTask : HazelcastFixedRateTask<Materialize
      * if not, we skip it and will pick it up in the next period.
      */
     override fun runTask() {
+        // TODO
+    }
+
+    fun doTask() {
         val dataUnsynchPredicate = Predicates.equal(
                 MaterializedEntitySetMapStore.FLAGS_INDEX,
                 OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED)
