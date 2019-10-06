@@ -25,8 +25,8 @@ public class GraphProcessorPod {
     @Inject
     private Set<GraphProcessor> graphProcessors;
 
-    @Inject
-    private EdmManager edmManager;
+//    @Inject
+//    private EdmManager edmManager;
 
     @Inject
     private PostgresEntityDataQueryService dataQueryService;

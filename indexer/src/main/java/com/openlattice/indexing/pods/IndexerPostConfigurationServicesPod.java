@@ -58,9 +58,6 @@ public class IndexerPostConfigurationServicesPod {
     private HikariDataSource hikariDataSource;
 
     @Inject
-    private EdmManager edm;
-
-    @Inject
     private ListeningExecutorService executor;
 
     @Inject
@@ -127,8 +124,7 @@ public class IndexerPostConfigurationServicesPod {
                 hazelcastInstance,
                 indexerConfiguration,
                 auditingManager,
-                dataGraphService,
-                edm );
+                dataGraphService );
     }
 
     @Bean
