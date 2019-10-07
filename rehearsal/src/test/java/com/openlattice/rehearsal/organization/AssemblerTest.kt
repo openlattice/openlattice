@@ -1368,7 +1368,7 @@ class AssemblerTest : AssemblerTestBase() {
         permissionsApi.updateAcls(listOf(AclData(ptEs1Org1Acl, Action.SET)))
 
         // wait for background task
-        Thread.sleep(5000L)
+        Thread.sleep(60_00L)
 
         checkMaterializedEntitySetColumns(organization1DataSource, es1, et, propertyFqns)
     }
