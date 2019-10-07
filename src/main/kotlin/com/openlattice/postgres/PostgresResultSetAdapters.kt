@@ -83,7 +83,7 @@ fun getEntityPropertiesByPropertyTypeId2(
 }
 
 @Throws(SQLException::class)
-fun yetAnotherReplacementMethod(
+fun getEntityPropertiesByPropertyTypeId4(
         rs: ResultSet,
         authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
         byteBlobDataManager: ByteBlobDataManager

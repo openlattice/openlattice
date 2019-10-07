@@ -84,7 +84,7 @@ class PostgresEntityDataQueryService(
         ) { rs -> getEntityPropertiesByPropertyTypeId2(rs, authorizedPropertyTypes, byteBlobDataManager) }
     }
 
-    fun aMethodToReplaceTheAboveMethodBecauseIDoNotUnderstandIt(
+    fun getEntitiesWithPropertyTypeIdsNew(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
             linking: Boolean = false
@@ -94,7 +94,7 @@ class PostgresEntityDataQueryService(
                 authorizedPropertyTypes,
                 mapOf(),
                 linking
-        ) { rs -> yetAnotherReplacementMethod(rs, authorizedPropertyTypes, byteBlobDataManager) }
+        ) { rs -> getEntityPropertiesByPropertyTypeId4(rs, authorizedPropertyTypes, byteBlobDataManager) }
     }
 
     @JvmOverloads
