@@ -1127,7 +1127,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
 
         // add user1 as member
         OrganizationControllerCallHelper.addMemberToOrganization(organizationID, user1.id)
-        Thread.sleep(5000L) // wait for configuring the user
+        Thread.sleep(1000L) // wait for configuring the user
 
         // both entity sets should be selectable by user1
         loginAs("user1")
@@ -1158,12 +1158,12 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
 
         /* remove membership and remove read on entity set 1 and re-add as member */
         OrganizationControllerCallHelper.removeMemberFromOrganization(organizationID, user1.id)
-        Thread.sleep(5000L) // wait for configuring the user
+        Thread.sleep(1000L) // wait for configuring the user
 
         permissionsApi.updateAcl(AclData(es1ReadAcl, Action.REMOVE))
 
         OrganizationControllerCallHelper.addMemberToOrganization(organizationID, user1.id)
-        Thread.sleep(5000L) // wait for configuring the user
+        Thread.sleep(1000L) // wait for configuring the user
 
         // only entity set 2 and edges should be selectable by user1
         user1OrganizationDataSource.connection.use { connection ->
