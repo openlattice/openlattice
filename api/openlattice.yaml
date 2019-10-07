@@ -308,6 +308,30 @@ paths:
         "200":
           description: Success
   /datastore/edm/entity/type/{entityTypeId}/property/type:
+    get:
+      summary: Get all EntityType propertyType metadata
+      operationId: getAllEntityTypePropertyMetadata
+      parameters:
+        - name: entityTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  $ref: "#/components/entityTypePropertyMetadata"
     patch:
       summary: Updates the EntityType definition for the given EntityType UUID by reordering its properties as specified by the provided list.
       operationId: reorderPropertyTypesInEntityType
@@ -353,6 +377,60 @@ paths:
       responses:
         "200":
           description: Success
+  /datastore/edm/entity/type/{entityTypeId}/property/type/{propertyTypeId}:
+    get:
+      summary: Get EntityType propertyType metadata
+      operationId: getEntityTypePropertyMetadata
+      parameters:
+        - name: entityTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: propertyTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/entityTypePropertyMetadata"
+    post:
+      summary: Update EntityType Property metadata
+      operationId: updateEntityTypePropertyMetadata
+      parameters:
+        - name: entityTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: propertyTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+      
 
   # property Types
 
@@ -1689,8 +1767,10 @@ paths:
                   type: object
                   additionalProperties:
                     type: object
-                    items:
-                      $ref: "#/components/neighborEntityIds"
+                    additionalProperties:
+                      type: array
+                      items:
+                        $ref: "#/components/neighborEntityIds"
   
   ####################
   ## DIRECTORY APIs ##
@@ -2556,6 +2636,136 @@ paths:
         "200":
           description: Success
 
+  ##################
+  ## LINKING APIs ##
+  ##################
+  
+  /linker/linkingfeedback:
+    put:
+      summary: Submits feedbacks for a given linking entity set and linking id in a batch format.
+      operationId: addLinkingFeedback
+      tags:
+        - linking
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/linkingFeedback"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: integer
+    delete:
+      summary: Deletes linking feedback
+      operationId: deleteLinkingFeedback
+      tags:
+        linking
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/entityKeyPair"
+  /linker/linkingfeedback/entity:
+    post:
+      summary: Returns positive/negative/all linking feedbacks on the given entity.
+      operationId: getLinkingFeedbacksOnEntity
+      tags:
+        - linking
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      parameters:
+        - name: feedbackType
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [Positive, Negative, All]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/entityDataKey"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                $ref: "#/components/entityLinkingFeedback"
+  /linker/linkingfeedback/features:
+    post:
+      summary: Returns the feedback on the given entity pair along with their features
+      operationId: getLinkingFeedbackWithFeatures
+      tags:
+        - linking
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      parameters:
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/entityKeyPair"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/entityLinkingFeatures"
+  /linker/linkingfeedback/all:
+    get:
+      summary: Returns all feedback submitted
+      operationId: getAllLinkingFeedback
+      tags:
+        - linking
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/entityLinkingFeedback"
+  /linker/linkingfeedback/features/all:
+    get:
+      summary: Returns all feedback submitted walong with the features of pairwise entities
+      operationId: getAllLinkingFeedbackWithFeatures
+      tags:
+        - linking
+      security:
+        - openlattice_auth: []
+        - http-auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/entityLinkingFeatures"
+
 components:
   securitySchemes:
     http_auth:
@@ -2655,6 +2865,14 @@ components:
             fae6af98-2675-45bd-9a5b-1619a87235a8,
           ]
         category: EntityType
+    entityTypePropertyMetadata:
+      title: An entity type property metadata
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
     associationType:
       type: object
       properties:
@@ -3235,6 +3453,54 @@ components:
             type: string
           credential:
             type: string
+    entityDataKey:
+      type: object
+      properties:
+        entitySetId: 
+          type: string
+          format: uuid
+        entityKeyId:
+          type: string
+          format: uuid
+    linkingFeedback:
+      type: object
+      properties:
+        linkingEntity:
+          $ref: "#/components/entityDataKey"
+        link:
+          type: array
+          items:
+            $ref: "#/components/entityDataKey"
+        unlink:
+          type: array
+          items:
+            $ref: "#/components/entityDataKey"
+    entityKeyPair:
+      type: object
+      properties:
+        first:
+          type: string
+          format: uuid
+        second:
+          type: string
+          format: uuid  
+    entityLinkingFeedback:
+      type: object
+      properties:
+        entityKeyPair:
+          $ref: "#/components/entityKeyPair"
+        linked:
+          type: boolean
+    entityLinkingFeatures:
+      type: object
+      properties:
+        entityLinkingFeedback:
+          $ref: "#/components/entityLinkingFeedback"
+        features:
+          type: object
+          additionalProperties:
+            type: number
+
 tags:
   - name: edm
     description: API endpoints to the entity data model.

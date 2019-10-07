@@ -58,7 +58,7 @@ public class EntityType extends AbstractSchemaAssociatedSecurableType {
             @JsonProperty( SerializationConstants.PROPERTIES_FIELD ) LinkedHashSet<UUID> properties,
             @JsonProperty( SerializationConstants.PROPERTY_TAGS )
                     Optional<LinkedHashMultimap<UUID, String>> propertyTags,
-            @JsonProperty( SerializationConstants.BASE_TYPE_FIELD ) Optional<UUID> baseType,
+             @JsonProperty( SerializationConstants.BASE_TYPE_FIELD ) Optional<UUID> baseType,
             @JsonProperty( SerializationConstants.CATEGORY ) Optional<SecurableObjectType> category,
             @JsonProperty( SerializationConstants.SHARDS ) Optional<Integer> shards ) {
         super( id, type, title, description, schemas );
