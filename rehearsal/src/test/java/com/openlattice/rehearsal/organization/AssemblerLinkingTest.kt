@@ -205,6 +205,7 @@ class AssemblerLinkingTest : SetupTestData() {
                         Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
+                        Optional.empty(),
                         Optional.empty()
                 )
         )

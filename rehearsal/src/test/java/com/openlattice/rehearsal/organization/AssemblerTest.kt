@@ -180,6 +180,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                         Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
+                        Optional.empty(),
                         Optional.empty()
                 )
         )
@@ -1087,6 +1088,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                         Optional.empty(),
                         Optional.empty(),
                         Optional.of(organization2.id),
+                        Optional.empty(),
                         Optional.empty()
                 )
         )
