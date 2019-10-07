@@ -44,6 +44,7 @@ import com.openlattice.apps.processors.UpdateAppTypeMetadataProcessor;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.util.AuthorizationUtils;
 import com.openlattice.controllers.exceptions.BadRequestException;
+import com.openlattice.data.DataExpiration;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.util.Util;
 import com.openlattice.edm.EntitySet;
@@ -175,7 +176,8 @@ public class AppService {
                 Optional.empty(),
                 Optional.of( organizationId ),
                 Optional.of( flags ),
-                Optional.of( new LinkedHashSet<>( organizationService.getDefaultPartitions( organizationId ) ) ) );
+                Optional.of( new LinkedHashSet<>( organizationService.getDefaultPartitions( organizationId ) ) ),
+                Optional.empty() );
         edmService.createEntitySet( principal, entitySet );
         return entitySet.getId();
     }
@@ -386,11 +388,19 @@ public class AppService {
     }
 
     public void updateAppMetadata( UUID appId, MetadataUpdate metadataUpdate ) {
+        if ( metadataUpdate.getName().isPresent() ) {
+            reservations.renameReservation( appId, metadataUpdate.getName().get() );
+        }
+
         apps.executeOnKey( appId, new UpdateAppMetadataProcessor( metadataUpdate ) );
         eventBus.post( new AppCreatedEvent( apps.get( appId ) ) );
     }
 
     public void updateAppTypeMetadata( UUID appTypeId, MetadataUpdate metadataUpdate ) {
+        if ( metadataUpdate.getType().isPresent() ) {
+            reservations.renameReservation( appTypeId, metadataUpdate.getType().get() );
+        }
+
         appTypes.executeOnKey( appTypeId, new UpdateAppTypeMetadataProcessor( metadataUpdate ) );
         eventBus.post( new AppTypeCreatedEvent( appTypes.get( appTypeId ) ) );
     }

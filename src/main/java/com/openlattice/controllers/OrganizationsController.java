@@ -21,7 +21,6 @@
 package com.openlattice.controllers;
 
 import com.codahale.metrics.annotation.Timed;
-import com.dataloom.streams.StreamUtil;
 import com.google.common.base.Predicates;
 import com.google.common.collect.*;
 import com.openlattice.assembler.Assembler;
@@ -273,15 +272,10 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     public Void refreshDataChanges(
             @PathVariable( ID ) UUID organizationId,
             @PathVariable( SET_ID ) UUID entitySetId ) {
-        // we need authorized property types to re-build materialized view, since the only way to refresh it is
-        // to drop and re-import cascade to organization database
-        final var authorizedPropertyTypesByEntitySet =
-                getAuthorizedPropertiesForMaterialization( organizationId, Set.of( entitySetId ) );
+        // the person requesting refresh should be the owner of the organization
+        ensureOwner( organizationId );
 
-        assembler.refreshMaterializedEntitySet(
-                organizationId,
-                entitySetId,
-                authorizedPropertyTypesByEntitySet.get( entitySetId ) );
+        assembler.refreshMaterializedEntitySet( organizationId, entitySetId );
         return null;
     }
 

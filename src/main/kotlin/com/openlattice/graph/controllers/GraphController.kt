@@ -29,6 +29,7 @@ import com.openlattice.data.requests.NeighborEntityDetails
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.*
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.*
 import java.util.*
@@ -37,6 +38,9 @@ import javax.inject.Inject
 /**
  *
  */
+@SuppressFBWarnings(
+        value = ["BC_BAD_CAST_TO_ABSTRACT_COLLECTION"],
+        justification = "Allowing kotlin collection mapping cast to List")
 @RestController
 @RequestMapping(CONTROLLER)
 class GraphController

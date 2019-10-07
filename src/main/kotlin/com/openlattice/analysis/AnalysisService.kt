@@ -26,6 +26,7 @@ import com.openlattice.analysis.requests.NeighborType
 import com.openlattice.authorization.*
 import com.openlattice.data.DataGraphManager
 import com.openlattice.datastore.services.EdmManager
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.stream.Collectors
@@ -35,6 +36,10 @@ import javax.inject.Inject
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
+@SuppressFBWarnings(
+        value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE", "BC_BAD_CAST_TO_ABSTRACT_COLLECTION"],
+        justification = "Allowing redundant kotlin null check on lateinit variables, " +
+                "Allowing kotlin collection mapping cast to List")
 class AnalysisService : AuthorizingComponent {
     private val logger = LoggerFactory.getLogger(AnalysisService::class.java)
 
