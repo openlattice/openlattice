@@ -26,5 +26,8 @@ package com.openlattice.assembler
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 interface AssemblerConnectionManagerDependent<T> {
+    companion object {
+        const val NOT_INITIALIZED = "Assembler Connection Manager not initialized."
+    }
     fun init(acm: AssemblerConnectionManager): T
 }

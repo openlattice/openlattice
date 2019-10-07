@@ -32,7 +32,6 @@ import com.hazelcast.core.IMap;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.query.Predicates;
 import com.hazelcast.query.QueryConstants;
-import com.openlattice.assembler.events.MaterializedEntitySetDataChangeEvent;
 import com.openlattice.assembler.events.MaterializedEntitySetEdmChangeEvent;
 import com.openlattice.auditing.AuditRecordEntitySetsManager;
 import com.openlattice.auditing.AuditingConfiguration;
@@ -59,6 +58,7 @@ import com.openlattice.edm.set.EntitySetPropertyMetadata;
 import com.openlattice.edm.type.AssociationDetails;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
+import com.openlattice.edm.type.EntityTypePropertyMetadata;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.edm.types.processors.*;
 import com.openlattice.hazelcast.HazelcastMap;
@@ -395,7 +395,7 @@ public class EdmService implements EdmManager {
         final int startSize = linkingEntitySet.getLinkedEntitySets().size();
         final EntitySet updatedLinkingEntitySet = (EntitySet) entitySets.executeOnKey(
                 linkingEntitySetId, new AddEntitySetsToLinkingEntitySetProcessor( newLinkedEntitySets ) );
-        markMaterializedEntitySetDirtyWithDataChanges( linkingEntitySet.getId() );
+        markMaterializedEntitySetDirtyWithEdmChanges( linkingEntitySet.getId() );
 
         eventBus.post( new LinkedEntitySetAddedEvent( linkingEntitySetId ) );
 
@@ -409,7 +409,7 @@ public class EdmService implements EdmManager {
         final EntitySet updatedLinkingEntitySet = (EntitySet) entitySets.executeOnKey(
                 linkingEntitySetId, new RemoveEntitySetsFromLinkingEntitySetProcessor( linkedEntitySets ) );
 
-        markMaterializedEntitySetDirtyWithDataChanges( linkingEntitySet.getId() );
+        markMaterializedEntitySetDirtyWithEdmChanges( linkingEntitySet.getId() );
         eventBus.post( new LinkedEntitySetRemovedEvent( linkingEntitySetId ) );
 
         return startSize - updatedLinkingEntitySet.getLinkedEntitySets().size();
@@ -685,19 +685,16 @@ public class EdmService implements EdmManager {
     @Override
     public Map<UUID, PropertyType> getPropertyTypesForEntitySet( UUID entitySetId ) {
 
-        Optional<UUID> maybeEtId = (Optional<UUID>) entitySets.executeOnKey( entitySetId, new GetEntityTypeFromEntitySetEntryProcessor() );
-        if ( maybeEtId.isEmpty() ) {
+        UUID maybeEtId = (UUID) entitySets.executeOnKey( entitySetId, new GetEntityTypeFromEntitySetEntryProcessor());
+        if ( maybeEtId == null ) {
             throw new ResourceNotFoundException( "Entity set " + entitySetId.toString() + " does not exist." );
         }
-
-        UUID entityTypeId = maybeEtId.get();
-        
-        Optional<Set<UUID>> maybeEtProps = (Optional<Set<UUID>>) entityTypes.executeOnKey( entityTypeId, new GetPropertiesFromEntityTypeEntryProcessor() );
-        if ( maybeEtProps.isEmpty() ) {
-            throw new ResourceNotFoundException( "Entity type " + entityTypeId.toString() + " does not exist." );
+        Set<UUID> maybeEtProps = (Set<UUID>) entityTypes.executeOnKey( maybeEtId, new GetPropertiesFromEntityTypeEntryProcessor());
+        if ( maybeEtProps == null ) {
+            throw new ResourceNotFoundException( "Entity type " + maybeEtId.toString() + " does not exist." );
         }
 
-        return propertyTypes.getAll( maybeEtProps.get() );
+        return propertyTypes.getAll( maybeEtProps );
     }
 
     @Override
@@ -1003,10 +1000,6 @@ public class EdmService implements EdmManager {
 
     private void markMaterializedEntitySetDirtyWithEdmChanges( UUID entitySetId ) {
         eventBus.post( new MaterializedEntitySetEdmChangeEvent( entitySetId ) );
-    }
-
-    private void markMaterializedEntitySetDirtyWithDataChanges( UUID entitySetId ) {
-        eventBus.post( new MaterializedEntitySetDataChangeEvent( entitySetId ) );
     }
 
     /**************
@@ -1762,6 +1755,20 @@ public class EdmService implements EdmManager {
     @Override public void removeDataExpirationPolicy( UUID entitySetId ) {
         entitySets.executeOnKey( entitySetId, new RemoveDataExpirationPolicyProcessor() );
         return;
+    }
+
+    @Override public void updateEntityTypePropertyMetadata(
+            UUID entityTypeId, UUID propertyTypeId, MetadataUpdate update ) {
+
+    }
+
+    @Override public EntityTypePropertyMetadata getEntityTypePropertyMetadata(
+            UUID entityTypeId, UUID propertyTypeId ) {
+        return null;
+    }
+
+    @Override public Map<UUID, EntityTypePropertyMetadata> getAllEntityTypePropertyMetadata( UUID entityTypeId ) {
+        return null;
     }
 
 }

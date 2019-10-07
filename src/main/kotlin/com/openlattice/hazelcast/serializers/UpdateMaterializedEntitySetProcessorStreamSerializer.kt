@@ -25,32 +25,45 @@ import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.AssemblerConnectionManagerDependent
-import com.openlattice.assembler.processors.RefreshMaterializedEntitySetProcessor
+import com.openlattice.assembler.processors.UpdateMaterializedEntitySetProcessor
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import org.springframework.stereotype.Component
 
 @Component
-class RefreshMaterializedEntitySetProcessorStreamSerializer
-    : SelfRegisteringStreamSerializer<RefreshMaterializedEntitySetProcessor>,
-        AssemblerConnectionManagerDependent<Void?> {
-
+class UpdateMaterializedEntitySetProcessorStreamSerializer
+    : SelfRegisteringStreamSerializer<UpdateMaterializedEntitySetProcessor>, AssemblerConnectionManagerDependent<Void?> {
     private lateinit var acm: AssemblerConnectionManager
 
     override fun getTypeId(): Int {
-        return StreamSerializerTypeIds.REFRESH_MATERIALIZED_ENTITY_SET_PROCESSOR.ordinal
+        return StreamSerializerTypeIds.UPDATE_MATERIALIZED_ENTITY_SET_PROCESSOR.ordinal
     }
 
-    override fun getClazz(): Class<out RefreshMaterializedEntitySetProcessor> {
-        return RefreshMaterializedEntitySetProcessor::class.java
+    override fun getClazz(): Class<out UpdateMaterializedEntitySetProcessor> {
+        return UpdateMaterializedEntitySetProcessor::class.java
     }
 
-    override fun write(out: ObjectDataOutput, obj: RefreshMaterializedEntitySetProcessor) {
-        EntitySetStreamSerializer.serialize(out, obj.entitySet)
+    override fun write(output: ObjectDataOutput, obj: UpdateMaterializedEntitySetProcessor) {
+        EntitySetStreamSerializer.serialize(output, obj.entitySet)
+
+        output.writeInt(obj.materializablePropertyTypes.size)
+
+        obj.materializablePropertyTypes.forEach { (propertyTypeId, propertyType) ->
+            UUIDStreamSerializer.serialize(output, propertyTypeId)
+            PropertyTypeStreamSerializer.serialize(output, propertyType)
+        }
     }
 
-    override fun read(input: ObjectDataInput): RefreshMaterializedEntitySetProcessor {
+    override fun read(input: ObjectDataInput): UpdateMaterializedEntitySetProcessor {
         val entitySet = EntitySetStreamSerializer.deserialize(input)
-        return RefreshMaterializedEntitySetProcessor(entitySet).init(acm)
+
+        val size = input.readInt()
+        val materializablePropertyTypes = ((0 until size).map {
+            UUIDStreamSerializer.deserialize(input) to PropertyTypeStreamSerializer.deserialize(input)
+        }.toMap())
+
+        return UpdateMaterializedEntitySetProcessor(
+                entitySet, materializablePropertyTypes
+        ).init(acm)
     }
 
     override fun init(acm: AssemblerConnectionManager): Void? {

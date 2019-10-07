@@ -21,7 +21,6 @@ import java.util.*
  */
 internal class PostgresDataQueries
 
-
 const val VALUES = "values"
 
 

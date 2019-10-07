@@ -32,8 +32,6 @@ import com.openlattice.authorization.Principal
 import java.util.UUID
 
 
-private const val NOT_INITIALIZED = "Assembler Connection Manager not initialized."
-
 data class MaterializeEdgesProcessor(val authorizedPrincipals: Set<Principal>)
     : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(false),
         AssemblerConnectionManagerDependent<MaterializeEdgesProcessor>,
@@ -50,7 +48,7 @@ data class MaterializeEdgesProcessor(val authorizedPrincipals: Set<Principal>)
                     "organization $organizationId.")
         } else {
             acm?.materializeEdges(organizationId, assembly.materializedEntitySets.keys, authorizedPrincipals)
-                    ?: throw IllegalStateException(NOT_INITIALIZED)
+                    ?: throw IllegalStateException(AssemblerConnectionManagerDependent.NOT_INITIALIZED)
         }
 
         return null

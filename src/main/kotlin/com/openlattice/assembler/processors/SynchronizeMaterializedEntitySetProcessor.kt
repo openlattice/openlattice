@@ -34,8 +34,6 @@ import com.openlattice.edm.type.PropertyType
 import java.time.OffsetDateTime
 import java.util.*
 
-private const val NOT_INITIALIZED = "Assembler Connection Manager not initialized."
-
 data class SynchronizeMaterializedEntitySetProcessor(
         val entitySet: EntitySet,
         val materializablePropertyTypes: Map<UUID, PropertyType>,
@@ -57,7 +55,7 @@ data class SynchronizeMaterializedEntitySetProcessor(
                     organizationId,
                     mapOf(entitySet to materializablePropertyTypes),
                     mapOf(entitySet.id to authorizedPropertyTypesOfPrincipals)
-            ) ?: throw IllegalStateException(NOT_INITIALIZED)
+            ) ?: throw IllegalStateException(AssemblerConnectionManagerDependent.NOT_INITIALIZED)
 
             // Clear edm and data unsync flags.
             // Note: if we will have other flags, we only need to remove these 2 and not clear all!
