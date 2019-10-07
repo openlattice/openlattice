@@ -13,38 +13,25 @@ import com.openlattice.auditing.AuditEventType
 import com.openlattice.auditing.AuditableEvent
 import com.openlattice.auditing.AuditingManager
 import com.openlattice.authorization.AclKey
-import com.openlattice.conductor.rpc.ConductorElasticsearchApi
-import com.openlattice.data.*
 import com.openlattice.data.DataApi.MAX_BATCH_SIZE
+import com.openlattice.data.DataEdgeKey
+import com.openlattice.data.DataGraphManager
+import com.openlattice.data.DeleteType
+import com.openlattice.data.WriteEvent
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetFlag
-import com.openlattice.edm.set.ExpirationBase
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.indexing.configuration.IndexerConfiguration
-import com.openlattice.postgres.DataTables.LAST_WRITE
-import com.openlattice.postgres.IndexType
-import com.openlattice.postgres.PostgresColumn.*
-import com.openlattice.postgres.PostgresDataTables
-import com.openlattice.postgres.PostgresTable.DATA
-import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.PostgresIterable
-import com.openlattice.postgres.streams.StatementHolder
-import com.zaxxer.hikari.HikariDataSource
-import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
-import java.sql.Types
-import java.sql.ResultSet
-import java.time.Instant
 import java.time.OffsetDateTime
-import java.time.ZoneId
 import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
-import java.util.function.Function
-import java.util.function.Supplier
+import javax.inject.Inject
 
 /**
  * This is a background task that periodically searches for data that has surpassed its prescribed expiration date
@@ -58,8 +45,7 @@ class BackgroundExpiredDataDeletionService(
         hazelcastInstance: HazelcastInstance,
         private val indexerConfiguration: IndexerConfiguration,
         private val auditingManager: AuditingManager,
-        private val dataGraphService: DataGraphService,
-        private val edm: EdmManager
+        private val dataGraphService: DataGraphManager
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(BackgroundExpiredDataDeletionService::class.java)!!
@@ -67,6 +53,9 @@ class BackgroundExpiredDataDeletionService(
 
     private val entitySets: IMap<UUID, EntitySet> = hazelcastInstance.getMap(HazelcastMap.ENTITY_SETS.name)
     private val expirationLocks: IMap<UUID, Long> = hazelcastInstance.getMap(HazelcastMap.EXPIRATION_LOCKS.name)
+
+    @Inject
+    private lateinit var edm: EdmManager
 
     init {
         expirationLocks.addIndex(QueryConstants.THIS_ATTRIBUTE_NAME.value(), true)
@@ -104,7 +93,11 @@ class BackgroundExpiredDataDeletionService(
                             .parallelStream()
                             .filter { !it.isLinking }
                             .mapToInt {
-                                deleteExpiredData(it, edm.getPropertyTypesAsMap(edm.getEntityType(it.entityTypeId).properties))
+                                deleteExpiredData(
+                                        it, edm.getPropertyTypesAsMap(
+                                        edm.getEntityType(it.entityTypeId).properties
+                                )
+                                )
                             }
                             .sum()
 
@@ -152,7 +145,8 @@ class BackgroundExpiredDataDeletionService(
                     dataGraphService.deleteEntities(
                             entitySet.id,
                             ids,
-                            propertyTypes)
+                            propertyTypes
+                    )
 
                 } else {
                     if (!edm.isAssociationEntitySet(entitySet.id)) {
@@ -161,27 +155,32 @@ class BackgroundExpiredDataDeletionService(
                     dataGraphService.clearEntities(
                             entitySet.id,
                             ids,
-                            propertyTypes)
+                            propertyTypes
+                    )
                 }
 
-                logger.info("Completed deleting {} expired elements from entity set {}.",
+                logger.info(
+                        "Completed deleting {} expired elements from entity set {}.",
                         writeEvent.numUpdates,
-                        entitySet.name)
+                        entitySet.name
+                )
 
                 totalDeletedEntitiesCount += writeEvent.numUpdates
                 deletedEntityKeyIds.addAll(ids)
             }
 
             auditingManager.recordEvents(
-                    listOf(AuditableEvent(
-                            IdConstants.SYSTEM_ID.id,
-                            AclKey(entitySet.id),
-                            AuditEventType.DELETE_EXPIRED_ENTITIES,
-                            "Expired entities deleted through BackgroundExpiredDataDeletionService",
-                            Optional.of(deletedEntityKeyIds),
-                            ImmutableMap.of(),
-                            OffsetDateTime.now(),
-                            Optional.empty())
+                    listOf(
+                            AuditableEvent(
+                                    IdConstants.SYSTEM_ID.id,
+                                    AclKey(entitySet.id),
+                                    AuditEventType.DELETE_EXPIRED_ENTITIES,
+                                    "Expired entities deleted through BackgroundExpiredDataDeletionService",
+                                    Optional.of(deletedEntityKeyIds),
+                                    ImmutableMap.of(),
+                                    OffsetDateTime.now(),
+                                    Optional.empty()
+                            )
                     )
             )
         }
@@ -189,12 +188,15 @@ class BackgroundExpiredDataDeletionService(
     }
 
     private fun deleteAssociationsOfExpiredEntities(entitySetId: UUID, ids: Set<UUID>): List<WriteEvent> {
-        val associationEdgeKeys: PostgresIterable<DataEdgeKey> = dataGraphService.getEdgesConnectedToEntities(entitySetId, ids, true)
+        val associationEdgeKeys: PostgresIterable<DataEdgeKey> = dataGraphService.getEdgesConnectedToEntities(
+                entitySetId, ids, true
+        )
         val associationPropertyTypes = associationEdgeKeys
                 .map {
                     it.edge.entitySetId to
                             edm.getPropertyTypesAsMap(
-                                    edm.getEntityType(edm.getEntitySet(it.edge.entitySetId).entityTypeId
+                                    edm.getEntityType(
+                                            edm.getEntitySet(it.edge.entitySetId).entityTypeId
                                     ).properties
                             )
                 }.toMap()
@@ -202,7 +204,9 @@ class BackgroundExpiredDataDeletionService(
     }
 
     private fun clearAssociationsOfExpiredEntities(entitySetId: UUID, ids: Set<UUID>): List<WriteEvent> {
-        val associationEdgeKeys: PostgresIterable<DataEdgeKey> = dataGraphService.getEdgesConnectedToEntities(entitySetId, ids, false)
+        val associationEdgeKeys: PostgresIterable<DataEdgeKey> = dataGraphService.getEdgesConnectedToEntities(
+                entitySetId, ids, false
+        )
 
         //filter out audit entity set edges from association edges to clear
         val associationEdgeESIds = associationEdgeKeys.map { it.edge.entitySetId }.toSet()
@@ -215,7 +219,8 @@ class BackgroundExpiredDataDeletionService(
                 .map {
                     it to
                             edm.getPropertyTypesAsMap(
-                                    edm.getEntityType(edm.getEntitySet(it).entityTypeId
+                                    edm.getEntityType(
+                                            edm.getEntitySet(it).entityTypeId
                                     ).properties
                             )
                 }.toMap()

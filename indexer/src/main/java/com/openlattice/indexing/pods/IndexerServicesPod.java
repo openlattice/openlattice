@@ -36,16 +36,7 @@ import com.openlattice.auditing.*;
 import com.openlattice.auditing.pods.AuditingConfigurationPod;
 import com.openlattice.auth0.Auth0TokenProvider;
 import com.openlattice.authentication.Auth0Configuration;
-import com.openlattice.authorization.AuthorizationManager;
-import com.openlattice.authorization.AuthorizationQueryService;
-import com.openlattice.authorization.DbCredentialService;
-import com.openlattice.authorization.EdmAuthorizationHelper;
-import com.openlattice.authorization.HazelcastAclKeyReservationService;
-import com.openlattice.authorization.HazelcastAuthorizationService;
-import com.openlattice.authorization.HazelcastSecurableObjectResolveTypeService;
-import com.openlattice.authorization.PostgresUserApi;
-import com.openlattice.authorization.Principals;
-import com.openlattice.authorization.SecurableObjectResolveTypeService;
+import com.openlattice.authorization.*;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.DataGraphService;
@@ -53,6 +44,7 @@ import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.ids.PostgresEntityKeyIdService;
 import com.openlattice.data.storage.*;
 import com.openlattice.data.storage.partitions.PartitionManager;
+import com.openlattice.datastore.pods.ByteBlobServicePod;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.directory.UserDirectoryService;
@@ -77,13 +69,17 @@ import com.openlattice.postgres.PostgresTableManager;
 import com.zaxxer.hikari.HikariDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.annotation.*;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Profile;
 
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 
 @Configuration
-@Import( { IndexerConfigurationPod.class, AuditingConfigurationPod.class, AssemblerConfigurationPod.class } )
+@Import( { IndexerConfigurationPod.class, AuditingConfigurationPod.class, AssemblerConfigurationPod.class,
+        ByteBlobServicePod.class } )
 public class IndexerServicesPod {
     private static Logger logger = LoggerFactory.getLogger( IndexerServicesPod.class );
 
@@ -209,6 +205,7 @@ public class IndexerServicesPod {
     public PhoneNumberService phoneNumberService() {
         return new PhoneNumberService( hazelcastInstance );
     }
+
     @Bean
     public HazelcastOrganizationService organizationsManager() {
         return new HazelcastOrganizationService(
@@ -307,11 +304,6 @@ public class IndexerServicesPod {
     @Bean
     public GraphService graphApi() {
         return new Graph( hikariDataSource, dataModelService(), partitionManager() );
-    }
-
-    @Bean
-    public HazelcastIdGenerationService idGenerationService() {
-        return new HazelcastIdGenerationService( hazelcastClientProvider );
     }
 
     @Bean
