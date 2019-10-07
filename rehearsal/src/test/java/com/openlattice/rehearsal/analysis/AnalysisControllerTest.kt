@@ -31,15 +31,14 @@ class AnalysisControllerTest : MultipleAuthenticatedUsersBase() {
         val personEt = edmApi.getEntityType( personEntityTypeId )
         val personEs = createEntitySet( personEt )
 
-        val pt = createPropertyType()
         val linkingEs = createEntitySet( EdmTestConstants.personEt, true, setOf(personEs.id) )
 
         // Create edge and src entitysets (linked entity set is dst)
-        val edge = MultipleAuthenticatedUsersBase.createEdgeEntityType()
-        val esEdge = MultipleAuthenticatedUsersBase.createEntitySet(edge)
-        val src = MultipleAuthenticatedUsersBase.createEntityType()
-        val esSrc = MultipleAuthenticatedUsersBase.createEntitySet(src)
-        MultipleAuthenticatedUsersBase.createAssociationType(edge, setOf(src), setOf(personEt))
+        val edge = createEdgeEntityType()
+        val esEdge = createEntitySet(edge)
+        val src = createEntityType()
+        val esSrc = createEntitySet(src)
+        createAssociationType(edge, setOf(src), setOf(personEt))
 
         // Create entries for src, dst
         val testDataSrc = TestDataFactory.randomStringEntityData(numberOfEntries, src.properties)
