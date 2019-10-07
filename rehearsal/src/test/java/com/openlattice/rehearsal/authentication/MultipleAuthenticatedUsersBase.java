@@ -344,7 +344,7 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
                 organizationId,
                 Optional.of( flags ),
                 Optional.empty(),
-                Optional.empty() );
+                Optional.empty());
 
         Map<String, UUID> entitySetIds = entitySetsApi.createEntitySets( Set.of( newES ) );
 

@@ -22,12 +22,12 @@ package com.openlattice.rehearsal.organization
 
 import com.openlattice.assembler.AssemblerConfiguration
 import com.openlattice.assembler.AssemblerConnectionManager
+import com.openlattice.assembler.PostgresDatabases
 import com.openlattice.assembler.pods.AssemblerConfigurationPod
 import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.PostgresColumn
 import com.openlattice.postgres.PostgresTable
 import com.openlattice.rehearsal.application.TestServer
-import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import java.sql.ResultSet
 import java.util.*
@@ -45,20 +45,11 @@ class TestAssemblerConnectionManager {
 
         @JvmStatic
         fun connect(organizationId: UUID, config: Optional<Properties> = Optional.empty()): HikariDataSource {
-            val dbName = "org_${organizationId.toString().replace("-", "").toLowerCase()}"
+            val dbName = PostgresDatabases.buildOrganizationDatabaseName(organizationId)
             val connectionConfig = config.orElse(assemblerConfiguration.server.clone() as Properties)
-            connectionConfig.computeIfPresent("jdbcUrl") { _, jdbcUrl ->
-                "${(jdbcUrl as String).removeSuffix(
-                        "/"
-                )}/$dbName" + if (assemblerConfiguration.ssl) {
-                    "?ssl=true"
-                } else {
-                    ""
-                }
-            }
-            return HikariDataSource(HikariConfig(connectionConfig))
-        }
 
+            return AssemblerConnectionManager.connect(dbName, connectionConfig, assemblerConfiguration.ssl)
+        }
 
         /**
          * Generates SQL query for selecting properties of materialized entity sets.
@@ -88,17 +79,17 @@ class TestAssemblerConnectionManager {
                     if (!srcEntitySetId.isPresent && !edgeEntitySetId.isPresent && !dstEntitySetId.isPresent) {
                         ""
                     } else {
-                        val srcEntitySetIdClause = if(srcEntitySetId.isPresent) {
+                        val srcEntitySetIdClause = if (srcEntitySetId.isPresent) {
                             "${PostgresColumn.SRC_ENTITY_SET_ID.name} = '${srcEntitySetId.get()}' AND "
                         } else {
                             "TRUE AND "
                         }
-                        val edgeEntitySetIdClause = if(edgeEntitySetId.isPresent) {
+                        val edgeEntitySetIdClause = if (edgeEntitySetId.isPresent) {
                             "${PostgresColumn.EDGE_ENTITY_SET_ID.name} = '${edgeEntitySetId.get()}' AND "
                         } else {
                             "TRUE AND "
                         }
-                        val dstEntitySetIdClause = if(dstEntitySetId.isPresent) {
+                        val dstEntitySetIdClause = if (dstEntitySetId.isPresent) {
                             "${PostgresColumn.DST_ENTITY_SET_ID.name} = '${dstEntitySetId.get()}'"
                         } else {
                             "TRUE"

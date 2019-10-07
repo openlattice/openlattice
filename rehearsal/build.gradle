@@ -71,6 +71,7 @@ dependencies {
         testCompile project(":conductor")
         testCompile project(":datastore")
         testCompile project(":shuttle")
+        testCompile project(":launchpad")
 
         testCompile( project(path: ":api", configuration: "tests"))
         testCompile( project(path: ":rhizome", configuration: "tests"))
@@ -79,6 +80,7 @@ dependencies {
         logger.quiet(project.name + " using jar dependencies.")
         testCompile "com.openlattice:conductor-client:${conductor_client_version}"
         testCompile "com.openlattice:shuttle:${shuttle_version}"
+        testCompile "com.openlattice:shuttle:${launchpad_version}"
 
         testCompile "com.openlattice:api:${api_version}:tests"
         testCompile "com.openlattice:rhizome:${rhizome_version}:tests"
