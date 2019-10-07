@@ -1,8 +1,10 @@
 package com.openlattice.data.storage
 
 import com.google.common.collect.Multimaps
+import com.openlattice.IdConstants
 import com.openlattice.analysis.SqlBindInfo
 import com.openlattice.analysis.requests.Filter
+import com.openlattice.data.DeleteType
 import com.openlattice.data.WriteEvent
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.data.storage.partitions.PartitionsInfo
@@ -576,13 +578,37 @@ class PostgresEntityDataQueryService(
         val numUpdates = entityKeyIds
                 .groupBy { getPartition(it, partitions) }
                 .map { (partition, entities) ->
-                    deleteEntities(entitySetId, entities, authorizedPropertyTypes, partition, partitionVersion)
+                    deletePropertiesFromEntities(entitySetId, entities, authorizedPropertyTypes, partition, partitionVersion)
                 }.sum()
 
         return WriteEvent(System.currentTimeMillis(), numUpdates)
     }
 
-    private fun deleteEntities(
+    fun deleteEntityDataAndEntities(
+            entitySetId: UUID,
+            entityKeyIds: Set<UUID>,
+            authorizedPropertyTypes: Map<UUID, PropertyType>,
+            partitionsInfo: PartitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
+    ): WriteEvent {
+        // Delete properties from S3
+        authorizedPropertyTypes.map { property ->
+            if (property.value.datatype == EdmPrimitiveTypeKind.Binary) {
+                deletePropertyOfEntityFromS3(entitySetId, entityKeyIds, property.key)
+            }
+        }
+
+        val partitions = partitionsInfo.partitions.toList()
+        val partitionVersion = partitionsInfo.partitionsVersion
+        val numUpdates = entityKeyIds
+                .groupBy { getPartition(it, partitions) }
+                .map { (partition, entities) ->
+                    deleteEntities(entitySetId, entities, partition, partitionVersion)
+                }.sum()
+
+        return WriteEvent(System.currentTimeMillis(), numUpdates)
+    }
+
+    private fun deletePropertiesFromEntities(
             entitySetId: UUID,
             entities: Collection<UUID>,
             authorizedPropertyTypes: Map<UUID, PropertyType>,
@@ -609,6 +635,36 @@ class PostgresEntityDataQueryService(
             ps.setInt(3, partition)
             ps.setInt(4, partitionVersion)
             ps.setArray(5, propertyTypesArr)
+
+            val count = ps.executeUpdate()
+            connection.commit()
+            count
+        }
+    }
+
+    private fun deleteEntities(
+            entitySetId: UUID,
+            entities: Collection<UUID>,
+            partition: Int,
+            partitionVersion: Int
+    ): Int {
+        return hds.connection.use { connection ->
+            connection.autoCommit = false
+
+            val idsArr = PostgresArrays.createUuidArray(connection, entities)
+
+            // Acquire entity key id locks
+            val rowLocks = connection.prepareStatement(lockEntitiesSql)
+            rowLocks.setArray(1, idsArr)
+            rowLocks.setInt(2, partition)
+            rowLocks.executeQuery()
+
+            // Delete entity properties from data table
+            val ps = connection.prepareStatement(deleteEntitiesInEntitySet)
+            ps.setObject(1, entitySetId)
+            ps.setArray(2, idsArr)
+            ps.setInt(3, partition)
+            ps.setInt(4, partitionVersion)
 
             val count = ps.executeUpdate()
             connection.commit()
@@ -873,6 +929,41 @@ class PostgresEntityDataQueryService(
 
 
         return WriteEvent(tombstoneVersion, numUpdated)
+    }
+
+    fun getExpiringEntitiesFromEntitySet(entitySetId: UUID, expirationBaseColumn: String, formattedDateMinusTTE: Any,
+                                         sqlFormat: Int, deleteType: DeleteType) : BasePostgresIterable<UUID> {
+        val partitionsInfo: PartitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
+        val partitions = PostgresArrays.createIntArray(hds.connection, partitionsInfo.partitions)
+        val partitionVersion = partitionsInfo.partitionsVersion
+        return BasePostgresIterable(
+                PreparedStatementHolderSupplier(
+                        hds,
+                        getExpiringEntitiesQuery(expirationBaseColumn, deleteType),
+                        FETCH_SIZE,
+                        false
+                ) {stmt ->
+                    stmt.setObject(1, entitySetId)
+                    stmt.setArray(2, partitions)
+                    stmt.setInt(3, partitionVersion)
+                    stmt.setObject(4, IdConstants.ID_ID.id)
+                    stmt.setObject(5, formattedDateMinusTTE, sqlFormat)
+                }
+        ) { rs -> ResultSetAdapters.id(rs)}
+    }
+
+    private fun getExpiringEntitiesQuery(expirationBaseColumn: String, deleteType: DeleteType) : String {
+        var ignoredClearedEntitiesClause = ""
+        if (deleteType == DeleteType.Soft) {
+            ignoredClearedEntitiesClause = "AND ${VERSION.name} >= 0 "
+        }
+        return "SELECT ${ID.name} FROM ${PostgresTable.DATA.name} " +
+                "WHERE ${ENTITY_SET_ID.name} = ? " +
+                "AND ${PARTITION.name} = ANY(?) " +
+                "AND ${PARTITIONS_VERSION.name} = ? " +
+                "AND ${PROPERTY_TYPE_ID.name} != ? " +
+                "AND $expirationBaseColumn <= ? " +
+                ignoredClearedEntitiesClause // this clause ignores entities that have already been cleared
     }
 }
 

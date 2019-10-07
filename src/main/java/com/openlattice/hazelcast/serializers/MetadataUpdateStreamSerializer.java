@@ -5,14 +5,17 @@ import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.openlattice.hazelcast.serializers.GuavaStreamSerializersKt;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
+import com.openlattice.data.DataExpiration;
 import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
+
 import java.io.DataInput;
 import java.io.IOException;
 import java.util.LinkedHashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.springframework.stereotype.Component;
 
@@ -59,6 +62,13 @@ public class MetadataUpdateStreamSerializer implements SelfRegisteringStreamSeri
         OptionalStreamSerializers.serialize( out,
                 object.getPartitions(),
                 ( output, elem ) -> output.writeIntArray( elem.stream().mapToInt( e -> e ).toArray() ) );
+        if ( object.getDataExpiration().isPresent() ) {
+            out.writeBoolean( true );
+            OptionalStreamSerializers
+                    .serialize( out, object.getDataExpiration(), DataExpirationStreamSerializer::serialize );
+        } else {
+            out.writeBoolean( false );
+        }
     }
 
     public static MetadataUpdate deserialize( ObjectDataInput in ) throws IOException {
@@ -77,6 +87,14 @@ public class MetadataUpdateStreamSerializer implements SelfRegisteringStreamSeri
                 .deserialize( in, UUIDStreamSerializer::deserialize );
         Optional<LinkedHashSet<Integer>> partitions = OptionalStreamSerializers
                 .deserialize( in, input -> toLinkedHashSet( input.readIntArray() ) );
+        Optional<DataExpiration> dataExpiration;
+        boolean hasExpiration = in.readBoolean();
+        if ( hasExpiration ) {
+            dataExpiration = OptionalStreamSerializers.deserialize( in, DataExpirationStreamSerializer::deserialize );
+        } else {
+            dataExpiration = Optional.empty();
+        }
+
         return new MetadataUpdate( title,
                 description,
                 name,
@@ -87,7 +105,8 @@ public class MetadataUpdateStreamSerializer implements SelfRegisteringStreamSeri
                 url,
                 propertyTags,
                 organizationId,
-                partitions );
+                partitions,
+                dataExpiration );
     }
 
     private static LinkedHashSet<Integer> toLinkedHashSet( int[] array ) {

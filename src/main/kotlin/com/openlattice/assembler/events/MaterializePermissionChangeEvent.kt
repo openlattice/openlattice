@@ -18,15 +18,14 @@
  *
  *
  */
-package com.openlattice.ids.tasks
+package com.openlattice.assembler.events
 
-import com.openlattice.data.EntityKeyIdService
-import com.openlattice.datastore.services.EdmManager
-import com.openlattice.organizations.roles.SecurePrincipalsManager
-import com.openlattice.tasks.HazelcastTaskDependencies
+import com.openlattice.authorization.Principal
+import com.openlattice.authorization.securable.SecurableObjectType
+import java.util.UUID
 
-data class IdConstantsReservationDependency(
-        val entityKeyIdService: EntityKeyIdService,
-        val edmService: EdmManager,
-        val spm: SecurePrincipalsManager
-) : HazelcastTaskDependencies
+data class MaterializePermissionChangeEvent(
+        val organizationPrincipal: Principal,
+        val entitySetIds: Set<UUID>,
+        val objectType: SecurableObjectType
+)

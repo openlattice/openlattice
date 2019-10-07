@@ -22,4 +22,12 @@ package com.openlattice.assembler
 
 import java.util.UUID
 
-data class EntitySetAssemblyKey(val entitySetId: UUID, val organizationId: UUID)
+data class EntitySetAssemblyKey(val entitySetId: UUID, val organizationId: UUID) : Comparable<EntitySetAssemblyKey> {
+    override fun compareTo(other: EntitySetAssemblyKey): Int {
+        val entitySetCompare = entitySetId.compareTo(other.entitySetId)
+        if (entitySetCompare != 0) {
+            return entitySetCompare
+        }
+        return organizationId.compareTo(other.organizationId)
+    }
+}

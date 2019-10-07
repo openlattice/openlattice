@@ -27,26 +27,19 @@ import com.openlattice.assembler.EntitySetAssemblyKey
 import com.openlattice.assembler.MaterializedEntitySet
 import com.openlattice.assembler.MaterializedEntitySetsDependencies
 import com.openlattice.assembler.processors.MaterializedEntitySetsRefreshAggregator
-import com.openlattice.authorization.AclKey
-import com.openlattice.authorization.Permission
-import com.openlattice.controllers.exceptions.ForbiddenException
-import com.openlattice.controllers.exceptions.ResourceNotFoundException
-import com.openlattice.edm.type.PropertyType
 import com.openlattice.organization.OrganizationEntitySetFlag
-import com.openlattice.organization.OrganizationPrincipal
 import com.openlattice.postgres.mapstores.MaterializedEntitySetMapStore
 import com.openlattice.tasks.HazelcastFixedRateTask
 import com.openlattice.tasks.Task
-import java.util.*
 import java.util.concurrent.TimeUnit
 
 class MaterializedEntitySetsDataRefreshTask : HazelcastFixedRateTask<MaterializedEntitySetsDependencies> {
     override fun getInitialDelay(): Long {
-        return 30000L // wait until AssemblerConnectionManager can be initialized
+        return 60_000L // wait until AssemblerConnectionManager can be initialized
     }
 
     override fun getPeriod(): Long {
-        return 3600L // minimum refresh rate is 1 min
+        return 60_000L // minimum refresh rate is 1 min
     }
 
     override fun getTimeUnit(): TimeUnit {
@@ -63,51 +56,20 @@ class MaterializedEntitySetsDataRefreshTask : HazelcastFixedRateTask<Materialize
         val dataUnsynchPredicate = Predicates.equal(
                 MaterializedEntitySetMapStore.FLAGS_INDEX,
                 OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED)
+        val edmSynchPredicate = Predicates.notEqual(
+                MaterializedEntitySetMapStore.FLAGS_INDEX,
+                OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED)
 
         val hasRefreshRatePredicate = SqlPredicate("${MaterializedEntitySetMapStore.REFRESH_RATE_INDEX} != null")
 
         val refreshableEntitySets = getDependency().materializedEntitySets
                 .aggregate(
                         MaterializedEntitySetsRefreshAggregator(),
-                        Predicates.and(hasRefreshRatePredicate, dataUnsynchPredicate)
+                        Predicates.and(edmSynchPredicate, hasRefreshRatePredicate, dataUnsynchPredicate)
                                 as Predicate<EntitySetAssemblyKey, MaterializedEntitySet>)
 
         refreshableEntitySets.forEach {
-            getDependency().assembler.refreshMaterializedEntitySet(
-                    it.organizationId,
-                    it.entitySetId,
-                    getAuthorizedPropertiesForMaterialization(it.organizationId, it.entitySetId))
-        }
-    }
-
-    private fun getAuthorizedPropertiesForMaterialization(organizationId: UUID, entitySetId: UUID): Map<UUID, PropertyType> {
-        val organizationPrincipal = getDependency().organizations.getOrganizationPrincipal(organizationId)
-        //This will be rare, since it is unlikely you have access to an organization that does not exist.
-                ?: throw ResourceNotFoundException("Organization does not exist.")
-
-        // check materialization on all linking and normal entity sets
-        val entitySet = getDependency().edm.getEntitySet(entitySetId)
-        val allEntitySetIds = mutableSetOf(entitySet.id) + entitySet.linkedEntitySets
-
-        allEntitySetIds.forEach { ensureMaterialize(it, organizationPrincipal) }
-
-        // first we collect authorized property types of normal entity sets and then for each linking entity set, we
-        // check materialization on normal entity sets and get the intersection of their authorized property types
-        return getDependency().authzHelper
-                .getAuthorizedPropertiesOnEntitySets(
-                        setOf(entitySetId), EnumSet.of(Permission.MATERIALIZE), setOf(organizationPrincipal.principal))
-                .getValue(entitySetId)
-    }
-
-    private fun ensureMaterialize(entitySetId: UUID, principal: OrganizationPrincipal) {
-        val aclKey = AclKey(entitySetId)
-
-        if (!getDependency().authzHelper.authorizationManager.checkIfHasPermissions(
-                        aclKey,
-                        setOf(principal.principal),
-                        EnumSet.of(Permission.MATERIALIZE))) {
-            throw ForbiddenException("EntitySet " + aclKey.toString() + " is not accessible by organization " +
-                    "principal " + principal.principal.id + " .")
+            getDependency().assembler.refreshMaterializedEntitySet(it.organizationId, it.entitySetId)
         }
     }
 
