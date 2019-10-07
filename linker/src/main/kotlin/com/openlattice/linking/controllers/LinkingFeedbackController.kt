@@ -21,7 +21,6 @@
 
 package com.openlattice.linking.controllers
 
-import com.google.common.collect.Sets
 import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
@@ -32,7 +31,6 @@ import com.openlattice.datastore.services.EdmManager
 import com.openlattice.linking.*
 import com.openlattice.linking.util.PersonMetric
 import com.openlattice.linking.util.PersonProperties
-import com.sun.jna.platform.RasterRangesUtils
 import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.*
@@ -165,14 +163,14 @@ constructor(
 
     @GetMapping(path = [LinkingFeedbackApi.ALL], produces = [MediaType.APPLICATION_JSON_VALUE])
     override fun getAllLinkingFeedback(): Iterable<EntityLinkingFeedback> {
-        return feedbackService.getLinkingFeedbacks()
+        return feedbackService.getLinkingFeedback()
     }
 
     @GetMapping(
             path = [LinkingFeedbackApi.FEATURES + LinkingFeedbackApi.ALL],
             produces = [MediaType.APPLICATION_JSON_VALUE])
     override fun getAllLinkingFeedbackWithFeatures(): Iterable<EntityLinkingFeatures> {
-        return feedbackService.getLinkingFeedbacks().map {
+        return feedbackService.getLinkingFeedback().map {
             val entities = dataLoader.getEntities(setOf(it.entityPair.first, it.entityPair.second))
             EntityLinkingFeatures(
                     it,
