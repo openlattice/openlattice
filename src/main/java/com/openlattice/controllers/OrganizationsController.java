@@ -72,6 +72,9 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     @Inject
     private EdmAuthorizationHelper authzHelper;
 
+    @Inject
+    private AtlasDataService ads;
+
     @Timed
     @Override
     @GetMapping(
@@ -621,6 +624,30 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         organizations.removeRoleFromUser( new AclKey( organizationId, roleId ),
                 new Principal( PrincipalType.USER, userId ) );
         return null;
+    }
+
+    @Timed
+    @Override
+    @PostMapping(
+            value = ID_PATH + ATLAS_TABLE
+    )
+    public UUID createAtlasTable(
+            @PathVariable( ID ) UUID organizationId,
+            @RequestBody OrganizationAtlasTable organizationAtlasTable ) {
+        ensureOwner( organizationId );
+        return ads.createOrganizationAtlasTable( organizationAtlasTable );
+    }
+
+    @Timed
+    @Override
+    @PostMapping(
+            value = ID_PATH + ATLAS_COLUMN
+    )
+    public UUID createAtlasColumn(
+            @PathVariable( ID ) UUID organizationId,
+            @RequestBody OrganizationAtlasColumn organizationAtlasColumn ) {
+        ensureOwner( organizationId );
+       return ads.createOrganizationAtlasColumn( organizationAtlasColumn );
     }
 
     private void ensureRoleAdminAccess( UUID organizationId, UUID roleId ) {
