@@ -84,6 +84,10 @@ public final class PostgresColumn {
             new PostgresColumnDefinition( CATEGORY_FIELD, TEXT ).notNull();
     public static final PostgresColumnDefinition CLAUSES                           =
             new PostgresColumnDefinition( "clauses", INTEGER_ARRAY );
+    public static final String                   COLUMN_IDS_FIELD                  = "column_ids";
+    public static final PostgresColumnDefinition COLUMN_IDS                        =
+            new PostgresColumnDefinition( COLUMN_IDS_FIELD, UUID_ARRAY )
+                    .notNull();
     public static final String                   COMPONENT_TYPES_FIELD             = "comp_types";
     public static final PostgresColumnDefinition COMPONENT_TYPES                   =
             new PostgresColumnDefinition( COMPONENT_TYPES_FIELD, INTEGER )

@@ -61,6 +61,8 @@ import com.openlattice.linking.EntityKeyPair;
 import com.openlattice.linking.EntityLinkingFeedback;
 import com.openlattice.notifications.sms.SmsEntitySetInformation;
 import com.openlattice.notifications.sms.SmsInformationKey;
+import com.openlattice.organization.OrganizationAtlasColumn;
+import com.openlattice.organization.OrganizationAtlasTable;
 import com.openlattice.organization.OrganizationEntitySetFlag;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.PrincipalSet;
@@ -1196,5 +1198,26 @@ public final class ResultSetAdapters {
         UUID templateTypeId = templateTypeid( rs );
 
         return new CollectionTemplateKey( entitySetCollectionId, templateTypeId );
+    }
+
+    public static OrganizationAtlasColumn organizationAtlasColumn( ResultSet rs ) throws SQLException {
+        UUID id = id(rs);
+        String name = name(rs);
+        String title = title(rs);
+        Optional<String> description = Optional.ofNullable( description( (rs) ) );
+        UUID organizationId = id(rs);
+
+        return new OrganizationAtlasColumn( id, name, title, description, organizationId );
+    }
+
+    public static OrganizationAtlasTable organizationAtlasTable( ResultSet rs ) throws SQLException {
+        UUID id = id(rs);
+        String name = name(rs);
+        String title = title(rs);
+        Optional<String> description = Optional.ofNullable( description( (rs) ) );
+        Set<UUID> columnIds = new LinkedHashSet<>(Arrays.asList(PostgresArrays.getUuidArray( rs, COLUMN_IDS_FIELD )));
+        UUID organizationId = id(rs);
+
+        return new OrganizationAtlasTable( id, name, title, description, columnIds, organizationId );
     }
 }

@@ -309,6 +309,25 @@ public final class PostgresTable {
                     .addColumns( ORGANIZATION_ID, INITIALIZED )
                     .primaryKey( ORGANIZATION_ID );
 
+    public static final PostgresTableDefinition ORGANIZATION_ATLAS_COLUMN =
+            new PostgresTableDefinition( "organization_atlas_column" )
+                    .addColumns(
+                            ID,
+                            NAME,
+                            TITLE,
+                            DESCRIPTION,
+                            ORGANIZATION_ID );
+
+    public static final PostgresTableDefinition ORGANIZATION_ATLAS_TABLE =
+            new PostgresTableDefinition( "organization_atlas_table" )
+                    .addColumns(
+                            ID,
+                            NAME,
+                            TITLE,
+                            DESCRIPTION,
+                            COLUMN_IDS,
+                            ORGANIZATION_ID );
+
     public static final PostgresTableDefinition PERMISSIONS              =
             new PostgresTableDefinition( "permissions" )
                     .addColumns( ACL_KEY,
