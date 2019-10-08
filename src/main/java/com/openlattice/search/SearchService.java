@@ -20,7 +20,9 @@
 
 package com.openlattice.search;
 
+import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.annotation.Timed;
+import com.codahale.metrics.Timer;
 import com.dataloom.streams.StreamUtil;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.*;
@@ -104,8 +106,18 @@ public class SearchService {
     @Inject
     private IndexingMetadataManager indexingMetadataManager;
 
-    public SearchService( EventBus eventBus ) {
+    private Timer indexEntitiesTimer;
+
+    private Timer markAsIndexedTimer;
+
+    public SearchService( EventBus eventBus, MetricRegistry metricRegistry ) {
         eventBus.register( this );
+        indexEntitiesTimer = metricRegistry.timer(
+                MetricRegistry.name( SearchService.class, "indexEntities" )
+        );
+        markAsIndexedTimer = metricRegistry.timer(
+                MetricRegistry.name( SearchService.class, "markAsIndexed" )
+        );
     }
 
     @Timed
@@ -229,7 +241,7 @@ public class SearchService {
     @Timed
     @Subscribe
     public void deleteLinkedEntities( LinkedEntitiesDeletedEvent event ) {
-        // TODO figure how we handle deletion of entities which belong to a linking entity
+        // TODO : https://jira.openlattice.com/browse/LATTICE-2225
         if ( event.getLinkedEntitySetIds().size() > 0 ) {
             Map<UUID, UUID> entitySetIdsToEntityTypeIds = dataModelService
                     .getEntitySetsAsMap( event.getLinkedEntitySetIds() ).values().stream()
@@ -295,8 +307,14 @@ public class SearchService {
      */
     @Subscribe
     public void indexEntities( EntitiesUpsertedEvent event ) {
+        final var indexEntitiesContext = indexEntitiesTimer.time();
         UUID entityTypeId = dataModelService.getEntityTypeByEntitySetId( event.getEntitySetId() ).getId();
-        if ( elasticsearchApi.createBulkEntityData( entityTypeId, event.getEntitySetId(), event.getEntities() ) ) {
+        final var entitiesIndexed = elasticsearchApi
+                .createBulkEntityData( entityTypeId, event.getEntitySetId(), event.getEntities() );
+        indexEntitiesContext.stop();
+
+        if ( entitiesIndexed ) {
+            final var markAsIndexedContext = markAsIndexedTimer.time();
             // mark them as indexed
             indexingMetadataManager.markAsIndexed(
                     Map.of(
@@ -310,9 +328,8 @@ public class SearchService {
                     ),
                     false
             );
+            markAsIndexedContext.stop();
         }
-
-
     }
 
     @Subscribe
