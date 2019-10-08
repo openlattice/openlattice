@@ -17,6 +17,7 @@ class OrganizationAtlasColumn
  * @param name A unique name for the object, which should be identical to the database name
  * @param title A title for the object
  * @param description A description for the object
+ * @param tableId The id of the table that contains this column
  * @param organizationId The id of the organization that owns this column
  */
 
@@ -26,6 +27,7 @@ constructor(
         @JsonProperty(SerializationConstants.NAME_FIELD) var name: String,
         @JsonProperty(SerializationConstants.TITLE_FIELD) title: String,
         @JsonProperty(SerializationConstants.DESCRIPTION_FIELD) description: Optional<String>,
+        @JsonProperty(SerializationConstants.TABLE_ID) var tableId: UUID,
         @JsonProperty(SerializationConstants.ORGANIZATION_ID) var organizationId: UUID
 ) : AbstractSecurableObject(id, title, description) {
 
@@ -34,8 +36,9 @@ constructor(
             name: String,
             title: String,
             description: Optional<String>,
+            tableId: UUID,
             organizationId: UUID
-    ) : this(Optional.of(id), name, title, description, organizationId)
+    ) : this(Optional.of(id), name, title, description, tableId, organizationId)
 
     @JsonIgnore
     override fun getCategory(): SecurableObjectType {

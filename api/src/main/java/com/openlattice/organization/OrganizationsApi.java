@@ -40,6 +40,8 @@ public interface OrganizationsApi {
     String EMAIL_DOMAINS     = "/email-domains";
     String EMAIL_DOMAIN_PATH = "/{" + EMAIL_DOMAIN + ":.+}";
     String ENTITY_SETS       = "/entity-sets";
+    String ATLAS_COLUMN      = "/atlas-column";
+    String ATLAS_TABLE      = "/atlas-table";
     // @formatter:on
     /*
      * Acutal path elements
@@ -255,5 +257,12 @@ public interface OrganizationsApi {
             @Path( ID ) UUID organizationId,
             @Path( ROLE_ID ) UUID roleId,
             @Path( USER_ID ) String userId );
+
+    //Endpoints for management of atlas database
+    @POST( BASE + ID_PATH + ATLAS_TABLE)
+    UUID createAtlasTable( @Path(ID) UUID organizationId, @Body OrganizationAtlasTable organizationAtlasTable);
+
+    @POST( BASE + ID_PATH + ATLAS_COLUMN)
+    UUID createAtlasColumn( @Path( ID ) UUID organizationId, @Body OrganizationAtlasColumn organizationAtlasColumn);
 
 }
