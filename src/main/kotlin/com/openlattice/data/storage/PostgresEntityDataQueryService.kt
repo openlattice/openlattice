@@ -231,6 +231,8 @@ class PostgresEntityDataQueryService(
      * @param entitySetId The entity set id for which to insert entities for.
      * @param entities The entites to update or insert.
      * @param authorizedPropertyTypes The authorized property types for the insertion.
+     * @param awsPassthrough True if the data will be stored directly in AWS via another means and all that is being
+     * @param idsAlreadyLocked Indicates whether the entities being upserted have already been locked for update.
      *
      * @return A write event summarizing the results of performing this operation.
      */
@@ -259,7 +261,9 @@ class PostgresEntityDataQueryService(
 
     /**
      * Updates or insert entities.
-     * @param entitySetId The entity set id for which to insert entities for.
+     * @param connection A postgres connection that will be used to execute the upsert. Must not be in autocommit mode.
+     * @param entitySetId The entity set id for which to insert entities.
+     * @param partitionsInfo The PartitionsInfo of the entity set for which to insert entities.
      * @param entities The entities to update or insert.
      * @param authorizedPropertyTypes The authorized property types for the insertion.
      * @param awsPassthrough True if the data will be stored directly in AWS via another means and all that is being
