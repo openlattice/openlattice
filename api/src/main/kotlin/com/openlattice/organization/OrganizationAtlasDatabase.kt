@@ -40,6 +40,6 @@ class OrganizationAtlasDatabase
 
     @JsonIgnore
     override fun getCategory(): SecurableObjectType {
-        return SecurableObjectType.AtlasDatabase
+        return SecurableObjectType.OrganizationAtlasDatabase
     }
 }
