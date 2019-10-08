@@ -1,9 +1,14 @@
 package com.openlattice.organizations
 
+import com.google.common.base.Preconditions.checkState
+import com.hazelcast.core.HazelcastInstance
+import com.hazelcast.core.IMap
 import com.openlattice.assembler.AssemblerConfiguration
 import com.openlattice.assembler.PostgresRoles.Companion.buildAtlasPostgresUsername
 import com.openlattice.authorization.*
+import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organization.OrganizationAtlasColumn
+import com.openlattice.organization.OrganizationAtlasTable
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 
 import com.openlattice.postgres.DataTables.quote
@@ -12,11 +17,15 @@ import com.zaxxer.hikari.HikariDataSource
 import java.util.*
 
 class AtlasDataService(
+        private val hazelcastInstance: HazelcastInstance,
         private val hds: HikariDataSource,
         private val assemblerConfiguration: AssemblerConfiguration, //for now using this, may need to make a separate one
         private val securePrincipalsManager: SecurePrincipalsManager,
-        private val aclKeyReservations: HazelcastAclKeyReservationService,
+        private val aclKeyReservations: HazelcastAclKeyReservationService
         ) {
+
+    private val organizationAtlasColumns: IMap<UUID, OrganizationAtlasColumn> = hazelcastInstance.getMap(HazelcastMap.ORGANIZATION_ATLAS_COlUMN.name)
+    private val organizationAtlasTables: IMap<UUID, OrganizationAtlasTable> = hazelcastInstance.getMap(HazelcastMap.ORGANIZATION_ATLAS_TABLE.name)
     //lifted from assembly connection manager, likely will need to be customized
     companion object {
         @JvmStatic
@@ -64,9 +73,21 @@ class AtlasDataService(
 //        }
 //    }
 
-    fun createOrganizationAtlasColumn(column: OrganizationAtlasColumn): UUID {
-        aclKeyReservations.reserveIdAndValidateType(column, column::name)
-        checkState()
+    fun createOrganizationAtlasTable( table: OrganizationAtlasTable ) : UUID {
+        aclKeyReservations.reserveIdAndValidateType(table, table::name)
+        checkState(organizationAtlasTables.putIfAbsent(table.id, table) == null,
+                "OrganizationAtlasColumn ${table.name} already exists")
+    }
+
+    fun createOrganizationAtlasColumn(column: OrganizationAtlasColumn) : UUID {
+        var table = organizationAtlasTables[column.tableId]
+        checkState(table == null,
+                "OrganizationAtlasColumn ${column.name} belongs to a table that does not exist")
+        val uniqueColumnName = "${table!!.name}_${column.name}"
+        aclKeyReservations.reserveIdAndValidateType(column, {uniqueColumnName}) //TODO ask if this is dumb
+        checkState(organizationAtlasColumns.putIfAbsent(column.id, column) == null,
+                "OrganizationAtlasColumn $uniqueColumnName already exists")
+
     }
 
     private fun getGrantSql(principal: Principal, tableName: String, columnNames: Optional<Set<String>>): String {
