@@ -39,15 +39,21 @@ class BulkLinkedDataLambdasStreamSerializer(
 
         try {
             output.writeInt(data.entitiesByLinkingId.size)
-            data.entitiesByLinkingId.forEach {
-                writeUUID(output, it.key)
+            data.entitiesByLinkingId.forEach { (linkingId, entitiesOfLinkingId) ->
+                writeUUID(output, linkingId)
 
-                output.writeInt(it.value.size)
-                it.value.forEach { entry ->
-                    writeUUID(output, entry.key)
-                    val bytes = mapper.writeValueAsBytes(entry.value)
-                    output.writeInt(bytes.size)
-                    output.writeBytes(bytes)
+                output.writeInt(entitiesOfLinkingId.size)
+                entitiesOfLinkingId.forEach { (entitySetId, entitiesOfEntitySetId) ->
+                    writeUUID(output, entitySetId)
+
+                    output.writeInt(entitiesOfEntitySetId.size)
+                    entitiesOfEntitySetId.forEach { (originId, entityData) ->
+                        writeUUID(output, originId)
+
+                        val bytes = mapper.writeValueAsBytes(entityData)
+                        output.writeInt(bytes.size)
+                        output.writeBytes(bytes)
+                    }
                 }
             }
         } catch (e: JsonProcessingException) {
