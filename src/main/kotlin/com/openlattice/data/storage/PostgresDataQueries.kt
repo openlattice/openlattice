@@ -321,12 +321,23 @@ internal fun selectLinkingEntitySetSql(linkingEntitySetId: UUID): String {
 }
 
 /**
+ * Preparable sql to upsert entities in [IDS] table.
+ *
+ * It sets a positive version and updates last write to current time.
+ *
+ * The bind order is the following:
+ *
  * 1 - versions
+ *
  * 2 - version
+ *
  * 3 - version
+ *
  * 4 - entity set id
+ *
  * 5 - entity key ids
- * 6 - partitions
+ *
+ * 6 - partition
  */
 internal val upsertEntitiesSql = "UPDATE ${IDS.name} " +
         "SET ${VERSIONS.name} = ${VERSIONS.name} || ?, " +

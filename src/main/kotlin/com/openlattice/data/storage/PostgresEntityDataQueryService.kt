@@ -153,7 +153,7 @@ class PostgresEntityDataQueryService(
             metadataOptions: Set<MetadataOption> = EnumSet.noneOf(MetadataOption::class.java)
     ): BasePostgresIterable<Pair<UUID, Map<UUID, Set<Any>>>> {
         return getEntitySetIterable(entityKeyIds, authorizedPropertyTypes, mapOf(), metadataOptions) { rs ->
-            getEntityPropertiesByPropertyTypeId2(rs, authorizedPropertyTypes,byteBlobDataManager )
+            getEntityPropertiesByPropertyTypeId2(rs, authorizedPropertyTypes, byteBlobDataManager)
 //            getEntityPropertiesByPropertyTypeId(rs, authorizedPropertyTypes, byteBlobDataManager)
         }
     }
@@ -482,7 +482,7 @@ class PostgresEntityDataQueryService(
     }
 
     private fun extractValues(propertyValues: Map<UUID, Set<Map<ByteBuffer, Any>>>): Map<UUID, Set<Any>> {
-        return propertyValues.mapValues { (entityKeyId, replacements) -> replacements.flatMap { it.values }.toSet() }
+        return propertyValues.mapValues { (_, replacements) -> replacements.flatMap { it.values }.toSet() }
     }
 
     /**
@@ -523,6 +523,7 @@ class PostgresEntityDataQueryService(
             conn.autoCommit = false
             tombstone(conn, entitySetId, authorizedPropertyTypes.values)
             val event = tombstone(conn, entitySetId)
+            // todo set last_write=now() or last_index = -infinity() in ids table
             conn.autoCommit = true
             event
         }
@@ -541,6 +542,7 @@ class PostgresEntityDataQueryService(
         return hds.connection.use { conn ->
             tombstone(conn, entitySetId, entityKeyIds, authorizedPropertyTypes.values)
             tombstone(conn, entitySetId, entityKeyIds)
+            // todo set last_write=now() or last_index = -infinity() in ids table
         }
     }
 
@@ -557,6 +559,7 @@ class PostgresEntityDataQueryService(
     ): WriteEvent {
         return hds.connection.use { conn ->
             tombstone(conn, entitySetId, entityKeyIds, authorizedPropertyTypes.values)
+            // todo set last_write=now() or last_index = -infinity() in ids table
         }
     }
 
@@ -578,12 +581,18 @@ class PostgresEntityDataQueryService(
         val numUpdates = entityKeyIds
                 .groupBy { getPartition(it, partitions) }
                 .map { (partition, entities) ->
+                    // todo only set version = 0, not delete (delete later after it is indexed in a background job)
                     deletePropertiesFromEntities(entitySetId, entities, authorizedPropertyTypes, partition, partitionVersion)
                 }.sum()
+
+        // todo set last_write=now() or last_index = -infinity() in ids table
 
         return WriteEvent(System.currentTimeMillis(), numUpdates)
     }
 
+    /**
+     * Deletes entities from [PostgresTable.DATA] and binary properties from S3.
+     */
     fun deleteEntityDataAndEntities(
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
@@ -642,6 +651,9 @@ class PostgresEntityDataQueryService(
         }
     }
 
+    /**
+     * Deletes entities from [PostgresTable.DATA] table.
+     */
     private fun deleteEntities(
             entitySetId: UUID,
             entities: Collection<UUID>,
@@ -735,7 +747,11 @@ class PostgresEntityDataQueryService(
         return count.get()
     }
 
+    /**
+     * Deletes entity key ids belonging to the requested entity set in [IDS] table.
+     */
     fun deleteEntitySet(entitySetId: UUID): WriteEvent {
+        // todo set last_write=now() or last_index = -infinity() in ids table + only set version = 0, no delete
         val numUpdates = hds.connection.use {
             val ps = it.prepareStatement(deleteEntitySetEntityKeys)
             ps.setObject(1, entitySetId)
@@ -745,7 +761,11 @@ class PostgresEntityDataQueryService(
         return WriteEvent(System.currentTimeMillis(), numUpdates)
     }
 
+    /**
+     * Deletes entities from [IDS] table.
+     */
     fun deleteEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): WriteEvent {
+        // todo set last_write=now() or last_index = -infinity() in ids table + only set version = 0, no delete
         val numUpdates = hds.connection.use {
             val ps = it.prepareStatement(deleteEntityKeys)
             val arr = PostgresArrays.createUuidArray(it, entityKeyIds)
@@ -932,7 +952,7 @@ class PostgresEntityDataQueryService(
     }
 
     fun getExpiringEntitiesFromEntitySet(entitySetId: UUID, expirationBaseColumn: String, formattedDateMinusTTE: Any,
-                                         sqlFormat: Int, deleteType: DeleteType) : BasePostgresIterable<UUID> {
+                                         sqlFormat: Int, deleteType: DeleteType): BasePostgresIterable<UUID> {
         val partitionsInfo: PartitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
         val partitions = PostgresArrays.createIntArray(hds.connection, partitionsInfo.partitions)
         val partitionVersion = partitionsInfo.partitionsVersion
@@ -942,17 +962,17 @@ class PostgresEntityDataQueryService(
                         getExpiringEntitiesQuery(expirationBaseColumn, deleteType),
                         FETCH_SIZE,
                         false
-                ) {stmt ->
+                ) { stmt ->
                     stmt.setObject(1, entitySetId)
                     stmt.setArray(2, partitions)
                     stmt.setInt(3, partitionVersion)
                     stmt.setObject(4, IdConstants.ID_ID.id)
                     stmt.setObject(5, formattedDateMinusTTE, sqlFormat)
                 }
-        ) { rs -> ResultSetAdapters.id(rs)}
+        ) { rs -> ResultSetAdapters.id(rs) }
     }
 
-    private fun getExpiringEntitiesQuery(expirationBaseColumn: String, deleteType: DeleteType) : String {
+    private fun getExpiringEntitiesQuery(expirationBaseColumn: String, deleteType: DeleteType): String {
         var ignoredClearedEntitiesClause = ""
         if (deleteType == DeleteType.Soft) {
             ignoredClearedEntitiesClause = "AND ${VERSION.name} >= 0 "
