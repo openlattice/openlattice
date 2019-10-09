@@ -242,7 +242,9 @@ class PostgresEntityDataQueryService(
             awsPassthrough: Boolean = false
     ): WriteEvent {
 
-        return upsertEntities(entitySetId, null, entities, authorizedPropertyTypes, awsPassthrough)
+        val tombstoneFn = { _: Connection, _: Map<UUID, Map<UUID, Set<Any>>> -> null }
+
+        return upsertEntities(entitySetId, tombstoneFn, entities, authorizedPropertyTypes, awsPassthrough)
     }
 
     /**
@@ -258,7 +260,7 @@ class PostgresEntityDataQueryService(
      */
     private fun upsertEntities(
             entitySetId: UUID,
-            tombstoneFn: ((conn: Connection, entityBatch: Map<UUID, Map<UUID, Set<Any>>>) -> Any)?,
+            tombstoneFn: (conn: Connection, entityBatch: Map<UUID, Map<UUID, Set<Any>>>) -> Any?,
             entities: Map<UUID, Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>,
             awsPassthrough: Boolean = false
@@ -283,7 +285,7 @@ class PostgresEntityDataQueryService(
                         val idsArr = PostgresArrays.createUuidArray(connection, entityBatch.keys)
                         lockEntitiesForUpdate(connection, idsArr, partition, partitionsInfo.partitionsVersion)
 
-                        tombstoneFn?.invoke(connection, entityBatch)
+                        tombstoneFn(connection, entityBatch)
 
                         val (uec, upc) = upsertEntities(
                                 connection,
