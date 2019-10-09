@@ -36,16 +36,16 @@ class BulkLinkedDataLambdasStreamSerializerTest
     override fun createInput(): ConductorElasticsearchCall<*> {
         val rnd = Random(4)
         val entitiesByLinkingId: Map<UUID, Map<UUID, Map<UUID, Map<UUID, Set<Any>>>>> =
-                (1..rnd.nextInt(2, 4)).associateBy(
+                (0..rnd.nextInt(1, 4)).associateBy(
                         { UUID.randomUUID() },
                         {
-                            (1..rnd.nextInt(2, 4)).associateBy(
+                            (0..rnd.nextInt(0, 4)).associateBy(
                                     { UUID.randomUUID() },
                                     {
-                                        (1..rnd.nextInt(2, 4)).associateBy(
+                                        (0..rnd.nextInt(0, 4)).associateBy(
                                                 { UUID.randomUUID() },
                                                 {
-                                                    (1..rnd.nextInt(2, 4)).associateBy(
+                                                    (0..rnd.nextInt(0, 4)).associateBy(
                                                             { UUID.randomUUID() },
                                                             { setOf("a") }
                                                     )
