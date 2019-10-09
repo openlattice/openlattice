@@ -37,26 +37,25 @@ import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.indexing.configuration.IndexerConfiguration
 import com.openlattice.postgres.DataTables.LAST_INDEX
 import com.openlattice.postgres.DataTables.LAST_WRITE
+import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.ResultSetAdapters
-import com.openlattice.postgres.streams.PostgresIterable
-import com.openlattice.postgres.streams.StatementHolder
+import com.openlattice.postgres.streams.BasePostgresIterable
+import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
-import java.sql.ResultSet
 import java.time.OffsetDateTime
 import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
-import java.util.function.Function
-import java.util.function.Supplier
 
 const val EXPIRATION_MILLIS = 60_000L
 const val INDEX_RATE = 30_000L
 const val FETCH_SIZE = 128_000
+const val INDEX_SIZE = 1000
 
 class BackgroundIndexingService(
         hazelcastInstance: HazelcastInstance,
@@ -68,7 +67,6 @@ class BackgroundIndexingService(
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(BackgroundIndexingService::class.java)!!
-        const val INDEX_SIZE = 1000
     }
 
     private val propertyTypes: IMap<UUID, PropertyType> = hazelcastInstance.getMap(HazelcastMap.PROPERTY_TYPES.name)
@@ -151,51 +149,44 @@ class BackgroundIndexingService(
         }
     }
 
-    private fun getEntityDataKeysQuery(entitySet: EntitySet, getTombstoned: Boolean = false): String {
+    /**
+     * Preparable sql statement to select entity key ids (with last write) of an entity set for indexing.
+     * Bind order is the following:
+     * 1. entity set id
+     * 2. partition (array)
+     * 3. partition version
+     */
+    private fun getEntityDataKeysQuery(reindexAll: Boolean = false, getTombstoned: Boolean = false): String {
+        val dirtyIdsClause = if (!reindexAll) {
+            "${LAST_INDEX.name} < ${LAST_WRITE.name}"
+        } else {
+            ""
+        }
         return "SELECT ${ID.name}, ${LAST_WRITE.name} FROM ${IDS.name} " +
-                "WHERE ${entitySetClause(entitySet)} AND ${versionClause(getTombstoned)}"
-    }
-
-    private fun getDirtyEntitiesWithLastWriteQuery(entitySet: EntitySet, getTombstoned: Boolean = false): String {
-        return "SELECT ${ID.name}, ${LAST_WRITE.name} FROM ${IDS.name} " +
-                "WHERE ${entitySetClause(entitySet)} " +
-                "AND ${LAST_INDEX.name} < ${LAST_WRITE.name} " +
+                "WHERE ${ENTITY_SET_ID.name} = ? " +
+                "AND ${PARTITION.name} = ANY(?) " +
+                "AND ${PARTITIONS_VERSION.name} = ? " +
                 "AND ${versionClause(getTombstoned)} " +
-                "LIMIT $FETCH_SIZE"
-    }
-
-    private fun entitySetClause(entitySet: EntitySet): String {
-        return "${ENTITY_SET_ID.name} = '${entitySet.id}' " +
-                "AND ${PARTITION.name} = ANY('{${entitySet.partitions.joinToString(",")}}') " +
-                "AND ${PARTITIONS_VERSION.name} = ${entitySet.partitionsVersion}"
+                "AND $dirtyIdsClause"
     }
 
     private fun versionClause(getTombstoned: Boolean): String {
-        return "${VERSION.name} ${if (getTombstoned) "<" else ">"} 0"
+        return "${VERSION.name} ${if (getTombstoned) "<=" else ">"} 0"
     }
 
-    private fun getEntityDataKeys(entitySet: EntitySet, getTombstoned: Boolean = false): PostgresIterable<Pair<UUID, OffsetDateTime>> {
-        return PostgresIterable(Supplier<StatementHolder> {
-            val connection = hds.connection
-            connection.autoCommit = false
-            val stmt = connection.createStatement()
-            stmt.fetchSize = 64_000
-            val rs = stmt.executeQuery(getEntityDataKeysQuery(entitySet, getTombstoned))
-            StatementHolder(connection, stmt, rs)
-        }, Function<ResultSet, Pair<UUID, OffsetDateTime>> {
-            ResultSetAdapters.id(it) to ResultSetAdapters.lastWriteTyped(it)
-        })
-    }
-
-    private fun getDirtyEntityKeyIds(entitySet: EntitySet, getTombstoned: Boolean = false): PostgresIterable<Pair<UUID, OffsetDateTime>> {
-        return PostgresIterable(Supplier<StatementHolder> {
-            val connection = hds.connection
-            val stmt = connection.createStatement()
-            val rs = stmt.executeQuery(getDirtyEntitiesWithLastWriteQuery(entitySet, getTombstoned))
-            StatementHolder(connection, stmt, rs)
-        }, Function<ResultSet, Pair<UUID, OffsetDateTime>> {
-            ResultSetAdapters.id(it) to ResultSetAdapters.lastWriteTyped(it)
-        })
+    private fun getEntityDataKeys(
+            entitySet: EntitySet,
+            reindexAll: Boolean = false,
+            getTombstoned: Boolean = false
+    ): BasePostgresIterable<Pair<UUID, OffsetDateTime>> {
+        return BasePostgresIterable(
+                PreparedStatementHolderSupplier(hds, getEntityDataKeysQuery(reindexAll, getTombstoned)) { ps ->
+                    ps.setObject(1, entitySet.id)
+                    ps.setArray(2, PostgresArrays.createIntArray(ps.connection, entitySet.partitions))
+                    ps.setInt(3, entitySet.partitionsVersion)
+                    ps.fetchSize = FETCH_SIZE
+                }
+        ) { ResultSetAdapters.id(it) to ResultSetAdapters.lastWriteTyped(it) }
     }
 
     private fun getPropertyTypeForEntityType(entityTypeId: UUID): Map<UUID, PropertyType> {
@@ -204,6 +195,11 @@ class BackgroundIndexingService(
                 .filter { it.value.datatype != EdmPrimitiveTypeKind.Binary }
     }
 
+    /**
+     * @param entitySet The entity set that is about to get indexed.
+     * @param reindexAll Indicator whether it should re-index all entities found in the entity set or just the ones,
+     * which are not yet indexed.
+     */
     private fun indexEntitySet(entitySet: EntitySet, reindexAll: Boolean = false): Int {
 
         val upsertedEntityCount = indexEntitiesInEntitySet(entitySet, reindexAll, indexTombstoned = false)
@@ -212,7 +208,18 @@ class BackgroundIndexingService(
         return upsertedEntityCount + tombstonedEntityCount
     }
 
-    private fun indexEntitiesInEntitySet(entitySet: EntitySet, reindexAll: Boolean = false, indexTombstoned: Boolean = false): Int {
+    /**
+     * @param entitySet The entity set that is about to get indexed.
+     * @param reindexAll Indicator whether it should re-index all entities found in the entity set or just the ones,
+     * which are not yet indexed.
+     * @param indexTombstoned Indicator whether it should un-index cleared ([VERSION] < 0) and deleted ([VERSION] = 0)
+     * entities or index still active ones ([VERSION] > 0).
+     */
+    private fun indexEntitiesInEntitySet(
+            entitySet: EntitySet,
+            reindexAll: Boolean = false,
+            indexTombstoned: Boolean = false
+    ): Int {
         logger.info(
                 "Starting indexing for entity set {} with id {}",
                 entitySet.name,
@@ -220,11 +227,7 @@ class BackgroundIndexingService(
         )
 
         val esw = Stopwatch.createStarted()
-        val entityKeyIdsWithLastWrite = if (reindexAll) {
-            getEntityDataKeys(entitySet, indexTombstoned)
-        } else {
-            getDirtyEntityKeyIds(entitySet, indexTombstoned)
-        }
+        val entityKeyIdsWithLastWrite = getEntityDataKeys(entitySet, reindexAll, indexTombstoned)
 
         val propertyTypes = getPropertyTypeForEntityType(entitySet.entityTypeId)
 
@@ -235,10 +238,10 @@ class BackgroundIndexingService(
             updateExpiration(entitySet)
             while (entityKeyIdsIterator.hasNext()) {
                 val batch = getBatch(entityKeyIdsIterator)
-                if (indexTombstoned) {
-                    indexCount += unindexEntities(entitySet, batch, !reindexAll)
+                indexCount += if (indexTombstoned) {
+                    unindexEntities(entitySet, batch, !reindexAll)
                 } else {
-                    indexCount += indexEntities(entitySet, batch, propertyTypes, !reindexAll)
+                    indexEntities(entitySet, batch, propertyTypes, !reindexAll)
                 }
             }
             entityKeyIdsIterator = entityKeyIdsWithLastWrite.iterator()
@@ -275,7 +278,8 @@ class BackgroundIndexingService(
             )
         }
 
-        if (entitiesById.isEmpty() || !elasticsearchApi.createBulkEntityData(entitySet.entityTypeId, entitySet.id, entitiesById)) {
+        if (entitiesById.isEmpty()
+                || !elasticsearchApi.createBulkEntityData(entitySet.entityTypeId, entitySet.id, entitiesById)) {
             logger.error("Failed to index elements with entitiesById: {}", entitiesById)
             return 0
         }
@@ -298,7 +302,7 @@ class BackgroundIndexingService(
 
     }
 
-    internal fun unindexEntities(
+    private fun unindexEntities(
             entitySet: EntitySet,
             batchToIndex: Map<UUID, OffsetDateTime>,
             markAsIndexed: Boolean = true
@@ -324,7 +328,11 @@ class BackgroundIndexingService(
             )
         } else {
             indexCount = 0
-            logger.error("Failed to un-index elements of entity set {} with entity key ids: {}", entitySet.id, batchToIndex.keys)
+            logger.error(
+                    "Failed to un-index elements of entity set {} with entity key ids: {}",
+                    entitySet.id,
+                    batchToIndex.keys
+            )
 
         }
         return indexCount
