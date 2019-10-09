@@ -178,11 +178,10 @@ class BackgroundIndexingService(
             getTombstoned: Boolean = false
     ): BasePostgresIterable<Pair<UUID, OffsetDateTime>> {
         return BasePostgresIterable(
-                PreparedStatementHolderSupplier(hds, getEntityDataKeysQuery(reindexAll, getTombstoned)) { ps ->
-                    ps.setObject(1, entitySet.id)
-                    ps.setArray(2, PostgresArrays.createIntArray(ps.connection, entitySet.partitions))
-                    ps.setInt(3, entitySet.partitionsVersion)
-                    ps.fetchSize = FETCH_SIZE
+                PreparedStatementHolderSupplier(hds, getEntityDataKeysQuery(reindexAll, getTombstoned), FETCH_SIZE) {
+                    it.setObject(1, entitySet.id)
+                    it.setArray(2, PostgresArrays.createIntArray(it.connection, entitySet.partitions))
+                    it.setInt(3, entitySet.partitionsVersion)
                 }
         ) { ResultSetAdapters.id(it) to ResultSetAdapters.lastWriteTyped(it) }
     }
