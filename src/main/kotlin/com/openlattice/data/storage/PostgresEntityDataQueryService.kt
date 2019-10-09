@@ -249,9 +249,8 @@ class PostgresEntityDataQueryService(
 
     /**
      * Updates or insert entities.
-     * @param connection A postgres connection that will be used to execute the upsert. Must not be in autocommit mode.
      * @param entitySetId The entity set id for which to insert entities.
-     * @param partitionsInfo The PartitionsInfo of the entity set for which to insert entities.
+     * @param tombstoneFn A function that may tombstone values before performing the upsert.
      * @param entities The entities to update or insert.
      * @param authorizedPropertyTypes The authorized property types for the insertion.
      * @param awsPassthrough True if the data will be stored directly in AWS via another means and all that is being
