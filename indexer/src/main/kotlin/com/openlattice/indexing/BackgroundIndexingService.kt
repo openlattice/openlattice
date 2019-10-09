@@ -162,16 +162,14 @@ class BackgroundIndexingService(
         } else {
             ""
         }
+        val versionsClause = "${VERSION.name} ${if (getTombstoned) "<=" else ">"} 0"
+
         return "SELECT ${ID.name}, ${LAST_WRITE.name} FROM ${IDS.name} " +
                 "WHERE ${ENTITY_SET_ID.name} = ? " +
                 "AND ${PARTITION.name} = ANY(?) " +
                 "AND ${PARTITIONS_VERSION.name} = ? " +
-                "AND ${versionClause(getTombstoned)} " +
-                "AND $dirtyIdsClause"
-    }
-
-    private fun versionClause(getTombstoned: Boolean): String {
-        return "${VERSION.name} ${if (getTombstoned) "<=" else ">"} 0"
+                "AND $versionsClause " +
+                "AND $dirtyIdsClause "
     }
 
     private fun getEntityDataKeys(
@@ -196,6 +194,9 @@ class BackgroundIndexingService(
     }
 
     /**
+     * Creates missing documents for non-indexed entities in entity set and deletes documents of cleared/deleted
+     * entities in entity set.
+     *
      * @param entitySet The entity set that is about to get indexed.
      * @param reindexAll Indicator whether it should re-index all entities found in the entity set or just the ones,
      * which are not yet indexed.
@@ -212,6 +213,8 @@ class BackgroundIndexingService(
      * @param entitySet The entity set that is about to get indexed.
      * @param reindexAll Indicator whether it should re-index all entities found in the entity set or just the ones,
      * which are not yet indexed.
+     *
+     * NOTE: If it is set to true, it also won't mark entities as indexed.
      * @param indexTombstoned Indicator whether it should un-index cleared ([VERSION] < 0) and deleted ([VERSION] = 0)
      * entities or index still active ones ([VERSION] > 0).
      */
@@ -311,8 +314,8 @@ class BackgroundIndexingService(
 
         val indexCount: Int
 
-        if (batchToIndex.isNotEmpty() &&
-                elasticsearchApi.deleteEntityDataBulk(entitySet.id, entitySet.entityTypeId, batchToIndex.keys)) {
+        if (batchToIndex.isNotEmpty()
+                && elasticsearchApi.deleteEntityDataBulk(entitySet.id, entitySet.entityTypeId, batchToIndex.keys)) {
             indexCount = if (markAsIndexed) {
                 dataManager.markAsIndexed(mapOf(entitySet.id to batchToIndex), false)
             } else {
