@@ -258,7 +258,7 @@ class PostgresEntityDataQueryService(
      */
     private fun upsertEntities(
             entitySetId: UUID,
-            tombstoneFn: ((conn: Connection, currEntities: Map<UUID, Map<UUID, Set<Any>>>) -> Any)?,
+            tombstoneFn: ((conn: Connection, entityBatch: Map<UUID, Map<UUID, Set<Any>>>) -> Any)?,
             entities: Map<UUID, Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>,
             awsPassthrough: Boolean = false
@@ -439,8 +439,8 @@ class PostgresEntityDataQueryService(
     ): WriteEvent {
         val propertyTypes = authorizedPropertyTypes.values
 
-        val tombstoneFn = { conn: Connection, currEntities: Map<UUID, Map<UUID, Set<Any>>> ->
-            tombstone(conn, entitySetId, currEntities.keys, propertyTypes)
+        val tombstoneFn = { conn: Connection, entityBatch: Map<UUID, Map<UUID, Set<Any>>> ->
+            tombstone(conn, entitySetId, entityBatch.keys, propertyTypes)
         }
 
         return upsertEntities(entitySetId, tombstoneFn, entities, authorizedPropertyTypes)
@@ -453,8 +453,8 @@ class PostgresEntityDataQueryService(
     ): WriteEvent {
 
         // Is the overhead from including irrelevant property types in a bulk delete really worse than performing individual queries? :thinking-face:
-        val tombstoneFn = { conn: Connection, currEntities: Map<UUID, Map<UUID, Set<Any>>> ->
-            currEntities.forEach { (entityKeyId, entity) ->
+        val tombstoneFn = { conn: Connection, entityBatch: Map<UUID, Map<UUID, Set<Any>>> ->
+            entityBatch.forEach { (entityKeyId, entity) ->
                 //Implied access enforcement as it will raise exception if lacking permission
                 tombstone(
                         conn,
@@ -475,8 +475,8 @@ class PostgresEntityDataQueryService(
     ): WriteEvent {
         //We expect controller to have performed access control checks upstream.
 
-        val tombstoneFn = { conn: Connection, currEntities: Map<UUID, Map<UUID, Set<Any>>> ->
-            val ids = currEntities.keys
+        val tombstoneFn = { conn: Connection, entityBatch: Map<UUID, Map<UUID, Set<Any>>> ->
+            val ids = entityBatch.keys
             tombstone(conn, entitySetId, replacementProperties.filter { ids.contains(it.key) })
         }
 
