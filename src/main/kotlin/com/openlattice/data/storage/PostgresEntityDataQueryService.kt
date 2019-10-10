@@ -451,7 +451,7 @@ class PostgresEntityDataQueryService(
                     entitySetId,
                     entities.keys,
                     authorizedPropertyTypes.values,
-                    -version,
+                    version,
                     partitionsInfo
             )
             val event = upsertEntities(
@@ -486,7 +486,7 @@ class PostgresEntityDataQueryService(
                         entitySetId,
                         setOf(entityKeyId),
                         entity.keys.map { authorizedPropertyTypes.getValue(it) }.toSet(),
-                        -version,
+                        version,
                         partitionsInfo
                 )
             }
@@ -554,7 +554,7 @@ class PostgresEntityDataQueryService(
             ps.executeUpdate()
         }
 
-        return WriteEvent(-version, numUpdated)
+        return WriteEvent(version, numUpdated)
     }
 
     /**
@@ -589,8 +589,8 @@ class PostgresEntityDataQueryService(
         val version = System.currentTimeMillis()
 
         return hds.connection.use { conn ->
-            tombstone(conn, entitySetId, entityKeyIds, authorizedPropertyTypes.values, -version, partitionsInfo)
-            tombstone(conn, entitySetId, entityKeyIds, -version, partitionsInfo)
+            tombstone(conn, entitySetId, entityKeyIds, authorizedPropertyTypes.values, version, partitionsInfo)
+            tombstone(conn, entitySetId, entityKeyIds, version, partitionsInfo)
         }
     }
 
@@ -617,7 +617,7 @@ class PostgresEntityDataQueryService(
                     entitySetId,
                     entityKeyIds,
                     authorizedPropertyTypes.values,
-                    -version,
+                    version,
                     partitionsInfo
             )
             if (writeEvent.numUpdates > 0) {
@@ -885,7 +885,7 @@ class PostgresEntityDataQueryService(
             ps.executeUpdate()
         }
 
-        return WriteEvent(-version, numUpdated)
+        return WriteEvent(version, numUpdated)
     }
 
     /**
@@ -895,14 +895,14 @@ class PostgresEntityDataQueryService(
      * @param entitySetId The entity set id for which to tombstone entries.
      * @param entityKeyIds The entity key ids for which to tombstone entries.
      * @param partitionsInfo Contains the partition info for the requested entity set.
-     * @param tombstoneVersion The version to be used for tombstoning.
+     * @param version Version to be used for tombstoning.
      * @param partitionsInfo Contains the partition information for the requested entity set.
      */
     private fun tombstone(
             conn: Connection,
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
-            tombstoneVersion: Long,
+            version: Long,
             partitionsInfo: PartitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
     ): WriteEvent {
         val partitions = partitionsInfo.partitions.toList()
@@ -911,9 +911,9 @@ class PostgresEntityDataQueryService(
         val partitionsArr = PostgresArrays.createIntArray(conn, entityKeyIds.map { getPartition(it, partitions) })
 
         val numUpdated = conn.prepareStatement(updateVersionsForEntitiesInEntitySet).use { ps ->
-            ps.setLong(1, tombstoneVersion)
-            ps.setLong(2, tombstoneVersion)
-            ps.setLong(3, tombstoneVersion)
+            ps.setLong(1, -version)
+            ps.setLong(2, -version)
+            ps.setLong(3, -version)
             ps.setObject(4, entitySetId)
             ps.setArray(5, entityKeyIdsArr)
             ps.setArray(6, partitionsArr)
@@ -921,7 +921,7 @@ class PostgresEntityDataQueryService(
             ps.executeUpdate()
         }
 
-        return WriteEvent(tombstoneVersion, numUpdated)
+        return WriteEvent(version, numUpdated)
     }
 
     /**
@@ -934,7 +934,7 @@ class PostgresEntityDataQueryService(
      * @param entitySetId The entity set id for which to tombstone entries
      * @param entityKeyIds The entity key ids for which to tombstone entries.
      * @param propertyTypesToTombstone A collection of property types to tombstone
-     * @param tombstoneVersion Version to be used for tombstoning.
+     * @param version Version to be used for tombstoning.
      * @param partitionsInfo Contains the partition info for the requested entity set.
      *
      * @return A write event object containing a summary of the operation useful for auditing purposes.
@@ -944,7 +944,7 @@ class PostgresEntityDataQueryService(
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
             propertyTypesToTombstone: Collection<PropertyType>,
-            tombstoneVersion: Long,
+            version: Long,
             partitonsInfo: PartitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
     ): WriteEvent {
         val propertyTypeIdsArr = PostgresArrays.createUuidArray(conn, propertyTypesToTombstone.map { it.id })
@@ -953,9 +953,9 @@ class PostgresEntityDataQueryService(
         val partitionsArr = PostgresArrays.createIntArray(conn, entityKeyIds.map { getPartition(it, partitions) })
 
         val numUpdated = conn.prepareStatement(updateVersionsForPropertyTypesInEntitiesInEntitySet).use { ps ->
-            ps.setLong(1, tombstoneVersion)
-            ps.setLong(2, tombstoneVersion)
-            ps.setLong(3, tombstoneVersion)
+            ps.setLong(1, -version)
+            ps.setLong(2, -version)
+            ps.setLong(3, -version)
             ps.setObject(4, entitySetId)
             ps.setArray(5, entityKeyIdsArr)
             ps.setArray(6, partitionsArr)
@@ -964,7 +964,7 @@ class PostgresEntityDataQueryService(
             ps.executeUpdate()
         }
 
-        return WriteEvent(tombstoneVersion, numUpdated)
+        return WriteEvent(version, numUpdated)
     }
 
 
@@ -1028,7 +1028,7 @@ class PostgresEntityDataQueryService(
 
 
 
-        return WriteEvent(-version, numUpdated)
+        return WriteEvent(version, numUpdated)
     }
 
     fun getExpiringEntitiesFromEntitySet(
