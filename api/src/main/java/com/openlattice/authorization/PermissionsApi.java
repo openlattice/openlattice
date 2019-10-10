@@ -67,7 +67,7 @@ public interface PermissionsApi {
     // if map is not present, assume all tables
     // TODO Make this better later, probably an object of some sort
     @PATCH( BASE + UPDATE + ID_PATH + IP_ADDRESS_PATH )
-    Void updateAtlasAcls(
+    Void updateExternalDatabaseAcls(
             @Path(ID_PATH) UUID organizationId,
             @Path(IP_ADDRESS) String ipAddress,
             @Body List<AclData> req);
