@@ -58,6 +58,8 @@ public interface OrganizationsApi {
     String ROLES             = "/roles";
     String ROLE_ID           = "roleId";
     String ROLE_ID_PATH      = "/{" + ROLE_ID + "}";
+    String TABLE_ID          = "tableId";
+    String TABLE_ID_PATH     = "/{" + TABLE_ID + "}";
     /*
      * These determine the service routing for the LB
      */
@@ -264,5 +266,7 @@ public interface OrganizationsApi {
 
     @POST( BASE + ID_PATH + ATLAS_COLUMN)
     UUID createAtlasColumn( @Path( ID ) UUID organizationId, @Body OrganizationAtlasColumn organizationAtlasColumn);
+
+    //update, get, delete
 
 }

@@ -65,7 +65,7 @@ public final class SerializationConstants {
     public static final String CHILD_CLAUSES                    = "childClauses";
     public static final String CHILD_QUERIES                    = "childQueries";
     public static final String CLAUSES                          = "clauses";
-    public static final String COLUMN_IDS                        = "columnIds";
+    public static final String COLUMNS                          = "columns";
     public static final String COLUMN_IDS_BY_TABLE_ID           = "columnIdsByTableId";
     public static final String COMPARISON                       = "comparison";
     public static final String CONFIG                           = "config";
