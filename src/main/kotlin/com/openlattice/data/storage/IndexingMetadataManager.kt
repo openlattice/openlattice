@@ -25,6 +25,7 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
                 entityKeyIdsWithLastWrite.forEach { (entitySetId, entities) ->
 
                     val partitions = entitySetPartitions.getValue(entitySetId).partitions.toList()
+                    val partitionVersion = entitySetPartitions.getValue(entitySetId).partitionsVersion
                     entities.entries
                             .groupBy({ getPartition(it.key, partitions) }, { it.toPair() })
                             .mapValues { it.value.toMap() }
@@ -40,6 +41,7 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
                                             stmt.setObject(2, entitySetId)
                                             stmt.setArray(3, idsArray)
                                             stmt.setInt(4, partition)
+                                            stmt.setInt(5, partitionVersion)
                                             stmt.addBatch()
                                         }
                             }
@@ -127,9 +129,13 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
  * 2. entity set id
  * 3. entity key ids (uuid array)
  * 4. partition
+ * 5. partition version
  */
 private val updateLastIndexSql = "UPDATE ${IDS.name} SET ${LAST_INDEX.name} = ? " +
-        "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID.name} = ANY(?) AND ${PARTITION.name} = ?"
+        "WHERE ${ENTITY_SET_ID.name} = ? " +
+        "AND ${ID.name} = ANY(?) " +
+        "AND ${PARTITION.name} = ? " +
+        "AND ${PARTITIONS_VERSION.name} = ?"
 
 /**
  * Arguments of preparable sql in order:
@@ -137,10 +143,14 @@ private val updateLastIndexSql = "UPDATE ${IDS.name} SET ${LAST_INDEX.name} = ? 
  * 2. entity set id
  * 3. linking ids (uuid array)
  * 4. partition
+ * 5. partition version
  */
 private val updateLastLinkingIndexSql = "UPDATE ${IDS.name} SET ${LAST_LINK_INDEX.name} = ? " +
-        "WHERE ${ENTITY_SET_ID.name} = ? AND ${LINKING_ID.name} = ANY(?) " +
-        "AND ${LINKING_ID.name} IS NOT NULL AND ${PARTITION.name} = ?"
+        "WHERE ${ENTITY_SET_ID.name} = ? " +
+        "AND ${LINKING_ID.name} = ANY(?) " +
+        "AND ${LINKING_ID.name} IS NOT NULL " +
+        "AND ${PARTITION.name} = ? " +
+        "AND ${PARTITIONS_VERSION.name} = ?"
 
 
 /**
