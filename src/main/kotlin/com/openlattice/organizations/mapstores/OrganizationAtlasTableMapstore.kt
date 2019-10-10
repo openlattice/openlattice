@@ -22,20 +22,17 @@ class OrganizationAtlasTableMapstore(
 
     override fun bind(ps: PreparedStatement, key: UUID, value: OrganizationAtlasTable) {
         var index = bind(ps, key, 1)
-        val columnIds = PostgresArrays.createUuidArray(ps.connection, value.columnIds)
 
         //create
         ps.setString(index++, value.name)
         ps.setString(index++, value.title)
         ps.setString(index++, value.description)
-        ps.setArray(index++, columnIds)
         ps.setObject(index++, value.organizationId)
 
         //update
         ps.setString(index++, value.name)
         ps.setString(index++, value.title)
         ps.setString(index++, value.description)
-        ps.setArray(index++, columnIds)
         ps.setObject(index++, value.organizationId)
     }
 

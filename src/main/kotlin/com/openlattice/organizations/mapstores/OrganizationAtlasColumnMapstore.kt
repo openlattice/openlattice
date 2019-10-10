@@ -25,12 +25,14 @@ class OrganizationAtlasColumnMapstore(
         ps.setString(index++, value.name)
         ps.setString(index++, value.title)
         ps.setString(index++, value.description)
+        ps.setObject(index++, value.tableId)
         ps.setObject(index++, value.organizationId)
 
         //update
         ps.setString(index++, value.name)
         ps.setString(index++, value.title)
         ps.setString(index++, value.description)
+        ps.setObject(index++, value.tableId)
         ps.setObject(index++, value.organizationId)
     }
 

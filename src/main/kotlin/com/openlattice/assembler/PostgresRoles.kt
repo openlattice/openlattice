@@ -20,11 +20,6 @@ class PostgresRoles private constructor() {
         }
 
         @JvmStatic
-        fun buildAtlasPostgresUsername(securablePrincipal: SecurablePrincipal): String {
-            return "$AD_PREFIX|user|${securablePrincipal.id}"
-        }
-
-        @JvmStatic
         fun buildOrganizationUserId(organizationId: UUID): String {
             return "$INTERNAL_PREFIX|organization|$organizationId"
         }

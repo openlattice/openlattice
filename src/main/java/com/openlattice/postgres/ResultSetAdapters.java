@@ -1200,24 +1200,25 @@ public final class ResultSetAdapters {
         return new CollectionTemplateKey( entitySetCollectionId, templateTypeId );
     }
 
-    public static OrganizationAtlasColumn organizationAtlasColumn( ResultSet rs ) throws SQLException {
-        UUID id = id(rs);
-        String name = name(rs);
-        String title = title(rs);
-        Optional<String> description = Optional.ofNullable( description( (rs) ) );
-        UUID organizationId = id(rs);
-
-        return new OrganizationAtlasColumn( id, name, title, description, organizationId );
-    }
-
     public static OrganizationAtlasTable organizationAtlasTable( ResultSet rs ) throws SQLException {
         UUID id = id(rs);
         String name = name(rs);
         String title = title(rs);
         Optional<String> description = Optional.ofNullable( description( (rs) ) );
-        Set<UUID> columnIds = new LinkedHashSet<>(Arrays.asList(PostgresArrays.getUuidArray( rs, COLUMN_IDS_FIELD )));
         UUID organizationId = id(rs);
 
-        return new OrganizationAtlasTable( id, name, title, description, columnIds, organizationId );
+        return new OrganizationAtlasTable( id, name, title, description, organizationId );
     }
+
+    public static OrganizationAtlasColumn organizationAtlasColumn( ResultSet rs ) throws SQLException {
+        UUID id = id(rs);
+        String name = name(rs);
+        String title = title(rs);
+        Optional<String> description = Optional.ofNullable( description( (rs) ) );
+        UUID tableId = id(rs);
+        UUID organizationId = id(rs);
+
+        return new OrganizationAtlasColumn( id, name, title, description, tableId, organizationId );
+    }
+
 }
