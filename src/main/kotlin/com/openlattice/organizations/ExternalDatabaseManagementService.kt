@@ -158,9 +158,10 @@ class ExternalDatabaseManagementService(
                         privileges.add("ALL")
                     } else {
                         if (ace.permissions.contains(Permission.WRITE)) {
-                            val writePrivileges = listOf("SELECT", "INSERT", "UPDATE", "DELETE")
+                            val writePrivileges = listOf("INSERT", "UPDATE", "DELETE")
                             privileges.addAll(writePrivileges)
-                        } else if (ace.permissions.contains(Permission.READ)) {
+                        }
+                        if (ace.permissions.contains(Permission.READ)) {
                             privileges.add("SELECT")
                         }
                     }
@@ -179,7 +180,7 @@ class ExternalDatabaseManagementService(
                 val tableAndColumnNames = getTableAndColumnNames(it)
                 it.acl.aces.forEach { ace ->
                     val dbUser = getDBUser(ace.principal.id)
-                    preparePrivilegesStmt(stmt,"ALL PRIVILEGES", tableAndColumnNames.first, tableAndColumnNames.second, dbUser)
+                    preparePrivilegesStmt(stmt,listOf("ALL"), tableAndColumnNames.first, tableAndColumnNames.second, dbUser)
                 }
             }
             stmt.executeBatch()
