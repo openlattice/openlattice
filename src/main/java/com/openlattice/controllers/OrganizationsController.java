@@ -24,8 +24,6 @@ import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Predicates;
 import com.google.common.collect.*;
 import com.openlattice.assembler.Assembler;
-import com.openlattice.assembler.PostgresDatabases;
-import com.openlattice.assembler.PostgresRoles;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.authorization.util.AuthorizationUtils;
@@ -36,7 +34,7 @@ import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organization.*;
 import com.openlattice.organization.roles.Role;
-import com.openlattice.organizations.AtlasDataService;
+import com.openlattice.organizations.ExternalDatabaseManagementService;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import org.springframework.http.HttpStatus;
@@ -73,7 +71,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     private EdmAuthorizationHelper authzHelper;
 
     @Inject
-    private AtlasDataService ads;
+    private ExternalDatabaseManagementService edms;
 
     @Timed
     @Override
@@ -633,9 +631,9 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     )
     public UUID createAtlasTable(
             @PathVariable( ID ) UUID organizationId,
-            @RequestBody OrganizationAtlasTable organizationAtlasTable ) {
+            @RequestBody OrganizationExternalDatabaseTable organizationExternalDatabaseTable ) {
         ensureOwner( organizationId );
-        return ads.createOrganizationAtlasTable( organizationId, organizationAtlasTable );
+        return edms.createOrganizationAtlasTable( organizationId, organizationExternalDatabaseTable );
     }
 
     @Timed
@@ -645,9 +643,9 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     )
     public UUID createAtlasColumn(
             @PathVariable( ID ) UUID organizationId,
-            @RequestBody OrganizationAtlasColumn organizationAtlasColumn ) {
+            @RequestBody OrganizationExternalDatabaseColumn organizationExternalDatabaseColumn ) {
         ensureOwner( organizationId );
-        return ads.createOrganizationAtlasColumn( organizationId, organizationAtlasColumn );
+        return edms.createOrganizationAtlasColumn( organizationId, organizationExternalDatabaseColumn );
     }
 
     private void ensureRoleAdminAccess( UUID organizationId, UUID roleId ) {

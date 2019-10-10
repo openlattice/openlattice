@@ -28,7 +28,7 @@ import com.openlattice.assembler.PostgresDatabases;
 import com.openlattice.authorization.*;
 import com.openlattice.controllers.exceptions.BadRequestException;
 import com.openlattice.controllers.exceptions.ForbiddenException;
-import com.openlattice.organizations.AtlasDataService;
+import com.openlattice.organizations.ExternalDatabaseManagementService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 
 import java.util.*;
@@ -56,7 +56,7 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
     private EventBus eventBus;
 
     @Inject
-    private AtlasDataService ads;
+    private ExternalDatabaseManagementService edms;
 
     @Override
     @Timed
@@ -123,13 +123,13 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
     @Timed
     @Override
     @PostMapping( value = BASE + UPDATE + ID_PATH + IP_ADDRESS_PATH )
-    public Void updateAtlasAcls(
+    public Void updateExternalDatabaseAcls(
             @PathVariable(ID_PATH) UUID organizationId,
             @PathVariable(IP_ADDRESS) String ipAddress,
             @RequestBody List<AclData> req){
         updateAcls( req );
         String dbName = PostgresDatabases.buildOrganizationDatabaseName( organizationId );
-        ads.updatePermissionsOnAtlas( dbName, ipAddress, req );
+        edms.updatePermissionsOnAtlas( dbName, ipAddress, req );
 
         return null;
     }
