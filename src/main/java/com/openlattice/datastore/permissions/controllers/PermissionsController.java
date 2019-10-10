@@ -127,9 +127,7 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
             @PathVariable(ID_PATH) UUID organizationId,
             @PathVariable(IP_ADDRESS) String ipAddress,
             @RequestBody List<AclData> req){
-
         updateAcls( req );
-
         String dbName = PostgresDatabases.buildOrganizationDatabaseName( organizationId );
         ads.updatePermissionsOnAtlas( dbName, ipAddress, req );
 

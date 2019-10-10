@@ -635,7 +635,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             @PathVariable( ID ) UUID organizationId,
             @RequestBody OrganizationAtlasTable organizationAtlasTable ) {
         ensureOwner( organizationId );
-        return ads.createOrganizationAtlasTable( organizationAtlasTable );
+        return ads.createOrganizationAtlasTable( organizationId, organizationAtlasTable );
     }
 
     @Timed
@@ -647,7 +647,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             @PathVariable( ID ) UUID organizationId,
             @RequestBody OrganizationAtlasColumn organizationAtlasColumn ) {
         ensureOwner( organizationId );
-       return ads.createOrganizationAtlasColumn( organizationAtlasColumn );
+        return ads.createOrganizationAtlasColumn( organizationId, organizationAtlasColumn );
     }
 
     private void ensureRoleAdminAccess( UUID organizationId, UUID roleId ) {
