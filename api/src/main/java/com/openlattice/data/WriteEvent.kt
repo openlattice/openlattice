@@ -1,6 +1,9 @@
 package com.openlattice.data
 
-data class WriteEvent(
-        val version: Long,
-        val numUpdates: Int
-)
+import kotlin.math.abs
+
+data class WriteEvent(var version: Long, val numUpdates: Int) {
+    init {
+        version = abs(version)
+    }
+}
