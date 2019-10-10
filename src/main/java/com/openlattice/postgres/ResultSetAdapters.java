@@ -61,8 +61,8 @@ import com.openlattice.linking.EntityKeyPair;
 import com.openlattice.linking.EntityLinkingFeedback;
 import com.openlattice.notifications.sms.SmsEntitySetInformation;
 import com.openlattice.notifications.sms.SmsInformationKey;
-import com.openlattice.organization.OrganizationAtlasColumn;
-import com.openlattice.organization.OrganizationAtlasTable;
+import com.openlattice.organization.OrganizationExternalDatabaseColumn;
+import com.openlattice.organization.OrganizationExternalDatabaseTable;
 import com.openlattice.organization.OrganizationEntitySetFlag;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.PrincipalSet;
@@ -1200,17 +1200,17 @@ public final class ResultSetAdapters {
         return new CollectionTemplateKey( entitySetCollectionId, templateTypeId );
     }
 
-    public static OrganizationAtlasTable organizationAtlasTable( ResultSet rs ) throws SQLException {
+    public static OrganizationExternalDatabaseTable organizationAtlasTable( ResultSet rs ) throws SQLException {
         UUID id = id(rs);
         String name = name(rs);
         String title = title(rs);
         Optional<String> description = Optional.ofNullable( description( (rs) ) );
         UUID organizationId = id(rs);
 
-        return new OrganizationAtlasTable( id, name, title, description, organizationId );
+        return new OrganizationExternalDatabaseTable( id, name, title, description, organizationId );
     }
 
-    public static OrganizationAtlasColumn organizationAtlasColumn( ResultSet rs ) throws SQLException {
+    public static OrganizationExternalDatabaseColumn organizationAtlasColumn( ResultSet rs ) throws SQLException {
         UUID id = id(rs);
         String name = name(rs);
         String title = title(rs);
@@ -1218,7 +1218,7 @@ public final class ResultSetAdapters {
         UUID tableId = id(rs);
         UUID organizationId = id(rs);
 
-        return new OrganizationAtlasColumn( id, name, title, description, tableId, organizationId );
+        return new OrganizationExternalDatabaseColumn( id, name, title, description, tableId, organizationId );
     }
 
 }
