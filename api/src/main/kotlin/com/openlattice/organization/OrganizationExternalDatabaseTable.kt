@@ -9,7 +9,7 @@ import com.openlattice.client.serialization.SerializationConstants
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import java.util.*
 
-class OrganizationAtlasTable
+class OrganizationExternalDatabaseTable
 
 /**
  * Creates a securable object for an organization's entire database in Atlas
@@ -17,6 +17,7 @@ class OrganizationAtlasTable
  * @param id An optional UUID that will be automatically generated if not provided
  * @param name The name of the table
  * @param title A title for the object
+ * @param description An optional description of this object
  * @param organizationId The id of the organization that owns this table
  */
 

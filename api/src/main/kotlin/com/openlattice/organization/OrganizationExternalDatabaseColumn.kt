@@ -9,7 +9,7 @@ import com.openlattice.client.serialization.SerializationConstants
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import java.util.*
 
-class OrganizationAtlasColumn
+class OrganizationExternalDatabaseColumn
 
 /**
  * Creates a securable object for an organization's entire database in Atlas
