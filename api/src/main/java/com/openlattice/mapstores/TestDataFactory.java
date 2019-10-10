@@ -36,8 +36,8 @@ import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organization.Organization;
-import com.openlattice.organization.OrganizationAtlasColumn;
-import com.openlattice.organization.OrganizationAtlasTable;
+import com.openlattice.organization.OrganizationExternalDatabaseColumn;
+import com.openlattice.organization.OrganizationExternalDatabaseTable;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.postgres.IndexType;
 import com.openlattice.requests.PermissionsRequestDetails;
@@ -587,8 +587,8 @@ public final class TestDataFactory {
         );
     }
 
-    public static OrganizationAtlasColumn organizationAtlasColumn() {
-        return new OrganizationAtlasColumn(
+    public static OrganizationExternalDatabaseColumn organizationAtlasColumn() {
+        return new OrganizationExternalDatabaseColumn(
                 UUID.randomUUID(),
                 randomAlphanumeric( 5 ),
                 randomAlphanumeric( 5 ),
@@ -598,11 +598,11 @@ public final class TestDataFactory {
     }
 
 
-    public static OrganizationAtlasTable organizationAtlasTable() {
-        OrganizationAtlasColumn column = organizationAtlasColumn();
+    public static OrganizationExternalDatabaseTable organizationAtlasTable() {
+        OrganizationExternalDatabaseColumn column = organizationAtlasColumn();
         Set<UUID> columnIds = ImmutableSet.of( column.getId() );
 
-        return new OrganizationAtlasTable(
+        return new OrganizationExternalDatabaseTable(
                 UUID.randomUUID(),
                 randomAlphanumeric( 5 ),
                 randomAlphanumeric( 5 ),

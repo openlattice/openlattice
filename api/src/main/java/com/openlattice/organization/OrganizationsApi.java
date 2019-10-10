@@ -19,7 +19,6 @@
 package com.openlattice.organization;
 
 import com.openlattice.directory.pojo.Auth0UserBasic;
-import com.openlattice.notifications.sms.SmsEntitySetInformation;
 import com.openlattice.organization.roles.Role;
 
 import java.util.*;
@@ -262,10 +261,12 @@ public interface OrganizationsApi {
 
     //Endpoints for management of atlas database
     @POST( BASE + ID_PATH + ATLAS_TABLE)
-    UUID createAtlasTable( @Path(ID) UUID organizationId, @Body OrganizationAtlasTable organizationAtlasTable);
+    UUID createAtlasTable( @Path(ID) UUID organizationId, @Body
+            OrganizationExternalDatabaseTable organizationExternalDatabaseTable );
 
     @POST( BASE + ID_PATH + ATLAS_COLUMN)
-    UUID createAtlasColumn( @Path( ID ) UUID organizationId, @Body OrganizationAtlasColumn organizationAtlasColumn);
+    UUID createAtlasColumn( @Path( ID ) UUID organizationId, @Body
+            OrganizationExternalDatabaseColumn organizationExternalDatabaseColumn );
 
     //update, get, delete
 
