@@ -509,21 +509,10 @@ public final class ResultSetAdapters {
         return linkedHashSetUUID( rs, CONFIG_TYPE_IDS.getName() );
     }
 
-    public static double diameter( ResultSet rs ) throws SQLException {
-        return rs.getDouble( GRAPH_DIAMETER.getName() );
-    }
-
     public static Set<UUID> entityKeyIds( ResultSet rs ) throws SQLException {
         return Sets.newHashSet( (UUID[]) rs.getArray( ENTITY_KEY_IDS_COL.getName() ).getArray() );
     }
 
-    public static UUID graphId( ResultSet rs ) throws SQLException {
-        return rs.getObject( GRAPH_ID.getName(), UUID.class );
-    }
-
-    public static UUID vertexId( ResultSet rs ) throws SQLException {
-        return rs.getObject( VERTEX_ID.getName(), UUID.class );
-    }
 
     public static UUID securableObjectId( ResultSet rs ) throws SQLException {
         return rs.getObject( SECURABLE_OBJECTID.getName(), UUID.class );
@@ -539,14 +528,6 @@ public final class ResultSetAdapters {
 
     public static String nullableTitle( ResultSet rs ) throws SQLException {
         return rs.getString( NULLABLE_TITLE.getName() );
-    }
-
-    public static UUID currentSyncId( ResultSet rs ) throws SQLException {
-        return rs.getObject( CURRENT_SYNC_ID.getName(), UUID.class );
-    }
-
-    public static UUID syncId( ResultSet rs ) throws SQLException {
-        return rs.getObject( SYNC_ID.getName(), UUID.class );
     }
 
     public static SecurableObjectType securableObjectType( ResultSet rs ) throws SQLException {
