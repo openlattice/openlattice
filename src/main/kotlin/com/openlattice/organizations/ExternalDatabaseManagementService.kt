@@ -9,6 +9,7 @@ import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.controllers.exceptions.BadRequestException
 import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.hazelcast.processors.UUIDKeyToUUIDSetMerger
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import com.openlattice.organization.OrganizationExternalDatabaseTable
 import com.openlattice.organizations.roles.SecurePrincipalsManager
@@ -29,8 +30,8 @@ class ExternalDatabaseManagementService(
         private val authorizationManager: AuthorizationManager
 ) {
 
-    private val organizationExternalDatabaseColumns: IMap<UUID, OrganizationExternalDatabaseColumn> = hazelcastInstance.getMap(HazelcastMap.ORGANIZATION_ATLAS_COlUMN.name)
-    private val organizationExternalDatabaseTables: IMap<UUID, OrganizationExternalDatabaseTable> = hazelcastInstance.getMap(HazelcastMap.ORGANIZATION_ATLAS_TABLE.name)
+    private val organizationExternalDatabaseColumns: IMap<UUID, OrganizationExternalDatabaseColumn> = hazelcastInstance.getMap(HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_COlUMN.name)
+    private val organizationExternalDatabaseTables: IMap<UUID, OrganizationExternalDatabaseTable> = hazelcastInstance.getMap(HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_TABLE.name)
     private val securableObjectTypes: IMap<AclKey, SecurableObjectType> = hazelcastInstance.getMap(HazelcastMap.SECURABLE_OBJECT_TYPES.name)
     private val logger = LoggerFactory.getLogger(ExternalDatabaseManagementService::class.java)
 
@@ -141,6 +142,14 @@ class ExternalDatabaseManagementService(
         authorizationManager.addPermission(columnAclKey, principal, EnumSet.allOf(Permission::class.java))
 
         return column.id
+    }
+
+    fun getOrganizationExternalDatabaseTable( tableId: UUID ) : OrganizationExternalDatabaseTable {
+        return organizationExternalDatabaseTables[tableId]!!
+    }
+
+    fun getOrganizationExternalDatabaseColumn( columnId: UUID ) : OrganizationExternalDatabaseColumn {
+        return organizationExternalDatabaseColumns[columnId]!!
     }
 
     /**
