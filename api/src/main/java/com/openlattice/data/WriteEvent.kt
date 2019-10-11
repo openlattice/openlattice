@@ -4,7 +4,7 @@ import java.util.*
 import kotlin.math.abs
 
 /**
- * Represents an write event used for auditing.
+ * Represents a write event used for auditing.
  * @param _version The timestamp when the event occurred.
  * Note: The timestamp should always be the time, when the event occurred, so it will show up in a time range query.
  * For this reason the absolute value will be used.
