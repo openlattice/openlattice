@@ -2,10 +2,12 @@ package com.openlattice.postgres
 
 import com.google.common.cache.CacheBuilder
 import com.google.common.cache.CacheLoader
+import com.openlattice.IdConstants
 import com.openlattice.edm.PostgresEdmTypeConverter
 import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresColumn.*
+import com.openlattice.postgres.PostgresTable.DATA
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 
 /**
@@ -94,7 +96,7 @@ class PostgresDataTables {
 
             val tableDefinition = CitusDistributedTableDefinition("data")
                     .addColumns(*columns)
-                    .primaryKey(ENTITY_SET_ID, ID_VALUE, PARTITION, PROPERTY_TYPE_ID, HASH, PARTITIONS_VERSION)
+                    .primaryKey(ENTITY_SET_ID, ID_VALUE, ORIGIN_ID, PARTITION, PROPERTY_TYPE_ID, HASH, PARTITIONS_VERSION)
                     .distributionColumn(PARTITION)
 
             tableDefinition.addIndexes(
@@ -139,6 +141,10 @@ class PostgresDataTables {
                     .ifNotExists()
                     .desc()
 
+            val originIdNotNullIndex = PostgresExpressionIndexDefinition(tableDefinition, "(${ORIGIN_ID.name} != '${IdConstants.EMPTY_ORIGIN_ID.id}')" )
+                .name("origin_id_not_equal_empty_idx")
+                .ifNotExists()
+
             tableDefinition.addIndexes(
                     idIndex,
                     entitySetIdIndex,
@@ -147,7 +153,8 @@ class PostgresDataTables {
                     propertyTypeIdIndex,
                     partitionsVersionIndex,
                     currentPropertiesForEntitySetIndex,
-                    currentPropertiesForEntityIndex
+                    currentPropertiesForEntityIndex,
+                    originIdNotNullIndex
             )
 
             return tableDefinition

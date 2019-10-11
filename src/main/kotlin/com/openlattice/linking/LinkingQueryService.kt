@@ -45,12 +45,15 @@ interface LinkingQueryService {
             clusterId: UUID,
             scores: Map<EntityDataKey, Map<EntityDataKey, Double>>): Int
 
-    fun getNeighborhoodScores(blockKey: EntityDataKey): Map<EntityDataKey, Double>
-    fun deleteMatchScore(blockKey: EntityDataKey, blockElement: EntityDataKey): Int
 
-    fun getOrderedBlocks(): PostgresIterable<Pair<EntityDataKey, Long>>
-    fun getClustersBySize(): PostgresIterable<Pair<EntityDataKey, Double>>
-    fun deleteNeighborhood(entity: EntityDataKey, positiveFeedbacks: List<EntityKeyPair>): Int
+    fun createLinks(linkingId: UUID, toAdd: Set<EntityDataKey>): Int
+
+    fun tombstoneLinks(linkingId: UUID, toRemove: Set<EntityDataKey>): Int
+
+    fun getClusterFromLinkingId(linkingId: UUID): Map<EntityDataKey, Map<EntityDataKey, Double>>
+
+    fun deleteNeighborhood(entity: EntityDataKey, positiveFeedbacks: Collection<EntityKeyPair>): Int
+
     fun deleteNeighborhoods(entitySetId: UUID, entityKeyIds: Set<UUID>): Int
 
     /**
@@ -58,24 +61,27 @@ interface LinkingQueryService {
      * @param clusterIds The ids for the clusters to load.
      * @return The graph of scores for each cluster requested.
      */
-    fun getClusters(clusterIds: Collection<UUID>): Map<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>>
+    fun getClustersForIds(dataKeys: Set<EntityDataKey>): Map<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>>
 
     fun deleteEntitySetNeighborhood(entitySetId: UUID): Int
 
-    fun updateLinkingTable(clusterId: UUID, newMember: EntityDataKey): Int
+    fun updateIdsTable(clusterId: UUID, newMember: EntityDataKey): Int
 
-    fun getEntitiesNeedingLinking(entitySetIds: Set<UUID>, limit: Int = 10_000): PostgresIterable<Pair<UUID, UUID>>
+    fun getEntitiesNeedingLinking(entitySetId: UUID, limit: Int = 10_000): PostgresIterable<EntityDataKey>
+
     fun getEntitiesNotLinked(entitySetIds: Set<UUID>, limit: Int = 10_000): PostgresIterable<Pair<UUID, UUID>>
+
     fun getLinkableEntitySets(
             linkableEntityTypeIds: Set<UUID>,
             entitySetBlacklist: Set<UUID>,
             whitelist: Set<UUID>
     ): PostgresIterable<UUID>
 
-    fun getIdsOfClustersContaining(dataKeys: Set<EntityDataKey>): PostgresIterable<UUID>
     fun lockClustersForUpdates(clusters: Set<UUID>): Connection
 
     fun getEntityKeyIdsOfLinkingIds(linkingIds: Set<UUID>): PostgresIterable<Pair<UUID, Set<UUID>>>
+
+    fun createOrUpdateLink(linkingId: UUID, cluster: Map<UUID, LinkedHashSet<UUID>>)
 }
 
 
