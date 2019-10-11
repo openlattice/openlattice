@@ -321,6 +321,8 @@ class PostgresEntityDataQueryService(
                         updatedEntityCount += uec
                         updatedPropertyCounts += upc
 
+                        connection.commit()
+
                     }
                 }
 
