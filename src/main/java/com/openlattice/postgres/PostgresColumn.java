@@ -228,9 +228,6 @@ public final class PostgresColumn {
     public static final String                   GRAPH_DIAMETER_FIELD            = "graph_diameter";
     public static final PostgresColumnDefinition GRAPH_DIAMETER                  =
             new PostgresColumnDefinition( GRAPH_DIAMETER_FIELD, DECIMAL );
-    public static final String                   GRAPH_ID_FIELD                  = "graph_id";
-    public static final PostgresColumnDefinition GRAPH_ID                        =
-            new PostgresColumnDefinition( GRAPH_ID_FIELD, UUID );
     public static final String                   HASH_FIELD                      = "hash";
     public static final PostgresColumnDefinition HASH                            =
             new PostgresColumnDefinition( HASH_FIELD, BYTEA ).notNull();
