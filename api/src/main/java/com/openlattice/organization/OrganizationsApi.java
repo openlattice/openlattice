@@ -32,33 +32,35 @@ import retrofit2.http.PUT;
 import retrofit2.http.Path;
 
 public interface OrganizationsApi {
-    String ASSEMBLE          = "/assemble";
-    String CONTROLLER        = "/organizations";
-    String DESCRIPTION       = "/description";
-    String EMAIL_DOMAIN      = "email-domain";
-    String EMAIL_DOMAINS     = "/email-domains";
-    String EMAIL_DOMAIN_PATH = "/{" + EMAIL_DOMAIN + ":.+}";
-    String ENTITY_SETS       = "/entity-sets";
-    String ATLAS_COLUMN      = "/atlas-column";
-    String ATLAS_TABLE      = "/atlas-table";
+    String ASSEMBLE                 = "/assemble";
+    String CONTROLLER               = "/organizations";
+    String DESCRIPTION              = "/description";
+    String EMAIL_DOMAIN             = "email-domain";
+    String EMAIL_DOMAINS            = "/email-domains";
+    String EMAIL_DOMAIN_PATH        = "/{" + EMAIL_DOMAIN + ":.+}";
+    String ENTITY_SETS              = "/entity-sets";
+    String EXTERNAL_DATABASE_COLUMN = "/external-database-column";
+    String EXTERNAL_DATABASE_TABLE  = "/external-database-table";
     // @formatter:on
     /*
      * Acutal path elements
      */
-    String ID                = "id";
-    String ID_PATH           = "/{" + ID + "}";
-    String INTEGRATION       = "/integration";
-    String MEMBERS           = "/members";
-    String PRINCIPALS        = "/principals";
-    String PRINCIPAL_ID      = "pid";
-    String PRINCIPAL_ID_PATH = "/{" + PRINCIPAL_ID + "}";
-    String REFRESH           = "/refresh";
+    String ID                       = "id";
+    String ID_PATH                  = "/{" + ID + "}";
+    String INTEGRATION              = "/integration";
+    String MEMBERS                  = "/members";
+    String PRINCIPALS               = "/principals";
+    String PRINCIPAL_ID             = "pid";
+    String PRINCIPAL_ID_PATH        = "/{" + PRINCIPAL_ID + "}";
+    String REFRESH                  = "/refresh";
     String REFRESH_RATE      = "/refresh-rate";
     String ROLES             = "/roles";
     String ROLE_ID           = "roleId";
     String ROLE_ID_PATH      = "/{" + ROLE_ID + "}";
-    String TABLE_ID          = "tableId";
-    String TABLE_ID_PATH     = "/{" + TABLE_ID + "}";
+    String TABLE_NAME          = "tableName";
+    String TABLE_NAME_PATH     = "/{" + TABLE_NAME + "}";
+    String COLUMN_NAME          = "columnName";
+    String COLUMN_NAME_PATH     = "/{" + COLUMN_NAME + "}";
     /*
      * These determine the service routing for the LB
      */
@@ -260,14 +262,38 @@ public interface OrganizationsApi {
             @Path( USER_ID ) String userId );
 
     //Endpoints for management of atlas database
-    @POST( BASE + ID_PATH + ATLAS_TABLE)
-    UUID createAtlasTable( @Path(ID) UUID organizationId, @Body
+
+    //create
+    @POST( BASE + ID_PATH + EXTERNAL_DATABASE_TABLE )
+    UUID createExternalDatabaseTable( @Path(ID) UUID organizationId, @Body
             OrganizationExternalDatabaseTable organizationExternalDatabaseTable );
 
-    @POST( BASE + ID_PATH + ATLAS_COLUMN)
-    UUID createAtlasColumn( @Path( ID ) UUID organizationId, @Body
+    @POST( BASE + ID_PATH + EXTERNAL_DATABASE_COLUMN )
+    UUID createExternalDatabaseColumn( @Path( ID ) UUID organizationId, @Body
             OrganizationExternalDatabaseColumn organizationExternalDatabaseColumn );
 
-    //update, get, delete
+    //get
+    /**
+     * Gets an OrganizationExternalDatabaseTable object, which represents a an
+     * organization's table in an external database
+     * @param organizationId The organization's UUID
+     * @param tableName The exact name of the table in the database
+     */
+    @GET( BASE + ID_PATH + TABLE_NAME_PATH + EXTERNAL_DATABASE_TABLE)
+    OrganizationExternalDatabaseTable getExternalDatabaseTable(
+            @Path( ID ) UUID organizationId, @Path( TABLE_NAME) String tableName );
+
+    /**
+     * Gets an OrganizationExternalDatabaseColumn object, which represents a column
+     * within an organization's table in an external database
+     * @param organizationId The organization's UUID
+     * @param tableName The exact name of the table in the database
+     * @param columnName The exact name of the column in the database
+     */
+    @GET( BASE + ID_PATH + TABLE_NAME_PATH + COLUMN_NAME_PATH + EXTERNAL_DATABASE_TABLE)
+    OrganizationExternalDatabaseColumn getExternalDatabaseColumn(
+            @Path( ID ) UUID organizationId, @Path(TABLE_NAME) String tableName, @Path( COLUMN_NAME) String columnName );
+
+    //update, delete
 
 }
