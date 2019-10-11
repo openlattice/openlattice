@@ -8,10 +8,13 @@ import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresUsername
 import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.controllers.exceptions.BadRequestException
+import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.processors.UUIDKeyToUUIDSetMerger
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import com.openlattice.organization.OrganizationExternalDatabaseTable
+import com.openlattice.organizations.processors.UpdateOrganizationExternalDatabaseColumn
+import com.openlattice.organizations.processors.UpdateOrganizationExternalDatabaseTable
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 
 import com.openlattice.postgres.DataTables.quote
@@ -105,7 +108,7 @@ class ExternalDatabaseManagementService(
      * Creates a securable object that represents a table containing raw data in an external database
      */
 
-    fun createOrganizationAtlasTable(orgId: UUID, table: OrganizationExternalDatabaseTable): UUID {
+    fun createOrganizationExternalDatabaseTable(orgId: UUID, table: OrganizationExternalDatabaseTable): UUID {
         val principal = Principals.getCurrentUser()
         Principals.ensureUser(principal)
 
@@ -126,7 +129,7 @@ class ExternalDatabaseManagementService(
      * Creates a securable object that represents a column containing raw data in an external database
      */
 
-    fun createOrganizationAtlasColumn(orgId: UUID, column: OrganizationExternalDatabaseColumn): UUID {
+    fun createOrganizationExternalDatabaseColumn(orgId: UUID, column: OrganizationExternalDatabaseColumn): UUID {
         val principal = Principals.getCurrentUser()
         Principals.ensureUser(principal)
 
@@ -150,6 +153,26 @@ class ExternalDatabaseManagementService(
 
     fun getOrganizationExternalDatabaseColumn( columnId: UUID ) : OrganizationExternalDatabaseColumn {
         return organizationExternalDatabaseColumns[columnId]!!
+    }
+
+    fun updateOrganizationExternalDatabaseTable( orgId: UUID, tableId: UUID, tableName: String, update: MetadataUpdate) {
+        if (update.name.isPresent) {
+            val newTableFqn = FullQualifiedName(orgId.toString(), update.name.get())
+            aclKeyReservations.renameReservation(tableId, newTableFqn.fullQualifiedNameAsString)
+        }
+
+        organizationExternalDatabaseTables.submitToKey(tableId, UpdateOrganizationExternalDatabaseTable(update))
+
+        //write a signalUpdate method
+    }
+
+    fun updateOrganizationExternalDatabaseColumn( orgId: UUID, tableId: UUID, tableName: String, columnId: UUID, columnName: String, update: MetadataUpdate) {
+        if (update.name.isPresent) {
+            val newColumnFqn = FullQualifiedName(tableName, update.name.get())
+            aclKeyReservations.renameReservation(columnId, newColumnFqn.fullQualifiedNameAsString)
+        }
+
+        organizationExternalDatabaseColumns.submitToKey(columnId, UpdateOrganizationExternalDatabaseColumn(update))
     }
 
     /**
