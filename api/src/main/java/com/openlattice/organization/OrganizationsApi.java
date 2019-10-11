@@ -19,17 +19,12 @@
 package com.openlattice.organization;
 
 import com.openlattice.directory.pojo.Auth0UserBasic;
+import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.organization.roles.Role;
 
 import java.util.*;
 
-import retrofit2.http.Body;
-import retrofit2.http.DELETE;
-import retrofit2.http.GET;
-import retrofit2.http.HTTP;
-import retrofit2.http.POST;
-import retrofit2.http.PUT;
-import retrofit2.http.Path;
+import retrofit2.http.*;
 
 public interface OrganizationsApi {
     String ASSEMBLE                 = "/assemble";
@@ -53,14 +48,14 @@ public interface OrganizationsApi {
     String PRINCIPAL_ID             = "pid";
     String PRINCIPAL_ID_PATH        = "/{" + PRINCIPAL_ID + "}";
     String REFRESH                  = "/refresh";
-    String REFRESH_RATE      = "/refresh-rate";
-    String ROLES             = "/roles";
-    String ROLE_ID           = "roleId";
-    String ROLE_ID_PATH      = "/{" + ROLE_ID + "}";
-    String TABLE_NAME          = "tableName";
-    String TABLE_NAME_PATH     = "/{" + TABLE_NAME + "}";
-    String COLUMN_NAME          = "columnName";
-    String COLUMN_NAME_PATH     = "/{" + COLUMN_NAME + "}";
+    String REFRESH_RATE             = "/refresh-rate";
+    String ROLES                    = "/roles";
+    String ROLE_ID                  = "roleId";
+    String ROLE_ID_PATH             = "/{" + ROLE_ID + "}";
+    String TABLE_NAME               = "tableName";
+    String TABLE_NAME_PATH          = "/{" + TABLE_NAME + "}";
+    String COLUMN_NAME              = "columnName";
+    String COLUMN_NAME_PATH         = "/{" + COLUMN_NAME + "}";
     /*
      * These determine the service routing for the LB
      */
@@ -264,17 +259,29 @@ public interface OrganizationsApi {
     //Endpoints for management of atlas database
 
     //create
+    /**
+     * Creates a securable OrganizationExternalDatabaseTable object, which represents an
+     * organization's table in an external database
+     * @param organizationId The organization's UUID
+     * @param organizationExternalDatabaseTable The object to be created
+     */
     @POST( BASE + ID_PATH + EXTERNAL_DATABASE_TABLE )
     UUID createExternalDatabaseTable( @Path(ID) UUID organizationId, @Body
             OrganizationExternalDatabaseTable organizationExternalDatabaseTable );
 
+    /**
+     * Creates a securable OrganizationExternalDatabaseColumn object, which represents a
+     * column within an organization's table in an external database
+     * @param organizationId The organization's UUID
+     * @param organizationExternalDatabaseColumn The object to be created
+     */
     @POST( BASE + ID_PATH + EXTERNAL_DATABASE_COLUMN )
     UUID createExternalDatabaseColumn( @Path( ID ) UUID organizationId, @Body
             OrganizationExternalDatabaseColumn organizationExternalDatabaseColumn );
 
     //get
     /**
-     * Gets an OrganizationExternalDatabaseTable object, which represents a an
+     * Gets an OrganizationExternalDatabaseTable object, which represents an
      * organization's table in an external database
      * @param organizationId The organization's UUID
      * @param tableName The exact name of the table in the database
@@ -290,10 +297,26 @@ public interface OrganizationsApi {
      * @param tableName The exact name of the table in the database
      * @param columnName The exact name of the column in the database
      */
-    @GET( BASE + ID_PATH + TABLE_NAME_PATH + COLUMN_NAME_PATH + EXTERNAL_DATABASE_TABLE)
+    @GET( BASE + ID_PATH + TABLE_NAME_PATH + COLUMN_NAME_PATH + EXTERNAL_DATABASE_COLUMN)
     OrganizationExternalDatabaseColumn getExternalDatabaseColumn(
             @Path( ID ) UUID organizationId, @Path(TABLE_NAME) String tableName, @Path( COLUMN_NAME) String columnName );
 
-    //update, delete
+
+    //update
+    @PATCH( BASE + ID_PATH + TABLE_NAME_PATH + EXTERNAL_DATABASE_TABLE)
+    Void updateExternalDatabaseTable(
+            @Path( ID ) UUID organizationId,
+            @Path( TABLE_NAME ) String tableName,
+            @Body MetadataUpdate metadataUpdate );
+
+    @PATCH( BASE + ID_PATH + TABLE_NAME_PATH + COLUMN_NAME_PATH + EXTERNAL_DATABASE_TABLE)
+    Void updateExternalDatabaseColumn(
+            @Path( ID ) UUID organizationId,
+            @Path( TABLE_NAME ) String tableName,
+            @Path( COLUMN_NAME ) String columnName,
+            @Body MetadataUpdate metadataUpdate );
+
+
+    //delete
 
 }
