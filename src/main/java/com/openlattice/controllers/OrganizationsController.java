@@ -142,6 +142,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         ensureObjectCanBeDeleted( organizationId );
 
         organizations.destroyOrganization( organizationId );
+        edms.deleteOrganizationExternalDatabase( organizationId );
         authorizations.deletePermissions( aclKey );
         securableObjectTypes.deleteSecurableObjectType( new AclKey( organizationId ) );
         return null;
