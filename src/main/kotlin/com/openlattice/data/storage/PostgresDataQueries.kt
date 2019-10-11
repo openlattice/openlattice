@@ -644,7 +644,7 @@ fun upsertPropertyValueSql(propertyType: PropertyType): String {
             "${LAST_WRITE.name} = GREATEST(${DATA.name}.${LAST_WRITE.name},EXCLUDED.${LAST_WRITE.name}), " +
             "${PARTITIONS_VERSION.name} = EXCLUDED.${PARTITIONS_VERSION.name}, " +
             "${VERSION.name} = CASE " +
-                "WHEN abs(${DATA.name}.${VERSION.name}) < EXCLUDED.${VERSION.name} " +
+                "WHEN abs(${DATA.name}.${VERSION.name}) <= EXCLUDED.${VERSION.name} " +
                 "THEN EXCLUDED.${VERSION.name} " +
                 "ELSE ${DATA.name}.${VERSION.name} " +
             "END"
@@ -687,7 +687,7 @@ fun upsertPropertyValueLinkingRowSql(propertyType: PropertyType ): String {
             "${LAST_WRITE.name} = GREATEST(${DATA.name}.${LAST_WRITE.name},EXCLUDED.${LAST_WRITE.name}), " +
             "${PARTITIONS_VERSION.name} = EXCLUDED.${PARTITIONS_VERSION.name}, " +
             "${VERSION.name} = CASE " +
-                "WHEN abs(${DATA.name}.${VERSION.name}) < EXCLUDED.${VERSION.name} " +
+                "WHEN abs(${DATA.name}.${VERSION.name}) <= EXCLUDED.${VERSION.name} " +
                 "THEN EXCLUDED.${VERSION.name} " +
                 "ELSE ${DATA.name}.${VERSION.name} " +
             "END"
@@ -726,7 +726,7 @@ fun createOrUpdateLinkFromEntity(): String {
                 "${LAST_WRITE.name} = GREATEST(${DATA.name}.${LAST_WRITE.name},EXCLUDED.${LAST_WRITE.name}), " +
                 "${PARTITIONS_VERSION.name} = EXCLUDED.${PARTITIONS_VERSION.name}, " +
                 "${VERSION.name} = CASE " +
-                    "WHEN abs(${DATA.name}.${VERSION.name}) < EXCLUDED.${VERSION.name} " +
+                    "WHEN abs(${DATA.name}.${VERSION.name}) <= EXCLUDED.${VERSION.name} " +
                     "THEN EXCLUDED.${VERSION.name} " +
                     "ELSE ${DATA.name}.${VERSION.name} " +
                 "END"
