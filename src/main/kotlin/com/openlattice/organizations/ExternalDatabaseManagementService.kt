@@ -6,6 +6,7 @@ import com.hazelcast.core.IMap
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.openlattice.assembler.AssemblerConfiguration
+import com.openlattice.assembler.PostgresDatabases
 import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresUsername
 import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.SecurableObjectType
@@ -126,6 +127,8 @@ class ExternalDatabaseManagementService(
         //eventBus?
 
         return table.id
+
+        //TODO figure out how to differentiate between creating a securable object of a table that already exists versus a new table that needs to be created
     }
 
     /**
@@ -158,10 +161,20 @@ class ExternalDatabaseManagementService(
         return organizationExternalDatabaseColumns[columnId]!!
     }
 
-    fun updateOrganizationExternalDatabaseTable(orgId: UUID, tableId: UUID, update: MetadataUpdate) {
+    fun updateOrganizationExternalDatabaseTable(orgId: UUID, tableName: String, tableId: UUID, update: MetadataUpdate) {
         if (update.name.isPresent) {
-            val newTableFqn = FullQualifiedName(orgId.toString(), update.name.get())
+            val newTableName = update.name.get()
+            val newTableFqn = FullQualifiedName(orgId.toString(), newTableName)
             aclKeyReservations.renameReservation(tableId, newTableFqn.fullQualifiedNameAsString)
+
+            //update table name in external database
+            val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
+            connect(dbName).use {
+                val stmt = it.connection.prepareStatement(getRenameTableSql())
+                stmt.setString(1, tableName)
+                stmt.setString(2, newTableName)
+                stmt.execute()
+            }
         }
 
         organizationExternalDatabaseTables.submitToKey(tableId, UpdateOrganizationExternalDatabaseTable(update))
@@ -169,10 +182,22 @@ class ExternalDatabaseManagementService(
         //write a signalUpdate method
     }
 
-    fun updateOrganizationExternalDatabaseColumn(tableId: UUID, columnId: UUID, update: MetadataUpdate) {
+    fun updateOrganizationExternalDatabaseColumn(orgId: UUID, tableName: String, tableId: UUID,
+                                                 columnName: String, columnId: UUID, update: MetadataUpdate) {
         if (update.name.isPresent) {
+            val newColumnName = update.name.get()
             val newColumnFqn = FullQualifiedName(tableId.toString(), update.name.get())
             aclKeyReservations.renameReservation(columnId, newColumnFqn.fullQualifiedNameAsString)
+
+            //update column name in external database
+            val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
+            connect(dbName).use {
+                val stmt = it.connection.prepareStatement(getRenameTableSql())
+                stmt.setString(1, tableName)
+                stmt.setString(2, columnName)
+                stmt.setString(3, newColumnName)
+                stmt.execute()
+            }
         }
 
         organizationExternalDatabaseColumns.submitToKey(columnId, UpdateOrganizationExternalDatabaseColumn(update))
@@ -180,22 +205,39 @@ class ExternalDatabaseManagementService(
         //write a signalUpdate method
     }
 
-    fun deleteOrganizationExternalDatabaseTable(tableId: UUID) {
+    fun deleteOrganizationExternalDatabaseTable(orgId: UUID, tableName: String, tableId: UUID) {
         organizationExternalDatabaseTables.remove(tableId)
         aclKeyReservations.release(tableId)
+
+        //drop table from external database
+        val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
+        connect(dbName).use {
+            val stmt = it.connection.prepareStatement(getDropTableStmt())
+            stmt.setString(1, tableName)
+            stmt.execute()
+        }
 
         //delete columns that belonged to this table
         val belongsToDeletedTable = Predicates.equal("tableId", tableId)
         val columnsToDelete = organizationExternalDatabaseColumns.values(belongsToDeletedTable)
         columnsToDelete.forEach {
-            deleteOrganizationExternalDatabaseColumn(it.id)
+            deleteOrganizationExternalDatabaseColumn(orgId, tableName, it.name, it.id)
         }
 
     }
 
-    fun deleteOrganizationExternalDatabaseColumn(columnId: UUID) {
+    fun deleteOrganizationExternalDatabaseColumn(orgId: UUID, tableName: String, columnName: String, columnId: UUID) {
         organizationExternalDatabaseTables.remove(columnId)
         aclKeyReservations.release(columnId)
+
+        //drop column from table in external database
+        val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
+        connect(dbName).use {
+            val stmt = it.connection.prepareStatement(getDropColumnStmt())
+            stmt.setString(1, tableName)
+            stmt.setString(2, columnName)
+            stmt.execute()
+        }
     }
 
     /**
@@ -263,6 +305,22 @@ class ExternalDatabaseManagementService(
         stmt.setString(3, columnName)
         stmt.setString(4, dbUser)
         stmt.addBatch()
+    }
+
+    private fun getRenameTableSql(): String {
+        return "ALTER TABLE ? RENAME TO ?"
+    }
+
+    private fun getRenameColumnSql(): String {
+        return "ALTER TABLE ? RENAME COLUMN ? to ?"
+    }
+
+    private fun getDropTableStmt(): String {
+        return "DROP TABLE IF EXISTS ?"
+    }
+
+    private fun getDropColumnStmt(): String {
+        return "ALTER TABLE ? DROP COLUMN IF EXISTS ?"
     }
 
 }
