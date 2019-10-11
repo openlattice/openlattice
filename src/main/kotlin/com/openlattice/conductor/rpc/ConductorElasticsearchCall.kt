@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018. OpenLattice, Inc.
+ * Copyright (C) 2019. OpenLattice, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,28 +16,27 @@
  *
  * You can contact the owner of the copyright at support@openlattice.com
  *
+ *
  */
+package com.openlattice.conductor.rpc
 
-package com.openlattice.data.events;
+import java.util.UUID
+import java.util.concurrent.Callable
+import java.util.function.Function
 
-import java.util.Set;
-import java.util.UUID;
-
-public class LinkedEntitiesDeletedEvent {
-
-    private final Set<UUID> linkedEntitySetIds;
-    private final Set<UUID> entityKeyIds;
-
-    public LinkedEntitiesDeletedEvent( Set<UUID> linkedEntitySetIds, Set<UUID> entityKeyIds ) {
-        this.linkedEntitySetIds = linkedEntitySetIds;
-        this.entityKeyIds = entityKeyIds;
+data class ConductorElasticsearchCall<T>(
+        val userId: UUID,
+        val function: Function<ConductorElasticsearchApi, T>,
+        private val api: ConductorElasticsearchApi?
+) : Callable<T> {
+    companion object {
+        @JvmStatic
+        fun <T> wrap(f: Function<ConductorElasticsearchApi, T>): ConductorElasticsearchCall<T> {
+            return ConductorElasticsearchCall(UUID.randomUUID(), f, null)
+        }
     }
 
-    public Set<UUID> getLinkedEntitySetIds() {
-        return linkedEntitySetIds;
-    }
-
-    public Set<UUID> getEntityKeyIds() {
-        return entityKeyIds;
+    override fun call(): T {
+        return function.apply(api!!)
     }
 }

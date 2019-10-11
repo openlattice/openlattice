@@ -57,6 +57,7 @@ public class BulkEntityDataLambdasStreamSerializer extends Serializer<BulkEntity
 
             for ( Map.Entry<UUID, Map<UUID, Set<Object>>> entry : object.getEntitiesById().entrySet() ) {
                 writeUUID( output, entry.getKey() );
+
                 byte[] bytes = mapper.writeValueAsBytes( entry.getValue() );
                 output.writeInt( bytes.length );
                 output.writeBytes( bytes );

@@ -54,17 +54,6 @@ class PostgresEntityDatastore(
 
 
     @Timed
-    override fun getEntitySetData(
-            entitySetId: UUID,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): Map<UUID, Map<UUID, Set<Any>>> {
-        return dataQueryService.getEntitiesWithPropertyTypeIds(
-                ImmutableMap.of(entitySetId, Optional.empty()),
-                ImmutableMap.of(entitySetId, authorizedPropertyTypes)
-        ).toMap()
-    }
-
-    @Timed
     override fun getEntityKeyIdsInEntitySet(entitySetId: UUID): BasePostgresIterable<UUID> {
         return dataQueryService.getEntityKeyIdsInEntitySet(entitySetId)
     }
@@ -131,7 +120,9 @@ class PostgresEntityDatastore(
             val entities = dataQueryService
                     .getEntitiesWithPropertyTypeIds(
                             ImmutableMap.of(entitySetId, Optional.of(entityKeyIds)),
-                            ImmutableMap.of(entitySetId, edmManager.getPropertyTypesForEntitySet(entitySetId))
+                            ImmutableMap.of(entitySetId, edmManager.getPropertyTypesForEntitySet(entitySetId)),
+                            mapOf(),
+                            EnumSet.of(MetadataOption.LAST_WRITE)
                     )
             eventBus.post(EntitiesUpsertedEvent(entitySetId, entities.toMap()))
         }
@@ -164,8 +155,8 @@ class PostgresEntityDatastore(
     }
 
     private fun shouldIndexDirectly(entitySetId: UUID, entityKeyIds: Set<UUID>): Boolean {
-        return entityKeyIds.size < BATCH_INDEX_THRESHOLD && !edmManager.getEntitySet(entitySetId).flags
-                .contains(EntitySetFlag.AUDIT)
+        return entityKeyIds.size < BATCH_INDEX_THRESHOLD
+                && edmManager.getEntitySetIdsWithFlags(setOf(entitySetId), setOf(EntitySetFlag.AUDIT)).isEmpty()
     }
 
     private fun markMaterializedEntitySetDirty(entitySetId: UUID) {
@@ -317,49 +308,28 @@ class PostgresEntityDatastore(
     }
 
     /**
-     * Retrieves the authorized, linked property data for the given linking ids of entity sets.
+     * Retrieves the authorized, property data mapped by entity key ids as the origins of the data for each entity set
+     * for the given linking ids.
      *
      * @param linkingIdsByEntitySetId map of linked(normal) entity set ids and their linking ids
      * @param authorizedPropertyTypesByEntitySetId map of authorized property types
+     * @param extraMetadataOptions set of [MetadataOption]s to include in result (besides the origin id)
      */
-    @Timed
-    @Deprecated(message = "Unused")
-    override fun getLinkedEntityDataByLinkingId(
-            linkingIdsByEntitySetId: Map<UUID, Optional<Set<UUID>>>,
-            authorizedPropertyTypesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>
-    ): Map<UUID, Map<UUID, Map<UUID, Set<Any>>>> {
-
-        return getLinkedEntityDataByLinkingIdWithMetadata(
-                linkingIdsByEntitySetId,
-                authorizedPropertyTypesByEntitySetId,
-                EnumSet.noneOf(MetadataOption::class.java)
-        )
-    }
-
     @Timed
     override fun getLinkedEntityDataByLinkingIdWithMetadata(
             linkingIdsByEntitySetId: Map<UUID, Optional<Set<UUID>>>,
             authorizedPropertyTypesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>,
-            metadataOptions: EnumSet<MetadataOption>
-    ): Map<UUID, Map<UUID, Map<UUID, Set<Any>>>> {
-
-        val linkedEntityData = HashMap<UUID, MutableMap<UUID, MutableMap<UUID, Set<Any>>>>()
-
-        // map of: pair<linking_id, entity_set_id> to property_data
-        dataQueryService.getEntitiesWithPropertyTypeIdsNew(
+            extraMetadataOptions: EnumSet<MetadataOption>
+    ): Map<UUID, Map<UUID, Map<UUID, Map<UUID, Set<Any>>>>> {
+        // pair<linking_id to pair<entity_set_id to pair<origin_id to property_data>>>
+        val linkedEntityDataStream = dataQueryService.getLinkedEntitiesByEntitySetIdWithOriginIds(
                 linkingIdsByEntitySetId,
                 authorizedPropertyTypesByEntitySetId,
-                linking = true
-        ).map { ( esidEkid, ptToData ) ->
-            linkedEntityData.getOrPut( esidEkid.entityKeyId ) {
-                mutableMapOf()
-            }.getOrPut( esidEkid.entitySetId ) {
-                ptToData.toMutableMap()
-            }
-        }
+                extraMetadataOptions
+        )
 
-        // linking_id/(normal)entity_set_id/property_type_id
-        return linkedEntityData
+        // linking_id/entity_set_id/origin_id/property_type_id
+        return linkedEntityDataStream.toMap().mapValues { mapOf(it.value).mapValues { mapOf(it.value) } }
     }
 
     //TODO: Can be made more efficient if we are getting across same type.

@@ -20,7 +20,6 @@
 
 package com.openlattice.hazelcast.serializers;
 
-import com.openlattice.hazelcast.serializers.SearchResultStreamSerializer;
 import com.openlattice.search.requests.SearchResult;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
