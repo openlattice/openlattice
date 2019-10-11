@@ -23,6 +23,7 @@ import java.util.*
 internal class PostgresDataQueries
 
 const val VALUES = "values"
+
 val dataTableColumnsSql = PostgresDataTables.dataTableColumns.joinToString(",") { it.name }
 
 val valuesColumnsSql = PostgresDataTables.dataTableValueColumns.joinToString(",") {
@@ -50,65 +51,95 @@ val jsonValueColumnsSql = PostgresDataTables.dataColumns.entries
  * 3. partition(s) (array)
  *
  */
-fun buildPreparableFiltersSqlForLinkedEntities(
+fun buildPreparableFiltersSql(
         startIndex: Int,
         propertyTypes: Map<UUID, PropertyType>,
         propertyTypeFilters: Map<UUID, Set<Filter>>,
+        metadataOptions: Set<MetadataOption>,
+        linking: Boolean,
         idsPresent: Boolean,
-        partitionsPresent: Boolean,
-        selectOriginIds: Boolean = false
+        partitionsPresent: Boolean
 ): Pair<String, Set<SqlBinder>> {
     val filtersClauses = buildPreparableFiltersClause(startIndex, propertyTypes, propertyTypeFilters)
     val filtersClause = if (filtersClauses.first.isNotEmpty()) " AND ${filtersClauses.first} " else ""
 
+    val metadataOptionColumns = metadataOptions.associateWith(::mapMetaDataToColumnSql)
+    val nonAggregatedMetadataSql = metadataOptionColumns
+            .filter { !isMetaDataAggregated(it.key) }.values.joinToString("")
+    val innerGroupBy = groupBy(ESID_EKID_PART_PTID + nonAggregatedMetadataSql)
     // TODO: remove IS NOT NULL post-migration
-    val innerSql = selectEntitiesGroupedByIdAndPropertyTypeId(
-            idsPresent = idsPresent, partitionsPresent = partitionsPresent, selectOriginIds = selectOriginIds
-    ) + " AND ${ORIGIN_ID.name} IS NOT NULL AND ${ORIGIN_ID.name} != '${IdConstants.EMPTY_ORIGIN_ID.id}' " +
-            filtersClause + GROUP_BY_ESID_EKID_PART_PTID
+    val linkingClause = if (linking) {
+        " AND ${ORIGIN_ID.name} IS NOT NULL AND ${ORIGIN_ID.name} != '${IdConstants.EMPTY_ORIGIN_ID.id}' "
+    } else {
+        ""
+    }
 
-    val maybeEntityKeyIds = if (selectOriginIds) ",${ENTITY_KEY_IDS_COL.name}" else ""
-    val groupBy = if (selectOriginIds) GROUP_BY_ESID_EKID_PART_EKIDS else GROUP_BY_ESID_EKID_PART
-    val sql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name}$maybeEntityKeyIds,$jsonValueColumnsSql " +
-            "FROM ($innerSql) entities $groupBy"
+    val innerSql = selectEntitiesGroupedByIdAndPropertyTypeId(
+            metadataOptions,
+            idsPresent = idsPresent,
+            partitionsPresent = partitionsPresent
+    ) + linkingClause + filtersClause + innerGroupBy
+
+    val metadataOptionColumnsSql = metadataOptionColumns.values.joinToString("")
+    val outerGroupBy = groupBy(ESID_EKID_PART + metadataOptionColumnsSql)
+    val sql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name}$metadataOptionColumnsSql,$jsonValueColumnsSql " +
+            "FROM ($innerSql) entities $outerGroupBy"
 
     return sql to filtersClauses.second
 
 }
 
+internal fun selectEntitiesGroupedByIdAndPropertyTypeId(
+        metadataOptions: Set<MetadataOption>,
+        idsPresent: Boolean = true,
+        partitionsPresent: Boolean = true,
+        entitySetsPresent: Boolean = true
+): String {
+    val metadataOptionsSql = metadataOptions
+            .joinToString("") { mapMetaDataToSelector(it) } // they already have the comma prefix
+    return "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name},${PROPERTY_TYPE_ID.name}$metadataOptionsSql,$valuesColumnsSql " +
+            "FROM ${DATA.name} ${optionalWhereClauses(idsPresent, partitionsPresent, entitySetsPresent)}"
+}
+
 /**
- * Builds a preparable SQL query for reading filterable data.
- *
- * The first three columns om
- * @return A preparable sql query to read the data to a ordered set of [SqlBinder] objects. The prepared query
- * must be have the first three parameters bound separately from the [SqlBinder] objects. The parameters are as follows:
- * 1. entity set ids (array)
- * 2. entity key ids (array)
- * 3. partition(s) (array)
- *
+ * Returns the correspondent column name used for the metadata option with a comma prefix.
  */
-fun buildPreparableFiltersSqlForEntities(
-        startIndex: Int,
-        propertyTypes: Map<UUID, PropertyType>,
-        propertyTypeFilters: Map<UUID, Set<Filter>>,
-        idsPresent: Boolean,
-        partitionsPresent: Boolean,
-        selectOriginIds: Boolean = false
-): Pair<String, Set<SqlBinder>> {
-    val filtersClauses = buildPreparableFiltersClause(startIndex, propertyTypes, propertyTypeFilters)
-    val filtersClause = if (filtersClauses.first.isNotEmpty()) " AND ${filtersClauses.first} " else ""
+private fun mapMetaDataToColumnSql(metadataOption: MetadataOption): String {
+    return ",${mapMetaDataToColumnName(metadataOption)}"
+}
 
-    val innerSql = selectEntitiesGroupedByIdAndPropertyTypeId(
-            idsPresent = idsPresent, partitionsPresent = partitionsPresent, selectOriginIds = selectOriginIds
-    ) + filtersClause + GROUP_BY_ESID_EKID_PART_PTID
+/**
+ * Returns the correspondent column name used for the metadata option.
+ */
+private fun mapMetaDataToColumnName(metadataOption: MetadataOption): String {
+    return when (metadataOption) {
+        MetadataOption.ORIGIN_IDS -> ORIGIN_ID.name
+        MetadataOption.LAST_WRITE -> LAST_WRITE.name
+        MetadataOption.ENTITY_KEY_IDS -> ENTITY_KEY_IDS_COL.name
+        else -> throw UnsupportedOperationException("No implementation yet for metadata option $metadataOption")
+    }
+}
 
-    val entityKeyIds = if (selectOriginIds) ",${ENTITY_KEY_IDS_COL.name}" else ""
-    val groupBy = if (selectOriginIds) GROUP_BY_ESID_EKID_PART_EKIDS else GROUP_BY_ESID_EKID_PART
-    val sql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name}$entityKeyIds,$jsonValueColumnsSql " +
-            "FROM ($innerSql) entities $groupBy"
+/**
+ * Returns the select sql snippet for the requested metadata option.
+ */
+private fun mapMetaDataToSelector(metadataOption: MetadataOption): String {
+    return when (metadataOption) {
+        MetadataOption.ORIGIN_IDS -> ",${ORIGIN_ID.name}"
+        MetadataOption.LAST_WRITE -> ",max(${LAST_WRITE.name}) AS ${mapMetaDataToColumnName(metadataOption)}"
+        MetadataOption.ENTITY_KEY_IDS ->
+            ",array_agg(COALESCE(${ORIGIN_ID.name},${ID.name})) AS ${mapMetaDataToColumnName(metadataOption)}"
+        else -> throw UnsupportedOperationException("No implementation yet for metadata option $metadataOption")
+    }
+}
 
-    return sql to filtersClauses.second
-
+private fun isMetaDataAggregated(metadataOption: MetadataOption): Boolean {
+    return when (metadataOption) {
+        MetadataOption.ORIGIN_IDS -> false
+        MetadataOption.LAST_WRITE -> true
+        MetadataOption.ENTITY_KEY_IDS -> true
+        else -> throw UnsupportedOperationException("No implementation yet for metadata option $metadataOption")
+    }
 }
 
 /*
@@ -194,9 +225,12 @@ internal fun doBind(ps: PreparedStatement, info: SqlBindInfo) {
     }
 }
 
-internal val GROUP_BY_ESID_EKID_PART = "GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name})"
-internal val GROUP_BY_ESID_EKID_PART_PTID = "GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name},${PROPERTY_TYPE_ID.name})"
-internal val GROUP_BY_ESID_EKID_PART_EKIDS = "GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name},${ENTITY_KEY_IDS_COL.name})"
+internal val ESID_EKID_PART = "${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name}"
+internal val ESID_EKID_PART_PTID = "${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name},${PROPERTY_TYPE_ID.name}"
+
+internal fun groupBy(columns: String): String {
+    return "GROUP BY ($columns)"
+}
 
 /**
  * Preparable SQL that selects entities across multiple entity sets grouping by id and property type id from the [DATA]
@@ -236,100 +270,6 @@ fun optionalWhereClausesSingleEdk(
     return "WHERE ${optionalClauses.joinToString(" AND ")}"
 }
 
-internal fun selectEntitiesGroupedByIdAndPropertyTypeId(
-        idsPresent: Boolean = true,
-        partitionsPresent: Boolean = true,
-        entitySetsPresent: Boolean = true,
-        selectOriginIds: Boolean = false
-): String {
-    val entityKeyIds = if (selectOriginIds) ",array_agg(COALESCE(${ORIGIN_ID.name},${ID.name})) as ${ENTITY_KEY_IDS_COL.name}" else ""
-    return "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name},${PROPERTY_TYPE_ID.name}$entityKeyIds,$valuesColumnsSql " +
-            "FROM ${DATA.name} ${optionalWhereClauses(idsPresent, partitionsPresent, entitySetsPresent)}"
-}
-
-
-/**
- * Preparable SQL that selects entire entity sets grouping by id and property type id from the [DATA] table with the
- * following bind order:
- *
- * 1. entity set ids (array)
- *
- */
-internal val selectEntitySetGroupedByIdAndPropertyTypeId =
-        "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name},${PROPERTY_TYPE_ID.name},$valuesColumnsSql " +
-                "FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = ANY(?) "
-
-/**
- * Preparable SQL that selects entities across multiple entity sets grouping by id and property type id from the [DATA]
- * table with the following bind order:
- *
- * 1. entity set ids (array)
- * 2. entity key ids (array)
- * 3. partition (array)
- *
- */
-internal val selectEntitiesSql =
-        "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},$jsonValueColumnsSql FROM (${selectEntitiesGroupedByIdAndPropertyTypeId()}) entities " +
-                GROUP_BY_ESID_EKID_PART
-
-/**
- * Preparable SQL that selects entire entity sets grouping by id and property type id from the [DATA] table with the
- * following bind order:
- *
- * 1. entity set ids (array)
- *
- */
-internal val selectEntitySetsSql =
-        "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},$jsonValueColumnsSql FROM ($selectEntitySetGroupedByIdAndPropertyTypeId) entity_set " +
-                GROUP_BY_ESID_EKID_PART
-
-
-/**
- * Preparable SQL that selects linking entities across multiple entity sets grouping by linking id and property type id
- * from the  [DATA] table with the following bind order:
- *
- * 1. normal entity set ids (array)
- * 2. linking ids (array)
- * 3. partition (array)
- *
- */
-internal val selectLinkingEntitiesByNormalEntitySetIdsSql =
-        "SELECT ${ENTITY_SET_ID.name},${LINKING_ID.name},$jsonValueColumnsSql FROM (${selectEntitiesGroupedByIdAndPropertyTypeId()} entities " +
-                "GROUP BY (${ENTITY_SET_ID.name},${LINKING_ID.name}, ${PARTITION.name})"
-
-/**
- * Preparable SQL that selects linking entities across multiple entity sets grouping by linking id and property type id
- * from the  [DATA] table with the following bind order:
- *
- * 1. normal entity set ids (array)
- * 2. linking ids (array)
- * 3. partition (array)
- *
- * Note: It's only selecting from 1 linking entity set
- *
- */
-// todo: what if we want to select multiple linking entity sets?
-internal fun selectLinkingEntitiesByLinkingEntitySetIdSql(linkingEntitySetId: UUID): String {
-    return "SELECT '$linkingEntitySetId' AS ${ENTITY_SET_ID.name},${LINKING_ID.name},$jsonValueColumnsSql " +
-            "FROM (${selectEntitiesGroupedByIdAndPropertyTypeId()}) entities " +
-            "GROUP BY (${ENTITY_SET_ID.name},${LINKING_ID.name}, ${PARTITION.name})"
-}
-
-/**
- * Preparable SQL that selects an entire linking entity set grouping by linking id and property type id from the [DATA]
- * table with the following bind order:
- *
- * 1. normal entity set ids (array)
- *
- * Note: It's only selecting from 1 linking entity set
- *
- */
-// todo: what if we want to select multiple linking entity sets?
-internal fun selectLinkingEntitySetSql(linkingEntitySetId: UUID): String {
-    return "SELECT '$linkingEntitySetId' AS ${ENTITY_SET_ID.name},${ID.name},$jsonValueColumnsSql FROM ($selectEntitySetGroupedByIdAndPropertyTypeId) entity_set " +
-            "GROUP BY (${ENTITY_SET_ID.name},${ID.name}, ${PARTITION.name})"
-}
-
 /**
  * Preparable sql to upsert entities in [IDS] table.
  *
@@ -349,6 +289,7 @@ internal fun selectLinkingEntitySetSql(linkingEntitySetId: UUID): String {
  *
  * 6 - partition
  */
+// @formatter:off
 internal val upsertEntitiesSql = "UPDATE ${IDS.name} " +
         "SET ${VERSIONS.name} = ${VERSIONS.name} || ?, " +
             "${DataTables.LAST_WRITE.name} = now(), " +
@@ -357,7 +298,7 @@ internal val upsertEntitiesSql = "UPDATE ${IDS.name} " +
                 "ELSE ${IDS.name}.${VERSION.name} " +
             "END " +
         "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ?"
-
+// @formatter:on
 
 /**
  * Preparable sql to lock entities with the following bind order:
@@ -429,7 +370,7 @@ internal val updateVersionsForPropertiesInEntitySet = "UPDATE ${DATA.name} " +
         "WHERE ${ENTITY_SET_ID.name} = ? "
 
 /**
- * Preparable SQL thatupserts a version for all properties in a given entity set in [PostgresTable.DATA]
+ * Preparable SQL that updates a version for all properties in a given entity set in [DATA]
  *
  * The following bind order is expected:
  *
@@ -471,7 +412,7 @@ internal fun updateVersionsForPropertyTypesInEntitiesInEntitySet( linking: Boole
 }
 
 /**
- * Preparable SQL updates a version for all property values in a given entity set in [PostgresTable.DATA]
+ * Preparable SQL updates a version for all property values in a given entity set in [DATA]
  *
  * The following bind order is expected:
  *
@@ -509,7 +450,7 @@ val tombstoneLinkForEntity = "$updateVersionsForPropertiesInEntitySet " +
         "AND ${PARTITION.name} = ANY(?) "
 
 /**
- * Preparable SQL deletes a given property in a given entity set in [PostgresTable.IDS]
+ * Preparable SQL deletes a given property in a given entity set in [IDS]
  *
  * The following bind order is expected:
  *
@@ -519,7 +460,7 @@ val tombstoneLinkForEntity = "$updateVersionsForPropertiesInEntitySet " +
 internal val deletePropertyInEntitySet = "DELETE FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${PROPERTY_TYPE_ID.name} = ? "
 
 /**
- * Preparable SQL deletes all entity ids a given entity set in [PostgresTable.IDS]
+ * Preparable SQL deletes all entity ids a given entity set in [IDS]
  *
  * The following bind order is expected:
  *
@@ -528,7 +469,7 @@ internal val deletePropertyInEntitySet = "DELETE FROM ${DATA.name} WHERE ${ENTIT
 internal val deleteEntitySetEntityKeys = "DELETE FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = ? "
 
 /**
- * Preparable SQL deletes all property values of entities in a given entity set in [PostgresTable.DATA]
+ * Preparable SQL deletes all property values of entities in a given entity set in [DATA]
  *
  * The following bind order is expected:
  *
@@ -542,7 +483,7 @@ internal val deletePropertiesOfEntitiesInEntitySet = "DELETE FROM ${DATA.name} "
         "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ? AND ${PARTITIONS_VERSION.name} = ? AND ${PROPERTY_TYPE_ID.name} = ANY(?) "
 
 /**
- * Preparable SQL deletes all property values of entities and entity key id in a given entity set in [PostgresTable.DATA]
+ * Preparable SQL deletes all property values of entities and entity key id in a given entity set in [DATA]
  *
  * The following bind order is expected:
  *
@@ -555,7 +496,20 @@ internal val deleteEntitiesInEntitySet = "DELETE FROM ${DATA.name} " +
         "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ? AND ${PARTITIONS_VERSION.name} = ? "
 
 /**
- * Preparable SQL deletes all entities in a given entity set in [PostgresTable.IDS]
+ * Preparable SQL updates last write to current time for all entity ids a given entity set in [IDS]
+ *
+ * The following bind order is expected:
+ *
+ * 1. entity set id
+ * 2. entity key ids
+ * 3. partition
+ * 4. partition version
+ */
+internal val updateLastWriteForEntitiesInEntitySet = "UPDATE ${IDS.name} SET ${LAST_WRITE.name} = 'now()' " +
+        "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID.name} = ANY(?) AND ${PARTITION.name} = ANY(?) AND ${PARTITIONS_VERSION.name} = ?"
+
+/**
+ * Preparable SQL deletes all entities in a given entity set in [IDS]
  *
  * The following bind order is expected:
  *
@@ -756,15 +710,15 @@ fun selectPropertyTypesOfEntitySetColumnar(
         linking: Boolean
 ): String {
     val idColumnsList = listOf(ENTITY_SET_ID.name, ID.name, ENTITY_KEY_IDS_COL.name)
-    val (entitySetData, _) = if (linking) {
-        buildPreparableFiltersSqlForLinkedEntities(
-                3, authorizedPropertyTypes, mapOf(), idsPresent = false, partitionsPresent = true, selectOriginIds = true
-        )
-    } else {
-        buildPreparableFiltersSqlForEntities(
-                3, authorizedPropertyTypes, mapOf(), idsPresent = false, partitionsPresent = true, selectOriginIds = true
-        )
-    }
+    val (entitySetData, _) = buildPreparableFiltersSql(
+            3,
+            authorizedPropertyTypes,
+            mapOf(),
+            EnumSet.of(MetadataOption.ENTITY_KEY_IDS),
+            linking,
+            idsPresent = false,
+            partitionsPresent = true
+    )
 
     val selectColumns = (idColumnsList +
             (authorizedPropertyTypes.map { selectPropertyColumn(it.value) }))
