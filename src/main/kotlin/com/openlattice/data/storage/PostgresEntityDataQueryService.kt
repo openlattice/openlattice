@@ -388,8 +388,8 @@ class PostgresEntityDataQueryService(
                 rawValue
             } else {
                 Multimaps.asMap(JsonDeserializer
-                                        .validateFormatAndNormalize(rawValue, authorizedPropertyTypes)
-                                        { "Entity set $entitySetId with entity key id $entityKeyId" })
+                        .validateFormatAndNormalize(rawValue, authorizedPropertyTypes)
+                        { "Entity set $entitySetId with entity key id $entityKeyId" })
             }
 
             entityData.map { (propertyTypeId, values) ->
@@ -484,13 +484,14 @@ class PostgresEntityDataQueryService(
             authorizedPropertyTypes: Map<UUID, PropertyType>,
             partitionsInfo: PartitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
     ): WriteEvent {
-        val version = System.currentTimeMillis()
         val entityKeyIdsToLinkingIds = getLinkingIdsOfEntityKeyIds(entities.keys)
 
         val propertyTypes = authorizedPropertyTypes.values
 
-        // TODO Juli
-        val tombstoneFn: (Connection, Long, Map<UUID, Map<UUID, Set<Any>>>) -> Unit = { conn: Connection, version: Long, entityBatch: Map<UUID, Map<UUID, Set<Any>>> ->
+        val tombstoneFn: (Connection, Long, Map<UUID, Map<UUID, Set<Any>>>) ->
+        Unit = { conn: Connection,
+                 version: Long,
+                 entityBatch: Map<UUID, Map<UUID, Set<Any>>> ->
             tombstone(
                     conn,
                     entitySetId,
@@ -508,7 +509,7 @@ class PostgresEntityDataQueryService(
                 entities,
                 entityKeyIdsToLinkingIds,
                 authorizedPropertyTypes,
-                version,
+                System.currentTimeMillis(),
                 partitionsInfo
         )
     }
@@ -519,26 +520,26 @@ class PostgresEntityDataQueryService(
             authorizedPropertyTypes: Map<UUID, PropertyType>,
             partitionsInfo: PartitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
     ): WriteEvent {
-        val version = System.currentTimeMillis()
-
         val entityKeyIdsToLinkingIds = getLinkingIdsOfEntityKeyIds(entities.keys)
 
-        // TODO Julia
         // Is the overhead from including irrelevant property types in a bulk delete really worse than performing individual queries? :thinking-face:
-        val tombstoneFn = { conn: Connection, version: Long, entityBatch: Map<UUID, Map<UUID, Set<Any>>> ->
-            entityBatch.forEach { (entityKeyId, entity) ->
-                //Implied access enforcement as it will raise exception if lacking permission
-                tombstone(
-                        conn,
-                        entitySetId,
-                        setOf(entityKeyId),
-                        entityKeyIdsToLinkingIds,
-                        entity.keys.map { authorizedPropertyTypes.getValue(it) }.toSet(),
-                        version,
-                        partitionsInfo
-                )
-            }
-        }
+        val tombstoneFn =
+                { conn: Connection,
+                  version: Long,
+                  entityBatch: Map<UUID, Map<UUID, Set<Any>>> ->
+                    entityBatch.forEach { (entityKeyId, entity) ->
+                        //Implied access enforcement as it will raise exception if lacking permission
+                        tombstone(
+                                conn,
+                                entitySetId,
+                                setOf(entityKeyId),
+                                entityKeyIdsToLinkingIds,
+                                entity.keys.map { authorizedPropertyTypes.getValue(it) }.toSet(),
+                                version,
+                                partitionsInfo
+                        )
+                    }
+                }
 
         return upsertEntities(
                 entitySetId,
@@ -546,7 +547,7 @@ class PostgresEntityDataQueryService(
                 entities,
                 entityKeyIdsToLinkingIds,
                 authorizedPropertyTypes,
-                version,
+                System.currentTimeMillis(),
                 partitionsInfo
         )
     }
@@ -558,20 +559,21 @@ class PostgresEntityDataQueryService(
     ): WriteEvent {
         //We expect controller to have performed access control checks upstream.
         val entityKeyIdsToLinkingIds = getLinkingIdsOfEntityKeyIds(replacementProperties.keys)
-        val version = System.currentTimeMillis()
         val partitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
 
-        val tombstoneFn: (Connection, Long, Map<UUID, Map<UUID, Set<Any>>>) -> Unit = { conn: Connection, version: Long, entityBatch: Map<UUID, Map<UUID, Set<Any>>> ->
-            val ids = entityBatch.keys
-            tombstone(
-                    conn,
-                    entitySetId,
-                    replacementProperties.filter { ids.contains(it.key) },
-                    entityKeyIdsToLinkingIds,
-                    version,
-                    partitionsInfo
-            )
-        }
+        val tombstoneFn: (Connection, Long, Map<UUID, Map<UUID, Set<Any>>>) -> Unit =
+                { conn: Connection,
+                  version: Long, entityBatch: Map<UUID, Map<UUID, Set<Any>>> ->
+                    val ids = entityBatch.keys
+                    tombstone(
+                            conn,
+                            entitySetId,
+                            replacementProperties.filter { ids.contains(it.key) },
+                            entityKeyIdsToLinkingIds,
+                            version,
+                            partitionsInfo
+                    )
+                }
 
         //This performs unnecessary copies and we should fix at some point
         val replacementValues = replacementProperties.asSequence().map {
@@ -580,14 +582,13 @@ class PostgresEntityDataQueryService(
             )
         }.toMap()
 
-        // TODO Juli
         return upsertEntities(
                 entitySetId,
                 tombstoneFn,
                 replacementValues,
                 entityKeyIdsToLinkingIds,
                 authorizedPropertyTypes,
-                version,
+                System.currentTimeMillis(),
                 partitionsInfo
         )
 
@@ -634,7 +635,6 @@ class PostgresEntityDataQueryService(
             val version = System.currentTimeMillis()
             tombstone(conn, entitySetId, authorizedPropertyTypes.values, version)
             val event = tombstone(conn, entitySetId, version)
-            // TODO Juli
             conn.autoCommit = true
             event
         }
@@ -1088,7 +1088,6 @@ class PostgresEntityDataQueryService(
      * @return A write event object containing a summary of the operation useful for auditing purposes.
      *
      */
-    // TODO JULI
     private fun tombstone(
             conn: Connection,
             entitySetId: UUID,
