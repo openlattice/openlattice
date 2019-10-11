@@ -309,7 +309,7 @@ public interface OrganizationsApi {
             @Path( TABLE_NAME ) String tableName,
             @Body MetadataUpdate metadataUpdate );
 
-    @PATCH( BASE + ID_PATH + TABLE_NAME_PATH + COLUMN_NAME_PATH + EXTERNAL_DATABASE_TABLE)
+    @PATCH( BASE + ID_PATH + TABLE_NAME_PATH + COLUMN_NAME_PATH + EXTERNAL_DATABASE_COLUMN)
     Void updateExternalDatabaseColumn(
             @Path( ID ) UUID organizationId,
             @Path( TABLE_NAME ) String tableName,
@@ -318,5 +318,15 @@ public interface OrganizationsApi {
 
 
     //delete
+    @DELETE(BASE + ID_PATH + TABLE_NAME_PATH + EXTERNAL_DATABASE_TABLE)
+    Void deleteExternalDatabaseTable(
+            @Path( ID ) UUID organizationId,
+            @Path( TABLE_NAME ) String tableName );
+
+    @DELETE(BASE + ID_PATH + TABLE_NAME_PATH + COLUMN_NAME_PATH + EXTERNAL_DATABASE_COLUMN)
+    Void deleteExternalDatabaseColumn(
+            @Path( ID ) UUID organizationId,
+            @Path( TABLE_NAME ) String tableName,
+            @Path( COLUMN_NAME ) String columnName);
 
 }
