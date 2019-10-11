@@ -767,6 +767,9 @@ class PostgresEntityDataQueryService(
             idsArr: java.sql.Array,
             partition: Int,
             partitionVersion: Int) {
+
+        check(!connection.autoCommit) { "Connection auto-commit must be disabled" }
+        
         // Acquire entity key id locks
         val rowLocks = connection.prepareStatement(lockEntitiesSql)
         rowLocks.setArray(1, idsArr)
