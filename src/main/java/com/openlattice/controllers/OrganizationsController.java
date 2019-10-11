@@ -33,6 +33,7 @@ import com.openlattice.controllers.exceptions.ForbiddenException;
 import com.openlattice.controllers.exceptions.ResourceNotFoundException;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.directory.pojo.Auth0UserBasic;
+import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.organization.*;
@@ -40,7 +41,6 @@ import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.ExternalDatabaseManagementService;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
-import jdk.jfr.Timespan;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -49,6 +49,8 @@ import org.springframework.web.bind.annotation.*;
 import javax.inject.Inject;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static com.google.common.base.Preconditions.checkState;
 
 @RestController
 @RequestMapping( OrganizationsApi.CONTROLLER )
@@ -644,7 +646,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             @PathVariable( ID ) UUID organizationId,
             @RequestBody OrganizationExternalDatabaseTable organizationExternalDatabaseTable ) {
         ensureOwner( organizationId );
-        return edms.createOrganizationAtlasTable( organizationId, organizationExternalDatabaseTable );
+        return edms.createOrganizationExternalDatabaseTable( organizationId, organizationExternalDatabaseTable );
     }
 
     @Timed
@@ -656,7 +658,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             @PathVariable( ID ) UUID organizationId,
             @RequestBody OrganizationExternalDatabaseColumn organizationExternalDatabaseColumn ) {
         ensureOwner( organizationId );
-        return edms.createOrganizationAtlasColumn( organizationId, organizationExternalDatabaseColumn );
+        return edms.createOrganizationExternalDatabaseColumn( organizationId, organizationExternalDatabaseColumn );
     }
 
     @Timed
@@ -667,8 +669,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     public OrganizationExternalDatabaseTable getExternalDatabaseTable(
             @PathVariable( ID ) UUID organizationId,
             @PathVariable( TABLE_NAME ) String tableName ) {
-        FullQualifiedName tableFQN = new FullQualifiedName( organizationId.toString(), tableName );
-        UUID tableId = aclKeys.get( tableFQN.getFullQualifiedNameAsString() );
+        UUID tableId = getExternalDatabaseObjectId( organizationId, tableName );
         ensureReadAccess( new AclKey(organizationId, tableId) );
         return edms.getOrganizationExternalDatabaseTable(tableId);
     }
@@ -682,12 +683,43 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             @PathVariable( ID ) UUID organizationId,
             @PathVariable( TABLE_NAME ) String tableName,
             @PathVariable( COLUMN_NAME ) String columnName ) {
-        FullQualifiedName tableFQN = new FullQualifiedName( organizationId.toString(), tableName );
-        UUID tableId = aclKeys.get( tableFQN.getFullQualifiedNameAsString() );
-        FullQualifiedName columnFQN = new FullQualifiedName( tableId.toString(), columnName );
-        UUID columnId = aclKeys.get( columnFQN.getFullQualifiedNameAsString() );
+        UUID tableId = getExternalDatabaseObjectId( organizationId, tableName );
+        UUID columnId = getExternalDatabaseObjectId( tableId, columnName );
         ensureReadAccess( new AclKey(organizationId, tableId, columnId) );
         return edms.getOrganizationExternalDatabaseColumn(columnId);
+    }
+
+    @Timed
+    @Override
+    @PatchMapping(
+            value = ID_PATH + TABLE_NAME_PATH + EXTERNAL_DATABASE_TABLE
+    )
+    public Void updateExternalDatabaseTable(
+            @PathVariable( ID ) UUID organizationId,
+            @PathVariable( TABLE_NAME ) String tableName,
+            @RequestBody MetadataUpdate metadataUpdate ) {
+        UUID tableId = getExternalDatabaseObjectId( organizationId, tableName );
+        ensureAdminAccess();
+        edms.updateOrganizationExternalDatabaseTable( organizationId, tableId, tableName, metadataUpdate );
+        return null;
+
+    }
+
+    @Timed
+    @Override
+    @PatchMapping(
+            value = ID_PATH + TABLE_NAME_PATH + COLUMN_NAME_PATH + EXTERNAL_DATABASE_TABLE
+    )
+    public Void updateExternalDatabaseColumn (
+            @PathVariable( ID ) UUID organizationId,
+            @PathVariable( TABLE_NAME ) String tableName,
+            @PathVariable( COLUMN_NAME ) String columnName,
+            @RequestBody MetadataUpdate metadataUpdate ) {
+        UUID tableId = getExternalDatabaseObjectId( organizationId, tableName );
+        UUID columnId = getExternalDatabaseObjectId( tableId, columnName );
+        ensureAdminAccess();
+        edms.updateOrganizationExternalDatabaseColumn( organizationId, tableId, tableName, columnId, columnName, metadataUpdate );
+        return null;
     }
 
     private void ensureRoleAdminAccess( UUID organizationId, UUID roleId ) {
@@ -722,6 +754,14 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             throw new ForbiddenException( "EntitySet " + aclKey.toString() + " is not accessible by organization " +
                     "principal " + principal.getPrincipal().getId() + " ." );
         }
+    }
+
+    private UUID getExternalDatabaseObjectId(UUID containingObjectId, String name) {
+        FullQualifiedName fqn = new FullQualifiedName( containingObjectId.toString(), name );
+        UUID id = aclKeys.get( fqn.getFullQualifiedNameAsString() );
+        //Is the below line correct?
+        checkState(id != null, "External database object with name {} does not exist", name);
+        return id;
     }
 
 }
