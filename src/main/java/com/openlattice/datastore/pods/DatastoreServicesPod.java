@@ -71,6 +71,7 @@ import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.linking.PostgresLinkingFeedbackService;
 import com.openlattice.linking.graph.PostgresLinkingQueryService;
 import com.openlattice.notifications.sms.PhoneNumberService;
+import com.openlattice.organizations.ExternalDatabaseManagementService;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
@@ -488,6 +489,16 @@ public class DatastoreServicesPod {
                 schemaManager(),
                 authorizationManager(),
                 eventBus );
+    }
+
+    @Bean
+    public ExternalDatabaseManagementService edms() {
+        return new ExternalDatabaseManagementService(
+                hazelcastInstance,
+                assemblerConfiguration,
+                principalService(),
+                aclKeyReservationService(),
+                authorizationManager() );
     }
 
     @PostConstruct
