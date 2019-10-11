@@ -700,7 +700,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             @RequestBody MetadataUpdate metadataUpdate ) {
         UUID tableId = getExternalDatabaseObjectId( organizationId, tableName );
         ensureAdminAccess();
-        edms.updateOrganizationExternalDatabaseTable( organizationId, tableId, metadataUpdate );
+        edms.updateOrganizationExternalDatabaseTable( organizationId, tableName, tableId, metadataUpdate );
         return null;
 
     }
@@ -718,7 +718,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         UUID tableId = getExternalDatabaseObjectId( organizationId, tableName );
         UUID columnId = getExternalDatabaseObjectId( tableId, columnName );
         ensureAdminAccess();
-        edms.updateOrganizationExternalDatabaseColumn( tableId, columnId, metadataUpdate );
+        edms.updateOrganizationExternalDatabaseColumn( organizationId, tableName, tableId, columnName, columnId, metadataUpdate );
         return null;
     }
 
@@ -736,7 +736,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         ensureObjectCanBeDeleted( tableId );
         authorizations.deletePermissions(aclKey);
         securableObjectTypes.deleteSecurableObjectType(aclKey);
-        edms.deleteOrganizationExternalDatabaseTable( tableId );
+        edms.deleteOrganizationExternalDatabaseTable( organizationId, tableName, tableId );
         return null;
     }
 
@@ -752,12 +752,12 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     ) {
         UUID tableId = getExternalDatabaseObjectId( organizationId, tableName );
         UUID columnId = getExternalDatabaseObjectId( tableId, columnName );
-        AclKey aclKey = new AclKey( organizationId, tableId, columnId )
+        AclKey aclKey = new AclKey( organizationId, tableId, columnId );
         ensureOwnerAccess( aclKey );
         ensureObjectCanBeDeleted( tableId );
         authorizations.deletePermissions(aclKey);
         securableObjectTypes.deleteSecurableObjectType(aclKey);
-        edms.deleteOrganizationExternalDatabaseColumn( columnId );
+        edms.deleteOrganizationExternalDatabaseColumn( organizationId, tableName, columnName, columnId );
         return null;
     }
 
