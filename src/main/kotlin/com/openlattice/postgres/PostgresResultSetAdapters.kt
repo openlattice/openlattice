@@ -3,11 +3,13 @@ package com.openlattice.postgres
 import com.dataloom.mappers.ObjectMappers
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.openlattice.IdConstants
+import com.openlattice.data.EntityDataKey
 import com.openlattice.data.Property
 import com.openlattice.data.storage.ByteBlobDataManager
 import com.openlattice.edm.EdmConstants.Companion.ID_FQN
 import com.openlattice.edm.PostgresEdmTypeConverter
 import com.openlattice.edm.type.PropertyType
+import com.openlattice.linking.EntityKeyPair
 import com.openlattice.postgres.ResultSetAdapters.entitySetId
 import com.openlattice.postgres.ResultSetAdapters.id
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
@@ -60,12 +62,11 @@ fun getEntityPropertiesByPropertyTypeId2(
 
     val entity = dataTypes.map { datatype ->
         val json = rs.getString("v_$datatype")
-        mapper.readValue<MutableMap<UUID, MutableSet<Any>>>(json)
-    }.fold(mutableMapOf(IdConstants.ID_ID.id to mutableSetOf<Any>(id))) { acc, mutableMap ->
+        return@map mapper.readValue<MutableMap<UUID, MutableSet<Any>>>(json)
+    }.fold( mutableMapOf( IdConstants.ID_ID.id to mutableSetOf<Any>( id )) ) { acc, mutableMap ->
         acc.putAll(mutableMap)
         return@fold acc
     }
-
     (entity.keys - propertyTypes.keys).forEach { entity.remove(it) }
 
     propertyTypes.forEach { (_, propertyType) ->
@@ -81,6 +82,37 @@ fun getEntityPropertiesByPropertyTypeId2(
     return id to entity
 }
 
+@Throws(SQLException::class)
+fun getEntityPropertiesByPropertyTypeId4(
+        rs: ResultSet,
+        authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
+        byteBlobDataManager: ByteBlobDataManager
+): Pair<EntityDataKey, MutableMap<UUID, MutableSet<Any>>> {
+    val id = id(rs)
+    val entitySetId = entitySetId(rs)
+    val propertyTypes = authorizedPropertyTypes.getValue(entitySetId)
+    val dataTypes = propertyTypes.map { (_, pt) -> PostgresEdmTypeConverter.map(pt.datatype) }.toSet()
+
+    val entity = dataTypes.map { datatype ->
+        val json = rs.getString("v_$datatype")
+        return@map mapper.readValue<MutableMap<UUID, MutableSet<Any>>>(json)
+    }.fold( mutableMapOf( IdConstants.ID_ID.id to mutableSetOf<Any>( id )) ) { acc, mutableMap ->
+        acc.putAll(mutableMap)
+        return@fold acc
+    }
+    (entity.keys - propertyTypes.keys).forEach { entity.remove(it) }
+
+    propertyTypes.forEach { (_, propertyType) ->
+        if (propertyType.datatype == EdmPrimitiveTypeKind.Binary) {
+            val urls = entity.getOrElse(propertyType.id) { mutableSetOf() }
+            if (urls.isNotEmpty()) {
+                entity[propertyType.id] = byteBlobDataManager.getObjects(urls).toMutableSet()
+            }
+        }
+    }
+
+    return EntityDataKey(entitySetId, id) to entity
+}
 
 @Throws(SQLException::class)
 fun getEntityPropertiesByPropertyTypeId3(

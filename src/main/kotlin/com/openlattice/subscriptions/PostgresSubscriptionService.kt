@@ -32,9 +32,9 @@ class PostgresSubscriptionService(
                 ps.setObject(1, user.id)
                 ps.setObject(2, entitySetId)
                 ps.setObject(3, id)
-                ps.setObject(4, srcString)
-                ps.setObject(5, dstString)
-                ps.setObject(6, mapper.writeValueAsString(subscription.contact))
+                ps.setString(4, srcString)
+                ps.setString(5, dstString)
+                ps.setString(6, mapper.writeValueAsString(subscription.contact))
 
                 print(ps.toString())
                 ps.executeUpdate()

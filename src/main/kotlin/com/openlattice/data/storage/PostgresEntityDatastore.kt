@@ -13,7 +13,6 @@ import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.PostgresEdmManager
 import com.openlattice.edm.events.EntitySetDataDeletedEvent
 import com.openlattice.edm.set.EntitySetFlag
-import com.openlattice.edm.set.ExpirationBase
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.linking.LinkingQueryService
 import com.openlattice.linking.PostgresLinkingFeedbackService
@@ -24,7 +23,6 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.nio.ByteBuffer
-import java.time.OffsetDateTime
 import java.util.*
 import java.util.stream.Stream
 import javax.inject.Inject
@@ -312,7 +310,9 @@ class PostgresEntityDatastore(
                 entityKeyIds,
                 authorizedPropertyTypes,
                 emptyMap(),
-                metadataOptions
+                metadataOptions,
+                Optional.empty(),
+                true
         ).values.stream()
     }
 
@@ -323,6 +323,7 @@ class PostgresEntityDatastore(
      * @param authorizedPropertyTypesByEntitySetId map of authorized property types
      */
     @Timed
+    @Deprecated(message = "Unused")
     override fun getLinkedEntityDataByLinkingId(
             linkingIdsByEntitySetId: Map<UUID, Optional<Set<UUID>>>,
             authorizedPropertyTypesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>
@@ -341,27 +342,23 @@ class PostgresEntityDatastore(
             authorizedPropertyTypesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>,
             metadataOptions: EnumSet<MetadataOption>
     ): Map<UUID, Map<UUID, Map<UUID, Set<Any>>>> {
-        // TODO: Do this less terribly
-        // map of: pair<linking_id, entity_set_id> to property_data
-        val linkedEntityDataStream = dataQueryService.getEntitiesWithPropertyTypeIds(
-                linkingIdsByEntitySetId,
-                authorizedPropertyTypesByEntitySetId,
-                metadataOptions = metadataOptions,
-                linking = true
-        )
 
         val linkedEntityData = HashMap<UUID, MutableMap<UUID, MutableMap<UUID, Set<Any>>>>()
-//        linkedEntityDataStream.forEach { (first, second) ->
-//            val primaryId = first.first //linking_id
-//            val secondaryId = first.second //entity_set_id
-//
-//            linkedEntityData
-//                    .getOrPut(primaryId) { mutableMapOf() }
-//                    .getOrPut(secondaryId) { second.toMutableMap() }
-//
-//        }
 
-        // linking_id/entity_set_id/property_type_id
+        // map of: pair<linking_id, entity_set_id> to property_data
+        dataQueryService.getEntitiesWithPropertyTypeIdsNew(
+                linkingIdsByEntitySetId,
+                authorizedPropertyTypesByEntitySetId,
+                linking = true
+        ).map { ( esidEkid, ptToData ) ->
+            linkedEntityData.getOrPut( esidEkid.entityKeyId ) {
+                mutableMapOf()
+            }.getOrPut( esidEkid.entitySetId ) {
+                ptToData.toMutableMap()
+            }
+        }
+
+        // linking_id/(normal)entity_set_id/property_type_id
         return linkedEntityData
     }
 
