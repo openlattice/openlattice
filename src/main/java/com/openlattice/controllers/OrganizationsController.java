@@ -23,6 +23,8 @@ package com.openlattice.controllers;
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Predicates;
 import com.google.common.collect.*;
+import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.core.IMap;
 import com.openlattice.assembler.Assembler;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
@@ -32,11 +34,14 @@ import com.openlattice.controllers.exceptions.ResourceNotFoundException;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.edm.type.PropertyType;
+import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.organization.*;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.ExternalDatabaseManagementService;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
+import jdk.jfr.Timespan;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
@@ -72,6 +77,12 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
 
     @Inject
     private ExternalDatabaseManagementService edms;
+
+    @Inject
+    private HazelcastInstance hazelcastInstance;
+
+    private IMap<String, UUID> aclKeys = hazelcastInstance.getMap(
+            HazelcastMap.ACL_KEYS.name() );
 
     @Timed
     @Override
@@ -627,9 +638,9 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     @Timed
     @Override
     @PostMapping(
-            value = ID_PATH + ATLAS_TABLE
+            value = ID_PATH + EXTERNAL_DATABASE_TABLE
     )
-    public UUID createAtlasTable(
+    public UUID createExternalDatabaseTable(
             @PathVariable( ID ) UUID organizationId,
             @RequestBody OrganizationExternalDatabaseTable organizationExternalDatabaseTable ) {
         ensureOwner( organizationId );
@@ -639,13 +650,44 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     @Timed
     @Override
     @PostMapping(
-            value = ID_PATH + ATLAS_COLUMN
+            value = ID_PATH + EXTERNAL_DATABASE_COLUMN
     )
-    public UUID createAtlasColumn(
+    public UUID createExternalDatabaseColumn(
             @PathVariable( ID ) UUID organizationId,
             @RequestBody OrganizationExternalDatabaseColumn organizationExternalDatabaseColumn ) {
         ensureOwner( organizationId );
         return edms.createOrganizationAtlasColumn( organizationId, organizationExternalDatabaseColumn );
+    }
+
+    @Timed
+    @Override
+    @GetMapping(
+            value = ID_PATH + TABLE_NAME_PATH + EXTERNAL_DATABASE_TABLE
+    )
+    public OrganizationExternalDatabaseTable getExternalDatabaseTable(
+            @PathVariable( ID ) UUID organizationId,
+            @PathVariable( TABLE_NAME ) String tableName ) {
+        FullQualifiedName tableFQN = new FullQualifiedName( organizationId.toString(), tableName );
+        UUID tableId = aclKeys.get( tableFQN.getFullQualifiedNameAsString() );
+        ensureReadAccess( new AclKey(organizationId, tableId) );
+        return edms.getOrganizationExternalDatabaseTable(tableId);
+    }
+
+    @Timed
+    @Override
+    @GetMapping(
+            value = ID_PATH + TABLE_NAME_PATH + COLUMN_NAME_PATH + EXTERNAL_DATABASE_COLUMN
+    )
+    public OrganizationExternalDatabaseColumn getExternalDatabaseColumn(
+            @PathVariable( ID ) UUID organizationId,
+            @PathVariable( TABLE_NAME ) String tableName,
+            @PathVariable( COLUMN_NAME ) String columnName ) {
+        FullQualifiedName tableFQN = new FullQualifiedName( organizationId.toString(), tableName );
+        UUID tableId = aclKeys.get( tableFQN.getFullQualifiedNameAsString() );
+        FullQualifiedName columnFQN = new FullQualifiedName( tableId.toString(), columnName );
+        UUID columnId = aclKeys.get( columnFQN.getFullQualifiedNameAsString() );
+        ensureReadAccess( new AclKey(organizationId, tableId, columnId) );
+        return edms.getOrganizationExternalDatabaseColumn(columnId);
     }
 
     private void ensureRoleAdminAccess( UUID organizationId, UUID roleId ) {
