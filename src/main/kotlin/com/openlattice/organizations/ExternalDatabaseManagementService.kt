@@ -3,6 +3,8 @@ package com.openlattice.organizations
 import com.google.common.base.Preconditions.checkState
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
+import com.hazelcast.query.Predicate
+import com.hazelcast.query.Predicates
 import com.openlattice.assembler.AssemblerConfiguration
 import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresUsername
 import com.openlattice.authorization.*
@@ -30,7 +32,8 @@ class ExternalDatabaseManagementService(
         private val assemblerConfiguration: AssemblerConfiguration, //for now using this, may need to make a separate one
         private val securePrincipalsManager: SecurePrincipalsManager,
         private val aclKeyReservations: HazelcastAclKeyReservationService,
-        private val authorizationManager: AuthorizationManager
+        private val authorizationManager: AuthorizationManager,
+        private val securableObjectTypesService: SecurableObjectResolveTypeService
 ) {
 
     private val organizationExternalDatabaseColumns: IMap<UUID, OrganizationExternalDatabaseColumn> = hazelcastInstance.getMap(HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_COlUMN.name)
@@ -147,15 +150,15 @@ class ExternalDatabaseManagementService(
         return column.id
     }
 
-    fun getOrganizationExternalDatabaseTable( tableId: UUID ) : OrganizationExternalDatabaseTable {
+    fun getOrganizationExternalDatabaseTable(tableId: UUID): OrganizationExternalDatabaseTable {
         return organizationExternalDatabaseTables[tableId]!!
     }
 
-    fun getOrganizationExternalDatabaseColumn( columnId: UUID ) : OrganizationExternalDatabaseColumn {
+    fun getOrganizationExternalDatabaseColumn(columnId: UUID): OrganizationExternalDatabaseColumn {
         return organizationExternalDatabaseColumns[columnId]!!
     }
 
-    fun updateOrganizationExternalDatabaseTable( orgId: UUID, tableId: UUID, tableName: String, update: MetadataUpdate) {
+    fun updateOrganizationExternalDatabaseTable(orgId: UUID, tableId: UUID, update: MetadataUpdate) {
         if (update.name.isPresent) {
             val newTableFqn = FullQualifiedName(orgId.toString(), update.name.get())
             aclKeyReservations.renameReservation(tableId, newTableFqn.fullQualifiedNameAsString)
@@ -166,20 +169,33 @@ class ExternalDatabaseManagementService(
         //write a signalUpdate method
     }
 
-    fun updateOrganizationExternalDatabaseColumn( orgId: UUID, tableId: UUID, tableName: String, columnId: UUID, columnName: String, update: MetadataUpdate) {
+    fun updateOrganizationExternalDatabaseColumn(tableId: UUID, columnId: UUID, update: MetadataUpdate) {
         if (update.name.isPresent) {
-            val newColumnFqn = FullQualifiedName(tableName, update.name.get())
+            val newColumnFqn = FullQualifiedName(tableId.toString(), update.name.get())
             aclKeyReservations.renameReservation(columnId, newColumnFqn.fullQualifiedNameAsString)
         }
 
-        //check if name of table to which column belongs has been changed
-        var newTableId = Optional.empty<UUID>()
-        val currentColumn = organizationExternalDatabaseColumns[columnId]!!
-        if (currentColumn.tableId != tableId) {
-            newTableId = Optional.of(tableId)
+        organizationExternalDatabaseColumns.submitToKey(columnId, UpdateOrganizationExternalDatabaseColumn(update))
+
+        //write a signalUpdate method
+    }
+
+    fun deleteOrganizationExternalDatabaseTable(tableId: UUID) {
+        organizationExternalDatabaseTables.remove(tableId)
+        aclKeyReservations.release(tableId)
+
+        //delete columns that belonged to this table
+        val belongsToDeletedTable = Predicates.equal("tableId", tableId)
+        val columnsToDelete = organizationExternalDatabaseColumns.values(belongsToDeletedTable)
+        columnsToDelete.forEach {
+            deleteOrganizationExternalDatabaseColumn(it.id)
         }
 
-        organizationExternalDatabaseColumns.submitToKey(columnId, UpdateOrganizationExternalDatabaseColumn(update, newTableId))
+    }
+
+    fun deleteOrganizationExternalDatabaseColumn(columnId: UUID) {
+        organizationExternalDatabaseTables.remove(columnId)
+        aclKeyReservations.release(columnId)
     }
 
     /**
@@ -219,7 +235,7 @@ class ExternalDatabaseManagementService(
                 val tableAndColumnNames = getTableAndColumnNames(it)
                 it.acl.aces.forEach { ace ->
                     val dbUser = getDBUser(ace.principal.id)
-                    preparePrivilegesStmt(stmt,listOf("ALL"), tableAndColumnNames.first, tableAndColumnNames.second, dbUser)
+                    preparePrivilegesStmt(stmt, listOf("ALL"), tableAndColumnNames.first, tableAndColumnNames.second, dbUser)
                 }
             }
             stmt.executeBatch()
