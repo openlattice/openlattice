@@ -153,7 +153,7 @@ class PostgresEntityDataQueryService(
             metadataOptions: Set<MetadataOption> = EnumSet.noneOf(MetadataOption::class.java)
     ): BasePostgresIterable<Pair<UUID, Map<UUID, Set<Any>>>> {
         return getEntitySetIterable(entityKeyIds, authorizedPropertyTypes, mapOf(), metadataOptions) { rs ->
-            getEntityPropertiesByPropertyTypeId2(rs, authorizedPropertyTypes,byteBlobDataManager )
+            getEntityPropertiesByPropertyTypeId2(rs, authorizedPropertyTypes, byteBlobDataManager)
 //            getEntityPropertiesByPropertyTypeId(rs, authorizedPropertyTypes, byteBlobDataManager)
         }
     }
@@ -231,6 +231,7 @@ class PostgresEntityDataQueryService(
      * @param entitySetId The entity set id for which to insert entities for.
      * @param entities The entites to update or insert.
      * @param authorizedPropertyTypes The authorized property types for the insertion.
+     * @param awsPassthrough True if the data will be stored directly in AWS via another means and all that is being
      *
      * @return A write event summarizing the results of performing this operation.
      */
@@ -240,17 +241,16 @@ class PostgresEntityDataQueryService(
             authorizedPropertyTypes: Map<UUID, PropertyType>,
             awsPassthrough: Boolean = false
     ): WriteEvent {
-        return hds.connection.use { connection ->
-            val writeEvent = upsertEntities(connection, entitySetId, entities, authorizedPropertyTypes, awsPassthrough)
-//            connection.commit()
-//            connection.autoCommit = true
-            return@use writeEvent
-        }
+
+        val tombstoneFn = { _: Connection, _: Map<UUID, Map<UUID, Set<Any>>> -> null }
+
+        return upsertEntities(entitySetId, tombstoneFn, entities, authorizedPropertyTypes, awsPassthrough)
     }
 
     /**
      * Updates or insert entities.
-     * @param entitySetId The entity set id for which to insert entities for.
+     * @param entitySetId The entity set id for which to insert entities.
+     * @param tombstoneFn A function that may tombstone values before performing the upsert.
      * @param entities The entities to update or insert.
      * @param authorizedPropertyTypes The authorized property types for the insertion.
      * @param awsPassthrough True if the data will be stored directly in AWS via another means and all that is being
@@ -259,16 +259,16 @@ class PostgresEntityDataQueryService(
      * @return A write event summarizing the results of performing this operation.
      */
     private fun upsertEntities(
-            connection: Connection,
             entitySetId: UUID,
+            tombstoneFn: (conn: Connection, entityBatch: Map<UUID, Map<UUID, Set<Any>>>) -> Any?,
             entities: Map<UUID, Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>,
             awsPassthrough: Boolean = false
     ): WriteEvent {
-        connection.autoCommit = true
-//        check(!connection.autoCommit) { "Connection must not be in autocommit mode." }
-        val version = System.currentTimeMillis()
+
         val partitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
+
+        val version = System.currentTimeMillis()
         val partitions = partitionsInfo.partitions.toList()
 
         var updatedEntityCount = 0
@@ -277,19 +277,32 @@ class PostgresEntityDataQueryService(
         entities.entries
                 .groupBy({ getPartition(it.key, partitions) }, { it.toPair() })
                 .mapValues { it.value.toMap() }
-                .forEach { (partition, entities) ->
-                    val (uec, upc) = upsertEntities(
-                            connection,
-                            entitySetId,
-                            entities,
-                            authorizedPropertyTypes,
-                            version,
-                            partitionsInfo,
-                            partition,
-                            awsPassthrough
-                    )
-                    updatedEntityCount += uec
-                    updatedPropertyCounts += upc
+                .forEach { (partition, entityBatch) ->
+
+                    hds.connection.use { connection ->
+                        connection.autoCommit = false
+
+                        val idsArr = PostgresArrays.createUuidArray(connection, entityBatch.keys)
+                        lockEntitiesForUpdate(connection, idsArr, partition, partitionsInfo.partitionsVersion)
+
+                        tombstoneFn(connection, entityBatch)
+
+                        val (uec, upc) = upsertEntities(
+                                connection,
+                                entitySetId,
+                                entityBatch,
+                                authorizedPropertyTypes,
+                                version,
+                                partitionsInfo,
+                                partition,
+                                awsPassthrough
+                        )
+                        updatedEntityCount += uec
+                        updatedPropertyCounts += upc
+
+                        connection.autoCommit = true
+                    }
+
                 }
 
         logger.debug("Updated $updatedEntityCount entities and $updatedPropertyCounts properties")
@@ -310,7 +323,6 @@ class PostgresEntityDataQueryService(
 
         //Update the versions of all entities.
 
-        connection.autoCommit = true
         val entityKeyIdsArr = PostgresArrays.createUuidArray(connection, entities.keys)
         val versionsArrays = PostgresArrays.createLongArray(connection, version)
 
@@ -427,13 +439,13 @@ class PostgresEntityDataQueryService(
             entities: Map<UUID, Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): WriteEvent {
-        return hds.connection.use { connection ->
-            connection.autoCommit = false
-            tombstone(connection, entitySetId, entities.keys, authorizedPropertyTypes.values)
-            val event = upsertEntities(connection, entitySetId, entities, authorizedPropertyTypes)
-            connection.autoCommit = true
-            event
+        val propertyTypes = authorizedPropertyTypes.values
+
+        val tombstoneFn = { conn: Connection, entityBatch: Map<UUID, Map<UUID, Set<Any>>> ->
+            tombstone(conn, entitySetId, entityBatch.keys, propertyTypes)
         }
+
+        return upsertEntities(entitySetId, tombstoneFn, entities, authorizedPropertyTypes)
     }
 
     fun partialReplaceEntities(
@@ -441,22 +453,21 @@ class PostgresEntityDataQueryService(
             entities: Map<UUID, Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): WriteEvent {
-        //Only tombstone properties being replaced.
-        return hds.connection.use { connection ->
-            connection.autoCommit = false
-            entities.forEach { (entityKeyId, entity) ->
+
+        // Is the overhead from including irrelevant property types in a bulk delete really worse than performing individual queries? :thinking-face:
+        val tombstoneFn = { conn: Connection, entityBatch: Map<UUID, Map<UUID, Set<Any>>> ->
+            entityBatch.forEach { (entityKeyId, entity) ->
                 //Implied access enforcement as it will raise exception if lacking permission
                 tombstone(
-                        connection,
+                        conn,
                         entitySetId,
                         setOf(entityKeyId),
                         entity.keys.map { authorizedPropertyTypes.getValue(it) }.toSet()
                 )
             }
-            val event = upsertEntities(connection, entitySetId, entities, authorizedPropertyTypes)
-            connection.autoCommit = true
-            event
         }
+
+        return upsertEntities(entitySetId, tombstoneFn, entities, authorizedPropertyTypes)
     }
 
     fun replacePropertiesInEntities(
@@ -466,19 +477,20 @@ class PostgresEntityDataQueryService(
     ): WriteEvent {
         //We expect controller to have performed access control checks upstream.
 
-        return hds.connection.use { connection ->
-            connection.autoCommit = false
-            tombstone(connection, entitySetId, replacementProperties)
-            //This performs unnecessary copies and we should fix at some point
-            val replacementValues = replacementProperties.asSequence().map {
-                it.key to extractValues(
-                        it.value
-                )
-            }.toMap()
-            val event = upsertEntities(entitySetId, replacementValues, authorizedPropertyTypes)
-            connection.autoCommit = true
-            event
+        val tombstoneFn = { conn: Connection, entityBatch: Map<UUID, Map<UUID, Set<Any>>> ->
+            val ids = entityBatch.keys
+            tombstone(conn, entitySetId, replacementProperties.filter { ids.contains(it.key) })
         }
+
+        //This performs unnecessary copies and we should fix at some point
+        val replacementValues = replacementProperties.asSequence().map {
+            it.key to extractValues(
+                    it.value
+            )
+        }.toMap()
+
+        return upsertEntities(entitySetId, tombstoneFn, replacementValues, authorizedPropertyTypes)
+
     }
 
     private fun extractValues(propertyValues: Map<UUID, Set<Map<ByteBuffer, Any>>>): Map<UUID, Set<Any>> {
@@ -622,11 +634,7 @@ class PostgresEntityDataQueryService(
 
             val idsArr = PostgresArrays.createUuidArray(connection, entities)
 
-            // Acquire entity key id locks
-            val rowLocks = connection.prepareStatement(lockEntitiesSql)
-            rowLocks.setArray(1, idsArr)
-            rowLocks.setInt(2, partition)
-            rowLocks.executeQuery()
+            lockEntitiesForUpdate(connection, idsArr, partition, partitionVersion)
 
             // Delete entity properties from data table
             val ps = connection.prepareStatement(deletePropertiesOfEntitiesInEntitySet)
@@ -653,11 +661,7 @@ class PostgresEntityDataQueryService(
 
             val idsArr = PostgresArrays.createUuidArray(connection, entities)
 
-            // Acquire entity key id locks
-            val rowLocks = connection.prepareStatement(lockEntitiesSql)
-            rowLocks.setArray(1, idsArr)
-            rowLocks.setInt(2, partition)
-            rowLocks.executeQuery()
+            lockEntitiesForUpdate(connection, idsArr, partition, partitionVersion)
 
             // Delete entity properties from data table
             val ps = connection.prepareStatement(deleteEntitiesInEntitySet)
@@ -756,6 +760,22 @@ class PostgresEntityDataQueryService(
         }
 
         return WriteEvent(System.currentTimeMillis(), numUpdates)
+    }
+
+    private fun lockEntitiesForUpdate(
+            connection: Connection,
+            idsArr: java.sql.Array,
+            partition: Int,
+            partitionVersion: Int) {
+
+        check(!connection.autoCommit) { "Connection auto-commit must be disabled" }
+        
+        // Acquire entity key id locks
+        val rowLocks = connection.prepareStatement(lockEntitiesSql)
+        rowLocks.setArray(1, idsArr)
+        rowLocks.setInt(2, partition)
+        rowLocks.setInt(3, partitionVersion)
+        rowLocks.executeQuery()
     }
 
     /**
@@ -932,7 +952,7 @@ class PostgresEntityDataQueryService(
     }
 
     fun getExpiringEntitiesFromEntitySet(entitySetId: UUID, expirationBaseColumn: String, formattedDateMinusTTE: Any,
-                                         sqlFormat: Int, deleteType: DeleteType) : BasePostgresIterable<UUID> {
+                                         sqlFormat: Int, deleteType: DeleteType): BasePostgresIterable<UUID> {
         val partitionsInfo: PartitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
         val partitions = PostgresArrays.createIntArray(hds.connection, partitionsInfo.partitions)
         val partitionVersion = partitionsInfo.partitionsVersion
@@ -942,17 +962,17 @@ class PostgresEntityDataQueryService(
                         getExpiringEntitiesQuery(expirationBaseColumn, deleteType),
                         FETCH_SIZE,
                         false
-                ) {stmt ->
+                ) { stmt ->
                     stmt.setObject(1, entitySetId)
                     stmt.setArray(2, partitions)
                     stmt.setInt(3, partitionVersion)
                     stmt.setObject(4, IdConstants.ID_ID.id)
                     stmt.setObject(5, formattedDateMinusTTE, sqlFormat)
                 }
-        ) { rs -> ResultSetAdapters.id(rs)}
+        ) { rs -> ResultSetAdapters.id(rs) }
     }
 
-    private fun getExpiringEntitiesQuery(expirationBaseColumn: String, deleteType: DeleteType) : String {
+    private fun getExpiringEntitiesQuery(expirationBaseColumn: String, deleteType: DeleteType): String {
         var ignoredClearedEntitiesClause = ""
         if (deleteType == DeleteType.Soft) {
             ignoredClearedEntitiesClause = "AND ${VERSION.name} >= 0 "
@@ -966,7 +986,6 @@ class PostgresEntityDataQueryService(
                 ignoredClearedEntitiesClause // this clause ignores entities that have already been cleared
     }
 }
-
 
 private fun abortInsert(entitySetId: UUID, entityKeyId: UUID): Nothing {
     throw InvalidParameterException(
