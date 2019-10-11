@@ -23,16 +23,17 @@ import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
+import org.springframework.stereotype.Service
 import java.sql.PreparedStatement
 import java.util.*
 
+@Service
 class ExternalDatabaseManagementService(
         private val hazelcastInstance: HazelcastInstance,
         private val assemblerConfiguration: AssemblerConfiguration, //for now using this, may need to make a separate one
         private val securePrincipalsManager: SecurePrincipalsManager,
         private val aclKeyReservations: HazelcastAclKeyReservationService,
-        private val authorizationManager: AuthorizationManager,
-        private val securableObjectTypesService: SecurableObjectResolveTypeService
+        private val authorizationManager: AuthorizationManager
 ) {
 
     private val organizationExternalDatabaseColumns: IMap<UUID, OrganizationExternalDatabaseColumn> = hazelcastInstance.getMap(HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_COlUMN.name)
@@ -260,7 +261,22 @@ class ExternalDatabaseManagementService(
     }
 
     /**
-     * Grants or revokes privileges on a table or column in an external database
+     * Revokes all privileges for a user on an organization's database
+     * when that user is removed from an organization.
+     */
+    fun revokeAllPrivilegesFromMember( orgId: UUID, userId: String ) {
+        val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
+        val userName = getDBUser(userId)
+        connect(dbName).use{
+            val stmt = it.connection.prepareStatement(getRevokeOnDBStmt())
+            stmt.setString(1, dbName)
+            stmt.setString(2, userName)
+            stmt.execute()
+        }
+    }
+
+    /**
+     * Grants or revokes privileges on a table or column in an external database.
      */
     private fun executePrivilegesUpdate(sqlStmt: String, dbName: String, aclData: List<AclData>) {
         connect(dbName).use { hds ->
@@ -344,6 +360,10 @@ class ExternalDatabaseManagementService(
 
     private fun getDropColumnStmt(): String {
         return "ALTER TABLE ? DROP COLUMN IF EXISTS ?"
+    }
+
+    private fun getRevokeOnDBStmt(): String {
+        return "REVOKE ALL ON DATABASE ? FROM ?"
     }
 
 }
