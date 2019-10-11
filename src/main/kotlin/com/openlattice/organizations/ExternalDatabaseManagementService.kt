@@ -3,7 +3,6 @@ package com.openlattice.organizations
 import com.google.common.base.Preconditions.checkState
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
-import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.openlattice.assembler.AssemblerConfiguration
 import com.openlattice.assembler.PostgresDatabases
@@ -13,7 +12,6 @@ import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.controllers.exceptions.BadRequestException
 import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.hazelcast.HazelcastMap
-import com.openlattice.hazelcast.processors.UUIDKeyToUUIDSetMerger
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import com.openlattice.organization.OrganizationExternalDatabaseTable
 import com.openlattice.organizations.processors.UpdateOrganizationExternalDatabaseColumn
@@ -192,7 +190,7 @@ class ExternalDatabaseManagementService(
             //update column name in external database
             val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
             connect(dbName).use {
-                val stmt = it.connection.prepareStatement(getRenameTableSql())
+                val stmt = it.connection.prepareStatement(getRenameColumnSql())
                 stmt.setString(1, tableName)
                 stmt.setString(2, columnName)
                 stmt.setString(3, newColumnName)
@@ -206,7 +204,7 @@ class ExternalDatabaseManagementService(
     }
 
     fun deleteOrganizationExternalDatabaseTable(orgId: UUID, tableName: String, tableId: UUID) {
-        organizationExternalDatabaseTables.remove(tableId)
+        organizationExternalDatabaseTables.remove(tableId) //TODO make this a set so we can batch delete
         aclKeyReservations.release(tableId)
 
         //drop table from external database
@@ -227,7 +225,7 @@ class ExternalDatabaseManagementService(
     }
 
     fun deleteOrganizationExternalDatabaseColumn(orgId: UUID, tableName: String, columnName: String, columnId: UUID) {
-        organizationExternalDatabaseTables.remove(columnId)
+        organizationExternalDatabaseTables.remove(columnId) //TODO make this a set so we can batch delete
         aclKeyReservations.release(columnId)
 
         //drop column from table in external database
@@ -236,6 +234,27 @@ class ExternalDatabaseManagementService(
             val stmt = it.connection.prepareStatement(getDropColumnStmt())
             stmt.setString(1, tableName)
             stmt.setString(2, columnName)
+            stmt.execute()
+        }
+    }
+
+    /**
+     * Deletes an organization's entire database.
+     * Is called when an organization is deleted.
+     */
+    fun deleteOrganizationExternalDatabase(orgId: UUID) {
+        //remove all tables/columns within org
+        val belongsToDeletedDB = Predicates.equal("organizationId", orgId)
+        val tablesToDelete = organizationExternalDatabaseTables.values(belongsToDeletedDB)
+        tablesToDelete.forEach {
+            deleteOrganizationExternalDatabaseTable(orgId, it.name, it.id)
+        }
+
+        //drop db from schema
+        val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
+        connect(dbName).use {
+            val stmt = it.connection.prepareStatement(getDropDBStmt())
+            stmt.setString(1, dbName)
             stmt.execute()
         }
     }
@@ -255,7 +274,7 @@ class ExternalDatabaseManagementService(
                         privileges.add("ALL")
                     } else {
                         if (ace.permissions.contains(Permission.WRITE)) {
-                            val writePrivileges = listOf("INSERT", "UPDATE", "DELETE")
+                            val writePrivileges = listOf("INSERT", "UPDATE")
                             privileges.addAll(writePrivileges)
                         }
                         if (ace.permissions.contains(Permission.READ)) {
@@ -313,6 +332,10 @@ class ExternalDatabaseManagementService(
 
     private fun getRenameColumnSql(): String {
         return "ALTER TABLE ? RENAME COLUMN ? to ?"
+    }
+
+    private fun getDropDBStmt(): String {
+        return "DROP DATABASE ?"
     }
 
     private fun getDropTableStmt(): String {
