@@ -309,7 +309,7 @@ public final class PostgresTable {
                     .addColumns( ORGANIZATION_ID, INITIALIZED )
                     .primaryKey( ORGANIZATION_ID );
 
-    public static final PostgresTableDefinition ORGANIZATION_ATLAS_COLUMN =
+    public static final PostgresTableDefinition ORGANIZATION_EXTERNAL_DATABASE_COLUMN =
             new PostgresTableDefinition( "organization_atlas_column" )
                     .addColumns(
                             ID,
@@ -318,7 +318,7 @@ public final class PostgresTable {
                             DESCRIPTION,
                             ORGANIZATION_ID );
 
-    public static final PostgresTableDefinition ORGANIZATION_ATLAS_TABLE =
+    public static final PostgresTableDefinition ORGANIZATION_EXTERNAL_DATABASE_TABLE =
             new PostgresTableDefinition( "organization_atlas_table" )
                     .addColumns(
                             ID,
