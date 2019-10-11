@@ -671,8 +671,8 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             @PathVariable( ID ) UUID organizationId,
             @PathVariable( TABLE_NAME ) String tableName ) {
         UUID tableId = getExternalDatabaseObjectId( organizationId, tableName );
-        ensureReadAccess( new AclKey(organizationId, tableId) );
-        return edms.getOrganizationExternalDatabaseTable(tableId);
+        ensureReadAccess( new AclKey( organizationId, tableId ) );
+        return edms.getOrganizationExternalDatabaseTable( tableId );
     }
 
     @Timed
@@ -686,8 +686,8 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             @PathVariable( COLUMN_NAME ) String columnName ) {
         UUID tableId = getExternalDatabaseObjectId( organizationId, tableName );
         UUID columnId = getExternalDatabaseObjectId( tableId, columnName );
-        ensureReadAccess( new AclKey(organizationId, tableId, columnId) );
-        return edms.getOrganizationExternalDatabaseColumn(columnId);
+        ensureReadAccess( new AclKey( organizationId, tableId, columnId ) );
+        return edms.getOrganizationExternalDatabaseColumn( columnId );
     }
 
     @Timed
@@ -700,7 +700,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             @PathVariable( TABLE_NAME ) String tableName,
             @RequestBody MetadataUpdate metadataUpdate ) {
         UUID tableId = getExternalDatabaseObjectId( organizationId, tableName );
-        ensureAdminAccess();
+        ensureOwnerAccess( new AclKey( organizationId, tableId ) );
         edms.updateOrganizationExternalDatabaseTable( organizationId, tableName, tableId, metadataUpdate );
         return null;
 
@@ -711,15 +711,20 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     @PatchMapping(
             value = ID_PATH + TABLE_NAME_PATH + COLUMN_NAME_PATH + EXTERNAL_DATABASE_COLUMN
     )
-    public Void updateExternalDatabaseColumn (
+    public Void updateExternalDatabaseColumn(
             @PathVariable( ID ) UUID organizationId,
             @PathVariable( TABLE_NAME ) String tableName,
             @PathVariable( COLUMN_NAME ) String columnName,
             @RequestBody MetadataUpdate metadataUpdate ) {
         UUID tableId = getExternalDatabaseObjectId( organizationId, tableName );
         UUID columnId = getExternalDatabaseObjectId( tableId, columnName );
-        ensureAdminAccess();
-        edms.updateOrganizationExternalDatabaseColumn( organizationId, tableName, tableId, columnName, columnId, metadataUpdate );
+        ensureOwnerAccess( new AclKey(organizationId, tableId, columnId));
+        edms.updateOrganizationExternalDatabaseColumn( organizationId,
+                tableName,
+                tableId,
+                columnName,
+                columnId,
+                metadataUpdate );
         return null;
     }
 
@@ -735,8 +740,8 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         AclKey aclKey = new AclKey( organizationId, tableId );
         ensureOwnerAccess( aclKey );
         ensureObjectCanBeDeleted( tableId );
-        authorizations.deletePermissions(aclKey);
-        securableObjectTypes.deleteSecurableObjectType(aclKey);
+        authorizations.deletePermissions( aclKey );
+        securableObjectTypes.deleteSecurableObjectType( aclKey );
         edms.deleteOrganizationExternalDatabaseTable( organizationId, tableName, tableId );
         return null;
     }
@@ -756,8 +761,8 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         AclKey aclKey = new AclKey( organizationId, tableId, columnId );
         ensureOwnerAccess( aclKey );
         ensureObjectCanBeDeleted( tableId );
-        authorizations.deletePermissions(aclKey);
-        securableObjectTypes.deleteSecurableObjectType(aclKey);
+        authorizations.deletePermissions( aclKey );
+        securableObjectTypes.deleteSecurableObjectType( aclKey );
         edms.deleteOrganizationExternalDatabaseColumn( organizationId, tableName, columnName, columnId );
         return null;
     }
@@ -796,10 +801,10 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         }
     }
 
-    private UUID getExternalDatabaseObjectId(UUID containingObjectId, String name) {
+    private UUID getExternalDatabaseObjectId( UUID containingObjectId, String name ) {
         FullQualifiedName fqn = new FullQualifiedName( containingObjectId.toString(), name );
         UUID id = aclKeys.get( fqn.getFullQualifiedNameAsString() );
-        checkState(id != null, "External database object with name {} does not exist", name);
+        checkState( id != null, "External database object with name {} does not exist", name );
         return id;
     }
 
