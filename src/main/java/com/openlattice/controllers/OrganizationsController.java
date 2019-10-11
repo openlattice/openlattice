@@ -494,6 +494,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             @PathVariable( USER_ID ) String userId ) {
         ensureOwnerAccess( new AclKey( organizationId ) );
         organizations.removeMembers( organizationId, ImmutableSet.of( new Principal( PrincipalType.USER, userId ) ) );
+        edms.revokeAllPrivilegesFromMember( organizationId, userId );
         return null;
     }
 
