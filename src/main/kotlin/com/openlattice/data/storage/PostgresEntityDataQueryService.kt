@@ -5,7 +5,6 @@ import com.openlattice.IdConstants
 import com.openlattice.analysis.SqlBindInfo
 import com.openlattice.analysis.requests.Filter
 import com.openlattice.data.DeleteType
-import com.openlattice.data.EntityDataKey
 import com.openlattice.data.WriteEvent
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.data.storage.partitions.PartitionsInfo
@@ -553,11 +552,18 @@ class PostgresEntityDataQueryService(
         //We expect controller to have performed access control checks upstream.
         val entityKeyIdsToLinkingIds = getLinkingIdsOfEntityKeyIds(replacementProperties.keys)
         val version = System.currentTimeMillis()
+        val partitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
 
         val tombstoneFn = { conn: Connection, entityBatch: Map<UUID, Map<UUID, Set<Any>>> ->
             val ids = entityBatch.keys
-            // todo
-            tombstone(conn, entitySetId, replacementProperties.filter { ids.contains(it.key) }, entityKeyIdsToLinkingIds)
+            tombstone(
+                    conn,
+                    entitySetId,
+                    replacementProperties.filter { ids.contains(it.key) },
+                    entityKeyIdsToLinkingIds,
+                    version,
+                    partitionsInfo
+            )
         }
 
         //This performs unnecessary copies and we should fix at some point
@@ -573,7 +579,8 @@ class PostgresEntityDataQueryService(
                 replacementValues,
                 entityKeyIdsToLinkingIds,
                 authorizedPropertyTypes,
-                version
+                version,
+                partitionsInfo
         )
 
     }
@@ -585,9 +592,8 @@ class PostgresEntityDataQueryService(
     /**
      * Tombstones all entities in an entity set.
      */
-    private fun tombstone(conn: Connection, entitySetId: UUID): WriteEvent {
+    private fun tombstone(conn: Connection, entitySetId: UUID, version: Long): WriteEvent {
         check(!conn.autoCommit) { "Connection auto-commit must be disabled" }
-        val version = System.currentTimeMillis()
 
         val numUpdated = conn.prepareStatement(updateVersionsForEntitySet).use { ps ->
             ps.setLong(1, -version)
@@ -617,8 +623,9 @@ class PostgresEntityDataQueryService(
     fun clearEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent {
         return hds.connection.use { conn ->
             conn.autoCommit = false
-            tombstone(conn, entitySetId, authorizedPropertyTypes.values)
-            val event = tombstone(conn, entitySetId)
+            val version = System.currentTimeMillis()
+            tombstone(conn, entitySetId, authorizedPropertyTypes.values, version)
+            val event = tombstone(conn, entitySetId, version)
             conn.autoCommit = true
             event
         }
@@ -643,7 +650,15 @@ class PostgresEntityDataQueryService(
         val version = System.currentTimeMillis()
 
         return hds.connection.use { conn ->
-            tombstone(conn, entitySetId, entityKeyIds,entityKeyIdsToLinkingIds, authorizedPropertyTypes.values, version, partitionsInfo)
+            tombstone(
+                    conn,
+                    entitySetId,
+                    entityKeyIds,
+                    entityKeyIdsToLinkingIds,
+                    authorizedPropertyTypes.values,
+                    version,
+                    partitionsInfo
+            )
             tombstoneIdsTable(conn, entitySetId, entityKeyIds, version, partitionsInfo)
         }
     }
@@ -935,9 +950,9 @@ class PostgresEntityDataQueryService(
     private fun tombstone(
             conn: Connection,
             entitySetId: UUID,
-            propertyTypesToTombstone: Collection<PropertyType>
+            propertyTypesToTombstone: Collection<PropertyType>,
+            version: Long
     ): WriteEvent {
-        val version = System.currentTimeMillis()
         val propertyTypeIdsArr = PostgresArrays.createUuidArray(conn, propertyTypesToTombstone.map { it.id })
 
         val numUpdated = conn.prepareStatement(updateVersionsForPropertyTypesInEntitySet).use { ps ->
@@ -1065,11 +1080,11 @@ class PostgresEntityDataQueryService(
             entitySetId: UUID,
             entities: Map<UUID, Map<UUID, Set<Map<ByteBuffer, Any>>>>,
             entityKeyIdsToLinkingIds: Map<UUID, UUID>,
+            version: Long,
             partitionsInfo: PartitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
     ): WriteEvent {
         val entityKeyIds = entities.keys
         val partitions = partitionsInfo.partitions.toList()
-        val version = System.currentTimeMillis()
         val entityKeyIdsArr = PostgresArrays.createUuidArray(conn, entityKeyIds)
         val partitionsArr = PostgresArrays.createIntArray(conn, entityKeyIds.map { getPartition(it, partitions) })
         val partitionsVersion = partitionsInfo.partitionsVersion
