@@ -85,22 +85,6 @@ fun getEntityPropertiesByEntitySetIdOriginIdAndPropertyTypeId(
 }
 
 @Throws(SQLException::class)
-fun getEntityPropertiesByPropertyTypeId4(
-        rs: ResultSet,
-        authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
-        byteBlobDataManager: ByteBlobDataManager
-): Pair<EntityDataKey, MutableMap<UUID, MutableSet<Any>>> {
-    val id = id(rs)
-    val entitySetId = entitySetId(rs)
-    val propertyTypes = authorizedPropertyTypes.getValue(entitySetId)
-
-    val entity = readJsonDataColumns(rs, propertyTypes, byteBlobDataManager)
-    // TODO Do we need ID column in properties?
-
-    return EntityDataKey(entitySetId, id) to entity
-}
-
-@Throws(SQLException::class)
 fun getEntityPropertiesByFullQualifiedName(
         rs: ResultSet,
         authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
