@@ -50,4 +50,6 @@ interface EntityKeyIdService {
     ): MutableMap<EntityKey, UUID>
 
     fun reserveEntityKeyIds(entityKeys: Set<EntityKey>): Set<UUID>
+
+    fun reserveLinkingIds( count: Int): List<UUID>
 }

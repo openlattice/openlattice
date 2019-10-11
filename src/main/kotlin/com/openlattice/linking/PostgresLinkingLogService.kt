@@ -14,7 +14,15 @@ class PostgresLinkingLogService(
         val mapper: ObjectMapper
 ) : LinkingLogService {
 
-    override fun createCluster(linkingId: UUID, linkedEntities: Map<UUID, Set<UUID>>) {
+    override fun createOrUpdateCluster(linkingId: UUID, linkedEntities: Map<UUID, Set<UUID>>, newCluster: Boolean) {
+        if ( newCluster ) {
+            createCluster( linkingId, linkedEntities )
+        } else {
+            updateCluster( linkingId, linkedEntities )
+        }
+    }
+
+    private fun createCluster(linkingId: UUID, linkedEntities: Map<UUID, Set<UUID>>) {
         hds.connection.use { conn ->
             conn.prepareStatement(INSERT_LOG_SQL).use { ps ->
                 ps.setObject(1, linkingId)
@@ -25,7 +33,7 @@ class PostgresLinkingLogService(
         }
     }
 
-    override fun updateCluster(linkingId: UUID, linkedEntities: Map<UUID, Set<UUID>>) {
+    private fun updateCluster(linkingId: UUID, linkedEntities: Map<UUID, Set<UUID>>) {
         hds.connection.use { conn ->
             conn.prepareStatement(ADD_LINK_SQL).use { ps ->
                 linkedEntities.forEach { esid, ekids ->
@@ -82,22 +90,12 @@ class PostgresLinkingLogService(
                 ps.setObject(1, linkingId)
                 ps.executeQuery().use { rs->
                     rs.next()
-                    val searchConstraintsJson = rs.getString( ID_MAP_FIELD )
-                    return mapper.readValue( searchConstraintsJson )
+                    return mapper.readValue( rs.getString( ID_MAP_FIELD ))
                 }
             }
         }
     }
 }
-
-private val LOG_COLUMNS = LINKING_LOG.columns.joinToString(",", transform = PostgresColumnDefinition::getName)
-
-private val APPEND_PREFIX = "INSERT INTO ${LINKING_LOG.name} ($LOG_COLUMNS) "
-
-private val APPEND_SUFFIX = "FROM ${LINKING_LOG.name} " +
-        "WHERE ${LINKING_ID.name}=? " +
-        "ORDER BY ${VERSION.name} DESC " +
-        "LIMIT 1 "
 
 private val READ_VERSION_LINKED_SQL = "SELECT ${ID_MAP.name} " +
         "FROM ${LINKING_LOG.name} " +
@@ -105,9 +103,16 @@ private val READ_VERSION_LINKED_SQL = "SELECT ${ID_MAP.name} " +
         "ORDER BY ${VERSION.name} DESC " +
         "LIMIT 1"
 
-private val READ_LATEST_LINKED_SQL = "SELECT ${ID_MAP.name} $APPEND_SUFFIX"
+private val LOG_COLUMNS = LINKING_LOG.columns.joinToString(",", transform = PostgresColumnDefinition::getName)
+
+private val APPEND_PREFIX = "INSERT INTO ${LINKING_LOG.name} ($LOG_COLUMNS) "
 
 private val INSERT_LOG_SQL = "$APPEND_PREFIX VALUES (?,?::jsonb,?)"
+
+private val APPEND_SUFFIX = "FROM ${LINKING_LOG.name} " +
+        "WHERE ${LINKING_ID.name}=? " +
+        "ORDER BY ${VERSION.name} DESC " +
+        "LIMIT 1 "
 
 private val ADD_LINK_SQL = APPEND_PREFIX +
         "( SELECT ${LINKING_ID.name}, " +
@@ -124,3 +129,6 @@ private val REMOVE_ENTITY_SQL= APPEND_PREFIX +
             "END" +
             ", ? " +
         "$APPEND_SUFFIX ) "
+
+private val READ_LATEST_LINKED_SQL = "SELECT ${ID_MAP.name} $APPEND_SUFFIX"
+

@@ -133,9 +133,9 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
  */
 private val updateLastIndexSql = "UPDATE ${IDS.name} SET ${LAST_INDEX.name} = ? " +
         "WHERE ${ENTITY_SET_ID.name} = ? " +
-        "AND ${ID.name} = ANY(?) " +
-        "AND ${PARTITION.name} = ? " +
-        "AND ${PARTITIONS_VERSION.name} = ?"
+            "AND ${ID.name} = ANY(?) " +
+            "AND ${PARTITION.name} = ? " +
+            "AND ${PARTITIONS_VERSION.name} = ?"
 
 /**
  * Arguments of preparable sql in order:
@@ -147,10 +147,10 @@ private val updateLastIndexSql = "UPDATE ${IDS.name} SET ${LAST_INDEX.name} = ? 
  */
 private val updateLastLinkingIndexSql = "UPDATE ${IDS.name} SET ${LAST_LINK_INDEX.name} = ? " +
         "WHERE ${ENTITY_SET_ID.name} = ? " +
-        "AND ${LINKING_ID.name} = ANY(?) " +
-        "AND ${LINKING_ID.name} IS NOT NULL " +
-        "AND ${PARTITION.name} = ? " +
-        "AND ${PARTITIONS_VERSION.name} = ?"
+            "AND ${LINKING_ID.name} = ANY(?) " +
+            "AND ${LINKING_ID.name} IS NOT NULL " +
+            "AND ${PARTITION.name} = ? " +
+            "AND ${PARTITIONS_VERSION.name} = ?"
 
 
 /**
@@ -161,8 +161,10 @@ private val updateLastLinkingIndexSql = "UPDATE ${IDS.name} SET ${LAST_LINK_INDE
 fun markEntitySetsAsNeedsToBeIndexedSql(linking: Boolean): String {
     val updateColumn = if (linking) LAST_LINK_INDEX.name else LAST_INDEX.name
 
-    return "UPDATE ${IDS.name} SET $updateColumn = '-infinity()' " +
-            "WHERE ${ENTITY_SET_ID.name} = ANY(?) AND ${PARTITION.name} = ANY(?)"
+    return "UPDATE ${IDS.name} " +
+            "SET $updateColumn = '-infinity()' " +
+            "WHERE ${ENTITY_SET_ID.name} = ANY(?) " +
+                "AND ${PARTITION.name} = ANY(?)"
 }
 
 /**
@@ -171,9 +173,11 @@ fun markEntitySetsAsNeedsToBeIndexedSql(linking: Boolean): String {
  * 2. partition
  * 3. linking ids (uuid array)
  */
-private val markLinkingIdsAsNeedToBeIndexedSql = "UPDATE ${IDS.name} SET ${LAST_LINK_INDEX.name} = '-infinity()' " +
+private val markLinkingIdsAsNeedToBeIndexedSql = "UPDATE ${IDS.name} " +
+        "SET ${LAST_LINK_INDEX.name} = '-infinity()' " +
         "WHERE ${ENTITY_SET_ID.name} = ? AND ${PARTITION.name} = ? " +
-        "AND ${LINKING_ID.name} IS NOT NULL AND ${LINKING_ID.name} = ANY(?)"
+            "AND ${LINKING_ID.name} IS NOT NULL " +
+            "AND ${LINKING_ID.name} = ANY(?)"
 
 /**
  * Arguments of preparable sql in order:
@@ -181,7 +185,11 @@ private val markLinkingIdsAsNeedToBeIndexedSql = "UPDATE ${IDS.name} SET ${LAST_
  * 2. partition
  * 3. linking ids (uuid array)
  */
-private val markAsNeedsToBeLinkedSql = "UPDATE ${IDS.name} SET ${LAST_LINK.name} = '-infinity()' " +
-        "WHERE ${VERSION.name} > 0 AND ${ENTITY_SET_ID.name} = ? AND ${PARTITION.name} = ? " +
-        "AND ${LINKING_ID.name} IS NOT NULL AND ${LINKING_ID.name} = ANY(?)"
+private val markAsNeedsToBeLinkedSql = "UPDATE ${IDS.name} " +
+        "SET ${LAST_LINK.name} = '-infinity()' " +
+        "WHERE ${VERSION.name} > 0 " +
+            "AND ${ENTITY_SET_ID.name} = ? " +
+            "AND ${PARTITION.name} = ? " +
+            "AND ${LINKING_ID.name} IS NOT NULL " +
+            "AND ${LINKING_ID.name} = ANY(?)"
 

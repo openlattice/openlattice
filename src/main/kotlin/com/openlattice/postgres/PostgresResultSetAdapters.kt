@@ -3,10 +3,10 @@ package com.openlattice.postgres
 import com.dataloom.mappers.ObjectMappers
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.openlattice.IdConstants
+import com.openlattice.data.EntityDataKey
 import com.openlattice.data.storage.ByteBlobDataManager
 import com.openlattice.data.storage.MetadataOption
 import com.openlattice.edm.EdmConstants.Companion.ID_FQN
-import com.openlattice.edm.EdmConstants.Companion.LAST_INDEX_FQN
 import com.openlattice.edm.EdmConstants.Companion.LAST_WRITE_FQN
 import com.openlattice.edm.PostgresEdmTypeConverter
 import com.openlattice.edm.type.PropertyType
@@ -27,7 +27,6 @@ internal class PostgresResultSetAdapters
 private val logger = LoggerFactory.getLogger(PostgresResultSetAdapters::class.java)
 private val mapper = ObjectMappers.newJsonMapper()
 
-
 @Throws(SQLException::class)
 fun getEntityPropertiesByPropertyTypeId(
         rs: ResultSet,
@@ -44,6 +43,7 @@ fun getEntityPropertiesByPropertyTypeId(
             propertyTypes,
             byteBlobDataManager
     )
+    // TODO Do we need ID column in properties?
 
     if (metadataOptions.contains(MetadataOption.LAST_WRITE)) {
         entity[IdConstants.LAST_WRITE_ID.id] = mutableSetOf<Any>(lastWriteTyped(rs))
@@ -84,6 +84,21 @@ fun getEntityPropertiesByEntitySetIdOriginIdAndPropertyTypeId(
     return id to (entitySetId to (originId to entity))
 }
 
+@Throws(SQLException::class)
+fun getEntityPropertiesByPropertyTypeId4(
+        rs: ResultSet,
+        authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
+        byteBlobDataManager: ByteBlobDataManager
+): Pair<EntityDataKey, MutableMap<UUID, MutableSet<Any>>> {
+    val id = id(rs)
+    val entitySetId = entitySetId(rs)
+    val propertyTypes = authorizedPropertyTypes.getValue(entitySetId)
+
+    val entity = readJsonDataColumns(rs, propertyTypes, byteBlobDataManager)
+    // TODO Do we need ID column in properties?
+
+    return EntityDataKey(entitySetId, id) to entity
+}
 
 @Throws(SQLException::class)
 fun getEntityPropertiesByFullQualifiedName(

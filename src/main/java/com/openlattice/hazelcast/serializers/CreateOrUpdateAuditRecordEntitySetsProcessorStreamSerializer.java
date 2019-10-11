@@ -25,7 +25,6 @@ import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractUUIDStreamSerializer;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.edm.processors.CreateOrUpdateAuditRecordEntitySetsProcessor;
-import com.openlattice.edm.processors.UpdateAuditEdgeEntitySetIdProcessor;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import java.io.IOException;
 import org.springframework.stereotype.Component;

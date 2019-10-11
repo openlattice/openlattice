@@ -62,7 +62,7 @@ class PostgresLinkingLogServiceTest {
     fun logLinkCreated() {
         val linkingId = UUID.randomUUID()
         val links = generateNRandomLinks(10)
-        service.createCluster( linkingId, links  )
+        service.createOrUpdateCluster( linkingId, links , true )
         val latest = service.readLatestLinkLog( linkingId )
         assert(links == latest)
     }
@@ -72,11 +72,11 @@ class PostgresLinkingLogServiceTest {
         val linkingId = UUID.randomUUID()
         val links = generateNRandomLinks(10)
         val newLinks = generateNRandomLinks(10)
-        service.createCluster( linkingId, links )
+        service.createOrUpdateCluster( linkingId, links, true )
         var latest = service.readLatestLinkLog( linkingId )
         assert( latest == links )
 
-        service.updateCluster( linkingId, newLinks )
+        service.createOrUpdateCluster( linkingId, newLinks, false )
         latest = service.readLatestLinkLog( linkingId )
         assert( latest.containsKey(links.keys.first()) )
         assert( latest.containsKey(newLinks.keys.first()) )
@@ -88,11 +88,11 @@ class PostgresLinkingLogServiceTest {
         val linkingId = UUID.randomUUID()
         val links = generateNRandomLinks(10)
         val otherLinks = generateNRandomLinks(10)
-        service.createCluster( linkingId, links  )
+        service.createOrUpdateCluster( linkingId, links, true )
         var latest = service.readLatestLinkLog(linkingId)
         assert( latest == links )
 
-        service.updateCluster( linkingId, otherLinks )
+        service.createOrUpdateCluster( linkingId, otherLinks, false)
         latest = service.readLatestLinkLog(linkingId)
         assert( latest == links.plus(otherLinks) )
 
@@ -106,30 +106,30 @@ class PostgresLinkingLogServiceTest {
     fun readLatestLinkLog() {
         val linkingId = UUID.randomUUID()
         val firstAdd = generateNRandomLinks(10)
-        service.createCluster( linkingId, firstAdd )
+        service.createOrUpdateCluster( linkingId, firstAdd, true )
         var latest = service.readLatestLinkLog( linkingId )
         var expected = firstAdd
         assert(expected.equals(latest))
 
         val secondAdd = generateNRandomLinks(10)
-        service.updateCluster( linkingId, secondAdd )
+        service.createOrUpdateCluster( linkingId, secondAdd, false )
         latest = service.readLatestLinkLog( linkingId )
         expected = expected.plus(secondAdd)
         assert(expected.equals(latest))
 
         val thirdAdd = generateNRandomLinks(10)
-        service.updateCluster( linkingId, thirdAdd )
+        service.createOrUpdateCluster( linkingId, thirdAdd, false )
         latest = service.readLatestLinkLog( linkingId )
         expected = expected.plus(thirdAdd)
         assert(expected.equals(latest))
 
         val fourthAdd = generateNRandomLinks(10)
-        service.updateCluster( linkingId , fourthAdd )
+        service.createOrUpdateCluster( linkingId , fourthAdd, false )
         latest = service.readLatestLinkLog( linkingId )
         expected = expected.plus(fourthAdd)
         assert(expected.equals(latest))
 
-        service.createCluster( UUID.randomUUID(), generateNRandomLinks(10) )
+        service.createOrUpdateCluster( UUID.randomUUID(), generateNRandomLinks(10), true )
         latest = service.readLatestLinkLog( linkingId )
         assert(expected.equals(latest))
 
