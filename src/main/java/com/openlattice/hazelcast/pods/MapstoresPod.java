@@ -66,8 +66,12 @@ import com.openlattice.ids.IdGenerationMapstore;
 import com.openlattice.ids.Range;
 import com.openlattice.linking.mapstores.LinkingFeedbackMapstore;
 import com.openlattice.notifications.sms.SmsInformationMapstore;
+import com.openlattice.organization.OrganizationExternalDatabaseColumn;
+import com.openlattice.organization.OrganizationExternalDatabaseTable;
 import com.openlattice.organizations.PrincipalSet;
 import com.openlattice.organizations.mapstores.OrganizationDefaultPartitionsMapstore;
+import com.openlattice.organizations.mapstores.OrganizationExternalDatabaseColumnMapstore;
+import com.openlattice.organizations.mapstores.OrganizationExternalDatabaseTableMapstore;
 import com.openlattice.postgres.PostgresPod;
 import com.openlattice.postgres.PostgresTableManager;
 import com.openlattice.postgres.mapstores.AclKeysMapstore;
@@ -314,6 +318,16 @@ public class MapstoresPod {
     @Bean
     public SelfRegisteringMapStore<CollectionTemplateKey, UUID> entitySetCollectionConfigMapstore() {
         return new EntitySetCollectionConfigMapstore( hikariDataSource );
+    }
+
+    @Bean
+    public SelfRegisteringMapStore<UUID, OrganizationExternalDatabaseTable> organizationExternalDatabaseTableMapstore() {
+        return new OrganizationExternalDatabaseTableMapstore( hikariDataSource );
+    }
+
+    @Bean
+    public SelfRegisteringMapStore<UUID, OrganizationExternalDatabaseColumn> organizationExternalDatabaseColumnMapstore() {
+        return new OrganizationExternalDatabaseColumnMapstore( hikariDataSource );
     }
 
     @Bean
