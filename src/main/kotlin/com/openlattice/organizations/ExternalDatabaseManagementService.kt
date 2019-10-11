@@ -172,7 +172,14 @@ class ExternalDatabaseManagementService(
             aclKeyReservations.renameReservation(columnId, newColumnFqn.fullQualifiedNameAsString)
         }
 
-        organizationExternalDatabaseColumns.submitToKey(columnId, UpdateOrganizationExternalDatabaseColumn(update))
+        //check if name of table to which column belongs has been changed
+        var newTableId = Optional.empty<UUID>()
+        val currentColumn = organizationExternalDatabaseColumns[columnId]!!
+        if (currentColumn.tableId != tableId) {
+            newTableId = Optional.of(tableId)
+        }
+
+        organizationExternalDatabaseColumns.submitToKey(columnId, UpdateOrganizationExternalDatabaseColumn(update, newTableId))
     }
 
     /**
