@@ -21,12 +21,14 @@ class IdCatchupEntryProcessor(hds: HikariDataSource) : AbstractRhizomeEntryProce
     private val hds: HikariDataSource = checkNotNull(hds)
 
     companion object {
+
         private val logger = LoggerFactory.getLogger(IdCatchupEntryProcessor::class.java)
     }
 
     override fun process(entry: MutableMap.MutableEntry<Int, Range>): Void? {
         val range = checkNotNull(entry.value) //Range should never be null in the EP.
         var counter = 0
+        val x = 1L shl 2
         try {
             hds.connection.use { connection ->
                 prepareExistQuery(connection).use { ps ->
@@ -53,8 +55,12 @@ class IdCatchupEntryProcessor(hds: HikariDataSource) : AbstractRhizomeEntryProce
     }
 
     @Throws(SQLException::class)
+    fun prepareLatestQuery(connection: Connection): PreparedStatement {
+        return connection.prepareStatement("SELECT ${PostgresColumn.ID.name} from ${PostgresTable.IDS.name} WHERE ${PostgresColumn.ID_VALUE.name} = UU?")
+    }
+    @Throws(SQLException::class)
     fun prepareExistQuery(connection: Connection): PreparedStatement {
-        return connection.prepareStatement("SELECT count(*) from ${PostgresTable.IDS.name} WHERE ${PostgresColumn.ID_VALUE.name} = ?")
+        return connection.prepareStatement("SELECT ${PostgresColumn.MSB.name},${PostgresColumn.LSB.name} from ${PostgresTable.ID_GENERATION.name} WHERE ${PostgresColumn.ID_VALUE.name} = ?")
     }
 
     @Throws(SQLException::class)

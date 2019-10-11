@@ -177,7 +177,9 @@ class PostgresEntityDataQueryService(
         val entitySetIds = entityKeyIds.keys
         val ids = entityKeyIds.values.flatMap { it.orElse(emptySet()) }.toSet()
         val partitions = entityKeyIds.flatMap { (entitySetId, maybeEntityKeyIds) ->
-            val entitySetPartitions = if (linking) partitionManager.getAllPartitions() else partitionManager.getEntitySetPartitionsInfo(entitySetId).partitions.toList()
+            val entitySetPartitions = if (linking) partitionManager.getAllPartitions() else partitionManager.getEntitySetPartitionsInfo(
+                    entitySetId
+            ).partitions.toList()
             maybeEntityKeyIds.map {
                 getPartitionsInfo(it, entitySetPartitions)
             }.orElse(entitySetPartitions)
@@ -250,7 +252,7 @@ class PostgresEntityDataQueryService(
         val version = System.currentTimeMillis()
         val entityKeyIdsToLinkingIds = getLinkingIdsOfEntityKeyIds(entities.keys)
 
-        val tombstoneFn = { _: Connection, _: Map<UUID, Map<UUID, Set<Any>>> -> null }
+        val tombstoneFn = { _: Connection, _: Long, _: Map<UUID, Map<UUID, Set<Any>>> -> }
 
         return upsertEntities(
                 entitySetId,
@@ -280,7 +282,7 @@ class PostgresEntityDataQueryService(
      */
     private fun upsertEntities(
             entitySetId: UUID,
-            tombstoneFn: (conn: Connection, entityBatch: Map<UUID, Map<UUID, Set<Any>>>) -> Any?,
+            tombstoneFn: (conn: Connection, version: Long, entityBatch: Map<UUID, Map<UUID, Set<Any>>>) -> Unit,
             entities: Map<UUID, Map<UUID, Set<Any>>>, // ekids ->
             entityKeyIdsToLinkingIds: Map<UUID, UUID>,
             authorizedPropertyTypes: Map<UUID, PropertyType>,
@@ -303,7 +305,7 @@ class PostgresEntityDataQueryService(
                         val idsArr = PostgresArrays.createUuidArray(connection, entityBatch.keys)
                         lockEntitiesForUpdate(connection, idsArr, partition, partitionsInfo.partitionsVersion)
 
-                        tombstoneFn(connection, entityBatch)
+                        tombstoneFn(connection, version, entityBatch)
 
                         val (uec, upc) = upsertEntities(
                                 connection,
@@ -319,7 +321,6 @@ class PostgresEntityDataQueryService(
                         updatedEntityCount += uec
                         updatedPropertyCounts += upc
 
-                        connection.autoCommit = true
                     }
                 }
 
@@ -387,8 +388,8 @@ class PostgresEntityDataQueryService(
                 rawValue
             } else {
                 Multimaps.asMap(JsonDeserializer
-                        .validateFormatAndNormalize(rawValue, authorizedPropertyTypes)
-                        { "Entity set $entitySetId with entity key id $entityKeyId" })
+                                        .validateFormatAndNormalize(rawValue, authorizedPropertyTypes)
+                                        { "Entity set $entitySetId with entity key id $entityKeyId" })
             }
 
             entityData.map { (propertyTypeId, values) ->
@@ -406,8 +407,10 @@ class PostgresEntityDataQueryService(
 
                     val dataType = authorizedPropertyTypes.getValue(propertyTypeId).datatype
 
-                    val (propertyHash, insertValue) = getPropertyHash(entitySetId, entityKeyId, propertyTypeId,
-                            value, dataType, awsPassthrough)
+                    val (propertyHash, insertValue) = getPropertyHash(
+                            entitySetId, entityKeyId, propertyTypeId,
+                            value, dataType, awsPassthrough
+                    )
 
                     upsertPropertyValue.first.setObject(1, entitySetId)
                     upsertPropertyValue.first.setObject(2, entityKeyId)
@@ -420,7 +423,7 @@ class PostgresEntityDataQueryService(
                     upsertPropertyValue.first.setObject(9, insertValue)
                     upsertPropertyValue.first.addBatch()
 
-                    val maybeLinkingId = entityKeyIdsToLinkingIds.get(entityKeyId)
+                    val maybeLinkingId = entityKeyIdsToLinkingIds[entityKeyId]
                     if (maybeLinkingId != null) {
                         // update for linked rows
                         upsertPropertyValue.second.setObject(1, entitySetId)
@@ -446,12 +449,14 @@ class PostgresEntityDataQueryService(
         return updatedEntityCount to updatedPropertyCounts
     }
 
-    private fun getPropertyHash(entitySetId: UUID,
-                                entityKeyId: UUID,
-                                propertyTypeId: UUID,
-                                value: Any,
-                                dataType: EdmPrimitiveTypeKind,
-                                awsPassthrough: Boolean): Pair<ByteArray, Any> {
+    private fun getPropertyHash(
+            entitySetId: UUID,
+            entityKeyId: UUID,
+            propertyTypeId: UUID,
+            value: Any,
+            dataType: EdmPrimitiveTypeKind,
+            awsPassthrough: Boolean
+    ): Pair<ByteArray, Any> {
         if (dataType != EdmPrimitiveTypeKind.Binary) {
             return PostgresDataHasher.hashObject(value, dataType) to value
         }
@@ -484,7 +489,8 @@ class PostgresEntityDataQueryService(
 
         val propertyTypes = authorizedPropertyTypes.values
 
-        val tombstoneFn = { conn: Connection, entityBatch: Map<UUID, Map<UUID, Set<Any>>> ->
+        // TODO Juli
+        val tombstoneFn: (Connection, Long, Map<UUID, Map<UUID, Set<Any>>>) -> Unit = { conn: Connection, version: Long, entityBatch: Map<UUID, Map<UUID, Set<Any>>> ->
             tombstone(
                     conn,
                     entitySetId,
@@ -517,8 +523,9 @@ class PostgresEntityDataQueryService(
 
         val entityKeyIdsToLinkingIds = getLinkingIdsOfEntityKeyIds(entities.keys)
 
+        // TODO Julia
         // Is the overhead from including irrelevant property types in a bulk delete really worse than performing individual queries? :thinking-face:
-        val tombstoneFn = { conn: Connection, entityBatch: Map<UUID, Map<UUID, Set<Any>>> ->
+        val tombstoneFn = { conn: Connection, version: Long, entityBatch: Map<UUID, Map<UUID, Set<Any>>> ->
             entityBatch.forEach { (entityKeyId, entity) ->
                 //Implied access enforcement as it will raise exception if lacking permission
                 tombstone(
@@ -554,7 +561,7 @@ class PostgresEntityDataQueryService(
         val version = System.currentTimeMillis()
         val partitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
 
-        val tombstoneFn = { conn: Connection, entityBatch: Map<UUID, Map<UUID, Set<Any>>> ->
+        val tombstoneFn: (Connection, Long, Map<UUID, Map<UUID, Set<Any>>>) -> Unit = { conn: Connection, version: Long, entityBatch: Map<UUID, Map<UUID, Set<Any>>> ->
             val ids = entityBatch.keys
             tombstone(
                     conn,
@@ -573,6 +580,7 @@ class PostgresEntityDataQueryService(
             )
         }.toMap()
 
+        // TODO Juli
         return upsertEntities(
                 entitySetId,
                 tombstoneFn,
@@ -626,6 +634,7 @@ class PostgresEntityDataQueryService(
             val version = System.currentTimeMillis()
             tombstone(conn, entitySetId, authorizedPropertyTypes.values, version)
             val event = tombstone(conn, entitySetId, version)
+            // TODO Juli
             conn.autoCommit = true
             event
         }
@@ -922,7 +931,8 @@ class PostgresEntityDataQueryService(
             connection: Connection,
             idsArr: java.sql.Array,
             partition: Int,
-            partitionVersion: Int) {
+            partitionVersion: Int
+    ) {
 
         check(!connection.autoCommit) { "Connection auto-commit must be disabled" }
 
@@ -1044,7 +1054,9 @@ class PostgresEntityDataQueryService(
             ps.executeUpdate()
         }
 
-        val linksTombstoned = conn.prepareStatement(updateVersionsForPropertyTypesInEntitiesInEntitySet(linking = true)).use { ps ->
+        val linksTombstoned = conn.prepareStatement(
+                updateVersionsForPropertyTypesInEntitiesInEntitySet(linking = true)
+        ).use { ps ->
             ps.setLong(1, -version)
             ps.setLong(2, -version)
             ps.setLong(3, -version)
@@ -1070,11 +1082,13 @@ class PostgresEntityDataQueryService(
      * @param entitySetId The entity set id for which to tombstone entries
      * @param entities The entities with their properties for which to tombstone entries.
      * @param entityKeyIdsToLinkingIds TODO
+     * @param version The version to use to tombstone.
      * @param partitionsInfo Contains the partition info for the entity set of the entities.
      *
      * @return A write event object containing a summary of the operation useful for auditing purposes.
      *
      */
+    // TODO JULI
     private fun tombstone(
             conn: Connection,
             entitySetId: UUID,
@@ -1086,8 +1100,11 @@ class PostgresEntityDataQueryService(
         val entityKeyIds = entities.keys
         val partitions = partitionsInfo.partitions.toList()
         val entityKeyIdsArr = PostgresArrays.createUuidArray(conn, entityKeyIds)
-        val partitionsArr = PostgresArrays.createIntArray(conn, entityKeyIds.map { getPartition(it, partitions) })
         val partitionsVersion = partitionsInfo.partitionsVersion
+        val partitionsArr = PostgresArrays.createIntArray(
+                conn, entities.keys.map {
+            getPartition(it, partitions)
+        })
 
         val updatePropertyValueVersion = conn.prepareStatement(updateVersionsForPropertyValuesInEntitiesInEntitySet())
         val tombstoneLinks = conn.prepareStatement(updateVersionsForPropertyValuesInEntitiesInEntitySet(linking = true))
@@ -1119,7 +1136,11 @@ class PostgresEntityDataQueryService(
                             tombstoneLinks.setLong(3, -version)
                             tombstoneLinks.setObject(4, entitySetId)
                             tombstoneLinks.setArray(5, propertyTypeIdsArr)
-                            tombstoneLinks.setArray(6, PostgresArrays.createUuidArray(conn, entityKeyIdsToLinkingIds.values))
+                            tombstoneLinks.setArray(
+                                    6, PostgresArrays.createUuidArray(
+                                    conn, entityKeyIdsToLinkingIds.values
+                            )
+                            )
                             tombstoneLinks.setArray(7, entityKeyIdsArr)
                             tombstoneLinks.setBytes(8, update.array())
                             tombstoneLinks.addBatch()

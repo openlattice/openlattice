@@ -206,9 +206,6 @@ public final class PostgresColumn {
     public static final String                   FLAGS_FIELD                     = "flags";
     public static final PostgresColumnDefinition FLAGS                           =
             new PostgresColumnDefinition( FLAGS_FIELD, BOOLEAN ).notNull();
-    public static final String                   GRAPH_ID_FIELD                  = "graph_id";
-    public static final PostgresColumnDefinition GRAPH_ID                        =
-            new PostgresColumnDefinition( GRAPH_ID_FIELD, UUID );
     public static final String                   HASH_FIELD                      = "hash";
     public static final PostgresColumnDefinition HASH                            =
             new PostgresColumnDefinition( HASH_FIELD, BYTEA ).notNull();

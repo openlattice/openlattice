@@ -397,10 +397,6 @@ public final class PostgresTable {
                     .addColumns( ENTITY_SET_ID, ENTITY_ID, ID_VALUE )
                     .primaryKey( ENTITY_SET_ID, ENTITY_ID )
                     .distributionColumn( ENTITY_ID );
-    public static final PostgresTableDefinition VERTEX_IDS_AFTER_LINKING =
-            new PostgresTableDefinition( "vertex_ids_after_linking" )
-                    .addColumns( GRAPH_ID, VERTEX_ID, NEW_VERTEX_ID )
-                    .primaryKey( GRAPH_ID, VERTEX_ID );
 
     static {
         PRINCIPAL_TREES.addIndexes(
