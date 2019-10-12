@@ -21,11 +21,6 @@ import java.util.stream.Stream
  */
 interface EntityDatastore {
 
-    fun getEntitySetData(
-            entitySetId: UUID,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): Map<UUID, Map<UUID, Set<Any>>>
-
     fun getEntityKeyIdsInEntitySet(entitySetId: UUID): BasePostgresIterable<UUID>
 
     fun getEntities(
@@ -58,16 +53,11 @@ interface EntityDatastore {
             metadataOptions: EnumSet<MetadataOption>
     ): Stream<MutableMap<FullQualifiedName, MutableSet<Any>>>
 
-    fun getLinkedEntityDataByLinkingId(
-            linkingIdsByEntitySetId: Map<UUID, Optional<Set<UUID>>>,
-            authorizedPropertyTypesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>
-    ): Map<UUID, Map<UUID, Map<UUID, Set<Any>>>>
-
     fun getLinkedEntityDataByLinkingIdWithMetadata(
             linkingIdsByEntitySetId: Map<UUID, Optional<Set<UUID>>>,
             authorizedPropertyTypesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>,
-            metadataOptions: EnumSet<MetadataOption>
-    ): Map<UUID, Map<UUID, Map<UUID, Set<Any>>>>
+            extraMetadataOptions: EnumSet<MetadataOption>
+    ): Map<UUID, Map<UUID, Map<UUID, Map<UUID, Set<Any>>>>>
 
     fun getEntities(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,

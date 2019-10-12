@@ -6,9 +6,7 @@ import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.fasterxml.jackson.core.JsonProcessingException
-import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.google.common.collect.SetMultimap
 import com.openlattice.conductor.rpc.ReIndexEntitySetMetadataLambdas
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
