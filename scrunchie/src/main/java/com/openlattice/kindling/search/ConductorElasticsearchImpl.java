@@ -525,11 +525,15 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
     /*** ENTITY DATA CREATE/DELETE ***/
 
+    /**
+     * @param entityValues Property values of a linked entity mapped by the normal entity set id, normal entity key id
+     *                     and property type ids respectively.
+     */
     private byte[] formatLinkedEntity( Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> entityValues ) {
 
         List<Map<Object, Object>> documents = entityValues.entrySet().stream().flatMap( esEntry -> {
             final var entitySetId = esEntry.getKey();
-            Map<UUID, Map<UUID, Set<Object>>> entity = esEntry.getValue();
+            Map<UUID, Map<UUID, Set<Object>>> entity = esEntry.getValue(); // ek_id -> pt_id -> pt_values
 
             return entity.entrySet().stream().map( ekEntry -> {
                 final var entityKeyId = ekEntry.getKey();
