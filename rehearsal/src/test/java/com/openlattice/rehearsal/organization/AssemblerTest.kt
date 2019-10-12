@@ -1,7 +1,10 @@
 package com.openlattice.rehearsal.organization
 
+import com.google.common.collect.ArrayListMultimap
 import com.google.common.collect.ImmutableList
+import com.google.common.collect.ListMultimap
 import com.openlattice.assembler.AssemblerConnectionManager
+import com.openlattice.assembler.PostgresDatabases
 import com.openlattice.authorization.*
 import com.openlattice.data.DataEdgeKey
 import com.openlattice.data.DeleteType
@@ -9,6 +12,7 @@ import com.openlattice.data.EntityDataKey
 import com.openlattice.data.UpdateType
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.requests.MetadataUpdate
+import com.openlattice.launchpad.configuration.*
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.organization.Organization
 import com.openlattice.organization.OrganizationEntitySetFlag
@@ -171,6 +175,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                         Optional.empty(),
                         Optional.empty(),
                         Optional.of(newFqn),
+                        Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
@@ -1083,6 +1088,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                         Optional.empty(),
                         Optional.empty(),
                         Optional.of(organization2.id),
+                        Optional.empty(),
                         Optional.empty()
                 )
         )
@@ -1097,6 +1103,76 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
             }
         }
 
+    }
+
+    @Test
+    fun testRunIntegrationWithOrganizationUser() {
+        val organization2 = createOrganization()
+        val et = createEntityType()
+        val es = createEntitySet(et)
+
+        // add data
+        val testData = TestDataFactory.randomStringEntityData(numberOfEntities, et.properties)
+        val entities = ImmutableList.copyOf(testData.values)
+        dataApi.createEntities(es.id, entities)
+
+        // integrate data from local db to org openlattice schema
+        val organizationUserCredentials = organizationsApi.getOrganizationIntegrationAccount(organization2.id)
+        val organizationDataBaseName = PostgresDatabases.buildOrganizationDatabaseName(organization2.id)
+
+        val sourceDb = "local_db"
+        val destinationDb = "${organization2.id}_db"
+        val destinationTable = "${es.name}_copy"
+
+        val integrations: ListMultimap<String, Integration> = ArrayListMultimap.create()
+        integrations.putAll(destinationDb,
+                listOf(
+                        Integration(
+                                "integrate entity set with limit",
+                                "(select * from ${PostgresTable.DATA.name} where ${ENTITY_SET_ID.name} = '${es.id}') es",
+                                quote(destinationTable)
+                        )
+                )
+        )
+
+        val integrationConfiguration = IntegrationConfiguration(
+                "assembler_integration",
+                "integration to make sure organization user can integrate to openlattice schema",
+                listOf(
+                        LaunchpadDatasource(
+                                sourceDb,
+                                "jdbc:postgresql://localhost:5432/openlattice",
+                                "org.postgresql.Driver",
+                                Optional.of("oltest"),
+                                Optional.of("test"),
+                                Optional.of(20000),
+                                Optional.empty()
+                        )
+                ),
+                listOf(
+                        LaunchpadDestination(
+                                destinationDb,
+                                "jdbc:postgresql://localhost:5432/$organizationDataBaseName",
+                                "org.postgresql.Driver",
+                                Optional.of(organizationUserCredentials.user),
+                                Optional.of(organizationUserCredentials.credential),
+                                Optional.empty(),
+                                Optional.empty()
+                        )
+                ),
+                mapOf(sourceDb to integrations)
+        )
+        IntegrationRunner.runIntegrations(integrationConfiguration)
+
+        // check if table is there
+        val organizationDataSource2 = TestAssemblerConnectionManager.connect(organization2.id)
+        organizationDataSource2.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(destinationTable))
+                // there is data in the table
+                Assert.assertTrue(rs.next())
+            }
+        }
     }
 
 
