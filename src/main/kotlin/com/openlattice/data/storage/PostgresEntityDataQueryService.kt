@@ -297,7 +297,18 @@ class PostgresEntityDataQueryService(
         entities.entries
                 .groupBy({ getPartition(it.key, partitions) }, { it.toPair() })
                 .mapValues { it.value.toMap() }
-                .forEach { (partition, entityBatch) ->
+                .asSequence().asStream().parallel()
+                .forEach { (partition, rawEntityBatch) ->
+
+                    val entityBatch = rawEntityBatch.mapValues { (entityKeyId, rawValue) ->
+                        return@mapValues if (awsPassthrough) {
+                            rawValue
+                        } else {
+                            Multimaps.asMap(JsonDeserializer
+                                    .validateFormatAndNormalize(rawValue, authorizedPropertyTypes)
+                                    { "Entity set $entitySetId with entity key id $entityKeyId" })
+                        }
+                    }
 
                     hds.connection.use { connection ->
                         connection.autoCommit = false
@@ -384,15 +395,7 @@ class PostgresEntityDataQueryService(
 
         //Update property values. We use multiple prepared statements in batch while re-using ARRAY[version].
         val upsertPropertyValues = mutableMapOf<UUID, Pair<PreparedStatement, PreparedStatement>>()
-        val updatedPropertyCounts = entities.entries.map { (entityKeyId, rawValue) ->
-            // select from ids to find out if it's linking
-            val entityData = if (awsPassthrough) {
-                rawValue
-            } else {
-                Multimaps.asMap(JsonDeserializer
-                        .validateFormatAndNormalize(rawValue, authorizedPropertyTypes)
-                        { "Entity set $entitySetId with entity key id $entityKeyId" })
-            }
+        val updatedPropertyCounts = entities.entries.map { (entityKeyId, entityData) ->
 
             entityData.map { (propertyTypeId, values) ->
                 val upsertPropertyValue = upsertPropertyValues.getOrPut(propertyTypeId) {
