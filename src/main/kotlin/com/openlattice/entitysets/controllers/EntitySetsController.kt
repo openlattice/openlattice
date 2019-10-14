@@ -235,8 +235,6 @@ constructor(
 
         ensureEntitySetCanBeDeleted(entitySet)
 
-        deleteAuditEntitySetsForId(entitySetId)
-
         val entityType = edmManager.getEntityType(entitySet.entityTypeId)
         val authorizedPropertyTypes = authzHelper
                 .getAuthorizedPropertyTypes(entitySetId, EnumSet.of(Permission.OWNER))
@@ -252,6 +250,8 @@ constructor(
 
         edmManager.deleteEntitySet(entitySetId)
         securableObjectTypes.deleteSecurableObjectType(AclKey(entitySetId))
+
+        deleteAuditEntitySetsForId(entitySetId)
 
         recordEvent(
                 AuditableEvent(
