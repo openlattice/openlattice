@@ -723,7 +723,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
     }
 
     private static UUID getEntityKeyId( Map<FullQualifiedName, Set<Object>> entity ) {
-        return UUID.fromString( entity.get( ID_FQN ).iterator().next().toString() );
+        return SearchService.getEntityKeyId( entity );
     }
 
     private void validateSearch( SearchConstraints searchConstraints ) {
