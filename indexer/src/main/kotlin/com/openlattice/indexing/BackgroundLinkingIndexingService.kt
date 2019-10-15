@@ -36,7 +36,6 @@ import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.HazelcastQueue
 import com.openlattice.indexing.configuration.IndexerConfiguration
 import com.openlattice.linking.util.PersonProperties
-import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.DataTables.*
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.IDS
@@ -183,13 +182,16 @@ class BackgroundLinkingIndexingService(
     }
 
     private fun selectDirtyLinkingIds(): String {
-        return "SELECT ${LINKING_ID.name}, ${DataTables.LAST_WRITE.name} " +
+        // @formatter:off
+        return "SELECT ${LINKING_ID.name}, ${LAST_WRITE.name} " +
                 "FROM ${IDS.name} " +
-                "WHERE ${LINKING_ID.name} IS NOT NULL " +
-                "AND ${LAST_INDEX.name} >= ${LAST_WRITE.name} " +
-                "AND ${LAST_LINK.name} >= ${LAST_WRITE.name} " +
-                "AND ${LAST_LINK_INDEX.name} < ${LAST_WRITE.name} " +
-                "AND ${VERSION.name} > 0 AND ${LINKING_ID.name} IS NOT NULL"
+                "WHERE " +
+                    "${LAST_INDEX.name} >= ${LAST_WRITE.name} AND " +
+                    "${LAST_LINK.name} >= ${LAST_WRITE.name} AND " +
+                    "${LAST_LINK_INDEX.name} < ${LAST_WRITE.name} AND " +
+                    "${VERSION.name} > 0 AND " +
+                    "${LINKING_ID.name} IS NOT NULL"
+        // @formatter:on
     }
 
     private fun getEntitySetIdsOfLinkingId(linkingId: UUID): BasePostgresIterable<UUID> {
