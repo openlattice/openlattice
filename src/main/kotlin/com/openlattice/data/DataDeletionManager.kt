@@ -35,7 +35,10 @@ interface DataDeletionManager {
             principals: Set<Principal>
     ): WriteEvent
 
-    /** These functions do not perform auth checks and should only be used internally. **/
+
+
+    /* The functions below do not perform auth checks and should only be used internally. */
+
 
     /**
      * Clears or deletes the specified entity key ids from an entity set, as well as any edges and association entities.

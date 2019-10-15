@@ -383,7 +383,7 @@ class PostgresEntityDatastore(
     )
     override fun deleteEntitySetData(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent {
         logger.info("Deleting data of entity set: {}", entitySetId)
-        val (_, numUpdates) = dataQueryService.deleteEntitySetData(entitySetId, authorizedPropertyTypes)
+        val numUpdates = dataQueryService.deleteEntitySetData(entitySetId, authorizedPropertyTypes).numUpdates
         val writeEvent = dataQueryService.deleteEntitySet(entitySetId)
 
         signalEntitySetDataDeleted(entitySetId)
@@ -412,8 +412,8 @@ class PostgresEntityDatastore(
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): WriteEvent {
 
-        val (_, numUpdates) = dataQueryService
-                .deleteEntityDataAndEntities(entitySetId, entityKeyIds, authorizedPropertyTypes)
+        val numUpdates = dataQueryService
+                .deleteEntityDataAndEntities(entitySetId, entityKeyIds, authorizedPropertyTypes).numUpdates
         val writeEvent = dataQueryService.deleteEntities(entitySetId, entityKeyIds)
         signalDeletedEntities(entitySetId, entityKeyIds)
 
