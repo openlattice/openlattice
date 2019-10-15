@@ -335,7 +335,7 @@ public interface OrganizationsApi {
             @Body Set<String> tableNames );
 
     @DELETE( BASE + ID_PATH + TABLE_NAME_PATH + EXTERNAL_DATABASE_COLUMN)
-    Void deleteExternalDataBaseColumns(
+    Void deleteExternalDatabaseColumns(
             @Path( ID ) UUID organizationId,
             @Path( TABLE_NAME ) String tableName,
             @Body Set<String> columnNames );
