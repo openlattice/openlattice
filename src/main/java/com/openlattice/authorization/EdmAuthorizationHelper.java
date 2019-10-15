@@ -139,7 +139,7 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
     /**
      * Note: entitysets are assumed to have same entity type
      */
-    private Map<UUID, Map<UUID, PropertyType>> getAuthorizedPropertyTypes(
+    public @NotNull Map<UUID, Map<UUID, PropertyType>> getAuthorizedPropertyTypes(
             Set<UUID> entitySetIds,
             Set<UUID> selectedProperties,
             EnumSet<Permission> requiredPermissions,

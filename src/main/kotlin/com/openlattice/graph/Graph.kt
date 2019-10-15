@@ -64,7 +64,7 @@ import java.util.stream.Stream
 
 const val SELF_ENTITY_SET_ID = "self_entity_set_id"
 const val SELF_ENTITY_KEY_ID = "self_entity_key_id"
-private const val BATCH_SIZE = 10000
+private const val BATCH_SIZE = 10_000
 
 private val logger = LoggerFactory.getLogger(Graph::class.java)
 
@@ -217,6 +217,7 @@ class Graph(
                     val stmt = connection.prepareStatement(NEIGHBORHOOD_OF_ENTITY_SET_SQL)
                     stmt.setObject(1, entitySetId)
                     stmt.setObject(2, entitySetId)
+                    stmt.setObject(3, entitySetId)
                     stmt.fetchSize = BATCH_SIZE
                     val rs = stmt.executeQuery()
                     StatementHolder(connection, stmt, rs)
@@ -487,6 +488,49 @@ class Graph(
         return neighbors
     }
 
+    override fun getEdgeEntitySetsConnectedToEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): Set<UUID> {
+        val query = "SELECT DISTINCT ${EDGE_ENTITY_SET_ID.name} " +
+                "FROM ${E.name} " +
+                "WHERE (${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ANY(?) " +
+                "OR (${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} = ANY(?) )"
+
+        return PostgresIterable(
+                Supplier {
+                    val connection = hds.connection
+                    val entityKeyIdArr = PostgresArrays.createUuidArray(connection, entityKeyIds)
+
+                    val ps = connection.prepareStatement(query)
+                    ps.setObject(1, entitySetId)
+                    ps.setArray(2, entityKeyIdArr)
+                    ps.setObject(3, entitySetId)
+                    ps.setArray(4, entityKeyIdArr)
+                    val rs = ps.executeQuery()
+                    StatementHolder(connection, ps, rs)
+                },
+                Function<ResultSet, UUID> { ResultSetAdapters.edgeEntitySetId(it) }
+        ).toSet()
+    }
+
+
+    override fun getEdgeEntitySetsConnectedToEntitySet(entitySetId: UUID): Set<UUID> {
+        val query = "SELECT DISTINCT ${EDGE_ENTITY_SET_ID.name} " +
+                "FROM ${E.name} " +
+                "WHERE ${SRC_ENTITY_SET_ID.name} = ? OR ${DST_ENTITY_SET_ID.name} = ?"
+
+        return PostgresIterable(
+                Supplier {
+                    val connection = hds.connection
+
+                    val ps = connection.prepareStatement(query)
+                    ps.setObject(1, entitySetId)
+                    ps.setObject(2, entitySetId)
+                    val rs = ps.executeQuery()
+                    StatementHolder(connection, ps, rs)
+                },
+                Function<ResultSet, UUID> { ResultSetAdapters.edgeEntitySetId(it) }
+        ).toSet()
+    }
+
     private fun buildAssociationTable(
             index: Int,
             selfEntitySetIds: Set<UUID>,
@@ -651,7 +695,7 @@ private val DELETE_BY_VERTEX_SQL = "$DELETE_SQL $VERTEX_FILTER_SQL"
 private val LOCK_BY_VERTEX_SQL = "$LOCK_SQL1 $VERTEX_FILTER_SQL $LOCK_SQL2"
 
 private val NEIGHBORHOOD_OF_ENTITY_SET_SQL = "SELECT * FROM ${E.name} WHERE " +
-        "(${SRC_ENTITY_SET_ID.name} = ?) OR (${DST_ENTITY_SET_ID.name} = ? )"
+        "(${SRC_ENTITY_SET_ID.name} = ?) OR (${EDGE_ENTITY_SET_ID.name} = ?) OR (${DST_ENTITY_SET_ID.name} = ?)"
 
 private val SRC_ID_SQL = "${SRC_ENTITY_KEY_ID.name} = ? AND ${SRC_ENTITY_SET_ID.name} = ?"
 private val DST_ID_SQL = "${DST_ENTITY_KEY_ID.name} = ? AND ${DST_ENTITY_SET_ID.name} = ?"
