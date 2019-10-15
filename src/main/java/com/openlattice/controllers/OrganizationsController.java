@@ -750,6 +750,29 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     @Timed
     @Override
     @DeleteMapping(
+            value = ID_PATH + EXTERNAL_DATABASE_TABLE
+    )
+    public Void deleteExternalDatabaseTables(
+            @PathVariable( ID ) UUID organizationId,
+            @RequestBody Set<String> tableNames ) {
+        Map<UUID, String> tableNameById = tableNames.stream().collect(
+                Collectors.toMap( tableName -> getExternalDatabaseObjectId( organizationId, tableName),
+                        tableName -> tableName ));
+        Set<AclKey> aclKeys = tableNameById.keySet().stream().map(tableId -> new AclKey( organizationId, tableId ))
+                .collect( Collectors.toSet() );
+        tableNameById.forEach( (id, name) -> ensureObjectCanBeDeleted( id ) );
+        aclKeys.forEach( aclKey -> {
+            ensureOwnerAccess( aclKey );
+            authorizations.deletePermissions( aclKey );
+            securableObjectTypes.deleteSecurableObjectType( aclKey );
+        } );
+        edms.deleteOrganizationExternalDatabaseTables( organizationId, tableNameById );
+        return null;
+    }
+
+    @Timed
+    @Override
+    @DeleteMapping(
             value = ID_PATH + TABLE_NAME_PATH + COLUMN_NAME_PATH + EXTERNAL_DATABASE_COLUMN
     )
     public Void deleteExternalDatabaseColumn(
