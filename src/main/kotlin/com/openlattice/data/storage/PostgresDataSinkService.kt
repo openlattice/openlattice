@@ -25,7 +25,7 @@ class PostgresDataSinkService {
             val entitiesToIntegrate = entitiesBySet.getOrPut(entity.entitySetId) { HashMap() }
             entitiesToIntegrate[entity.entityKeyId] = entity.properties
         }
-        entitiesBySet.forEach { entitySetId, entities ->
+        entitiesBySet.forEach { (entitySetId, entities) ->
             dataQueryService.upsertEntities(
                     entitySetId, entities, authorizedPropertiesByEntitySetId.getValue(entitySetId)
             )

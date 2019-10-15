@@ -113,7 +113,8 @@ public final class PostgresTable {
                             VERSIONS )
                     .primaryKey( ID, EDGE_COMP_1, EDGE_COMP_2, COMPONENT_TYPES )
                     .distributionColumn( ID_VALUE );
-    public static final PostgresTableDefinition        ENTITY_KEY_IDS               =
+    @Deprecated
+    public static final PostgresTableDefinition ENTITY_KEY_IDS =
             new CitusDistributedTableDefinition( "entity_key_ids" )
                     .addColumns( ENTITY_SET_ID,
                             ID,
@@ -305,7 +306,6 @@ public final class PostgresTable {
                     .addColumns( ID, NULLABLE_TITLE, DESCRIPTION, ALLOWED_EMAIL_DOMAINS, MEMBERS, APP_IDS, PARTITIONS );
     public static final PostgresTableDefinition ORGANIZATION_ASSEMBLIES  =
             new PostgresTableDefinition( "organization_assemblies" )
-
                     .addColumns( ORGANIZATION_ID, INITIALIZED )
                     .primaryKey( ORGANIZATION_ID );
 
@@ -356,7 +356,6 @@ public final class PostgresTable {
             .addColumns( ACL_KEY, PRINCIPAL_OF_ACL_KEY )
             .primaryKey( ACL_KEY, PRINCIPAL_OF_ACL_KEY );
     public static final PostgresTableDefinition PROPAGATION_GRAPH        = new PostgresTableDefinition(
-
             "propagation_graph" )
             .addColumns( SRC_ENTITY_SET_ID, SRC_PROPERTY_TYPE_ID, DST_ENTITY_SET_ID, DST_PROPERTY_TYPE_ID )
             .primaryKey( SRC_ENTITY_SET_ID, SRC_PROPERTY_TYPE_ID, DST_ENTITY_SET_ID, DST_PROPERTY_TYPE_ID );
@@ -417,10 +416,6 @@ public final class PostgresTable {
                     .addColumns( ENTITY_SET_ID, ENTITY_ID, ID_VALUE )
                     .primaryKey( ENTITY_SET_ID, ENTITY_ID )
                     .distributionColumn( ENTITY_ID );
-    public static final PostgresTableDefinition VERTEX_IDS_AFTER_LINKING =
-            new PostgresTableDefinition( "vertex_ids_after_linking" )
-                    .addColumns( GRAPH_ID, VERTEX_ID, NEW_VERTEX_ID )
-                    .primaryKey( GRAPH_ID, VERTEX_ID );
 
     static {
         PRINCIPAL_TREES.addIndexes(

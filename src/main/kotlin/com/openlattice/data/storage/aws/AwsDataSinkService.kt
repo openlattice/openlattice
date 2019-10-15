@@ -43,8 +43,10 @@ class AwsDataSinkService(
             urls.add(url)
         }
         //write s3Keys to postgres
-        data.forEach { entitySetId, data ->
-            dqs.upsertEntities(entitySetId, data, authorizedPropertyTypes.getValue(entitySetId), true)
+        data.forEach { (entitySetId, entityData) ->
+            dqs.upsertEntities(
+                    entitySetId, entityData, authorizedPropertyTypes.getValue(entitySetId), true
+            )
         }
 
         return urls

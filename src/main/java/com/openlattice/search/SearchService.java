@@ -20,15 +20,32 @@
 
 package com.openlattice.search;
 
+import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.annotation.Timed;
+import com.codahale.metrics.Timer;
 import com.dataloom.streams.StreamUtil;
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.*;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.SetMultimap;
+import com.google.common.collect.Sets;
 import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
+import com.openlattice.IdConstants;
 import com.openlattice.apps.App;
 import com.openlattice.apps.AppType;
-import com.openlattice.authorization.*;
+import com.openlattice.authorization.AccessCheck;
+import com.openlattice.authorization.AclKey;
+import com.openlattice.authorization.AuthorizationManager;
+import com.openlattice.authorization.Permission;
+import com.openlattice.authorization.Principal;
+import com.openlattice.authorization.Principals;
+import com.openlattice.authorization.SecurableObjectResolveTypeService;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.collections.EntitySetCollection;
 import com.openlattice.collections.EntityTypeCollection;
@@ -46,7 +63,27 @@ import com.openlattice.data.storage.MetadataOption;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.edm.EdmConstants;
 import com.openlattice.edm.EntitySet;
-import com.openlattice.edm.events.*;
+import com.openlattice.edm.events.AppCreatedEvent;
+import com.openlattice.edm.events.AppDeletedEvent;
+import com.openlattice.edm.events.AppTypeCreatedEvent;
+import com.openlattice.edm.events.AppTypeDeletedEvent;
+import com.openlattice.edm.events.AssociationTypeCreatedEvent;
+import com.openlattice.edm.events.AssociationTypeDeletedEvent;
+import com.openlattice.edm.events.ClearAllDataEvent;
+import com.openlattice.edm.events.EntitySetCollectionCreatedEvent;
+import com.openlattice.edm.events.EntitySetCollectionDeletedEvent;
+import com.openlattice.edm.events.EntitySetCreatedEvent;
+import com.openlattice.edm.events.EntitySetDataDeletedEvent;
+import com.openlattice.edm.events.EntitySetDeletedEvent;
+import com.openlattice.edm.events.EntitySetMetadataUpdatedEvent;
+import com.openlattice.edm.events.EntityTypeCollectionCreatedEvent;
+import com.openlattice.edm.events.EntityTypeCollectionDeletedEvent;
+import com.openlattice.edm.events.EntityTypeCreatedEvent;
+import com.openlattice.edm.events.EntityTypeDeletedEvent;
+import com.openlattice.edm.events.PropertyTypeCreatedEvent;
+import com.openlattice.edm.events.PropertyTypeDeletedEvent;
+import com.openlattice.edm.events.PropertyTypesAddedToEntityTypeEvent;
+import com.openlattice.edm.events.PropertyTypesInEntitySetUpdatedEvent;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
@@ -58,14 +95,29 @@ import com.openlattice.organizations.events.OrganizationDeletedEvent;
 import com.openlattice.organizations.events.OrganizationUpdatedEvent;
 import com.openlattice.postgres.streams.PostgresIterable;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
-import com.openlattice.search.requests.*;
+import com.openlattice.search.requests.DataSearchResult;
+import com.openlattice.search.requests.EntityDataKeySearchResult;
+import com.openlattice.search.requests.EntityNeighborsFilter;
+import com.openlattice.search.requests.SearchConstraints;
+import com.openlattice.search.requests.SearchResult;
+import com.openlattice.search.requests.SearchTerm;
 import kotlin.Pair;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
-import java.util.*;
+import java.time.OffsetDateTime;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -102,8 +154,18 @@ public class SearchService {
     @Inject
     private IndexingMetadataManager indexingMetadataManager;
 
-    public SearchService( EventBus eventBus ) {
+    private Timer indexEntitiesTimer;
+
+    private Timer markAsIndexedTimer;
+
+    public SearchService( EventBus eventBus, MetricRegistry metricRegistry ) {
         eventBus.register( this );
+        indexEntitiesTimer = metricRegistry.timer(
+                MetricRegistry.name( SearchService.class, "indexEntities" )
+        );
+        markAsIndexedTimer = metricRegistry.timer(
+                MetricRegistry.name( SearchService.class, "markAsIndexed" )
+        );
     }
 
     @Timed
@@ -227,6 +289,7 @@ public class SearchService {
     @Timed
     @Subscribe
     public void deleteLinkedEntities( LinkedEntitiesDeletedEvent event ) {
+        // TODO : https://jira.openlattice.com/browse/LATTICE-2225
         if ( event.getLinkedEntitySetIds().size() > 0 ) {
             Map<UUID, UUID> entitySetIdsToEntityTypeIds = dataModelService
                     .getEntitySetsAsMap( event.getLinkedEntitySetIds() ).values().stream()
@@ -292,25 +355,28 @@ public class SearchService {
      */
     @Subscribe
     public void indexEntities( EntitiesUpsertedEvent event ) {
+        final var indexEntitiesContext = indexEntitiesTimer.time();
         UUID entityTypeId = dataModelService.getEntityTypeByEntitySetId( event.getEntitySetId() ).getId();
-        elasticsearchApi.createBulkEntityData( entityTypeId, event.getEntitySetId(), event.getEntities() );
-    }
+        final var entitiesIndexed = elasticsearchApi
+                .createBulkEntityData( entityTypeId, event.getEntitySetId(), event.getEntities() );
+        indexEntitiesContext.stop();
 
-    private void indexLinkedEntities(
-            UUID linkingEntitySetId, Map<UUID, Set<UUID>> linkingIds, Map<UUID, PropertyType> propertyTypes ) {
-        if ( !linkingIds.isEmpty() ) {
-            UUID entityTypeId = dataModelService.getEntityTypeByEntitySetId( linkingEntitySetId ).getId();
-
-            // linking_id/(normal)entity_set_id/property_type_id
-            Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> linkedData = dataManager
-                    .getLinkedEntityDataByLinkingIdWithMetadata(
-                            linkingIds.entrySet().stream().collect(
-                                    Collectors.toMap( Map.Entry::getKey, entry -> Optional.of( entry.getValue() ) ) ),
-                            linkingIds.keySet().stream().collect(
-                                    Collectors.toMap( Function.identity(), entitySetId -> propertyTypes ) ),
-                            EnumSet.of( MetadataOption.LAST_WRITE ) );
-
-            elasticsearchApi.createBulkLinkedData( entityTypeId, linkedData );
+        if ( entitiesIndexed ) {
+            final var markAsIndexedContext = markAsIndexedTimer.time();
+            // mark them as indexed
+            indexingMetadataManager.markAsIndexed(
+                    Map.of(
+                            event.getEntitySetId(),
+                            event.getEntities().entrySet().stream().collect( Collectors.toMap(
+                                    Map.Entry::getKey,
+                                    entity ->
+                                            ( OffsetDateTime ) entity.getValue()
+                                                    .get( IdConstants.LAST_WRITE_ID.getId() ).iterator().next()
+                            ) )
+                    ),
+                    false
+            );
+            markAsIndexedContext.stop();
         }
     }
 
@@ -841,7 +907,7 @@ public class SearchService {
         return dataManager.getEntityKeyIdsOfLinkingIds( linkingIds );
     }
 
-    private static UUID getEntityKeyId( Map<FullQualifiedName, Set<Object>> entity ) {
+    public static UUID getEntityKeyId( Map<FullQualifiedName, Set<Object>> entity ) {
         return UUID.fromString( entity.get( EdmConstants.ID_FQN ).iterator().next().toString() );
     }
 

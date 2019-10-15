@@ -25,7 +25,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.*;
-import com.openlattice.IdConstants;
 import com.openlattice.apps.App;
 import com.openlattice.apps.AppConfigKey;
 import com.openlattice.apps.AppType;
@@ -40,7 +39,6 @@ import com.openlattice.collections.CollectionTemplateType;
 import com.openlattice.collections.EntitySetCollection;
 import com.openlattice.collections.EntityTypeCollection;
 import com.openlattice.data.*;
-import com.openlattice.data.storage.ByteBlobDataManager;
 import com.openlattice.data.storage.MetadataOption;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.set.EntitySetFlag;
@@ -82,18 +80,13 @@ import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.sql.Date;
 import java.sql.*;
-import java.time.Instant;
 import java.time.OffsetDateTime;
-import java.time.ZoneId;
 import java.util.*;
 import java.util.Base64.Decoder;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.openlattice.edm.EdmConstants.*;
 import static com.openlattice.postgres.DataTables.*;
 import static com.openlattice.postgres.PostgresArrays.getTextArray;
 import static com.openlattice.postgres.PostgresColumn.*;
@@ -109,19 +102,21 @@ public final class ResultSetAdapters {
             .getMimeDecoder();
     private static final ObjectMapper                                         mapper               = ObjectMappers
             .newJsonMapper();
-    private static final TypeReference<Map<String, Object>>                   alertMetadataTypeRef = new TypeReference<Map<String, Object>>() {
-    };
-    private static final TypeReference<LinkedHashSet<CollectionTemplateType>> templateTypeRef      = new TypeReference<LinkedHashSet<CollectionTemplateType>>() {
-    };
+    private static final TypeReference<Map<String, Object>>                   alertMetadataTypeRef =
+            new TypeReference<>() {};
+    private static final TypeReference<LinkedHashSet<CollectionTemplateType>> templateTypeRef      =
+            new TypeReference<>() {};
 
-    @NotNull public static SmsInformationKey smsInformationKey(
+    @NotNull
+    public static SmsInformationKey smsInformationKey(
             @NotNull ResultSet rs ) throws SQLException {
         final var phoneNumber = phoneNumber( rs );
         final var organizationId = organizationId( rs );
         return new SmsInformationKey( phoneNumber, organizationId );
     }
 
-    @NotNull public static SmsEntitySetInformation smsEntitySetInformation( @NotNull ResultSet rs )
+    @NotNull
+    public static SmsEntitySetInformation smsEntitySetInformation( @NotNull ResultSet rs )
             throws SQLException {
         final var phoneNumber = phoneNumber( rs );
         final var organizationId = organizationId( rs );
@@ -130,7 +125,8 @@ public final class ResultSetAdapters {
         return new SmsEntitySetInformation( phoneNumber, organizationId, entitySetIds, tags );
     }
 
-    @NotNull public static Set<UUID> entitySetIds( @NotNull ResultSet rs ) throws SQLException {
+    @NotNull
+    public static Set<UUID> entitySetIds( @NotNull ResultSet rs ) throws SQLException {
         final UUID[] entitySetIds = PostgresArrays.getUuidArray( rs, ENTITY_SET_IDS_FIELD );
 
         if ( entitySetIds == null ) {
@@ -141,20 +137,22 @@ public final class ResultSetAdapters {
 
     }
 
-    @NotNull public static Set<String> tags( @NotNull ResultSet rs ) throws SQLException {
+    @NotNull
+    public static Set<String> tags( @NotNull ResultSet rs ) throws SQLException {
         return new LinkedHashSet<>( Arrays.asList( PostgresArrays.getTextArray( rs, TAGS_FIELD ) ) );
     }
 
-    @NotNull public static String phoneNumber( @NotNull ResultSet rs ) throws SQLException {
+    @NotNull
+    public static String phoneNumber( @NotNull ResultSet rs ) throws SQLException {
         return rs.getString( PHONE_NUMBER_FIELD );
     }
 
     public static UUID clusterId( ResultSet rs ) throws SQLException {
-        return (UUID) rs.getObject( LINKING_ID_FIELD );
+        return ( UUID ) rs.getObject( LINKING_ID_FIELD );
     }
 
     public static GraphQueryState graphQueryState( ResultSet rs ) throws SQLException {
-        final UUID queryId = (UUID) rs.getObject( QUERY_ID.getName() );
+        final UUID queryId = ( UUID ) rs.getObject( QUERY_ID.getName() );
         final State state = State.valueOf( rs.getString( STATE.getName() ) );
         final long startTime = rs.getLong( START_TIME.getName() );
         return new GraphQueryState(
@@ -170,48 +168,19 @@ public final class ResultSetAdapters {
     }
 
     public static EntityDataKey srcEntityDataKey( ResultSet rs ) throws SQLException {
-        final UUID srcEntitySetId = (UUID) rs.getObject( SRC_ENTITY_SET_ID_FIELD );
-        final UUID srcEntityKeyId = (UUID) rs.getObject( SRC_ENTITY_KEY_ID_FIELD );
+        final UUID srcEntitySetId = ( UUID ) rs.getObject( SRC_ENTITY_SET_ID_FIELD );
+        final UUID srcEntityKeyId = ( UUID ) rs.getObject( SRC_ENTITY_KEY_ID_FIELD );
         return new EntityDataKey( srcEntitySetId, srcEntityKeyId );
     }
 
     public static EntityDataKey dstEntityDataKey( ResultSet rs ) throws SQLException {
-        final UUID dstEntitySetId = (UUID) rs.getObject( DST_ENTITY_SET_ID_FIELD );
-        final UUID dstEntityKeyId = (UUID) rs.getObject( DST_ENTITY_KEY_ID_FIELD );
+        final UUID dstEntitySetId = ( UUID ) rs.getObject( DST_ENTITY_SET_ID_FIELD );
+        final UUID dstEntityKeyId = ( UUID ) rs.getObject( DST_ENTITY_KEY_ID_FIELD );
         return new EntityDataKey( dstEntitySetId, dstEntityKeyId );
     }
 
     public static Double score( ResultSet rs ) throws SQLException {
         return rs.getDouble( SCORE_FIELD );
-    }
-
-    public static PropertyValueKey propertyValueKey( String propertyName, ResultSet rs ) throws SQLException {
-        UUID entityKeyId = id( rs );
-        Object value = propertyValue( propertyName, rs );
-        return new PropertyValueKey( entityKeyId, value );
-    }
-
-    public static Object propertyValue( String propertyName, ResultSet rs ) throws SQLException {
-        return rs.getObject( propertyName );
-    }
-
-    public static PropertyMetadata propertyMetadata( ResultSet rs ) throws SQLException {
-        byte[] hash = rs.getBytes( PostgresColumn.HASH_FIELD );
-        long version = rs.getLong( PostgresColumn.VERSION_FIELD );
-        Long[] versions = PostgresArrays.getLongArray( rs, PostgresColumn.VERSIONS_FIELD );
-        OffsetDateTime lastWrite = rs.getObject( PostgresColumn.LAST_WRITE_FIELD, OffsetDateTime.class );
-        return new PropertyMetadata( hash, version, Arrays.asList( versions ), lastWrite );
-    }
-
-    public static EntityDataMetadata entityDataMetadata( ResultSet rs ) throws SQLException {
-        long version = rs.getLong( PostgresColumn.VERSION_FIELD );
-        OffsetDateTime lastWrite = rs.getObject( PostgresColumn.LAST_WRITE_FIELD, OffsetDateTime.class );
-        OffsetDateTime lastIndex = rs.getObject( PostgresColumn.LAST_WRITE_FIELD, OffsetDateTime.class );
-        return new EntityDataMetadata( version, lastWrite, lastIndex );
-    }
-
-    public static Set<UUID> linkingIds( ResultSet rs ) throws SQLException {
-        return ImmutableSet.copyOf( PostgresArrays.getUuidArray( rs, LINKING_ID.getName() ) );
     }
 
     public static NeighborhoodSelection neighborhoodSelection( ResultSet rs, String colName )
@@ -252,7 +221,7 @@ public final class ResultSetAdapters {
     public static Edge edge( ResultSet rs ) throws SQLException {
         DataEdgeKey key = edgeKey( rs );
         long version = rs.getLong( VERSION.getName() );
-        List<Long> versions = Arrays.asList( (Long[]) rs.getArray( VERSIONS.getName() ).getArray() );
+        List<Long> versions = Arrays.asList( ( Long[] ) rs.getArray( VERSIONS.getName() ).getArray() );
 
         return new Edge( key, version, versions );
     }
@@ -271,7 +240,7 @@ public final class ResultSetAdapters {
     }
 
     public static EntityKey entityKey( ResultSet rs ) throws SQLException {
-        UUID entitySetId = (UUID) rs.getObject( ENTITY_SET_ID_FIELD );
+        UUID entitySetId = ( UUID ) rs.getObject( ENTITY_SET_ID_FIELD );
         String entityId = rs.getString( ENTITY_ID_FIELD );
         return new EntityKey( entitySetId, entityId );
     }
@@ -388,7 +357,7 @@ public final class ResultSetAdapters {
     }
 
     public static Set<FullQualifiedName> schemas( ResultSet rs ) throws SQLException {
-        return Arrays.stream( (String[]) rs.getArray( SCHEMAS.getName() ).getArray() ).map( FullQualifiedName::new )
+        return Arrays.stream( ( String[] ) rs.getArray( SCHEMAS.getName() ).getArray() ).map( FullQualifiedName::new )
                 .collect( Collectors.toSet() );
     }
 
@@ -424,16 +393,8 @@ public final class ResultSetAdapters {
         return new AceKey( aclKey, principal );
     }
 
-    public static <R> LinkedHashSet<R> linkedHashSetOfType(
-            ResultSet rs,
-            String colName,
-            Function<Object, R[]> arrayCastFunction ) throws SQLException {
-        return Arrays.stream( arrayCastFunction.apply( rs.getArray( colName ).getArray() ) )
-                .collect( Collectors.toCollection( LinkedHashSet::new ) );
-    }
-
     public static LinkedHashSet<UUID> linkedHashSetUUID( ResultSet rs, String colName ) throws SQLException {
-        return Arrays.stream( (UUID[]) rs.getArray( colName ).getArray() )
+        return Arrays.stream( ( UUID[] ) rs.getArray( colName ).getArray() )
                 .collect( Collectors.toCollection( LinkedHashSet::new ) );
     }
 
@@ -462,7 +423,7 @@ public final class ResultSetAdapters {
     }
 
     public static Set<String> contacts( ResultSet rs ) throws SQLException {
-        return Sets.newHashSet( (String[]) rs.getArray( CONTACTS.getName() ).getArray() );
+        return Sets.newHashSet( ( String[] ) rs.getArray( CONTACTS.getName() ).getArray() );
     }
 
     public static LinkedHashSet<UUID> src( ResultSet rs ) throws SQLException {
@@ -490,7 +451,7 @@ public final class ResultSetAdapters {
     }
 
     public static LinkedHashSet<String> members( ResultSet rs ) throws SQLException {
-        return Arrays.stream( (String[]) rs.getArray( MEMBERS.getName() ).getArray() )
+        return Arrays.stream( ( String[] ) rs.getArray( MEMBERS.getName() ).getArray() )
                 .collect( Collectors
                         .toCollection( LinkedHashSet::new ) );
     }
@@ -511,28 +472,12 @@ public final class ResultSetAdapters {
         return linkedHashSetUUID( rs, CONFIG_TYPE_IDS.getName() );
     }
 
-    public static double diameter( ResultSet rs ) throws SQLException {
-        return rs.getDouble( GRAPH_DIAMETER.getName() );
-    }
-
     public static Set<UUID> entityKeyIds( ResultSet rs ) throws SQLException {
-        return Sets.newHashSet( (UUID[]) rs.getArray( ENTITY_KEY_IDS_COL.getName() ).getArray() );
-    }
-
-    public static UUID graphId( ResultSet rs ) throws SQLException {
-        return rs.getObject( GRAPH_ID.getName(), UUID.class );
-    }
-
-    public static UUID vertexId( ResultSet rs ) throws SQLException {
-        return rs.getObject( VERTEX_ID.getName(), UUID.class );
+        return Sets.newHashSet( ( UUID[] ) rs.getArray( ENTITY_KEY_IDS_COL.getName() ).getArray() );
     }
 
     public static UUID securableObjectId( ResultSet rs ) throws SQLException {
         return rs.getObject( SECURABLE_OBJECTID.getName(), UUID.class );
-    }
-
-    public static UUID roleId( ResultSet rs ) throws SQLException {
-        return rs.getObject( ROLE_ID.getName(), UUID.class );
     }
 
     public static UUID organizationId( ResultSet rs ) throws SQLException {
@@ -541,14 +486,6 @@ public final class ResultSetAdapters {
 
     public static String nullableTitle( ResultSet rs ) throws SQLException {
         return rs.getString( NULLABLE_TITLE.getName() );
-    }
-
-    public static UUID currentSyncId( ResultSet rs ) throws SQLException {
-        return rs.getObject( CURRENT_SYNC_ID.getName(), UUID.class );
-    }
-
-    public static UUID syncId( ResultSet rs ) throws SQLException {
-        return rs.getObject( SYNC_ID.getName(), UUID.class );
     }
 
     public static SecurableObjectType securableObjectType( ResultSet rs ) throws SQLException {
@@ -737,20 +674,12 @@ public final class ResultSetAdapters {
         return new Status( request, principal, status );
     }
 
-    //    public static Role role( ResultSet rs ) throws SQLException {
-    //        UUID roleId = roleId( rs );
-    //        UUID orgId = organizationId( rs );
-    //        String title = nullableTitle( rs );
-    //        String description = description( rs );
-    //        return new Role( Optional.of( roleId ), orgId, title, Optional.ofNullable( description ) );
-    //    }
-
     public static PrincipalSet principalSet( ResultSet rs ) throws SQLException {
         Array usersArray = rs.getArray( PRINCIPAL_IDS.getName() );
         if ( usersArray == null ) {
             return PrincipalSet.wrap( ImmutableSet.of() );
         }
-        Stream<String> users = Arrays.stream( (String[]) usersArray.getArray() );
+        Stream<String> users = Arrays.stream( ( String[] ) usersArray.getArray() );
         return PrincipalSet
                 .wrap( users.map( user -> new Principal( PrincipalType.USER, user ) ).collect( Collectors.toSet() ) );
     }
@@ -787,234 +716,26 @@ public final class ResultSetAdapters {
         return new AppType( id, type, title, description, entityTypeId );
     }
 
-    private static List<?> propertyValue( ResultSet rs, PropertyType propertyType ) throws SQLException {
-        final String fqn = propertyType.getType().getFullQualifiedNameAsString();
-        List<?> objects = null;
-        Array arr = rs.getArray( fqn );
-        if ( arr != null ) {
-            switch ( propertyType.getDatatype() ) {
-                case String:
-                case GeographyPoint:
-                    objects = Arrays.asList( (String[]) arr.getArray() );
-                    break;
-                case Guid:
-                    objects = Arrays.asList( (UUID[]) arr.getArray() );
-                    break;
-                case Byte:
-                    byte[] bytes = rs.getBytes( fqn );
-                    if ( bytes != null && bytes.length > 0 ) {
-                        objects = Arrays.asList( rs.getBytes( fqn ) );
-                    }
-                    break;
-                case Int16:
-                    objects = Arrays.asList( (Short[]) arr.getArray() );
-                    break;
-                case Int32:
-                    objects = Arrays.asList( (Integer[]) arr.getArray() );
-                    break;
-                case Duration:
-                case Int64:
-                    objects = Arrays.asList( (Long[]) arr.getArray() );
-                    break;
-                case Date:
-                    objects = Stream
-                            .of( (Date[]) arr.getArray() )
-                            .map( Date::toLocalDate )
-                            .collect( Collectors.toList() );
-                    break;
-                case TimeOfDay:
-                    objects = Stream
-                            .of( (Time[]) arr.getArray() )
-                            .map( Time::toLocalTime )
-                            .collect( Collectors.toList() );
-                    break;
-                case DateTimeOffset:
-                    objects = Stream
-                            .of( (Timestamp[]) arr.getArray() )
-                            .map( ts -> OffsetDateTime
-                                    .ofInstant( Instant.ofEpochMilli( ts.getTime() ), ZoneId.of( "UTC" ) ) )
-                            .collect( Collectors.toList() );
-                    break;
-                case Double:
-                    objects = Arrays.asList( (Double[]) arr.getArray() );
-                    break;
-                case Boolean:
-                    objects = Arrays.asList( (Boolean[]) arr.getArray() );
-                    break;
-                case Binary:
-                    objects = Arrays.asList( (String[]) arr.getArray() );
-                    break;
-                default:
-                    objects = null;
-                    logger.error( "Unable to read property type {}.",
-                            propertyType.getId() );
-            }
-        }
-
-        return objects;
-    }
-
-    public static Map<UUID, Set<Object>> implicitEntityValuesById(
-            ResultSet rs,
-            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
-            ByteBlobDataManager byteBlobDataManager ) throws SQLException {
-        final Map<UUID, Set<Object>> data = new HashMap<>();
-
-        final Set<PropertyType> allPropertyTypes = authorizedPropertyTypes.values().stream()
-                .flatMap( propertyTypesOfEntitySet -> propertyTypesOfEntitySet.values().stream() )
-                .collect( Collectors.toSet() );
-        for ( PropertyType propertyType : allPropertyTypes ) {
-            List<?> objects = propertyValue( rs, propertyType );
-
-            if ( objects != null ) {
-                if ( propertyType.getDatatype() == EdmPrimitiveTypeKind.Binary ) {
-                    data.put( propertyType.getId(), new HashSet<>( byteBlobDataManager.getObjects( objects ) ) );
-                } else {
-                    data.put( propertyType.getId(), new HashSet<>( objects ) );
-                }
-            }
-        }
-        return data;
-    }
-
-    public static Map<UUID, Set<Object>> implicitEntityValuesByIdWithLastWrite(
-            ResultSet rs,
-            Map<UUID, PropertyType> authorizedPropertyTypes,
-            ByteBlobDataManager byteBlobDataManager ) throws SQLException {
-        final Map<UUID, Set<Object>> data = new HashMap<>();
-
-        for ( PropertyType propertyType : authorizedPropertyTypes.values() ) {
-            List<?> objects = propertyValue( rs, propertyType );
-
-            if ( objects != null ) {
-                if ( propertyType.getDatatype() == EdmPrimitiveTypeKind.Binary ) {
-                    data.put( propertyType.getId(), new HashSet<>( byteBlobDataManager.getObjects( objects ) ) );
-                } else {
-                    data.put( propertyType.getId(), new HashSet<>( objects ) );
-                }
-            }
-        }
-
-        data.put( IdConstants.LAST_WRITE_ID.getId(), ImmutableSet.of( lastWrite( rs ) ) );
-        return data;
-    }
-
-    public static Map<FullQualifiedName, Set<Object>> implicitEntityValuesByFqn(
-            ResultSet rs,
-            Map<UUID, PropertyType> authorizedPropertyTypes,
-            ByteBlobDataManager byteBlobDataManager ) throws SQLException {
-        final Map<FullQualifiedName, Set<Object>> data = new HashMap<>();
-
-        for ( PropertyType propertyType : authorizedPropertyTypes.values() ) {
-            List<?> objects = propertyValue( rs, propertyType );
-
-            if ( objects != null ) {
-                if ( propertyType.getDatatype() == EdmPrimitiveTypeKind.Binary ) {
-                    data.put( propertyType.getType(), new HashSet<>( byteBlobDataManager.getObjects( objects ) ) );
-                } else {
-                    data.put( propertyType.getType(), new HashSet<>( objects ) );
-                }
-            }
-        }
-
-        return data;
-    }
-
-    public static SetMultimap<FullQualifiedName, Object> implicitNormalEntity(
-            ResultSet rs,
-            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
-            Set<MetadataOption> metadataOptions,
-            ByteBlobDataManager byteBlobDataManager ) throws SQLException {
-        return implicitEntity( rs, authorizedPropertyTypes, metadataOptions, byteBlobDataManager, false );
-    }
-
-    public static SetMultimap<FullQualifiedName, Object> implicitLinkedEntity(
-            ResultSet rs,
-            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
-            Set<MetadataOption> metadataOptions,
-            ByteBlobDataManager byteBlobDataManager ) throws SQLException {
-        return implicitEntity( rs, authorizedPropertyTypes, metadataOptions, byteBlobDataManager, true );
-    }
-
-    private static SetMultimap<FullQualifiedName, Object> implicitEntity(
-            ResultSet rs,
-            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
-            Set<MetadataOption> metadataOptions,
-            ByteBlobDataManager byteBlobDataManager,
-            Boolean linking ) throws SQLException {
-        final SetMultimap<FullQualifiedName, Object> data = HashMultimap.create();
-        final Collection<PropertyType> allPropertyTypes;
-
-        if ( linking ) {
-            final UUID entityKeyId = linkingId( rs );
-            data.put( ID_FQN, entityKeyId );
-
-            allPropertyTypes = authorizedPropertyTypes.values().stream()
-                    .flatMap( propertyTypesOfEntitySet -> propertyTypesOfEntitySet.values().stream() )
-                    .collect( Collectors.toSet() );
-        } else {
-            final UUID entityKeyId = id( rs );
-            data.put( ID_FQN, entityKeyId );
-
-            UUID entitySetId = entitySetId( rs );
-            allPropertyTypes = authorizedPropertyTypes.get( entitySetId ).values();
-        }
-
-        if ( metadataOptions.contains( MetadataOption.LAST_WRITE ) ) {
-            data.put( LAST_WRITE_FQN, lastWrite( rs ) );
-        }
-
-        if ( metadataOptions.contains( MetadataOption.LAST_INDEX ) ) {
-            data.put( LAST_INDEX_FQN, lastIndex( rs ) );
-        }
-
-        for ( PropertyType propertyType : allPropertyTypes ) {
-            List<?> objects = propertyValue( rs, propertyType );
-
-            if ( objects != null ) {
-                if ( propertyType.getDatatype() == EdmPrimitiveTypeKind.Binary ) {
-                    data.putAll( propertyType.getType(), byteBlobDataManager.getObjects( objects ) );
-                } else {
-                    data.putAll( propertyType.getType(), objects );
-                }
-            }
-        }
-
-        return data;
-    }
-
     public static UUID linkingId( ResultSet rs ) throws SQLException {
-        return (UUID) rs.getObject( LINKING_ID.getName() );
+        return ( UUID ) rs.getObject( LINKING_ID.getName() );
     }
 
     public static OffsetDateTime lastWriteTyped( ResultSet rs ) throws SQLException {
         return rs.getObject( LAST_WRITE.getName(), OffsetDateTime.class );
     }
 
-    public static Object lastWrite( ResultSet rs ) throws SQLException {
-        return rs.getObject( LAST_WRITE.getName() );
-    }
-
-    public static Object lastIndex( ResultSet rs ) throws SQLException {
-        return rs.getObject( LAST_INDEX.getName() );
-    }
-
     public static Boolean linking( ResultSet rs ) throws SQLException {
-        return (Boolean) rs.getObject( LINKING.getName() );
+        return ( Boolean ) rs.getObject( LINKING.getName() );
     }
 
     public static LinkedHashSet<UUID> linkedEntitySets( ResultSet rs ) throws SQLException {
         return linkedHashSetUUID( rs, LINKED_ENTITY_SETS.getName() );
     }
 
-    public static Boolean external( ResultSet rs ) throws SQLException {
-        return (Boolean) rs.getObject( EXTERNAL.getName() );
-    }
-
     public static PropertyUsageSummary propertyUsageSummary( ResultSet rs ) throws SQLException {
-        UUID entityTypeID = (UUID) rs.getObject( ENTITY_TYPE_ID_FIELD );
+        UUID entityTypeID = ( UUID ) rs.getObject( ENTITY_TYPE_ID_FIELD );
         String entitySetName = rs.getString( ENTITY_SET_NAME_FIELD );
-        UUID entitySetId = (UUID) rs.getObject( ENTITY_SET_ID_FIELD );
+        UUID entitySetId = ( UUID ) rs.getObject( ENTITY_SET_ID_FIELD );
         long count = count( rs );
         return new PropertyUsageSummary( entityTypeID, entitySetName, entitySetId, count );
     }
@@ -1056,12 +777,12 @@ public final class ResultSetAdapters {
     }
 
     public static EntityLinkingFeedback entityLinkingFeedback( ResultSet rs ) throws SQLException {
-        boolean linked = linked( rs );
+        boolean linked = isLinked( rs );
 
         return new EntityLinkingFeedback( entityKeyPair( rs ), linked );
     }
 
-    public static Boolean linked( ResultSet rs ) throws SQLException {
+    public static Boolean isLinked( ResultSet rs ) throws SQLException {
         return rs.getBoolean( LINKED_FIELD );
     }
 
@@ -1091,7 +812,8 @@ public final class ResultSetAdapters {
         }
     }
 
-    public static @Nullable UUID auditRecordEntitySetId( ResultSet rs ) throws SQLException {
+    public static @Nullable
+    UUID auditRecordEntitySetId( ResultSet rs ) throws SQLException {
         return rs.getObject( AUDIT_RECORD_ENTITY_SET_ID_FIELD, UUID.class );
     }
 
@@ -1107,7 +829,7 @@ public final class ResultSetAdapters {
 
     private static UUID[] readNullableUuidArray( UUID[] nullable ) {
         if ( nullable == null ) {
-            return new UUID[ 0 ];
+            return new UUID[0];
         } else {
             return nullable;
         }
@@ -1221,4 +943,7 @@ public final class ResultSetAdapters {
         return new OrganizationExternalDatabaseColumn( id, name, title, description, tableId, organizationId );
     }
 
+    public static UUID originId( ResultSet rs ) throws SQLException {
+        return rs.getObject( ORIGIN_ID.getName(), UUID.class );
+    }
 }
