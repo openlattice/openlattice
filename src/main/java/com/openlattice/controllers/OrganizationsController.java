@@ -814,6 +814,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             securableObjectTypes.deleteSecurableObjectType( aclKey );
         } );
         edms.deleteOrganizationExternalDatabaseColumns( organizationId, tableName, columnNameById );
+        return null;
     }
 
     private void ensureRoleAdminAccess( UUID organizationId, UUID roleId ) {
