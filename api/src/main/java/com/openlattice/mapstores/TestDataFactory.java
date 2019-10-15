@@ -588,7 +588,7 @@ public final class TestDataFactory {
     }
 
     public static OrganizationExternalDatabaseColumn organizationAtlasColumn() {
-        OrganizationExternalDatabaseTable table = organizationAtlasTable()
+        OrganizationExternalDatabaseTable table = organizationAtlasTable();
         return new OrganizationExternalDatabaseColumn(
                 UUID.randomUUID(),
                 randomAlphanumeric( 5 ),
