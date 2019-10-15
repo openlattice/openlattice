@@ -588,27 +588,25 @@ public final class TestDataFactory {
     }
 
     public static OrganizationExternalDatabaseColumn organizationAtlasColumn() {
+        OrganizationExternalDatabaseTable table = organizationAtlasTable()
         return new OrganizationExternalDatabaseColumn(
                 UUID.randomUUID(),
                 randomAlphanumeric( 5 ),
                 randomAlphanumeric( 5 ),
                 Optional.of(randomAlphanumeric( 5 )),
+                table.getId(),
                 UUID.randomUUID()
         );
     }
 
 
     public static OrganizationExternalDatabaseTable organizationAtlasTable() {
-        OrganizationExternalDatabaseColumn column = organizationAtlasColumn();
-        Set<UUID> columnIds = ImmutableSet.of( column.getId() );
-
         return new OrganizationExternalDatabaseTable(
                 UUID.randomUUID(),
                 randomAlphanumeric( 5 ),
                 randomAlphanumeric( 5 ),
                 Optional.of(randomAlphanumeric( 5 )),
-                columnIds,
-                column.getOrganizationId()
+                UUID.randomUUID()
         );
     }
 
