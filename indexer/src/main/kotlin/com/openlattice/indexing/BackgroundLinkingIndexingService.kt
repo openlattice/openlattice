@@ -177,7 +177,7 @@ class BackgroundLinkingIndexingService(
      */
     private fun getDirtyLinkingIds(): BasePostgresIterable<Pair<UUID, OffsetDateTime>> {
         return BasePostgresIterable(
-                StatementHolderSupplier(hds, selectDirtyLinkingIds(), FETCH_SIZE)
+                StatementHolderSupplier(hds, selectDirtyLinkingIds())
         ) { rs -> ResultSetAdapters.linkingId(rs) to ResultSetAdapters.lastWriteTyped(rs) }
     }
 
@@ -190,7 +190,8 @@ class BackgroundLinkingIndexingService(
                     "${LAST_LINK.name} >= ${LAST_WRITE.name} AND " +
                     "${LAST_LINK_INDEX.name} < ${LAST_WRITE.name} AND " +
                     "${VERSION.name} > 0 AND " +
-                    "${LINKING_ID.name} IS NOT NULL"
+                    "${LINKING_ID.name} IS NOT NULL " +
+                "LIMIT $FETCH_SIZE"
         // @formatter:on
     }
 
