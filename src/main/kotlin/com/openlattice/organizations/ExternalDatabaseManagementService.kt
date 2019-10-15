@@ -67,17 +67,17 @@ class ExternalDatabaseManagementService(
         permissions.entries.forEach {
             when (it.key) {
                 Action.ADD -> {
-                    val grantStmt = grantPrivilegesSql()
+                    val grantStmt = getGrantPrivilegesStmt()
                     executePrivilegesUpdate(grantStmt, dbName, it.value)
                 }
                 Action.REMOVE -> {
-                    val revokeStmt = revokePrivilegesSql()
+                    val revokeStmt = getRevokePrivilegesStmt()
                     executePrivilegesUpdate(revokeStmt, dbName, it.value)
                 }
 
                 Action.SET -> {
                     revokeAllPrivileges(dbName, it.value)
-                    val grantStmt = grantPrivilegesSql()
+                    val grantStmt = getGrantPrivilegesStmt()
                     executePrivilegesUpdate(grantStmt, dbName, it.value)
                 }
                 else -> {
@@ -204,8 +204,12 @@ class ExternalDatabaseManagementService(
         //write a signalUpdate method
     }
 
+    fun deleteOrganizationExternalDatabaseTables(orgId: UUID, tableNameById: Map<UUID, String>) {
+        tableNameById.forEach{ deleteOrganizationExternalDatabaseTable(orgId, it.value, it.key)}
+    }
+
     fun deleteOrganizationExternalDatabaseTable(orgId: UUID, tableName: String, tableId: UUID) {
-        organizationExternalDatabaseTables.remove(tableId) //TODO make this a set so we can batch delete
+        organizationExternalDatabaseTables.remove(tableId) //TODO make this a set so we can batch delete, entry processor?
         aclKeyReservations.release(tableId)
 
         //drop table from external database
@@ -226,7 +230,7 @@ class ExternalDatabaseManagementService(
     }
 
     fun deleteOrganizationExternalDatabaseColumn(orgId: UUID, tableName: String, columnName: String, columnId: UUID) {
-        organizationExternalDatabaseTables.remove(columnId) //TODO make this a set so we can batch delete
+        organizationExternalDatabaseTables.remove(columnId) //TODO make this a set so we can batch delete, entry processor?
         aclKeyReservations.release(columnId)
 
         //drop column from table in external database
@@ -290,8 +294,7 @@ class ExternalDatabaseManagementService(
                         privileges.add("ALL")
                     } else {
                         if (ace.permissions.contains(Permission.WRITE)) {
-                            val writePrivileges = listOf("INSERT", "UPDATE")
-                            privileges.addAll(writePrivileges)
+                            privileges.addAll(listOf("INSERT", "UPDATE"))
                         }
                         if (ace.permissions.contains(Permission.READ)) {
                             privileges.add("SELECT")
@@ -307,7 +310,7 @@ class ExternalDatabaseManagementService(
 
     private fun revokeAllPrivileges(dbName: String, aclData: List<AclData>) {
         connect(dbName).use { hds ->
-            val stmt = hds.connection.prepareStatement(revokePrivilegesSql())
+            val stmt = hds.connection.prepareStatement(getRevokePrivilegesStmt())
             aclData.forEach {
                 val tableAndColumnNames = getTableAndColumnNames(it)
                 it.acl.aces.forEach { ace ->
@@ -325,11 +328,11 @@ class ExternalDatabaseManagementService(
         return quote(buildPostgresUsername(securePrincipal))
     }
 
-    private fun grantPrivilegesSql(): String {
+    private fun getGrantPrivilegesStmt(): String {
         return "GRANT ? ? ON ? TO ?"
     }
 
-    private fun revokePrivilegesSql(): String {
+    private fun getRevokePrivilegesStmt(): String {
         return "REVOKE ? ? ON ? FROM ?"
     }
 
