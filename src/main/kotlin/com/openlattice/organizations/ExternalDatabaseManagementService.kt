@@ -229,6 +229,10 @@ class ExternalDatabaseManagementService(
 
     }
 
+    fun deleteOrganizationExternalDatabaseColumns(orgId: UUID, tableName: String, columnNameById: Map<UUID, String>) {
+        columnNameById.forEach{ deleteOrganizationExternalDatabaseColumn(orgId, tableName, it.value, it.key)}
+    }
+
     fun deleteOrganizationExternalDatabaseColumn(orgId: UUID, tableName: String, columnName: String, columnId: UUID) {
         organizationExternalDatabaseTables.remove(columnId) //TODO make this a set so we can batch delete, entry processor?
         aclKeyReservations.release(columnId)
@@ -242,6 +246,8 @@ class ExternalDatabaseManagementService(
             stmt.execute()
         }
     }
+
+
 
     /**
      * Deletes an organization's entire database.
