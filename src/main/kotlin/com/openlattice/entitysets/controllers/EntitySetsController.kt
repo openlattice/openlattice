@@ -22,13 +22,8 @@ package com.openlattice.entitysets.controllers
 import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Preconditions
 import com.google.common.collect.ImmutableMap
-import com.google.common.collect.ImmutableSet
 import com.google.common.collect.Lists
 import com.google.common.collect.Maps
-import com.openlattice.auditing.AuditEventType
-import com.openlattice.auditing.AuditRecordEntitySetsManager
-import com.openlattice.auditing.AuditableEvent
-import com.openlattice.auditing.AuditingComponent
 import com.openlattice.IdConstants
 import com.openlattice.auditing.*
 import com.openlattice.authorization.*
@@ -38,22 +33,22 @@ import com.openlattice.controllers.exceptions.ForbiddenException
 import com.openlattice.controllers.exceptions.wrappers.BatchException
 import com.openlattice.controllers.exceptions.wrappers.ErrorsDTO
 import com.openlattice.controllers.util.ApiExceptions
-import com.openlattice.data.DataExpiration
+import com.openlattice.data.DataDeletionManager
 import com.openlattice.data.DataGraphManager
+import com.openlattice.data.DeleteType
 import com.openlattice.data.WriteEvent
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.edm.set.EntitySetPropertyMetadata
-import com.openlattice.edm.set.ExpirationBase
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.entitysets.EntitySetsApi
 import com.openlattice.entitysets.EntitySetsApi.Companion.ALL
+import com.openlattice.entitysets.EntitySetsApi.Companion.EXPIRATION_PATH
 import com.openlattice.entitysets.EntitySetsApi.Companion.ID
 import com.openlattice.entitysets.EntitySetsApi.Companion.IDS_PATH
 import com.openlattice.entitysets.EntitySetsApi.Companion.ID_PATH
-import com.openlattice.entitysets.EntitySetsApi.Companion.EXPIRATION_PATH
 import com.openlattice.entitysets.EntitySetsApi.Companion.LINKING
 import com.openlattice.entitysets.EntitySetsApi.Companion.METADATA_PATH
 import com.openlattice.entitysets.EntitySetsApi.Companion.NAME
@@ -63,19 +58,10 @@ import com.openlattice.entitysets.EntitySetsApi.Companion.PROPERTY_TYPE_ID
 import com.openlattice.entitysets.EntitySetsApi.Companion.PROPERTY_TYPE_ID_PATH
 import com.openlattice.linking.util.PersonProperties
 import com.openlattice.organizations.roles.SecurePrincipalsManager
-import com.openlattice.postgres.DataTables.LAST_WRITE
-import com.openlattice.postgres.PostgresColumn.VERSIONS
-import com.openlattice.postgres.PostgresDataTables
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
-import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
-import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.*
-import retrofit2.http.PUT
-import retrofit2.http.Path
-import java.sql.Types
 import java.time.OffsetDateTime
-import java.time.ZoneId
 import java.util.*
 import javax.inject.Inject
 import kotlin.streams.asSequence
@@ -94,7 +80,8 @@ constructor(
         private val dgm: DataGraphManager,
         private val spm: SecurePrincipalsManager,
         private val authzHelper: EdmAuthorizationHelper,
-        private val securableObjectTypes: SecurableObjectResolveTypeService
+        private val securableObjectTypes: SecurableObjectResolveTypeService,
+        private val deletionManager: DataDeletionManager
 ) : EntitySetsApi, AuthorizingComponent, AuditingComponent {
 
     override fun getAuditingManager(): AuditingManager {
@@ -230,7 +217,6 @@ constructor(
     @RequestMapping(path = [ALL + ID_PATH], method = [RequestMethod.DELETE])
     override fun deleteEntitySet(@PathVariable(ID) entitySetId: UUID): Int {
         ensureOwnerAccess(AclKey(entitySetId))
-        val deleted: List<WriteEvent>
         val entitySet = edmManager.getEntitySet(entitySetId)
 
         ensureEntitySetCanBeDeleted(entitySet)
@@ -245,10 +231,10 @@ constructor(
         }
 
         // linking entitysets have no entities or associations
-        deleted = if (!entitySet.isLinking) {
+        val deleted = if (!entitySet.isLinking) {
             // associations need to be deleted first, because edges are deleted in DataGraphManager.deleteEntitySet call
-            deleteAssociationsOfEntitySet(entitySetId) + dgm.deleteEntitySet(entitySetId, authorizedPropertyTypes)
-        } else listOf(WriteEvent(System.currentTimeMillis(), 1))
+            deletionManager.clearOrDeleteEntitySet(entitySetId, DeleteType.Hard, Principals.getCurrentPrincipals())
+        } else WriteEvent(System.currentTimeMillis(), 1)
 
         edmManager.deleteEntitySet(entitySetId)
         securableObjectTypes.deleteSecurableObjectType(AclKey(entitySetId))
@@ -266,7 +252,7 @@ constructor(
                 )
         )
 
-        return deleted.sumBy { it.numUpdates }
+        return deleted.numUpdates
     }
 
     @Timed
@@ -464,7 +450,6 @@ constructor(
     }
 
 
-
     private fun removeEntitySets(linkingEntitySetId: UUID, entitySetIds: Set<UUID>): Int {
         ensureOwnerAccess(AclKey(linkingEntitySetId))
         Preconditions.checkState(
@@ -517,64 +502,19 @@ constructor(
         }
     }
 
-    private fun deleteAssociationsOfEntitySet(entitySetId: UUID): List<WriteEvent> {
-        // collect association entity key ids
-        val associationsEdgeKeys = dgm.getEdgeKeysOfEntitySet(entitySetId)
-
-        // access checks
-        val authorizedPropertyTypes = HashMap<UUID, Map<UUID, PropertyType>>()
-        associationsEdgeKeys.stream().forEach { edgeKey ->
-            if (!authorizedPropertyTypes.containsKey(edgeKey.edge.entitySetId)) {
-                val authorizedPropertyTypesOfAssociation = getAuthorizedPropertyTypesForDelete(
-                        edgeKey.edge.entitySetId, Optional.empty()
-                )
-                authorizedPropertyTypes[edgeKey.edge.entitySetId] = authorizedPropertyTypesOfAssociation
-            }
-        }
-
-        // delete associations of entity set
-        return dgm.deleteAssociationsBatch(entitySetId, associationsEdgeKeys, authorizedPropertyTypes)
-    }
-
-    private fun getAuthorizedPropertyTypesForDelete(
-            entitySetId: UUID,
-            properties: Optional<Set<UUID>>
-    ): Map<UUID, PropertyType> {
-        ensureOwnerAccess(AclKey(entitySetId))
-        val entitySet = getEntitySet(entitySetId)
-        if (entitySet.isLinking) {
-            throw IllegalArgumentException("You cannot delete entities from a linking entity set.")
-        }
-
-        val entityType = edmManager.getEntityType(entitySet.entityTypeId)
-        val requiredProperties = properties.orElse(entityType.properties)
-        val authorizedPropertyTypes = authzHelper.getAuthorizedPropertyTypes(
-                ImmutableSet.of(entitySetId),
-                requiredProperties,
-                EnumSet.of(Permission.OWNER)
-        ).getValue(entitySetId)
-        if (!authorizedPropertyTypes.keys.containsAll(requiredProperties)) {
-            throw ForbiddenException(
-                    "You must be an owner of all required entity set properties to delete entities from it."
-            )
-        }
-
-        return authorizedPropertyTypes
-    }
-
     private fun deleteAuditEntitySetsForId(entitySetId: UUID) {
         val aclKey = AclKey(entitySetId)
 
         val propertyTypes = aresManager.auditingTypes.propertyTypes
 
-        aresManager.getAuditRecordEntitySets(aclKey).forEach {
-            dgm.deleteEntitySet(it, propertyTypes)
+        aresManager.getAuditEdgeEntitySets(aclKey).forEach {
+            deletionManager.clearOrDeleteEntitySet(it, DeleteType.Hard)
             edmManager.deleteEntitySet(it)
             securableObjectTypes.deleteSecurableObjectType(AclKey(it))
         }
 
-        aresManager.getAuditEdgeEntitySets(aclKey).forEach {
-            dgm.deleteEntitySet(it, mapOf())
+        aresManager.getAuditRecordEntitySets(aclKey).forEach {
+            deletionManager.clearOrDeleteEntitySet(it, DeleteType.Hard)
             edmManager.deleteEntitySet(it)
             securableObjectTypes.deleteSecurableObjectType(AclKey(it))
         }
