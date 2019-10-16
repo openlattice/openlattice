@@ -21,6 +21,14 @@ class WriteEvent(_version: Long, val numUpdates: Int) {
         }
     }
 
+    operator fun component1(): Long {
+        return version
+    }
+
+    operator fun component2(): Int {
+        return numUpdates
+    }
+
     override fun hashCode(): Int {
         return Objects.hash(version, numUpdates)
     }
