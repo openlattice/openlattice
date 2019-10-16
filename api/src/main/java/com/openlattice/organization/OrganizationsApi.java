@@ -56,6 +56,9 @@ public interface OrganizationsApi {
     String TABLE_NAME_PATH          = "/{" + TABLE_NAME + "}";
     String COLUMN_NAME              = "columnName";
     String COLUMN_NAME_PATH         = "/{" + COLUMN_NAME + "}";
+    String SQL_TYPE                 = "sqlType";
+    String SQL_TYPE_PATH            = "/{" + SQL_TYPE + "}";
+
     /*
      * These determine the service routing for the LB
      */
@@ -261,7 +264,7 @@ public interface OrganizationsApi {
     //create
     /**
      * Creates a securable OrganizationExternalDatabaseTable object, which represents an
-     * organization's table in an external database
+     * organization's table in an external database. The table must already exist in the database
      * @param organizationId The organization's UUID
      * @param organizationExternalDatabaseTable The object to be created
      */
@@ -271,15 +274,43 @@ public interface OrganizationsApi {
 
     /**
      * Creates a securable OrganizationExternalDatabaseColumn object, which represents a
-     * column within an organization's table in an external database
+     * column within an organization's table in an external database. The table and column must
+     * already exist in the database
      * @param organizationId The organization's UUID
      * @param organizationExternalDatabaseColumn The object to be created
      */
     @POST( BASE + ID_PATH + EXTERNAL_DATABASE_COLUMN )
-    UUID createExternalDatabaseColumn( @Path( ID ) UUID organizationId, @Body
-            OrganizationExternalDatabaseColumn organizationExternalDatabaseColumn );
+    UUID createExternalDatabaseColumn( @Path( ID ) UUID organizationId,
+            @Body OrganizationExternalDatabaseColumn organizationExternalDatabaseColumn );
 
-    //TODO make "add" or "createNew" or something for creating a new table/column
+    /**
+     * Creates a table with specified columns within an organization's database and creates a
+     * securable OrganizationExternalDatabaseTable object and the specified number of
+     * securable OrganizationExternalDatabaseColumn objects, which correspond to the new table.
+     * The table must not already exist in the database
+     * @param organizationId The organization's UUID
+     * @param tableName The name of the table to be created
+     * @param columnNameToSqlType An ordered map (of column name to sql type) of columns to be created
+     */
+    @POST( BASE + ID_PATH + TABLE_NAME_PATH + EXTERNAL_DATABASE_TABLE )
+    Void createNewExternalDatabaseTable( @Path( ID ) UUID organizationId, @Path( TABLE_NAME ) String tableName,
+            @Body LinkedHashMap<String, String> columnNameToSqlType);
+
+    /**
+     * Creates a new column within a table belonging to an organization and creates a
+     * securable OrganizationExternalDatabaseColumn object corresponding to that column.
+     * The column must not already exist in the database
+     * @param organizationId The organization's UUID
+     * @param tableName The name of the table to which the column will belong
+     * @param columnName The name of the column to be created
+     * @param sqlType The sql type of the column to be created
+     */
+    @POST( BASE + ID_PATH + TABLE_NAME_PATH + COLUMN_NAME_PATH + SQL_TYPE_PATH + EXTERNAL_DATABASE_COLUMN )
+    Void createNewExternalDatabaseColumn(
+            @Path( ID ) UUID organizationId,
+            @Path( TABLE_NAME ) String tableName,
+            @Path( COLUMN_NAME ) String columnName,
+            @Path( SQL_TYPE) String sqlType);
 
     //get
     /**
