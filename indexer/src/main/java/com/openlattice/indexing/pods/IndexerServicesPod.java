@@ -287,8 +287,18 @@ public class IndexerServicesPod {
     }
 
     @Bean
+    public IndexingMetadataManager indexingMetadataManager() {
+        return new IndexingMetadataManager( hikariDataSource, partitionManager() );
+    }
+
+    @Bean
     public PostgresEntityDataQueryService dataQueryService() {
-        return new PostgresEntityDataQueryService( hikariDataSource, byteBlobDataManager, partitionManager() );
+        return new PostgresEntityDataQueryService(
+                hikariDataSource,
+                byteBlobDataManager,
+                partitionManager(),
+                indexingMetadataManager()
+        );
     }
 
     @Bean
