@@ -96,30 +96,6 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
         }
     }
 
-    fun markLinkingIdsAsNeedToBeIndexed(linkingEntityKeys: Map<UUID, Set<UUID>>): Int {
-        val entitySetPartitions = partitionManager.getEntitySetsPartitionsInfo(linkingEntityKeys.keys)
-
-        hds.connection.use { connection ->
-            connection.prepareStatement(markLinkingIdsAsNeedToBeIndexedSql).use { stmt ->
-                linkingEntityKeys.forEach { (entitySetId, linkingIds) ->
-                    val partitions = entitySetPartitions.getValue(entitySetId).partitions.toList()
-
-                    linkingIds.groupBy { getPartition(it, partitions) }
-                            .forEach { (partition, linkingIds) ->
-                                val linkingIdsArray = PostgresArrays.createUuidArray(connection, linkingIds)
-                                stmt.setObject(1, entitySetId)
-                                stmt.setInt(2, partition)
-                                stmt.setArray(3, linkingIdsArray)
-
-                                stmt.addBatch()
-                            }
-                }
-
-                return stmt.executeBatch().sum()
-            }
-        }
-    }
-
     fun markAsNeedsToBeLinked(linkingEntityDataKeys: Set<EntityDataKey>): Int {
         val linkingEntityKeys = linkingEntityDataKeys
                 .groupBy { it.entitySetId }
@@ -206,19 +182,6 @@ private val markIdsAsNeedToBeIndexedSql = "UPDATE ${IDS.name} " +
         "AND ${PARTITION.name} = ? " +
         "AND ${PARTITIONS_VERSION.name} = ? " +
         "AND ${ID.name} = ANY(?)"
-
-/**
- * Arguments of preparable sql in order:
- * 1. entity set id
- * 2. partition
- * 3. linking ids (uuid array)
- */
-
-private val markLinkingIdsAsNeedToBeIndexedSql = "UPDATE ${IDS.name} " +
-        "SET ${LAST_LINK_INDEX.name} = '-infinity()' " +
-        "WHERE ${ENTITY_SET_ID.name} = ? AND ${PARTITION.name} = ? " +
-            "AND ${LINKING_ID.name} IS NOT NULL " +
-            "AND ${LINKING_ID.name} = ANY(?)"
 
 /**
  * Arguments of preparable sql in order:
