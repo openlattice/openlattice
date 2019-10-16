@@ -26,8 +26,6 @@ class IdCatchupEntryProcessor(hds: HikariDataSource) : AbstractRhizomeEntryProce
 
     override fun process(entry: MutableMap.MutableEntry<Int, Range?>): Void? {
         val range = entry.value!! //Range should never be null in the EP.
-        var counter = 0
-        val x = 1L shl 2
         val lowerbound = Range(range.base)
         val supremum = Range(range.base + 1)
 
@@ -37,12 +35,21 @@ class IdCatchupEntryProcessor(hds: HikariDataSource) : AbstractRhizomeEntryProce
 
                     ps.setObject(1, lowerbound)
                     ps.setObject(2, supremum)
+                    val rs = ps.executeQuery()
+                    val newMaxRange  = if (rs.next()) {
+                        val id = id(ps.executeQuery())
 
-                    val id = id(ps.executeQuery())
+                        Range(
+                                range.base,
+                                id.mostSignificantBits xor range.base,
+                                id.leastSignificantBits
+                        )
+                    } else {
+                        logger.warn("Detected exhausted range.")
+                        Range( range.base, -1 ushr 16, -2 ) //This is -2 so that increment takes it to -1
+                    }
 
-                    val newMaxRange = Range(range.base, id.mostSignificantBits xor range.base, id.leastSignificantBits)
                     newMaxRange.nextId()
-
                     entry.setValue(newMaxRange)
                 }
             }
