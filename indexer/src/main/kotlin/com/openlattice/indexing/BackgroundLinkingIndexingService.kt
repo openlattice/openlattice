@@ -42,7 +42,9 @@ import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.mapstores.EntityTypeMapstore
-import com.openlattice.postgres.streams.*
+import com.openlattice.postgres.streams.BasePostgresIterable
+import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
+import com.openlattice.postgres.streams.StatementHolderSupplier
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
@@ -51,7 +53,7 @@ import java.time.Instant
 import java.time.OffsetDateTime
 import java.util.*
 import java.util.concurrent.TimeUnit
-import java.util.stream.Stream
+import kotlin.streams.asStream
 
 internal const val LINKING_INDEXING_TIMEOUT_MILLIS = 120_000L // 2 min
 internal const val LINKING_INDEX_RATE = 60_000L // 1 min
@@ -64,7 +66,8 @@ class BackgroundLinkingIndexingService(
         private val elasticsearchApi: ConductorElasticsearchApi,
         private val dataManager: IndexingMetadataManager,
         private val dataStore: EntityDatastore,
-        private val indexerConfiguration: IndexerConfiguration) {
+        private val indexerConfiguration: IndexerConfiguration
+) {
 
     companion object {
         private val logger = LoggerFactory.getLogger(BackgroundLinkingIndexingService::class.java)
@@ -76,18 +79,25 @@ class BackgroundLinkingIndexingService(
 
     // TODO if at any point there are more linkable entity types, this must change
     private val personEntityType = entityTypes.values(
-            Predicates.equal(EntityTypeMapstore.FULLQUALIFIED_NAME_PREDICATE, PersonProperties.PERSON_TYPE_FQN.fullQualifiedNameAsString)
+            Predicates.equal(
+                    EntityTypeMapstore.FULLQUALIFIED_NAME_PREDICATE,
+                    PersonProperties.PERSON_TYPE_FQN.fullQualifiedNameAsString
+            )
     ).first()
 
     // TODO if at any point there are more linkable entity types, this must change
     private val personPropertyTypes = propertyTypes.getAll(personEntityType.properties)
 
-    private val linkingIndexingLocks: IMap<UUID, Long> = hazelcastInstance.getMap(HazelcastMap.LINKING_INDEXING_LOCKS.name)
+    private val linkingIndexingLocks: IMap<UUID, Long> = hazelcastInstance.getMap(
+            HazelcastMap.LINKING_INDEXING_LOCKS.name
+    )
 
     /**
      * Queue containing linking ids, which need to be re-indexed in elasticsearch.
      */
-    private val candidates = hazelcastInstance.getQueue<Pair<UUID, OffsetDateTime>>(HazelcastQueue.LINKING_INDEXING.name)
+    private val candidates = hazelcastInstance.getQueue<Pair<UUID, OffsetDateTime>>(
+            HazelcastQueue.LINKING_INDEXING.name
+    )
 
     init {
         hazelcastInstance.config.getQueueConfig(HazelcastQueue.LINKING_INDEXING.name).maxSize = FETCH_SIZE
@@ -95,29 +105,27 @@ class BackgroundLinkingIndexingService(
 
     @Suppress("UNUSED")
     private val linkingIndexingWorker = executor.submit {
-        Stream.generate {
-            val batch = mutableMapOf<UUID, OffsetDateTime>()
-            while (candidates.peek() != null && batch.size < LINKING_INDEX_SIZE) {
-                val candidate = candidates.poll()
-                batch[candidate.first] = candidate.second
-            }
-            batch
-        }
+        generateSequence(candidates::take)
+                .chunked(LINKING_INDEX_SIZE)
+                .asStream()
                 .parallel()
                 .forEach { candidateBatch ->
                     if (!indexerConfiguration.backgroundLinkingIndexingEnabled) {
                         return@forEach
                     }
+
+                    val candidateMap = candidateBatch.toMap()
+
                     try {
-                        lock(candidateBatch.keys)
-                        index(candidateBatch)
+                        lock(candidateMap.keys)
+                        index(candidateMap)
                     } catch (ex: Exception) {
                         logger.error(
-                                "Unable to index linking entity with from bacth if linking ids ${candidateBatch.keys}.",
+                                "Unable to index linking entity with from bacth if linking ids ${candidateMap.keys}.",
                                 ex
                         )
                     } finally {
-                        unLock(candidateBatch.keys)
+                        unLock(candidateMap.keys)
                     }
                 }
     }
@@ -141,7 +149,9 @@ class BackgroundLinkingIndexingService(
         val watch = Stopwatch.createStarted()
 
         // get data for linking id by entity set ids and property ids
-        val dirtyLinkingIdsByEntitySetIds = getEntitySetIdsOfLinkingIds(linkingIdsWithLastWrite.keys).toMap() // (normal)entity_set_id/linking_id
+        val dirtyLinkingIdsByEntitySetIds = getEntitySetIdsOfLinkingIds(
+                linkingIdsWithLastWrite.keys
+        ).toMap() // (normal)entity_set_id/linking_id
         val propertyTypesOfEntitySets = dirtyLinkingIdsByEntitySetIds.keys.associateWith { personPropertyTypes } // entity_set_id/property_type_id/property_type
         val linkedEntityData = dataStore // linking_id/(normal)entity_set_id/entity_key_id/property_type_id
                 .getLinkedEntityDataByLinkingIdWithMetadata(
@@ -152,8 +162,10 @@ class BackgroundLinkingIndexingService(
 
         val indexCount = indexLinkedEntities(linkingIdsWithLastWrite, linkedEntityData, dirtyLinkingIdsByEntitySetIds)
 
-        logger.info("Finished linked indexing $indexCount elements with linking ids ${linkingIdsWithLastWrite.keys} " +
-                "in ${watch.elapsed(TimeUnit.MILLISECONDS)} ms")
+        logger.info(
+                "Finished linked indexing $indexCount elements with linking ids ${linkingIdsWithLastWrite.keys} " +
+                        "in ${watch.elapsed(TimeUnit.MILLISECONDS)} ms"
+        )
     }
 
     private fun indexLinkedEntities(
