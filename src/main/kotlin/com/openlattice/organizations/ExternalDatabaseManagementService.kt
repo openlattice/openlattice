@@ -5,6 +5,7 @@ import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
 import com.hazelcast.query.Predicates
 import com.openlattice.assembler.AssemblerConfiguration
+import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.PostgresDatabases
 import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresUsername
 import com.openlattice.authorization.*
@@ -30,7 +31,7 @@ import java.util.*
 @Service
 class ExternalDatabaseManagementService(
         private val hazelcastInstance: HazelcastInstance,
-        private val assemblerConfiguration: AssemblerConfiguration, //for now using this, may need to make a separate one
+        private val assemblerConnectionManager: AssemblerConnectionManager, //for now using this, may need to move connection logic to its own file
         private val securePrincipalsManager: SecurePrincipalsManager,
         private val aclKeyReservations: HazelcastAclKeyReservationService,
         private val authorizationManager: AuthorizationManager
@@ -39,28 +40,8 @@ class ExternalDatabaseManagementService(
     private val organizationExternalDatabaseColumns: IMap<UUID, OrganizationExternalDatabaseColumn> = hazelcastInstance.getMap(HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_COlUMN.name)
     private val organizationExternalDatabaseTables: IMap<UUID, OrganizationExternalDatabaseTable> = hazelcastInstance.getMap(HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_TABLE.name)
     private val securableObjectTypes: IMap<AclKey, SecurableObjectType> = hazelcastInstance.getMap(HazelcastMap.SECURABLE_OBJECT_TYPES.name)
+//    private val aclKeys: IMap<String, UUID> = hazelcastInstance.getMap(HazelcastMap.ACL_KEYS.name)
     private val logger = LoggerFactory.getLogger(ExternalDatabaseManagementService::class.java)
-
-    //lifted from assembly connection manager, likely will need to be customized
-    companion object {
-        @JvmStatic
-        fun connect(dbName: String, config: Properties, useSsl: Boolean): HikariDataSource {
-            config.computeIfPresent("jdbcUrl") { _, jdbcUrl ->
-                "${(jdbcUrl as String).removeSuffix(
-                        "/"
-                )}/$dbName" + if (useSsl) {
-                    "?sslmode=require"
-                } else {
-                    ""
-                }
-            }
-            return HikariDataSource(HikariConfig(config))
-        }
-    }
-
-    fun connect(dbName: String): HikariDataSource {
-        return connect(dbName, assemblerConfiguration.server.clone() as Properties, assemblerConfiguration.ssl)
-    }
 
     fun updatePermissionsOnAtlas(dbName: String, ipAddress: String, req: List<AclData>) {
         val permissions = req.groupBy { it.action }
@@ -107,10 +88,6 @@ class ExternalDatabaseManagementService(
         return Pair(tableName, columnName)
     }
 
-    /**
-     * Creates a securable object that represents a table containing raw data in an external database
-     */
-
     fun createOrganizationExternalDatabaseTable(orgId: UUID, table: OrganizationExternalDatabaseTable): UUID {
         val principal = Principals.getCurrentUser()
         Principals.ensureUser(principal)
@@ -129,10 +106,6 @@ class ExternalDatabaseManagementService(
 
         //TODO figure out how to differentiate between creating a securable object of a table that already exists versus a new table that needs to be created
     }
-
-    /**
-     * Creates a securable object that represents a column containing raw data in an external database
-     */
 
     fun createOrganizationExternalDatabaseColumn(orgId: UUID, column: OrganizationExternalDatabaseColumn): UUID {
         val principal = Principals.getCurrentUser()
@@ -168,7 +141,7 @@ class ExternalDatabaseManagementService(
 
             //update table name in external database
             val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
-            connect(dbName).use {
+            assemblerConnectionManager.connect(dbName).use {
                 val stmt = it.connection.prepareStatement(getRenameTableSql())
                 stmt.setString(1, tableName)
                 stmt.setString(2, newTableName)
@@ -190,7 +163,7 @@ class ExternalDatabaseManagementService(
 
             //update column name in external database
             val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
-            connect(dbName).use {
+            assemblerConnectionManager.connect(dbName).use {
                 val stmt = it.connection.prepareStatement(getRenameColumnSql())
                 stmt.setString(1, tableName)
                 stmt.setString(2, columnName)
@@ -214,7 +187,7 @@ class ExternalDatabaseManagementService(
 
         //drop table from external database
         val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
-        connect(dbName).use {
+        assemblerConnectionManager.connect(dbName).use {
             val stmt = it.connection.prepareStatement(getDropTableStmt())
             stmt.setString(1, tableName)
             stmt.execute()
@@ -239,7 +212,7 @@ class ExternalDatabaseManagementService(
 
         //drop column from table in external database
         val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
-        connect(dbName).use {
+        assemblerConnectionManager.connect(dbName).use {
             val stmt = it.connection.prepareStatement(getDropColumnStmt())
             stmt.setString(1, tableName)
             stmt.setString(2, columnName)
@@ -263,7 +236,7 @@ class ExternalDatabaseManagementService(
 
         //drop db from schema
         val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
-        connect(dbName).use {
+        assemblerConnectionManager.connect(dbName).use {
             val stmt = it.connection.prepareStatement(getDropDBStmt())
             stmt.setString(1, dbName)
             stmt.execute()
@@ -277,7 +250,7 @@ class ExternalDatabaseManagementService(
     fun revokeAllPrivilegesFromMember( orgId: UUID, userId: String ) {
         val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
         val userName = getDBUser(userId)
-        connect(dbName).use{
+        assemblerConnectionManager.connect(dbName).use{
             val stmt = it.connection.prepareStatement(getRevokeOnDBStmt())
             stmt.setString(1, dbName)
             stmt.setString(2, userName)
@@ -289,7 +262,7 @@ class ExternalDatabaseManagementService(
      * Grants or revokes privileges on a table or column in an external database.
      */
     private fun executePrivilegesUpdate(sqlStmt: String, dbName: String, aclData: List<AclData>) {
-        connect(dbName).use { hds ->
+        assemblerConnectionManager.connect(dbName).use { hds ->
             val stmt = hds.connection.prepareStatement(sqlStmt)
             aclData.forEach {
                 val tableAndColumnNames = getTableAndColumnNames(it)
@@ -315,7 +288,7 @@ class ExternalDatabaseManagementService(
 
 
     private fun revokeAllPrivileges(dbName: String, aclData: List<AclData>) {
-        connect(dbName).use { hds ->
+        assemblerConnectionManager.connect(dbName).use { hds ->
             val stmt = hds.connection.prepareStatement(getRevokePrivilegesStmt())
             aclData.forEach {
                 val tableAndColumnNames = getTableAndColumnNames(it)
@@ -328,6 +301,13 @@ class ExternalDatabaseManagementService(
 
         }
     }
+//
+//    fun getExternalDatabaseObjectId(containingObjectId: UUID, name: String): UUID {
+//        val fqn = FullQualifiedName(containingObjectId.toString(), name)
+//        val id = aclKeys.get(fqn.fullQualifiedNameAsString)
+//        checkState(id != null, "External database object with name {} does not exist", name)
+//        return id!!
+//    }
 
     private fun getDBUser(principalId: String): String {
         val securePrincipal = securePrincipalsManager.getPrincipal(principalId)
