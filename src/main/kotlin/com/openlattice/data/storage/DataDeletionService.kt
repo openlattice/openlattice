@@ -16,10 +16,29 @@ import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.core.GraphService
 import com.openlattice.postgres.PostgresMetaDataProperties
 import com.openlattice.postgres.streams.PostgresIterable
+import com.openlattice.search.requests.EntityNeighborsFilter
 import org.slf4j.LoggerFactory
+import java.lang.IllegalStateException
 import java.util.*
 import java.util.stream.Collectors
 import kotlin.math.max
+
+/*
+ * The general approach when deleting (hard or soft delete) entities is as follows:
+ *
+ * 1. Ensure the user has permissions to delete from the requested entity set.
+ * 2. If not deleting from an association entity set, load all association entity set ids that are present in edges of
+ *    the entities being deleted, and ensure the user is authorized to delete from all of those association entity sets.
+ * 3. Delete all edges connected to the entities being deleted.
+ * 4. If not deleting from an association entity set, also delete the association entities from all edges connected to
+ *    the entities being deleted.
+ * 5. Delete the entities themselves.
+ *
+ * We could end up with a zombie edge if a user creates an association between one of the deleted entities using a new
+ * association entity set after the association auth checks are done. This theoretically shouldn't break anything,
+ * but at some point we may want to introduce some kind of locking to prevent this behavior.
+ *
+ */
 
 class DataDeletionService(
         private val edmService: EdmManager,
@@ -36,6 +55,8 @@ class DataDeletionService(
     }
 
     private val logger = LoggerFactory.getLogger(DataDeletionService::class.java)
+
+    /** Delete all entities from an entity set **/
 
     override fun clearOrDeleteEntitySet(entitySetId: UUID, deleteType: DeleteType): WriteEvent {
         return clearOrDeleteEntitySet(entitySetId, deleteType, setOf(), skipAuthChecks = true)
@@ -77,6 +98,8 @@ class DataDeletionService(
         return writeEvent
 
     }
+
+    /** Delete specific entities from an entity set **/
 
     override fun clearOrDeleteEntities(entitySetId: UUID, entityKeyIds: Set<UUID>, deleteType: DeleteType): WriteEvent {
         return clearOrDeleteEntities(entitySetId, entityKeyIds, deleteType, setOf(), skipAuthChecks = true)
@@ -120,6 +143,7 @@ class DataDeletionService(
                 eds.deleteEntities(entitySetId, chunk, authorizedPropertyTypes)
             } else {
                 eds.clearEntities(entitySetId, chunk, authorizedPropertyTypes)
+
             }
 
             numUpdates += writeEvent.numUpdates
@@ -130,6 +154,41 @@ class DataDeletionService(
 
         return WriteEvent(maxVersion, numUpdates)
     }
+
+    /** Delete specific entities from an entity set along with their neighborhoods **/
+
+    override fun clearOrDeleteEntitiesAndNeighborhood(
+            entitySetId: UUID,
+            entityKeyIds: Set<UUID>,
+            srcEntitySetFilter: Set<UUID>,
+            dstEntitySetFilter: Set<UUID>,
+            deleteType: DeleteType,
+            principals: Set<Principal>
+    ): WriteEvent {
+
+        if (entityKeyIds.isEmpty()) {
+            throw IllegalStateException("Cannot delete from an empty set of entityKeyIds for entity set $entitySetId")
+        }
+
+        // Ensure the entity set and neighbor entity sets that are being deleted from are authorized
+        val authorizedPropertyTypes = getAuthorizedPropertyTypesForDeleteByEntitySet(
+                setOf(entitySetId) + srcEntitySetFilter + dstEntitySetFilter,
+                deleteType,
+                Optional.empty(),
+                principals)
+
+        // TODO 1) getNeighborEntityKeyIdsThatMatchFilters()
+        // TODO 2) authorize assoc entities of entityKeyIds + neighborEntityKeyIds
+        // TODO 3) delete assoc entities of entityKeyIds + neighborEntityKeyIds
+        // TODO 4) delete edges of entityKeyIds + neighborEntityKeyIds
+        // TODO 5) delete entityKeyIds + neighborEntityKeyIds
+
+
+        // TODO idk: how to batch this without exploding memory
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
+    /** Delete property values from specific entities. No entities are actually deleted here. **/
 
     override fun clearOrDeleteEntityProperties(
             entitySetId: UUID,
@@ -159,6 +218,9 @@ class DataDeletionService(
         return writeEvent
 
     }
+
+    /** Association deletion and auth **/
+
 
     private fun authorizeAndDeleteAssociations(
             entitySetId: UUID,
@@ -201,9 +263,9 @@ class DataDeletionService(
     }
 
     private fun deleteEdgesForAssociationEntitySet(
-        entitySetId: UUID,
-        entityKeyIds: Optional<Set<UUID>>,
-        deleteType: DeleteType
+            entitySetId: UUID,
+            entityKeyIds: Optional<Set<UUID>>,
+            deleteType: DeleteType
     ) {
         val edgeKeys = collectAssociations(entitySetId,
                 entityKeyIds,
@@ -230,17 +292,6 @@ class DataDeletionService(
 
 
     /** Authorization checks **/
-
-    private fun getAuthorizedPropertyTypesForDelete(
-            entitySetId: UUID,
-            properties: Optional<Set<UUID>>,
-            deleteType: DeleteType,
-            principals: Set<Principal>,
-            skipAuthChecks: Boolean = false
-    ): Map<UUID, PropertyType> {
-        val entitySet = edmService.getEntitySet(entitySetId)
-        return getAuthorizedPropertyTypesForDelete(entitySet, properties, deleteType, principals, skipAuthChecks)
-    }
 
     private fun checkPermissions(aclKey: AclKey, requiredPermissions: EnumSet<Permission>, principals: Set<Principal>) {
         if (!authorizationManager.checkIfHasPermissions(aclKey, principals, requiredPermissions)) {
@@ -279,8 +330,8 @@ class DataDeletionService(
         /* Hard deletes will authorize deletion of all audit property types, while soft deletes will authorize none. */
         val entitySetsToDeleteFrom = if (deleteType == DeleteType.Hard) edgeEntitySets else nonAuditEdgeEntitySets
 
-        return entitySetsToDeleteFrom.map { it.id }.associateWith {
-            entityTypesById.getValue(it).properties.associateWith { ptId -> propertyTypesById.getValue(ptId) }.toMap()
+        return entitySetsToDeleteFrom.associate {
+            it.id to entityTypesById.getValue(it.entityTypeId).properties.associateWith { ptId -> propertyTypesById.getValue(ptId) }.toMap()
                     .plus(IdConstants.ID_ID.id to PostgresMetaDataProperties.ID.propertyType)
         }.toMap()
     }
@@ -318,47 +369,75 @@ class DataDeletionService(
 
     }
 
+    private fun getAuthorizedPropertyTypesForDeleteByEntitySet(
+            entitySetIds: Set<UUID>,
+            deleteType: DeleteType,
+            properties: Optional<Set<UUID>>,
+            principals: Set<Principal>
+    ): Map<UUID, Map<UUID, PropertyType>> {
+
+        val entitySets = edmService.getEntitySetsAsMap(entitySetIds).values
+        val requiredPermissions = getRequiredPermissions(deleteType)
+
+        entitySets.forEach {
+            if (it.flags.contains(EntitySetFlag.AUDIT)) {
+                throw ForbiddenException("Cannot delete from entity set ${it.id} because it is an audit entity set.")
+            }
+        }
+
+        val entityTypesById = edmService.getEntityTypesAsMap(entitySets.map { it.entityTypeId }.toSet())
+
+        val accessChecks = mutableSetOf<AccessCheck>()
+
+        /* Ignore audit entity sets when determining delete or clear permissions */
+        entitySets.forEach {
+            accessChecks.add(AccessCheck(AclKey(it.id), requiredPermissions))
+
+            val propertyTypeIds = properties.orElse(entityTypesById.getValue(it.entityTypeId).properties)
+            propertyTypeIds.forEach { propertyTypeId ->
+                accessChecks.add(AccessCheck(AclKey(it.id, propertyTypeId), requiredPermissions))
+            }
+        }
+
+        val unauthorizedAclKeys = authorizationManager.accessChecksForPrincipals(accessChecks, principals)
+                .filter { it.permissions.values.contains(false) }
+                .map { it.aclKey }
+                .collect(Collectors.toSet())
+
+        if (unauthorizedAclKeys.isNotEmpty()) {
+            throw ForbiddenException("Unable to delete from entity sets $entitySetIds: missing required permissions " +
+                    "on associations for AclKeys $unauthorizedAclKeys")
+        }
+
+        val allPropertyTypeIds = properties.orElse(entityTypesById.values.flatMap { it.properties }.toSet())
+        val propertyTypesById = edmService.getPropertyTypesAsMap(allPropertyTypeIds)
+
+        return entitySets.associate {
+            it.id to properties.orElse(entityTypesById.getValue(it.entityTypeId).properties)
+                    .associateWith { ptId -> propertyTypesById.getValue(ptId) }.toMap()
+                    .plus(IdConstants.ID_ID.id to PostgresMetaDataProperties.ID.propertyType)
+        }.toMap()
+
+    }
+
     private fun getAuthorizedPropertyTypesForDelete(
-            entitySet: EntitySet,
+            entitySetId: UUID,
             properties: Optional<Set<UUID>>,
             deleteType: DeleteType,
             principals: Set<Principal>,
             skipAuthChecks: Boolean = false
     ): Map<UUID, PropertyType> {
-        val entitySetId = entitySet.id
 
         if (skipAuthChecks) {
             return edmService.getPropertyTypesForEntitySet(entitySetId)
         }
 
-        val permissionsToCheck = getRequiredPermissions(deleteType)
-        checkPermissions(AclKey(entitySetId), permissionsToCheck, principals)
-
-        if (entitySet.isLinking) {
-            throw IllegalArgumentException("You cannot delete entities from a linking entity set.")
-        }
-
-        val entityType = edmService.getEntityType(entitySet.entityTypeId)
-        val requiredProperties = properties.orElse(entityType.properties)
-        val authorizedPropertyTypes = authzHelper
-                .getAuthorizedPropertyTypes(ImmutableSet.of<UUID>(entitySetId),
-                        requiredProperties,
-                        permissionsToCheck,
-                        principals)
-                .getValue(entitySetId)
-
-        if (!authorizedPropertyTypes.keys.containsAll(requiredProperties)) {
-            throw ForbiddenException(
-                    "You must have ${permissionsToCheck.iterator().next()} permission of all required " +
-                            "entity set ${entitySet.id} properties to delete entities from it.")
-        }
-
-        // if we delete all properties, also delete @id
-        if (properties.isEmpty) {
-            authorizedPropertyTypes[IdConstants.ID_ID.id] = PostgresMetaDataProperties.ID.propertyType
-        }
-
-        return authorizedPropertyTypes
+        return getAuthorizedPropertyTypesForDeleteByEntitySet(
+                setOf(entitySetId),
+                deleteType,
+                properties,
+                principals
+        ).getValue(entitySetId)
     }
 
     private fun getRequiredPermissions(deleteType: DeleteType): EnumSet<Permission> {

@@ -1,6 +1,7 @@
 package com.openlattice.data
 
 import com.openlattice.authorization.Principal
+import com.openlattice.search.requests.EntityNeighborsFilter
 import java.util.*
 
 interface DataDeletionManager {
@@ -20,6 +21,19 @@ interface DataDeletionManager {
     fun clearOrDeleteEntities(
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
+            deleteType: DeleteType,
+            principals: Set<Principal>
+    ): WriteEvent
+
+    /**
+     * Clears or deletes the specified entity key ids from an entity set, as well as any edges filtered based on the
+     * filter parameters, and the association entities and neighbor entities present on those edges, if authorized
+     */
+    fun clearOrDeleteEntitiesAndNeighborhood(
+            entitySetId: UUID,
+            entityKeyIds: Set<UUID>,
+            srcEntitySetFilter: Set<UUID>,
+            dstEntitySetFilter: Set<UUID>,
             deleteType: DeleteType,
             principals: Set<Principal>
     ): WriteEvent
