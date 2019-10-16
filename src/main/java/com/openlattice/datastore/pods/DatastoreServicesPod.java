@@ -395,7 +395,9 @@ public class DatastoreServicesPod {
         return new PostgresEntityDataQueryService(
                 hikariDataSource,
                 byteBlobDataManager,
-                partitionManager() );
+                partitionManager(),
+                indexingMetadataManager()
+        );
     }
 
     @Bean
