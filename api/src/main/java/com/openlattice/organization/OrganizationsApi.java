@@ -266,8 +266,8 @@ public interface OrganizationsApi {
      * @param organizationExternalDatabaseTable The object to be created
      */
     @POST( BASE + ID_PATH + EXTERNAL_DATABASE_TABLE )
-    UUID createExternalDatabaseTable( @Path(ID) UUID organizationId, @Body
-            OrganizationExternalDatabaseTable organizationExternalDatabaseTable );
+    UUID createExternalDatabaseTable( @Path(ID) UUID organizationId,
+            @Body OrganizationExternalDatabaseTable organizationExternalDatabaseTable );
 
     /**
      * Creates a securable OrganizationExternalDatabaseColumn object, which represents a
@@ -278,6 +278,8 @@ public interface OrganizationsApi {
     @POST( BASE + ID_PATH + EXTERNAL_DATABASE_COLUMN )
     UUID createExternalDatabaseColumn( @Path( ID ) UUID organizationId, @Body
             OrganizationExternalDatabaseColumn organizationExternalDatabaseColumn );
+
+    //TODO make "add" or "createNew" or something for creating a new table/column
 
     //get
     /**
@@ -303,12 +305,27 @@ public interface OrganizationsApi {
 
 
     //update
+    /**
+     * Updates an OrganizationExternalDatabaseTable object, which represents an
+     * organization's table in an external database. This alters both the object
+     * and the table in the database.
+     * @param organizationId The organization's UUID
+     * @param tableName The exact name of the table in the database
+     */
     @PATCH( BASE + ID_PATH + TABLE_NAME_PATH + EXTERNAL_DATABASE_TABLE)
     Void updateExternalDatabaseTable(
             @Path( ID ) UUID organizationId,
             @Path( TABLE_NAME ) String tableName,
             @Body MetadataUpdate metadataUpdate );
 
+    /**
+     * Updates an OrganizationExternalDatabaseColumn object, which represents a column
+     * within an organization's table in an external database. This alters both the object
+     * and the column in the database.
+     * @param organizationId The organization's UUID
+     * @param tableName The exact name of the table in the database
+     * @param columnName The exact name of the column in the database
+     */
     @PATCH( BASE + ID_PATH + TABLE_NAME_PATH + COLUMN_NAME_PATH + EXTERNAL_DATABASE_COLUMN)
     Void updateExternalDatabaseColumn(
             @Path( ID ) UUID organizationId,
@@ -318,22 +335,49 @@ public interface OrganizationsApi {
 
 
     //delete
+    /**
+     * Deletes an OrganizationExternalDatabaseTable object, which represents an
+     * organization's table in an external database. This deletes both the object
+     * and the table in the database. It is a hard delete
+     * @param organizationId The organization's UUID
+     * @param tableName The exact name of the table in the database
+     */
     @DELETE(BASE + ID_PATH + TABLE_NAME_PATH + EXTERNAL_DATABASE_TABLE)
     Void deleteExternalDatabaseTable(
             @Path( ID ) UUID organizationId,
             @Path( TABLE_NAME ) String tableName );
 
+    /**
+     * Deletes an OrganizationExternalDatabaseColumn object, which represents a column
+     * within an organization's table in an external database. This deletes both the object
+     * and the column in the database. It is a hard delete
+     * @param organizationId The organization's UUID
+     * @param tableName The exact name of the table in the database
+     * @param columnName The exact name of the column in the database
+     */
     @DELETE(BASE + ID_PATH + TABLE_NAME_PATH + COLUMN_NAME_PATH + EXTERNAL_DATABASE_COLUMN)
     Void deleteExternalDatabaseColumn(
             @Path( ID ) UUID organizationId,
             @Path( TABLE_NAME ) String tableName,
             @Path( COLUMN_NAME ) String columnName);
 
+    /**
+     * Deletes multiple OrganizationExternalDatabaseTable objects and the tables they represent
+     * in the database. It is a hard delete
+     * @param organizationId The organization's UUID
+     * @param tableNames The exact names of the tables in the database
+     */
     @DELETE(BASE + ID_PATH + EXTERNAL_DATABASE_TABLE)
     Void deleteExternalDatabaseTables(
             @Path( ID ) UUID organizationId,
             @Body Set<String> tableNames );
-
+    /**
+     * Deletes multiple OrganizationExternalDatabaseColumn objects and the columns they represent
+     * within an organization's table in an external database. It is a hard delete
+     * @param organizationId The organization's UUID
+     * @param tableName The exact name of the table in the database
+     * @param columnNames The exact names of the columns in the database
+     */
     @DELETE( BASE + ID_PATH + TABLE_NAME_PATH + EXTERNAL_DATABASE_COLUMN)
     Void deleteExternalDatabaseColumns(
             @Path( ID ) UUID organizationId,
