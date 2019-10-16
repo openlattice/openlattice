@@ -285,7 +285,8 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
     @Override
     public boolean createBulkLinkedData(
             UUID entityTypeId,
-            Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> entitiesByLinkingId ) {
+            Map<UUID, Map<UUID, Map<UUID, Map<UUID, Set<Object>>>>> entitiesByLinkingId
+    ) {
         try {
             return executor.submit( ConductorElasticsearchCall.wrap(
                     new BulkLinkedDataLambdas( entityTypeId, entitiesByLinkingId ) ) ).get();

@@ -387,7 +387,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public SearchService searchService() {
-        return new SearchService( eventBus );
+        return new SearchService( eventBus, metricRegistry );
     }
 
     @Bean
