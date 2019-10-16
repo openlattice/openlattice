@@ -47,6 +47,7 @@ public class HazelcastIdGenerationService {
     public static final  int               MASK_LENGTH    = 16;
     public static final  int               NUM_PARTITIONS = 1 << MASK_LENGTH; //65536
     private static final Random            r              = new Random();
+
     /*
      * Each range owns a portion of the keyspace.
      */
