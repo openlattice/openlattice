@@ -43,7 +43,8 @@ const val S3_DELETE_BATCH_SIZE = 10_000
 class PostgresEntityDataQueryService(
         private val hds: HikariDataSource,
         private val byteBlobDataManager: ByteBlobDataManager,
-        private val partitionManager: PartitionManager
+        private val partitionManager: PartitionManager,
+        private val indexingMetaDataManager: IndexingMetadataManager
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(PostgresEntityDataQueryService::class.java)
@@ -733,6 +734,11 @@ class PostgresEntityDataQueryService(
                     )
                 }.sum()
 
+        // if properties were deleted, issue a re-index for all entities involved
+        if (numUpdates > 0) {
+            indexingMetaDataManager.markEntitiesAsNeedsToBeIndexed(mapOf(entitySetId to entityKeyIds))
+        }
+
         return WriteEvent(System.currentTimeMillis(), numUpdates)
     }
 
@@ -1075,7 +1081,7 @@ class PostgresEntityDataQueryService(
      * @param conn A valid JDBC connection, ideally with autocommit disabled.
      * @param entitySetId The entity set id for which to tombstone entries
      * @param entities The entities with their properties for which to tombstone entries.
-     * @param entityKeyIdsToLinkingIds TODO
+     * @param entityKeyIdsToLinkingIds Linking ids mapped by their origin ids.
      * @param version The version to use to tombstone.
      * @param partitionsInfo Contains the partition info for the entity set of the entities.
      *

@@ -70,6 +70,32 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
         }
     }
 
+    fun markEntitiesAsNeedsToBeIndexed(entityKeys: Map<UUID, Set<UUID>>): Int {
+        val entitySetPartitions = partitionManager.getEntitySetsPartitionsInfo(entityKeys.keys)
+
+        hds.connection.use { connection ->
+            connection.prepareStatement(markIdsAsNeedToBeIndexedSql).use { stmt ->
+                entityKeys.forEach { (entitySetId, entityKeyIds) ->
+                    val partitions = entitySetPartitions.getValue(entitySetId).partitions.toList()
+                    val partitionVersion = entitySetPartitions.getValue(entitySetId).partitionsVersion
+
+                    entityKeyIds.groupBy { getPartition(it, partitions) }
+                            .forEach { (partition, entityKeyIds) ->
+                                val idsArray = PostgresArrays.createUuidArray(connection, entityKeyIds)
+                                stmt.setObject(1, entitySetId)
+                                stmt.setInt(2, partition)
+                                stmt.setInt(3, partitionVersion)
+                                stmt.setArray(4, idsArray)
+
+                                stmt.addBatch()
+                            }
+                }
+
+                return stmt.executeBatch().sum()
+            }
+        }
+    }
+
     fun markLinkingIdsAsNeedToBeIndexed(linkingEntityKeys: Map<UUID, Set<UUID>>): Int {
         val entitySetPartitions = partitionManager.getEntitySetsPartitionsInfo(linkingEntityKeys.keys)
 
@@ -122,7 +148,7 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
         }
     }
 }
-
+// @formatter:off
 /**
  * Arguments of preparable sql in order:
  * 1. last index
@@ -171,8 +197,23 @@ fun markEntitySetsAsNeedsToBeIndexedSql(linking: Boolean): String {
  * Arguments of preparable sql in order:
  * 1. entity set id
  * 2. partition
+ * 3. partition version
+ * 4. ids (uuid array)
+ */
+private val markIdsAsNeedToBeIndexedSql = "UPDATE ${IDS.name} " +
+        "SET ${LAST_INDEX.name} = '-infinity()' " +
+        "WHERE ${ENTITY_SET_ID.name} = ? " +
+        "AND ${PARTITION.name} = ? " +
+        "AND ${PARTITIONS_VERSION.name} = ? " +
+        "AND ${ID.name} = ANY(?)"
+
+/**
+ * Arguments of preparable sql in order:
+ * 1. entity set id
+ * 2. partition
  * 3. linking ids (uuid array)
  */
+
 private val markLinkingIdsAsNeedToBeIndexedSql = "UPDATE ${IDS.name} " +
         "SET ${LAST_LINK_INDEX.name} = '-infinity()' " +
         "WHERE ${ENTITY_SET_ID.name} = ? AND ${PARTITION.name} = ? " +
@@ -192,4 +233,4 @@ private val markAsNeedsToBeLinkedSql = "UPDATE ${IDS.name} " +
             "AND ${PARTITION.name} = ? " +
             "AND ${LINKING_ID.name} IS NOT NULL " +
             "AND ${LINKING_ID.name} = ANY(?)"
-
+// @formatter:on
