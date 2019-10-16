@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018. OpenLattice, Inc.
+ * Copyright (C) 2019. OpenLattice, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,20 +18,8 @@
  *
  *
  */
+package com.openlattice.data.events
 
-package com.openlattice.data.storage;
+import java.util.UUID
 
-/**
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
- */
-public enum MetadataOption {
-    ENTITY_KEY_IDS,
-    @Deprecated
-    ENTITY_SET_IDS,
-    ORIGIN_IDS,
-    LAST_INDEX,
-    LAST_LINK,
-    LAST_WRITE,
-    VERSION,
-    VERSIONS
-}
+data class EntitiesDeletedEvent(val entitySetId: UUID, val entityKeyIds: Set<UUID>)

@@ -46,9 +46,6 @@ public class DataTables {
             TIMESTAMPTZ )
             .withDefault( "'-infinity'" )
             .notNull();
-    public static final  PostgresColumnDefinition OWNERS         = new PostgresColumnDefinition(
-            "owners",
-            PostgresDatatype.UUID );
     public static final  PostgresColumnDefinition READERS        = new PostgresColumnDefinition(
             "readers",
             PostgresDatatype.UUID );
