@@ -209,6 +209,7 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
     }
 
     @PostMapping( "/" + ENTITY_KEY_IDS )
+    @Timed
     public Set<UUID> getEntityKeyIds( @RequestBody LinkedHashSet<EntityKey> entityKeys ) {
         return dgm.getEntityKeyIds( entityKeys );
     }
