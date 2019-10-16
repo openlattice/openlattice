@@ -46,6 +46,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
+import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -83,8 +84,13 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     @Inject
     private HazelcastInstance hazelcastInstance;
 
-    private IMap<String, UUID> aclKeys = hazelcastInstance.getMap(
-            HazelcastMap.ACL_KEYS.name() );
+    private IMap<String, UUID> aclKeysMap;
+
+    @PostConstruct
+    public Void init() {
+        this.aclKeysMap = hazelcastInstance.getMap( HazelcastMap.ACL_KEYS.name() );
+        return null;
+    }
 
     @Timed
     @Override
@@ -853,7 +859,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
 
     private UUID getExternalDatabaseObjectId( UUID containingObjectId, String name ) {
         FullQualifiedName fqn = new FullQualifiedName( containingObjectId.toString(), name );
-        UUID id = aclKeys.get( fqn.getFullQualifiedNameAsString() );
+        UUID id = aclKeysMap.get( fqn.getFullQualifiedNameAsString() );
         checkState( id != null, "External database object with name {} does not exist", name );
         return id;
     }
