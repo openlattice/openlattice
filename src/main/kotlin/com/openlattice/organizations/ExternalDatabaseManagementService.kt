@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.sql.PreparedStatement
 import java.util.*
+import kotlin.collections.LinkedHashMap
 
 @Service
 class ExternalDatabaseManagementService(
@@ -40,7 +41,6 @@ class ExternalDatabaseManagementService(
     private val organizationExternalDatabaseColumns: IMap<UUID, OrganizationExternalDatabaseColumn> = hazelcastInstance.getMap(HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_COlUMN.name)
     private val organizationExternalDatabaseTables: IMap<UUID, OrganizationExternalDatabaseTable> = hazelcastInstance.getMap(HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_TABLE.name)
     private val securableObjectTypes: IMap<AclKey, SecurableObjectType> = hazelcastInstance.getMap(HazelcastMap.SECURABLE_OBJECT_TYPES.name)
-//    private val aclKeys: IMap<String, UUID> = hazelcastInstance.getMap(HazelcastMap.ACL_KEYS.name)
     private val logger = LoggerFactory.getLogger(ExternalDatabaseManagementService::class.java)
 
     fun updatePermissionsOnAtlas(dbName: String, ipAddress: String, req: List<AclData>) {
@@ -123,6 +123,40 @@ class ExternalDatabaseManagementService(
         authorizationManager.addPermission(columnAclKey, principal, EnumSet.allOf(Permission::class.java))
 
         return column.id
+    }
+
+    fun createNewOrganizationExternalDatabaseTable( orgId: UUID, tableName: String, columnNameToSqlType: LinkedHashMap<String, String> ) {
+        //TODO figure out title stuff
+        val table = OrganizationExternalDatabaseTable(Optional.empty(), tableName, "title", Optional.empty(), orgId)
+        val tableId = createOrganizationExternalDatabaseTable(orgId, table)
+        columnNameToSqlType.keys.forEach {
+            val column = OrganizationExternalDatabaseColumn(Optional.empty(), it, "title", Optional.empty(), tableId, orgId)
+            createOrganizationExternalDatabaseColumn(orgId, column)
+        }
+
+        //create table in db
+        val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
+        assemblerConnectionManager.connect(dbName).use {
+            it.connection.createStatement().use { stmt ->
+                stmt.execute("CREATE TABLE $tableName(${columnNameToSqlType
+                        .map { entry -> entry.key + " " + entry.value }.joinToString(", ")})")
+            }
+
+        }
+    }
+
+    fun createNewOrganizationExternalDatabaseColumn( orgId: UUID, tableId: UUID, tableName: String, columnName: String, sqlType: String) {
+        val column = OrganizationExternalDatabaseColumn(Optional.empty(), columnName, "title", Optional.empty(), tableId, orgId)
+        createOrganizationExternalDatabaseColumn(orgId, column)
+
+        //add column to table in db
+        val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
+        assemblerConnectionManager.connect(dbName).use {
+            it.connection.createStatement().use { stmt ->
+                stmt.execute("ALTER TABLE $tableName ADD COLUMN $columnName $sqlType")
+            }
+
+        }
     }
 
     fun getOrganizationExternalDatabaseTable(tableId: UUID): OrganizationExternalDatabaseTable {
@@ -301,13 +335,6 @@ class ExternalDatabaseManagementService(
 
         }
     }
-//
-//    fun getExternalDatabaseObjectId(containingObjectId: UUID, name: String): UUID {
-//        val fqn = FullQualifiedName(containingObjectId.toString(), name)
-//        val id = aclKeys.get(fqn.fullQualifiedNameAsString)
-//        checkState(id != null, "External database object with name {} does not exist", name)
-//        return id!!
-//    }
 
     private fun getDBUser(principalId: String): String {
         val securePrincipal = securePrincipalsManager.getPrincipal(principalId)
