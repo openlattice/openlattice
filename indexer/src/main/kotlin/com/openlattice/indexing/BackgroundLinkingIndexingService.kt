@@ -37,6 +37,7 @@ import com.openlattice.hazelcast.HazelcastQueue
 import com.openlattice.indexing.configuration.IndexerConfiguration
 import com.openlattice.linking.util.PersonProperties
 import com.openlattice.postgres.DataTables.*
+import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.ResultSetAdapters
@@ -67,6 +68,7 @@ class BackgroundLinkingIndexingService(
 
     companion object {
         private val logger = LoggerFactory.getLogger(BackgroundLinkingIndexingService::class.java)
+        const val LINKING_INDEX_SIZE = 100
     }
 
     private val propertyTypes: IMap<UUID, PropertyType> = hazelcastInstance.getMap(HazelcastMap.PROPERTY_TYPES.name)
@@ -87,21 +89,35 @@ class BackgroundLinkingIndexingService(
      */
     private val candidates = hazelcastInstance.getQueue<Pair<UUID, OffsetDateTime>>(HazelcastQueue.LINKING_INDEXING.name)
 
+    init {
+        hazelcastInstance.config.getQueueConfig(HazelcastQueue.LINKING_INDEXING.name).maxSize = FETCH_SIZE
+    }
+
     @Suppress("UNUSED")
     private val linkingIndexingWorker = executor.submit {
-        Stream.generate { candidates.take() }
+        Stream.generate {
+            val batch = mutableMapOf<UUID, OffsetDateTime>()
+            while (candidates.peek() != null && batch.size < LINKING_INDEX_SIZE) {
+                val candidate = candidates.poll()
+                batch[candidate.first] = candidate.second
+            }
+            batch
+        }
                 .parallel()
-                .forEach { candidate ->
+                .forEach { candidateBatch ->
                     if (!indexerConfiguration.backgroundLinkingIndexingEnabled) {
                         return@forEach
                     }
                     try {
-                        lock(candidate.first)
-                        index(candidate.first, candidate.second)
+                        lock(candidateBatch.keys)
+                        index(candidateBatch)
                     } catch (ex: Exception) {
-                        logger.error("Unable to index linking entity with linking_id ${candidate.first}.", ex)
+                        logger.error(
+                                "Unable to index linking entity with from bacth if linking ids ${candidateBatch.keys}.",
+                                ex
+                        )
                     } finally {
-                        unLock(candidate.first)
+                        unLock(candidateBatch.keys)
                     }
                 }
     }
@@ -116,60 +132,64 @@ class BackgroundLinkingIndexingService(
         executor.submit {
             logger.info("Registering linking ids needing indexing.")
 
-            candidates.addAll(getDirtyLinkingIds())
+            getDirtyLinkingIds().forEach(candidates::put)
         }
     }
 
-    private fun index(linkingId: UUID, lastWrite: OffsetDateTime) {
-        logger.info("Starting background linking indexing task for linking id $linkingId.")
+    private fun index(linkingIdsWithLastWrite: Map<UUID, OffsetDateTime>) {
+        logger.info("Starting background linking indexing task for linking ids ${linkingIdsWithLastWrite.keys}.")
         val watch = Stopwatch.createStarted()
 
         // get data for linking id by entity set ids and property ids
-        val dirtyLinkingIdByEntitySetIds = getEntitySetIdsOfLinkingId(linkingId)
-                .associateWith { Optional.of(setOf(linkingId)) } // entity_set_id/linking_id
-        val propertyTypesOfEntitySets = dirtyLinkingIdByEntitySetIds.keys.associateWith { personPropertyTypes } // entity_set_id/property_type_id/property_type
+        val dirtyLinkingIdsByEntitySetIds = getEntitySetIdsOfLinkingIds(linkingIdsWithLastWrite.keys).toMap() // (normal)entity_set_id/linking_id
+        val propertyTypesOfEntitySets = dirtyLinkingIdsByEntitySetIds.keys.associateWith { personPropertyTypes } // entity_set_id/property_type_id/property_type
         val linkedEntityData = dataStore // linking_id/(normal)entity_set_id/entity_key_id/property_type_id
                 .getLinkedEntityDataByLinkingIdWithMetadata(
-                        dirtyLinkingIdByEntitySetIds,
+                        dirtyLinkingIdsByEntitySetIds,
                         propertyTypesOfEntitySets,
                         EnumSet.of(MetadataOption.LAST_WRITE)
                 )
 
-        val indexCount = indexLinkedEntity(linkingId, lastWrite, personEntityType.id, linkedEntityData)
+        val indexCount = indexLinkedEntities(linkingIdsWithLastWrite, linkedEntityData, dirtyLinkingIdsByEntitySetIds)
 
-        logger.info(
-                "Finished linked indexing {} elements with linking id {} in {} ms",
-                indexCount,
-                linkingId,
-                watch.elapsed(TimeUnit.MILLISECONDS)
-        )
+        logger.info("Finished linked indexing $indexCount elements with linking ids ${linkingIdsWithLastWrite.keys} " +
+                "in ${watch.elapsed(TimeUnit.MILLISECONDS)} ms")
     }
 
-    private fun indexLinkedEntity(
-            linkingId: UUID,
-            lastWrite: OffsetDateTime,
-            entityTypeId: UUID,
-            dataByLinkingId: Map<UUID, Map<UUID, Map<UUID, Map<UUID, Set<Any>>>>>
+    private fun indexLinkedEntities(
+            linkingIdsWithLastWrite: Map<UUID, OffsetDateTime>,
+            dataByLinkingId: Map<UUID, Map<UUID, Map<UUID, Map<UUID, Set<Any>>>>>,
+            linkingIdsByEntitySetIds: Map<UUID, Optional<Set<UUID>>>
     ): Int {
-        if (elasticsearchApi.createBulkLinkedData(entityTypeId, dataByLinkingId)) {
+        if (elasticsearchApi.createBulkLinkedData(personEntityType.id, dataByLinkingId)) {
             return 0
         }
         return dataManager.markAsIndexed(
-                dataByLinkingId.keys.map { it to mapOf(linkingId to lastWrite) }.toMap(),
+                linkingIdsByEntitySetIds.mapValues {
+                    // it should be present, since we use array_agg() + we filter on linking id in query
+                    it.value.get().associateWith { linkingId ->
+                        linkingIdsWithLastWrite.getValue(linkingId)
+                    }
+                },
                 true
         )
     }
 
-    private fun lock(linkingId: UUID) {
-        val existingExpiration = linkingIndexingLocks.putIfAbsent(
-                linkingId,
-                Instant.now().plusMillis(LINKING_INDEXING_TIMEOUT_MILLIS).toEpochMilli()
-        )
-        check(existingExpiration == null) { "Unable to lock $linkingId. Existing lock expires at $existingExpiration." }
+    private fun lock(linkingIds: Collection<UUID>) {
+        linkingIds.forEach { linkingId ->
+            val existingExpiration = linkingIndexingLocks.putIfAbsent(
+                    linkingId,
+                    Instant.now().plusMillis(LINKING_INDEXING_TIMEOUT_MILLIS).toEpochMilli()
+            )
+            check(existingExpiration == null) {
+                "Unable to lock $linkingId. Existing lock expires at $existingExpiration."
+            }
+        }
     }
 
-    private fun unLock(linkingId: UUID) {
-        linkingIndexingLocks.delete(linkingId)
+
+    private fun unLock(linkingIds: Collection<UUID>) {
+        linkingIds.forEach(linkingIndexingLocks::delete)
     }
 
     /**
@@ -195,14 +215,19 @@ class BackgroundLinkingIndexingService(
         // @formatter:on
     }
 
-    private fun getEntitySetIdsOfLinkingId(linkingId: UUID): BasePostgresIterable<UUID> {
+    private fun getEntitySetIdsOfLinkingIds(
+            linkingIds: Set<UUID>
+    ): BasePostgresIterable<Pair<UUID, Optional<Set<UUID>>>> {
         return BasePostgresIterable(
                 PreparedStatementHolderSupplier(hds, selectLinkingIdsByEntitySetIds()) { ps ->
-                    ps.setObject(1, linkingId)
-                }) { ResultSetAdapters.entitySetId(it) }
+                    val linkingIdsArr = PostgresArrays.createUuidArray(ps.connection, linkingIds)
+                    ps.setArray(1, linkingIdsArr)
+                }) { ResultSetAdapters.entitySetId(it) to Optional.of(ResultSetAdapters.entityKeyIds(it)) }
     }
 
     private fun selectLinkingIdsByEntitySetIds(): String {
-        return "SELECT ${ENTITY_SET_ID.name} FROM ${IDS.name} WHERE ${LINKING_ID.name} = ? "
+        return "SELECT ${ENTITY_SET_ID.name}, array_agg(${LINKING_ID.name}) as ${ENTITY_KEY_IDS_COL.name} " +
+                "FROM ${IDS.name} " +
+                "WHERE ${LINKING_ID.name} = ANY(?) "
     }
 }
