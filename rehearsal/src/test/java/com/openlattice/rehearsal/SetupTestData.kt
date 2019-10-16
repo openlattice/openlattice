@@ -46,7 +46,6 @@ open class SetupTestData : MultipleAuthenticatedUsersBase() {
 
         @Test
         fun doImport() {
-//            importDataSet("associationTestFlight.yaml","")
             importDataSet("$DATA_FOLDER/socratesA.yaml","$FLIGHT_FOLDER/testdata1.csv")
             importDataSet("$DATA_FOLDER/socratesB.yaml","$FLIGHT_FOLDER/testdata2.csv")
         }
