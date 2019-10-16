@@ -45,6 +45,7 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import retrofit2.http.Path;
 
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
@@ -667,6 +668,36 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             @RequestBody OrganizationExternalDatabaseColumn organizationExternalDatabaseColumn ) {
         ensureOwner( organizationId );
         return edms.createOrganizationExternalDatabaseColumn( organizationId, organizationExternalDatabaseColumn );
+    }
+
+    @Timed
+    @Override
+    @PostMapping(
+            value = ID_PATH + TABLE_NAME_PATH + EXTERNAL_DATABASE_TABLE
+    )
+    public Void createNewExternalDatabaseTable(
+            @PathVariable( ID ) UUID organizationId,
+            @PathVariable( TABLE_NAME ) String tableName,
+            @RequestBody LinkedHashMap<String, String> columnNameToSqlType ) {
+        ensureOwner( organizationId );
+        edms.createNewOrganizationExternalDatabaseTable( organizationId, tableName, columnNameToSqlType );
+        return null;
+    }
+
+    @Timed
+    @Override
+    @PostMapping(
+            value = ID_PATH + TABLE_NAME_PATH + COLUMN_NAME_PATH + SQL_TYPE_PATH + EXTERNAL_DATABASE_COLUMN
+    )
+    public Void createNewExternalDatabaseColumn(
+            @PathVariable( ID ) UUID organizationId,
+            @PathVariable( TABLE_NAME ) String tableName,
+            @PathVariable( COLUMN_NAME ) String columnName,
+            @PathVariable( SQL_TYPE ) String sqlType ) {
+        ensureOwner( organizationId );
+        UUID tableId = getExternalDatabaseObjectId( organizationId, tableName );
+        edms.createNewOrganizationExternalDatabaseColumn( organizationId, tableId, tableName, columnName, sqlType );
+        return null;
     }
 
     @Timed
