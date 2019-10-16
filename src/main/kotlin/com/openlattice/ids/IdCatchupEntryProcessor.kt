@@ -45,7 +45,7 @@ class IdCatchupEntryProcessor(hds: HikariDataSource) : AbstractRhizomeEntryProce
                                 id.leastSignificantBits
                         )
                     } else {
-                        logger.warn("Detected exhausted range.")
+                        logger.warn("Detected exhausted range with base {}", range.base)
                         Range( range.base, -1 ushr 16, -2 ) //This is -2 so that increment takes it to -1
                     }
 
