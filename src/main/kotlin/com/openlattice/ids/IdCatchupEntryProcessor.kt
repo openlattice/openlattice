@@ -5,14 +5,12 @@ import com.google.common.base.Preconditions.checkNotNull
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.postgres.PostgresColumn
 import com.openlattice.postgres.PostgresTable
-import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.ResultSetAdapters.id
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.SQLException
-import java.util.*
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -45,10 +43,8 @@ class IdCatchupEntryProcessor(hds: HikariDataSource) : AbstractRhizomeEntryProce
                     val newMaxRange = Range(range.base, id.mostSignificantBits xor range.base, id.leastSignificantBits)
                     newMaxRange.nextId()
 
+                    entry.setValue(newMaxRange)
                 }
-
-                    entry.setValue(range)
-
             }
         } catch (e: SQLException) {
             logger.error("Error catching up ranges.", e)
