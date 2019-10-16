@@ -2,7 +2,7 @@ package com.openlattice.rehearsal.organization
 
 import com.openlattice.authorization.*
 import com.openlattice.mapstores.TestDataFactory
-import com.openlattice.rehearsal.GeneralException
+import com.openlattice.organization.roles.Role
 import com.openlattice.rehearsal.assertException
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
 import org.junit.Assert
@@ -123,4 +123,57 @@ class OrganizationsControllerTest : MultipleAuthenticatedUsersBase() {
 
     }
 
+    @Test
+    fun testAddPreviouslyDeletedRoleToOrganization() {
+
+        /*
+         * this test is meant to simulate the following events that may take place in the organizations web app:
+         *   1. a new role is added to an organization, for example "SUPER_ADMIN"
+         *   2. the new "SUPER_ADMIN" role is deleted from the organization, perhaps by accident
+         *   3. the same "SUPER_ADMIN" role needs to be added back to the organization
+         */
+
+        loginAs("admin")
+        val orgId = createOrganization().id
+
+        /*
+         * NOTE: this mimics how the role JSON is constructed on the frontend before the API request
+         */
+        val roleTitle = "SUPER_ADMIN"
+        val principal = Principal(PrincipalType.ROLE, "$orgId|$roleTitle")
+        val role = Role(Optional.empty(), orgId, principal, roleTitle, Optional.empty())
+
+        val originalRoles = organizationsApi.getRoles(orgId)
+        Assert.assertEquals(1, originalRoles.size)
+
+        // 1. add a new role to the organization
+        val roleId = organizationsApi.createRole(role)
+        Assert.assertEquals(role.id, roleId)
+
+        // confirm the role was successfully added
+        val rolesWithSuperAdmin = organizationsApi.getRoles(orgId)
+        Assert.assertEquals(2, rolesWithSuperAdmin.size)
+        Assert.assertNotEquals(originalRoles, rolesWithSuperAdmin)
+        Assert.assertTrue(rolesWithSuperAdmin.contains(role))
+
+        // 2. delete the role
+        organizationsApi.deleteRole(orgId, role.id)
+
+        // confirm the role was successfully deleted
+        val rolesWithoutSuperAdmin = organizationsApi.getRoles(orgId)
+        Assert.assertEquals(1, rolesWithoutSuperAdmin.size)
+        Assert.assertEquals(originalRoles, rolesWithoutSuperAdmin)
+        Assert.assertFalse(rolesWithoutSuperAdmin.contains(role))
+
+        // 3. add the same role to the organization
+        val sameRole = Role(Optional.empty(), orgId, principal, roleTitle, Optional.empty())
+        val sameRoleId = organizationsApi.createRole(sameRole)
+        Assert.assertEquals(sameRole.id, sameRoleId)
+
+        // confirm the role was successfully added
+        val rolesWithSuperAdminAgain = organizationsApi.getRoles(orgId)
+        Assert.assertEquals(2, rolesWithSuperAdminAgain.size)
+        Assert.assertNotEquals(rolesWithoutSuperAdmin, rolesWithSuperAdminAgain)
+        Assert.assertTrue(rolesWithSuperAdminAgain.contains(sameRole))
+    }
 }
