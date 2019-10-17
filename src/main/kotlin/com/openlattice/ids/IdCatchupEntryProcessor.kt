@@ -59,10 +59,6 @@ class IdCatchupEntryProcessor(hds: HikariDataSource) : AbstractRhizomeEntryProce
         return null
     }
 
-    fun getLowerboundRange(): Range {
-
-    }
-
     /**
      * This only works because the base represents the 16 most significant bits in the UUID. This query is intended to
      * be used with the lowest possible UUID for a given base and the lowest possible UUID for the immediately larger
