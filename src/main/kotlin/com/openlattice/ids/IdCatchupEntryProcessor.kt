@@ -5,6 +5,7 @@ import com.google.common.base.Preconditions.checkNotNull
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.postgres.PostgresColumn
 import com.openlattice.postgres.PostgresTable
+import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.ResultSetAdapters.id
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
@@ -26,30 +27,28 @@ class IdCatchupEntryProcessor(hds: HikariDataSource) : AbstractRhizomeEntryProce
 
     override fun process(entry: MutableMap.MutableEntry<Int, Range?>): Void? {
         val range = entry.value!! //Range should never be null in the EP.
-        val lowerbound = Range(range.base)
-        val supremum = Range(range.base + 1)
+        val lowerbound = Range(range.base).nextId()
+        val supremum = Range(range.base + (1 shl 48)).nextId()
 
         try {
             hds.connection.use { connection ->
                 prepareLatestQuery(connection).use { ps ->
-
                     ps.setObject(1, lowerbound)
                     ps.setObject(2, supremum)
                     val rs = ps.executeQuery()
-                    val newMaxRange  = if (rs.next()) {
-                        val id = id(ps.executeQuery())
-
-                        Range(
+                    val newMaxRange = if (rs.next()) {
+                        val id = id(rs)
+                        val r = Range(
                                 range.base,
                                 id.mostSignificantBits xor range.base,
                                 id.leastSignificantBits
                         )
+                        r.nextId()
+                        r
                     } else {
-                        logger.warn("Detected exhausted range with base {}", range.base)
-                        Range( range.base, -1 ushr 16, -2 ) //This is -2 so that increment takes it to -1
+                        logger.warn("Detected empty range with base {} ({})", range.base, range.base ushr 48)
+                        Range(range.base) //This is -2 so that increment takes it to -1
                     }
-
-                    newMaxRange.nextId()
                     entry.setValue(newMaxRange)
                 }
             }
@@ -72,8 +71,9 @@ class IdCatchupEntryProcessor(hds: HikariDataSource) : AbstractRhizomeEntryProce
     @Throws(SQLException::class)
     private fun prepareLatestQuery(connection: Connection): PreparedStatement {
         return connection.prepareStatement(
-                "SELECT ${PostgresColumn.ID.name} from ${PostgresTable.IDS.name} WHERE ${PostgresColumn.ID_VALUE.name} >= ? AND ${PostgresColumn.ID_VALUE.name} < ?"
+                "SELECT ${PostgresColumn.ID.name} from ${PostgresTable.IDS.name} WHERE ${PostgresColumn.ID_VALUE.name} >= ? AND ${PostgresColumn.ID_VALUE.name} < ? ORDER BY ID DESC LIMIT 1"
         )
     }
+
 }
 
