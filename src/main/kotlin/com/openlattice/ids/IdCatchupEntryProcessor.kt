@@ -79,13 +79,5 @@ class IdCatchupEntryProcessor(hds: HikariDataSource) : AbstractRhizomeEntryProce
         )
     }
 
-    @Throws(SQLException::class)
-    private fun prepareExistsQuery(connection: Connection): PreparedStatement {
-        return connection.prepareStatement(
-                "SELECT count(*) from ${PostgresTable.IDS.name} WHERE ${PostgresColumn.ID_VALUE.name} = ?"
-        )
-    }
-
-
 }
 
