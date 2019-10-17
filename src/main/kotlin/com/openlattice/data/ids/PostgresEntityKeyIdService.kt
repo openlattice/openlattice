@@ -208,8 +208,6 @@ class PostgresEntityKeyIdService(
     }
 
     private fun assignEntityKeyIds(entityKeys: Set<EntityKey>): Map<EntityKey, UUID> {
-        val connection = hds.connection
-        connection.autoCommit = false
         val unassignedEntityKeyIds = mutableMapOf<EntityKey, UUID>()
         //Create map of assignedEntityKeys and unassignedEntityKey is in single pass
         val assignedEntityKeyIds = entityKeys.associateWith { key ->
@@ -224,7 +222,7 @@ class PostgresEntityKeyIdService(
             }
         }
 
-        storeEntityKeyIds(unassignedEntityKeyIds, connection)
+        storeEntityKeyIds(unassignedEntityKeyIds)
         return assignedEntityKeyIds
     }
 
