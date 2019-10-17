@@ -330,7 +330,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public HazelcastIdGenerationService idGenerationService() {
-        return new HazelcastIdGenerationService( hazelcastClientProvider );
+        return new HazelcastIdGenerationService( hazelcastClientProvider, executor );
     }
 
     @Bean
