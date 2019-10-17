@@ -6,6 +6,7 @@ import com.hazelcast.core.IMap
 import com.hazelcast.query.Predicates
 import com.openlattice.assembler.AssemblerConfiguration
 import com.openlattice.assembler.AssemblerConnectionManager
+import com.openlattice.assembler.AssemblerConnectionManager.Companion.PUBLIC_SCHEMA
 import com.openlattice.assembler.PostgresDatabases
 import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresUsername
 import com.openlattice.authorization.*
@@ -138,8 +139,7 @@ class ExternalDatabaseManagementService(
         val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
         assemblerConnectionManager.connect(dbName).use {
             it.connection.createStatement().use { stmt ->
-                //currently returning false :(
-                val result = stmt.execute("CREATE TABLE $tableName(${columnNameToSqlType
+                stmt.execute("CREATE TABLE $PUBLIC_SCHEMA.$tableName(${columnNameToSqlType
                         .map { entry -> entry.key + " " + entry.value }.joinToString(", ")})")
             }
 
@@ -154,8 +154,7 @@ class ExternalDatabaseManagementService(
         val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
         assemblerConnectionManager.connect(dbName).use {
             it.connection.createStatement().use { stmt ->
-                //currently returning false :(
-                val result = stmt.execute("ALTER TABLE $tableName ADD COLUMN $columnName $sqlType")
+                stmt.execute("ALTER TABLE $PUBLIC_SCHEMA.$tableName ADD COLUMN $columnName $sqlType")
             }
 
         }
@@ -177,9 +176,10 @@ class ExternalDatabaseManagementService(
 
             //update table name in external database
             val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
+            val tableNamePath = "$PUBLIC_SCHEMA.$tableName"
             assemblerConnectionManager.connect(dbName).use {
                 val stmt = it.connection.prepareStatement(getRenameTableSql())
-                stmt.setString(1, tableName)
+                stmt.setString(1, tableNamePath)
                 stmt.setString(2, newTableName)
                 stmt.execute()
             }
@@ -199,9 +199,10 @@ class ExternalDatabaseManagementService(
 
             //update column name in external database
             val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
+            val tableNamePath = "$PUBLIC_SCHEMA.$tableName"
             assemblerConnectionManager.connect(dbName).use {
                 val stmt = it.connection.prepareStatement(getRenameColumnSql())
-                stmt.setString(1, tableName)
+                stmt.setString(1, tableNamePath)
                 stmt.setString(2, columnName)
                 stmt.setString(3, newColumnName)
                 stmt.execute()
@@ -223,9 +224,10 @@ class ExternalDatabaseManagementService(
 
         //drop table from external database
         val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
+        val tableNamePath = "$PUBLIC_SCHEMA.$tableName"
         assemblerConnectionManager.connect(dbName).use {
             val stmt = it.connection.prepareStatement(getDropTableStmt())
-            stmt.setString(1, tableName)
+            stmt.setString(1, tableNamePath)
             stmt.execute()
         }
 
@@ -248,9 +250,10 @@ class ExternalDatabaseManagementService(
 
         //drop column from table in external database
         val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
+        val tableNamePath = "$PUBLIC_SCHEMA.$tableName"
         assemblerConnectionManager.connect(dbName).use {
             val stmt = it.connection.prepareStatement(getDropColumnStmt())
-            stmt.setString(1, tableName)
+            stmt.setString(1, tableNamePath)
             stmt.setString(2, columnName)
             stmt.execute()
         }
@@ -353,8 +356,9 @@ class ExternalDatabaseManagementService(
 
     private fun preparePrivilegesStmt(stmt: PreparedStatement, privileges: List<String>, tableName: String, columnName: String, dbUser: String) {
         val privilegesAsString = privileges.joinToString(separator = ", ")
+        val tableNamePath = "$PUBLIC_SCHEMA.$tableName"
         stmt.setString(1, privilegesAsString)
-        stmt.setString(2, tableName)
+        stmt.setString(2, tableNamePath)
         stmt.setString(3, columnName)
         stmt.setString(4, dbUser)
         stmt.addBatch()
