@@ -229,7 +229,8 @@ class ExternalDatabaseManagementService(
         val belongsToDeletedTable = Predicates.equal("tableId", tableId)
         val columnsToDelete = organizationExternalDatabaseColumns.values(belongsToDeletedTable)
         columnsToDelete.forEach {
-            deleteOrganizationExternalDatabaseColumn(orgId, tableName, it.name, it.id)
+            organizationExternalDatabaseColumns.remove(it.id)
+            aclKeyReservations.release(it.id)
         }
 
     }
@@ -239,7 +240,7 @@ class ExternalDatabaseManagementService(
     }
 
     fun deleteOrganizationExternalDatabaseColumn(orgId: UUID, tableName: String, columnName: String, columnId: UUID) {
-        organizationExternalDatabaseTables.remove(columnId) //TODO make this a set so we can batch delete, entry processor?
+        organizationExternalDatabaseColumns.remove(columnId) //TODO make this a set so we can batch delete, entry processor?
         aclKeyReservations.release(columnId)
 
         //drop column from table in external database
@@ -247,7 +248,7 @@ class ExternalDatabaseManagementService(
         val tableNamePath = "$PUBLIC_SCHEMA.$tableName"
         assemblerConnectionManager.connect(dbName).use {
             it.connection.createStatement().use { stmt ->
-                stmt.execute("ALTER TABLE $tableNamePath DROP COLUMN IF EXISTS $columnName")
+                stmt.execute("ALTER TABLE IF EXISTS $tableNamePath DROP COLUMN IF EXISTS $columnName")
             }
         }
     }
@@ -256,12 +257,20 @@ class ExternalDatabaseManagementService(
      * Deletes an organization's entire database.
      * Is called when an organization is deleted.
      */
+    //TODO break into further helper methods to reduce reuse of code
     fun deleteOrganizationExternalDatabase(orgId: UUID) {
         //remove all tables/columns within org
         val belongsToDeletedDB = Predicates.equal("organizationId", orgId)
         val tablesToDelete = organizationExternalDatabaseTables.values(belongsToDeletedDB)
-        tablesToDelete.forEach {
-            deleteOrganizationExternalDatabaseTable(orgId, it.name, it.id)
+        tablesToDelete.forEach { table ->
+            organizationExternalDatabaseTables.remove(table.id)
+            aclKeyReservations.release(table.id)
+            val belongsToDeletedTable = Predicates.equal("tableId", table.id)
+            val columnsToDelete = organizationExternalDatabaseColumns.values(belongsToDeletedTable)
+            columnsToDelete.forEach { column ->
+                organizationExternalDatabaseColumns.remove(column.id)
+                aclKeyReservations.release(column.id)
+            }
         }
 
         //drop db from schema
@@ -337,16 +346,6 @@ class ExternalDatabaseManagementService(
     private fun getDBUser(principalId: String): String {
         val securePrincipal = securePrincipalsManager.getPrincipal(principalId)
         return quote(buildPostgresUsername(securePrincipal))
-    }
-
-    private fun preparePrivilegesStmt(stmt: PreparedStatement, privileges: List<String>, tableName: String, columnName: String, dbUser: String) {
-        val privilegesAsString = privileges.joinToString(separator = ", ")
-        val tableNamePath = "$PUBLIC_SCHEMA.$tableName"
-        stmt.setString(1, privilegesAsString)
-        stmt.setString(2, tableNamePath)
-        stmt.setString(3, columnName)
-        stmt.setString(4, dbUser)
-        stmt.addBatch()
     }
 
     private fun createPrivilegesSql(action: Action, privileges: List<String>, tableName: String, columnName: String, dbUser: String): String {
