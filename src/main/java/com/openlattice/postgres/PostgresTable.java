@@ -316,6 +316,7 @@ public final class PostgresTable {
                             NAME,
                             TITLE,
                             DESCRIPTION,
+                            TABLE_ID,
                             ORGANIZATION_ID );
 
     public static final PostgresTableDefinition ORGANIZATION_EXTERNAL_DATABASE_TABLE =
@@ -325,7 +326,6 @@ public final class PostgresTable {
                             NAME,
                             TITLE,
                             DESCRIPTION,
-                            COLUMN_IDS,
                             ORGANIZATION_ID );
 
     public static final PostgresTableDefinition PERMISSIONS              =
