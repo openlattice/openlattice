@@ -28,6 +28,7 @@ package com.openlattice.hazelcast;
 public enum HazelcastQueue {
     AUDITING,
     EMAIL_SPOOL,
+    ID_GENERATION,
     INDEXING,
     LINKING_CANDIDATES,
     LINKING_INDEXING,
