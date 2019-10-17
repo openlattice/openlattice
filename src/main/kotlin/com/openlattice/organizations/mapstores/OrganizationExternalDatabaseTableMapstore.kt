@@ -60,6 +60,6 @@ open class OrganizationExternalDatabaseTableMapstore(
     }
 
     override fun generateTestValue(): OrganizationExternalDatabaseTable {
-        return TestDataFactory.organizationAtlasTable()
+        return TestDataFactory.organizationExternalDatabaseTable()
     }
 }
