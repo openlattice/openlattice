@@ -93,9 +93,9 @@ class ExternalDatabaseManagementService(
         Principals.ensureUser(principal)
 
         val tableFQN = FullQualifiedName(orgId.toString(), table.name)
-        aclKeyReservations.reserveIdAndValidateType(table, tableFQN::getFullQualifiedNameAsString)
         checkState(organizationExternalDatabaseTables.putIfAbsent(table.id, table) == null,
                 "OrganizationExternalDatabaseTable ${tableFQN.fullQualifiedNameAsString} already exists")
+        aclKeyReservations.reserveIdAndValidateType(table, tableFQN::getFullQualifiedNameAsString)
 
         val tableAclKey = AclKey(orgId, table.id)
         authorizationManager.setSecurableObjectType(tableAclKey, SecurableObjectType.OrganizationAtlasTable)
@@ -114,9 +114,9 @@ class ExternalDatabaseManagementService(
         checkState(organizationExternalDatabaseTables[column.tableId] != null,
                 "OrganizationExternalDatabaseColumn ${column.name} belongs to a table that does not exist")
         val columnFQN = FullQualifiedName(column.tableId.toString(), column.name)
-        aclKeyReservations.reserveIdAndValidateType(column, columnFQN::getFullQualifiedNameAsString)
         checkState(organizationExternalDatabaseColumns.putIfAbsent(column.id, column) == null,
                 "OrganizationExternalDatabaseColumn ${columnFQN.fullQualifiedNameAsString} already exists")
+        aclKeyReservations.reserveIdAndValidateType(column, columnFQN::getFullQualifiedNameAsString)
 
         val columnAclKey = AclKey(orgId, column.tableId, column.id)
         authorizationManager.setSecurableObjectType(columnAclKey, SecurableObjectType.OrganizationAtlasColumn)
@@ -138,7 +138,8 @@ class ExternalDatabaseManagementService(
         val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
         assemblerConnectionManager.connect(dbName).use {
             it.connection.createStatement().use { stmt ->
-                stmt.execute("CREATE TABLE $tableName(${columnNameToSqlType
+                //currently returning false :(
+                val result = stmt.execute("CREATE TABLE $tableName(${columnNameToSqlType
                         .map { entry -> entry.key + " " + entry.value }.joinToString(", ")})")
             }
 
@@ -153,7 +154,8 @@ class ExternalDatabaseManagementService(
         val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
         assemblerConnectionManager.connect(dbName).use {
             it.connection.createStatement().use { stmt ->
-                stmt.execute("ALTER TABLE $tableName ADD COLUMN $columnName $sqlType")
+                //currently returning false :(
+                val result = stmt.execute("ALTER TABLE $tableName ADD COLUMN $columnName $sqlType")
             }
 
         }
