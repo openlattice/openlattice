@@ -44,23 +44,20 @@ class ExternalDatabaseManagementService(
     private val securableObjectTypes: IMap<AclKey, SecurableObjectType> = hazelcastInstance.getMap(HazelcastMap.SECURABLE_OBJECT_TYPES.name)
     private val logger = LoggerFactory.getLogger(ExternalDatabaseManagementService::class.java)
 
-    fun updatePermissionsOnAtlas(dbName: String, ipAddress: String, req: List<AclData>) {
+    fun updateExternalDatabasePermissions(dbName: String, ipAddress: String, req: List<AclData>) {
         val permissions = req.groupBy { it.action }
         permissions.entries.forEach {
             when (it.key) {
                 Action.ADD -> {
-                    val grantStmt = getGrantPrivilegesStmt()
-                    executePrivilegesUpdate(grantStmt, dbName, it.value)
+                    executePrivilegesUpdate(Action.ADD, dbName, it.value)
                 }
                 Action.REMOVE -> {
-                    val revokeStmt = getRevokePrivilegesStmt()
-                    executePrivilegesUpdate(revokeStmt, dbName, it.value)
+                    executePrivilegesUpdate(Action.REMOVE, dbName, it.value)
                 }
 
                 Action.SET -> {
                     revokeAllPrivileges(dbName, it.value)
-                    val grantStmt = getGrantPrivilegesStmt()
-                    executePrivilegesUpdate(grantStmt, dbName, it.value)
+                    executePrivilegesUpdate(Action.ADD, dbName, it.value)
                 }
                 else -> {
                     logger.error("Invalid action ${it.key} specified for request")
@@ -104,8 +101,6 @@ class ExternalDatabaseManagementService(
         //eventBus?
 
         return table.id
-
-        //TODO figure out how to differentiate between creating a securable object of a table that already exists versus a new table that needs to be created
     }
 
     fun createOrganizationExternalDatabaseColumn(orgId: UUID, column: OrganizationExternalDatabaseColumn): UUID {
@@ -126,7 +121,7 @@ class ExternalDatabaseManagementService(
         return column.id
     }
 
-    fun createNewOrganizationExternalDatabaseTable( orgId: UUID, tableName: String, columnNameToSqlType: LinkedHashMap<String, String> ) {
+    fun createNewOrganizationExternalDatabaseTable(orgId: UUID, tableName: String, columnNameToSqlType: LinkedHashMap<String, String>) {
         //TODO figure out title stuff
         val table = OrganizationExternalDatabaseTable(Optional.empty(), tableName, "title", Optional.empty(), orgId)
         val tableId = createOrganizationExternalDatabaseTable(orgId, table)
@@ -146,7 +141,8 @@ class ExternalDatabaseManagementService(
         }
     }
 
-    fun createNewOrganizationExternalDatabaseColumn( orgId: UUID, tableId: UUID, tableName: String, columnName: String, sqlType: String) {
+    fun createNewOrganizationExternalDatabaseColumn(orgId: UUID, tableId: UUID, tableName: String, columnName: String, sqlType: String) {
+        //TODO figure out title stuff
         val column = OrganizationExternalDatabaseColumn(Optional.empty(), columnName, "title", Optional.empty(), tableId, orgId)
         createOrganizationExternalDatabaseColumn(orgId, column)
 
@@ -177,11 +173,11 @@ class ExternalDatabaseManagementService(
             //update table name in external database
             val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
             val tableNamePath = "$PUBLIC_SCHEMA.$tableName"
+            val newTableNamePath = "$PUBLIC_SCHEMA.$newTableName"
             assemblerConnectionManager.connect(dbName).use {
-                val stmt = it.connection.prepareStatement(getRenameTableSql())
-                stmt.setString(1, tableNamePath)
-                stmt.setString(2, newTableName)
-                stmt.execute()
+                it.connection.createStatement().use { stmt ->
+                    stmt.execute("ALTER TABLE $tableNamePath RENAME TO $newTableName")
+                }
             }
         }
 
@@ -201,11 +197,9 @@ class ExternalDatabaseManagementService(
             val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
             val tableNamePath = "$PUBLIC_SCHEMA.$tableName"
             assemblerConnectionManager.connect(dbName).use {
-                val stmt = it.connection.prepareStatement(getRenameColumnSql())
-                stmt.setString(1, tableNamePath)
-                stmt.setString(2, columnName)
-                stmt.setString(3, newColumnName)
-                stmt.execute()
+                it.connection.createStatement().use { stmt ->
+                    stmt.execute("ALTER TABLE $tableNamePath RENAME COLUMN $columnName to $newColumnName")
+                }
             }
         }
 
@@ -215,7 +209,7 @@ class ExternalDatabaseManagementService(
     }
 
     fun deleteOrganizationExternalDatabaseTables(orgId: UUID, tableNameById: Map<UUID, String>) {
-        tableNameById.forEach{ deleteOrganizationExternalDatabaseTable(orgId, it.value, it.key)}
+        tableNameById.forEach { deleteOrganizationExternalDatabaseTable(orgId, it.value, it.key) }
     }
 
     fun deleteOrganizationExternalDatabaseTable(orgId: UUID, tableName: String, tableId: UUID) {
@@ -226,9 +220,9 @@ class ExternalDatabaseManagementService(
         val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
         val tableNamePath = "$PUBLIC_SCHEMA.$tableName"
         assemblerConnectionManager.connect(dbName).use {
-            val stmt = it.connection.prepareStatement(getDropTableStmt())
-            stmt.setString(1, tableNamePath)
-            stmt.execute()
+            it.connection.createStatement().use { stmt ->
+                stmt.execute("DROP TABLE IF EXISTS $tableNamePath")
+            }
         }
 
         //delete columns that belonged to this table
@@ -241,7 +235,7 @@ class ExternalDatabaseManagementService(
     }
 
     fun deleteOrganizationExternalDatabaseColumns(orgId: UUID, tableName: String, columnNameById: Map<UUID, String>) {
-        columnNameById.forEach{ deleteOrganizationExternalDatabaseColumn(orgId, tableName, it.value, it.key)}
+        columnNameById.forEach { deleteOrganizationExternalDatabaseColumn(orgId, tableName, it.value, it.key) }
     }
 
     fun deleteOrganizationExternalDatabaseColumn(orgId: UUID, tableName: String, columnName: String, columnId: UUID) {
@@ -252,14 +246,11 @@ class ExternalDatabaseManagementService(
         val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
         val tableNamePath = "$PUBLIC_SCHEMA.$tableName"
         assemblerConnectionManager.connect(dbName).use {
-            val stmt = it.connection.prepareStatement(getDropColumnStmt())
-            stmt.setString(1, tableNamePath)
-            stmt.setString(2, columnName)
-            stmt.execute()
+            it.connection.createStatement().use { stmt ->
+                stmt.execute("ALTER TABLE $tableNamePath DROP COLUMN IF EXISTS $columnName")
+            }
         }
     }
-
-
 
     /**
      * Deletes an organization's entire database.
@@ -276,9 +267,9 @@ class ExternalDatabaseManagementService(
         //drop db from schema
         val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
         assemblerConnectionManager.connect(dbName).use {
-            val stmt = it.connection.prepareStatement(getDropDBStmt())
-            stmt.setString(1, dbName)
-            stmt.execute()
+            it.connection.createStatement().use { stmt ->
+                stmt.execute("DROP DATABASE $dbName")
+            }
         }
     }
 
@@ -286,72 +277,66 @@ class ExternalDatabaseManagementService(
      * Revokes all privileges for a user on an organization's database
      * when that user is removed from an organization.
      */
-    fun revokeAllPrivilegesFromMember( orgId: UUID, userId: String ) {
+    fun revokeAllPrivilegesFromMember(orgId: UUID, userId: String) {
         val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
         val userName = getDBUser(userId)
-        assemblerConnectionManager.connect(dbName).use{
-            val stmt = it.connection.prepareStatement(getRevokeOnDBStmt())
-            stmt.setString(1, dbName)
-            stmt.setString(2, userName)
-            stmt.execute()
+        assemblerConnectionManager.connect(dbName).use {
+            it.connection.createStatement().use { stmt ->
+                stmt.execute("REVOKE ALL ON DATABASE $dbName FROM $userName")
+            }
         }
     }
 
     /**
      * Grants or revokes privileges on a table or column in an external database.
      */
-    private fun executePrivilegesUpdate(sqlStmt: String, dbName: String, aclData: List<AclData>) {
+    private fun executePrivilegesUpdate(action: Action, dbName: String, aclData: List<AclData>) {
         assemblerConnectionManager.connect(dbName).use { hds ->
-            val stmt = hds.connection.prepareStatement(sqlStmt)
-            aclData.forEach {
-                val tableAndColumnNames = getTableAndColumnNames(it)
-                it.acl.aces.forEach { ace ->
-                    val dbUser = getDBUser(ace.principal.id)
-                    val privileges = mutableListOf<String>()
-                    if (ace.permissions.contains(Permission.OWNER)) {
-                        privileges.add("ALL")
-                    } else {
-                        if (ace.permissions.contains(Permission.WRITE)) {
-                            privileges.addAll(listOf("INSERT", "UPDATE"))
+            hds.connection.createStatement().use { stmt ->
+                aclData.forEach {
+                    val tableAndColumnNames = getTableAndColumnNames(it)
+                    it.acl.aces.forEach { ace ->
+                        val dbUser = getDBUser(ace.principal.id)
+                        val privileges = mutableListOf<String>()
+                        if (ace.permissions.contains(Permission.OWNER)) {
+                            privileges.add("ALL")
+                        } else {
+                            if (ace.permissions.contains(Permission.WRITE)) {
+                                privileges.addAll(listOf("INSERT", "UPDATE"))
+                            }
+                            if (ace.permissions.contains(Permission.READ)) {
+                                privileges.add("SELECT")
+                            }
                         }
-                        if (ace.permissions.contains(Permission.READ)) {
-                            privileges.add("SELECT")
-                        }
+                        val sql = createPrivilegesSql(action, privileges, tableAndColumnNames.first, tableAndColumnNames.second, dbUser)
+                        stmt.addBatch(sql)
                     }
-                    preparePrivilegesStmt(stmt, privileges, tableAndColumnNames.first, tableAndColumnNames.second, dbUser)
                 }
+                stmt.executeBatch()
             }
-            stmt.executeBatch()
         }
     }
 
 
     private fun revokeAllPrivileges(dbName: String, aclData: List<AclData>) {
         assemblerConnectionManager.connect(dbName).use { hds ->
-            val stmt = hds.connection.prepareStatement(getRevokePrivilegesStmt())
-            aclData.forEach {
-                val tableAndColumnNames = getTableAndColumnNames(it)
-                it.acl.aces.forEach { ace ->
-                    val dbUser = getDBUser(ace.principal.id)
-                    preparePrivilegesStmt(stmt, listOf("ALL"), tableAndColumnNames.first, tableAndColumnNames.second, dbUser)
+            hds.connection.createStatement().use { stmt ->
+                aclData.forEach {
+                    val tableAndColumnNames = getTableAndColumnNames(it)
+                    it.acl.aces.forEach { ace ->
+                        val dbUser = getDBUser(ace.principal.id)
+                        val sql = createPrivilegesSql(Action.REMOVE, listOf("ALL"), tableAndColumnNames.first, tableAndColumnNames.second, dbUser)
+                        stmt.addBatch(sql)
+                    }
                 }
+                stmt.executeBatch()
             }
-            stmt.executeBatch()
-
         }
     }
 
     private fun getDBUser(principalId: String): String {
         val securePrincipal = securePrincipalsManager.getPrincipal(principalId)
         return quote(buildPostgresUsername(securePrincipal))
-    }
-
-    private fun getGrantPrivilegesStmt(): String {
-        return "GRANT ? ? ON ? TO ?"
-    }
-
-    private fun getRevokePrivilegesStmt(): String {
-        return "REVOKE ? ? ON ? FROM ?"
     }
 
     private fun preparePrivilegesStmt(stmt: PreparedStatement, privileges: List<String>, tableName: String, columnName: String, dbUser: String) {
@@ -364,28 +349,14 @@ class ExternalDatabaseManagementService(
         stmt.addBatch()
     }
 
-    private fun getRenameTableSql(): String {
-        return "ALTER TABLE ? RENAME TO ?"
-    }
-
-    private fun getRenameColumnSql(): String {
-        return "ALTER TABLE ? RENAME COLUMN ? to ?"
-    }
-
-    private fun getDropDBStmt(): String {
-        return "DROP DATABASE ?"
-    }
-
-    private fun getDropTableStmt(): String {
-        return "DROP TABLE IF EXISTS ?"
-    }
-
-    private fun getDropColumnStmt(): String {
-        return "ALTER TABLE ? DROP COLUMN IF EXISTS ?"
-    }
-
-    private fun getRevokeOnDBStmt(): String {
-        return "REVOKE ALL ON DATABASE ? FROM ?"
+    private fun createPrivilegesSql(action: Action, privileges: List<String>, tableName: String, columnName: String, dbUser: String): String {
+        val privilegesAsString = privileges.joinToString(separator = ", ")
+        val tableNamePath = "$PUBLIC_SCHEMA.$tableName"
+        return if (action == Action.ADD) {
+            "GRANT $privilegesAsString $columnName ON $tableNamePath TO $dbUser"
+        } else {
+            "REVOKE $privilegesAsString $columnName ON $tableNamePath FROM $dbUser"
+        }
     }
 
 }
