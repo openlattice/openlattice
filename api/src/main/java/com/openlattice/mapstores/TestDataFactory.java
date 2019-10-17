@@ -587,8 +587,8 @@ public final class TestDataFactory {
         );
     }
 
-    public static OrganizationExternalDatabaseColumn organizationAtlasColumn() {
-        OrganizationExternalDatabaseTable table = organizationAtlasTable();
+    public static OrganizationExternalDatabaseColumn organizationExternalDatabaseColumn() {
+        OrganizationExternalDatabaseTable table = organizationExternalDatabaseTable();
         return new OrganizationExternalDatabaseColumn(
                 UUID.randomUUID(),
                 randomAlphanumeric( 5 ),
@@ -600,7 +600,7 @@ public final class TestDataFactory {
     }
 
 
-    public static OrganizationExternalDatabaseTable organizationAtlasTable() {
+    public static OrganizationExternalDatabaseTable organizationExternalDatabaseTable() {
         return new OrganizationExternalDatabaseTable(
                 UUID.randomUUID(),
                 randomAlphanumeric( 5 ),
