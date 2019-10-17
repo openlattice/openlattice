@@ -5,8 +5,10 @@ import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.organization.OrganizationExternalDatabaseTable
+import org.springframework.stereotype.Component
 import java.util.*
 
+@Component
 class OrganizationExternalDatabaseTableStreamSerializer : SelfRegisteringStreamSerializer<OrganizationExternalDatabaseTable> {
 
     companion object {
