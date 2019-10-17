@@ -111,7 +111,7 @@ class ExternalDatabaseManagementService(
         val principal = Principals.getCurrentUser()
         Principals.ensureUser(principal)
 
-        checkState(organizationExternalDatabaseTables[column.tableId] == null,
+        checkState(organizationExternalDatabaseTables[column.tableId] != null,
                 "OrganizationExternalDatabaseColumn ${column.name} belongs to a table that does not exist")
         val columnFQN = FullQualifiedName(column.tableId.toString(), column.name)
         aclKeyReservations.reserveIdAndValidateType(column, columnFQN::getFullQualifiedNameAsString)
