@@ -29,8 +29,6 @@ class HazelcastIdGenerationService(clients: HazelcastClientProvider, private val
     private val scrolls = hazelcastInstance.getMap<Long, Range>(HazelcastMap.ID_GENERATION.name)
     private val idsQueue = hazelcastInstance.getQueue<UUID>(HazelcastQueue.ID_GENERATION.name)
 
-    private val rangeIndex = AtomicInteger()
-
     init {
         if (scrolls.isEmpty) {
             //Initialize the ranges

@@ -219,6 +219,7 @@ class PostgresEntityKeyIdService(
                 unassignedEntityKeyIds[key] = elem
                 elem
             } else {
+                idGenerationService.returnId(elem)
                 id
             }
         }
