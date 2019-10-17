@@ -5,8 +5,8 @@ import com.google.common.util.concurrent.ListeningExecutorService
 import com.openlattice.hazelcast.HazelcastClient
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.HazelcastQueue
+import org.slf4j.LoggerFactory
 import java.util.*
-import java.util.concurrent.atomic.AtomicInteger
 
 /**
  *
@@ -20,6 +20,7 @@ class HazelcastIdGenerationService(clients: HazelcastClientProvider, private val
     companion object {
         private const val MASK_LENGTH = 16
         const val NUM_PARTITIONS = 1L shl MASK_LENGTH //65536
+        private val logger = LoggerFactory.getLogger(HazelcastIdGenerationService::class.java)
     }
 
     /*
@@ -50,6 +51,7 @@ class HazelcastIdGenerationService(clients: HazelcastClientProvider, private val
             ids.values
                     .map { (it as List<UUID>)[0] }
                     .forEach { idsQueue.put(it) }
+            logger.info("Added $NUM_PARTITIONS ids to queue")
         }
     }
 
