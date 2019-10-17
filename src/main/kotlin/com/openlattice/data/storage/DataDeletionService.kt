@@ -177,6 +177,15 @@ class DataDeletionService(
                 Optional.empty(),
                 principals)
 
+        authorizeAndDeleteAssociationsForNeighborhood(
+                entitySetId,
+                entityKeyIds,
+                srcEntitySetFilter,
+                dstEntitySetFilter,
+                deleteType,
+                principals
+        )
+
         // TODO 1) getNeighborEntityKeyIdsThatMatchFilters()
         // TODO 2) authorize assoc entities of entityKeyIds + neighborEntityKeyIds
         // TODO 3) delete assoc entities of entityKeyIds + neighborEntityKeyIds
@@ -220,6 +229,28 @@ class DataDeletionService(
     }
 
     /** Association deletion and auth **/
+
+
+    private fun authorizeAndDeleteAssociationsForNeighborhood(
+            entitySetId: UUID,
+            entityKeyIds: Set<UUID>,
+            srcEntitySetFilter: Set<UUID>,
+            dstEntitySetFilter: Set<UUID>,
+            deleteType: DeleteType,
+            principals: Set<Principal>
+    ): Int {
+
+        // if no filters, just treat at a normal delete
+        if (srcEntitySetFilter.isEmpty() && dstEntitySetFilter.isEmpty()) {
+            return authorizeAndDeleteAssociations(entitySetId, Optional.of(entityKeyIds), deleteType, principals)
+        }
+
+
+        
+
+
+        return 0
+    }
 
 
     private fun authorizeAndDeleteAssociations(
