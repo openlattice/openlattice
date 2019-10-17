@@ -315,7 +315,14 @@ class PostgresEntityKeyIdService(
 
         //Making this line O(n) is why we chose to just take a set instead of a sequence (thus allowing lazy views since copy is required anyway)
         val missing = entityKeys.minus(entityKeyIds.keys)
-        entityKeyIds.putAll(storeEntityKeyIds(genEntityKeyIds(missing)))
+
+        countUpEntityKeys(missing)
+
+        val missingMap = assignEntityKeyIds(missing)
+
+        countDownEntityKeys(missing)
+
+        entityKeyIds.putAll(missingMap)
 
         return entityKeyIds
     }
