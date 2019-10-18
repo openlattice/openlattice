@@ -208,6 +208,30 @@ class ExternalDatabaseManagementService(
         //write a signalUpdate method
     }
 
+    fun setPrimaryKey(orgId: UUID, tableName: String, tableId: UUID, columnNames: Set<String>) {
+        val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
+        val tableNamePath = "$PUBLIC_SCHEMA.$tableName"
+        assemblerConnectionManager.connect(dbName).use {
+            //remove primary key if it exists
+            it.connection.createStatement().use { stmt ->
+                val primaryKeyResultSet = stmt.executeQuery(
+                        "SELECT constraint_name FROM information_schema.table_constraints " +
+                                "WHERE table_name = $tableNamePath AND constraint_type = 'PRIMARY KEY'")
+                if (primaryKeyResultSet.isBeforeFirst) {
+                    val primaryKey = primaryKeyResultSet.getString("constraint_name")
+                    stmt.execute("ALTER TABLE $tableNamePath DROP CONSTRAINT $primaryKey")
+                }
+            }
+            if (columnNames.isNotEmpty()) {
+                val primaryKeyColumns = columnNames.joinToString(", ")
+                it.connection.createStatement().use { stmt ->
+                    stmt.execute("ALTER TABLE $tableNamePath ADD PRIMARY KEY ($primaryKeyColumns)")
+
+                }
+            }
+        }
+    }
+
     fun deleteOrganizationExternalDatabaseTables(orgId: UUID, tableNameById: Map<UUID, String>) {
         tableNameById.forEach { deleteOrganizationExternalDatabaseTable(orgId, it.value, it.key) }
     }
@@ -236,6 +260,7 @@ class ExternalDatabaseManagementService(
     }
 
     fun deleteOrganizationExternalDatabaseColumns(orgId: UUID, tableName: String, columnNameById: Map<UUID, String>) {
+        //TODO add check that they aren't deleting a primary key column?
         columnNameById.forEach { deleteOrganizationExternalDatabaseColumn(orgId, tableName, it.value, it.key) }
     }
 
