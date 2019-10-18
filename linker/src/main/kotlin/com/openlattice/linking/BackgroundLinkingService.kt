@@ -83,7 +83,7 @@ class BackgroundLinkingService
 
     private val candidates = hazelcastInstance.getQueue<EntityDataKey>(HazelcastQueue.LINKING_CANDIDATES.name)
 
-    private val linkingWorker = executor.submit {
+    private val linkingWorker = if (isLinkingEnabled()) executor.submit {
         Stream.generate { candidates.take() }
                 .parallel()
                 .forEach { candidate ->
@@ -96,7 +96,7 @@ class BackgroundLinkingService
                         unlock(candidate)
                     }
                 }
-    }
+    } else null
 
     /**
      * Links a candidate entity to other matching entities.
@@ -262,6 +262,10 @@ class BackgroundLinkingService
     @Scheduled(fixedRate = 30000)
     fun pruneFailedNodes() {
         logger.info("Removing locks for any failed nodes.")
+        if (!isLinkingEnabled()) {
+            return
+        }
+
         val lockOwners = linkingLocks.aggregate(Aggregators.distinct<MutableMap.MutableEntry<UUID, String>, String>())
         val memberIds = hazelcastInstance.cluster.members.map { it.uuid }
         val failedNodes = lockOwners - memberIds
@@ -273,6 +277,10 @@ class BackgroundLinkingService
     @Scheduled(fixedRate = 30000)
     fun updateCandidateList() {
         logger.info("Updating linking candidates list.")
+        if (!isLinkingEnabled()) {
+            return
+        }
+
         if (!running.tryLock()) {
             logger.info("Couldn't get a lock, will try again later")
             return
@@ -327,6 +335,15 @@ class BackgroundLinkingService
 
     private fun unlock(candidate: EntityDataKey) {
         entityLinkingLocks.delete(candidate)
+    }
+
+    private fun isLinkingEnabled(): Boolean {
+        if (!configuration.backgroundLinkingEnabled) {
+            logger.info("Skipping task as background linking is not enabled.")
+            return false
+        }
+
+        return true
     }
 }
 
