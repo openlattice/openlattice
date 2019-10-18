@@ -36,6 +36,7 @@ public interface OrganizationsApi {
     String ENTITY_SETS              = "/entity-sets";
     String EXTERNAL_DATABASE_COLUMN = "/external-database-column";
     String EXTERNAL_DATABASE_TABLE  = "/external-database-table";
+    String PRIMARY_KEY              = "/primary-key";
     // @formatter:on
     /*
      * Acutal path elements
@@ -363,6 +364,19 @@ public interface OrganizationsApi {
             @Path( TABLE_NAME ) String tableName,
             @Path( COLUMN_NAME ) String columnName,
             @Body MetadataUpdate metadataUpdate );
+
+    /**
+     * Sets the primary key on a table.
+     * @param organizationId The organization's UUID
+     * @param tableName The exact name of the table in the database
+     * @param columnNames The exact names of the column(s) that will comprise the primary key.
+     *                    An empty set will remove the primary key from the table.
+     */
+    @PATCH( BASE + ID_PATH + TABLE_NAME_PATH + PRIMARY_KEY )
+    Void setPrimaryKey(
+            @Path( ID ) UUID organizationId,
+            @Path ( TABLE_NAME ) String tableName,
+            @Body Set<String> columnNames );
 
 
     //delete
