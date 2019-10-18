@@ -19,6 +19,7 @@ import com.openlattice.data.DataGraphManager
 import com.openlattice.data.DeleteType
 import com.openlattice.data.WriteEvent
 import com.openlattice.datastore.services.EdmManager
+import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.edm.type.PropertyType
@@ -56,6 +57,9 @@ class BackgroundExpiredDataDeletionService(
 
     @Inject
     private lateinit var edm: EdmManager
+
+    @Inject
+    private lateinit var entitySetManager: EntitySetManager
 
     init {
         expirationLocks.addIndex(QueryConstants.THIS_ATTRIBUTE_NAME.value(), true)
@@ -139,7 +143,7 @@ class BackgroundExpiredDataDeletionService(
                 val ids = idsChunk.toSet()
 
                 val writeEvent = if (entitySet.expiration.deleteType == DeleteType.Hard) {
-                    if (!edm.isAssociationEntitySet(entitySet.id)) {
+                    if (!entitySetManager.isAssociationEntitySet(entitySet.id)) {
                         deleteAssociationsOfExpiredEntities(entitySet.id, ids)
                     }
                     dataGraphService.deleteEntities(
@@ -149,7 +153,7 @@ class BackgroundExpiredDataDeletionService(
                     )
 
                 } else {
-                    if (!edm.isAssociationEntitySet(entitySet.id)) {
+                    if (!entitySetManager.isAssociationEntitySet(entitySet.id)) {
                         clearAssociationsOfExpiredEntities(entitySet.id, ids)
                     }
                     dataGraphService.clearEntities(
@@ -196,7 +200,7 @@ class BackgroundExpiredDataDeletionService(
                     it.edge.entitySetId to
                             edm.getPropertyTypesAsMap(
                                     edm.getEntityType(
-                                            edm.getEntitySet(it.edge.entitySetId).entityTypeId
+                                            entitySetManager.getEntitySet(it.edge.entitySetId)!!.entityTypeId
                                     ).properties
                             )
                 }.toMap()
@@ -210,7 +214,7 @@ class BackgroundExpiredDataDeletionService(
 
         //filter out audit entity set edges from association edges to clear
         val associationEdgeESIds = associationEdgeKeys.map { it.edge.entitySetId }.toSet()
-        val auditEdgeEntitySetIds = edm.getEntitySetIdsWithFlags(associationEdgeESIds, setOf(EntitySetFlag.AUDIT))
+        val auditEdgeEntitySetIds = entitySetManager.getEntitySetIdsWithFlags(associationEdgeESIds, setOf(EntitySetFlag.AUDIT))
         val filteredAssociationEdgeKeys = associationEdgeESIds
                 .filter { auditEdgeEntitySetIds.contains(it) }
                 .toSet()
@@ -220,7 +224,7 @@ class BackgroundExpiredDataDeletionService(
                     it to
                             edm.getPropertyTypesAsMap(
                                     edm.getEntityType(
-                                            edm.getEntitySet(it).entityTypeId
+                                            entitySetManager.getEntitySet(it)!!.entityTypeId
                                     ).properties
                             )
                 }.toMap()
