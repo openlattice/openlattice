@@ -756,13 +756,32 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             @RequestBody MetadataUpdate metadataUpdate ) {
         UUID tableId = getExternalDatabaseObjectId( organizationId, tableName );
         UUID columnId = getExternalDatabaseObjectId( tableId, columnName );
-        ensureOwnerAccess( new AclKey(organizationId, tableId, columnId));
+        ensureOwnerAccess( new AclKey( organizationId, tableId, columnId ));
         edms.updateOrganizationExternalDatabaseColumn( organizationId,
                 tableName,
                 tableId,
                 columnName,
                 columnId,
                 metadataUpdate );
+        return null;
+    }
+
+    @Timed
+    @Override
+    @PatchMapping(
+            value = ID_PATH + TABLE_NAME_PATH + PRIMARY_KEY
+    )
+    public Void setPrimaryKey(
+            @PathVariable( ID ) UUID organizationId,
+            @PathVariable( TABLE_NAME ) String tableName,
+            @RequestBody Set<String> columnNames ) {
+        UUID tableId = getExternalDatabaseObjectId( organizationId, tableName );
+        ensureOwnerAccess( new AclKey( organizationId, tableId ) );
+        columnNames.forEach(columnName -> {
+            UUID columnId = getExternalDatabaseObjectId( tableId, columnName );
+            ensureOwnerAccess( new AclKey( organizationId, tableId, columnId ) );
+        } );
+        edms.setPrimaryKey( organizationId, tableName, tableId, columnNames );
         return null;
     }
 
@@ -891,7 +910,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     private UUID getExternalDatabaseObjectId( UUID containingObjectId, String name ) {
         FullQualifiedName fqn = new FullQualifiedName( containingObjectId.toString(), name );
         UUID id = aclKeysMap.get( fqn.getFullQualifiedNameAsString() );
-        checkState( id != null, "External database object with name {} does not exist", name );
+        checkState( id != null, "External database object with name " + name + " does not exist");
         return id;
     }
 
