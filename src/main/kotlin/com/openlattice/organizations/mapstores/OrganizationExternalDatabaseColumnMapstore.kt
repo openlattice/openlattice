@@ -51,7 +51,7 @@ open class OrganizationExternalDatabaseColumnMapstore(
     }
 
     override fun mapToValue(rs: ResultSet?): OrganizationExternalDatabaseColumn {
-        return ResultSetAdapters.organizationAtlasColumn(rs)
+        return ResultSetAdapters.organizationExternalDatabaseColumn(rs)
     }
 
     override fun getMapConfig(): MapConfig {
