@@ -18,20 +18,25 @@
  *
  *
  */
+package com.openlattice.data
 
-package com.openlattice.graph
+import org.junit.Assert
+import org.junit.Test
 
-import java.util.*
+class WriteEventTest {
 
-/**
- * @param ids The entity key ids for which to build the neighborhood (entity set id -> set of ids )
- * @param srcSelections The list of neighborhood selections where the ids are the destination. (src + filter > edge + filter > ids)
- * @param dstSelections The list of neighborhood selections where the ids are the source. (ids > edge + filter > dst + filter)
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
- */
-data class NeighborhoodQuery(
-        val ids: Map<UUID, Optional<Set<UUID>>>,
-        val srcSelections: List<NeighborhoodSelection>,
-        val dstSelections: List<NeighborhoodSelection>
-)
+    @Test
+    fun testWriteEventNegativeVersion() {
+        val we = WriteEvent(-1L, 1)
+        Assert.assertEquals(1, we.version)
+    }
 
+    @Test
+    fun testWriteEventEquality() {
+        val we1 = WriteEvent(-1L, 1)
+        val we2 = WriteEvent(-1L, 1)
+
+        Assert.assertEquals(we1, we2)
+        println(we1)
+    }
+}
