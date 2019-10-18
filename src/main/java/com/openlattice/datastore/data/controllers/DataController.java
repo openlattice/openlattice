@@ -35,6 +35,7 @@ import com.openlattice.data.graph.DataGraphServiceHelper;
 import com.openlattice.data.requests.EntitySetSelection;
 import com.openlattice.data.requests.FileType;
 import com.openlattice.datastore.services.EdmService;
+import com.openlattice.datastore.services.EntitySetManager;
 import com.openlattice.datastore.services.SyncTicketService;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.set.EntitySetFlag;
@@ -81,6 +82,9 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
 
     @Inject
     private SyncTicketService sts;
+
+    @Inject
+    private EntitySetManager entitySetService;
 
     @Inject
     private EdmService edmService;
@@ -184,7 +188,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             checkState( allProperties.equals( selectedProperties ) || allProperties.containsAll( selectedProperties ),
                     "Selected properties are not property types of entity set %s", entitySetId );
 
-            final var entitySet = edmService.getEntitySet( entitySetId );
+            final var entitySet = entitySetService.getEntitySet( entitySetId );
             Set<UUID> normalEntitySetIds;
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesOfEntitySets;
 
@@ -295,9 +299,11 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                         .putAll( entitySetId, requiredPropertyTypes ).build(),
                 WRITE_PERMISSION ) );
 
-        WriteEvent writeEvent = dgm.replacePropertiesInEntities( entitySetId,
+        WriteEvent writeEvent = dgm.replacePropertiesInEntities(
+                entitySetId,
                 entities,
-                edmService.getPropertyTypesAsMap( requiredPropertyTypes ) );
+                edmService.getPropertyTypesAsMap( requiredPropertyTypes )
+        );
 
         recordEvent( new AuditableEvent(
                 getCurrentUserId(),
@@ -713,7 +719,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         final var edgeEntitySetIds = associationsEdgeKeys.stream()
                 .map( edgeKey -> edgeKey.getEdge().getEntitySetId() )
                 .collect( Collectors.toSet() );
-        final var auditEdgeEntitySetIds = edmService
+        final var auditEdgeEntitySetIds = entitySetService
                 .getEntitySetIdsWithFlags( edgeEntitySetIds, Set.of( EntitySetFlag.AUDIT ) );
 
         final var filteredAssociationsEdgeKeys = associationsEdgeKeys.stream()
@@ -742,14 +748,14 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                 entityKeyIds,
                 true );
         final var edgeAuditPropertyTypes = edmService.getPropertyTypesAsMap(
-                edmService.getAuditRecordEntitySetsManager().getAuditingTypes().edgeEntityType
+                entitySetService.getAuditRecordEntitySetsManager().getAuditingTypes().edgeEntityType
                         .getAssociationEntityType().getProperties() );
 
         // collect edge entity sets
         final var edgeEntitySetIds = associationsEdgeKeys.stream()
                 .map( edgeKey -> edgeKey.getEdge().getEntitySetId() )
                 .collect( Collectors.toSet() );
-        final var edgeEntitySets = edmService.getEntitySetsAsMap( edgeEntitySetIds );
+        final var edgeEntitySets = entitySetService.getEntitySetsAsMap( edgeEntitySetIds );
 
         // access checks
         final Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes = new HashMap<>();
@@ -760,11 +766,12 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                         final var edgeEntitySet = edgeEntitySets.get( edgeKey.getEdge().getEntitySetId() );
                         Map<UUID, PropertyType> authorizedPropertyTypesOfAssociation =
                                 ( edgeEntitySet.getEntityTypeId().equals(
-                                        edmService.getAuditRecordEntitySetsManager().getAuditingTypes()
+                                        entitySetService.getAuditRecordEntitySetsManager().getAuditingTypes()
                                                 .auditingEdgeEntityTypeId ) )
                                         ? edgeAuditPropertyTypes
                                         : getAuthorizedPropertyTypesForDelete(
-                                        edgeEntitySet, Optional.empty(), DeleteType.Hard );
+                                                edgeEntitySet, Optional.empty(), DeleteType.Hard
+                                );
                         authorizedPropertyTypes.put(
                                 edgeKey.getEdge().getEntitySetId(), authorizedPropertyTypesOfAssociation );
                     }
@@ -955,7 +962,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId ) {
         ensureReadAccess( new AclKey( entitySetId ) );
-        EntitySet entitySet = edmService.getEntitySet( entitySetId );
+        EntitySet entitySet = entitySetService.getEntitySet( entitySetId );
 
         if ( entitySet.isLinking() ) {
             checkState( !entitySet.getLinkedEntitySets().isEmpty(),
@@ -983,7 +990,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId,
             @PathVariable( PROPERTY_TYPE_ID ) UUID propertyTypeId ) {
         ensureReadAccess( new AclKey( entitySetId ) );
-        final EntitySet entitySet = edmService.getEntitySet( entitySetId );
+        final EntitySet entitySet = entitySetService.getEntitySet( entitySetId );
 
         if ( entitySet.isLinking() ) {
             checkState( !entitySet.getLinkedEntitySets().isEmpty(),
@@ -1027,7 +1034,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             UUID entitySetId,
             Optional<Set<UUID>> properties,
             DeleteType deleteType ) {
-        final EntitySet entitySet = edmService.getEntitySet( entitySetId );
+        final EntitySet entitySet = entitySetService.getEntitySet( entitySetId );
         return getAuthorizedPropertyTypesForDelete( entitySet, properties, deleteType );
     }
 
@@ -1080,7 +1087,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         int numUpdates = 0;
         long maxVersion = Long.MIN_VALUE;
 
-        final var isAssociationEntitySet = edmService.isAssociationEntitySet( entitySetId );
+        final var isAssociationEntitySet = entitySetService.isAssociationEntitySet( entitySetId );
 
         // access checks for entity set and properties
         final Map<UUID, PropertyType> authorizedPropertyTypes =
