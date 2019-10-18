@@ -129,7 +129,7 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
             @RequestBody List<AclData> req){
         updateAcls( req );
         String dbName = PostgresDatabases.buildOrganizationDatabaseName( organizationId );
-        edms.updatePermissionsOnAtlas( dbName, ipAddress, req );
+        edms.updateExternalDatabasePermissions( dbName, ipAddress, req );
 
         return null;
     }
