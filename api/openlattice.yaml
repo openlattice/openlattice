@@ -3482,7 +3482,6 @@ components:
             type: string
           credential:
             type: string
-<<<<<<< HEAD
     searchConstraints:
       type: object
       properties:
@@ -3597,8 +3596,6 @@ components:
     DataSearchResult:
       type: object
       
-      
-=======
     entityDataKey:
       type: object
       properties:
@@ -3647,7 +3644,6 @@ components:
           additionalProperties:
             type: number
 
->>>>>>> develop
 tags:
   - name: edm
     description: API endpoints to the entity data model.
