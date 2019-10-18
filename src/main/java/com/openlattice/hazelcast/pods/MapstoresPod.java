@@ -48,20 +48,21 @@ import com.openlattice.authorization.mapstores.PrincipalMapstore;
 import com.openlattice.authorization.mapstores.PrincipalTreesMapstore;
 import com.openlattice.authorization.mapstores.UserMapstore;
 import com.openlattice.authorization.securable.SecurableObjectType;
+import com.openlattice.collections.CollectionTemplateKey;
+import com.openlattice.collections.EntitySetCollection;
+import com.openlattice.collections.EntityTypeCollection;
 import com.openlattice.collections.mapstores.EntitySetCollectionConfigMapstore;
 import com.openlattice.collections.mapstores.EntitySetCollectionMapstore;
 import com.openlattice.collections.mapstores.EntityTypeCollectionMapstore;
 import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.edm.EntitySet;
-import com.openlattice.collections.CollectionTemplateKey;
-import com.openlattice.collections.EntitySetCollection;
-import com.openlattice.collections.EntityTypeCollection;
 import com.openlattice.edm.set.EntitySetPropertyKey;
 import com.openlattice.edm.set.EntitySetPropertyMetadata;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.hazelcast.HazelcastQueue;
+import com.openlattice.ids.HazelcastIdGenerationService;
 import com.openlattice.ids.IdGenerationMapstore;
 import com.openlattice.ids.Range;
 import com.openlattice.linking.mapstores.LinkingFeedbackMapstore;
@@ -256,6 +257,13 @@ public class MapstoresPod {
     }
 
     @Bean
+    public QueueConfigurer idGenerationQueueConfigurer() {
+        return config -> config.setName( HazelcastQueue.ID_GENERATION.name() )
+                .setMaxSize( (int) ( HazelcastIdGenerationService.NUM_PARTITIONS * 3 ) )
+                .setBackupCount( 1 );
+    }
+
+    @Bean
     public QueueConfigurer twilioQueueConfigurer() {
         return config -> config.setName( HazelcastQueue.TWILIO.name() ).setMaxSize( 100_000 ).setBackupCount( 1 );
     }
@@ -337,7 +345,7 @@ public class MapstoresPod {
     }
 
     @Bean
-    public OrganizationDefaultPartitionsMapstore organizationDefaultPartitionsMapstore(){
+    public OrganizationDefaultPartitionsMapstore organizationDefaultPartitionsMapstore() {
         return new OrganizationDefaultPartitionsMapstore( hikariDataSource );
     }
 }
