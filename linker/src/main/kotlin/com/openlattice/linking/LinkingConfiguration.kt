@@ -42,6 +42,7 @@ private const val WHITELIST = "whitelist"
 private const val SEARCH_CONFIGURATION = "searchConfiguration"
 private const val BATCH_SIZE = "batch-size"
 private const val LOAD_SIZE = "load-size"
+private const val BACKGROUND_LINKING_ENABLED = "background-linking-enabled"
 private val DEFAULT_ENTITY_TYPES = setOf(PersonProperties.PERSON_TYPE_FQN.fullQualifiedNameAsString)
 
 /**
@@ -55,6 +56,7 @@ data class LinkingConfiguration(
         @JsonProperty(BLACKLIST) val blacklist: Set<UUID> = setOf(),
         @JsonProperty(BATCH_SIZE) val batchSize: Int = 10,
         @JsonProperty(LOAD_SIZE) val loadSize: Int = 100,
+        @JsonProperty(BACKGROUND_LINKING_ENABLED) val backgroundLinkingEnabled: Boolean = true,
         @JsonProperty(ENTITY_TYPES_FIELD) private val entityTypesFqns: Set<String> = DEFAULT_ENTITY_TYPES
 ) : Configuration {
     companion object {
