@@ -14,7 +14,10 @@ import java.util.*
 
 class IndexingMetadataManager(private val hds: HikariDataSource, private val partitionManager: PartitionManager) {
 
-    fun markAsIndexed(entityKeyIdsWithLastWrite: Map<UUID, Map<UUID, OffsetDateTime>>, linking: Boolean): Int {
+    fun markAsIndexed(
+            entityKeyIdsWithLastWrite: Map<UUID, Map<UUID, OffsetDateTime>>, // entity_set_id -> id -> last_write
+            linking: Boolean
+    ): Int {
         val entitySetPartitions = partitionManager.getEntitySetsPartitionsInfo(entityKeyIdsWithLastWrite.keys)
 
         return hds.connection.use { connection ->

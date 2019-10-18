@@ -10,6 +10,7 @@ import com.openlattice.data.WriteEvent
 import com.openlattice.data.events.EntitiesDeletedEvent
 import com.openlattice.data.events.EntitiesUpsertedEvent
 import com.openlattice.datastore.services.EdmManager
+import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.PostgresEdmManager
 import com.openlattice.edm.events.EntitySetDataDeletedEvent
 import com.openlattice.edm.set.EntitySetFlag
@@ -34,8 +35,8 @@ import javax.inject.Inject
 @Service
 class PostgresEntityDatastore(
         private val dataQueryService: PostgresEntityDataQueryService,
-        private val edmManager: EdmManager,
-        private val postgresEdmManager: PostgresEdmManager
+        private val postgresEdmManager: PostgresEdmManager,
+        private val entitySetManager: EntitySetManager
 ) : EntityDatastore {
 
     companion object {
@@ -120,7 +121,7 @@ class PostgresEntityDatastore(
             val entities = dataQueryService
                     .getEntitiesWithPropertyTypeIds(
                             ImmutableMap.of(entitySetId, Optional.of(entityKeyIds)),
-                            ImmutableMap.of(entitySetId, edmManager.getPropertyTypesForEntitySet(entitySetId)),
+                            ImmutableMap.of(entitySetId, entitySetManager.getPropertyTypesForEntitySet(entitySetId)),
                             mapOf(),
                             EnumSet.of(MetadataOption.LAST_WRITE)
                     )
@@ -156,7 +157,7 @@ class PostgresEntityDatastore(
 
     private fun shouldIndexDirectly(entitySetId: UUID, entityKeyIds: Set<UUID>): Boolean {
         return entityKeyIds.size < BATCH_INDEX_THRESHOLD
-                && edmManager.getEntitySetIdsWithFlags(setOf(entitySetId), setOf(EntitySetFlag.AUDIT)).isEmpty()
+                && entitySetManager.getEntitySetIdsWithFlags(setOf(entitySetId), setOf(EntitySetFlag.AUDIT)).isEmpty()
     }
 
     private fun markMaterializedEntitySetDirty(entitySetId: UUID) {

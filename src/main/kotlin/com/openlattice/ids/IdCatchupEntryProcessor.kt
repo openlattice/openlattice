@@ -56,11 +56,11 @@ class IdCatchupEntryProcessor(hds: HikariDataSource) : AbstractRhizomeEntryProce
 
     @Throws(SQLException::class)
     fun prepareLatestQuery(connection: Connection): PreparedStatement {
-        return connection.prepareStatement("SELECT ${PostgresColumn.ID.name} from ${PostgresTable.IDS.name} WHERE ${PostgresColumn.ID_VALUE.name} = UU?")
+        return connection.prepareStatement("SELECT ${PostgresColumn.ID.name} from ${PostgresTable.IDS.name} WHERE ${PostgresColumn.ID_VALUE.name} = ?")
     }
     @Throws(SQLException::class)
     fun prepareExistQuery(connection: Connection): PreparedStatement {
-        return connection.prepareStatement("SELECT ${PostgresColumn.MSB.name},${PostgresColumn.LSB.name} from ${PostgresTable.ID_GENERATION.name} WHERE ${PostgresColumn.ID_VALUE.name} = ?")
+        return connection.prepareStatement("SELECT count(*) from ${PostgresTable.IDS.name} WHERE ${PostgresColumn.ID_VALUE.name} = ?")
     }
 
     @Throws(SQLException::class)

@@ -24,11 +24,11 @@ import com.google.common.collect.ListMultimap
 import com.openlattice.data.DataEdge
 import com.openlattice.data.DataEdgeKey
 import com.openlattice.data.integration.Association
-import com.openlattice.datastore.services.EdmManager
+import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.type.AssociationType
 import java.util.UUID
 
-class DataGraphServiceHelper(private val edmManager: EdmManager) {
+class DataGraphServiceHelper(private val entitySetManager: EntitySetManager) {
 
     /**
      * Checks whether the entity type of the src and dst entity sets in each edge are part of allowed src and dst
@@ -134,10 +134,10 @@ class DataGraphServiceHelper(private val edmManager: EdmManager) {
             srcAssociationEntitySetIds: Map<UUID, Set<UUID>>,
             dstAssociationEntitySetIds: Map<UUID, Set<UUID>>
     ) {
-        val associationTypes = edmManager.getAssociationTypeDetailsByEntitySetIds(srcAssociationEntitySetIds.keys)
-        val allSrcEntityTypes = edmManager
+        val associationTypes = entitySetManager.getAssociationTypeDetailsByEntitySetIds(srcAssociationEntitySetIds.keys)
+        val allSrcEntityTypes = entitySetManager
                 .getEntityTypeIdsByEntitySetIds(srcAssociationEntitySetIds.values.flatten().toSet())
-        val allDstEntityTypes = edmManager
+        val allDstEntityTypes = entitySetManager
                 .getEntityTypeIdsByEntitySetIds(dstAssociationEntitySetIds.values.flatten().toSet())
 
         associationTypes.keys.forEach { edgeEntitySetId ->
