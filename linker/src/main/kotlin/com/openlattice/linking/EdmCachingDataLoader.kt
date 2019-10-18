@@ -26,7 +26,6 @@ import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
 import com.hazelcast.query.Predicates
 import com.openlattice.data.EntityDataKey
-import com.openlattice.data.storage.MetadataOption
 import com.openlattice.data.storage.PostgresEntityDataQueryService
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
@@ -34,7 +33,6 @@ import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.linking.util.PersonProperties
 import com.openlattice.postgres.mapstores.EntityTypeMapstore
 import com.openlattice.postgres.streams.BasePostgresIterable
-import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.TimeUnit
 
@@ -46,10 +44,6 @@ class EdmCachingDataLoader(
         private val dataQueryService: PostgresEntityDataQueryService,
         hazelcast: HazelcastInstance
 ) : DataLoader {
-    companion object {
-        private val logger = LoggerFactory.getLogger(EdmCachingDataLoader::class.java)
-    }
-
     private val entityTypes: IMap<UUID, EntityType> = hazelcast.getMap(HazelcastMap.ENTITY_TYPES.name)
 
     private val propertyTypes: IMap<UUID, PropertyType> = hazelcast.getMap(HazelcastMap.PROPERTY_TYPES.name)

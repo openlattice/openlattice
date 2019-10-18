@@ -54,7 +54,7 @@ interface Matcher {
     /**
      * Allow inplace updating of the model used for peforming the matching.
      *
-     * @param modelSource A supplier that returns an input stream to a serialized MultiLayerNetwork
+     * @param model A supplier that returns an input stream to a serialized MultiLayerNetwork
      *
      */
 

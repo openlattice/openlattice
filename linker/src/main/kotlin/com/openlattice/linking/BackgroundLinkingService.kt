@@ -29,7 +29,7 @@ import com.hazelcast.aggregation.Aggregators
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
-import com.openlattice.IdConstants
+import com.hazelcast.query.QueryConstants
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.EntityKeyIdService
 import com.openlattice.edm.EntitySet
@@ -83,6 +83,7 @@ class BackgroundLinkingService
 
     private val candidates = hazelcastInstance.getQueue<EntityDataKey>(HazelcastQueue.LINKING_CANDIDATES.name)
 
+    @Suppress("UNUSED")
     private val linkingWorker = if (isLinkingEnabled()) executor.submit {
         Stream.generate { candidates.take() }
                 .parallel()
@@ -110,11 +111,11 @@ class BackgroundLinkingService
     private fun link(candidate: EntityDataKey) {
         clearNeighborhoods(candidate)
         // if we have positive feedbacks on entity, we use its linking id and match them together
-        if ( linkingFeedbackService.hasFeedbacks( FeedbackType.Positive, candidate )) {
+        if (linkingFeedbackService.hasFeedbacks(FeedbackType.Positive, candidate)) {
             try {
                 // only linking id of entity should remain, since we cleared neighborhood, except the ones
                 // with positive feedback
-                val clusters = lqs.getClustersForIds(setOf( candidate ))
+                val clusters = lqs.getClustersForIds(setOf(candidate))
                 val cluster = clusters.entries.first()
                 val clusterId = cluster.key
 
@@ -164,21 +165,21 @@ class BackgroundLinkingService
             //Decision that needs to be made is whether to start new cluster or merge into existing cluster.
             //No locks are required since any items that block to this element will be skipped.
             try {
-                val clusters = lqs.getClustersForIds( dataKeys )
-                lqs.lockClustersForUpdates( clusters.keys ).use { conn ->
+                val clusters = lqs.getClustersForIds(dataKeys)
+                lqs.lockClustersForUpdates(clusters.keys).use { conn ->
                     val maybeBestCluster = clusters
-                        .asSequence()
-                        .map { cluster -> cluster(candidate, cluster, ::completeLinkCluster) }
-                        .filter { scoredCluster -> scoredCluster.score > MINIMUM_SCORE }
-                        .maxBy { scoredCluster -> scoredCluster.score }
+                            .asSequence()
+                            .map { cluster -> cluster(candidate, cluster, ::completeLinkCluster) }
+                            .filter { scoredCluster -> scoredCluster.score > MINIMUM_SCORE }
+                            .maxBy { scoredCluster -> scoredCluster.score }
 
                     if (maybeBestCluster != null) {
-                        return@use insertMatches( conn, maybeBestCluster.clusterId, candidate, maybeBestCluster.cluster, false )
+                        return@use insertMatches(conn, maybeBestCluster.clusterId, candidate, maybeBestCluster.cluster, false)
                     }
                     val clusterId = ids.reserveLinkingIds(1).first()
                     val block = candidate to mapOf(candidate to elem)
                     //TODO: When creating new cluster do we really need to re-match or can we assume score of 1.0?
-                    return@use insertMatches( conn, clusterId, candidate, matcher.match(block).second, true )
+                    return@use insertMatches(conn, clusterId, candidate, matcher.match(block).second, true)
                 }
             } catch (ex: Exception) {
                 logger.error("An error occurred while performing linking.", ex)
@@ -217,48 +218,49 @@ class BackgroundLinkingService
                               linkingId: UUID,
                               newMember: EntityDataKey,
                               scores: Map<EntityDataKey, Map<EntityDataKey, Double>>,
-                              newCluster: Boolean ) {
-        lqs.insertMatchScores( conn, linkingId, scores )
-        lqs.updateIdsTable( linkingId, newMember )
+                              newCluster: Boolean) {
+        lqs.insertMatchScores(conn, linkingId, scores)
+        lqs.updateIdsTable(linkingId, newMember)
 
         var toRemove = setOf<EntityDataKey>()
         var toAdd = setOf<EntityDataKey>()
-        val oldCluster = if ( newCluster ) {
+        val oldCluster = if (newCluster) {
             mapOf()
         } else {
             linkingLogService.readLatestLinkLog(linkingId)
         }
 
-        val scoresAsEsidToEkids = ( collectKeys(scores) + newMember )
-            .groupBy { edk -> edk.entitySetId }
-            .mapValues { (esid, edks ) ->
-                val newEdks = edks.toSet()
-                val oldEdks = (oldCluster[esid] ?: setOf()).mapTo( mutableSetOf(), { EntityDataKey( esid, it ) } )
+        val scoresAsEsidToEkids = (collectKeys(scores) + newMember)
+                .groupBy { edk -> edk.entitySetId }
+                .mapValues { (esid, edks) ->
+                    val newEdks = edks.toSet()
+                    val oldEdks = (oldCluster[esid] ?: setOf()).mapTo(mutableSetOf(), { EntityDataKey(esid, it) })
 
-                toAdd = Sets.union( toAdd, Sets.difference( newEdks, oldEdks ))
-                toRemove = Sets.union( toRemove, Sets.difference( oldEdks, newEdks ))
+                    toAdd = Sets.union(toAdd, Sets.difference(newEdks, oldEdks))
+                    toRemove = Sets.union(toRemove, Sets.difference(oldEdks, newEdks))
 
-                Sets.newLinkedHashSet( edks.map { it.entityKeyId } )
-            }
+                    Sets.newLinkedHashSet(edks.map { it.entityKeyId })
+                }
 
-    /* TODO: we do an upsert into data table for every member in the cluster regardless of score */
-        if ( newCluster ){
-            lqs.createOrUpdateLink( linkingId, scoresAsEsidToEkids )
+        /* TODO: we do an upsert into data table for every member in the cluster regardless of score */
+        if (newCluster) {
+            lqs.createOrUpdateLink(linkingId, scoresAsEsidToEkids)
         } else {
             logger.debug("Writing ${toAdd.size} new links")
             logger.debug("Removing ${toRemove.size} old links")
 
-            if ( toAdd.isNotEmpty() ) {
-                lqs.createLinks( linkingId, toAdd )
+            if (toAdd.isNotEmpty()) {
+                lqs.createLinks(linkingId, toAdd)
             }
-            if ( toRemove.isNotEmpty() ) {
-                lqs.tombstoneLinks( linkingId, toRemove )
+            if (toRemove.isNotEmpty()) {
+                lqs.tombstoneLinks(linkingId, toRemove)
             }
         }
-        linkingLogService.createOrUpdateCluster( linkingId, scoresAsEsidToEkids, newCluster )
+        linkingLogService.createOrUpdateCluster(linkingId, scoresAsEsidToEkids, newCluster)
     }
 
     @Timed
+    @Suppress("UNUSED", "UNCHECKED_CAST")
     @Scheduled(fixedRate = 30000)
     fun pruneFailedNodes() {
         logger.info("Removing locks for any failed nodes.")
@@ -274,6 +276,7 @@ class BackgroundLinkingService
     }
 
     @Timed
+    @Suppress("UNUSED")
     @Scheduled(fixedRate = 30000)
     fun updateCandidateList() {
         logger.info("Updating linking candidates list.")
@@ -287,30 +290,30 @@ class BackgroundLinkingService
         }
         try {
             pgEdmManager.allEntitySets
-                .asSequence()
-                .filter { linkableTypes.contains(it.entityTypeId) }
-                .filter { es ->
-                    //Filter any entity sets that are currently locked for a call to entities needing linking.
-                    val ownerId = linkingLocks.putIfAbsent(
-                        es.id,
-                        hazelcastInstance.localEndpoint.uuid
-                    ) ?: hazelcastInstance.localEndpoint.uuid
-                    return@filter ownerId == hazelcastInstance.localEndpoint.uuid
-                }.forEach { es ->
-                    logger.info(
-                            "Registering job to queue entities needing linking in entity set {} ({}) .",
-                            entitySets.getValue( es.id ).name,
-                            es.id
-                    )
-                    executor.submit {
-                        val needLinking = lqs.getEntitiesNeedingLinking( es.id, configuration.loadSize )
+                    .asSequence()
+                    .filter { linkableTypes.contains(it.entityTypeId) }
+                    .filter { es ->
+                        //Filter any entity sets that are currently locked for a call to entities needing linking.
+                        val ownerId = linkingLocks.putIfAbsent(
+                                es.id,
+                                hazelcastInstance.localEndpoint.uuid
+                        ) ?: hazelcastInstance.localEndpoint.uuid
+                        return@filter ownerId == hazelcastInstance.localEndpoint.uuid
+                    }.forEach { es ->
+                        logger.info(
+                                "Registering job to queue entities needing linking in entity set {} ({}) .",
+                                entitySets.getValue(es.id).name,
+                                es.id
+                        )
+                        executor.submit {
+                            val needLinking = lqs.getEntitiesNeedingLinking(es.id, configuration.loadSize)
 
-                        candidates.addAll( needLinking )
+                            candidates.addAll(needLinking)
 
-                        //Allow other nodes to link this entity set.
-                        linkingLocks.delete( es.id )
+                            //Allow other nodes to link this entity set.
+                            linkingLocks.delete(es.id)
+                        }
                     }
-                }
         } catch (ex: Exception) {
             logger.info("Encountered error while updating candidates for linking.", ex)
         } finally {
@@ -326,9 +329,13 @@ class BackgroundLinkingService
         check(existingExpiration == null) { "Unable to lock $candidate. Existing lock expires at $existingExpiration " }
     }
 
+    @Suppress("UNCHECKED_CAST")
     private fun isLocked(block: Set<EntityDataKey>): Boolean {
         //Skip locked elements as they will be requeued.
-        val keyFilter = Predicates.`in`("__key", *block.toTypedArray()) as Predicate<EntityDataKey, Long>
+        val keyFilter = Predicates.`in`(
+                QueryConstants.KEY_ATTRIBUTE_NAME.value(),
+                *block.toTypedArray()
+        ) as Predicate<EntityDataKey, Long>
 
         return entityLinkingLocks.aggregate(Aggregators.count(), keyFilter) > 0L
     }
