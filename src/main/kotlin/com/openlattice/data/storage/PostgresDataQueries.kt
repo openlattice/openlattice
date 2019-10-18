@@ -333,6 +333,7 @@ internal val updateVersionsForEntitySet = "UPDATE ${IDS.name} " +
                 "END, " +
             "${LAST_WRITE.name} = 'now()' " +
         "WHERE ${ENTITY_SET_ID.name} = ? "
+// TODO do we need partition + partition version here??
 // @formatter:on
 /**
  * Preparable SQL that upserts a version and sets last write to current datetime for all entities in a given entity set
@@ -344,8 +345,8 @@ internal val updateVersionsForEntitySet = "UPDATE ${IDS.name} " +
  * 2. version
  * 3. version
  * 4. entity set id
- * 5. entity key ids
- * 6. partition
+ * 5. entity key ids (uuid array)
+ * 6. partitions (int array)
  * 7. partition version
  */
 internal val updateVersionsForEntitiesInEntitySet = "$updateVersionsForEntitySet " +

@@ -889,7 +889,7 @@ class PostgresEntityDataQueryService(
     }
 
     /**
-     * Deletes entity key ids belonging to the requested entity set in [IDS] table.
+     * Deletes entity key ids belonging to the requested entity set from [IDS] table.
      */
     fun deleteEntitySet(entitySetId: UUID): WriteEvent {
         // todo set last_write=now() or last_index = -infinity() in ids table + only set version = 0, no delete
@@ -903,10 +903,30 @@ class PostgresEntityDataQueryService(
     }
 
     /**
+     * Tombstones (to version = 0) entity key ids belonging to the requested entity set in [IDS] table.
+     */
+    fun tombstoneDeletedEntitySet(entitySetId: UUID): WriteEvent {
+        val numUpdates = hds.connection.use {
+            val ps = it.prepareStatement(updateVersionsForEntitySet)
+            ps.setLong(1, 0L)
+            ps.setLong(2, 0L)
+            ps.setLong(3, 0L)
+            ps.setObject(4, entitySetId)
+            ps.executeUpdate()
+        }
+
+        // if entities were tombstoned to 0, set last_index = -infinity() to issue un-indexing
+        if (numUpdates > 0) {
+            indexingMetaDataManager.markEntitySetAsNeedsToBeIndexed(entitySetId)
+        }
+
+        return WriteEvent(System.currentTimeMillis(), numUpdates)
+    }
+
+    /**
      * Deletes entities from [IDS] table.
      */
     fun deleteEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): WriteEvent {
-        // todo set last_write=now() or last_index = -infinity() in ids table + only set version = 0, no delete
         val numUpdates = hds.connection.use {
             val ps = it.prepareStatement(deleteEntityKeys)
             val arr = PostgresArrays.createUuidArray(it, entityKeyIds)
@@ -914,6 +934,41 @@ class PostgresEntityDataQueryService(
             ps.setArray(2, arr)
 
             ps.executeUpdate()
+        }
+
+        return WriteEvent(System.currentTimeMillis(), numUpdates)
+    }
+
+    /**
+     * Tombstones (to version = 0) entities in [IDS] table.
+     */
+    fun tombstoneDeletedEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): WriteEvent {
+        val partitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
+        val partitionsVersion = partitionsInfo.partitionsVersion
+
+        val numUpdates = hds.connection.use {
+            val ps = it.prepareStatement(updateVersionsForEntitiesInEntitySet)
+
+            val partitionsArr = PostgresArrays.createIntArray(
+                    it,
+                    entityKeyIds.map { getPartition(it, partitionsInfo.partitions.toList()) }
+            )
+            val idsArr = PostgresArrays.createUuidArray(it, entityKeyIds)
+
+            ps.setLong(1, 0L)
+            ps.setLong(2, 0L)
+            ps.setLong(3, 0L)
+            ps.setObject(4, entitySetId)
+            ps.setArray(5, idsArr)
+            ps.setArray(6, partitionsArr)
+            ps.setInt(7, partitionsVersion)
+
+            ps.executeUpdate()
+        }
+
+        // if entities were tombstoned to 0, set last_index = -infinity() to issue un-indexing
+        if (numUpdates > 0) {
+            indexingMetaDataManager.markEntitiesAsNeedsToBeIndexed(mapOf(entitySetId to entityKeyIds))
         }
 
         return WriteEvent(System.currentTimeMillis(), numUpdates)
