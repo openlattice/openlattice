@@ -28,6 +28,7 @@ import com.openlattice.data.EntityDataKey
 import com.openlattice.data.storage.EntityDatastore
 import com.openlattice.data.storage.IndexingMetadataManager
 import com.openlattice.datastore.services.EdmManager
+import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.linking.*
 import com.openlattice.linking.util.PersonMetric
 import com.openlattice.linking.util.PersonProperties
@@ -48,7 +49,8 @@ constructor(
         private val dataLoader: DataLoader,
         private val edm: EdmManager,
         private val entityDataStore: EntityDatastore,
-        private val dataManager: IndexingMetadataManager
+        private val dataManager: IndexingMetadataManager,
+        private val entitySetManager: EntitySetManager
 ) : LinkingFeedbackApi, AuthorizingComponent {
 
 
@@ -106,7 +108,7 @@ constructor(
     }
 
     private fun linkingFeedbackCheck(entityDataKeys: Set<EntityDataKey>, linkingEntityDataKey: EntityDataKey) {
-        val linkingEntitySet = edm.getEntitySet(linkingEntityDataKey.entitySetId)
+        val linkingEntitySet = entitySetManager.getEntitySet(linkingEntityDataKey.entitySetId)!!
         val entityKeyIdsOfLinkingId = entityDataStore
                 .getEntityKeyIdsOfLinkingIds(setOf(linkingEntityDataKey.entityKeyId)).first().second
 
