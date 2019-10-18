@@ -484,6 +484,10 @@ public final class ResultSetAdapters {
         return rs.getObject( ORGANIZATION_ID.getName(), UUID.class );
     }
 
+    public static UUID tableId( ResultSet rs ) throws SQLException {
+        return rs.getObject( TABLE_ID.getName(), UUID.class );
+    }
+
     public static String nullableTitle( ResultSet rs ) throws SQLException {
         return rs.getString( NULLABLE_TITLE.getName() );
     }
@@ -922,23 +926,23 @@ public final class ResultSetAdapters {
         return new CollectionTemplateKey( entitySetCollectionId, templateTypeId );
     }
 
-    public static OrganizationExternalDatabaseTable organizationAtlasTable( ResultSet rs ) throws SQLException {
+    public static OrganizationExternalDatabaseTable organizationExternalDatabaseTable( ResultSet rs ) throws SQLException {
         UUID id = id(rs);
         String name = name(rs);
         String title = title(rs);
         Optional<String> description = Optional.ofNullable( description( (rs) ) );
-        UUID organizationId = id(rs);
+        UUID organizationId = organizationId( rs );
 
         return new OrganizationExternalDatabaseTable( id, name, title, description, organizationId );
     }
 
-    public static OrganizationExternalDatabaseColumn organizationAtlasColumn( ResultSet rs ) throws SQLException {
+    public static OrganizationExternalDatabaseColumn organizationExternalDatabaseColumn( ResultSet rs ) throws SQLException {
         UUID id = id(rs);
         String name = name(rs);
         String title = title(rs);
         Optional<String> description = Optional.ofNullable( description( (rs) ) );
-        UUID tableId = id(rs);
-        UUID organizationId = id(rs);
+        UUID tableId = tableId(rs);
+        UUID organizationId = organizationId( rs );
 
         return new OrganizationExternalDatabaseColumn( id, name, title, description, tableId, organizationId );
     }
