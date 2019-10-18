@@ -83,7 +83,7 @@ class BackgroundLinkingService
 
     private val candidates = hazelcastInstance.getQueue<EntityDataKey>(HazelcastQueue.LINKING_CANDIDATES.name)
 
-    private val linkingWorker = if (configuration.backgroundLinkingEnabled) executor.submit {
+    private val linkingWorker = if (isLinkingEnabled()) executor.submit {
         Stream.generate { candidates.take() }
                 .parallel()
                 .forEach { candidate ->
