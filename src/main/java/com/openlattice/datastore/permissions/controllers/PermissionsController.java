@@ -122,14 +122,13 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
 
     @Timed
     @Override
-    @PostMapping( value = BASE + UPDATE + ID_PATH + IP_ADDRESS_PATH )
+    @PostMapping( value = BASE + UPDATE + ID_PATH )
     public Void updateExternalDatabaseAcls(
             @PathVariable(ID_PATH) UUID organizationId,
-            @PathVariable(IP_ADDRESS) String ipAddress,
             @RequestBody List<AclData> req){
         updateAcls( req );
         String dbName = PostgresDatabases.buildOrganizationDatabaseName( organizationId );
-        edms.updateExternalDatabasePermissions( dbName, ipAddress, req );
+        edms.updateExternalDatabasePermissions( dbName, req );
 
         return null;
     }
