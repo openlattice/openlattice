@@ -702,6 +702,22 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
 
     @Timed
     @Override
+    @PostMapping(
+            value = ID_PATH + USER_ID_PATH + EXTERNAL_DATABASE
+    )
+    public Void addTrustedUser(
+            @PathVariable( ID ) UUID organizationId,
+            @PathVariable( USER_ID ) String userId,
+            @RequestBody Set<String> ipAddresses
+    ) {
+        ensureOwner( organizationId );
+        Principal userPrincipal = new Principal( PrincipalType.USER, userId );
+        edms.addTrustedUser( organizationId, userPrincipal, ipAddresses );
+        return null;
+    }
+
+    @Timed
+    @Override
     @GetMapping(
             value = ID_PATH + TABLE_NAME_PATH + EXTERNAL_DATABASE_TABLE
     )
