@@ -29,6 +29,7 @@ import org.springframework.stereotype.Service
 import java.sql.PreparedStatement
 import java.util.*
 import kotlin.collections.LinkedHashMap
+import com.typesafe.config.ConfigFactory
 
 @Service
 class ExternalDatabaseManagementService(
@@ -44,7 +45,7 @@ class ExternalDatabaseManagementService(
     private val securableObjectTypes: IMap<AclKey, SecurableObjectType> = hazelcastInstance.getMap(HazelcastMap.SECURABLE_OBJECT_TYPES.name)
     private val logger = LoggerFactory.getLogger(ExternalDatabaseManagementService::class.java)
 
-    fun updateExternalDatabasePermissions(dbName: String, ipAddress: String, req: List<AclData>) {
+    fun updateExternalDatabasePermissions(dbName: String, req: List<AclData>) {
         val permissions = req.groupBy { it.action }
         permissions.entries.forEach {
             when (it.key) {
@@ -156,6 +157,12 @@ class ExternalDatabaseManagementService(
         }
     }
 
+    fun addTrustedUser(orgId: UUID, userPrincipal: Principal, ipAdresses: Set<String>) {
+        val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
+        val userName = getDBUser(userPrincipal.id)
+        //edit the pg_hba file through some magic. must. become. magician.
+    }
+
     fun getOrganizationExternalDatabaseTable(tableId: UUID): OrganizationExternalDatabaseTable {
         return organizationExternalDatabaseTables[tableId]!!
     }
@@ -260,7 +267,6 @@ class ExternalDatabaseManagementService(
     }
 
     fun deleteOrganizationExternalDatabaseColumns(orgId: UUID, tableName: String, columnNameById: Map<UUID, String>) {
-        //TODO add check that they aren't deleting a primary key column?
         columnNameById.forEach { deleteOrganizationExternalDatabaseColumn(orgId, tableName, it.value, it.key) }
     }
 
