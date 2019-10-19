@@ -29,10 +29,7 @@ import com.openlattice.data.storage.EntityDatastore;
 import com.openlattice.data.storage.IndexingMetadataManager;
 import com.openlattice.data.storage.PostgresEntityDataQueryService;
 import com.openlattice.data.storage.partitions.PartitionManager;
-import com.openlattice.indexing.BackgroundExpiredDataDeletionService;
-import com.openlattice.indexing.BackgroundIndexingService;
-import com.openlattice.indexing.BackgroundLinkingIndexingService;
-import com.openlattice.indexing.IndexingService;
+import com.openlattice.indexing.*;
 import com.openlattice.indexing.configuration.IndexerConfiguration;
 import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.linking.PostgresLinkingFeedbackService;
@@ -114,6 +111,16 @@ public class IndexerPostConfigurationServicesPod {
                 indexingMetadataManager(),
                 entityDatastore,
                 indexerConfiguration );
+    }
+
+    @Bean
+    public BackgroundIndexedEntitiesDeletionService backgroundIndexedEntitiesDeletionService() {
+        return new BackgroundIndexedEntitiesDeletionService(
+                hazelcastInstance,
+                hikariDataSource,
+                indexerConfiguration,
+                dataQueryService
+        );
     }
 
     @Bean
