@@ -34,6 +34,7 @@ public interface OrganizationsApi {
     String EMAIL_DOMAINS            = "/email-domains";
     String EMAIL_DOMAIN_PATH        = "/{" + EMAIL_DOMAIN + ":.+}";
     String ENTITY_SETS              = "/entity-sets";
+    String EXTERNAL_DATABASE        = "/external-database";
     String EXTERNAL_DATABASE_COLUMN = "/external-database-column";
     String EXTERNAL_DATABASE_TABLE  = "/external-database-table";
     String PRIMARY_KEY              = "/primary-key";
@@ -312,6 +313,18 @@ public interface OrganizationsApi {
             @Path( TABLE_NAME ) String tableName,
             @Path( COLUMN_NAME ) String columnName,
             @Path( SQL_TYPE) String sqlType);
+
+    /**
+     *
+     * @param organizationId The organization's UUID
+     * @param userId The user to be given trusted status
+     * @param ipAddresses The set of ip addresses (as strings) from which users will be trusted
+     */
+    @POST( BASE + ID_PATH + USER_ID_PATH + EXTERNAL_DATABASE)
+    Void addTrustedUser(
+            @Path( ID ) UUID organizationId,
+            @Path( USER_ID ) String userId,
+            @Body Set<String> ipAddresses );
 
     //get
     /**
