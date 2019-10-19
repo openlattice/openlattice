@@ -943,8 +943,10 @@ public final class ResultSetAdapters {
         Optional<String> description = Optional.ofNullable( description( (rs) ) );
         UUID tableId = tableId(rs);
         UUID organizationId = organizationId( rs );
+        String dataType = rs.getString( DATATYPE.getName() );
+        Boolean isPrimaryKey = rs.getBoolean( IS_PRIMARY_KEY.getName() );
 
-        return new OrganizationExternalDatabaseColumn( id, name, title, description, tableId, organizationId );
+        return new OrganizationExternalDatabaseColumn( id, name, title, description, tableId, organizationId, dataType, isPrimaryKey );
     }
 
     public static UUID originId( ResultSet rs ) throws SQLException {

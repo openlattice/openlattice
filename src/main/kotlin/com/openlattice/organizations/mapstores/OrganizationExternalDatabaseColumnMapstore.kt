@@ -31,6 +31,8 @@ open class OrganizationExternalDatabaseColumnMapstore(
         ps.setString(index++, value.description)
         ps.setObject(index++, value.tableId)
         ps.setObject(index++, value.organizationId)
+        ps.setString(index++, value.dataType)
+        ps.setBoolean(index++, value.isPrimaryKey)
 
         //update
         ps.setString(index++, value.name)
@@ -38,6 +40,8 @@ open class OrganizationExternalDatabaseColumnMapstore(
         ps.setString(index++, value.description)
         ps.setObject(index++, value.tableId)
         ps.setObject(index++, value.organizationId)
+        ps.setString(index++, value.dataType)
+        ps.setBoolean(index++, value.isPrimaryKey)
     }
 
     override fun bind(ps: PreparedStatement, key: UUID, offset: Int) : Int {

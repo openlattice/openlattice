@@ -19,6 +19,8 @@ class OrganizationExternalDatabaseColumnStreamSerializer : SelfRegisteringStream
             output.writeUTF(obj.description)
             UUIDStreamSerializer.serialize(output, obj.tableId)
             UUIDStreamSerializer.serialize(output, obj.organizationId)
+            output.writeUTF(obj.dataType)
+            output.writeBoolean(obj.isPrimaryKey)
         }
 
         fun deserialize(input: ObjectDataInput): OrganizationExternalDatabaseColumn {
@@ -28,7 +30,9 @@ class OrganizationExternalDatabaseColumnStreamSerializer : SelfRegisteringStream
             val description = input.readUTF()
             val tableId = UUIDStreamSerializer.deserialize(input)
             val orgId = UUIDStreamSerializer.deserialize(input)
-            return OrganizationExternalDatabaseColumn(id, name, title, Optional.of(description), tableId, orgId)
+            val dataType = input.readUTF()
+            val isPrimaryKey = input.readBoolean()
+            return OrganizationExternalDatabaseColumn(id, name, title, Optional.of(description), tableId, orgId, dataType, isPrimaryKey)
         }
     }
 

@@ -225,6 +225,9 @@ public final class PostgresColumn {
     public static final String                   INITIALIZED_FIELD               = "initialized";
     public static final PostgresColumnDefinition INITIALIZED                     =
             new PostgresColumnDefinition( INITIALIZED_FIELD, BOOLEAN );
+    public static final String                   IS_PRIMARY_KEY_FIELD            = "is_primary_key";
+    public static final PostgresColumnDefinition IS_PRIMARY_KEY                  =
+            new PostgresColumnDefinition( IS_PRIMARY_KEY_FIELD, BOOLEAN ).notNull();
     public static final String                   KEY_FIELD                       = "key";
     public static final PostgresColumnDefinition KEY                             =
             new PostgresColumnDefinition( KEY_FIELD, UUID_ARRAY ).notNull();
