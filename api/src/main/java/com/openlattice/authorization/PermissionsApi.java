@@ -34,16 +34,12 @@ public interface PermissionsApi {
     String CONTROLLER = "/permissions";
     String BASE       = SERVICE + CONTROLLER;
 
-    String EXPLAIN = "/explain";
-    String UPDATE = "/update";
+    String EXPLAIN       = "/explain";
+    String UPDATE        = "/update";
 
-    //for new atlas apis TODO maybe move to own api file, or else don't separate in this file
     String ID           = "id";
     String ID_PATH      = "/{" + ID + "}";
-    String TABLE        = "table";
-    String TABLE_PATH   = "/{" + TABLE + "}";
-    String IP_ADDRESS   = "ipAddress";
-    String IP_ADDRESS_PATH  = "/{" + IP_ADDRESS + "}";
+
 
     /**
      * Adds, removes, or sets the ace for a particular acl key. Successful only if user is the owner of acl key.
@@ -66,10 +62,9 @@ public interface PermissionsApi {
     //map keys are tables to be granted permissions, set will be either columns specific to the table or an empty set which means all columns.
     // if map is not present, assume all tables
     // TODO Make this better later, probably an object of some sort
-    @PATCH( BASE + UPDATE + ID_PATH + IP_ADDRESS_PATH )
+    @PATCH( BASE + UPDATE + ID_PATH )
     Void updateExternalDatabaseAcls(
             @Path(ID_PATH) UUID organizationId,
-            @Path(IP_ADDRESS) String ipAddress,
             @Body List<AclData> req);
 
     /**
