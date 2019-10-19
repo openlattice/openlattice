@@ -29,7 +29,9 @@ constructor(
         @JsonProperty(SerializationConstants.TITLE_FIELD) title: String,
         @JsonProperty(SerializationConstants.DESCRIPTION_FIELD) description: Optional<String>,
         @JsonProperty(SerializationConstants.TABLE_ID) var tableId: UUID,
-        @JsonProperty(SerializationConstants.ORGANIZATION_ID) var organizationId: UUID
+        @JsonProperty(SerializationConstants.ORGANIZATION_ID) var organizationId: UUID,
+        @JsonProperty(SerializationConstants.DATATYPE_FIELD) var dataType: String,
+        @JsonProperty(SerializationConstants.IS_PRIMARY_KEY) var isPrimaryKey: Boolean
 ) : AbstractSecurableObject(id, title, description) {
 
     constructor(
@@ -38,8 +40,10 @@ constructor(
             title: String,
             description: Optional<String>,
             tableId: UUID,
-            organizationId: UUID
-    ) : this(Optional.of(id), name, title, description, tableId, organizationId)
+            organizationId: UUID,
+            dataType: String,
+            isPrimaryKey: Boolean
+    ) : this(Optional.of(id), name, title, description, tableId, organizationId, dataType, isPrimaryKey)
 
     @JsonIgnore
     override fun getCategory(): SecurableObjectType {

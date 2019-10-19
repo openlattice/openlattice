@@ -144,6 +144,7 @@ public final class SerializationConstants {
     public static final String IS_DESCENDING                    = "isDescending";
     public static final String IS_DST                           = "isDst";
     public static final String IS_OWNER                         = "isOwner";
+    public static final String IS_PRIMARY_KEY                   = "isPrimaryKey";
     public static final String KEYWORD                          = "kw";
     public static final String KEY_FIELD                        = "key";
     public static final String LAST_INDEX                       = "lastIndex";

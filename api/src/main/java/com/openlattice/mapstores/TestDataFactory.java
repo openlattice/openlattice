@@ -595,7 +595,10 @@ public final class TestDataFactory {
                 randomAlphanumeric( 5 ),
                 Optional.of(randomAlphanumeric( 5 )),
                 table.getId(),
-                UUID.randomUUID()
+                UUID.randomUUID(),
+                randomAlphabetic( 5 ),
+                r.nextBoolean()
+
         );
     }
 
