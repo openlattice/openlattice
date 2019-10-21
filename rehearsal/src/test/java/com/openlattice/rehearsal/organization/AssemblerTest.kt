@@ -1077,6 +1077,80 @@ class AssemblerTest : AssemblerTestBase() {
     }
 
     @Test
+    fun testAddRemoveMembers() {
+        /* add read on entity sets 1,2 to user and add as member */
+        // create entity set and materialize in organization
+        val et = createEntityType()
+        val es1 = createEntitySet(et, organizationID)
+        val es2 = createEntitySet(et, organizationID)
+
+        grantMaterializePermissions(organization, es1, setOf())
+        organizationsApi.assembleEntitySets(organizationID, mapOf(es1.id to null))
+        grantMaterializePermissions(organization, es2, setOf())
+        organizationsApi.assembleEntitySets(organizationID, mapOf(es2.id to null))
+
+        // add read on both to user1
+        val readPermission = EnumSet.of(Permission.READ)
+        val es1ReadAcl = Acl(AclKey(es1.id), setOf(Ace(user1, readPermission, OffsetDateTime.MAX)))
+        permissionsApi.updateAcl(AclData(es1ReadAcl, Action.ADD))
+        val es2ReadAcl = Acl(AclKey(es2.id), setOf(Ace(user1, readPermission, OffsetDateTime.MAX)))
+        permissionsApi.updateAcl(AclData(es2ReadAcl, Action.ADD))
+
+        // add user1 as member
+        OrganizationControllerCallHelper.addMemberToOrganization(organizationID, user1.id)
+        Thread.sleep(1000L) // wait for configuring the user
+
+        // both entity sets should be selectable by user1
+        loginAs("user1")
+        val materializedViewAccount = principalApi.materializedViewAccount
+        loginAs("admin")
+
+        val connectionProperties = Properties()
+        connectionProperties["jdbcUrl"] = "jdbc:postgresql://localhost:5432"
+        connectionProperties["username"] = materializedViewAccount.username
+        connectionProperties["password"] = materializedViewAccount.credential
+        connectionProperties["maximumPoolSize"] = 5
+        connectionProperties["connectionTimeout"] = 60000
+
+        // connect with user1(simple member) credentials
+        val user1OrganizationDataSource = TestAssemblerConnectionManager.connect(
+                organizationID,
+                Optional.of(connectionProperties)
+        )
+
+        user1OrganizationDataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es1.name))
+                stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es2.name))
+                stmt.executeQuery(TestAssemblerConnectionManager.selectEdgesOfEntitySetsSql())
+            }
+        }
+
+
+        /* remove membership and remove read on entity set 1 and re-add as member */
+        OrganizationControllerCallHelper.removeMemberFromOrganization(organizationID, user1.id)
+        Thread.sleep(1000L) // wait for configuring the user
+
+        permissionsApi.updateAcl(AclData(es1ReadAcl, Action.REMOVE))
+
+        OrganizationControllerCallHelper.addMemberToOrganization(organizationID, user1.id)
+        Thread.sleep(1000L) // wait for configuring the user
+
+        // only entity set 2 and edges should be selectable by user1
+        user1OrganizationDataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es2.name))
+                stmt.executeQuery(TestAssemblerConnectionManager.selectEdgesOfEntitySetsSql())
+                assertException(
+                        { stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es1.name)) },
+                        "permission denied for materialized view ${es1.name}"
+                )
+            }
+        }
+
+    }
+
+    @Test
     fun testRunIntegrationWithOrganizationUser() {
         val organization2 = createOrganization()
         val et = createEntityType()
