@@ -29,18 +29,14 @@ import com.openlattice.data.UpdateType
 import com.openlattice.data.requests.EntitySetSelection
 import com.openlattice.data.requests.FileType
 import com.openlattice.edm.EdmConstants
-import com.openlattice.edm.EntitySet
 import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.edm.type.EntityType
-import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.mapstores.TestDataFactory.fqn
 import com.openlattice.mapstores.TestDataFactory.randomStringEntityData
 import com.openlattice.organization.Organization
 import com.openlattice.organization.OrganizationEntitySetFlag
-import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn
 import com.openlattice.postgres.ResultSetAdapters
-import com.openlattice.rehearsal.SetupTestData
 import com.openlattice.rehearsal.assertException
 import com.openlattice.rehearsal.edm.EdmTestConstants
 import org.apache.commons.lang.RandomStringUtils
@@ -48,15 +44,15 @@ import org.junit.AfterClass
 import org.junit.Assert
 import org.junit.BeforeClass
 import org.junit.Test
-import org.postgresql.util.PSQLException
 import java.lang.reflect.UndeclaredThrowableException
-import java.sql.ResultSet
 import java.time.OffsetDateTime
 import java.util.*
 
 private const val numberOfEntities = 10
 
-class AssemblerLinkingTest : SetupTestData() {
+// TODO: change column names in mat views
+
+class AssemblerLinkingTest : AssemblerTestBase() {
 
     private val organizationDataSource = TestAssemblerConnectionManager.connect(organizationID)
 
@@ -277,7 +273,7 @@ class AssemblerLinkingTest : SetupTestData() {
 
         Assert.assertFalse(
                 organizationsApi.getOrganizationEntitySets(organizationID)[esLinking.id]!!
-                        .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED)
+                        .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED)
         )
 
         // check linking ids
@@ -300,17 +296,17 @@ class AssemblerLinkingTest : SetupTestData() {
 
         Assert.assertTrue(
                 organizationsApi.getOrganizationEntitySets(organizationID)[esLinking.id]!!
-                        .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED)
+                        .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED)
         )
 
         // grant materialize again with new entity set included
         grantMaterializePermissions(organization, esLinking, personEt.properties)
 
         // refresh
-        organizationsApi.refreshDataChanges(organizationID, esLinking.id)
+        organizationsApi.synchronizeEdmChanges(organizationID, esLinking.id)
         Assert.assertFalse(
                 organizationsApi.getOrganizationEntitySets(organizationID)[esLinking.id]!!
-                        .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED)
+                        .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED)
         )
 
         // check linking ids
@@ -335,17 +331,17 @@ class AssemblerLinkingTest : SetupTestData() {
 
         Assert.assertTrue(
                 organizationsApi.getOrganizationEntitySets(organizationID)[esLinking.id]!!
-                        .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED)
+                        .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED)
         )
 
         // grant materialize again with new entity set included
         grantMaterializePermissions(organization, esLinking, personEt.properties)
 
         // refresh
-        organizationsApi.refreshDataChanges(organizationID, esLinking.id)
+        organizationsApi.synchronizeEdmChanges(organizationID, esLinking.id)
         Assert.assertFalse(
                 organizationsApi.getOrganizationEntitySets(organizationID)[esLinking.id]!!
-                        .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED)
+                        .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED)
         )
 
         // check linking ids
@@ -993,55 +989,8 @@ class AssemblerLinkingTest : SetupTestData() {
 
         organizationsApi.assembleEntitySets(organizationID, mapOf(esLinking.id to 321))
 
-        user1OrganizationDataSource.connection.use { connection ->
-            connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking.name))
-                Assert.assertEquals(PostgresColumn.ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
-                Assert.assertEquals(PostgresColumn.LINKING_ID.name, rs.metaData.getColumnName(2))
-                val columns = TestAssemblerConnectionManager.getColumnNames(rs)
-                personEt.properties.forEach {
-                    Assert.assertTrue(columns.contains(edmApi.getPropertyType(it).type.fullQualifiedNameAsString))
-                }
-            }
-        }
+        checkMaterializedEntitySetColumns(user1OrganizationDataSource, esLinking, personEt)
 
         loginAs("admin")
-    }
-
-
-    /**
-     * Add permission to materialize entity set and it's properties to organization principal
-     */
-    private fun grantMaterializePermissions(
-            organization: Organization, linkingEntitySet: EntitySet, properties: Set<UUID>
-    ) {
-        val newPermissions = EnumSet.of(Permission.MATERIALIZE)
-
-        val linkingEntitySetAcl = Acl(
-                AclKey(linkingEntitySet.id),
-                setOf(Ace(organization.principal, newPermissions, OffsetDateTime.MAX))
-        )
-        permissionsApi.updateAcl(AclData(linkingEntitySetAcl, Action.ADD))
-
-        // add permissions on properties and normal entity sets
-        linkingEntitySet.linkedEntitySets.forEach { entitySetId ->
-            val entitySetAcl = Acl(
-                    AclKey(entitySetId),
-                    setOf(Ace(organization.principal, newPermissions, OffsetDateTime.MAX))
-            )
-            permissionsApi.updateAcl(AclData(entitySetAcl, Action.ADD))
-
-            properties.forEach {
-                val propertyTypeAcl = Acl(
-                        AclKey(entitySetId, it),
-                        setOf(Ace(organization.principal, newPermissions, OffsetDateTime.MAX))
-                )
-                permissionsApi.updateAcl(AclData(propertyTypeAcl, Action.ADD))
-            }
-        }
-    }
-
-    private fun getStringResult(rs: ResultSet, column: String): String {
-        return PostgresArrays.getTextArray(rs, column)[0]
     }
 }
