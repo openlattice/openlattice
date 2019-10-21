@@ -62,7 +62,7 @@ import edu.umd.cs.findbugs.classfile.ResourceNotFoundException
 import org.slf4j.LoggerFactory
 import java.util.*
 
-class EntitySetService(
+open class EntitySetService(
         hazelcastInstance: HazelcastInstance,
         private val eventBus: EventBus,
         private val edmManager: PostgresEdmManager,
