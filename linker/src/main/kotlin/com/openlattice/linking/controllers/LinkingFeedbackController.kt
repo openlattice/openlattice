@@ -67,7 +67,7 @@ constructor(
                     "Cannot submit feedback for less than 2 entities or if no positively linking entity is provided")
         }
 
-        if( Collections.disjoint( feedback.link, feedback.unlink )) {
+        if( !Collections.disjoint( feedback.link, feedback.unlink )) {
             throw IllegalArgumentException("Cannot submit feedback with and entity being both linking and non-linking")
         }
 
