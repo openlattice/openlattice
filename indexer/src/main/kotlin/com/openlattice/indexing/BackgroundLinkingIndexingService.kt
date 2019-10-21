@@ -206,39 +206,97 @@ class BackgroundLinkingIndexingService(
 
     /**
      * Returns the linking ids, which are needing to be indexed.
+     * Either because of property change or because of partial entity deletion(soft or hard) from the cluster.
      */
     private fun getDirtyLinkingIds(): BasePostgresIterable<Pair<UUID, OffsetDateTime>> {
         return BasePostgresIterable(
-                StatementHolderSupplier(hds, selectDirtyLinkingIds(), FETCH_SIZE)
+                StatementHolderSupplier(hds, selectDirtyLinkingIds, FETCH_SIZE)
         ) { rs -> ResultSetAdapters.linkingId(rs) to ResultSetAdapters.lastWriteTyped(rs) }
     }
 
-    private fun selectDirtyLinkingIds(): String {
-        // @formatter:off
-        return "SELECT ${LINKING_ID.name}, ${LAST_WRITE.name} " +
-                "FROM ${IDS.name} " +
-                "WHERE " +
-                    "${LAST_INDEX.name} >= ${LAST_WRITE.name} AND " +
-                    "${LAST_LINK.name} >= ${LAST_WRITE.name} AND " +
-                    "${LAST_LINK_INDEX.name} < ${LAST_WRITE.name} AND " +
-                    "${VERSION.name} > 0 AND " +
-                    "${LINKING_ID.name} IS NOT NULL"
-        // @formatter:on
+
+    /**
+     * Returns the linking ids, which are needing to be un-indexed (to delete those documents).
+     */
+    private fun getDeletedLinkingIds(): BasePostgresIterable<Pair<UUID, Set<UUID>>> {
+        return BasePostgresIterable(
+                StatementHolderSupplier(hds, selectDeletedLinkingIds)
+        ) { ResultSetAdapters.linkingId(it) to ResultSetAdapters.entityKeyIds(it) }
+
     }
 
     private fun getEntitySetIdsOfLinkingIds(
             linkingIds: Set<UUID>
     ): BasePostgresIterable<Pair<UUID, Optional<Set<UUID>>>> {
         return BasePostgresIterable(
-                PreparedStatementHolderSupplier(hds, selectLinkingIdsByEntitySetIds()) { ps ->
+                PreparedStatementHolderSupplier(hds, selectLinkingIdsByEntitySetIds) { ps ->
                     val linkingIdsArr = PostgresArrays.createUuidArray(ps.connection, linkingIds)
                     ps.setArray(1, linkingIdsArr)
                 }) { ResultSetAdapters.entitySetId(it) to Optional.of(ResultSetAdapters.entityKeyIds(it)) }
     }
 
-    private fun selectLinkingIdsByEntitySetIds(): String {
-        return "SELECT ${ENTITY_SET_ID.name}, array_agg(${LINKING_ID.name}) as ${ENTITY_KEY_IDS_COL.name} " +
-                "FROM ${IDS.name} " +
-                "WHERE ${LINKING_ID.name} = ANY(?) "
-    }
+    private val selectLinkingIdsByEntitySetIds =
+            // @formatter:off
+        "SELECT ${ENTITY_SET_ID.name}, array_agg(${LINKING_ID.name}) as ${ENTITY_KEY_IDS_COL.name} " +
+        "FROM ${IDS.name} " +
+        "WHERE ${LINKING_ID.name} = ANY(?) " +
+        "GROUP BY ${ENTITY_SET_ID.name}"
+        // @formatter:on
 }
+
+/**
+ * Select linking ids, where ALL normal entities are cleared or deleted.
+ */
+internal val selectDeletedLinkingIds =
+        // @formatter:off
+            "SELECT ${LINKING_ID.name}, array_agg(${ID.name}) as ${ENTITY_KEY_IDS_COL.name} " +
+             "FROM ${IDS.name} l " +
+            "WHERE " +
+                "NOT EXISTS ( " +
+                    "SELECT ${ID.name} " +
+                    "FROM ${IDS.name} r " +
+                    "WHERE " +
+                        "l.${LINKING_ID.name} = r.${LINKING_ID.name} AND " +
+                        "${VERSION.name} > 0 " +
+                " ) AND " +
+                "${LINKING_ID.name} IS NOT NULL " +
+            "GROUP BY ${LINKING_ID.name}"
+            // @formatter:on
+
+
+/**
+ * Select linking ids, where indexing+linking already finished and linking indexing is due + where some normal entities
+ * are cleared or deleted.
+ */
+internal val selectDirtyLinkingIds =
+        // @formatter:off
+            "SELECT ${LINKING_ID.name}, max(${LAST_WRITE.name}) AS ${LAST_WRITE.name} " +
+            "FROM ${IDS.name} " +
+            "WHERE " +
+                "${LAST_INDEX.name} >= ${LAST_WRITE.name} AND " +
+                "${LAST_LINK.name} >= ${LAST_WRITE.name} AND " +
+                "${LAST_LINK_INDEX.name} < ${LAST_WRITE.name} AND " +
+                "${VERSION.name} > 0 AND " +
+                "${LINKING_ID.name} IS NOT NULL " +
+            "GROUP BY ${LINKING_ID.name} " +
+        "UNION ALL " +
+            "SELECT ${LINKING_ID.name}, max(${LAST_WRITE.name}) AS ${LAST_WRITE.name} " +
+            "FROM ${IDS.name} l " +
+            "WHERE " +
+                "EXISTS ( " +
+                    "SELECT ${ID.name} " +
+                    "FROM ${IDS.name} r " +
+                    "WHERE " +
+                        "l.${LINKING_ID.name} = r.${LINKING_ID.name} AND " +
+                        "${VERSION.name} < 0 " +
+                " ) AND " +
+                "EXISTS ( " +
+                    "SELECT ${ID.name} " +
+                    "FROM ${IDS.name} r " +
+                    "WHERE " +
+                        "l.${LINKING_ID.name} = r.${LINKING_ID.name} AND " +
+                        "${VERSION.name} > 0 " +
+                " ) AND " +
+                "${LINKING_ID.name} IS NOT NULL " +
+            "GROUP BY ${LINKING_ID.name} "
+        // @formatter:on

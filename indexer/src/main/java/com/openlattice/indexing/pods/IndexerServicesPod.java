@@ -289,7 +289,7 @@ public class IndexerServicesPod {
 
     @Bean
     public HazelcastIdGenerationService idGeneration() {
-        return new HazelcastIdGenerationService( hazelcastClientProvider );
+        return new HazelcastIdGenerationService( hazelcastClientProvider, executor );
     }
 
     @Bean
