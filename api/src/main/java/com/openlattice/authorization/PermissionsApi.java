@@ -58,15 +58,6 @@ public interface PermissionsApi {
     @PATCH( BASE + UPDATE )
     Void updateAcls( @Body List<AclData> req );
 
-    //update permissions
-    //map keys are tables to be granted permissions, set will be either columns specific to the table or an empty set which means all columns.
-    // if map is not present, assume all tables
-    // TODO Make this better later, probably an object of some sort
-    @PATCH( BASE + UPDATE + ID_PATH )
-    Void updateExternalDatabaseAcls(
-            @Path(ID_PATH) UUID organizationId,
-            @Body List<AclData> req);
-
     /**
      * Retrieves the acl for a particular acl key. Only return if user is the owner of acl key.
      *
