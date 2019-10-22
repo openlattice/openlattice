@@ -37,13 +37,11 @@ import com.openlattice.hazelcast.HazelcastQueue
 import com.openlattice.indexing.configuration.IndexerConfiguration
 import com.openlattice.linking.util.PersonProperties
 import com.openlattice.postgres.DataTables.*
-import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.mapstores.EntityTypeMapstore
 import com.openlattice.postgres.streams.BasePostgresIterable
-import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.openlattice.postgres.streams.StatementHolderSupplier
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
@@ -95,7 +93,7 @@ class BackgroundLinkingIndexingService(
     /**
      * Queue containing linking ids, which need to be re-indexed in elasticsearch.
      */
-    private val candidates = hazelcastInstance.getQueue<Pair<UUID, OffsetDateTime>>(
+    private val candidates = hazelcastInstance.getQueue<Triple<UUID, OffsetDateTime, Set<UUID>>>(
             HazelcastQueue.LINKING_INDEXING.name
     )
 
@@ -110,18 +108,28 @@ class BackgroundLinkingIndexingService(
                         return@forEach
                     }
 
-                    val candidateMap = candidateBatch.toMap()
+                    // entity set id -> linking id -> last write
+                    val linkingEntityKeyIdsWithLastWrite = mutableMapOf<UUID, MutableMap<UUID, OffsetDateTime>>()
+                    val linkingIds = mutableSetOf<UUID>()
+                    candidateBatch.forEach {
+                        val linkingId = it.first
+                        val lastWrite = it.second
+                        it.third.forEach { entitySetId ->
+                            if (!linkingEntityKeyIdsWithLastWrite.containsKey(entitySetId)) {
+                                linkingEntityKeyIdsWithLastWrite[entitySetId] = mutableMapOf()
+                            }
+                            linkingEntityKeyIdsWithLastWrite.getValue(entitySetId)[linkingId] = lastWrite
+                        }
+                        linkingIds.add(it.first)
+                    }
 
                     try {
-                        lock(candidateMap.keys)
-                        index(candidateMap)
+                        lock(linkingIds)
+                        index(linkingEntityKeyIdsWithLastWrite, linkingIds)
                     } catch (ex: Exception) {
-                        logger.error(
-                                "Unable to index linking entity with from bacth if linking ids ${candidateMap.keys}.",
-                                ex
-                        )
+                        logger.error("Unable to index linking entity with from bacth if linking ids $linkingIds.", ex)
                     } finally {
-                        unLock(candidateMap.keys)
+                        unLock(linkingIds)
                     }
                 }
     }
@@ -140,15 +148,21 @@ class BackgroundLinkingIndexingService(
         }
     }
 
-    private fun index(linkingIdsWithLastWrite: Map<UUID, OffsetDateTime>) {
-        logger.info("Starting background linking indexing task for linking ids ${linkingIdsWithLastWrite.keys}.")
+    /**
+     * Collect data and indexes linking ids in elasticsearch and marks them as indexed.
+     * @param linkingEntityKeyIdsWithLastWrite Map of entity set id -> linking id -> last write of linking entity.
+     * @param linkingIds The linking ids about to get indexed.
+     */
+    private fun index(linkingEntityKeyIdsWithLastWrite: Map<UUID, Map<UUID, OffsetDateTime>>, linkingIds: Set<UUID>) {
+        logger.info("Starting background linking indexing task for linking ids $linkingIds.")
         val watch = Stopwatch.createStarted()
 
         // get data for linking id by entity set ids and property ids
-        val dirtyLinkingIdsByEntitySetIds = getEntitySetIdsOfLinkingIds(
-                linkingIdsWithLastWrite.keys
-        ).toMap() // (normal)entity_set_id/linking_id
-        val propertyTypesOfEntitySets = dirtyLinkingIdsByEntitySetIds.keys.associateWith { personPropertyTypes } // entity_set_id/property_type_id/property_type
+        // (normal)entity_set_id/linking_id
+        val dirtyLinkingIdsByEntitySetIds = linkingEntityKeyIdsWithLastWrite.keys.associateWith {
+            Optional.of(linkingEntityKeyIdsWithLastWrite.values.flatMap { it.keys }.toSet())
+        }
+        val propertyTypesOfEntitySets = linkingEntityKeyIdsWithLastWrite.keys.associateWith { personPropertyTypes } // entity_set_id/property_type_id/property_type
         val linkedEntityData = dataStore // linking_id/(normal)entity_set_id/entity_key_id/property_type_id
                 .getLinkedEntityDataByLinkingIdWithMetadata(
                         dirtyLinkingIdsByEntitySetIds,
@@ -156,31 +170,26 @@ class BackgroundLinkingIndexingService(
                         EnumSet.of(MetadataOption.LAST_WRITE)
                 )
 
-        val indexCount = indexLinkedEntities(linkingIdsWithLastWrite, linkedEntityData, dirtyLinkingIdsByEntitySetIds)
+        val indexCount = indexLinkedEntities(linkingEntityKeyIdsWithLastWrite, linkedEntityData)
 
         logger.info(
-                "Finished linked indexing $indexCount elements with linking ids ${linkingIdsWithLastWrite.keys} " +
-                        "in ${watch.elapsed(TimeUnit.MILLISECONDS)} ms"
+                "Finished linked indexing $indexCount elements with linking ids $linkingIds in " +
+                        "${watch.elapsed(TimeUnit.MILLISECONDS)} ms."
         )
     }
 
+    /**
+     * @param linkingIdsWithLastWrite Map of entity_set_id -> linking_id -> last_write
+     * @param dataByLinkingId Map of linking_id -> entity_set_id -> id -> property_type_id -> data
+     */
     private fun indexLinkedEntities(
-            linkingIdsWithLastWrite: Map<UUID, OffsetDateTime>,
-            dataByLinkingId: Map<UUID, Map<UUID, Map<UUID, Map<UUID, Set<Any>>>>>,
-            linkingIdsByEntitySetIds: Map<UUID, Optional<Set<UUID>>>
+            linkingIdsWithLastWrite: Map<UUID, Map<UUID, OffsetDateTime>>,
+            dataByLinkingId: Map<UUID, Map<UUID, Map<UUID, Map<UUID, Set<Any>>>>>
     ): Int {
         if (elasticsearchApi.createBulkLinkedData(personEntityType.id, dataByLinkingId)) {
             return 0
         }
-        return dataManager.markAsIndexed(
-                linkingIdsByEntitySetIds.mapValues {
-                    // it should be present, since we use array_agg() + we filter on linking id in query
-                    it.value.get().associateWith { linkingId ->
-                        linkingIdsWithLastWrite.getValue(linkingId)
-                    }
-                },
-                true
-        )
+        return dataManager.markAsIndexed(linkingIdsWithLastWrite, true)
     }
 
     private fun lock(linkingIds: Collection<UUID>) {
@@ -201,43 +210,38 @@ class BackgroundLinkingIndexingService(
     }
 
     /**
-     * Returns the linking ids, which are needing to be indexed.
+     * Returns the linking ids, which are needing to be indexed along with their last_write and entity sets.
      * Either because of property change or because of partial entity deletion(soft or hard) from the cluster.
      */
-    private fun getDirtyLinkingIds(): BasePostgresIterable<Pair<UUID, OffsetDateTime>> {
+    private fun getDirtyLinkingIds(): BasePostgresIterable<Triple<UUID, OffsetDateTime, Set<UUID>>> {
         return BasePostgresIterable(
                 StatementHolderSupplier(hds, selectDirtyLinkingIds, FETCH_SIZE)
-        ) { rs -> ResultSetAdapters.linkingId(rs) to ResultSetAdapters.lastWriteTyped(rs) }
+        ) {
+            Triple(
+                    ResultSetAdapters.linkingId(it),
+                    ResultSetAdapters.lastWriteTyped(it),
+                    ResultSetAdapters.entitySetIds(it)
+            )
+        }
     }
 
 
     /**
-     * Returns the linking ids, which are needing to be un-indexed (to delete those documents).
+     * Returns the linking ids along with last_write and its entity set ids, which are needing to be un-indexed
+     * (to delete those documents).
      */
-    private fun getDeletedLinkingIds(): BasePostgresIterable<Pair<UUID, Set<UUID>>> {
+    private fun getDeletedLinkingIds(): BasePostgresIterable<Triple<UUID, OffsetDateTime, Set<UUID>>> {
         return BasePostgresIterable(
-                StatementHolderSupplier(hds, selectDeletedLinkingIds)
-        ) { ResultSetAdapters.linkingId(it) to ResultSetAdapters.entityKeyIds(it) }
+                StatementHolderSupplier(hds, selectDeletedLinkingIds, FETCH_SIZE)
+        ) {
+            Triple(
+                    ResultSetAdapters.linkingId(it),
+                    ResultSetAdapters.lastWriteTyped(it),
+                    ResultSetAdapters.entitySetIds(it)
+            )
+        }
 
     }
-
-    private fun getEntitySetIdsOfLinkingIds(
-            linkingIds: Set<UUID>
-    ): BasePostgresIterable<Pair<UUID, Optional<Set<UUID>>>> {
-        return BasePostgresIterable(
-                PreparedStatementHolderSupplier(hds, selectLinkingIdsByEntitySetIds) { ps ->
-                    val linkingIdsArr = PostgresArrays.createUuidArray(ps.connection, linkingIds)
-                    ps.setArray(1, linkingIdsArr)
-                }) { ResultSetAdapters.entitySetId(it) to Optional.of(ResultSetAdapters.entityKeyIds(it)) }
-    }
-
-    private val selectLinkingIdsByEntitySetIds =
-            // @formatter:off
-        "SELECT ${ENTITY_SET_ID.name}, array_agg(${LINKING_ID.name}) as ${ENTITY_KEY_IDS_COL.name} " +
-        "FROM ${IDS.name} " +
-        "WHERE ${LINKING_ID.name} = ANY(?) " +
-        "GROUP BY ${ENTITY_SET_ID.name}"
-        // @formatter:on
 }
 
 /**
@@ -247,7 +251,7 @@ internal val selectDeletedLinkingIds =
         // @formatter:off
         "SELECT " +
                 "${LINKING_ID.name}, " +
-                "array_agg(${ID.name}) as ${ENTITY_KEY_IDS_COL.name}, " +
+                "max(${LAST_WRITE.name}) AS ${LAST_WRITE.name}, " +
                 "array_agg(${ENTITY_SET_ID.name}) AS ${ENTITY_SET_IDS.name} " +
         "FROM ${IDS.name} " +
         "WHERE ${LINKING_ID.name} NOT IN ( " +
@@ -262,12 +266,15 @@ internal val selectDeletedLinkingIds =
 
 
 /**
- * Select linking ids, where indexing+linking already finished and linking indexing is due + where some normal entities
- * are cleared or deleted.
+ * Select linking ids, where both indexing and linking already finished, but linking indexing is due and those where
+ * some normal entities are cleared or deleted.
  */
 internal val selectDirtyLinkingIds =
         // @formatter:off
-            "SELECT ${LINKING_ID.name}, max(${LAST_WRITE.name}) AS ${LAST_WRITE.name} " +
+            "SELECT " +
+                "${LINKING_ID.name}, " +
+                "max(${LAST_WRITE.name}) AS ${LAST_WRITE.name}, " +
+                "array_agg(${ENTITY_SET_ID.name}) AS ${ENTITY_SET_IDS.name} " +
             "FROM ${IDS.name} " +
             "WHERE " +
                 "${LAST_INDEX.name} >= ${LAST_WRITE.name} AND " +
@@ -277,21 +284,24 @@ internal val selectDirtyLinkingIds =
                 "${LINKING_ID.name} IS NOT NULL " +
             "GROUP BY ${LINKING_ID.name} " +
         "UNION ALL " +
-            "SELECT ${LINKING_ID.name}, max(${LAST_WRITE.name}) AS ${LAST_WRITE.name} " +
+            "SELECT " +
+                "${LINKING_ID.name}, " +
+                "max(${LAST_WRITE.name}) AS ${LAST_WRITE.name}, " +
+                "array_agg(${ENTITY_SET_ID.name}) AS ${ENTITY_SET_IDS.name} " +
             "FROM ${IDS.name} l " +
-            "WHERE " +
-                "EXISTS ( " +
-                    "SELECT ${ID.name} " +
-                    "FROM ${IDS.name} r " +
+            "WHERE ${LINKING_ID.name} " +
+                "IN ( " +
+                    "SELECT ${LINKING_ID.name} " +
+                    "FROM ${IDS.name} " +
                     "WHERE " +
-                        "l.${LINKING_ID.name} = r.${LINKING_ID.name} AND " +
+                        "${LINKING_ID.name} IS NOT NULL AND " +
                         "${VERSION.name} < 0 " +
-                " ) AND " +
-                "EXISTS ( " +
-                    "SELECT ${ID.name} " +
-                    "FROM ${IDS.name} r " +
+                " ) AND ${LINKING_ID.name} " +
+                "IN ( " +
+                    "SELECT ${LINKING_ID.name} " +
+                    "FROM ${IDS.name} " +
                     "WHERE " +
-                        "l.${LINKING_ID.name} = r.${LINKING_ID.name} AND " +
+                        "${LINKING_ID.name} IS NOT NULL AND " +
                         "${VERSION.name} > 0 " +
                 " ) AND " +
                 "${LINKING_ID.name} IS NOT NULL " +
