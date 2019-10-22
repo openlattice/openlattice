@@ -2705,7 +2705,8 @@ paths:
             application/json:
               schema:
                 type: array
-                $ref: "#/components/entityLinkingFeedback"
+                items:
+                  $ref: "#/components/entityLinkingFeedback"
   /linker/linkingfeedback/features:
     post:
       summary: Returns the feedback on the given entity pair along with their features
@@ -2765,6 +2766,56 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/entityLinkingFeatures"
+
+  ################
+  ## ADMIN APIs ##
+  ################
+  
+  /indexer/reindex:
+    get:
+      summary: Retrieve the current state of reindexing jobs
+      operationId: getIndexingState
+      tags:
+        - admin
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/indexingState"
+    post:
+      summary: Merge job descriptions for performing a partial or full reindex of provided entity sets.
+      operationId: reindex
+      tags:
+        - admin
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      requestBody:
+        required: true
+        description: A map of entity set ids to entity key ids that determines what will be reindexed. If no entity key ids are provided then all entities in an entity set are reindexed. If no entity set ids are provided then all entity sets are scheduled for reindexing.
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties:
+                type: array
+                items:
+                  type: string
+                  format: uuid
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/indexingState"
+    
+        
 
 components:
   securitySchemes:
@@ -3500,7 +3551,29 @@ components:
           type: object
           additionalProperties:
             type: number
-
+    indexingState:
+      type: object
+      properties:
+        indexing:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+              format: uuid
+        queue:
+          type: array
+          items:
+            type: string 
+            format: uuid     
+        currentEntitySet:
+          type: string
+          format: uuid
+        queueSize:
+          type: integer
+        count:
+          type: integer
+    
 tags:
   - name: edm
     description: API endpoints to the entity data model.
