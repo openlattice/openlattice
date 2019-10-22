@@ -120,40 +120,40 @@ class ExternalDatabaseManagementService(
         return column.id
     }
 
-    fun createNewOrganizationExternalDatabaseTable(orgId: UUID, tableName: String, columnNameToSqlType: LinkedHashMap<String, String>) {
-        //TODO figure out title stuff
-        val table = OrganizationExternalDatabaseTable(Optional.empty(), tableName, "title", Optional.empty(), orgId)
-        val tableId = createOrganizationExternalDatabaseTable(orgId, table)
-        columnNameToSqlType.keys.forEach {
-            val column = OrganizationExternalDatabaseColumn(Optional.empty(), it, "title", Optional.empty(), tableId, orgId)
-            createOrganizationExternalDatabaseColumn(orgId, column)
-        }
-
-        //create table in db
-        val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
-        assemblerConnectionManager.connect(dbName).use {
-            it.connection.createStatement().use { stmt ->
-                stmt.execute("CREATE TABLE $PUBLIC_SCHEMA.$tableName(${columnNameToSqlType
-                        .map { entry -> entry.key + " " + entry.value }.joinToString(", ")})")
-            }
-
-        }
-    }
-
-    fun createNewOrganizationExternalDatabaseColumn(orgId: UUID, tableId: UUID, tableName: String, columnName: String, sqlType: String) {
-        //TODO figure out title stuff
-        val column = OrganizationExternalDatabaseColumn(Optional.empty(), columnName, "title", Optional.empty(), tableId, orgId)
-        createOrganizationExternalDatabaseColumn(orgId, column)
-
-        //add column to table in db
-        val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
-        assemblerConnectionManager.connect(dbName).use {
-            it.connection.createStatement().use { stmt ->
-                stmt.execute("ALTER TABLE $PUBLIC_SCHEMA.$tableName ADD COLUMN $columnName $sqlType")
-            }
-
-        }
-    }
+//    fun createNewOrganizationExternalDatabaseTable(orgId: UUID, tableName: String, columnNameToSqlType: LinkedHashMap<String, String>) {
+//        //TODO figure out title stuff
+//        val table = OrganizationExternalDatabaseTable(Optional.empty(), tableName, "title", Optional.empty(), orgId)
+//        val tableId = createOrganizationExternalDatabaseTable(orgId, table)
+//        columnNameToSqlType.keys.forEach {
+//            val column = OrganizationExternalDatabaseColumn(Optional.empty(), it, "title", Optional.empty(), tableId, orgId)
+//            createOrganizationExternalDatabaseColumn(orgId, column)
+//        }
+//
+//        //create table in db
+//        val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
+//        assemblerConnectionManager.connect(dbName).use {
+//            it.connection.createStatement().use { stmt ->
+//                stmt.execute("CREATE TABLE $PUBLIC_SCHEMA.$tableName(${columnNameToSqlType
+//                        .map { entry -> entry.key + " " + entry.value }.joinToString(", ")})")
+//            }
+//
+//        }
+//    }
+//
+//    fun createNewOrganizationExternalDatabaseColumn(orgId: UUID, tableId: UUID, tableName: String, columnName: String, sqlType: String) {
+//        //TODO figure out title stuff
+//        val column = OrganizationExternalDatabaseColumn(Optional.empty(), columnName, "title", Optional.empty(), tableId, orgId)
+//        createOrganizationExternalDatabaseColumn(orgId, column)
+//
+//        //add column to table in db
+//        val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
+//        assemblerConnectionManager.connect(dbName).use {
+//            it.connection.createStatement().use { stmt ->
+//                stmt.execute("ALTER TABLE $PUBLIC_SCHEMA.$tableName ADD COLUMN $columnName $sqlType")
+//            }
+//
+//        }
+//    }
 
     fun addTrustedUser(orgId: UUID, userPrincipal: Principal, ipAdresses: Set<String>) {
         val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
@@ -169,73 +169,73 @@ class ExternalDatabaseManagementService(
         return organizationExternalDatabaseColumns[columnId]!!
     }
 
-    fun updateOrganizationExternalDatabaseTable(orgId: UUID, tableName: String, tableId: UUID, update: MetadataUpdate) {
-        if (update.name.isPresent) {
-            val newTableName = update.name.get()
-            val newTableFqn = FullQualifiedName(orgId.toString(), newTableName)
-            aclKeyReservations.renameReservation(tableId, newTableFqn.fullQualifiedNameAsString)
+//    fun updateOrganizationExternalDatabaseTable(orgId: UUID, tableName: String, tableId: UUID, update: MetadataUpdate) {
+//        if (update.name.isPresent) {
+//            val newTableName = update.name.get()
+//            val newTableFqn = FullQualifiedName(orgId.toString(), newTableName)
+//            aclKeyReservations.renameReservation(tableId, newTableFqn.fullQualifiedNameAsString)
+//
+//            //update table name in external database
+//            val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
+//            val tableNamePath = "$PUBLIC_SCHEMA.$tableName"
+//            val newTableNamePath = "$PUBLIC_SCHEMA.$newTableName"
+//            assemblerConnectionManager.connect(dbName).use {
+//                it.connection.createStatement().use { stmt ->
+//                    stmt.execute("ALTER TABLE $tableNamePath RENAME TO $newTableName")
+//                }
+//            }
+//        }
+//
+//        organizationExternalDatabaseTables.submitToKey(tableId, UpdateOrganizationExternalDatabaseTable(update))
+//
+//        //write a signalUpdate method
+//    }
+//
+//    fun updateOrganizationExternalDatabaseColumn(orgId: UUID, tableName: String, tableId: UUID,
+//                                                 columnName: String, columnId: UUID, update: MetadataUpdate) {
+//        if (update.name.isPresent) {
+//            val newColumnName = update.name.get()
+//            val newColumnFqn = FullQualifiedName(tableId.toString(), update.name.get())
+//            aclKeyReservations.renameReservation(columnId, newColumnFqn.fullQualifiedNameAsString)
+//
+//            //update column name in external database
+//            val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
+//            val tableNamePath = "$PUBLIC_SCHEMA.$tableName"
+//            assemblerConnectionManager.connect(dbName).use {
+//                it.connection.createStatement().use { stmt ->
+//                    stmt.execute("ALTER TABLE $tableNamePath RENAME COLUMN $columnName to $newColumnName")
+//                }
+//            }
+//        }
+//
+//        organizationExternalDatabaseColumns.submitToKey(columnId, UpdateOrganizationExternalDatabaseColumn(update))
+//
+//        //write a signalUpdate method
+//    }
 
-            //update table name in external database
-            val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
-            val tableNamePath = "$PUBLIC_SCHEMA.$tableName"
-            val newTableNamePath = "$PUBLIC_SCHEMA.$newTableName"
-            assemblerConnectionManager.connect(dbName).use {
-                it.connection.createStatement().use { stmt ->
-                    stmt.execute("ALTER TABLE $tableNamePath RENAME TO $newTableName")
-                }
-            }
-        }
-
-        organizationExternalDatabaseTables.submitToKey(tableId, UpdateOrganizationExternalDatabaseTable(update))
-
-        //write a signalUpdate method
-    }
-
-    fun updateOrganizationExternalDatabaseColumn(orgId: UUID, tableName: String, tableId: UUID,
-                                                 columnName: String, columnId: UUID, update: MetadataUpdate) {
-        if (update.name.isPresent) {
-            val newColumnName = update.name.get()
-            val newColumnFqn = FullQualifiedName(tableId.toString(), update.name.get())
-            aclKeyReservations.renameReservation(columnId, newColumnFqn.fullQualifiedNameAsString)
-
-            //update column name in external database
-            val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
-            val tableNamePath = "$PUBLIC_SCHEMA.$tableName"
-            assemblerConnectionManager.connect(dbName).use {
-                it.connection.createStatement().use { stmt ->
-                    stmt.execute("ALTER TABLE $tableNamePath RENAME COLUMN $columnName to $newColumnName")
-                }
-            }
-        }
-
-        organizationExternalDatabaseColumns.submitToKey(columnId, UpdateOrganizationExternalDatabaseColumn(update))
-
-        //write a signalUpdate method
-    }
-
-    fun setPrimaryKey(orgId: UUID, tableName: String, tableId: UUID, columnNames: Set<String>) {
-        val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
-        val tableNamePath = "$PUBLIC_SCHEMA.$tableName"
-        assemblerConnectionManager.connect(dbName).use {
-            //remove primary key if it exists
-            it.connection.createStatement().use { stmt ->
-                val primaryKeyResultSet = stmt.executeQuery(
-                        "SELECT constraint_name FROM information_schema.table_constraints " +
-                                "WHERE table_name = $tableNamePath AND constraint_type = 'PRIMARY KEY'")
-                if (primaryKeyResultSet.isBeforeFirst) {
-                    val primaryKey = primaryKeyResultSet.getString("constraint_name")
-                    stmt.execute("ALTER TABLE $tableNamePath DROP CONSTRAINT $primaryKey")
-                }
-            }
-            if (columnNames.isNotEmpty()) {
-                val primaryKeyColumns = columnNames.joinToString(", ")
-                it.connection.createStatement().use { stmt ->
-                    stmt.execute("ALTER TABLE $tableNamePath ADD PRIMARY KEY ($primaryKeyColumns)")
-
-                }
-            }
-        }
-    }
+//    fun setPrimaryKey(orgId: UUID, tableName: String, tableId: UUID, columnNames: Set<String>) {
+//        val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
+//        val tableNamePath = "$PUBLIC_SCHEMA.$tableName"
+//        assemblerConnectionManager.connect(dbName).use {
+//            //remove primary key if it exists
+//            it.connection.createStatement().use { stmt ->
+//                val primaryKeyResultSet = stmt.executeQuery(
+//                        "SELECT constraint_name FROM information_schema.table_constraints " +
+//                                "WHERE table_name = $tableNamePath AND constraint_type = 'PRIMARY KEY'")
+//                if (primaryKeyResultSet.isBeforeFirst) {
+//                    val primaryKey = primaryKeyResultSet.getString("constraint_name")
+//                    stmt.execute("ALTER TABLE $tableNamePath DROP CONSTRAINT $primaryKey")
+//                }
+//            }
+//            if (columnNames.isNotEmpty()) {
+//                val primaryKeyColumns = columnNames.joinToString(", ")
+//                it.connection.createStatement().use { stmt ->
+//                    stmt.execute("ALTER TABLE $tableNamePath ADD PRIMARY KEY ($primaryKeyColumns)")
+//
+//                }
+//            }
+//        }
+//    }
 
     fun deleteOrganizationExternalDatabaseTables(orgId: UUID, tableIds: Set<UUID>) {
         tableIds.forEach { deleteOrganizationExternalDatabaseTable(orgId, it) }
@@ -361,23 +361,6 @@ class ExternalDatabaseManagementService(
             }
         }
         return orgIds
-    }
-
-    fun getCurrentTables(dbName: String): Set<String> {
-        val tableNames = mutableSetOf<String>()
-        assemblerConnectionManager.connect(dbName).use { dataSource ->
-            dataSource.connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery("SELECT table_name FROM information_schema.tables " +
-                        "WHERE table_schema='$PUBLIC_SCHEMA' " +
-                        "AND table_type='BASE TABLE'")
-                while (rs.next()) {
-                    val tableName = rs.getString("table_name")
-                    tableNames.add(tableName)
-                }
-
-            }
-        }
-        return tableNames
     }
 
     fun getColumnNamesByTable(orgId: UUID, dbName: String): Map<String, Set<String>> {
