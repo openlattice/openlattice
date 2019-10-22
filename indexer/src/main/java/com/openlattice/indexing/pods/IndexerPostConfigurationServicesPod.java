@@ -22,6 +22,7 @@ package com.openlattice.indexing.pods;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
+import com.openlattice.BackgroundExternalDatabaseUpdatingService;
 import com.openlattice.auditing.AuditingManager;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.DataGraphManager;
@@ -39,6 +40,7 @@ import com.openlattice.indexing.configuration.IndexerConfiguration;
 import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.linking.PostgresLinkingFeedbackService;
 import com.openlattice.linking.graph.PostgresLinkingQueryService;
+import com.openlattice.organizations.ExternalDatabaseManagementService;
 import com.zaxxer.hikari.HikariDataSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -74,6 +76,9 @@ public class IndexerPostConfigurationServicesPod {
 
     @Inject
     private EntityDatastore entityDatastore;
+
+    @Inject
+    private ExternalDatabaseManagementService edms;
 
     @Bean
     public PartitionManager partitionManager() {
@@ -125,6 +130,13 @@ public class IndexerPostConfigurationServicesPod {
                 indexerConfiguration,
                 auditingManager,
                 dataGraphService );
+    }
+
+    @Bean
+    public BackgroundExternalDatabaseUpdatingService backgroundExternalDatabaseUpdatingService() {
+        return new BackgroundExternalDatabaseUpdatingService(
+                hazelcastInstance,
+                edms );
     }
 
     @Bean
