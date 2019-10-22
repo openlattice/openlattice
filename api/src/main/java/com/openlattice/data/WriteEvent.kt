@@ -20,15 +20,7 @@ class WriteEvent(_version: Long, val numUpdates: Int) {
             else -> false
         }
     }
-
-    operator fun component1(): Long {
-        return version
-    }
-
-    operator fun component2(): Int {
-        return numUpdates
-    }
-
+    
     override fun hashCode(): Int {
         return Objects.hash(version, numUpdates)
     }
@@ -36,4 +28,7 @@ class WriteEvent(_version: Long, val numUpdates: Int) {
     override fun toString(): String {
         return "WriteEvent(version=$version, numUpdates=$numUpdates)"
     }
+
+    operator fun component1() = version
+    operator fun component2() = numUpdates
 }
