@@ -75,9 +75,9 @@ import static com.google.common.collect.Maps.transformValues;
 import static com.openlattice.authorization.EdmAuthorizationHelper.*;
 
 @RestController
-@RequestMapping( DataApi.CONTROLLER )
+@RequestMapping(DataApi.CONTROLLER)
 public class DataController implements DataApi, AuthorizingComponent, AuditingComponent {
-    private static final Logger logger = LoggerFactory.getLogger( DataController.class );
+    private static final Logger logger = LoggerFactory.getLogger(DataController.class);
 
     @Inject
     private SyncTicketService sts;
@@ -117,256 +117,256 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     private LoadingCache<AuthorizationKey, Set<UUID>> authorizedPropertyCache;
 
     @RequestMapping(
-            path = { "/" + ENTITY_SET + "/" + SET_ID_PATH },
+            path = {"/" + ENTITY_SET + "/" + SET_ID_PATH},
             method = RequestMethod.GET,
-            produces = { MediaType.APPLICATION_JSON_VALUE, CustomMediaType.TEXT_CSV_VALUE } )
+            produces = {MediaType.APPLICATION_JSON_VALUE, CustomMediaType.TEXT_CSV_VALUE})
     @Timed
     public EntitySetData<FullQualifiedName> loadEntitySetData(
-            @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
+            @PathVariable(ENTITY_SET_ID) UUID entitySetId,
             @RequestParam(
                     value = FILE_TYPE,
-                    required = false ) FileType fileType,
+                    required = false) FileType fileType,
             @RequestParam(
                     value = TOKEN,
-                    required = false ) String token,
-            HttpServletResponse response ) {
-        setContentDisposition( response, entitySetId.toString(), fileType );
-        setDownloadContentType( response, fileType );
+                    required = false) String token,
+            HttpServletResponse response) {
+        setContentDisposition(response, entitySetId.toString(), fileType);
+        setDownloadContentType(response, fileType);
 
-        return loadEntitySetData( entitySetId, fileType, token );
+        return loadEntitySetData(entitySetId, fileType, token);
     }
 
     @Override
     public EntitySetData<FullQualifiedName> loadEntitySetData(
             UUID entitySetId,
             FileType fileType,
-            String token ) {
-        if ( StringUtils.isNotBlank( token ) ) {
+            String token) {
+        if (StringUtils.isNotBlank(token)) {
             Authentication authentication = authProvider
-                    .authenticate( PreAuthenticatedAuthenticationJsonWebToken.usingToken( token ) );
-            SecurityContextHolder.getContext().setAuthentication( authentication );
+                    .authenticate(PreAuthenticatedAuthenticationJsonWebToken.usingToken(token));
+            SecurityContextHolder.getContext().setAuthentication(authentication);
         }
-        return loadEntitySetData( entitySetId, new EntitySetSelection( Optional.empty() ) );
+        return loadEntitySetData(entitySetId, new EntitySetSelection(Optional.empty()));
     }
 
     @RequestMapping(
-            path = { "/" + ENTITY_SET + "/" + SET_ID_PATH },
+            path = {"/" + ENTITY_SET + "/" + SET_ID_PATH},
             method = RequestMethod.POST,
-            consumes = { MediaType.APPLICATION_JSON_VALUE },
-            produces = { MediaType.APPLICATION_JSON_VALUE, CustomMediaType.TEXT_CSV_VALUE } )
+            consumes = {MediaType.APPLICATION_JSON_VALUE},
+            produces = {MediaType.APPLICATION_JSON_VALUE, CustomMediaType.TEXT_CSV_VALUE})
     @Timed
     public EntitySetData<FullQualifiedName> loadEntitySetData(
-            @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
-            @RequestBody( required = false ) EntitySetSelection selection,
-            @RequestParam( value = FILE_TYPE, required = false ) FileType fileType,
-            HttpServletResponse response ) {
-        setContentDisposition( response, entitySetId.toString(), fileType );
-        setDownloadContentType( response, fileType );
-        return loadEntitySetData( entitySetId, selection, fileType );
+            @PathVariable(ENTITY_SET_ID) UUID entitySetId,
+            @RequestBody(required = false) EntitySetSelection selection,
+            @RequestParam(value = FILE_TYPE, required = false) FileType fileType,
+            HttpServletResponse response) {
+        setContentDisposition(response, entitySetId.toString(), fileType);
+        setDownloadContentType(response, fileType);
+        return loadEntitySetData(entitySetId, selection, fileType);
     }
 
     @Override
     public EntitySetData<FullQualifiedName> loadEntitySetData(
             UUID entitySetId,
             EntitySetSelection selection,
-            FileType fileType ) {
-        return loadEntitySetData( entitySetId, selection );
+            FileType fileType) {
+        return loadEntitySetData(entitySetId, selection);
     }
 
     private EntitySetData<FullQualifiedName> loadEntitySetData(
             UUID entitySetId,
-            EntitySetSelection selection ) {
-        if ( authz.checkIfHasPermissions(
-                new AclKey( entitySetId ), Principals.getCurrentPrincipals(), READ_PERMISSION ) ) {
+            EntitySetSelection selection) {
+        if (authz.checkIfHasPermissions(
+                new AclKey(entitySetId), Principals.getCurrentPrincipals(), READ_PERMISSION)) {
 
-            Optional<Set<UUID>> entityKeyIds = ( selection == null ) ? Optional.empty() : selection.getEntityKeyIds();
-            Optional<Set<UUID>> propertyTypeIds = ( selection == null ) ? Optional.empty() : selection.getProperties();
+            Optional<Set<UUID>> entityKeyIds = (selection == null) ? Optional.empty() : selection.getEntityKeyIds();
+            Optional<Set<UUID>> propertyTypeIds = (selection == null) ? Optional.empty() : selection.getProperties();
 
-            final Set<UUID> allProperties = authzHelper.getAllPropertiesOnEntitySet( entitySetId );
-            final Set<UUID> selectedProperties = propertyTypeIds.orElse( allProperties );
-            checkState( allProperties.equals( selectedProperties ) || allProperties.containsAll( selectedProperties ),
-                    "Selected properties are not property types of entity set %s", entitySetId );
+            final Set<UUID> allProperties = authzHelper.getAllPropertiesOnEntitySet(entitySetId);
+            final Set<UUID> selectedProperties = propertyTypeIds.orElse(allProperties);
+            checkState(allProperties.equals(selectedProperties) || allProperties.containsAll(selectedProperties),
+                    "Selected properties are not property types of entity set %s", entitySetId);
 
-            final var entitySet = edmService.getEntitySet( entitySetId );
+            final var entitySet = edmService.getEntitySet(entitySetId);
             Set<UUID> normalEntitySetIds;
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesOfEntitySets;
 
-            if ( entitySet.isLinking() ) {
-                normalEntitySetIds = Sets.newHashSet( entitySet.getLinkedEntitySets() );
-                checkState( !normalEntitySetIds.isEmpty(),
-                        "Linked entity sets are empty for linking entity set %s", entitySetId );
+            if (entitySet.isLinking()) {
+                normalEntitySetIds = Sets.newHashSet(entitySet.getLinkedEntitySets());
+                checkState(!normalEntitySetIds.isEmpty(),
+                        "Linked entity sets are empty for linking entity set %s", entitySetId);
 
-                normalEntitySetIds.forEach( esId -> ensureReadAccess( new AclKey( esId ) ) );
+                normalEntitySetIds.forEach(esId -> ensureReadAccess(new AclKey(esId)));
 
                 authorizedPropertyTypesOfEntitySets = authzHelper
-                        .getAuthorizedPropertyTypesByNormalEntitySet( entitySet, selectedProperties, READ_PERMISSION );
+                        .getAuthorizedPropertyTypesByNormalEntitySet(entitySet, selectedProperties, READ_PERMISSION);
 
             } else {
-                normalEntitySetIds = Set.of( entitySetId );
+                normalEntitySetIds = Set.of(entitySetId);
                 authorizedPropertyTypesOfEntitySets = authzHelper
-                        .getAuthorizedPropertyTypes( normalEntitySetIds, selectedProperties, READ_PERMISSION );
+                        .getAuthorizedPropertyTypes(normalEntitySetIds, selectedProperties, READ_PERMISSION);
             }
 
             final Map<UUID, Optional<Set<UUID>>> entityKeyIdsOfEntitySets = normalEntitySetIds.stream()
-                    .collect( Collectors.toMap( esId -> esId, esId -> entityKeyIds ) );
+                    .collect(Collectors.toMap(esId -> esId, esId -> entityKeyIds));
 
             final var authorizedPropertyTypes = authorizedPropertyTypesOfEntitySets.values().iterator().next();
-            final LinkedHashSet<String> orderedPropertyNames = new LinkedHashSet<>( authorizedPropertyTypes.size() );
+            final LinkedHashSet<String> orderedPropertyNames = new LinkedHashSet<>(authorizedPropertyTypes.size());
             selectedProperties.stream()
-                    .filter( authorizedPropertyTypes::containsKey )
-                    .map( authorizedPropertyTypes::get )
-                    .map( pt -> pt.getType().getFullQualifiedNameAsString() )
-                    .forEach( orderedPropertyNames::add );
+                    .filter(authorizedPropertyTypes::containsKey)
+                    .map(authorizedPropertyTypes::get)
+                    .map(pt -> pt.getType().getFullQualifiedNameAsString())
+                    .forEach(orderedPropertyNames::add);
 
             return dgm.getEntitySetData(
                     entityKeyIdsOfEntitySets,
                     orderedPropertyNames,
                     authorizedPropertyTypesOfEntitySets,
-                    entitySet.isLinking() );
+                    entitySet.isLinking());
         } else {
-            throw new ForbiddenException( "Insufficient permissions to read the entity set " + entitySetId
-                    + " or it doesn't exists." );
+            throw new ForbiddenException("Insufficient permissions to read the entity set " + entitySetId
+                    + " or it doesn't exists.");
         }
     }
 
     @Override
     @PutMapping(
             value = "/" + ENTITY_SET + "/" + SET_ID_PATH,
-            consumes = MediaType.APPLICATION_JSON_VALUE )
+            consumes = MediaType.APPLICATION_JSON_VALUE)
     @Timed
     public Integer updateEntitiesInEntitySet(
-            @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
+            @PathVariable(ENTITY_SET_ID) UUID entitySetId,
             @RequestBody Map<UUID, Map<UUID, Set<Object>>> entities,
-            @RequestParam( value = TYPE, defaultValue = "Merge" ) UpdateType updateType ) {
-        Preconditions.checkNotNull( updateType, "An invalid update type value was specified." );
-        ensureReadAccess( new AclKey( entitySetId ) );
+            @RequestParam(value = TYPE, defaultValue = "Merge") UpdateType updateType) {
+        Preconditions.checkNotNull(updateType, "An invalid update type value was specified.");
+        ensureReadAccess(new AclKey(entitySetId));
         var allAuthorizedPropertyTypes = authzHelper
-                .getAuthorizedPropertyTypes( entitySetId, EnumSet.of( Permission.WRITE ) );
-        var requiredPropertyTypes = requiredEntitySetPropertyTypes( entities );
+                .getAuthorizedPropertyTypes(entitySetId, EnumSet.of(Permission.WRITE));
+        var requiredPropertyTypes = requiredEntitySetPropertyTypes(entities);
 
-        accessCheck( allAuthorizedPropertyTypes, requiredPropertyTypes );
+        accessCheck(allAuthorizedPropertyTypes, requiredPropertyTypes);
 
-        var authorizedPropertyTypes = Maps.asMap( requiredPropertyTypes, allAuthorizedPropertyTypes::get );
+        var authorizedPropertyTypes = Maps.asMap(requiredPropertyTypes, allAuthorizedPropertyTypes::get);
 
         final AuditEventType auditEventType;
         final WriteEvent writeEvent;
 
-        switch ( updateType ) {
+        switch (updateType) {
             case Replace:
                 auditEventType = AuditEventType.REPLACE_ENTITIES;
-                writeEvent = dgm.replaceEntities( entitySetId, entities, authorizedPropertyTypes );
+                writeEvent = dgm.replaceEntities(entitySetId, entities, authorizedPropertyTypes);
                 break;
             case PartialReplace:
                 auditEventType = AuditEventType.PARTIAL_REPLACE_ENTITIES;
-                writeEvent = dgm.partialReplaceEntities( entitySetId, entities, authorizedPropertyTypes );
+                writeEvent = dgm.partialReplaceEntities(entitySetId, entities, authorizedPropertyTypes);
                 break;
             case Merge:
                 auditEventType = AuditEventType.MERGE_ENTITIES;
-                writeEvent = dgm.mergeEntities( entitySetId, entities, authorizedPropertyTypes );
+                writeEvent = dgm.mergeEntities(entitySetId, entities, authorizedPropertyTypes);
                 break;
             default:
-                throw new BadRequestException( "Unsupported UpdateType: \"" + updateType + "\'" );
+                throw new BadRequestException("Unsupported UpdateType: \"" + updateType + "\'");
         }
 
-        recordEvent( new AuditableEvent(
+        recordEvent(new AuditableEvent(
                 getCurrentUserId(),
-                new AclKey( entitySetId ),
+                new AclKey(entitySetId),
                 auditEventType,
                 "Entities updated using update type " + updateType.toString()
                         + " through DataApi.updateEntitiesInEntitySet",
-                Optional.of( entities.keySet() ),
+                Optional.of(entities.keySet()),
                 ImmutableMap.of(),
-                getDateTimeFromLong( writeEvent.getVersion() ),
+                getDateTimeFromLong(writeEvent.getVersion()),
                 Optional.empty()
-        ) );
+        ));
 
         return writeEvent.getNumUpdates();
     }
 
     @PatchMapping(
             value = "/" + ENTITY_SET + "/" + SET_ID_PATH,
-            consumes = MediaType.APPLICATION_JSON_VALUE )
+            consumes = MediaType.APPLICATION_JSON_VALUE)
     @Override
     @Timed
     public Integer replaceEntityProperties(
-            @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
-            @RequestBody Map<UUID, Map<UUID, Set<Map<ByteBuffer, Object>>>> entities ) {
-        ensureReadAccess( new AclKey( entitySetId ) );
+            @PathVariable(ENTITY_SET_ID) UUID entitySetId,
+            @RequestBody Map<UUID, Map<UUID, Set<Map<ByteBuffer, Object>>>> entities) {
+        ensureReadAccess(new AclKey(entitySetId));
 
-        final Set<UUID> requiredPropertyTypes = requiredReplacementPropertyTypes( entities );
-        accessCheck( aclKeysForAccessCheck( ImmutableSetMultimap.<UUID, UUID>builder()
-                        .putAll( entitySetId, requiredPropertyTypes ).build(),
-                WRITE_PERMISSION ) );
+        final Set<UUID> requiredPropertyTypes = requiredReplacementPropertyTypes(entities);
+        accessCheck(aclKeysForAccessCheck(ImmutableSetMultimap.<UUID, UUID>builder()
+                        .putAll(entitySetId, requiredPropertyTypes).build(),
+                WRITE_PERMISSION));
 
-        WriteEvent writeEvent = dgm.replacePropertiesInEntities( entitySetId,
+        WriteEvent writeEvent = dgm.replacePropertiesInEntities(entitySetId,
                 entities,
-                edmService.getPropertyTypesAsMap( requiredPropertyTypes ) );
+                edmService.getPropertyTypesAsMap(requiredPropertyTypes));
 
-        recordEvent( new AuditableEvent(
+        recordEvent(new AuditableEvent(
                 getCurrentUserId(),
-                new AclKey( entitySetId ),
+                new AclKey(entitySetId),
                 AuditEventType.REPLACE_PROPERTIES_OF_ENTITIES,
                 "Entity properties replaced through DataApi.replaceEntityProperties",
-                Optional.of( entities.keySet() ),
+                Optional.of(entities.keySet()),
                 ImmutableMap.of(),
-                getDateTimeFromLong( writeEvent.getVersion() ),
+                getDateTimeFromLong(writeEvent.getVersion()),
                 Optional.empty()
-        ) );
+        ));
 
         return writeEvent.getNumUpdates();
     }
 
     @Override
     @Timed
-    @PutMapping( value = "/" + ASSOCIATION, consumes = MediaType.APPLICATION_JSON_VALUE )
-    public Integer createAssociations( @RequestBody Set<DataEdgeKey> associations ) {
+    @PutMapping(value = "/" + ASSOCIATION, consumes = MediaType.APPLICATION_JSON_VALUE)
+    public Integer createAssociations(@RequestBody Set<DataEdgeKey> associations) {
         final var entitySetIdChecks = new HashMap<AclKey, EnumSet<Permission>>();
         associations.forEach(
                 association -> {
-                    entitySetIdChecks.put( new AclKey( association.getEdge().getEntitySetId() ), WRITE_PERMISSION );
-                    entitySetIdChecks.put( new AclKey( association.getSrc().getEntitySetId() ), WRITE_PERMISSION );
-                    entitySetIdChecks.put( new AclKey( association.getDst().getEntitySetId() ), WRITE_PERMISSION );
+                    entitySetIdChecks.put(new AclKey(association.getEdge().getEntitySetId()), WRITE_PERMISSION);
+                    entitySetIdChecks.put(new AclKey(association.getSrc().getEntitySetId()), WRITE_PERMISSION);
+                    entitySetIdChecks.put(new AclKey(association.getDst().getEntitySetId()), WRITE_PERMISSION);
                 }
         );
 
         //Ensure that we have write access to entity sets.
-        accessCheck( entitySetIdChecks );
+        accessCheck(entitySetIdChecks);
 
         //Allowed entity types check
-        dataGraphServiceHelper.checkEdgeEntityTypes( associations );
+        dataGraphServiceHelper.checkEdgeEntityTypes(associations);
 
-        WriteEvent writeEvent = dgm.createAssociations( associations );
+        WriteEvent writeEvent = dgm.createAssociations(associations);
 
         Stream<Pair<EntityDataKey, Map<String, Object>>> neighborMappingsCreated = associations.stream()
-                .flatMap( dataEdgeKey -> Stream.of(
-                        Pair.of( dataEdgeKey.getSrc(),
-                                ImmutableMap.of( "association",
+                .flatMap(dataEdgeKey -> Stream.of(
+                        Pair.of(dataEdgeKey.getSrc(),
+                                ImmutableMap.of("association",
                                         dataEdgeKey.getEdge(),
                                         "neighbor",
                                         dataEdgeKey.getDst(),
                                         "isSrc",
-                                        true ) ),
-                        Pair.of( dataEdgeKey.getDst(),
-                                ImmutableMap.of( "association",
+                                        true)),
+                        Pair.of(dataEdgeKey.getDst(),
+                                ImmutableMap.of("association",
                                         dataEdgeKey.getEdge(),
                                         "neighbor",
                                         dataEdgeKey.getSrc(),
                                         "isSrc",
-                                        false ) ),
-                        Pair.of( dataEdgeKey.getEdge(),
-                                ImmutableMap.of( "src", dataEdgeKey.getSrc(), "dst", dataEdgeKey.getDst() ) )
-                ) );
+                                        false)),
+                        Pair.of(dataEdgeKey.getEdge(),
+                                ImmutableMap.of("src", dataEdgeKey.getSrc(), "dst", dataEdgeKey.getDst()))
+                ));
 
-        recordEvents( neighborMappingsCreated.map( pair -> new AuditableEvent(
+        recordEvents(neighborMappingsCreated.map(pair -> new AuditableEvent(
                 getCurrentUserId(),
-                new AclKey( pair.getKey().getEntitySetId() ),
+                new AclKey(pair.getKey().getEntitySetId()),
                 AuditEventType.ASSOCIATE_ENTITIES,
                 "Create associations between entities using DataApi.createAssociations",
-                Optional.of( ImmutableSet.of( pair.getKey().getEntityKeyId() ) ),
+                Optional.of(ImmutableSet.of(pair.getKey().getEntityKeyId())),
                 pair.getValue(),
-                getDateTimeFromLong( writeEvent.getVersion() ),
+                getDateTimeFromLong(writeEvent.getVersion()),
                 Optional.empty()
-        ) ).collect( Collectors.toList() ) );
+        )).collect(Collectors.toList()));
 
         return writeEvent.getNumUpdates();
     }
@@ -376,29 +376,29 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     @RequestMapping(
             value = "/" + ENTITY_SET + "/",
             method = RequestMethod.POST,
-            consumes = MediaType.APPLICATION_JSON_VALUE )
+            consumes = MediaType.APPLICATION_JSON_VALUE)
     public List<UUID> createEntities(
-            @RequestParam( ENTITY_SET_ID ) UUID entitySetId,
-            @RequestBody List<Map<UUID, Set<Object>>> entities ) {
+            @RequestParam(ENTITY_SET_ID) UUID entitySetId,
+            @RequestBody List<Map<UUID, Set<Object>>> entities) {
         //Ensure that we have read access to entity set metadata.
-        ensureReadAccess( new AclKey( entitySetId ) );
+        ensureReadAccess(new AclKey(entitySetId));
         //Load authorized property types
         final Map<UUID, PropertyType> authorizedPropertyTypes = authzHelper
-                .getAuthorizedPropertyTypes( entitySetId, WRITE_PERMISSION );
+                .getAuthorizedPropertyTypes(entitySetId, WRITE_PERMISSION);
         Pair<List<UUID>, WriteEvent> entityKeyIdsToWriteEvent = dgm
-                .createEntities( entitySetId, entities, authorizedPropertyTypes );
+                .createEntities(entitySetId, entities, authorizedPropertyTypes);
         List<UUID> entityKeyIds = entityKeyIdsToWriteEvent.getKey();
 
-        recordEvent( new AuditableEvent(
+        recordEvent(new AuditableEvent(
                 getCurrentUserId(),
-                new AclKey( entitySetId ),
+                new AclKey(entitySetId),
                 AuditEventType.CREATE_ENTITIES,
                 "Entities created through DataApi.createEntities",
-                Optional.of( Sets.newHashSet( entityKeyIds ) ),
+                Optional.of(Sets.newHashSet(entityKeyIds)),
                 ImmutableMap.of(),
-                getDateTimeFromLong( entityKeyIdsToWriteEvent.getValue().getVersion() ),
+                getDateTimeFromLong(entityKeyIdsToWriteEvent.getValue().getVersion()),
                 Optional.empty()
-        ) );
+        ));
 
         return entityKeyIds;
     }
@@ -407,13 +407,13 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     @Override
     @PutMapping(
             value = "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH,
-            consumes = MediaType.APPLICATION_JSON_VALUE )
+            consumes = MediaType.APPLICATION_JSON_VALUE)
     public Integer mergeIntoEntityInEntitySet(
-            @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
-            @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId,
-            @RequestBody Map<UUID, Set<Object>> entity ) {
-        final var entities = ImmutableMap.of( entityKeyId, entity );
-        return updateEntitiesInEntitySet( entitySetId, entities, UpdateType.Merge );
+            @PathVariable(ENTITY_SET_ID) UUID entitySetId,
+            @PathVariable(ENTITY_KEY_ID) UUID entityKeyId,
+            @RequestBody Map<UUID, Set<Object>> entity) {
+        final var entities = ImmutableMap.of(entityKeyId, entity);
+        return updateEntitiesInEntitySet(entitySetId, entities, UpdateType.Merge);
     }
 
     @Override
@@ -424,234 +424,234 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     @Timed
     @Override
     @RequestMapping(
-            path = { "/" + ASSOCIATION },
+            path = {"/" + ASSOCIATION},
             method = RequestMethod.POST,
-            consumes = MediaType.APPLICATION_JSON_VALUE )
-    public ListMultimap<UUID, UUID> createAssociations( @RequestBody ListMultimap<UUID, DataEdge> associations ) {
+            consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ListMultimap<UUID, UUID> createAssociations(@RequestBody ListMultimap<UUID, DataEdge> associations) {
         //Ensure that we have read access to entity set metadata.
-        associations.keySet().forEach( entitySetId -> ensureReadAccess( new AclKey( entitySetId ) ) );
+        associations.keySet().forEach(entitySetId -> ensureReadAccess(new AclKey(entitySetId)));
 
         //Ensure that we can write properties.
-        final SetMultimap<UUID, UUID> requiredPropertyTypes = requiredAssociationPropertyTypes( associations );
-        accessCheck( aclKeysForAccessCheck( requiredPropertyTypes, WRITE_PERMISSION ) );
+        final SetMultimap<UUID, UUID> requiredPropertyTypes = requiredAssociationPropertyTypes(associations);
+        accessCheck(aclKeysForAccessCheck(requiredPropertyTypes, WRITE_PERMISSION));
 
         final Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySet = authzHelper
-                .getAuthorizedPropertiesOnEntitySets( associations.keySet(), WRITE_PERMISSION );
+                .getAuthorizedPropertiesOnEntitySets(associations.keySet(), WRITE_PERMISSION);
 
-        dataGraphServiceHelper.checkAssociationEntityTypes( associations );
+        dataGraphServiceHelper.checkAssociationEntityTypes(associations);
         Map<UUID, CreateAssociationEvent> associationsCreated = dgm
-                .createAssociations( associations, authorizedPropertyTypesByEntitySet );
+                .createAssociations(associations, authorizedPropertyTypesByEntitySet);
 
         ListMultimap<UUID, UUID> associationIds = ArrayListMultimap.create();
 
         UUID currentUserId = getCurrentUserId();
 
-        Stream<AuditableEvent> associationEntitiesCreated = associationsCreated.entrySet().stream().map( entry -> {
+        Stream<AuditableEvent> associationEntitiesCreated = associationsCreated.entrySet().stream().map(entry -> {
             UUID associationEntitySetId = entry.getKey();
-            OffsetDateTime writeDateTime = getDateTimeFromLong( entry.getValue().getEntityWriteEvent()
-                    .getVersion() );
-            associationIds.putAll( associationEntitySetId, entry.getValue().getIds() );
+            OffsetDateTime writeDateTime = getDateTimeFromLong(entry.getValue().getEntityWriteEvent()
+                    .getVersion());
+            associationIds.putAll(associationEntitySetId, entry.getValue().getIds());
 
             return new AuditableEvent(
                     currentUserId,
-                    new AclKey( associationEntitySetId ),
+                    new AclKey(associationEntitySetId),
                     AuditEventType.CREATE_ENTITIES,
                     "Create association entities using DataApi.createAssociations",
-                    Optional.of( Sets.newHashSet( entry.getValue().getIds() ) ),
+                    Optional.of(Sets.newHashSet(entry.getValue().getIds())),
                     ImmutableMap.of(),
                     writeDateTime,
                     Optional.empty()
             );
-        } );
+        });
 
         Stream<AuditableEvent> neighborMappingsCreated = associationsCreated
                 .entrySet()
                 .stream()
-                .flatMap( entry -> {
+                .flatMap(entry -> {
                     UUID associationEntitySetId = entry.getKey();
-                    OffsetDateTime writeDateTime = getDateTimeFromLong( entry.getValue().getEdgeWriteEvent()
-                            .getVersion() );
+                    OffsetDateTime writeDateTime = getDateTimeFromLong(entry.getValue().getEdgeWriteEvent()
+                            .getVersion());
 
-                    return Streams.mapWithIndex( entry.getValue().getIds().stream(),
-                            ( associationEntityKeyId, index ) -> {
+                    return Streams.mapWithIndex(entry.getValue().getIds().stream(),
+                            (associationEntityKeyId, index) -> {
 
-                                EntityDataKey associationEntityDataKey = new EntityDataKey( associationEntitySetId,
-                                        associationEntityKeyId );
-                                DataEdge dataEdge = associations.get( associationEntitySetId )
-                                        .get( Long.valueOf( index ).intValue() );
+                                EntityDataKey associationEntityDataKey = new EntityDataKey(associationEntitySetId,
+                                        associationEntityKeyId);
+                                DataEdge dataEdge = associations.get(associationEntitySetId)
+                                        .get(Long.valueOf(index).intValue());
 
                                 return Stream.<Triple<EntityDataKey, OffsetDateTime, Map<String, Object>>>of(
-                                        Triple.of( dataEdge.getSrc(),
+                                        Triple.of(dataEdge.getSrc(),
                                                 writeDateTime,
-                                                ImmutableMap.of( "association",
+                                                ImmutableMap.of("association",
                                                         associationEntityDataKey,
                                                         "neighbor",
                                                         dataEdge.getDst(),
                                                         "isSrc",
-                                                        true ) ),
-                                        Triple.of( dataEdge.getDst(),
+                                                        true)),
+                                        Triple.of(dataEdge.getDst(),
                                                 writeDateTime,
-                                                ImmutableMap.of( "association",
+                                                ImmutableMap.of("association",
                                                         associationEntityDataKey,
                                                         "neighbor",
                                                         dataEdge.getSrc(),
                                                         "isSrc",
-                                                        false ) ),
-                                        Triple.of( associationEntityDataKey,
+                                                        false)),
+                                        Triple.of(associationEntityDataKey,
                                                 writeDateTime,
-                                                ImmutableMap.of( "src",
+                                                ImmutableMap.of("src",
                                                         dataEdge.getSrc(),
                                                         "dst",
-                                                        dataEdge.getDst() ) ) );
-                            } );
-                } ).flatMap( Function.identity() ).map( triple -> new AuditableEvent(
+                                                        dataEdge.getDst())));
+                            });
+                }).flatMap(Function.identity()).map(triple -> new AuditableEvent(
                         currentUserId,
-                        new AclKey( triple.getLeft().getEntitySetId() ),
+                        new AclKey(triple.getLeft().getEntitySetId()),
                         AuditEventType.ASSOCIATE_ENTITIES,
                         "Create associations between entities using DataApi.createAssociations",
-                        Optional.of( ImmutableSet.of( triple.getLeft().getEntityKeyId() ) ),
+                        Optional.of(ImmutableSet.of(triple.getLeft().getEntityKeyId())),
                         triple.getRight(),
                         triple.getMiddle(),
                         Optional.empty()
-                ) );
+                ));
 
-        recordEvents( Stream.concat( associationEntitiesCreated, neighborMappingsCreated )
-                .collect( Collectors.toList() ) );
+        recordEvents(Stream.concat(associationEntitiesCreated, neighborMappingsCreated)
+                .collect(Collectors.toList()));
 
         return associationIds;
     }
 
     @Timed
     @Override
-    @PatchMapping( value = "/" + ASSOCIATION )
+    @PatchMapping(value = "/" + ASSOCIATION)
     public Integer replaceAssociationData(
             @RequestBody Map<UUID, Map<UUID, DataEdge>> associations,
-            @RequestParam( value = PARTIAL, required = false, defaultValue = "false" ) boolean partial ) {
-        associations.keySet().forEach( entitySetId -> ensureReadAccess( new AclKey( entitySetId ) ) );
+            @RequestParam(value = PARTIAL, required = false, defaultValue = "false") boolean partial) {
+        associations.keySet().forEach(entitySetId -> ensureReadAccess(new AclKey(entitySetId)));
 
         //Ensure that we can write properties.
-        final SetMultimap<UUID, UUID> requiredPropertyTypes = requiredAssociationPropertyTypes( associations );
-        accessCheck( aclKeysForAccessCheck( requiredPropertyTypes, WRITE_PERMISSION ) );
+        final SetMultimap<UUID, UUID> requiredPropertyTypes = requiredAssociationPropertyTypes(associations);
+        accessCheck(aclKeysForAccessCheck(requiredPropertyTypes, WRITE_PERMISSION));
 
         final Map<UUID, PropertyType> authorizedPropertyTypes = edmService
-                .getPropertyTypesAsMap( ImmutableSet.copyOf( requiredPropertyTypes.values() ) );
-        return associations.entrySet().stream().mapToInt( association -> {
+                .getPropertyTypesAsMap(ImmutableSet.copyOf(requiredPropertyTypes.values()));
+        return associations.entrySet().stream().mapToInt(association -> {
             final UUID entitySetId = association.getKey();
-            if ( partial ) {
-                return dgm.partialReplaceEntities( entitySetId,
-                        transformValues( association.getValue(), DataEdge::getData ),
-                        authorizedPropertyTypes ).getNumUpdates();
+            if (partial) {
+                return dgm.partialReplaceEntities(entitySetId,
+                        transformValues(association.getValue(), DataEdge::getData),
+                        authorizedPropertyTypes).getNumUpdates();
             } else {
 
-                return dgm.replaceEntities( entitySetId,
-                        transformValues( association.getValue(), DataEdge::getData ),
-                        authorizedPropertyTypes ).getNumUpdates();
+                return dgm.replaceEntities(entitySetId,
+                        transformValues(association.getValue(), DataEdge::getData),
+                        authorizedPropertyTypes).getNumUpdates();
             }
-        } ).sum();
+        }).sum();
     }
 
     @Timed
     @Override
-    @PostMapping( value = { "/", "" } )
-    public DataGraphIds createEntityAndAssociationData( @RequestBody DataGraph data ) {
+    @PostMapping(value = {"/", ""})
+    public DataGraphIds createEntityAndAssociationData(@RequestBody DataGraph data) {
         final ListMultimap<UUID, UUID> entityKeyIds = ArrayListMultimap.create();
         final ListMultimap<UUID, UUID> associationEntityKeyIds;
 
         //First create the entities so we have entity key ids to work with
-        Multimaps.asMap( data.getEntities() )
-                .forEach( ( entitySetId, entities ) ->
-                        entityKeyIds.putAll( entitySetId, createEntities( entitySetId, entities ) ) );
+        Multimaps.asMap(data.getEntities())
+                .forEach((entitySetId, entities) ->
+                        entityKeyIds.putAll(entitySetId, createEntities(entitySetId, entities)));
         final ListMultimap<UUID, DataEdge> toBeCreated = ArrayListMultimap.create();
-        Multimaps.asMap( data.getAssociations() )
-                .forEach( ( entitySetId, associations ) -> {
-                    for ( DataAssociation association : associations ) {
+        Multimaps.asMap(data.getAssociations())
+                .forEach((entitySetId, associations) -> {
+                    for (DataAssociation association : associations) {
                         final UUID srcEntitySetId = association.getSrcEntitySetId();
                         final UUID srcEntityKeyId = association
                                 .getSrcEntityKeyId()
-                                .orElseGet( () ->
-                                        entityKeyIds.get( srcEntitySetId )
-                                                .get( association.getSrcEntityIndex().get() ) );
+                                .orElseGet(() ->
+                                        entityKeyIds.get(srcEntitySetId)
+                                                .get(association.getSrcEntityIndex().get()));
 
                         final UUID dstEntitySetId = association.getDstEntitySetId();
                         final UUID dstEntityKeyId = association
                                 .getDstEntityKeyId()
-                                .orElseGet( () ->
-                                        entityKeyIds.get( dstEntitySetId )
-                                                .get( association.getDstEntityIndex().get() ) );
+                                .orElseGet(() ->
+                                        entityKeyIds.get(dstEntitySetId)
+                                                .get(association.getDstEntityIndex().get()));
 
                         toBeCreated.put(
                                 entitySetId,
                                 new DataEdge(
-                                        new EntityDataKey( srcEntitySetId, srcEntityKeyId ),
-                                        new EntityDataKey( dstEntitySetId, dstEntityKeyId ),
-                                        association.getData() ) );
+                                        new EntityDataKey(srcEntitySetId, srcEntityKeyId),
+                                        new EntityDataKey(dstEntitySetId, dstEntityKeyId),
+                                        association.getData()));
                     }
-                } );
-        associationEntityKeyIds = createAssociations( toBeCreated );
+                });
+        associationEntityKeyIds = createAssociations(toBeCreated);
 
         /* entity and association creation will be audited by createEntities and createAssociations */
 
-        return new DataGraphIds( entityKeyIds, associationEntityKeyIds );
+        return new DataGraphIds(entityKeyIds, associationEntityKeyIds);
     }
 
     @Timed
     @Override
     @RequestMapping(
-            path = { "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ALL },
-            method = RequestMethod.DELETE )
+            path = {"/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ALL},
+            method = RequestMethod.DELETE)
     public Integer deleteAllEntitiesFromEntitySet(
-            @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
-            @RequestParam( value = TYPE ) DeleteType deleteType ) {
+            @PathVariable(ENTITY_SET_ID) UUID entitySetId,
+            @RequestParam(value = TYPE) DeleteType deleteType) {
 
         WriteEvent writeEvent = deletionManager
-                .clearOrDeleteEntitySet( entitySetId, deleteType, Principals.getCurrentPrincipals() );
+                .clearOrDeleteEntitySet(entitySetId, deleteType, Principals.getCurrentPrincipals());
 
-        recordEvent( new AuditableEvent(
+        recordEvent(new AuditableEvent(
                 getCurrentUserId(),
-                new AclKey( entitySetId ),
+                new AclKey(entitySetId),
                 AuditEventType.DELETE_ENTITIES,
                 "All entities deleted from entity set using delete type " + deleteType.toString()
                         + " through DataApi.deleteAllEntitiesFromEntitySet",
                 Optional.empty(),
                 ImmutableMap.of(),
-                getDateTimeFromLong( writeEvent.getVersion() ),
+                getDateTimeFromLong(writeEvent.getVersion()),
                 Optional.empty()
-        ) );
+        ));
 
         return writeEvent.getNumUpdates();
     }
 
     @Timed
     @Override
-    @DeleteMapping( path = { "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH } )
+    @DeleteMapping(path = {"/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH})
     public Integer deleteEntity(
-            @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
-            @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId,
-            @RequestParam( value = TYPE ) DeleteType deleteType ) {
-        return deleteEntities( entitySetId, ImmutableSet.of( entityKeyId ), deleteType );
+            @PathVariable(ENTITY_SET_ID) UUID entitySetId,
+            @PathVariable(ENTITY_KEY_ID) UUID entityKeyId,
+            @RequestParam(value = TYPE) DeleteType deleteType) {
+        return deleteEntities(entitySetId, ImmutableSet.of(entityKeyId), deleteType);
     }
 
     @Timed
     @Override
-    @DeleteMapping( path = { "/" + ENTITY_SET + "/" + SET_ID_PATH } )
+    @DeleteMapping(path = {"/" + ENTITY_SET + "/" + SET_ID_PATH})
     public Integer deleteEntities(
-            @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
+            @PathVariable(ENTITY_SET_ID) UUID entitySetId,
             @RequestBody Set<UUID> entityKeyIds,
-            @RequestParam( value = TYPE ) DeleteType deleteType ) {
+            @RequestParam(value = TYPE) DeleteType deleteType) {
 
         WriteEvent writeEvent = deletionManager
-                .clearOrDeleteEntities( entitySetId, entityKeyIds, deleteType, Principals.getCurrentPrincipals() );
+                .clearOrDeleteEntities(entitySetId, entityKeyIds, deleteType, Principals.getCurrentPrincipals());
 
-        recordEvent( new AuditableEvent(
+        recordEvent(new AuditableEvent(
                 getCurrentUserId(),
-                new AclKey( entitySetId ),
+                new AclKey(entitySetId),
                 AuditEventType.DELETE_ENTITIES,
                 "Entities deleted using delete type " + deleteType.toString() + " through DataApi.deleteEntities",
-                Optional.of( entityKeyIds ),
+                Optional.of(entityKeyIds),
                 ImmutableMap.of(),
-                getDateTimeFromLong( writeEvent.getVersion() ),
+                getDateTimeFromLong(writeEvent.getVersion()),
                 Optional.empty()
-        ) );
+        ));
 
         return writeEvent.getNumUpdates();
     }
@@ -659,42 +659,42 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     @Timed
     @Override
     @DeleteMapping(
-            path = { "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH + "/" + PROPERTIES } )
+            path = {"/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH + "/" + PROPERTIES})
     public Integer deleteEntityProperties(
-            @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
-            @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId,
+            @PathVariable(ENTITY_SET_ID) UUID entitySetId,
+            @PathVariable(ENTITY_KEY_ID) UUID entityKeyId,
             @RequestBody Set<UUID> propertyTypeIds,
-            @RequestParam( value = TYPE ) DeleteType deleteType ) {
+            @RequestParam(value = TYPE) DeleteType deleteType) {
 
-        WriteEvent writeEvent = deletionManager.clearOrDeleteEntityProperties( entitySetId,
-                ImmutableSet.of( entityKeyId ),
+        WriteEvent writeEvent = deletionManager.clearOrDeleteEntityProperties(entitySetId,
+                ImmutableSet.of(entityKeyId),
                 deleteType,
                 propertyTypeIds,
-                Principals.getCurrentPrincipals() );
+                Principals.getCurrentPrincipals());
 
-        recordEvent( new AuditableEvent(
+        recordEvent(new AuditableEvent(
                 getCurrentUserId(),
-                new AclKey( entitySetId ),
+                new AclKey(entitySetId),
                 AuditEventType.DELETE_PROPERTIES_OF_ENTITIES,
                 "Entity properties deleted using delete type " + deleteType.toString()
                         + " through DataApi.deleteEntityProperties",
-                Optional.of( ImmutableSet.of( entityKeyId ) ),
-                ImmutableMap.of( "propertyTypeIds", propertyTypeIds ),
-                getDateTimeFromLong( writeEvent.getVersion() ),
+                Optional.of(ImmutableSet.of(entityKeyId)),
+                ImmutableMap.of("propertyTypeIds", propertyTypeIds),
+                getDateTimeFromLong(writeEvent.getVersion()),
                 Optional.empty()
-        ) );
+        ));
 
         return writeEvent.getNumUpdates();
     }
 
     @Timed
     @RequestMapping(
-            path = { "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + NEIGHBORS },
-            method = RequestMethod.POST )
+            path = {"/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + NEIGHBORS},
+            method = RequestMethod.POST)
     public Long deleteEntitiesAndNeighbors(
-            @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
+            @PathVariable(ENTITY_SET_ID) UUID entitySetId,
             @RequestBody EntityNeighborsFilter filter,
-            @RequestParam( value = TYPE ) DeleteType deleteType ) {
+            @RequestParam(value = TYPE) DeleteType deleteType) {
         // Note: this function is only useful for deleting src/dst entities and their neighboring entities
         // (along with associations connected to all of them), not associations.
         // If called with an association entity set, it will simplify down to a basic delete call.
@@ -702,56 +702,56 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         WriteEvent writeEvent = deletionManager.clearOrDeleteEntitiesAndNeighbors(
                 entitySetId,
                 filter.getEntityKeyIds(),
-                filter.getSrcEntitySetIds().orElse( ImmutableSet.of() ),
-                filter.getDstEntitySetIds().orElse( ImmutableSet.of() ),
+                filter.getSrcEntitySetIds().orElse(ImmutableSet.of()),
+                filter.getDstEntitySetIds().orElse(ImmutableSet.of()),
                 deleteType,
                 Principals.getCurrentPrincipals()
         );
 
-        recordEvent( new AuditableEvent(
+        recordEvent(new AuditableEvent(
                 getCurrentUserId(),
-                new AclKey( entitySetId ),
+                new AclKey(entitySetId),
                 AuditEventType.DELETE_ENTITY_AND_NEIGHBORHOOD,
                 "Entities and all neighbors deleted using delete type " + deleteType.toString() +
                         " through DataApi.clearEntityAndNeighborEntities",
-                Optional.of( filter.getEntityKeyIds() ),
+                Optional.of(filter.getEntityKeyIds()),
                 ImmutableMap.of(),
-                getDateTimeFromLong( writeEvent.getVersion() ),
+                getDateTimeFromLong(writeEvent.getVersion()),
                 Optional.empty()
-        ) );
+        ));
 
-        return writeEvent.getNumUpdates();
+        return Long.valueOf( writeEvent.getNumUpdates() );
 
     }
 
     @Timed
     @Override
     @RequestMapping(
-            path = { "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH },
-            method = RequestMethod.PUT )
+            path = {"/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH},
+            method = RequestMethod.PUT)
     public Integer replaceEntityInEntitySet(
-            @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
-            @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId,
-            @RequestBody Map<UUID, Set<Object>> entity ) {
-        ensureReadAccess( new AclKey( entitySetId ) );
-        Map<UUID, PropertyType> authorizedPropertyTypes = authzHelper.getAuthorizedPropertyTypes( entitySetId,
+            @PathVariable(ENTITY_SET_ID) UUID entitySetId,
+            @PathVariable(ENTITY_KEY_ID) UUID entityKeyId,
+            @RequestBody Map<UUID, Set<Object>> entity) {
+        ensureReadAccess(new AclKey(entitySetId));
+        Map<UUID, PropertyType> authorizedPropertyTypes = authzHelper.getAuthorizedPropertyTypes(entitySetId,
                 WRITE_PERMISSION,
-                edmService.getPropertyTypesAsMap( entity.keySet() ),
-                Principals.getCurrentPrincipals() );
+                edmService.getPropertyTypesAsMap(entity.keySet()),
+                Principals.getCurrentPrincipals());
 
         WriteEvent writeEvent = dgm
-                .replaceEntities( entitySetId, ImmutableMap.of( entityKeyId, entity ), authorizedPropertyTypes );
+                .replaceEntities(entitySetId, ImmutableMap.of(entityKeyId, entity), authorizedPropertyTypes);
 
-        recordEvent( new AuditableEvent(
+        recordEvent(new AuditableEvent(
                 getCurrentUserId(),
-                new AclKey( entitySetId ),
+                new AclKey(entitySetId),
                 AuditEventType.REPLACE_ENTITIES,
                 "Entity replaced through DataApi.replaceEntityInEntitySet",
-                Optional.of( ImmutableSet.of( entityKeyId ) ),
+                Optional.of(ImmutableSet.of(entityKeyId)),
                 ImmutableMap.of(),
-                getDateTimeFromLong( writeEvent.getVersion() ),
+                getDateTimeFromLong(writeEvent.getVersion()),
                 Optional.empty()
-        ) );
+        ));
 
         return writeEvent.getNumUpdates();
     }
@@ -759,57 +759,57 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     @Timed
     @Override
     @RequestMapping(
-            path = { "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH },
-            method = RequestMethod.POST )
+            path = {"/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH},
+            method = RequestMethod.POST)
     public Integer replaceEntityInEntitySetUsingFqns(
-            @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
-            @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId,
-            @RequestBody Map<FullQualifiedName, Set<Object>> entityByFqns ) {
+            @PathVariable(ENTITY_SET_ID) UUID entitySetId,
+            @PathVariable(ENTITY_KEY_ID) UUID entityKeyId,
+            @RequestBody Map<FullQualifiedName, Set<Object>> entityByFqns) {
         final Map<UUID, Set<Object>> entity = new HashMap<>();
 
         entityByFqns
-                .forEach( ( fqn, properties ) -> entity.put( edmService.getPropertyTypeId( fqn ), properties ) );
+                .forEach((fqn, properties) -> entity.put(edmService.getPropertyTypeId(fqn), properties));
 
-        return replaceEntityInEntitySet( entitySetId, entityKeyId, entity );
+        return replaceEntityInEntitySet(entitySetId, entityKeyId, entity);
     }
 
     @Timed
     @Override
     @RequestMapping(
-            path = { "/" + SET_ID_PATH + "/" + COUNT },
-            method = RequestMethod.GET )
-    public long getEntitySetSize( @PathVariable( ENTITY_SET_ID ) UUID entitySetId ) {
-        ensureReadAccess( new AclKey( entitySetId ) );
+            path = {"/" + SET_ID_PATH + "/" + COUNT},
+            method = RequestMethod.GET)
+    public long getEntitySetSize(@PathVariable(ENTITY_SET_ID) UUID entitySetId) {
+        ensureReadAccess(new AclKey(entitySetId));
 
         // If entityset is linking: should return distinct count of entities corresponding to the linking entity set,
         // which is the distinct count of linking_id s
-        return dgm.getEntitySetSize( entitySetId );
+        return dgm.getEntitySetSize(entitySetId);
     }
 
     @Timed
     @Override
     @RequestMapping(
-            path = { "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH },
-            method = RequestMethod.GET )
+            path = {"/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH},
+            method = RequestMethod.GET)
     public Map<FullQualifiedName, Set<Object>> getEntity(
-            @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
-            @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId ) {
-        ensureReadAccess( new AclKey( entitySetId ) );
-        EntitySet entitySet = edmService.getEntitySet( entitySetId );
+            @PathVariable(ENTITY_SET_ID) UUID entitySetId,
+            @PathVariable(ENTITY_KEY_ID) UUID entityKeyId) {
+        ensureReadAccess(new AclKey(entitySetId));
+        EntitySet entitySet = edmService.getEntitySet(entitySetId);
 
-        if ( entitySet.isLinking() ) {
-            checkState( !entitySet.getLinkedEntitySets().isEmpty(),
-                    "Linked entity sets are empty for linking entity set %s", entitySetId );
-            entitySet.getLinkedEntitySets().forEach( esId -> ensureReadAccess( new AclKey( esId ) ) );
+        if (entitySet.isLinking()) {
+            checkState(!entitySet.getLinkedEntitySets().isEmpty(),
+                    "Linked entity sets are empty for linking entity set %s", entitySetId);
+            entitySet.getLinkedEntitySets().forEach(esId -> ensureReadAccess(new AclKey(esId)));
 
             final Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes = authzHelper
-                    .getAuthorizedPropertiesByNormalEntitySets( entitySet, EnumSet.of( Permission.READ ) );
+                    .getAuthorizedPropertiesByNormalEntitySets(entitySet, EnumSet.of(Permission.READ));
 
-            return dgm.getLinkingEntity( entitySet.getLinkedEntitySets(), entityKeyId, authorizedPropertyTypes );
+            return dgm.getLinkingEntity(entitySet.getLinkedEntitySets(), entityKeyId, authorizedPropertyTypes);
         } else {
             final Map<UUID, PropertyType> authorizedPropertyTypes = authzHelper
-                    .getAuthorizedPropertyTypes( entitySetId, READ_PERMISSION );
-            return dgm.getEntity( entitySetId, entityKeyId, authorizedPropertyTypes );
+                    .getAuthorizedPropertyTypes(entitySetId, READ_PERMISSION);
+            return dgm.getEntity(entitySetId, entityKeyId, authorizedPropertyTypes);
         }
     }
 
@@ -817,57 +817,59 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     @Override
     @GetMapping(
             path = "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH + "/" + PROPERTY_TYPE_ID_PATH,
-            produces = MediaType.APPLICATION_JSON_VALUE )
+            produces = MediaType.APPLICATION_JSON_VALUE)
     public Set<Object> getEntity(
-            @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
-            @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId,
-            @PathVariable( PROPERTY_TYPE_ID ) UUID propertyTypeId ) {
-        ensureReadAccess( new AclKey( entitySetId ) );
-        final EntitySet entitySet = edmService.getEntitySet( entitySetId );
+            @PathVariable(ENTITY_SET_ID) UUID entitySetId,
+            @PathVariable(ENTITY_KEY_ID) UUID entityKeyId,
+            @PathVariable(PROPERTY_TYPE_ID) UUID propertyTypeId) {
+        ensureReadAccess(new AclKey(entitySetId));
+        final EntitySet entitySet = edmService.getEntitySet(entitySetId);
 
-        if ( entitySet.isLinking() ) {
-            checkState( !entitySet.getLinkedEntitySets().isEmpty(),
-                    "Linked entity sets are empty for linking entity set %s", entitySetId );
+        if (entitySet.isLinking()) {
+            checkState(!entitySet.getLinkedEntitySets().isEmpty(),
+                    "Linked entity sets are empty for linking entity set %s", entitySetId);
 
-            entitySet.getLinkedEntitySets().forEach( esId -> ensureReadAccess( new AclKey( esId ) ) );
+            entitySet.getLinkedEntitySets().forEach(esId -> ensureReadAccess(new AclKey(esId)));
 
             final Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes = authzHelper
                     .getAuthorizedPropertyTypesByNormalEntitySet(
                             entitySet,
-                            Set.of( propertyTypeId ),
-                            EnumSet.of( Permission.READ ) );
+                            Set.of(propertyTypeId),
+                            EnumSet.of(Permission.READ));
 
             // if any of its normal entitysets don't have read permission on property type, reading is not allowed
-            if ( authorizedPropertyTypes.values().iterator().next().isEmpty() ) {
-                throw new ForbiddenException( "Not authorized to read property type " + propertyTypeId
-                        + " in one or more normal entity sets of linking entity set " + entitySetId );
+            if (authorizedPropertyTypes.values().iterator().next().isEmpty()) {
+                throw new ForbiddenException("Not authorized to read property type " + propertyTypeId
+                        + " in one or more normal entity sets of linking entity set " + entitySetId);
             }
 
-            final var propertyTypeFqn = authorizedPropertyTypes.values().iterator().next().get( propertyTypeId )
+            final var propertyTypeFqn = authorizedPropertyTypes.values().iterator().next().get(propertyTypeId)
                     .getType();
 
             return dgm.getLinkingEntity(
                     entitySet.getLinkedEntitySets(),
                     entityKeyId,
-                    authorizedPropertyTypes )
-                    .get( propertyTypeFqn );
+                    authorizedPropertyTypes)
+                    .get(propertyTypeFqn);
         } else {
-            ensureReadAccess( new AclKey( entitySetId, propertyTypeId ) );
+            ensureReadAccess(new AclKey(entitySetId, propertyTypeId));
             final Map<UUID, PropertyType> authorizedPropertyTypes = edmService
-                    .getPropertyTypesAsMap( ImmutableSet.of( propertyTypeId ) );
+                    .getPropertyTypesAsMap(ImmutableSet.of(propertyTypeId));
 
-            final var propertyTypeFqn = authorizedPropertyTypes.get( propertyTypeId ).getType();
+            final var propertyTypeFqn = authorizedPropertyTypes.get(propertyTypeId).getType();
 
-            return dgm.getEntity( entitySetId, entityKeyId, authorizedPropertyTypes )
-                    .get( propertyTypeFqn );
+            return dgm.getEntity(entitySetId, entityKeyId, authorizedPropertyTypes)
+                    .get(propertyTypeFqn);
         }
     }
 
     private UUID getCurrentUserId() {
-        return spm.getPrincipal( Principals.getCurrentUser().getId() ).getId();
+        return spm.getPrincipal(Principals.getCurrentUser().getId()).getId();
     }
 
-    @NotNull @Override public AuditingManager getAuditingManager() {
+    @NotNull
+    @Override
+    public AuditingManager getAuditingManager() {
         return auditingManager;
     }
 
@@ -875,49 +877,49 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
      * Methods for setting http response header
      */
 
-    private static void setDownloadContentType( HttpServletResponse response, FileType fileType ) {
-        if ( fileType == FileType.csv ) {
-            response.setContentType( CustomMediaType.TEXT_CSV_VALUE );
+    private static void setDownloadContentType(HttpServletResponse response, FileType fileType) {
+        if (fileType == FileType.csv) {
+            response.setContentType(CustomMediaType.TEXT_CSV_VALUE);
         } else {
-            response.setContentType( MediaType.APPLICATION_JSON_VALUE );
+            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         }
     }
 
     private static void setContentDisposition(
             HttpServletResponse response,
             String fileName,
-            FileType fileType ) {
-        if ( fileType == FileType.csv || fileType == FileType.json ) {
-            response.setHeader( "Content-Disposition",
-                    "attachment; filename=" + fileName + "." + fileType.toString() );
+            FileType fileType) {
+        if (fileType == FileType.csv || fileType == FileType.json) {
+            response.setHeader("Content-Disposition",
+                    "attachment; filename=" + fileName + "." + fileType.toString());
         }
     }
 
-    private static SetMultimap<UUID, UUID> requiredAssociationPropertyTypes( ListMultimap<UUID, DataEdge> associations ) {
+    private static SetMultimap<UUID, UUID> requiredAssociationPropertyTypes(ListMultimap<UUID, DataEdge> associations) {
         final SetMultimap<UUID, UUID> propertyTypesByEntitySet = HashMultimap.create();
-        associations.entries().forEach( entry -> propertyTypesByEntitySet
-                .putAll( entry.getKey(), entry.getValue().getData().keySet() ) );
+        associations.entries().forEach(entry -> propertyTypesByEntitySet
+                .putAll(entry.getKey(), entry.getValue().getData().keySet()));
         return propertyTypesByEntitySet;
     }
 
-    private static SetMultimap<UUID, UUID> requiredAssociationPropertyTypes( Map<UUID, Map<UUID, DataEdge>> associations ) {
+    private static SetMultimap<UUID, UUID> requiredAssociationPropertyTypes(Map<UUID, Map<UUID, DataEdge>> associations) {
         final SetMultimap<UUID, UUID> propertyTypesByEntitySet = HashMultimap.create();
-        associations.forEach( ( esId, edges ) -> edges.values()
-                .forEach( de -> propertyTypesByEntitySet.putAll( esId, de.getData().keySet() ) ) );
+        associations.forEach((esId, edges) -> edges.values()
+                .forEach(de -> propertyTypesByEntitySet.putAll(esId, de.getData().keySet())));
         return propertyTypesByEntitySet;
     }
 
-    private static Set<UUID> requiredEntitySetPropertyTypes( Map<UUID, Map<UUID, Set<Object>>> entities ) {
-        return entities.values().stream().map( Map::keySet ).flatMap( Set::stream )
-                .collect( Collectors.toSet() );
+    private static Set<UUID> requiredEntitySetPropertyTypes(Map<UUID, Map<UUID, Set<Object>>> entities) {
+        return entities.values().stream().map(Map::keySet).flatMap(Set::stream)
+                .collect(Collectors.toSet());
     }
 
-    private static Set<UUID> requiredReplacementPropertyTypes( Map<UUID, Map<UUID, Set<Map<ByteBuffer, Object>>>> entities ) {
-        return entities.values().stream().flatMap( m -> m.keySet().stream() ).collect( Collectors.toSet() );
+    private static Set<UUID> requiredReplacementPropertyTypes(Map<UUID, Map<UUID, Set<Map<ByteBuffer, Object>>>> entities) {
+        return entities.values().stream().flatMap(m -> m.keySet().stream()).collect(Collectors.toSet());
     }
 
-    private static OffsetDateTime getDateTimeFromLong( long epochTime ) {
-        return OffsetDateTime.ofInstant( Instant.ofEpochMilli( epochTime ), ZoneId.systemDefault() );
+    private static OffsetDateTime getDateTimeFromLong(long epochTime) {
+        return OffsetDateTime.ofInstant(Instant.ofEpochMilli(epochTime), ZoneId.systemDefault());
     }
 
 }
