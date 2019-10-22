@@ -699,50 +699,14 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         // (along with associations connected to all of them), not associations.
         // If called with an association entity set, it will simplify down to a basic delete call.
 
-        Set<Principal> principals = Principals.getCurrentPrincipals();
-
-        final Set<UUID> entityKeyIds = filter.getEntityKeyIds();
-
-        // we don't include associations in filtering, since they will be deleted anyways with deleting the entities
-        final Set<UUID> filteringNeighborEntitySetIds = Stream
-                .of( filter.getSrcEntitySetIds().orElse( Set.of() ), filter.getDstEntitySetIds().orElse( Set.of() ) )
-                .flatMap( Set::stream )
-                .collect( Collectors.toSet() );
-
-        // if no neighbor entity set ids are defined to delete from, it reduces down to a simple deleteEntities call
-        if ( filteringNeighborEntitySetIds.isEmpty() ) {
-            return Integer
-                    .valueOf( deletionManager.clearOrDeleteEntities( entitySetId, entityKeyIds, deleteType, principals )
-                            .getNumUpdates() ).longValue();
-        }
-
-        /*
-         * 1 - collect all neighbor entities, organized by EntitySet
-         */
-
-        boolean includeClearedEdges = deleteType.equals( DeleteType.Hard );
-        Map<UUID, Set<EntityDataKey>> entitySetIdToEntityDataKeysMap = dgm
-                .getEdgesConnectedToEntities( entitySetId, entityKeyIds, includeClearedEdges )
-                .stream()
-                .filter( edge ->
-                        ( edge.getDst().getEntitySetId().equals( entitySetId )
-                                && filteringNeighborEntitySetIds.contains( edge.getSrc().getEntitySetId() ) )
-                                || ( edge.getSrc().getEntitySetId().equals( entitySetId )
-                                && filteringNeighborEntitySetIds.contains( edge.getDst().getEntitySetId() ) ) )
-                .flatMap( edge -> Stream.of( edge.getSrc(), edge.getDst() ) )
-                .collect( Collectors.groupingBy( EntityDataKey::getEntitySetId, Collectors.toSet() ) );
-
-        /*
-         * 2 - delete all entities
-         */
-
-        /* Delete entity */
-
-        long numUpdates = 0;
-
-        WriteEvent writeEvent = deletionManager
-                .clearOrDeleteEntities( entitySetId, entityKeyIds, deleteType, principals );
-        numUpdates += writeEvent.getNumUpdates();
+        WriteEvent writeEvent = deletionManager.clearOrDeleteEntitiesAndNeighbors(
+                entitySetId,
+                filter.getEntityKeyIds(),
+                filter.getSrcEntitySetIds().orElse( ImmutableSet.of() ),
+                filter.getDstEntitySetIds().orElse( ImmutableSet.of() ),
+                deleteType,
+                Principals.getCurrentPrincipals()
+        );
 
         recordEvent( new AuditableEvent(
                 getCurrentUserId(),
@@ -750,45 +714,13 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                 AuditEventType.DELETE_ENTITY_AND_NEIGHBORHOOD,
                 "Entities and all neighbors deleted using delete type " + deleteType.toString() +
                         " through DataApi.clearEntityAndNeighborEntities",
-                Optional.of( entityKeyIds ),
+                Optional.of( filter.getEntityKeyIds() ),
                 ImmutableMap.of(),
                 getDateTimeFromLong( writeEvent.getVersion() ),
                 Optional.empty()
         ) );
 
-        /* 3 - Delete neighbors */
-
-        List<AuditableEvent> neighborDeleteEvents = Lists.newArrayList();
-
-        numUpdates += entitySetIdToEntityDataKeysMap.entrySet().stream().mapToInt( entry -> {
-                    final UUID neighborEntitySetId = entry.getKey();
-                    final Set<UUID> neighborEntityKeyIds = entry.getValue().stream().map( EntityDataKey::getEntityKeyId )
-                            .collect( Collectors.toSet() );
-
-                    WriteEvent neighborWriteEvent = deletionManager.clearOrDeleteEntities( neighborEntitySetId,
-                            neighborEntityKeyIds,
-                            deleteType,
-                            principals );
-
-                    neighborDeleteEvents.add( new AuditableEvent(
-                            getCurrentUserId(),
-                            new AclKey( neighborEntitySetId ),
-                            AuditEventType.DELETE_ENTITY_AS_PART_OF_NEIGHBORHOOD,
-                            "Entity deleted using delete type " + deleteType.toString() + " as part of " +
-                                    "neighborhood delete through DataApi.clearEntityAndNeighborEntities",
-                            Optional.of( neighborEntityKeyIds ),
-                            ImmutableMap.of(),
-                            getDateTimeFromLong( neighborWriteEvent.getVersion() ),
-                            Optional.empty()
-                    ) );
-
-                    return neighborWriteEvent.getNumUpdates();
-                }
-        ).sum();
-
-        recordEvents( neighborDeleteEvents );
-
-        return numUpdates;
+        return writeEvent.getNumUpdates();
 
     }
 
