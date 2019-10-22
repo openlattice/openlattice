@@ -1,11 +1,9 @@
 package com.openlattice.organizations
 
 import com.google.common.base.Preconditions.checkState
-import com.google.common.collect.SetMultimap
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
 import com.hazelcast.query.Predicates
-import com.openlattice.assembler.AssemblerConfiguration
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.AssemblerConnectionManager.Companion.PUBLIC_SCHEMA
 import com.openlattice.assembler.PostgresDatabases
@@ -23,12 +21,10 @@ import com.openlattice.organizations.roles.SecurePrincipalsManager
 
 import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.ResultSetAdapters.organizationId
-import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
-import java.sql.PreparedStatement
 import java.util.*
 import kotlin.collections.LinkedHashMap
 
@@ -384,8 +380,8 @@ class ExternalDatabaseManagementService(
         return tableNames
     }
 
-    fun getColumnIdsByTable(orgId: UUID, dbName: String, tableIds: Set<UUID>): Map<String, Set<String>> {
-        val columnIdsByTableId = HashMap<String, MutableSet<String>>()
+    fun getColumnNamesByTable(orgId: UUID, dbName: String): Map<String, Set<String>> {
+        val columnNamesByTableName = HashMap<String, MutableSet<String>>()
         assemblerConnectionManager.connect(dbName).use { dataSource ->
             dataSource.connection.createStatement().use { stmt ->
                 val rs = stmt.executeQuery(
@@ -399,15 +395,20 @@ class ExternalDatabaseManagementService(
                 while (rs.next()) {
                     val tableName = rs.getString("table_name")
                     val columnName = rs.getString("column_name")
-                    columnIdsByTableId.getOrPut(tableName) { mutableSetOf() }.add(columnName)
+                    columnNamesByTableName.getOrPut(tableName) { mutableSetOf() }.add(columnName)
                 }
             }
 
         }
-        return columnIdsByTableId
+        return columnNamesByTableName
     }
 
-    fun createNewColumnObjects(dbName: String, tableName: String, tableId: UUID, orgId: UUID): Set<OrganizationExternalDatabaseColumn> {
+    fun createNewColumnObjects(dbName: String, tableName: String, tableId: UUID, orgId: UUID, columnName: Optional<String>): Set<OrganizationExternalDatabaseColumn> {
+        val columnCondition = if (columnName.isPresent) {
+            "AND information_schema.columns.column_name = '${columnName.get()}'"
+        } else {
+            ""
+        }
         val newColumns = mutableSetOf<OrganizationExternalDatabaseColumn>()
         assemblerConnectionManager.connect(dbName).use { dataSource ->
             dataSource.connection.createStatement().use { stmt ->
@@ -423,7 +424,8 @@ class ExternalDatabaseManagementService(
                                 "LEFT OUTER JOIN information_schema.table_constraints " +
                                 "on information_schema.constraint_column_usage.constraint_name = " +
                                 "information_schema.table_constraints.constraint_name " +
-                                "WHERE information_schema.columns.table_name = '$tableName'"
+                                "WHERE information_schema.columns.table_name = '$tableName' " +
+                                "$columnCondition"
                 )
                 while (rs.next()) {
                     val columnName = rs.getString("column_name")
@@ -498,3 +500,4 @@ class ExternalDatabaseManagementService(
 //LEFT OUTER JOIN information_schema.table_constraints on information_schema.constraint_column_usage.constraint_name =
 //information_schema.table_constraints.constraint_name
 //WHERE information_schema.columns.table_name = '$tableName'
+//AND information_schema.columns.column_name = '$columnName'
