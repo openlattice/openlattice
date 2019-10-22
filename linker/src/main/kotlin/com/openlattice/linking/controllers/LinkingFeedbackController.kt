@@ -21,6 +21,7 @@
 
 package com.openlattice.linking.controllers
 
+import com.google.common.collect.Sets
 import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
@@ -35,7 +36,6 @@ import com.openlattice.linking.util.PersonProperties
 import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.*
-import java.util.*
 import javax.inject.Inject
 
 @RestController
@@ -64,11 +64,15 @@ constructor(
     override fun addLinkingFeedback(@RequestBody feedback: LinkingFeedback): Int {
         if (feedback.link.isEmpty() || feedback.link.size + feedback.unlink.size < 2) {
             throw IllegalArgumentException(
-                    "Cannot submit feedback for less than 2 entities or if no positively linking entity is provided")
+                    "Cannot submit feedback for less than 2 entities or if no positively linking entity is provided"
+            )
         }
 
-        if( !Collections.disjoint( feedback.link, feedback.unlink )) {
-            throw IllegalArgumentException("Cannot submit feedback with and entity being both linking and non-linking")
+        val interSection = Sets.intersection(feedback.link, feedback.unlink)
+        if (!interSection.isEmpty()) {
+            throw IllegalArgumentException(
+                    "Cannot submit feedback with entities $interSection being both linking and non-linking"
+            )
         }
 
         // ensure read access on linking entity set
@@ -130,7 +134,7 @@ constructor(
     private fun createLinkingFeedbackCombinations(
             entityDataKey: EntityDataKey, entityList: Array<EntityDataKey>, offset: Int, linked: Boolean): Int {
         (offset until entityList.size).forEach {
-            val elf = EntityLinkingFeedback(EntityKeyPair( entityDataKey, entityList[it] ), linked)
+            val elf = EntityLinkingFeedback(EntityKeyPair(entityDataKey, entityList[it]), linked)
 
             feedbackService.addLinkingFeedback(elf)
 
