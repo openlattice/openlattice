@@ -99,10 +99,6 @@ class BackgroundLinkingIndexingService(
             HazelcastQueue.LINKING_INDEXING.name
     )
 
-    init {
-        hazelcastInstance.config.getQueueConfig(HazelcastQueue.LINKING_INDEXING.name).maxSize = FETCH_SIZE
-    }
-
     @Suppress("UNUSED")
     private val linkingIndexingWorker = executor.submit {
         generateSequence(candidates::take)
