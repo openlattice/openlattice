@@ -40,6 +40,6 @@ constructor(
 
     @JsonIgnore
     override fun getCategory(): SecurableObjectType {
-        return SecurableObjectType.OrganizationAtlasTable
+        return SecurableObjectType.OrganizationExternalDatabaseTable
     }
 }

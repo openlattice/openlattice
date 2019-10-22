@@ -36,7 +36,6 @@ public enum SecurableObjectType {
     Principal,
     Role,
     Unknown,
-    OrganizationAtlasDatabase,
-    OrganizationAtlasTable,
-    OrganizationAtlasColumn
+    OrganizationExternalDatabaseTable,
+    OrganizationExternalDatabaseColumn
 }

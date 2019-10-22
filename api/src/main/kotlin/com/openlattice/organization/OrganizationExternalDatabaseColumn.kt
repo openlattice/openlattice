@@ -31,7 +31,8 @@ constructor(
         @JsonProperty(SerializationConstants.TABLE_ID) var tableId: UUID,
         @JsonProperty(SerializationConstants.ORGANIZATION_ID) var organizationId: UUID,
         @JsonProperty(SerializationConstants.DATATYPE_FIELD) var dataType: String,
-        @JsonProperty(SerializationConstants.IS_PRIMARY_KEY) var isPrimaryKey: Boolean
+        @JsonProperty(SerializationConstants.IS_PRIMARY_KEY) var isPrimaryKey: Boolean,
+        @JsonProperty(SerializationConstants.ORDINAL_POSITION) var ordinalPosition: Int
 ) : AbstractSecurableObject(id, title, description) {
 
     constructor(
@@ -42,11 +43,12 @@ constructor(
             tableId: UUID,
             organizationId: UUID,
             dataType: String,
-            isPrimaryKey: Boolean
-    ) : this(Optional.of(id), name, title, description, tableId, organizationId, dataType, isPrimaryKey)
+            isPrimaryKey: Boolean,
+            ordinalPosition: Int
+    ) : this(Optional.of(id), name, title, description, tableId, organizationId, dataType, isPrimaryKey, ordinalPosition)
 
     @JsonIgnore
     override fun getCategory(): SecurableObjectType {
-        return SecurableObjectType.OrganizationAtlasColumn
+        return SecurableObjectType.OrganizationExternalDatabaseColumn
     }
 }
