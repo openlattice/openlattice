@@ -2771,7 +2771,7 @@ paths:
   ## ADMIN APIs ##
   ################
   
-  /indexer/reindex:
+  /indexer/index/reindex:
     get:
       summary: Retrieve the current state of reindexing jobs
       operationId: getIndexingState
