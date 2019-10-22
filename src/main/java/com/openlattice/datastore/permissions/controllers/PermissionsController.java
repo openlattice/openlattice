@@ -24,16 +24,21 @@ import com.codahale.metrics.annotation.Timed;
 import com.dataloom.streams.StreamUtil;
 import com.google.common.collect.*;
 import com.google.common.eventbus.EventBus;
+import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.core.IMap;
 import com.openlattice.assembler.PostgresDatabases;
 import com.openlattice.authorization.*;
+import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.controllers.exceptions.BadRequestException;
 import com.openlattice.controllers.exceptions.ForbiddenException;
+import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.organizations.ExternalDatabaseManagementService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 
 import org.slf4j.Logger;
@@ -57,6 +62,17 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
 
     @Inject
     private ExternalDatabaseManagementService edms;
+
+    @Inject
+    private HazelcastInstance hazelcastInstance;
+
+    private IMap<AclKey, SecurableObjectType> securableObjectTypes;
+
+    @PostConstruct
+    public Void init() {
+        this.securableObjectTypes = hazelcastInstance.getMap( HazelcastMap.SECURABLE_OBJECT_TYPES.name() );
+        return null;
+    }
 
     @Override
     @Timed
@@ -102,15 +118,19 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
             switch ( action ) {
                 case ADD:
                     authorizations.addPermissions( acls );
+                    edms.executePrivilegesUpdate( action, getOrganizationExternalDatabaseAcls( acls ) );
                     break;
 
                 case REMOVE:
                     authorizations.removePermissions( acls );
+                    edms.executePrivilegesUpdate( action, getOrganizationExternalDatabaseAcls( acls ) );
                     break;
 
                 case SET:
                     authorizations.setPermissions( acls );
+                    edms.executePrivilegesUpdate( action, getOrganizationExternalDatabaseAcls( acls ) );
                     break;
+
                 default:
                     logger.error( "Invalid action {} specified for request.", action );
                     throw new BadRequestException( "Invalid action specified: " + action );
@@ -119,21 +139,6 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
 
         return null;
     }
-
-    @Timed
-    @Override
-    @PostMapping( value = BASE + UPDATE + ID_PATH )
-    public Void updateExternalDatabaseAcls(
-            @PathVariable(ID_PATH) UUID organizationId,
-            @RequestBody List<AclData> req){
-        updateAcls( req );
-        String dbName = PostgresDatabases.buildOrganizationDatabaseName( organizationId );
-        edms.updateExternalDatabasePermissions( dbName, req );
-
-        return null;
-    }
-
-
 
     @Override
     @Timed
@@ -219,5 +224,12 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
     @Override
     public AuthorizationManager getAuthorizationManager() {
         return authorizations;
+    }
+
+    private List<Acl> getOrganizationExternalDatabaseAcls(List<Acl> acls) {
+        return acls.stream().filter( acl -> {
+            SecurableObjectType type = securableObjectTypes.get( new AclKey( acl.getAclKey() ) );
+            return type == SecurableObjectType.OrganizationExternalDatabaseColumn || type == SecurableObjectType.OrganizationExternalDatabaseTable;
+        }).collect( Collectors.toList() );
     }
 }
