@@ -1,6 +1,7 @@
 package com.openlattice.organizations
 
 import com.google.common.base.Preconditions.checkState
+import com.google.common.collect.SetMultimap
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
 import com.hazelcast.query.Predicates
@@ -21,6 +22,7 @@ import com.openlattice.organizations.processors.UpdateOrganizationExternalDataba
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 
 import com.openlattice.postgres.DataTables.quote
+import com.openlattice.postgres.ResultSetAdapters.organizationId
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.FullQualifiedName
@@ -29,11 +31,11 @@ import org.springframework.stereotype.Service
 import java.sql.PreparedStatement
 import java.util.*
 import kotlin.collections.LinkedHashMap
-import com.typesafe.config.ConfigFactory
 
 @Service
 class ExternalDatabaseManagementService(
         private val hazelcastInstance: HazelcastInstance,
+        private val hds: HikariDataSource,
         private val assemblerConnectionManager: AssemblerConnectionManager, //for now using this, may need to move connection logic to its own file
         private val securePrincipalsManager: SecurePrincipalsManager,
         private val aclKeyReservations: HazelcastAclKeyReservationService,
@@ -239,49 +241,29 @@ class ExternalDatabaseManagementService(
         }
     }
 
-    fun deleteOrganizationExternalDatabaseTables(orgId: UUID, tableNameById: Map<UUID, String>) {
-        tableNameById.forEach { deleteOrganizationExternalDatabaseTable(orgId, it.value, it.key) }
+    fun deleteOrganizationExternalDatabaseTables(orgId: UUID, tableIds: Set<UUID>) {
+        tableIds.forEach { deleteOrganizationExternalDatabaseTable(orgId, it) }
     }
 
-    fun deleteOrganizationExternalDatabaseTable(orgId: UUID, tableName: String, tableId: UUID) {
+    fun deleteOrganizationExternalDatabaseTable(orgId: UUID, tableId: UUID) {
         organizationExternalDatabaseTables.remove(tableId) //TODO make this a set so we can batch delete, entry processor?
         aclKeyReservations.release(tableId)
-
-        //drop table from external database
-        val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
-        val tableNamePath = "$PUBLIC_SCHEMA.$tableName"
-        assemblerConnectionManager.connect(dbName).use {
-            it.connection.createStatement().use { stmt ->
-                stmt.execute("DROP TABLE IF EXISTS $tableNamePath")
-            }
-        }
 
         //delete columns that belonged to this table
         val belongsToDeletedTable = Predicates.equal("tableId", tableId)
         val columnsToDelete = organizationExternalDatabaseColumns.values(belongsToDeletedTable)
-        columnsToDelete.forEach {
-            organizationExternalDatabaseColumns.remove(it.id)
-            aclKeyReservations.release(it.id)
-        }
+        val columnIds = columnsToDelete.map { it.id }.toSet()
+        deleteOrganizationExternalDatabaseColumns(orgId, columnIds)
 
     }
 
-    fun deleteOrganizationExternalDatabaseColumns(orgId: UUID, tableName: String, columnNameById: Map<UUID, String>) {
-        columnNameById.forEach { deleteOrganizationExternalDatabaseColumn(orgId, tableName, it.value, it.key) }
+    fun deleteOrganizationExternalDatabaseColumns(orgId: UUID, columnIds: Set<UUID>) {
+        columnIds.forEach { deleteOrganizationExternalDatabaseColumn(orgId, it) }
     }
 
-    fun deleteOrganizationExternalDatabaseColumn(orgId: UUID, tableName: String, columnName: String, columnId: UUID) {
+    fun deleteOrganizationExternalDatabaseColumn(orgId: UUID, columnId: UUID) {
         organizationExternalDatabaseColumns.remove(columnId) //TODO make this a set so we can batch delete, entry processor?
         aclKeyReservations.release(columnId)
-
-        //drop column from table in external database
-        val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
-        val tableNamePath = "$PUBLIC_SCHEMA.$tableName"
-        assemblerConnectionManager.connect(dbName).use {
-            it.connection.createStatement().use { stmt ->
-                stmt.execute("ALTER TABLE IF EXISTS $tableNamePath DROP COLUMN IF EXISTS $columnName")
-            }
-        }
     }
 
     /**
@@ -374,6 +356,97 @@ class ExternalDatabaseManagementService(
         }
     }
 
+    fun getOrganizationDBNames(): Set<UUID> {
+        val orgIds = mutableSetOf<UUID>()
+        hds.connection.createStatement().use {
+            val rs = it.executeQuery("SELECT id FROM organizations")
+            while (rs.next()) {
+                orgIds.add(organizationId(rs))
+            }
+        }
+        return orgIds
+    }
+
+    fun getCurrentTables(dbName: String): Set<String> {
+        val tableNames = mutableSetOf<String>()
+        assemblerConnectionManager.connect(dbName).use { dataSource ->
+            dataSource.connection.createStatement().use { stmt ->
+                val rs = stmt.executeQuery("SELECT table_name FROM information_schema.tables " +
+                        "WHERE table_schema='$PUBLIC_SCHEMA' " +
+                        "AND table_type='BASE TABLE'")
+                while (rs.next()) {
+                    val tableName = rs.getString("table_name")
+                    tableNames.add(tableName)
+                }
+
+            }
+        }
+        return tableNames
+    }
+
+    fun getColumnIdsByTable(orgId: UUID, dbName: String, tableIds: Set<UUID>): Map<String, Set<String>> {
+        val columnIdsByTableId = HashMap<String, MutableSet<String>>()
+        assemblerConnectionManager.connect(dbName).use { dataSource ->
+            dataSource.connection.createStatement().use { stmt ->
+                val rs = stmt.executeQuery(
+                        "SELECT information_schema.tables.table_name, information_schema.columns.column_name " +
+                                "FROM information_schema.tables " +
+                                "LEFT JOIN information_schema.columns on " +
+                                "information_schema.tables.table_name = information_schema.columns.table_name " +
+                                "WHERE information_schema.tables.table_schema='$PUBLIC_SCHEMA' " +
+                                "AND table_type='BASE TABLE' " +
+                                "ORDER BY information_schema.tables.table_name")
+                while (rs.next()) {
+                    val tableName = rs.getString("table_name")
+                    val columnName = rs.getString("column_name")
+                    columnIdsByTableId.getOrPut(tableName) { mutableSetOf() }.add(columnName)
+                }
+            }
+
+        }
+        return columnIdsByTableId
+    }
+
+    fun createNewColumnObjects(dbName: String, tableName: String, tableId: UUID, orgId: UUID): Set<OrganizationExternalDatabaseColumn> {
+        val newColumns = mutableSetOf<OrganizationExternalDatabaseColumn>()
+        assemblerConnectionManager.connect(dbName).use { dataSource ->
+            dataSource.connection.createStatement().use { stmt ->
+                val rs = stmt.executeQuery(
+                        "SELECT information_schema.tables.table_name, information_schema.columns.column_name, " +
+                                "information_schema.columns.data_type, information_schema.columns.ordinal_position, " +
+                                "information_schema.table_constraints.constraint_type " +
+                                "FROM information_schema.tables " +
+                                "LEFT JOIN information_schema.columns on information_schema.tables.table_name = " +
+                                "information_schema.columns.table_name " +
+                                "LEFT OUTER JOIN information_schema.constraint_column_usage on " +
+                                "information_schema.columns.column_name = information_schema.constraint_column_usage.column_name " +
+                                "LEFT OUTER JOIN information_schema.table_constraints " +
+                                "on information_schema.constraint_column_usage.constraint_name = " +
+                                "information_schema.table_constraints.constraint_name " +
+                                "WHERE information_schema.columns.table_name = '$tableName'"
+                )
+                while (rs.next()) {
+                    val columnName = rs.getString("column_name")
+                    val dataType = rs.getString("data_type")
+                    val position = rs.getInt( "ordinal_position")
+                    val isPrimaryKey = rs.getString("constraint_type") == "PRIMARY KEY"
+                    val newColumn = OrganizationExternalDatabaseColumn(
+                            Optional.empty(),
+                            columnName,
+                            columnName,
+                            Optional.empty(),
+                            tableId,
+                            orgId,
+                            dataType,
+                            isPrimaryKey,
+                            position)
+                    newColumns.add(newColumn)
+                }
+            }
+        }
+        return newColumns
+    }
+
     private fun getDBUser(principalId: String): String {
         val securePrincipal = securePrincipalsManager.getPrincipal(principalId)
         return quote(buildPostgresUsername(securePrincipal))
@@ -390,3 +463,38 @@ class ExternalDatabaseManagementService(
     }
 
 }
+
+//to get column names by table
+//SELECT information_schema.tables.table_name, information_schema.columns.column_name
+//FROM information_schema.tables
+//LEFT JOIN information_schema.columns on
+//information_schema.tables.table_name = information_schema.columns.table_name
+//WHERE information_schema.tables.table_schema='public'
+//AND table_type='BASE TABLE'
+//ORDER BY information_schema.tables.table_name
+
+//to get all relevant information about column data for all tables
+//SELECT information_schema.tables.table_name, information_schema.columns.column_name, information_schema.columns.data_type,
+// information_schema.columns.ordinal_position, information_schema.table_constraints.constraint_type
+// FROM information_schema.tables LEFT JOIN information_schema.columns on information_schema.tables.table_name =
+// information_schema.columns.table_name
+// LEFT OUTER JOIN information_schema.constraint_column_usage on information_schema.columns.table_name =
+// information_schema.constraint_column_usage.table_name
+// AND information_schema.columns.column_name = information_schema.constraint_column_usage.column_name
+// LEFT OUTER JOIN information_schema.table_constraints on information_schema.constraint_column_usage.constraint_name =
+// information_schema.table_constraints.constraint_name
+// WHERE information_schema.tables.table_schema='public'
+// AND information_schema.tables.table_type='BASE TABLE'
+// ORDER BY information_schema.columns.table_name
+
+//to get all relevant column information about a specific table
+//SELECT information_schema.tables.table_name, information_schema.columns.column_name, information_schema.columns.data_type,
+//information_schema.columns.ordinal_position, information_schema.table_constraints.constraint_type
+//FROM information_schema.tables LEFT JOIN information_schema.columns on information_schema.tables.table_name =
+//information_schema.columns.table_name
+//LEFT OUTER JOIN information_schema.constraint_column_usage on information_schema.columns.table_name =
+//information_schema.constraint_column_usage.table_name
+//AND information_schema.columns.column_name = information_schema.constraint_column_usage.column_name
+//LEFT OUTER JOIN information_schema.table_constraints on information_schema.constraint_column_usage.constraint_name =
+//information_schema.table_constraints.constraint_name
+//WHERE information_schema.columns.table_name = '$tableName'
