@@ -191,6 +191,7 @@ public final class SerializationConstants {
     public static final String PERMISSIONS_MAP                  = "permissionsMap";
     public static final String PHONE_NUMBER                     = "phoneNumber";
     public static final String PII_FIELD                        = "pii";
+    public static final String ORDINAL_POSITION                 = "ordinalPosition";
     public static final String PRESENT                          = "present";
     public static final String PRINCIPAL                        = "principal";
     public static final String PRINCIPAL_PATHS                  = "principalPaths";

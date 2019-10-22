@@ -597,8 +597,8 @@ public final class TestDataFactory {
                 table.getId(),
                 UUID.randomUUID(),
                 randomAlphabetic( 5 ),
-                r.nextBoolean()
-
+                r.nextBoolean(),
+                r.nextInt( 1000 )
         );
     }
 
