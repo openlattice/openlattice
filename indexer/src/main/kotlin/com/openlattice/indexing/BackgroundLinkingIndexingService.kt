@@ -99,10 +99,6 @@ class BackgroundLinkingIndexingService(
             HazelcastQueue.LINKING_INDEXING.name
     )
 
-    init {
-        hazelcastInstance.config.getQueueConfig(HazelcastQueue.LINKING_INDEXING.name).maxSize = FETCH_SIZE
-    }
-
     @Suppress("UNUSED")
     private val linkingIndexingWorker = executor.submit {
         generateSequence(candidates::take)
@@ -249,19 +245,20 @@ class BackgroundLinkingIndexingService(
  */
 internal val selectDeletedLinkingIds =
         // @formatter:off
-            "SELECT ${LINKING_ID.name}, array_agg(${ID.name}) as ${ENTITY_KEY_IDS_COL.name} " +
-             "FROM ${IDS.name} l " +
-            "WHERE " +
-                "NOT EXISTS ( " +
-                    "SELECT ${ID.name} " +
-                    "FROM ${IDS.name} r " +
-                    "WHERE " +
-                        "l.${LINKING_ID.name} = r.${LINKING_ID.name} AND " +
-                        "${VERSION.name} > 0 " +
-                " ) AND " +
-                "${LINKING_ID.name} IS NOT NULL " +
-            "GROUP BY ${LINKING_ID.name}"
-            // @formatter:on
+        "SELECT " +
+                "${LINKING_ID.name}, " +
+                "array_agg(${ID.name}) as ${ENTITY_KEY_IDS_COL.name}, " +
+                "array_agg(${ENTITY_SET_ID.name}) AS ${ENTITY_SET_IDS.name} " +
+        "FROM ${IDS.name} " +
+        "WHERE ${LINKING_ID.name} NOT IN ( " +
+                "SELECT ${LINKING_ID.name} " +
+                "FROM ${IDS.name} " +
+                "WHERE " +
+                "${LINKING_ID.name} IS NOT NUL " +
+                "${VERSION.name} > 0 " +
+        " ) AND ${LINKING_ID.name} IS NOT NULL " +
+        "GROUP BY ${LINKING_ID.name}"
+        // @formatter:on
 
 
 /**
