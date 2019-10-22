@@ -673,36 +673,6 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     @Timed
     @Override
     @PostMapping(
-            value = ID_PATH + TABLE_NAME_PATH + EXTERNAL_DATABASE_TABLE
-    )
-    public Void createNewExternalDatabaseTable(
-            @PathVariable( ID ) UUID organizationId,
-            @PathVariable( TABLE_NAME ) String tableName,
-            @RequestBody LinkedHashMap<String, String> columnNameToSqlType ) {
-        ensureOwner( organizationId );
-        edms.createNewOrganizationExternalDatabaseTable( organizationId, tableName, columnNameToSqlType );
-        return null;
-    }
-
-    @Timed
-    @Override
-    @PostMapping(
-            value = ID_PATH + TABLE_NAME_PATH + COLUMN_NAME_PATH + SQL_TYPE_PATH + EXTERNAL_DATABASE_COLUMN
-    )
-    public Void createNewExternalDatabaseColumn(
-            @PathVariable( ID ) UUID organizationId,
-            @PathVariable( TABLE_NAME ) String tableName,
-            @PathVariable( COLUMN_NAME ) String columnName,
-            @PathVariable( SQL_TYPE ) String sqlType ) {
-        ensureOwner( organizationId );
-        UUID tableId = getExternalDatabaseObjectId( organizationId, tableName );
-        edms.createNewOrganizationExternalDatabaseColumn( organizationId, tableId, tableName, columnName, sqlType );
-        return null;
-    }
-
-    @Timed
-    @Override
-    @PostMapping(
             value = ID_PATH + USER_ID_PATH + EXTERNAL_DATABASE
     )
     public Void addTrustedUser(
@@ -742,63 +712,6 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         UUID columnId = getExternalDatabaseObjectId( tableId, columnName );
         ensureReadAccess( new AclKey( organizationId, tableId, columnId ) );
         return edms.getOrganizationExternalDatabaseColumn( columnId );
-    }
-
-    @Timed
-    @Override
-    @PatchMapping(
-            value = ID_PATH + TABLE_NAME_PATH + EXTERNAL_DATABASE_TABLE
-    )
-    public Void updateExternalDatabaseTable(
-            @PathVariable( ID ) UUID organizationId,
-            @PathVariable( TABLE_NAME ) String tableName,
-            @RequestBody MetadataUpdate metadataUpdate ) {
-        UUID tableId = getExternalDatabaseObjectId( organizationId, tableName );
-        ensureOwnerAccess( new AclKey( organizationId, tableId ) );
-        edms.updateOrganizationExternalDatabaseTable( organizationId, tableName, tableId, metadataUpdate );
-        return null;
-
-    }
-
-    @Timed
-    @Override
-    @PatchMapping(
-            value = ID_PATH + TABLE_NAME_PATH + COLUMN_NAME_PATH + EXTERNAL_DATABASE_COLUMN
-    )
-    public Void updateExternalDatabaseColumn(
-            @PathVariable( ID ) UUID organizationId,
-            @PathVariable( TABLE_NAME ) String tableName,
-            @PathVariable( COLUMN_NAME ) String columnName,
-            @RequestBody MetadataUpdate metadataUpdate ) {
-        UUID tableId = getExternalDatabaseObjectId( organizationId, tableName );
-        UUID columnId = getExternalDatabaseObjectId( tableId, columnName );
-        ensureOwnerAccess( new AclKey( organizationId, tableId, columnId ));
-        edms.updateOrganizationExternalDatabaseColumn( organizationId,
-                tableName,
-                tableId,
-                columnName,
-                columnId,
-                metadataUpdate );
-        return null;
-    }
-
-    @Timed
-    @Override
-    @PatchMapping(
-            value = ID_PATH + TABLE_NAME_PATH + PRIMARY_KEY
-    )
-    public Void setPrimaryKey(
-            @PathVariable( ID ) UUID organizationId,
-            @PathVariable( TABLE_NAME ) String tableName,
-            @RequestBody Set<String> columnNames ) {
-        UUID tableId = getExternalDatabaseObjectId( organizationId, tableName );
-        ensureOwnerAccess( new AclKey( organizationId, tableId ) );
-        columnNames.forEach(columnName -> {
-            UUID columnId = getExternalDatabaseObjectId( tableId, columnName );
-            ensureOwnerAccess( new AclKey( organizationId, tableId, columnId ) );
-        } );
-        edms.setPrimaryKey( organizationId, tableName, tableId, columnNames );
-        return null;
     }
 
     @Timed
