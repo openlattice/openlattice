@@ -1,20 +1,15 @@
 package com.openlattice
 
-import com.google.common.base.Preconditions.checkState
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
-import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.PostgresDatabases
 import com.openlattice.authorization.AclKey
-import com.openlattice.authorization.AuthorizationManager
-import com.openlattice.authorization.HazelcastAclKeyReservationService
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.indexing.MAX_DURATION_MILLIS
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import com.openlattice.organization.OrganizationExternalDatabaseTable
 import com.openlattice.organizations.ExternalDatabaseManagementService
-import com.openlattice.organizations.roles.SecurePrincipalsManager
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
@@ -36,48 +31,69 @@ class BackgroundExternalDatabaseUpdatingService(
     private val securableObjectTypes: IMap<AclKey, SecurableObjectType> = hazelcastInstance.getMap(HazelcastMap.SECURABLE_OBJECT_TYPES.name)
     private val aclKeys: IMap<String, UUID> = hazelcastInstance.getMap(HazelcastMap.ACL_KEYS.name)
 
+    @Suppress("UNUSED")
     @Scheduled(fixedRate = MAX_DURATION_MILLIS)
     fun scanOrganizationDatabases() {
-        //get organizationIds
         val orgIds = edms.getOrganizationDBNames()
         orgIds.forEach {orgId ->
             val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
             val currentTableIds = mutableSetOf<UUID>()
-            val currentColumnsByTableId = edms.getColumnIdsByTable(orgId, dbName, currentTableIds)
-            currentColumnsByTableId.forEach { (tableName, columnNames) ->
+            val currentColumnIds = mutableSetOf<UUID>()
+            val currentColumnNamesByTableName = edms.getColumnNamesByTable(orgId, dbName)
+            currentColumnNamesByTableName.forEach { (tableName, columnNames) ->
                 //check if table existed previously
-                val fqn = FullQualifiedName(orgId.toString(), tableName)
-                val id = aclKeys[fqn.fullQualifiedNameAsString]
-                if (id == null) {
+                val tableFQN = FullQualifiedName(orgId.toString(), tableName)
+                val tableId = aclKeys[tableFQN.fullQualifiedNameAsString]
+                if (tableId == null) {
                     //create new securable object for this table
                     //TODO handling of permissions
                     val newTable = OrganizationExternalDatabaseTable(Optional.empty(), tableName, tableName, Optional.empty(), orgId)
                     val newTableId = edms.createOrganizationExternalDatabaseTable(orgId, newTable)
                     currentTableIds.add(newTableId)
-                    val newColumns = edms.createNewColumnObjects(dbName, tableName, newTableId, orgId)
+                    val newColumns = edms.createNewColumnObjects(dbName, tableName, newTableId, orgId, Optional.empty())
                     newColumns.forEach {
-                        edms.createOrganizationExternalDatabaseColumn(orgId, it)
+                        val newColumnId = edms.createOrganizationExternalDatabaseColumn(orgId, it)
                         //TODO handling of permissions
+                        currentColumnIds.add(newColumnId)
                     }
                 } else {
-                    currentTableIds.add(id)
+                    currentTableIds.add(tableId)
+                    //check if columns existed previously
+                    columnNames.forEach {
+                        val columnFQN = FullQualifiedName(tableId.toString(), it)
+                        val columnId = aclKeys[columnFQN.fullQualifiedNameAsString]
+                        if (columnId == null) {
+                            //create new securable object for this column
+                            //TODO handling of permissions
+                            val newColumn = edms.createNewColumnObjects(dbName, tableName, tableId, orgId, Optional.of(it))
+                            newColumn.forEach {
+                                val newColumnId = edms.createOrganizationExternalDatabaseColumn(orgId, it)
+                                currentColumnIds.add(newColumnId)
+                            }
+                        } else {
+                            currentColumnIds.add(columnId)
+                        }
+                    }
+
                 }
 
             }
-            //check if tables have been deleted (i.e. if our map is out of date)
-            val missingIds = organizationExternalDatabaseColumns.keys - currentTableIds
-            if (missingIds.isNotEmpty()) {
-                edms.deleteOrganizationExternalDatabaseTables(orgId, missingIds)
+
+            //check if tables have been deleted in the database
+            val missingTableIds = organizationExternalDatabaseTables.keys - currentTableIds
+            if (missingTableIds.isNotEmpty()) {
+                edms.deleteOrganizationExternalDatabaseTables(orgId, missingTableIds)
             }
+
+            //check if columns have been deleted in the database
+            val missingColumnIds = organizationExternalDatabaseColumns.keys - currentColumnIds
+            if (missingTableIds.isNotEmpty()) {
+                edms.deleteOrganizationExternalDatabaseColumns(orgId, missingColumnIds)
+            }
+
         }
 
 
-    }
-    private fun getExternalDatabaseObjectId(containingObjectId: UUID, name: String): UUID {
-        val fqn = FullQualifiedName(containingObjectId.toString(), name)
-        val id = aclKeys.get(fqn.fullQualifiedNameAsString)
-        checkState(id != null, "External database object with name $name does not exist")
-        return id!!
     }
 
 }
