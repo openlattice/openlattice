@@ -80,8 +80,13 @@ fun buildPreparableFiltersSql(
             partitionsPresent = partitionsPresent
     ) + linkingClause + filtersClause + innerGroupBy
 
-    val metadataOptionColumnsSql = metadataOptionColumns.values.joinToString("")
-    val outerGroupBy = groupBy(ESID_EKID_PART + metadataOptionColumnsSql)
+    val metadataOptionColumnsSql = metadataOptionColumns
+            .values.joinToString("")
+    // TODO don't filter out LAST_WRITE from group by after empty rows are eliminated  https://jira.openlattice.com/browse/LATTICE-2254
+    val metadataOptionOuterGroupBySql = metadataOptionColumns
+            .filter { it.key != MetadataOption.LAST_WRITE }
+            .values.joinToString("")
+    val outerGroupBy = groupBy(ESID_EKID_PART + metadataOptionOuterGroupBySql)
     val sql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name}$metadataOptionColumnsSql,$jsonValueColumnsSql " +
             "FROM ($innerSql) entities $outerGroupBy"
 
@@ -105,7 +110,13 @@ internal fun selectEntitiesGroupedByIdAndPropertyTypeId(
  * Returns the correspondent column name used for the metadata option with a comma prefix.
  */
 private fun mapMetaDataToColumnSql(metadataOption: MetadataOption): String {
-    return ",${mapMetaDataToColumnName(metadataOption)}"
+    return when (metadataOption) {
+        MetadataOption.ORIGIN_IDS -> ",${ORIGIN_ID.name}"
+        // TODO should be just last_write with comma prefix after empty rows are eliminated https://jira.openlattice.com/browse/LATTICE-2254
+        MetadataOption.LAST_WRITE -> ",max(${LAST_WRITE.name}) AS ${mapMetaDataToColumnName(metadataOption)}"
+        MetadataOption.ENTITY_KEY_IDS -> ",${ENTITY_KEY_IDS_COL.name}"
+        else -> throw UnsupportedOperationException("No implementation yet for metadata option $metadataOption")
+    }
 }
 
 /**
