@@ -2693,7 +2693,7 @@ paths:
       summary: Deletes linking feedback
       operationId: deleteLinkingFeedback
       tags:
-        linking
+        - linking
       security:
         - openlattice_auth: []
         - http_auth: []
@@ -2703,6 +2703,13 @@ paths:
           application/json:
             schema:
               $ref: "#/components/entityKeyPair"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: integer
   /linker/linkingfeedback/entity:
     post:
       summary: Returns positive/negative/all linking feedbacks on the given entity.
@@ -2742,13 +2749,12 @@ paths:
       security:
         - openlattice_auth: []
         - http_auth: []
-      parameters:
-        requestBody:
-          required: true
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/entityKeyPair"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/entityKeyPair"
       responses:
         "200":
           description: Success
@@ -3487,7 +3493,7 @@ components:
       properties:
         entitySetIds:
           type: array
-          item:
+          items:
             type: string
             format: uuid
         start:
@@ -3575,7 +3581,7 @@ components:
             type: array
             items:
               type: array
-              item:
+              items:
                 type: number
         start:
           type: string
@@ -3595,7 +3601,19 @@ components:
           type: boolean    
     DataSearchResult:
       type: object
-      
+      properties:
+        numHits:
+          type: integer
+        hits:
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: array
+              items:
+                type: object
+                additionalProperties: true
+            
     entityDataKey:
       type: object
       properties:
