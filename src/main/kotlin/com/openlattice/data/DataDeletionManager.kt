@@ -24,6 +24,19 @@ interface DataDeletionManager {
             principals: Set<Principal>
     ): WriteEvent
 
+
+    /**
+     * Clears or deletes the specified entity key ids from an entity set, as well as any edges and association entities, if authorized
+     */
+    fun clearOrDeleteEntitiesAndNeighbors(
+            entitySetId: UUID,
+            entityKeyIds: Set<UUID>,
+            srcEntitySetIds: Set<UUID>,
+            dstEntitySetIds: Set<UUID>,
+            deleteType: DeleteType,
+            principals: Set<Principal>
+    ): WriteEvent
+
     /**
      * Clears or deletes certain property values from the specified entity key ids from an entity set, if authorized
      */

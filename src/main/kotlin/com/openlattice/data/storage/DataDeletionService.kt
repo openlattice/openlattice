@@ -1,10 +1,10 @@
 package com.openlattice.data.storage
 
-import com.google.common.collect.ImmutableSet
-import com.google.common.collect.Iterables
-import com.google.common.collect.Sets
+import com.google.common.collect.*
 import com.openlattice.IdConstants
+import com.openlattice.auditing.AuditEventType
 import com.openlattice.auditing.AuditRecordEntitySetsManager
+import com.openlattice.auditing.AuditableEvent
 import com.openlattice.authorization.*
 import com.openlattice.controllers.exceptions.ForbiddenException
 import com.openlattice.data.*
@@ -19,6 +19,7 @@ import com.openlattice.postgres.streams.PostgresIterable
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.stream.Collectors
+import java.util.stream.Stream
 import kotlin.math.max
 
 class DataDeletionService(
@@ -90,6 +91,67 @@ class DataDeletionService(
             principals: Set<Principal>
     ): WriteEvent {
         return clearOrDeleteEntities(entitySetId, entityKeyIds, deleteType, principals, skipAuthChecks = false)
+    }
+
+
+    // TODO rewrite this from scratch.
+    override fun clearOrDeleteEntitiesAndNeighbors(
+            entitySetId: UUID,
+            entityKeyIds: Set<UUID>,
+            srcEntitySetIds: Set<UUID>,
+            dstEntitySetIds: Set<UUID>,
+            deleteType: DeleteType,
+            principals: Set<Principal>
+    ): WriteEvent {
+
+        // we don't include associations in filtering, since they will be deleted anyways with deleting the entities
+        val filteringNeighborEntitySetIds = srcEntitySetIds + dstEntitySetIds
+
+        // if no neighbor entity set ids are defined to delete from, it reduces down to a simple deleteEntities call
+        if (filteringNeighborEntitySetIds.isEmpty()) {
+            return clearOrDeleteEntities(entitySetId, entityKeyIds, deleteType, principals)
+        }
+
+        /*
+         * 1 - collect all neighbor entities, organized by EntitySet
+         */
+
+        val includeClearedEdges = deleteType == DeleteType.Hard
+
+        val entitySetIdToEntityDataKeysMap: Map<UUID, List<EntityDataKey>> = dgm
+                .getEdgesConnectedToEntities(entitySetId, entityKeyIds, includeClearedEdges)
+                .filter { edge -> edge.dst.entitySetId == entitySetId && filteringNeighborEntitySetIds.contains(edge.src.entitySetId) || edge.src.entitySetId == entitySetId && filteringNeighborEntitySetIds.contains(edge.dst.entitySetId) }
+                .flatMap { edge -> setOf(edge.src, edge.dst) }
+                .groupBy { it.entitySetId }
+
+        /*
+         * 2 - delete all entities
+         */
+
+        /* Delete entity */
+
+        var numUpdates: Int = 0
+
+        val entityWriteEvent = clearOrDeleteEntities(entitySetId, entityKeyIds, deleteType, principals)
+        numUpdates += entityWriteEvent.numUpdates
+
+        /* 3 - Delete neighbors */
+
+        val neighborDeleteEvents = Lists.newArrayList<AuditableEvent>()
+
+        numUpdates += entitySetIdToEntityDataKeysMap.entries.stream().mapToInt { entry ->
+            val neighborEntitySetId = entry.key
+            val neighborEntityKeyIds = entry.value.map { it.entityKeyId }.toSet()
+
+            val neighborWriteEvent = clearOrDeleteEntities(neighborEntitySetId,
+                    neighborEntityKeyIds,
+                    deleteType,
+                    principals)
+
+            neighborWriteEvent.numUpdates
+        }.sum()
+
+        return WriteEvent(entityWriteEvent.version, numUpdates)
     }
 
     private fun clearOrDeleteEntities(
