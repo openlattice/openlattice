@@ -349,48 +349,6 @@ public interface OrganizationsApi {
             @Path( ID ) UUID organizationId, @Path(TABLE_NAME) String tableName, @Path( COLUMN_NAME) String columnName );
 
 
-    //update
-    /**
-     * Updates an OrganizationExternalDatabaseTable object, which represents an
-     * organization's table in an external database. This alters both the object
-     * and the table in the database.
-     * @param organizationId The organization's UUID
-     * @param tableName The exact name of the table in the database
-     */
-    @PATCH( BASE + ID_PATH + TABLE_NAME_PATH + EXTERNAL_DATABASE_TABLE)
-    Void updateExternalDatabaseTable(
-            @Path( ID ) UUID organizationId,
-            @Path( TABLE_NAME ) String tableName,
-            @Body MetadataUpdate metadataUpdate );
-
-    /**
-     * Updates an OrganizationExternalDatabaseColumn object, which represents a column
-     * within an organization's table in an external database. This alters both the object
-     * and the column in the database.
-     * @param organizationId The organization's UUID
-     * @param tableName The exact name of the table in the database
-     * @param columnName The exact name of the column in the database
-     */
-    @PATCH( BASE + ID_PATH + TABLE_NAME_PATH + COLUMN_NAME_PATH + EXTERNAL_DATABASE_COLUMN)
-    Void updateExternalDatabaseColumn(
-            @Path( ID ) UUID organizationId,
-            @Path( TABLE_NAME ) String tableName,
-            @Path( COLUMN_NAME ) String columnName,
-            @Body MetadataUpdate metadataUpdate );
-
-    /**
-     * Sets the primary key on a table.
-     * @param organizationId The organization's UUID
-     * @param tableName The exact name of the table in the database
-     * @param columnNames The exact names of the column(s) that will comprise the primary key.
-     *                    An empty set will remove the primary key from the table.
-     */
-    @PATCH( BASE + ID_PATH + TABLE_NAME_PATH + PRIMARY_KEY )
-    Void setPrimaryKey(
-            @Path( ID ) UUID organizationId,
-            @Path ( TABLE_NAME ) String tableName,
-            @Body Set<String> columnNames );
-
 
     //delete
     /**
