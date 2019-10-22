@@ -319,7 +319,8 @@ public final class PostgresTable {
                             TABLE_ID,
                             ORGANIZATION_ID,
                             DATATYPE,
-                            IS_PRIMARY_KEY);
+                            IS_PRIMARY_KEY,
+                            ORDINAL_POSITION);
 
     public static final PostgresTableDefinition ORGANIZATION_EXTERNAL_DATABASE_TABLE =
             new PostgresTableDefinition( "organization_external_database_tables" )

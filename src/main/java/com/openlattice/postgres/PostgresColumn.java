@@ -84,7 +84,6 @@ public final class PostgresColumn {
             new PostgresColumnDefinition( CATEGORY_FIELD, TEXT ).notNull();
     public static final PostgresColumnDefinition CLAUSES                           =
             new PostgresColumnDefinition( "clauses", INTEGER_ARRAY );
-    public static final String                   COLUMN_IDS_FIELD                  = "column_ids";
     public static final String                   COMPONENT_TYPES_FIELD             = "comp_types";
     public static final PostgresColumnDefinition COMPONENT_TYPES                   =
             new PostgresColumnDefinition( COMPONENT_TYPES_FIELD, INTEGER )
@@ -318,6 +317,9 @@ public final class PostgresColumn {
     public static final String                   TIME_TO_EXPIRATION_FIELD          = "time_to_expiration";
     public static final PostgresColumnDefinition TIME_TO_EXPIRATION                =
             new PostgresColumnDefinition( TIME_TO_EXPIRATION_FIELD, BIGINT );
+    public static final String                   ORDINAL_POSITION_FIELD            = "ordinal_position";
+    public static final PostgresColumnDefinition ORDINAL_POSITION                  =
+            new PostgresColumnDefinition( ORDINAL_POSITION_FIELD, INTEGER ).notNull();
     public static final String                   ORGANIZATION_ID_FIELD             = "organization_id";
     public static final PostgresColumnDefinition ORGANIZATION_ID                   =
             new PostgresColumnDefinition( ORGANIZATION_ID_FIELD, UUID ).notNull();

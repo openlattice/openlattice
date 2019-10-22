@@ -103,9 +103,11 @@ public final class ResultSetAdapters {
     private static final ObjectMapper                                         mapper               = ObjectMappers
             .newJsonMapper();
     private static final TypeReference<Map<String, Object>>                   alertMetadataTypeRef =
-            new TypeReference<>() {};
+            new TypeReference<>() {
+            };
     private static final TypeReference<LinkedHashSet<CollectionTemplateType>> templateTypeRef      =
-            new TypeReference<>() {};
+            new TypeReference<>() {
+            };
 
     @NotNull
     public static SmsInformationKey smsInformationKey(
@@ -148,11 +150,11 @@ public final class ResultSetAdapters {
     }
 
     public static UUID clusterId( ResultSet rs ) throws SQLException {
-        return ( UUID ) rs.getObject( LINKING_ID_FIELD );
+        return (UUID) rs.getObject( LINKING_ID_FIELD );
     }
 
     public static GraphQueryState graphQueryState( ResultSet rs ) throws SQLException {
-        final UUID queryId = ( UUID ) rs.getObject( QUERY_ID.getName() );
+        final UUID queryId = (UUID) rs.getObject( QUERY_ID.getName() );
         final State state = State.valueOf( rs.getString( STATE.getName() ) );
         final long startTime = rs.getLong( START_TIME.getName() );
         return new GraphQueryState(
@@ -168,14 +170,14 @@ public final class ResultSetAdapters {
     }
 
     public static EntityDataKey srcEntityDataKey( ResultSet rs ) throws SQLException {
-        final UUID srcEntitySetId = ( UUID ) rs.getObject( SRC_ENTITY_SET_ID_FIELD );
-        final UUID srcEntityKeyId = ( UUID ) rs.getObject( SRC_ENTITY_KEY_ID_FIELD );
+        final UUID srcEntitySetId = (UUID) rs.getObject( SRC_ENTITY_SET_ID_FIELD );
+        final UUID srcEntityKeyId = (UUID) rs.getObject( SRC_ENTITY_KEY_ID_FIELD );
         return new EntityDataKey( srcEntitySetId, srcEntityKeyId );
     }
 
     public static EntityDataKey dstEntityDataKey( ResultSet rs ) throws SQLException {
-        final UUID dstEntitySetId = ( UUID ) rs.getObject( DST_ENTITY_SET_ID_FIELD );
-        final UUID dstEntityKeyId = ( UUID ) rs.getObject( DST_ENTITY_KEY_ID_FIELD );
+        final UUID dstEntitySetId = (UUID) rs.getObject( DST_ENTITY_SET_ID_FIELD );
+        final UUID dstEntityKeyId = (UUID) rs.getObject( DST_ENTITY_KEY_ID_FIELD );
         return new EntityDataKey( dstEntitySetId, dstEntityKeyId );
     }
 
@@ -221,7 +223,7 @@ public final class ResultSetAdapters {
     public static Edge edge( ResultSet rs ) throws SQLException {
         DataEdgeKey key = edgeKey( rs );
         long version = rs.getLong( VERSION.getName() );
-        List<Long> versions = Arrays.asList( ( Long[] ) rs.getArray( VERSIONS.getName() ).getArray() );
+        List<Long> versions = Arrays.asList( (Long[]) rs.getArray( VERSIONS.getName() ).getArray() );
 
         return new Edge( key, version, versions );
     }
@@ -240,7 +242,7 @@ public final class ResultSetAdapters {
     }
 
     public static EntityKey entityKey( ResultSet rs ) throws SQLException {
-        UUID entitySetId = ( UUID ) rs.getObject( ENTITY_SET_ID_FIELD );
+        UUID entitySetId = (UUID) rs.getObject( ENTITY_SET_ID_FIELD );
         String entityId = rs.getString( ENTITY_ID_FIELD );
         return new EntityKey( entitySetId, entityId );
     }
@@ -357,7 +359,7 @@ public final class ResultSetAdapters {
     }
 
     public static Set<FullQualifiedName> schemas( ResultSet rs ) throws SQLException {
-        return Arrays.stream( ( String[] ) rs.getArray( SCHEMAS.getName() ).getArray() ).map( FullQualifiedName::new )
+        return Arrays.stream( (String[]) rs.getArray( SCHEMAS.getName() ).getArray() ).map( FullQualifiedName::new )
                 .collect( Collectors.toSet() );
     }
 
@@ -394,7 +396,7 @@ public final class ResultSetAdapters {
     }
 
     public static LinkedHashSet<UUID> linkedHashSetUUID( ResultSet rs, String colName ) throws SQLException {
-        return Arrays.stream( ( UUID[] ) rs.getArray( colName ).getArray() )
+        return Arrays.stream( (UUID[]) rs.getArray( colName ).getArray() )
                 .collect( Collectors.toCollection( LinkedHashSet::new ) );
     }
 
@@ -423,7 +425,7 @@ public final class ResultSetAdapters {
     }
 
     public static Set<String> contacts( ResultSet rs ) throws SQLException {
-        return Sets.newHashSet( ( String[] ) rs.getArray( CONTACTS.getName() ).getArray() );
+        return Sets.newHashSet( (String[]) rs.getArray( CONTACTS.getName() ).getArray() );
     }
 
     public static LinkedHashSet<UUID> src( ResultSet rs ) throws SQLException {
@@ -451,7 +453,7 @@ public final class ResultSetAdapters {
     }
 
     public static LinkedHashSet<String> members( ResultSet rs ) throws SQLException {
-        return Arrays.stream( ( String[] ) rs.getArray( MEMBERS.getName() ).getArray() )
+        return Arrays.stream( (String[]) rs.getArray( MEMBERS.getName() ).getArray() )
                 .collect( Collectors
                         .toCollection( LinkedHashSet::new ) );
     }
@@ -473,7 +475,7 @@ public final class ResultSetAdapters {
     }
 
     public static Set<UUID> entityKeyIds( ResultSet rs ) throws SQLException {
-        return Sets.newHashSet( ( UUID[] ) rs.getArray( ENTITY_KEY_IDS_COL.getName() ).getArray() );
+        return Sets.newHashSet( (UUID[]) rs.getArray( ENTITY_KEY_IDS_COL.getName() ).getArray() );
     }
 
     public static UUID securableObjectId( ResultSet rs ) throws SQLException {
@@ -611,9 +613,9 @@ public final class ResultSetAdapters {
         final var deleteType = deleteType( rs );
         final var startDateProperty = startDateProperty( rs );
         return new DataExpiration( timeToExpiration,
-                    expirationBase,
-                    deleteType,
-                    Optional.ofNullable( startDateProperty ) );
+                expirationBase,
+                deleteType,
+                Optional.ofNullable( startDateProperty ) );
     }
 
     public static Long timeToExpiration( ResultSet rs ) throws SQLException {
@@ -628,7 +630,7 @@ public final class ResultSetAdapters {
 
     public static DeleteType deleteType( ResultSet rs ) throws SQLException {
         String deleteType = rs.getString( EXPIRATION_DELETE_FLAG_FIELD );
-        if ( deleteType != null) { return DeleteType.valueOf( deleteType ); }
+        if ( deleteType != null ) { return DeleteType.valueOf( deleteType ); }
         return null;
     }
 
@@ -683,7 +685,7 @@ public final class ResultSetAdapters {
         if ( usersArray == null ) {
             return PrincipalSet.wrap( ImmutableSet.of() );
         }
-        Stream<String> users = Arrays.stream( ( String[] ) usersArray.getArray() );
+        Stream<String> users = Arrays.stream( (String[]) usersArray.getArray() );
         return PrincipalSet
                 .wrap( users.map( user -> new Principal( PrincipalType.USER, user ) ).collect( Collectors.toSet() ) );
     }
@@ -721,7 +723,7 @@ public final class ResultSetAdapters {
     }
 
     public static UUID linkingId( ResultSet rs ) throws SQLException {
-        return ( UUID ) rs.getObject( LINKING_ID.getName() );
+        return (UUID) rs.getObject( LINKING_ID.getName() );
     }
 
     public static OffsetDateTime lastWriteTyped( ResultSet rs ) throws SQLException {
@@ -729,7 +731,7 @@ public final class ResultSetAdapters {
     }
 
     public static Boolean linking( ResultSet rs ) throws SQLException {
-        return ( Boolean ) rs.getObject( LINKING.getName() );
+        return (Boolean) rs.getObject( LINKING.getName() );
     }
 
     public static LinkedHashSet<UUID> linkedEntitySets( ResultSet rs ) throws SQLException {
@@ -737,9 +739,9 @@ public final class ResultSetAdapters {
     }
 
     public static PropertyUsageSummary propertyUsageSummary( ResultSet rs ) throws SQLException {
-        UUID entityTypeID = ( UUID ) rs.getObject( ENTITY_TYPE_ID_FIELD );
+        UUID entityTypeID = (UUID) rs.getObject( ENTITY_TYPE_ID_FIELD );
         String entitySetName = rs.getString( ENTITY_SET_NAME_FIELD );
-        UUID entitySetId = ( UUID ) rs.getObject( ENTITY_SET_ID_FIELD );
+        UUID entitySetId = (UUID) rs.getObject( ENTITY_SET_ID_FIELD );
         long count = count( rs );
         return new PropertyUsageSummary( entityTypeID, entitySetName, entitySetId, count );
     }
@@ -833,7 +835,7 @@ public final class ResultSetAdapters {
 
     private static UUID[] readNullableUuidArray( UUID[] nullable ) {
         if ( nullable == null ) {
-            return new UUID[0];
+            return new UUID[ 0 ];
         } else {
             return nullable;
         }
@@ -926,27 +928,38 @@ public final class ResultSetAdapters {
         return new CollectionTemplateKey( entitySetCollectionId, templateTypeId );
     }
 
-    public static OrganizationExternalDatabaseTable organizationExternalDatabaseTable( ResultSet rs ) throws SQLException {
-        UUID id = id(rs);
-        String name = name(rs);
-        String title = title(rs);
-        Optional<String> description = Optional.ofNullable( description( (rs) ) );
+    public static OrganizationExternalDatabaseTable organizationExternalDatabaseTable( ResultSet rs )
+            throws SQLException {
+        UUID id = id( rs );
+        String name = name( rs );
+        String title = title( rs );
+        Optional<String> description = Optional.ofNullable( description( ( rs ) ) );
         UUID organizationId = organizationId( rs );
 
         return new OrganizationExternalDatabaseTable( id, name, title, description, organizationId );
     }
 
-    public static OrganizationExternalDatabaseColumn organizationExternalDatabaseColumn( ResultSet rs ) throws SQLException {
-        UUID id = id(rs);
-        String name = name(rs);
-        String title = title(rs);
-        Optional<String> description = Optional.ofNullable( description( (rs) ) );
-        UUID tableId = tableId(rs);
+    public static OrganizationExternalDatabaseColumn organizationExternalDatabaseColumn( ResultSet rs )
+            throws SQLException {
+        UUID id = id( rs );
+        String name = name( rs );
+        String title = title( rs );
+        Optional<String> description = Optional.ofNullable( description( ( rs ) ) );
+        UUID tableId = tableId( rs );
         UUID organizationId = organizationId( rs );
         String dataType = rs.getString( DATATYPE.getName() );
         Boolean isPrimaryKey = rs.getBoolean( IS_PRIMARY_KEY.getName() );
+        Integer ordinalPosition = rs.getInt( ORDINAL_POSITION.getName() );
 
-        return new OrganizationExternalDatabaseColumn( id, name, title, description, tableId, organizationId, dataType, isPrimaryKey );
+        return new OrganizationExternalDatabaseColumn( id,
+                name,
+                title,
+                description,
+                tableId,
+                organizationId,
+                dataType,
+                isPrimaryKey,
+                ordinalPosition );
     }
 
     public static UUID originId( ResultSet rs ) throws SQLException {

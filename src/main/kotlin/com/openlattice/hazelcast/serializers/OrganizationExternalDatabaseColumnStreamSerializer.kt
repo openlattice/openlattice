@@ -21,6 +21,7 @@ class OrganizationExternalDatabaseColumnStreamSerializer : SelfRegisteringStream
             UUIDStreamSerializer.serialize(output, obj.organizationId)
             output.writeUTF(obj.dataType)
             output.writeBoolean(obj.isPrimaryKey)
+            output.writeInt(obj.ordinalPosition)
         }
 
         fun deserialize(input: ObjectDataInput): OrganizationExternalDatabaseColumn {
@@ -32,7 +33,8 @@ class OrganizationExternalDatabaseColumnStreamSerializer : SelfRegisteringStream
             val orgId = UUIDStreamSerializer.deserialize(input)
             val dataType = input.readUTF()
             val isPrimaryKey = input.readBoolean()
-            return OrganizationExternalDatabaseColumn(id, name, title, Optional.of(description), tableId, orgId, dataType, isPrimaryKey)
+            val ordinalPosition = input.readInt()
+            return OrganizationExternalDatabaseColumn(id, name, title, Optional.of(description), tableId, orgId, dataType, isPrimaryKey, ordinalPosition)
         }
     }
 
