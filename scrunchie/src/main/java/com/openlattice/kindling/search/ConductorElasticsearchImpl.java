@@ -678,7 +678,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     @Override
-    public boolean deleteEntityDataBulk( UUID entitySetId, UUID entityTypeId, Set<UUID> entityKeyIds ) {
+    public boolean deleteEntityDataBulk( UUID entityTypeId, Set<UUID> entityKeyIds ) {
         if ( !verifyElasticsearchConnection() ) { return false; }
 
         String index = getIndexName( entityTypeId );
