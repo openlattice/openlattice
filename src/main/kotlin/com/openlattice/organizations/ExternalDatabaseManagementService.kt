@@ -367,39 +367,3 @@ class ExternalDatabaseManagementService(
     }
 
 }
-
-//to get column names by table
-//SELECT information_schema.tables.table_name, information_schema.columns.column_name
-//FROM information_schema.tables
-//LEFT JOIN information_schema.columns on
-//information_schema.tables.table_name = information_schema.columns.table_name
-//WHERE information_schema.tables.table_schema='public'
-//AND table_type='BASE TABLE'
-//ORDER BY information_schema.tables.table_name
-
-//to get all relevant information about column data for all tables
-//SELECT information_schema.tables.table_name, information_schema.columns.column_name, information_schema.columns.data_type,
-// information_schema.columns.ordinal_position, information_schema.table_constraints.constraint_type
-// FROM information_schema.tables LEFT JOIN information_schema.columns on information_schema.tables.table_name =
-// information_schema.columns.table_name
-// LEFT OUTER JOIN information_schema.constraint_column_usage on information_schema.columns.table_name =
-// information_schema.constraint_column_usage.table_name
-// AND information_schema.columns.column_name = information_schema.constraint_column_usage.column_name
-// LEFT OUTER JOIN information_schema.table_constraints on information_schema.constraint_column_usage.constraint_name =
-// information_schema.table_constraints.constraint_name
-// WHERE information_schema.tables.table_schema='public'
-// AND information_schema.tables.table_type='BASE TABLE'
-// ORDER BY information_schema.columns.table_name
-
-//to get all relevant column information about a specific table
-//SELECT information_schema.tables.table_name, information_schema.columns.column_name, information_schema.columns.data_type,
-//information_schema.columns.ordinal_position, information_schema.table_constraints.constraint_type
-//FROM information_schema.tables LEFT JOIN information_schema.columns on information_schema.tables.table_name =
-//information_schema.columns.table_name
-//LEFT OUTER JOIN information_schema.constraint_column_usage on information_schema.columns.table_name =
-//information_schema.constraint_column_usage.table_name
-//AND information_schema.columns.column_name = information_schema.constraint_column_usage.column_name
-//LEFT OUTER JOIN information_schema.table_constraints on information_schema.constraint_column_usage.constraint_name =
-//information_schema.table_constraints.constraint_name
-//WHERE information_schema.columns.table_name = '$tableName'
-//AND information_schema.columns.column_name = '$columnName'
