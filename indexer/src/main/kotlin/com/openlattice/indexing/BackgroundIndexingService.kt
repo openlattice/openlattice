@@ -314,7 +314,7 @@ class BackgroundIndexingService(
         val indexCount: Int
 
         if (batchToIndex.isNotEmpty()
-                && elasticsearchApi.deleteEntityDataBulk(entitySet.id, entitySet.entityTypeId, batchToIndex.keys)) {
+                && elasticsearchApi.deleteEntityDataBulk(entitySet.entityTypeId, batchToIndex.keys)) {
             indexCount = if (markAsIndexed) {
                 dataManager.markAsIndexed(mapOf(entitySet.id to batchToIndex), false)
             } else {
