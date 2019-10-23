@@ -265,45 +265,49 @@ internal val selectDeletedLinkingIds =
         // @formatter:on
 
 
+internal const val withAlias = "valid_linking_entities"
+
 /**
  * Select linking ids, where both indexing and linking already finished, but linking indexing is due and those where
  * some normal entities are cleared or deleted.
  */
 internal val selectDirtyLinkingIds =
         // @formatter:off
-            "SELECT " +
-                "${LINKING_ID.name}, " +
-                "max(${LAST_WRITE.name}) AS ${LAST_WRITE.name}, " +
-                "array_agg(${ENTITY_SET_ID.name}) AS ${ENTITY_SET_IDS.name} " +
+        "WITH $withAlias AS " +
+            "(SELECT ${LINKING_ID.name}, " +
+                    "${ENTITY_SET_ID.name}, " +
+                    "${LAST_WRITE.name}, " +
+                    "${LAST_INDEX.name}, " +
+                    "${LAST_LINK.name}, " +
+                    "${LAST_LINK_INDEX.name} " +
             "FROM ${IDS.name} " +
-            "WHERE " +
-                "${LAST_INDEX.name} >= ${LAST_WRITE.name} AND " +
-                "${LAST_LINK.name} >= ${LAST_WRITE.name} AND " +
-                "${LAST_LINK_INDEX.name} < ${LAST_WRITE.name} AND " +
-                "${VERSION.name} > 0 AND " +
-                "${LINKING_ID.name} IS NOT NULL " +
-            "GROUP BY ${LINKING_ID.name} " +
-        "UNION ALL " +
-            "SELECT " +
-                "${LINKING_ID.name}, " +
+            "WHERE ${LINKING_ID.name} IS NOT NULL " +
+                "AND ${VERSION.name} > 0 ) " +
+        "SELECT ${LINKING_ID.name}, " +
                 "max(${LAST_WRITE.name}) AS ${LAST_WRITE.name}, " +
                 "array_agg(${ENTITY_SET_ID.name}) AS ${ENTITY_SET_IDS.name} " +
-            "FROM ${IDS.name} l " +
-            "WHERE ${LINKING_ID.name} " +
-                "IN ( " +
-                    "SELECT ${LINKING_ID.name} " +
-                    "FROM ${IDS.name} " +
-                    "WHERE " +
-                        "${LINKING_ID.name} IS NOT NULL AND " +
-                        "${VERSION.name} < 0 " +
-                " ) AND ${LINKING_ID.name} " +
-                "IN ( " +
-                    "SELECT ${LINKING_ID.name} " +
-                    "FROM ${IDS.name} " +
-                    "WHERE " +
-                        "${LINKING_ID.name} IS NOT NULL AND " +
-                        "${VERSION.name} > 0 " +
-                " ) AND " +
-                "${LINKING_ID.name} IS NOT NULL " +
-            "GROUP BY ${LINKING_ID.name} "
+        "FROM $withAlias " +
+        "WHERE ${LAST_INDEX.name} >= ${LAST_WRITE.name} AND " +
+              "${LAST_LINK.name} >= ${LAST_WRITE.name} AND " +
+              "${LAST_LINK_INDEX.name} < ${LAST_WRITE.name} " +
+        "GROUP BY ${LINKING_ID.name} " +
+        "UNION ALL " +
+        "SELECT ${LINKING_ID.name}, " +
+                "max(${LAST_WRITE.name}) AS ${LAST_WRITE.name}, " +
+                "array_agg(${ENTITY_SET_ID.name}) AS ${ENTITY_SET_IDS.name} " +
+        "FROM ${IDS.name} " +
+        "WHERE ${LINKING_ID.name} IN " +
+            "( SELECT ${LINKING_ID.name} " +
+                "FROM ${IDS.name} " +
+                "WHERE " +
+                    "${LINKING_ID.name} IS NOT NULL AND " +
+                    "${VERSION.name} <= 0 ) " +
+            "AND ${LINKING_ID.name} IN " +
+                "( SELECT ${LINKING_ID.name} " +
+                  "FROM $withAlias ) " +
+            "AND ${ENTITY_SET_ID.name} IN " +
+                "( SELECT ${ENTITY_SET_ID.name} " +
+                  "FROM $withAlias ) " +
+            "AND ${LINKING_ID.name} IS NOT NULL " +
+        "GROUP BY ${LINKING_ID.name} "
         // @formatter:on
