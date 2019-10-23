@@ -54,7 +54,6 @@ import com.openlattice.data.EntityDataKey;
 import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.events.EntitiesDeletedEvent;
 import com.openlattice.data.events.EntitiesUpsertedEvent;
-import com.openlattice.data.events.LinkedEntitiesDeletedEvent;
 import com.openlattice.data.requests.NeighborEntityDetails;
 import com.openlattice.data.requests.NeighborEntityIds;
 import com.openlattice.data.storage.EntityDatastore;
@@ -288,26 +287,6 @@ public class SearchService {
     public void deleteEntities( EntitiesDeletedEvent event ) {
         UUID entityTypeId = entitySetService.getEntityTypeByEntitySetId( event.getEntitySetId() ).getId();
         elasticsearchApi.deleteEntityDataBulk( entityTypeId, event.getEntityKeyIds() );
-    }
-
-    @Timed
-    @Subscribe
-    public void deleteLinkedEntities( LinkedEntitiesDeletedEvent event ) {
-        // TODO : https://jira.openlattice.com/browse/LATTICE-2225
-        if ( event.getLinkedEntitySetIds().size() > 0 ) {
-            Map<UUID, UUID> entitySetIdsToEntityTypeIds = entitySetService
-                    .getEntitySetsAsMap( event.getLinkedEntitySetIds() ).values().stream()
-                    .collect( Collectors.toMap( EntitySet::getId, EntitySet::getEntityTypeId ) );
-
-            event.getLinkedEntitySetIds().forEach( entitySetId -> {
-                        UUID entityTypeId = entitySetIdsToEntityTypeIds.get( entitySetId );
-                        event.getEntityKeyIds()
-                                .stream()
-                                .map( id -> new EntityDataKey( entitySetId, id ) )
-                                .forEach( edk -> elasticsearchApi.deleteEntityData( edk, entityTypeId ) );
-                    }
-            );
-        }
     }
 
     @Timed
