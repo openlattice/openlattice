@@ -1,0 +1,137 @@
+package com.openlattice.organization
+
+import retrofit2.http.*
+import java.util.*
+
+interface OrganizationExternalDatabaseApi {
+
+    companion object {
+        /* These determine the service routing */
+        const val SERVICE = "/datastore"
+        const val CONTROLLER = "/organization-database"
+        const val BASE = SERVICE + CONTROLLER
+
+        const val EXTERNAL_DATABASE = "/external-database"
+        const val EXTERNAL_DATABASE_COLUMN = "/external-database-column"
+        const val EXTERNAL_DATABASE_TABLE = "/external-database-table"
+
+        const val ID = "id"
+        const val ID_PATH = "/{$ID}"
+        const val TABLE_NAME = "tableName"
+        const val TABLE_NAME_PATH = "/{$TABLE_NAME}"
+        const val COLUMN_NAME = "columnName"
+        const val COLUMN_NAME_PATH = "/{$COLUMN_NAME}"
+        const val SQL_TYPE = "sqlType"
+        const val SQL_TYPE_PATH = "/{$SQL_TYPE}"
+        const val USER_ID = "userId"
+        const val USER_ID_PATH = "/{$USER_ID:.*}"
+    }
+
+    //create
+    /**
+     * Creates a securable OrganizationExternalDatabaseTable object, which represents an
+     * organization's table in an external database. The table must already exist in the database
+     * @param organizationId The organization's UUID
+     * @param organizationExternalDatabaseTable The object to be created
+     */
+    @POST(BASE + ID_PATH + EXTERNAL_DATABASE_TABLE)
+    fun createExternalDatabaseTable(@Path(ID) organizationId: UUID,
+                                    @Body organizationExternalDatabaseTable: OrganizationExternalDatabaseTable): UUID
+
+    /**
+     * Creates a securable OrganizationExternalDatabaseColumn object, which represents a
+     * column within an organization's table in an external database. The table and column must
+     * already exist in the database
+     * @param organizationId The organization's UUID
+     * @param organizationExternalDatabaseColumn The object to be created
+     */
+    @POST(BASE + ID_PATH + EXTERNAL_DATABASE_COLUMN)
+    fun createExternalDatabaseColumn(@Path(ID) organizationId: UUID,
+                                     @Body organizationExternalDatabaseColumn: OrganizationExternalDatabaseColumn): UUID
+
+    /**
+     *
+     * @param organizationId The organization's UUID
+     * @param userId The user to be given trusted status
+     * @param ipAddresses The set of ip addresses (as strings) from which users will be trusted
+     */
+    @POST(BASE + ID_PATH + USER_ID_PATH + EXTERNAL_DATABASE)
+    fun addTrustedUser(
+            @Path(ID) organizationId: UUID,
+            @Path(USER_ID) userId: String,
+            @Body ipAddresses: Set<String>)
+
+    //get
+    /**
+     * Gets an OrganizationExternalDatabaseTable object, which represents an
+     * organization's table in an external database
+     * @param organizationId The organization's UUID
+     * @param tableName The exact name of the table in the database
+     */
+    @GET(BASE + ID_PATH + TABLE_NAME_PATH + EXTERNAL_DATABASE_TABLE)
+    fun getExternalDatabaseTable(
+            @Path(ID) organizationId: UUID, @Path(TABLE_NAME) tableName: String): OrganizationExternalDatabaseTable
+
+    /**
+     * Gets an OrganizationExternalDatabaseColumn object, which represents a column
+     * within an organization's table in an external database
+     * @param organizationId The organization's UUID
+     * @param tableName The exact name of the table in the database
+     * @param columnName The exact name of the column in the database
+     */
+    @GET(BASE + ID_PATH + TABLE_NAME_PATH + COLUMN_NAME_PATH + EXTERNAL_DATABASE_COLUMN)
+    fun getExternalDatabaseColumn(
+            @Path(ID) organizationId: UUID, @Path(TABLE_NAME) tableName: String, @Path(COLUMN_NAME) columnName: String): OrganizationExternalDatabaseColumn
+
+
+    //delete
+    /**
+     * Deletes an OrganizationExternalDatabaseTable object, which represents an
+     * organization's table in an external database. This deletes both the object
+     * and the table in the database. It is a hard delete
+     * @param organizationId The organization's UUID
+     * @param tableName The exact name of the table in the database
+     */
+    @DELETE(BASE + ID_PATH + TABLE_NAME_PATH + EXTERNAL_DATABASE_TABLE)
+    fun deleteExternalDatabaseTable(
+            @Path(ID) organizationId: UUID,
+            @Path(TABLE_NAME) tableName: String)
+
+    /**
+     * Deletes an OrganizationExternalDatabaseColumn object, which represents a column
+     * within an organization's table in an external database. This deletes both the object
+     * and the column in the database. It is a hard delete
+     * @param organizationId The organization's UUID
+     * @param tableName The exact name of the table in the database
+     * @param columnName The exact name of the column in the database
+     */
+    @DELETE(BASE + ID_PATH + TABLE_NAME_PATH + COLUMN_NAME_PATH + EXTERNAL_DATABASE_COLUMN)
+    fun deleteExternalDatabaseColumn(
+            @Path(ID) organizationId: UUID,
+            @Path(TABLE_NAME) tableName: String,
+            @Path(COLUMN_NAME) columnName: String)
+
+    /**
+     * Deletes multiple OrganizationExternalDatabaseTable objects and the tables they represent
+     * in the database. It is a hard delete
+     * @param organizationId The organization's UUID
+     * @param tableNames The exact names of the tables in the database
+     */
+    @DELETE(BASE + ID_PATH + EXTERNAL_DATABASE_TABLE)
+    fun deleteExternalDatabaseTables(
+            @Path(ID) organizationId: UUID,
+            @Body tableNames: Set<String>)
+
+    /**
+     * Deletes multiple OrganizationExternalDatabaseColumn objects and the columns they represent
+     * within an organization's table in an external database. It is a hard delete
+     * @param organizationId The organization's UUID
+     * @param tableName The exact name of the table in the database
+     * @param columnNames The exact names of the columns in the database
+     */
+    @DELETE(BASE + ID_PATH + TABLE_NAME_PATH + EXTERNAL_DATABASE_COLUMN)
+    fun deleteExternalDatabaseColumns(
+            @Path(ID) organizationId: UUID,
+            @Path(TABLE_NAME) tableName: String,
+            @Body columnNames: Set<String>)
+}

@@ -37,7 +37,6 @@ public interface OrganizationsApi {
     String EXTERNAL_DATABASE        = "/external-database";
     String EXTERNAL_DATABASE_COLUMN = "/external-database-column";
     String EXTERNAL_DATABASE_TABLE  = "/external-database-table";
-    String PRIMARY_KEY              = "/primary-key";
     // @formatter:on
     /*
      * Acutal path elements
@@ -54,12 +53,6 @@ public interface OrganizationsApi {
     String ROLES                    = "/roles";
     String ROLE_ID                  = "roleId";
     String ROLE_ID_PATH             = "/{" + ROLE_ID + "}";
-    String TABLE_NAME               = "tableName";
-    String TABLE_NAME_PATH          = "/{" + TABLE_NAME + "}";
-    String COLUMN_NAME              = "columnName";
-    String COLUMN_NAME_PATH         = "/{" + COLUMN_NAME + "}";
-    String SQL_TYPE                 = "sqlType";
-    String SQL_TYPE_PATH            = "/{" + SQL_TYPE + "}";
 
     /*
      * These determine the service routing for the LB
@@ -260,144 +253,5 @@ public interface OrganizationsApi {
             @Path( ID ) UUID organizationId,
             @Path( ROLE_ID ) UUID roleId,
             @Path( USER_ID ) String userId );
-
-    //Endpoints for management of atlas database
-
-    //create
-    /**
-     * Creates a securable OrganizationExternalDatabaseTable object, which represents an
-     * organization's table in an external database. The table must already exist in the database
-     * @param organizationId The organization's UUID
-     * @param organizationExternalDatabaseTable The object to be created
-     */
-    @POST( BASE + ID_PATH + EXTERNAL_DATABASE_TABLE )
-    UUID createExternalDatabaseTable( @Path(ID) UUID organizationId,
-            @Body OrganizationExternalDatabaseTable organizationExternalDatabaseTable );
-
-    /**
-     * Creates a securable OrganizationExternalDatabaseColumn object, which represents a
-     * column within an organization's table in an external database. The table and column must
-     * already exist in the database
-     * @param organizationId The organization's UUID
-     * @param organizationExternalDatabaseColumn The object to be created
-     */
-    @POST( BASE + ID_PATH + EXTERNAL_DATABASE_COLUMN )
-    UUID createExternalDatabaseColumn( @Path( ID ) UUID organizationId,
-            @Body OrganizationExternalDatabaseColumn organizationExternalDatabaseColumn );
-
-    /**
-     * Creates a table with specified columns within an organization's database and creates a
-     * securable OrganizationExternalDatabaseTable object and the specified number of
-     * securable OrganizationExternalDatabaseColumn objects, which correspond to the new table.
-     * The table must not already exist in the database
-     * @param organizationId The organization's UUID
-     * @param tableName The name of the table to be created
-     * @param columnNameToSqlType An ordered map (of column name to sql type) of columns to be created
-     */
-    @POST( BASE + ID_PATH + TABLE_NAME_PATH + EXTERNAL_DATABASE_TABLE )
-    Void createNewExternalDatabaseTable( @Path( ID ) UUID organizationId, @Path( TABLE_NAME ) String tableName,
-            @Body LinkedHashMap<String, String> columnNameToSqlType);
-
-    /**
-     * Creates a new column within a table belonging to an organization and creates a
-     * securable OrganizationExternalDatabaseColumn object corresponding to that column.
-     * The column must not already exist in the database
-     * @param organizationId The organization's UUID
-     * @param tableName The name of the table to which the column will belong
-     * @param columnName The name of the column to be created
-     * @param sqlType The sql type of the column to be created
-     */
-    @POST( BASE + ID_PATH + TABLE_NAME_PATH + COLUMN_NAME_PATH + SQL_TYPE_PATH + EXTERNAL_DATABASE_COLUMN )
-    Void createNewExternalDatabaseColumn(
-            @Path( ID ) UUID organizationId,
-            @Path( TABLE_NAME ) String tableName,
-            @Path( COLUMN_NAME ) String columnName,
-            @Path( SQL_TYPE) String sqlType);
-
-    /**
-     *
-     * @param organizationId The organization's UUID
-     * @param userId The user to be given trusted status
-     * @param ipAddresses The set of ip addresses (as strings) from which users will be trusted
-     */
-    @POST( BASE + ID_PATH + USER_ID_PATH + EXTERNAL_DATABASE)
-    Void addTrustedUser(
-            @Path( ID ) UUID organizationId,
-            @Path( USER_ID ) String userId,
-            @Body Set<String> ipAddresses );
-
-    //get
-    /**
-     * Gets an OrganizationExternalDatabaseTable object, which represents an
-     * organization's table in an external database
-     * @param organizationId The organization's UUID
-     * @param tableName The exact name of the table in the database
-     */
-    @GET( BASE + ID_PATH + TABLE_NAME_PATH + EXTERNAL_DATABASE_TABLE)
-    OrganizationExternalDatabaseTable getExternalDatabaseTable(
-            @Path( ID ) UUID organizationId, @Path( TABLE_NAME) String tableName );
-
-    /**
-     * Gets an OrganizationExternalDatabaseColumn object, which represents a column
-     * within an organization's table in an external database
-     * @param organizationId The organization's UUID
-     * @param tableName The exact name of the table in the database
-     * @param columnName The exact name of the column in the database
-     */
-    @GET( BASE + ID_PATH + TABLE_NAME_PATH + COLUMN_NAME_PATH + EXTERNAL_DATABASE_COLUMN)
-    OrganizationExternalDatabaseColumn getExternalDatabaseColumn(
-            @Path( ID ) UUID organizationId, @Path(TABLE_NAME) String tableName, @Path( COLUMN_NAME) String columnName );
-
-
-
-    //delete
-    /**
-     * Deletes an OrganizationExternalDatabaseTable object, which represents an
-     * organization's table in an external database. This deletes both the object
-     * and the table in the database. It is a hard delete
-     * @param organizationId The organization's UUID
-     * @param tableName The exact name of the table in the database
-     */
-    @DELETE(BASE + ID_PATH + TABLE_NAME_PATH + EXTERNAL_DATABASE_TABLE)
-    Void deleteExternalDatabaseTable(
-            @Path( ID ) UUID organizationId,
-            @Path( TABLE_NAME ) String tableName );
-
-    /**
-     * Deletes an OrganizationExternalDatabaseColumn object, which represents a column
-     * within an organization's table in an external database. This deletes both the object
-     * and the column in the database. It is a hard delete
-     * @param organizationId The organization's UUID
-     * @param tableName The exact name of the table in the database
-     * @param columnName The exact name of the column in the database
-     */
-    @DELETE(BASE + ID_PATH + TABLE_NAME_PATH + COLUMN_NAME_PATH + EXTERNAL_DATABASE_COLUMN)
-    Void deleteExternalDatabaseColumn(
-            @Path( ID ) UUID organizationId,
-            @Path( TABLE_NAME ) String tableName,
-            @Path( COLUMN_NAME ) String columnName);
-
-    /**
-     * Deletes multiple OrganizationExternalDatabaseTable objects and the tables they represent
-     * in the database. It is a hard delete
-     * @param organizationId The organization's UUID
-     * @param tableNames The exact names of the tables in the database
-     */
-    @DELETE(BASE + ID_PATH + EXTERNAL_DATABASE_TABLE)
-    Void deleteExternalDatabaseTables(
-            @Path( ID ) UUID organizationId,
-            @Body Set<String> tableNames );
-    /**
-     * Deletes multiple OrganizationExternalDatabaseColumn objects and the columns they represent
-     * within an organization's table in an external database. It is a hard delete
-     * @param organizationId The organization's UUID
-     * @param tableName The exact name of the table in the database
-     * @param columnNames The exact names of the columns in the database
-     */
-    @DELETE( BASE + ID_PATH + TABLE_NAME_PATH + EXTERNAL_DATABASE_COLUMN)
-    Void deleteExternalDatabaseColumns(
-            @Path( ID ) UUID organizationId,
-            @Path( TABLE_NAME ) String tableName,
-            @Body Set<String> columnNames );
-
+    
 }
