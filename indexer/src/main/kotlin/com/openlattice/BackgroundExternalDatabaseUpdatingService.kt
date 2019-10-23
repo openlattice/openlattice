@@ -3,8 +3,6 @@ package com.openlattice
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
 import com.openlattice.assembler.PostgresDatabases
-import com.openlattice.authorization.AclKey
-import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.indexing.MAX_DURATION_MILLIS
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
@@ -33,7 +31,7 @@ class BackgroundExternalDatabaseUpdatingService(
     @Suppress("UNUSED")
     @Scheduled(fixedRate = MAX_DURATION_MILLIS)
     fun scanOrganizationDatabases() {
-        val orgIds = edms.getOrganizationDBNames()
+        val orgIds = edms.getOrganizationIds()
         orgIds.forEach {orgId ->
             val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
             val currentTableIds = mutableSetOf<UUID>()
@@ -45,15 +43,20 @@ class BackgroundExternalDatabaseUpdatingService(
                 val tableId = aclKeys[tableFQN.fullQualifiedNameAsString]
                 if (tableId == null) {
                     //create new securable object for this table
-                    //TODO handling of permissions
                     val newTable = OrganizationExternalDatabaseTable(Optional.empty(), tableName, tableName, Optional.empty(), orgId)
                     val newTableId = edms.createOrganizationExternalDatabaseTable(orgId, newTable)
                     currentTableIds.add(newTableId)
+
+                    //add table-level permissions
+                    edms.addPermissions(dbName, orgId, newTableId, newTable.name, Optional.empty(), Optional.empty())
+
                     val newColumns = edms.createNewColumnObjects(dbName, tableName, newTableId, orgId, Optional.empty())
                     newColumns.forEach {
                         val newColumnId = edms.createOrganizationExternalDatabaseColumn(orgId, it)
-                        //TODO handling of permissions
                         currentColumnIds.add(newColumnId)
+
+                        //add column-level permissions
+                        edms.addPermissions(dbName, orgId, newTableId, newTable.name, Optional.of(newColumnId), Optional.of(it.name))
                     }
                 } else {
                     currentTableIds.add(tableId)
@@ -65,9 +68,12 @@ class BackgroundExternalDatabaseUpdatingService(
                             //create new securable object for this column
                             //TODO handling of permissions
                             val newColumn = edms.createNewColumnObjects(dbName, tableName, tableId, orgId, Optional.of(it))
-                            newColumn.forEach {
-                                val newColumnId = edms.createOrganizationExternalDatabaseColumn(orgId, it)
+                            newColumn.forEach { newColumn ->
+                                val newColumnId = edms.createOrganizationExternalDatabaseColumn(orgId, newColumn)
                                 currentColumnIds.add(newColumnId)
+
+                                //add column-level permissions
+                                edms.addPermissions(dbName, orgId, tableId, tableName, Optional.of(newColumnId), Optional.of(newColumn.name))
                             }
                         } else {
                             currentColumnIds.add(columnId)
