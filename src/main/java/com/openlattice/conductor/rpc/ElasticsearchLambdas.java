@@ -178,16 +178,14 @@ public class ElasticsearchLambdas implements Serializable {
     }
 
     public static Function<ConductorElasticsearchApi, Boolean> deleteEntityDataBulk(
-            UUID entitySetId,
             UUID entityTypeId,
             Set<UUID> entityKeyIds ) {
         return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ( api ) -> api
-                .deleteEntityDataBulk( entitySetId, entityTypeId, entityKeyIds );
+                .deleteEntityDataBulk( entityTypeId, entityKeyIds );
     }
 
     public static Function<ConductorElasticsearchApi, Boolean> clearAllData() {
-        return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ( api ) -> api
-                .clearAllData();
+        return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ConductorElasticsearchApi::clearAllData;
     }
 
     public static Function<ConductorElasticsearchApi, Boolean> triggerSecurableObjectIndex(

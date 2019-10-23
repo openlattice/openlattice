@@ -287,7 +287,7 @@ public class SearchService {
     @Subscribe
     public void deleteEntities( EntitiesDeletedEvent event ) {
         UUID entityTypeId = entitySetService.getEntityTypeByEntitySetId( event.getEntitySetId() ).getId();
-        elasticsearchApi.deleteEntityDataBulk( event.getEntitySetId(), entityTypeId, event.getEntityKeyIds() );
+        elasticsearchApi.deleteEntityDataBulk( entityTypeId, event.getEntityKeyIds() );
     }
 
     @Timed
