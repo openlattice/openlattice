@@ -21,10 +21,13 @@ import com.openlattice.organizations.roles.SecurePrincipalsManager
 
 import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.ResultSetAdapters.organizationId
+import com.openlattice.privileges.OwnerPrivileges
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
+import java.security.Permissions
+import java.time.OffsetDateTime
 import java.util.*
 import kotlin.collections.LinkedHashMap
 
@@ -41,8 +44,10 @@ class ExternalDatabaseManagementService(
     private val organizationExternalDatabaseColumns: IMap<UUID, OrganizationExternalDatabaseColumn> = hazelcastInstance.getMap(HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_COlUMN.name)
     private val organizationExternalDatabaseTables: IMap<UUID, OrganizationExternalDatabaseTable> = hazelcastInstance.getMap(HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_TABLE.name)
     private val securableObjectTypes: IMap<AclKey, SecurableObjectType> = hazelcastInstance.getMap(HazelcastMap.SECURABLE_OBJECT_TYPES.name)
+    private val aces: IMap<AceKey, AceValue> = hazelcastInstance.getMap(HazelcastMap.PERMISSIONS.name)
     private val logger = LoggerFactory.getLogger(ExternalDatabaseManagementService::class.java)
 
+    /*CREATE*/
     fun createOrganizationExternalDatabaseTable(orgId: UUID, table: OrganizationExternalDatabaseTable): UUID {
         val principal = Principals.getCurrentUser()
         Principals.ensureUser(principal)
@@ -78,10 +83,16 @@ class ExternalDatabaseManagementService(
         return column.id
     }
 
-    fun addTrustedUser(orgId: UUID, userPrincipal: Principal, ipAdresses: Set<String>) {
-        val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
-        val userName = getDBUser(userPrincipal.id)
-        //edit the pg_hba file through some magic. must. become. magician.
+    /*GET*/
+    fun getOrganizationIds(): Set<UUID> {
+        val orgIds = mutableSetOf<UUID>()
+        hds.connection.createStatement().use {
+            val rs = it.executeQuery("SELECT id FROM organizations")
+            while (rs.next()) {
+                orgIds.add(organizationId(rs))
+            }
+        }
+        return orgIds
     }
 
     fun getOrganizationExternalDatabaseTable(tableId: UUID): OrganizationExternalDatabaseTable {
@@ -92,6 +103,7 @@ class ExternalDatabaseManagementService(
         return organizationExternalDatabaseColumns[columnId]!!
     }
 
+    /*DELETE*/
     fun deleteOrganizationExternalDatabaseTables(orgId: UUID, tableIds: Set<UUID>) {
         tableIds.forEach { deleteOrganizationExternalDatabaseTable(orgId, it) }
     }
@@ -146,6 +158,13 @@ class ExternalDatabaseManagementService(
         }
     }
 
+    /*PERMISSIONS*/
+    fun addTrustedUser(orgId: UUID, userPrincipal: Principal, ipAdresses: Set<String>) {
+        val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
+        val userName = getDBUser(userPrincipal.id)
+        //edit the pg_hba file through some magic. must. become. magician.
+    }
+
     /**
      * Sets privileges for a user on an organization's table or column
      */
@@ -158,7 +177,7 @@ class ExternalDatabaseManagementService(
                 dataSource.connection.createStatement().use { stmt ->
                     acls.forEach {
                         val tableAndColumnNames = getTableAndColumnNames(AclKey(it.aclKey))
-                        it.aces.forEach{ ace ->
+                        it.aces.forEach { ace ->
                             val dbUser = getDBUser(ace.principal.id)
                             val privileges = mutableListOf<String>()
                             if (ace.permissions.contains(Permission.OWNER)) {
@@ -199,23 +218,51 @@ class ExternalDatabaseManagementService(
             }
         }
     }
-    
-    fun getOrganizationIds(): Set<UUID> {
-        val orgIds = mutableSetOf<UUID>()
-        hds.connection.createStatement().use {
-            val rs = it.executeQuery("SELECT id FROM organizations")
-            while (rs.next()) {
-                orgIds.add(organizationId(rs))
+
+    fun addPermissions(dbName: String, orgId: UUID, tableId: UUID, tableName: String, maybeColumnId: Optional<UUID>, maybeColumnName: Optional<String>) {
+        val privilegesByUser = HashMap<String, MutableSet<String>>()
+        var columnClause = ""
+        lateinit var aclKey: AclKey
+        if (maybeColumnId.isPresent && maybeColumnName.isPresent) {
+            val columnName = maybeColumnName.get()
+            val columnId = maybeColumnId.get()
+            columnClause = "AND column_name = '$columnName'"
+            aclKey = AclKey(orgId, tableId, columnId)
+        } else {
+            aclKey = AclKey(orgId, tableId)
+        }
+        assemblerConnectionManager.connect(dbName).use { dataSource ->
+            dataSource.connection.createStatement().use { stmt ->
+                val rs = stmt.executeQuery(
+                        "SELECT grantee, privilege_type " +
+                                "FROM information_schema.role_table_grants " +
+                                "WHERE table_name = '$tableName " +
+                                columnClause)
+                while (rs.next()) {
+                    val user = rs.getString("grantee")
+                    val privilege = rs.getString("privilege_type").toUpperCase()
+                    privilegesByUser.getOrPut(user) { mutableSetOf() }.add(privilege)
+                }
             }
         }
-        return orgIds
+        privilegesByUser.forEach { (user, privileges) ->
+            val principal = securePrincipalsManager.getPrincipal(user).principal
+            val aceKey = AceKey(aclKey, principal)
+            var permissions = EnumSet.noneOf(Permission::class.java)
+            if (privileges == OwnerPrivileges.values() as Set<String>) { //eek
+                permissions.add(Permission.OWNER)
+            }
+            if (privileges.contains("SELECT")) {
+                permissions.add(Permission.READ)
+            }
+            if (privileges.contains("INSERT") || privileges.contains("UPDATE"))
+                permissions.add(Permission.WRITE)
+            val aceValue = AceValue(permissions, SecurableObjectType.OrganizationExternalDatabaseTable, OffsetDateTime.MAX)
+            aces[aceKey] = aceValue //TODO should be a merger or what?
+        }
     }
 
-    private fun getDBUser(principalId: String): String {
-        val securePrincipal = securePrincipalsManager.getPrincipal(principalId)
-        return quote(buildPostgresUsername(securePrincipal))
-    }
-
+    /*IDK WHERE THESE BELONG CONCEPTUALLY YET*/
     fun getColumnNamesByTable(orgId: UUID, dbName: String): Map<String, Set<String>> {
         val columnNamesByTableName = HashMap<String, MutableSet<String>>()
         assemblerConnectionManager.connect(dbName).use { dataSource ->
@@ -285,6 +332,7 @@ class ExternalDatabaseManagementService(
         return newColumns
     }
 
+    /*PRIVATE FUNCTIONS*/
     private fun createPrivilegesSql(action: Action, privileges: List<String>, tableName: String, columnName: String, dbUser: String): String {
         val privilegesAsString = privileges.joinToString(separator = ", ")
         val tableNamePath = "$PUBLIC_SCHEMA.$tableName"
@@ -311,6 +359,11 @@ class ExternalDatabaseManagementService(
         }
         //add checks in here for map indexing??
         return Pair(tableName, columnName)
+    }
+
+    private fun getDBUser(principalId: String): String {
+        val securePrincipal = securePrincipalsManager.getPrincipal(principalId)
+        return quote(buildPostgresUsername(securePrincipal))
     }
 
 }
