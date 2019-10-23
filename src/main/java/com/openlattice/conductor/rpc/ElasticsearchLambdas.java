@@ -170,13 +170,6 @@ public class ElasticsearchLambdas implements Serializable {
                 .executeSecurableObjectFQNSearch( securableObjectType, namespace, name, start, maxHits );
     }
 
-    public static Function<ConductorElasticsearchApi, Boolean> deleteEntityData(
-            EntityDataKey edk,
-            UUID entityTypeId ) {
-        return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ( api ) -> api
-                .deleteEntityData( edk, entityTypeId );
-    }
-
     public static Function<ConductorElasticsearchApi, Boolean> deleteEntityDataBulk(
             UUID entityTypeId,
             Set<UUID> entityKeyIds ) {
