@@ -159,12 +159,22 @@ public class SearchService {
 
     private Timer indexEntitiesTimer;
 
+    private Timer deleteEntitiesTimer;
+
+    private Timer deleteEntitySetDataTimer;
+
     private Timer markAsIndexedTimer;
 
     public SearchService( EventBus eventBus, MetricRegistry metricRegistry ) {
         eventBus.register( this );
         indexEntitiesTimer = metricRegistry.timer(
                 MetricRegistry.name( SearchService.class, "indexEntities" )
+        );
+        deleteEntitiesTimer = metricRegistry.timer(
+                MetricRegistry.name( SearchService.class, "deleteEntities" )
+        );
+        deleteEntitySetDataTimer = metricRegistry.timer(
+                MetricRegistry.name( SearchService.class, "entitySetDataCleared" )
         );
         markAsIndexedTimer = metricRegistry.timer(
                 MetricRegistry.name( SearchService.class, "markAsIndexed" )
@@ -282,18 +292,40 @@ public class SearchService {
         elasticsearchApi.deleteEntitySet( event.getEntitySetId(), event.getEntityTypeId() );
     }
 
-    @Timed
     @Subscribe
     public void deleteEntities( EntitiesDeletedEvent event ) {
+        final var deleteEntitiesContext = deleteEntitiesTimer.time();
         UUID entityTypeId = entitySetService.getEntityTypeByEntitySetId( event.getEntitySetId() ).getId();
-        elasticsearchApi.deleteEntityDataBulk( entityTypeId, event.getEntityKeyIds() );
+        final var entitiesDeleted = elasticsearchApi.deleteEntityDataBulk( entityTypeId, event.getEntityKeyIds() );
+        deleteEntitiesContext.stop();
+
+        if ( entitiesDeleted ) {
+            final var markAsIndexedContext = markAsIndexedTimer.time();
+            // mark them as (un)indexed:  set last_index to now()
+            // note: it does not matter when we get last_write, as opposed to upserts, because the only action taken
+            // here is to remove the documents
+            indexingMetadataManager.markAsUnIndexed(
+                    Map.of( event.getEntitySetId(), event.getEntityKeyIds() ), false
+            );
+            markAsIndexedContext.stop();
+        }
     }
 
-    @Timed
     @Subscribe
     public void entitySetDataCleared( EntitySetDataDeletedEvent event ) {
+        final var deleteEntitySetDataContext = deleteEntitySetDataTimer.time();
         UUID entityTypeId = entitySetService.getEntityTypeByEntitySetId( event.getEntitySetId() ).getId();
-        elasticsearchApi.clearEntitySetData( event.getEntitySetId(), entityTypeId );
+        final var entitySetDataDeleted = elasticsearchApi.clearEntitySetData( event.getEntitySetId(), entityTypeId );
+        deleteEntitySetDataContext.stop();
+
+        if ( entitySetDataDeleted ) {
+            final var markAsIndexedContext = markAsIndexedTimer.time();
+            // mark every entity in entity set as (un)indexed:  set last_index to now()
+            // note: it does not matter when we get last_write, as opposed to upserts, because the only action taken
+            // here is to remove the documents
+            indexingMetadataManager.markAsUnIndexed( event.getEntitySetId() );
+            markAsIndexedContext.stop();
+        }
     }
 
     @Timed

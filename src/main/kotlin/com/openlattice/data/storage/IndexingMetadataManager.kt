@@ -27,8 +27,9 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
 
                 entityKeyIdsWithLastWrite.forEach { (entitySetId, entities) ->
 
-                    val partitions = entitySetPartitions.getValue(entitySetId).partitions.toList()
-                    val partitionVersion = entitySetPartitions.getValue(entitySetId).partitionsVersion
+                    val partitionsInfo = entitySetPartitions.getValue(entitySetId)
+                    val partitions = partitionsInfo.partitions.toList()
+                    val partitionVersion = partitionsInfo.partitionsVersion
                     entities.entries
                             .groupBy({ getPartition(it.key, partitions) }, { it.toPair() })
                             .mapValues { it.value.toMap() }
@@ -45,11 +46,71 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
                                             stmt.setArray(3, idsArray)
                                             stmt.setInt(4, partition)
                                             stmt.setInt(5, partitionVersion)
+
                                             stmt.addBatch()
                                         }
                             }
                 }
                 stmt.executeBatch().sum()
+            }
+        }
+    }
+
+    /**
+     * Sets the last_write of provided entities to current datetime. Used when un-indexing entities after deletion.
+     * @param entityKeyIds Map of (normal) entity set ids and either entity key ids or linking ids, depending on
+     * [linking].
+     * @param linking Denotes, if the provided ids are linking ids or not.
+     */
+    fun markAsUnIndexed(entityKeyIds: Map<UUID, Set<UUID>>, linking: Boolean): Int {
+        val entitySetPartitions = partitionManager.getEntitySetsPartitionsInfo(entityKeyIds.keys)
+
+        return hds.connection.use { connection ->
+            val updateSql = if (linking) markLastLinkingIndexSql else markLastIndexSql
+
+            connection.prepareStatement(updateSql).use { stmt ->
+
+                entityKeyIds.forEach { (entitySetId, entities) ->
+
+                    val partitionsInfo = entitySetPartitions.getValue(entitySetId)
+                    val partitions = partitionsInfo.partitions.toList()
+                    val partitionVersion = partitionsInfo.partitionsVersion
+
+                    entities.groupBy { getPartition(it, partitions) }
+                            .forEach { (partition, entities) ->
+
+                                val idsArray = PostgresArrays.createUuidArray(connection, entities)
+                                stmt.setObject(1, entitySetId)
+                                stmt.setArray(2, idsArray)
+                                stmt.setInt(3, partition)
+                                stmt.setInt(4, partitionVersion)
+
+                                stmt.addBatch()
+                            }
+                }
+                stmt.executeBatch().sum()
+            }
+        }
+    }
+
+    /**
+     * Sets the last_write of provided entity set to current datetime. Used when un-indexing entities after entity set
+     * data deletion.
+     * @param entitySetId The id of the (normal) entity set id.
+     */
+    fun markAsUnIndexed(entitySetId: UUID): Int {
+        val partitionInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
+        val partitions = partitionInfo.partitions.toList()
+        val partitionVersion = partitionInfo.partitionsVersion
+
+        return hds.connection.use { connection ->
+            connection.prepareStatement(markEntitySetLastIndexSql).use { stmt ->
+                val partitionsArray = PostgresArrays.createIntArray(connection, partitions)
+                stmt.setObject(1, entitySetId)
+                stmt.setArray(2, partitionsArray)
+                stmt.setInt(3, partitionVersion)
+
+                stmt.executeUpdate()
             }
         }
     }
@@ -79,16 +140,17 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
         hds.connection.use { connection ->
             connection.prepareStatement(markIdsAsNeedToBeIndexedSql).use { stmt ->
                 entityKeys.forEach { (entitySetId, entityKeyIds) ->
-                    val partitions = entitySetPartitions.getValue(entitySetId).partitions.toList()
-                    val partitionVersion = entitySetPartitions.getValue(entitySetId).partitionsVersion
+                    val partitionsInfo = entitySetPartitions.getValue(entitySetId)
+                    val partitions = partitionsInfo.partitions.toList()
+                    val partitionVersion = partitionsInfo.partitionsVersion
 
                     entityKeyIds.groupBy { getPartition(it, partitions) }
                             .forEach { (partition, entityKeyIds) ->
                                 val idsArray = PostgresArrays.createUuidArray(connection, entityKeyIds)
                                 stmt.setObject(1, entitySetId)
-                                stmt.setInt(2, partition)
-                                stmt.setInt(3, partitionVersion)
-                                stmt.setArray(4, idsArray)
+                                stmt.setArray(2, idsArray)
+                                stmt.setInt(3, partition)
+                                stmt.setInt(4, partitionVersion)
 
                                 stmt.addBatch()
                             }
@@ -128,14 +190,18 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
         hds.connection.use { connection ->
             connection.prepareStatement(markAsNeedsToBeLinkedSql).use { stmt ->
                 linkingEntityKeys.forEach { (entitySetId, linkingIds) ->
-                    val partitions = entitySetPartitions.getValue(entitySetId).partitions.toList()
+                    val partitionsInfo = entitySetPartitions.getValue(entitySetId)
+                    val partitions = partitionsInfo.partitions.toList()
+                    val partitionVersion = partitionsInfo.partitionsVersion
 
                     linkingIds.groupBy { getPartition(it, partitions) }
                             .forEach { (partition, linkingIds) ->
                                 val linkingIdsArray = PostgresArrays.createUuidArray(connection, linkingIds)
                                 stmt.setObject(1, entitySetId)
-                                stmt.setInt(2, partition)
-                                stmt.setArray(3, linkingIdsArray)
+                                stmt.setArray(2, linkingIdsArray)
+                                stmt.setInt(3, partition)
+                                stmt.setInt(4, partitionVersion)
+
                                 stmt.addBatch()
                             }
                 }
@@ -146,6 +212,43 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
     }
 }
 // @formatter:off
+
+/**
+ * 1. entity set id
+ * 2. entity key ids (uuid array)
+ * 3. partition
+ * 4. partition version
+ */
+private val entityKeyIdsInEntitySet =
+        " ${ENTITY_SET_ID.name} = ? " +
+        "AND ${ID.name} = ANY(?) " +
+        "AND ${PARTITION.name} = ? " +
+        "AND ${PARTITIONS_VERSION.name} = ? "
+
+/**
+ * 1. entity set id
+ * 2. linking ids (uuid array)
+ * 3. partition
+ * 4. partition version
+ */
+private val linkingIdsInEntitySet =
+        " ${ENTITY_SET_ID.name} = ? " +
+        "AND ${LINKING_ID.name} = ANY(?) " +
+        "AND ${LINKING_ID.name} IS NOT NULL " +
+        "AND ${PARTITION.name} = ? " +
+        "AND ${PARTITIONS_VERSION.name} = ? "
+
+/**
+ * 1. entity set id
+ * 2. partitions (int array)
+ * 3. partition version
+ */
+private val entitySet =
+        " ${ENTITY_SET_ID.name} = ? " +
+        "AND ${PARTITION.name} = ANY(?) " +
+        "AND ${PARTITIONS_VERSION.name} = ? "
+
+
 /**
  * Arguments of preparable sql in order:
  * 1. last index
@@ -154,11 +257,7 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
  * 4. partition
  * 5. partition version
  */
-private val updateLastIndexSql = "UPDATE ${IDS.name} SET ${LAST_INDEX.name} = ? " +
-        "WHERE ${ENTITY_SET_ID.name} = ? " +
-            "AND ${ID.name} = ANY(?) " +
-            "AND ${PARTITION.name} = ? " +
-            "AND ${PARTITIONS_VERSION.name} = ?"
+private val updateLastIndexSql = "UPDATE ${IDS.name} SET ${LAST_INDEX.name} = ? WHERE $entityKeyIdsInEntitySet"
 
 /**
  * Arguments of preparable sql in order:
@@ -168,12 +267,36 @@ private val updateLastIndexSql = "UPDATE ${IDS.name} SET ${LAST_INDEX.name} = ? 
  * 4. partition
  * 5. partition version
  */
-private val updateLastLinkingIndexSql = "UPDATE ${IDS.name} SET ${LAST_LINK_INDEX.name} = ? " +
-        "WHERE ${ENTITY_SET_ID.name} = ? " +
-            "AND ${LINKING_ID.name} = ANY(?) " +
-            "AND ${LINKING_ID.name} IS NOT NULL " +
-            "AND ${PARTITION.name} = ? " +
-            "AND ${PARTITIONS_VERSION.name} = ?"
+private val updateLastLinkingIndexSql =
+        "UPDATE ${IDS.name} SET ${LAST_LINK_INDEX.name} = ? WHERE $linkingIdsInEntitySet"
+
+/**
+ * Arguments of preparable sql in order:
+ * 1. entity set id
+ * 2. entity key ids (uuid array)
+ * 3. partition
+ * 4. partition version
+ */
+private val markLastIndexSql = "UPDATE ${IDS.name} SET ${LAST_INDEX.name} = 'now()' WHERE $entityKeyIdsInEntitySet"
+
+/**
+ * Arguments of preparable sql in order:
+ * 1. entity set id
+ * 2. linking ids (uuid array)
+ * 3. partition
+ * 4. partition version
+ */
+private val markLastLinkingIndexSql =
+        "UPDATE ${IDS.name} SET ${LAST_LINK_INDEX.name} = 'now()' WHERE $linkingIdsInEntitySet"
+
+/**
+ * Arguments of preparable sql in order:
+ * 1. entity set id
+ * 3. partitions (int array)
+ * 4. partition version
+ */
+private val markEntitySetLastIndexSql = "UPDATE ${IDS.name} SET ${LAST_INDEX.name} = 'now()' WHERE $entitySet"
+
 
 
 /**
@@ -184,25 +307,19 @@ private val updateLastLinkingIndexSql = "UPDATE ${IDS.name} SET ${LAST_LINK_INDE
 fun markEntitySetsAsNeedsToBeIndexedSql(linking: Boolean): String {
     val updateColumn = if (linking) LAST_LINK_INDEX.name else LAST_INDEX.name
 
-    return "UPDATE ${IDS.name} " +
-            "SET $updateColumn = '-infinity()' " +
-            "WHERE ${ENTITY_SET_ID.name} = ANY(?) " +
-                "AND ${PARTITION.name} = ANY(?)"
+    return "UPDATE ${IDS.name} SET $updateColumn = '-infinity()' " +
+            "WHERE ${ENTITY_SET_ID.name} = ANY(?) AND ${PARTITION.name} = ANY(?)"
 }
 
 /**
  * Arguments of preparable sql in order:
  * 1. entity set id
- * 2. partition
- * 3. partition version
- * 4. ids (uuid array)
+ * 2. entity key ids (uuid array)
+ * 3. partition
+ * 4. partition version
  */
-private val markIdsAsNeedToBeIndexedSql = "UPDATE ${IDS.name} " +
-        "SET ${LAST_INDEX.name} = '-infinity()' " +
-        "WHERE ${ENTITY_SET_ID.name} = ? " +
-        "AND ${PARTITION.name} = ? " +
-        "AND ${PARTITIONS_VERSION.name} = ? " +
-        "AND ${ID.name} = ANY(?)"
+private val markIdsAsNeedToBeIndexedSql =
+        "UPDATE ${IDS.name} SET ${LAST_INDEX.name} = '-infinity()' WHERE $entityKeyIdsInEntitySet"
 
 /**
  * Arguments of preparable sql in order:
@@ -210,23 +327,17 @@ private val markIdsAsNeedToBeIndexedSql = "UPDATE ${IDS.name} " +
  * 2. partition (int array)
  * 3. partition version
  */
-private val markEntitySetAsNeedToBeIndexedSql = "UPDATE ${IDS.name} " +
-        "SET ${LAST_INDEX.name} = '-infinity()' " +
-        "WHERE ${ENTITY_SET_ID.name} = ? " +
-        "AND ${PARTITION.name} = ANY(?) " +
-        "AND ${PARTITIONS_VERSION.name} = ? "
+private val markEntitySetAsNeedToBeIndexedSql =
+        "UPDATE ${IDS.name} SET ${LAST_INDEX.name} = '-infinity()' WHERE $entitySet"
 
 /**
  * Arguments of preparable sql in order:
  * 1. entity set id
- * 2. partition
- * 3. linking ids (uuid array)
+ * 2. linking ids (uuid array)
+ * 3. partition
+ * 4. partition version
  */
-private val markAsNeedsToBeLinkedSql = "UPDATE ${IDS.name} " +
-        "SET ${LAST_LINK.name} = '-infinity()' " +
-        "WHERE ${VERSION.name} > 0 " +
-            "AND ${ENTITY_SET_ID.name} = ? " +
-            "AND ${PARTITION.name} = ? " +
-            "AND ${LINKING_ID.name} IS NOT NULL " +
-            "AND ${LINKING_ID.name} = ANY(?)"
+private val markAsNeedsToBeLinkedSql =
+        "UPDATE ${IDS.name} SET ${LAST_LINK.name} = '-infinity()' WHERE ${VERSION.name} > 0 AND $linkingIdsInEntitySet"
+
 // @formatter:on
