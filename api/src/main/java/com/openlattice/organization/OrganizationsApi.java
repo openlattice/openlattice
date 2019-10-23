@@ -19,7 +19,6 @@
 package com.openlattice.organization;
 
 import com.openlattice.directory.pojo.Auth0UserBasic;
-import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.organization.roles.Role;
 
 import java.util.*;
@@ -27,32 +26,29 @@ import java.util.*;
 import retrofit2.http.*;
 
 public interface OrganizationsApi {
-    String ASSEMBLE                 = "/assemble";
-    String CONTROLLER               = "/organizations";
-    String DESCRIPTION              = "/description";
-    String EMAIL_DOMAIN             = "email-domain";
-    String EMAIL_DOMAINS            = "/email-domains";
-    String EMAIL_DOMAIN_PATH        = "/{" + EMAIL_DOMAIN + ":.+}";
-    String ENTITY_SETS              = "/entity-sets";
-    String EXTERNAL_DATABASE        = "/external-database";
-    String EXTERNAL_DATABASE_COLUMN = "/external-database-column";
-    String EXTERNAL_DATABASE_TABLE  = "/external-database-table";
+    String ASSEMBLE          = "/assemble";
+    String CONTROLLER        = "/organizations";
+    String DESCRIPTION       = "/description";
+    String EMAIL_DOMAIN      = "email-domain";
+    String EMAIL_DOMAINS     = "/email-domains";
+    String EMAIL_DOMAIN_PATH = "/{" + EMAIL_DOMAIN + ":.+}";
+    String ENTITY_SETS       = "/entity-sets";
     // @formatter:on
     /*
      * Acutal path elements
      */
-    String ID                       = "id";
-    String ID_PATH                  = "/{" + ID + "}";
-    String INTEGRATION              = "/integration";
-    String MEMBERS                  = "/members";
-    String PRINCIPALS               = "/principals";
-    String PRINCIPAL_ID             = "pid";
-    String PRINCIPAL_ID_PATH        = "/{" + PRINCIPAL_ID + "}";
-    String REFRESH                  = "/refresh";
-    String REFRESH_RATE             = "/refresh-rate";
-    String ROLES                    = "/roles";
-    String ROLE_ID                  = "roleId";
-    String ROLE_ID_PATH             = "/{" + ROLE_ID + "}";
+    String ID                = "id";
+    String ID_PATH           = "/{" + ID + "}";
+    String INTEGRATION       = "/integration";
+    String MEMBERS           = "/members";
+    String PRINCIPALS        = "/principals";
+    String PRINCIPAL_ID      = "pid";
+    String PRINCIPAL_ID_PATH = "/{" + PRINCIPAL_ID + "}";
+    String REFRESH           = "/refresh";
+    String REFRESH_RATE      = "/refresh-rate";
+    String ROLES             = "/roles";
+    String ROLE_ID           = "roleId";
+    String ROLE_ID_PATH      = "/{" + ROLE_ID + "}";
 
     /*
      * These determine the service routing for the LB
@@ -253,5 +249,5 @@ public interface OrganizationsApi {
             @Path( ID ) UUID organizationId,
             @Path( ROLE_ID ) UUID roleId,
             @Path( USER_ID ) String userId );
-    
+
 }
