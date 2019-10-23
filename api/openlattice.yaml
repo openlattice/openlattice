@@ -1792,14 +1792,37 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties:
-                  type: object
-                  additionalProperties:
-                    type: object
-                    items:
-                      $ref: "#/components/DataSearchResult"
-      
+                $ref: "#/components/DataSearchResult"
+  /datastore/search/{entitySetId}:
+    post:
+      summary: Executes a search over the data of a given entity set to find rows that match the search term
+      operationId: executeEntitySetDataQuery
+      parameters:
+        - name: entitySetId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        description: A JSON object that contains three parameters, "start", which specifies the hit number to start returning results on for paging, "maxHits", which specifies the maximum number of hits to return, and "searchTerm", which is the search term results will match on.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/SearchTerm"
+      tags:
+        - search
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: "A  data search result object, containing the total number of hits for the given query, and the hits themselves."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/DataSearchResult"
   
   ####################
   ## DIRECTORY APIs ##
@@ -3598,7 +3621,19 @@ components:
           type: string
           format: uuid
         exact:
-          type: boolean    
+          type: boolean 
+    SearchTerm:
+      type: object
+      properties:
+        searchTerm: 
+          type: string
+        start: 
+          type: integer
+        maxHits:
+          type: integer
+        fuzzy:
+          type: boolean
+           
     DataSearchResult:
       type: object
       properties:
