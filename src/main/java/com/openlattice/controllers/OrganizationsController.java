@@ -23,8 +23,6 @@ package com.openlattice.controllers;
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Predicates;
 import com.google.common.collect.*;
-import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.IMap;
 import com.openlattice.assembler.Assembler;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
@@ -33,26 +31,19 @@ import com.openlattice.controllers.exceptions.ForbiddenException;
 import com.openlattice.controllers.exceptions.ResourceNotFoundException;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.directory.pojo.Auth0UserBasic;
-import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.edm.type.PropertyType;
-import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.organization.*;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.ExternalDatabaseManagementService;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
-import retrofit2.http.Path;
 
-import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 import java.util.*;
 import java.util.stream.Collectors;
-
-import static com.google.common.base.Preconditions.checkState;
 
 @RestController
 @RequestMapping( OrganizationsApi.CONTROLLER )
@@ -81,17 +72,6 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
 
     @Inject
     private ExternalDatabaseManagementService edms;
-
-    @Inject
-    private HazelcastInstance hazelcastInstance;
-
-    private IMap<String, UUID> aclKeysMap;
-
-    @PostConstruct
-    public Void init() {
-        this.aclKeysMap = hazelcastInstance.getMap( HazelcastMap.ACL_KEYS.name() );
-        return null;
-    }
 
     @Timed
     @Override
