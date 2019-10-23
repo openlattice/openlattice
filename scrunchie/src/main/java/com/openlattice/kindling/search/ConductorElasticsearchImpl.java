@@ -540,9 +540,14 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 final var propertyValues = ekEntry.getValue();
 
                 Map<Object, Object> values = new HashMap<>( propertyValues.size() + 2 );
-                propertyValues.forEach( values::put );
+                propertyValues.forEach( ( propertyTypeId, value ) -> {
+                    if ( !propertyTypeId.equals( LAST_WRITE_ID.getId() ) ) {
+                        values.put( propertyTypeId, value );
+                    }
+                } );
                 values.put( ID_ID.getId(), entityKeyId );
                 values.put( ENTITY_SET_ID_KEY_ID.getId(), entitySetId );
+                values.put( LAST_WRITE_KEY_ID.getId(), entity.get( LAST_WRITE_ID.getId() ) );
 
                 return values;
             } );
@@ -560,8 +565,13 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     private byte[] formatEntity( UUID entitySetId, Map<UUID, Set<Object>> entity ) {
 
         Map<Object, Object> values = new HashMap<>( entity.size() + 1 );
-        entity.forEach( values::put );
+        entity.forEach( ( propertyTypeId, value ) -> {
+            if ( !propertyTypeId.equals( LAST_WRITE_ID.getId() ) ) {
+                values.put( propertyTypeId, value );
+            }
+        } );
         values.put( ENTITY_SET_ID_KEY_ID.getId(), entitySetId );
+        values.put( LAST_WRITE_KEY_ID.getId(), entity.get( LAST_WRITE_ID.getId() ) );
 
         try {
             return mapper.writeValueAsBytes( ImmutableMap.of( ENTITY, values, ENTITY_SET_ID_FIELD, entitySetId ) );
