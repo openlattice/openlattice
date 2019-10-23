@@ -28,9 +28,11 @@ import com.hazelcast.query.Predicates
 import com.hazelcast.query.QueryConstants
 import com.openlattice.data.storage.PostgresEntityDataQueryService
 import com.openlattice.postgres.PostgresTable.IDS
+import com.openlattice.postgres.DataTables.LAST_INDEX
 import com.openlattice.edm.EntitySet
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.indexing.configuration.IndexerConfiguration
+import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.BasePostgresIterable
@@ -141,6 +143,9 @@ class BackgroundIndexedEntitiesDeletionService(
         return deleteCount
     }
 
+    /**
+     * Select all ids, which have been hard deleted and already un-indexed.
+     */
     private fun getDeletedIds(entitySetId: UUID): BasePostgresIterable<UUID> {
         return BasePostgresIterable(
                 PreparedStatementHolderSupplier(hds, selectDeletedIds(), FETCH_SIZE) {
@@ -157,8 +162,8 @@ class BackgroundIndexedEntitiesDeletionService(
                 "FROM ${IDS.name} " +
                 "WHERE " +
                 "${ENTITY_SET_ID.name} = ? AND " +
-                "${VERSION.name} = 0 AND" +
-                "( OR )"
+                "${VERSION.name} = 0 AND " +
+                "( (${LAST_INDEX.name} >= ${LAST_WRITE.name}) OR (${LAST_LINK_INDEX.name} >= ${LAST_WRITE.name}) )"
     }
 
     private fun tryLockEntitySet(entitySetId: UUID): Boolean {
