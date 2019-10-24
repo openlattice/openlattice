@@ -134,8 +134,8 @@ class PostgresEntityDatastore(
                 .forEach { this.markMaterializedEntitySetDirty(it) }
     }
 
-    private fun signalEntitySetDataDeleted(entitySetId: UUID) {
-        eventBus.post(EntitySetDataDeletedEvent(entitySetId))
+    private fun signalEntitySetDataDeleted(entitySetId: UUID, deleteType: DeleteType) {
+        eventBus.post(EntitySetDataDeletedEvent(entitySetId, deleteType))
         markMaterializedEntitySetDirty(entitySetId) // mark entityset as unsync with data
 
         // mark all involved linking entitysets as unsync with data
@@ -143,9 +143,9 @@ class PostgresEntityDatastore(
                 .forEach { this.markMaterializedEntitySetDirty(it) }
     }
 
-    private fun signalDeletedEntities(entitySetId: UUID, entityKeyIds: Set<UUID>) {
+    private fun signalDeletedEntities(entitySetId: UUID, entityKeyIds: Set<UUID>, deleteType: DeleteType) {
         if (shouldIndexDirectly(entitySetId, entityKeyIds)) {
-            eventBus.post(EntitiesDeletedEvent(entitySetId, entityKeyIds))
+            eventBus.post(EntitiesDeletedEvent(entitySetId, entityKeyIds, deleteType))
         }
 
         markMaterializedEntitySetDirty(entitySetId) // mark entityset as unsync with data
@@ -183,7 +183,7 @@ class PostgresEntityDatastore(
             entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>
     ): WriteEvent {
         val writeEvent = dataQueryService.clearEntitySet(entitySetId, authorizedPropertyTypes)
-        signalEntitySetDataDeleted(entitySetId)
+        signalEntitySetDataDeleted(entitySetId, DeleteType.Soft)
         return writeEvent
     }
 
@@ -192,7 +192,7 @@ class PostgresEntityDatastore(
             entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
     ): WriteEvent {
         val writeEvent = dataQueryService.clearEntities(entitySetId, entityKeyIds, authorizedPropertyTypes)
-        signalDeletedEntities(entitySetId, entityKeyIds)
+        signalDeletedEntities(entitySetId, entityKeyIds, DeleteType.Soft)
         return writeEvent
     }
 
@@ -387,7 +387,7 @@ class PostgresEntityDatastore(
         val (_, numUpdates) = dataQueryService.deleteEntitySetData(entitySetId, authorizedPropertyTypes)
         val writeEvent = dataQueryService.tombstoneDeletedEntitySet(entitySetId)
 
-        signalEntitySetDataDeleted(entitySetId)
+        signalEntitySetDataDeleted(entitySetId, DeleteType.Hard)
 
         // delete entities from linking feedbacks
         val deleteFeedbackCount = feedbackQueryService.deleteLinkingFeedback(entitySetId, Optional.empty())
@@ -416,7 +416,7 @@ class PostgresEntityDatastore(
         val (_, numUpdates) = dataQueryService
                 .deleteEntityDataAndEntities(entitySetId, entityKeyIds, authorizedPropertyTypes)
         val writeEvent = dataQueryService.tombstoneDeletedEntities(entitySetId, entityKeyIds)
-        signalDeletedEntities(entitySetId, entityKeyIds)
+        signalDeletedEntities(entitySetId, entityKeyIds, DeleteType.Hard)
 
         // delete entities from linking feedbacks too
         val deleteFeedbackCount = feedbackQueryService.deleteLinkingFeedback(entitySetId, Optional.of(entityKeyIds))

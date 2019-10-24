@@ -50,6 +50,7 @@ import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.collections.EntitySetCollection;
 import com.openlattice.collections.EntityTypeCollection;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
+import com.openlattice.data.DeleteType;
 import com.openlattice.data.EntityDataKey;
 import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.events.EntitiesDeletedEvent;
@@ -300,14 +301,17 @@ public class SearchService {
         deleteEntitiesContext.stop();
 
         if ( entitiesDeleted ) {
-            final var markAsIndexedContext = markAsIndexedTimer.time();
-            // mark them as (un)indexed:  set last_index to now()
-            // note: it does not matter when we get last_write, as opposed to upserts, because the only action taken
-            // here is to remove the documents
-            indexingMetadataManager.markAsUnIndexed(
-                    Map.of( event.getEntitySetId(), event.getEntityKeyIds() ), false
-            );
-            markAsIndexedContext.stop();
+            // mark them as (un)indexed:
+            // - set last_index to now() when it's a hard delete (it does not matter when we
+            // get last_write, because the only action take here is to remove the documents)
+            // - let background task take soft deletes
+            if ( event.getDeleteType() == DeleteType.Hard ) {
+                final var markAsIndexedContext = markAsIndexedTimer.time();
+                indexingMetadataManager.markAsUnIndexed(
+                        Map.of( event.getEntitySetId(), event.getEntityKeyIds() ), false
+                );
+                markAsIndexedContext.stop();
+            }
         }
     }
 
@@ -319,12 +323,15 @@ public class SearchService {
         deleteEntitySetDataContext.stop();
 
         if ( entitySetDataDeleted ) {
-            final var markAsIndexedContext = markAsIndexedTimer.time();
-            // mark every entity in entity set as (un)indexed:  set last_index to now()
-            // note: it does not matter when we get last_write, as opposed to upserts, because the only action taken
-            // here is to remove the documents
-            indexingMetadataManager.markAsUnIndexed( event.getEntitySetId() );
-            markAsIndexedContext.stop();
+            // mark them as (un)indexed:
+            // - set last_index to now() when it's a hard delete (it does not matter when we
+            // get last_write, because the only action take here is to remove the documents)
+            // - let background task take soft deletes (would be too much overhead for clear calls)
+            if ( event.getDeleteType() == DeleteType.Hard ) {
+                final var markAsIndexedContext = markAsIndexedTimer.time();
+                indexingMetadataManager.markAsUnIndexed( event.getEntitySetId() );
+                markAsIndexedContext.stop();
+            }
         }
     }
 
