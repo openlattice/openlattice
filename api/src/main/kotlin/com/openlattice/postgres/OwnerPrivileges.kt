@@ -1,4 +1,4 @@
-package com.openlattice.privileges
+package com.openlattice.postgres
 
 enum class OwnerPrivileges {
     INSERT,
