@@ -161,24 +161,6 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
         }
     }
 
-    fun markEntitySetAsNeedsToBeIndexed(entitySetId: UUID): Int {
-        val partitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
-
-        hds.connection.use { connection ->
-            connection.prepareStatement(markEntitySetAsNeedToBeIndexedSql).use { stmt ->
-                val partitions = partitionsInfo.partitions.toList()
-                val partitionVersion = partitionsInfo.partitionsVersion
-
-                val partitionsArray = PostgresArrays.createIntArray(connection, partitions)
-                stmt.setObject(1, entitySetId)
-                stmt.setArray(2, partitionsArray)
-                stmt.setInt(3, partitionVersion)
-
-                return stmt.executeUpdate()
-            }
-        }
-    }
-
     fun markAsNeedsToBeLinked(linkingEntityDataKeys: Set<EntityDataKey>): Int {
         val linkingEntityKeys = linkingEntityDataKeys
                 .groupBy { it.entitySetId }
@@ -320,15 +302,6 @@ fun markEntitySetsAsNeedsToBeIndexedSql(linking: Boolean): String {
  */
 private val markIdsAsNeedToBeIndexedSql =
         "UPDATE ${IDS.name} SET ${LAST_INDEX.name} = '-infinity()' WHERE $entityKeyIdsInEntitySet"
-
-/**
- * Arguments of preparable sql in order:
- * 1. entity set id
- * 2. partition (int array)
- * 3. partition version
- */
-private val markEntitySetAsNeedToBeIndexedSql =
-        "UPDATE ${IDS.name} SET ${LAST_INDEX.name} = '-infinity()' WHERE $entitySet"
 
 /**
  * Arguments of preparable sql in order:

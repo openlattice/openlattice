@@ -915,11 +915,6 @@ class PostgresEntityDataQueryService(
             ps.executeUpdate()
         }
 
-        // if entities were tombstoned to 0, set last_index = -infinity() to issue un-indexing
-        if (numUpdates > 0) {
-            indexingMetaDataManager.markEntitySetAsNeedsToBeIndexed(entitySetId)
-        }
-
         return WriteEvent(System.currentTimeMillis(), numUpdates)
     }
 
@@ -964,11 +959,6 @@ class PostgresEntityDataQueryService(
             ps.setInt(7, partitionsVersion)
 
             ps.executeUpdate()
-        }
-
-        // if entities were tombstoned to 0, set last_index = -infinity() to issue un-indexing
-        if (numUpdates > 0) {
-            indexingMetaDataManager.markEntitiesAsNeedsToBeIndexed(mapOf(entitySetId to entityKeyIds))
         }
 
         return WriteEvent(System.currentTimeMillis(), numUpdates)
