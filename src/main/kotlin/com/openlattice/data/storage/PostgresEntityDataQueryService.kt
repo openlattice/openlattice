@@ -923,8 +923,8 @@ class PostgresEntityDataQueryService(
                         val arr = PostgresArrays.createUuidArray(conn, rawEntityBatch)
                         ps.setObject(1, entitySetId)
                         ps.setArray(2, arr)
-                        ps.setInt(1, partition)
-                        ps.setInt(2, partitionsVersion)
+                        ps.setInt(3, partition)
+                        ps.setInt(4, partitionsVersion)
 
                         ps.addBatch()
                     }
