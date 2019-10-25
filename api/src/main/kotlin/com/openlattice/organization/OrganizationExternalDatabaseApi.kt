@@ -14,11 +14,14 @@ interface OrganizationExternalDatabaseApi {
         const val EXTERNAL_DATABASE = "/external-database"
         const val EXTERNAL_DATABASE_COLUMN = "/external-database-column"
         const val EXTERNAL_DATABASE_TABLE = "/external-database-table"
+        const val DATA = "/data"
 
         const val ID = "id"
         const val ID_PATH = "/{$ID}"
         const val TABLE_NAME = "tableName"
         const val TABLE_NAME_PATH = "/{$TABLE_NAME}"
+        const val TABLE_ID = "tableID"
+        const val TABLE_ID_PATH = "/{$TABLE_ID}"
         const val COLUMN_NAME = "columnName"
         const val COLUMN_NAME_PATH = "/{$COLUMN_NAME}"
         const val SQL_TYPE = "sqlType"
@@ -62,6 +65,40 @@ interface OrganizationExternalDatabaseApi {
             @Body ipAddresses: Set<String>)
 
     //get
+
+    /**
+     * Gets all OrganizationExternalDatabaseTable objects for an organizatoin
+     * @param organizationId The organization's UUID
+     */
+    @GET(BASE + ID_PATH + EXTERNAL_DATABASE_TABLE)
+    fun getExternalDatabaseTables(@Path(ID) organizationId: UUID): Set<OrganizationExternalDatabaseTable>
+
+    /**
+     * Gets all OrganizationExternalDatabaseTable objects mapped to
+     * their containing OrganizationExternalDatabase Columns
+     * for an organization
+     * @param organizationId The organization's UUID
+     */
+    @GET(BASE + ID_PATH + EXTERNAL_DATABASE_TABLE + EXTERNAL_DATABASE_COLUMN)
+    fun getExternalDatabaseTablesWithColumns(@Path(ID) organizationId: UUID): Map<OrganizationExternalDatabaseTable, Set<OrganizationExternalDatabaseColumn>>
+
+    /**
+     * Gets an OrganizationExternalDatabaseTable object mapped to
+     * their containing OrganizationExternalDatabase Columns
+     * for an organization
+     * @param organizationId The organization's UUID
+     */
+    @GET(BASE + ID_PATH + TABLE_ID_PATH + EXTERNAL_DATABASE_TABLE + EXTERNAL_DATABASE_COLUMN)
+    fun getExternalDatabaseTableWithColumns(@Path(ID) organizationId: UUID, @Path(TABLE_ID) tableId: UUID)
+
+    /**
+     * Gets an OrganizationExternalDatabaseTable object with
+     * rows of raw data for an organizatoin
+     * @param organizationId The organization's UUID
+     */
+    @GET(BASE + ID_PATH + TABLE_ID_PATH + DATA)
+    fun getExternalDatabaseTableData(@Path(ID) organizationId: UUID, @Path(TABLE_ID) tableId: UUID)
+
     /**
      * Gets an OrganizationExternalDatabaseTable object, which represents an
      * organization's table in an external database
