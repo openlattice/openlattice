@@ -889,20 +889,6 @@ class PostgresEntityDataQueryService(
     }
 
     /**
-     * Deletes entity key ids belonging to the requested entity set from [IDS] table.
-     */
-    fun deleteEntitySet(entitySetId: UUID): WriteEvent {
-        // todo set last_write=now() or last_index = -infinity() in ids table + only set version = 0, no delete
-        val numUpdates = hds.connection.use {
-            val ps = it.prepareStatement(deleteEntitySetEntityKeys)
-            ps.setObject(1, entitySetId)
-            ps.executeUpdate()
-        }
-
-        return WriteEvent(System.currentTimeMillis(), numUpdates)
-    }
-
-    /**
      * Tombstones (to version = 0) entity key ids belonging to the requested entity set in [IDS] table.
      */
     fun tombstoneDeletedEntitySet(entitySetId: UUID): WriteEvent {
