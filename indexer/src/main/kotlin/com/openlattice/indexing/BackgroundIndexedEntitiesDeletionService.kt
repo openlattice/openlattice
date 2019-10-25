@@ -33,6 +33,7 @@ import com.openlattice.edm.EntitySet
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.indexing.configuration.IndexerConfiguration
 import com.openlattice.postgres.DataTables.LAST_WRITE
+import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.BasePostgresIterable
@@ -127,7 +128,7 @@ class BackgroundIndexedEntitiesDeletionService(
         logger.info("Starting entity deletion for entity set ${entitySet.name} with id ${entitySet.id}")
 
         val esw = Stopwatch.createStarted()
-        val deletableIds = getDeletedIds(entitySet.id)
+        val deletableIds = getDeletedIds(entitySet)
 
         var deleteCount = 0
         deletableIds.asSequence().chunked(DELETE_SIZE).forEach {
@@ -146,10 +147,13 @@ class BackgroundIndexedEntitiesDeletionService(
     /**
      * Select all ids, which have been hard deleted and already un-indexed.
      */
-    private fun getDeletedIds(entitySetId: UUID): BasePostgresIterable<UUID> {
+    private fun getDeletedIds(entitySet: EntitySet): BasePostgresIterable<UUID> {
         return BasePostgresIterable(
                 PreparedStatementHolderSupplier(hds, selectDeletedIds(), FETCH_SIZE) {
-                    it.setObject(1, entitySetId)
+                    val partitionsArray = PostgresArrays.createIntArray(it.connection, entitySet.partitions)
+                    it.setObject(1, entitySet.id)
+                    it.setArray(2, partitionsArray)
+                    it.setInt(3, entitySet.partitionsVersion)
                 }
         ) { rs -> ResultSetAdapters.id(rs) }
     }
@@ -158,12 +162,17 @@ class BackgroundIndexedEntitiesDeletionService(
         // get all ids where version = 0 and either
         // a: last_index >= last_write
         // b: last_link_index >= last_write and linking_id is not null
+
+        // @formatter:off
         return "SELECT ${ID.name} " +
                 "FROM ${IDS.name} " +
                 "WHERE " +
-                "${ENTITY_SET_ID.name} = ? AND " +
-                "${VERSION.name} = 0 AND " +
-                "( (${LAST_INDEX.name} >= ${LAST_WRITE.name}) OR (${LAST_LINK_INDEX.name} >= ${LAST_WRITE.name}) )"
+                    "${ENTITY_SET_ID.name} = ? AND " +
+                    "${PARTITION.name} = ANY(?) AND " +
+                    "${PARTITIONS_VERSION.name} = ? AND " +
+                    "${VERSION.name} = 0 AND " +
+                    "( (${LAST_INDEX.name} >= ${LAST_WRITE.name}) OR (${LAST_LINK_INDEX.name} >= ${LAST_WRITE.name}) )"
+        // @formatter:on
     }
 
     private fun tryLockEntitySet(entitySetId: UUID): Boolean {
