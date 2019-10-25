@@ -79,6 +79,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
+import javax.xml.transform.Result;
 import java.io.IOException;
 import java.sql.*;
 import java.time.OffsetDateTime;
@@ -947,9 +948,9 @@ public final class ResultSetAdapters {
         Optional<String> description = Optional.ofNullable( description( ( rs ) ) );
         UUID tableId = tableId( rs );
         UUID organizationId = organizationId( rs );
-        String dataType = rs.getString( DATATYPE.getName() );
+        String dataType = sqlDataType( rs );
         Boolean isPrimaryKey = rs.getBoolean( IS_PRIMARY_KEY.getName() );
-        Integer ordinalPosition = rs.getInt( ORDINAL_POSITION.getName() );
+        Integer ordinalPosition = ordinalPosition( rs );
 
         return new OrganizationExternalDatabaseColumn( id,
                 name,
@@ -960,6 +961,30 @@ public final class ResultSetAdapters {
                 dataType,
                 isPrimaryKey,
                 ordinalPosition );
+    }
+
+    public static String columnName( ResultSet rs ) throws SQLException {
+        return rs.getString( COLUMN_NAME.getName() );
+    }
+
+    public static String sqlDataType( ResultSet rs ) throws SQLException {
+        return rs.getString( DATATYPE.getName() );
+    }
+
+    public static Integer ordinalPosition( ResultSet rs ) throws SQLException {
+        return rs.getInt( ORDINAL_POSITION.getName() );
+    }
+
+    public static String constraintType( ResultSet rs ) throws SQLException {
+        return rs.getString( CONSTRAINT_TYPE.getName() );
+    }
+
+    public static String privilegeType( ResultSet rs ) throws SQLException {
+        return rs.getString( PRIVILEGE_TYPE.getName() );
+    }
+
+    public static String user( ResultSet rs ) throws SQLException {
+        return rs.getString( USER.getName() );
     }
 
     public static UUID originId( ResultSet rs ) throws SQLException {
