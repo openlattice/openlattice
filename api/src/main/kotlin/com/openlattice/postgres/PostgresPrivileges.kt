@@ -1,6 +1,6 @@
 package com.openlattice.postgres
 
-enum class OwnerPrivileges {
+enum class PostgresPrivileges {
     INSERT,
     SELECT,
     UPDATE,
