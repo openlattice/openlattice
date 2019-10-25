@@ -97,6 +97,18 @@ class ExternalDatabaseManagementService(
         return organizationExternalDatabaseTables.values(belongsToOrganization(orgId)).toSet()
     }
 
+    fun getExternalDatabaseTablesWithColumns(orgId: UUID): Map<OrganizationExternalDatabaseTable, Set<OrganizationExternalDatabaseColumn>> {
+        val tables = getExternalDatabaseTables(orgId)
+        return tables.map {
+            it to (organizationExternalDatabaseColumns.values(belongsToTable(it.id)).toSet())
+        }.toMap()
+    }
+
+    fun getExternalDatabaseTableWithColumns(tableId: UUID): Pair<OrganizationExternalDatabaseTable, Set<OrganizationExternalDatabaseColumn>> {
+        val table = getOrganizationExternalDatabaseTable(tableId)
+        return Pair(table, (organizationExternalDatabaseColumns.values(belongsToTable(tableId)).toSet()))
+    }
+
     fun getOrganizationExternalDatabaseTable(tableId: UUID): OrganizationExternalDatabaseTable {
         return organizationExternalDatabaseTables.getValue(tableId)
     }
@@ -132,19 +144,10 @@ class ExternalDatabaseManagementService(
      * Deletes an organization's entire database.
      * Is called when an organization is deleted.
      */
-    //TODO break into further helper methods to reduce reuse of code
     fun deleteOrganizationExternalDatabase(orgId: UUID) {
         //remove all tables/columns within org
-        val tablesToDelete = organizationExternalDatabaseTables.values(belongsToOrganization(orgId))
-        tablesToDelete.forEach { table ->
-            organizationExternalDatabaseTables.remove(table.id)
-            aclKeyReservations.release(table.id)
-            val columnsToDelete = organizationExternalDatabaseColumns.values(belongsToTable(table.id))
-            columnsToDelete.forEach { column ->
-                organizationExternalDatabaseColumns.remove(column.id)
-                aclKeyReservations.release(column.id)
-            }
-        }
+        val tableIds = organizationExternalDatabaseTables.keySet(belongsToOrganization(orgId))
+        deleteOrganizationExternalDatabaseTables(orgId, tableIds)
 
         //drop db from schema
         val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
