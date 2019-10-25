@@ -301,7 +301,7 @@ class SearchControllerTest : MultipleAuthenticatedUsersBase() {
 
         Assert.assertEquals(2, searchedEntities.numHits)
         searchedEntities.hits.forEach { entityData ->
-            val id = entityData.getValue(EdmConstants.ID_FQN).first() as UUID
+            val id = UUID.fromString(entityData.getValue(EdmConstants.ID_FQN).first() as String)
             Assert.assertTrue(entities.keys.contains(id))
         }
 
@@ -313,7 +313,10 @@ class SearchControllerTest : MultipleAuthenticatedUsersBase() {
         searchedEntities = searchApi.executeEntitySetDataQuery(es.id, searchAll)
 
         Assert.assertEquals(1, searchedEntities.numHits)
-        Assert.assertEquals(id2, searchedEntities.hits.first().getValue(EdmConstants.ID_FQN).first() as UUID)
+        Assert.assertEquals(
+                id2,
+                UUID.fromString(searchedEntities.hits.first().getValue(EdmConstants.ID_FQN).first() as String)
+        )
 
 
         /* Soft delete */
@@ -344,8 +347,14 @@ class SearchControllerTest : MultipleAuthenticatedUsersBase() {
 
         Assert.assertEquals(1, searchedEntities1.numHits)
         Assert.assertEquals(1, searchedEntities2.numHits)
-        Assert.assertEquals(id1, searchedEntities1.hits.first().getValue(EdmConstants.ID_FQN).first() as UUID)
-        Assert.assertEquals(id2, searchedEntities2.hits.first().getValue(EdmConstants.ID_FQN).first() as UUID)
+        Assert.assertEquals(
+                id1,
+                UUID.fromString(searchedEntities1.hits.first().getValue(EdmConstants.ID_FQN).first() as String)
+        )
+        Assert.assertEquals(
+                id2,
+                UUID.fromString(searchedEntities2.hits.first().getValue(EdmConstants.ID_FQN).first() as String)
+        )
 
         /* Hard delete */
         dataApi.deleteAllEntitiesFromEntitySet(es1.id, DeleteType.Hard)
@@ -355,7 +364,10 @@ class SearchControllerTest : MultipleAuthenticatedUsersBase() {
         searchedEntities2 = searchApi.executeEntitySetDataQuery(es2.id, searchAll)
         Assert.assertEquals(0, searchedEntities1.numHits)
         Assert.assertEquals(1, searchedEntities2.numHits)
-        Assert.assertEquals(id2, searchedEntities2.hits.first().getValue(EdmConstants.ID_FQN).first() as UUID)
+        Assert.assertEquals(
+                id2,
+                UUID.fromString(searchedEntities2.hits.first().getValue(EdmConstants.ID_FQN).first() as String)
+        )
 
 
         /* Soft delete */
