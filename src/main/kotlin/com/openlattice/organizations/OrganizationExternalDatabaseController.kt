@@ -8,12 +8,18 @@ import com.openlattice.authorization.*
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.CONTROLLER
 import com.openlattice.organization.OrganizationExternalDatabaseApi
+import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.COLUMN_NAME
 import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.COLUMN_NAME_PATH
 import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.EXTERNAL_DATABASE
 import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.EXTERNAL_DATABASE_COLUMN
 import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.EXTERNAL_DATABASE_TABLE
+import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.ID
 import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.ID_PATH
+import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.TABLE_ID
+import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.TABLE_ID_PATH
+import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.TABLE_NAME
 import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.TABLE_NAME_PATH
+import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.USER_ID
 import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.USER_ID_PATH
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import com.openlattice.organization.OrganizationExternalDatabaseTable
@@ -21,6 +27,7 @@ import com.openlattice.organization.OrganizationsApi
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.*
+import retrofit2.http.Path
 import java.util.*
 import java.util.stream.Collectors
 import javax.annotation.PostConstruct
@@ -57,7 +64,7 @@ class OrganizationExternalDatabaseController : OrganizationExternalDatabaseApi, 
     @Timed
     @PostMapping(path = [ID_PATH + EXTERNAL_DATABASE_TABLE])
     override fun createExternalDatabaseTable(
-            @PathVariable(OrganizationsApi.ID) organizationId: UUID,
+            @PathVariable(ID) organizationId: UUID,
             @RequestBody organizationExternalDatabaseTable: OrganizationExternalDatabaseTable): UUID {
         ensureOwner(organizationId)
         return edms.createOrganizationExternalDatabaseTable(organizationId, organizationExternalDatabaseTable)
@@ -66,7 +73,7 @@ class OrganizationExternalDatabaseController : OrganizationExternalDatabaseApi, 
     @Timed
     @PostMapping(path = [ID_PATH + EXTERNAL_DATABASE_COLUMN])
     override fun createExternalDatabaseColumn(
-            @PathVariable(OrganizationsApi.ID) organizationId: UUID,
+            @PathVariable(ID) organizationId: UUID,
             @RequestBody organizationExternalDatabaseColumn: OrganizationExternalDatabaseColumn): UUID {
         ensureOwner(organizationId)
         return edms.createOrganizationExternalDatabaseColumn(organizationId, organizationExternalDatabaseColumn)
@@ -75,8 +82,8 @@ class OrganizationExternalDatabaseController : OrganizationExternalDatabaseApi, 
     @Timed
     @PostMapping(path = [ID_PATH + USER_ID_PATH + EXTERNAL_DATABASE])
     override fun addTrustedUser(
-            @PathVariable(OrganizationsApi.ID) organizationId: UUID,
-            @PathVariable(OrganizationsApi.USER_ID) userId: String,
+            @PathVariable(ID) organizationId: UUID,
+            @PathVariable(USER_ID) userId: String,
             @RequestBody ipAddresses: Set<String>
     ) {
         ensureOwner(organizationId)
@@ -85,10 +92,32 @@ class OrganizationExternalDatabaseController : OrganizationExternalDatabaseApi, 
     }
 
     @Timed
+    @GetMapping(path = [ID_PATH + EXTERNAL_DATABASE_TABLE])
+    override fun getExternalDatabaseTables(
+            @PathVariable(ID) organizationId: UUID): Set<OrganizationExternalDatabaseTable> {
+        return edms.getExternalDatabaseTables(organizationId)
+    }
+
+    @Timed
+    @GetMapping(path = [ID_PATH + EXTERNAL_DATABASE_TABLE + EXTERNAL_DATABASE_COLUMN])
+    override fun getExternalDatabaseTablesWithColumns(
+            @PathVariable(ID) organizationId: UUID): Map<OrganizationExternalDatabaseTable, Set<OrganizationExternalDatabaseColumn>> {
+        return edms.getExternalDatabaseTablesWithColumns(organizationId)
+    }
+
+    @Timed
+    @GetMapping(path = [ID_PATH + TABLE_ID_PATH + EXTERNAL_DATABASE_TABLE + EXTERNAL_DATABASE_COLUMN])
+    override fun getExternalDatabaseTableWithColumns(
+            @PathVariable(ID) organizationId: UUID,
+            @PathVariable(TABLE_ID) tableId: UUID): Pair<OrganizationExternalDatabaseTable, Set<OrganizationExternalDatabaseColumn> {
+        return edms.getExternalDatabaseTableWithColumns(tableId)
+    }
+
+    @Timed
     @GetMapping(path = [ID_PATH + TABLE_NAME_PATH + EXTERNAL_DATABASE_TABLE])
     override fun getExternalDatabaseTable(
-            @PathVariable(OrganizationsApi.ID) organizationId: UUID,
-            @PathVariable(OrganizationsApi.TABLE_NAME) tableName: String): OrganizationExternalDatabaseTable {
+            @PathVariable(ID) organizationId: UUID,
+            @PathVariable(TABLE_NAME) tableName: String): OrganizationExternalDatabaseTable {
         val tableId = getExternalDatabaseObjectId(organizationId, tableName)
         ensureReadAccess(AclKey(organizationId, tableId))
         return edms.getOrganizationExternalDatabaseTable(tableId)
@@ -97,9 +126,9 @@ class OrganizationExternalDatabaseController : OrganizationExternalDatabaseApi, 
     @Timed
     @GetMapping(path = [ID_PATH + TABLE_NAME_PATH + COLUMN_NAME_PATH + EXTERNAL_DATABASE_COLUMN])
     override fun getExternalDatabaseColumn(
-            @PathVariable(OrganizationsApi.ID) organizationId: UUID,
-            @PathVariable(OrganizationsApi.TABLE_NAME) tableName: String,
-            @PathVariable(OrganizationsApi.COLUMN_NAME) columnName: String): OrganizationExternalDatabaseColumn {
+            @PathVariable(ID) organizationId: UUID,
+            @PathVariable(TABLE_NAME) tableName: String,
+            @PathVariable(COLUMN_NAME) columnName: String): OrganizationExternalDatabaseColumn {
         val tableId = getExternalDatabaseObjectId(organizationId, tableName)
         val columnId = getExternalDatabaseObjectId(tableId, columnName)
         ensureReadAccess(AclKey(organizationId, tableId, columnId))
@@ -109,8 +138,8 @@ class OrganizationExternalDatabaseController : OrganizationExternalDatabaseApi, 
     @Timed
     @DeleteMapping(path = [ID_PATH + TABLE_NAME_PATH + EXTERNAL_DATABASE_TABLE])
     override fun deleteExternalDatabaseTable(
-            @PathVariable(OrganizationsApi.ID) organizationId: UUID,
-            @PathVariable(OrganizationsApi.TABLE_NAME) tableName: String) {
+            @PathVariable(ID) organizationId: UUID,
+            @PathVariable(TABLE_NAME) tableName: String) {
         val tableId = getExternalDatabaseObjectId(organizationId, tableName)
         val aclKey = AclKey(organizationId, tableId)
         ensureOwnerAccess(aclKey)
@@ -123,7 +152,7 @@ class OrganizationExternalDatabaseController : OrganizationExternalDatabaseApi, 
     @Timed
     @DeleteMapping(path = [ID_PATH + EXTERNAL_DATABASE_TABLE])
     override fun deleteExternalDatabaseTables(
-            @PathVariable(OrganizationsApi.ID) organizationId: UUID,
+            @PathVariable(ID) organizationId: UUID,
             @RequestBody tableNames: Set<String>) {
         val tableNameById = tableNames.stream().collect<Map<UUID, String>, Any>(
                 Collectors.toMap({ tableName -> getExternalDatabaseObjectId(organizationId, tableName) },
@@ -142,9 +171,9 @@ class OrganizationExternalDatabaseController : OrganizationExternalDatabaseApi, 
     @Timed
     @DeleteMapping(path = [ID_PATH + TABLE_NAME_PATH + COLUMN_NAME_PATH + EXTERNAL_DATABASE_COLUMN])
     override fun deleteExternalDatabaseColumn(
-            @PathVariable(OrganizationsApi.ID) organizationId: UUID,
-            @PathVariable(OrganizationsApi.TABLE_NAME) tableName: String,
-            @PathVariable(OrganizationsApi.COLUMN_NAME) columnName: String
+            @PathVariable(ID) organizationId: UUID,
+            @PathVariable(TABLE_NAME) tableName: String,
+            @PathVariable(COLUMN_NAME) columnName: String
     ) {
         val tableId = getExternalDatabaseObjectId(organizationId, tableName)
         val columnId = getExternalDatabaseObjectId(tableId, columnName)
@@ -159,8 +188,8 @@ class OrganizationExternalDatabaseController : OrganizationExternalDatabaseApi, 
     @Timed
     @DeleteMapping(path = [ID_PATH + TABLE_NAME_PATH + EXTERNAL_DATABASE_COLUMN])
     override fun deleteExternalDatabaseColumns(
-            @PathVariable(OrganizationsApi.ID) organizationId: UUID,
-            @PathVariable(OrganizationsApi.TABLE_NAME) tableName: String,
+            @PathVariable(ID) organizationId: UUID,
+            @PathVariable(TABLE_NAME) tableName: String,
             @RequestBody columnNames: Set<String>
     ) {
         val tableId = getExternalDatabaseObjectId(organizationId, tableName)
