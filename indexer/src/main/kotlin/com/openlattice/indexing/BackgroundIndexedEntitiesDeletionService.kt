@@ -149,7 +149,7 @@ class BackgroundIndexedEntitiesDeletionService(
      */
     private fun getDeletedIds(entitySet: EntitySet): BasePostgresIterable<UUID> {
         return BasePostgresIterable(
-                PreparedStatementHolderSupplier(hds, selectDeletedIds(), FETCH_SIZE) {
+                PreparedStatementHolderSupplier(hds, selectDeletedIds, FETCH_SIZE) {
                     val partitionsArray = PostgresArrays.createIntArray(it.connection, entitySet.partitions)
                     it.setObject(1, entitySet.id)
                     it.setArray(2, partitionsArray)
@@ -158,22 +158,25 @@ class BackgroundIndexedEntitiesDeletionService(
         ) { rs -> ResultSetAdapters.id(rs) }
     }
 
-    private fun selectDeletedIds(): String {
-        // get all ids where version = 0 and either
-        // a: last_index >= last_write
-        // b: last_link_index >= last_write and linking_id is not null
 
-        // @formatter:off
-        return "SELECT ${ID.name} " +
-                "FROM ${IDS.name} " +
-                "WHERE " +
-                    "${ENTITY_SET_ID.name} = ? AND " +
-                    "${PARTITION.name} = ANY(?) AND " +
-                    "${PARTITIONS_VERSION.name} = ? AND " +
-                    "${VERSION.name} = 0 AND " +
-                    "( (${LAST_INDEX.name} >= ${LAST_WRITE.name}) OR (${LAST_LINK_INDEX.name} >= ${LAST_WRITE.name}) )"
-        // @formatter:on
-    }
+    // get all ids where version = 0 and either
+    // a: last_index >= last_write
+    // b: last_link_index >= last_write and linking_id is not null
+    private val selectDeletedIds =
+            // @formatter:off
+            "SELECT ${ID.name} " +
+            "FROM ${IDS.name} " +
+            "WHERE " +
+                "${ENTITY_SET_ID.name} = ? AND " +
+                "${PARTITION.name} = ANY(?) AND " +
+                "${PARTITIONS_VERSION.name} = ? AND " +
+                "${VERSION.name} = 0 AND " +
+                "( " +
+                    "(${LAST_INDEX.name} >= ${LAST_WRITE.name}) " +
+                    "OR " +
+                    "(${LAST_LINK_INDEX.name} >= ${LAST_WRITE.name} AND ${LINKING_ID.name} IS NOT NULL) " +
+                ")"
+            // @formatter:on
 
     private fun tryLockEntitySet(entitySetId: UUID): Boolean {
         return deletionLocks.putIfAbsent(entitySetId, System.currentTimeMillis() + EXPIRATION_MILLIS) == null
