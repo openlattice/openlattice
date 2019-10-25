@@ -892,12 +892,15 @@ class PostgresEntityDataQueryService(
      * Tombstones (to version = 0) entity key ids belonging to the requested entity set in [IDS] table.
      */
     fun tombstoneDeletedEntitySet(entitySetId: UUID): WriteEvent {
+        val partitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
+
         val numUpdates = hds.connection.use {
-            val ps = it.prepareStatement(updateVersionsForEntitySet)
-            ps.setLong(1, 0L)
-            ps.setLong(2, 0L)
-            ps.setLong(3, 0L)
-            ps.setObject(4, entitySetId)
+            val ps = it.prepareStatement(zeroVersionsForEntitySet)
+            val partitionsArr = PostgresArrays.createIntArray(it, partitionsInfo.partitions)
+
+            ps.setObject(1, entitySetId)
+            ps.setArray(2, partitionsArr)
+            ps.setInt(3, partitionsInfo.partitionsVersion)
             ps.executeUpdate()
         }
 
@@ -908,14 +911,25 @@ class PostgresEntityDataQueryService(
      * Deletes entities from [IDS] table.
      */
     fun deleteEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): WriteEvent {
-        val numUpdates = hds.connection.use {
-            val ps = it.prepareStatement(deleteEntityKeys)
-            val arr = PostgresArrays.createUuidArray(it, entityKeyIds)
-            ps.setObject(1, entitySetId)
-            ps.setArray(2, arr)
+        val partitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
+        val partitions = partitionsInfo.partitions.toList()
+        val partitionsVersion = partitionsInfo.partitionsVersion
 
-            ps.executeUpdate()
-        }
+        val numUpdates =  hds.connection.use {conn ->
+            val ps = conn.prepareStatement(deleteEntityKeys)
+            entityKeyIds
+                    .groupBy { getPartition(it, partitions) }
+                    .forEach { (partition, rawEntityBatch) ->
+                        val arr = PostgresArrays.createUuidArray(conn, rawEntityBatch)
+                        ps.setObject(1, entitySetId)
+                        ps.setArray(2, arr)
+                        ps.setInt(1, partition)
+                        ps.setInt(2, partitionsVersion)
+
+                        ps.addBatch()
+                    }
+            ps.executeBatch()
+        }.sum()
 
         return WriteEvent(System.currentTimeMillis(), numUpdates)
     }
@@ -925,27 +939,27 @@ class PostgresEntityDataQueryService(
      */
     fun tombstoneDeletedEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): WriteEvent {
         val partitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
+        val partitions = partitionsInfo.partitions.toList()
         val partitionsVersion = partitionsInfo.partitionsVersion
 
-        val numUpdates = hds.connection.use {
-            val ps = it.prepareStatement(updateVersionsForEntitiesInEntitySet)
+        val numUpdates = hds.connection.use { conn ->
+            val ps = conn.prepareStatement(zeroVersionsForEntitiesInEntitySet)
 
-            val partitionsArr = PostgresArrays.createIntArray(
-                    it,
-                    entityKeyIds.map { getPartition(it, partitionsInfo.partitions.toList()) }
-            )
-            val idsArr = PostgresArrays.createUuidArray(it, entityKeyIds)
+            entityKeyIds.groupBy { getPartition(it, partitions) }
+                    .forEach { (partition, rawEntityBatch) ->
+                        val partitionsArr = PostgresArrays.createIntArray(conn, listOf(partition))
+                        val idsArr = PostgresArrays.createUuidArray(conn, rawEntityBatch)
 
-            ps.setLong(1, 0L)
-            ps.setLong(2, 0L)
-            ps.setLong(3, 0L)
-            ps.setObject(4, entitySetId)
-            ps.setArray(5, idsArr)
-            ps.setArray(6, partitionsArr)
-            ps.setInt(7, partitionsVersion)
+                        ps.setObject(1, entitySetId)
+                        ps.setArray(2, partitionsArr)
+                        ps.setInt(3, partitionsVersion)
+                        ps.setArray(4, idsArr)
 
-            ps.executeUpdate()
-        }
+                        ps.addBatch()
+                    }
+
+            ps.executeBatch()
+        }.sum()
 
         return WriteEvent(System.currentTimeMillis(), numUpdates)
     }

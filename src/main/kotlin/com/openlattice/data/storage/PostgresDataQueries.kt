@@ -367,6 +367,42 @@ internal val updateVersionsForEntitiesInEntitySet = "$updateVersionsForEntitySet
 
 
 /**
+ * Preparable SQL that zeroes out the version and sets last write to current datetime for all entities in a given
+ * entity set in [IDS] table.
+ *
+ * The following bind order is expected:
+ *
+ * 1. entity set id
+ * 2. partition (uuid array)
+ * 3. partition version
+ */
+// @formatter:off
+internal val zeroVersionsForEntitySet = "UPDATE ${IDS.name} " +
+        "SET " +
+            "${VERSIONS.name} = ${VERSIONS.name} || ARRAY[0]::bigint[], " +
+            "${VERSION.name} = 0, " +
+            "${LAST_WRITE.name} = 'now()' " +
+        "WHERE " +
+            "${ENTITY_SET_ID.name} = ? AND " +
+            "${PARTITION.name} = ANY(?) AND " +
+            "${PARTITIONS_VERSION.name} = ? "
+// @formatter:on
+
+
+/**
+ * Preparable SQL that zeroes out the version and sets last write to current datetime for all entities in a given
+ * entity set in [IDS] table.
+ *
+ * The following bind order is expected:
+ *
+ * 1. entity set id
+ * 2. partition (uuid array)
+ * 3. partition version
+ * 4. id (uuid array)
+ */
+internal val zeroVersionsForEntitiesInEntitySet = "$zeroVersionsForEntitySet AND ${ID.name} = ANY(?) "
+
+/**
  * Preparable SQL that updates a version and sets last write to current datetime for all properties in a given entity
  * set in [DATA] table.
  *
@@ -529,8 +565,16 @@ internal val deleteEntitiesInEntitySet = "DELETE FROM ${DATA.name} " +
  *
  * 1. entity set id
  * 2. entity key ids
+ * 3. partition
+ * 4. partition version
  */
-internal val deleteEntityKeys = "DELETE FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${ID.name} = ANY(?)"
+// @formatter:off
+internal val deleteEntityKeys =
+        "$deleteEntitySetEntityKeys AND " +
+            "${ID.name} = ANY(?) AND " +
+            "${PARTITION.name} = ? AND " +
+            "${PARTITIONS_VERSION.name} = ? "
+// @formatter:on
 
 /**
  * Selects a text properties from entity sets with the following bind order:
