@@ -47,6 +47,9 @@ import java.util.concurrent.locks.ReentrantLock
 
 
 const val DELETE_SIZE = 10_000
+const val DELETE_EXPIRATION_MILLIS = 60_000L
+const val DELETE_RATE = 30_000L
+const val DELETE_FETCH_SIZE = 128_000
 
 /**
  * Background service to delete entities from ids table, which have been hard deleted and already processed by
@@ -73,7 +76,7 @@ class BackgroundIndexedEntitiesDeletionService(
     private val taskLock = ReentrantLock()
 
     @Suppress("UNCHECKED_CAST", "UNUSED")
-    @Scheduled(fixedRate = EXPIRATION_MILLIS)
+    @Scheduled(fixedRate = DELETE_EXPIRATION_MILLIS)
     fun scavengeIndexingLocks() {
         deletionLocks.removeAll(
                 Predicates.lessThan(
@@ -84,7 +87,7 @@ class BackgroundIndexedEntitiesDeletionService(
     }
 
     @Suppress("UNUSED")
-    @Scheduled(fixedRate = INDEX_RATE)
+    @Scheduled(fixedRate = DELETE_RATE)
     fun deleteIndexedEntitiesInEntitySet() {
         logger.info("Starting background deletion task.")
 
@@ -149,7 +152,7 @@ class BackgroundIndexedEntitiesDeletionService(
      */
     private fun getDeletedIds(entitySet: EntitySet): BasePostgresIterable<UUID> {
         return BasePostgresIterable(
-                PreparedStatementHolderSupplier(hds, selectDeletedIds, FETCH_SIZE) {
+                PreparedStatementHolderSupplier(hds, selectDeletedIds, DELETE_FETCH_SIZE) {
                     val partitionsArray = PostgresArrays.createIntArray(it.connection, entitySet.partitions)
                     it.setObject(1, entitySet.id)
                     it.setArray(2, partitionsArray)
@@ -179,7 +182,7 @@ class BackgroundIndexedEntitiesDeletionService(
             // @formatter:on
 
     private fun tryLockEntitySet(entitySetId: UUID): Boolean {
-        return deletionLocks.putIfAbsent(entitySetId, System.currentTimeMillis() + EXPIRATION_MILLIS) == null
+        return deletionLocks.putIfAbsent(entitySetId, System.currentTimeMillis() + DELETE_EXPIRATION_MILLIS) == null
     }
 
     private fun deleteDeletionLock(entitySetId: UUID) {
@@ -187,6 +190,6 @@ class BackgroundIndexedEntitiesDeletionService(
     }
 
     private fun updateExpiration(entitySetId: UUID) {
-        deletionLocks.set(entitySetId, System.currentTimeMillis() + EXPIRATION_MILLIS)
+        deletionLocks.set(entitySetId, System.currentTimeMillis() + DELETE_EXPIRATION_MILLIS)
     }
 }
