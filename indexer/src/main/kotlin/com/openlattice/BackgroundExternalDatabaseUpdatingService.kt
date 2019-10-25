@@ -27,12 +27,12 @@ class BackgroundExternalDatabaseUpdatingService(
     private val organizationExternalDatabaseColumns: IMap<UUID, OrganizationExternalDatabaseColumn> = hazelcastInstance.getMap(HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_COlUMN.name)
     private val organizationExternalDatabaseTables: IMap<UUID, OrganizationExternalDatabaseTable> = hazelcastInstance.getMap(HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_TABLE.name)
     private val aclKeys: IMap<String, UUID> = hazelcastInstance.getMap(HazelcastMap.ACL_KEYS.name)
+    private val organizationTitles: IMap<UUID, String> = hazelcastInstance.getMap(HazelcastMap.ORGANIZATIONS_TITLES.name)
 
     @Suppress("UNUSED")
     @Scheduled(fixedRate = MAX_DURATION_MILLIS)
     fun scanOrganizationDatabases() {
-        val orgIds = edms.getOrganizationIds()
-        orgIds.forEach {orgId ->
+        organizationTitles.keys.forEach {orgId ->
             val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
             val currentTableIds = mutableSetOf<UUID>()
             val currentColumnIds = mutableSetOf<UUID>()
