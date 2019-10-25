@@ -13,14 +13,16 @@ import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.organizations.mapstores.ID_INDEX
 import com.openlattice.hazelcast.HazelcastMap
-import com.openlattice.hazelcast.processors.RemoveOrganizationExternalDatabaseColumnsEntryProcessor
-import com.openlattice.hazelcast.processors.RemoveOrganizationExternalDatabaseTableEntryProcessor
+import com.openlattice.hazelcast.processors.DeleteOrganizationExternalDatabaseColumnsEntryProcessor
+import com.openlattice.hazelcast.processors.DeleteOrganizationExternalDatabaseTableEntryProcessor
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import com.openlattice.organization.OrganizationExternalDatabaseTable
+import com.openlattice.organizations.mapstores.ORGANIZATION_ID_INDEX
+import com.openlattice.organizations.mapstores.TABLE_ID_INDEX
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 
 import com.openlattice.postgres.DataTables.quote
-import com.openlattice.postgres.OwnerPrivileges
+import com.openlattice.postgres.PostgresPrivileges
 import com.openlattice.postgres.ResultSetAdapters.*
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.StatementHolderSupplier
@@ -91,6 +93,10 @@ class ExternalDatabaseManagementService(
         return organizationTitles.keys
     }
 
+    fun getExternalDatabaseTables(orgId: UUID): Set<OrganizationExternalDatabaseTable> {
+        return organizationExternalDatabaseTables.values(belongsToOrganization(orgId)).toSet()
+    }
+
     fun getOrganizationExternalDatabaseTable(tableId: UUID): OrganizationExternalDatabaseTable {
         return organizationExternalDatabaseTables.getValue(tableId)
     }
@@ -101,14 +107,10 @@ class ExternalDatabaseManagementService(
 
     /*DELETE*/
     fun deleteOrganizationExternalDatabaseTables(orgId: UUID, tableIds: Set<UUID>) {
-        val tablesToDelete = organizationExternalDatabaseTables.values(idsPredicate(tableIds)).toSet()
-        //check with someone that the below is doing what I think it is doing
-        organizationExternalDatabaseTables.executeOnEntries(RemoveOrganizationExternalDatabaseTableEntryProcessor(tablesToDelete))
+        organizationExternalDatabaseTables.executeOnEntries(DeleteOrganizationExternalDatabaseTableEntryProcessor(), idsPredicate(tableIds))
         tableIds.forEach {
             aclKeyReservations.release(it)
-            val belongsToDeletedTable = Predicates.equal("tableId", it)
-            val columnsToDelete = organizationExternalDatabaseColumns.values(belongsToDeletedTable)
-            val columnIds = columnsToDelete.map { it.id }.toSet()
+            val columnIds = organizationExternalDatabaseColumns.keySet(belongsToTable(it))
             deleteOrganizationExternalDatabaseColumns(orgId, columnIds)
         }
     }
@@ -118,9 +120,7 @@ class ExternalDatabaseManagementService(
     }
 
     fun deleteOrganizationExternalDatabaseColumns(orgId: UUID, columnIds: Set<UUID>) {
-        val columnsToDelete = organizationExternalDatabaseColumns.values(idsPredicate(columnIds)).toSet()
-        //check with someone that the below is doing what I think it is doing
-        organizationExternalDatabaseColumns.executeOnEntries(RemoveOrganizationExternalDatabaseColumnsEntryProcessor(columnsToDelete))
+        organizationExternalDatabaseColumns.executeOnEntries(DeleteOrganizationExternalDatabaseColumnsEntryProcessor(), idsPredicate(columnIds))
         columnIds.forEach { aclKeyReservations.release(it) }
     }
 
@@ -135,13 +135,11 @@ class ExternalDatabaseManagementService(
     //TODO break into further helper methods to reduce reuse of code
     fun deleteOrganizationExternalDatabase(orgId: UUID) {
         //remove all tables/columns within org
-        val belongsToDeletedDB = Predicates.equal("organizationId", orgId)
-        val tablesToDelete = organizationExternalDatabaseTables.values(belongsToDeletedDB)
+        val tablesToDelete = organizationExternalDatabaseTables.values(belongsToOrganization(orgId))
         tablesToDelete.forEach { table ->
             organizationExternalDatabaseTables.remove(table.id)
             aclKeyReservations.release(table.id)
-            val belongsToDeletedTable = Predicates.equal("tableId", table.id)
-            val columnsToDelete = organizationExternalDatabaseColumns.values(belongsToDeletedTable)
+            val columnsToDelete = organizationExternalDatabaseColumns.values(belongsToTable(table.id))
             columnsToDelete.forEach { column ->
                 organizationExternalDatabaseColumns.remove(column.id)
                 aclKeyReservations.release(column.id)
@@ -225,7 +223,7 @@ class ExternalDatabaseManagementService(
     }
 
     fun addPermissions(dbName: String, orgId: UUID, tableId: UUID, tableName: String, maybeColumnId: Optional<UUID>, maybeColumnName: Optional<String>) {
-        val privilegesByUser = HashMap<String, MutableSet<String>>()
+        val privilegesByUser = HashMap<String, MutableSet<PostgresPrivileges>>()
         var columnCondition = ""
         lateinit var aclKey: AclKey
         if (maybeColumnId.isPresent && maybeColumnName.isPresent) {
@@ -244,20 +242,20 @@ class ExternalDatabaseManagementService(
                 StatementHolderSupplier(assemblerConnectionManager.connect(dbName), sql)
         ) { rs ->
             val user = user(rs)
-            val privilege = privilegeType(rs).toUpperCase()
+            val privilege = PostgresPrivileges.valueOf(privilegeType(rs).toUpperCase())
             privilegesByUser.getOrPut(user) { mutableSetOf() }.add(privilege)
         }
         privilegesByUser.forEach { (user, privileges) ->
             val principal = securePrincipalsManager.getPrincipal(user).principal
             val aceKey = AceKey(aclKey, principal)
             var permissions = EnumSet.noneOf(Permission::class.java)
-            if (privileges == OwnerPrivileges.values() as Set<String>) { //eek
+            if (privileges == PostgresPrivileges.values().toSet() ) {
                 permissions.add(Permission.OWNER)
             }
-            if (privileges.contains("SELECT")) {
+            if (privileges.contains(PostgresPrivileges.SELECT)) {
                 permissions.add(Permission.READ)
             }
-            if (privileges.contains("INSERT") || privileges.contains("UPDATE"))
+            if (privileges.contains(PostgresPrivileges.INSERT) || privileges.contains(PostgresPrivileges.UPDATE))
                 permissions.add(Permission.WRITE)
             val aceValue = AceValue(permissions, SecurableObjectType.OrganizationExternalDatabaseTable, OffsetDateTime.MAX)
             aces[aceKey] = aceValue //TODO should be a merger or what?
@@ -370,9 +368,16 @@ class ExternalDatabaseManagementService(
     /*INTERNAL SQL QUERIES*/
 
     /*PREDICATES*/
-
     private fun idsPredicate(ids: Set<UUID>): Predicate<*, *> {
         return Predicates.`in`(ID_INDEX, *ids.toTypedArray())
+    }
+
+    private fun belongsToOrganization(orgId: UUID): Predicate<*, *> {
+        return Predicates.equal(ORGANIZATION_ID_INDEX, orgId)
+    }
+
+    private fun belongsToTable(tableId: UUID): Predicate<*, *> {
+        return Predicates.equal(TABLE_ID_INDEX, tableId)
     }
 
 }
