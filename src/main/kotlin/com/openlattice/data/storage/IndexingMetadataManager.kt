@@ -57,7 +57,8 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
     }
 
     /**
-     * Sets the last_write of provided entities to current datetime. Used when un-indexing entities after deletion.
+     * Sets the last_index/last_link_index of provided entities to current datetime. Used when un-indexing entities
+     * after deletion.
      * @param entityKeyIds Map of (normal) entity set ids and either entity key ids or linking ids, depending on
      * [linking].
      * @param linking Denotes, if the provided ids are linking ids or not.
