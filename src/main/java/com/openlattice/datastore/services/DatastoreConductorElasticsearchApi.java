@@ -296,17 +296,6 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
         }
     }
 
-    @Override
-    public boolean deleteEntityData( EntityDataKey edk, UUID entityTypeId ) {
-        try {
-            return executor.submit( ConductorElasticsearchCall
-                    .wrap( ElasticsearchLambdas.deleteEntityData( edk, entityTypeId ) ) ).get();
-        } catch ( InterruptedException | ExecutionException e ) {
-            logger.debug( "unable to delete entity data from elasticsearch" );
-            return false;
-        }
-    }
-
     @Override public boolean deleteEntityDataBulk( UUID entityTypeId, Set<UUID> entityKeyIds ) {
         try {
             return executor.submit( ConductorElasticsearchCall
