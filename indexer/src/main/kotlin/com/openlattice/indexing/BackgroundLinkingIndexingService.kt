@@ -93,13 +93,20 @@ class BackgroundLinkingIndexingService(
     /**
      * Queue containing linking ids, which need to be re-indexed in elasticsearch.
      */
-    private val candidates = hazelcastInstance.getQueue<Triple<UUID, OffsetDateTime, Set<UUID>>>(
+    private val indexCandidates = hazelcastInstance.getQueue<Triple<UUID, OffsetDateTime, Set<UUID>>>(
             HazelcastQueue.LINKING_INDEXING.name
+    )
+
+    /**
+     * Queue containing linking ids, which need to be re-indexed in elasticsearch.
+     */
+    private val unIndexCandidates = hazelcastInstance.getQueue<Triple<UUID, OffsetDateTime, Set<UUID>>>(
+            HazelcastQueue.LINKING_UNINDEXING.name
     )
 
     @Suppress("UNUSED")
     private val linkingIndexingWorker = executor.submit {
-        generateSequence(candidates::take)
+        generateSequence(indexCandidates::take)
                 .chunked(LINKING_INDEX_SIZE)
                 .asStream()
                 .parallel()
@@ -108,20 +115,7 @@ class BackgroundLinkingIndexingService(
                         return@forEach
                     }
 
-                    // entity set id -> linking id -> last write
-                    val linkingEntityKeyIdsWithLastWrite = mutableMapOf<UUID, MutableMap<UUID, OffsetDateTime>>()
-                    val linkingIds = mutableSetOf<UUID>()
-                    candidateBatch.forEach {
-                        val linkingId = it.first
-                        val lastWrite = it.second
-                        it.third.forEach { entitySetId ->
-                            if (!linkingEntityKeyIdsWithLastWrite.containsKey(entitySetId)) {
-                                linkingEntityKeyIdsWithLastWrite[entitySetId] = mutableMapOf()
-                            }
-                            linkingEntityKeyIdsWithLastWrite.getValue(entitySetId)[linkingId] = lastWrite
-                        }
-                        linkingIds.add(it.first)
-                    }
+                    val (linkingEntityKeyIdsWithLastWrite, linkingIds) = mapCandidates(candidateBatch)
 
                     try {
                         lock(linkingIds)
@@ -134,6 +128,52 @@ class BackgroundLinkingIndexingService(
                 }
     }
 
+    @Suppress("UNUSED")
+    private val linkingUnIndexingWorker = executor.submit {
+        generateSequence(unIndexCandidates::take)
+                .chunked(LINKING_INDEX_SIZE)
+                .asStream()
+                .parallel()
+                .forEach { candidateBatch ->
+                    if (!indexerConfiguration.backgroundLinkingIndexingEnabled) {
+                        return@forEach
+                    }
+
+                    val (linkingEntityKeyIdsWithLastWrite, linkingIds) = mapCandidates(candidateBatch)
+
+                    try {
+                        lock(linkingIds)
+                        unIndex(linkingEntityKeyIdsWithLastWrite, linkingIds)
+                    } catch (ex: Exception) {
+                        logger.error("Unable to index linking entity with from bacth if linking ids $linkingIds.", ex)
+                    } finally {
+                        unLock(linkingIds)
+                    }
+                }
+    }
+
+    private fun mapCandidates(
+            candidates: List<Triple<UUID, OffsetDateTime, Set<UUID>>>
+    ): Pair<Map<UUID, Map<UUID, OffsetDateTime>>, Set<UUID>> {
+
+        // entity set id -> linking id -> last write
+        val linkingEntityKeyIdsWithLastWrite = mutableMapOf<UUID, MutableMap<UUID, OffsetDateTime>>()
+        val linkingIds = mutableSetOf<UUID>()
+        candidates.forEach {
+            val linkingId = it.first
+            val lastWrite = it.second
+            it.third.forEach { entitySetId ->
+                if (!linkingEntityKeyIdsWithLastWrite.containsKey(entitySetId)) {
+                    linkingEntityKeyIdsWithLastWrite[entitySetId] = mutableMapOf()
+                }
+                linkingEntityKeyIdsWithLastWrite.getValue(entitySetId)[linkingId] = lastWrite
+            }
+            linkingIds.add(it.first)
+        }
+
+        return linkingEntityKeyIdsWithLastWrite to linkingIds
+    }
+
     @Timed
     @Suppress("UNUSED")
     @Scheduled(fixedRate = LINKING_INDEX_RATE)
@@ -143,8 +183,10 @@ class BackgroundLinkingIndexingService(
         }
         executor.submit {
             logger.info("Registering linking ids needing indexing.")
+            getDirtyLinkingIds().forEach(indexCandidates::put)
 
-            getDirtyLinkingIds().forEach(candidates::put)
+            logger.info("Registering linking ids needing un-indexing.")
+            getDeletedLinkingIds().forEach(unIndexCandidates::put)
         }
     }
 
@@ -179,6 +221,23 @@ class BackgroundLinkingIndexingService(
     }
 
     /**
+     * Un-index linking ids, where there are no normal entities left.
+     * The documents need to be deleted from elasticsearch and last_index needs to be updated.
+     * @param linkingIds The linking ids about to get un-indexed.
+     */
+    private fun unIndex(linkingEntityKeyIdsWithLastWrite: Map<UUID, Map<UUID, OffsetDateTime>>, linkingIds: Set<UUID>) {
+        logger.info("Starting background linking un-indexing task for linking ids $linkingIds.")
+        val watch = Stopwatch.createStarted()
+
+        val indexCount = unIndexLinkedEntities(linkingEntityKeyIdsWithLastWrite, linkingIds)
+
+        logger.info(
+                "Finished linked un-indexing $indexCount elements with linking ids $linkingIds in " +
+                        "${watch.elapsed(TimeUnit.MILLISECONDS)} ms."
+        )
+    }
+
+    /**
      * @param linkingIdsWithLastWrite Map of entity_set_id -> linking_id -> last_write
      * @param dataByLinkingId Map of linking_id -> entity_set_id -> id -> property_type_id -> data
      */
@@ -186,7 +245,21 @@ class BackgroundLinkingIndexingService(
             linkingIdsWithLastWrite: Map<UUID, Map<UUID, OffsetDateTime>>,
             dataByLinkingId: Map<UUID, Map<UUID, Map<UUID, Map<UUID, Set<Any>>>>>
     ): Int {
-        if (elasticsearchApi.createBulkLinkedData(personEntityType.id, dataByLinkingId)) {
+        if (!elasticsearchApi.createBulkLinkedData(personEntityType.id, dataByLinkingId)) {
+            return 0
+        }
+        return dataManager.markAsIndexed(linkingIdsWithLastWrite, true)
+    }
+
+    /**
+     * @param linkingIdsWithLastWrite Map of entity_set_id -> linking_id -> last_write
+     * @param linkingIds Set of linking_ids to delete from elasticsearch.
+     */
+    private fun unIndexLinkedEntities(
+            linkingIdsWithLastWrite: Map<UUID, Map<UUID, OffsetDateTime>>,
+            linkingIds: Set<UUID>
+    ): Int {
+        if (!elasticsearchApi.deleteEntityDataBulk(personEntityType.id, linkingIds)) {
             return 0
         }
         return dataManager.markAsIndexed(linkingIdsWithLastWrite, true)
@@ -240,7 +313,6 @@ class BackgroundLinkingIndexingService(
                     ResultSetAdapters.entitySetIds(it)
             )
         }
-
     }
 }
 
