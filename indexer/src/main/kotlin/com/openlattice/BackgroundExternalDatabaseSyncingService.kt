@@ -64,6 +64,8 @@ class BackgroundExternalDatabaseSyncingService(
             //add enabling config
             val timer = Stopwatch.createStarted()
             val lockedOrganizationIds = organizationTitles.keys
+                    .filter {it != IdConstants.OPENLATTICE_ORGANIZATION_ID.id }
+                    .filter {it != IdConstants.GLOBAL_ORGANIZATION_ID.id }
                     .filter { tryLockOrganization(it) }
                     .shuffled()
 
@@ -80,7 +82,7 @@ class BackgroundExternalDatabaseSyncingService(
                     totalSynced,
                     timer)
         } else {
-            logger.info("Not starting new external database synch task as an existing one is running")
+            logger.info("Not starting new external database sync task as an existing one is running")
         }
     }
 
@@ -120,12 +122,12 @@ class BackgroundExternalDatabaseSyncingService(
                         //create new securable object for this column
                         //TODO handling of permissions
                         val newColumn = edms.createNewColumnObjects(dbName, tableName, tableId, orgId, Optional.of(it))
-                        newColumn.forEach { newColumn ->
-                            val newColumnId = edms.createOrganizationExternalDatabaseColumn(orgId, newColumn)
+                        newColumn.forEach { column ->
+                            val newColumnId = edms.createOrganizationExternalDatabaseColumn(orgId, column)
                             currentColumnIds.add(newColumnId)
 
                             //add column-level permissions
-                            edms.addPermissions(dbName, orgId, tableId, tableName, Optional.of(newColumnId), Optional.of(newColumn.name))
+                            edms.addPermissions(dbName, orgId, tableId, tableName, Optional.of(newColumnId), Optional.of(column.name))
                         }
                     } else {
                         currentColumnIds.add(columnId)
