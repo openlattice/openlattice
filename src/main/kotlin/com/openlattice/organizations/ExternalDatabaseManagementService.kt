@@ -36,7 +36,6 @@ import java.util.*
 @Service
 class ExternalDatabaseManagementService(
         private val hazelcastInstance: HazelcastInstance,
-        private val hds: HikariDataSource, //remove this
         private val assemblerConnectionManager: AssemblerConnectionManager, //for now using this, may need to move connection logic to its own file
         private val securePrincipalsManager: SecurePrincipalsManager,
         private val aclKeyReservations: HazelcastAclKeyReservationService,
@@ -50,6 +49,7 @@ class ExternalDatabaseManagementService(
     private val aces: IMap<AceKey, AceValue> = hazelcastInstance.getMap(HazelcastMap.PERMISSIONS.name)
     private val logger = LoggerFactory.getLogger(ExternalDatabaseManagementService::class.java)
     private val primaryKeyConstraint = "PRIMARY KEY"
+    private val FETCH_SIZE = 100_000
 
     /*CREATE*/
     fun createOrganizationExternalDatabaseTable(orgId: UUID, table: OrganizationExternalDatabaseTable): UUID {
@@ -291,15 +291,13 @@ class ExternalDatabaseManagementService(
                 "LEFT JOIN information_schema.columns on " +
                 "information_schema.tables.table_name = information_schema.columns.table_name " +
                 "WHERE information_schema.tables.table_schema='$PUBLIC_SCHEMA' " +
-                "AND table_type='BASE TABLE' " +
-                "ORDER BY information_schema.tables.table_name"
+                "AND table_type='BASE TABLE'"
         BasePostgresIterable(
-                StatementHolderSupplier(assemblerConnectionManager.connect(dbName), sql)
-        ) { rs ->
-            val tableName = name(rs)
-            val columnName = columnName(rs)
-            columnNamesByTableName.getOrPut(tableName) { mutableSetOf() }.add(columnName)
-        }
+                StatementHolderSupplier(assemblerConnectionManager.connect(dbName), sql, FETCH_SIZE)
+        ) { rs -> name(rs) to columnName(rs) }
+                .forEach {
+                    columnNamesByTableName.getOrPut(it.first) { mutableSetOf() }.add(it.second)
+                }
         return columnNamesByTableName
     }
 
