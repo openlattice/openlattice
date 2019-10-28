@@ -24,8 +24,8 @@ interface OrganizationExternalDatabaseApi {
         const val TABLE_ID_PATH = "/{$TABLE_ID}"
         const val COLUMN_NAME = "columnName"
         const val COLUMN_NAME_PATH = "/{$COLUMN_NAME}"
-        const val SQL_TYPE = "sqlType"
-        const val SQL_TYPE_PATH = "/{$SQL_TYPE}"
+        const val ROW_COUNT = "rowCount"
+        const val ROW_COUNT_PATH = "/{$ROW_COUNT}"
         const val USER_ID = "userId"
         const val USER_ID_PATH = "/{$USER_ID:.*}"
     }
@@ -94,11 +94,13 @@ interface OrganizationExternalDatabaseApi {
 
     /**
      * Gets an OrganizationExternalDatabaseTable object with
-     * rows of raw data for an organization
+     * user specified number of rows of raw data for an organization
      * @param organizationId The organization's UUID
+     * @param tableId The id of the organization's table
+     * @param rowCount The number of rows to be retrieved
      */
-    @GET(BASE + ID_PATH + TABLE_ID_PATH + DATA)
-    fun getExternalDatabaseTableData(@Path(ID) organizationId: UUID, @Path(TABLE_ID) tableId: UUID): Map<UUID, List<Any>>
+    @GET(BASE + ID_PATH + TABLE_ID_PATH + ROW_COUNT_PATH + DATA)
+    fun getExternalDatabaseTableData(@Path(ID) organizationId: UUID, @Path(TABLE_ID) tableId: UUID, @Path(ROW_COUNT) rowCount: Int): Map<UUID, List<Any?>>
 
     /**
      * Gets an OrganizationExternalDatabaseTable object, which represents an
