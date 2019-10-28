@@ -87,17 +87,18 @@ interface OrganizationExternalDatabaseApi {
      * their containing OrganizationExternalDatabase Columns
      * for an organization
      * @param organizationId The organization's UUID
+     * @param tableId The id of the organization's table
      */
     @GET(BASE + ID_PATH + TABLE_ID_PATH + EXTERNAL_DATABASE_TABLE + EXTERNAL_DATABASE_COLUMN)
-    fun getExternalDatabaseTableWithColumns(@Path(ID) organizationId: UUID, @Path(TABLE_ID) tableId: UUID)
+    fun getExternalDatabaseTableWithColumns(@Path(ID) organizationId: UUID, @Path(TABLE_ID) tableId: UUID): Pair<OrganizationExternalDatabaseTable, Set<OrganizationExternalDatabaseColumn>>
 
     /**
      * Gets an OrganizationExternalDatabaseTable object with
-     * rows of raw data for an organizatoin
+     * rows of raw data for an organization
      * @param organizationId The organization's UUID
      */
     @GET(BASE + ID_PATH + TABLE_ID_PATH + DATA)
-    fun getExternalDatabaseTableData(@Path(ID) organizationId: UUID, @Path(TABLE_ID) tableId: UUID)
+    fun getExternalDatabaseTableData(@Path(ID) organizationId: UUID, @Path(TABLE_ID) tableId: UUID): Map<UUID, List<Any>>
 
     /**
      * Gets an OrganizationExternalDatabaseTable object, which represents an
