@@ -10,6 +10,7 @@ import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.CO
 import com.openlattice.organization.OrganizationExternalDatabaseApi
 import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.COLUMN_NAME
 import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.COLUMN_NAME_PATH
+import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.DATA
 import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.EXTERNAL_DATABASE
 import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.EXTERNAL_DATABASE_COLUMN
 import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.EXTERNAL_DATABASE_TABLE
@@ -95,6 +96,7 @@ class OrganizationExternalDatabaseController : OrganizationExternalDatabaseApi, 
     @GetMapping(path = [ID_PATH + EXTERNAL_DATABASE_TABLE])
     override fun getExternalDatabaseTables(
             @PathVariable(ID) organizationId: UUID): Set<OrganizationExternalDatabaseTable> {
+        ensureOwner(organizationId)
         return edms.getExternalDatabaseTables(organizationId)
     }
 
@@ -102,6 +104,7 @@ class OrganizationExternalDatabaseController : OrganizationExternalDatabaseApi, 
     @GetMapping(path = [ID_PATH + EXTERNAL_DATABASE_TABLE + EXTERNAL_DATABASE_COLUMN])
     override fun getExternalDatabaseTablesWithColumns(
             @PathVariable(ID) organizationId: UUID): Map<OrganizationExternalDatabaseTable, Set<OrganizationExternalDatabaseColumn>> {
+        ensureOwner(organizationId)
         return edms.getExternalDatabaseTablesWithColumns(organizationId)
     }
 
@@ -109,8 +112,18 @@ class OrganizationExternalDatabaseController : OrganizationExternalDatabaseApi, 
     @GetMapping(path = [ID_PATH + TABLE_ID_PATH + EXTERNAL_DATABASE_TABLE + EXTERNAL_DATABASE_COLUMN])
     override fun getExternalDatabaseTableWithColumns(
             @PathVariable(ID) organizationId: UUID,
-            @PathVariable(TABLE_ID) tableId: UUID): Pair<OrganizationExternalDatabaseTable, Set<OrganizationExternalDatabaseColumn> {
+            @PathVariable(TABLE_ID) tableId: UUID): Pair<OrganizationExternalDatabaseTable, Set<OrganizationExternalDatabaseColumn>> {
+        ensureReadAccess(AclKey(organizationId, tableId))
         return edms.getExternalDatabaseTableWithColumns(tableId)
+    }
+
+    @Timed
+    @GetMapping(path = [ID_PATH + TABLE_ID_PATH + DATA])
+    override fun getExternalDatabaseTableData(
+            @PathVariable(ID) organizationId: UUID,
+            @PathVariable(TABLE_ID) tableId: UUID): Map<UUID, List<Any>> {
+        ensureReadAccess(AclKey(organizationId, tableId))
+        return edms.getExternalDatabaseTableData(organizationId, tableId)
     }
 
     @Timed
@@ -146,7 +159,7 @@ class OrganizationExternalDatabaseController : OrganizationExternalDatabaseApi, 
         ensureObjectCanBeDeleted(tableId)
         authorizations.deletePermissions(aclKey)
         securableObjectTypes.deleteSecurableObjectType(aclKey)
-        edms.deleteOrganizationExternalDatabaseTable(organizationId, tableName, tableId)
+        edms.deleteOrganizationExternalDatabaseTable(organizationId, tableId)
     }
 
     @Timed
@@ -154,18 +167,17 @@ class OrganizationExternalDatabaseController : OrganizationExternalDatabaseApi, 
     override fun deleteExternalDatabaseTables(
             @PathVariable(ID) organizationId: UUID,
             @RequestBody tableNames: Set<String>) {
-        val tableNameById = tableNames.stream().collect<Map<UUID, String>, Any>(
-                Collectors.toMap({ tableName -> getExternalDatabaseObjectId(organizationId, tableName) },
-                        { tableName -> tableName }))
-        val aclKeys = tableNameById.keys.stream().map { tableId -> AclKey(organizationId, tableId) }
-                .collect<Set<AclKey>, Any>(Collectors.toSet())
-        tableNameById.forEach { (id, name) -> ensureObjectCanBeDeleted(id) }
+        val tableIds = tableNames.map {
+            getExternalDatabaseObjectId(organizationId, it)
+        }.toSet()
+        tableIds.forEach { ensureObjectCanBeDeleted(it) }
+        val aclKeys = tableIds.map{AclKey(organizationId, it)}.toSet()
         aclKeys.forEach { aclKey ->
             ensureOwnerAccess(aclKey)
             authorizations.deletePermissions(aclKey)
             securableObjectTypes.deleteSecurableObjectType(aclKey)
         }
-        edms.deleteOrganizationExternalDatabaseTables(organizationId, tableNameById)
+        edms.deleteOrganizationExternalDatabaseTables(organizationId, tableIds)
     }
 
     @Timed
@@ -179,10 +191,10 @@ class OrganizationExternalDatabaseController : OrganizationExternalDatabaseApi, 
         val columnId = getExternalDatabaseObjectId(tableId, columnName)
         val aclKey = AclKey(organizationId, tableId, columnId)
         ensureOwnerAccess(aclKey)
-        ensureObjectCanBeDeleted(tableId)
+        ensureObjectCanBeDeleted(columnId)
         authorizations.deletePermissions(aclKey)
         securableObjectTypes.deleteSecurableObjectType(aclKey)
-        edms.deleteOrganizationExternalDatabaseColumn(organizationId, tableName, columnName, columnId)
+        edms.deleteOrganizationExternalDatabaseColumn(organizationId, columnId)
     }
 
     @Timed
@@ -193,18 +205,17 @@ class OrganizationExternalDatabaseController : OrganizationExternalDatabaseApi, 
             @RequestBody columnNames: Set<String>
     ) {
         val tableId = getExternalDatabaseObjectId(organizationId, tableName)
-        val columnNameById = columnNames.stream().collect<Map<UUID, String>, Any>(
-                Collectors.toMap({ columnName -> getExternalDatabaseObjectId(tableId, columnName) },
-                        { columnName -> columnName }))
-        val aclKeys = columnNameById.keys.stream().map { columnId -> AclKey(organizationId, tableId, columnId) }
-                .collect<Set<AclKey>, Any>(Collectors.toSet())
-        columnNameById.forEach { (id, name) -> ensureObjectCanBeDeleted(id) }
+        val columnIds = columnNames.map {
+            getExternalDatabaseObjectId(tableId, it)
+        }.toSet()
+        columnIds.forEach { ensureObjectCanBeDeleted(it) }
+        val aclKeys = columnIds.map{AclKey(organizationId, tableId, it)}.toSet()
         aclKeys.forEach { aclKey ->
             ensureOwnerAccess(aclKey)
             authorizations.deletePermissions(aclKey)
             securableObjectTypes.deleteSecurableObjectType(aclKey)
         }
-        edms.deleteOrganizationExternalDatabaseColumns(organizationId, tableName, columnNameById)
+        edms.deleteOrganizationExternalDatabaseColumns(organizationId, columnIds)
     }
 
     private fun ensureOwner(organizationId: UUID): AclKey {
