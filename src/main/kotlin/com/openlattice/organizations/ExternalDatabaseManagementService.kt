@@ -109,6 +109,24 @@ class ExternalDatabaseManagementService(
         return Pair(table, (organizationExternalDatabaseColumns.values(belongsToTable(tableId)).toSet()))
     }
 
+    fun getExternalDatabaseTableData(orgId: UUID, tableId: UUID): Map<UUID, List<Any>> {
+        val tableName = organizationExternalDatabaseTables.getValue(tableId).name
+        val columns = organizationExternalDatabaseColumns.values(belongsToTable(tableId))
+        val dataByColumnId = mutableMapOf<UUID, MutableList<Any>>()
+
+        val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
+        val sql = "SELECT * FROM $tableName LIMIT 1000"
+        BasePostgresIterable(
+                StatementHolderSupplier(assemblerConnectionManager.connect(dbName), sql)
+        ) { rs ->
+            columns.forEach {
+                val datum = rs.getObject(it.name)
+                dataByColumnId.getOrPut(it.id) { mutableListOf() }.add(datum)
+            }
+        }
+        return dataByColumnId
+    }
+
     fun getOrganizationExternalDatabaseTable(tableId: UUID): OrganizationExternalDatabaseTable {
         return organizationExternalDatabaseTables.getValue(tableId)
     }
@@ -252,7 +270,7 @@ class ExternalDatabaseManagementService(
             val principal = securePrincipalsManager.getPrincipal(user).principal
             val aceKey = AceKey(aclKey, principal)
             var permissions = EnumSet.noneOf(Permission::class.java)
-            if (privileges == PostgresPrivileges.values().toSet() ) {
+            if (privileges == PostgresPrivileges.values().toSet()) {
                 permissions.add(Permission.OWNER)
             }
             if (privileges.contains(PostgresPrivileges.SELECT)) {
@@ -329,6 +347,8 @@ class ExternalDatabaseManagementService(
     private fun createPrivilegesSql(action: Action, privileges: List<String>, tableName: String, columnName: String, dbUser: String): String {
         val privilegesAsString = privileges.joinToString(separator = ", ")
         val tableNamePath = "$PUBLIC_SCHEMA.$tableName"
+        checkState(action == Action.REMOVE || action == Action.ADD || action == Action.SET,
+                "Invalid action $action specified")
         return if (action == Action.REMOVE) {
             "REVOKE $privilegesAsString $columnName ON $tableNamePath FROM $dbUser"
         } else {
