@@ -27,6 +27,7 @@ import com.kryptnostic.rhizome.configuration.Configuration
 import com.kryptnostic.rhizome.configuration.ConfigurationKey
 import com.kryptnostic.rhizome.configuration.SimpleConfigurationKey
 import com.kryptnostic.rhizome.configuration.annotation.ReloadableConfiguration
+import com.openlattice.BackgroundExternalDatabaseSyncingService
 import com.openlattice.conductor.rpc.SearchConfiguration
 
 
@@ -40,6 +41,7 @@ private const val ERROR_REPORTING_EMAIL = "error-reporting-email"
 private const val BACKGROUND_INDEXING_ENABLED = "background-indexing-enabled"
 private const val BACKGROUND_LINKING_INDEXING_ENABLED = "background-linking-indexing-enabled"
 private const val BACKGROUND_EXPIRED_DATA_DELETION_ENABLED = "background-expired-data-deletion-enabled"
+private const val BACKGROUND_EXTERNAL_DATABASE_SYNCING_ENABLED = "background-external-database-syncing-enabled"
 
 @ReloadableConfiguration(uri = "indexer.yaml")
 data class IndexerConfiguration(
@@ -47,7 +49,8 @@ data class IndexerConfiguration(
         @JsonProperty(ERROR_REPORTING_EMAIL) val errorReportingEmail: String,
         @JsonProperty(BACKGROUND_INDEXING_ENABLED) val backgroundIndexingEnabled: Boolean = true,
         @JsonProperty(BACKGROUND_LINKING_INDEXING_ENABLED) val backgroundLinkingIndexingEnabled: Boolean = true,
-        @JsonProperty(BACKGROUND_EXPIRED_DATA_DELETION_ENABLED) val backgroundExpiredDataDeletionEnabled: Boolean = true
+        @JsonProperty(BACKGROUND_EXPIRED_DATA_DELETION_ENABLED) val backgroundExpiredDataDeletionEnabled: Boolean = true,
+        @JsonProperty(BACKGROUND_EXTERNAL_DATABASE_SYNCING_ENABLED) val backgroundExternalDatabaseSyncingEnabled: Boolean = true
 ) : Configuration {
     companion object {
         @JvmStatic
