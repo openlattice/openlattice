@@ -62,6 +62,7 @@ import com.openlattice.indexing.configuration.IndexerConfiguration;
 import com.openlattice.kindling.search.ConductorElasticsearchImpl;
 import com.openlattice.mail.config.MailServiceRequirements;
 import com.openlattice.notifications.sms.PhoneNumberService;
+import com.openlattice.organizations.ExternalDatabaseManagementService;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
@@ -319,6 +320,10 @@ public class IndexerServicesPod {
     @Bean
     public DataGraphManager dataGraphService() {
         return new DataGraphService( graphApi(), idService(), entityDatastore(), postgresEntitySetSizeCacheManager() );
+    }
+
+    @Bean ExternalDatabaseManagementService edms() {
+        return new ExternalDatabaseManagementService( hazelcastInstance, assemblerConnectionManager(), principalService(), aclKeyReservationService(), authorizationManager() );
     }
 
     @Bean( name = "auditingManager" )
