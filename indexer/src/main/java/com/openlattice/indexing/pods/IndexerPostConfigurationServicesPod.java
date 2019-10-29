@@ -134,7 +134,8 @@ public class IndexerPostConfigurationServicesPod {
     public BackgroundExternalDatabaseSyncingService backgroundExternalDatabaseUpdatingService() {
         return new BackgroundExternalDatabaseSyncingService(
                 hazelcastInstance,
-                edms );
+                edms,
+                indexerConfiguration);
     }
 
     @Bean
