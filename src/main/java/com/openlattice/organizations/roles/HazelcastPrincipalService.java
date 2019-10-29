@@ -386,4 +386,10 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
         return Predicates.and( Predicates.equal( "this.index[any]", principalAclKey.getIndex() ) );
     }
 
+    @Override
+    public SecurablePrincipal getSecurablePrincipalById( UUID id ) {
+        return principals.values( Predicates.equal( "lastIdInAclKey", id ) )
+                .stream().findFirst().get();
+    }
+
 }
