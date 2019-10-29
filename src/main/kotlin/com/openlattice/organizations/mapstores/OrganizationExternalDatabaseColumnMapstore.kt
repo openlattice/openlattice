@@ -14,7 +14,7 @@ import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.util.*
 
-const val ID_INDEX = "key"
+const val ID_INDEX = "__key"
 const val TABLE_ID_INDEX = "tableId"
 const val ORGANIZATION_ID_INDEX = "organizationId"
 
