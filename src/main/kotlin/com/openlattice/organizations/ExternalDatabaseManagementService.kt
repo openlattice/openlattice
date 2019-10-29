@@ -250,17 +250,19 @@ class ExternalDatabaseManagementService(
     fun addPermissions(dbName: String, orgId: UUID, tableId: UUID, tableName: String, maybeColumnId: Optional<UUID>, maybeColumnName: Optional<String>) {
         val privilegesByUser = HashMap<UUID, MutableSet<PostgresPrivileges>>()
         var columnCondition = ""
+        var grantsTableName = "information_schema.role_table_grants"
         lateinit var aclKey: AclKey
         if (maybeColumnId.isPresent && maybeColumnName.isPresent) {
             val columnName = maybeColumnName.get()
             val columnId = maybeColumnId.get()
             columnCondition = "AND column_name = '$columnName'"
+            grantsTableName = "information_schema.role_column_grants"
             aclKey = AclKey(orgId, tableId, columnId)
         } else {
             aclKey = AclKey(orgId, tableId)
         }
         val sql = "SELECT grantee AS user, privilege_type " +
-                "FROM information_schema.role_table_grants " +
+                "FROM $grantsTableName " +
                 "WHERE table_name = '$tableName' " +
                 columnCondition
         BasePostgresIterable(
