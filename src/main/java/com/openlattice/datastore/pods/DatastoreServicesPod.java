@@ -495,7 +495,6 @@ public class DatastoreServicesPod {
     public ExternalDatabaseManagementService edms() {
         return new ExternalDatabaseManagementService(
                 hazelcastInstance,
-                hikariDataSource,
                 assemblerConnectionManager(),
                 principalService(),
                 aclKeyReservationService(),
