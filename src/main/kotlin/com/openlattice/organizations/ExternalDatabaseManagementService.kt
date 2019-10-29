@@ -9,6 +9,8 @@ import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.AssemblerConnectionManager.Companion.PUBLIC_SCHEMA
 import com.openlattice.assembler.PostgresDatabases
 import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresUsername
+import com.openlattice.assembler.PostgresRoles.Companion.getSecurablePrincipalIdFromUserName
+import com.openlattice.assembler.PostgresRoles.Companion.isPostgresUserName
 import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.organizations.mapstores.ID_INDEX
@@ -246,7 +248,7 @@ class ExternalDatabaseManagementService(
     }
 
     fun addPermissions(dbName: String, orgId: UUID, tableId: UUID, tableName: String, maybeColumnId: Optional<UUID>, maybeColumnName: Optional<String>) {
-        val privilegesByUser = HashMap<String, MutableSet<PostgresPrivileges>>()
+        val privilegesByUser = HashMap<UUID, MutableSet<PostgresPrivileges>>()
         var columnCondition = ""
         lateinit var aclKey: AclKey
         if (maybeColumnId.isPresent && maybeColumnName.isPresent) {
@@ -264,12 +266,16 @@ class ExternalDatabaseManagementService(
         BasePostgresIterable(
                 StatementHolderSupplier(assemblerConnectionManager.connect(dbName), sql)
         ) { rs ->
-            val user = user(rs)
-            val privilege = PostgresPrivileges.valueOf(privilegeType(rs).toUpperCase())
-            privilegesByUser.getOrPut(user) { mutableSetOf() }.add(privilege)
+            user(rs) to PostgresPrivileges.valueOf(privilegeType(rs).toUpperCase())
         }
-        privilegesByUser.forEach { (user, privileges) ->
-            val principal = securePrincipalsManager.getPrincipal(user).principal
+                .filter { isPostgresUserName(it.first) }
+                .forEach {
+                    val securablePrincipalId = getSecurablePrincipalIdFromUserName(it.first)
+                    privilegesByUser.getOrPut(securablePrincipalId) { mutableSetOf() }.add(it.second)
+                }
+
+        privilegesByUser.forEach { (securablePrincipalId, privileges) ->
+            val principal = securePrincipalsManager.getSecurablePrincipalById(securablePrincipalId).principal
             val aceKey = AceKey(aclKey, principal)
             var permissions = EnumSet.noneOf(Permission::class.java)
             if (privileges == PostgresPrivileges.values().toSet()) {
@@ -284,6 +290,8 @@ class ExternalDatabaseManagementService(
             aces[aceKey] = aceValue //TODO should be a merger or what?
         }
     }
+
+    //fun removePermissions(dbName: String, )
 
     /*IDK WHERE THESE BELONG CONCEPTUALLY YET*/
     fun getColumnNamesByTable(orgId: UUID, dbName: String): Map<String, Set<String>> {
@@ -305,7 +313,7 @@ class ExternalDatabaseManagementService(
 
     fun createNewColumnObjects(dbName: String, tableName: String, tableId: UUID, orgId: UUID, columnName: Optional<String>): BasePostgresIterable<OrganizationExternalDatabaseColumn> {
         var columnCondition = ""
-        columnName.ifPresent { columnName -> columnCondition = "AND information_schema.columns.column_name = '$columnName'" }
+        columnName.ifPresent { columnCondition = "AND information_schema.columns.column_name = '$it'" }
 
         val sql = "SELECT information_schema.tables.table_name, information_schema.columns.column_name, " +
                 "information_schema.columns.data_type AS datatype, information_schema.columns.ordinal_position, " +
