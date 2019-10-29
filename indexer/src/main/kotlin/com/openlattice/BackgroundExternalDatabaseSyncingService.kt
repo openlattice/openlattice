@@ -97,6 +97,7 @@ class BackgroundExternalDatabaseSyncingService(
     }
 
     fun syncOrganizationDatabases(orgId: UUID): Int {
+        var totalSynced = 0
         val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
         val currentTableIds = mutableSetOf<UUID>()
         val currentColumnIds = mutableSetOf<UUID>()
@@ -114,15 +115,20 @@ class BackgroundExternalDatabaseSyncingService(
                 //add table-level permissions
                 edms.addPermissions(dbName, orgId, newTableId, newTable.name, Optional.empty(), Optional.empty())
 
+                totalSynced++
+
                 //create new securable objects for columns in this table
                 edms.createNewColumnObjects(dbName, tableName, newTableId, orgId, Optional.empty())
                         .forEach {
-                    val newColumnId = edms.createOrganizationExternalDatabaseColumn(orgId, it)
-                    currentColumnIds.add(newColumnId)
+                            val newColumnId = edms.createOrganizationExternalDatabaseColumn(orgId, it)
+                            currentColumnIds.add(newColumnId)
 
-                    //add column-level permissions
-                    edms.addPermissions(dbName, orgId, newTableId, newTable.name, Optional.of(newColumnId), Optional.of(it.name))
-                }
+                            //add column-level permissions
+                            edms.addPermissions(dbName, orgId, newTableId, newTable.name, Optional.of(newColumnId), Optional.of(it.name))
+
+                            totalSynced++
+
+                        }
             } else {
                 currentTableIds.add(tableId)
                 //check if columns existed previously
@@ -133,12 +139,15 @@ class BackgroundExternalDatabaseSyncingService(
                         //create new securable object for this column
                         edms.createNewColumnObjects(dbName, tableName, tableId, orgId, Optional.of(it))
                                 .forEach { column ->
-                            val newColumnId = edms.createOrganizationExternalDatabaseColumn(orgId, column)
-                            currentColumnIds.add(newColumnId)
+                                    val newColumnId = edms.createOrganizationExternalDatabaseColumn(orgId, column)
+                                    currentColumnIds.add(newColumnId)
 
-                            //add column-level permissions
-                            edms.addPermissions(dbName, orgId, tableId, tableName, Optional.of(newColumnId), Optional.of(column.name))
-                        }
+                                    //add column-level permissions
+                                    edms.addPermissions(dbName, orgId, tableId, tableName, Optional.of(newColumnId), Optional.of(column.name))
+
+                                    totalSynced++
+
+                                }
                     } else {
                         currentColumnIds.add(columnId)
                     }
@@ -152,14 +161,16 @@ class BackgroundExternalDatabaseSyncingService(
         val missingTableIds = organizationExternalDatabaseTables.keys - currentTableIds
         if (missingTableIds.isNotEmpty()) {
             edms.deleteOrganizationExternalDatabaseTables(orgId, missingTableIds)
+            totalSynced += missingTableIds.size
         }
 
         //check if columns have been deleted in the database
         val missingColumnIds = organizationExternalDatabaseColumns.keys - currentColumnIds
-        if (missingTableIds.isNotEmpty()) {
+        if (missingColumnIds.isNotEmpty()) {
             edms.deleteOrganizationExternalDatabaseColumns(orgId, missingColumnIds)
+            totalSynced += missingColumnIds.size
         }
-        return 1 //TODO add actual tracking of counts
+        return totalSynced
     }
 
     private fun tryLockOrganization(orgId: UUID): Boolean {
