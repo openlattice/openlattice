@@ -9,7 +9,7 @@ private const val ADFS_PREFIX = "adfs|"
 private const val AD_PREFIX = "ad|"
 private const val WAAD_PREFIX = "waad|"
 private const val INTERNAL_PREFIX = "ol-internal"
-private val USERNAME_REGEX = Pattern.compile(".*|.*|.*")
+private val USERNAME_REGEX = Pattern.compile(".*(\\|).*(\\|).*")
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
