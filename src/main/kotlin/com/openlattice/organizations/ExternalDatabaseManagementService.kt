@@ -53,8 +53,9 @@ class ExternalDatabaseManagementService(
 
     /*CREATE*/
     fun createOrganizationExternalDatabaseTable(orgId: UUID, table: OrganizationExternalDatabaseTable): UUID {
-        val principal = Principals.getCurrentUser()
-        Principals.ensureUser(principal)
+        //TODO find out if principal things should be used or not, currently returning null
+//        val principal = Principals.getCurrentUser()
+//        Principals.ensureUser(principal)
 
         val tableFQN = FullQualifiedName(orgId.toString(), table.name)
         checkState(organizationExternalDatabaseTables.putIfAbsent(table.id, table) == null,
@@ -63,15 +64,16 @@ class ExternalDatabaseManagementService(
 
         val tableAclKey = AclKey(orgId, table.id)
         authorizationManager.setSecurableObjectType(tableAclKey, SecurableObjectType.OrganizationExternalDatabaseTable)
-        authorizationManager.addPermission(tableAclKey, principal, EnumSet.allOf(Permission::class.java))
+        //authorizationManager.addPermission(tableAclKey, principal, EnumSet.allOf(Permission::class.java))
         //eventBus?
 
         return table.id
     }
 
     fun createOrganizationExternalDatabaseColumn(orgId: UUID, column: OrganizationExternalDatabaseColumn): UUID {
-        val principal = Principals.getCurrentUser()
-        Principals.ensureUser(principal)
+        //TODO find out if principal things should be used or not, currently returning null
+//        val principal = Principals.getCurrentUser()
+//        Principals.ensureUser(principal)
 
         checkState(organizationExternalDatabaseTables[column.tableId] != null,
                 "OrganizationExternalDatabaseColumn ${column.name} belongs to " +
@@ -83,7 +85,7 @@ class ExternalDatabaseManagementService(
 
         val columnAclKey = AclKey(orgId, column.tableId, column.id)
         authorizationManager.setSecurableObjectType(columnAclKey, SecurableObjectType.OrganizationExternalDatabaseColumn)
-        authorizationManager.addPermission(columnAclKey, principal, EnumSet.allOf(Permission::class.java))
+//        authorizationManager.addPermission(columnAclKey, principal, EnumSet.allOf(Permission::class.java))
 
         return column.id
     }
@@ -288,7 +290,7 @@ class ExternalDatabaseManagementService(
         val columnNamesByTableName = HashMap<String, MutableSet<String>>()
         val sql = "SELECT information_schema.tables.table_name AS name, information_schema.columns.column_name " +
                 "FROM information_schema.tables " +
-                "LEFT JOIN information_schema.columns on " +
+                "LEFT JOIN information_schema.columns ON " +
                 "information_schema.tables.table_name = information_schema.columns.table_name " +
                 "WHERE information_schema.tables.table_schema='$PUBLIC_SCHEMA' " +
                 "AND table_type='BASE TABLE'"
@@ -301,21 +303,21 @@ class ExternalDatabaseManagementService(
         return columnNamesByTableName
     }
 
-    fun createNewColumnObjects(dbName: String, tableName: String, tableId: UUID, orgId: UUID, columnName: Optional<String>): Set<OrganizationExternalDatabaseColumn> {
+    fun createNewColumnObjects(dbName: String, tableName: String, tableId: UUID, orgId: UUID, columnName: Optional<String>): BasePostgresIterable<OrganizationExternalDatabaseColumn> {
         var columnCondition = ""
         columnName.ifPresent { columnName -> columnCondition = "AND information_schema.columns.column_name = '$columnName'" }
 
         val sql = "SELECT information_schema.tables.table_name, information_schema.columns.column_name, " +
-                "information_schema.columns.data_type as datatype, information_schema.columns.ordinal_position, " +
+                "information_schema.columns.data_type AS datatype, information_schema.columns.ordinal_position, " +
                 "information_schema.table_constraints.constraint_type " +
                 "FROM information_schema.tables " +
-                "LEFT JOIN information_schema.columns on information_schema.tables.table_name = " +
+                "LEFT JOIN information_schema.columns ON information_schema.tables.table_name = " +
                 "information_schema.columns.table_name " +
-                "LEFT OUTER JOIN information_schema.constraint_column_usage on " +
+                "LEFT OUTER JOIN information_schema.constraint_column_usage ON " +
                 "information_schema.columns.column_name = information_schema.constraint_column_usage.column_name " +
-                "AND information_schema.columns.table_name = information_schema.constraint_column_usage.table_name" +
+                "AND information_schema.columns.table_name = information_schema.constraint_column_usage.table_name " +
                 "LEFT OUTER JOIN information_schema.table_constraints " +
-                "on information_schema.constraint_column_usage.constraint_name = " +
+                "ON information_schema.constraint_column_usage.constraint_name = " +
                 "information_schema.table_constraints.constraint_name " +
                 "WHERE information_schema.columns.table_name = '$tableName' " +
                 "AND (information_schema.table_constraints.constraint_type = 'PRIMARY KEY' " +
@@ -338,7 +340,7 @@ class ExternalDatabaseManagementService(
                     dataType,
                     isPrimaryKey,
                     position)
-        }.toSet()
+        }
     }
 
     /*PRIVATE FUNCTIONS*/
