@@ -9,6 +9,7 @@ import com.hazelcast.query.QueryConstants
 import com.openlattice.assembler.PostgresDatabases
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.indexing.MAX_DURATION_MILLIS
+import com.openlattice.indexing.configuration.IndexerConfiguration
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import com.openlattice.organization.OrganizationExternalDatabaseTable
 import com.openlattice.organizations.ExternalDatabaseManagementService
@@ -26,7 +27,8 @@ const val SCAN_RATE = 30_000L
 
 class BackgroundExternalDatabaseSyncingService(
         private val hazelcastInstance: HazelcastInstance,
-        private val edms: ExternalDatabaseManagementService
+        private val edms: ExternalDatabaseManagementService,
+        private val indexerConfiguration: IndexerConfiguration
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(BackgroundExternalDatabaseSyncingService::class.java)
@@ -62,25 +64,33 @@ class BackgroundExternalDatabaseSyncingService(
         logger.info("Starting background external database sync task.")
         if (taskLock.tryLock()) {
             //add enabling config
-            val timer = Stopwatch.createStarted()
-            val lockedOrganizationIds = organizationTitles.keys
-                    .filter {it != IdConstants.OPENLATTICE_ORGANIZATION_ID.id }
-                    .filter {it != IdConstants.GLOBAL_ORGANIZATION_ID.id }
-                    .filter { tryLockOrganization(it) }
-                    .shuffled()
+            try {
+                if (indexerConfiguration.backgroundExternalDatabaseSyncingEnabled) {
+                    val timer = Stopwatch.createStarted()
+                    val lockedOrganizationIds = organizationTitles.keys
+                            .filter { it != IdConstants.OPENLATTICE_ORGANIZATION_ID.id }
+                            .filter { it != IdConstants.GLOBAL_ORGANIZATION_ID.id }
+                            .filter { tryLockOrganization(it) }
+                            .shuffled()
 
-            val totalSynced = lockedOrganizationIds
-                    .parallelStream()
-                    .mapToInt {
-                        syncOrganizationDatabases(it)
-                    }
-                    .sum()
+                    val totalSynced = lockedOrganizationIds
+                            .parallelStream()
+                            .mapToInt {
+                                syncOrganizationDatabases(it)
+                            }
+                            .sum()
 
-            lockedOrganizationIds.forEach(this::deleteIndexingLock)
+                    lockedOrganizationIds.forEach(this::deleteIndexingLock)
 
-            logger.info("Completed syncing {} database objects in {} ms",
-                    totalSynced,
-                    timer)
+                    logger.info("Completed syncing {} database objects in {}",
+                            totalSynced,
+                            timer)
+                } else {
+                    logger.info("Skipping external database syncing as it is not enabled.")
+                }
+            } finally {
+                taskLock.unlock()
+            }
         } else {
             logger.info("Not starting new external database sync task as an existing one is running")
         }
@@ -104,8 +114,9 @@ class BackgroundExternalDatabaseSyncingService(
                 //add table-level permissions
                 edms.addPermissions(dbName, orgId, newTableId, newTable.name, Optional.empty(), Optional.empty())
 
-                val newColumns = edms.createNewColumnObjects(dbName, tableName, newTableId, orgId, Optional.empty())
-                newColumns.forEach {
+                //create new securable objects for columns in this table
+                edms.createNewColumnObjects(dbName, tableName, newTableId, orgId, Optional.empty())
+                        .forEach {
                     val newColumnId = edms.createOrganizationExternalDatabaseColumn(orgId, it)
                     currentColumnIds.add(newColumnId)
 
@@ -120,9 +131,8 @@ class BackgroundExternalDatabaseSyncingService(
                     val columnId = aclKeys[columnFQN.fullQualifiedNameAsString]
                     if (columnId == null) {
                         //create new securable object for this column
-                        //TODO handling of permissions
-                        val newColumn = edms.createNewColumnObjects(dbName, tableName, tableId, orgId, Optional.of(it))
-                        newColumn.forEach { column ->
+                        edms.createNewColumnObjects(dbName, tableName, tableId, orgId, Optional.of(it))
+                                .forEach { column ->
                             val newColumnId = edms.createOrganizationExternalDatabaseColumn(orgId, column)
                             currentColumnIds.add(newColumnId)
 
