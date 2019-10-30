@@ -1166,7 +1166,7 @@ class PostgresEntityDataQueryService(
 
                     entityKeyId to linkingId
                 }
-        ).asSequence().toMap()
+        ).toMap()
     }
 
     fun getExpiringEntitiesFromEntitySet(
