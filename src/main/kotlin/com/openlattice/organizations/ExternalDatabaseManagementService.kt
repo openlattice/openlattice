@@ -12,7 +12,6 @@ import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresUsername
 import com.openlattice.assembler.PostgresRoles.Companion.getSecurablePrincipalIdFromUserName
 import com.openlattice.assembler.PostgresRoles.Companion.isPostgresUserName
 import com.openlattice.authorization.*
-import com.openlattice.authorization.mapstores.PermissionMapstore.ACL_KEY_INDEX
 import com.openlattice.authorization.processors.PermissionMerger
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.organizations.mapstores.ID_INDEX
@@ -27,7 +26,6 @@ import com.openlattice.organizations.roles.SecurePrincipalsManager
 
 import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresPrivileges
-import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.ResultSetAdapters.*
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.StatementHolderSupplier
@@ -210,21 +208,23 @@ class ExternalDatabaseManagementService(
 
                             //revoke any previous privileges before setting specified ones
                             if (action == Action.SET) {
-                                val revokeSql = createPrivilegesSql(Action.REMOVE, listOf("ALL"), tableAndColumnNames.first, tableAndColumnNames.second, dbUser)
+                                val revokeSql = createPrivilegesUpdateSql(Action.REMOVE, listOf("ALL"), tableAndColumnNames.first, tableAndColumnNames.second, dbUser)
                                 stmt.addBatch(revokeSql)
                             }
 
                             if (ace.permissions.contains(Permission.OWNER)) {
-                                privileges.add("ALL")
+                                privileges.add(PostgresPrivileges.ALL.toString())
                             } else {
                                 if (ace.permissions.contains(Permission.WRITE)) {
-                                    privileges.addAll(listOf("INSERT", "UPDATE"))
+                                    privileges.addAll(listOf(
+                                            PostgresPrivileges.INSERT.toString(),
+                                            PostgresPrivileges.UPDATE.toString()))
                                 }
                                 if (ace.permissions.contains(Permission.READ)) {
-                                    privileges.add("SELECT")
+                                    privileges.add(PostgresPrivileges.SELECT.toString())
                                 }
                             }
-                            val grantSql = createPrivilegesSql(action, privileges, tableAndColumnNames.first, tableAndColumnNames.second, dbUser)
+                            val grantSql = createPrivilegesUpdateSql(action, privileges, tableAndColumnNames.first, tableAndColumnNames.second, dbUser)
                             stmt.addBatch(grantSql)
                         }
                     }
@@ -285,7 +285,6 @@ class ExternalDatabaseManagementService(
     }
 
     fun removePermissions(orgId: UUID, tableId: UUID, maybeColumnId: Optional<UUID>) {
-        //remove entire aceKey from map
         val aclKey = AclKey(orgId, tableId)
         maybeColumnId.ifPresent { aclKey.add(it) }
         authorizationManager.deletePermissions(aclKey)
@@ -294,12 +293,7 @@ class ExternalDatabaseManagementService(
     /*IDK WHERE THESE BELONG CONCEPTUALLY YET*/
     fun getColumnNamesByTable(orgId: UUID, dbName: String): Map<String, Set<String>> {
         val columnNamesByTableName = HashMap<String, MutableSet<String>>()
-        val sql = "SELECT information_schema.tables.table_name AS name, information_schema.columns.column_name " +
-                "FROM information_schema.tables " +
-                "LEFT JOIN information_schema.columns ON " +
-                "information_schema.tables.table_name = information_schema.columns.table_name " +
-                "WHERE information_schema.tables.table_schema='$PUBLIC_SCHEMA' " +
-                "AND table_type='BASE TABLE'"
+        val sql = getCurrentTableAndColumnNamesSql()
         BasePostgresIterable(
                 StatementHolderSupplier(assemblerConnectionManager.connect(dbName), sql, FETCH_SIZE)
         ) { rs -> name(rs) to columnName(rs) }
@@ -313,22 +307,7 @@ class ExternalDatabaseManagementService(
         var columnCondition = ""
         columnName.ifPresent { columnCondition = "AND information_schema.columns.column_name = '$it'" }
 
-        val sql = "SELECT information_schema.tables.table_name, information_schema.columns.column_name, " +
-                "information_schema.columns.data_type AS datatype, information_schema.columns.ordinal_position, " +
-                "information_schema.table_constraints.constraint_type " +
-                "FROM information_schema.tables " +
-                "LEFT JOIN information_schema.columns ON information_schema.tables.table_name = " +
-                "information_schema.columns.table_name " +
-                "LEFT OUTER JOIN information_schema.constraint_column_usage ON " +
-                "information_schema.columns.column_name = information_schema.constraint_column_usage.column_name " +
-                "AND information_schema.columns.table_name = information_schema.constraint_column_usage.table_name " +
-                "LEFT OUTER JOIN information_schema.table_constraints " +
-                "ON information_schema.constraint_column_usage.constraint_name = " +
-                "information_schema.table_constraints.constraint_name " +
-                "WHERE information_schema.columns.table_name = '$tableName' " +
-                "AND (information_schema.table_constraints.constraint_type = 'PRIMARY KEY' " +
-                "OR information_schema.table_constraints.constraint_type IS NULL)" +
-                columnCondition
+        val sql = getColumnMetadataSql(tableName, columnCondition)
         return BasePostgresIterable(
                 StatementHolderSupplier(assemblerConnectionManager.connect(dbName), sql)
         ) { rs ->
@@ -350,7 +329,7 @@ class ExternalDatabaseManagementService(
     }
 
     /*PRIVATE FUNCTIONS*/
-    private fun createPrivilegesSql(action: Action, privileges: List<String>, tableName: String, columnName: String, dbUser: String): String {
+    private fun createPrivilegesUpdateSql(action: Action, privileges: List<String>, tableName: String, columnName: String, dbUser: String): String {
         val privilegesAsString = privileges.joinToString(separator = ", ")
         val tableNamePath = "$PUBLIC_SCHEMA.$tableName"
         checkState(action == Action.REMOVE || action == Action.ADD || action == Action.SET,
@@ -404,14 +383,45 @@ class ExternalDatabaseManagementService(
             grantsTableName = "information_schema.role_column_grants"
             objectType = SecurableObjectType.OrganizationExternalDatabaseColumn
         }
-        val sql =  "SELECT grantee AS user, privilege_type " +
-                "FROM $grantsTableName " +
-                "WHERE table_name = '$tableName' " +
-                columnCondition
+        val sql =  getCurrentUsersPrivilegesSql(tableName, grantsTableName, columnCondition)
         return Pair(sql, objectType)
     }
 
     /*INTERNAL SQL QUERIES*/
+    private fun getCurrentTableAndColumnNamesSql(): String {
+        return "SELECT information_schema.tables.table_name AS name, information_schema.columns.column_name " +
+                "FROM information_schema.tables " +
+                "LEFT JOIN information_schema.columns ON " +
+                "information_schema.tables.table_name = information_schema.columns.table_name " +
+                "WHERE information_schema.tables.table_schema='$PUBLIC_SCHEMA' " +
+                "AND table_type='BASE TABLE'"
+    }
+
+    private fun getColumnMetadataSql(tableName: String, columnCondition: String): String {
+        return "SELECT information_schema.tables.table_name, information_schema.columns.column_name, " +
+                "information_schema.columns.data_type AS datatype, information_schema.columns.ordinal_position, " +
+                "information_schema.table_constraints.constraint_type " +
+                "FROM information_schema.tables " +
+                "LEFT JOIN information_schema.columns ON information_schema.tables.table_name = " +
+                "information_schema.columns.table_name " +
+                "LEFT OUTER JOIN information_schema.constraint_column_usage ON " +
+                "information_schema.columns.column_name = information_schema.constraint_column_usage.column_name " +
+                "AND information_schema.columns.table_name = information_schema.constraint_column_usage.table_name " +
+                "LEFT OUTER JOIN information_schema.table_constraints " +
+                "ON information_schema.constraint_column_usage.constraint_name = " +
+                "information_schema.table_constraints.constraint_name " +
+                "WHERE information_schema.columns.table_name = '$tableName' " +
+                "AND (information_schema.table_constraints.constraint_type = 'PRIMARY KEY' " +
+                "OR information_schema.table_constraints.constraint_type IS NULL)" +
+                columnCondition
+    }
+
+    private fun getCurrentUsersPrivilegesSql(tableName: String, grantsTableName: String, columnCondition: String): String {
+        return "SELECT grantee AS user, privilege_type " +
+                "FROM $grantsTableName " +
+                "WHERE table_name = '$tableName' " +
+                columnCondition
+    }
 
     /*PREDICATES*/
     private fun idsPredicate(ids: Set<UUID>): Predicate<*, *> {
