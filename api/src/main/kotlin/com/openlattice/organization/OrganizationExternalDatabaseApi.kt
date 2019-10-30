@@ -29,29 +29,6 @@ interface OrganizationExternalDatabaseApi {
         const val USER_ID = "userId"
         const val USER_ID_PATH = "/{$USER_ID:.*}"
     }
-
-    //create
-    /**
-     * Creates a securable OrganizationExternalDatabaseTable object, which represents an
-     * organization's table in an external database. The table must already exist in the database
-     * @param organizationId The organization's UUID
-     * @param organizationExternalDatabaseTable The object to be created
-     */
-    @POST(BASE + ID_PATH + EXTERNAL_DATABASE_TABLE)
-    fun createExternalDatabaseTable(@Path(ID) organizationId: UUID,
-                                    @Body organizationExternalDatabaseTable: OrganizationExternalDatabaseTable): UUID
-
-    /**
-     * Creates a securable OrganizationExternalDatabaseColumn object, which represents a
-     * column within an organization's table in an external database. The table and column must
-     * already exist in the database
-     * @param organizationId The organization's UUID
-     * @param organizationExternalDatabaseColumn The object to be created
-     */
-    @POST(BASE + ID_PATH + EXTERNAL_DATABASE_COLUMN)
-    fun createExternalDatabaseColumn(@Path(ID) organizationId: UUID,
-                                     @Body organizationExternalDatabaseColumn: OrganizationExternalDatabaseColumn): UUID
-
     /**
      *
      * @param organizationId The organization's UUID
