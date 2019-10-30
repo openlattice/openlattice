@@ -9,7 +9,6 @@ import com.openlattice.data.EntitySetData
 import com.openlattice.data.WriteEvent
 import com.openlattice.data.events.EntitiesDeletedEvent
 import com.openlattice.data.events.EntitiesUpsertedEvent
-import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.PostgresEdmManager
 import com.openlattice.edm.events.EntitySetDataDeletedEvent
@@ -330,7 +329,25 @@ class PostgresEntityDatastore(
         )
 
         // linking_id/entity_set_id/origin_id/property_type_id
-        return linkedEntityDataStream.toMap().mapValues { mapOf(it.value).mapValues { mapOf(it.value) } }
+        val linkedDataMap = HashMap<UUID, MutableMap<UUID, MutableMap<UUID, MutableMap<UUID, MutableSet<Any>>>>>()
+        linkedEntityDataStream.forEach {
+            val linkingId = it.first
+            val entitySetId = it.second.first
+            val entityKeyId = it.second.second.first
+            val entityData = it.second.second.second
+
+            if (linkedDataMap.containsKey(linkingId)) {
+                if (linkedDataMap.getValue(linkingId).containsKey(entitySetId)) {
+                    linkedDataMap.getValue(linkingId).getValue(entitySetId)[entityKeyId] = entityData
+                } else {
+                    linkedDataMap.getValue(linkingId)[entitySetId] = mutableMapOf(entityKeyId to entityData)
+                }
+            } else {
+                linkedDataMap[linkingId] = mutableMapOf(entitySetId to mutableMapOf(entityKeyId to entityData))
+            }
+        }
+
+        return linkedDataMap
     }
 
     //TODO: Can be made more efficient if we are getting across same type.
@@ -459,7 +476,7 @@ class PostgresEntityDatastore(
     }
 
     override fun getExpiringEntitiesFromEntitySet(entitySetId: UUID, expirationBaseColumn: String, formattedDateMinusTTE: Any,
-                                                  sqlFormat: Int, deletedType: DeleteType) : BasePostgresIterable<UUID> {
+                                                  sqlFormat: Int, deletedType: DeleteType): BasePostgresIterable<UUID> {
         return dataQueryService
                 .getExpiringEntitiesFromEntitySet(entitySetId, expirationBaseColumn, formattedDateMinusTTE,
                         sqlFormat, deletedType)
