@@ -63,7 +63,6 @@ class BackgroundExternalDatabaseSyncingService(
     fun scanOrganizationDatabases() {
         logger.info("Starting background external database sync task.")
         if (taskLock.tryLock()) {
-            //add enabling config
             try {
                 if (indexerConfiguration.backgroundExternalDatabaseSyncingEnabled) {
                     val timer = Stopwatch.createStarted()
