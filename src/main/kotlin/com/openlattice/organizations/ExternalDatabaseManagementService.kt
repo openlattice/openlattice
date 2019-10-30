@@ -92,6 +92,31 @@ class ExternalDatabaseManagementService(
         return column.id
     }
 
+    fun createNewColumnObjects(dbName: String, tableName: String, tableId: UUID, orgId: UUID, columnName: Optional<String>): BasePostgresIterable<OrganizationExternalDatabaseColumn> {
+        var columnCondition = ""
+        columnName.ifPresent { columnCondition = "AND information_schema.columns.column_name = '$it'" }
+
+        val sql = getColumnMetadataSql(tableName, columnCondition)
+        return BasePostgresIterable(
+                StatementHolderSupplier(assemblerConnectionManager.connect(dbName), sql)
+        ) { rs ->
+            val columnName = columnName(rs)
+            val dataType = sqlDataType(rs)
+            val position = ordinalPosition(rs)
+            val isPrimaryKey = constraintType(rs) == primaryKeyConstraint
+            OrganizationExternalDatabaseColumn(
+                    Optional.empty(),
+                    columnName,
+                    columnName,
+                    Optional.empty(),
+                    tableId,
+                    orgId,
+                    dataType,
+                    isPrimaryKey,
+                    position)
+        }
+    }
+
     /*GET*/
     fun getOrganizationIds(): Set<UUID> {
         return organizationTitles.keys
@@ -137,6 +162,18 @@ class ExternalDatabaseManagementService(
 
     fun getOrganizationExternalDatabaseColumn(columnId: UUID): OrganizationExternalDatabaseColumn {
         return organizationExternalDatabaseColumns.getValue(columnId)
+    }
+
+    fun getColumnNamesByTable(orgId: UUID, dbName: String): Map<String, Set<String>> {
+        val columnNamesByTableName = HashMap<String, MutableSet<String>>()
+        val sql = getCurrentTableAndColumnNamesSql()
+        BasePostgresIterable(
+                StatementHolderSupplier(assemblerConnectionManager.connect(dbName), sql, FETCH_SIZE)
+        ) { rs -> name(rs) to columnName(rs) }
+                .forEach {
+                    columnNamesByTableName.getOrPut(it.first) { mutableSetOf() }.add(it.second)
+                }
+        return columnNamesByTableName
     }
 
     /*DELETE*/
@@ -251,8 +288,9 @@ class ExternalDatabaseManagementService(
 
     fun addPermissions(dbName: String, orgId: UUID, tableId: UUID, tableName: String, maybeColumnId: Optional<UUID>, maybeColumnName: Optional<String>) {
         val privilegesByUser = HashMap<UUID, MutableSet<PostgresPrivileges>>()
-        val aclKey = AclKey(orgId, tableId)
-        maybeColumnId.ifPresent { aclKey.add(it) }
+        val aclKeyUUIDs = mutableListOf(orgId, tableId)
+        maybeColumnId.ifPresent { aclKeyUUIDs.add(it) }
+        val aclKey = AclKey(aclKeyUUIDs)
         val privilegesFields = getPrivilegesFields(tableName, maybeColumnName)
         val sql = privilegesFields.first
         val objectType = privilegesFields.second
@@ -290,44 +328,6 @@ class ExternalDatabaseManagementService(
         authorizationManager.deletePermissions(aclKey)
     }
 
-    /*IDK WHERE THESE BELONG CONCEPTUALLY YET*/
-    fun getColumnNamesByTable(orgId: UUID, dbName: String): Map<String, Set<String>> {
-        val columnNamesByTableName = HashMap<String, MutableSet<String>>()
-        val sql = getCurrentTableAndColumnNamesSql()
-        BasePostgresIterable(
-                StatementHolderSupplier(assemblerConnectionManager.connect(dbName), sql, FETCH_SIZE)
-        ) { rs -> name(rs) to columnName(rs) }
-                .forEach {
-                    columnNamesByTableName.getOrPut(it.first) { mutableSetOf() }.add(it.second)
-                }
-        return columnNamesByTableName
-    }
-
-    fun createNewColumnObjects(dbName: String, tableName: String, tableId: UUID, orgId: UUID, columnName: Optional<String>): BasePostgresIterable<OrganizationExternalDatabaseColumn> {
-        var columnCondition = ""
-        columnName.ifPresent { columnCondition = "AND information_schema.columns.column_name = '$it'" }
-
-        val sql = getColumnMetadataSql(tableName, columnCondition)
-        return BasePostgresIterable(
-                StatementHolderSupplier(assemblerConnectionManager.connect(dbName), sql)
-        ) { rs ->
-            val columnName = columnName(rs)
-            val dataType = sqlDataType(rs)
-            val position = ordinalPosition(rs)
-            val isPrimaryKey = constraintType(rs) == primaryKeyConstraint
-            OrganizationExternalDatabaseColumn(
-                    Optional.empty(),
-                    columnName,
-                    columnName,
-                    Optional.empty(),
-                    tableId,
-                    orgId,
-                    dataType,
-                    isPrimaryKey,
-                    position)
-        }
-    }
-
     /*PRIVATE FUNCTIONS*/
     private fun createPrivilegesUpdateSql(action: Action, privileges: List<String>, tableName: String, columnName: String, dbUser: String): String {
         val privilegesAsString = privileges.joinToString(separator = ", ")
@@ -351,11 +351,10 @@ class ExternalDatabaseManagementService(
             tableName = organizationExternalDatabaseTables.getValue(organizationAtlasColumn.tableId).name
             columnName = organizationAtlasColumn.name
         } else {
-            val organizationAtlasTable = organizationExternalDatabaseTables[securableObjectId]!!
+            val organizationAtlasTable = organizationExternalDatabaseTables.getValue(securableObjectId)
             tableName = organizationAtlasTable.name
             columnName = ""
         }
-        //add checks in here for map indexing??
         return Pair(tableName, columnName)
     }
 
@@ -389,21 +388,16 @@ class ExternalDatabaseManagementService(
 
     /*INTERNAL SQL QUERIES*/
     private fun getCurrentTableAndColumnNamesSql(): String {
-        return "SELECT information_schema.tables.table_name AS name, information_schema.columns.column_name " +
-                "FROM information_schema.tables " +
-                "LEFT JOIN information_schema.columns ON " +
-                "information_schema.tables.table_name = information_schema.columns.table_name " +
+        return selectExpression + fromExpression + leftJoinColumnsExpression +
                 "WHERE information_schema.tables.table_schema='$PUBLIC_SCHEMA' " +
                 "AND table_type='BASE TABLE'"
     }
 
     private fun getColumnMetadataSql(tableName: String, columnCondition: String): String {
-        return "SELECT information_schema.tables.table_name, information_schema.columns.column_name, " +
-                "information_schema.columns.data_type AS datatype, information_schema.columns.ordinal_position, " +
+        return selectExpression + ", information_schema.columns.data_type AS datatype, " +
+                "information_schema.columns.ordinal_position, " +
                 "information_schema.table_constraints.constraint_type " +
-                "FROM information_schema.tables " +
-                "LEFT JOIN information_schema.columns ON information_schema.tables.table_name = " +
-                "information_schema.columns.table_name " +
+                fromExpression + leftJoinColumnsExpression +
                 "LEFT OUTER JOIN information_schema.constraint_column_usage ON " +
                 "information_schema.columns.column_name = information_schema.constraint_column_usage.column_name " +
                 "AND information_schema.columns.table_name = information_schema.constraint_column_usage.table_name " +
@@ -422,6 +416,12 @@ class ExternalDatabaseManagementService(
                 "WHERE table_name = '$tableName' " +
                 columnCondition
     }
+
+    private val selectExpression = "SELECT information_schema.tables.table_name AS name, information_schema.columns.column_name "
+
+    private val fromExpression = "FROM information_schema.tables "
+
+    private val leftJoinColumnsExpression = "LEFT JOIN information_schema.columns ON information_schema.tables.table_name = information_schema.columns.table_name "
 
     /*PREDICATES*/
     private fun idsPredicate(ids: Set<UUID>): Predicate<*, *> {
