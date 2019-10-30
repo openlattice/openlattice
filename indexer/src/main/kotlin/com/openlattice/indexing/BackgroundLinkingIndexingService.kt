@@ -98,7 +98,7 @@ class BackgroundLinkingIndexingService(
     )
 
     /**
-     * Queue containing linking ids, which need to be re-indexed in elasticsearch.
+     * Queue containing linking ids, which need to be un-indexed (deleted) from elasticsearch.
      */
     private val unIndexCandidates = hazelcastInstance.getQueue<Triple<UUID, OffsetDateTime, Set<UUID>>>(
             HazelcastQueue.LINKING_UNINDEXING.name
@@ -121,7 +121,7 @@ class BackgroundLinkingIndexingService(
                         lock(linkingIds)
                         index(linkingEntityKeyIdsWithLastWrite, linkingIds)
                     } catch (ex: Exception) {
-                        logger.error("Unable to index linking entity with from bacth if linking ids $linkingIds.", ex)
+                        logger.error("Unable to index linking entity with from batch of linking ids $linkingIds.", ex)
                     } finally {
                         unLock(linkingIds)
                     }
@@ -145,7 +145,9 @@ class BackgroundLinkingIndexingService(
                         lock(linkingIds)
                         unIndex(linkingEntityKeyIdsWithLastWrite, linkingIds)
                     } catch (ex: Exception) {
-                        logger.error("Unable to index linking entity with from bacth if linking ids $linkingIds.", ex)
+                        logger.error(
+                                "Unable to un-index linking entity with from batch of linking ids $linkingIds.", ex
+                        )
                     } finally {
                         unLock(linkingIds)
                     }
@@ -181,12 +183,16 @@ class BackgroundLinkingIndexingService(
         if (!indexerConfiguration.backgroundLinkingIndexingEnabled) {
             return
         }
-        executor.submit {
-            logger.info("Registering linking ids needing indexing.")
-            getDirtyLinkingIds().forEach(indexCandidates::put)
+        try {
+            executor.submit {
+                logger.info("Registering linking ids needing indexing.")
+                getDirtyLinkingIds().forEach(indexCandidates::put)
 
-            logger.info("Registering linking ids needing un-indexing.")
-            getDeletedLinkingIds().forEach(unIndexCandidates::put)
+                logger.info("Registering linking ids needing un-indexing.")
+                getDeletedLinkingIds().forEach(unIndexCandidates::put)
+            }
+        } catch(ex: Exception) {
+            logger.info("Encountered error while updating candidates for linking indexing.", ex)
         }
     }
 
@@ -326,13 +332,15 @@ internal val selectDeletedLinkingIds =
                 "max(${LAST_WRITE.name}) AS ${LAST_WRITE.name}, " +
                 "array_agg(${ENTITY_SET_ID.name}) AS ${ENTITY_SET_IDS.name} " +
         "FROM ${IDS.name} " +
-        "WHERE ${LINKING_ID.name} NOT IN ( " +
+        "WHERE " +
+            "${LINKING_ID.name} NOT IN ( " +
                 "SELECT ${LINKING_ID.name} " +
                 "FROM ${IDS.name} " +
                 "WHERE " +
-                "${LINKING_ID.name} IS NOT NUL " +
-                "${VERSION.name} > 0 " +
-        " ) AND ${LINKING_ID.name} IS NOT NULL " +
+                    "${LINKING_ID.name} IS NOT NULL AND " +
+                    "${VERSION.name} > 0 " +
+                ") AND " +
+            "${LINKING_ID.name} IS NOT NULL " +
         "GROUP BY ${LINKING_ID.name}"
         // @formatter:on
 
