@@ -87,8 +87,6 @@ public class SecurablePrincipal extends AbstractSecurableObject {
         return aclKey;
     }
 
-    public UUID getLastIdInAclKey() { return aclKey.get( aclKey.getSize()-1 ); }
-
     @Override
     public boolean equals( Object o ) {
         if ( this == o ) { return true; }
