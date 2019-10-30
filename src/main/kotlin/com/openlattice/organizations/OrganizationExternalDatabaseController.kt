@@ -63,25 +63,6 @@ class OrganizationExternalDatabaseController : OrganizationExternalDatabaseApi, 
         this.aclKeysMap = hazelcastInstance.getMap(HazelcastMap.ACL_KEYS.name)
     }
 
-    //TODO timed?
-    @Timed
-    @PostMapping(path = [ID_PATH + EXTERNAL_DATABASE_TABLE])
-    override fun createExternalDatabaseTable(
-            @PathVariable(ID) organizationId: UUID,
-            @RequestBody organizationExternalDatabaseTable: OrganizationExternalDatabaseTable): UUID {
-        ensureOwner(organizationId)
-        return edms.createOrganizationExternalDatabaseTable(organizationId, organizationExternalDatabaseTable)
-    }
-
-    @Timed
-    @PostMapping(path = [ID_PATH + EXTERNAL_DATABASE_COLUMN])
-    override fun createExternalDatabaseColumn(
-            @PathVariable(ID) organizationId: UUID,
-            @RequestBody organizationExternalDatabaseColumn: OrganizationExternalDatabaseColumn): UUID {
-        ensureOwner(organizationId)
-        return edms.createOrganizationExternalDatabaseColumn(organizationId, organizationExternalDatabaseColumn)
-    }
-
     @Timed
     @PostMapping(path = [ID_PATH + USER_ID_PATH + EXTERNAL_DATABASE])
     override fun addTrustedUser(
