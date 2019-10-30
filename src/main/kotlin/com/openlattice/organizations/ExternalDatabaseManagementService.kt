@@ -12,6 +12,8 @@ import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresUsername
 import com.openlattice.assembler.PostgresRoles.Companion.getSecurablePrincipalIdFromUserName
 import com.openlattice.assembler.PostgresRoles.Companion.isPostgresUserName
 import com.openlattice.authorization.*
+import com.openlattice.authorization.mapstores.PermissionMapstore.ACL_KEY_INDEX
+import com.openlattice.authorization.processors.PermissionMerger
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.organizations.mapstores.ID_INDEX
 import com.openlattice.hazelcast.HazelcastMap
@@ -25,10 +27,10 @@ import com.openlattice.organizations.roles.SecurePrincipalsManager
 
 import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresPrivileges
+import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.ResultSetAdapters.*
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.StatementHolderSupplier
-import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -249,22 +251,12 @@ class ExternalDatabaseManagementService(
 
     fun addPermissions(dbName: String, orgId: UUID, tableId: UUID, tableName: String, maybeColumnId: Optional<UUID>, maybeColumnName: Optional<String>) {
         val privilegesByUser = HashMap<UUID, MutableSet<PostgresPrivileges>>()
-        var columnCondition = ""
-        var grantsTableName = "information_schema.role_table_grants"
-        lateinit var aclKey: AclKey
-        if (maybeColumnId.isPresent && maybeColumnName.isPresent) {
-            val columnName = maybeColumnName.get()
-            val columnId = maybeColumnId.get()
-            columnCondition = "AND column_name = '$columnName'"
-            grantsTableName = "information_schema.role_column_grants"
-            aclKey = AclKey(orgId, tableId, columnId)
-        } else {
-            aclKey = AclKey(orgId, tableId)
-        }
-        val sql = "SELECT grantee AS user, privilege_type " +
-                "FROM $grantsTableName " +
-                "WHERE table_name = '$tableName' " +
-                columnCondition
+        val aclKey = AclKey(orgId, tableId)
+        maybeColumnId.ifPresent { aclKey.add(it) }
+        val privilegesFields = getPrivilegesFields(tableName, maybeColumnName)
+        val sql = privilegesFields.first
+        val objectType = privilegesFields.second
+
         BasePostgresIterable(
                 StatementHolderSupplier(assemblerConnectionManager.connect(dbName), sql)
         ) { rs ->
@@ -279,7 +271,7 @@ class ExternalDatabaseManagementService(
         privilegesByUser.forEach { (securablePrincipalId, privileges) ->
             val principal = securePrincipalsManager.getSecurablePrincipalById(securablePrincipalId).principal
             val aceKey = AceKey(aclKey, principal)
-            var permissions = EnumSet.noneOf(Permission::class.java)
+            val permissions = EnumSet.noneOf(Permission::class.java)
             if (privileges == PostgresPrivileges.values().toSet()) {
                 permissions.add(Permission.OWNER)
             }
@@ -288,12 +280,16 @@ class ExternalDatabaseManagementService(
             }
             if (privileges.contains(PostgresPrivileges.INSERT) || privileges.contains(PostgresPrivileges.UPDATE))
                 permissions.add(Permission.WRITE)
-            val aceValue = AceValue(permissions, SecurableObjectType.OrganizationExternalDatabaseTable, OffsetDateTime.MAX)
-            aces[aceKey] = aceValue //TODO should be a merger or what?
+            aces.executeOnKey(aceKey, PermissionMerger(permissions, objectType, OffsetDateTime.MAX))
         }
     }
 
-    //fun removePermissions(dbName: String, )
+    fun removePermissions(orgId: UUID, tableId: UUID, maybeColumnId: Optional<UUID>) {
+        //remove entire aceKey from map
+        val aclKey = AclKey(orgId, tableId)
+        maybeColumnId.ifPresent { aclKey.add(it) }
+        authorizationManager.deletePermissions(aclKey)
+    }
 
     /*IDK WHERE THESE BELONG CONCEPTUALLY YET*/
     fun getColumnNamesByTable(orgId: UUID, dbName: String): Map<String, Set<String>> {
@@ -396,6 +392,23 @@ class ExternalDatabaseManagementService(
             return false
         }
         return true
+    }
+
+    private fun getPrivilegesFields(tableName: String, maybeColumnName: Optional<String>): Pair<String, SecurableObjectType> {
+        var columnCondition = ""
+        var grantsTableName = "information_schema.role_table_grants"
+        var objectType = SecurableObjectType.OrganizationExternalDatabaseTable
+        if (maybeColumnName.isPresent) {
+            val columnName = maybeColumnName.get()
+            columnCondition = "AND column_name = '$columnName'"
+            grantsTableName = "information_schema.role_column_grants"
+            objectType = SecurableObjectType.OrganizationExternalDatabaseColumn
+        }
+        val sql =  "SELECT grantee AS user, privilege_type " +
+                "FROM $grantsTableName " +
+                "WHERE table_name = '$tableName' " +
+                columnCondition
+        return Pair(sql, objectType)
     }
 
     /*INTERNAL SQL QUERIES*/
