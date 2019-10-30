@@ -297,7 +297,8 @@ internal val upsertEntitiesSql = "UPDATE ${IDS.name} " +
                 "WHEN abs(${IDS.name}.${VERSION.name}) <= abs(?) THEN ? " +
                 "ELSE ${IDS.name}.${VERSION.name} " +
             "END " +
-        "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ?"
+        "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ? " +
+        "RETURNING ${ID.name},${LINKING_ID.name} "
 // @formatter:on
 
 /**
@@ -400,15 +401,9 @@ internal val updateVersionsForPropertyTypesInEntitySet = "$updateVersionsForProp
  * 8. partition version
  */
 internal fun updateVersionsForPropertyTypesInEntitiesInEntitySet( linking: Boolean = false ): String {
-    val maybeLinking = if ( linking ){
-        "AND ${ORIGIN_ID.name} = ANY(?) "
-    } else {
-        "AND ${PARTITION.name} = ANY(?) AND ${PARTITIONS_VERSION.name} = ? "
-    }
-
     return "$updateVersionsForPropertyTypesInEntitySet " +
-            "AND ${ID_VALUE.name} = ANY(?) " +
-            maybeLinking
+            if( linking ) "AND ${ORIGIN_ID.name} = ANY(?) " else "AND ${ID_VALUE.name} = ANY(?) " +
+            "AND ${PARTITION.name} = ANY(?) AND ${PARTITIONS_VERSION.name} = ? "
 }
 
 /**
