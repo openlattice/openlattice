@@ -96,7 +96,7 @@ class BackgroundExternalDatabaseSyncingService(
         }
     }
 
-    fun syncOrganizationDatabases(orgId: UUID): Int {
+    private fun syncOrganizationDatabases(orgId: UUID): Int {
         var totalSynced = 0
         val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
         val currentTableIds = mutableSetOf<UUID>()
@@ -160,6 +160,7 @@ class BackgroundExternalDatabaseSyncingService(
         //check if tables have been deleted in the database
         val missingTableIds = organizationExternalDatabaseTables.keys - currentTableIds
         if (missingTableIds.isNotEmpty()) {
+            missingTableIds.forEach { edms.removePermissions(orgId, it, Optional.empty()) }
             edms.deleteOrganizationExternalDatabaseTables(orgId, missingTableIds)
             totalSynced += missingTableIds.size
         }
@@ -167,6 +168,10 @@ class BackgroundExternalDatabaseSyncingService(
         //check if columns have been deleted in the database
         val missingColumnIds = organizationExternalDatabaseColumns.keys - currentColumnIds
         if (missingColumnIds.isNotEmpty()) {
+            missingColumnIds.forEach {
+                val tableId = organizationExternalDatabaseColumns.getValue(it).tableId
+                edms.removePermissions(orgId, tableId, Optional.of(it))
+            }
             edms.deleteOrganizationExternalDatabaseColumns(orgId, missingColumnIds)
             totalSynced += missingColumnIds.size
         }
