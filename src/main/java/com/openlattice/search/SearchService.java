@@ -20,12 +20,15 @@
 
 package com.openlattice.search;
 
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.Timer;
 import com.codahale.metrics.annotation.Timed;
 import com.dataloom.streams.StreamUtil;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.*;
 import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
+import com.openlattice.IdConstants;
 import com.openlattice.apps.App;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
@@ -64,6 +67,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
+import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -101,8 +105,18 @@ public class SearchService {
     @Inject
     private IndexingMetadataManager indexingMetadataManager;
 
-    public SearchService( EventBus eventBus ) {
+    private Timer indexEntitiesTimer;
+
+    private Timer markAsIndexedTimer;
+
+    public SearchService( EventBus eventBus, MetricRegistry metricRegistry ) {
         eventBus.register( this );
+        indexEntitiesTimer = metricRegistry.timer(
+                MetricRegistry.name( SearchService.class, "indexEntities" )
+        );
+        markAsIndexedTimer = metricRegistry.timer(
+                MetricRegistry.name( SearchService.class, "markAsIndexed" )
+        );
     }
 
     @Timed
@@ -197,7 +211,8 @@ public class SearchService {
                         .toMap( SearchService::getEntityKeyId, Function.identity() ) );
 
         List<Map<FullQualifiedName, Set<Object>>> results = result.getEntityDataKeys().stream()
-                .map( edk -> entitiesById.get( edk.getEntityKeyId() ) ).collect( Collectors.toList() );
+                .map( edk -> entitiesById.get( edk.getEntityKeyId() ) ).filter( Objects::nonNull )
+                .collect( Collectors.toList() );
 
         return new DataSearchResult( result.getNumHits(), results );
     }
@@ -225,6 +240,7 @@ public class SearchService {
     @Timed
     @Subscribe
     public void deleteLinkedEntities( LinkedEntitiesDeletedEvent event ) {
+        // TODO : https://jira.openlattice.com/browse/LATTICE-2225
         if ( event.getLinkedEntitySetIds().size() > 0 ) {
             Map<UUID, UUID> entitySetIdsToEntityTypeIds = dataModelService
                     .getEntitySetsAsMap( event.getLinkedEntitySetIds() ).values().stream()
@@ -290,25 +306,28 @@ public class SearchService {
      */
     @Subscribe
     public void indexEntities( EntitiesUpsertedEvent event ) {
+        final var indexEntitiesContext = indexEntitiesTimer.time();
         UUID entityTypeId = dataModelService.getEntityTypeByEntitySetId( event.getEntitySetId() ).getId();
-        elasticsearchApi.createBulkEntityData( entityTypeId, event.getEntitySetId(), event.getEntities() );
-    }
+        final var entitiesIndexed = elasticsearchApi
+                .createBulkEntityData( entityTypeId, event.getEntitySetId(), event.getEntities() );
+        indexEntitiesContext.stop();
 
-    private void indexLinkedEntities(
-            UUID linkingEntitySetId, Map<UUID, Set<UUID>> linkingIds, Map<UUID, PropertyType> propertyTypes ) {
-        if ( !linkingIds.isEmpty() ) {
-            UUID entityTypeId = dataModelService.getEntityTypeByEntitySetId( linkingEntitySetId ).getId();
-
-            // linking_id/(normal)entity_set_id/property_type_id
-            Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> linkedData = dataManager
-                    .getLinkedEntityDataByLinkingIdWithMetadata(
-                            linkingIds.entrySet().stream().collect(
-                                    Collectors.toMap( Map.Entry::getKey, entry -> Optional.of( entry.getValue() ) ) ),
-                            linkingIds.keySet().stream().collect(
-                                    Collectors.toMap( Function.identity(), entitySetId -> propertyTypes ) ),
-                            EnumSet.of( MetadataOption.LAST_WRITE ) );
-
-            elasticsearchApi.createBulkLinkedData( entityTypeId, linkedData );
+        if ( entitiesIndexed ) {
+            final var markAsIndexedContext = markAsIndexedTimer.time();
+            // mark them as indexed
+            indexingMetadataManager.markAsIndexed(
+                    Map.of(
+                            event.getEntitySetId(),
+                            event.getEntities().entrySet().stream().collect( Collectors.toMap(
+                                    Map.Entry::getKey,
+                                    entity ->
+                                            (OffsetDateTime) entity.getValue()
+                                                    .get( IdConstants.LAST_WRITE_ID.getId() ).iterator().next()
+                            ) )
+                    ),
+                    false
+            );
+            markAsIndexedContext.stop();
         }
     }
 
@@ -823,7 +842,7 @@ public class SearchService {
         return dataManager.getEntityKeyIdsOfLinkingIds( linkingIds );
     }
 
-    private static UUID getEntityKeyId( Map<FullQualifiedName, Set<Object>> entity ) {
+    public static UUID getEntityKeyId( Map<FullQualifiedName, Set<Object>> entity ) {
         return UUID.fromString( entity.get( EdmConstants.ID_FQN ).iterator().next().toString() );
     }
 

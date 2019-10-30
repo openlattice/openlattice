@@ -11,7 +11,8 @@ import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresDataTables.Companion.getColumnDefinition
 import com.openlattice.postgres.PostgresDataTables.Companion.getSourceDataColumnName
-import com.openlattice.postgres.PostgresTable.*
+import com.openlattice.postgres.PostgresTable.DATA
+import com.openlattice.postgres.PostgresTable.IDS
 import java.sql.PreparedStatement
 import java.util.*
 
@@ -22,20 +23,14 @@ import java.util.*
 internal class PostgresDataQueries
 
 const val VALUES = "values"
-val dataMetadataColumnsParametersSql = PostgresDataTables.dataTableMetadataColumns.joinToString(",") { "?" }
-val dataMetadataColumnsSql = PostgresDataTables.dataTableMetadataColumns.joinToString { "," }
-val dataTableColumnsSql = PostgresDataTables.dataTableColumns.joinToString(",") { it.name }
-val dataTableColumnsBindSql = PostgresDataTables.dataTableColumns.joinToString(",") { "?" }
 
-val dataTableColumnsConflictSetSql = PostgresDataTables.dataTableColumns.joinToString(",") {
-    "${it.name} = EXCLUDED.${it.name}"
-}
+val dataTableColumnsSql = PostgresDataTables.dataTableColumns.joinToString(",") { it.name }
 
 val valuesColumnsSql = PostgresDataTables.dataTableValueColumns.joinToString(",") {
     "array_agg(${it.name}) FILTER (where ${it.name} IS NOT NULL) as ${it.name}"
 }
 
-val jsonValueColumnNamesAsString = PostgresDataTables.dataColumns.keys.map { getMergedDataColumnName(it) }.joinToString(",")
+val primaryKeyColumnNamesAsString = PostgresDataTables.buildDataTableDefinition().primaryKey.joinToString(",") { it.name }
 
 val jsonValueColumnsSql = PostgresDataTables.dataColumns.entries
         .joinToString(",") { (datatype, cols) ->
@@ -56,64 +51,106 @@ val jsonValueColumnsSql = PostgresDataTables.dataColumns.entries
  * 3. partition(s) (array)
  *
  */
-fun buildPreparableFiltersSqlForLinkedEntities(
+fun buildPreparableFiltersSql(
         startIndex: Int,
         propertyTypes: Map<UUID, PropertyType>,
         propertyTypeFilters: Map<UUID, Set<Filter>>,
+        metadataOptions: Set<MetadataOption>,
+        linking: Boolean,
         idsPresent: Boolean,
-        partitionsPresent: Boolean,
-        selectOriginIds: Boolean = false
+        partitionsPresent: Boolean
 ): Pair<String, Set<SqlBinder>> {
     val filtersClauses = buildPreparableFiltersClause(startIndex, propertyTypes, propertyTypeFilters)
     val filtersClause = if (filtersClauses.first.isNotEmpty()) " AND ${filtersClauses.first} " else ""
 
+    val metadataOptionColumns = metadataOptions.associateWith(::mapMetaDataToColumnSql)
+    val nonAggregatedMetadataSql = metadataOptionColumns
+            .filter { !isMetaDataAggregated(it.key) }.values.joinToString("")
+    val innerGroupBy = groupBy(ESID_EKID_PART_PTID + nonAggregatedMetadataSql)
     // TODO: remove IS NOT NULL post-migration
-    val innerSql = selectEntitiesGroupedByIdAndPropertyTypeId(
-            idsPresent = idsPresent, partitionsPresent = partitionsPresent, selectOriginIds = selectOriginIds
-    ) + " AND ${ORIGIN_ID.name} IS NOT NULL AND ${ORIGIN_ID.name} IS NOT '${IdConstants.EMPTY_ORIGIN_ID.id}' " + filtersClause + GROUP_BY_ESID_EKID_PART_PTID
+    val linkingClause = if (linking) {
+        " AND ${ORIGIN_ID.name} IS NOT NULL AND ${ORIGIN_ID.name} != '${IdConstants.EMPTY_ORIGIN_ID.id}' "
+    } else {
+        ""
+    }
 
-    val entityKeyIds = if (selectOriginIds) ",${ENTITY_KEY_IDS_COL.name}" else ""
-    val groupBy = if (selectOriginIds) GROUP_BY_ESID_EKID_PART_EKIDS else GROUP_BY_ESID_EKID_PART
-    val sql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name}$entityKeyIds,$jsonValueColumnsSql " +
-            "FROM ($innerSql) entities $groupBy"
+    val innerSql = selectEntitiesGroupedByIdAndPropertyTypeId(
+            metadataOptions,
+            idsPresent = idsPresent,
+            partitionsPresent = partitionsPresent
+    ) + linkingClause + filtersClause + innerGroupBy
+
+    val metadataOptionColumnsSql = metadataOptionColumns
+            .values.joinToString("")
+    // TODO don't filter out LAST_WRITE from group by after empty rows are eliminated  https://jira.openlattice.com/browse/LATTICE-2254
+    val metadataOptionOuterGroupBySql = metadataOptionColumns
+            .filter { it.key != MetadataOption.LAST_WRITE }
+            .values.joinToString("")
+    val outerGroupBy = groupBy(ESID_EKID_PART + metadataOptionOuterGroupBySql)
+    val sql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name}$metadataOptionColumnsSql,$jsonValueColumnsSql " +
+            "FROM ($innerSql) entities $outerGroupBy"
 
     return sql to filtersClauses.second
 
 }
 
+internal fun selectEntitiesGroupedByIdAndPropertyTypeId(
+        metadataOptions: Set<MetadataOption>,
+        idsPresent: Boolean = true,
+        partitionsPresent: Boolean = true,
+        entitySetsPresent: Boolean = true
+): String {
+    val metadataOptionsSql = metadataOptions
+            .joinToString("") { mapMetaDataToSelector(it) } // they already have the comma prefix
+    return "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name},${PROPERTY_TYPE_ID.name}$metadataOptionsSql,$valuesColumnsSql " +
+            "FROM ${DATA.name} ${optionalWhereClauses(idsPresent, partitionsPresent, entitySetsPresent)}"
+}
+
 /**
- * Builds a preparable SQL query for reading filterable data.
- *
- * The first three columns om
- * @return A preparable sql query to read the data to a ordered set of [SqlBinder] objects. The prepared query
- * must be have the first three parameters bound separately from the [SqlBinder] objects. The parameters are as follows:
- * 1. entity set ids (array)
- * 2. entity key ids (array)
- * 3. partition(s) (array)
- *
+ * Returns the correspondent column name used for the metadata option with a comma prefix.
  */
-fun buildPreparableFiltersSqlForEntities(
-        startIndex: Int,
-        propertyTypes: Map<UUID, PropertyType>,
-        propertyTypeFilters: Map<UUID, Set<Filter>>,
-        idsPresent: Boolean,
-        partitionsPresent: Boolean,
-        selectOriginIds: Boolean = false
-): Pair<String, Set<SqlBinder>> {
-    val filtersClauses = buildPreparableFiltersClause(startIndex, propertyTypes, propertyTypeFilters)
-    val filtersClause = if (filtersClauses.first.isNotEmpty()) " AND ${filtersClauses.first} " else ""
+private fun mapMetaDataToColumnSql(metadataOption: MetadataOption): String {
+    return when (metadataOption) {
+        MetadataOption.ORIGIN_IDS -> ",${ORIGIN_ID.name}"
+        // TODO should be just last_write with comma prefix after empty rows are eliminated https://jira.openlattice.com/browse/LATTICE-2254
+        MetadataOption.LAST_WRITE -> ",max(${LAST_WRITE.name}) AS ${mapMetaDataToColumnName(metadataOption)}"
+        MetadataOption.ENTITY_KEY_IDS -> ",${ENTITY_KEY_IDS_COL.name}"
+        else -> throw UnsupportedOperationException("No implementation yet for metadata option $metadataOption")
+    }
+}
 
-    val innerSql = selectEntitiesGroupedByIdAndPropertyTypeId(
-            idsPresent = idsPresent, partitionsPresent = partitionsPresent, selectOriginIds = selectOriginIds
-    ) + filtersClause + GROUP_BY_ESID_EKID_PART_PTID
+/**
+ * Returns the correspondent column name used for the metadata option.
+ */
+private fun mapMetaDataToColumnName(metadataOption: MetadataOption): String {
+    return when (metadataOption) {
+        MetadataOption.ORIGIN_IDS -> ORIGIN_ID.name
+        MetadataOption.LAST_WRITE -> LAST_WRITE.name
+        MetadataOption.ENTITY_KEY_IDS -> ENTITY_KEY_IDS_COL.name
+        else -> throw UnsupportedOperationException("No implementation yet for metadata option $metadataOption")
+    }
+}
 
-    val entityKeyIds = if (selectOriginIds) ",${ENTITY_KEY_IDS_COL.name}" else ""
-    val groupBy = if (selectOriginIds) GROUP_BY_ESID_EKID_PART_EKIDS else GROUP_BY_ESID_EKID_PART
-    val sql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name}$entityKeyIds,$jsonValueColumnsSql " +
-            "FROM ($innerSql) entities $groupBy"
+/**
+ * Returns the select sql snippet for the requested metadata option.
+ */
+private fun mapMetaDataToSelector(metadataOption: MetadataOption): String {
+    return when (metadataOption) {
+        MetadataOption.ORIGIN_IDS -> ",${ORIGIN_ID.name}"
+        MetadataOption.LAST_WRITE -> ",max(${LAST_WRITE.name}) AS ${mapMetaDataToColumnName(metadataOption)}"
+        MetadataOption.ENTITY_KEY_IDS ->
+            ",array_agg(COALESCE(${ORIGIN_ID.name},${ID.name})) AS ${mapMetaDataToColumnName(metadataOption)}"
+        else -> throw UnsupportedOperationException("No implementation yet for metadata option $metadataOption")
+    }
+}
 
-    return sql to filtersClauses.second
-
+private fun isMetaDataAggregated(metadataOption: MetadataOption): Boolean {
+    return when (metadataOption) {
+        MetadataOption.ORIGIN_IDS -> false
+        MetadataOption.LAST_WRITE -> true
+        MetadataOption.ENTITY_KEY_IDS -> true
+        else -> throw UnsupportedOperationException("No implementation yet for metadata option $metadataOption")
+    }
 }
 
 /*
@@ -199,9 +236,12 @@ internal fun doBind(ps: PreparedStatement, info: SqlBindInfo) {
     }
 }
 
-internal val GROUP_BY_ESID_EKID_PART = "GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name})"
-internal val GROUP_BY_ESID_EKID_PART_PTID = "GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name},${PROPERTY_TYPE_ID.name})"
-internal val GROUP_BY_ESID_EKID_PART_EKIDS = "GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name},${ENTITY_KEY_IDS_COL.name})"
+internal val ESID_EKID_PART = "${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name}"
+internal val ESID_EKID_PART_PTID = "${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name},${PROPERTY_TYPE_ID.name}"
+
+internal fun groupBy(columns: String): String {
+    return "GROUP BY ($columns)"
+}
 
 /**
  * Preparable SQL that selects entities across multiple entity sets grouping by id and property type id from the [DATA]
@@ -227,97 +267,18 @@ fun optionalWhereClauses(
     return "WHERE ${optionalClauses.joinToString(" AND ")}"
 }
 
-internal fun selectEntitiesGroupedByIdAndPropertyTypeId(
-        idsPresent: Boolean = true,
+fun optionalWhereClausesSingleEdk(
+        idPresent: Boolean = true,
         partitionsPresent: Boolean = true,
-        entitySetsPresent: Boolean = true,
-        selectOriginIds: Boolean = false
+        entitySetPresent: Boolean = true
 ): String {
-    val entityKeyIds = if (selectOriginIds) ",array_agg(COALESCE(${ORIGIN_ID.name},${ID.name})) as ${ENTITY_KEY_IDS_COL.name}" else ""
-    return "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name},${PROPERTY_TYPE_ID.name}$entityKeyIds,$valuesColumnsSql " +
-            "FROM ${DATA.name} ${optionalWhereClauses(idsPresent, partitionsPresent, entitySetsPresent)}"
-}
+    val entitySetClause = if (entitySetPresent) "${ENTITY_SET_ID.name} = ?" else ""
+    val idsClause = if (idPresent) "${ID_VALUE.name} = ?" else ""
+    val partitionClause = if (partitionsPresent) "${PARTITION.name} = ANY(?)" else ""
+    val versionsClause = "${VERSION.name} > 0 "
 
-
-/**
- * Preparable SQL that selects entire entity sets grouping by id and property type id from the [DATA] table with the
- * following bind order:
- *
- * 1. entity set ids (array)
- *
- */
-internal val selectEntitySetGroupedByIdAndPropertyTypeId =
-        "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name},${PROPERTY_TYPE_ID.name},$valuesColumnsSql " +
-                "FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = ANY(?) "
-
-/**
- * Preparable SQL that selects entities across multiple entity sets grouping by id and property type id from the [DATA]
- * table with the following bind order:
- *
- * 1. entity set ids (array)
- * 2. entity key ids (array)
- * 3. partition (array)
- *
- */
-internal val selectEntitiesSql =
-        "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},$jsonValueColumnsSql FROM (${selectEntitiesGroupedByIdAndPropertyTypeId()}) entities " +
-                GROUP_BY_ESID_EKID_PART
-
-/**
- * Preparable SQL that selects entire entity sets grouping by id and property type id from the [DATA] table with the
- * following bind order:
- *
- * 1. entity set ids (array)
- *
- */
-internal val selectEntitySetsSql =
-        "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},$jsonValueColumnsSql FROM ($selectEntitySetGroupedByIdAndPropertyTypeId) entity_set " +
-                GROUP_BY_ESID_EKID_PART
-
-
-/**
- * Preparable SQL that selects linking entities across multiple entity sets grouping by linking id and property type id
- * from the  [DATA] table with the following bind order:
- *
- * 1. normal entity set ids (array)
- * 2. linking ids (array)
- * 3. partition (array)
- *
- */
-internal val selectLinkingEntitiesByNormalEntitySetIdsSql =
-        "SELECT ${ENTITY_SET_ID.name},${LINKING_ID.name},$jsonValueColumnsSql FROM (${selectEntitiesGroupedByIdAndPropertyTypeId()} entities " +
-                "GROUP BY (${ENTITY_SET_ID.name},${LINKING_ID.name}, ${PARTITION.name})"
-
-/**
- * Preparable SQL that selects linking entities across multiple entity sets grouping by linking id and property type id
- * from the  [DATA] table with the following bind order:
- *
- * 1. normal entity set ids (array)
- * 2. linking ids (array)
- * 3. partition (array)
- *
- * Note: It's only selecting from 1 linking entity set
- *
- */
-// todo: what if we want to select multiple linking entity sets?
-internal fun selectLinkingEntitiesByLinkingEntitySetIdSql(linkingEntitySetId: UUID): String {
-    return "SELECT '$linkingEntitySetId' AS ${ENTITY_SET_ID.name},${LINKING_ID.name},$jsonValueColumnsSql FROM (${selectEntitiesGroupedByIdAndPropertyTypeId()}) entities " +
-            "GROUP BY (${ENTITY_SET_ID.name},${LINKING_ID.name}, ${PARTITION.name})"
-}
-
-/**
- * Preparable SQL that selects an entire linking entity set grouping by linking id and property type id from the [DATA]
- * table with the following bind order:
- *
- * 1. normal entity set ids (array)
- *
- * Note: It's only selecting from 1 linking entity set
- *
- */
-// todo: what if we want to select multiple linking entity sets?
-internal fun selectLinkingEntitySetSql(linkingEntitySetId: UUID): String {
-    return "SELECT '$linkingEntitySetId' AS ${ENTITY_SET_ID.name},${ID.name},$jsonValueColumnsSql FROM ($selectEntitySetGroupedByIdAndPropertyTypeId) entity_set " +
-            "GROUP BY (${ENTITY_SET_ID.name},${ID.name}, ${PARTITION.name})"
+    val optionalClauses = listOf(entitySetClause, idsClause, partitionClause, versionsClause).filter { it.isNotBlank() }
+    return "WHERE ${optionalClauses.joinToString(" AND ")}"
 }
 
 /**
@@ -328,23 +289,26 @@ internal fun selectLinkingEntitySetSql(linkingEntitySetId: UUID): String {
  * 5 - entity key ids
  * 6 - partitions
  */
+// @formatter:off
 internal val upsertEntitiesSql = "UPDATE ${IDS.name} " +
         "SET ${VERSIONS.name} = ${VERSIONS.name} || ?, " +
             "${DataTables.LAST_WRITE.name} = now(), " +
             "${VERSION.name} = CASE " +
-                "WHEN abs(${IDS.name}.${VERSION.name}) < abs(?) THEN ? " +
+                "WHEN abs(${IDS.name}.${VERSION.name}) <= abs(?) THEN ? " +
                 "ELSE ${IDS.name}.${VERSION.name} " +
             "END " +
-        "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ?"
-
+        "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ? " +
+        "RETURNING ${ID.name},${LINKING_ID.name} "
+// @formatter:on
 
 /**
  * Preparable sql to lock entities with the following bind order:
  * 1. entity key ids
- * 2. partitions
+ * 2. partition
+ * 3. partition version
  */
 internal val lockEntitiesSql = "SELECT 1 FROM ${IDS.name} " +
-        "WHERE ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ? " +
+        "WHERE ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ? AND ${PARTITIONS_VERSION.name} = ? " +
         "FOR UPDATE"
 
 /**
@@ -357,26 +321,15 @@ internal val lockEntitiesSql = "SELECT 1 FROM ${IDS.name} " +
  * 3. version
  * 4. entity set id
  */
-internal val updateVersionsForEntitySet = "UPDATE ${IDS.name} SET versions = versions || ARRAY[?], " +
-        "${VERSION.name} = CASE WHEN abs(${IDS.name}.${VERSION.name}) < abs(?) THEN ? " +
-        "ELSE ${IDS.name}.${VERSION.name} END " +
+internal val updateVersionsForEntitySet = "UPDATE ${IDS.name} " +
+        "SET " +
+            "${VERSIONS.name} = ${VERSIONS.name} || ARRAY[?], " +
+            "${VERSION.name} = CASE " +
+                "WHEN abs(${IDS.name}.${VERSION.name}) <= abs(?) " +
+                "THEN ? " +
+                "ELSE ${IDS.name}.${VERSION.name} " +
+            "END " +
         "WHERE ${ENTITY_SET_ID.name} = ? "
-
-/**
- * Preparable SQL that updates a version for all properties in a given entity set in [DATA]
- *
- * The following bind order is expected:
- *
- * 1. version
- * 2. version
- * 3. version
- * 4. entity set id
- */
-internal val updateVersionsForPropertiesInEntitySet = "UPDATE ${DATA.name} SET versions = versions || ARRAY[?], " +
-        "${VERSION.name} = CASE WHEN abs(${DATA.name}.${VERSION.name}) < abs(?) THEN ? " +
-        "ELSE ${DATA.name}.${VERSION.name} END " +
-        "WHERE ${ENTITY_SET_ID.name} = ? "
-
 
 /**
  * Preparable SQL that upserts a version for all entities in a given entity set in [IDS]
@@ -391,11 +344,34 @@ internal val updateVersionsForPropertiesInEntitySet = "UPDATE ${DATA.name} SET v
  * 6. partition
  * 7. partition version
  */
-internal val updateVersionsForEntitiesInEntitySet = "$updateVersionsForEntitySet AND ${ID_VALUE.name} = ANY(?) " +
-        "AND ${PARTITION.name} = ANY(?) AND ${PARTITIONS_VERSION.name} = ?"
+internal val updateVersionsForEntitiesInEntitySet = "$updateVersionsForEntitySet " +
+        "AND ${ID_VALUE.name} = ANY(?) " +
+        "AND ${PARTITION.name} = ANY(?) " +
+        "AND ${PARTITIONS_VERSION.name} = ? "
+
 
 /**
- * Preparable SQL thatupserts a version for all properties in a given entity set in [PostgresTable.DATA]
+ * Preparable SQL that updates a version for all properties in a given entity set in [DATA]
+ *
+ * The following bind order is expected:
+ *
+ * 1. version
+ * 2. version
+ * 3. version
+ * 4. entity set id
+ */
+internal val updateVersionsForPropertiesInEntitySet = "UPDATE ${DATA.name} " +
+        "SET " +
+            "${VERSIONS.name} = ${VERSIONS.name} || ARRAY[?], " +
+            "${VERSION.name} = CASE " +
+                "WHEN abs(${DATA.name}.${VERSION.name}) <= abs(?) " +
+                "THEN ? " +
+                "ELSE ${DATA.name}.${VERSION.name} " +
+            "END " +
+        "WHERE ${ENTITY_SET_ID.name} = ? "
+
+/**
+ * Preparable SQL that updates a version for all properties in a given entity set in [DATA]
  *
  * The following bind order is expected:
  *
@@ -405,7 +381,8 @@ internal val updateVersionsForEntitiesInEntitySet = "$updateVersionsForEntitySet
  * 4. entity set id
  * 5. property type ids
  */
-internal val updateVersionsForPropertyTypesInEntitySet = "$updateVersionsForPropertiesInEntitySet AND ${PROPERTY_TYPE_ID.name} = ANY(?)"
+internal val updateVersionsForPropertyTypesInEntitySet = "$updateVersionsForPropertiesInEntitySet " +
+        "AND ${PROPERTY_TYPE_ID.name} = ANY(?)"
 
 /**
  * Preparable SQL that updates a version for all properties in a given entity set in [PostgresTable.DATA]
@@ -416,15 +393,21 @@ internal val updateVersionsForPropertyTypesInEntitySet = "$updateVersionsForProp
  * 2. version
  * 3. version
  * 4. entity set id
- * 5. entity key ids
- * 6. partition
- * 7. partition version
+ * 5. property type ids
+ * 6. entity key ids
+ *    IF LINKING    checks against ORIGIN_ID
+ *    ELSE          checks against ID column
+ * 7. partitions
+ * 8. partition version
  */
-internal val updateVersionsForPropertiesInEntitiesInEntitySet = "$updateVersionsForPropertiesInEntitySet AND ${ID_VALUE.name} = ANY(?) " +
-        "AND ${PARTITION.name} = ANY(?) AND ${PARTITIONS_VERSION.name} = ? "
+internal fun updateVersionsForPropertyTypesInEntitiesInEntitySet( linking: Boolean = false ): String {
+    return "$updateVersionsForPropertyTypesInEntitySet " +
+            if( linking ) "AND ${ORIGIN_ID.name} = ANY(?) " else "AND ${ID_VALUE.name} = ANY(?) " +
+            "AND ${PARTITION.name} = ANY(?) AND ${PARTITIONS_VERSION.name} = ? "
+}
 
 /**
- * Preparable SQL thatpserts a version for all properties in a given entity set in [PostgresTable.DATA]
+ * Preparable SQL updates a version for all property values in a given entity set in [DATA]
  *
  * The following bind order is expected:
  *
@@ -432,34 +415,37 @@ internal val updateVersionsForPropertiesInEntitiesInEntitySet = "$updateVersions
  * 2. version
  * 3. version
  * 4. entity set id
- * 5. entity key ids
- * 6. partition
- * 7. partition version
- * 8. property type ids
- */
-internal val updateVersionsForPropertyTypesInEntitiesInEntitySet = "$updateVersionsForPropertiesInEntitiesInEntitySet AND ${PROPERTY_TYPE_ID.name} = ANY(?)"
-
-/**
- * Preparable SQL updates a version for all property values in a given entity set in [PostgresTable.DATA]
- *
- * The following bind order is expected:
- *
- * 1. version
- * 2. version
- * 3. version
- * 4. entity set id
- * 5. entity key ids
- * 6. partitions
- * 7. partition version
- * 8. property type id
+ * 5. property type id
+ * 6. entity key ids
+ *    IF LINKING    checks against ORIGIN_ID
+ *    ELSE          checks against ID column
+ * 7. partitions
+ * 8. partition version
  * 9. value
  */
-internal val updateVersionsForPropertyValuesInEntitiesInEntitySet = "$updateVersionsForPropertiesInEntitySet AND ${ID_VALUE.name} = ANY(?) " +
-        "AND ${PARTITION.name} = ANY(?) AND ${PARTITIONS_VERSION.name} = ? ${PROPERTY_TYPE_ID.name} = ? AND ${HASH.name} = ?"
-
+internal fun updateVersionsForPropertyValuesInEntitiesInEntitySet( linking: Boolean = false ): String {
+    return "${updateVersionsForPropertyTypesInEntitiesInEntitySet( linking )} AND ${HASH.name} = ? "
+}
 
 /**
- * Preparable SQL deletes a given property in a given entity set in [PostgresTable.IDS]
+ * Update set:
+ * 1. VERSION: system.currentTime
+ * 2. VERSION: system.currentTime
+ * 3. VERSION: system.currentTime
+ *
+ * Where :
+ * 4. ID_VALUE: linking id
+ * 5. ENTITY_SET: entity set id
+ * 6. ORIGIN_ID: entity key id
+ * 7. PARTITION: partition(s) (array)
+ */
+val tombstoneLinkForEntity = "$updateVersionsForPropertiesInEntitySet " +
+        "AND ${ID_VALUE.name} = ANY(?) " +
+        "AND ${ORIGIN_ID.name} = ANY(?) " +
+        "AND ${PARTITION.name} = ANY(?) "
+
+/**
+ * Preparable SQL deletes a given property in a given entity set in [IDS]
  *
  * The following bind order is expected:
  *
@@ -469,7 +455,7 @@ internal val updateVersionsForPropertyValuesInEntitiesInEntitySet = "$updateVers
 internal val deletePropertyInEntitySet = "DELETE FROM ${DATA.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${PROPERTY_TYPE_ID.name} = ? "
 
 /**
- * Preparable SQL deletes all entity ids a given entity set in [PostgresTable.IDS]
+ * Preparable SQL deletes all entity ids a given entity set in [IDS]
  *
  * The following bind order is expected:
  *
@@ -478,7 +464,7 @@ internal val deletePropertyInEntitySet = "DELETE FROM ${DATA.name} WHERE ${ENTIT
 internal val deleteEntitySetEntityKeys = "DELETE FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = ? "
 
 /**
- * Preparable SQL deletes all property values of entities in a given entity set in [PostgresTable.DATA]
+ * Preparable SQL deletes all property values of entities in a given entity set in [DATA]
  *
  * The following bind order is expected:
  *
@@ -492,7 +478,7 @@ internal val deletePropertiesOfEntitiesInEntitySet = "DELETE FROM ${DATA.name} "
         "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ? AND ${PARTITIONS_VERSION.name} = ? AND ${PROPERTY_TYPE_ID.name} = ANY(?) "
 
 /**
- * Preparable SQL deletes all property values of entities and entity key id in a given entity set in [PostgresTable.DATA]
+ * Preparable SQL deletes all property values of entities and entity key id in a given entity set in [DATA]
  *
  * The following bind order is expected:
  *
@@ -505,7 +491,20 @@ internal val deleteEntitiesInEntitySet = "DELETE FROM ${DATA.name} " +
         "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ? AND ${PARTITIONS_VERSION.name} = ? "
 
 /**
- * Preparable SQL deletes all entities in a given entity set in [PostgresTable.IDS]
+ * Preparable SQL updates last write to current time for all entity ids a given entity set in [IDS]
+ *
+ * The following bind order is expected:
+ *
+ * 1. entity set id
+ * 2. entity key ids
+ * 3. partition
+ * 4. partition version
+ */
+internal val updateLastWriteForEntitiesInEntitySet = "UPDATE ${IDS.name} SET ${LAST_WRITE.name} = 'now()' " +
+        "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID.name} = ANY(?) AND ${PARTITION.name} = ANY(?) AND ${PARTITIONS_VERSION.name} = ?"
+
+/**
+ * Preparable SQL deletes all entities in a given entity set in [IDS]
  *
  * The following bind order is expected:
  *
@@ -560,6 +559,7 @@ fun getPartitionsInfo(entityKeyIds: Set<UUID>, partitions: List<Int>): List<Int>
  *
  * @return A map of entity key ids to partitions.
  */
+@Deprecated("Unused")
 fun getPartitionsInfoMap(entityKeyIds: Set<UUID>, partitions: List<Int>): Map<UUID, Int> {
     return entityKeyIds.associateWith { entityKeyId -> getPartition(entityKeyId, partitions) }
 }
@@ -567,7 +567,6 @@ fun getPartitionsInfoMap(entityKeyIds: Set<UUID>, partitions: List<Int>): Map<UU
 fun getMergedDataColumnName(datatype: PostgresDatatype): String {
     return "v_${datatype.name}"
 }
-
 
 /**
  * This function generates preparable sql with the following bind order:
@@ -577,11 +576,11 @@ fun getMergedDataColumnName(datatype: PostgresDatatype): String {
  * 3.  PARTITION
  * 4.  PROPERTY_TYPE_ID
  * 5.  HASH
- * 6.  LAST_WRITE
- * 7.  VERSION,
- * 8.  VERSIONS
- * 9.  PARTITIONS_VERSION
- * 10. Value Column
+ *     LAST_WRITE = now()
+ * 6.  VERSION,
+ * 7.  VERSIONS
+ * 8.  PARTITIONS_VERSION
+ * 9.  Value Column
  */
 fun upsertPropertyValueSql(propertyType: PropertyType): String {
     val insertColumn = getColumnDefinition(propertyType.postgresIndexType, propertyType.datatype)
@@ -596,15 +595,102 @@ fun upsertPropertyValueSql(propertyType: PropertyType): String {
             VERSIONS,
             PARTITIONS_VERSION
     ).joinToString(",") { it.name }
-    return "INSERT INTO ${DATA.name} ($metadataColumnsSql,${insertColumn.name}) VALUES (?,?,?,?,?,now(),?,?,?,?) " +
-            "ON CONFLICT (${PARTITION.name},${ENTITY_SET_ID.name},${PROPERTY_TYPE_ID.name},${ID_VALUE.name}, ${HASH.name}, ${PARTITIONS_VERSION.name}) DO UPDATE " +
-            "SET ${VERSIONS.name} = ${DATA.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
+
+    return "INSERT INTO ${DATA.name} ($metadataColumnsSql,${insertColumn.name}) " +
+            "VALUES (?,?,?,?,?,now(),?,?,?,?) " +
+            "ON CONFLICT ($primaryKeyColumnNamesAsString) " +
+            "DO UPDATE SET " +
+            "${VERSIONS.name} = ${DATA.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
             "${LAST_WRITE.name} = GREATEST(${DATA.name}.${LAST_WRITE.name},EXCLUDED.${LAST_WRITE.name}), " +
             "${PARTITIONS_VERSION.name} = EXCLUDED.${PARTITIONS_VERSION.name}, " +
-            "${VERSION.name} = CASE WHEN abs(${DATA.name}.${VERSION.name}) < EXCLUDED.${VERSION.name} THEN EXCLUDED.${VERSION.name} " +
-            "ELSE ${DATA.name}.${VERSION.name} END"
+            "${VERSION.name} = CASE " +
+                "WHEN abs(${DATA.name}.${VERSION.name}) <= EXCLUDED.${VERSION.name} " +
+                "THEN EXCLUDED.${VERSION.name} " +
+                "ELSE ${DATA.name}.${VERSION.name} " +
+            "END"
 }
 
+/**
+ * This function generates preparable sql with the following bind order:
+ *
+ * 1.  ENTITY_SET_ID
+ * 2.  ID_VALUE         --> expects linking ID
+ * 3.  PARTITION
+ * 4.  PROPERTY_TYPE_ID
+ * 5.  HASH
+ *     LAST_WRITE = now()
+ * 6.  VERSION,
+ * 7.  VERSIONS
+ * 8.  PARTITIONS_VERSION
+ * 9.  Value Column
+ * 10. ORIGIN ID        --> expects entity key id
+ */
+fun upsertPropertyValueLinkingRowSql(propertyType: PropertyType ): String {
+    val insertColumn = getColumnDefinition(propertyType.postgresIndexType, propertyType.datatype)
+    val metadataColumnsSql = listOf(
+            ENTITY_SET_ID,
+            ID_VALUE,
+            PARTITION,
+            PROPERTY_TYPE_ID,
+            HASH,
+            LAST_WRITE,
+            VERSION,
+            VERSIONS,
+            PARTITIONS_VERSION
+    ).joinToString(",") { it.name }
+
+    return "INSERT INTO ${DATA.name} ($metadataColumnsSql,${insertColumn.name},${ORIGIN_ID.name}) " +
+            "VALUES (?,?,?,?,?,now(),?,?,?,?,?) " +
+            "ON CONFLICT ($primaryKeyColumnNamesAsString) " +
+            "DO UPDATE SET " +
+            "${VERSIONS.name} = ${DATA.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
+            "${LAST_WRITE.name} = GREATEST(${DATA.name}.${LAST_WRITE.name},EXCLUDED.${LAST_WRITE.name}), " +
+            "${PARTITIONS_VERSION.name} = EXCLUDED.${PARTITIONS_VERSION.name}, " +
+            "${VERSION.name} = CASE " +
+                "WHEN abs(${DATA.name}.${VERSION.name}) <= EXCLUDED.${VERSION.name} " +
+                "THEN EXCLUDED.${VERSION.name} " +
+                "ELSE ${DATA.name}.${VERSION.name} " +
+            "END"
+}
+
+/**
+ * Used to C(~RUD~) a link from linker
+ * This function generates preparable sql with the following bind order:
+ *
+ * Insert into:
+ * 1. ID_VALUE: linkingId
+ * 2. VERSION: system.currentTime
+ *
+ * Select ƒrom where:
+ * 3. ENTITY_SET: entity set id
+ * 4. ID_VALUE: entity key id
+ * 5. PARTITION: partition(s) (array)
+ *
+ */
+fun createOrUpdateLinkFromEntity(): String {
+    val existingColumnsUpdatedForLinking = PostgresDataTables.dataTableColumns.joinToString(",") {
+        when( it ) {
+            VERSION, ID_VALUE, PARTITION   -> "?"
+            ORIGIN_ID                      -> ID_VALUE.name
+            LAST_WRITE                     -> "now()"
+            else                           -> it.name
+        }
+    }
+    return "INSERT INTO ${DATA.name} ($dataTableColumnsSql) " +
+            "SELECT $existingColumnsUpdatedForLinking " +
+            "FROM ${DATA.name} " +
+            "${optionalWhereClausesSingleEdk( idPresent = true, partitionsPresent = true, entitySetPresent = true )} " +
+            "ON CONFLICT ($primaryKeyColumnNamesAsString) " +
+            "DO UPDATE SET " +
+                "${VERSIONS.name} = ${DATA.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
+                "${LAST_WRITE.name} = GREATEST(${DATA.name}.${LAST_WRITE.name},EXCLUDED.${LAST_WRITE.name}), " +
+                "${PARTITIONS_VERSION.name} = EXCLUDED.${PARTITIONS_VERSION.name}, " +
+                "${VERSION.name} = CASE " +
+                    "WHEN abs(${DATA.name}.${VERSION.name}) <= EXCLUDED.${VERSION.name} " +
+                    "THEN EXCLUDED.${VERSION.name} " +
+                    "ELSE ${DATA.name}.${VERSION.name} " +
+                "END"
+}
 
 /* For materialized views */
 
@@ -619,15 +705,15 @@ fun selectPropertyTypesOfEntitySetColumnar(
         linking: Boolean
 ): String {
     val idColumnsList = listOf(ENTITY_SET_ID.name, ID.name, ENTITY_KEY_IDS_COL.name)
-    val (entitySetData, _) = if (linking) {
-        buildPreparableFiltersSqlForLinkedEntities(
-                3, authorizedPropertyTypes, mapOf(), idsPresent = false, partitionsPresent = true, selectOriginIds = true
-        )
-    } else {
-        buildPreparableFiltersSqlForEntities(
-                3, authorizedPropertyTypes, mapOf(), idsPresent = false, partitionsPresent = true, selectOriginIds = true
-        )
-    }
+    val (entitySetData, _) = buildPreparableFiltersSql(
+            3,
+            authorizedPropertyTypes,
+            mapOf(),
+            EnumSet.of(MetadataOption.ENTITY_KEY_IDS),
+            linking,
+            idsPresent = false,
+            partitionsPresent = true
+    )
 
     val selectColumns = (idColumnsList +
             (authorizedPropertyTypes.map { selectPropertyColumn(it.value) }))

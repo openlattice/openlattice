@@ -21,32 +21,31 @@
 package com.openlattice.assembler.processors
 
 import com.hazelcast.core.Offloadable
-import com.hazelcast.core.ReadOnly
 import com.hazelcast.spi.ExecutionService
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.assembler.AssemblerConnectionManager
+import com.openlattice.assembler.AssemblerConnectionManagerDependent
 import com.openlattice.assembler.EntitySetAssemblyKey
 import com.openlattice.assembler.MaterializedEntitySet
-import com.openlattice.assembler.AssemblerConnectionManagerDependent
+import com.openlattice.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor
 import org.slf4j.LoggerFactory
 
 private val logger = LoggerFactory.getLogger(RenameMaterializedEntitySetProcessor::class.java)
-private const val NOT_INITIALIZED = "Assembler Connection Manager not initialized."
 
 data class RenameMaterializedEntitySetProcessor(val oldName: String, val newName: String)
-    : AbstractRhizomeEntryProcessor<EntitySetAssemblyKey, MaterializedEntitySet?, Void?>(false),
+    : AbstractReadOnlyRhizomeEntryProcessor<EntitySetAssemblyKey, MaterializedEntitySet?, Void?>(),
         AssemblerConnectionManagerDependent<RenameMaterializedEntitySetProcessor>,
-        Offloadable, ReadOnly {
+        Offloadable {
     @Transient
     private var acm: AssemblerConnectionManager? = null
 
     override fun process(entry: MutableMap.MutableEntry<EntitySetAssemblyKey, MaterializedEntitySet?>): Void? {
         val organizationId = entry.key.organizationId
         if (entry.value == null) {
-            logger.error("Encountered null assembly while trying to rename entity set materialized view.")
+            logger.error("Encountered null assembly while trying to rename entity set ${entry.key.entitySetId} " +
+                    "materialized view in organization $organizationId.")
         } else {
             acm?.renameMaterializedEntitySet(organizationId, oldName, newName)
-                    ?: throw IllegalStateException(NOT_INITIALIZED)
+                    ?: throw IllegalStateException(AssemblerConnectionManagerDependent.NOT_INITIALIZED)
         }
         return null
     }

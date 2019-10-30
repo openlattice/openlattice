@@ -22,9 +22,7 @@
 package com.openlattice.assembler.processors
 
 import com.hazelcast.core.Offloadable
-import com.hazelcast.core.ReadOnly
 import com.hazelcast.spi.ExecutionService
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.AssemblerConnectionManagerDependent
 import com.openlattice.assembler.EntitySetAssemblyKey
@@ -32,13 +30,12 @@ import com.openlattice.assembler.MaterializedEntitySet
 import com.openlattice.authorization.Principal
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
+import com.openlattice.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor
 import org.slf4j.LoggerFactory
-import java.lang.IllegalStateException
 import java.util.*
 
 
 private val logger = LoggerFactory.getLogger(MaterializeEntitySetProcessor::class.java)
-private const val NOT_INITIALIZED = "Assembler Connection Manager not initialized."
 
 /**
  * An offloadable entity processor that materializes an entity set.
@@ -49,10 +46,8 @@ data class MaterializeEntitySetProcessor(
         val entitySet: EntitySet,
         val materializablePropertyTypes: Map<UUID, PropertyType>,
         val authorizedPropertyTypesOfPrincipals: Map<Principal, Set<PropertyType>>
-) : AbstractRhizomeEntryProcessor<EntitySetAssemblyKey, MaterializedEntitySet, Void?>(false),
-        AssemblerConnectionManagerDependent<MaterializeEntitySetProcessor>,
-        Offloadable,
-        ReadOnly {
+) : AbstractReadOnlyRhizomeEntryProcessor<EntitySetAssemblyKey, MaterializedEntitySet, Void?>(),
+        AssemblerConnectionManagerDependent<MaterializeEntitySetProcessor>, Offloadable {
     @Transient
     private var acm: AssemblerConnectionManager? = null
 
@@ -60,13 +55,14 @@ data class MaterializeEntitySetProcessor(
         val entitySetAssemblyKey = entry.key
         val materializedEntitySet = entry.value
         if (materializedEntitySet == null) {
-            logger.error("Materialized entity set with id {} for organization id {} was not initialized properly.")
+            logger.error("Materialized entity set with id ${entitySetAssemblyKey.entitySetId} for organization id " +
+                    "${entitySetAssemblyKey.organizationId} was not initialized properly.")
         } else {
             acm?.materializeEntitySets(
                     entitySetAssemblyKey.organizationId,
                     mapOf(entitySet to materializablePropertyTypes),
                     mapOf(entitySet.id to authorizedPropertyTypesOfPrincipals)
-            ) ?: throw IllegalStateException(NOT_INITIALIZED)
+            ) ?: throw IllegalStateException(AssemblerConnectionManagerDependent.NOT_INITIALIZED)
         }
 
         return null

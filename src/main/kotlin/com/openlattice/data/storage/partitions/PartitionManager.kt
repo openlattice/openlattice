@@ -52,7 +52,7 @@ class PartitionManager @JvmOverloads constructor(
         partitionList.addAll(partitionList.size until partitions)
     }
 
-    fun getAllPartitions() : List<Int> {
+    fun getAllPartitions(): List<Int> {
         return partitionList
     }
 
@@ -60,7 +60,7 @@ class PartitionManager @JvmOverloads constructor(
         val update = MetadataUpdate(
                 Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
                 Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
-                Optional.empty(), Optional.of(LinkedHashSet(partitions))
+                Optional.empty(), Optional.of(LinkedHashSet(partitions)), Optional.empty()
         )
         entitySets.executeOnKey(entitySetId, UpdateEntitySetMetadataProcessor(update))
     }
@@ -169,13 +169,13 @@ class PartitionManager @JvmOverloads constructor(
         return getEmptiestPartitions(partitionCount).map { it.first }
     }
 
-    private fun getEmptiestPartitions(desiredPartitions: Int): BasePostgresIterable<Pair<Int, Long>> {
+    private fun getEmptiestPartitions(partitionCount: Int): BasePostgresIterable<Pair<Int, Long>> {
         //A quick note is that the partitions materialized view shouldn't be turned into a distributed table
         //with out addressing the interaction of the order by and limit clauses.
         return BasePostgresIterable(
                 PreparedStatementHolderSupplier(hds, EMPTIEST_PARTITIONS) { ps ->
                     ps.setArray(1, PostgresArrays.createIntArray(ps.connection, partitionList))
-                    ps.setObject(2, desiredPartitions)
+                    ps.setInt(2, partitionCount)
                 }) { it.getInt(PARTITION.name) to it.getLong(COUNT) }
     }
 

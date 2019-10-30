@@ -22,8 +22,6 @@
 
 package com.openlattice.mapstores;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.kryptnostic.rhizome.mapstores.TestableSelfRegisteringMapStore;
 import com.openlattice.authorization.AceKey;
@@ -33,25 +31,18 @@ import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.mapstores.PostgresCredentialMapstore;
 import com.openlattice.authorization.mapstores.UserMapstore;
 import com.openlattice.authorization.securable.AbstractSecurableObject;
-import com.openlattice.data.PropertyMetadata;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.hazelcast.HazelcastMap;
-import java.time.LocalDate;
-import java.time.LocalTime;
-import java.time.OffsetDateTime;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.apache.commons.lang.RandomStringUtils;
-import org.apache.commons.lang3.RandomUtils;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.junit.Assert;
 import org.junit.Ignore;
@@ -136,24 +127,6 @@ public class MapstoresTest extends HzAuthzTest {
         EntitySet entitySet = TestDataFactory.entitySetWithType( entityType.getId() );
         Principal p = TestDataFactory.userPrincipal();
         edm.createEntitySet( p, entitySet );
-        Thread.sleep( 1000 );
-
-        Map<UUID, Map<Object, PropertyMetadata>> properties = new HashMap<>();
-        PropertyMetadata pm = new PropertyMetadata( RandomUtils.nextBytes( 16 ),
-                1,
-                ImmutableList.of( 1L ),
-                OffsetDateTime.now() );
-
-        properties.put( propertyTypes[ 0 ].getId(), ImmutableMap.of( RandomStringUtils.randomAlphanumeric( 5 ), pm ) );
-        properties.put( propertyTypes[ 1 ].getId(), ImmutableMap.of( RandomUtils.nextLong( 0, 1L << 62 ), pm ) );
-        properties.put( propertyTypes[ 2 ].getId(), ImmutableMap.of( OffsetDateTime.now(), pm ) );
-        properties.put( propertyTypes[ 3 ].getId(), ImmutableMap.of( LocalDate.now(), pm ) );
-        properties.put( propertyTypes[ 4 ].getId(), ImmutableMap.of( LocalTime.now(), pm ) );
-        properties.put( propertyTypes[ 5 ].getId(), ImmutableMap.of( RandomUtils.nextInt( 0, 1 ) == 0, pm ) );
-        properties.put( propertyTypes[ 6 ].getId(), ImmutableMap.of( new byte[] { 1, 2, 3, 4 }, pm ) );
-        properties.put( propertyTypes[ 7 ].getId(), ImmutableMap.of( UUID.randomUUID(), pm ) );
-        properties.put( propertyTypes[ 8 ].getId(), ImmutableMap.of( RandomUtils.nextInt( 0, 1 << 30 ), pm ) );
-        properties.put( propertyTypes[ 9 ].getId(), ImmutableMap.of( RandomUtils.nextDouble( 0, 1e20 ), pm ) );
     }
 
     @SuppressWarnings( { "rawtypes", "unchecked" } )

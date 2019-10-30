@@ -195,11 +195,11 @@ class Graph(
                     connection.autoCommit = false
                     val idArr = PostgresArrays.createUuidArray(connection, entityKeyIds)
                     val stmt = connection.prepareStatement(sql)
-                    stmt.setObject(1, idArr)
+                    stmt.setArray(1, idArr)
                     stmt.setObject(2, entitySetId)
-                    stmt.setObject(3, idArr)
+                    stmt.setArray(3, idArr)
                     stmt.setObject(4, entitySetId)
-                    stmt.setObject(5, idArr)
+                    stmt.setArray(5, idArr)
                     stmt.setObject(6, entitySetId)
                     stmt.fetchSize = BATCH_SIZE
                     val rs = stmt.executeQuery()

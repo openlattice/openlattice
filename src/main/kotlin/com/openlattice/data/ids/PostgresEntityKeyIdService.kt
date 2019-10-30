@@ -23,13 +23,13 @@ package com.openlattice.data.ids
 
 import com.geekbeast.hazelcast.HazelcastClientProvider
 import com.google.common.base.Preconditions.checkState
-import com.google.common.collect.Queues
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.openlattice.IdConstants
 import com.openlattice.data.EntityKey
 import com.openlattice.data.EntityKeyIdService
 import com.openlattice.data.storage.getPartition
 import com.openlattice.data.storage.partitions.PartitionManager
+import com.openlattice.data.storage.partitions.PartitionsInfo
 import com.openlattice.data.util.PostgresDataHasher
 import com.openlattice.hazelcast.HazelcastClient
 import com.openlattice.hazelcast.HazelcastMap
@@ -41,8 +41,8 @@ import com.openlattice.postgres.ResultSetAdapters
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.slf4j.LoggerFactory
+import java.sql.Connection
 import java.util.*
-import java.util.concurrent.BlockingQueue
 import kotlin.collections.HashMap
 
 /**
@@ -72,13 +72,8 @@ class PostgresEntityKeyIdService(
         private val partitionManager: PartitionManager
 ) : EntityKeyIdService {
     private val hazelcastInstance = hazelcastClients.getClient(HazelcastClient.IDS.name)
-    private val q: BlockingQueue<UUID> = Queues.newArrayBlockingQueue(65536)
     private val idRefCounts = hazelcastInstance.getMap<EntityKey, Long>(HazelcastMap.ID_REF_COUNTS.name)
     private val idMap = hazelcastInstance.getMap<EntityKey, UUID>(HazelcastMap.ID_CACHE.name)
-
-    init {
-        idGenerationService.getNextIds(q.remainingCapacity()).forEach(q::put)
-    }
 
     private fun genEntityKeyIds(entityIds: Set<EntityKey>): Map<EntityKey, UUID> {
         val ids = idGenerationService.getNextIds(entityIds.size)
@@ -86,9 +81,12 @@ class PostgresEntityKeyIdService(
         return entityIds.zip(ids).toMap()
     }
 
-    private fun storeEntityKeyIdReservations(entitySetId: UUID, entityKeyIds: Set<UUID>) {
-        val partitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
-
+    private fun storeEntityKeyIdReservations(
+            entitySetId: UUID, entityKeyIds: Set<UUID>,
+            partitionsInfo: PartitionsInfo = partitionManager.getEntitySetPartitionsInfo(
+                    entitySetId
+            )
+    ) {
         hds.connection.use { connection ->
             connection.autoCommit = false
 
@@ -120,18 +118,24 @@ class PostgresEntityKeyIdService(
                 logger.warn("Expected ${entityKeyIds.size} entity key id writes. Only $totalWritten writes registered.")
             }
             if (totalDataRowsWritten != entityKeyIds.size) {
-                logger.warn("Expected ${entityKeyIds.size} entityKeyUd data writes. Only $totalDataRowsWritten writes registered.")
+                logger.warn(
+                        "Expected ${entityKeyIds.size} entityKeyId data writes. Only $totalDataRowsWritten writes registered."
+                )
             }
             connection.commit()
             connection.autoCommit = true
         }
     }
 
-    private fun storeEntityKeyIds(entityKeyIds: Map<EntityKey, UUID>): Map<EntityKey, UUID> {
-        val partitionsByEntitySet = partitionManager.getEntitySetsPartitionsInfo(entityKeyIds.keys.map { it.entitySetId }.toSet())
+    private fun storeEntityKeyIds(
+            entityKeyIds: Map<EntityKey, UUID>, conn: Connection = hds.connection
+    ): Map<EntityKey, UUID> {
+        val partitionsByEntitySet = partitionManager.getEntitySetsPartitionsInfo(
+                entityKeyIds.keys.map { it.entitySetId }.toSet()
+        )
                 .mapValues { it.value.partitions.toList() to it.value.partitionsVersion }
 
-        hds.connection.use { connection ->
+        conn.use { connection ->
             connection.autoCommit = false
 
             val insertSyncIds = connection.prepareStatement(INSERT_SYNC_SQL)
@@ -171,13 +175,17 @@ class PostgresEntityKeyIdService(
             val dataRowsWritten = insertToData.executeBatch().sum()
 
             if (totalSyncIdRowsWritten != entityKeyIds.size) {
-                logger.warn("Expected ${entityKeyIds.size} sync id writes. Only $totalSyncIdRowsWritten writes registered.")
+                logger.warn(
+                        "Expected ${entityKeyIds.size} sync id writes. Only $totalSyncIdRowsWritten writes registered."
+                )
             }
             if (totalWritten != entityKeyIds.size) {
                 logger.warn("Expected ${entityKeyIds.size} entity key writes. Only $totalWritten writes registered.")
             }
             if (dataRowsWritten != entityKeyIds.size) {
-                logger.warn("Expected ${entityKeyIds.size} entityKeyId data writes. Only $dataRowsWritten writes registered.")
+                logger.warn(
+                        "Expected ${entityKeyIds.size} entityKeyId data writes. Only $dataRowsWritten writes registered."
+                )
             }
             connection.commit()
             connection.autoCommit = true
@@ -192,7 +200,7 @@ class PostgresEntityKeyIdService(
 
     private fun countDownEntityKeys(entityKeys: Set<EntityKey>) {
         idRefCounts.executeOnKeys(entityKeys, IdRefCountDecrementer())
-                .forEach { entityKey, count ->
+                .forEach { (entityKey, count) ->
                     if (count == 0) {
                         idMap.delete(entityKey)
                     }
@@ -200,27 +208,27 @@ class PostgresEntityKeyIdService(
     }
 
     private fun assignEntityKeyIds(entityKeys: Set<EntityKey>): Map<EntityKey, UUID> {
-        executor.submit {
-            idGenerationService.getNextIds(entityKeys.size).forEach(q::put)
+        val unassignedEntityKeyIds = mutableMapOf<EntityKey, UUID>()
+        //Create map of assignedEntityKeys and unassignedEntityKey is in single pass
+        val assignedEntityKeyIds = entityKeys.associateWith { key ->
+            val elem = idGenerationService.getNextId()
+            val id = idMap.putIfAbsent(key, elem)
+            if (id == null) {
+                unassignedEntityKeyIds[key] = elem
+                elem
+            } else {
+                idGenerationService.returnId(elem)
+                id
+            }
         }
 
-        return entityKeys.map { key ->
-            val elem = q.take()
-            val assignedId = idMap.putIfAbsent(key, elem)
-            return@map if (assignedId == null) {
-                val assignedPair = key to elem
-                storeEntityKeyIds(mapOf(assignedPair))
-                assignedPair
-            } else {
-                q.offer(elem)
-                key to assignedId
-            }
-        }.toMap()
+        storeEntityKeyIds(unassignedEntityKeyIds)
+        return assignedEntityKeyIds
     }
 
     override fun reserveEntityKeyIds(entityKeys: Set<EntityKey>): Set<UUID> {
         val entityIdsByEntitySet = entityKeys.groupBy({ it.entitySetId },
-                { it.entityId }).mapValues { it.value.toSet() }
+                                                      { it.entityId }).mapValues { it.value.toSet() }
         val existing = loadEntityKeyIds(entityIdsByEntitySet)
         val missing = entityKeys - existing.keys
 
@@ -232,6 +240,15 @@ class PostgresEntityKeyIdService(
 
         return entityKeys.asSequence().map { existing[it] ?: missingMap.getValue(it) }.toSet()
 
+    }
+
+    override fun reserveLinkingIds(count: Int): List<UUID> {
+        val ids = idGenerationService.getNextIds(count)
+        storeEntityKeyIdReservations(
+                IdConstants.LINKING_ENTITY_SET_ID.id, ids,
+                PartitionsInfo(partitionManager.getAllPartitions().toSet(), 0)
+        )
+        return ids.toList()
     }
 
     override fun reserveIds(entitySetId: UUID, count: Int): List<UUID> {
@@ -291,12 +308,19 @@ class PostgresEntityKeyIdService(
             entityKeys: Set<EntityKey>, entityKeyIds: MutableMap<EntityKey, UUID>
     ): MutableMap<EntityKey, UUID> {
         val entityIdsByEntitySet = entityKeys.groupBy({ it.entitySetId },
-                { it.entityId }).mapValues { it.value.toSet() }
+                                                      { it.entityId }).mapValues { it.value.toSet() }
         entityKeyIds.putAll(loadEntityKeyIds(entityIdsByEntitySet))
 
         //Making this line O(n) is why we chose to just take a set instead of a sequence (thus allowing lazy views since copy is required anyway)
         val missing = entityKeys.minus(entityKeyIds.keys)
-        entityKeyIds.putAll(storeEntityKeyIds(genEntityKeyIds(missing)))
+
+        countUpEntityKeys(missing)
+
+        val missingMap = assignEntityKeyIds(missing)
+
+        countDownEntityKeys(missing)
+
+        entityKeyIds.putAll(missingMap)
 
         return entityKeyIds
     }

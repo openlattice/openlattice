@@ -2,13 +2,16 @@ package com.openlattice.data.storage
 
 import com.google.common.collect.ListMultimap
 import com.google.common.collect.SetMultimap
+import com.openlattice.data.DeleteType
 import com.openlattice.data.EntitySetData
 import com.openlattice.data.WriteEvent
+import com.openlattice.edm.set.ExpirationBase
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PostgresIterable
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import java.nio.ByteBuffer
+import java.time.OffsetDateTime
 import java.util.*
 import java.util.stream.Stream
 
@@ -17,11 +20,6 @@ import java.util.stream.Stream
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 interface EntityDatastore {
-
-    fun getEntitySetData(
-            entitySetId: UUID,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): Map<UUID, Map<UUID, Set<Any>>>
 
     fun getEntityKeyIdsInEntitySet(entitySetId: UUID): BasePostgresIterable<UUID>
 
@@ -55,16 +53,11 @@ interface EntityDatastore {
             metadataOptions: EnumSet<MetadataOption>
     ): Stream<MutableMap<FullQualifiedName, MutableSet<Any>>>
 
-    fun getLinkedEntityDataByLinkingId(
-            linkingIdsByEntitySetId: Map<UUID, Optional<Set<UUID>>>,
-            authorizedPropertyTypesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>
-    ): Map<UUID, Map<UUID, Map<UUID, Set<Any>>>>
-
     fun getLinkedEntityDataByLinkingIdWithMetadata(
             linkingIdsByEntitySetId: Map<UUID, Optional<Set<UUID>>>,
             authorizedPropertyTypesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>,
-            metadataOptions: EnumSet<MetadataOption>
-    ): Map<UUID, Map<UUID, Map<UUID, Set<Any>>>>
+            extraMetadataOptions: EnumSet<MetadataOption>
+    ): Map<UUID, Map<UUID, Map<UUID, Map<UUID, Set<Any>>>>>
 
     fun getEntities(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
@@ -195,5 +188,8 @@ interface EntityDatastore {
     fun deleteEntityProperties(
             entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
     ): WriteEvent
+
+    fun getExpiringEntitiesFromEntitySet(entitySetId: UUID, expirationBaseColumn: String, formattedDateMinusTTE: Any,
+                                         sqlFormat: Int, deleteType: DeleteType) : BasePostgresIterable<UUID>
 
 }

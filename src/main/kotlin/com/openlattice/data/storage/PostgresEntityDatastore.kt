@@ -4,6 +4,7 @@ import com.codahale.metrics.annotation.Timed
 import com.google.common.collect.*
 import com.google.common.eventbus.EventBus
 import com.openlattice.assembler.events.MaterializedEntitySetDataChangeEvent
+import com.openlattice.data.DeleteType
 import com.openlattice.data.EntitySetData
 import com.openlattice.data.WriteEvent
 import com.openlattice.data.events.EntitiesDeletedEvent
@@ -51,17 +52,6 @@ class PostgresEntityDatastore(
     @Inject
     private lateinit var linkingQueryService: LinkingQueryService
 
-
-    @Timed
-    override fun getEntitySetData(
-            entitySetId: UUID,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): Map<UUID, Map<UUID, Set<Any>>> {
-        return dataQueryService.getEntitiesWithPropertyTypeIds(
-                ImmutableMap.of(entitySetId, Optional.empty()),
-                ImmutableMap.of(entitySetId, authorizedPropertyTypes)
-        ).toMap()
-    }
 
     @Timed
     override fun getEntityKeyIdsInEntitySet(entitySetId: UUID): BasePostgresIterable<UUID> {
@@ -130,7 +120,9 @@ class PostgresEntityDatastore(
             val entities = dataQueryService
                     .getEntitiesWithPropertyTypeIds(
                             ImmutableMap.of(entitySetId, Optional.of(entityKeyIds)),
-                            ImmutableMap.of(entitySetId, edmManager.getPropertyTypesForEntitySet(entitySetId))
+                            ImmutableMap.of(entitySetId, edmManager.getPropertyTypesForEntitySet(entitySetId)),
+                            mapOf(),
+                            EnumSet.of(MetadataOption.LAST_WRITE)
                     )
             eventBus.post(EntitiesUpsertedEvent(entitySetId, entities.toMap()))
         }
@@ -163,8 +155,8 @@ class PostgresEntityDatastore(
     }
 
     private fun shouldIndexDirectly(entitySetId: UUID, entityKeyIds: Set<UUID>): Boolean {
-        return entityKeyIds.size < BATCH_INDEX_THRESHOLD && !edmManager.getEntitySet(entitySetId).flags
-                .contains(EntitySetFlag.AUDIT)
+        return entityKeyIds.size < BATCH_INDEX_THRESHOLD
+                && edmManager.getEntitySetIdsWithFlags(setOf(entitySetId), setOf(EntitySetFlag.AUDIT)).isEmpty()
     }
 
     private fun markMaterializedEntitySetDirty(entitySetId: UUID) {
@@ -309,57 +301,35 @@ class PostgresEntityDatastore(
                 entityKeyIds,
                 authorizedPropertyTypes,
                 emptyMap(),
-                metadataOptions
+                metadataOptions,
+                Optional.empty(),
+                true
         ).values.stream()
     }
 
     /**
-     * Retrieves the authorized, linked property data for the given linking ids of entity sets.
+     * Retrieves the authorized, property data mapped by entity key ids as the origins of the data for each entity set
+     * for the given linking ids.
      *
      * @param linkingIdsByEntitySetId map of linked(normal) entity set ids and their linking ids
      * @param authorizedPropertyTypesByEntitySetId map of authorized property types
+     * @param extraMetadataOptions set of [MetadataOption]s to include in result (besides the origin id)
      */
-    @Timed
-    override fun getLinkedEntityDataByLinkingId(
-            linkingIdsByEntitySetId: Map<UUID, Optional<Set<UUID>>>,
-            authorizedPropertyTypesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>
-    ): Map<UUID, Map<UUID, Map<UUID, Set<Any>>>> {
-
-        return getLinkedEntityDataByLinkingIdWithMetadata(
-                linkingIdsByEntitySetId,
-                authorizedPropertyTypesByEntitySetId,
-                EnumSet.noneOf(MetadataOption::class.java)
-        )
-    }
-
     @Timed
     override fun getLinkedEntityDataByLinkingIdWithMetadata(
             linkingIdsByEntitySetId: Map<UUID, Optional<Set<UUID>>>,
             authorizedPropertyTypesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>,
-            metadataOptions: EnumSet<MetadataOption>
-    ): Map<UUID, Map<UUID, Map<UUID, Set<Any>>>> {
-        // TODO: Do this less terribly
-        // map of: pair<linking_id, entity_set_id> to property_data
-        val linkedEntityDataStream = dataQueryService.getEntitiesWithPropertyTypeIds(
+            extraMetadataOptions: EnumSet<MetadataOption>
+    ): Map<UUID, Map<UUID, Map<UUID, Map<UUID, Set<Any>>>>> {
+        // pair<linking_id to pair<entity_set_id to pair<origin_id to property_data>>>
+        val linkedEntityDataStream = dataQueryService.getLinkedEntitiesByEntitySetIdWithOriginIds(
                 linkingIdsByEntitySetId,
                 authorizedPropertyTypesByEntitySetId,
-                metadataOptions = metadataOptions,
-                linking = true
+                extraMetadataOptions
         )
 
-        val linkedEntityData = HashMap<UUID, MutableMap<UUID, MutableMap<UUID, Set<Any>>>>()
-//        linkedEntityDataStream.forEach { (first, second) ->
-//            val primaryId = first.first //linking_id
-//            val secondaryId = first.second //entity_set_id
-//
-//            linkedEntityData
-//                    .getOrPut(primaryId) { mutableMapOf() }
-//                    .getOrPut(secondaryId) { second.toMutableMap() }
-//
-//        }
-
-        // linking_id/entity_set_id/property_type_id
-        return linkedEntityData
+        // linking_id/entity_set_id/origin_id/property_type_id
+        return linkedEntityDataStream.toMap().mapValues { mapOf(it.value).mapValues { mapOf(it.value) } }
     }
 
     //TODO: Can be made more efficient if we are getting across same type.
@@ -419,7 +389,7 @@ class PostgresEntityDatastore(
         signalEntitySetDataDeleted(entitySetId)
 
         // delete entities from linking feedbacks
-        val deleteFeedbackCount = feedbackQueryService.deleteLinkingFeedbacks(entitySetId, Optional.empty())
+        val deleteFeedbackCount = feedbackQueryService.deleteLinkingFeedback(entitySetId, Optional.empty())
 
         // Delete all neighboring entries from matched entities
         val deleteMatchCount = linkingQueryService.deleteEntitySetNeighborhood(entitySetId)
@@ -448,7 +418,7 @@ class PostgresEntityDatastore(
         signalDeletedEntities(entitySetId, entityKeyIds)
 
         // delete entities from linking feedbacks too
-        val deleteFeedbackCount = feedbackQueryService.deleteLinkingFeedbacks(entitySetId, Optional.of(entityKeyIds))
+        val deleteFeedbackCount = feedbackQueryService.deleteLinkingFeedback(entitySetId, Optional.of(entityKeyIds))
 
         // Delete all neighboring entries from matched entities
         val deleteMatchCount = linkingQueryService.deleteNeighborhoods(entitySetId, entityKeyIds)
@@ -486,6 +456,13 @@ class PostgresEntityDatastore(
         )
 
         return propertyWriteEvent
+    }
+
+    override fun getExpiringEntitiesFromEntitySet(entitySetId: UUID, expirationBaseColumn: String, formattedDateMinusTTE: Any,
+                                                  sqlFormat: Int, deletedType: DeleteType) : BasePostgresIterable<UUID> {
+        return dataQueryService
+                .getExpiringEntitiesFromEntitySet(entitySetId, expirationBaseColumn, formattedDateMinusTTE,
+                        sqlFormat, deletedType)
     }
 
 }

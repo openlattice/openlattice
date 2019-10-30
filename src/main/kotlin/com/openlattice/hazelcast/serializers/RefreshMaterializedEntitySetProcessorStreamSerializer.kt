@@ -46,32 +46,11 @@ class RefreshMaterializedEntitySetProcessorStreamSerializer
 
     override fun write(out: ObjectDataOutput, obj: RefreshMaterializedEntitySetProcessor) {
         EntitySetStreamSerializer.serialize(out, obj.entitySet)
-
-        out.writeInt(obj.materializablePropertyTypes.size)
-
-        obj.materializablePropertyTypes.forEach { (propertyTypeId, propertyType) ->
-            UUIDStreamSerializer.serialize(out, propertyTypeId)
-            PropertyTypeStreamSerializer.serialize(out, propertyType)
-        }
-
-        MaterializeEntitySetProcessorStreamSerializer
-                .serializeAuthorizedPropertyTypesOfPrincipals(out, obj.authorizedPropertyTypesOfPrincipals)
     }
 
     override fun read(input: ObjectDataInput): RefreshMaterializedEntitySetProcessor {
         val entitySet = EntitySetStreamSerializer.deserialize(input)
-
-        val size = input.readInt()
-        val materializablePropertyTypes = ((0 until size).map {
-            UUIDStreamSerializer.deserialize(input) to PropertyTypeStreamSerializer.deserialize(input)
-        }.toMap())
-
-        val authorizedPropertyTypesOfPrincipals = MaterializeEntitySetProcessorStreamSerializer
-                .deserializeAuthorizedPropertyTypesOfPrincipals(input)
-
-        return RefreshMaterializedEntitySetProcessor(
-                entitySet, materializablePropertyTypes, authorizedPropertyTypesOfPrincipals
-        ).init(acm)
+        return RefreshMaterializedEntitySetProcessor(entitySet).init(acm)
     }
 
     override fun init(acm: AssemblerConnectionManager): Void? {
