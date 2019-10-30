@@ -55,10 +55,6 @@ class ExternalDatabaseManagementService(
 
     /*CREATE*/
     fun createOrganizationExternalDatabaseTable(orgId: UUID, table: OrganizationExternalDatabaseTable): UUID {
-        //TODO find out if principal things should be used or not, currently returning null
-//        val principal = Principals.getCurrentUser()
-//        Principals.ensureUser(principal)
-
         val tableFQN = FullQualifiedName(orgId.toString(), table.name)
         checkState(organizationExternalDatabaseTables.putIfAbsent(table.id, table) == null,
                 "OrganizationExternalDatabaseTable ${tableFQN.fullQualifiedNameAsString} already exists")
@@ -66,17 +62,11 @@ class ExternalDatabaseManagementService(
 
         val tableAclKey = AclKey(orgId, table.id)
         authorizationManager.setSecurableObjectType(tableAclKey, SecurableObjectType.OrganizationExternalDatabaseTable)
-        //authorizationManager.addPermission(tableAclKey, principal, EnumSet.allOf(Permission::class.java))
-        //eventBus?
 
         return table.id
     }
 
     fun createOrganizationExternalDatabaseColumn(orgId: UUID, column: OrganizationExternalDatabaseColumn): UUID {
-        //TODO find out if principal things should be used or not, currently returning null
-//        val principal = Principals.getCurrentUser()
-//        Principals.ensureUser(principal)
-
         checkState(organizationExternalDatabaseTables[column.tableId] != null,
                 "OrganizationExternalDatabaseColumn ${column.name} belongs to " +
                         "a table with id ${column.tableId} that does not exist")
@@ -87,7 +77,6 @@ class ExternalDatabaseManagementService(
 
         val columnAclKey = AclKey(orgId, column.tableId, column.id)
         authorizationManager.setSecurableObjectType(columnAclKey, SecurableObjectType.OrganizationExternalDatabaseColumn)
-//        authorizationManager.addPermission(columnAclKey, principal, EnumSet.allOf(Permission::class.java))
 
         return column.id
     }
@@ -153,8 +142,8 @@ class ExternalDatabaseManagementService(
                 pairsList.add(it.id to rs.getObject(it.name))
             }
             return@BasePostgresIterable pairsList
-        }.forEach {
-            it.forEach {
+        }.forEach { pairsList ->
+            pairsList.forEach {
                 dataByColumnId.getOrPut(it.first) { mutableListOf() }.add(it.second)
             }
         }
