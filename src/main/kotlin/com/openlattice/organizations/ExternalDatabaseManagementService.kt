@@ -148,9 +148,14 @@ class ExternalDatabaseManagementService(
         BasePostgresIterable(
                 StatementHolderSupplier(assemblerConnectionManager.connect(dbName), sql)
         ) { rs ->
+            val pairsList = mutableListOf<Pair<UUID, Any?>>()
             columns.forEach {
-                val datum: Any? = rs.getObject(it.name)
-                dataByColumnId.getOrPut(it.id) { mutableListOf() }.add(datum)
+                pairsList.add(it.id to rs.getObject(it.name))
+            }
+            return@BasePostgresIterable pairsList
+        }.forEach {
+            it.forEach {
+                dataByColumnId.getOrPut(it.first) { mutableListOf() }.add(it.second)
             }
         }
         return dataByColumnId
