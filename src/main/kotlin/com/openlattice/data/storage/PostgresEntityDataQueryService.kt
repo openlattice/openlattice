@@ -1112,7 +1112,7 @@ class PostgresEntityDataQueryService(
                     //TODO: https://github.com/pgjdbc/pgjdbc/pull/1194
                     //TODO: https://github.com/pgjdbc/pgjdbc/pull/1044
                     //Once above issues are resolved this can be done as a single query WHERE HASH = ANY(?)
-                    
+
                     updates
                             .flatMap { it.keys }
                             .forEach { update ->
@@ -1132,11 +1132,8 @@ class PostgresEntityDataQueryService(
                                 tombstoneLinks.setLong(3, -version)
                                 tombstoneLinks.setObject(4, entitySetId)
                                 tombstoneLinks.setArray(5, propertyTypeIdsArr)
-                                tombstoneLinks.setArray(
-                                        6,
-                                        PostgresArrays.createUuidArray(conn, linkingIds)
-                                )
-                                tombstoneLinks.setArray(7, entityKeyIdsArr)
+                                tombstoneLinks.setArray(6, entityKeyIdsArr)
+                                tombstoneLinks.setArray(7, linkingPartitionsArr)
                                 tombstoneLinks.setInt(8, partitionsVersion)
                                 tombstoneLinks.setBytes(9, update.array())
                                 tombstoneLinks.addBatch()
