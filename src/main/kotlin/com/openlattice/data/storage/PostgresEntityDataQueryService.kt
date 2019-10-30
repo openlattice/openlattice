@@ -1005,7 +1005,6 @@ class PostgresEntityDataQueryService(
      * This version of tombstone only operates on the [PostgresTable.DATA] table and does not change the version of
      * entities in the [PostgresTable.IDS] table
      *
-     * @param conn A valid JDBC connection, ideally with autocommit disabled.
      * @param entitySetId The entity set id for which to tombstone entries
      * @param entityKeyIds The entity key ids for which to tombstone entries.
      * @param propertyTypesToTombstone A collection of property types to tombstone
@@ -1022,11 +1021,14 @@ class PostgresEntityDataQueryService(
             version: Long,
             partitionsInfo: PartitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
     ): WriteEvent {
+        val linkingIds = entityKeyIdsToLinkingIds.values
         return hds.connection.use { conn ->
             val propertyTypeIdsArr = PostgresArrays.createUuidArray(conn, propertyTypesToTombstone.map { it.id })
             val entityKeyIdsArr = PostgresArrays.createUuidArray(conn, entityKeyIds)
             val partitions = partitionsInfo.partitions.toList()
             val partitionsArr = PostgresArrays.createIntArray(conn, entityKeyIds.map { getPartition(it, partitions) })
+            val linkingPartitionsArr = PostgresArrays.createIntArray(
+                    conn, linkingIds.map { getPartition(it, partitions) })
 
             val numUpdated = conn.prepareStatement(updateVersionsForPropertyTypesInEntitiesInEntitySet()).use { ps ->
                 ps.setLong(1, -version)
@@ -1048,8 +1050,9 @@ class PostgresEntityDataQueryService(
                 ps.setLong(3, -version)
                 ps.setObject(4, entitySetId)
                 ps.setArray(5, propertyTypeIdsArr)
-                ps.setArray(6, PostgresArrays.createUuidArray(conn, entityKeyIdsToLinkingIds.values))
-                ps.setArray(7, entityKeyIdsArr)
+                ps.setArray(6, entityKeyIdsArr)
+                ps.setArray(7, linkingPartitionsArr)
+                ps.setInt(8, partitionsInfo.partitionsVersion)
                 ps.executeUpdate()
             }
 
@@ -1082,6 +1085,7 @@ class PostgresEntityDataQueryService(
     ): WriteEvent {
         return hds.connection.use { conn ->
             val entityKeyIds = entities.keys
+            val linkingIds = entityKeyIdsToLinkingIds.values
             val partitions = partitionsInfo.partitions.toList()
             val entityKeyIdsArr = PostgresArrays.createUuidArray(conn, entityKeyIds)
             val partitionsVersion = partitionsInfo.partitionsVersion
@@ -1089,6 +1093,10 @@ class PostgresEntityDataQueryService(
                     conn, entities.keys.map {
                 getPartition(it, partitions)
             })
+            val linkingPartitionsArr = PostgresArrays.createIntArray(
+                    conn,
+                    linkingIds.map { getPartition(it, partitions) }
+            )
 
             val updatePropertyValueVersion = conn.prepareStatement(
                     updateVersionsForPropertyValuesInEntitiesInEntitySet()
@@ -1104,7 +1112,7 @@ class PostgresEntityDataQueryService(
                     //TODO: https://github.com/pgjdbc/pgjdbc/pull/1194
                     //TODO: https://github.com/pgjdbc/pgjdbc/pull/1044
                     //Once above issues are resolved this can be done as a single query WHERE HASH = ANY(?)
-
+                    z
                     updates
                             .flatMap { it.keys }
                             .forEach { update ->
@@ -1126,10 +1134,11 @@ class PostgresEntityDataQueryService(
                                 tombstoneLinks.setArray(5, propertyTypeIdsArr)
                                 tombstoneLinks.setArray(
                                         6,
-                                        PostgresArrays.createUuidArray(conn, entityKeyIdsToLinkingIds.values)
+                                        PostgresArrays.createUuidArray(conn, linkingIds)
                                 )
                                 tombstoneLinks.setArray(7, entityKeyIdsArr)
-                                tombstoneLinks.setBytes(8, update.array())
+                                tombstoneLinks.setInt(8, partitionsVersion)
+                                tombstoneLinks.setBytes(9, update.array())
                                 tombstoneLinks.addBatch()
                             }
                 }
