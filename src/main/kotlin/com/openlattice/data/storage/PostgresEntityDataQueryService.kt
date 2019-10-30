@@ -1112,7 +1112,7 @@ class PostgresEntityDataQueryService(
                     //TODO: https://github.com/pgjdbc/pgjdbc/pull/1194
                     //TODO: https://github.com/pgjdbc/pgjdbc/pull/1044
                     //Once above issues are resolved this can be done as a single query WHERE HASH = ANY(?)
-                    z
+                    
                     updates
                             .flatMap { it.keys }
                             .forEach { update ->
