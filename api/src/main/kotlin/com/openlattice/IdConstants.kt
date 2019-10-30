@@ -54,8 +54,12 @@ enum class IdConstants(val id: UUID) {
     VERSION_ID(UUID(7L, 20L)),
 
     // entity set ids
-    CONTACT_INFO_ENTITY_SET_ID(UUID(8L, 20L)),
-    LINKING_PERSON_ENTITY_SET_ID(UUID(9L, 20L)),
+    CONTACT_INFO_ENTITY_SET_ID(UUID(8, 20)),
+    LINKING_PERSON_ENTITY_SET_ID(UUID(9, 20)),
+
+    // system
+    SYSTEM_ID(UUID(10, 20)),
+
 
     /* Linker */
 
@@ -66,6 +70,6 @@ enum class IdConstants(val id: UUID) {
     LINKING_ENTITY_SET_ID(UUID(0L, 40L)),
 
     // empty origin ID
-    EMPTY_ORIGIN_ID(UUID(1L, 40L)),
+    EMPTY_ORIGIN_ID(UUID(Long.MAX_VALUE, Long.MAX_VALUE)),
 
 }

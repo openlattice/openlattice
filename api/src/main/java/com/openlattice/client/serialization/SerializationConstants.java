@@ -77,6 +77,7 @@ public final class SerializationConstants {
     public static final String DATATYPE_FIELD                   = "datatype";
     public static final String DATA_ID                          = "dataId";
     public static final String DEFAULT_SHOW                     = "defaultShow";
+    public static final String DELETE_TYPE                      = "deleteType";
     public static final String DEIDENTIFIED                     = "deidentified";
     public static final String DESCRIPTION_FIELD                = "description";
     public static final String DETAILS_FIELD                    = "details";
@@ -100,6 +101,8 @@ public final class SerializationConstants {
     public static final String ENTITY_ID_GENERATOR              = "entityIdGenerator";
     public static final String ENTITY_KEY_ID                    = "entityKeyId";
     public static final String ENTITY_KEY_IDS                   = "entityKeyIds";
+    public static final String ENTITY_LINKING_FEEDBACK          = "entityLinkingFeedback";
+    public static final String ENTITY_KEY_PAIR                  = "entityKeyPair";
     public static final String ENTITY_QUERIES                   = "entityQueries";
     public static final String ENTITY_SETS_ENTITY_KEY_MAPPINGS  = "entitySetsEntityKeyMappings";
     public static final String ENTITY_SETS_FIELD                = "entitySets";
@@ -151,7 +154,6 @@ public final class SerializationConstants {
     public static final String LINKED_ENTITY_SETS               = "linkedEntitySets";
     public static final String LINKING                          = "linking";
     public static final String LINKING_ENTITY                   = "linkingEntity";
-    public static final String LINKING_FEEDBACK                 = "linkingFeedback";
     public static final String LINKING_PROPERTIES_FIELD         = "linkingProperties";
     public static final String LONGITUDE                        = "longitude";
     public static final String LOWERBOUND                       = "lowerbound";
