@@ -358,20 +358,23 @@ class PostgresEntityDataQueryService(
 //        rowLocks.executeQuery()
 
             //Update metadata
-            val entityKeyIdsToLinkingIds = BasePostgresIterable<Pair<UUID, UUID?>>(
-                    ConnectedPreparedStatementHolderSupplier(
-                            connection,
-                            upsertEntitiesSql,
-                            DEFAULT_BATCH_SIZE
-                    ) { upsertEntities ->
-                        upsertEntities.setObject(1, versionsArrays)
-                        upsertEntities.setObject(2, version)
-                        upsertEntities.setObject(3, version)
-                        upsertEntities.setObject(4, entitySetId)
-                        upsertEntities.setArray(5, entityKeyIdsArr)
-                        upsertEntities.setInt(6, partition)
-                    }) { rs -> ResultSetAdapters.id(rs) to ResultSetAdapters.linkingId(rs) }.toMap()
-//
+            val upsertEntities = connection.prepareStatement(upsertEntitiesSql)
+
+            upsertEntities.setObject(1, versionsArrays)
+            upsertEntities.setObject(2, version)
+            upsertEntities.setObject(3, version)
+            upsertEntities.setObject(4, entitySetId)
+            upsertEntities.setArray(5, entityKeyIdsArr)
+            upsertEntities.setInt(6, partition)
+            upsertEntities.fetchSize = DEFAULT_BATCH_SIZE
+
+            val rs = upsertEntities.executeQuery()
+            val entityKeyIdsToLinkingIds: MutableMap<UUID, UUID?> = mutableMapOf()
+
+            while (rs.next()) {
+                entityKeyIdsToLinkingIds[ResultSetAdapters.id(rs)] = ResultSetAdapters.linkingId(rs)
+            }
+
             val updatedEntityCount = entityKeyIdsToLinkingIds.size
 
             //Basic validation.
