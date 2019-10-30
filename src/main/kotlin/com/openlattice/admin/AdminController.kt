@@ -15,6 +15,7 @@ import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.notifications.sms.SmsEntitySetInformation
 import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.postgres.DataTables.quote
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType
@@ -22,6 +23,10 @@ import org.springframework.web.bind.annotation.*
 import java.util.*
 import javax.inject.Inject
 
+@SuppressFBWarnings(
+        value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE", "BC_BAD_CAST_TO_ABSTRACT_COLLECTION"],
+        justification = "Allowing redundant kotlin null check on lateinit variables, " +
+                "Allowing kotlin collection mapping cast to List")
 @RestController
 @RequestMapping(CONTROLLER)
 class AdminController : AdminApi, AuthorizingComponent {

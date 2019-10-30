@@ -33,12 +33,15 @@ import com.openlattice.apps.*;
 import com.openlattice.apps.processors.*;
 import com.openlattice.authorization.*;
 import com.openlattice.collections.CollectionsManager;
+import com.openlattice.authorization.util.AuthorizationUtils;
+import com.openlattice.controllers.exceptions.BadRequestException;
+import com.openlattice.data.DataExpiration;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.util.Util;
 import com.openlattice.edm.EntitySet;
-import com.openlattice.edm.collection.CollectionTemplateType;
-import com.openlattice.edm.collection.EntitySetCollection;
-import com.openlattice.edm.collection.EntityTypeCollection;
+import com.openlattice.collections.CollectionTemplateType;
+import com.openlattice.collections.EntitySetCollection;
+import com.openlattice.collections.EntityTypeCollection;
 import com.openlattice.edm.events.AppCreatedEvent;
 import com.openlattice.edm.events.AppDeletedEvent;
 import com.openlattice.edm.requests.MetadataUpdate;
@@ -226,7 +229,7 @@ public class AppService {
                         app.getEntityTypeCollectionId(),
                         appInstallation.getTemplate().get(),
                         ImmutableSet.of(),
-                        Optional.of( organizationId )
+                        organizationId
                 ), true ) );
 
         Map<String, Object> settings = appInstallation.getSettings().orElse( app.getDefaultSettings() );
@@ -354,6 +357,10 @@ public class AppService {
     }
 
     public void updateAppMetadata( UUID appId, MetadataUpdate metadataUpdate ) {
+        if ( metadataUpdate.getName().isPresent() ) {
+            reservations.renameReservation( appId, metadataUpdate.getName().get() );
+        }
+
         apps.executeOnKey( appId, new UpdateAppMetadataProcessor( metadataUpdate ) );
         eventBus.post( new AppCreatedEvent( getApp( appId ) ) );
     }

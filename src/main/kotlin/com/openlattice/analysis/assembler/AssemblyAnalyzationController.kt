@@ -32,6 +32,7 @@ import com.openlattice.authorization.Principals
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EdmService
 import com.openlattice.directory.MaterializedViewAccount
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -39,6 +40,10 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import javax.inject.Inject
 
+@SuppressFBWarnings(
+        value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE", "BC_BAD_CAST_TO_ABSTRACT_COLLECTION"],
+        justification = "Allowing redundant kotlin null check on lateinit variables, " +
+                "Allowing kotlin collection mapping cast to List")
 @RestController
 @RequestMapping(CONTROLLER)
 class AssemblyAnalyzationController : AssemblyAnalyzationApi, AuthorizingComponent {

@@ -31,11 +31,7 @@ import com.hazelcast.core.HazelcastInstance;
 import com.kryptnostic.rhizome.configuration.ConfigurationConstants;
 import com.kryptnostic.rhizome.configuration.amazon.AmazonLaunchConfiguration;
 import com.openlattice.analysis.AnalysisService;
-import com.openlattice.assembler.Assembler;
-import com.openlattice.assembler.AssemblerConfiguration;
-import com.openlattice.assembler.AssemblerConnectionManager;
-import com.openlattice.assembler.AssemblerDependencies;
-import com.openlattice.assembler.AssemblerQueryService;
+import com.openlattice.assembler.*;
 import com.openlattice.assembler.pods.AssemblerConfigurationPod;
 import com.openlattice.assembler.tasks.UserCredentialSyncTask;
 import com.openlattice.auditing.*;
@@ -43,6 +39,7 @@ import com.openlattice.auth0.Auth0Pod;
 import com.openlattice.auth0.Auth0TokenProvider;
 import com.openlattice.authentication.Auth0Configuration;
 import com.openlattice.authorization.*;
+<<<<<<< HEAD
 import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.authorization.AuthorizationQueryService;
 import com.openlattice.authorization.DbCredentialService;
@@ -53,6 +50,8 @@ import com.openlattice.authorization.HazelcastSecurableObjectResolveTypeService;
 import com.openlattice.authorization.PostgresUserApi;
 import com.openlattice.authorization.Principals;
 import com.openlattice.authorization.SecurableObjectResolveTypeService;
+=======
+>>>>>>> develop
 import com.openlattice.collections.CollectionsManager;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.DataGraphManager;
@@ -61,15 +60,7 @@ import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.graph.DataGraphServiceHelper;
 import com.openlattice.data.ids.PostgresEntityKeyIdService;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
-import com.openlattice.data.storage.ByteBlobDataManager;
-import com.openlattice.data.storage.EntityDatastore;
-import com.openlattice.data.storage.IndexingMetadataManager;
-import com.openlattice.data.storage.PostgresDataSinkService;
-import com.openlattice.data.storage.PostgresEntityDataQueryService;
-import com.openlattice.data.storage.PostgresEntityDatastore;
-import com.openlattice.data.storage.PostgresEntitySetSizesInitializationTask;
-import com.openlattice.data.storage.PostgresEntitySetSizesTask;
-import com.openlattice.data.storage.PostgresEntitySetSizesTaskDependency;
+import com.openlattice.data.storage.*;
 import com.openlattice.data.storage.aws.AwsDataSinkService;
 import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.datastore.apps.services.AppService;
@@ -352,7 +343,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public HazelcastIdGenerationService idGenerationService() {
-        return new HazelcastIdGenerationService( hazelcastClientProvider );
+        return new HazelcastIdGenerationService( hazelcastClientProvider, executor );
     }
 
     @Bean
@@ -410,7 +401,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public SearchService searchService() {
-        return new SearchService( eventBus );
+        return new SearchService( eventBus, metricRegistry );
     }
 
     @Bean
@@ -486,16 +477,6 @@ public class DatastoreServicesPod {
     }
 
     @Bean
-    public CollectionsManager collectionsManager() {
-        return new CollectionsManager( hazelcastInstance,
-                dataModelService(),
-                aclKeyReservationService(),
-                schemaManager(),
-                authorizationManager(),
-                eventBus );
-    }
-
-    @Bean
     public HazelcastLongIdService longIdService() {
         return new HazelcastLongIdService( hazelcastClientProvider, hazelcastInstance );
     }
@@ -511,6 +492,16 @@ public class DatastoreServicesPod {
     @Profile( AuditingProfiles.LOCAL_AUDITING_PROFILE )
     public AuditingManager localAuditingService() {
         return new LocalAuditingService( dataGraphService(), auditRecordEntitySetsManager(), defaultObjectMapper() );
+    }
+
+    @Bean
+    public CollectionsManager collectionsManager() {
+        return new CollectionsManager( hazelcastInstance,
+                dataModelService(),
+                aclKeyReservationService(),
+                schemaManager(),
+                authorizationManager(),
+                eventBus );
     }
 
     @PostConstruct
