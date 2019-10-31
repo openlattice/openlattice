@@ -374,6 +374,12 @@ public final class PostgresColumn {
     public static final String                   REFRESH_RATE_FIELD              = "refresh_rate";
     public static final PostgresColumnDefinition REFRESH_RATE                    =
             new PostgresColumnDefinition( REFRESH_RATE_FIELD, BIGINT );
+    public static final String                   ROLE_ID_FIELD                   = "role_id";
+    public static final PostgresColumnDefinition ROLE_ID                         =
+            new PostgresColumnDefinition( ROLE_ID_FIELD, UUID ).notNull();
+    public static final String                   ROLES_FIELD                     = "roles";
+    public static final PostgresColumnDefinition ROLES                           =
+            new PostgresColumnDefinition( ROLES_FIELD, JSONB ).notNull();
     public static final String                   SCHEMAS_FIELD                   = "schemas";
     public static final PostgresColumnDefinition SCHEMAS                         =
             new PostgresColumnDefinition( SCHEMAS_FIELD, TEXT_ARRAY ).notNull();

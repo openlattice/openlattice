@@ -9,8 +9,8 @@ class UpdateAppConfigSettingsProcessor(
         val settingsToRemove: Set<String>
 ) : AbstractRhizomeEntryProcessor<AppConfigKey, AppTypeSetting, AppTypeSetting>() {
 
-    override fun process(entry: MutableMap.MutableEntry<AppConfigKey, AppTypeSetting>?): AppTypeSetting? {
-        val config = entry?.value ?: return null
+    override fun process(entry: MutableMap.MutableEntry<AppConfigKey, AppTypeSetting>): AppTypeSetting? {
+        val config = entry.value
         config.updateSettings(settingsToAdd)
         config.removeSettings(settingsToRemove)
         return config

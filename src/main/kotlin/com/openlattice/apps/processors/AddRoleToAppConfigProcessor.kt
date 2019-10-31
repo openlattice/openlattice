@@ -8,8 +8,8 @@ import java.util.*
 
 class AddRoleToAppConfigProcessor(val roleId: UUID, val roleAclKey: AclKey) : AbstractRhizomeEntryProcessor<AppConfigKey, AppTypeSetting, AppTypeSetting>() {
 
-    override fun process(entry: MutableMap.MutableEntry<AppConfigKey, AppTypeSetting>?): AppTypeSetting? {
-        val setting = entry?.value ?: return null
+    override fun process(entry: MutableMap.MutableEntry<AppConfigKey, AppTypeSetting>): AppTypeSetting? {
+        val setting = entry.value
         setting.addRole(roleId, roleAclKey)
         return setting
     }

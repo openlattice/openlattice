@@ -6,8 +6,8 @@ import java.util.*
 
 class RemoveRoleFromAppProcessor(val roleId: UUID) : AbstractRhizomeEntryProcessor<UUID, App, App>() {
 
-    override fun process(entry: MutableMap.MutableEntry<UUID, App>?): App? {
-        val app = entry?.value ?: return null
+    override fun process(entry: MutableMap.MutableEntry<UUID, App>): App? {
+        val app = entry.value
         app.removeRole(roleId)
         return app
     }
