@@ -129,8 +129,7 @@ public class LinkerPostConfigurationServicesPod {
         return new PostgresEntityDataQueryService(
                 hikariDataSource,
                 byteBlobDataManager,
-                partitionManager,
-                indexingMetadataManager()
+                partitionManager
         );
     }
 
