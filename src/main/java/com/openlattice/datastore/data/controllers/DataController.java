@@ -25,7 +25,6 @@ import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Preconditions;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.*;
-import com.openlattice.IdConstants;
 import com.openlattice.auditing.*;
 import com.openlattice.authorization.*;
 import com.openlattice.controllers.exceptions.BadRequestException;
@@ -37,12 +36,8 @@ import com.openlattice.data.requests.FileType;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.SyncTicketService;
 import com.openlattice.edm.EntitySet;
-import com.openlattice.edm.set.EntitySetFlag;
-import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
-import com.openlattice.postgres.PostgresMetaDataProperties;
-import com.openlattice.postgres.streams.PostgresIterable;
 import com.openlattice.search.requests.EntityNeighborsFilter;
 import com.openlattice.web.mediatypes.CustomMediaType;
 import org.apache.commons.lang3.StringUtils;
@@ -604,7 +599,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             @RequestParam( value = TYPE ) DeleteType deleteType ) {
 
         WriteEvent writeEvent = deletionManager
-                .clearOrDeleteEntitySet( entitySetId, deleteType, Principals.getCurrentPrincipals() );
+                .clearOrDeleteEntitySetIfAuthorized( entitySetId, deleteType, Principals.getCurrentPrincipals() );
 
         recordEvent( new AuditableEvent(
                 getCurrentUserId(),
@@ -640,7 +635,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             @RequestParam( value = TYPE ) DeleteType deleteType ) {
 
         WriteEvent writeEvent = deletionManager
-                .clearOrDeleteEntities( entitySetId, entityKeyIds, deleteType, Principals.getCurrentPrincipals() );
+                .clearOrDeleteEntitiesIfAuthorized( entitySetId, entityKeyIds, deleteType, Principals.getCurrentPrincipals() );
 
         recordEvent( new AuditableEvent(
                 getCurrentUserId(),
@@ -712,7 +707,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         // if no neighbor entity set ids are defined to delete from, it reduces down to a simple deleteEntities call
         if ( filteringNeighborEntitySetIds.isEmpty() ) {
             return Integer
-                    .valueOf( deletionManager.clearOrDeleteEntities( entitySetId, entityKeyIds, deleteType, principals )
+                    .valueOf( deletionManager.clearOrDeleteEntitiesIfAuthorized( entitySetId, entityKeyIds, deleteType, principals )
                             .getNumUpdates() ).longValue();
         }
 
@@ -741,7 +736,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         long numUpdates = 0;
 
         WriteEvent writeEvent = deletionManager
-                .clearOrDeleteEntities( entitySetId, entityKeyIds, deleteType, principals );
+                .clearOrDeleteEntitiesIfAuthorized( entitySetId, entityKeyIds, deleteType, principals );
         numUpdates += writeEvent.getNumUpdates();
 
         recordEvent( new AuditableEvent(
@@ -765,7 +760,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                     final Set<UUID> neighborEntityKeyIds = entry.getValue().stream().map( EntityDataKey::getEntityKeyId )
                             .collect( Collectors.toSet() );
 
-                    WriteEvent neighborWriteEvent = deletionManager.clearOrDeleteEntities( neighborEntitySetId,
+                    WriteEvent neighborWriteEvent = deletionManager.clearOrDeleteEntitiesIfAuthorized( neighborEntitySetId,
                             neighborEntityKeyIds,
                             deleteType,
                             principals );

@@ -233,7 +233,7 @@ constructor(
         // linking entitysets have no entities or associations
         val deleted = if (!entitySet.isLinking) {
             // associations need to be deleted first, because edges are deleted in DataGraphManager.deleteEntitySet call
-            deletionManager.clearOrDeleteEntitySet(entitySetId, DeleteType.Hard, Principals.getCurrentPrincipals())
+            deletionManager.clearOrDeleteEntitySetIfAuthorized(entitySetId, DeleteType.Hard, Principals.getCurrentPrincipals())
         } else WriteEvent(System.currentTimeMillis(), 1)
 
         edmManager.deleteEntitySet(entitySetId)
@@ -508,13 +508,13 @@ constructor(
         val propertyTypes = aresManager.auditingTypes.propertyTypes
 
         aresManager.getAuditEdgeEntitySets(aclKey).forEach {
-            deletionManager.clearOrDeleteEntitySet(it, DeleteType.Hard)
+            deletionManager.clearOrDeleteEntitySetIfAuthorized(it, DeleteType.Hard)
             edmManager.deleteEntitySet(it)
             securableObjectTypes.deleteSecurableObjectType(AclKey(it))
         }
 
         aresManager.getAuditRecordEntitySets(aclKey).forEach {
-            deletionManager.clearOrDeleteEntitySet(it, DeleteType.Hard)
+            deletionManager.clearOrDeleteEntitySetIfAuthorized(it, DeleteType.Hard)
             edmManager.deleteEntitySet(it)
             securableObjectTypes.deleteSecurableObjectType(AclKey(it))
         }
