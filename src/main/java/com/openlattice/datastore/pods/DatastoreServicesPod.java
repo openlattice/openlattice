@@ -41,6 +41,7 @@ import com.openlattice.authentication.Auth0Configuration;
 import com.openlattice.authorization.*;
 import com.openlattice.collections.CollectionsManager;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
+import com.openlattice.data.DataDeletionManager;
 import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.DataGraphService;
 import com.openlattice.data.EntityKeyIdService;
@@ -205,7 +206,8 @@ public class DatastoreServicesPod {
         return new PostgresTypeManager( hikariDataSource );
     }
 
-    @Bean PartitionManager partitionManager() {
+    @Bean
+    PartitionManager partitionManager() {
         return new PartitionManager( hazelcastInstance, hikariDataSource );
     }
 
@@ -330,7 +332,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public HazelcastIdGenerationService idGenerationService() {
-        return new HazelcastIdGenerationService( hazelcastClientProvider );
+        return new HazelcastIdGenerationService( hazelcastClientProvider, executor );
     }
 
     @Bean
@@ -419,11 +421,13 @@ public class DatastoreServicesPod {
         return new PersistentSearchService( hikariDataSource, principalService() );
     }
 
-    @Bean PostgresDataSinkService postgresDataSinkService() {
+    @Bean
+    PostgresDataSinkService postgresDataSinkService() {
         return new PostgresDataSinkService();
     }
 
-    @Bean AwsDataSinkService awsDataSinkService() {
+    @Bean
+    AwsDataSinkService awsDataSinkService() {
         return new AwsDataSinkService( partitionManager(), byteBlobDataManager, hikariDataSource );
     }
 
@@ -488,6 +492,19 @@ public class DatastoreServicesPod {
                 schemaManager(),
                 authorizationManager(),
                 eventBus );
+    }
+
+    @Bean
+    public DataDeletionManager dataDeletionManager() {
+        return new DataDeletionService(
+                dataModelService(),
+                dataGraphService(),
+                edmAuthorizationHelper(),
+                authorizationManager(),
+                auditRecordEntitySetsManager(),
+                entityDatastore(),
+                graphApi()
+        );
     }
 
     @PostConstruct
