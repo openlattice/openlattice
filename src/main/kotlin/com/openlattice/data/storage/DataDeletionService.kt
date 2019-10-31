@@ -117,7 +117,7 @@ class DataDeletionService(
     }
 
 
-    // TODO rewrite this from scratch.
+    // TODO rewrite this from scratch: LATTICE-2268
     override fun clearOrDeleteEntitiesAndNeighborsIfAuthorized(
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
