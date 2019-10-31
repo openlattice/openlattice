@@ -1006,4 +1006,8 @@ public final class ResultSetAdapters {
                 authorizationMethod );
     }
 
+    public static String username(ResultSet rs) throws SQLException {
+        return rs.getString( USERNAME.getName() );
+    }
+
 }
