@@ -118,7 +118,7 @@ class DataDeletionService(
 
 
     // TODO rewrite this from scratch.
-    override fun clearOrDeleteEntitiesAndNeighbors(
+    override fun clearOrDeleteEntitiesAndNeighborsIfAuthorized(
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
             srcEntitySetIds: Set<UUID>,
@@ -215,48 +215,6 @@ class DataDeletionService(
         logger.info("Deleted {} entities from entity set {}.", numUpdates, entitySetId)
 
         return WriteEvent(maxVersion, numUpdates)
-    }
-
-    /** Delete specific entities from an entity set along with their neighborhoods **/
-
-    override fun clearOrDeleteEntitiesAndNeighborhoodIfAuthorized(
-            entitySetId: UUID,
-            entityKeyIds: Set<UUID>,
-            srcEntitySetFilter: Set<UUID>,
-            dstEntitySetFilter: Set<UUID>,
-            deleteType: DeleteType,
-            principals: Set<Principal>
-    ): WriteEvent {
-
-        if (entityKeyIds.isEmpty()) {
-            throw IllegalStateException("Cannot delete from an empty set of entityKeyIds for entity set $entitySetId")
-        }
-
-        // Ensure the entity set and neighbor entity sets that are being deleted from are authorized
-        val authorizedPropertyTypes = getAuthorizedPropertyTypesForDeleteByEntitySet(
-                setOf(entitySetId) + srcEntitySetFilter + dstEntitySetFilter,
-                deleteType,
-                Optional.empty(),
-                principals)
-
-        authorizeAndDeleteAssociationsForNeighborhood(
-                entitySetId,
-                entityKeyIds,
-                srcEntitySetFilter,
-                dstEntitySetFilter,
-                deleteType,
-                principals
-        )
-
-        // TODO 1) getNeighborEntityKeyIdsThatMatchFilters()
-        // TODO 2) authorize assoc entities of entityKeyIds + neighborEntityKeyIds
-        // TODO 3) delete assoc entities of entityKeyIds + neighborEntityKeyIds
-        // TODO 4) delete edges of entityKeyIds + neighborEntityKeyIds
-        // TODO 5) delete entityKeyIds + neighborEntityKeyIds
-
-
-        // TODO idk: how to batch this without exploding memory
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
     /** Delete property values from specific entities. No entities are actually deleted here. **/
