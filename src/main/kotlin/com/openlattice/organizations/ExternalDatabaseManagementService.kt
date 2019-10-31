@@ -25,6 +25,7 @@ import com.openlattice.organizations.mapstores.TABLE_ID_INDEX
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 
 import com.openlattice.postgres.DataTables.quote
+import com.openlattice.postgres.PostgresAuthenticationRecord
 import com.openlattice.postgres.PostgresPrivileges
 import com.openlattice.postgres.ResultSetAdapters.*
 import com.openlattice.postgres.streams.BasePostgresIterable
@@ -32,6 +33,10 @@ import com.openlattice.postgres.streams.StatementHolderSupplier
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
+import java.io.BufferedOutputStream
+import java.io.IOException
+import java.nio.file.Files
+import java.nio.file.Paths
 import java.time.OffsetDateTime
 import java.util.*
 
@@ -46,11 +51,13 @@ class ExternalDatabaseManagementService(
 
     private val organizationExternalDatabaseColumns: IMap<UUID, OrganizationExternalDatabaseColumn> = hazelcastInstance.getMap(HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_COlUMN.name)
     private val organizationExternalDatabaseTables: IMap<UUID, OrganizationExternalDatabaseTable> = hazelcastInstance.getMap(HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_TABLE.name)
+    private val hbaAuthenticationRecordsMapstore: IMap<String, PostgresAuthenticationRecord> = hazelcastInstance.getMap(HazelcastMap.HBA_AUTHENTICATION_RECORDS.name)
     private val securableObjectTypes: IMap<AclKey, SecurableObjectType> = hazelcastInstance.getMap(HazelcastMap.SECURABLE_OBJECT_TYPES.name)
     private val organizationTitles: IMap<UUID, String> = hazelcastInstance.getMap(HazelcastMap.ORGANIZATIONS_TITLES.name)
     private val aces: IMap<AceKey, AceValue> = hazelcastInstance.getMap(HazelcastMap.PERMISSIONS.name)
     private val logger = LoggerFactory.getLogger(ExternalDatabaseManagementService::class.java)
     private val primaryKeyConstraint = "PRIMARY KEY"
+    private val localHBAPath = "/usr/local/var/postgres/pg_hba_test.conf"
     private val FETCH_SIZE = 100_000
 
     /*CREATE*/
@@ -212,10 +219,17 @@ class ExternalDatabaseManagementService(
     }
 
     /*PERMISSIONS*/
-    fun addTrustedUser(orgId: UUID, userPrincipal: Principal, ipAdresses: Set<String>) {
+    fun addTrustedUsers(orgId: UUID, userPrincipal: Principal, ipAdressToIPMask: Map<String, String>) {
         val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
-        val userName = getDBUser(userPrincipal.id)
+        val userId = getDBUser(userPrincipal.id)
         //edit the pg_hba file through some magic. must. become. magician.
+        //add to map
+        //delete current hba and recreate
+        ipAdressToIPMask.forEach { (ipAddress, ipMask) ->
+            val record = PostgresAuthenticationRecord("hostssl", dbName, userId, ipAddress, ipMask, "md5")
+            hbaAuthenticationRecordsMapstore[userId] = record
+        }
+        updateHBARecords()
     }
 
     /**
@@ -376,8 +390,29 @@ class ExternalDatabaseManagementService(
             grantsTableName = "information_schema.role_column_grants"
             objectType = SecurableObjectType.OrganizationExternalDatabaseColumn
         }
-        val sql =  getCurrentUsersPrivilegesSql(tableName, grantsTableName, columnCondition)
+        val sql = getCurrentUsersPrivilegesSql(tableName, grantsTableName, columnCondition)
         return Pair(sql, objectType)
+    }
+
+    private fun updateHBARecords() {
+        val path = Paths.get(localHBAPath)
+        //clear out previous hba records file
+        Files.delete(path)
+
+        //write updated records
+        val records = hbaAuthenticationRecordsMapstore.values.map { it.buildWriteableRecord() }
+        try {
+            val out = BufferedOutputStream(
+                    Files.newOutputStream(path)
+            )
+            records.forEach {
+                val recordAsByteArray = it.toByteArray()
+                out.write(recordAsByteArray, 0, recordAsByteArray.size)
+            }
+        } catch (ex: IOException) {
+            logger.info("IO exception while trying to update hba config")
+        }
+
     }
 
     /*INTERNAL SQL QUERIES*/
