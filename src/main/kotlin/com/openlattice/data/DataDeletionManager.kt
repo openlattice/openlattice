@@ -9,7 +9,7 @@ interface DataDeletionManager {
     /**
      * Clears or deletes all entities from an entity set, as well as any edges and association entities, if authorized
      */
-    fun clearOrDeleteEntitySet(
+    fun clearOrDeleteEntitySetIfAuthorized(
             entitySetId: UUID,
             deleteType: DeleteType,
             principals: Set<Principal>
@@ -18,7 +18,7 @@ interface DataDeletionManager {
     /**
      * Clears or deletes the specified entity key ids from an entity set, as well as any edges and association entities, if authorized
      */
-    fun clearOrDeleteEntities(
+    fun clearOrDeleteEntitiesIfAuthorized(
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
             deleteType: DeleteType,
@@ -29,7 +29,7 @@ interface DataDeletionManager {
      * Clears or deletes the specified entity key ids from an entity set, as well as any edges filtered based on the
      * filter parameters, and the association entities and neighbor entities present on those edges, if authorized
      */
-    fun clearOrDeleteEntitiesAndNeighborhood(
+    fun clearOrDeleteEntitiesAndNeighborhoodIfAuthorized(
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
             srcEntitySetFilter: Set<UUID>,

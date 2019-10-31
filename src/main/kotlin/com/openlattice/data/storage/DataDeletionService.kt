@@ -1,6 +1,5 @@
 package com.openlattice.data.storage
 
-import com.google.common.collect.ImmutableSet
 import com.google.common.collect.Iterables
 import com.google.common.collect.Sets
 import com.openlattice.IdConstants
@@ -16,9 +15,7 @@ import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.core.GraphService
 import com.openlattice.postgres.PostgresMetaDataProperties
 import com.openlattice.postgres.streams.PostgresIterable
-import com.openlattice.search.requests.EntityNeighborsFilter
 import org.slf4j.LoggerFactory
-import java.lang.IllegalStateException
 import java.util.*
 import java.util.stream.Collectors
 import kotlin.math.max
@@ -62,7 +59,7 @@ class DataDeletionService(
         return clearOrDeleteEntitySet(entitySetId, deleteType, setOf(), skipAuthChecks = true)
     }
 
-    override fun clearOrDeleteEntitySet(
+    override fun clearOrDeleteEntitySetIfAuthorized(
             entitySetId: UUID,
             deleteType: DeleteType,
             principals: Set<Principal>
@@ -106,7 +103,7 @@ class DataDeletionService(
     }
 
 
-    override fun clearOrDeleteEntities(
+    override fun clearOrDeleteEntitiesIfAuthorized(
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
             deleteType: DeleteType,
@@ -157,7 +154,7 @@ class DataDeletionService(
 
     /** Delete specific entities from an entity set along with their neighborhoods **/
 
-    override fun clearOrDeleteEntitiesAndNeighborhood(
+    override fun clearOrDeleteEntitiesAndNeighborhoodIfAuthorized(
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
             srcEntitySetFilter: Set<UUID>,
@@ -246,7 +243,7 @@ class DataDeletionService(
         }
 
 
-        
+
 
 
         return 0
