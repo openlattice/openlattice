@@ -135,33 +135,6 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
         }
     }
 
-    fun markEntitiesAsNeedsToBeIndexed(entityKeys: Map<UUID, Set<UUID>>): Int {
-        val entitySetPartitions = partitionManager.getEntitySetsPartitionsInfo(entityKeys.keys)
-
-        hds.connection.use { connection ->
-            connection.prepareStatement(markIdsAsNeedToBeIndexedSql).use { stmt ->
-                entityKeys.forEach { (entitySetId, entityKeyIds) ->
-                    val partitionsInfo = entitySetPartitions.getValue(entitySetId)
-                    val partitions = partitionsInfo.partitions.toList()
-                    val partitionVersion = partitionsInfo.partitionsVersion
-
-                    entityKeyIds.groupBy { getPartition(it, partitions) }
-                            .forEach { (partition, entityKeyIds) ->
-                                val idsArray = PostgresArrays.createUuidArray(connection, entityKeyIds)
-                                stmt.setObject(1, entitySetId)
-                                stmt.setArray(2, idsArray)
-                                stmt.setInt(3, partition)
-                                stmt.setInt(4, partitionVersion)
-
-                                stmt.addBatch()
-                            }
-                }
-
-                return stmt.executeBatch().sum()
-            }
-        }
-    }
-
     fun markAsNeedsToBeLinked(linkingEntityDataKeys: Set<EntityDataKey>): Int {
         val linkingEntityKeys = linkingEntityDataKeys
                 .groupBy { it.entitySetId }

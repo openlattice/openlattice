@@ -695,12 +695,16 @@ class PostgresEntityDataQueryService(
         }
     }
 
+    /**
+     * Deletes properties of entities in entity set from [DATA] table.
+     */
     fun deleteEntityData(
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
             authorizedPropertyTypes: Map<UUID, PropertyType>,
             partitionsInfo: PartitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
     ): WriteEvent {
+        // TODO same as deleteEntityDataAndEntities?
         // Delete properties from S3
         authorizedPropertyTypes.map { property ->
             if (property.value.datatype == EdmPrimitiveTypeKind.Binary) {
@@ -718,11 +722,6 @@ class PostgresEntityDataQueryService(
                     )
                 }.sum()
 
-        // if properties were deleted, issue a re-index for all entities involved
-        if (numUpdates > 0) {
-            indexingMetaDataManager.markEntitiesAsNeedsToBeIndexed(mapOf(entitySetId to entityKeyIds))
-        }
-
         return WriteEvent(System.currentTimeMillis(), numUpdates)
     }
 
@@ -736,6 +735,7 @@ class PostgresEntityDataQueryService(
             partition: Int,
             partitionVersion: Int
     ): Int {
+        // TODO delete also linking entity entries
         return hds.connection.use { connection ->
             connection.autoCommit = false
 
