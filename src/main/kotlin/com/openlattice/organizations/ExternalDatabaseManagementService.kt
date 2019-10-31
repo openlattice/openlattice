@@ -37,6 +37,7 @@ import java.io.BufferedOutputStream
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Paths
+import java.nio.file.StandardOpenOption
 import java.time.OffsetDateTime
 import java.util.*
 
@@ -222,9 +223,6 @@ class ExternalDatabaseManagementService(
     fun addTrustedUsers(orgId: UUID, userPrincipal: Principal, ipAdressToIPMask: Map<String, String>) {
         val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
         val userId = getDBUser(userPrincipal.id)
-        //edit the pg_hba file through some magic. must. become. magician.
-        //add to map
-        //delete current hba and recreate
         ipAdressToIPMask.forEach { (ipAddress, ipMask) ->
             val record = PostgresAuthenticationRecord("hostssl", dbName, userId, ipAddress, ipMask, "md5")
             hbaAuthenticationRecordsMapstore[userId] = record
@@ -396,19 +394,21 @@ class ExternalDatabaseManagementService(
 
     private fun updateHBARecords() {
         val path = Paths.get(localHBAPath)
-        //clear out previous hba records file
-        Files.delete(path)
+        //delete previous hba records file
+        Files.deleteIfExists(path)
 
-        //write updated records
+        //recreate hba file with new records
         val records = hbaAuthenticationRecordsMapstore.values.map { it.buildWriteableRecord() }
         try {
             val out = BufferedOutputStream(
-                    Files.newOutputStream(path)
+                    Files.newOutputStream(path, StandardOpenOption.WRITE, StandardOpenOption.CREATE,
+                            StandardOpenOption.TRUNCATE_EXISTING)
             )
             records.forEach {
                 val recordAsByteArray = it.toByteArray()
-                out.write(recordAsByteArray, 0, recordAsByteArray.size)
+                out.write(recordAsByteArray)
             }
+            out.close()
         } catch (ex: IOException) {
             logger.info("IO exception while trying to update hba config")
         }
