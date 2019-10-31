@@ -1,5 +1,7 @@
 package com.openlattice.postgres.mapstores
 
+import com.hazelcast.config.InMemoryFormat
+import com.hazelcast.config.MapConfig
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.postgres.PostgresAuthenticationRecord
@@ -9,17 +11,18 @@ import com.zaxxer.hikari.HikariDataSource
 import java.sql.PreparedStatement
 import java.sql.ResultSet
 
-class HBAAuthenticationRecordsMapstore(
+open class HBAAuthenticationRecordsMapstore(
         hds: HikariDataSource
 ) : AbstractBasePostgresMapstore<String, PostgresAuthenticationRecord>
 (HazelcastMap.HBA_AUTHENTICATION_RECORDS.name, PostgresTable.HBA_AUTHENTICATION_RECORDS, hds) {
+
     override fun bind(ps: PreparedStatement, key: String, value: PostgresAuthenticationRecord) {
         var index = bind(ps, key, 1)
 
         //create
         ps.setString(index++, value.connectionType)
         ps.setString(index++, value.database)
-        ps.setString(index++, value.userId)
+        ps.setString(index++, value.username)
         ps.setString(index++, value.ipAddress)
         ps.setString(index++, value.ipMask)
         ps.setString(index++, value.authenticationMethod)
@@ -27,7 +30,7 @@ class HBAAuthenticationRecordsMapstore(
         //update
         ps.setString(index++, value.connectionType)
         ps.setString(index++, value.database)
-        ps.setString(index++, value.userId)
+        ps.setString(index++, value.username)
         ps.setString(index++, value.ipAddress)
         ps.setString(index++, value.ipMask)
         ps.setString(index++, value.authenticationMethod)
@@ -53,5 +56,10 @@ class HBAAuthenticationRecordsMapstore(
 
     override fun generateTestValue(): PostgresAuthenticationRecord {
         return TestDataFactory.postgresAuthenticationRecord()
+    }
+
+    override fun getMapConfig(): MapConfig {
+        return super.getMapConfig()
+                .setInMemoryFormat( InMemoryFormat.OBJECT )
     }
 }

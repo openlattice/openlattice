@@ -72,28 +72,10 @@ import com.openlattice.organizations.PrincipalSet;
 import com.openlattice.organizations.mapstores.OrganizationDefaultPartitionsMapstore;
 import com.openlattice.organizations.mapstores.OrganizationExternalDatabaseColumnMapstore;
 import com.openlattice.organizations.mapstores.OrganizationExternalDatabaseTableMapstore;
+import com.openlattice.postgres.PostgresAuthenticationRecord;
 import com.openlattice.postgres.PostgresPod;
 import com.openlattice.postgres.PostgresTableManager;
-import com.openlattice.postgres.mapstores.AclKeysMapstore;
-import com.openlattice.postgres.mapstores.AppConfigMapstore;
-import com.openlattice.postgres.mapstores.AppMapstore;
-import com.openlattice.postgres.mapstores.AppTypeMapstore;
-import com.openlattice.postgres.mapstores.AssociationTypeMapstore;
-import com.openlattice.postgres.mapstores.AuditRecordEntitySetConfigurationMapstore;
-import com.openlattice.postgres.mapstores.EntitySetMapstore;
-import com.openlattice.postgres.mapstores.EntitySetPropertyMetadataMapstore;
-import com.openlattice.postgres.mapstores.EntityTypeMapstore;
-import com.openlattice.postgres.mapstores.MaterializedEntitySetMapStore;
-import com.openlattice.postgres.mapstores.NamesMapstore;
-import com.openlattice.postgres.mapstores.OrganizationAppsMapstore;
-import com.openlattice.postgres.mapstores.OrganizationAssemblyMapstore;
-import com.openlattice.postgres.mapstores.OrganizationDescriptionsMapstore;
-import com.openlattice.postgres.mapstores.OrganizationEmailDomainsMapstore;
-import com.openlattice.postgres.mapstores.OrganizationMembersMapstore;
-import com.openlattice.postgres.mapstores.OrganizationTitlesMapstore;
-import com.openlattice.postgres.mapstores.RequestsMapstore;
-import com.openlattice.postgres.mapstores.SchemasMapstore;
-import com.openlattice.postgres.mapstores.SecurableObjectTypeMapstore;
+import com.openlattice.postgres.mapstores.*;
 import com.openlattice.requests.Status;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
@@ -328,6 +310,10 @@ public class MapstoresPod {
     @Bean
     public SelfRegisteringMapStore<UUID, OrganizationExternalDatabaseColumn> organizationExternalDatabaseColumnMapstore() {
         return new OrganizationExternalDatabaseColumnMapstore( hikariDataSource );
+    }
+
+    @Bean SelfRegisteringMapStore<String, PostgresAuthenticationRecord> hbaAuthenticationRecordsMapstore() {
+        return new HBAAuthenticationRecordsMapstore( hikariDataSource );
     }
 
     @Bean
