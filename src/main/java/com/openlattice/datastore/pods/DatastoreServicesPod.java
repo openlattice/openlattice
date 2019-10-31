@@ -439,8 +439,7 @@ public class DatastoreServicesPod {
         return new AwsDataSinkService(
                 partitionManager(),
                 byteBlobDataManager,
-                hikariDataSource,
-                indexingMetadataManager()
+                hikariDataSource
         );
     }
 
