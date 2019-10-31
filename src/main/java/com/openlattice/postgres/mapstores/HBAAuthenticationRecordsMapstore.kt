@@ -22,7 +22,6 @@ open class HBAAuthenticationRecordsMapstore(
         //create
         ps.setString(index++, value.connectionType)
         ps.setString(index++, value.database)
-        ps.setString(index++, value.username)
         ps.setString(index++, value.ipAddress)
         ps.setString(index++, value.ipMask)
         ps.setString(index++, value.authenticationMethod)
@@ -30,7 +29,6 @@ open class HBAAuthenticationRecordsMapstore(
         //update
         ps.setString(index++, value.connectionType)
         ps.setString(index++, value.database)
-        ps.setString(index++, value.username)
         ps.setString(index++, value.ipAddress)
         ps.setString(index++, value.ipMask)
         ps.setString(index++, value.authenticationMethod)
@@ -43,7 +41,7 @@ open class HBAAuthenticationRecordsMapstore(
     }
 
     override fun mapToKey(rs: ResultSet?): String {
-        return ResultSetAdapters.user(rs)
+        return ResultSetAdapters.username(rs)
     }
 
     override fun mapToValue(rs: ResultSet?): PostgresAuthenticationRecord {
