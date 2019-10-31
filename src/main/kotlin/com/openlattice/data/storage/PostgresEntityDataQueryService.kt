@@ -726,6 +726,9 @@ class PostgresEntityDataQueryService(
         return WriteEvent(System.currentTimeMillis(), numUpdates)
     }
 
+    /**
+     * Deletes properties of entities in entity set from [DATA] table.
+     */
     private fun deletePropertiesFromEntities(
             entitySetId: UUID,
             entities: Collection<UUID>,
@@ -756,6 +759,9 @@ class PostgresEntityDataQueryService(
         }
     }
 
+    /**
+     * Deletes properties of entities in entity set from [DATA] table.
+     */
     fun deleteEntityDataAndEntities(
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
@@ -789,6 +795,7 @@ class PostgresEntityDataQueryService(
             partition: Int,
             partitionVersion: Int
     ): Int {
+        // TODO also delete linking entities
         return hds.connection.use { connection ->
             connection.autoCommit = false
 
@@ -809,6 +816,9 @@ class PostgresEntityDataQueryService(
         }
     }
 
+    /**
+     * Deletes property types of entity set from [DATA] table.
+     */
     fun deleteEntitySetData(entitySetId: UUID, propertyTypes: Map<UUID, PropertyType>): WriteEvent {
         val numUpdates = hds.connection.use { connection ->
             val ps = connection.prepareStatement(deletePropertyInEntitySet)
@@ -854,7 +864,7 @@ class PostgresEntityDataQueryService(
     }
 
 
-    fun deletePropertiesInEntitySetFromS3(entitySetId: UUID, propertyTypeId: UUID): Long {
+    private fun deletePropertiesInEntitySetFromS3(entitySetId: UUID, propertyTypeId: UUID): Long {
         val count = AtomicLong()
         BasePostgresIterable<String>(
                 PreparedStatementHolderSupplier(hds, selectEntitySetTextProperties, FETCH_SIZE) { ps ->
@@ -969,7 +979,7 @@ class PostgresEntityDataQueryService(
      * Tombstones the provided set of property types for each provided entity key.
      *
      * This version of tombstone only operates on the [DATA] table and does not change the version of
-     * entities in the [PostgresTable.IDS] table
+     * entities in the [IDS] table
      *
      * @param conn A valid JDBC connection, ideally with autocommit disabled.
      * @param entitySetId The entity set id for which to tombstone entries

@@ -513,7 +513,7 @@ val tombstoneLinkForEntity = "$updateVersionsForPropertiesInEntitySet " +
         "AND ${PARTITION.name} = ANY(?) "
 
 /**
- * Preparable SQL deletes a given property in a given entity set in [IDS]
+ * Preparable SQL deletes a given property in a given entity set in [DATA]
  *
  * The following bind order is expected:
  *
