@@ -459,8 +459,13 @@ internal val updateVersionsForPropertyTypesInEntitySet = "$updateVersionsForProp
  * 7. partitions
  * 8. partition version
  */
-internal fun updateVersionsForPropertyTypesInEntitiesInEntitySet( linking: Boolean = false ): String {
-    val idsSql = if( linking ) "AND ${ORIGIN_ID.name} = ANY(?)" else "AND ${ID_VALUE.name} = ANY(?)"
+internal fun updateVersionsForPropertyTypesInEntitiesInEntitySet(linking: Boolean = false): String {
+    val idsSql = if (linking) {
+        "AND ${ORIGIN_ID.name} = ANY(?)"
+    } else {
+        "AND ${ID_VALUE.name} = ANY(?)"
+    }
+
     return "$updateVersionsForPropertyTypesInEntitySet $idsSql " +
             "AND ${PARTITION.name} = ANY(?) " +
             "AND ${PARTITIONS_VERSION.name} = ? "
