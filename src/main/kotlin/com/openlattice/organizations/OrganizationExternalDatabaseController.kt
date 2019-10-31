@@ -8,6 +8,8 @@ import com.openlattice.authorization.*
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.CONTROLLER
 import com.openlattice.organization.OrganizationExternalDatabaseApi
+import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.AUTH_METHOD
+import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.AUTH_METHOD_PATH
 import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.COLUMN_NAME
 import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.COLUMN_NAME_PATH
 import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.DATA
@@ -65,14 +67,14 @@ class OrganizationExternalDatabaseController : OrganizationExternalDatabaseApi, 
 
     @Timed
     @PostMapping(path = [ID_PATH + USER_ID_PATH + EXTERNAL_DATABASE])
-    override fun addTrustedUser(
+    override fun addTrustedUsers(
             @PathVariable(ID) organizationId: UUID,
             @PathVariable(USER_ID) userId: String,
-            @RequestBody ipAddresses: Set<String>
+            @RequestBody ipAddressToIPMask: Map<String, String>
     ) {
         ensureOwner(organizationId)
         val userPrincipal = Principal(PrincipalType.USER, userId)
-        edms.addTrustedUser(organizationId, userPrincipal, ipAddresses)
+        edms.addTrustedUsers(organizationId, userPrincipal, ipAddressToIPMask)
     }
 
     @Timed
