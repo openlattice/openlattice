@@ -8,8 +8,6 @@ import com.openlattice.authorization.*
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.CONTROLLER
 import com.openlattice.organization.OrganizationExternalDatabaseApi
-import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.AUTH_METHOD
-import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.AUTH_METHOD_PATH
 import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.COLUMN_NAME
 import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.COLUMN_NAME_PATH
 import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.DATA
