@@ -14,10 +14,9 @@ import java.util.*
 class AwsDataSinkService(
         partitionManager: PartitionManager,
         private val byteBlobDataManager: ByteBlobDataManager,
-        hds: HikariDataSource,
-        indexingMetadataManager: IndexingMetadataManager
+        hds: HikariDataSource
 ) {
-    private val dqs = PostgresEntityDataQueryService(hds, byteBlobDataManager, partitionManager, indexingMetadataManager)
+    private val dqs = PostgresEntityDataQueryService(hds, byteBlobDataManager, partitionManager)
 
     fun generatePresignedUrls(
             entities: List<S3EntityData>, authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
