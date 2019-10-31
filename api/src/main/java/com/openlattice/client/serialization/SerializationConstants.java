@@ -55,6 +55,7 @@ public final class SerializationConstants {
     public static final String AUDIT_ID                         = "auditId";
     public static final String AUDIT_RECORD_ENTITY_SET_ID       = "auditRecordEntitySetId";
     public static final String AUDIT_RECORD_ENTITY_SET_IDS      = "auditRecordEntitySetIds";
+    public static final String AUTHENTICATION_METHOD            = "authenticationMethod";
     public static final String AUTHORIZED_OBJECTS               = "authorizedObjects";
     public static final String BASE_TYPE_FIELD                  = "baseType";
     public static final String BIDIRECTIONAL                    = "bidirectional";
@@ -70,11 +71,13 @@ public final class SerializationConstants {
     public static final String COMPARISON                       = "comparison";
     public static final String CONFIG                           = "config";
     public static final String CONFLICTS                        = "conflicts";
+    public static final String CONNECTION_TYPE                  = "connectionType";
     public static final String CONSTRAINTS                      = "constraints";
     public static final String CONTACTS                         = "contacts";
     public static final String COUNT                            = "count";
     public static final String CURRENT_ENTITY_SET               = "currentEntitySet";
     public static final String DATA                             = "data";
+    public static final String DATABASE                         = "database";
     public static final String DATASOURCE_IDS                   = "datasourceIds";
     public static final String DATATYPE_FIELD                   = "datatype";
     public static final String DATA_ID                          = "dataId";
@@ -141,6 +144,8 @@ public final class SerializationConstants {
     public static final String INCLUDE_FIELD                    = "include";
     public static final String INDEXING                         = "indexing";
     public static final String INDEX_TYPE                       = "indexType";
+    public static final String IP_ADDRESS                       = "ipAddress";
+    public static final String IP_MASK                          = "ipMask";
     public static final String IS_DESCENDING                    = "isDescending";
     public static final String IS_DST                           = "isDst";
     public static final String IS_OWNER                         = "isOwner";

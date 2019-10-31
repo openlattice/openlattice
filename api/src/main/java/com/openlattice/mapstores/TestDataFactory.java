@@ -40,6 +40,7 @@ import com.openlattice.organization.OrganizationExternalDatabaseColumn;
 import com.openlattice.organization.OrganizationExternalDatabaseTable;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.postgres.IndexType;
+import com.openlattice.postgres.PostgresAuthenticationRecord;
 import com.openlattice.requests.PermissionsRequestDetails;
 import com.openlattice.requests.Request;
 import com.openlattice.requests.RequestStatus;
@@ -610,6 +611,17 @@ public final class TestDataFactory {
                 randomAlphanumeric( 5 ),
                 Optional.of(randomAlphanumeric( 5 )),
                 UUID.randomUUID()
+        );
+    }
+
+    public static PostgresAuthenticationRecord postgresAuthenticationRecord() {
+        return new PostgresAuthenticationRecord(
+                randomAlphanumeric( 5 ),
+                randomAlphanumeric( 5 ),
+                randomAlphanumeric( 5 ),
+                randomAlphanumeric( 5 ),
+                randomAlphanumeric( 5 ),
+                randomAlphanumeric( 5 )
         );
     }
 
