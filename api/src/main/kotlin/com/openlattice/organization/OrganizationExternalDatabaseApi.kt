@@ -29,6 +29,7 @@ interface OrganizationExternalDatabaseApi {
         const val USER_ID = "userId"
         const val USER_ID_PATH = "/{$USER_ID}"
     }
+
     /**
      *
      * @param organizationId The organization's UUID
@@ -36,12 +37,15 @@ interface OrganizationExternalDatabaseApi {
      * @param ipAddresses The set of ip addresses (as strings) from which users will be trusted
      */
     @POST(BASE + ID_PATH + USER_ID_PATH + EXTERNAL_DATABASE)
-    fun addTrustedUsers(
+    fun addTrustedUser(
             @Path(ID) organizationId: UUID,
             @Path(USER_ID) userId: String,
             @Body ipAddressToIPMask: Map<String, String>)
 
-    //gotta add a remove trusted user too
+    @DELETE(BASE + ID_PATH + USER_ID_PATH + EXTERNAL_DATABASE)
+    fun removeTrustedUser(
+            @Path(ID) organizationId: UUID,
+            @Path(USER_ID) userId: String)
 
     //get
 
