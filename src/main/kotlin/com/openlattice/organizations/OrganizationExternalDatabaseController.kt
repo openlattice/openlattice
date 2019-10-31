@@ -26,13 +26,10 @@ import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.US
 import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.USER_ID_PATH
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import com.openlattice.organization.OrganizationExternalDatabaseTable
-import com.openlattice.organization.OrganizationsApi
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.*
-import retrofit2.http.Path
 import java.util.*
-import java.util.stream.Collectors
 import javax.annotation.PostConstruct
 import javax.inject.Inject
 
@@ -65,14 +62,25 @@ class OrganizationExternalDatabaseController : OrganizationExternalDatabaseApi, 
 
     @Timed
     @PostMapping(path = [ID_PATH + USER_ID_PATH + EXTERNAL_DATABASE])
-    override fun addTrustedUsers(
+    override fun addTrustedUser(
             @PathVariable(ID) organizationId: UUID,
             @PathVariable(USER_ID) userId: String,
             @RequestBody ipAddressToIPMask: Map<String, String>
     ) {
         ensureOwner(organizationId)
         val userPrincipal = Principal(PrincipalType.USER, userId)
-        edms.addTrustedUsers(organizationId, userPrincipal, ipAddressToIPMask)
+        edms.addTrustedUser(organizationId, userPrincipal, ipAddressToIPMask)
+    }
+
+    @Timed
+    @DeleteMapping(path = [ID_PATH + USER_ID_PATH + EXTERNAL_DATABASE])
+    override fun removeTrustedUser(
+            @PathVariable(ID) organizationId: UUID,
+            @PathVariable(USER_ID) userId: String
+    ) {
+        ensureOwner(organizationId)
+        val userPrincipal = Principal(PrincipalType.USER, userId)
+        edms.removeTrustedUser(userPrincipal)
     }
 
     @Timed
