@@ -490,6 +490,9 @@ public final class PostgresColumn {
     public static final String                   USER_FIELD                        = "user";
     public static final PostgresColumnDefinition USER                              =
             new PostgresColumnDefinition( USER_FIELD, TEXT );
+    public static final String                   USERNAME_FIELD                    = "username";
+    public static final PostgresColumnDefinition USERNAME                          =
+            new PostgresColumnDefinition( USERNAME_FIELD, TEXT );
     public static final String                   VERSIONS_FIELD                    = "versions";
     public static final PostgresColumnDefinition VERSIONS                          =
             new PostgresColumnDefinition( VERSIONS_FIELD, BIGINT_ARRAY )

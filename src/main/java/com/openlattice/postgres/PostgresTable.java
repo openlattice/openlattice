@@ -236,10 +236,11 @@ public final class PostgresTable {
                     .addColumns(
                             CONNECTION_TYPE,
                             DATABASE,
-                            USER,
+                            USERNAME,
                             IP_ADDRESS,
                             IP_MASK,
-                            AUTHENTICATION_METHOD );
+                            AUTHENTICATION_METHOD )
+            .primaryKey( DATABASE, USERNAME );
 
     public static final PostgresTableDefinition        IDS                          =
             new CitusDistributedTableDefinition( "ids" )
