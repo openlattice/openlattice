@@ -25,7 +25,7 @@ import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.hazelcast.StreamSerializerTypeIds
-import com.openlattice.ids.IdGeneratingEntryProcessor
+import com.openlattice.ids.IdsGeneratingEntryProcessor
 import org.springframework.stereotype.Component
 
 /**
@@ -33,17 +33,17 @@ import org.springframework.stereotype.Component
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 @Component
-class IdGeneratingEntryProcessorStreamSerializer : SelfRegisteringStreamSerializer<IdGeneratingEntryProcessor> {
-    override fun getClazz(): Class<IdGeneratingEntryProcessor> {
-        return IdGeneratingEntryProcessor::class.java
+class IdGeneratingEntryProcessorStreamSerializer : SelfRegisteringStreamSerializer<IdsGeneratingEntryProcessor> {
+    override fun getClazz(): Class<IdsGeneratingEntryProcessor> {
+        return IdsGeneratingEntryProcessor::class.java
     }
 
-    override fun write(out: ObjectDataOutput, obj: IdGeneratingEntryProcessor) {
+    override fun write(out: ObjectDataOutput, obj: IdsGeneratingEntryProcessor) {
         out.writeInt(obj.count)
     }
 
-    override fun read(input: ObjectDataInput): IdGeneratingEntryProcessor {
-        return IdGeneratingEntryProcessor(input.readInt())
+    override fun read(input: ObjectDataInput): IdsGeneratingEntryProcessor {
+        return IdsGeneratingEntryProcessor(input.readInt())
     }
 
     override fun getTypeId(): Int {

@@ -45,6 +45,7 @@ import com.openlattice.postgres.PostgresColumn
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.*
 import com.openlattice.postgres.ResultSetAdapters
+import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
 import com.openlattice.search.requests.EntityNeighborsFilter
@@ -491,8 +492,7 @@ class Graph(
     override fun getEdgeEntitySetsConnectedToEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): Set<UUID> {
         val query = "SELECT DISTINCT ${EDGE_ENTITY_SET_ID.name} " +
                 "FROM ${E.name} " +
-                "WHERE (${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ANY(?) " +
-                "OR (${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} = ANY(?) )"
+                "WHERE ($SRC_IDS_SQL) OR ($DST_IDS_SQL) "
 
         return PostgresIterable(
                 Supplier {
@@ -517,7 +517,7 @@ class Graph(
                 "FROM ${E.name} " +
                 "WHERE ${SRC_ENTITY_SET_ID.name} = ? OR ${DST_ENTITY_SET_ID.name} = ?"
 
-        return PostgresIterable(
+        return BasePostgresIterable(
                 Supplier {
                     val connection = hds.connection
 
@@ -527,7 +527,7 @@ class Graph(
                     val rs = ps.executeQuery()
                     StatementHolder(connection, ps, rs)
                 },
-                Function<ResultSet, UUID> { ResultSetAdapters.edgeEntitySetId(it) }
+                { ResultSetAdapters.edgeEntitySetId(it) }
         ).toSet()
     }
 
