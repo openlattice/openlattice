@@ -697,7 +697,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         // (along with associations connected to all of them), not associations.
         // If called with an association entity set, it will simplify down to a basic delete call.
 
-        WriteEvent writeEvent = deletionManager.clearOrDeleteEntitiesAndNeighborhoodIfAuthorized(
+        WriteEvent writeEvent = deletionManager.clearOrDeleteEntitiesAndNeighborsIfAuthorized(
                 entitySetId,
                 filter.getEntityKeyIds(),
                 filter.getSrcEntitySetIds().orElse( ImmutableSet.of() ),
