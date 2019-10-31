@@ -990,4 +990,20 @@ public final class ResultSetAdapters {
     public static UUID originId( ResultSet rs ) throws SQLException {
         return rs.getObject( ORIGIN_ID.getName(), UUID.class );
     }
+
+    public static PostgresAuthenticationRecord postgresAuthenticationRecord( ResultSet rs ) throws SQLException {
+        String connectionType = rs.getString( CONNECTION_TYPE.getName() );
+        String database = rs.getString( DATABASE.getName() );
+        String userId = rs.getString( USER.getName() );
+        String ipAddress = rs.getString( IP_ADDRESS.getName() );
+        String ipMask = rs.getString( IP_MASK.getName() );
+        String authorizationMethod = rs.getString( AUTHENTICATION_METHOD.getName() );
+        return new PostgresAuthenticationRecord( connectionType,
+                database,
+                userId,
+                ipAddress,
+                ipMask,
+                authorizationMethod );
+    }
+
 }
