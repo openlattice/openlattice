@@ -44,8 +44,7 @@ const val DEFAULT_BATCH_SIZE = 128_000
 class PostgresEntityDataQueryService(
         private val hds: HikariDataSource,
         private val byteBlobDataManager: ByteBlobDataManager,
-        private val partitionManager: PartitionManager,
-        private val indexingMetaDataManager: IndexingMetadataManager
+        private val partitionManager: PartitionManager
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(PostgresEntityDataQueryService::class.java)
