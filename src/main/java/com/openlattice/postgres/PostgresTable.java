@@ -234,13 +234,13 @@ public final class PostgresTable {
     public static final PostgresTableDefinition HBA_AUTHENTICATION_RECORDS          =
             new PostgresTableDefinition( "hba_authentication_records" )
                     .addColumns(
-                            CONNECTION_TYPE,
-                            DATABASE,
                             USERNAME,
+                            DATABASE,
+                            CONNECTION_TYPE,
                             IP_ADDRESS,
                             IP_MASK,
                             AUTHENTICATION_METHOD )
-            .primaryKey( DATABASE, USERNAME );
+            .primaryKey( USERNAME );
 
     public static final PostgresTableDefinition        IDS                          =
             new CitusDistributedTableDefinition( "ids" )
