@@ -220,13 +220,19 @@ class ExternalDatabaseManagementService(
     }
 
     /*PERMISSIONS*/
-    fun addTrustedUsers(orgId: UUID, userPrincipal: Principal, ipAdressToIPMask: Map<String, String>) {
+    fun addTrustedUser(orgId: UUID, userPrincipal: Principal, ipAdressToIPMask: Map<String, String>) {
         val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
-        val userId = getDBUser(userPrincipal.id)
+        val username = getDBUser(userPrincipal.id)
         ipAdressToIPMask.forEach { (ipAddress, ipMask) ->
-            val record = PostgresAuthenticationRecord("hostssl", dbName, userId, ipAddress, ipMask, "md5")
-            hbaAuthenticationRecordsMapstore[userId] = record
+            val record = PostgresAuthenticationRecord("hostssl", dbName, username, ipAddress, ipMask, "md5")
+            hbaAuthenticationRecordsMapstore[username] = record
         }
+        updateHBARecords()
+    }
+
+    fun removeTrustedUser(userPrincipal: Principal) {
+        val username = getDBUser(userPrincipal.id)
+        hbaAuthenticationRecordsMapstore.remove(username)
         updateHBARecords()
     }
 
