@@ -254,6 +254,7 @@ public final class SerializationConstants {
     public static final String UPPERBOUND                       = "upperbound";
     public static final String URL                              = "url";
     public static final String USER_ID                          = "userId";
+    public static final String USERNAME                         = "username";
     public static final String VALUES                           = "values";
     public static final String VALUE_FIELD                      = "value";
     public static final String VALUE_MAPPER                     = "valueMapper";

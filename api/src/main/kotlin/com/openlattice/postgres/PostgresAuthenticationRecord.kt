@@ -17,9 +17,17 @@ import com.openlattice.client.serialization.SerializationConstants
 data class PostgresAuthenticationRecord(
         @JsonProperty(SerializationConstants.CONNECTION_TYPE) val connectionType: String,
         @JsonProperty(SerializationConstants.DATABASE) val database: String,
-        @JsonProperty(SerializationConstants.USER_ID) val userId: String,
+        @JsonProperty(SerializationConstants.USERNAME) val username: String,
         @JsonProperty(SerializationConstants.IP_ADDRESS) val ipAddress: String,
         @JsonProperty(SerializationConstants.IP_MASK) val ipMask: String,
         @JsonProperty(SerializationConstants.AUTHENTICATION_METHOD) val authenticationMethod: String
 ) {
+    fun buildWriteableRecord(): String {
+            return "${this.connectionType}  " +
+                    "${this.database}  " +
+                    "${this.username}  " +
+                    "${this.ipAddress}  " +
+                    "${this.ipMask}  " +
+                    "${this.authenticationMethod}"
+    }
 }
