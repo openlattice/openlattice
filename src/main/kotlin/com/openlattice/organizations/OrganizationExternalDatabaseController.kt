@@ -80,7 +80,7 @@ class OrganizationExternalDatabaseController : OrganizationExternalDatabaseApi, 
     ) {
         ensureOwner(organizationId)
         val userPrincipal = Principal(PrincipalType.USER, userId)
-        edms.removeTrustedUser(userPrincipal)
+        edms.removeTrustedUser(organizationId, userPrincipal)
     }
 
     @Timed
