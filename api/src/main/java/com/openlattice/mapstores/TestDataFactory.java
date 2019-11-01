@@ -594,7 +594,7 @@ public final class TestDataFactory {
                 UUID.randomUUID(),
                 randomAlphanumeric( 5 ),
                 randomAlphanumeric( 5 ),
-                Optional.of(randomAlphanumeric( 5 )),
+                Optional.of( randomAlphanumeric( 5 ) ),
                 table.getId(),
                 UUID.randomUUID(),
                 randomAlphabetic( 5 ),
@@ -603,24 +603,24 @@ public final class TestDataFactory {
         );
     }
 
-
     public static OrganizationExternalDatabaseTable organizationExternalDatabaseTable() {
         return new OrganizationExternalDatabaseTable(
                 UUID.randomUUID(),
                 randomAlphanumeric( 5 ),
                 randomAlphanumeric( 5 ),
-                Optional.of(randomAlphanumeric( 5 )),
+                Optional.of( randomAlphanumeric( 5 ) ),
                 UUID.randomUUID()
         );
     }
 
     public static PostgresAuthenticationRecord postgresAuthenticationRecord() {
+        String[] ipAddressesArray = { randomAlphanumeric( 5 ) };
+        Set<String> ipAddresses = new HashSet<>( Arrays.asList( ipAddressesArray ) );
         return new PostgresAuthenticationRecord(
                 randomAlphanumeric( 5 ),
                 randomAlphanumeric( 5 ),
                 randomAlphanumeric( 5 ),
-                randomAlphanumeric( 5 ),
-                randomAlphanumeric( 5 ),
+                ipAddresses,
                 randomAlphanumeric( 5 )
         );
     }

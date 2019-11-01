@@ -28,24 +28,31 @@ interface OrganizationExternalDatabaseApi {
         const val ROW_COUNT_PATH = "/{$ROW_COUNT}"
         const val USER_ID = "userId"
         const val USER_ID_PATH = "/{$USER_ID}"
+        const val CONNECTION_TYPE = "connectionType"
+        const val CONNECTION_TYPE_PATH = "/{$CONNECTION_TYPE}"
     }
 
     /**
      *
      * @param organizationId The organization's UUID
      * @param userId The user to be given trusted status
-     * @param ipAddresses The set of ip addresses (as strings) from which users will be trusted
+     * @param connectionType The connection type via which the user will be trusted
+     * @param ipAddresses The set of ip addresses (as strings) from which users
+     * will be trusted. This should be an empty set if the connectionType is local.
      */
-    @POST(BASE + ID_PATH + USER_ID_PATH + EXTERNAL_DATABASE)
+    @POST(BASE + ID_PATH + USER_ID_PATH + CONNECTION_TYPE_PATH + EXTERNAL_DATABASE)
     fun addTrustedUser(
             @Path(ID) organizationId: UUID,
             @Path(USER_ID) userId: String,
-            @Body ipAddressToIPMask: Map<String, String>)
+            @Path(CONNECTION_TYPE) connectionType: String,
+            @Body ipAddresses: Set<String>)
 
     @DELETE(BASE + ID_PATH + USER_ID_PATH + EXTERNAL_DATABASE)
     fun removeTrustedUser(
             @Path(ID) organizationId: UUID,
             @Path(USER_ID) userId: String)
+
+    //will need to add an update trusted user as well
 
     //get
 

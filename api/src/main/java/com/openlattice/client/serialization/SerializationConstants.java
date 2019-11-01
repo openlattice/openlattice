@@ -144,7 +144,7 @@ public final class SerializationConstants {
     public static final String INCLUDE_FIELD                    = "include";
     public static final String INDEXING                         = "indexing";
     public static final String INDEX_TYPE                       = "indexType";
-    public static final String IP_ADDRESS                       = "ipAddress";
+    public static final String IP_ADDRESSES                     = "ipAddresses";
     public static final String IP_MASK                          = "ipMask";
     public static final String IS_DESCENDING                    = "isDescending";
     public static final String IS_DST                           = "isDst";
