@@ -73,6 +73,7 @@ import com.openlattice.linking.graph.PostgresLinkingQueryService;
 import com.openlattice.notifications.sms.PhoneNumberService;
 import com.openlattice.organizations.ExternalDatabaseManagementService;
 import com.openlattice.organizations.HazelcastOrganizationService;
+import com.openlattice.organizations.OrganizationExternalDatabaseConfiguration;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.PostgresTableManager;
@@ -143,6 +144,9 @@ public class DatastoreServicesPod {
 
     @Inject
     private HazelcastClientProvider hazelcastClientProvider;
+
+    @Inject
+    private OrganizationExternalDatabaseConfiguration organizationExternalDatabaseConfiguration;
 
     @Bean
     public PostgresUserApi pgUserApi() {
@@ -498,7 +502,8 @@ public class DatastoreServicesPod {
                 assemblerConnectionManager(),
                 principalService(),
                 aclKeyReservationService(),
-                authorizationManager() );
+                authorizationManager(),
+                organizationExternalDatabaseConfiguration);
     }
 
     @PostConstruct
