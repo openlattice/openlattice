@@ -2,6 +2,7 @@ package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
+import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.postgres.PostgresAuthenticationRecord
@@ -15,8 +16,7 @@ class PostgresAuthenticationRecordStreamSerializer : SelfRegisteringStreamSerial
             output.writeUTF(obj.connectionType)
             output.writeUTF(obj.database)
             output.writeUTF(obj.username)
-            output.writeUTF(obj.ipAddress)
-            output.writeUTF(obj.ipMask)
+            SetStreamSerializers.fastOrderedStringSetSerializeAsArray(output, obj.ipAddresses)
             output.writeUTF(obj.authenticationMethod)
         }
 
@@ -24,10 +24,9 @@ class PostgresAuthenticationRecordStreamSerializer : SelfRegisteringStreamSerial
             val connectionType = input.readUTF()
             val database = input.readUTF()
             val username = input.readUTF()
-            val ipAddress = input.readUTF()
-            val ipMask = input.readUTF()
+            val ipAddresses = SetStreamSerializers.fastOrderedStringSetDeserializeAsArray(input)
             val authenticationMethod = input.readUTF()
-            return PostgresAuthenticationRecord(connectionType, database, username,ipAddress, ipMask, authenticationMethod)
+            return PostgresAuthenticationRecord(connectionType, database, username,ipAddresses, authenticationMethod)
         }
     }
 
