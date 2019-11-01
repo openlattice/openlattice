@@ -1,1 +1,3 @@
 path: "/usr/local/var/postgres/pg_hba_test.conf"
+connectionMethod: "hostssl"
+authMethod: "md5"
