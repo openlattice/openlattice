@@ -59,7 +59,6 @@ class ExternalDatabaseManagementService(
     private val aces: IMap<AceKey, AceValue> = hazelcastInstance.getMap(HazelcastMap.PERMISSIONS.name)
     private val logger = LoggerFactory.getLogger(ExternalDatabaseManagementService::class.java)
     private val primaryKeyConstraint = "PRIMARY KEY"
-    private val localHBAPath = "/usr/local/var/postgres/pg_hba_test.conf"
     private val FETCH_SIZE = 100_000
 
     /*CREATE*/
@@ -225,7 +224,13 @@ class ExternalDatabaseManagementService(
         val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
         val username = getDBUser(userPrincipal.id)
         ipAdressToIPMask.forEach { (ipAddress, ipMask) ->
-            val record = PostgresAuthenticationRecord("hostssl", dbName, username, ipAddress, ipMask, "md5")
+            val record = PostgresAuthenticationRecord(
+                    organizationExternalDatabaseConfiguration.connectionMethod,
+                    dbName,
+                    username,
+                    ipAddress,
+                    ipMask,
+                    organizationExternalDatabaseConfiguration.authMethod)
             hbaAuthenticationRecordsMapstore[username] = record
         }
         updateHBARecords(dbName)
@@ -462,7 +467,7 @@ class ExternalDatabaseManagementService(
     }
 
     private fun getReloadConfigSql(): String {
-        "SELECT pg_reload_conf()"
+        return "SELECT pg_reload_conf()"
     }
 
     private val selectExpression = "SELECT information_schema.tables.table_name AS name, information_schema.columns.column_name "
