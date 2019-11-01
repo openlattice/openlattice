@@ -237,8 +237,7 @@ public final class PostgresTable {
                             USERNAME,
                             DATABASE,
                             CONNECTION_TYPE,
-                            IP_ADDRESS,
-                            IP_MASK,
+                            IP_ADDRESSES,
                             AUTHENTICATION_METHOD )
             .primaryKey( USERNAME );
 

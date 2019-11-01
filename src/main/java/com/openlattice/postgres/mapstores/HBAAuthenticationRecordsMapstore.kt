@@ -4,6 +4,7 @@ import com.hazelcast.config.InMemoryFormat
 import com.hazelcast.config.MapConfig
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.mapstores.TestDataFactory
+import com.openlattice.postgres.PostgresArrays.createTextArray
 import com.openlattice.postgres.PostgresAuthenticationRecord
 import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.ResultSetAdapters
@@ -18,19 +19,21 @@ open class HBAAuthenticationRecordsMapstore(
 
     override fun bind(ps: PreparedStatement, key: String, value: PostgresAuthenticationRecord) {
         var index = bind(ps, key, 1)
+        val ipAddresses = createTextArray(
+                ps.connection,
+                value.ipAddresses.map { it })
 
         //create
         ps.setString(index++, value.connectionType)
         ps.setString(index++, value.database)
-        ps.setString(index++, value.ipAddress)
-        ps.setString(index++, value.ipMask)
+
+        ps.setArray(index++, ipAddresses)
         ps.setString(index++, value.authenticationMethod)
 
         //update
         ps.setString(index++, value.connectionType)
         ps.setString(index++, value.database)
-        ps.setString(index++, value.ipAddress)
-        ps.setString(index++, value.ipMask)
+        ps.setArray(index++, ipAddresses)
         ps.setString(index++, value.authenticationMethod)
     }
 
@@ -58,6 +61,6 @@ open class HBAAuthenticationRecordsMapstore(
 
     override fun getMapConfig(): MapConfig {
         return super.getMapConfig()
-                .setInMemoryFormat( InMemoryFormat.OBJECT )
+                .setInMemoryFormat(InMemoryFormat.OBJECT)
     }
 }

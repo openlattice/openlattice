@@ -79,7 +79,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
-import javax.xml.transform.Result;
 import java.io.IOException;
 import java.sql.*;
 import java.time.OffsetDateTime;
@@ -995,14 +994,12 @@ public final class ResultSetAdapters {
         String connectionType = rs.getString( CONNECTION_TYPE.getName() );
         String database = rs.getString( DATABASE.getName() );
         String userId = rs.getString( USERNAME.getName() );
-        String ipAddress = rs.getString( IP_ADDRESS.getName() );
-        String ipMask = rs.getString( IP_MASK.getName() );
+        Set<String> ipAddresses = new LinkedHashSet<>( Arrays.asList( PostgresArrays.getTextArray( rs, IP_ADDRESSES.getName() ) ) );
         String authorizationMethod = rs.getString( AUTHENTICATION_METHOD.getName() );
         return new PostgresAuthenticationRecord( connectionType,
                 database,
                 userId,
-                ipAddress,
-                ipMask,
+                ipAddresses,
                 authorizationMethod );
     }
 

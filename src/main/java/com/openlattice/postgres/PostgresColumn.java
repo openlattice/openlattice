@@ -101,7 +101,7 @@ public final class PostgresColumn {
     public static final PostgresColumnDefinition CONFIG_TYPE_ID                    =
             new PostgresColumnDefinition( CONFIG_TYPE_ID_FIELD, UUID );
     public static final String                   CONNECTION_TYPE_FIELD             = "connection_type";
-    public static final PostgresColumnDefinition CONNECTION_TYPE                    =
+    public static final PostgresColumnDefinition CONNECTION_TYPE                   =
             new PostgresColumnDefinition( CONNECTION_TYPE_FIELD, TEXT );
     public static final String                   CONSTRAINT_TYPE_FIELD             = "constraint_type";
     public static final PostgresColumnDefinition CONSTRAINT_TYPE                   =
@@ -230,12 +230,9 @@ public final class PostgresColumn {
     public static final String                   ID_FIELD                          = "id";
     public static final PostgresColumnDefinition ID                                =
             new PostgresColumnDefinition( ID_FIELD, UUID ).primaryKey().notNull();
-    public static final String                   IP_ADDRESS_FIELD                  = "ip_address";
-    public static final PostgresColumnDefinition IP_ADDRESS                        =
-            new PostgresColumnDefinition( IP_ADDRESS_FIELD, TEXT );
-    public static final String                   IP_MASK_FIELD                     = "ip_mask";
-    public static final PostgresColumnDefinition IP_MASK                           =
-            new PostgresColumnDefinition( IP_MASK_FIELD, TEXT );
+    public static final String                   IP_ADDRESSES_FIELD                = "ip_addresses";
+    public static final PostgresColumnDefinition IP_ADDRESSES                      =
+            new PostgresColumnDefinition( IP_ADDRESSES_FIELD, TEXT_ARRAY );
     public static final PostgresColumnDefinition ID_VALUE                          =
             new PostgresColumnDefinition( ID_FIELD, UUID );
     public static final String                   INDEX_TYPE_FIELD                  = "index_type";
