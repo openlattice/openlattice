@@ -10,6 +10,8 @@ import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.CO
 import com.openlattice.organization.OrganizationExternalDatabaseApi
 import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.COLUMN_NAME
 import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.COLUMN_NAME_PATH
+import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.CONNECTION_TYPE
+import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.CONNECTION_TYPE_PATH
 import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.DATA
 import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.EXTERNAL_DATABASE
 import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.EXTERNAL_DATABASE_COLUMN
@@ -61,15 +63,21 @@ class OrganizationExternalDatabaseController : OrganizationExternalDatabaseApi, 
     }
 
     @Timed
-    @PostMapping(path = [ID_PATH + USER_ID_PATH + EXTERNAL_DATABASE])
+    @PostMapping(path = [ID_PATH + USER_ID_PATH + CONNECTION_TYPE_PATH + EXTERNAL_DATABASE])
     override fun addTrustedUser(
             @PathVariable(ID) organizationId: UUID,
             @PathVariable(USER_ID) userId: String,
-            @RequestBody ipAddressToIPMask: Map<String, String>
+            @PathVariable(CONNECTION_TYPE) connectionType: String,
+            @RequestBody ipAddresses: Set<String>
     ) {
         ensureOwner(organizationId)
+        if (connectionType == "local") {
+            checkState(ipAddresses.isEmpty(), "Local connections may not specify an IP address")
+        } else {
+            checkState(ipAddresses.isNotEmpty(), "Host connections must specify at least one IP address")
+        }
         val userPrincipal = Principal(PrincipalType.USER, userId)
-        edms.addTrustedUser(organizationId, userPrincipal, ipAddressToIPMask)
+        edms.addTrustedUser(organizationId, userPrincipal, connectionType, ipAddresses)
     }
 
     @Timed
