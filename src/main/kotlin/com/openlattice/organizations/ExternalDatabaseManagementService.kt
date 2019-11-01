@@ -47,7 +47,8 @@ class ExternalDatabaseManagementService(
         private val assemblerConnectionManager: AssemblerConnectionManager, //for now using this, may need to move connection logic to its own file
         private val securePrincipalsManager: SecurePrincipalsManager,
         private val aclKeyReservations: HazelcastAclKeyReservationService,
-        private val authorizationManager: AuthorizationManager
+        private val authorizationManager: AuthorizationManager,
+        private val organizationExternalDatabaseConfiguration: OrganizationExternalDatabaseConfiguration
 ) {
 
     private val organizationExternalDatabaseColumns: IMap<UUID, OrganizationExternalDatabaseColumn> = hazelcastInstance.getMap(HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_COlUMN.name)
@@ -399,7 +400,7 @@ class ExternalDatabaseManagementService(
     }
 
     private fun updateHBARecords() {
-        val path = Paths.get(localHBAPath)
+        val path = Paths.get(organizationExternalDatabaseConfiguration.path)
         //delete previous hba records file
         Files.deleteIfExists(path)
 
