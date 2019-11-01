@@ -228,13 +228,14 @@ class ExternalDatabaseManagementService(
             val record = PostgresAuthenticationRecord("hostssl", dbName, username, ipAddress, ipMask, "md5")
             hbaAuthenticationRecordsMapstore[username] = record
         }
-        updateHBARecords()
+        updateHBARecords(dbName)
     }
 
-    fun removeTrustedUser(userPrincipal: Principal) {
+    fun removeTrustedUser(orgId: UUID, userPrincipal: Principal) {
+        val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
         val username = getDBUser(userPrincipal.id)
         hbaAuthenticationRecordsMapstore.remove(username)
-        updateHBARecords()
+        updateHBARecords(dbName)
     }
 
     /**
@@ -399,7 +400,7 @@ class ExternalDatabaseManagementService(
         return Pair(sql, objectType)
     }
 
-    private fun updateHBARecords() {
+    private fun updateHBARecords(dbName: String) {
         val path = Paths.get(organizationExternalDatabaseConfiguration.path)
         //delete previous hba records file
         Files.deleteIfExists(path)
@@ -416,6 +417,13 @@ class ExternalDatabaseManagementService(
                 out.write(recordAsByteArray)
             }
             out.close()
+
+            //reload config
+            assemblerConnectionManager.connect(dbName).use {
+                it.connection.createStatement().use { stmt ->
+                    stmt.executeQuery(getReloadConfigSql())
+                }
+            }
         } catch (ex: IOException) {
             logger.info("IO exception while trying to update hba config")
         }
@@ -451,6 +459,10 @@ class ExternalDatabaseManagementService(
                 "FROM $grantsTableName " +
                 "WHERE table_name = '$tableName' " +
                 columnCondition
+    }
+
+    private fun getReloadConfigSql(): String {
+        "SELECT pg_reload_conf()"
     }
 
     private val selectExpression = "SELECT information_schema.tables.table_name AS name, information_schema.columns.column_name "
