@@ -37,6 +37,7 @@ import java.io.BufferedOutputStream
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Paths
+import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 import java.time.OffsetDateTime
 import java.util.*
@@ -403,15 +404,14 @@ class ExternalDatabaseManagementService(
     }
 
     private fun updateHBARecords(dbName: String) {
-        val path = Paths.get(organizationExternalDatabaseConfiguration.path)
-        //delete previous hba records file
-        Files.deleteIfExists(path)
+        val originalHBAPath = Paths.get(organizationExternalDatabaseConfiguration.path + organizationExternalDatabaseConfiguration.fileName)
+        val tempHBAPath = Paths.get(organizationExternalDatabaseConfiguration.path + "/temp_hba.conf")
 
-        //recreate hba file with new records
+        //create hba file with new records
         val records = hbaAuthenticationRecordsMapstore.values.map { it.buildWriteableRecord() }
         try {
             val out = BufferedOutputStream(
-                    Files.newOutputStream(path, StandardOpenOption.WRITE, StandardOpenOption.CREATE,
+                    Files.newOutputStream(tempHBAPath, StandardOpenOption.WRITE, StandardOpenOption.CREATE,
                             StandardOpenOption.TRUNCATE_EXISTING)
             )
             records.forEach {
@@ -427,7 +427,14 @@ class ExternalDatabaseManagementService(
                 }
             }
         } catch (ex: IOException) {
-            logger.info("IO exception while trying to update hba config")
+            logger.info("IO exception while creating new hba config")
+        }
+
+        //replace old hba with new hba
+        try {
+            Files.move(tempHBAPath, originalHBAPath, StandardCopyOption.REPLACE_EXISTING)
+        } catch (ex: IOException) {
+            logger.info("IO exception while updating hba config")
         }
 
     }
