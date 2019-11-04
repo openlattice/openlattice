@@ -254,34 +254,40 @@ class ExternalDatabaseManagementService(
                 conn.createStatement().use { stmt ->
                     dataSource.connection.autoCommit = false
                     orgAcls.forEach {
+                        val aclKey = AclKey(it.aclKey)
                         val tableAndColumnNames = getTableAndColumnNames(AclKey(it.aclKey))
+                        val tableName = tableAndColumnNames.first
+                        val columnName = tableAndColumnNames.second
                         it.aces.forEach { ace ->
                             if (!areValidPermissions(ace.permissions)) {
                                 throw IllegalStateException("Permissions ${ace.permissions} are not valid")
                             }
                             val dbUser = getDBUser(ace.principal.id)
-                            val privileges = mutableListOf<String>()
 
                             //revoke any previous privileges before setting specified ones
                             if (action == Action.SET) {
-                                val revokeSql = createPrivilegesUpdateSql(Action.REMOVE, listOf("ALL"), tableAndColumnNames.first, tableAndColumnNames.second, dbUser)
+                                val revokeSql = createPrivilegesUpdateSql(Action.REMOVE, listOf("ALL"), tableName, columnName, dbUser)
                                 stmt.addBatch(revokeSql)
-                            }
 
-                            if (ace.permissions.contains(Permission.OWNER)) {
-                                privileges.add(PostgresPrivileges.ALL.toString())
-                            } else {
-                                if (ace.permissions.contains(Permission.WRITE)) {
-                                    privileges.addAll(listOf(
-                                            PostgresPrivileges.INSERT.toString(),
-                                            PostgresPrivileges.UPDATE.toString()))
-                                }
-                                if (ace.permissions.contains(Permission.READ)) {
-                                    privileges.add(PostgresPrivileges.SELECT.toString())
+                                //maintain column-level privileges if object is a table
+                                if (columnName.isEmpty) {
+                                    getMaintainColumnPrivilegesSql(aclKey, ace.principal, tableName, dbUser).forEach {
+                                        maintenanceStmt -> stmt.addBatch(maintenanceStmt)
+                                    }
                                 }
                             }
-                            val grantSql = createPrivilegesUpdateSql(action, privileges, tableAndColumnNames.first, tableAndColumnNames.second, dbUser)
+                            val privileges = getPrivilegesFromPermissions(ace.permissions)
+                            val grantSql = createPrivilegesUpdateSql(action, privileges, tableName, columnName, dbUser)
                             stmt.addBatch(grantSql)
+
+                            //if we've removed privileges on a table, maintain column-level privileges
+                            if (action == Action.REMOVE) {
+                                if (columnName.isEmpty) {
+                                    getMaintainColumnPrivilegesSql(aclKey, ace.principal, tableName, dbUser).forEach {
+                                        maintenanceStmt -> stmt.addBatch(maintenanceStmt)
+                                    }
+                                }
+                            }
                         }
                     }
                     stmt.executeBatch()
@@ -348,11 +354,12 @@ class ExternalDatabaseManagementService(
     }
 
     /*PRIVATE FUNCTIONS*/
-    private fun createPrivilegesUpdateSql(action: Action, privileges: List<String>, tableName: String, columnName: String, dbUser: String): String {
+    private fun createPrivilegesUpdateSql(action: Action, privileges: List<String>, tableName: String, columnName: Optional<String>, dbUser: String): String {
         val privilegesAsString = privileges.joinToString(separator = ", ")
         checkState(action == Action.REMOVE || action == Action.ADD || action == Action.SET,
                 "Invalid action $action specified")
-        val columnField = "($columnName)"
+        var columnField = ""
+        columnName.ifPresent { columnField = "($it)" }
         return if (action == Action.REMOVE) {
             "REVOKE $privilegesAsString $columnField ON $tableName FROM $dbUser"
         } else {
@@ -360,19 +367,19 @@ class ExternalDatabaseManagementService(
         }
     }
 
-    private fun getTableAndColumnNames(aclKey: AclKey): Pair<String, String> {
+    private fun getTableAndColumnNames(aclKey: AclKey): Pair<String, Optional<String>> {
         val securableObjectType = securableObjectTypes[aclKey]!!
         val tableName: String
-        val columnName: String
+        val columnName: Optional<String>
         val securableObjectId = aclKey.last()
         if (securableObjectType == SecurableObjectType.OrganizationExternalDatabaseColumn) {
             val organizationAtlasColumn = organizationExternalDatabaseColumns.getValue(securableObjectId)
             tableName = organizationExternalDatabaseTables.getValue(organizationAtlasColumn.tableId).name
-            columnName = organizationAtlasColumn.name
+            columnName = Optional.of(organizationAtlasColumn.name)
         } else {
             val organizationAtlasTable = organizationExternalDatabaseTables.getValue(securableObjectId)
             tableName = organizationAtlasTable.name
-            columnName = ""
+            columnName = Optional.empty()
         }
         return Pair(tableName, columnName)
     }
@@ -389,6 +396,38 @@ class ExternalDatabaseManagementService(
             return false
         }
         return true
+    }
+
+    private fun getMaintainColumnPrivilegesSql(aclKey: AclKey, principal: Principal, tableName: String, dbUser: String): List<String> {
+        val maintenanceStmts = mutableListOf<String>()
+        organizationExternalDatabaseColumns.values(belongsToTable(aclKey.last())).forEach {
+            val columnAclKey = AclKey(listOf(aclKey[0], aclKey[1], it.id))
+            val columnAceKey = AceKey(columnAclKey, principal)
+            val columnAceValue = aces[columnAceKey]
+            if (columnAceValue != null) {
+                val columnPrivileges = getPrivilegesFromPermissions(columnAceValue.permissions)
+                val grantSql = createPrivilegesUpdateSql(Action.ADD, columnPrivileges, tableName, Optional.of(it.name), dbUser)
+                maintenanceStmts.add(grantSql)
+            }
+        }
+        return maintenanceStmts
+    }
+
+    private fun getPrivilegesFromPermissions(permissions: EnumSet<Permission>): List<String> {
+        val privileges = mutableListOf<String>()
+        if (permissions.contains(Permission.OWNER)) {
+            privileges.add(PostgresPrivileges.ALL.toString())
+        } else {
+            if (permissions.contains(Permission.WRITE)) {
+                privileges.addAll(listOf(
+                        PostgresPrivileges.INSERT.toString(),
+                        PostgresPrivileges.UPDATE.toString()))
+            }
+            if (permissions.contains(Permission.READ)) {
+                privileges.add(PostgresPrivileges.SELECT.toString())
+            }
+        }
+        return privileges
     }
 
     private fun getPrivilegesFields(tableName: String, maybeColumnName: Optional<String>): Pair<String, SecurableObjectType> {
