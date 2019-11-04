@@ -249,8 +249,10 @@ class ExternalDatabaseManagementService(
         aclsByOrg.forEach { (orgId, orgAcls) ->
             val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
             assemblerConnectionManager.connect(dbName).use { dataSource ->
-                dataSource.connection.autoCommit = false
-                dataSource.connection.createStatement().use { stmt ->
+                val conn = dataSource.connection
+                conn.autoCommit = false
+                conn.createStatement().use { stmt ->
+                    dataSource.connection.autoCommit = false
                     orgAcls.forEach {
                         val tableAndColumnNames = getTableAndColumnNames(AclKey(it.aclKey))
                         it.aces.forEach { ace ->
@@ -283,7 +285,7 @@ class ExternalDatabaseManagementService(
                         }
                     }
                     stmt.executeBatch()
-                    dataSource.connection.commit()
+                    conn.commit()
                 }
             }
         }
@@ -348,13 +350,12 @@ class ExternalDatabaseManagementService(
     /*PRIVATE FUNCTIONS*/
     private fun createPrivilegesUpdateSql(action: Action, privileges: List<String>, tableName: String, columnName: String, dbUser: String): String {
         val privilegesAsString = privileges.joinToString(separator = ", ")
-        val tableNamePath = "$PUBLIC_SCHEMA.$tableName"
         checkState(action == Action.REMOVE || action == Action.ADD || action == Action.SET,
                 "Invalid action $action specified")
         return if (action == Action.REMOVE) {
-            "REVOKE $privilegesAsString $columnName ON $tableNamePath FROM $dbUser"
+            "REVOKE $privilegesAsString $columnName ON $tableName FROM $dbUser"
         } else {
-            "GRANT $privilegesAsString $columnName ON $tableNamePath TO $dbUser"
+            "GRANT $privilegesAsString $columnName ON $tableName TO $dbUser"
         }
     }
 
