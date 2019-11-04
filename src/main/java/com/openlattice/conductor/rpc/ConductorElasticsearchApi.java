@@ -158,9 +158,7 @@ public interface ConductorElasticsearchApi {
 
     boolean clearEntitySetData( UUID entitySetId, UUID entityTypeId );
 
-    boolean deleteEntityData( EntityDataKey edk, UUID entityTypeId );
-
-    boolean deleteEntityDataBulk( UUID entitySetId, UUID entityTypeId, Set<UUID> entityKeyIds );
+    boolean deleteEntityDataBulk( UUID entityTypeId, Set<UUID> entityKeyIds );
 
     /* Update Mappings */
     boolean addPropertyTypesToEntityType( EntityType entityType, List<PropertyType> newPropertyTypes );

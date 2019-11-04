@@ -290,6 +290,14 @@ public class MapstoresPod {
     }
 
     @Bean
+    public QueueConfigurer linkingUnIndexingQueueConfigurer() {
+        return config -> config
+                .setName( HazelcastQueue.LINKING_UNINDEXING.name() )
+                .setMaxSize( 128_000 )
+                .setBackupCount( 1 );
+    }
+
+    @Bean
     public SelfRegisteringMapStore<UUID, App> appMapstore() {
         return new AppMapstore( hikariDataSource );
     }
