@@ -282,17 +282,28 @@ fun optionalWhereClausesSingleEdk(
 }
 
 /**
+ * Preparable sql to upsert entities in [IDS] table.
+ *
+ * It sets a positive version and updates last write to current time.
+ *
+ * The bind order is the following:
+ *
  * 1 - versions
+ *
  * 2 - version
+ *
  * 3 - version
+ *
  * 4 - entity set id
+ *
  * 5 - entity key ids
- * 6 - partitions
+ *
+ * 6 - partition
  */
 // @formatter:off
 internal val upsertEntitiesSql = "UPDATE ${IDS.name} " +
         "SET ${VERSIONS.name} = ${VERSIONS.name} || ?, " +
-            "${DataTables.LAST_WRITE.name} = now(), " +
+            "${LAST_WRITE.name} = now(), " +
             "${VERSION.name} = CASE " +
                 "WHEN abs(${IDS.name}.${VERSION.name}) <= abs(?) THEN ? " +
                 "ELSE ${IDS.name}.${VERSION.name} " +
@@ -312,7 +323,8 @@ internal val lockEntitiesSql = "SELECT 1 FROM ${IDS.name} " +
         "FOR UPDATE"
 
 /**
- * Preparable SQL that upserts a version for all entities in a given entity set in [IDS]
+ * Preparable SQL that upserts a version and sets last write to current datetime for all entities in a given entity set
+ * in [IDS] table.
  *
  * The following bind order is expected:
  *
@@ -321,18 +333,23 @@ internal val lockEntitiesSql = "SELECT 1 FROM ${IDS.name} " +
  * 3. version
  * 4. entity set id
  */
+// @formatter:off
 internal val updateVersionsForEntitySet = "UPDATE ${IDS.name} " +
         "SET " +
             "${VERSIONS.name} = ${VERSIONS.name} || ARRAY[?], " +
-            "${VERSION.name} = CASE " +
-                "WHEN abs(${IDS.name}.${VERSION.name}) <= abs(?) " +
-                "THEN ? " +
-                "ELSE ${IDS.name}.${VERSION.name} " +
-            "END " +
+            "${VERSION.name} = " +
+                "CASE " +
+                    "WHEN abs(${IDS.name}.${VERSION.name}) <= abs(?) " +
+                    "THEN ? " +
+                    "ELSE ${IDS.name}.${VERSION.name} " +
+                "END, " +
+            "${LAST_WRITE.name} = 'now()' " +
         "WHERE ${ENTITY_SET_ID.name} = ? "
-
+// TODO do we need partition + partition version here??
+// @formatter:on
 /**
- * Preparable SQL that upserts a version for all entities in a given entity set in [IDS]
+ * Preparable SQL that upserts a version and sets last write to current datetime for all entities in a given entity set
+ * in [IDS] table.
  *
  * The following bind order is expected:
  *
@@ -340,8 +357,8 @@ internal val updateVersionsForEntitySet = "UPDATE ${IDS.name} " +
  * 2. version
  * 3. version
  * 4. entity set id
- * 5. entity key ids
- * 6. partition
+ * 5. entity key ids (uuid array)
+ * 6. partitions (int array)
  * 7. partition version
  */
 internal val updateVersionsForEntitiesInEntitySet = "$updateVersionsForEntitySet " +
@@ -351,7 +368,44 @@ internal val updateVersionsForEntitiesInEntitySet = "$updateVersionsForEntitySet
 
 
 /**
- * Preparable SQL that updates a version for all properties in a given entity set in [DATA]
+ * Preparable SQL that zeroes out the version and sets last write to current datetime for all entities in a given
+ * entity set in [IDS] table.
+ *
+ * The following bind order is expected:
+ *
+ * 1. entity set id
+ * 2. partition (uuid array)
+ * 3. partition version
+ */
+// @formatter:off
+internal val zeroVersionsForEntitySet = "UPDATE ${IDS.name} " +
+        "SET " +
+            "${VERSIONS.name} = ${VERSIONS.name} || ARRAY[0]::bigint[], " +
+            "${VERSION.name} = 0, " +
+            "${LAST_WRITE.name} = 'now()' " +
+        "WHERE " +
+            "${ENTITY_SET_ID.name} = ? AND " +
+            "${PARTITION.name} = ANY(?) AND " +
+            "${PARTITIONS_VERSION.name} = ? "
+// @formatter:on
+
+
+/**
+ * Preparable SQL that zeroes out the version and sets last write to current datetime for all entities in a given
+ * entity set in [IDS] table.
+ *
+ * The following bind order is expected:
+ *
+ * 1. entity set id
+ * 2. partition (uuid array)
+ * 3. partition version
+ * 4. id (uuid array)
+ */
+internal val zeroVersionsForEntitiesInEntitySet = "$zeroVersionsForEntitySet AND ${ID.name} = ANY(?) "
+
+/**
+ * Preparable SQL that updates a version and sets last write to current datetime for all properties in a given entity
+ * set in [DATA] table.
  *
  * The following bind order is expected:
  *
@@ -360,18 +414,22 @@ internal val updateVersionsForEntitiesInEntitySet = "$updateVersionsForEntitySet
  * 3. version
  * 4. entity set id
  */
+// @formatter:off
 internal val updateVersionsForPropertiesInEntitySet = "UPDATE ${DATA.name} " +
         "SET " +
             "${VERSIONS.name} = ${VERSIONS.name} || ARRAY[?], " +
-            "${VERSION.name} = CASE " +
-                "WHEN abs(${DATA.name}.${VERSION.name}) <= abs(?) " +
-                "THEN ? " +
-                "ELSE ${DATA.name}.${VERSION.name} " +
-            "END " +
+            "${VERSION.name} = " +
+                "CASE " +
+                    "WHEN abs(${DATA.name}.${VERSION.name}) <= abs(?) " +
+                    "THEN ? " +
+                    "ELSE ${DATA.name}.${VERSION.name} " +
+                "END, " +
+            "${LAST_WRITE.name} = 'now()' " +
         "WHERE ${ENTITY_SET_ID.name} = ? "
-
+// @formatter:on
 /**
- * Preparable SQL that updates a version for all properties in a given entity set in [DATA]
+ * Preparable SQL that updates a version and sets last write to current datetime for all properties in a given entity
+ * set in [DATA] table.
  *
  * The following bind order is expected:
  *
@@ -385,7 +443,8 @@ internal val updateVersionsForPropertyTypesInEntitySet = "$updateVersionsForProp
         "AND ${PROPERTY_TYPE_ID.name} = ANY(?)"
 
 /**
- * Preparable SQL that updates a version for all properties in a given entity set in [PostgresTable.DATA]
+ * Preparable SQL that updates a version and sets last write to current datetime for all properties in a given entity
+ * set in [DATA] table.
  *
  * The following bind order is expected:
  *
@@ -400,14 +459,21 @@ internal val updateVersionsForPropertyTypesInEntitySet = "$updateVersionsForProp
  * 7. partitions
  * 8. partition version
  */
-internal fun updateVersionsForPropertyTypesInEntitiesInEntitySet( linking: Boolean = false ): String {
-    return "$updateVersionsForPropertyTypesInEntitySet " +
-            if( linking ) "AND ${ORIGIN_ID.name} = ANY(?) " else "AND ${ID_VALUE.name} = ANY(?) " +
-            "AND ${PARTITION.name} = ANY(?) AND ${PARTITIONS_VERSION.name} = ? "
+internal fun updateVersionsForPropertyTypesInEntitiesInEntitySet(linking: Boolean = false): String {
+    val idsSql = if (linking) {
+        "AND ${ORIGIN_ID.name} = ANY(?)"
+    } else {
+        "AND ${ID_VALUE.name} = ANY(?)"
+    }
+
+    return "$updateVersionsForPropertyTypesInEntitySet $idsSql " +
+            "AND ${PARTITION.name} = ANY(?) " +
+            "AND ${PARTITIONS_VERSION.name} = ? "
 }
 
 /**
- * Preparable SQL updates a version for all property values in a given entity set in [DATA]
+ * Preparable SQL updates a version and sets last write to current datetime for all property values in a given entity
+ * set in [DATA] table.
  *
  * The following bind order is expected:
  *
@@ -415,37 +481,39 @@ internal fun updateVersionsForPropertyTypesInEntitiesInEntitySet( linking: Boole
  * 2. version
  * 3. version
  * 4. entity set id
- * 5. property type id
- * 6. entity key ids
- *    IF LINKING    checks against ORIGIN_ID
- *    ELSE          checks against ID column
+ * 5. property type ids
+ * 6. entity key ids (if linking: linking ids)
  * 7. partitions
  * 8. partition version
- * 9. value
+ * 9. {origin ids}: only if linking
+ * 10. value
  */
 internal fun updateVersionsForPropertyValuesInEntitiesInEntitySet( linking: Boolean = false ): String {
     return "${updateVersionsForPropertyTypesInEntitiesInEntitySet( linking )} AND ${HASH.name} = ? "
 }
 
 /**
+ * Preparable SQL that updates a version and sets last write to current datetime for all properties in a given linked
+ * entity set in [DATA] table.
+ *
  * Update set:
  * 1. VERSION: system.currentTime
  * 2. VERSION: system.currentTime
  * 3. VERSION: system.currentTime
  *
  * Where :
- * 4. ID_VALUE: linking id
- * 5. ENTITY_SET: entity set id
+ * 4. ENTITY_SET: entity set id
+ * 5. ID_VALUE: linking id
  * 6. ORIGIN_ID: entity key id
  * 7. PARTITION: partition(s) (array)
  */
 val tombstoneLinkForEntity = "$updateVersionsForPropertiesInEntitySet " +
-        "AND ${ID_VALUE.name} = ANY(?) " +
-        "AND ${ORIGIN_ID.name} = ANY(?) " +
+        "AND ${ID_VALUE.name} = ? " +
+        "AND ${ORIGIN_ID.name} = ? " +
         "AND ${PARTITION.name} = ANY(?) "
 
 /**
- * Preparable SQL deletes a given property in a given entity set in [IDS]
+ * Preparable SQL deletes a given property in a given entity set in [DATA]
  *
  * The following bind order is expected:
  *
@@ -491,7 +559,7 @@ internal val deleteEntitiesInEntitySet = "DELETE FROM ${DATA.name} " +
         "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ? AND ${PARTITIONS_VERSION.name} = ? "
 
 /**
- * Preparable SQL updates last write to current time for all entity ids a given entity set in [IDS]
+ * Preparable SQL deletes all entities in a given entity set in [IDS]
  *
  * The following bind order is expected:
  *
@@ -500,18 +568,13 @@ internal val deleteEntitiesInEntitySet = "DELETE FROM ${DATA.name} " +
  * 3. partition
  * 4. partition version
  */
-internal val updateLastWriteForEntitiesInEntitySet = "UPDATE ${IDS.name} SET ${LAST_WRITE.name} = 'now()' " +
-        "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID.name} = ANY(?) AND ${PARTITION.name} = ANY(?) AND ${PARTITIONS_VERSION.name} = ?"
-
-/**
- * Preparable SQL deletes all entities in a given entity set in [IDS]
- *
- * The following bind order is expected:
- *
- * 1. entity set id
- * 2. entity key ids
- */
-internal val deleteEntityKeys = "DELETE FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${ID.name} = ANY(?)"
+// @formatter:off
+internal val deleteEntityKeys =
+        "$deleteEntitySetEntityKeys AND " +
+            "${ID.name} = ANY(?) AND " +
+            "${PARTITION.name} = ? AND " +
+            "${PARTITIONS_VERSION.name} = ? "
+// @formatter:on
 
 /**
  * Selects a text properties from entity sets with the following bind order:

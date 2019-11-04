@@ -36,6 +36,7 @@ public class PostgresUserApiTests extends HzAuthzTest {
 
     @BeforeClass
     public static void init() {
+        HzAuthzTest.init();
         api = testServer.getContext().getBean( PostgresUserApi.class );
     }
 

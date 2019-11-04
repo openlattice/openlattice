@@ -28,7 +28,7 @@ import com.hazelcast.query.Predicates
 import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.data.storage.partitions.PartitionManager
-import com.openlattice.datastore.services.EdmManager
+import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.processors.CreateOrUpdateAuditRecordEntitySetsProcessor
 import com.openlattice.edm.processors.UpdateAuditEdgeEntitySetIdProcessor
@@ -52,7 +52,7 @@ private val logger = LoggerFactory.getLogger(AuditRecordEntitySetsManager::class
 
 class AuditRecordEntitySetsManager(
         val auditingTypes: AuditingTypes,
-        val edm: EdmManager,
+        private val entitySetManager: EntitySetManager,
         private val partitionManager: PartitionManager,
         private val authorizationManager: AuthorizationManager,
         private val hazelcastInstance: HazelcastInstance
@@ -144,8 +144,8 @@ class AuditRecordEntitySetsManager(
         if (auditRecordEntitySetConfigurations.keySet(isAnAuditEntitySetPredicate(aclKeyRoot)).isEmpty()) {
             auditRecordEntitySetConfigurations
                     .executeOnKey(aclKey, CreateOrUpdateAuditRecordEntitySetsProcessor(entitySet.id, edgeEntitySet.id))
-            edm.createEntitySet(firstUserPrincipal, entitySet)
-            edm.createEntitySet(firstUserPrincipal, edgeEntitySet)
+            entitySetManager.createEntitySet(firstUserPrincipal, entitySet)
+            entitySetManager.createEntitySet(firstUserPrincipal, edgeEntitySet)
         }
 
         val auditAclKeys = auditingTypes.propertyTypeIds.values.map { AclKey(entitySet.id, it) }.toMutableSet()
@@ -163,7 +163,7 @@ class AuditRecordEntitySetsManager(
         if (auditRecordEntitySetConfigurations.keySet(isAnAuditEntitySetPredicate(aclKeyRoot)).isEmpty()) {
 
             val auditEntitySetId = auditRecordEntitySetConfigurations.getValue(aclKey).activeAuditRecordEntitySetId
-            val auditEntitySet = edm.getEntitySet(auditEntitySetId)
+            val auditEntitySet = entitySetManager.getEntitySet(auditEntitySetId)!!
             val currentAuditEntitySetAclKey = AclKey(auditEntitySetId)
 
             val newAuditEdgeEntitySet = buildAuditEdgeEntitySet(
@@ -191,7 +191,7 @@ class AuditRecordEntitySetsManager(
                 return
             }
 
-            edm.createEntitySet(firstUserPrincipal, newAuditEdgeEntitySet)
+            entitySetManager.createEntitySet(firstUserPrincipal, newAuditEdgeEntitySet)
             authorizationManager.getAllSecurableObjectPermissions(currentAuditEntitySetAclKey).aces.forEach { ace ->
                 authorizationManager.addPermission(newEdgeAclKey, ace.principal, ace.permissions, ace.expirationDate)
             }
@@ -275,8 +275,8 @@ class AuditRecordEntitySetsManager(
         val auditEntitySetId = auditRecordEntitySetConfigurations.getValue(aclKey).activeAuditRecordEntitySetId
         val auditEdgeEntitySetId = auditRecordEntitySetConfigurations.getValue(aclKey).activeAuditEdgeEntitySetId
 
-        val auditEntitySet = edm.getEntitySet(auditEntitySetId)
-        val auditEdgeEntitySet = edm.getEntitySet(auditEdgeEntitySetId)
+        val auditEntitySet = entitySetManager.getEntitySet(auditEntitySetId)!!
+        val auditEdgeEntitySet = entitySetManager.getEntitySet(auditEdgeEntitySetId!!)
 
         val currentAuditEntitySetAclKey = AclKey(auditEntitySetId)
         val currentAuditEdgeEntitySetAclKey = AclKey(auditEdgeEntitySetId)
@@ -388,7 +388,7 @@ class AuditRecordEntitySetsManager(
 
     private fun getEdmAuditEntitySetId(): UUID {
         if (edmAuditEntitySetId == null) {
-            edmAuditEntitySetId = edm.getEntitySet(EDM_AUDIT_ENTITY_SET_NAME).id
+            edmAuditEntitySetId = entitySetManager.getEntitySet(EDM_AUDIT_ENTITY_SET_NAME)!!.id
         }
 
         return edmAuditEntitySetId!!
