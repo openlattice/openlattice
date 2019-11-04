@@ -352,10 +352,11 @@ class ExternalDatabaseManagementService(
         val privilegesAsString = privileges.joinToString(separator = ", ")
         checkState(action == Action.REMOVE || action == Action.ADD || action == Action.SET,
                 "Invalid action $action specified")
+        val columnField = "($columnName)"
         return if (action == Action.REMOVE) {
-            "REVOKE $privilegesAsString $columnName ON $tableName FROM $dbUser"
+            "REVOKE $privilegesAsString $columnField ON $tableName FROM $dbUser"
         } else {
-            "GRANT $privilegesAsString $columnName ON $tableName TO $dbUser"
+            "GRANT $privilegesAsString $columnField ON $tableName TO $dbUser"
         }
     }
 
