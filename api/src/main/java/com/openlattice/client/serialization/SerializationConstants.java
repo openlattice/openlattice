@@ -79,6 +79,7 @@ public final class SerializationConstants {
     public static final String DEFAULT_SHOW                     = "defaultShow";
     public static final String DELETE_TYPE                      = "deleteType";
     public static final String DEIDENTIFIED                     = "deidentified";
+    public static final String DESCENDING                       = "descending";
     public static final String DESCRIPTION_FIELD                = "description";
     public static final String DETAILS_FIELD                    = "details";
     public static final String DIFF                             = "diff";
@@ -139,7 +140,6 @@ public final class SerializationConstants {
     public static final String INCLUDE_FIELD                    = "include";
     public static final String INDEXING                         = "indexing";
     public static final String INDEX_TYPE                       = "indexType";
-    public static final String IS_DESCENDING                    = "isDescending";
     public static final String IS_DST                           = "isDst";
     public static final String IS_OWNER                         = "isOwner";
     public static final String KEYWORD                          = "kw";
