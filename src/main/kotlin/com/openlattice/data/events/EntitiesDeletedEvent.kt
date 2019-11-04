@@ -20,6 +20,7 @@
  */
 package com.openlattice.data.events
 
+import com.openlattice.data.DeleteType
 import java.util.UUID
 
-data class EntitiesDeletedEvent(val entitySetId: UUID, val entityKeyIds: Set<UUID>)
+data class EntitiesDeletedEvent(val entitySetId: UUID, val entityKeyIds: Set<UUID>, val deleteType: DeleteType)

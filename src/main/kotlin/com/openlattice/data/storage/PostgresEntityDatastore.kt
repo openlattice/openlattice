@@ -9,7 +9,7 @@ import com.openlattice.data.EntitySetData
 import com.openlattice.data.WriteEvent
 import com.openlattice.data.events.EntitiesDeletedEvent
 import com.openlattice.data.events.EntitiesUpsertedEvent
-import com.openlattice.datastore.services.EdmManager
+import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.PostgresEdmManager
 import com.openlattice.edm.events.EntitySetDataDeletedEvent
 import com.openlattice.edm.set.EntitySetFlag
@@ -34,8 +34,8 @@ import javax.inject.Inject
 @Service
 class PostgresEntityDatastore(
         private val dataQueryService: PostgresEntityDataQueryService,
-        private val edmManager: EdmManager,
-        private val postgresEdmManager: PostgresEdmManager
+        private val postgresEdmManager: PostgresEdmManager,
+        private val entitySetManager: EntitySetManager
 ) : EntityDatastore {
 
     companion object {
@@ -120,7 +120,7 @@ class PostgresEntityDatastore(
             val entities = dataQueryService
                     .getEntitiesWithPropertyTypeIds(
                             ImmutableMap.of(entitySetId, Optional.of(entityKeyIds)),
-                            ImmutableMap.of(entitySetId, edmManager.getPropertyTypesForEntitySet(entitySetId)),
+                            ImmutableMap.of(entitySetId, entitySetManager.getPropertyTypesForEntitySet(entitySetId)),
                             mapOf(),
                             EnumSet.of(MetadataOption.LAST_WRITE)
                     )
@@ -133,8 +133,8 @@ class PostgresEntityDatastore(
                 .forEach { this.markMaterializedEntitySetDirty(it) }
     }
 
-    private fun signalEntitySetDataDeleted(entitySetId: UUID) {
-        eventBus.post(EntitySetDataDeletedEvent(entitySetId))
+    private fun signalEntitySetDataDeleted(entitySetId: UUID, deleteType: DeleteType) {
+        eventBus.post(EntitySetDataDeletedEvent(entitySetId, deleteType))
         markMaterializedEntitySetDirty(entitySetId) // mark entityset as unsync with data
 
         // mark all involved linking entitysets as unsync with data
@@ -142,9 +142,9 @@ class PostgresEntityDatastore(
                 .forEach { this.markMaterializedEntitySetDirty(it) }
     }
 
-    private fun signalDeletedEntities(entitySetId: UUID, entityKeyIds: Set<UUID>) {
+    private fun signalDeletedEntities(entitySetId: UUID, entityKeyIds: Set<UUID>, deleteType: DeleteType) {
         if (shouldIndexDirectly(entitySetId, entityKeyIds)) {
-            eventBus.post(EntitiesDeletedEvent(entitySetId, entityKeyIds))
+            eventBus.post(EntitiesDeletedEvent(entitySetId, entityKeyIds, deleteType))
         }
 
         markMaterializedEntitySetDirty(entitySetId) // mark entityset as unsync with data
@@ -156,7 +156,7 @@ class PostgresEntityDatastore(
 
     private fun shouldIndexDirectly(entitySetId: UUID, entityKeyIds: Set<UUID>): Boolean {
         return entityKeyIds.size < BATCH_INDEX_THRESHOLD
-                && edmManager.getEntitySetIdsWithFlags(setOf(entitySetId), setOf(EntitySetFlag.AUDIT)).isEmpty()
+                && entitySetManager.getEntitySetIdsWithFlags(setOf(entitySetId), setOf(EntitySetFlag.AUDIT)).isEmpty()
     }
 
     private fun markMaterializedEntitySetDirty(entitySetId: UUID) {
@@ -182,7 +182,7 @@ class PostgresEntityDatastore(
             entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>
     ): WriteEvent {
         val writeEvent = dataQueryService.clearEntitySet(entitySetId, authorizedPropertyTypes)
-        signalEntitySetDataDeleted(entitySetId)
+        signalEntitySetDataDeleted(entitySetId, DeleteType.Soft)
         return writeEvent
     }
 
@@ -191,7 +191,7 @@ class PostgresEntityDatastore(
             entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
     ): WriteEvent {
         val writeEvent = dataQueryService.clearEntities(entitySetId, entityKeyIds, authorizedPropertyTypes)
-        signalDeletedEntities(entitySetId, entityKeyIds)
+        signalDeletedEntities(entitySetId, entityKeyIds, DeleteType.Soft)
         return writeEvent
     }
 
@@ -329,7 +329,25 @@ class PostgresEntityDatastore(
         )
 
         // linking_id/entity_set_id/origin_id/property_type_id
-        return linkedEntityDataStream.toMap().mapValues { mapOf(it.value).mapValues { mapOf(it.value) } }
+        val linkedDataMap = HashMap<UUID, MutableMap<UUID, MutableMap<UUID, MutableMap<UUID, MutableSet<Any>>>>>()
+        linkedEntityDataStream.forEach {
+            val linkingId = it.first
+            val entitySetId = it.second.first
+            val entityKeyId = it.second.second.first
+            val entityData = it.second.second.second
+
+            if (linkedDataMap.containsKey(linkingId)) {
+                if (linkedDataMap.getValue(linkingId).containsKey(entitySetId)) {
+                    linkedDataMap.getValue(linkingId).getValue(entitySetId)[entityKeyId] = entityData
+                } else {
+                    linkedDataMap.getValue(linkingId)[entitySetId] = mutableMapOf(entityKeyId to entityData)
+                }
+            } else {
+                linkedDataMap[linkingId] = mutableMapOf(entitySetId to mutableMapOf(entityKeyId to entityData))
+            }
+        }
+
+        return linkedDataMap
     }
 
     //TODO: Can be made more efficient if we are getting across same type.
@@ -383,10 +401,11 @@ class PostgresEntityDatastore(
     )
     override fun deleteEntitySetData(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent {
         logger.info("Deleting data of entity set: {}", entitySetId)
-        val numUpdates = dataQueryService.deleteEntitySetData(entitySetId, authorizedPropertyTypes).numUpdates
-        val writeEvent = dataQueryService.deleteEntitySet(entitySetId)
 
-        signalEntitySetDataDeleted(entitySetId)
+        val (_, numUpdates) = dataQueryService.deleteEntitySetData(entitySetId, authorizedPropertyTypes)
+        val writeEvent = dataQueryService.tombstoneDeletedEntitySet(entitySetId)
+
+        signalEntitySetDataDeleted(entitySetId, DeleteType.Hard)
 
         // delete entities from linking feedbacks
         val deleteFeedbackCount = feedbackQueryService.deleteLinkingFeedback(entitySetId, Optional.empty())
@@ -412,10 +431,10 @@ class PostgresEntityDatastore(
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): WriteEvent {
 
-        val numUpdates = dataQueryService
-                .deleteEntityDataAndEntities(entitySetId, entityKeyIds, authorizedPropertyTypes).numUpdates
-        val writeEvent = dataQueryService.deleteEntities(entitySetId, entityKeyIds)
-        signalDeletedEntities(entitySetId, entityKeyIds)
+        val (_, numUpdates) = dataQueryService
+                .deleteEntityDataAndEntities(entitySetId, entityKeyIds, authorizedPropertyTypes)
+        val writeEvent = dataQueryService.tombstoneDeletedEntities(entitySetId, entityKeyIds)
+        signalDeletedEntities(entitySetId, entityKeyIds, DeleteType.Hard)
 
         // delete entities from linking feedbacks too
         val deleteFeedbackCount = feedbackQueryService.deleteLinkingFeedback(entitySetId, Optional.of(entityKeyIds))
@@ -446,7 +465,6 @@ class PostgresEntityDatastore(
                 .deleteEntityData(entitySetId, entityKeyIds, authorizedPropertyTypes)
 
         // same as if we updated the entities
-
         signalCreatedEntities(entitySetId, entityKeyIds)
 
         logger.info(
@@ -459,7 +477,7 @@ class PostgresEntityDatastore(
     }
 
     override fun getExpiringEntitiesFromEntitySet(entitySetId: UUID, expirationBaseColumn: String, formattedDateMinusTTE: Any,
-                                                  sqlFormat: Int, deletedType: DeleteType) : BasePostgresIterable<UUID> {
+                                                  sqlFormat: Int, deletedType: DeleteType): BasePostgresIterable<UUID> {
         return dataQueryService
                 .getExpiringEntitiesFromEntitySet(entitySetId, expirationBaseColumn, formattedDateMinusTTE,
                         sqlFormat, deletedType)

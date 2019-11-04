@@ -25,8 +25,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Maps;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
-import com.hazelcast.util.Preconditions;
 import com.openlattice.datastore.services.EdmManager;
+import com.openlattice.datastore.services.EntitySetManager;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
@@ -35,18 +35,21 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.validation.constraints.NotNull;
+
 import org.springframework.stereotype.Component;
 
 @Component
 public class EdmAuthorizationHelper implements AuthorizingComponent {
-    public static final EnumSet<Permission> READ_PERMISSION  = EnumSet.of( Permission.READ );
-    public static final EnumSet<Permission> WRITE_PERMISSION = EnumSet.of( Permission.WRITE );
-    private final EdmManager           edm;
-    private final AuthorizationManager authz;
+    public static final EnumSet<Permission>  READ_PERMISSION  = EnumSet.of( Permission.READ );
+    public static final EnumSet<Permission>  WRITE_PERMISSION = EnumSet.of( Permission.WRITE );
+    private final       EdmManager           edm;
+    private final       AuthorizationManager authz;
+    private final       EntitySetManager     entitySetManager;
 
-    public EdmAuthorizationHelper( EdmManager edm, AuthorizationManager authz ) {
-        this.edm = Preconditions.checkNotNull( edm );
-        this.authz = Preconditions.checkNotNull( authz );
+    public EdmAuthorizationHelper( EdmManager edm, AuthorizationManager authz, EntitySetManager entitySetManager ) {
+        this.edm = edm;
+        this.authz = authz;
+        this.entitySetManager = entitySetManager;
     }
 
     @Timed
@@ -61,7 +64,7 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
             UUID entitySetId,
             EnumSet<Permission> requiredPermissions,
             Set<Principal> principals ) {
-        final var propertyTypes = edm.getPropertyTypesForEntitySet( entitySetId );
+        final var propertyTypes = entitySetManager.getPropertyTypesForEntitySet( entitySetId );
 
         return getAuthorizedPropertyTypes( entitySetId, requiredPermissions, propertyTypes, principals );
     }
@@ -73,13 +76,13 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
             Map<UUID, PropertyType> propertyTypes,
             Set<Principal> principals ) {
 
-        final var entitySet = edm.getEntitySet( entitySetId );
+        final var entitySet = entitySetManager.getEntitySet( entitySetId );
 
         return ( entitySet.isLinking() )
                 ? getAuthorizedPropertyTypesOfLinkingEntitySet(
                 entitySet, propertyTypes.keySet(), requiredPermissions, principals )
                 : getAuthorizedPropertyTypesOfNormalEntitySet(
-                        entitySetId, propertyTypes, requiredPermissions, principals );
+                entitySetId, propertyTypes, requiredPermissions, principals );
     }
 
     /**
@@ -169,9 +172,9 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
      * Returns authorized property types for a linking entity set, which is the intersection of authorized properties on
      * each its normal entity sets.
      *
-     * @param linkingEntitySet the linking entity set to check for
+     * @param linkingEntitySet    the linking entity set to check for
      * @param requiredPermissions the permissions to check for
-     * @param principals the principals to check against
+     * @param principals          the principals to check against
      * @return Map of authorized property types by normal entity sets
      */
     @Timed
@@ -251,9 +254,9 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
      * Returns authorized property types for entity sets.
      * Note: entity sets are assumed to have same entity type
      *
-     * @param entitySetIds the ids of entity sets to check for
+     * @param entitySetIds        the ids of entity sets to check for
      * @param requiredPermissions the permissions to check for
-     * @param principals the principals to check against
+     * @param principals          the principals to check against
      * @return Map of authorized property types by entity set ids
      */
     @Timed
@@ -264,17 +267,17 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
         return ( entitySetIds.isEmpty() )
                 ? Maps.newHashMap()
                 : getAuthorizedPropertyTypes(
-                        entitySetIds,
-                        getAllPropertiesOnEntitySet( entitySetIds.iterator().next() ),
-                        requiredPermissions,
-                        principals );
+                entitySetIds,
+                getAllPropertiesOnEntitySet( entitySetIds.iterator().next() ),
+                requiredPermissions,
+                principals );
     }
 
     @Timed
     public Set<UUID> getAuthorizedPropertyTypeIds(
             UUID entitySetId,
             EnumSet<Permission> requiredPermissions ) {
-        final var entitySet = edm.getEntitySet( entitySetId );
+        final var entitySet = entitySetManager.getEntitySet( entitySetId );
         final var properties = getAllPropertiesOnEntitySet( entitySetId );
 
         return ( entitySet.isLinking() )
@@ -315,9 +318,9 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
      * Note: The returned maps keys are the requested entity set ids and not the normal entity set ids for linking
      * entity sets!
      *
-     * @param entitySetIds The entity set ids for which to get the authorized property types.
+     * @param entitySetIds        The entity set ids for which to get the authorized property types.
      * @param requiredPermissions The set of required permissions to check for.
-     * @param principals The set of pricipals to check the permissions against.
+     * @param principals          The set of pricipals to check the permissions against.
      * @return A Map with keys for each of the requested entity set id and values of authorized property types by their
      * id.
      */
@@ -329,15 +332,15 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
         return ( entitySetIds.isEmpty() )
                 ? Maps.newHashMap()
                 : entitySetIds.stream().collect( Collectors.toMap(
-                        Function.identity(),
-                        entitySetId -> getAuthorizedPropertyTypes( entitySetId, requiredPermissions, principals )
-                ) );
+                Function.identity(),
+                entitySetId -> getAuthorizedPropertyTypes( entitySetId, requiredPermissions, principals )
+        ) );
     }
 
     @Timed
     public Map<UUID, Map<UUID, PropertyType>> getAuthorizedPropertiesOnEntitySets(
             Set<UUID> entitySetIds,
-            EnumSet<Permission> requiredPermissions) {
+            EnumSet<Permission> requiredPermissions ) {
         return getAuthorizedPropertiesOnEntitySets(
                 entitySetIds, requiredPermissions, Principals.getCurrentPrincipals()
         );
@@ -350,7 +353,7 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
             Set<Principal> principals ) {
         return entitySetIds.stream()
                 .filter( entitySetId -> {
-                    var entitySet = edm.getEntitySet( entitySetId );
+                    var entitySet = entitySetManager.getEntitySet( entitySetId );
                     var entitySetIdsToCheck = Sets.newHashSet( entitySetId );
                     if ( entitySet.isLinking() ) {
                         entitySetIdsToCheck.addAll( entitySet.getLinkedEntitySets() );
@@ -379,11 +382,12 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
      */
     @Timed
     public Set<UUID> getAllPropertiesOnEntitySet( UUID entitySetId ) {
-        EntityType et = edm.getEntityTypeByEntitySetId( entitySetId );
+        EntityType et = entitySetManager.getEntityTypeByEntitySetId( entitySetId );
         return et.getProperties();
     }
 
-    @Override public AuthorizationManager getAuthorizationManager() {
+    @Override
+    public AuthorizationManager getAuthorizationManager() {
         return authz;
     }
 

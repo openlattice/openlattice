@@ -32,6 +32,7 @@ import com.openlattice.authorization.mapstores.PostgresCredentialMapstore;
 import com.openlattice.authorization.mapstores.UserMapstore;
 import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.datastore.services.EdmService;
+import com.openlattice.datastore.services.EntitySetManager;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
@@ -73,7 +74,7 @@ public class MapstoresTest extends HzAuthzTest {
         AceValue expected = (AceValue) permissions.generateTestValue();
         AceKey key = (AceKey) permissions.generateTestKey();
 
-        Object actual = null;
+        Object actual;
         try {
             objectTypes.store( key.getAclKey(), expected.getSecurableObjectType() );
             permissions.store( key, expected );
@@ -105,6 +106,7 @@ public class MapstoresTest extends HzAuthzTest {
     @Test
     public void testDataMapstore() throws InterruptedException {
         EdmService edm = testServer.getContext().getBean( EdmService.class );
+        var esm = testServer.getContext().getBean( EntitySetManager.class );
 
         PropertyType[] propertyTypes = new PropertyType[] {
                 TestDataFactory.propertyType( EdmPrimitiveTypeKind.String ),
@@ -126,7 +128,7 @@ public class MapstoresTest extends HzAuthzTest {
 
         EntitySet entitySet = TestDataFactory.entitySetWithType( entityType.getId() );
         Principal p = TestDataFactory.userPrincipal();
-        edm.createEntitySet( p, entitySet );
+        esm.createEntitySet( p, entitySet );
     }
 
     @SuppressWarnings( { "rawtypes", "unchecked" } )
@@ -140,7 +142,7 @@ public class MapstoresTest extends HzAuthzTest {
                 && UUID.class.equals( key.getClass() ) ) {
             key = ( (AbstractSecurableObject) expected ).getId();
         }
-        Object actual = null;
+        Object actual;
         try {
             ms.store( key, expected );
             actual = ms.load( key );

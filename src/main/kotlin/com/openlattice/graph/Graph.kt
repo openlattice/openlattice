@@ -35,6 +35,7 @@ import com.openlattice.data.storage.getPartition
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.data.storage.selectEntitySetWithCurrentVersionOfPropertyTypes
 import com.openlattice.datastore.services.EdmManager
+import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.core.GraphService
 import com.openlattice.graph.core.NeighborSets
@@ -71,7 +72,7 @@ private val logger = LoggerFactory.getLogger(Graph::class.java)
 
 class Graph(
         private val hds: HikariDataSource,
-        private val edm: EdmManager,
+        private val entitySetManager: EntitySetManager,
         private val partitionManager: PartitionManager
 ) : GraphService {
 
@@ -537,7 +538,7 @@ class Graph(
             authorizedFilteredRanking: AuthorizedFilteredNeighborsRanking,
             linked: Boolean
     ): String {
-        val esEntityKeyIds = edm
+        val esEntityKeyIds = entitySetManager
                 .getEntitySetIdsOfType(authorizedFilteredRanking.filteredNeighborsRanking.associationTypeId)
                 .map { it to Optional.empty<Set<UUID>>() }
                 .toMap()
@@ -585,7 +586,7 @@ class Graph(
             authorizedFilteredRanking: AuthorizedFilteredNeighborsRanking,
             linked: Boolean
     ): String {
-        val esEntityKeyIds = edm
+        val esEntityKeyIds = entitySetManager
                 .getEntitySetIdsOfType(authorizedFilteredRanking.filteredNeighborsRanking.neighborTypeId)
                 .map { it to Optional.empty<Set<UUID>>() }
                 .toMap()
