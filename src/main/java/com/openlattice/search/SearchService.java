@@ -50,17 +50,18 @@ import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.collections.EntitySetCollection;
 import com.openlattice.collections.EntityTypeCollection;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
+import com.openlattice.data.DeleteType;
 import com.openlattice.data.EntityDataKey;
 import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.events.EntitiesDeletedEvent;
 import com.openlattice.data.events.EntitiesUpsertedEvent;
-import com.openlattice.data.events.LinkedEntitiesDeletedEvent;
 import com.openlattice.data.requests.NeighborEntityDetails;
 import com.openlattice.data.requests.NeighborEntityIds;
 import com.openlattice.data.storage.EntityDatastore;
 import com.openlattice.data.storage.IndexingMetadataManager;
 import com.openlattice.data.storage.MetadataOption;
 import com.openlattice.datastore.services.EdmManager;
+import com.openlattice.datastore.services.EntitySetManager;
 import com.openlattice.edm.EdmConstants;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.events.AppCreatedEvent;
@@ -143,6 +144,9 @@ public class SearchService {
     private EdmManager dataModelService;
 
     @Inject
+    private EntitySetManager entitySetService;
+
+    @Inject
     private GraphService graphService;
 
     @Inject
@@ -156,12 +160,22 @@ public class SearchService {
 
     private Timer indexEntitiesTimer;
 
+    private Timer deleteEntitiesTimer;
+
+    private Timer deleteEntitySetDataTimer;
+
     private Timer markAsIndexedTimer;
 
     public SearchService( EventBus eventBus, MetricRegistry metricRegistry ) {
         eventBus.register( this );
         indexEntitiesTimer = metricRegistry.timer(
                 MetricRegistry.name( SearchService.class, "indexEntities" )
+        );
+        deleteEntitiesTimer = metricRegistry.timer(
+                MetricRegistry.name( SearchService.class, "deleteEntities" )
+        );
+        deleteEntitySetDataTimer = metricRegistry.timer(
+                MetricRegistry.name( SearchService.class, "entitySetDataCleared" )
         );
         markAsIndexedTimer = metricRegistry.timer(
                 MetricRegistry.name( SearchService.class, "markAsIndexed" )
@@ -220,7 +234,7 @@ public class SearchService {
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySet ) {
 
         final Set<UUID> entitySetIds = Sets.newHashSet( Arrays.asList( searchConstraints.getEntitySetIds() ) );
-        final Map<UUID, EntitySet> entitySetsById = dataModelService.getEntitySetsAsMap( entitySetIds );
+        final Map<UUID, EntitySet> entitySetsById = entitySetService.getEntitySetsAsMap( entitySetIds );
         final var linkingEntitySets = entitySetsById.values().stream()
                 .filter( EntitySet::isLinking )
                 .collect( Collectors.toMap(
@@ -235,7 +249,7 @@ public class SearchService {
             return new DataSearchResult( 0, Lists.newArrayList() );
         }
 
-        Map<UUID, UUID> entityTypesByEntitySet = dataModelService
+        Map<UUID, UUID> entityTypesByEntitySet = entitySetService
                 .getEntitySetsAsMap( Sets.newHashSet( Arrays.asList( searchConstraints.getEntitySetIds() ) ) ).values()
                 .stream()
                 .collect( Collectors.toMap( EntitySet::getId, EntitySet::getEntityTypeId ) );
@@ -279,38 +293,46 @@ public class SearchService {
         elasticsearchApi.deleteEntitySet( event.getEntitySetId(), event.getEntityTypeId() );
     }
 
-    @Timed
     @Subscribe
     public void deleteEntities( EntitiesDeletedEvent event ) {
-        UUID entityTypeId = dataModelService.getEntityTypeByEntitySetId( event.getEntitySetId() ).getId();
-        elasticsearchApi.deleteEntityDataBulk( event.getEntitySetId(), entityTypeId, event.getEntityKeyIds() );
-    }
+        final var deleteEntitiesContext = deleteEntitiesTimer.time();
+        UUID entityTypeId = entitySetService.getEntityTypeByEntitySetId( event.getEntitySetId() ).getId();
+        final var entitiesDeleted = elasticsearchApi.deleteEntityDataBulk( entityTypeId, event.getEntityKeyIds() );
+        deleteEntitiesContext.stop();
 
-    @Timed
-    @Subscribe
-    public void deleteLinkedEntities( LinkedEntitiesDeletedEvent event ) {
-        // TODO : https://jira.openlattice.com/browse/LATTICE-2225
-        if ( event.getLinkedEntitySetIds().size() > 0 ) {
-            Map<UUID, UUID> entitySetIdsToEntityTypeIds = dataModelService
-                    .getEntitySetsAsMap( event.getLinkedEntitySetIds() ).values().stream()
-                    .collect( Collectors.toMap( EntitySet::getId, EntitySet::getEntityTypeId ) );
-
-            event.getLinkedEntitySetIds().forEach( entitySetId -> {
-                        UUID entityTypeId = entitySetIdsToEntityTypeIds.get( entitySetId );
-                        event.getEntityKeyIds()
-                                .stream()
-                                .map( id -> new EntityDataKey( entitySetId, id ) )
-                                .forEach( edk -> elasticsearchApi.deleteEntityData( edk, entityTypeId ) );
-                    }
-            );
+        if ( entitiesDeleted ) {
+            // mark them as (un)indexed:
+            // - set last_index to now() when it's a hard delete (it does not matter when we
+            // get last_write, because the only action take here is to remove the documents)
+            // - let background task take soft deletes
+            if ( event.getDeleteType() == DeleteType.Hard ) {
+                final var markAsIndexedContext = markAsIndexedTimer.time();
+                indexingMetadataManager.markAsUnIndexed(
+                        Map.of( event.getEntitySetId(), event.getEntityKeyIds() ), false
+                );
+                markAsIndexedContext.stop();
+            }
         }
     }
 
-    @Timed
     @Subscribe
     public void entitySetDataCleared( EntitySetDataDeletedEvent event ) {
-        UUID entityTypeId = dataModelService.getEntityTypeByEntitySetId( event.getEntitySetId() ).getId();
-        elasticsearchApi.clearEntitySetData( event.getEntitySetId(), entityTypeId );
+        final var deleteEntitySetDataContext = deleteEntitySetDataTimer.time();
+        UUID entityTypeId = entitySetService.getEntityTypeByEntitySetId( event.getEntitySetId() ).getId();
+        final var entitySetDataDeleted = elasticsearchApi.clearEntitySetData( event.getEntitySetId(), entityTypeId );
+        deleteEntitySetDataContext.stop();
+
+        if ( entitySetDataDeleted ) {
+            // mark them as (un)indexed:
+            // - set last_index to now() when it's a hard delete (it does not matter when we
+            // get last_write, because the only action take here is to remove the documents)
+            // - let background task take soft deletes (would be too much overhead for clear calls)
+            if ( event.getDeleteType() == DeleteType.Hard ) {
+                final var markAsIndexedContext = markAsIndexedTimer.time();
+                indexingMetadataManager.markAsUnIndexed( event.getEntitySetId() );
+                markAsIndexedContext.stop();
+            }
+        }
     }
 
     @Timed
@@ -356,7 +378,7 @@ public class SearchService {
     @Subscribe
     public void indexEntities( EntitiesUpsertedEvent event ) {
         final var indexEntitiesContext = indexEntitiesTimer.time();
-        UUID entityTypeId = dataModelService.getEntityTypeByEntitySetId( event.getEntitySetId() ).getId();
+        UUID entityTypeId = entitySetService.getEntityTypeByEntitySetId( event.getEntitySetId() ).getId();
         final var entitiesIndexed = elasticsearchApi
                 .createBulkEntityData( entityTypeId, event.getEntitySetId(), event.getEntities() );
         indexEntitiesContext.stop();
@@ -560,7 +582,7 @@ public class SearchService {
             return ImmutableMap.of();
         }
 
-        Collection<EntitySet> linkingEntitySets = dataModelService.getEntitySetsAsMap( entitySetIds ).values();
+        Collection<EntitySet> linkingEntitySets = entitySetService.getEntitySetsAsMap( entitySetIds ).values();
         linkingEntitySets.removeIf( entitySet -> !entitySet.isLinking() );
         Map<UUID, Set<UUID>> entityKeyIdsByLinkingId = ImmutableMap.of();
 
@@ -612,7 +634,7 @@ public class SearchService {
                 .filter( auth -> auth.getPermissions().get( Permission.READ ) ).map( auth -> auth.getAclKey().get( 0 ) )
                 .collect( Collectors.toSet() );
 
-        Map<UUID, EntitySet> entitySetsById = dataModelService.getEntitySetsAsMap( authorizedEntitySetIds );
+        Map<UUID, EntitySet> entitySetsById = entitySetService.getEntitySetsAsMap( authorizedEntitySetIds );
 
         Map<UUID, EntityType> entityTypesById = dataModelService
                 .getEntityTypesAsMap( entitySetsById.values().stream().map( entitySet -> {
@@ -929,7 +951,7 @@ public class SearchService {
     }
 
     public void triggerEntitySetIndex() {
-        Map<EntitySet, Set<UUID>> entitySets = StreamUtil.stream( dataModelService.getEntitySets() ).collect( Collectors
+        Map<EntitySet, Set<UUID>> entitySets = StreamUtil.stream( entitySetService.getEntitySets() ).collect( Collectors
                 .toMap( entitySet -> entitySet,
                         entitySet -> dataModelService.getEntityType( entitySet.getEntityTypeId() ).getProperties() ) );
         Map<UUID, PropertyType> propertyTypes = StreamUtil.stream( dataModelService.getPropertyTypes() )
@@ -938,23 +960,23 @@ public class SearchService {
     }
 
     public void triggerEntitySetDataIndex( UUID entitySetId ) {
-        EntityType entityType = dataModelService.getEntityTypeByEntitySetId( entitySetId );
+        EntityType entityType = entitySetService.getEntityTypeByEntitySetId( entitySetId );
         Map<UUID, PropertyType> propertyTypes = dataModelService.getPropertyTypesAsMap( entityType.getProperties() );
         List<PropertyType> propertyTypeList = Lists.newArrayList( propertyTypes.values() );
 
         elasticsearchApi.deleteEntitySet( entitySetId, entityType.getId() );
         elasticsearchApi.saveEntitySetToElasticsearch(
                 entityType,
-                dataModelService.getEntitySet( entitySetId ),
+                entitySetService.getEntitySet( entitySetId ),
                 propertyTypeList );
 
-        EntitySet entitySet = dataModelService.getEntitySet( entitySetId );
+        EntitySet entitySet = entitySetService.getEntitySet( entitySetId );
         Set<UUID> entitySetIds = ( entitySet.isLinking() ) ? entitySet.getLinkedEntitySets() : Set.of( entitySetId );
         indexingMetadataManager.markEntitySetsAsNeedsToBeIndexed( entitySetIds, entitySet.isLinking() );
     }
 
     public void triggerAllEntitySetDataIndex() {
-        dataModelService.getEntitySets().forEach( entitySet -> triggerEntitySetDataIndex( entitySet.getId() ) );
+        entitySetService.getEntitySets().forEach( entitySet -> triggerEntitySetDataIndex( entitySet.getId() ) );
     }
 
     public void triggerAppIndex( List<App> apps ) {

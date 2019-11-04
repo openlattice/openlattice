@@ -4,19 +4,17 @@ import com.amazonaws.HttpMethod
 import com.google.common.collect.Lists
 import com.openlattice.data.integration.S3EntityData
 import com.openlattice.data.storage.ByteBlobDataManager
+import com.openlattice.data.storage.IndexingMetadataManager
 import com.openlattice.data.storage.PostgresEntityDataQueryService
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.edm.type.PropertyType
 import com.zaxxer.hikari.HikariDataSource
-import org.slf4j.LoggerFactory
 import java.util.*
 
-private val logger = LoggerFactory.getLogger(AwsDataSinkService::class.java)
-
 class AwsDataSinkService(
-        private val partitionManager: PartitionManager,
+        partitionManager: PartitionManager,
         private val byteBlobDataManager: ByteBlobDataManager,
-        private val hds: HikariDataSource
+        hds: HikariDataSource
 ) {
     private val dqs = PostgresEntityDataQueryService(hds, byteBlobDataManager, partitionManager)
 
