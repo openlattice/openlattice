@@ -11,6 +11,7 @@ import com.openlattice.authorization.*
 import com.openlattice.controllers.exceptions.ForbiddenException
 import com.openlattice.data.*
 import com.openlattice.datastore.services.EdmManager
+import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.edm.type.EntityType
@@ -43,6 +44,7 @@ import kotlin.math.max
 
 class DataDeletionService(
         private val edmService: EdmManager,
+        private val entitySetManager: EntitySetManager,
         private val dgm: DataGraphManager,
         private val authzHelper: EdmAuthorizationHelper,
         private val authorizationManager: AuthorizationManager,
@@ -281,7 +283,7 @@ class DataDeletionService(
             skipAuthChecks: Boolean = false
     ): Int {
 
-        if (!edmService.isAssociationEntitySet(entitySetId)) {
+        if (!entitySetManager.isAssociationEntitySet(entitySetId)) {
             deleteEdgesForAssociationEntitySet(entitySetId, entityKeyIds, deleteType)
             return 0
         }
@@ -364,7 +366,7 @@ class DataDeletionService(
             dgm.getEdgeEntitySetsConnectedToEntitySet(entitySetId)
         }
 
-        val edgeEntitySets = edmService.getEntitySetsAsMap(edgeEntitySetIds).values
+        val edgeEntitySets = entitySetManager.getEntitySetsAsMap(edgeEntitySetIds).values
         val nonAuditEdgeEntitySets = edgeEntitySets.filter { !it.flags.contains(EntitySetFlag.AUDIT) }
         val entityTypesById = edmService.getEntityTypesAsMap(edgeEntitySets.map { it.entityTypeId }.toSet())
 
@@ -427,7 +429,7 @@ class DataDeletionService(
             principals: Set<Principal>
     ): Map<UUID, Map<UUID, PropertyType>> {
 
-        val entitySets = edmService.getEntitySetsAsMap(entitySetIds).values
+        val entitySets = entitySetManager.getEntitySetsAsMap(entitySetIds).values
         val requiredPermissions = getRequiredPermissions(deleteType)
 
         entitySets.forEach {
@@ -480,7 +482,7 @@ class DataDeletionService(
     ): Map<UUID, PropertyType> {
 
         if (skipAuthChecks) {
-            return edmService.getPropertyTypesForEntitySet(entitySetId)
+            return entitySetManager.getPropertyTypesForEntitySet(entitySetId)
         }
 
         return getAuthorizedPropertyTypesForDeleteByEntitySet(
