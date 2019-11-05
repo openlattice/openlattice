@@ -6,26 +6,26 @@ import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
 import com.openlattice.authorization.*
 import com.openlattice.hazelcast.HazelcastMap
-import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.CONTROLLER
-import com.openlattice.organization.OrganizationExternalDatabaseApi
-import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.COLUMN_NAME
-import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.COLUMN_NAME_PATH
-import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.CONNECTION_TYPE
-import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.CONNECTION_TYPE_PATH
-import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.DATA
-import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.EXTERNAL_DATABASE
-import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.EXTERNAL_DATABASE_COLUMN
-import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.EXTERNAL_DATABASE_TABLE
-import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.ID
-import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.ID_PATH
-import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.ROW_COUNT
-import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.ROW_COUNT_PATH
-import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.TABLE_ID
-import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.TABLE_ID_PATH
-import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.TABLE_NAME
-import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.TABLE_NAME_PATH
-import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.USER_ID
-import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.USER_ID_PATH
+import com.openlattice.organization.DatasetApi.Companion.CONTROLLER
+import com.openlattice.organization.DatasetApi
+import com.openlattice.organization.DatasetApi.Companion.COLUMN_NAME
+import com.openlattice.organization.DatasetApi.Companion.COLUMN_NAME_PATH
+import com.openlattice.organization.DatasetApi.Companion.CONNECTION_TYPE
+import com.openlattice.organization.DatasetApi.Companion.CONNECTION_TYPE_PATH
+import com.openlattice.organization.DatasetApi.Companion.DATA
+import com.openlattice.organization.DatasetApi.Companion.EXTERNAL_DATABASE
+import com.openlattice.organization.DatasetApi.Companion.EXTERNAL_DATABASE_COLUMN
+import com.openlattice.organization.DatasetApi.Companion.EXTERNAL_DATABASE_TABLE
+import com.openlattice.organization.DatasetApi.Companion.ID
+import com.openlattice.organization.DatasetApi.Companion.ID_PATH
+import com.openlattice.organization.DatasetApi.Companion.ROW_COUNT
+import com.openlattice.organization.DatasetApi.Companion.ROW_COUNT_PATH
+import com.openlattice.organization.DatasetApi.Companion.TABLE_ID
+import com.openlattice.organization.DatasetApi.Companion.TABLE_ID_PATH
+import com.openlattice.organization.DatasetApi.Companion.TABLE_NAME
+import com.openlattice.organization.DatasetApi.Companion.TABLE_NAME_PATH
+import com.openlattice.organization.DatasetApi.Companion.USER_ID
+import com.openlattice.organization.DatasetApi.Companion.USER_ID_PATH
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import com.openlattice.organization.OrganizationExternalDatabaseTable
 import com.openlattice.organization.OrganizationExternalDatabaseTableColumnsPair
@@ -38,10 +38,10 @@ import javax.inject.Inject
 
 @RestController
 @RequestMapping(CONTROLLER)
-class OrganizationExternalDatabaseController : OrganizationExternalDatabaseApi, AuthorizingComponent {
+class DatasetController : DatasetApi, AuthorizingComponent {
 
     companion object {
-        private val logger = LoggerFactory.getLogger(OrganizationExternalDatabaseController::class.java)
+        private val logger = LoggerFactory.getLogger(DatasetController::class.java)
     }
 
     @Inject
