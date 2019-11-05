@@ -3,7 +3,7 @@ package com.openlattice.organization
 import retrofit2.http.*
 import java.util.*
 
-interface OrganizationExternalDatabaseApi {
+interface DatasetApi {
 
     companion object {
         /* These determine the service routing */
