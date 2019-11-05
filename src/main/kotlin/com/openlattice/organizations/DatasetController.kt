@@ -56,12 +56,8 @@ class DatasetController : DatasetApi, AuthorizingComponent {
     @Inject
     private lateinit var hazelcastInstance: HazelcastInstance
 
-    private lateinit var aclKeysMap: IMap<String, UUID>
-
-    @PostConstruct
-    fun init() {
-        this.aclKeysMap = hazelcastInstance.getMap(HazelcastMap.ACL_KEYS.name)
-    }
+    @Inject
+    private lateinit var aclKeyReservations: HazelcastAclKeyReservationService
 
     @Timed
     @PostMapping(path = [ID_PATH + USER_ID_PATH + CONNECTION_TYPE_PATH + EXTERNAL_DATABASE])
@@ -71,7 +67,7 @@ class DatasetController : DatasetApi, AuthorizingComponent {
             @PathVariable(CONNECTION_TYPE) connectionType: String,
             @RequestBody ipAddresses: Set<String>
     ) {
-        ensureOwner(organizationId)
+        ensureOwnerAccess(AclKey(organizationId))
         if (connectionType == "local") {
             checkState(ipAddresses.isEmpty(), "Local connections may not specify an IP address")
         } else {
@@ -87,7 +83,7 @@ class DatasetController : DatasetApi, AuthorizingComponent {
             @PathVariable(ID) organizationId: UUID,
             @PathVariable(USER_ID) userId: String
     ) {
-        ensureOwner(organizationId)
+        ensureOwnerAccess(AclKey(organizationId))
         val userPrincipal = Principal(PrincipalType.USER, userId)
         edms.removeHBARecord(organizationId, userPrincipal)
     }
@@ -96,7 +92,7 @@ class DatasetController : DatasetApi, AuthorizingComponent {
     @GetMapping(path = [ID_PATH + EXTERNAL_DATABASE_TABLE])
     override fun getExternalDatabaseTables(
             @PathVariable(ID) organizationId: UUID): Set<OrganizationExternalDatabaseTable> {
-        ensureOwner(organizationId)
+        ensureOwnerAccess(AclKey(organizationId))
         return edms.getExternalDatabaseTables(organizationId)
     }
 
@@ -104,7 +100,7 @@ class DatasetController : DatasetApi, AuthorizingComponent {
     @GetMapping(path = [ID_PATH + EXTERNAL_DATABASE_TABLE + EXTERNAL_DATABASE_COLUMN])
     override fun getExternalDatabaseTablesWithColumns(
             @PathVariable(ID) organizationId: UUID): Map<OrganizationExternalDatabaseTable, Set<OrganizationExternalDatabaseColumn>> {
-        ensureOwner(organizationId)
+        ensureOwnerAccess(AclKey(organizationId))
         return edms.getExternalDatabaseTablesWithColumns(organizationId)
     }
 
@@ -168,9 +164,7 @@ class DatasetController : DatasetApi, AuthorizingComponent {
     override fun deleteExternalDatabaseTables(
             @PathVariable(ID) organizationId: UUID,
             @RequestBody tableNames: Set<String>) {
-        val tableIds = tableNames.map {
-            getExternalDatabaseObjectId(organizationId, it)
-        }.toSet()
+        val tableIds = getExternalDatabaseObjectIds(organizationId, tableNames)
         tableIds.forEach { ensureObjectCanBeDeleted(it) }
         val aclKeys = tableIds.map { AclKey(organizationId, it) }.toSet()
         aclKeys.forEach { aclKey ->
@@ -206,9 +200,7 @@ class DatasetController : DatasetApi, AuthorizingComponent {
             @RequestBody columnNames: Set<String>
     ) {
         val tableId = getExternalDatabaseObjectId(organizationId, tableName)
-        val columnIds = columnNames.map {
-            getExternalDatabaseObjectId(tableId, it)
-        }.toSet()
+        val columnIds = getExternalDatabaseObjectIds(tableId, columnNames)
         columnIds.forEach { ensureObjectCanBeDeleted(it) }
         val aclKeys = columnIds.map { AclKey(organizationId, tableId, it) }.toSet()
         aclKeys.forEach { aclKey ->
@@ -219,17 +211,20 @@ class DatasetController : DatasetApi, AuthorizingComponent {
         edms.deleteOrganizationExternalDatabaseColumns(organizationId, columnIds)
     }
 
-    private fun ensureOwner(organizationId: UUID): AclKey {
-        val aclKey = AclKey(organizationId)
-        accessCheck(aclKey, EnumSet.of(Permission.OWNER))
-        return aclKey
-    }
-
     private fun getExternalDatabaseObjectId(containingObjectId: UUID, name: String): UUID {
-        val fqn = FullQualifiedName(containingObjectId.toString(), name)
-        val id = aclKeysMap.get(fqn.fullQualifiedNameAsString)
+        val fqn = FullQualifiedName(containingObjectId.toString(), name).toString()
+        val id = aclKeyReservations.getId(fqn)
         checkState(id != null, "External database object with name $name does not exist")
         return id!!
+    }
+
+    private fun getExternalDatabaseObjectIds( containingObjectId: UUID, names: Set<String>): Set<UUID> {
+        val fqns = names.map{FullQualifiedName(containingObjectId.toString(), it).toString()}.toSet()
+        val ids = aclKeyReservations.getIds(fqns).toSet()
+        ids.forEach{
+            checkState(it != null, "External database object with name $it does not exist")
+        }
+        return ids
     }
 
     override fun getAuthorizationManager(): AuthorizationManager {
