@@ -52,8 +52,6 @@ interface OrganizationExternalDatabaseApi {
             @Path(ID) organizationId: UUID,
             @Path(USER_ID) userId: String)
 
-    //will need to add an update trusted user as well
-
     //get
 
     /**
@@ -65,7 +63,7 @@ interface OrganizationExternalDatabaseApi {
 
     /**
      * Gets all OrganizationExternalDatabaseTable objects mapped to
-     * their containing OrganizationExternalDatabase Columns
+     * their containing OrganizationExternalDatabase columns
      * for an organization
      * @param organizationId The organization's UUID
      */
@@ -73,14 +71,14 @@ interface OrganizationExternalDatabaseApi {
     fun getExternalDatabaseTablesWithColumns(@Path(ID) organizationId: UUID): Map<OrganizationExternalDatabaseTable, Set<OrganizationExternalDatabaseColumn>>
 
     /**
-     * Gets an OrganizationExternalDatabaseTable object mapped to
-     * their containing OrganizationExternalDatabase Columns
+     * Gets an object containing an OrganizationExternalDatabaseTable
+     * object and its OrganizationExternalDatabase columns
      * for an organization
      * @param organizationId The organization's UUID
      * @param tableId The id of the organization's table
      */
     @GET(BASE + ID_PATH + TABLE_ID_PATH + EXTERNAL_DATABASE_TABLE + EXTERNAL_DATABASE_COLUMN)
-    fun getExternalDatabaseTableWithColumns(@Path(ID) organizationId: UUID, @Path(TABLE_ID) tableId: UUID): Pair<OrganizationExternalDatabaseTable, Set<OrganizationExternalDatabaseColumn>>
+    fun getExternalDatabaseTableWithColumns(@Path(ID) organizationId: UUID, @Path(TABLE_ID) tableId: UUID): OrganizationExternalDatabaseTableColumnsPair
 
     /**
      * Gets an OrganizationExternalDatabaseTable object with
