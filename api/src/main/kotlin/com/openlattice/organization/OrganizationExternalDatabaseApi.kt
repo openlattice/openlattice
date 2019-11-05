@@ -86,6 +86,8 @@ interface OrganizationExternalDatabaseApi {
      * @param organizationId The organization's UUID
      * @param tableId The id of the organization's table
      * @param rowCount The number of rows to be retrieved
+     * @return a map of column id to a descending list of all data in that column.
+     * Empty values in postgres are nulls in the list.
      */
     @GET(BASE + ID_PATH + TABLE_ID_PATH + ROW_COUNT_PATH + DATA)
     fun getExternalDatabaseTableData(@Path(ID) organizationId: UUID, @Path(TABLE_ID) tableId: UUID, @Path(ROW_COUNT) rowCount: Int): Map<UUID, List<Any?>>
