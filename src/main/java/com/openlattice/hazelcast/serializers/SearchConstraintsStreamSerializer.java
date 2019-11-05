@@ -107,7 +107,7 @@ public class SearchConstraintsStreamSerializer extends Serializer<SearchConstrai
 
         SortDefinition sortDefinition = object.getSortDefinition();
         out.writeString( sortDefinition.getSortType().toString() );
-        out.writeBoolean( sortDefinition.isDescending() );
+        out.writeBoolean( sortDefinition.getDescending() );
 
         if (sortDefinition.getPropertyTypeId() != null) {
             out.writeBoolean( true );

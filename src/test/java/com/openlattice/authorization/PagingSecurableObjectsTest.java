@@ -52,6 +52,7 @@ public class PagingSecurableObjectsTest extends HzAuthzTest {
 
     @BeforeClass
     public static void init() {
+        HzAuthzTest.init();
         currentPrincipals.add( u1 );
         currentPrincipals.add( r1 );
         currentPrincipals.add( r2 );
