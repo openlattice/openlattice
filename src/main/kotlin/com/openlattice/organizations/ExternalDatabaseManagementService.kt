@@ -221,7 +221,7 @@ class ExternalDatabaseManagementService(
     }
 
     /*PERMISSIONS*/
-    fun addTrustedUser(orgId: UUID, userPrincipal: Principal, connectionType: String, ipAddresses: Set<String>) {
+    fun addHBARecord(orgId: UUID, userPrincipal: Principal, connectionType: String, ipAddresses: Set<String>) {
         val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
         val username = getDBUser(userPrincipal.id)
         val record = PostgresAuthenticationRecord(
@@ -234,7 +234,7 @@ class ExternalDatabaseManagementService(
         updateHBARecords(dbName)
     }
 
-    fun removeTrustedUser(orgId: UUID, userPrincipal: Principal) {
+    fun removeHBARecord(orgId: UUID, userPrincipal: Principal) {
         val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
         val username = getDBUser(userPrincipal.id)
         hbaAuthenticationRecordsMapstore.remove(username)
@@ -386,6 +386,7 @@ class ExternalDatabaseManagementService(
 
     private fun getDBUser(principalId: String): String {
         val securePrincipal = securePrincipalsManager.getPrincipal(principalId)
+        checkState(securePrincipal.principalType == PrincipalType.USER, "Principal must be of type USER")
         return quote(buildPostgresUsername(securePrincipal))
     }
 
