@@ -443,7 +443,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         Map<String, Object> entityPropertiesMapping = Maps.newHashMap();
 
         entityPropertiesMapping.put( ENTITY_SET_ID_KEY_ID.getId().toString(), keywordMapping );
-        entityPropertiesMapping.put( LAST_WRITE_KEY_ID.getId().toString(), keywordMapping );
+        entityPropertiesMapping.put( LAST_WRITE_ID.getId().toString(), keywordMapping );
 
         for ( PropertyType propertyType : propertyTypes ) {
 
@@ -825,7 +825,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         BoolQueryBuilder query = QueryBuilders.boolQuery().minimumShouldMatch( 1 );
 
         for ( int i = 0; i < entitySetIds.length; i++ ) {
-            RangeQueryBuilder rangeQuery = QueryBuilders.rangeQuery( getFieldName( LAST_WRITE_KEY_ID.getId() ) );
+            RangeQueryBuilder rangeQuery = QueryBuilders.rangeQuery( getFieldName( LAST_WRITE_ID.getId() ) );
 
             if ( constraint.getStartDate().isPresent() ) {
                 rangeQuery.gt( constraint.getStartDate().get().toString() );
