@@ -37,9 +37,6 @@ public interface PermissionsApi {
     String EXPLAIN       = "/explain";
     String UPDATE        = "/update";
 
-    String ID           = "id";
-    String ID_PATH      = "/{" + ID + "}";
-
 
     /**
      * Adds, removes, or sets the ace for a particular acl key. Successful only if user is the owner of acl key.
