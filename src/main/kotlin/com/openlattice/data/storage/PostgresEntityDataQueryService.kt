@@ -12,8 +12,8 @@ import com.openlattice.data.util.PostgresDataHasher
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.*
 import com.openlattice.postgres.PostgresColumn.*
-import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.PostgresTable.DATA
+import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
@@ -138,7 +138,10 @@ class PostgresEntityDataQueryService(
                 linking
         ) { rs ->
             getEntityPropertiesByFullQualifiedName(
-                    rs, authorizedPropertyTypes, metadataOptions, byteBlobDataManager
+                    rs,
+                    authorizedPropertyTypes,
+                    metadataOptions,
+                    byteBlobDataManager
             )
         }.toMap()
     }
@@ -275,7 +278,6 @@ class PostgresEntityDataQueryService(
      * @param entitySetId The entity set id for which to insert entities.
      * @param tombstoneFn A function that may tombstone values before performing the upsert.
      * @param entities The entities to update or insert.
-     * @param entityKeyIdsToLinkingIds A map from entity key ids to their linking ids.
      * @param authorizedPropertyTypes The authorized property types for the insertion.
      * @param version The version to use for upserting.
      * @param partitionsInfo Contains the partition information for the requested entity set.
@@ -314,7 +316,7 @@ class PostgresEntityDataQueryService(
                     }
 
                     tombstoneFn(version, entityBatch)
-                    val (uec, upc) = upsertEntities(
+                    val upc = upsertEntities(
                             entitySetId,
                             entityBatch,
                             authorizedPropertyTypes,
@@ -323,7 +325,10 @@ class PostgresEntityDataQueryService(
                             partition,
                             awsPassthrough
                     )
-                    updatedEntityCount += uec
+                    //For now we can't track how many entities were updated in a call transactionally.
+                    //If we want to check how many entities were written at a specific version that is possible but
+                    //expensive.
+                    updatedEntityCount += entities.size
                     updatedPropertyCounts += upc
                 }
 
@@ -340,72 +345,30 @@ class PostgresEntityDataQueryService(
             partitionsVersion: Int,
             partition: Int,
             awsPassthrough: Boolean
-    ): Pair<Int, Int> {
+    ): Int {
         return hds.connection.use { connection ->
             //Update the versions of all entities.
-
             val entityKeyIdsArr = PostgresArrays.createUuidArray(connection, entities.keys)
             val versionsArrays = PostgresArrays.createLongArray(connection, version)
-            val allPartitions = partitionManager.getAllPartitions()
 
             /*
-         * Our approach is to use entity level locking that takes advantage of the router executor to avoid deadlocks.
-         *
-         * If performance becomes an issue, we can break this is up into individual transactions at the risk of
-         * ending up with partial property right and decoupled metadata updates.
-         */
-
-//        //Acquire entity key id locks
-//        val rowLocks = connection.prepareStatement(lockEntitiesSql)
-//        rowLocks.setArray(1, entityKeyIdsArr)
-//        rowLocks.setInt(2, partition)
-//        rowLocks.executeQuery()
-
-            //Update metadata
-            val upsertEntities = connection.prepareStatement(upsertEntitiesSql)
-
-            upsertEntities.setObject(1, versionsArrays)
-            upsertEntities.setObject(2, version)
-            upsertEntities.setObject(3, version)
-            upsertEntities.setObject(4, entitySetId)
-            upsertEntities.setArray(5, entityKeyIdsArr)
-            upsertEntities.setInt(6, partition)
-            upsertEntities.fetchSize = DEFAULT_BATCH_SIZE
-
-            val rs = upsertEntities.executeQuery()
-            val entityKeyIdsToLinkingIds: MutableMap<UUID, UUID?> = mutableMapOf()
-
-            while (rs.next()) {
-                entityKeyIdsToLinkingIds[ResultSetAdapters.id(rs)] = ResultSetAdapters.linkingId(rs)
-            }
-
-            val updatedEntityCount = entityKeyIdsToLinkingIds.size
-
-            //Basic validation.
-            if (updatedEntityCount != entities.size) {
-                logger.warn(
-                        "Update $updatedEntityCount entities. Expect to update ${entities.size} for entity set $entitySetId."
-                )
-                logger.debug("Entity key ids: {}", entities.keys)
-            }
+             * We do not need entity level locking as our version field ensures that data is consistent even across
+             * transactions in all cases, except deletes (clear is fine) as long entity version is not bumped until
+             * all properties are written.
+             *
+             */
 
             //Update property values. We use multiple prepared statements in batch while re-using ARRAY[version].
-            val upsertPropertyValues = mutableMapOf<UUID, Pair<PreparedStatement, PreparedStatement>>()
+            val upsertPropertyValues = mutableMapOf<UUID, PreparedStatement>()
             val updatedPropertyCounts = entities.entries.map { (entityKeyId, entityData) ->
 
                 entityData.map { (propertyTypeId, values) ->
                     val upsertPropertyValue = upsertPropertyValues.getOrPut(propertyTypeId) {
                         val pt = authorizedPropertyTypes[propertyTypeId] ?: abortInsert(entitySetId, entityKeyId)
-                        connection.prepareStatement(upsertPropertyValueSql(pt)) to
-                                connection.prepareStatement(upsertPropertyValueLinkingRowSql(pt))
+                        connection.prepareStatement(upsertPropertyValueSql(pt))
                     }
 
-                    //TODO: Keep track of collisions here. We can detect when hashes collide for an entity
-                    //and read the existing value to determine which colliding values need to be assigned new
-                    // hashes. This is fine because hashes are immutable and the front-end always requests them
-                    // from the backend before performing operations.
                     values.map { value ->
-
                         val dataType = authorizedPropertyTypes.getValue(propertyTypeId).datatype
 
                         val (propertyHash, insertValue) = getPropertyHash(
@@ -413,39 +376,37 @@ class PostgresEntityDataQueryService(
                                 value, dataType, awsPassthrough
                         )
 
-                        upsertPropertyValue.first.setObject(1, entitySetId)
-                        upsertPropertyValue.first.setObject(2, entityKeyId)
-                        upsertPropertyValue.first.setInt(3, partition)
-                        upsertPropertyValue.first.setObject(4, propertyTypeId)
-                        upsertPropertyValue.first.setObject(5, propertyHash)
-                        upsertPropertyValue.first.setObject(6, version)
-                        upsertPropertyValue.first.setArray(7, versionsArrays)
-                        upsertPropertyValue.first.setInt(8, partitionsVersion)
-                        upsertPropertyValue.first.setObject(9, insertValue)
-                        upsertPropertyValue.first.addBatch()
-
-                        val maybeLinkingId = entityKeyIdsToLinkingIds[entityKeyId]
-                        if (maybeLinkingId != null) {
-                            // update for linked rows
-                            upsertPropertyValue.second.setObject(1, entitySetId)
-                            upsertPropertyValue.second.setObject(2, maybeLinkingId)
-                            upsertPropertyValue.second.setInt(3, getPartition(maybeLinkingId, allPartitions))
-                            upsertPropertyValue.second.setObject(4, propertyTypeId)
-                            upsertPropertyValue.second.setObject(5, propertyHash)
-                            upsertPropertyValue.second.setObject(6, version)
-                            upsertPropertyValue.second.setArray(7, versionsArrays)
-                            upsertPropertyValue.second.setInt(8, partitionsVersion)
-                            upsertPropertyValue.second.setObject(9, insertValue)
-                            upsertPropertyValue.second.setObject(10, entityKeyId)
-                            upsertPropertyValue.second.addBatch()
-                        }
+                        upsertPropertyValue.setObject(1, entitySetId)
+                        upsertPropertyValue.setObject(2, entityKeyId)
+                        upsertPropertyValue.setInt(3, partition)
+                        upsertPropertyValue.setObject(4, propertyTypeId)
+                        upsertPropertyValue.setObject(5, propertyHash)
+                        upsertPropertyValue.setObject(6, version)
+                        upsertPropertyValue.setArray(7, versionsArrays)
+                        upsertPropertyValue.setInt(8, partitionsVersion)
+                        upsertPropertyValue.setObject(9, insertValue)
+                        upsertPropertyValue.addBatch()
                     }
                 }
-                upsertPropertyValues.values.map { (entity, link) ->
-                    entity.executeBatch().sum() + link.executeBatch().sum()
-                }.sum()
+                upsertPropertyValues.values.map { it.executeBatch().sum() }.sum()
             }.sum()
-            updatedEntityCount to updatedPropertyCounts
+
+            //Make data visible by marking new version in ids table.
+            val upsertEntities = connection.prepareStatement(buildUpsertEntitiesAndLinkedData())
+
+            upsertEntities.setObject(1, versionsArrays)
+            upsertEntities.setObject(2, version)
+            upsertEntities.setObject(3, version)
+            upsertEntities.setObject(4, entitySetId)
+            upsertEntities.setArray(5, entityKeyIdsArr)
+            upsertEntities.setInt(6, partition)
+            upsertEntities.setInt(7, partition)
+            upsertEntities.setLong(8, version)
+
+
+            val updatedLinkedEntities = upsertEntities.executeUpdate()
+            logger.debug("Updated $updatedLinkedEntities linked entities as part of insert.")
+            updatedPropertyCounts
         }
 
     }
@@ -908,7 +869,7 @@ class PostgresEntityDataQueryService(
         val partitions = partitionsInfo.partitions.toList()
         val partitionsVersion = partitionsInfo.partitionsVersion
 
-        val numUpdates =  hds.connection.use {conn ->
+        val numUpdates = hds.connection.use { conn ->
             val ps = conn.prepareStatement(deleteEntityKeys)
             entityKeyIds
                     .groupBy { getPartition(it, partitions) }
