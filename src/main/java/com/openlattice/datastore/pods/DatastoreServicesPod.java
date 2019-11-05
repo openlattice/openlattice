@@ -41,6 +41,7 @@ import com.openlattice.authentication.Auth0Configuration;
 import com.openlattice.authorization.*;
 import com.openlattice.collections.CollectionsManager;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
+import com.openlattice.data.DataDeletionManager;
 import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.DataGraphService;
 import com.openlattice.data.EntityKeyIdService;
@@ -51,10 +52,7 @@ import com.openlattice.data.storage.*;
 import com.openlattice.data.storage.aws.AwsDataSinkService;
 import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.datastore.apps.services.AppService;
-import com.openlattice.datastore.services.DatastoreConductorElasticsearchApi;
-import com.openlattice.datastore.services.EdmManager;
-import com.openlattice.datastore.services.EdmService;
-import com.openlattice.datastore.services.SyncTicketService;
+import com.openlattice.datastore.services.*;
 import com.openlattice.directory.UserDirectoryService;
 import com.openlattice.edm.PostgresEdmManager;
 import com.openlattice.edm.properties.PostgresTypeManager;
@@ -163,11 +161,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public GraphQueryService graphQueryService() {
-        return new PostgresGraphQueryService(
-                hikariDataSource,
-                dataModelService(),
-                dataQueryService()
-        );
+        return new PostgresGraphQueryService( hikariDataSource, entitySetManager(), dataQueryService() );
     }
 
     @Bean
@@ -205,7 +199,8 @@ public class DatastoreServicesPod {
         return new PostgresTypeManager( hikariDataSource );
     }
 
-    @Bean PartitionManager partitionManager() {
+    @Bean
+    PartitionManager partitionManager() {
         return new PartitionManager( hazelcastInstance, hikariDataSource );
     }
 
@@ -218,14 +213,27 @@ public class DatastoreServicesPod {
                 authorizationManager(),
                 pgEdmManager(),
                 entityTypeManager(),
-                schemaManager(),
-                auditingConfiguration,
-                partitionManager() );
+                schemaManager()
+        );
+    }
+
+    @Bean
+    public EntitySetManager entitySetManager() {
+        return new EntitySetService(
+                hazelcastInstance,
+                eventBus,
+                pgEdmManager(),
+                aclKeyReservationService(),
+                authorizationManager(),
+                partitionManager(),
+                dataModelService(),
+                auditingConfiguration
+        );
     }
 
     @Bean
     public AuditRecordEntitySetsManager auditRecordEntitySetsManager() {
-        return dataModelService().getAuditRecordEntitySetsManager();
+        return entitySetManager().getAuditRecordEntitySetsManager();
     }
 
     @Bean
@@ -240,7 +248,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public EntityDatastore entityDatastore() {
-        return new PostgresEntityDatastore( dataQueryService(), dataModelService(), pgEdmManager() );
+        return new PostgresEntityDatastore( dataQueryService(), pgEdmManager(), entitySetManager() );
     }
 
     @Bean
@@ -310,7 +318,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public EdmAuthorizationHelper edmAuthorizationHelper() {
-        return new EdmAuthorizationHelper( dataModelService(), authorizationManager() );
+        return new EdmAuthorizationHelper( dataModelService(), authorizationManager(), entitySetManager() );
     }
 
     @Bean
@@ -325,7 +333,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public GraphService graphApi() {
-        return new Graph( hikariDataSource, dataModelService(), partitionManager() );
+        return new Graph( hikariDataSource, entitySetManager(), partitionManager() );
     }
 
     @Bean
@@ -349,7 +357,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public DataGraphServiceHelper dataGraphServiceHelper() {
-        return new DataGraphServiceHelper( dataModelService() );
+        return new DataGraphServiceHelper( entitySetManager() );
     }
 
     @Bean
@@ -396,7 +404,8 @@ public class DatastoreServicesPod {
         return new PostgresEntityDataQueryService(
                 hikariDataSource,
                 byteBlobDataManager,
-                partitionManager() );
+                partitionManager()
+        );
     }
 
     @Bean
@@ -420,12 +429,17 @@ public class DatastoreServicesPod {
         return new PersistentSearchService( hikariDataSource, principalService() );
     }
 
-    @Bean PostgresDataSinkService postgresDataSinkService() {
+    @Bean
+    PostgresDataSinkService postgresDataSinkService() {
         return new PostgresDataSinkService();
     }
 
     @Bean AwsDataSinkService awsDataSinkService() {
-        return new AwsDataSinkService( partitionManager(), byteBlobDataManager, hikariDataSource );
+        return new AwsDataSinkService(
+                partitionManager(),
+                byteBlobDataManager,
+                hikariDataSource
+        );
     }
 
     @Bean
@@ -483,12 +497,29 @@ public class DatastoreServicesPod {
 
     @Bean
     public CollectionsManager collectionsManager() {
-        return new CollectionsManager( hazelcastInstance,
+        return new CollectionsManager(
+                hazelcastInstance,
                 dataModelService(),
+                entitySetManager(),
                 aclKeyReservationService(),
                 schemaManager(),
                 authorizationManager(),
-                eventBus );
+                eventBus
+        );
+    }
+
+    @Bean
+    public DataDeletionManager dataDeletionManager() {
+        return new DataDeletionService(
+                dataModelService(),
+                entitySetManager(),
+                dataGraphService(),
+                edmAuthorizationHelper(),
+                authorizationManager(),
+                auditRecordEntitySetsManager(),
+                entityDatastore(),
+                graphApi()
+        );
     }
 
     @PostConstruct

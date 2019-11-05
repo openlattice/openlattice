@@ -10,6 +10,7 @@ import com.openlattice.authorization.Principals
 import com.openlattice.data.storage.MetadataOption
 import com.openlattice.data.storage.selectEntitySetWithCurrentVersionOfPropertyTypes
 import com.openlattice.datastore.services.EdmManager
+import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.PostgresEdmManager
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.notifications.sms.SmsEntitySetInformation
@@ -49,6 +50,9 @@ class AdminController : AdminApi, AuthorizingComponent {
     private lateinit var edm: EdmManager
 
     @Inject
+    private lateinit var entitySetManager: EntitySetManager
+
+    @Inject
     private lateinit var organizations: HazelcastOrganizationService
 
     @GetMapping(value = [SQL + ID_PATH], produces = [MediaType.APPLICATION_JSON_VALUE])
@@ -57,7 +61,7 @@ class AdminController : AdminApi, AuthorizingComponent {
             @RequestParam(OMIT_ENTITY_SET_ID, defaultValue = "false") omitEntitySetId: Boolean
     ): String {
         ensureAdminAccess()
-        val entitySet = edm.getEntitySet(entitySetId)
+        val entitySet = entitySetManager.getEntitySet(entitySetId)!!
         return if (entitySet.isLinking) {
             buildEntitySetSql(
                     entitySet.linkedEntitySets.associateWith { Optional.empty<Set<UUID>>() }, true, omitEntitySetId
@@ -85,7 +89,7 @@ class AdminController : AdminApi, AuthorizingComponent {
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>, linking: Boolean, omitEntitySetId: Boolean
     ): String {
         val entityTypeId = Iterables.getOnlyElement(
-                edm.getEntitySetsAsMap(entityKeyIds.keys).values.map { it.entityTypeId }.toSet()
+                entitySetManager.getEntitySetsAsMap(entityKeyIds.keys).values.map { it.entityTypeId }.toSet()
         )
         val entityType = edm.getEntityType(entityTypeId)
         val propertyTypes = edm.getPropertyTypesAsMap(entityType.properties)

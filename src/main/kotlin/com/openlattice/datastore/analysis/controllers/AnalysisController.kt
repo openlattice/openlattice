@@ -24,8 +24,6 @@ package com.openlattice.datastore.analysis.controllers
 import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Preconditions.checkArgument
 import com.google.common.base.Preconditions.checkState
-import com.google.common.collect.HashMultimap
-import com.google.common.collect.ImmutableSetMultimap
 import com.openlattice.analysis.AnalysisApi
 import com.openlattice.analysis.AnalysisService
 import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking
@@ -37,6 +35,7 @@ import com.openlattice.data.DataGraphManager
 import com.openlattice.data.requests.FileType
 import com.openlattice.web.mediatypes.CustomMediaType
 import com.openlattice.datastore.services.EdmService
+import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.EdmConstants.Companion.COUNT_FQN
 import com.openlattice.edm.EdmConstants.Companion.ID_FQN
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
@@ -48,7 +47,6 @@ import javax.inject.Inject
 import javax.servlet.http.HttpServletResponse
 import kotlin.collections.LinkedHashSet
 
-private val mm = HashMultimap.create<FullQualifiedName, Any>(ImmutableSetMultimap.of(COUNT_FQN, 0))
 
 /**
  *
@@ -75,6 +73,9 @@ class AnalysisController : AnalysisApi, AuthorizingComponent {
 
     @Inject
     private lateinit var authorizations: AuthorizationManager
+
+    @Inject
+    private lateinit var entitySetManager: EntitySetManager
 
     @Timed
     @RequestMapping(
@@ -106,8 +107,8 @@ class AnalysisController : AnalysisApi, AuthorizingComponent {
             filteredRankings: RankingAggregation,
             fileType: FileType?
     ): Iterable<Map<String, Any>> {
-        val entitySet = edm.getEntitySet(entitySetId)
-        val columnTitles = getEntitySetColumns(edm.getEntityTypeByEntitySetId(entitySetId).id)
+        val entitySet = entitySetManager.getEntitySet(entitySetId)!!
+        val columnTitles = getEntitySetColumns(entitySetManager.getEntityTypeByEntitySetId(entitySetId).id)
 
         //TODO: Make this more concise
         if (entitySet.isLinking) {
@@ -179,12 +180,12 @@ class AnalysisController : AnalysisApi, AuthorizingComponent {
             val authorizedEntitySetPropertyTypes =
                     edm.getPropertyTypesAsMap(edm.getEntityType(filteredRanking.neighborTypeId).properties)
             val authorizedAssociations =
-                    edm.getEntitySetIdsOfType(filteredRanking.associationTypeId)
+                    entitySetManager.getEntitySetIdsOfType(filteredRanking.associationTypeId)
                             .filter { entitySetIsAuthorized(it) }
                             .map { accessCheckAndReturnAuthorizedPropetyTypes(filteredRanking.associationFilters, it) }
                             .toMap()
             val authorizedNeighbors =
-                    edm.getEntitySetIdsOfType(filteredRanking.neighborTypeId)
+                    entitySetManager.getEntitySetIdsOfType(filteredRanking.neighborTypeId)
                             .filter { entitySetIsAuthorized(it) }
                             .map { accessCheckAndReturnAuthorizedPropetyTypes(filteredRanking.neighborFilters, it) }
                             .toMap()
@@ -216,7 +217,7 @@ class AnalysisController : AnalysisApi, AuthorizingComponent {
     override fun getNeighborTypes(@PathVariable(AnalysisApi.ENTITY_SET_ID) entitySetId: UUID): Iterable<NeighborType> {
         ensureReadAccess(AclKey(entitySetId))
 
-        val entitySet = edm.getEntitySet(entitySetId)
+        val entitySet = entitySetManager.getEntitySet(entitySetId)!!
 
         val allEntitySetIds = if (entitySet.isLinking) {
             val linkedEntitySetIds = HashSet(entitySet.linkedEntitySets)

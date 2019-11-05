@@ -37,6 +37,7 @@ import com.openlattice.authorization.util.AuthorizationUtils;
 import com.openlattice.controllers.exceptions.BadRequestException;
 import com.openlattice.data.DataExpiration;
 import com.openlattice.datastore.services.EdmManager;
+import com.openlattice.datastore.services.EntitySetManager;
 import com.openlattice.datastore.util.Util;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.collections.CollectionTemplateType;
@@ -71,6 +72,7 @@ public class AppService {
     private final SecurePrincipalsManager           principalsService;
     private final HazelcastAclKeyReservationService reservations;
     private final CollectionsManager                collectionsManager;
+    private final EntitySetManager                  entitySetService;
 
     @Inject
     private EventBus eventBus;
@@ -83,7 +85,8 @@ public class AppService {
             AuthorizationManager authorizationService,
             SecurePrincipalsManager principalsService,
             HazelcastAclKeyReservationService reservations,
-            CollectionsManager collectionsManager
+            CollectionsManager collectionsManager,
+            EntitySetManager entitySetService
     ) {
         this.apps = hazelcast.getMap( HazelcastMap.APPS.name() );
         this.appConfigs = hazelcast.getMap( HazelcastMap.APP_CONFIGS.name() );
@@ -98,6 +101,7 @@ public class AppService {
         this.principalsService = principalsService;
         this.reservations = reservations;
         this.collectionsManager = collectionsManager;
+        this.entitySetService = entitySetService;
     }
 
     public Iterable<App> getApps() {
@@ -160,7 +164,7 @@ public class AppService {
                 .getEntityTypesAsMap( entityTypeCollection.getTemplate().stream()
                         .map( CollectionTemplateType::getEntityTypeId ).collect(
                                 Collectors.toSet() ) );
-        Map<UUID, EntitySet> entitySetsById = edmService
+        Map<UUID, EntitySet> entitySetsById = entitySetService
                 .getEntitySetsAsMap( Sets.newHashSet( entitySetCollection.getTemplate().values() ) );
 
         Map<UUID, AclKey> roles = appRoles.stream().collect( Collectors.toMap( AppRole::getId, appRole -> {

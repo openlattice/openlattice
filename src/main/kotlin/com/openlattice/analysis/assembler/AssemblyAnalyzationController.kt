@@ -31,6 +31,7 @@ import com.openlattice.authorization.DbCredentialService
 import com.openlattice.authorization.Principals
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EdmService
+import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.directory.MaterializedViewAccount
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.springframework.http.MediaType
@@ -63,6 +64,9 @@ class AssemblyAnalyzationController : AssemblyAnalyzationApi, AuthorizingCompone
     @Inject
     private lateinit var edmService: EdmManager
 
+    @Inject
+    private lateinit var entitySetManager: EntitySetManager
+
     @PostMapping(value = [SIMPLE_AGGREGATION], produces = [MediaType.APPLICATION_JSON_VALUE])
     override fun getSimpleAssemblyAggregates(
             @RequestBody assemblyAggregationFilter: AssemblyAggregationFilter
@@ -71,9 +75,9 @@ class AssemblyAnalyzationController : AssemblyAnalyzationApi, AuthorizingCompone
         val account = MaterializedViewAccount(principal, dbCredService.getDbCredential(principal))
 
         val dbName = PostgresDatabases.buildOrganizationDatabaseName(assemblyAggregationFilter.organizationId)
-        val srcEntitySetName = edmService.getEntitySet(assemblyAggregationFilter.srcEntitySetId).name
-        val edgeEntitySetName = edmService.getEntitySet(assemblyAggregationFilter.edgeEntitySetId).name
-        val dstEntitySetName = edmService.getEntitySet(assemblyAggregationFilter.dstEntitySetId).name
+        val srcEntitySetName = entitySetManager.getEntitySet(assemblyAggregationFilter.srcEntitySetId)!!.name
+        val edgeEntitySetName = entitySetManager.getEntitySet(assemblyAggregationFilter.edgeEntitySetId)!!.name
+        val dstEntitySetName = entitySetManager.getEntitySet(assemblyAggregationFilter.dstEntitySetId)!!.name
 
 
         val groupedGroupings = assemblyAggregationFilter.groupProperties.groupBy { it.orientation }

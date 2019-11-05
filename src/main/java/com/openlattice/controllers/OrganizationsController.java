@@ -29,7 +29,7 @@ import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.authorization.util.AuthorizationUtils;
 import com.openlattice.controllers.exceptions.ForbiddenException;
 import com.openlattice.controllers.exceptions.ResourceNotFoundException;
-import com.openlattice.datastore.services.EdmManager;
+import com.openlattice.datastore.services.EntitySetManager;
 import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organization.*;
@@ -64,7 +64,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     private SecurePrincipalsManager principalService;
 
     @Inject
-    private EdmManager edm;
+    private EntitySetManager entitySetManager;
 
     @Inject
     private EdmAuthorizationHelper authzHelper;
@@ -155,7 +155,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             @RequestBody EnumSet<OrganizationEntitySetFlag> flagFilter ) {
         ensureRead( organizationId );
         final var orgPrincipal = organizations.getOrganizationPrincipal( organizationId );
-        final var internal = edm.getEntitySetsForOrganization( organizationId );
+        final var internal = entitySetManager.getEntitySetsForOrganization( organizationId );
         final var external = authorizations.getAuthorizedObjectsOfType(
                 orgPrincipal.getPrincipal(),
                 SecurableObjectType.EntitySet,
@@ -313,7 +313,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         }
 
         // check materialization on all linking and normal entity sets
-        final var entitySets = edm.getEntitySetsAsMap( entitySetIds );
+        final var entitySets = entitySetManager.getEntitySetsAsMap( entitySetIds );
         final var allEntitySetIds = entitySets.values().stream()
                 .flatMap( entitySet -> {
                     var entitySetIdsToCheck = Sets.newHashSet( entitySet.getId() );
