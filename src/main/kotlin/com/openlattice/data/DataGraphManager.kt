@@ -73,16 +73,6 @@ interface DataGraphManager {
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
     ): Map<FullQualifiedName, Set<Any>>
 
-    //Soft deletes
-    fun clearEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent
-
-    /**
-     * Clears property data, id, edges of entities.
-     */
-    fun clearEntities(
-            entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): WriteEvent
-
     /**
      * Deletes property data, id, edges of association entities in batches.
      */
@@ -92,23 +82,6 @@ interface DataGraphManager {
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
     ): List<WriteEvent>
 
-    fun clearEntityProperties(
-            entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): WriteEvent
-
-    //Hard deletes
-    /**
-     * Deletes property data, id, edges of all entities in entityset.
-     */
-    fun deleteEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent
-
-    /**
-     * Deletes property data, id, edges of entities.
-     */
-    fun deleteEntities(
-            entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): WriteEvent
-
     /**
      * Deletes property data, id, edges of association entities in batches.
      */
@@ -117,11 +90,6 @@ interface DataGraphManager {
             associationsEdgeKeys: Iterable<DataEdgeKey>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
     ): List<WriteEvent>
-
-
-    fun deleteEntityProperties(
-            entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): WriteEvent
 
     /*
      * Bulk endpoints for entities/associations
@@ -218,4 +186,7 @@ interface DataGraphManager {
                                          deleteType: DeleteType,
                                          expirationPropertyType: Optional<PropertyType>
     ): BasePostgresIterable<UUID>
+
+    fun getEdgeEntitySetsConnectedToEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): Set<UUID>
+    fun getEdgeEntitySetsConnectedToEntitySet(entitySetId: UUID): Set<UUID>
 }
