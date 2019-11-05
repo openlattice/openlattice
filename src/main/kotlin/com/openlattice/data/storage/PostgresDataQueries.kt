@@ -73,8 +73,8 @@ fun buildPreparableFiltersSql(
     val metadataOptionColumnsSql = metadataOptionColumns.values.joinToString("")
     val innerGroupBy = groupBy(ESID_EKID_PART_PTID)
     val outerGroupBy = if (metadataOptions.contains(MetadataOption.ORIGIN_IDS)) {
-        groupBy(ESID_EKID_PART)
-    } else groupBy("$ESID_EKID_PART,${ORIGIN_ID.name}")
+        groupBy("$ESID_EKID_PART,${ORIGIN_ID.name}")
+    } else groupBy(ESID_EKID_PART)
     val linkingClause = if (linking) " AND ${ORIGIN_ID.name} != '${ID_VALUE.name}' " else ""
 
     val innerSql = selectEntitiesGroupedByIdAndPropertyTypeId(
@@ -84,7 +84,8 @@ fun buildPreparableFiltersSql(
             detailed = detailed
     ) + linkingClause + filtersClause + innerGroupBy
 
-    val sql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name}$metadataOptionColumnsSql,$PROPERTIES " +
+    val sql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name}$metadataOptionColumnsSql," +
+            "jsonb_object_agg($PROPERTY_TYPE_ID,PROPERTIES) " +
             "FROM ($innerSql) entities $outerGroupBy"
 
     return sql to filtersClauses.second

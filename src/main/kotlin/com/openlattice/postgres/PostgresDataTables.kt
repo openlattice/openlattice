@@ -134,22 +134,19 @@ class PostgresDataTables {
             val currentPropertiesForEntitySetIndex = PostgresColumnsIndexDefinition(
                     tableDefinition, ENTITY_SET_ID, VERSION
             )
-                    .name(quote(prefix + "entity_set_id_version_idx"))
+                    .name(quote(prefix + "_entity_set_id_version_idx"))
                     .ifNotExists()
                     .desc()
 
             val currentPropertiesForEntityIndex = PostgresColumnsIndexDefinition(tableDefinition, ID_VALUE, VERSION)
-                    .name(quote(prefix + "id_version_idx"))
+                    .name(quote(prefix + "_id_version_idx"))
                     .ifNotExists()
                     .desc()
-          
-            val readDataIndex = PostgresExpressionIndexDefinition(tableDefinition, "(${ORIGIN_ID.name} != '${IdConstants.EMPTY_ORIGIN_ID.id}')" )
-                    .name("read_data_idx")
+
+            val readDataIndex = PostgresExpressionIndexDefinition(tableDefinition, "(${ORIGIN_ID.name} != ${ID_VALUE.name})" )
+                    .name(prefix+"_read_data_idx")
                     .ifNotExists()
 
-            val originIdNotNullIndex = PostgresExpressionIndexDefinition(tableDefinition, "(${ORIGIN_ID.name} != '${IdConstants.EMPTY_ORIGIN_ID.id}')" )
-                .name("origin_id_not_equal_empty_idx")
-                .ifNotExists()
 
             tableDefinition.addIndexes(
                     idIndex,
@@ -161,7 +158,7 @@ class PostgresDataTables {
                     partitionsVersionIndex,
                     currentPropertiesForEntitySetIndex,
                     currentPropertiesForEntityIndex,
-                    originIdNotNullIndex
+                    readDataIndex
             )
 
             return tableDefinition
