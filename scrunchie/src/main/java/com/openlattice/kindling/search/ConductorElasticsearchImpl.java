@@ -99,7 +99,6 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             ASSOCIATION_TYPE_INDEX,
             PROPERTY_TYPE_INDEX,
             APP_INDEX,
-            APP_TYPE_INDEX,
             ENTITY_TYPE_COLLECTION_INDEX,
             ENTITY_SET_COLLECTION_INDEX
     };
@@ -109,7 +108,6 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             SecurableObjectType.AssociationType, ASSOCIATION_TYPE_INDEX,
             SecurableObjectType.PropertyTypeInEntitySet, PROPERTY_TYPE_INDEX,
             SecurableObjectType.App, APP_INDEX,
-            SecurableObjectType.AppType, APP_TYPE_INDEX,
             SecurableObjectType.EntityTypeCollection, ENTITY_TYPE_COLLECTION_INDEX,
             SecurableObjectType.EntitySetCollection, ENTITY_SET_COLLECTION_INDEX,
             SecurableObjectType.Organization, ORGANIZATIONS
@@ -120,7 +118,6 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             ASSOCIATION_TYPE_INDEX, ASSOCIATION_TYPE,
             PROPERTY_TYPE_INDEX, PROPERTY_TYPE,
             APP_INDEX, APP,
-            APP_TYPE_INDEX, APP_TYPE,
             ENTITY_TYPE_COLLECTION_INDEX, ENTITY_TYPE_COLLECTION,
             ENTITY_SET_COLLECTION_INDEX, ENTITY_SET_COLLECTION,
             ORGANIZATIONS, ORGANIZATION_TYPE
@@ -1364,8 +1361,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 PROPERTY_TYPE_INDEX,
                 ASSOCIATION_TYPE_INDEX,
                 ORGANIZATIONS,
-                APP_INDEX,
-                APP_TYPE_INDEX )
+                APP_INDEX )
                 .get();
         return true;
     }
