@@ -70,7 +70,7 @@ class PostgresLinkingFeedbackService(private val hds: HikariDataSource, hazelcas
         return operation(buildPredicatesForQueries(feedbackType, entity))
     }
 
-    @SuppressWarnings("unchecked")
+    @Suppress("UNCHECKED_CAST")
     fun buildPredicatesForQueries(feedbackType: FeedbackType, entity: EntityDataKey): Predicate<EntityKeyPair, Boolean> {
         val entityPredicate = Predicates.or(
                 Predicates.equal(FIRST_ENTITY_INDEX, entity),
@@ -92,7 +92,7 @@ class PostgresLinkingFeedbackService(private val hds: HikariDataSource, hazelcas
         return EntityLinkingFeedback(entityPair, feedback)
     }
 
-    @SuppressWarnings("unchecked")
+    @Suppress("UNCHECKED_CAST")
     fun deleteLinkingFeedback(entitySetId: UUID, entityKeyIds: Optional<Set<UUID>>): Int {
         val firstEntitySetPredicate = Predicates.equal(FIRST_ENTITY_SET_INDEX, entitySetId)
         val secondEntitySetPredicate = Predicates.equal(SECOND_ENTITY_SET_INDEX, entitySetId)

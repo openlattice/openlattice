@@ -18,8 +18,9 @@
  *
  *
  */
-package com.openlattice.data.events
+package com.openlattice.edm.events
 
-import java.util.UUID
+import com.openlattice.data.DeleteType
+import java.util.*
 
-data class LinkedEntitiesDeletedEvent(val linkedEntitySetIds: Set<UUID>, val entityKeyIds: Set<UUID>)
+data class EntitySetDataDeletedEvent(val entitySetId: UUID, val deleteType: DeleteType)

@@ -29,7 +29,7 @@ import com.openlattice.data.EntityDataKey
 import com.openlattice.data.storage.MetadataOption
 import com.openlattice.data.storage.PostgresEntityDataQueryService
 import com.openlattice.data.storage.selectEntitySetWithCurrentVersionOfPropertyTypes
-import com.openlattice.datastore.services.EdmManager
+import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.DataTables.quote
@@ -61,7 +61,7 @@ private val logger = LoggerFactory.getLogger(PostgresGraphQueryService::class.ja
 @Service
 class PostgresGraphQueryService(
         private val hds: HikariDataSource,
-        private val edm: EdmManager,
+        private val entitySetManager: EntitySetManager,
         private val pgDataService: PostgresEntityDataQueryService
 ) : GraphQueryService {
     @Timed
@@ -483,7 +483,7 @@ class PostgresGraphQueryService(
     ): List<AssociationFilterDefinition> {
         val entitySetsByType = getEntitySetsByEntityTypeIds(maybeEntityTypeIds)
         val entitySetsWithType = maybeEntitySetIds.map { entitySetIds ->
-            edm.getEntityTypeIdsByEntitySetIds(entitySetIds)
+            entitySetManager.getEntityTypeIdsByEntitySetIds(entitySetIds)
         }.orElse(emptyMap())
 
         return (entitySetsByType.map { (entityTypeId, entitySetIds) ->
@@ -665,14 +665,14 @@ class PostgresGraphQueryService(
     ): MutableMap<UUID, MutableSet<UUID>> {
         return maybeEntityTypeIds.map { entityTypeIds ->
             entityTypeIds.associateWith { entityTypeId ->
-                edm.getEntitySetIdsOfType(entityTypeId).toMutableSet()
+                entitySetManager.getEntitySetIdsOfType(entityTypeId).toMutableSet()
             }.toMutableMap()
         }.orElse(mutableMapOf())
     }
 
     override fun getEntitySets(entityTypeIds: Optional<Set<UUID>>): List<UUID> {
         return entityTypeIds
-                .map(edm::getEntitySetsOfType)
+                .map(entitySetManager::getEntitySetsOfType)
                 .orElseGet { emptyList() }
                 .map(EntitySet::getId)
     }
