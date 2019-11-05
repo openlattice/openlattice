@@ -20,6 +20,7 @@ import com.openlattice.hazelcast.processors.DeleteOrganizationExternalDatabaseCo
 import com.openlattice.hazelcast.processors.DeleteOrganizationExternalDatabaseTableEntryProcessor
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import com.openlattice.organization.OrganizationExternalDatabaseTable
+import com.openlattice.organization.OrganizationExternalDatabaseTableColumnsPair
 import com.openlattice.organizations.mapstores.ORGANIZATION_ID_INDEX
 import com.openlattice.organizations.mapstores.TABLE_ID_INDEX
 import com.openlattice.organizations.roles.SecurePrincipalsManager
@@ -131,9 +132,9 @@ class ExternalDatabaseManagementService(
         }.toMap()
     }
 
-    fun getExternalDatabaseTableWithColumns(tableId: UUID): Pair<OrganizationExternalDatabaseTable, Set<OrganizationExternalDatabaseColumn>> {
+    fun getExternalDatabaseTableWithColumns(tableId: UUID): OrganizationExternalDatabaseTableColumnsPair {
         val table = getOrganizationExternalDatabaseTable(tableId)
-        return Pair(table, (organizationExternalDatabaseColumns.values(belongsToTable(tableId)).toSet()))
+        return OrganizationExternalDatabaseTableColumnsPair(table, organizationExternalDatabaseColumns.values(belongsToTable(tableId)).toSet())
     }
 
     fun getExternalDatabaseTableData(orgId: UUID, tableId: UUID, rowCount: Int): Map<UUID, List<Any?>> {
