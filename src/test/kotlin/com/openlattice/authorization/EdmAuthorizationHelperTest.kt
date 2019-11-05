@@ -20,10 +20,12 @@
  */
 package com.openlattice.authorization
 
+import com.google.common.eventbus.EventBus
 import com.openlattice.auditing.AuditingConfiguration
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.datastore.services.EdmService
+import com.openlattice.datastore.services.EntitySetService
 import com.openlattice.edm.PostgresEdmManager
 import com.openlattice.edm.properties.PostgresTypeManager
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager
@@ -32,6 +34,7 @@ import com.openlattice.mapstores.TestDataFactory
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.junit.Assert
 import org.junit.Test
+import org.mockito.Mockito
 import java.util.*
 
 class EdmAuthorizationHelperTest : HzAuthzTest() {
@@ -39,6 +42,7 @@ class EdmAuthorizationHelperTest : HzAuthzTest() {
 
     init {
         val auditingConfig = testServer.context.getBean(AuditingConfiguration::class.java)
+
         val edmManager = EdmService(
                 hds,
                 hazelcastInstance,
@@ -46,12 +50,20 @@ class EdmAuthorizationHelperTest : HzAuthzTest() {
                 hzAuthz,
                 PostgresEdmManager(hds, hazelcastInstance),
                 PostgresTypeManager(hds),
-                HazelcastSchemaManager(hazelcastInstance, PostgresSchemaQueryService(hds)),
-                auditingConfig,
-                PartitionManager(hazelcastInstance, hds)
+                HazelcastSchemaManager(hazelcastInstance, PostgresSchemaQueryService(hds))
+        )
+        val entitySetManager = EntitySetService(
+                hazelcastInstance,
+                Mockito.mock(EventBus::class.java),
+                PostgresEdmManager(hds, hazelcastInstance),
+                HazelcastAclKeyReservationService(hazelcastInstance),
+                hzAuthz,
+                PartitionManager(hazelcastInstance, hds),
+                edmManager,
+                auditingConfig
         )
 
-        edmAuthHelper = EdmAuthorizationHelper(edmManager, hzAuthz)
+        edmAuthHelper = EdmAuthorizationHelper(edmManager, hzAuthz, entitySetManager)
     }
 
     /**
