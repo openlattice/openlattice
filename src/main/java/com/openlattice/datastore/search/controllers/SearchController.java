@@ -45,6 +45,7 @@ import com.openlattice.search.SearchApi;
 import com.openlattice.search.SearchService;
 import com.openlattice.search.SortDefinition;
 import com.openlattice.search.requests.*;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.jetbrains.annotations.NotNull;
@@ -59,6 +60,9 @@ import java.util.stream.Collectors;
 import static com.google.common.base.Preconditions.checkState;
 import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION;
 
+@SuppressFBWarnings(
+        value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE",
+        justification = "NPEs are prevented by Preconditions.checkState but SpotBugs doesn't understand this")
 @RestController
 @RequestMapping( SearchApi.CONTROLLER )
 public class SearchController implements SearchApi, AuthorizingComponent, AuditingComponent {

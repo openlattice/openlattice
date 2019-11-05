@@ -41,6 +41,7 @@ import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.search.requests.EntityNeighborsFilter;
 import com.openlattice.web.mediatypes.CustomMediaType;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.lang3.tuple.Triple;
@@ -70,6 +71,9 @@ import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.Maps.transformValues;
 import static com.openlattice.authorization.EdmAuthorizationHelper.*;
 
+@SuppressFBWarnings(
+        value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE",
+        justification = "NPEs are prevented by Preconditions.checkState but SpotBugs doesn't understand this")
 @RestController
 @RequestMapping( DataApi.CONTROLLER )
 public class DataController implements DataApi, AuthorizingComponent, AuditingComponent {
