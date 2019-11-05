@@ -224,6 +224,10 @@ public final class ResultSetAdapters {
         return new Edge( key, version, versions );
     }
 
+    public static UUID edgeEntitySetId( ResultSet rs ) throws SQLException {
+        return rs.getObject( EDGE_ENTITY_SET_ID.getName(), UUID.class );
+    }
+
     public static DataEdgeKey edgeKey( ResultSet rs ) throws SQLException {
         final UUID srcEntityKeyId = rs.getObject( SRC_ENTITY_KEY_ID.getName(), UUID.class );
         final UUID srcEntitySetId = rs.getObject( SRC_ENTITY_SET_ID.getName(), UUID.class );
