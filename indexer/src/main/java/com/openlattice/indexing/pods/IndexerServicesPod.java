@@ -38,6 +38,7 @@ import com.openlattice.auth0.Auth0TokenProvider;
 import com.openlattice.authentication.Auth0Configuration;
 import com.openlattice.authorization.*;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
+import com.openlattice.data.DataDeletionManager;
 import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.DataGraphService;
 import com.openlattice.data.EntityKeyIdService;
@@ -47,6 +48,8 @@ import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.datastore.pods.ByteBlobServicePod;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.EdmService;
+import com.openlattice.datastore.services.EntitySetManager;
+import com.openlattice.datastore.services.EntitySetService;
 import com.openlattice.directory.UserDirectoryService;
 import com.openlattice.edm.PostgresEdmManager;
 import com.openlattice.edm.properties.PostgresTypeManager;
@@ -226,7 +229,7 @@ public class IndexerServicesPod {
 
     @Bean
     public EdmAuthorizationHelper edmAuthorizationHelper() {
-        return new EdmAuthorizationHelper( dataModelService(), authorizationManager() );
+        return new EdmAuthorizationHelper( dataModelService(), authorizationManager(), entitySetManager() );
     }
 
     @Bean
@@ -268,9 +271,22 @@ public class IndexerServicesPod {
                 authorizationManager(),
                 edmManager(),
                 entityTypeManager(),
-                schemaManager(),
-                auditingConfiguration,
-                partitionManager() );
+                schemaManager()
+        );
+    }
+
+    @Bean
+    public EntitySetManager entitySetManager() {
+        return new EntitySetService(
+                hazelcastInstance,
+                eventBus,
+                edmManager(),
+                aclKeyReservationService(),
+                authorizationManager(),
+                partitionManager(),
+                dataModelService(),
+                auditingConfiguration
+        );
     }
 
     @Bean
@@ -289,12 +305,16 @@ public class IndexerServicesPod {
 
     @Bean
     public PostgresEntityDataQueryService dataQueryService() {
-        return new PostgresEntityDataQueryService( hikariDataSource, byteBlobDataManager, partitionManager() );
+        return new PostgresEntityDataQueryService(
+                hikariDataSource,
+                byteBlobDataManager,
+                partitionManager()
+        );
     }
 
     @Bean
     public EntityDatastore entityDatastore() {
-        return new PostgresEntityDatastore( dataQueryService(), dataModelService(), edmManager() );
+        return new PostgresEntityDatastore( dataQueryService(), edmManager(), entitySetManager() );
     }
 
     @Bean
@@ -304,7 +324,7 @@ public class IndexerServicesPod {
 
     @Bean
     public GraphService graphApi() {
-        return new Graph( hikariDataSource, dataModelService(), partitionManager() );
+        return new Graph( hikariDataSource, entitySetManager(), partitionManager() );
     }
 
     @Bean
@@ -314,7 +334,7 @@ public class IndexerServicesPod {
 
     @Bean
     public AuditRecordEntitySetsManager auditRecordEntitySetsManager() {
-        return dataModelService().getAuditRecordEntitySetsManager();
+        return entitySetManager().getAuditRecordEntitySetsManager();
     }
 
     @Bean
@@ -337,6 +357,20 @@ public class IndexerServicesPod {
     @Profile( AuditingProfiles.LOCAL_AUDITING_PROFILE )
     public AuditingManager localAuditingService() {
         return new LocalAuditingService( dataGraphService(), auditRecordEntitySetsManager(), defaultObjectMapper );
+    }
+
+    @Bean
+    public DataDeletionManager dataDeletionManager() {
+        return new DataDeletionService(
+                dataModelService(),
+                entitySetManager(),
+                dataGraphService(),
+                edmAuthorizationHelper(),
+                authorizationManager(),
+                auditRecordEntitySetsManager(),
+                entityDatastore(),
+                graphApi()
+        );
     }
 
     @PostConstruct
