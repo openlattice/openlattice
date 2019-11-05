@@ -26,6 +26,7 @@ import com.openlattice.analysis.requests.NeighborType
 import com.openlattice.authorization.*
 import com.openlattice.data.DataGraphManager
 import com.openlattice.datastore.services.EdmManager
+import com.openlattice.datastore.services.EntitySetManager
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.slf4j.LoggerFactory
 import java.util.*
@@ -53,7 +54,8 @@ class AnalysisService : AuthorizingComponent {
     private lateinit var edmManager: EdmManager
 
     @Inject
-    private lateinit var authorizationHelper: EdmAuthorizationHelper
+    private lateinit var entitySetManager: EntitySetManager
+
 
     fun getNeighborTypes(entitySetIds: Set<UUID>): Iterable<NeighborType> {
         val neighborEntitySets = dgm.getNeighborEntitySets(entitySetIds)
@@ -69,7 +71,7 @@ class AnalysisService : AuthorizingComponent {
                 .map { it.aclKey[0] }
                 .collect(Collectors.toSet())
 
-        val entitySets = edmManager.getEntitySetsAsMap(authorizedEntitySetIds)
+        val entitySets = entitySetManager.getEntitySetsAsMap(authorizedEntitySetIds)
 
         val entityTypes = edmManager.getEntityTypesAsMap(entitySets.values.map { it.entityTypeId }.toSet())
 

@@ -46,6 +46,7 @@ import com.openlattice.authorization.util.AuthorizationUtils;
 import com.openlattice.controllers.exceptions.BadRequestException;
 import com.openlattice.data.DataExpiration;
 import com.openlattice.datastore.services.EdmManager;
+import com.openlattice.datastore.services.EntitySetManager;
 import com.openlattice.datastore.util.Util;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.events.AppCreatedEvent;
@@ -87,6 +88,7 @@ public class AppService {
     private final AuthorizationManager              authorizationService;
     private final SecurePrincipalsManager           principalsService;
     private final HazelcastAclKeyReservationService reservations;
+    private final EntitySetManager                  entitySetService;
 
     @Inject
     private EventBus eventBus;
@@ -98,7 +100,8 @@ public class AppService {
             AuthorizationQueryService authorizations,
             AuthorizationManager authorizationService,
             SecurePrincipalsManager principalsService,
-            HazelcastAclKeyReservationService reservations
+            HazelcastAclKeyReservationService reservations,
+            EntitySetManager entitySetService
     ) {
         this.apps = hazelcast.getMap( HazelcastMap.APPS.name() );
         this.appTypes = hazelcast.getMap( HazelcastMap.APP_TYPES.name() );
@@ -110,6 +113,7 @@ public class AppService {
         this.authorizationService = authorizationService;
         this.principalsService = principalsService;
         this.reservations = reservations;
+        this.entitySetService = entitySetService;
     }
 
     public Iterable<App> getApps() {
@@ -178,7 +182,7 @@ public class AppService {
                 Optional.of( flags ),
                 Optional.of( new LinkedHashSet<>( organizationService.getDefaultPartitions( organizationId ) ) ),
                 Optional.empty() );
-        edmService.createEntitySet( principal, entitySet );
+        entitySetService.createEntitySet( principal, entitySet );
         return entitySet.getId();
     }
 
