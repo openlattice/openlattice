@@ -51,7 +51,8 @@ import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.elasticsearch.action.admin.indices.mapping.put.PutMappingRequest;
 import org.elasticsearch.action.bulk.BulkRequestBuilder;
 import org.elasticsearch.action.bulk.BulkResponse;
-import org.elasticsearch.action.delete.DeleteRequest;
+import org.elasticsearch.action.delete.DeleteAction;
+import org.elasticsearch.action.delete.DeleteRequestBuilder;
 import org.elasticsearch.action.search.MultiSearchRequest;
 import org.elasticsearch.action.search.MultiSearchResponse;
 import org.elasticsearch.action.search.SearchRequestBuilder;
@@ -666,26 +667,16 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     @Override
-    public boolean deleteEntityData( EntityDataKey edk, UUID entityTypeId ) {
-        if ( !verifyElasticsearchConnection() ) { return false; }
-
-        UUID entityKeyId = edk.getEntityKeyId(); // either entityKeyId or linkingId
-
-        client.prepareDelete( getIndexName( entityTypeId ), getTypeName( entityTypeId ), entityKeyId.toString() )
-                .execute()
-                .actionGet();
-        return true;
-    }
-
-    @Override
-    public boolean deleteEntityDataBulk( UUID entitySetId, UUID entityTypeId, Set<UUID> entityKeyIds ) {
+    public boolean deleteEntityDataBulk( UUID entityTypeId, Set<UUID> entityKeyIds ) {
         if ( !verifyElasticsearchConnection() ) { return false; }
 
         String index = getIndexName( entityTypeId );
         String type = getTypeName( entityTypeId );
 
         BulkRequestBuilder request = client.prepareBulk();
-        entityKeyIds.forEach( entityKeyId -> request.add( new DeleteRequest( index, type, entityKeyId.toString() ) ) );
+        final var requestBuilder =
+                new DeleteRequestBuilder( client, DeleteAction.INSTANCE, index ).setType( type );
+        entityKeyIds.forEach( entityKeyId -> request.add( requestBuilder.setId( entityKeyId.toString() ).request() ) );
 
         request.execute().actionGet();
 
