@@ -13,18 +13,13 @@ import com.openlattice.auditing.AuditEventType
 import com.openlattice.auditing.AuditableEvent
 import com.openlattice.auditing.AuditingManager
 import com.openlattice.authorization.AclKey
-import com.openlattice.data.DataApi.MAX_BATCH_SIZE
-import com.openlattice.data.DataEdgeKey
-import com.openlattice.data.DataGraphManager
-import com.openlattice.data.DeleteType
-import com.openlattice.data.WriteEvent
+import com.openlattice.data.*
+import com.openlattice.data.storage.DataDeletionService.Companion.MAX_BATCH_SIZE
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.EntitySet
-import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.indexing.configuration.IndexerConfiguration
-import com.openlattice.postgres.streams.PostgresIterable
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import java.time.OffsetDateTime
@@ -45,7 +40,8 @@ class BackgroundExpiredDataDeletionService(
         hazelcastInstance: HazelcastInstance,
         private val indexerConfiguration: IndexerConfiguration,
         private val auditingManager: AuditingManager,
-        private val dataGraphService: DataGraphManager
+        private val dataGraphService: DataGraphManager,
+        private val deletionManager: DataDeletionManager
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(BackgroundExpiredDataDeletionService::class.java)!!
@@ -126,7 +122,6 @@ class BackgroundExpiredDataDeletionService(
                 entitySet.id
         )
 
-        val deletedEntityKeyIds: MutableSet<UUID> = mutableSetOf()
         var totalDeletedEntitiesCount = 0
 
         val expirationPT = entitySet.expiration.startDateProperty.map { propertyTypes[it]!! }
@@ -134,30 +129,14 @@ class BackgroundExpiredDataDeletionService(
                 entitySet.id, entitySet.expiration, OffsetDateTime.now(), entitySet.expiration.deleteType, expirationPT
         )
         while (entityKeyIds.iterator().hasNext()) {
+            val deletedEntityKeyIds: MutableSet<UUID> = mutableSetOf()
+
             val chunkedEntityKeyIds = Iterables.partition(entityKeyIds, MAX_BATCH_SIZE)
+
             for (idsChunk in chunkedEntityKeyIds) {
                 val ids = idsChunk.toSet()
 
-                val writeEvent = if (entitySet.expiration.deleteType == DeleteType.Hard) {
-                    if (!edm.isAssociationEntitySet(entitySet.id)) {
-                        deleteAssociationsOfExpiredEntities(entitySet.id, ids)
-                    }
-                    dataGraphService.deleteEntities(
-                            entitySet.id,
-                            ids,
-                            propertyTypes
-                    )
-
-                } else {
-                    if (!edm.isAssociationEntitySet(entitySet.id)) {
-                        clearAssociationsOfExpiredEntities(entitySet.id, ids)
-                    }
-                    dataGraphService.clearEntities(
-                            entitySet.id,
-                            ids,
-                            propertyTypes
-                    )
-                }
+                val writeEvent = deletionManager.clearOrDeleteEntities(entitySet.id, ids, entitySet.expiration.deleteType)
 
                 logger.info(
                         "Completed deleting {} expired elements from entity set {}.",
@@ -185,46 +164,6 @@ class BackgroundExpiredDataDeletionService(
             )
         }
         return totalDeletedEntitiesCount
-    }
-
-    private fun deleteAssociationsOfExpiredEntities(entitySetId: UUID, ids: Set<UUID>): List<WriteEvent> {
-        val associationEdgeKeys: PostgresIterable<DataEdgeKey> = dataGraphService.getEdgesConnectedToEntities(
-                entitySetId, ids, true
-        )
-        val associationPropertyTypes = associationEdgeKeys
-                .map {
-                    it.edge.entitySetId to
-                            edm.getPropertyTypesAsMap(
-                                    edm.getEntityType(
-                                            edm.getEntitySet(it.edge.entitySetId).entityTypeId
-                                    ).properties
-                            )
-                }.toMap()
-        return dataGraphService.deleteAssociationsBatch(entitySetId, associationEdgeKeys, associationPropertyTypes)
-    }
-
-    private fun clearAssociationsOfExpiredEntities(entitySetId: UUID, ids: Set<UUID>): List<WriteEvent> {
-        val associationEdgeKeys: PostgresIterable<DataEdgeKey> = dataGraphService.getEdgesConnectedToEntities(
-                entitySetId, ids, false
-        )
-
-        //filter out audit entity set edges from association edges to clear
-        val associationEdgeESIds = associationEdgeKeys.map { it.edge.entitySetId }.toSet()
-        val auditEdgeEntitySetIds = edm.getEntitySetIdsWithFlags(associationEdgeESIds, setOf(EntitySetFlag.AUDIT))
-        val filteredAssociationEdgeKeys = associationEdgeESIds
-                .filter { auditEdgeEntitySetIds.contains(it) }
-                .toSet()
-
-        val associationPropertyTypes = filteredAssociationEdgeKeys
-                .map {
-                    it to
-                            edm.getPropertyTypesAsMap(
-                                    edm.getEntityType(
-                                            edm.getEntitySet(it).entityTypeId
-                                    ).properties
-                            )
-                }.toMap()
-        return dataGraphService.clearAssociationsBatch(entitySetId, associationEdgeKeys, associationPropertyTypes)
     }
 
     private fun tryLockEntitySet(entitySet: EntitySet): Boolean {

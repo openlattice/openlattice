@@ -38,6 +38,7 @@ import com.openlattice.auth0.Auth0TokenProvider;
 import com.openlattice.authentication.Auth0Configuration;
 import com.openlattice.authorization.*;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
+import com.openlattice.data.DataDeletionManager;
 import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.DataGraphService;
 import com.openlattice.data.EntityKeyIdService;
@@ -332,6 +333,19 @@ public class IndexerServicesPod {
     @Profile( AuditingProfiles.LOCAL_AUDITING_PROFILE )
     public AuditingManager localAuditingService() {
         return new LocalAuditingService( dataGraphService(), auditRecordEntitySetsManager(), defaultObjectMapper );
+    }
+
+    @Bean
+    public DataDeletionManager dataDeletionManager() {
+        return new DataDeletionService(
+                dataModelService(),
+                dataGraphService(),
+                edmAuthorizationHelper(),
+                authorizationManager(),
+                auditRecordEntitySetsManager(),
+                entityDatastore(),
+                graphApi()
+        );
     }
 
     @PostConstruct
