@@ -93,9 +93,10 @@ public class JsonDeserializer {
                         }
                     }
                 }
-            } catch ( NullPointerException e ) {
+            } catch ( Exception e ) {
                 throw new IllegalStateException(
-                        "Unable to write to property type " + entry.getKey() + ": " + lazyMessage.get() );
+                        "Unable to write to property type " + entry.getKey() + " with values " + entry.getValue()
+                                .toString() + ": " + lazyMessage.get() );
             }
         }
 
