@@ -358,6 +358,7 @@ public class IndexerServicesPod {
     public DataDeletionManager dataDeletionManager() {
         return new DataDeletionService(
                 dataModelService(),
+                entitySetManager(),
                 dataGraphService(),
                 edmAuthorizationHelper(),
                 authorizationManager(),
