@@ -22,14 +22,13 @@ package com.openlattice.entitysets.controllers
 import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Preconditions
 import com.google.common.collect.ImmutableMap
-import com.google.common.collect.ImmutableSet
 import com.google.common.collect.Lists
 import com.google.common.collect.Maps
+import com.openlattice.IdConstants
 import com.openlattice.auditing.AuditEventType
 import com.openlattice.auditing.AuditRecordEntitySetsManager
 import com.openlattice.auditing.AuditableEvent
 import com.openlattice.auditing.AuditingComponent
-import com.openlattice.IdConstants
 import com.openlattice.auditing.*
 import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.SecurableObjectType
@@ -38,22 +37,23 @@ import com.openlattice.controllers.exceptions.ForbiddenException
 import com.openlattice.controllers.exceptions.wrappers.BatchException
 import com.openlattice.controllers.exceptions.wrappers.ErrorsDTO
 import com.openlattice.controllers.util.ApiExceptions
-import com.openlattice.data.DataExpiration
+import com.openlattice.data.DataDeletionManager
 import com.openlattice.data.DataGraphManager
+import com.openlattice.data.DeleteType
 import com.openlattice.data.WriteEvent
 import com.openlattice.datastore.services.EdmManager
+import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.edm.set.EntitySetPropertyMetadata
-import com.openlattice.edm.set.ExpirationBase
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.entitysets.EntitySetsApi
 import com.openlattice.entitysets.EntitySetsApi.Companion.ALL
+import com.openlattice.entitysets.EntitySetsApi.Companion.EXPIRATION_PATH
 import com.openlattice.entitysets.EntitySetsApi.Companion.ID
 import com.openlattice.entitysets.EntitySetsApi.Companion.IDS_PATH
 import com.openlattice.entitysets.EntitySetsApi.Companion.ID_PATH
-import com.openlattice.entitysets.EntitySetsApi.Companion.EXPIRATION_PATH
 import com.openlattice.entitysets.EntitySetsApi.Companion.LINKING
 import com.openlattice.entitysets.EntitySetsApi.Companion.METADATA_PATH
 import com.openlattice.entitysets.EntitySetsApi.Companion.NAME
@@ -63,19 +63,10 @@ import com.openlattice.entitysets.EntitySetsApi.Companion.PROPERTY_TYPE_ID
 import com.openlattice.entitysets.EntitySetsApi.Companion.PROPERTY_TYPE_ID_PATH
 import com.openlattice.linking.util.PersonProperties
 import com.openlattice.organizations.roles.SecurePrincipalsManager
-import com.openlattice.postgres.DataTables.LAST_WRITE
-import com.openlattice.postgres.PostgresColumn.VERSIONS
-import com.openlattice.postgres.PostgresDataTables
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
-import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
-import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.*
-import retrofit2.http.PUT
-import retrofit2.http.Path
-import java.sql.Types
 import java.time.OffsetDateTime
-import java.time.ZoneId
 import java.util.*
 import javax.inject.Inject
 import kotlin.streams.asSequence
@@ -94,14 +85,14 @@ constructor(
         private val dgm: DataGraphManager,
         private val spm: SecurePrincipalsManager,
         private val authzHelper: EdmAuthorizationHelper,
-        private val securableObjectTypes: SecurableObjectResolveTypeService
+        private val securableObjectTypes: SecurableObjectResolveTypeService,
+        private val deletionManager: DataDeletionManager,
+        private val entitySetManager: EntitySetManager
 ) : EntitySetsApi, AuthorizingComponent, AuditingComponent {
 
     override fun getAuditingManager(): AuditingManager {
         return auditingManager
     }
-
-    private val internalIds: Set<UUID> = IdConstants.values().map { it.id }.toSet() + edmManager.getEntitySet(EDM_AUDIT_ENTITY_SET_NAME).id
 
 
     @Timed
@@ -122,13 +113,13 @@ constructor(
     private fun addEntitySets(linkingEntitySetId: UUID, entitySetIds: Set<UUID>): Int {
         ensureOwnerAccess(AclKey(linkingEntitySetId))
         Preconditions.checkState(
-                edmManager.getEntitySet(linkingEntitySetId).isLinking,
+                entitySetManager.getEntitySet(linkingEntitySetId)!!.isLinking,
                 "Can't add linked entity sets to a not linking entity set"
         )
         checkLinkedEntitySets(entitySetIds)
         ensureValidLinkedEntitySets(entitySetIds)
 
-        return edmManager.addLinkedEntitySets(linkingEntitySetId, entitySetIds)
+        return entitySetManager.addLinkedEntitySets(linkingEntitySetId, entitySetIds)
     }
 
     @Timed
@@ -161,7 +152,7 @@ constructor(
         for (entitySet in entitySets) {
             try {
                 ensureValidEntitySet(entitySet)
-                edmManager.createEntitySet(Principals.getCurrentUser(), entitySet)
+                entitySetManager.createEntitySet(Principals.getCurrentUser(), entitySet)
                 createdEntitySets[entitySet.name] = entitySet.id
 
                 auditableEvents.add(
@@ -200,7 +191,7 @@ constructor(
         )
                 .asSequence()
                 .map { AuthorizationUtils.getLastAclKeySafely(it) }
-                .map { edmManager.getEntitySet(it) }
+                .map { entitySetManager.getEntitySet(it)!! }
                 .toSet()
     }
 
@@ -222,7 +213,7 @@ constructor(
                         Optional.empty()
                 )
         )
-        return edmManager.getEntitySet(entitySetId)
+        return entitySetManager.getEntitySet(entitySetId)!!
     }
 
 
@@ -230,12 +221,9 @@ constructor(
     @RequestMapping(path = [ALL + ID_PATH], method = [RequestMethod.DELETE])
     override fun deleteEntitySet(@PathVariable(ID) entitySetId: UUID): Int {
         ensureOwnerAccess(AclKey(entitySetId))
-        val deleted: List<WriteEvent>
-        val entitySet = edmManager.getEntitySet(entitySetId)
+        val entitySet = entitySetManager.getEntitySet(entitySetId)!!
 
         ensureEntitySetCanBeDeleted(entitySet)
-
-        deleteAuditEntitySetsForId(entitySetId)
 
         val entityType = edmManager.getEntityType(entitySet.entityTypeId)
         val authorizedPropertyTypes = authzHelper
@@ -245,13 +233,15 @@ constructor(
         }
 
         // linking entitysets have no entities or associations
-        deleted = if (!entitySet.isLinking) {
+        val deleted = if (!entitySet.isLinking) {
             // associations need to be deleted first, because edges are deleted in DataGraphManager.deleteEntitySet call
-            deleteAssociationsOfEntitySet(entitySetId) + dgm.deleteEntitySet(entitySetId, authorizedPropertyTypes)
-        } else listOf(WriteEvent(System.currentTimeMillis(), 1))
+            deletionManager.clearOrDeleteEntitySetIfAuthorized(entitySetId, DeleteType.Hard, Principals.getCurrentPrincipals())
+        } else WriteEvent(System.currentTimeMillis(), 1)
 
-        edmManager.deleteEntitySet(entitySetId)
+        entitySetManager.deleteEntitySet(entitySetId)
         securableObjectTypes.deleteSecurableObjectType(AclKey(entitySetId))
+
+        deleteAuditEntitySetsForId(entitySetId)
 
         recordEvent(
                 AuditableEvent(
@@ -266,7 +256,7 @@ constructor(
                 )
         )
 
-        return deleted.sumBy { it.numUpdates }
+        return deleted.numUpdates
     }
 
     @Timed
@@ -276,10 +266,10 @@ constructor(
             produces = [MediaType.APPLICATION_JSON_VALUE]
     )
     override fun getEntitySetId(@PathVariable(NAME) entitySetName: String): UUID {
-        val es = edmManager.getEntitySet(entitySetName)
-        ensureReadAccess(AclKey(es.id))
-        Preconditions.checkNotNull<EntitySet>(es, "Entity Set %s does not exists.", entitySetName)
-        return es.id
+        val esId = entitySetManager.getEntitySet(entitySetName)?.id
+                ?: throw  NullPointerException("Entity Set $entitySetName does not exists.")
+        ensureReadAccess(AclKey(esId))
+        return esId
     }
 
     @Timed
@@ -305,7 +295,7 @@ constructor(
             @RequestBody update: MetadataUpdate
     ): Int {
         ensureOwnerAccess(AclKey(entitySetId))
-        edmManager.updateEntitySetMetadata(entitySetId, update)
+        entitySetManager.updateEntitySetMetadata(entitySetId, update)
 
         recordEvent(
                 AuditableEvent(
@@ -345,7 +335,7 @@ constructor(
                     }
                 }
 
-        return edmManager.getAllEntitySetPropertyMetadataForIds(entitySetIds)
+        return entitySetManager.getAllEntitySetPropertyMetadataForIds(entitySetIds)
     }
 
     @Timed
@@ -359,7 +349,7 @@ constructor(
     ): Map<UUID, EntitySetPropertyMetadata> {
         //You should be able to get properties without having read access
         ensureReadAccess(AclKey(entitySetId))
-        return edmManager.getAllEntitySetPropertyMetadata(entitySetId)
+        return entitySetManager.getAllEntitySetPropertyMetadata(entitySetId)
     }
 
     @Timed
@@ -373,7 +363,7 @@ constructor(
             @PathVariable(PROPERTY_TYPE_ID) propertyTypeId: UUID
     ): EntitySetPropertyMetadata {
         ensureReadAccess(AclKey(entitySetId, propertyTypeId))
-        return edmManager.getEntitySetPropertyMetadata(entitySetId, propertyTypeId)
+        return entitySetManager.getEntitySetPropertyMetadata(entitySetId, propertyTypeId)
     }
 
     @Timed
@@ -384,7 +374,7 @@ constructor(
     override fun getPropertyTypesForEntitySet(@PathVariable(ID) entitySetId: UUID): Map<UUID, PropertyType> {
         //We only check for entity set metadata read access.
         ensureReadAccess(AclKey(entitySetId))
-        return edmManager.getPropertyTypesForEntitySet(entitySetId)
+        return entitySetManager.getPropertyTypesForEntitySet(entitySetId)
     }
 
     @Timed
@@ -399,7 +389,7 @@ constructor(
             @RequestBody update: MetadataUpdate
     ): Int {
         ensureOwnerAccess(AclKey(entitySetId, propertyTypeId))
-        edmManager.updateEntitySetPropertyMetadata(entitySetId, propertyTypeId, update)
+        entitySetManager.updateEntitySetPropertyMetadata(entitySetId, propertyTypeId, update)
 
         recordEvent(
                 AuditableEvent(
@@ -428,7 +418,7 @@ constructor(
             @PathVariable(ID) entitySetId: UUID
     ): Int {
         ensureOwnerAccess(AclKey(entitySetId))
-        edmManager.removeDataExpirationPolicy(entitySetId)
+        entitySetManager.removeDataExpirationPolicy(entitySetId)
 
         recordEvent(
                 AuditableEvent(
@@ -452,32 +442,35 @@ constructor(
     )
     override fun getExpiringEntitiesFromEntitySet(
             @PathVariable(ID) entitySetId: UUID,
-            @RequestBody dateTimeAsString: String): Set<UUID> {
+            @RequestBody dateTime: String): Set<UUID> {
         ensureReadAccess(AclKey(entitySetId))
-        val dateTime = OffsetDateTime.parse(dateTimeAsString)
         val es = getEntitySet(entitySetId)
         check(es.hasExpirationPolicy()) { "Entity set ${es.name} does not have an expiration policy" }
 
         val expirationPolicy = es.expiration
         val expirationPT = expirationPolicy.startDateProperty.map { edmManager.getPropertyType(it) }
-        return dgm.getExpiringEntitiesFromEntitySet(entitySetId, expirationPolicy, dateTime, es.expiration.deleteType, expirationPT).toSet()
+        return dgm.getExpiringEntitiesFromEntitySet(
+                entitySetId,
+                expirationPolicy,
+                OffsetDateTime.parse(dateTime),
+                es.expiration.deleteType,
+                expirationPT
+        ).toSet()
     }
-
 
 
     private fun removeEntitySets(linkingEntitySetId: UUID, entitySetIds: Set<UUID>): Int {
         ensureOwnerAccess(AclKey(linkingEntitySetId))
         Preconditions.checkState(
-                edmManager.getEntitySet(linkingEntitySetId).isLinking,
+                entitySetManager.getEntitySet(linkingEntitySetId)!!.isLinking,
                 "Can't remove linked entity sets from a not linking entity set"
         )
         checkLinkedEntitySets(entitySetIds)
 
-        return edmManager.removeLinkedEntitySets(linkingEntitySetId, entitySetIds)
+        return entitySetManager.removeLinkedEntitySets(linkingEntitySetId, entitySetIds)
     }
 
     private fun checkLinkedEntitySets(entitySetIds: Set<UUID>) {
-        checkNotNull(entitySetIds)
         Preconditions.checkState(entitySetIds.isNotEmpty(), "Linked entity sets is empty")
     }
 
@@ -485,14 +478,14 @@ constructor(
         val entityTypeId = edmManager.getEntityType(PersonProperties.PERSON_TYPE_FQN).id
         Preconditions.checkState(
                 entitySetIds.stream()
-                        .map { edmManager.getEntitySet(it).entityTypeId }
+                        .map { entitySetManager.getEntitySet(it)!!.entityTypeId }
                         .allMatch { entityTypeId == it },
                 "Linked entity sets are of differing entity types than %s :{}",
                 PersonProperties.PERSON_TYPE_FQN.fullQualifiedNameAsString, entitySetIds
         )
 
         Preconditions.checkState(
-                entitySetIds.all { !edmManager.getEntitySet(it).isLinking },
+                entitySetIds.all { !entitySetManager.getEntitySet(it)!!.isLinking },
                 "Cannot add linking entity set as linked entity set."
         )
     }
@@ -506,60 +499,15 @@ constructor(
         if (entitySet.isLinking) {
             entitySet.linkedEntitySets.forEach { linkedEntitySetId ->
                 Preconditions.checkArgument(
-                        edmManager.getEntityTypeByEntitySetId(linkedEntitySetId).id == entitySet.entityTypeId,
+                        entitySetManager.getEntityTypeByEntitySetId(linkedEntitySetId).id == entitySet.entityTypeId,
                         "Entity type of linked entity sets must be the same as of the linking entity set"
                 )
                 Preconditions.checkArgument(
-                        !edmManager.getEntitySet(linkedEntitySetId).isLinking,
+                        !entitySetManager.getEntitySet(linkedEntitySetId)!!.isLinking,
                         "Cannot add linking entity set as linked entity set."
                 )
             }
         }
-    }
-
-    private fun deleteAssociationsOfEntitySet(entitySetId: UUID): List<WriteEvent> {
-        // collect association entity key ids
-        val associationsEdgeKeys = dgm.getEdgeKeysOfEntitySet(entitySetId)
-
-        // access checks
-        val authorizedPropertyTypes = HashMap<UUID, Map<UUID, PropertyType>>()
-        associationsEdgeKeys.stream().forEach { edgeKey ->
-            if (!authorizedPropertyTypes.containsKey(edgeKey.edge.entitySetId)) {
-                val authorizedPropertyTypesOfAssociation = getAuthorizedPropertyTypesForDelete(
-                        edgeKey.edge.entitySetId, Optional.empty()
-                )
-                authorizedPropertyTypes[edgeKey.edge.entitySetId] = authorizedPropertyTypesOfAssociation
-            }
-        }
-
-        // delete associations of entity set
-        return dgm.deleteAssociationsBatch(entitySetId, associationsEdgeKeys, authorizedPropertyTypes)
-    }
-
-    private fun getAuthorizedPropertyTypesForDelete(
-            entitySetId: UUID,
-            properties: Optional<Set<UUID>>
-    ): Map<UUID, PropertyType> {
-        ensureOwnerAccess(AclKey(entitySetId))
-        val entitySet = getEntitySet(entitySetId)
-        if (entitySet.isLinking) {
-            throw IllegalArgumentException("You cannot delete entities from a linking entity set.")
-        }
-
-        val entityType = edmManager.getEntityType(entitySet.entityTypeId)
-        val requiredProperties = properties.orElse(entityType.properties)
-        val authorizedPropertyTypes = authzHelper.getAuthorizedPropertyTypes(
-                ImmutableSet.of(entitySetId),
-                requiredProperties,
-                EnumSet.of(Permission.OWNER)
-        ).getValue(entitySetId)
-        if (!authorizedPropertyTypes.keys.containsAll(requiredProperties)) {
-            throw ForbiddenException(
-                    "You must be an owner of all required entity set properties to delete entities from it."
-            )
-        }
-
-        return authorizedPropertyTypes
     }
 
     private fun deleteAuditEntitySetsForId(entitySetId: UUID) {
@@ -567,15 +515,15 @@ constructor(
 
         val propertyTypes = aresManager.auditingTypes.propertyTypes
 
-        aresManager.getAuditRecordEntitySets(aclKey).forEach {
-            dgm.deleteEntitySet(it, propertyTypes)
-            edmManager.deleteEntitySet(it)
+        aresManager.getAuditEdgeEntitySets(aclKey).forEach {
+            deletionManager.clearOrDeleteEntitySet(it, DeleteType.Hard)
+            entitySetManager.deleteEntitySet(it)
             securableObjectTypes.deleteSecurableObjectType(AclKey(it))
         }
 
-        aresManager.getAuditEdgeEntitySets(aclKey).forEach {
-            dgm.deleteEntitySet(it, mapOf())
-            edmManager.deleteEntitySet(it)
+        aresManager.getAuditRecordEntitySets(aclKey).forEach {
+            deletionManager.clearOrDeleteEntitySet(it, DeleteType.Hard)
+            entitySetManager.deleteEntitySet(it)
             securableObjectTypes.deleteSecurableObjectType(AclKey(it))
         }
 

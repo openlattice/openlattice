@@ -36,6 +36,7 @@ import com.openlattice.data.requests.NeighborEntityDetails;
 import com.openlattice.data.requests.NeighborEntityIds;
 import com.openlattice.datastore.apps.services.AppService;
 import com.openlattice.datastore.services.EdmService;
+import com.openlattice.datastore.services.EntitySetManager;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.organization.Organization;
 import com.openlattice.organizations.HazelcastOrganizationService;
@@ -43,8 +44,8 @@ import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.search.SearchApi;
 import com.openlattice.search.SearchService;
 import com.openlattice.search.SortDefinition;
-import com.openlattice.search.SortType;
 import com.openlattice.search.requests.*;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.jetbrains.annotations.NotNull;
@@ -56,9 +57,12 @@ import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static com.google.common.base.Preconditions.checkState;
 import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION;
-import static com.openlattice.edm.EdmConstants.ID_FQN;
 
+@SuppressFBWarnings(
+        value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE",
+        justification = "NPEs are prevented by Preconditions.checkState but SpotBugs doesn't understand this")
 @RestController
 @RequestMapping( SearchApi.CONTROLLER )
 public class SearchController implements SearchApi, AuthorizingComponent, AuditingComponent {
@@ -68,6 +72,9 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
 
     @Inject
     private EdmService edm;
+
+    @Inject
+    private EntitySetManager entitySetManager;
 
     @Inject
     private AppService appService;
@@ -101,10 +108,11 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
     @Timed
     public SearchResult executeEntitySetKeywordQuery(
             @RequestBody Search search ) {
-        if ( !search.getOptionalKeyword().isPresent() && !search.getOptionalEntityType().isPresent()
-                && !search.getOptionalPropertyTypes().isPresent() ) {
+        if ( search.getOptionalKeyword().isEmpty() && search.getOptionalEntityType().isEmpty()
+                && search.getOptionalPropertyTypes().isEmpty() ) {
             throw new IllegalArgumentException(
-                    "Your search cannot be empty--you must include at least one of of the three params: keyword ('kw'), entity type id ('eid'), or property type ids ('pid')" );
+                    "Your search cannot be empty--you must include at least one of of the three params: keyword " +
+                            "('kw'), entity type id ('eid'), or property type ids ('pid')" );
         }
         return searchService
                 .executeEntitySetKeywordSearchQuery( search.getOptionalKeyword(),
@@ -121,8 +129,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
     @Override
     @Timed
     public Iterable<EntitySet> getPopularEntitySet() {
-        return edm.getEntitySets();
-
+        return entitySetManager.getEntitySets();
     }
 
     @RequestMapping(
@@ -365,7 +372,9 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
 
         if ( authorizations.checkIfHasPermissions( new AclKey( entitySetId ), principals,
                 EnumSet.of( Permission.READ ) ) ) {
-            EntitySet es = edm.getEntitySet( entitySetId );
+            EntitySet es = entitySetManager.getEntitySet( entitySetId );
+
+            checkState( es != null, "Could not find entity set with id: " + entitySetId.toString() );
 
             final var entitySets = ( es.isLinking() ) ? es.getLinkedEntitySets() : Set.of( entitySetId );
             final var authorizedEntitySets = entitySets.stream()
@@ -454,7 +463,9 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
         if ( authorizations.checkIfHasPermissions( new AclKey( entitySetId ), principals,
                 EnumSet.of( Permission.READ ) ) ) {
 
-            EntitySet es = edm.getEntitySet( entitySetId );
+            EntitySet es = entitySetManager.getEntitySet( entitySetId );
+
+            checkState( es != null, "Could not find entity set with id: " + entitySetId.toString() );
 
             final var entitySets = ( es.isLinking() ) ? es.getLinkedEntitySets() : Set.of( entitySetId );
             final var authorizedEntitySets = entitySets.stream()
@@ -571,7 +582,9 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
         if ( authorizations.checkIfHasPermissions( new AclKey( entitySetId ), principals,
                 EnumSet.of( Permission.READ ) ) ) {
 
-            EntitySet es = edm.getEntitySet( entitySetId );
+            EntitySet es = entitySetManager.getEntitySet( entitySetId );
+
+            checkState( es != null, "Could not find entity set with id: " + entitySetId.toString() );
 
             if ( es.isLinking() ) {
                 final Set<UUID> authorizedEntitySets = es.getLinkedEntitySets().stream()
@@ -601,12 +614,12 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
         SetMultimap<UUID, UUID> neighborsByEntitySet = HashMultimap.create();
 
         result.values().forEach( associationMap ->
-                associationMap.entrySet().forEach( associationEntry -> {
-                    associationEntry.getValue().entries().forEach( neighborEntry -> {
+                associationMap.forEach( (associationEsId, association) -> {
+                    association.forEach( (neighborEsId, neighbor) -> {
                         neighborsByEntitySet
-                                .put( associationEntry.getKey(), neighborEntry.getValue().getAssociationEntityKeyId() );
+                                .put( associationEsId, neighbor.getAssociationEntityKeyId() );
                         neighborsByEntitySet
-                                .put( neighborEntry.getKey(), neighborEntry.getValue().getNeighborEntityKeyId() );
+                                .put( neighborEsId, neighbor.getNeighborEntityKeyId() );
                     } );
                 } )
         );
