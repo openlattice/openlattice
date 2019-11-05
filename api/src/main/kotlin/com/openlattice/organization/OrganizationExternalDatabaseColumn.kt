@@ -16,6 +16,9 @@ import java.util.*
  * @param description A description for the object
  * @param tableId The id of the table that contains this column
  * @param organizationId The id of the organization that owns this column
+ * @param dataType The sql data type of this column
+ * @param isPrimaryKey A boolean denoting if the column is a primary key of the containing table
+ * @param ordinalPosition The index of the column within the containing table
  */
 
 class OrganizationExternalDatabaseColumn

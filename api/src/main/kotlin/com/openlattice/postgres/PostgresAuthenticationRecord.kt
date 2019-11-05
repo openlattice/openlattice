@@ -6,12 +6,11 @@ import com.openlattice.client.serialization.SerializationConstants
 /**
  * Holds information for authentication records that will populate a pg_hba.conf file.
  *
- * @param type The connection type of the record.
+ * @param connectionType The connection type of the record.
  * @param database The name of the database that the record corresponds to
- * @param user The username that the record authenticates
- * @param ipAddresses The IP address from which the user may connect
- * @param ipMask The mask for the IP address
- * @param method The authentication method
+ * @param username The username that the record authenticates
+ * @param ipAddresses The IP addresses from which the user may connect
+ * @param authenticationMethod The authentication method
  */
 
 data class PostgresAuthenticationRecord(
