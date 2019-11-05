@@ -56,6 +56,7 @@ import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static com.google.common.base.Preconditions.checkState;
 import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION;
 
 @RestController
@@ -369,6 +370,8 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
                 EnumSet.of( Permission.READ ) ) ) {
             EntitySet es = entitySetManager.getEntitySet( entitySetId );
 
+            checkState( es != null, "Could not find entity set with id: " + entitySetId.toString() );
+
             final var entitySets = ( es.isLinking() ) ? es.getLinkedEntitySets() : Set.of( entitySetId );
             final var authorizedEntitySets = entitySets.stream()
                     .filter( linkedEntitySetId ->
@@ -457,6 +460,8 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
                 EnumSet.of( Permission.READ ) ) ) {
 
             EntitySet es = entitySetManager.getEntitySet( entitySetId );
+
+            checkState( es != null, "Could not find entity set with id: " + entitySetId.toString() );
 
             final var entitySets = ( es.isLinking() ) ? es.getLinkedEntitySets() : Set.of( entitySetId );
             final var authorizedEntitySets = entitySets.stream()
@@ -574,6 +579,8 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
                 EnumSet.of( Permission.READ ) ) ) {
 
             EntitySet es = entitySetManager.getEntitySet( entitySetId );
+
+            checkState( es != null, "Could not find entity set with id: " + entitySetId.toString() );
 
             if ( es.isLinking() ) {
                 final Set<UUID> authorizedEntitySets = es.getLinkedEntitySets().stream()

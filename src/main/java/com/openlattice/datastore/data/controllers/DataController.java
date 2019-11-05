@@ -190,6 +190,8 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             Set<UUID> normalEntitySetIds;
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesOfEntitySets;
 
+            checkState( entitySet != null, "Could not find entity set with id: " + entitySetId.toString() );
+
             if ( entitySet.isLinking() ) {
                 normalEntitySetIds = Sets.newHashSet( entitySet.getLinkedEntitySets() );
                 checkState( !normalEntitySetIds.isEmpty(),
@@ -802,6 +804,8 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         ensureReadAccess( new AclKey( entitySetId ) );
         EntitySet entitySet = entitySetService.getEntitySet( entitySetId );
 
+        checkState( entitySet != null, "Could not find entity set with id: " + entitySetId.toString() );
+
         if ( entitySet.isLinking() ) {
             checkState( !entitySet.getLinkedEntitySets().isEmpty(),
                     "Linked entity sets are empty for linking entity set %s", entitySetId );
@@ -829,6 +833,8 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             @PathVariable( PROPERTY_TYPE_ID ) UUID propertyTypeId ) {
         ensureReadAccess( new AclKey( entitySetId ) );
         final EntitySet entitySet = entitySetService.getEntitySet( entitySetId );
+
+        checkState( entitySet != null, "Could not find entity set with id: " + entitySetId.toString() );
 
         if ( entitySet.isLinking() ) {
             checkState( !entitySet.getLinkedEntitySets().isEmpty(),
