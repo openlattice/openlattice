@@ -1771,6 +1771,58 @@ paths:
                       type: array
                       items:
                         $ref: "#/components/neighborEntityIds"
+  /datastore/search:
+    patch:
+      summary: Executes a search over the data of a given entity set to find rows that match the search term
+      operationId: searchEntitySetData
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/searchConstraints"
+      tags:
+        - search
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: "A  data search result object, containing the total number of hits for the given query, and the hits themselves."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/DataSearchResult"
+  /datastore/search/{entitySetId}:
+    post:
+      summary: Executes a search over the data of a given entity set to find rows that match the search term
+      operationId: executeEntitySetDataQuery
+      parameters:
+        - name: entitySetId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        description: A JSON object that contains three parameters, "start", which specifies the hit number to start returning results on for paging, "maxHits", which specifies the maximum number of hits to return, and "searchTerm", which is the search term results will match on.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/SearchTerm"
+      tags:
+        - search
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: "A  data search result object, containing the total number of hits for the given query, and the hits themselves."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/DataSearchResult"
   
   ####################
   ## DIRECTORY APIs ##
@@ -2095,14 +2147,12 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: object
-                  additionalProperties:
-                    type: array
-                    items:
-                      type: string
-                      enum: [INTERNAL, EXTERNAL, MATERIALIZED]
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    type: string
+                    enum: [INTERNAL, EXTERNAL, MATERIALIZED]
     post:
       summary: Get the entity sets for an organization for a certain flag
       operationId: getFlaggedOrganizationEntitySets
@@ -2666,7 +2716,7 @@ paths:
       summary: Deletes linking feedback
       operationId: deleteLinkingFeedback
       tags:
-        linking
+        - linking
       security:
         - openlattice_auth: []
         - http_auth: []
@@ -2676,6 +2726,13 @@ paths:
           application/json:
             schema:
               $ref: "#/components/entityKeyPair"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: integer
   /linker/linkingfeedback/entity:
     post:
       summary: Returns positive/negative/all linking feedbacks on the given entity.
@@ -2716,13 +2773,12 @@ paths:
       security:
         - openlattice_auth: []
         - http_auth: []
-      parameters:
-        requestBody:
-          required: true
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/entityKeyPair"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/entityKeyPair"
       responses:
         "200":
           description: Success
@@ -3164,9 +3220,11 @@ components:
         description:
           type: string
         propertyTags:
-          type: array
-          items:
-            type: string
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
         defaultShow:
           type: boolean
 
@@ -3544,6 +3602,143 @@ components:
             type: string
           credential:
             type: string
+    searchConstraints:
+      type: object
+      properties:
+        entitySetIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        start:
+          type: integer
+        maxHits:
+          type: integer
+        constraints:
+          type: array
+          items:
+            $ref: "#/components/ConstraintGroup"
+        sort:
+            $ref: "#/components/SortDefinition"
+    SortDefinition:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [field, score, geoDistance]
+        isDescending:
+          type: boolean
+        propertyTypeId:
+          type: string
+          format: uuid
+        latitude:
+          type: number
+        longitude:
+          type: number
+    ConstraintGroup:
+      type: object
+      properties:
+        min:
+          type: integer
+        constraints:
+          type: array
+          items:
+            $ref: "#/components/Constraint"
+    Constraint:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [simple, advanced, geoDistance, geoPolygon, writeDateTimeFilter]
+        searchTerm:
+          type: string
+        fuzzy:
+          type: boolean
+        searchFields:
+          type: array
+          items:
+            $ref: "#/components/SearchDetails"
+        propertyTypeId:
+          type: string
+          format: uuid
+        latitude:
+          type: number
+        longitude:
+          type: number
+        radius:
+          type: number
+        unit:
+          type: string
+          enum: 
+            - miles
+            - mi
+            - yards
+            - yd
+            - feet
+            - ft
+            - inch
+            - in
+            - kilometers
+            - km
+            - meters
+            - m
+            - centimeters
+            - cm
+            - millimeters
+            - mm
+            - nauticalmiles
+            - nmi
+            - NM
+        zones:
+          type: array
+          items:
+            type: array
+            items:
+              type: array
+              items:
+                type: number
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+    SearchDetails:
+      type: object
+      properties:
+        searchTerm:
+          type: string
+        property:
+          type: string
+          format: uuid
+        exact:
+          type: boolean 
+    SearchTerm:
+      type: object
+      properties:
+        searchTerm: 
+          type: string
+        start: 
+          type: integer
+        maxHits:
+          type: integer
+        fuzzy:
+          type: boolean
+           
+    DataSearchResult:
+      type: object
+      properties:
+        numHits:
+          type: integer
+        hits:
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: array
+              items:
+                type: string
+            
     entityDataKey:
       type: object
       properties:
