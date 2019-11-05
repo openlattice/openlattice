@@ -41,14 +41,14 @@ interface OrganizationExternalDatabaseApi {
      * will be trusted. This should be an empty set if the connectionType is local.
      */
     @POST(BASE + ID_PATH + USER_ID_PATH + CONNECTION_TYPE_PATH + EXTERNAL_DATABASE)
-    fun addTrustedUser(
+    fun addHBARecord(
             @Path(ID) organizationId: UUID,
             @Path(USER_ID) userId: String,
             @Path(CONNECTION_TYPE) connectionType: String,
             @Body ipAddresses: Set<String>)
 
     @DELETE(BASE + ID_PATH + USER_ID_PATH + EXTERNAL_DATABASE)
-    fun removeTrustedUser(
+    fun removeHBARecord(
             @Path(ID) organizationId: UUID,
             @Path(USER_ID) userId: String)
 
