@@ -47,13 +47,20 @@ public interface GraphService {
 
     PostgresIterable<DataEdgeKey> getEdgeKeysOfEntitySet( UUID entitySetId );
 
-    PostgresIterable<DataEdgeKey> getEdgeKeysContainingEntities( UUID entitySetId, Set<UUID> entityKeyIds, boolean includeClearedEdges );
+    PostgresIterable<DataEdgeKey> getEdgeKeysContainingEntities(
+            UUID entitySetId,
+            Set<UUID> entityKeyIds,
+            boolean includeClearedEdges );
 
     Stream<Edge> getEdgesAndNeighborsForVertex( UUID entitySetId, UUID vertexId );
 
     Stream<Edge> getEdgesAndNeighborsForVertices( UUID entitySetId, EntityNeighborsFilter filter );
 
     Stream<Edge> getEdgesAndNeighborsForVerticesBulk( Set<UUID> entitySetIds, EntityNeighborsFilter filter );
+
+    Set<UUID> getEdgeEntitySetsConnectedToEntities( UUID entitySetId, Set<UUID> entityKeyIds );
+
+    Set<UUID> getEdgeEntitySetsConnectedToEntitySet( UUID entitySetId );
 
     PostgresIterable<Map<String, Object>> computeTopEntities(
             int limit,
