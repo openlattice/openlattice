@@ -64,7 +64,7 @@ class OrganizationExternalDatabaseController : OrganizationExternalDatabaseApi, 
 
     @Timed
     @PostMapping(path = [ID_PATH + USER_ID_PATH + CONNECTION_TYPE_PATH + EXTERNAL_DATABASE])
-    override fun addTrustedUser(
+    override fun addHBARecord(
             @PathVariable(ID) organizationId: UUID,
             @PathVariable(USER_ID) userId: String,
             @PathVariable(CONNECTION_TYPE) connectionType: String,
@@ -77,18 +77,18 @@ class OrganizationExternalDatabaseController : OrganizationExternalDatabaseApi, 
             checkState(ipAddresses.isNotEmpty(), "Host connections must specify at least one IP address")
         }
         val userPrincipal = Principal(PrincipalType.USER, userId)
-        edms.addTrustedUser(organizationId, userPrincipal, connectionType, ipAddresses)
+        edms.addHBARecord(organizationId, userPrincipal, connectionType, ipAddresses)
     }
 
     @Timed
     @DeleteMapping(path = [ID_PATH + USER_ID_PATH + EXTERNAL_DATABASE])
-    override fun removeTrustedUser(
+    override fun removeHBARecord(
             @PathVariable(ID) organizationId: UUID,
             @PathVariable(USER_ID) userId: String
     ) {
         ensureOwner(organizationId)
         val userPrincipal = Principal(PrincipalType.USER, userId)
-        edms.removeTrustedUser(organizationId, userPrincipal)
+        edms.removeHBARecord(organizationId, userPrincipal)
     }
 
     @Timed
