@@ -241,6 +241,7 @@ public final class SerializationConstants {
     public static final String SYNC_IDS                         = "syncIds";
     public static final String SYNC_TICKETS                     = "syncTickets";
     public static final String TAGS                             = "tags";
+    public static final String TABLE                            = "table";
     public static final String TABLE_ID                         = "tableId";
     public static final String TARGET                           = "target";
     public static final String TEMPLATE                         = "template";
