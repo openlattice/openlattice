@@ -24,6 +24,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
 import com.openlattice.auditing.AuditingManager;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
+import com.openlattice.data.DataDeletionManager;
 import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.storage.EntityDatastore;
 import com.openlattice.data.storage.IndexingMetadataManager;
@@ -69,6 +70,9 @@ public class IndexerPostConfigurationServicesPod {
 
     @Inject
     private EntityDatastore entityDatastore;
+
+    @Inject
+    private DataDeletionManager dataDeletionManager;
 
     @Bean
     public PartitionManager partitionManager() {
@@ -129,7 +133,8 @@ public class IndexerPostConfigurationServicesPod {
                 hazelcastInstance,
                 indexerConfiguration,
                 auditingManager,
-                dataGraphService );
+                dataGraphService,
+                dataDeletionManager );
     }
 
     @Bean
