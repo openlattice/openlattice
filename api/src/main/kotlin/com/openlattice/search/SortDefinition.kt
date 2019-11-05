@@ -7,7 +7,7 @@ import java.util.*
 
 data class SortDefinition(
         @JsonProperty(SerializationConstants.TYPE_FIELD) val sortType: SortType = SortType.score,
-        @JsonProperty(SerializationConstants.IS_DESCENDING) val isDescending: Boolean = true,
+        @JsonProperty(SerializationConstants.DESCENDING) val descending: Boolean = true,
         @JsonProperty(SerializationConstants.PROPERTY_TYPE_ID) val propertyTypeId: UUID? = null,
         @JsonProperty(SerializationConstants.LATITUDE) val latitude: Optional<Double> = Optional.empty(),
         @JsonProperty(SerializationConstants.LONGITUDE) val longitude: Optional<Double> = Optional.empty()

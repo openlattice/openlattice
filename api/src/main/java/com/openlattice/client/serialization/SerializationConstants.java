@@ -84,6 +84,7 @@ public final class SerializationConstants {
     public static final String DEFAULT_SHOW                     = "defaultShow";
     public static final String DELETE_TYPE                      = "deleteType";
     public static final String DEIDENTIFIED                     = "deidentified";
+    public static final String DESCENDING                       = "descending";
     public static final String DESCRIPTION_FIELD                = "description";
     public static final String DETAILS_FIELD                    = "details";
     public static final String DIFF                             = "diff";
