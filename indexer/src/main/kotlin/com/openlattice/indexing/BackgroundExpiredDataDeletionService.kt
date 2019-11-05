@@ -16,7 +16,6 @@ import com.openlattice.authorization.AclKey
 import com.openlattice.data.*
 import com.openlattice.data.storage.DataDeletionService.Companion.MAX_BATCH_SIZE
 import com.openlattice.datastore.services.EdmManager
-import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
@@ -53,9 +52,6 @@ class BackgroundExpiredDataDeletionService(
 
     @Inject
     private lateinit var edm: EdmManager
-
-    @Inject
-    private lateinit var entitySetManager: EntitySetManager
 
     init {
         expirationLocks.addIndex(QueryConstants.THIS_ATTRIBUTE_NAME.value(), true)
