@@ -1071,8 +1071,9 @@ class PostgresEntityDataQueryService(
             val entityKeyIdsArr = PostgresArrays.createUuidArray(conn, entityKeyIds)
             val partitions = partitionsInfo.partitions.toList()
             val partitionsArr = PostgresArrays.createIntArray(conn, entityKeyIds.map { getPartition(it, partitions) })
+            val allPartitions = partitionManager.getAllPartitions()
             val linkingPartitionsArr = PostgresArrays.createIntArray(
-                    conn, linkingIds.map { getPartition(it, partitions) })
+                    conn, linkingIds.map { getPartition(it, allPartitions) })
 
             val numUpdated = conn.prepareStatement(updateVersionsForPropertyTypesInEntitiesInEntitySet()).use { ps ->
                 ps.setLong(1, -version)
@@ -1137,9 +1138,10 @@ class PostgresEntityDataQueryService(
                     conn, entities.keys.map {
                 getPartition(it, partitions)
             })
+            val allPartitions = partitionManager.getAllPartitions()
             val linkingPartitionsArr = PostgresArrays.createIntArray(
                     conn,
-                    linkingIds.map { getPartition(it, partitions) }
+                    linkingIds.map { getPartition(it, allPartitions) }
             )
 
             val updatePropertyValueVersion = conn.prepareStatement(
