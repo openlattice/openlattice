@@ -47,6 +47,8 @@ import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.EdmService;
+import com.openlattice.datastore.services.EntitySetManager;
+import com.openlattice.datastore.services.EntitySetService;
 import com.openlattice.directory.UserDirectoryService;
 import com.openlattice.edm.PostgresEdmManager;
 import com.openlattice.edm.properties.PostgresTypeManager;
@@ -223,7 +225,7 @@ public class LinkerServicesPod {
 
     @Bean
     public EdmAuthorizationHelper edmAuthorizationHelper() {
-        return new EdmAuthorizationHelper( dataModelService(), authorizationManager() );
+        return new EdmAuthorizationHelper( dataModelService(), authorizationManager(), entitySetManager() );
     }
 
     @Bean
@@ -273,9 +275,23 @@ public class LinkerServicesPod {
                 authorizationManager(),
                 edmManager(),
                 entityTypeManager(),
-                schemaManager(),
-                auditingConfiguration,
-                partitionManager() );
+                schemaManager()
+        );
+    }
+
+
+    @Bean
+    public EntitySetManager entitySetManager() {
+        return new EntitySetService(
+                hazelcastInstance,
+                eventBus,
+                edmManager(),
+                aclKeyReservationService(),
+                authorizationManager(),
+                partitionManager(),
+                dataModelService(),
+                auditingConfiguration
+        );
     }
 
     @Bean

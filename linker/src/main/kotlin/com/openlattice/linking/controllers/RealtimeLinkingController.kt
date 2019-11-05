@@ -4,7 +4,6 @@ import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.linking.*
-import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
@@ -25,9 +24,6 @@ class RealtimeLinkingController(
     @Inject
     private lateinit var authz: AuthorizationManager
 
-    @Inject
-    private lateinit var backgroundLinkingService: BackgroundLinkingService
-
     private val entitySetBlacklist = lc.blacklist
     private val whitelist = lc.whitelist
     private val linkableTypes = edm.getEntityTypeUuids(lc.entityTypes)
@@ -35,10 +31,6 @@ class RealtimeLinkingController(
 
     override fun getAuthorizationManager(): AuthorizationManager {
         return authz
-    }
-
-    companion object {
-        private val logger = LoggerFactory.getLogger(RealtimeLinkingController::class.java)
     }
 
     @RequestMapping(

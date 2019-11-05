@@ -21,12 +21,9 @@
 
 package com.openlattice.linking
 
-import com.google.common.collect.SetMultimap
 import com.openlattice.data.EntityDataKey
 import com.openlattice.postgres.streams.BasePostgresIterable
-import com.openlattice.postgres.streams.PostgresIterable
 import java.util.*
-import java.util.stream.Stream
 
 /**
  *

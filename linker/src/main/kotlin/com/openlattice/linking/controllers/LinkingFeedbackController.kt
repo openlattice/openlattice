@@ -21,6 +21,7 @@
 
 package com.openlattice.linking.controllers
 
+import com.google.common.collect.Sets
 import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
@@ -28,13 +29,13 @@ import com.openlattice.data.EntityDataKey
 import com.openlattice.data.storage.EntityDatastore
 import com.openlattice.data.storage.IndexingMetadataManager
 import com.openlattice.datastore.services.EdmManager
+import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.linking.*
 import com.openlattice.linking.util.PersonMetric
 import com.openlattice.linking.util.PersonProperties
 import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.*
-import java.util.*
 import javax.inject.Inject
 
 @RestController
@@ -48,7 +49,8 @@ constructor(
         private val dataLoader: DataLoader,
         private val edm: EdmManager,
         private val entityDataStore: EntityDatastore,
-        private val dataManager: IndexingMetadataManager
+        private val dataManager: IndexingMetadataManager,
+        private val entitySetManager: EntitySetManager
 ) : LinkingFeedbackApi, AuthorizingComponent {
 
 
@@ -62,11 +64,15 @@ constructor(
     override fun addLinkingFeedback(@RequestBody feedback: LinkingFeedback): Int {
         if (feedback.link.isEmpty() || feedback.link.size + feedback.unlink.size < 2) {
             throw IllegalArgumentException(
-                    "Cannot submit feedback for less than 2 entities or if no positively linking entity is provided")
+                    "Cannot submit feedback for less than 2 entities or if no positively linking entity is provided"
+            )
         }
 
-        if( !Collections.disjoint( feedback.link, feedback.unlink )) {
-            throw IllegalArgumentException("Cannot submit feedback with and entity being both linking and non-linking")
+        val interSection = Sets.intersection(feedback.link, feedback.unlink)
+        if (!interSection.isEmpty()) {
+            throw IllegalArgumentException(
+                    "Cannot submit feedback with entities $interSection being both linking and non-linking"
+            )
         }
 
         // ensure read access on linking entity set
@@ -106,7 +112,7 @@ constructor(
     }
 
     private fun linkingFeedbackCheck(entityDataKeys: Set<EntityDataKey>, linkingEntityDataKey: EntityDataKey) {
-        val linkingEntitySet = edm.getEntitySet(linkingEntityDataKey.entitySetId)
+        val linkingEntitySet = entitySetManager.getEntitySet(linkingEntityDataKey.entitySetId)!!
         val entityKeyIdsOfLinkingId = entityDataStore
                 .getEntityKeyIdsOfLinkingIds(setOf(linkingEntityDataKey.entityKeyId)).first().second
 
@@ -128,7 +134,7 @@ constructor(
     private fun createLinkingFeedbackCombinations(
             entityDataKey: EntityDataKey, entityList: Array<EntityDataKey>, offset: Int, linked: Boolean): Int {
         (offset until entityList.size).forEach {
-            val elf = EntityLinkingFeedback(EntityKeyPair( entityDataKey, entityList[it] ), linked)
+            val elf = EntityLinkingFeedback(EntityKeyPair(entityDataKey, entityList[it]), linked)
 
             feedbackService.addLinkingFeedback(elf)
 

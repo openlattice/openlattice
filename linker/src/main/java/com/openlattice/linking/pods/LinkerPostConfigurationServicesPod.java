@@ -36,6 +36,8 @@ import com.openlattice.data.storage.PostgresEntityDatastore;
 import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.datastore.pods.ByteBlobServicePod;
 import com.openlattice.datastore.services.EdmManager;
+import com.openlattice.datastore.services.EntitySetManager;
+import com.openlattice.datastore.services.EntitySetService;
 import com.openlattice.edm.PostgresEdmManager;
 import com.openlattice.ids.HazelcastIdGenerationService;
 import com.openlattice.linking.BackgroundLinkingService;
@@ -100,6 +102,9 @@ public class LinkerPostConfigurationServicesPod {
     private LinkingLogService linkingLogService;
 
     @Inject
+    private EntitySetManager entitySetManager;
+
+    @Inject
     private HazelcastClientProvider hazelcastClientProvider;
 
     @Inject
@@ -121,7 +126,11 @@ public class LinkerPostConfigurationServicesPod {
 
     @Bean
     public PostgresEntityDataQueryService dataQueryService() {
-        return new PostgresEntityDataQueryService( hikariDataSource, byteBlobDataManager, partitionManager );
+        return new PostgresEntityDataQueryService(
+                hikariDataSource,
+                byteBlobDataManager,
+                partitionManager
+        );
     }
 
     @Bean
@@ -145,7 +154,7 @@ public class LinkerPostConfigurationServicesPod {
 
     @Bean
     public EntityDatastore entityDatastore() {
-        return new PostgresEntityDatastore( dataQueryService(), edm, pgEdmManager );
+        return new PostgresEntityDatastore( dataQueryService(), pgEdmManager, entitySetManager );
     }
 
     @Bean
