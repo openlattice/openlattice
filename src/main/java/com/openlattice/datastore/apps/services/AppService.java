@@ -32,17 +32,14 @@ import com.hazelcast.query.Predicates;
 import com.openlattice.apps.*;
 import com.openlattice.apps.processors.*;
 import com.openlattice.authorization.*;
+import com.openlattice.collections.CollectionTemplateType;
 import com.openlattice.collections.CollectionsManager;
-import com.openlattice.authorization.util.AuthorizationUtils;
-import com.openlattice.controllers.exceptions.BadRequestException;
-import com.openlattice.data.DataExpiration;
+import com.openlattice.collections.EntitySetCollection;
+import com.openlattice.collections.EntityTypeCollection;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.EntitySetManager;
 import com.openlattice.datastore.util.Util;
 import com.openlattice.edm.EntitySet;
-import com.openlattice.collections.CollectionTemplateType;
-import com.openlattice.collections.EntitySetCollection;
-import com.openlattice.collections.EntityTypeCollection;
 import com.openlattice.edm.events.AppCreatedEvent;
 import com.openlattice.edm.events.AppDeletedEvent;
 import com.openlattice.edm.requests.MetadataUpdate;
@@ -141,7 +138,7 @@ public class AppService {
 
     public void deleteRoleFromApp( UUID appId, UUID roleId ) {
         App app = getApp( appId );
-        appConfigs.executeOnKeys( getAppConfigKeysForApp(appId ), new RemoveRoleFromAppConfigProcessor( roleId ) );
+        appConfigs.executeOnKeys( getAppConfigKeysForApp( appId ), new RemoveRoleFromAppConfigProcessor( roleId ) );
         apps.executeOnKey( appId, new RemoveRoleFromAppProcessor( roleId ) );
     }
 
