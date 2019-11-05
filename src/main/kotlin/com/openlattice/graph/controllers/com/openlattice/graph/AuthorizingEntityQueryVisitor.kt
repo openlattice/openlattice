@@ -26,6 +26,7 @@ import com.google.common.collect.SetMultimap
 import com.openlattice.authorization.EdmAuthorizationHelper
 import com.openlattice.authorization.Permission
 import com.openlattice.datastore.services.EdmManager
+import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.graph.EntityQueryVisitor
 import com.openlattice.graph.query.AbstractEntityQuery
 import com.openlattice.graph.query.EntityKeyIdQuery
@@ -38,7 +39,7 @@ import java.util.*
  *
  */
 class AuthorizingEntityQueryVisitor(
-        private val edm: EdmManager,
+        private val esm: EntitySetManager,
         private val authzHelper: EdmAuthorizationHelper
 ) : EntityQueryVisitor {
     val entitySets: MutableSet<UUID> = mutableSetOf()
@@ -69,7 +70,7 @@ class AuthorizingEntityQueryVisitor(
         if (query.entitySetId.isPresent) {
             addEntitySetProperties(query.entitySetId.get())
         } else {
-            edm.getEntitySetIdsOfType(query.entityTypeId).forEach { addEntitySetProperties(it) }
+            esm.getEntitySetIdsOfType(query.entityTypeId).forEach { addEntitySetProperties(it) }
         }
     }
 

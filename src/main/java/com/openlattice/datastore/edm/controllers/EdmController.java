@@ -38,6 +38,7 @@ import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.data.requests.FileType;
 import com.openlattice.data.storage.EntityDatastore;
 import com.openlattice.datastore.services.EdmManager;
+import com.openlattice.datastore.services.EntitySetManager;
 import com.openlattice.edm.*;
 import com.openlattice.edm.requests.EdmDetailsSelector;
 import com.openlattice.edm.requests.EdmRequest;
@@ -50,7 +51,6 @@ import com.openlattice.edm.type.EntityTypePropertyMetadata;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.web.mediatypes.CustomMediaType;
-import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.jetbrains.annotations.NotNull;
@@ -76,6 +76,9 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
 
     @Inject
     private EdmManager modelService;
+
+    @Inject
+    private EntitySetManager entitySetManager;
 
     @Inject
     private HazelcastSchemaManager schemaManager;
@@ -214,12 +217,12 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         } );
 
         accessCheck( entitySetIds.stream()
-                .collect( Collectors.toMap( id -> new AclKey( id ), id -> EnumSet.of( Permission.READ ) ) ) );
+                .collect( Collectors.toMap( AclKey::new, id -> EnumSet.of( Permission.READ ) ) ) );
 
         return new EdmDetails(
                 modelService.getPropertyTypesAsMap( propertyTypeIds ),
                 modelService.getEntityTypesAsMap( entityTypeIds ),
-                modelService.getEntitySetsAsMap( entitySetIds ) );
+                entitySetManager.getEntitySetsAsMap( entitySetIds ) );
     }
 
     private void updatePropertyTypeIdsToGet( EdmDetailsSelector selector, Set<UUID> propertyTypeIds ) {
@@ -254,7 +257,8 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
             entitySetIds.add( selector.getId() );
         }
         if ( selector.getIncludedFields().contains( SecurableObjectType.EntityType ) ) {
-            es = modelService.getEntitySet( selector.getId() );
+            // TODO should non-existing es id be allowed?
+            es = entitySetManager.getEntitySet( selector.getId() );
             setRetrieved = true;
             if ( es != null ) {
                 entityTypeIds.add( es.getEntityTypeId() );
@@ -262,7 +266,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         }
         if ( selector.getIncludedFields().contains( SecurableObjectType.PropertyTypeInEntitySet ) ) {
             if ( !setRetrieved ) {
-                es = modelService.getEntitySet( selector.getId() );
+                es = entitySetManager.getEntitySet( selector.getId() );
             }
             if ( es != null ) {
                 EntityType et = modelService.getEntityType( es.getEntityTypeId() );
