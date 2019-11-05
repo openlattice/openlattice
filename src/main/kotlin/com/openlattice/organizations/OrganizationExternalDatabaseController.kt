@@ -28,6 +28,7 @@ import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.US
 import com.openlattice.organization.OrganizationExternalDatabaseApi.Companion.USER_ID_PATH
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import com.openlattice.organization.OrganizationExternalDatabaseTable
+import com.openlattice.organization.OrganizationExternalDatabaseTableColumnsPair
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.*
@@ -111,7 +112,7 @@ class OrganizationExternalDatabaseController : OrganizationExternalDatabaseApi, 
     @GetMapping(path = [ID_PATH + TABLE_ID_PATH + EXTERNAL_DATABASE_TABLE + EXTERNAL_DATABASE_COLUMN])
     override fun getExternalDatabaseTableWithColumns(
             @PathVariable(ID) organizationId: UUID,
-            @PathVariable(TABLE_ID) tableId: UUID): Pair<OrganizationExternalDatabaseTable, Set<OrganizationExternalDatabaseColumn>> {
+            @PathVariable(TABLE_ID) tableId: UUID): OrganizationExternalDatabaseTableColumnsPair {
         ensureReadAccess(AclKey(organizationId, tableId))
         return edms.getExternalDatabaseTableWithColumns(tableId)
     }
