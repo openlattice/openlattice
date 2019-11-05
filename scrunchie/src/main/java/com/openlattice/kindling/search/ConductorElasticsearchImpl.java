@@ -1427,7 +1427,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 sort = new ScoreSortBuilder();
                 break;
         }
-        sort.order( sortDefinition.isDescending() ? SortOrder.DESC : SortOrder.ASC );
+        sort.order( sortDefinition.getDescending() ? SortOrder.DESC : SortOrder.ASC );
 
         return sort;
     }
