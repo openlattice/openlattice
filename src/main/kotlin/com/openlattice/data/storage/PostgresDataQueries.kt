@@ -72,10 +72,10 @@ fun buildPreparableFiltersSql(
     val filtersClause = if (filtersClauses.first.isNotEmpty()) " AND ${filtersClauses.first} " else ""
     val metadataOptionColumns = metadataOptions.associateWith(::mapMetaDataToColumnSql)
     val metadataOptionColumnsSql = metadataOptionColumns.values.joinToString("")
-    val innerGroupBy = groupBy(ESID_EKID_PART_PTID)
-    val outerGroupBy = if (metadataOptions.contains(MetadataOption.ORIGIN_IDS)) {
-        groupBy("$ESID_EKID_PART,${ORIGIN_ID.name}")
-    } else groupBy(ESID_EKID_PART)
+
+    val (innerGroupBy,outerGroupBy) = if (metadataOptions.contains(MetadataOption.ORIGIN_IDS)) {
+        groupBy("$ESID_EKID_PART_PTID,${ORIGIN_ID.name}") to groupBy("$ESID_EKID_PART,${ORIGIN_ID.name}")
+    } else groupBy(ESID_EKID_PART)  to groupBy(ESID_EKID_PART)
     val linkingClause = if (linking) " AND ${ORIGIN_ID.name} != '${IdConstants.EMPTY_ORIGIN_ID.id}' " else ""
 
     val innerSql = selectEntitiesGroupedByIdAndPropertyTypeId(
