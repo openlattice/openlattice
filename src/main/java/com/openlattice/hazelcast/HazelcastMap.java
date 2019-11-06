@@ -36,6 +36,7 @@ public enum HazelcastMap {
     COMPLEX_TYPES,
     DATA,
     DB_CREDS,
+    DELETION_LOCKS,
     EDGES,
     ORGANIZATION_DEFAULT_PARTITIONS,
     ENTITY_DATA,

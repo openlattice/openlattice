@@ -21,6 +21,7 @@ import com.openlattice.collections.processors.UpdateEntitySetCollectionMetadataP
 import com.openlattice.collections.processors.UpdateEntityTypeCollectionMetadataProcessor
 import com.openlattice.controllers.exceptions.ForbiddenException
 import com.openlattice.datastore.services.EdmManager
+import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.events.EntitySetCollectionCreatedEvent
 import com.openlattice.edm.events.EntitySetCollectionDeletedEvent
@@ -36,8 +37,9 @@ import java.util.concurrent.ConcurrentMap
 
 @Service
 class CollectionsManager(
-        private val hazelcast: HazelcastInstance,
+        hazelcast: HazelcastInstance,
         private val edmManager: EdmManager,
+        private val entitySetManager: EntitySetManager,
         private val aclKeyReservations: HazelcastAclKeyReservationService,
         private val schemaManager: HazelcastSchemaManager,
         private val authorizations: AuthorizationManager,
@@ -114,7 +116,7 @@ class CollectionsManager(
         val principal = Principals.getCurrentUser()
         Principals.ensureUser(principal)
 
-        var entityTypeCollectionId = entitySetCollection.entityTypeCollectionId
+        val entityTypeCollectionId = entitySetCollection.entityTypeCollectionId
 
         val template = entityTypeCollections[entityTypeCollectionId]?.template ?: throw IllegalStateException(
                 "Cannot create EntitySetCollection ${entitySetCollection.id} because EntityTypeCollection $entityTypeCollectionId does not exist.")
@@ -313,7 +315,7 @@ class CollectionsManager(
     }
 
     private fun validateEntitySetCollectionTemplate(name: String, mappings: Map<UUID, UUID>, template: LinkedHashSet<CollectionTemplateType>) {
-        val entitySets = edmManager.getEntitySetsAsMap(mappings.values.toSet())
+        val entitySets = entitySetManager.getEntitySetsAsMap(mappings.values.toSet())
 
         val templateEntityTypesById = template.map { it.id to it.entityTypeId }.toMap()
 
@@ -377,7 +379,7 @@ class CollectionsManager(
                 Optional.of(flags),
                 Optional.empty(),
                 Optional.empty())
-        edmManager.createEntitySet(principal, entitySet)
+        entitySetManager.createEntitySet(principal, entitySet)
         return entitySet.id
     }
 

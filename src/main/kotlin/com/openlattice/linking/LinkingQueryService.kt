@@ -34,7 +34,7 @@ interface LinkingQueryService {
 
     /**
      * Inserts the results scoring pairs of elements within a cluster to persistent storage. The initial cluster usually
-     * consists of all scored pairs within a single block returned by the [Blocker].
+     * consists of all scored pairs within a single block returned by the [com.openlattice.linking.Blocker].
      *
      * @param clusterId A unique identifier for cluster that is being stored.
      * @param scores The scores pairs of elements within a cluster.
@@ -58,7 +58,7 @@ interface LinkingQueryService {
 
     /**
      * Retrieve several clusters.
-     * @param clusterIds The ids for the clusters to load.
+     * @param dataKeys The ids for the clusters to load.
      * @return The graph of scores for each cluster requested.
      */
     fun getClustersForIds(dataKeys: Set<EntityDataKey>): Map<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>>

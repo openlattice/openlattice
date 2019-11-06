@@ -15,7 +15,7 @@ import java.util.concurrent.locks.ReentrantLock
  *
  */
 class AuditingTypes(
-        val edm: EdmManager,
+        private val edm: EdmManager,
         private val auditingConfiguration: AuditingConfiguration
 ) {
     companion object {
@@ -74,7 +74,7 @@ class AuditingTypes(
     }
 
     fun getPropertyTypeId(auditProperty: AuditProperty): UUID {
-        return if (auditingConfiguration.fqns.keys.contains(auditProperty)) {
+        if (auditingConfiguration.fqns.keys.contains(auditProperty)) {
             return propertyTypeIds[auditProperty]!!
         } else {
             throw ResourceNotFoundException("Audit property $auditProperty is not configured.")

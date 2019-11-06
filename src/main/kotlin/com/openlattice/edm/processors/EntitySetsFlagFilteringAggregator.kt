@@ -25,7 +25,6 @@ import com.hazelcast.aggregation.Aggregator
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetFlag
 import java.util.*
-import java.util.Map
 
 data class EntitySetsFlagFilteringAggregator @JvmOverloads constructor(
         val filteringFlags: Set<EntitySetFlag>,
