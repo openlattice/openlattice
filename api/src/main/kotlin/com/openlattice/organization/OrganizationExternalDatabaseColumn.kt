@@ -17,7 +17,7 @@ import java.util.*
  * @param tableId The id of the table that contains this column
  * @param organizationId The id of the organization that owns this column
  * @param dataType The sql data type of this column
- * @param isPrimaryKey A boolean denoting if the column is a primary key of the containing table
+ * @param primaryKey A boolean denoting if the column is a primary key of the containing table
  * @param ordinalPosition The index of the column within the containing table
  */
 
@@ -31,7 +31,7 @@ constructor(
         @JsonProperty(SerializationConstants.TABLE_ID) var tableId: UUID,
         @JsonProperty(SerializationConstants.ORGANIZATION_ID) var organizationId: UUID,
         @JsonProperty(SerializationConstants.DATATYPE_FIELD) var dataType: String,
-        @JsonProperty(SerializationConstants.IS_PRIMARY_KEY) var isPrimaryKey: Boolean,
+        @JsonProperty(SerializationConstants.PRIMARY_KEY) var primaryKey: Boolean,
         @JsonProperty(SerializationConstants.ORDINAL_POSITION) var ordinalPosition: Int
 ) : AbstractSecurableObject(id, title, description) {
 
@@ -43,9 +43,9 @@ constructor(
             tableId: UUID,
             organizationId: UUID,
             dataType: String,
-            isPrimaryKey: Boolean,
+            primaryKey: Boolean,
             ordinalPosition: Int
-    ) : this(Optional.of(id), name, title, description, tableId, organizationId, dataType, isPrimaryKey, ordinalPosition)
+    ) : this(Optional.of(id), name, title, description, tableId, organizationId, dataType, primaryKey, ordinalPosition)
 
     @JsonIgnore
     override fun getCategory(): SecurableObjectType {

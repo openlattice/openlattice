@@ -146,10 +146,8 @@ public final class SerializationConstants {
     public static final String INDEXING                         = "indexing";
     public static final String INDEX_TYPE                       = "indexType";
     public static final String IP_ADDRESSES                     = "ipAddresses";
-    public static final String IS_DESCENDING                    = "isDescending";
     public static final String IS_DST                           = "isDst";
     public static final String IS_OWNER                         = "isOwner";
-    public static final String IS_PRIMARY_KEY                   = "isPrimaryKey";
     public static final String KEYWORD                          = "kw";
     public static final String KEY_FIELD                        = "key";
     public static final String LAST_INDEX                       = "lastIndex";
@@ -198,6 +196,7 @@ public final class SerializationConstants {
     public static final String PII_FIELD                        = "pii";
     public static final String ORDINAL_POSITION                 = "ordinalPosition";
     public static final String PRESENT                          = "present";
+    public static final String PRIMARY_KEY                      = "primaryKey";
     public static final String PRINCIPAL                        = "principal";
     public static final String PRINCIPAL_PATHS                  = "principalPaths";
     public static final String PROFILE_FIELD                    = "profile";
