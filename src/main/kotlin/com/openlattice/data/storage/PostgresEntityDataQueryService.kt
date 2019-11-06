@@ -105,7 +105,7 @@ class PostgresEntityDataQueryService(
             propertyTypeFilters: Map<UUID, Set<Filter>> = mapOf(),
             version: Optional<Long> = Optional.empty()
     ): BasePostgresIterable<Pair<UUID, Pair<UUID, Pair<UUID, MutableMap<UUID, MutableSet<Any>>>>>> {
-        val metadataOptions = extraMetadataOptions + MetadataOption.ORIGIN_IDS
+        val metadataOptions = extraMetadataOptions + MetadataOption.ENTITY_KEY_IDS
         return getEntitySetIterable(
                 entityKeyIds,
                 authorizedPropertyTypes,

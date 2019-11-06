@@ -83,7 +83,7 @@ fun buildPreparableFiltersSql(
     val metadataOptionColumns = metadataOptions.associateWith(::mapMetaDataToColumnSql)
     val metadataOptionColumnsSql = metadataOptionColumns.values.joinToString("")
 
-    val (innerGroupBy, outerGroupBy) = if (metadataOptions.contains(MetadataOption.ORIGIN_IDS)) {
+    val (innerGroupBy, outerGroupBy) = if (metadataOptions.contains(MetadataOption.ENTITY_KEY_IDS)) {
         groupBy("$ESID_EKID_PART_PTID,${ORIGIN_ID.name}") to groupBy("$ESID_EKID_PART,${ORIGIN_ID.name}")
     } else groupBy(ESID_EKID_PART_PTID) to groupBy(ESID_EKID_PART_PTID)
     val linkingClause = if (linking) " AND ${ORIGIN_ID.name} != '${IdConstants.EMPTY_ORIGIN_ID.id}' " else ""
@@ -121,7 +121,6 @@ internal fun selectEntitiesGroupedByIdAndPropertyTypeId(
  */
 private fun mapMetaDataToColumnSql(metadataOption: MetadataOption): String {
     return when (metadataOption) {
-        MetadataOption.ORIGIN_IDS -> ",${ORIGIN_ID.name}"
         // TODO should be just last_write with comma prefix after empty rows are eliminated https://jira.openlattice.com/browse/LATTICE-2254
         MetadataOption.LAST_WRITE -> ",max(${LAST_WRITE.name}) AS ${mapMetaDataToColumnName(metadataOption)}"
         MetadataOption.ENTITY_KEY_IDS -> ",array_agg(${ORIGIN_ID.name}) as ${ENTITY_KEY_IDS_COL.name}"
@@ -134,7 +133,6 @@ private fun mapMetaDataToColumnSql(metadataOption: MetadataOption): String {
  */
 private fun mapMetaDataToColumnName(metadataOption: MetadataOption): String {
     return when (metadataOption) {
-        MetadataOption.ORIGIN_IDS -> ORIGIN_ID.name
         MetadataOption.LAST_WRITE -> LAST_WRITE.name
         MetadataOption.ENTITY_KEY_IDS -> ENTITY_KEY_IDS_COL.name
         else -> throw UnsupportedOperationException("No implementation yet for metadata option $metadataOption")
@@ -146,19 +144,16 @@ private fun mapMetaDataToColumnName(metadataOption: MetadataOption): String {
  */
 private fun mapMetaDataToSelector(metadataOption: MetadataOption): String {
     return when (metadataOption) {
-        MetadataOption.ORIGIN_IDS -> ",${ORIGIN_ID.name}"
         MetadataOption.LAST_WRITE -> ",max(${LAST_WRITE.name}) AS ${mapMetaDataToColumnName(metadataOption)}"
-        MetadataOption.ENTITY_KEY_IDS ->
-            ",array_agg(COALESCE(${ORIGIN_ID.name},${ID.name})) AS ${mapMetaDataToColumnName(metadataOption)}"
+        MetadataOption.ENTITY_KEY_IDS -> ",array_agg(${ORIGIN_ID.name}) AS ${mapMetaDataToColumnName(metadataOption)}"
         else -> throw UnsupportedOperationException("No implementation yet for metadata option $metadataOption")
     }
 }
 
 private fun isMetaDataAggregated(metadataOption: MetadataOption): Boolean {
     return when (metadataOption) {
-        MetadataOption.ORIGIN_IDS -> false
-        MetadataOption.LAST_WRITE -> true
         MetadataOption.ENTITY_KEY_IDS -> true
+        MetadataOption.LAST_WRITE -> true
         else -> throw UnsupportedOperationException("No implementation yet for metadata option $metadataOption")
     }
 }
