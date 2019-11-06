@@ -338,8 +338,6 @@ internal fun buildUpsertEntitiesAndLinkedData(): String {
             ","
     ) { "${it.name} = EXCLUDED.${it.name}" }
 
-//    val selectLinkingIds = "INSERT INTO SELECT entity_set_id,id,linking_id,(?)[ 1 + (('x'||right(linking_id::text,8))::bit(32)::int % array_length(?,1))] " +
-//            "FROM ${IDS.name} INNER JOIN ${DATA.name} USING (entity_set_id, id, partition) "
 
     return "WITH linking_map as ($upsertEntitiesSql) INSERT INTO ${DATA.name} ($metadataColumnsSql,$insertColumns) " +
             "SELECT $metadataReadColumnsSql,$insertColumns FROM ${DATA.name} INNER JOIN " +
