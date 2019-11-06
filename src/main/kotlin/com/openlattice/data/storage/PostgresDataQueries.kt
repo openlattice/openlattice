@@ -23,13 +23,17 @@ import java.util.*
  */
 internal class PostgresDataQueries
 
+const val VALUE = "value"
 const val VALUES = "values"
 const val PROPERTIES = "properties"
 
 val dataTableColumnsSql = PostgresDataTables.dataTableColumns.joinToString(",") { it.name }
 
 val detailedValueColumnsSql = dataTableValueColumns.joinToString("||") {
-    "jsonb_agg(json_build_object('value',${it.name},'${ENTITY_SET_ID.name}', entity_set_id, '${ID_VALUE.name}', origin_id)) FILTER (where ${it.name} IS NOT NULL)"
+    "jsonb_agg(json_build_object('$VALUE',${it.name}," +
+            "'${ENTITY_SET_ID.name}', ${ENTITY_SET_ID.name}, " +
+            "'${ID_VALUE.name}', ${ORIGIN_ID.name})) " +
+            "FILTER (where ${it.name} IS NOT NULL)"
 } + " as $PROPERTIES"
 val valuesColumnsSql = dataTableValueColumns.joinToString("||") {
     "jsonb_agg(${it.name}) FILTER (where ${it.name} IS NOT NULL)"
