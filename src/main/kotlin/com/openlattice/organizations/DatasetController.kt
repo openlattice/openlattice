@@ -220,11 +220,7 @@ class DatasetController : DatasetApi, AuthorizingComponent {
 
     private fun getExternalDatabaseObjectIds( containingObjectId: UUID, names: Set<String>): Set<UUID> {
         val fqns = names.map{FullQualifiedName(containingObjectId.toString(), it).toString()}.toSet()
-        val ids = aclKeyReservations.getIds(fqns).toSet()
-        ids.forEach{
-            checkState(it != null, "External database object with name $it does not exist")
-        }
-        return ids
+        return aclKeyReservations.getIds(fqns).toSet()
     }
 
     override fun getAuthorizationManager(): AuthorizationManager {
