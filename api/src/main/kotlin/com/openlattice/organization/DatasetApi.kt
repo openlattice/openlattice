@@ -33,7 +33,8 @@ interface DatasetApi {
     }
 
     /**
-     *
+     * Adds an authentication record to the pg_hba config file
+     * that restricts database access by ip address for a user
      * @param organizationId The organization's UUID
      * @param userId The user to be given trusted status
      * @param connectionType The connection type via which the user will be trusted
@@ -47,6 +48,12 @@ interface DatasetApi {
             @Path(CONNECTION_TYPE) connectionType: String,
             @Body ipAddresses: Set<String>)
 
+    /**
+     * Removes a user's record from the pg_hba config file
+     * @param organizationId The organization's UUID
+     * @param userId The user to be given trusted status
+     * will be trusted. This should be an empty set if the connectionType is local.
+     */
     @DELETE(BASE + ID_PATH + USER_ID_PATH + EXTERNAL_DATABASE)
     fun removeHBARecord(
             @Path(ID) organizationId: UUID,
@@ -55,16 +62,15 @@ interface DatasetApi {
     //get
 
     /**
-     * Gets all OrganizationExternalDatabaseTable objects for an organizatoin
+     * Gets all OrganizationExternalDatabaseTable objects for an organization
      * @param organizationId The organization's UUID
      */
     @GET(BASE + ID_PATH + EXTERNAL_DATABASE_TABLE)
     fun getExternalDatabaseTables(@Path(ID) organizationId: UUID): Set<OrganizationExternalDatabaseTable>
 
     /**
-     * Gets all OrganizationExternalDatabaseTable objects mapped to
-     * their containing OrganizationExternalDatabase columns
-     * for an organization
+     * Gets a map of all OrganizationExternalDatabaseTable objects to
+     * OrganizationExternalDatabase columns that are contained within each table.
      * @param organizationId The organization's UUID
      */
     @GET(BASE + ID_PATH + EXTERNAL_DATABASE_TABLE + EXTERNAL_DATABASE_COLUMN)
