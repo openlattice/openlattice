@@ -26,10 +26,20 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+/**
+ * Represents body to narrow down loading an entity set by its properties and/or entities.
+ */
 public class EntitySetSelection {
     private final Optional<Set<UUID>> properties;
     private final Optional<Set<UUID>> entityKeyIds;
 
+    /**
+     * Creates an EntitySetSelection.
+     * Note, if properties are left empty, all the properties of the entity set will be selected.
+     * Note, if entities are left empty, all the entities of the entity set will be selected.
+     * @param properties The ids of properties to select.
+     * @param entityKeyIds The ids of entities to select.
+     */
     @JsonCreator
     public EntitySetSelection(
             @JsonProperty( SerializationConstants.PROPERTIES_FIELD ) Optional<Set<UUID>> properties,
@@ -38,6 +48,10 @@ public class EntitySetSelection {
         this.entityKeyIds = entityKeyIds;
     }
 
+    /**
+     * Creates an EntitySetSelection with with only narrowing down properties.
+     * @param properties The ids of properties to select.
+     */
     public EntitySetSelection( Optional<Set<UUID>> properties ) {
         this( properties, Optional.empty() );
     }
