@@ -124,7 +124,7 @@ private fun mapMetaDataToColumnSql(metadataOption: MetadataOption): String {
         MetadataOption.ORIGIN_IDS -> ",${ORIGIN_ID.name}"
         // TODO should be just last_write with comma prefix after empty rows are eliminated https://jira.openlattice.com/browse/LATTICE-2254
         MetadataOption.LAST_WRITE -> ",max(${LAST_WRITE.name}) AS ${mapMetaDataToColumnName(metadataOption)}"
-        MetadataOption.ENTITY_KEY_IDS -> ",array_agg(${ORIGIN_ID.name}) as ${ENTITY_KEY_IDS_COL.name})"
+        MetadataOption.ENTITY_KEY_IDS -> ",array_agg(${ORIGIN_ID.name}) as ${ENTITY_KEY_IDS_COL.name}"
         else -> throw UnsupportedOperationException("No implementation yet for metadata option $metadataOption")
     }
 }
