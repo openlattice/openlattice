@@ -53,7 +53,7 @@ class PostgresEntityDataQueryServiceTest {
 
 
     @Test
-    fun testEntitySetVersionQuery() {
+    fun testEntitySetLastWriteQuery() {
         val propertyTypes = listOf(
                 PropertyType(UUID.fromString("c270d705-3616-4abc-b16e-f891e264b784"), FullQualifiedName("im.PersonNickName"), "PersonNickName", Optional.empty<String>(), setOf(), EdmPrimitiveTypeKind.String),
                 PropertyType(UUID.fromString("7b038634-a0b4-4ce1-a04f-85d1775937aa"), FullQualifiedName("nc.PersonSurName"), "PersonSurName", Optional.empty<String>(), setOf(), EdmPrimitiveTypeKind.String),
@@ -85,7 +85,7 @@ class PostgresEntityDataQueryServiceTest {
                         0,
                         propertyTypes.associateBy { it.id },
                         mapOf(),
-                        EnumSet.of(MetadataOption.LAST_WRITE),
+                        EnumSet.of(MetadataOption.ENTITY_KEY_IDS),
                         linking = false,
                         idsPresent = true,
                         partitionsPresent = true

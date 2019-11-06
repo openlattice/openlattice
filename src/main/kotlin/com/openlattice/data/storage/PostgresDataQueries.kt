@@ -23,21 +23,27 @@ import java.util.*
  */
 internal class PostgresDataQueries
 
+
 const val VALUE = "value"
 const val VALUES = "values"
 const val PROPERTIES = "properties"
 
 val dataTableColumnsSql = PostgresDataTables.dataTableColumns.joinToString(",") { it.name }
 
+// @formatter:off
 val detailedValueColumnsSql = dataTableValueColumns.joinToString("||") {
-    "jsonb_agg(json_build_object('$VALUE',${it.name}," +
-            "'${ENTITY_SET_ID.name}', ${ENTITY_SET_ID.name}, " +
-            "'${ID_VALUE.name}', ${ORIGIN_ID.name})) " +
-            "FILTER (where ${it.name} IS NOT NULL)"
+    "jsonb_agg(" +
+        "json_build_object('$VALUE',${it.name}, " +
+        "'${ENTITY_SET_ID.name}', ${ENTITY_SET_ID.name}, " +
+        "'${ID_VALUE.name}', ${ORIGIN_ID.name}" +
+    ")) FILTER ( WHERE ${it.name} IS NOT NULL) "
 } + " as $PROPERTIES"
+
 val valuesColumnsSql = dataTableValueColumns.joinToString("||") {
-    "jsonb_agg(${it.name}) FILTER (where ${it.name} IS NOT NULL)"
+    "jsonb_agg(${it.name}) " +
+    "FILTER (WHERE ${it.name} IS NOT NULL)"
 } + " as $PROPERTIES"
+// @formatter:on
 
 val primaryKeyColumnNamesAsString = PostgresDataTables.buildDataTableDefinition().primaryKey.joinToString(
         ","
@@ -106,7 +112,7 @@ internal fun selectEntitiesGroupedByIdAndPropertyTypeId(
     //Already have the comma prefix
     val metadataOptionsSql = metadataOptions.joinToString("") { mapMetaDataToSelector(it) }
     val columnsSql = if (detailed) detailedValueColumnsSql else valuesColumnsSql
-    return "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name},${PROPERTY_TYPE_ID.name}$metadataOptionsSql,$columnsSql " +
+    return "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name},${ORIGIN_ID.name},${PROPERTY_TYPE_ID.name}$metadataOptionsSql,$columnsSql " +
             "FROM ${DATA.name} ${optionalWhereClauses(idsPresent, partitionsPresent, entitySetsPresent)}"
 }
 
