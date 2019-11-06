@@ -37,5 +37,5 @@ public interface SecurableObjectResolveTypeService {
 
     Set<AclKey> getSecurableObjectsOfType( SecurableObjectType type );
 
-    Set<AclKey> getOrganizationExternalDatabaseAclKeys( List<Acl> acls);
+    Set<AclKey> getOrganizationExternalDatabaseAclKeys( Set<AclKey> aclKeys);
 }
