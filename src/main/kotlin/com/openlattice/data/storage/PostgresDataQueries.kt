@@ -112,7 +112,7 @@ internal fun selectEntitiesGroupedByIdAndPropertyTypeId(
     //Already have the comma prefix
     val metadataOptionsSql = metadataOptions.joinToString("") { mapMetaDataToSelector(it) }
     val columnsSql = if (detailed) detailedValueColumnsSql else valuesColumnsSql
-    return "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name},${ORIGIN_ID.name},${PROPERTY_TYPE_ID.name}$metadataOptionsSql,$columnsSql " +
+    return "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name},${PROPERTY_TYPE_ID.name}$metadataOptionsSql,$columnsSql " +
             "FROM ${DATA.name} ${optionalWhereClauses(idsPresent, partitionsPresent, entitySetsPresent)}"
 }
 
