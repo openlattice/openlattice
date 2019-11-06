@@ -73,9 +73,9 @@ fun buildPreparableFiltersSql(
     val metadataOptionColumns = metadataOptions.associateWith(::mapMetaDataToColumnSql)
     val metadataOptionColumnsSql = metadataOptionColumns.values.joinToString("")
 
-    val (innerGroupBy,outerGroupBy) = if (metadataOptions.contains(MetadataOption.ORIGIN_IDS)) {
+    val (innerGroupBy, outerGroupBy) = if (metadataOptions.contains(MetadataOption.ORIGIN_IDS)) {
         groupBy("$ESID_EKID_PART_PTID,${ORIGIN_ID.name}") to groupBy("$ESID_EKID_PART,${ORIGIN_ID.name}")
-    } else groupBy(ESID_EKID_PART_PTID)  to groupBy(ESID_EKID_PART_PTID)
+    } else groupBy(ESID_EKID_PART_PTID) to groupBy(ESID_EKID_PART_PTID)
     val linkingClause = if (linking) " AND ${ORIGIN_ID.name} != '${IdConstants.EMPTY_ORIGIN_ID.id}' " else ""
 
     val innerSql = selectEntitiesGroupedByIdAndPropertyTypeId(
@@ -773,7 +773,7 @@ fun upsertPropertyValueLinkingRowSql(propertyType: PropertyType): String {
             VERSIONS,
             PARTITIONS_VERSION
     ).joinToString(",") { it.name }
-
+// @formatter:off
     return "INSERT INTO ${DATA.name} ($metadataColumnsSql,${insertColumn.name},${ORIGIN_ID.name}) " +
             "VALUES (?,?,?,?,?,now(),?,?,?,?,?) " +
             "ON CONFLICT ($primaryKeyColumnNamesAsString) " +
@@ -781,11 +781,11 @@ fun upsertPropertyValueLinkingRowSql(propertyType: PropertyType): String {
             "${VERSIONS.name} = ${DATA.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
             "${LAST_WRITE.name} = GREATEST(${DATA.name}.${LAST_WRITE.name},EXCLUDED.${LAST_WRITE.name}), " +
             "${PARTITIONS_VERSION.name} = EXCLUDED.${PARTITIONS_VERSION.name}, " +
-            "${VERSION.name} = CASE " +
-            "WHEN abs(${DATA.name}.${VERSION.name}) <= EXCLUDED.${VERSION.name} " +
-            "THEN EXCLUDED.${VERSION.name} " +
-            "ELSE ${DATA.name}.${VERSION.name} " +
+            "${VERSION.name} = CASE WHEN abs(${DATA.name}.${VERSION.name}) <= EXCLUDED.${VERSION.name} " +
+                "THEN EXCLUDED.${VERSION.name} " +
+                "ELSE ${DATA.name}.${VERSION.name} " +
             "END"
+    // @formatter:on
 }
 
 /**
