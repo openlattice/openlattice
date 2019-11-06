@@ -86,6 +86,7 @@ fun buildPreparableFiltersSql(
     ) + linkingClause + filtersClause + innerGroupBy
 
     val sql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name}$metadataOptionColumnsSql," +
+
             "jsonb_object_agg($PROPERTY_TYPE_ID,PROPERTIES) " +
             "FROM ($innerSql) entities $outerGroupBy"
 
@@ -114,7 +115,7 @@ private fun mapMetaDataToColumnSql(metadataOption: MetadataOption): String {
         MetadataOption.ORIGIN_IDS -> ",${ORIGIN_ID.name}"
         // TODO should be just last_write with comma prefix after empty rows are eliminated https://jira.openlattice.com/browse/LATTICE-2254
         MetadataOption.LAST_WRITE -> ",max(${LAST_WRITE.name}) AS ${mapMetaDataToColumnName(metadataOption)}"
-        MetadataOption.ENTITY_KEY_IDS -> ",${ENTITY_KEY_IDS_COL.name}"
+        MetadataOption.ENTITY_KEY_IDS -> ",array_agg(${ORIGIN_ID.name}) as ${ENTITY_KEY_IDS_COL.name})"
         else -> throw UnsupportedOperationException("No implementation yet for metadata option $metadataOption")
     }
 }
