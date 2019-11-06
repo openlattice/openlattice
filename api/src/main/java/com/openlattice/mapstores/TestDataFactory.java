@@ -589,24 +589,6 @@ public final class TestDataFactory {
         );
     }
 
-    public static CollectionTemplates collectionTemplates() {
-        Map<UUID, Map<UUID, UUID>> templates = Maps.newHashMap();
-
-        for ( int i = 0; i < 5; i++ ) {
-
-            int size = RandomUtils.nextInt( 1, 5 );
-            Map<UUID, UUID> map = Maps.newHashMap();
-
-            for ( int j = 0; j < size; j++ ) {
-                map.put( UUID.randomUUID(), UUID.randomUUID() );
-            }
-
-            templates.put( UUID.randomUUID(), map );
-        }
-
-        return new CollectionTemplates( templates );
-    }
-
     public static AppRole appRole() {
         return new AppRole( Optional.empty(),
                 randomAlphanumeric( 5 ),
