@@ -86,7 +86,6 @@ fun buildPreparableFiltersSql(
     ) + linkingClause + filtersClause + innerGroupBy
 
     val sql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name}$metadataOptionColumnsSql," +
-
             "jsonb_object_agg($PROPERTY_TYPE_ID,PROPERTIES) " +
             "FROM ($innerSql) entities $outerGroupBy"
 
