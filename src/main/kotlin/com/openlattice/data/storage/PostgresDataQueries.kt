@@ -811,20 +811,23 @@ fun createOrUpdateLinkFromEntity(): String {
             else -> it.name
         }
     }
+
+    // @formatter:off
     return "INSERT INTO ${DATA.name} ($dataTableColumnsSql) " +
             "SELECT $existingColumnsUpdatedForLinking " +
             "FROM ${DATA.name} " +
             "${optionalWhereClausesSingleEdk(idPresent = true, partitionsPresent = true, entitySetPresent = true)} " +
             "ON CONFLICT ($primaryKeyColumnNamesAsString) " +
             "DO UPDATE SET " +
-            "${VERSIONS.name} = ${DATA.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
-            "${LAST_WRITE.name} = GREATEST(${DATA.name}.${LAST_WRITE.name},EXCLUDED.${LAST_WRITE.name}), " +
-            "${PARTITIONS_VERSION.name} = EXCLUDED.${PARTITIONS_VERSION.name}, " +
-            "${VERSION.name} = CASE " +
-            "WHEN abs(${DATA.name}.${VERSION.name}) <= EXCLUDED.${VERSION.name} " +
-            "THEN EXCLUDED.${VERSION.name} " +
-            "ELSE ${DATA.name}.${VERSION.name} " +
-            "END"
+                "${VERSIONS.name} = ${DATA.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
+                "${LAST_WRITE.name} = GREATEST(${DATA.name}.${LAST_WRITE.name},EXCLUDED.${LAST_WRITE.name}), " +
+                "${PARTITIONS_VERSION.name} = EXCLUDED.${PARTITIONS_VERSION.name}, " +
+                "${VERSION.name} = CASE " +
+                    "WHEN abs(${DATA.name}.${VERSION.name}) <= EXCLUDED.${VERSION.name} " +
+                    "THEN EXCLUDED.${VERSION.name} " +
+                    "ELSE ${DATA.name}.${VERSION.name} " +
+                "END"
+    // @formatter:on
 }
 
 /* For materialized views */
