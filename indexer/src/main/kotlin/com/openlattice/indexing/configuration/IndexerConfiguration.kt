@@ -42,6 +42,7 @@ private const val BACKGROUND_INDEXING_ENABLED = "background-indexing-enabled"
 private const val BACKGROUND_LINKING_INDEXING_ENABLED = "background-linking-indexing-enabled"
 private const val BACKGROUND_EXPIRED_DATA_DELETION_ENABLED = "background-expired-data-deletion-enabled"
 private const val BACKGROUND_EXTERNAL_DATABASE_SYNCING_ENABLED = "background-external-database-syncing-enabled"
+private const val BACKGROUND_DELETION_ENABLED = "background-deletion-enabled"
 
 @ReloadableConfiguration(uri = "indexer.yaml")
 data class IndexerConfiguration(
@@ -51,6 +52,7 @@ data class IndexerConfiguration(
         @JsonProperty(BACKGROUND_LINKING_INDEXING_ENABLED) val backgroundLinkingIndexingEnabled: Boolean = true,
         @JsonProperty(BACKGROUND_EXPIRED_DATA_DELETION_ENABLED) val backgroundExpiredDataDeletionEnabled: Boolean = true,
         @JsonProperty(BACKGROUND_EXTERNAL_DATABASE_SYNCING_ENABLED) val backgroundExternalDatabaseSyncingEnabled: Boolean = true
+        @JsonProperty(BACKGROUND_DELETION_ENABLED) val backgroundDeletionEnabled: Boolean = true
 ) : Configuration {
     companion object {
         @JvmStatic
