@@ -64,6 +64,8 @@ import com.openlattice.mail.config.MailServiceRequirements;
 import com.openlattice.notifications.sms.PhoneNumberService;
 import com.openlattice.organizations.ExternalDatabaseManagementService;
 import com.openlattice.organizations.HazelcastOrganizationService;
+import com.openlattice.organizations.OrganizationExternalDatabaseConfiguration;
+import com.openlattice.organizations.pods.OrganizationExternalDatabaseConfigurationPod;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.PostgresTableManager;
@@ -80,7 +82,7 @@ import javax.inject.Inject;
 
 @Configuration
 @Import( { IndexerConfigurationPod.class, AuditingConfigurationPod.class, AssemblerConfigurationPod.class,
-        ByteBlobServicePod.class } )
+        ByteBlobServicePod.class, OrganizationExternalDatabaseConfigurationPod.class } )
 public class IndexerServicesPod {
     private static Logger logger = LoggerFactory.getLogger( IndexerServicesPod.class );
 
@@ -125,6 +127,9 @@ public class IndexerServicesPod {
 
     @Inject
     private ByteBlobDataManager byteBlobDataManager;
+
+    @Inject
+    private OrganizationExternalDatabaseConfiguration organizationExternalDatabaseConfiguration;
 
     @Bean
     public ConductorElasticsearchApi elasticsearchApi() {
@@ -323,7 +328,13 @@ public class IndexerServicesPod {
     }
 
     @Bean ExternalDatabaseManagementService edms() {
-        return new ExternalDatabaseManagementService( hazelcastInstance, assemblerConnectionManager(), principalService(), aclKeyReservationService(), authorizationManager() );
+        return new ExternalDatabaseManagementService(
+                hazelcastInstance,
+                assemblerConnectionManager(),
+                principalService(),
+                aclKeyReservationService(),
+                authorizationManager(),
+                organizationExternalDatabaseConfiguration );
     }
 
     @Bean( name = "auditingManager" )
