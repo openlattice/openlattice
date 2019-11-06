@@ -222,8 +222,9 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
     }
 
     private List<Acl> getOrganizationExternalDatabaseAcls( List<Acl> acls ) {
+        Set<AclKey> aclKeys = acls.stream().map(acl -> new AclKey( acl.getAclKey() )).collect( Collectors.toSet() );
         Set<AclKey> allOrgExternalDBAclKeys = securableObjectResolveTypeService
-                .getOrganizationExternalDatabaseAclKeys( acls );
+                .getOrganizationExternalDatabaseAclKeys( aclKeys );
         return acls.stream().filter( acl -> allOrgExternalDBAclKeys.contains( acl.getAclKey() ) )
                 .collect( Collectors.toList() );
     }
