@@ -66,13 +66,8 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
     @Inject
     private HazelcastInstance hazelcastInstance;
 
-    private IMap<AclKey, SecurableObjectType> securableObjectTypes;
-
-    @PostConstruct
-    public Void init() {
-        this.securableObjectTypes = hazelcastInstance.getMap( HazelcastMap.SECURABLE_OBJECT_TYPES.name() );
-        return null;
-    }
+    @Inject
+    private HazelcastSecurableObjectResolveTypeService securableObjectResolveTypeService;
 
     @Override
     @Timed
@@ -226,10 +221,10 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
         return authorizations;
     }
 
-    private List<Acl> getOrganizationExternalDatabaseAcls(List<Acl> acls) {
-        return acls.stream().filter( acl -> {
-            SecurableObjectType type = securableObjectTypes.get( new AclKey( acl.getAclKey() ) );
-            return type == SecurableObjectType.OrganizationExternalDatabaseColumn || type == SecurableObjectType.OrganizationExternalDatabaseTable;
-        }).collect( Collectors.toList() );
+    private List<Acl> getOrganizationExternalDatabaseAcls( List<Acl> acls ) {
+        Set<AclKey> allOrgExternalDBAclKeys = securableObjectResolveTypeService
+                .getOrganizationExternalDatabaseAclKeys( acls );
+        return acls.stream().filter( acl -> allOrgExternalDBAclKeys.contains( acl.getAclKey() ) )
+                .collect( Collectors.toList() );
     }
 }
