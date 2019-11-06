@@ -1,6 +1,7 @@
 package com.openlattice.data.storage
 
 
+import com.openlattice.IdConstants
 import com.openlattice.analysis.SqlBindInfo
 import com.openlattice.analysis.requests.Filter
 import com.openlattice.edm.PostgresEdmTypeConverter
@@ -75,7 +76,7 @@ fun buildPreparableFiltersSql(
     val outerGroupBy = if (metadataOptions.contains(MetadataOption.ORIGIN_IDS)) {
         groupBy("$ESID_EKID_PART,${ORIGIN_ID.name}")
     } else groupBy(ESID_EKID_PART)
-    val linkingClause = if (linking) " AND ${ORIGIN_ID.name} != '${ID_VALUE.name}' " else ""
+    val linkingClause = if (linking) " AND ${ORIGIN_ID.name} != '${IdConstants.EMPTY_ORIGIN_ID}' " else ""
 
     val innerSql = selectEntitiesGroupedByIdAndPropertyTypeId(
             metadataOptions,
@@ -336,6 +337,9 @@ internal fun buildUpsertEntitiesAndLinkedData(): String {
     val conflictClause = (metadataColumns + dataTableValueColumns).joinToString(
             ","
     ) { "${it.name} = EXCLUDED.${it.name}" }
+
+//    val selectLinkingIds = "INSERT INTO SELECT entity_set_id,id,linking_id,(?)[ 1 + (('x'||right(linking_id::text,8))::bit(32)::int % array_length(?,1))] " +
+//            "FROM ${IDS.name} INNER JOIN ${DATA.name} USING (entity_set_id, id, partition) "
 
     return "WITH linking_map as ($upsertEntitiesSql) INSERT INTO ${DATA.name} ($metadataColumnsSql,$insertColumns) " +
             "SELECT $metadataReadColumnsSql,$insertColumns FROM ${DATA.name} INNER JOIN " +

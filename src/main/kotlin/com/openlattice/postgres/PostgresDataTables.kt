@@ -143,7 +143,7 @@ class PostgresDataTables {
                     .ifNotExists()
                     .desc()
 
-            val readDataIndex = PostgresExpressionIndexDefinition(tableDefinition, "(${ORIGIN_ID.name} != ${ID_VALUE.name})" )
+            val readDataIndex = PostgresExpressionIndexDefinition(tableDefinition, "(${ORIGIN_ID.name} != '${IdConstants.EMPTY_ORIGIN_ID}')" )
                     .name(prefix+"_read_data_idx")
                     .ifNotExists()
 
