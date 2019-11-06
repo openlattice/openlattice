@@ -20,7 +20,7 @@ class OrganizationExternalDatabaseColumnStreamSerializer : SelfRegisteringStream
             UUIDStreamSerializer.serialize(output, obj.tableId)
             UUIDStreamSerializer.serialize(output, obj.organizationId)
             output.writeUTF(obj.dataType)
-            output.writeBoolean(obj.isPrimaryKey)
+            output.writeBoolean(obj.primaryKey)
             output.writeInt(obj.ordinalPosition)
         }
 

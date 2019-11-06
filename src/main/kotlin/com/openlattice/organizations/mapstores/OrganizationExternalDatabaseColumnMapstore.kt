@@ -33,7 +33,7 @@ open class OrganizationExternalDatabaseColumnMapstore(
         ps.setObject(index++, value.tableId)
         ps.setObject(index++, value.organizationId)
         ps.setString(index++, value.dataType)
-        ps.setBoolean(index++, value.isPrimaryKey)
+        ps.setBoolean(index++, value.primaryKey)
         ps.setInt(index++, value.ordinalPosition)
 
         //update
@@ -43,7 +43,7 @@ open class OrganizationExternalDatabaseColumnMapstore(
         ps.setObject(index++, value.tableId)
         ps.setObject(index++, value.organizationId)
         ps.setString(index++, value.dataType)
-        ps.setBoolean(index++, value.isPrimaryKey)
+        ps.setBoolean(index++, value.primaryKey)
         ps.setInt(index++, value.ordinalPosition)
     }
 
