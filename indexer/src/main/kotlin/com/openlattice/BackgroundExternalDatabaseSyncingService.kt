@@ -67,8 +67,7 @@ class BackgroundExternalDatabaseSyncingService(
                 if (indexerConfiguration.backgroundExternalDatabaseSyncingEnabled) {
                     val timer = Stopwatch.createStarted()
                     val lockedOrganizationIds = organizationTitles.keys
-                            .filter { it != IdConstants.OPENLATTICE_ORGANIZATION_ID.id }
-                            .filter { it != IdConstants.GLOBAL_ORGANIZATION_ID.id }
+                            .filter { it != IdConstants.OPENLATTICE_ORGANIZATION_ID.id && it != IdConstants.GLOBAL_ORGANIZATION_ID.id }
                             .filter { tryLockOrganization(it) }
                             .shuffled()
 
