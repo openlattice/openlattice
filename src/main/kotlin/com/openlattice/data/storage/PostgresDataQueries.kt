@@ -883,7 +883,7 @@ fun selectPropertyTypesOfEntitySetColumnar(
 
 
 private fun selectPropertyColumn(propertyType: PropertyType): String {
-    val dataType = PostgresEdmTypeConverter.map(propertyType.datatype)
+    val dataType = PostgresEdmTypeConverter.map(propertyType.datatype).sql()
     val propertyColumnName = propertyColumnName(propertyType)
 
     return "jsonb_array_elements_text($PROPERTIES -> '${propertyType.id}')::$dataType AS $propertyColumnName"
