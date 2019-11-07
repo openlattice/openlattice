@@ -28,7 +28,6 @@ public enum MetadataOption {
     ENTITY_KEY_IDS,
     @Deprecated
     ENTITY_SET_IDS,
-    ORIGIN_IDS,
     LAST_INDEX,
     LAST_LINK,
     LAST_WRITE,

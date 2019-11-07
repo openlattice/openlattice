@@ -6,6 +6,7 @@ import com.openlattice.IdConstants
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.storage.ByteBlobDataManager
 import com.openlattice.data.storage.MetadataOption
+import com.openlattice.data.storage.PROPERTIES
 import com.openlattice.edm.EdmConstants.Companion.ID_FQN
 import com.openlattice.edm.EdmConstants.Companion.LAST_WRITE_FQN
 import com.openlattice.edm.PostgresEdmTypeConverter
@@ -105,7 +106,6 @@ fun getEntityPropertiesByFullQualifiedName(
     }
 
     return id to entityByFqn
-
 }
 
 @Throws(SQLException::class)
@@ -114,15 +114,7 @@ fun readJsonDataColumns(
         propertyTypes: Map<UUID, PropertyType>,
         byteBlobDataManager: ByteBlobDataManager
 ): MutableMap<UUID, MutableSet<Any>> {
-    val dataTypes = propertyTypes.map { (_, pt) -> PostgresEdmTypeConverter.map(pt.datatype) }.toSet()
-
-    val entity = dataTypes.map { datatype ->
-        val json = rs.getString("v_$datatype")
-        mapper.readValue<MutableMap<UUID, MutableSet<Any>>>(json)
-    }.fold(mutableMapOf<UUID, MutableSet<Any>>()) { acc, mutableMap ->
-        acc.putAll(mutableMap)
-        return@fold acc
-    }
+    val entity = mapper.readValue<MutableMap<UUID, MutableSet<Any>>>(rs.getString(PROPERTIES))
 
     // Note: this call deletes all entries from result, which is not in propertyTypes (ID for example)
     (entity.keys - propertyTypes.keys).forEach { entity.remove(it) }
