@@ -9,6 +9,7 @@ import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.*
 import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.PostgresColumn.*
+import com.openlattice.postgres.PostgresDataTables.Companion.dataTableValueColumns
 import com.openlattice.postgres.PostgresDataTables.Companion.getColumnDefinition
 import com.openlattice.postgres.PostgresDataTables.Companion.getSourceDataColumnName
 import com.openlattice.postgres.PostgresTable.DATA
@@ -22,15 +23,31 @@ import java.util.*
  */
 internal class PostgresDataQueries
 
+
+const val VALUE = "value"
 const val VALUES = "values"
+const val PROPERTIES = "properties"
 
 val dataTableColumnsSql = PostgresDataTables.dataTableColumns.joinToString(",") { it.name }
 
-val valuesColumnsSql = PostgresDataTables.dataTableValueColumns.joinToString(",") {
-    "array_agg(${it.name}) FILTER (where ${it.name} IS NOT NULL) as ${it.name}"
-}
+// @formatter:off
+val detailedValueColumnsSql = "COALESCE( " + dataTableValueColumns.joinToString(",") {
+    "jsonb_agg(" +
+        "json_build_object('$VALUE',${it.name}, " +
+        "'${ENTITY_SET_ID.name}', ${ENTITY_SET_ID.name}, " +
+        "'${ID_VALUE.name}', ${ORIGIN_ID.name}" +
+    ")) FILTER ( WHERE ${it.name} IS NOT NULL) "
+} + ") as $PROPERTIES"
 
-val primaryKeyColumnNamesAsString = PostgresDataTables.buildDataTableDefinition().primaryKey.joinToString(",") { it.name }
+val valuesColumnsSql = "COALESCE( " + dataTableValueColumns.joinToString(",") {
+    "jsonb_agg(${it.name}) " +
+    "FILTER (WHERE ${it.name} IS NOT NULL)"
+} + ") as $PROPERTIES"
+// @formatter:on
+
+val primaryKeyColumnNamesAsString = PostgresDataTables.buildDataTableDefinition().primaryKey.joinToString(
+        ","
+) { it.name }
 
 val jsonValueColumnsSql = PostgresDataTables.dataColumns.entries
         .joinToString(",") { (datatype, cols) ->
@@ -58,51 +75,44 @@ fun buildPreparableFiltersSql(
         metadataOptions: Set<MetadataOption>,
         linking: Boolean,
         idsPresent: Boolean,
-        partitionsPresent: Boolean
+        partitionsPresent: Boolean,
+        detailed: Boolean = false
 ): Pair<String, Set<SqlBinder>> {
     val filtersClauses = buildPreparableFiltersClause(startIndex, propertyTypes, propertyTypeFilters)
     val filtersClause = if (filtersClauses.first.isNotEmpty()) " AND ${filtersClauses.first} " else ""
+    val metadataOptionColumns = metadataOptions.associateWith(::mapOuterMetaDataToColumnSql)
+    val metadataOptionColumnsSql = metadataOptionColumns.values.joinToString("")
 
-    val metadataOptionColumns = metadataOptions.associateWith(::mapMetaDataToColumnSql)
-    val nonAggregatedMetadataSql = metadataOptionColumns
-            .filter { !isMetaDataAggregated(it.key) }.values.joinToString("")
-    val innerGroupBy = groupBy(ESID_EKID_PART_PTID + nonAggregatedMetadataSql)
-    // TODO: remove IS NOT NULL post-migration
-    val linkingClause = if (linking) {
-        " AND ${ORIGIN_ID.name} IS NOT NULL AND ${ORIGIN_ID.name} != '${IdConstants.EMPTY_ORIGIN_ID.id}' "
-    } else {
-        ""
-    }
+    val (innerGroupBy, outerGroupBy) = if (metadataOptions.contains(MetadataOption.ENTITY_KEY_IDS)) {
+        groupBy("$ESID_EKID_PART_PTID,${ORIGIN_ID.name}") to groupBy(ESID_EKID_PART_PTID)
+    } else groupBy(ESID_EKID_PART_PTID) to groupBy(ESID_EKID_PART)
+    val linkingClause = if (linking) " AND ${ORIGIN_ID.name} != '${IdConstants.EMPTY_ORIGIN_ID.id}' " else ""
 
     val innerSql = selectEntitiesGroupedByIdAndPropertyTypeId(
             metadataOptions,
             idsPresent = idsPresent,
-            partitionsPresent = partitionsPresent
+            partitionsPresent = partitionsPresent,
+            detailed = detailed
     ) + linkingClause + filtersClause + innerGroupBy
 
-    val metadataOptionColumnsSql = metadataOptionColumns
-            .values.joinToString("")
-    // TODO don't filter out LAST_WRITE from group by after empty rows are eliminated  https://jira.openlattice.com/browse/LATTICE-2254
-    val metadataOptionOuterGroupBySql = metadataOptionColumns
-            .filter { it.key != MetadataOption.LAST_WRITE }
-            .values.joinToString("")
-    val outerGroupBy = groupBy(ESID_EKID_PART + metadataOptionOuterGroupBySql)
-    val sql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name}$metadataOptionColumnsSql,$jsonValueColumnsSql " +
+    val sql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name}$metadataOptionColumnsSql," +
+            "jsonb_object_agg(${PROPERTY_TYPE_ID.name},$PROPERTIES) as $PROPERTIES " +
             "FROM ($innerSql) entities $outerGroupBy"
 
     return sql to filtersClauses.second
-
 }
 
 internal fun selectEntitiesGroupedByIdAndPropertyTypeId(
         metadataOptions: Set<MetadataOption>,
         idsPresent: Boolean = true,
         partitionsPresent: Boolean = true,
-        entitySetsPresent: Boolean = true
+        entitySetsPresent: Boolean = true,
+        detailed: Boolean = false
 ): String {
-    val metadataOptionsSql = metadataOptions
-            .joinToString("") { mapMetaDataToSelector(it) } // they already have the comma prefix
-    return "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name},${PROPERTY_TYPE_ID.name}$metadataOptionsSql,$valuesColumnsSql " +
+    //Already have the comma prefix
+    val metadataOptionsSql = metadataOptions.joinToString("") { mapMetaDataToSelector(it) }
+    val columnsSql = if (detailed) detailedValueColumnsSql else valuesColumnsSql
+    return "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name},${PROPERTY_TYPE_ID.name}$metadataOptionsSql,$columnsSql " +
             "FROM ${DATA.name} ${optionalWhereClauses(idsPresent, partitionsPresent, entitySetsPresent)}"
 }
 
@@ -111,10 +121,21 @@ internal fun selectEntitiesGroupedByIdAndPropertyTypeId(
  */
 private fun mapMetaDataToColumnSql(metadataOption: MetadataOption): String {
     return when (metadataOption) {
-        MetadataOption.ORIGIN_IDS -> ",${ORIGIN_ID.name}"
         // TODO should be just last_write with comma prefix after empty rows are eliminated https://jira.openlattice.com/browse/LATTICE-2254
         MetadataOption.LAST_WRITE -> ",max(${LAST_WRITE.name}) AS ${mapMetaDataToColumnName(metadataOption)}"
-        MetadataOption.ENTITY_KEY_IDS -> ",${ENTITY_KEY_IDS_COL.name}"
+        MetadataOption.ENTITY_KEY_IDS -> ORIGIN_ID.name
+        else -> throw UnsupportedOperationException("No implementation yet for metadata option $metadataOption")
+    }
+}
+
+/**
+ * Returns the correspondent column name used for the metadata option with a comma prefix.
+ */
+private fun mapOuterMetaDataToColumnSql(metadataOption: MetadataOption): String {
+    return when (metadataOption) {
+        // TODO should be just last_write with comma prefix after empty rows are eliminated https://jira.openlattice.com/browse/LATTICE-2254
+        MetadataOption.LAST_WRITE -> ",max(${LAST_WRITE.name}) AS ${mapMetaDataToColumnName(metadataOption)}"
+        MetadataOption.ENTITY_KEY_IDS -> ",array_agg(${ORIGIN_ID.name}) as ${ENTITY_KEY_IDS_COL.name}"
         else -> throw UnsupportedOperationException("No implementation yet for metadata option $metadataOption")
     }
 }
@@ -124,7 +145,6 @@ private fun mapMetaDataToColumnSql(metadataOption: MetadataOption): String {
  */
 private fun mapMetaDataToColumnName(metadataOption: MetadataOption): String {
     return when (metadataOption) {
-        MetadataOption.ORIGIN_IDS -> ORIGIN_ID.name
         MetadataOption.LAST_WRITE -> LAST_WRITE.name
         MetadataOption.ENTITY_KEY_IDS -> ENTITY_KEY_IDS_COL.name
         else -> throw UnsupportedOperationException("No implementation yet for metadata option $metadataOption")
@@ -136,19 +156,16 @@ private fun mapMetaDataToColumnName(metadataOption: MetadataOption): String {
  */
 private fun mapMetaDataToSelector(metadataOption: MetadataOption): String {
     return when (metadataOption) {
-        MetadataOption.ORIGIN_IDS -> ",${ORIGIN_ID.name}"
         MetadataOption.LAST_WRITE -> ",max(${LAST_WRITE.name}) AS ${mapMetaDataToColumnName(metadataOption)}"
-        MetadataOption.ENTITY_KEY_IDS ->
-            ",array_agg(COALESCE(${ORIGIN_ID.name},${ID.name})) AS ${mapMetaDataToColumnName(metadataOption)}"
+        MetadataOption.ENTITY_KEY_IDS -> ",${ORIGIN_ID.name}"
         else -> throw UnsupportedOperationException("No implementation yet for metadata option $metadataOption")
     }
 }
 
 private fun isMetaDataAggregated(metadataOption: MetadataOption): Boolean {
     return when (metadataOption) {
-        MetadataOption.ORIGIN_IDS -> false
-        MetadataOption.LAST_WRITE -> true
         MetadataOption.ENTITY_KEY_IDS -> true
+        MetadataOption.LAST_WRITE -> true
         else -> throw UnsupportedOperationException("No implementation yet for metadata option $metadataOption")
     }
 }
@@ -299,9 +316,75 @@ fun optionalWhereClausesSingleEdk(
  * 5 - entity key ids
  *
  * 6 - partition
+ *
+ * 7 - partition
+ *
+ * 8 - version
+ */
+internal fun buildUpsertEntitiesAndLinkedData(): String {
+    val insertColumns = dataTableValueColumns.joinToString(",") { it.name }
+
+    val metadataColumns = listOf(
+            ENTITY_SET_ID,
+            ID_VALUE,
+            PARTITION,
+            ORIGIN_ID,
+            PROPERTY_TYPE_ID,
+            HASH,
+            LAST_WRITE,
+            VERSION,
+            VERSIONS,
+            PARTITIONS_VERSION
+    )
+    val metadataColumnsSql = metadataColumns.joinToString(",") { it.name }
+
+    val metadataReadColumnsSql = listOf(
+            ENTITY_SET_ID.name,
+            LINKING_ID.name,
+            "?",
+            ID_VALUE.name,
+            PROPERTY_TYPE_ID.name,
+            HASH.name,
+            LAST_WRITE.name,
+            VERSION.name,
+            VERSIONS.name,
+            PARTITIONS_VERSION.name
+    ).joinToString(",")
+
+    val conflictClause = (metadataColumns + dataTableValueColumns).joinToString(
+            ","
+    ) { "${it.name} = EXCLUDED.${it.name}" }
+
+
+    return "WITH linking_map as ($upsertEntitiesSql) INSERT INTO ${DATA.name} ($metadataColumnsSql,$insertColumns) " +
+            "SELECT $metadataReadColumnsSql,$insertColumns FROM ${DATA.name} INNER JOIN " +
+            "linking_map USING(${ENTITY_SET_ID.name},${ID.name},${PARTITION.name}) " +
+            "WHERE ${LINKING_ID.name} IS NOT NULL AND version > ? " +
+            "ON CONFLICT ($primaryKeyColumnNamesAsString) " +
+            "DO UPDATE SET $conflictClause"
+}
+
+/**
+ * Preparable sql to upsert entities in [IDS] table.
+ *
+ * It sets a positive version and updates last write to current time.
+ *
+ * The bind order is the following:
+ *
+ * 1 - versions
+ *
+ * 2 - version
+ *
+ * 3 - version
+ *
+ * 4 - entity set id
+ *
+ * 5 - entity key ids
+ *
+ * 6 - partition
  */
 // @formatter:off
-internal val upsertEntitiesSql = "UPDATE ${IDS.name} " +
+val upsertEntitiesSql = "UPDATE ${IDS.name} " +
         "SET ${VERSIONS.name} = ${VERSIONS.name} || ?, " +
             "${LAST_WRITE.name} = now(), " +
             "${VERSION.name} = CASE " +
@@ -309,7 +392,7 @@ internal val upsertEntitiesSql = "UPDATE ${IDS.name} " +
                 "ELSE ${IDS.name}.${VERSION.name} " +
             "END " +
         "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ? " +
-        "RETURNING ${ID.name},${LINKING_ID.name} "
+        "RETURNING ${ENTITY_SET_ID.name},${ID.name},${PARTITION.name},${LINKING_ID.name} "
 // @formatter:on
 
 /**
@@ -488,8 +571,8 @@ internal fun updateVersionsForPropertyTypesInEntitiesInEntitySet(linking: Boolea
  * 9. {origin ids}: only if linking
  * 10. value
  */
-internal fun updateVersionsForPropertyValuesInEntitiesInEntitySet( linking: Boolean = false ): String {
-    return "${updateVersionsForPropertyTypesInEntitiesInEntitySet( linking )} AND ${HASH.name} = ? "
+internal fun updateVersionsForPropertyValuesInEntitiesInEntitySet(linking: Boolean = false): String {
+    return "${updateVersionsForPropertyTypesInEntitiesInEntitySet(linking)} AND ${HASH.name} = ? "
 }
 
 /**
@@ -582,9 +665,15 @@ internal val deleteEntityKeys =
  * 2. property type ids (array)
  *
  */
-internal val selectEntitySetTextProperties = "SELECT COALESCE(${getSourceDataColumnName(PostgresDatatype.TEXT, IndexType.NONE)},${getSourceDataColumnName(PostgresDatatype.TEXT, IndexType.BTREE)}) AS ${getMergedDataColumnName(PostgresDatatype.TEXT)} " +
+internal val selectEntitySetTextProperties = "SELECT COALESCE(${getSourceDataColumnName(
+        PostgresDatatype.TEXT, IndexType.NONE
+)},${getSourceDataColumnName(PostgresDatatype.TEXT, IndexType.BTREE)}) AS ${getMergedDataColumnName(
+        PostgresDatatype.TEXT
+)} " +
         "FROM ${DATA.name} " +
-        "WHERE (${getSourceDataColumnName(PostgresDatatype.TEXT, IndexType.NONE)} IS NOT NULL OR ${getSourceDataColumnName(PostgresDatatype.TEXT, IndexType.BTREE)} IS NOT NULL) AND " +
+        "WHERE (${getSourceDataColumnName(
+                PostgresDatatype.TEXT, IndexType.NONE
+        )} IS NOT NULL OR ${getSourceDataColumnName(PostgresDatatype.TEXT, IndexType.BTREE)} IS NOT NULL) AND " +
         "${ENTITY_SET_ID.name} = ANY(?) AND ${PROPERTY_TYPE_ID.name} = ANY(?) "
 
 
@@ -667,9 +756,9 @@ fun upsertPropertyValueSql(propertyType: PropertyType): String {
             "${LAST_WRITE.name} = GREATEST(${DATA.name}.${LAST_WRITE.name},EXCLUDED.${LAST_WRITE.name}), " +
             "${PARTITIONS_VERSION.name} = EXCLUDED.${PARTITIONS_VERSION.name}, " +
             "${VERSION.name} = CASE " +
-                "WHEN abs(${DATA.name}.${VERSION.name}) <= EXCLUDED.${VERSION.name} " +
-                "THEN EXCLUDED.${VERSION.name} " +
-                "ELSE ${DATA.name}.${VERSION.name} " +
+            "WHEN abs(${DATA.name}.${VERSION.name}) <= EXCLUDED.${VERSION.name} " +
+            "THEN EXCLUDED.${VERSION.name} " +
+            "ELSE ${DATA.name}.${VERSION.name} " +
             "END"
 }
 
@@ -688,7 +777,7 @@ fun upsertPropertyValueSql(propertyType: PropertyType): String {
  * 9.  Value Column
  * 10. ORIGIN ID        --> expects entity key id
  */
-fun upsertPropertyValueLinkingRowSql(propertyType: PropertyType ): String {
+fun upsertPropertyValueLinkingRowSql(propertyType: PropertyType): String {
     val insertColumn = getColumnDefinition(propertyType.postgresIndexType, propertyType.datatype)
     val metadataColumnsSql = listOf(
             ENTITY_SET_ID,
@@ -701,7 +790,7 @@ fun upsertPropertyValueLinkingRowSql(propertyType: PropertyType ): String {
             VERSIONS,
             PARTITIONS_VERSION
     ).joinToString(",") { it.name }
-
+// @formatter:off
     return "INSERT INTO ${DATA.name} ($metadataColumnsSql,${insertColumn.name},${ORIGIN_ID.name}) " +
             "VALUES (?,?,?,?,?,now(),?,?,?,?,?) " +
             "ON CONFLICT ($primaryKeyColumnNamesAsString) " +
@@ -709,11 +798,11 @@ fun upsertPropertyValueLinkingRowSql(propertyType: PropertyType ): String {
             "${VERSIONS.name} = ${DATA.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
             "${LAST_WRITE.name} = GREATEST(${DATA.name}.${LAST_WRITE.name},EXCLUDED.${LAST_WRITE.name}), " +
             "${PARTITIONS_VERSION.name} = EXCLUDED.${PARTITIONS_VERSION.name}, " +
-            "${VERSION.name} = CASE " +
-                "WHEN abs(${DATA.name}.${VERSION.name}) <= EXCLUDED.${VERSION.name} " +
+            "${VERSION.name} = CASE WHEN abs(${DATA.name}.${VERSION.name}) <= EXCLUDED.${VERSION.name} " +
                 "THEN EXCLUDED.${VERSION.name} " +
                 "ELSE ${DATA.name}.${VERSION.name} " +
             "END"
+    // @formatter:on
 }
 
 /**
@@ -732,17 +821,19 @@ fun upsertPropertyValueLinkingRowSql(propertyType: PropertyType ): String {
  */
 fun createOrUpdateLinkFromEntity(): String {
     val existingColumnsUpdatedForLinking = PostgresDataTables.dataTableColumns.joinToString(",") {
-        when( it ) {
-            VERSION, ID_VALUE, PARTITION   -> "?"
-            ORIGIN_ID                      -> ID_VALUE.name
-            LAST_WRITE                     -> "now()"
-            else                           -> it.name
+        when (it) {
+            VERSION, ID_VALUE -> "?"
+            ORIGIN_ID -> ID_VALUE.name
+            LAST_WRITE -> "now()"
+            else -> it.name
         }
     }
+
+    // @formatter:off
     return "INSERT INTO ${DATA.name} ($dataTableColumnsSql) " +
             "SELECT $existingColumnsUpdatedForLinking " +
             "FROM ${DATA.name} " +
-            "${optionalWhereClausesSingleEdk( idPresent = true, partitionsPresent = true, entitySetPresent = true )} " +
+            "${optionalWhereClausesSingleEdk(idPresent = true, partitionsPresent = true, entitySetPresent = true)} " +
             "ON CONFLICT ($primaryKeyColumnNamesAsString) " +
             "DO UPDATE SET " +
                 "${VERSIONS.name} = ${DATA.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
@@ -753,6 +844,7 @@ fun createOrUpdateLinkFromEntity(): String {
                     "THEN EXCLUDED.${VERSION.name} " +
                     "ELSE ${DATA.name}.${VERSION.name} " +
                 "END"
+    // @formatter:on
 }
 
 /* For materialized views */
@@ -791,16 +883,19 @@ fun selectPropertyTypesOfEntitySetColumnar(
 
 
 private fun selectPropertyColumn(propertyType: PropertyType): String {
-    val dataType = PostgresEdmTypeConverter.map(propertyType.datatype)
-    val mergedName = getMergedDataColumnName(dataType)
+    val dataType = PostgresEdmTypeConverter.map(propertyType.datatype).sql()
     val propertyColumnName = propertyColumnName(propertyType)
 
-    return "jsonb_array_elements_text($mergedName -> '${propertyType.id}') AS $propertyColumnName"
+    return "jsonb_array_elements_text($PROPERTIES -> '${propertyType.id}')::$dataType AS $propertyColumnName"
 }
 
 private fun selectPropertyArray(propertyType: PropertyType): String {
     val propertyColumnName = propertyColumnName(propertyType)
-    return "array_agg($propertyColumnName) FILTER (WHERE $propertyColumnName IS NOT NULL) as $propertyColumnName"
+    return if( propertyType.isMultiValued ) {
+        "array_agg($propertyColumnName) FILTER (WHERE $propertyColumnName IS NOT NULL) as $propertyColumnName"
+    } else {
+        "(array_agg($propertyColumnName))[1] FILTER (WHERE $propertyColumnName IS NOT NULL) as $propertyColumnName"
+    }
 }
 
 private fun propertyColumnName(propertyType: PropertyType): String {

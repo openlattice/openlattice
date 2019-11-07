@@ -7,7 +7,6 @@ import com.openlattice.edm.PostgresEdmTypeConverter
 import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresColumn.*
-import com.openlattice.postgres.PostgresTable.DATA
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 
 /**
@@ -112,6 +111,9 @@ class PostgresDataTables {
                     .name(quote(prefix + "_id_idx"))
                     .ifNotExists()
                     .desc()
+            val originIdIndex = PostgresExpressionIndexDefinition(tableDefinition, ORIGIN_ID.name)
+                    .name(quote(prefix + "_origin_id_idx"))
+                    .ifNotExists()
             val versionIndex = PostgresColumnsIndexDefinition(tableDefinition, VERSION)
                     .name(quote(prefix + "_version_idx"))
                     .ifNotExists()
@@ -132,21 +134,23 @@ class PostgresDataTables {
             val currentPropertiesForEntitySetIndex = PostgresColumnsIndexDefinition(
                     tableDefinition, ENTITY_SET_ID, VERSION
             )
-                    .name(quote(prefix + "entity_set_id_version_idx"))
+                    .name(quote(prefix + "_entity_set_id_version_idx"))
                     .ifNotExists()
                     .desc()
 
             val currentPropertiesForEntityIndex = PostgresColumnsIndexDefinition(tableDefinition, ID_VALUE, VERSION)
-                    .name(quote(prefix + "id_version_idx"))
+                    .name(quote(prefix + "_id_version_idx"))
                     .ifNotExists()
                     .desc()
 
-            val originIdNotNullIndex = PostgresExpressionIndexDefinition(tableDefinition, "(${ORIGIN_ID.name} != '${IdConstants.EMPTY_ORIGIN_ID.id}')" )
-                .name("origin_id_not_equal_empty_idx")
-                .ifNotExists()
+            val readDataIndex = PostgresExpressionIndexDefinition(tableDefinition, "(${ORIGIN_ID.name} != '${IdConstants.EMPTY_ORIGIN_ID.id}')" )
+                    .name(prefix+"_read_data_idx")
+                    .ifNotExists()
+
 
             tableDefinition.addIndexes(
                     idIndex,
+                    originIdIndex,
                     entitySetIdIndex,
                     versionIndex,
                     lastWriteIndex,
@@ -154,7 +158,7 @@ class PostgresDataTables {
                     partitionsVersionIndex,
                     currentPropertiesForEntitySetIndex,
                     currentPropertiesForEntityIndex,
-                    originIdNotNullIndex
+                    readDataIndex
             )
 
             return tableDefinition
@@ -197,7 +201,7 @@ class PostgresDataTables {
         }
 
         @JvmStatic
-        fun getSourceDataColumnName(datatype: PostgresDatatype, indexType: IndexType) : String {
+        fun getSourceDataColumnName(datatype: PostgresDatatype, indexType: IndexType): String {
             return when (indexType) {
                 IndexType.BTREE -> "b_${datatype.name}"
                 IndexType.NONE -> "n_${datatype.name}"

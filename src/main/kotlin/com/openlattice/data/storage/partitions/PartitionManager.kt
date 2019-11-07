@@ -149,7 +149,7 @@ class PartitionManager @JvmOverloads constructor(
         }
     }
 
-    @Scheduled(fixedRate = 5 * 60000) //Update every 5 minutes.
+    @Scheduled(fixedRate = 15 * 60000) //Update every 5 minutes.
     fun refreshMaterializedView() {
         hds.connection.use { conn ->
             conn.createStatement().use { stmt ->
