@@ -31,13 +31,13 @@ const val PROPERTIES = "properties"
 val dataTableColumnsSql = PostgresDataTables.dataTableColumns.joinToString(",") { it.name }
 
 // @formatter:off
-val detailedValueColumnsSql = dataTableValueColumns.joinToString("||") {
+val detailedValueColumnsSql = "COALESCE( " + dataTableValueColumns.joinToString(",") {
     "jsonb_agg(" +
         "json_build_object('$VALUE',${it.name}, " +
         "'${ENTITY_SET_ID.name}', ${ENTITY_SET_ID.name}, " +
         "'${ID_VALUE.name}', ${ORIGIN_ID.name}" +
     ")) FILTER ( WHERE ${it.name} IS NOT NULL) "
-} + " as $PROPERTIES"
+} + ") as $PROPERTIES"
 
 val valuesColumnsSql = dataTableValueColumns.joinToString("||") {
     "jsonb_agg(${it.name}) " +
@@ -84,8 +84,8 @@ fun buildPreparableFiltersSql(
     val metadataOptionColumnsSql = metadataOptionColumns.values.joinToString("")
 
     val (innerGroupBy, outerGroupBy) = if (metadataOptions.contains(MetadataOption.ENTITY_KEY_IDS)) {
-        groupBy("$ESID_EKID_PART_PTID,${ORIGIN_ID.name}") to groupBy("$ESID_EKID_PART,${ORIGIN_ID.name}")
-    } else groupBy(ESID_EKID_PART_PTID) to groupBy(ESID_EKID_PART_PTID)
+        groupBy(ESID_EKID_PART_PTID) to groupBy(ESID_EKID_PART_PTID)
+    } else groupBy("$ESID_EKID_PART_PTID,${ORIGIN_ID.name}") to groupBy("$ESID_EKID_PART,${ORIGIN_ID.name}")
     val linkingClause = if (linking) " AND ${ORIGIN_ID.name} != '${IdConstants.EMPTY_ORIGIN_ID.id}' " else ""
 
     val innerSql = selectEntitiesGroupedByIdAndPropertyTypeId(
