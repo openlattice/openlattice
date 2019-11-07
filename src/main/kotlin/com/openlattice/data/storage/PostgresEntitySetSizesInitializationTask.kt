@@ -22,8 +22,8 @@ package com.openlattice.data.storage
 
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.postgres.PostgresColumn.*
-import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.PostgresTable.ENTITY_SETS
+import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.Task
 import org.slf4j.LoggerFactory
@@ -36,15 +36,12 @@ class PostgresEntitySetSizesInitializationTask : HazelcastInitializationTask<Pos
 
     companion object {
 
-        @JvmStatic
-        val ENTITY_SET_SIZES_VIEW = "entity_set_counts"
+        const val ENTITY_SET_SIZES_VIEW = "entity_set_counts"
 
-        @JvmStatic
         val CREATE_ENTITY_SET_COUNTS_VIEW = "CREATE MATERIALIZED VIEW IF NOT EXISTS $ENTITY_SET_SIZES_VIEW " +
                 "AS $NORMAL_ENTITY_SET_COUNTS UNION $LINKED_ENTITY_SET_COUNTS"
 
-        @JvmStatic
-        val REFRESH_ENTITY_SET_COUNTS_VIEW = "REFRESH MATERIALIZED VIEW $ENTITY_SET_SIZES_VIEW "
+        const val REFRESH_ENTITY_SET_COUNTS_VIEW = "REFRESH MATERIALIZED VIEW $ENTITY_SET_SIZES_VIEW "
     }
 
     override fun getInitialDelay(): Long {
