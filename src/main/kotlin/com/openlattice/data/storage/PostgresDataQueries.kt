@@ -157,7 +157,7 @@ private fun mapMetaDataToColumnName(metadataOption: MetadataOption): String {
 private fun mapMetaDataToSelector(metadataOption: MetadataOption): String {
     return when (metadataOption) {
         MetadataOption.LAST_WRITE -> ",max(${LAST_WRITE.name}) AS ${mapMetaDataToColumnName(metadataOption)}"
-        MetadataOption.ENTITY_KEY_IDS -> ",array_agg(${ORIGIN_ID.name}) AS ${mapMetaDataToColumnName(metadataOption)}"
+        MetadataOption.ENTITY_KEY_IDS -> ",${ORIGIN_ID.name} AS ${mapMetaDataToColumnName(metadataOption)}"
         else -> throw UnsupportedOperationException("No implementation yet for metadata option $metadataOption")
     }
 }
