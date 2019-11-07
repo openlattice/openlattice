@@ -49,8 +49,7 @@ class PostgresEntitySetSizesTask : HazelcastFixedRateTask<PostgresEntitySetSizes
         logger.info("Refreshing entity set count views.")
         getDependency().hikariDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                stmt.execute(DROP_ENTITY_SET_COUNTS_VIEW)
-                stmt.execute(CREATE_ENTITY_SET_COUNTS_VIEW)
+                stmt.execute(REFRESH_ENTITY_SET_COUNTS_VIEW)
             }
         }
     }
