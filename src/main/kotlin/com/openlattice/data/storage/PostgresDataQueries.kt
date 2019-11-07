@@ -39,10 +39,10 @@ val detailedValueColumnsSql = "COALESCE( " + dataTableValueColumns.joinToString(
     ")) FILTER ( WHERE ${it.name} IS NOT NULL) "
 } + ") as $PROPERTIES"
 
-val valuesColumnsSql = dataTableValueColumns.joinToString("||") {
+val valuesColumnsSql = "COALESCE( " + dataTableValueColumns.joinToString(",") {
     "jsonb_agg(${it.name}) " +
     "FILTER (WHERE ${it.name} IS NOT NULL)"
-} + " as $PROPERTIES"
+} + ") as $PROPERTIES"
 // @formatter:on
 
 val primaryKeyColumnNamesAsString = PostgresDataTables.buildDataTableDefinition().primaryKey.joinToString(
