@@ -221,19 +221,25 @@ public class AppService {
         App app = getApp( appId );
         Preconditions.checkNotNull( app, "The requested app with id %s does not exists.", appId.toString() );
 
-        UUID entitySetCollectionId = appInstallation.getEntitySetCollectionId()
-                .orElse( collectionsManager.createEntitySetCollection( new EntitySetCollection(
-                        Optional.empty(),
-                        app.getName(),
-                        app.getTitle(),
-                        Optional.of( app.getDescription() ),
-                        app.getEntityTypeCollectionId(),
-                        appInstallation.getTemplate().get(),
-                        ImmutableSet.of(),
-                        organizationId
-                ), true ) );
+        UUID entitySetCollectionId = appInstallation.getEntitySetCollectionId();
 
-        Map<String, Object> settings = appInstallation.getSettings().orElse( app.getDefaultSettings() );
+        if ( entitySetCollectionId == null ) {
+            entitySetCollectionId = collectionsManager.createEntitySetCollection( new EntitySetCollection(
+                    Optional.empty(),
+                    app.getName(),
+                    app.getTitle(),
+                    Optional.of( app.getDescription() ),
+                    app.getEntityTypeCollectionId(),
+                    appInstallation.getTemplate(),
+                    ImmutableSet.of(),
+                    organizationId
+            ), true );
+        }
+
+        Map<String, Object> settings = appInstallation.getSettings();
+        if ( settings == null ) {
+            settings = app.getDefaultSettings();
+        }
 
         installApp( app, organizationId, entitySetCollectionId, principal, settings );
     }
