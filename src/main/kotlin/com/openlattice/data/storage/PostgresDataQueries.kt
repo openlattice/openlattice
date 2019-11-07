@@ -884,10 +884,9 @@ fun selectPropertyTypesOfEntitySetColumnar(
 
 private fun selectPropertyColumn(propertyType: PropertyType): String {
     val dataType = PostgresEdmTypeConverter.map(propertyType.datatype)
-    val mergedName = getMergedDataColumnName(dataType)
     val propertyColumnName = propertyColumnName(propertyType)
 
-    return "jsonb_array_elements_text($mergedName -> '${propertyType.id}') AS $propertyColumnName"
+    return "jsonb_array_elements_text($PROPERTIES -> '${propertyType.id}')::$dataType AS $propertyColumnName"
 }
 
 private fun selectPropertyArray(propertyType: PropertyType): String {
