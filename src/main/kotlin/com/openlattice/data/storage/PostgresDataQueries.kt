@@ -822,7 +822,7 @@ fun upsertPropertyValueLinkingRowSql(propertyType: PropertyType): String {
 fun createOrUpdateLinkFromEntity(): String {
     val existingColumnsUpdatedForLinking = PostgresDataTables.dataTableColumns.joinToString(",") {
         when (it) {
-            VERSION, ID_VALUE, PARTITION -> "?"
+            VERSION, ID_VALUE -> "?"
             ORIGIN_ID -> ID_VALUE.name
             LAST_WRITE -> "now()"
             else -> it.name
@@ -892,7 +892,11 @@ private fun selectPropertyColumn(propertyType: PropertyType): String {
 
 private fun selectPropertyArray(propertyType: PropertyType): String {
     val propertyColumnName = propertyColumnName(propertyType)
-    return "array_agg($propertyColumnName) FILTER (WHERE $propertyColumnName IS NOT NULL) as $propertyColumnName"
+    return if( propertyType.isMultiValued ) {
+        "array_agg($propertyColumnName) FILTER (WHERE $propertyColumnName IS NOT NULL) as $propertyColumnName"
+    } else {
+        "(array_agg($propertyColumnName))[1] FILTER (WHERE $propertyColumnName IS NOT NULL) as $propertyColumnName"
+    }
 }
 
 private fun propertyColumnName(propertyType: PropertyType): String {

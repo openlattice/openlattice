@@ -1061,7 +1061,6 @@ class PostgresEntityDataQueryService(
      *
      * @param entitySetId The entity set id for which to tombstone entries
      * @param entities The entities with their properties for which to tombstone entries.
-     * @param entityKeyIdsToLinkingIds Linking ids mapped by their origin ids.
      * @param version The version to use to tombstone.
      * @param partitionsInfo Contains the partition info for the entity set of the entities.
      *
