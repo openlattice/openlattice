@@ -51,7 +51,6 @@ open class OrganizationExternalDatabaseTableMapstore(
 
     override fun getMapConfig(): MapConfig {
         return super.getMapConfig()
-                .addMapIndexConfig(MapIndexConfig(ID_INDEX, false))
                 .addMapIndexConfig(MapIndexConfig(ORGANIZATION_ID_INDEX, false))
                 .setInMemoryFormat( InMemoryFormat.OBJECT )
     }

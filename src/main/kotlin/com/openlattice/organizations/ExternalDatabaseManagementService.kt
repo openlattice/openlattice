@@ -5,6 +5,7 @@ import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
+import com.hazelcast.query.QueryConstants
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.AssemblerConnectionManager.Companion.PUBLIC_SCHEMA
 import com.openlattice.assembler.PostgresDatabases
@@ -525,7 +526,7 @@ class ExternalDatabaseManagementService(
 
     /*PREDICATES*/
     private fun idsPredicate(ids: Set<UUID>): Predicate<*, *> {
-        return Predicates.`in`(ID_INDEX, *ids.toTypedArray())
+        return Predicates.`in`(QueryConstants.KEY_ATTRIBUTE_NAME.value(), *ids.toTypedArray())
     }
 
     private fun belongsToOrganization(orgId: UUID): Predicate<*, *> {
