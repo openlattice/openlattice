@@ -61,7 +61,7 @@ class AppRoleStreamSerializer : SelfRegisteringStreamSerializer<AppRole> {
                 permissionsMap[permission] = childMap
             }
 
-            return AppRole(Optional.of(id), name, title, Optional.of(description), permissionsMap)
+            return AppRole(id, name, title, description, permissionsMap)
         }
     }
 
