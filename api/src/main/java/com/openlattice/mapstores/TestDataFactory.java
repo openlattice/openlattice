@@ -590,10 +590,10 @@ public final class TestDataFactory {
     }
 
     public static AppRole appRole() {
-        return new AppRole( Optional.empty(),
+        return new AppRole( null,
                 randomAlphanumeric( 5 ),
                 randomAlphanumeric( 5 ),
-                Optional.of( randomAlphanumeric( 5 ) ),
+                randomAlphanumeric( 5 ),
                 ImmutableMap.of( Permission.READ,
                         ImmutableMap.of( UUID.randomUUID(),
                                 Optional.of( ImmutableSet
