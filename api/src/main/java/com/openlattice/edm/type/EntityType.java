@@ -131,6 +131,7 @@ public class EntityType extends AbstractSchemaAssociatedSecurableType {
                 ", baseType=" + baseType +
                 ", h=" + h +
                 ", shards=" + shards +
+                ", propertyTags=" + propertyTags +
                 ", properties=" + properties +
                 ", schemas=" + schemas +
                 ", type=" + type +
