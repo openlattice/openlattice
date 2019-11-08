@@ -6,8 +6,11 @@ import com.openlattice.IdConstants
 import com.openlattice.data.storage.ByteBlobDataManager
 import com.openlattice.data.storage.MetadataOption
 import com.openlattice.data.storage.PROPERTIES
+import com.openlattice.data.storage.VALUE
 import com.openlattice.edm.EdmConstants.Companion.ID_FQN
 import com.openlattice.edm.EdmConstants.Companion.LAST_WRITE_FQN
+import com.openlattice.IdConstants.LAST_WRITE_ID
+import com.openlattice.postgres.PostgresMetaDataProperties.LAST_WRITE
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.ResultSetAdapters.*
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
@@ -19,6 +22,7 @@ import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.util.*
+import kotlin.collections.HashMap
 
 
 internal class PostgresResultSetAdapters
@@ -64,18 +68,14 @@ fun getEntityPropertiesByEntitySetIdOriginIdAndPropertyTypeId(
         authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
         metadataOptions: Set<MetadataOption>,
         byteBlobDataManager: ByteBlobDataManager
-): Pair<UUID, Pair<UUID, Pair<UUID, MutableMap<UUID, MutableSet<Any>>>>> {
+): Pair<UUID, Pair<UUID, Map<UUID, MutableMap<UUID, MutableSet<Any>>>>> {
     val id = id(rs)
     val entitySetId = entitySetId(rs)
     val propertyTypes = authorizedPropertyTypes.getValue(entitySetId)
 
-    val (originId, entity) = getLinkedEntityPropertiesWithOriginId(rs, propertyTypes, byteBlobDataManager)
+    val entities = readJsonDataColumnsWithId(rs, propertyTypes, byteBlobDataManager, metadataOptions)
 
-    if (metadataOptions.contains(MetadataOption.LAST_WRITE)) {
-        entity[IdConstants.LAST_WRITE_ID.id] = mutableSetOf<Any>(lastWriteTyped(rs))
-    }
-
-    return id to (entitySetId to (originId to entity))
+    return id to (entitySetId to entities)
 }
 
 /**
@@ -88,31 +88,24 @@ fun getEntityPropertiesByEntitySetIdOriginIdAndPropertyTypeFqn(
         authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
         metadataOptions: Set<MetadataOption>,
         byteBlobDataManager: ByteBlobDataManager
-): Pair<UUID, Pair<UUID, Pair<UUID, MutableMap<FullQualifiedName, MutableSet<Any>>>>> {
+): Pair<UUID, Pair<UUID, Map<UUID, MutableMap<FullQualifiedName, MutableSet<Any>>>>> {
     val id = id(rs)
     val entitySetId = entitySetId(rs)
     val propertyTypes = authorizedPropertyTypes.getValue(entitySetId)
 
-    val (originId, entity) = getLinkedEntityPropertiesWithOriginId(rs, propertyTypes, byteBlobDataManager)
+    val entities = readJsonDataColumnsWithId(rs, propertyTypes, byteBlobDataManager, metadataOptions)
 
-    val entityByFqn = entity.mapKeys { propertyTypes.getValue(it.key).type }.toMutableMap()
-
-    if (metadataOptions.contains(MetadataOption.LAST_WRITE)) {
-        entityByFqn[LAST_WRITE_FQN] = mutableSetOf<Any>(lastWriteTyped(rs))
+    val entityByFqn = entities.mapValues { (_, propertyValues) ->
+        propertyValues.mapKeys {
+            if (it.key == LAST_WRITE_ID.id) {
+                LAST_WRITE_FQN
+            } else {
+                propertyTypes.getValue(it.key).type
+            }
+        }.toMutableMap()
     }
 
-    return id to (entitySetId to (originId to entityByFqn))
-}
-
-private fun getLinkedEntityPropertiesWithOriginId(
-        rs: ResultSet,
-        propertyTypes:  Map<UUID, PropertyType>,
-        byteBlobDataManager: ByteBlobDataManager
-): Pair<UUID, MutableMap<UUID, MutableSet<Any>>> {
-    val originId = originId(rs)
-    val entity = readJsonDataColumns(rs, propertyTypes, byteBlobDataManager)
-
-    return originId to entity
+    return id to (entitySetId to entityByFqn)
 }
 
 @Throws(SQLException::class)
@@ -161,6 +154,53 @@ fun readJsonDataColumns(
 
     return entity
 }
+
+@Throws(SQLException::class)
+fun readJsonDataColumnsWithId(
+        rs: ResultSet,
+        propertyTypes: Map<UUID, PropertyType>,
+        byteBlobDataManager: ByteBlobDataManager,
+        metadataOptions: Set<MetadataOption>
+): MutableMap<UUID, MutableMap<UUID, MutableSet<Any>>> {
+
+    val detailedEntity = mapper.readValue<MutableMap<UUID, MutableSet<MutableMap<String, Any>>>>(rs.getString(PROPERTIES))
+    // origin id -> property type id -> values
+    val entities = mutableMapOf<UUID, MutableMap<UUID, MutableSet<Any>>>()
+    detailedEntity.forEach { (propertyTypeId, details) ->
+        // only select properties which are authorized
+        if (propertyTypes.keys.contains(propertyTypeId)) {
+            details.forEach { entityDetail ->
+                val originId = UUID.fromString(entityDetail[PostgresColumn.ID_VALUE.name] as String)
+                val propertyValue = entityDetail.getValue(VALUE)
+
+                if (!entities.containsKey(originId)) {
+                    entities[originId] = mutableMapOf(propertyTypeId to mutableSetOf(propertyValue))
+                } else {
+                    entities.getValue(originId)[propertyTypeId] = mutableSetOf(propertyValue)
+                }
+
+                if (metadataOptions.contains(MetadataOption.LAST_WRITE)) {
+                    val lastWrite = entityDetail[LAST_WRITE.name] as OffsetDateTime
+                    entities.getValue(originId)[LAST_WRITE_ID.id] = mutableSetOf<Any>(lastWrite)
+                }
+            }
+        }
+    }
+
+    propertyTypes.forEach { (_, propertyType) ->
+        if (propertyType.datatype == EdmPrimitiveTypeKind.Binary) {
+            entities.forEach { (_, entity) ->
+                val urls = entity.getOrElse(propertyType.id) { mutableSetOf() }
+                if (urls.isNotEmpty()) {
+                    entity[propertyType.id] = byteBlobDataManager.getObjects(urls).toMutableSet()
+                }
+            }
+        }
+    }
+
+    return entities
+}
+
 
 //TODO: If we are getting NPEs on read we may have to do better filtering here.
 @Throws(SQLException::class)

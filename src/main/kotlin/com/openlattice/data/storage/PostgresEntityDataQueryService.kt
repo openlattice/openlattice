@@ -104,7 +104,7 @@ class PostgresEntityDataQueryService(
             metadataOptions: EnumSet<MetadataOption> = EnumSet.noneOf(MetadataOption::class.java),
             propertyTypeFilters: Map<UUID, Set<Filter>> = mapOf(),
             version: Optional<Long> = Optional.empty()
-    ): BasePostgresIterable<Pair<UUID, Pair<UUID, Pair<UUID, MutableMap<UUID, MutableSet<Any>>>>>> {
+    ): BasePostgresIterable<Pair<UUID, Pair<UUID, Map<UUID, MutableMap<UUID, MutableSet<Any>>>>>> {
         return getEntitySetIterable(
                 entityKeyIds,
                 authorizedPropertyTypes,
@@ -130,7 +130,7 @@ class PostgresEntityDataQueryService(
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
             propertyTypeFilters: Map<UUID, Set<Filter>> = mapOf(),
             version: Optional<Long> = Optional.empty()
-    ): BasePostgresIterable<Pair<UUID, Pair<UUID, Pair<UUID, MutableMap<FullQualifiedName, MutableSet<Any>>>>>> {
+    ): BasePostgresIterable<Pair<UUID, Pair<UUID, Map<UUID, MutableMap<FullQualifiedName, MutableSet<Any>>>>>> {
         return getEntitySetIterable(
                 entityKeyIds,
                 authorizedPropertyTypes,
