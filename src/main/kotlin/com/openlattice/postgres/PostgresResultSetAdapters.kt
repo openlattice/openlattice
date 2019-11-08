@@ -22,7 +22,6 @@ import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.util.*
-import kotlin.collections.HashMap
 
 
 internal class PostgresResultSetAdapters
@@ -49,7 +48,7 @@ fun getEntityPropertiesByPropertyTypeId(
     // TODO Do we need ID column in properties?
 
     if (metadataOptions.contains(MetadataOption.LAST_WRITE)) {
-        entity[IdConstants.LAST_WRITE_ID.id] = mutableSetOf<Any>(lastWriteTyped(rs))
+        entity[LAST_WRITE_ID.id] = mutableSetOf<Any>(lastWriteTyped(rs))
     }
 
     return id to entity
