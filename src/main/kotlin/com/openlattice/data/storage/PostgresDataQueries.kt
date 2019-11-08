@@ -25,18 +25,20 @@ internal class PostgresDataQueries
 
 
 const val VALUE = "value"
-const val VALUES = "values"
 const val PROPERTIES = "properties"
 
 val dataTableColumnsSql = PostgresDataTables.dataTableColumns.joinToString(",") { it.name }
 
 // @formatter:off
-val detailedValueColumnsSql = "COALESCE( " + dataTableValueColumns.joinToString(",") {
-    "jsonb_agg(" +
-        "json_build_object('$VALUE',${it.name}, " +
-        "'${ENTITY_SET_ID.name}', ${ENTITY_SET_ID.name}, " +
-        "'${ID_VALUE.name}', ${ORIGIN_ID.name}" +
-    ")) FILTER ( WHERE ${it.name} IS NOT NULL) "
+val detailedValueColumnsSql =
+    "COALESCE( " + dataTableValueColumns.joinToString(",") {
+        "jsonb_agg(" +
+            "json_build_object(" +
+                "'$VALUE',${it.name}, " +
+                "'${ID_VALUE.name}', ${ORIGIN_ID.name}, " +
+                "'${LAST_WRITE.name}', ${LAST_WRITE.name}" +
+            ")" +
+        ") FILTER ( WHERE ${it.name} IS NOT NULL) "
 } + ") as $PROPERTIES"
 
 val valuesColumnsSql = "COALESCE( " + dataTableValueColumns.joinToString(",") {
@@ -107,18 +109,6 @@ internal fun selectEntitiesGroupedByIdAndPropertyTypeId(
     val columnsSql = if (detailed) detailedValueColumnsSql else valuesColumnsSql
     return "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name},${PROPERTY_TYPE_ID.name}$metadataOptionsSql,$columnsSql " +
             "FROM ${DATA.name} ${optionalWhereClauses(idsPresent, partitionsPresent, entitySetsPresent)}"
-}
-
-/**
- * Returns the correspondent column name used for the metadata option with a comma prefix.
- */
-private fun mapMetaDataToColumnSql(metadataOption: MetadataOption): String {
-    return when (metadataOption) {
-        // TODO should be just last_write with comma prefix after empty rows are eliminated https://jira.openlattice.com/browse/LATTICE-2254
-        MetadataOption.LAST_WRITE -> ",max(${LAST_WRITE.name}) AS ${mapMetaDataToColumnName(metadataOption)}"
-        MetadataOption.ENTITY_KEY_IDS -> ORIGIN_ID.name
-        else -> throw UnsupportedOperationException("No implementation yet for metadata option $metadataOption")
-    }
 }
 
 /**
