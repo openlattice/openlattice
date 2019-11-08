@@ -1,6 +1,7 @@
 package com.openlattice.data.storage.aws
 
 import com.amazonaws.AmazonServiceException
+import com.amazonaws.ClientConfiguration
 import com.amazonaws.HttpMethod
 import com.amazonaws.SdkClientException
 import com.amazonaws.auth.AWSStaticCredentialsProvider
@@ -8,10 +9,11 @@ import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.AmazonS3ClientBuilder
 import com.amazonaws.services.s3.model.*
+import com.amazonaws.services.s3.transfer.TransferManager
+import com.amazonaws.services.s3.transfer.TransferManagerBuilder
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.openlattice.data.storage.ByteBlobDataManager
 import com.openlattice.datastore.configuration.DatastoreConfiguration
-//import org.apache.tika.Tika
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.net.URL
@@ -29,11 +31,13 @@ class AwsBlobDataService(
     private val s3Credentials = BasicAWSCredentials(datastoreConfiguration.accessKeyId, datastoreConfiguration.secretAccessKey)
 
     private val s3 = newS3Client(datastoreConfiguration)
+    private val transferManager: TransferManager = TransferManagerBuilder.standard().withS3Client(s3).build()
 
     fun newS3Client(datastoreConfiguration: DatastoreConfiguration): AmazonS3 {
         val builder = AmazonS3ClientBuilder.standard()
         builder.region = datastoreConfiguration.regionName
         builder.credentials = AWSStaticCredentialsProvider(s3Credentials)
+        builder.clientConfiguration = ClientConfiguration()
         return builder.build()
     }
     
@@ -43,7 +47,9 @@ class AwsBlobDataService(
         metadata.contentLength = dataInputStream.available().toLong()
         metadata.contentType = contentType
         val putRequest = PutObjectRequest(datastoreConfiguration.bucketName, s3Key, dataInputStream, metadata)
-        s3.putObject(putRequest)
+        val uploadJob = transferManager.upload(putRequest)
+        uploadJob.waitForCompletion()
+        transferManager.shutdownNow(false)
 
     }
 
