@@ -49,13 +49,6 @@ val primaryKeyColumnNamesAsString = PostgresDataTables.buildDataTableDefinition(
         ","
 ) { it.name }
 
-val jsonValueColumnsSql = PostgresDataTables.dataColumns.entries
-        .joinToString(",") { (datatype, cols) ->
-            val (ni, bt) = cols
-            "COALESCE(jsonb_object_agg(${PROPERTY_TYPE_ID.name}, ${bt.name} || ${ni.name}) " +
-                    "FILTER (WHERE ${bt.name} IS NOT NULL OR ${ni.name} IS NOT NULL ),'{}') " +
-                    "as ${getMergedDataColumnName(datatype)}"
-        }
 
 /**
  * Builds a preparable SQL query for reading filterable data.
@@ -158,14 +151,6 @@ private fun mapMetaDataToSelector(metadataOption: MetadataOption): String {
     return when (metadataOption) {
         MetadataOption.LAST_WRITE -> ",max(${LAST_WRITE.name}) AS ${mapMetaDataToColumnName(metadataOption)}"
         MetadataOption.ENTITY_KEY_IDS -> ",${ORIGIN_ID.name}"
-        else -> throw UnsupportedOperationException("No implementation yet for metadata option $metadataOption")
-    }
-}
-
-private fun isMetaDataAggregated(metadataOption: MetadataOption): Boolean {
-    return when (metadataOption) {
-        MetadataOption.ENTITY_KEY_IDS -> true
-        MetadataOption.LAST_WRITE -> true
         else -> throw UnsupportedOperationException("No implementation yet for metadata option $metadataOption")
     }
 }

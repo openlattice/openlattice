@@ -93,6 +93,10 @@ class PostgresEntityDataQueryService(
         return getEntitiesWithPropertyTypeIds(entityKeyIds, authorizedPropertyTypes, mapOf(), metadataOptions)
     }
 
+    /**
+     * Returns linked entity set data detailed in a Map mapped by linking id, (normal) entity set id, origin id,
+     * property type id and values respectively.
+     */
     @JvmOverloads
     fun getLinkedEntitiesByEntitySetIdWithOriginIds(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
@@ -107,7 +111,8 @@ class PostgresEntityDataQueryService(
                 propertyTypeFilters,
                 metadataOptions,
                 version,
-                true
+                linking = true,
+                detailed = true
         ) { rs ->
             getEntityPropertiesByEntitySetIdOriginIdAndPropertyTypeId(
                     rs, authorizedPropertyTypes, metadataOptions, byteBlobDataManager
@@ -115,6 +120,10 @@ class PostgresEntityDataQueryService(
         }
     }
 
+    /**
+     * Returns linked entity set data detailed in a Map mapped by linking id, (normal) entity set id, origin id,
+     * property type full qualified name and values respectively.
+     */
     @JvmOverloads
     fun getLinkedEntitySetBreakDown(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
@@ -128,7 +137,8 @@ class PostgresEntityDataQueryService(
                 propertyTypeFilters,
                 EnumSet.noneOf(MetadataOption::class.java),
                 version,
-                true
+                linking = true,
+                detailed = true
         ) { rs ->
             getEntityPropertiesByEntitySetIdOriginIdAndPropertyTypeFqn(
                     rs, authorizedPropertyTypes, EnumSet.noneOf(MetadataOption::class.java), byteBlobDataManager
@@ -173,6 +183,7 @@ class PostgresEntityDataQueryService(
             metadataOptions: Set<MetadataOption> = EnumSet.noneOf(MetadataOption::class.java),
             version: Optional<Long> = Optional.empty(),
             linking: Boolean = false,
+            detailed: Boolean = false,
             adapter: (ResultSet) -> T
     ): Sequence<T> {
         return getEntitySetIterable(
@@ -182,6 +193,7 @@ class PostgresEntityDataQueryService(
                 metadataOptions,
                 version,
                 linking,
+                detailed,
                 adapter
         ).asSequence()
     }
@@ -196,6 +208,7 @@ class PostgresEntityDataQueryService(
             metadataOptions: Set<MetadataOption> = EnumSet.noneOf(MetadataOption::class.java),
             version: Optional<Long> = Optional.empty(),
             linking: Boolean = false,
+            detailed: Boolean = false,
             adapter: (ResultSet) -> T
     ): BasePostgresIterable<T> {
         val propertyTypes = authorizedPropertyTypes.values.flatMap { it.values }.associateBy { it.id }
@@ -224,7 +237,8 @@ class PostgresEntityDataQueryService(
                 metadataOptions,
                 linking,
                 ids.isNotEmpty(),
-                partitions.isNotEmpty()
+                partitions.isNotEmpty(),
+                detailed
         )
 
         return BasePostgresIterable(PreparedStatementHolderSupplier(hds, sql, FETCH_SIZE) { ps ->
