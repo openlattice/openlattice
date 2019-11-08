@@ -59,6 +59,11 @@ interface EntityDatastore {
             extraMetadataOptions: EnumSet<MetadataOption>
     ): Map<UUID, Map<UUID, Map<UUID, Map<UUID, Set<Any>>>>>
 
+    fun getLinkedEntitySetBreakDown(
+            linkingIdsByEntitySetId: Map<UUID, Optional<Set<UUID>>>,
+            authorizedPropertyTypesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>
+    ): Map<UUID, Map<UUID, Map<UUID, Map<FullQualifiedName, Set<Any>>>>>
+
     fun getEntities(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
             orderedPropertyTypes: LinkedHashSet<String>,

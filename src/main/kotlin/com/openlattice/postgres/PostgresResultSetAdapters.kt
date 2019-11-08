@@ -3,13 +3,11 @@ package com.openlattice.postgres
 import com.dataloom.mappers.ObjectMappers
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.openlattice.IdConstants
-import com.openlattice.data.EntityDataKey
 import com.openlattice.data.storage.ByteBlobDataManager
 import com.openlattice.data.storage.MetadataOption
 import com.openlattice.data.storage.PROPERTIES
 import com.openlattice.edm.EdmConstants.Companion.ID_FQN
 import com.openlattice.edm.EdmConstants.Companion.LAST_WRITE_FQN
-import com.openlattice.edm.PostgresEdmTypeConverter
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.ResultSetAdapters.*
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
@@ -69,20 +67,52 @@ fun getEntityPropertiesByEntitySetIdOriginIdAndPropertyTypeId(
 ): Pair<UUID, Pair<UUID, Pair<UUID, MutableMap<UUID, MutableSet<Any>>>>> {
     val id = id(rs)
     val entitySetId = entitySetId(rs)
-    val originId = originId(rs)
     val propertyTypes = authorizedPropertyTypes.getValue(entitySetId)
 
-    val entity = readJsonDataColumns(
-            rs,
-            propertyTypes,
-            byteBlobDataManager
-    )
+    val (originId, entity) = getLinkedEntityPropertiesWithOriginId(rs, propertyTypes, byteBlobDataManager)
 
     if (metadataOptions.contains(MetadataOption.LAST_WRITE)) {
         entity[IdConstants.LAST_WRITE_ID.id] = mutableSetOf<Any>(lastWriteTyped(rs))
     }
 
     return id to (entitySetId to (originId to entity))
+}
+
+/**
+ * Returns linked entity data from the [ResultSet] mapped respectively by its id, entity set, origin id and property
+ * full qualified name.
+ */
+@Throws(SQLException::class)
+fun getEntityPropertiesByEntitySetIdOriginIdAndPropertyTypeFqn(
+        rs: ResultSet,
+        authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
+        metadataOptions: Set<MetadataOption>,
+        byteBlobDataManager: ByteBlobDataManager
+): Pair<UUID, Pair<UUID, Pair<UUID, MutableMap<FullQualifiedName, MutableSet<Any>>>>> {
+    val id = id(rs)
+    val entitySetId = entitySetId(rs)
+    val propertyTypes = authorizedPropertyTypes.getValue(entitySetId)
+
+    val (originId, entity) = getLinkedEntityPropertiesWithOriginId(rs, propertyTypes, byteBlobDataManager)
+
+    val entityByFqn = entity.mapKeys { propertyTypes.getValue(it.key).type }.toMutableMap()
+
+    if (metadataOptions.contains(MetadataOption.LAST_WRITE)) {
+        entityByFqn[LAST_WRITE_FQN] = mutableSetOf<Any>(lastWriteTyped(rs))
+    }
+
+    return id to (entitySetId to (originId to entityByFqn))
+}
+
+private fun getLinkedEntityPropertiesWithOriginId(
+        rs: ResultSet,
+        propertyTypes:  Map<UUID, PropertyType>,
+        byteBlobDataManager: ByteBlobDataManager
+): Pair<UUID, MutableMap<UUID, MutableSet<Any>>> {
+    val originId = originId(rs)
+    val entity = readJsonDataColumns(rs, propertyTypes, byteBlobDataManager)
+
+    return originId to entity
 }
 
 @Throws(SQLException::class)

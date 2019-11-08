@@ -350,6 +350,39 @@ class PostgresEntityDatastore(
         return linkedDataMap
     }
 
+    override fun getLinkedEntitySetBreakDown(
+            linkingIdsByEntitySetId: Map<UUID, Optional<Set<UUID>>>,
+            authorizedPropertyTypesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>)
+            : Map<UUID, Map<UUID, Map<UUID, Map<FullQualifiedName, Set<Any>>>>> {
+        // pair<linking_id to pair<entity_set_id to pair<origin_id to property_data>>>
+        val linkedEntityDataStream = dataQueryService.getLinkedEntitySetBreakDown(
+                linkingIdsByEntitySetId,
+                authorizedPropertyTypesByEntitySetId
+        )
+
+        // linking_id/entity_set_id/origin_id/property_type_id
+        val linkedDataMap = HashMap<UUID, MutableMap<UUID, MutableMap<UUID, MutableMap<FullQualifiedName, MutableSet<Any>>>>>()
+        linkedEntityDataStream.forEach {
+            val linkingId = it.first
+            val entitySetId = it.second.first
+            val entityKeyId = it.second.second.first
+            val entityData = it.second.second.second
+
+            if (linkedDataMap.containsKey(linkingId)) {
+                if (linkedDataMap.getValue(linkingId).containsKey(entitySetId)) {
+                    linkedDataMap.getValue(linkingId).getValue(entitySetId)[entityKeyId] = entityData
+                } else {
+                    linkedDataMap.getValue(linkingId)[entitySetId] = mutableMapOf(entityKeyId to entityData)
+                }
+            } else {
+                linkedDataMap[linkingId] = mutableMapOf(entitySetId to mutableMapOf(entityKeyId to entityData))
+            }
+        }
+
+        return linkedDataMap
+    }
+
+
     //TODO: Can be made more efficient if we are getting across same type.
     /**
      * Loads data from multiple entity sets. Note: not implemented for linking entity sets!
