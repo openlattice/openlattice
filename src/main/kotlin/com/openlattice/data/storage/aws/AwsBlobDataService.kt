@@ -9,7 +9,6 @@ import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.AmazonS3ClientBuilder
 import com.amazonaws.services.s3.model.*
-import com.amazonaws.services.s3.transfer.TransferManager
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.openlattice.data.storage.ByteBlobDataManager
@@ -31,7 +30,7 @@ class AwsBlobDataService(
     private val s3Credentials = BasicAWSCredentials(datastoreConfiguration.accessKeyId, datastoreConfiguration.secretAccessKey)
 
     private val s3 = newS3Client(datastoreConfiguration)
-    private val transferManager: TransferManager = TransferManagerBuilder.standard().withS3Client(s3).build()
+    private val transferManager = TransferManagerBuilder.standard().withS3Client(s3).build()
 
     fun newS3Client(datastoreConfiguration: DatastoreConfiguration): AmazonS3 {
         val builder = AmazonS3ClientBuilder.standard()
@@ -49,8 +48,6 @@ class AwsBlobDataService(
         val putRequest = PutObjectRequest(datastoreConfiguration.bucketName, s3Key, dataInputStream, metadata)
         val uploadJob = transferManager.upload(putRequest)
         uploadJob.waitForCompletion()
-        transferManager.shutdownNow(false)
-
     }
 
     override fun deleteObjects(s3Keys: List<String>) {
