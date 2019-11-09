@@ -6,6 +6,9 @@ import com.amazonaws.HttpMethod
 import com.amazonaws.SdkClientException
 import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
+import com.amazonaws.retry.RetryPolicy
+import com.amazonaws.retry.PredefinedBackoffStrategies
+import com.amazonaws.retry.PredefinedRetryPolicies
 import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.AmazonS3ClientBuilder
 import com.amazonaws.services.s3.model.*
@@ -36,7 +39,12 @@ class AwsBlobDataService(
         val builder = AmazonS3ClientBuilder.standard()
         builder.region = datastoreConfiguration.regionName
         builder.credentials = AWSStaticCredentialsProvider(s3Credentials)
-        builder.clientConfiguration = ClientConfiguration()
+        val retryPolicy = RetryPolicy(
+                PredefinedRetryPolicies.DEFAULT_RETRY_CONDITION,
+                PredefinedBackoffStrategies.EqualJitterBackoffStrategy(1,2),
+                1,
+                false)
+        builder.clientConfiguration = ClientConfiguration().withRetryPolicy(retryPolicy)
         return builder.build()
     }
     
