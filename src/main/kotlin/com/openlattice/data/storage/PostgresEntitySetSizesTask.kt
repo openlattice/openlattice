@@ -20,6 +20,8 @@
  */
 package com.openlattice.data.storage
 
+import com.openlattice.data.storage.PostgresEntitySetSizesInitializationTask.Companion.ENTITY_SET_SIZES_VIEW
+import com.openlattice.data.storage.PostgresEntitySetSizesInitializationTask.Companion.REFRESH_ENTITY_SET_COUNTS_VIEW
 import com.openlattice.postgres.PostgresColumn.COUNT
 import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
 import com.openlattice.tasks.HazelcastFixedRateTask
@@ -49,8 +51,7 @@ class PostgresEntitySetSizesTask : HazelcastFixedRateTask<PostgresEntitySetSizes
         logger.info("Refreshing entity set count views.")
         getDependency().hikariDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                stmt.execute(DROP_ENTITY_SET_COUNTS_VIEW)
-                stmt.execute(CREATE_ENTITY_SET_COUNTS_VIEW)
+                stmt.execute(REFRESH_ENTITY_SET_COUNTS_VIEW)
             }
         }
     }
