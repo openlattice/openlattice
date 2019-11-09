@@ -71,7 +71,7 @@ class PostgresLinkedEntityDataQueryServiceTest {
                         0,
                         propertyTypes.associateBy { it.id },
                         mapOf(),
-                        EnumSet.of(MetadataOption.ORIGIN_IDS),
+                        EnumSet.of( MetadataOption.ENTITY_KEY_IDS),
                         linking = true,
                         idsPresent = true,
                         partitionsPresent = true

@@ -22,17 +22,28 @@ package com.openlattice.data.storage
 
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.postgres.PostgresColumn.*
-import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.PostgresTable.ENTITY_SETS
+import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.Task
 import org.slf4j.LoggerFactory
 
 // todo change name back to "entity_set_counts"
-internal const val ENTITY_SET_SIZES_VIEW = "entity_set_counts_staging"
+
 private val logger = LoggerFactory.getLogger(PostgresEntitySetSizesInitializationTask::class.java)
 
 class PostgresEntitySetSizesInitializationTask : HazelcastInitializationTask<PostgresEntitySetSizesTaskDependency> {
+
+    companion object {
+
+        const val ENTITY_SET_SIZES_VIEW = "entity_set_counts"
+
+        val CREATE_ENTITY_SET_COUNTS_VIEW = "CREATE MATERIALIZED VIEW IF NOT EXISTS $ENTITY_SET_SIZES_VIEW " +
+                "AS $NORMAL_ENTITY_SET_COUNTS UNION $LINKED_ENTITY_SET_COUNTS"
+
+        const val REFRESH_ENTITY_SET_COUNTS_VIEW = "REFRESH MATERIALIZED VIEW $ENTITY_SET_SIZES_VIEW "
+    }
+
     override fun getInitialDelay(): Long {
         return 0
     }
@@ -74,8 +85,3 @@ private val LINKED_ENTITY_SET_COUNTS =
                 "INNER JOIN $WRAPPED_LINKED_ENTITY_SETS " +
                 "ON ( linking_ids.${ENTITY_SET_ID.name} = ANY($WRAPPED_LINKED_ENTITY_SETS.${LINKED_ENTITY_SETS.name}) ) " +
                 "GROUP BY $WRAPPED_LINKED_ENTITY_SETS.${ID.name} )"
-
-internal val CREATE_ENTITY_SET_COUNTS_VIEW = "CREATE MATERIALIZED VIEW IF NOT EXISTS $ENTITY_SET_SIZES_VIEW " +
-        "AS $NORMAL_ENTITY_SET_COUNTS UNION $LINKED_ENTITY_SET_COUNTS"
-
-internal const val DROP_ENTITY_SET_COUNTS_VIEW = "DROP MATERIALIZED VIEW IF EXISTS $ENTITY_SET_SIZES_VIEW "
