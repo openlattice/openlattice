@@ -288,7 +288,7 @@ public interface DataApi {
      *
      * @param linkedEntitySetId The id of the linked entity set to load.
      * @param selection The id of the requested entity.
-     * @return A enttity details object, with property type FQNs as keys.
+     * @return A entity details object, with property type FQNs as keys.
      */
     @GET( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + DETAILED  )
     Map<UUID, Map<UUID, Map<UUID, Map<FullQualifiedName, Set<Object>>>>> loadLinkedEntitySetBreakdown(

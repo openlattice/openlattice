@@ -49,7 +49,7 @@ public class EntitySetSelection {
     }
 
     /**
-     * Creates an EntitySetSelection with with only narrowing down properties.
+     * Creates an EntitySetSelection with only narrowing down properties.
      * @param properties The ids of properties to select.
      */
     public EntitySetSelection( Optional<Set<UUID>> properties ) {
