@@ -184,15 +184,16 @@ constructor(
     @Timed
     @RequestMapping(path = ["", "/"], method = [RequestMethod.GET], produces = [MediaType.APPLICATION_JSON_VALUE])
     override fun getEntitySets(): Set<EntitySet> {
-        return authorizations.getAuthorizedObjectsOfType(
+        val entitySetIds =  authorizations.getAuthorizedObjectsOfType(
                 Principals.getCurrentPrincipals(),
                 SecurableObjectType.EntitySet,
                 EnumSet.of(Permission.READ)
         )
                 .asSequence()
                 .map { AuthorizationUtils.getLastAclKeySafely(it) }
-                .map { entitySetManager.getEntitySet(it)!! }
                 .toSet()
+
+        return  entitySetManager.getEntitySetsAsMap(entitySetIds).values.toSet()
     }
 
 
