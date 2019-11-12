@@ -12,7 +12,9 @@ import com.amazonaws.retry.PredefinedRetryPolicies
 import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.AmazonS3ClientBuilder
 import com.amazonaws.services.s3.model.*
+import com.amazonaws.services.s3.transfer.TransferManager
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder
+import com.amazonaws.services.s3.transfer.TransferManagerConfiguration
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.openlattice.data.storage.ByteBlobDataManager
 import com.openlattice.datastore.configuration.DatastoreConfiguration
@@ -33,9 +35,9 @@ class AwsBlobDataService(
     private val s3Credentials = BasicAWSCredentials(datastoreConfiguration.accessKeyId, datastoreConfiguration.secretAccessKey)
 
     private val s3 = newS3Client(datastoreConfiguration)
-    private val transferManager = TransferManagerBuilder.standard().withS3Client(s3).build()
+    private val transferManager = newTransferManager(s3)
 
-    fun newS3Client(datastoreConfiguration: DatastoreConfiguration): AmazonS3 {
+    private final fun newS3Client(datastoreConfiguration: DatastoreConfiguration): AmazonS3 {
         val builder = AmazonS3ClientBuilder.standard()
         builder.region = datastoreConfiguration.regionName
         builder.credentials = AWSStaticCredentialsProvider(s3Credentials)
@@ -46,6 +48,13 @@ class AwsBlobDataService(
                 false)
         builder.clientConfiguration = ClientConfiguration().withRetryPolicy(retryPolicy)
         return builder.build()
+    }
+
+    private final fun newTransferManager(s3: AmazonS3): TransferManager {
+        val txBuilder = TransferManagerBuilder.standard().withS3Client(s3)
+        txBuilder.multipartUploadThreshold = 5000 //use multipart upload when object passes this threshold in bytes
+        txBuilder.minimumUploadPartSize = 1000 //minimum size in bytes for a single part in a multipart upload
+        return txBuilder.build()
     }
     
     override fun putObject(s3Key: String, data: ByteArray, contentType: String) {
