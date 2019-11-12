@@ -14,7 +14,6 @@ import com.amazonaws.services.s3.AmazonS3ClientBuilder
 import com.amazonaws.services.s3.model.*
 import com.amazonaws.services.s3.transfer.TransferManager
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder
-import com.amazonaws.services.s3.transfer.TransferManagerConfiguration
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.openlattice.data.storage.ByteBlobDataManager
 import com.openlattice.datastore.configuration.DatastoreConfiguration
@@ -25,6 +24,8 @@ import java.util.*
 import java.util.concurrent.Callable
 
 private val logger = LoggerFactory.getLogger(AwsBlobDataService::class.java)
+const val MULTIPART_THRESHOLD = 1_000_000L
+const val MIN_PART_SIZE = 10_000L
 
 @Service
 class AwsBlobDataService(
@@ -33,7 +34,6 @@ class AwsBlobDataService(
 ) : ByteBlobDataManager {
 
     private val s3Credentials = BasicAWSCredentials(datastoreConfiguration.accessKeyId, datastoreConfiguration.secretAccessKey)
-
     private val s3 = newS3Client(datastoreConfiguration)
     private val transferManager = newTransferManager(s3)
 
@@ -52,8 +52,8 @@ class AwsBlobDataService(
 
     private final fun newTransferManager(s3: AmazonS3): TransferManager {
         val txBuilder = TransferManagerBuilder.standard().withS3Client(s3)
-        txBuilder.multipartUploadThreshold = 5000 //use multipart upload when object passes this threshold in bytes
-        txBuilder.minimumUploadPartSize = 1000 //minimum size in bytes for a single part in a multipart upload
+        txBuilder.multipartUploadThreshold = MULTIPART_THRESHOLD
+        txBuilder.minimumUploadPartSize = MIN_PART_SIZE
         return txBuilder.build()
     }
     
