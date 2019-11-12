@@ -181,12 +181,12 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             EntitySetSelection selection ) {
         if ( authz.checkIfHasPermissions(
                 new AclKey( entitySetId ), Principals.getCurrentPrincipals(), READ_PERMISSION ) ) {
+            final var entitySet = entitySetService.getEntitySet( entitySetId );
+            checkState( entitySet != null, "Could not find entity set with id: %s", entitySetId );
 
             Optional<Set<UUID>> entityKeyIds = ( selection == null ) ? Optional.empty() : selection.getEntityKeyIds();
             final var selectedProperties = getSelectedProperties( entitySetId, selection );
 
-            final var entitySet = entitySetService.getEntitySet( entitySetId );
-            checkState( entitySet != null, "Could not find entity set with id: %s", entitySetId );
             final var normalEntitySetIds = ( entitySet.isLinking() )
                     ? Sets.newHashSet( entitySet.getLinkedEntitySets() )
                     : Set.of( entitySetId );
