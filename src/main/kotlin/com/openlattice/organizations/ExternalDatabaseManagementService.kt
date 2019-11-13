@@ -15,7 +15,6 @@ import com.openlattice.assembler.PostgresRoles.Companion.isPostgresUserName
 import com.openlattice.authorization.*
 import com.openlattice.authorization.processors.PermissionMerger
 import com.openlattice.authorization.securable.SecurableObjectType
-import com.openlattice.organizations.mapstores.ID_INDEX
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.processors.DeleteOrganizationExternalDatabaseColumnsEntryProcessor
 import com.openlattice.hazelcast.processors.DeleteOrganizationExternalDatabaseTableEntryProcessor
