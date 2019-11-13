@@ -22,27 +22,28 @@
 
 package com.openlattice.hazelcast.serializers;
 
-import com.openlattice.authorization.Principal;
-import com.openlattice.authorization.PrincipalType;
-import com.openlattice.edm.set.EntitySetFlag;
-import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
+import com.openlattice.data.DataExpiration;
 import com.openlattice.edm.EntitySet;
+import com.openlattice.edm.set.EntitySetFlag;
+import com.openlattice.hazelcast.StreamSerializerTypeIds;
+import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.util.*;
-
-import org.springframework.stereotype.Component;
 
 @Component
 public class EntitySetStreamSerializer implements SelfRegisteringStreamSerializer<EntitySet> {
 
     @Override
-    public void write( ObjectDataOutput out, EntitySet object )
-            throws IOException {
+    public void write( ObjectDataOutput out, EntitySet object ) throws IOException {
+        serialize( out, object );
+    }
+
+    public static void serialize( ObjectDataOutput out, EntitySet object ) throws IOException {
         UUIDStreamSerializer.serialize( out, object.getId() );
         UUIDStreamSerializer.serialize( out, object.getEntityTypeId() );
         out.writeUTF( object.getName() );
@@ -56,23 +57,60 @@ public class EntitySetStreamSerializer implements SelfRegisteringStreamSerialize
             out.writeUTF( flag.toString() );
         }
 
+        var partitions = new int[ object.getPartitions().size() ];
+        var index = 0;
+        for ( var partition : object.getPartitions() ) {
+            partitions[ index++ ] = partition;
+        }
+
+        out.writeIntArray( partitions );
+
+        out.writeInt( object.getPartitionsVersion() );
+
+        if ( object.getExpiration() != null ) {
+            out.writeBoolean( true );
+            DataExpirationStreamSerializer.serialize( out, object.getExpiration() );
+        } else {
+            out.writeBoolean( false );
+        }
     }
 
     @Override
     public EntitySet read( ObjectDataInput in ) throws IOException {
-        Optional<UUID> id = Optional.of( UUIDStreamSerializer.deserialize( in ) );
+        return deserialize( in );
+    }
+
+    public static EntitySet deserialize( ObjectDataInput in ) throws IOException {
+        UUID id = UUIDStreamSerializer.deserialize( in );
         UUID entityTypeId = UUIDStreamSerializer.deserialize( in );
         String name = in.readUTF();
         String title = in.readUTF();
-        Optional<String> description = Optional.of( in.readUTF() );
+        String description = in.readUTF();
         Set<String> contacts = SetStreamSerializers.deserialize( in, ObjectDataInput::readUTF );
-        Optional<Set<UUID>> linkedEntitySets = Optional.of( SetStreamSerializers.fastUUIDSetDeserialize( in ) );
+        Set<UUID> linkedEntitySets = SetStreamSerializers.fastUUIDSetDeserialize( in );
         UUID organizationId = UUIDStreamSerializer.deserialize( in );
 
         int numFlags = in.readInt();
         EnumSet<EntitySetFlag> flags = EnumSet.noneOf( EntitySetFlag.class );
         for ( int i = 0; i < numFlags; i++ ) {
             flags.add( EntitySetFlag.valueOf( in.readUTF() ) );
+        }
+
+        var partitionsArray = in.readIntArray();
+        var partitions = new LinkedHashSet<Integer>( partitionsArray.length );
+
+        for ( var p : partitionsArray ) {
+            partitions.add( p );
+        }
+
+        int partitionsVersion = in.readInt();
+
+        DataExpiration expiration;
+        boolean hasExpiration = in.readBoolean();
+        if ( hasExpiration ) {
+            expiration = DataExpirationStreamSerializer.deserialize( in );
+        } else {
+            expiration = null;
         }
 
         EntitySet es = new EntitySet(
@@ -83,8 +121,11 @@ public class EntitySetStreamSerializer implements SelfRegisteringStreamSerialize
                 description,
                 contacts,
                 linkedEntitySets,
-                Optional.of( organizationId ),
-                Optional.of( flags ) );
+                organizationId,
+                flags,
+                partitions,
+                partitionsVersion,
+                expiration );
 
         return es;
     }

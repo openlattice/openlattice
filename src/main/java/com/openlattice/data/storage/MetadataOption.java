@@ -26,9 +26,11 @@ package com.openlattice.data.storage;
  */
 public enum MetadataOption {
     ENTITY_KEY_IDS,
+    @Deprecated
     ENTITY_SET_IDS,
     LAST_INDEX,
     LAST_LINK,
     LAST_WRITE,
-    VERSION
+    VERSION,
+    VERSIONS
 }

@@ -22,68 +22,48 @@
 
 package com.openlattice.datastore.services;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
-
-import com.codahale.metrics.annotation.Timed;
-import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.LinkedHashMultimap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.SetMultimap;
-import com.google.common.collect.Sets;
+import com.google.common.collect.*;
 import com.google.common.eventbus.EventBus;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.query.Predicates;
-import com.openlattice.assembler.Assembler;
-import com.openlattice.auditing.AuditRecordEntitySetsManager;
-import com.openlattice.auditing.AuditingConfiguration;
-import com.openlattice.auditing.AuditingTypes;
-import com.openlattice.authorization.AclKey;
-import com.openlattice.authorization.AuthorizationManager;
-import com.openlattice.authorization.HazelcastAclKeyReservationService;
-import com.openlattice.authorization.Permission;
-import com.openlattice.authorization.Principal;
-import com.openlattice.authorization.Principals;
+import com.openlattice.assembler.events.MaterializedEntitySetEdmChangeEvent;
+import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
-import com.openlattice.controllers.exceptions.ResourceNotFoundException;
 import com.openlattice.controllers.exceptions.TypeExistsException;
 import com.openlattice.controllers.exceptions.TypeNotFoundException;
 import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.datastore.util.Util;
-import com.openlattice.edm.EntityDataModel;
-import com.openlattice.edm.EntityDataModelDiff;
-import com.openlattice.edm.EntitySet;
-import com.openlattice.edm.PostgresEdmManager;
-import com.openlattice.edm.Schema;
+import com.openlattice.edm.*;
 import com.openlattice.edm.events.*;
-import com.openlattice.edm.processors.EntitySetsFlagFilteringAggregator;
 import com.openlattice.edm.properties.PostgresTypeManager;
 import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
-import com.openlattice.edm.set.EntitySetFlag;
 import com.openlattice.edm.set.EntitySetPropertyKey;
 import com.openlattice.edm.set.EntitySetPropertyMetadata;
 import com.openlattice.edm.type.*;
+import com.openlattice.edm.type.AssociationDetails;
+import com.openlattice.edm.type.AssociationType;
+import com.openlattice.edm.type.EntityType;
+import com.openlattice.edm.type.EntityTypePropertyMetadata;
+import com.openlattice.edm.type.PropertyType;
 import com.openlattice.edm.types.processors.*;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.hazelcast.HazelcastUtils;
-import com.openlattice.hazelcast.processors.AddEntitySetsToLinkingEntitySetProcessor;
-import com.openlattice.hazelcast.processors.RemoveEntitySetsFromLinkingEntitySetProcessor;
-import com.openlattice.organization.OrganizationEntitySetFlag;
-import com.openlattice.postgres.DataTables;
 import com.openlattice.postgres.PostgresQuery;
 import com.openlattice.postgres.PostgresTablesPod;
 import com.openlattice.postgres.mapstores.EntitySetMapstore;
 import com.openlattice.postgres.mapstores.EntityTypeMapstore;
 import com.zaxxer.hikari.HikariDataSource;
+import org.apache.commons.lang3.tuple.Pair;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
+import javax.inject.Inject;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.*;
@@ -91,12 +71,8 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import javax.inject.Inject;
 
-import org.apache.commons.lang3.tuple.Pair;
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 public class EdmService implements EdmManager {
 
@@ -110,7 +86,6 @@ public class EdmService implements EdmManager {
     private final IMap<UUID, AssociationType>                           associationTypes;
     private final IMap<EntitySetPropertyKey, EntitySetPropertyMetadata> entitySetPropertyMetadata;
     private final IMap<EntityTypePropertyKey, EntityTypePropertyMetadata> entityTypePropertyMetadata;
-    private final IMap<AclKey, SecurableObjectType>                     securableObjectTypes;
 
     private final HazelcastAclKeyReservationService aclKeyReservations;
     private final AuthorizationManager              authorizations;
@@ -120,8 +95,6 @@ public class EdmService implements EdmManager {
 
     private final HazelcastInstance            hazelcastInstance;
     private final HikariDataSource             hds;
-    private final AuditRecordEntitySetsManager aresManager;
-    private final Assembler                    assembler;
 
     @Inject
     private EventBus eventBus;
@@ -133,9 +106,7 @@ public class EdmService implements EdmManager {
             AuthorizationManager authorizations,
             PostgresEdmManager edmManager,
             PostgresTypeManager entityTypeManager,
-            HazelcastSchemaManager schemaManager,
-            AuditingConfiguration auditingConfiguration,
-            Assembler assembler ) {
+            HazelcastSchemaManager schemaManager ) {
 
         this.authorizations = authorizations;
         this.edmManager = edmManager;
@@ -151,15 +122,9 @@ public class EdmService implements EdmManager {
         this.associationTypes = hazelcastInstance.getMap( HazelcastMap.ASSOCIATION_TYPES.name() );
         this.entitySetPropertyMetadata = hazelcastInstance.getMap( HazelcastMap.ENTITY_SET_PROPERTY_METADATA.name() );
         this.entityTypePropertyMetadata = hazelcastInstance.getMap( HazelcastMap.ENTITY_TYPE_PROPERTY_METADATA.name() );
-        this.securableObjectTypes = hazelcastInstance.getMap( HazelcastMap.SECURABLE_OBJECT_TYPES.name() );
         this.aclKeyReservations = aclKeyReservations;
         propertyTypes.values().forEach( propertyType -> logger.debug( "Property type read: {}", propertyType ) );
         entityTypes.values().forEach( entityType -> logger.debug( "Object type read: {}", entityType ) );
-        this.aresManager = new AuditRecordEntitySetsManager( new AuditingTypes( this, auditingConfiguration ),
-                this,
-                authorizations,
-                hazelcastInstance );
-        this.assembler = assembler;
     }
 
     @Override
@@ -204,7 +169,6 @@ public class EdmService implements EdmManager {
 
         if ( dbRecord == null ) {
             propertyType.getSchemas().forEach( schemaManager.propertyTypesSchemaAdder( propertyType.getId() ) );
-            edmManager.createPropertyTypeIfNotExist( propertyType );
 
             eventBus.post( new PropertyTypeCreatedEvent( propertyType ) );
         } else {
@@ -254,10 +218,9 @@ public class EdmService implements EdmManager {
     @Override
     public void forceDeletePropertyType( UUID propertyTypeId ) {
         final var entityTypes = getEntityTypesContainPropertyType( propertyTypeId );
-        entityTypes.forEach( et -> {
-            forceRemovePropertyTypesFromEntityType( et.getId(),
-                    ImmutableSet.of( propertyTypeId ) );
-        } );
+        entityTypes.forEach( et ->
+                forceRemovePropertyTypesFromEntityType( et.getId(), ImmutableSet.of( propertyTypeId ) )
+        );
 
         propertyTypes.delete( propertyTypeId );
         aclKeyReservations.release( propertyTypeId );
@@ -271,10 +234,10 @@ public class EdmService implements EdmManager {
 
     private EntityType getEntityTypeWithBaseType( EntityType entityType ) {
         EntityType baseType = getEntityType( entityType.getBaseType().get() );
-        LinkedHashSet<UUID> properties = new LinkedHashSet<UUID>();
+        LinkedHashSet<UUID> properties = new LinkedHashSet<>();
         properties.addAll( baseType.getProperties() );
         properties.addAll( entityType.getProperties() );
-        LinkedHashSet<UUID> key = new LinkedHashSet<UUID>();
+        LinkedHashSet<UUID> key = new LinkedHashSet<>();
         key.addAll( baseType.getKey() );
         key.addAll( entityType.getKey() );
         key.forEach( keyId -> Preconditions.checkArgument( properties.contains( keyId ),
@@ -347,192 +310,9 @@ public class EdmService implements EdmManager {
         }
     }
 
-    /**
-     * Remove permissions/metadata information of the entity set
-     */
-    @Override
-    public void deleteEntitySet( UUID entitySetId ) {
-        final EntitySet entitySet = Util.getSafely( entitySets, entitySetId );
-        final EntityType entityType = getEntityType( entitySet.getEntityTypeId() );
-
-        // If this entity set is linked to a linking entity set, we need to collect all the linking ids of the entity
-        // set first in order to be able to reindex those, before entity data is unavailable
-        if ( !entitySet.isLinking() ) {
-            checkAndRemoveEntitySetLinkings( entitySetId );
-        }
-
-        /*
-         * We cleanup permissions first as this will make entity set unavailable, even if delete fails.
-         */
-        authorizations.deletePermissions( new AclKey( entitySetId ) );
-        entityType.getProperties().stream()
-                .map( propertyTypeId -> new AclKey( entitySetId, propertyTypeId ) )
-                .forEach( aclKey -> {
-                    authorizations.deletePermissions( aclKey );
-                    entitySetPropertyMetadata.delete( new EntitySetPropertyKey( aclKey.get( 0 ), aclKey.get( 1 ) ) );
-                } );
-
-        Util.deleteSafely( entitySets, entitySetId );
-        aclKeyReservations.release( entitySetId );
-        eventBus.post( new EntitySetDeletedEvent( entitySetId, entityType.getId() ) );
-        logger.info( "Entity set {}({}) deleted successfully", entitySet.getName(), entitySetId );
-    }
-
-    /**
-     * Checks and removes links if deleted entity set is linked to a linking entity set
-     *
-     * @param entitySetId the id of the deleted entity set
-     */
-    private void checkAndRemoveEntitySetLinkings( UUID entitySetId ) {
-        edmManager.getAllLinkingEntitySetsForEntitySet( entitySetId ).forEach(
-                linkingEntitySet -> {
-                    removeLinkedEntitySets( linkingEntitySet.getId(), Set.of( entitySetId ) );
-                    logger.info(
-                            "Removed link between linking entity set {}({}) and deleted entity set ({})",
-                            linkingEntitySet.getName(),
-                            linkingEntitySet.getId(),
-                            entitySetId );
-                }
-        );
-    }
-
     @Override
     public Set<UUID> getAllPropertyTypeIds() {
         return propertyTypes.keySet();
-    }
-
-    @Override
-    public int addLinkedEntitySets( UUID linkingEntitySetId, Set<UUID> newLinkedEntitySets ) {
-        final EntitySet linkingEntitySet = Util.getSafely( entitySets, linkingEntitySetId );
-        final int startSize = linkingEntitySet.getLinkedEntitySets().size();
-        final EntitySet updatedLinkingEntitySet = (EntitySet) entitySets.executeOnKey(
-                linkingEntitySetId, new AddEntitySetsToLinkingEntitySetProcessor( newLinkedEntitySets ) );
-        markMaterializedEntitySetDirtyWithDataChanges( linkingEntitySet.getId() );
-
-        eventBus.post( new LinkedEntitySetAddedEvent( linkingEntitySetId ) );
-
-        return updatedLinkingEntitySet.getLinkedEntitySets().size() - startSize;
-    }
-
-    @Override
-    public int removeLinkedEntitySets( UUID linkingEntitySetId, Set<UUID> linkedEntitySets ) {
-        final EntitySet linkingEntitySet = Util.getSafely( entitySets, linkingEntitySetId );
-        final int startSize = linkingEntitySet.getLinkedEntitySets().size();
-        final EntitySet updatedLinkingEntitySet = (EntitySet) entitySets.executeOnKey(
-                linkingEntitySetId, new RemoveEntitySetsFromLinkingEntitySetProcessor( linkedEntitySets ) );
-
-        Set<UUID> removedLinkingIds = edmManager.getLinkingIdsByEntitySetIds( linkedEntitySets )
-                .values().stream().flatMap( Set::stream ).collect( Collectors.toSet() );
-        Map<UUID, Set<UUID>> remainingLinkingIdsByEntitySetId = edmManager
-                .getLinkingIdsByEntitySetIds( updatedLinkingEntitySet.getLinkedEntitySets() );
-        markMaterializedEntitySetDirtyWithDataChanges( linkingEntitySet.getId() );
-
-        eventBus.post( new LinkedEntitySetRemovedEvent(
-                linkingEntitySetId,
-                remainingLinkingIdsByEntitySetId,
-                removedLinkingIds ) );
-
-        return startSize - updatedLinkingEntitySet.getLinkedEntitySets().size();
-    }
-
-    @Override
-    public Set<EntitySet> getLinkedEntitySets( UUID entitySetId ) {
-        final EntitySet es = Util.getSafely( entitySets, entitySetId );
-        return es == null
-                ? ImmutableSet.of()
-                : ImmutableSet.copyOf( entitySets.getAll( es.getLinkedEntitySets() ).values() );
-    }
-
-    @Override
-    public Set<UUID> getLinkedEntitySetIds( UUID entitySetId ) {
-        final EntitySet es = Util.getSafely( entitySets, entitySetId );
-        return es == null ? ImmutableSet.of() : es.getLinkedEntitySets();
-    }
-
-    private void createEntitySet( EntitySet entitySet ) {
-        aclKeyReservations.reserveIdAndValidateType( entitySet );
-
-        checkState( entitySets.putIfAbsent( entitySet.getId(), entitySet ) == null, "Entity set already exists." );
-    }
-
-    @Override
-    public void createEntitySet( Principal principal, EntitySet entitySet ) {
-        EntityType entityType = entityTypes.get( entitySet.getEntityTypeId() );
-        ensureValidEntitySet( entitySet );
-
-        if ( entityType.getCategory().equals( SecurableObjectType.AssociationType ) ) {
-            entitySet.addFlag( EntitySetFlag.ASSOCIATION );
-        } else if ( entitySet.getFlags().contains( EntitySetFlag.ASSOCIATION ) ) {
-            entitySet.removeFlag( EntitySetFlag.ASSOCIATION );
-        }
-
-        createEntitySet( principal, entitySet, entityType.getProperties() );
-    }
-
-    private void ensureValidEntitySet( EntitySet entitySet ) {
-        if ( entitySet.isLinking() ) {
-            entitySet.getLinkedEntitySets().forEach( linkedEntitySetId -> {
-                Preconditions.checkArgument(
-                        getEntityTypeByEntitySetId( linkedEntitySetId ).getId().equals( entitySet.getEntityTypeId() ),
-                        "Entity type of linked entity sets must be the same as of the linking entity set" );
-            } );
-        }
-    }
-
-    @Override
-    public void createEntitySet( Principal principal, EntitySet entitySet, Set<UUID> ownablePropertyTypeIDs ) {
-        Principals.ensureUser( principal );
-        createEntitySet( entitySet );
-
-        try {
-            setupDefaultEntitySetPropertyMetadata( entitySet.getId(), entitySet.getEntityTypeId() );
-
-            authorizations.setSecurableObjectType( new AclKey( entitySet.getId() ), SecurableObjectType.EntitySet );
-
-            authorizations.addPermission( new AclKey( entitySet.getId() ),
-                    principal,
-                    EnumSet.allOf( Permission.class ) );
-
-            ownablePropertyTypeIDs.stream()
-                    .map( propertyTypeId -> new AclKey( entitySet.getId(), propertyTypeId ) )
-                    .peek( aclKey -> {
-                        authorizations.setSecurableObjectType( aclKey,
-                                SecurableObjectType.PropertyTypeInEntitySet );
-                    } )
-                    .forEach( aclKey -> authorizations
-                            .addPermission( aclKey, principal, EnumSet.allOf( Permission.class ) ) );
-
-            List<PropertyType> ownablePropertyTypes = Lists
-                    .newArrayList( propertyTypes.getAll( ownablePropertyTypeIDs ).values() );
-            edmManager.createEntitySet( entitySet, ownablePropertyTypes );
-
-            eventBus.post( new EntitySetCreatedEvent( entitySet, ownablePropertyTypes ) );
-
-            if ( !entitySet.getFlags().contains( EntitySetFlag.AUDIT ) ) {
-                aresManager.createAuditEntitySetForEntitySet( entitySet );
-            }
-
-        } catch ( Exception e ) {
-            logger.error( "Unable to create entity set {} for principal {}", entitySet, principal, e );
-            Util.deleteSafely( entitySets, entitySet.getId() );
-            aclKeyReservations.release( entitySet.getId() );
-            throw new IllegalStateException( "Unable to create entity set: " + entitySet.getId() );
-        }
-    }
-
-    private void setupDefaultEntitySetPropertyMetadata( UUID entitySetId, UUID entityTypeId ) {
-        final var et = getEntityType( entityTypeId );
-        final var propertyTags = et.getPropertyTags();
-        et.getProperties().forEach( propertyTypeId -> {
-            EntitySetPropertyKey key = new EntitySetPropertyKey( entitySetId, propertyTypeId );
-            PropertyType property = getPropertyType( propertyTypeId );
-            EntitySetPropertyMetadata metadata = new EntitySetPropertyMetadata(
-                    property.getTitle(),
-                    property.getDescription(),
-                    new LinkedHashSet<>( propertyTags.get( propertyTypeId ) ),
-                    true );
-            entitySetPropertyMetadata.put( key, metadata );
-        } );
     }
 
     private void setupDefaultEntityTypePropertyMetadata( UUID entityTypeId ) {
@@ -546,7 +326,6 @@ public class EdmService implements EdmManager {
             entityTypePropertyMetadata.put( key, metadata );
         } );
     }
-
 
     @SuppressWarnings( "unchecked" )
     @Override
@@ -576,7 +355,7 @@ public class EdmService implements EdmManager {
     @Override
     public Set<UUID> getEntityTypeUuids( Set<FullQualifiedName> fqns ) {
         return aclKeys.getAll( Util.fqnToString( fqns ) ).values().stream()
-                .filter( id -> id != null )
+                .filter( Objects::nonNull )
                 .collect( Collectors.toSet() );
     }
 
@@ -588,7 +367,7 @@ public class EdmService implements EdmManager {
     @Override
     public Set<UUID> getPropertyTypeUuids( Set<FullQualifiedName> fqns ) {
         return aclKeys.getAll( Util.fqnToString( fqns ) ).values().stream()
-                .filter( id -> id != null )
+                .filter( Objects::nonNull )
                 .collect( Collectors.toSet() );
     }
 
@@ -628,11 +407,17 @@ public class EdmService implements EdmManager {
 
     @Override
     public EntityType getEntityType( FullQualifiedName typeFqn ) {
-        UUID entityTypeId = getTypeAclKey( typeFqn );
-        checkNotNull( entityTypeId,
+        final var entityType = getEntityTypeSafe( typeFqn );
+        checkNotNull( entityType,
                 "Entity type %s does not exists.",
                 typeFqn.getFullQualifiedNameAsString() );
-        return getEntityType( entityTypeId );
+        return entityType;
+    }
+
+    @Override
+    public @Nullable EntityType getEntityTypeSafe( FullQualifiedName typeFqn ) {
+        UUID entityTypeId = getTypeAclKey( typeFqn );
+        return ( entityTypeId == null ) ? null : getEntityType( entityTypeId );
     }
 
     @Override
@@ -663,8 +448,7 @@ public class EdmService implements EdmManager {
 
     @Override
     public Iterable<AssociationType> getAssociationTypes() {
-        return Iterables.transform( entityTypeManager.getAssociationTypeIds(),
-                associationTypeId -> getAssociationType( associationTypeId ) );
+        return Iterables.transform( entityTypeManager.getAssociationTypeIds(), this::getAssociationType );
     }
 
     @Override
@@ -673,19 +457,8 @@ public class EdmService implements EdmManager {
     }
 
     @Override
-    public EntitySet getEntitySet( UUID entitySetId ) {
-        return Util.getSafely( entitySets, entitySetId );
-    }
-
-    @Override
-    public Iterable<EntitySet> getEntitySets() {
-        return edmManager.getAllEntitySets();
-    }
-
-    @Override
     public Iterable<PropertyUsageSummary> getPropertyUsageSummary( UUID propertyTypeId ) {
-        String propertyTableName = DataTables.quote( DataTables.propertyTableName( propertyTypeId ) );
-        return edmManager.getPropertyUsageSummary( propertyTableName );
+        return edmManager.getPropertyUsageSummary( propertyTypeId );
     }
 
     @Override
@@ -706,24 +479,6 @@ public class EdmService implements EdmManager {
         return entityTypeManager.getPropertyTypes();
     }
 
-    @Timed
-    @Override
-    public Map<UUID, PropertyType> getPropertyTypesForEntitySet( UUID entitySetId ) {
-        //TODO: Use a projection to retrieve just the entity type.
-        EntitySet entitySet = Util.getSafely( entitySets, entitySetId );
-        if ( entitySet == null ) {
-            throw new ResourceNotFoundException( "Entity set " + entitySetId.toString() + " does not exist." );
-        }
-
-        //TODO: Use a project tio retrieve just the property type ids.
-        UUID entityTypeId = entitySet.getEntityTypeId();
-        EntityType entityType = Util.getSafely( entityTypes, entityTypeId );
-
-        if ( entityType == null ) {
-            throw new ResourceNotFoundException( "Entity type " + entityTypeId.toString() + " does not exist." );
-        }
-        return propertyTypes.getAll( entityType.getProperties() );
-    }
 
     @Override
     public void addPropertyTypesToEntityType( UUID entityTypeId, Set<UUID> propertyTypeIds ) {
@@ -732,11 +487,11 @@ public class EdmService implements EdmManager {
         List<PropertyType> newPropertyTypes = Lists.newArrayList( propertyTypes.getAll( propertyTypeIds ).values() );
         Stream<UUID> childrenIds = entityTypeManager.getEntityTypeChildrenIdsDeep( entityTypeId );
         Map<UUID, Boolean> childrenIdsToLocks = childrenIds
-                .collect( Collectors.toMap( Functions.<UUID>identity()::apply, propertyTypes::tryLock ) );
+                .collect( Collectors.toMap( Function.identity(), propertyTypes::tryLock ) );
         childrenIdsToLocks.values().forEach( locked -> {
             if ( !locked ) {
-                childrenIdsToLocks.entrySet().forEach( entry -> {
-                    if ( entry.getValue() ) { propertyTypes.unlock( entry.getKey() ); }
+                childrenIdsToLocks.forEach( (key, value) -> {
+                    if ( value ) { propertyTypes.unlock( key ); }
                 } );
                 throw new IllegalStateException(
                         "Unable to modify the entity data model right now--please try again." );
@@ -751,11 +506,11 @@ public class EdmService implements EdmManager {
             for ( EntitySet entitySet : getEntitySetsOfType( id ) ) {
                 UUID esId = entitySet.getId();
                 Map<UUID, PropertyType> propertyTypes = propertyTypeIds.stream().collect( Collectors.toMap(
-                        propertyTypeId -> propertyTypeId, propertyTypeId -> getPropertyType( propertyTypeId ) ) );
+                        propertyTypeId -> propertyTypeId, this::getPropertyType ) );
                 Iterable<Principal> owners = authorizations.getSecurableObjectOwners( new AclKey( esId ) );
                 for ( Principal owner : owners ) {
                     propertyTypeIds.stream()
-                            .map( propertyTypeId -> new AclKey( entitySet.getId(), propertyTypeId ) )
+                            .map( propertyTypeId -> new AclKey( esId, propertyTypeId ) )
                             .forEach( aclKey -> {
                                 authorizations.setSecurableObjectType( aclKey,
                                         SecurableObjectType.PropertyTypeInEntitySet );
@@ -779,7 +534,7 @@ public class EdmService implements EdmManager {
 
                 markMaterializedEntitySetDirtyWithEdmChanges( esId );  // add edm_unsync flag for materialized views
 
-                eventBus.post( new PropertyTypesInEntitySetUpdatedEvent( entitySet.getId(), allPropertyTypes, false ) );
+                eventBus.post( new PropertyTypesInEntitySetUpdatedEvent( esId, allPropertyTypes, false ) );
                 eventBus.post( new PropertyTypesAddedToEntitySetEvent(
                         entitySet,
                         newPropertyTypes,
@@ -795,8 +550,8 @@ public class EdmService implements EdmManager {
                 eventBus.post( new AssociationTypeCreatedEvent( getAssociationType( id ) ) );
             }
         } );
-        childrenIdsToLocks.entrySet().forEach( entry -> {
-            if ( entry.getValue() ) { propertyTypes.unlock( entry.getKey() ); }
+        childrenIdsToLocks.forEach( (key, value) -> {
+            if ( value ) { propertyTypes.unlock( key ); }
         } );
     }
 
@@ -829,14 +584,14 @@ public class EdmService implements EdmManager {
 
         List<UUID> childrenIds = entityTypeManager
                 .getEntityTypeChildrenIdsDeep( entityTypeId )
-                .collect( Collectors.<UUID>toList() );
+                .collect( Collectors.toList() );
 
         Map<UUID, Boolean> childrenIdsToLocks = childrenIds.stream()
-                .collect( Collectors.toMap( Functions.<UUID>identity()::apply, propertyTypes::tryLock ) );
+                .collect( Collectors.toMap( Function.identity(), propertyTypes::tryLock ) );
         childrenIdsToLocks.values().forEach( locked -> {
             if ( !locked ) {
-                childrenIdsToLocks.entrySet().forEach( entry -> {
-                    if ( entry.getValue() ) { propertyTypes.unlock( entry.getKey() ); }
+                childrenIdsToLocks.forEach( (key, value) -> {
+                    if ( value ) { propertyTypes.unlock( key ); }
                 } );
                 throw new IllegalStateException(
                         "Unable to modify the entity data model right now--please try again." );
@@ -944,8 +699,6 @@ public class EdmService implements EdmManager {
 
         if ( isFqnUpdated ) {
             aclKeyReservations.renameReservation( propertyTypeId, update.getType().get() );
-            edmManager.updatePropertyTypeFqn( propertyType, update.getType().get() );
-
             eventBus.post( new PropertyTypeCreatedEvent( propertyType ) );
         }
         propertyTypes.executeOnKey( propertyTypeId, new UpdatePropertyTypeMetadataProcessor( update ) );
@@ -980,21 +733,8 @@ public class EdmService implements EdmManager {
         }
     }
 
-    @Override
-    public void updateEntitySetMetadata( UUID entitySetId, MetadataUpdate update ) {
-        if ( update.getName().isPresent() ) {
-            aclKeyReservations.renameReservation( entitySetId, update.getName().get() );
-        }
-        entitySets.executeOnKey( entitySetId, new UpdateEntitySetMetadataProcessor( update ) );
-        eventBus.post( new EntitySetMetadataUpdatedEvent( getEntitySet( entitySetId ) ) );
-    }
-
     private void markMaterializedEntitySetDirtyWithEdmChanges( UUID entitySetId ) {
-        assembler.flagMaterializedEntitySetEdmUnsynch( entitySetId );
-    }
-
-    private void markMaterializedEntitySetDirtyWithDataChanges( UUID entitySetId ) {
-        assembler.flagMaterializedEntitySetDataUnsynch( entitySetId );
+        eventBus.post( new MaterializedEntitySetEdmChangeEvent( entitySetId ) );
     }
 
     /**************
@@ -1041,16 +781,6 @@ public class EdmService implements EdmManager {
     }
 
     @Override
-    public boolean checkEntitySetExists( String name ) {
-        UUID id = Util.getSafely( aclKeys, name );
-        if ( id == null ) {
-            return false;
-        } else {
-            return entitySets.containsKey( id );
-        }
-    }
-
-    @Override
     public Collection<PropertyType> getPropertyTypes( Set<UUID> propertyIds ) {
         return propertyTypes.getAll( propertyIds ).values();
     }
@@ -1073,16 +803,6 @@ public class EdmService implements EdmManager {
     @Override
     public FullQualifiedName getEntityTypeFqn( UUID entityTypeId ) {
         return Util.stringToFqn( Util.getSafely( names, entityTypeId ) );
-    }
-
-    @Override
-    public EntitySet getEntitySet( String entitySetName ) {
-        UUID id = Util.getSafely( aclKeys, entitySetName );
-        if ( id == null ) {
-            return null;
-        } else {
-            return getEntitySet( id );
-        }
     }
 
     @Override
@@ -1110,11 +830,6 @@ public class EdmService implements EdmManager {
         return entityTypes.getAll( entityTypeIds );
     }
 
-    @Override
-    public Map<UUID, EntitySet> getEntitySetsAsMap( Set<UUID> entitySetIds ) {
-        return entitySets.getAll( entitySetIds );
-    }
-
     @SuppressWarnings( "unchecked" )
     @Override
     public <V> Map<UUID, V> fromPropertyTypes( Set<UUID> propertyTypeIds, EntryProcessor<UUID, PropertyType> ep ) {
@@ -1134,18 +849,6 @@ public class EdmService implements EdmManager {
     public Set<UUID> getPropertyTypeIdsOfEntityTypeWithPIIField( UUID entityTypeId ) {
         return getPropertyTypeIdsOfEntityType( entityTypeId ).stream()
                 .filter( ptId -> getPropertyType( ptId ).isPii() ).collect( Collectors.toSet() );
-    }
-
-    @Override
-    public EntityType getEntityTypeByEntitySetId( UUID entitySetId ) {
-        UUID entityTypeId = getEntitySet( entitySetId ).getEntityTypeId();
-        return getEntityType( entityTypeId );
-    }
-
-    @Override
-    public Map<UUID, UUID> getEntityTypeIdsByEntitySetIds( Set<UUID> entitySetIds ) {
-        return entitySets.getAll( entitySetIds ).entrySet().stream()
-                .collect( Collectors.toMap( Map.Entry::getKey, entry -> entry.getValue().getEntityTypeId() ) );
     }
 
     @Override
@@ -1186,7 +889,7 @@ public class EdmService implements EdmManager {
                 .ofNullable( Util.getSafely( associationTypes, associationTypeId ) );
         Optional<EntityType> entityType = Optional.ofNullable(
                 Util.getSafely( entityTypes, associationTypeId ) );
-        if ( !associationDetails.isPresent() || !entityType.isPresent() ) { return null; }
+        if ( associationDetails.isEmpty() || entityType.isEmpty() ) { return null; }
         return new AssociationType(
                 entityType,
                 associationDetails.get().getSrc(),
@@ -1195,27 +898,10 @@ public class EdmService implements EdmManager {
     }
 
     @Override
-    public AssociationType getAssociationTypeByEntitySetId( UUID entitySetId ) {
-        final var entityTypeId = getEntitySet( entitySetId ).getEntityTypeId();
-        return getAssociationType( entityTypeId );
-    }
-
-    @Override
-    public Map<UUID, AssociationType> getAssociationTypeDetailsByEntitySetIds( Set<UUID> entitySetIds ) {
-        final var entityTypeIdsByEntitySetId = getEntityTypeIdsByEntitySetIds( entitySetIds );
-
-        Map<UUID, AssociationType> associationTypesByEntityTypeId = associationTypes
-                .getAll( Sets.newHashSet( entityTypeIdsByEntitySetId.values() ) );
-
-        return entitySetIds.stream().collect( Collectors.toMap( Function.identity(),
-                entitySetId -> associationTypesByEntityTypeId.get( entityTypeIdsByEntitySetId.get( entitySetId ) ) ) );
-    }
-
-    @Override
     public void deleteAssociationType( UUID associationTypeId ) {
         AssociationType associationType = getAssociationType( associationTypeId );
         if ( associationType.getAssociationEntityType() == null ) {
-            logger.error( "Inconsistency found: association type of id %s has no associated entity type",
+            logger.error( "Inconsistency found: association type of id {} has no associated entity type",
                     associationTypeId );
             throw new IllegalStateException( "Failed to delete association type of id " + associationTypeId );
         }
@@ -1229,25 +915,19 @@ public class EdmService implements EdmManager {
         AssociationType associationType = getAssociationTypeDetails( associationTypeId );
         LinkedHashSet<EntityType> srcEntityTypes = associationType.getSrc()
                 .stream()
-                .map( entityTypeId -> getEntityType( entityTypeId ) )
-                .collect( Collectors.toCollection( () -> new LinkedHashSet<>() ) );
+                .map( this::getEntityType )
+                .collect( Collectors.toCollection( LinkedHashSet::new ) );
         LinkedHashSet<EntityType> dstEntityTypes = associationType.getDst()
                 .stream()
-                .map( entityTypeId -> getEntityType( entityTypeId ) )
-                .collect( Collectors.toCollection( () -> new LinkedHashSet<>() ) );
+                .map( this::getEntityType )
+                .collect( Collectors.toCollection( LinkedHashSet::new ) );
         return new AssociationDetails( srcEntityTypes, dstEntityTypes, associationType.isBidirectional() );
     }
 
     @Override
     public Iterable<EntityType> getAvailableAssociationTypesForEntityType( UUID entityTypeId ) {
-        return entityTypeManager.getAssociationIdsForEntityType( entityTypeId ).map( id -> entityTypes.get( id ) )
+        return entityTypeManager.getAssociationIdsForEntityType( entityTypeId ).map( entityTypes::get )
                 .collect( Collectors.toList() );
-    }
-
-    @Override
-    public boolean isAssociationEntitySet( UUID entitySetId ) {
-        final var entityTypeId = getEntitySet( entitySetId ).getEntityTypeId();
-        return associationTypes.containsKey( entityTypeId );
     }
 
     private void createOrUpdatePropertyTypeWithFqn( PropertyType pt, FullQualifiedName fqn ) {
@@ -1271,6 +951,8 @@ public class EdmService implements EdmManager {
                     Optional.empty(),
                     Optional.empty(),
                     Optional.empty(),
+                    Optional.empty(),
+                    Optional.empty(),
                     Optional.empty() ) );
         }
     }
@@ -1288,7 +970,7 @@ public class EdmService implements EdmManager {
                     ? Optional.empty() : Optional.of( et.getDescription() );
             Optional<FullQualifiedName> optionalFqnUpdate = ( fqn.equals( existing.getType() ) )
                     ? Optional.empty() : Optional.of( fqn );
-            Optional<LinkedHashMultimap<UUID, String>> optionalPropertyTagsUpdate = ( existing.getPropertyTags()
+            Optional<LinkedHashMultimap<UUID, String>> optionalPropertyTagsUpdate = ( et.getPropertyTags()
                     .equals( existing.getPropertyTags() ) )
                     ? Optional.empty() : Optional.of( existing.getPropertyTags() );
             updateEntityTypeMetadata( existing.getId(), new MetadataUpdate(
@@ -1301,6 +983,8 @@ public class EdmService implements EdmManager {
                     Optional.empty(),
                     Optional.empty(),
                     optionalPropertyTagsUpdate,
+                    Optional.empty(),
+                    Optional.empty(),
                     Optional.empty() ) );
             if ( !et.getProperties().equals( existing.getProperties() ) ) {
                 addPropertyTypesToEntityType( existing.getId(), et.getProperties() );
@@ -1337,26 +1021,17 @@ public class EdmService implements EdmManager {
             SecurableObjectType objectType,
             Map<UUID, PropertyType> propertyTypesById,
             Map<UUID, EntityType> entityTypesById,
-            Map<UUID, AssociationType> associationTypesById,
-            boolean useTempFqn ) {
-        FullQualifiedName tempFqn = new FullQualifiedName(
-                UUID.randomUUID().toString(),
-                UUID.randomUUID().toString() );
+            Map<UUID, AssociationType> associationTypesById ) {
+
         switch ( objectType ) {
             case PropertyTypeInEntitySet:
-                if ( useTempFqn ) { createOrUpdatePropertyTypeWithFqn( propertyTypesById.get( id ), tempFqn ); } else {
-                    createOrUpdatePropertyType( propertyTypesById.get( id ) );
-                }
+                createOrUpdatePropertyType( propertyTypesById.get( id ) );
                 break;
             case EntityType:
-                if ( useTempFqn ) { createOrUpdateEntityTypeWithFqn( entityTypesById.get( id ), tempFqn ); } else {
-                    createOrUpdateEntityType( entityTypesById.get( id ) );
-                }
+                createOrUpdateEntityType( entityTypesById.get( id ) );
                 break;
             case AssociationType:
-                if ( useTempFqn ) {
-                    createOrUpdateAssociationTypeWithFqn( associationTypesById.get( id ), tempFqn );
-                } else { createOrUpdateAssociationType( associationTypesById.get( id ) ); }
+                createOrUpdateAssociationType( associationTypesById.get( id ) );
                 break;
             default:
                 break;
@@ -1449,7 +1124,7 @@ public class EdmService implements EdmManager {
             if ( schemaManager.checkSchemaExists( schema.getFqn() ) ) {
                 existing = schemaManager.getSchema( schema.getFqn().getNamespace(), schema.getFqn().getName() );
             }
-            if ( existing == null || !schema.equals( existing ) ) { updatedSchemas.add( schema ); }
+            if ( !schema.equals( existing ) ) { updatedSchemas.add( schema ); }
         } );
 
         List<Set<List<UUID>>> cyclesAndConflicts = checkFqnDiffs( idsToFqns );
@@ -1457,9 +1132,7 @@ public class EdmService implements EdmManager {
         cyclesAndConflicts.get( 0 ).forEach( idList -> idList.forEach( id -> idsToOutcome.put( id, true ) ) );
         cyclesAndConflicts.get( 1 ).forEach( idList -> idList.forEach( id -> idsToOutcome.put( id, false ) ) );
 
-        idsToOutcome.entrySet().forEach( idAndResolve -> {
-            UUID id = idAndResolve.getKey();
-            boolean shouldResolve = idAndResolve.getValue();
+        idsToOutcome.forEach( (id, shouldResolve) -> {
             switch ( idsToTypes.get( id ) ) {
                 case PropertyTypeInEntitySet:
                     if ( shouldResolve ) { updatedPropertyTypes.add( propertyTypesById.get( id ) ); } else {
@@ -1512,10 +1185,7 @@ public class EdmService implements EdmManager {
         SetMultimap<FullQualifiedName, UUID> internalFqnToId = HashMultimap.create();
         Map<FullQualifiedName, UUID> externalFqnToId = Maps.newHashMap();
 
-        idToType.entrySet().forEach( entry -> {
-            UUID id = entry.getKey();
-            FullQualifiedName fqn = entry.getValue();
-
+        idToType.forEach( (id, fqn) -> {
             UUID conflictId = aclKeys.get( fqn.toString() );
             updatedIdToFqn.put( id, fqn );
             internalFqnToId.put( fqn, id );
@@ -1558,75 +1228,6 @@ public class EdmService implements EdmManager {
             conflictingIdsToFqns.removeAll( conflictingIdsViewed );
         }
         return Lists.newArrayList( result, conflicts );
-    }
-
-    @Override
-    public Map<UUID, EntitySetPropertyMetadata> getAllEntitySetPropertyMetadata( UUID entitySetId ) {
-        return getEntityTypeByEntitySetId( entitySetId ).getProperties().stream()
-                .collect( Collectors.toMap( propertyTypeId -> propertyTypeId,
-                        propertyTypeId -> getEntitySetPropertyMetadata( entitySetId, propertyTypeId ) ) );
-    }
-
-    @Override
-    public Map<UUID, Map<UUID, EntitySetPropertyMetadata>> getAllEntitySetPropertyMetadataForIds( Set<UUID> entitySetIds ) {
-        Map<UUID, EntitySet> entitySetsById = entitySets.getAll( entitySetIds );
-        Map<UUID, EntityType> entityTypesById = entityTypes
-                .getAll( entitySetsById.values().stream().map( EntitySet::getEntityTypeId ).collect(
-                        Collectors.toSet() ) );
-
-        Set<EntitySetPropertyKey> keys = entitySetIds.stream()
-                .flatMap( entitySetId -> entityTypesById.get( entitySetsById.get( entitySetId ).getEntityTypeId() )
-                        .getProperties().stream()
-                        .map( propertyTypeId -> new EntitySetPropertyKey( entitySetId, propertyTypeId ) ) )
-                .collect( Collectors.toSet() );
-
-        Map<EntitySetPropertyKey, EntitySetPropertyMetadata> metadataMap = entitySetPropertyMetadata.getAll( keys );
-
-        Set<EntitySetPropertyKey> missingKeys = ImmutableSet.copyOf( Sets.difference( keys, metadataMap.keySet() ) );
-        Map<UUID, PropertyType> missingPropertyTypesById = propertyTypes
-                .getAll( missingKeys.stream().map( EntitySetPropertyKey::getPropertyTypeId )
-                        .collect( Collectors.toSet() ) );
-
-        Map<EntitySetPropertyKey, EntitySetPropertyMetadata> defaultMetadataToCreate = new HashMap<>( missingKeys
-                .size() );
-        for ( EntitySetPropertyKey newKey : missingKeys ) {
-
-            PropertyType propertyType = missingPropertyTypesById.get( newKey.getPropertyTypeId() );
-            Set<String> propertyTags = entityTypesById
-                    .get( entitySetsById.get( newKey.getEntitySetId() ).getEntityTypeId() )
-                    .getPropertyTags().get( newKey.getPropertyTypeId() );
-
-            EntitySetPropertyMetadata defaultMetadata = new EntitySetPropertyMetadata(
-                    propertyType.getTitle(),
-                    propertyType.getDescription(),
-                    new LinkedHashSet<>( propertyTags ),
-                    true );
-
-            defaultMetadataToCreate.put( newKey, defaultMetadata );
-            metadataMap.put( newKey, defaultMetadata );
-        }
-
-        entitySetPropertyMetadata.putAll( defaultMetadataToCreate );
-
-        return metadataMap.entrySet().stream().collect( Collectors.groupingBy( entry -> entry.getKey().getEntitySetId(),
-                Collectors.toMap( entry -> entry.getKey().getPropertyTypeId(), entry -> entry.getValue() ) ) );
-
-    }
-
-    @Override
-    public EntitySetPropertyMetadata getEntitySetPropertyMetadata( UUID entitySetId, UUID propertyTypeId ) {
-        EntitySetPropertyKey key = new EntitySetPropertyKey( entitySetId, propertyTypeId );
-        if ( !entitySetPropertyMetadata.containsKey( key ) ) {
-            UUID entityTypeId = getEntitySet( entitySetId ).getEntityTypeId();
-            setupDefaultEntitySetPropertyMetadata( entitySetId, entityTypeId );
-        }
-        return entitySetPropertyMetadata.get( key );
-    }
-
-    @Override
-    public void updateEntitySetPropertyMetadata( UUID entitySetId, UUID propertyTypeId, MetadataUpdate update ) {
-        EntitySetPropertyKey key = new EntitySetPropertyKey( entitySetId, propertyTypeId );
-        entitySetPropertyMetadata.executeOnKey( key, new UpdateEntitySetPropertyMetadataProcessor( update ) );
     }
 
     @Override
@@ -1704,30 +1305,18 @@ public class EdmService implements EdmManager {
 
         Set<UUID> updatedIds = Sets.newHashSet();
 
-        fqnCycles.forEach( cycle -> {
-            cycle.forEach( id -> {
-                resolveFqnCycles( id,
-                        idToType.get( id ),
-                        propertyTypesById,
-                        entityTypesById,
-                        associationTypesById,
-                        true );
-            } );
-            cycle.forEach( id -> {
-                resolveFqnCycles( id,
-                        idToType.get( id ),
-                        propertyTypesById,
-                        entityTypesById,
-                        associationTypesById,
-                        false );
-                updatedIds.add( id );
-            } );
+        fqnCycles.forEach( cycle ->
+                cycle.forEach( id -> {
+                    resolveFqnCycles( id,
+                            idToType.get( id ),
+                            propertyTypesById,
+                            entityTypesById,
+                            associationTypesById );
+                    updatedIds.add( id );
+                } )
+        );
 
-        } );
-
-        diff.getDiff().getSchemas().forEach( schema -> {
-            schemaManager.createOrUpdateSchemas( schema );
-        } );
+        diff.getDiff().getSchemas().forEach( schemaManager::createOrUpdateSchemas );
 
         diff.getDiff().getPropertyTypes().forEach( pt -> {
             if ( !updatedIds.contains( pt.getId() ) ) {
@@ -1751,35 +1340,12 @@ public class EdmService implements EdmManager {
         } );
     }
 
-    @Override
-    public Collection<EntitySet> getEntitySetsOfType( Set<UUID> entityTypeIds ) {
-        return entitySets.values( Predicates
-                .in( EntitySetMapstore.ENTITY_TYPE_ID_INDEX, entityTypeIds.toArray( new UUID[ 0 ] ) ) );
-    }
-
-    @Override public Collection<EntitySet> getEntitySetsOfType( UUID entityTypeId ) {
-        return entitySets.values( Predicates.equal( EntitySetMapstore.ENTITY_TYPE_ID_INDEX, entityTypeId ) );
-    }
-
-    @Override public Collection<UUID> getEntitySetIdsOfType( UUID entityTypeId ) {
+    /* Entity set related functions */
+    private Collection<UUID> getEntitySetIdsOfType( UUID entityTypeId ) {
         return entitySets.keySet( Predicates.equal( EntitySetMapstore.ENTITY_TYPE_ID_INDEX, entityTypeId ) );
     }
 
-    @Override public Set<UUID> getEntitySetsForOrganization( UUID organizationId ) {
-        return entitySets.keySet( Predicates.equal( EntitySetMapstore.ORGANIZATION_INDEX, organizationId ) );
+    private Collection<EntitySet> getEntitySetsOfType( UUID entityTypeId ) {
+        return entitySets.values( Predicates.equal( EntitySetMapstore.ENTITY_TYPE_ID_INDEX, entityTypeId ) );
     }
-
-    @Override
-    @SuppressWarnings( "unchecked" )
-    public Set<UUID> getEntitySetIdsWithFlags( Set<UUID> entitySetIds, Set<EntitySetFlag> filteringFlags ) {
-        return entitySets.aggregate(
-                new EntitySetsFlagFilteringAggregator( filteringFlags ),
-                Predicates.in( "__key", entitySetIds.toArray( new UUID[]{} ) ) );
-    }
-
-    @Override
-    public AuditRecordEntitySetsManager getAuditRecordEntitySetsManager() {
-        return aresManager;
-    }
-
 }

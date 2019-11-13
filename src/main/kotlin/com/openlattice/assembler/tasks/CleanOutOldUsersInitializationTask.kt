@@ -21,10 +21,8 @@
 
 package com.openlattice.assembler.tasks
 
-import com.hazelcast.query.Predicates
 import com.openlattice.assembler.*
 import com.openlattice.authorization.initializers.AuthorizationInitializationTask
-import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.organizations.tasks.OrganizationsInitializationTask
 import com.openlattice.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.Task
@@ -42,7 +40,7 @@ class CleanOutOldUsersInitializationTask : HazelcastInitializationTask<Assembler
         logger.info("Cleaning out unnecessary users from production.")
         val users = dependencies
                 .assemblerConnectionManager
-                .getAllUsers(dependencies.securePrincipalsManager)
+                .getAllUsers()
 /*        val organizations =
                 dependencies
                         .securableObjectTypes.keySet(Predicates.equal("this", SecurableObjectType.Organization))

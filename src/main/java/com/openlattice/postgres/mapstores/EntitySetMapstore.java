@@ -12,10 +12,8 @@ import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.postgres.PostgresArrays;
 import com.openlattice.postgres.ResultSetAdapters;
 import com.zaxxer.hikari.HikariDataSource;
-import java.sql.Array;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+
+import java.sql.*;
 import java.util.UUID;
 
 public class EntitySetMapstore extends AbstractBasePostgresMapstore<UUID, EntitySet> {
@@ -23,6 +21,7 @@ public class EntitySetMapstore extends AbstractBasePostgresMapstore<UUID, Entity
     public static final String ID_INDEX                = "id";
     public static final String LINKED_ENTITY_SET_INDEX = "linkedEntitySets[any]";
     public static final String ORGANIZATION_INDEX      = "organizationId";
+    public static final String FLAGS_INDEX             = "flags[any]";
 
     public EntitySetMapstore( HikariDataSource hds ) {
         super( HazelcastMap.ENTITY_SETS.name(), ENTITY_SETS, hds );
@@ -34,6 +33,7 @@ public class EntitySetMapstore extends AbstractBasePostgresMapstore<UUID, Entity
                 .createUuidArray( ps.getConnection(), value.getLinkedEntitySets().stream() );
         Array flags = PostgresArrays
                 .createTextArray( ps.getConnection(), value.getFlags().stream().map( EntitySetFlag::toString ) );
+        Array partitions = PostgresArrays.createIntArray( ps.getConnection(), value.getPartitions() );
 
         bind( ps, key, 1 );
         ps.setString( 2, value.getName() );
@@ -44,16 +44,50 @@ public class EntitySetMapstore extends AbstractBasePostgresMapstore<UUID, Entity
         ps.setArray( 7, linkedEntitySets );
         ps.setObject( 8, value.getOrganizationId() );
         ps.setArray( 9, flags );
+        ps.setArray( 10, partitions );
+        ps.setInt( 11, value.getPartitionsVersion() );
+        if ( value.getExpiration() == null ) {
+            ps.setNull( 12, Types.NULL );
+            ps.setNull( 13, Types.NULL );
+            ps.setNull( 14, Types.NULL );
+            ps.setNull( 15, Types.NULL );
+        } else {
+            ps.setLong( 12, value.getExpiration().getTimeToExpiration() );
+            ps.setString( 13, value.getExpiration().getExpirationBase().toString() );
+            ps.setString( 14, value.getExpiration().getDeleteType().toString() );
+            if ( value.getExpiration().getStartDateProperty().isPresent() ) {
+                ps.setObject( 15, value.getExpiration().getStartDateProperty().get() );
+            } else {
+                ps.setNull( 15, Types.NULL );
+            }
+        }
 
         // UPDATE
-        ps.setString( 10, value.getName() );
-        ps.setObject( 11, value.getEntityTypeId() );
-        ps.setString( 12, value.getTitle() );
-        ps.setString( 13, value.getDescription() );
-        ps.setArray( 14, contacts );
-        ps.setArray( 15, linkedEntitySets );
-        ps.setObject( 16, value.getOrganizationId() );
-        ps.setArray( 17, flags );
+        ps.setString( 16, value.getName() );
+        ps.setObject( 17, value.getEntityTypeId() );
+        ps.setString( 18, value.getTitle() );
+        ps.setString( 19, value.getDescription() );
+        ps.setArray( 20, contacts );
+        ps.setArray( 21, linkedEntitySets );
+        ps.setObject( 22, value.getOrganizationId() );
+        ps.setArray( 23, flags );
+        ps.setArray( 24, partitions );
+        ps.setInt( 25, value.getPartitionsVersion() );
+        if ( value.getExpiration() == null ) {
+            ps.setNull( 26, Types.NULL );
+            ps.setNull( 27, Types.NULL );
+            ps.setNull( 28, Types.NULL );
+            ps.setNull( 29, Types.NULL );
+        } else {
+            ps.setLong( 26, value.getExpiration().getTimeToExpiration() );
+            ps.setString( 27, value.getExpiration().getExpirationBase().toString() );
+            ps.setString( 28, value.getExpiration().getDeleteType().toString() );
+            if ( value.getExpiration().getStartDateProperty().isPresent() ) {
+                ps.setObject( 29, value.getExpiration().getStartDateProperty().get() );
+            } else {
+                ps.setNull( 29, Types.NULL );
+            }
+        }
     }
 
     @Override protected int bind( PreparedStatement ps, UUID key, int parameterIndex ) throws SQLException {
@@ -84,6 +118,7 @@ public class EntitySetMapstore extends AbstractBasePostgresMapstore<UUID, Entity
                 .addMapIndexConfig( new MapIndexConfig( ENTITY_TYPE_ID_INDEX, false ) )
                 .addMapIndexConfig( new MapIndexConfig( ID_INDEX, false ) )
                 .addMapIndexConfig( new MapIndexConfig( LINKED_ENTITY_SET_INDEX, false ) )
-                .addMapIndexConfig( new MapIndexConfig( ORGANIZATION_INDEX, false ) );
+                .addMapIndexConfig( new MapIndexConfig( ORGANIZATION_INDEX, false ) )
+                .addMapIndexConfig( new MapIndexConfig( FLAGS_INDEX, false ) );
     }
 }

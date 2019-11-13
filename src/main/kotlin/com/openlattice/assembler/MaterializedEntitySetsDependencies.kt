@@ -25,11 +25,13 @@ import com.openlattice.authorization.EdmAuthorizationHelper
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.tasks.HazelcastTaskDependencies
+import com.zaxxer.hikari.HikariDataSource
 
 data class MaterializedEntitySetsDependencies(
         val assembler: Assembler,
         val materializedEntitySets: IMap<EntitySetAssemblyKey, MaterializedEntitySet>,
         val organizations: HazelcastOrganizationService,
         val edm: EdmManager,
-        val authzHelper: EdmAuthorizationHelper
+        val authzHelper: EdmAuthorizationHelper,
+        val hds: HikariDataSource
 ) : HazelcastTaskDependencies

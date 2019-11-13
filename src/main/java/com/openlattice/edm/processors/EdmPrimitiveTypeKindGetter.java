@@ -22,17 +22,16 @@
 
 package com.openlattice.edm.processors;
 
-import java.util.Map.Entry;
-import java.util.UUID;
-
+import com.openlattice.edm.type.PropertyType;
+import com.openlattice.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.openlattice.edm.type.PropertyType;
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor;
+import java.util.Map.Entry;
+import java.util.UUID;
 
-public class EdmPrimitiveTypeKindGetter extends AbstractRhizomeEntryProcessor<UUID, PropertyType, EdmPrimitiveTypeKind> {
+public class EdmPrimitiveTypeKindGetter extends AbstractReadOnlyRhizomeEntryProcessor<UUID, PropertyType, EdmPrimitiveTypeKind> {
     private static final long            serialVersionUID      = 4485807443899509297L;
     private static final Logger          logger                = LoggerFactory
             .getLogger( EdmPrimitiveTypeKindGetter.class );

@@ -1,14 +1,17 @@
 package com.openlattice.search
 
-import com.google.common.collect.SetMultimap
+import com.hazelcast.query.Predicates
 import com.openlattice.authorization.*
+import com.openlattice.authorization.securable.SecurableObjectType
+import com.openlattice.authorization.util.AuthorizationUtils
 import com.openlattice.data.requests.NeighborEntityDetails
+import com.openlattice.edm.EdmConstants
+import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.edm.type.PropertyType
-import com.openlattice.postgres.DataTables
-import com.openlattice.postgres.DataTables.LAST_WRITE_FQN
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.PERSISTENT_SEARCHES
 import com.openlattice.postgres.ResultSetAdapters
+import com.openlattice.postgres.mapstores.EntitySetMapstore
 import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
 import com.openlattice.search.requests.DataSearchResult
@@ -29,6 +32,7 @@ import java.util.concurrent.TimeUnit
 import java.util.function.Function
 import java.util.function.Supplier
 import java.util.stream.Collectors
+import kotlin.streams.asSequence
 
 private val logger = LoggerFactory.getLogger(PersistentSearchMessengerTask::class.java)
 
@@ -99,7 +103,7 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
 
         val userEmail = dependencies.principalsManager.getUser(userSecurablePrincipal.principal.id).email
         newResults.hits.forEach {
-            val entityKeyId = UUID.fromString(it[DataTables.ID_FQN].first().toString())
+            val entityKeyId = UUID.fromString(it.getValue(EdmConstants.ID_FQN).first().toString())
             val renderableEmail = PersistentSearchEmailRenderer.renderEmail(
                     persistentSearch, it, userEmail, neighborsById.getOrDefault(
                     entityKeyId, listOf()
@@ -109,9 +113,9 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
         }
     }
 
-    private fun getLatestRead(vehicleReads: List<SetMultimap<FullQualifiedName, Any>>): OffsetDateTime? {
+    private fun getLatestRead(vehicleReads: List<Map<FullQualifiedName, Set<Any>>>): OffsetDateTime? {
         return vehicleReads
-                .flatMap { it[LAST_WRITE_FQN] ?: emptySet() }
+                .flatMap { it[EdmConstants.LAST_WRITE_FQN] ?: emptySet() }
                 .map {
                     logger.info("New read datetime as string: {}", it)
                     val localDateTime = Timestamp.valueOf(it.toString()).toLocalDateTime()
@@ -119,8 +123,8 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
                 }.max()
     }
 
-    private fun getHitEntityKeyIds(hits: List<SetMultimap<FullQualifiedName, Any>>): Set<UUID> {
-        return hits.map { UUID.fromString(it[DataTables.ID_FQN].first().toString()) }.toSet()
+    private fun getHitEntityKeyIds(hits: List<Map<FullQualifiedName, Set<Any>>>): Set<UUID> {
+        return hits.map { UUID.fromString((it[EdmConstants.ID_FQN] ?: emptySet()).first().toString()) }.toSet()
     }
 
     private fun findNewWritesForAlert(userAclKey: AclKey, persistentSearch: PersistentSearch): OffsetDateTime? {
@@ -162,7 +166,12 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
             if (results.hits.isNotEmpty()) neighborsById.putAll(
                     dependencies.searchService.executeEntityNeighborSearch(
                             entitySets.getOrDefault(false, listOf()).map { it.id }.toSet(),
-                            EntityNeighborsFilter(getHitEntityKeyIds(results.hits)),
+                            EntityNeighborsFilter(
+                                    getHitEntityKeyIds(results.hits),
+                                    Optional.empty(),
+                                    Optional.empty(),
+                                    Optional.of(getAuthorizedAssociationEntitySets(allUserPrincipals))
+                            ),
                             allUserPrincipals
                     )
             )
@@ -178,10 +187,23 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
         return null
     }
 
-    override fun runTask() {
+    private fun getAuthorizedAssociationEntitySets(principals: Set<Principal>): Set<UUID> {
+        val dependencies = getDependency()
+
+        val readableEntitySetIds = dependencies.authorizationManager.getAuthorizedObjectsOfType(
+                principals,
+                SecurableObjectType.EntitySet,
+                EnumSet.of(Permission.READ)
+        ).asSequence().map { AuthorizationUtils.getLastAclKeySafely(it) }.toSet()
+
+        return dependencies.entitySets.keySet(Predicates.and(
+                Predicates.`in`(EntitySetMapstore.ID_INDEX, *readableEntitySetIds.toTypedArray()),
+                Predicates.equal(EntitySetMapstore.FLAGS_INDEX, EntitySetFlag.ASSOCIATION),
+                Predicates.notEqual(EntitySetMapstore.FLAGS_INDEX, EntitySetFlag.AUDIT)
+        ))
     }
 
-    private fun doTask() {
+    override fun runTask() {
         logger.info("Loading new writes for persistent searches and sending alerts")
 
         val dependencies = getDependency()

@@ -25,12 +25,11 @@ import com.hazelcast.aggregation.Aggregator
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetFlag
 import java.util.*
-import java.util.Map
 
-data class EntitySetsFlagFilteringAggregator(
-        val filteringFlags: Set<EntitySetFlag>
+data class EntitySetsFlagFilteringAggregator @JvmOverloads constructor(
+        val filteringFlags: Set<EntitySetFlag>,
+        val filteredEntitySetIds: MutableSet<UUID> = mutableSetOf()
 ) : Aggregator<Map.Entry<UUID, EntitySet>, Set<UUID>>() {
-    private val filteredEntitySetIds = mutableSetOf<UUID>()
 
     override fun accumulate(input: Map.Entry<UUID, EntitySet>) {
         if (input.value.flags.containsAll(filteringFlags)) {

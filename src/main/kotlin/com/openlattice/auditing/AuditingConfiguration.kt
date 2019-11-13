@@ -23,6 +23,8 @@ package com.openlattice.auditing
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.kryptnostic.rhizome.configuration.annotation.ReloadableConfiguration
+import com.openlattice.aws.AwsS3ClientConfiguration
+import java.util.*
 
 /**
  * Configuration class for auditing.
@@ -31,5 +33,7 @@ import com.kryptnostic.rhizome.configuration.annotation.ReloadableConfiguration
 data class AuditingConfiguration(
         @JsonProperty("entity-type") val entityTypeFqn: String,
         @JsonProperty("edge-entity-type") val edgeEntityTypeFqn: String,
-        @JsonProperty("fqns") val fqns: Map<AuditProperty, String>
+        @JsonProperty("fqns") val fqns: Map<AuditProperty, String>,
+        @JsonProperty("aws") val awsS3ClientConfiguration: Optional<AwsS3ClientConfiguration>,
+        @JsonProperty("partitions") val partitions: Int = 257
 )

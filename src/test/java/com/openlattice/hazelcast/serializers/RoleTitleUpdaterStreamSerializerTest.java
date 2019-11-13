@@ -20,11 +20,9 @@
 
 package com.openlattice.hazelcast.serializers;
 
-import com.openlattice.hazelcast.serializers.RoleTitleUpdaterStreamSerializer;
+import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.organizations.roles.processors.PrincipalTitleUpdater;
 import java.io.Serializable;
-
-import org.apache.commons.lang3.RandomStringUtils;
 
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest;
 
@@ -35,7 +33,7 @@ public class RoleTitleUpdaterStreamSerializerTest
 
     @Override
     protected PrincipalTitleUpdater createInput() {
-        return new PrincipalTitleUpdater( RandomStringUtils.randomAlphanumeric( 5 ) );
+        return new PrincipalTitleUpdater( TestDataFactory.randomAlphanumeric( 5 ) );
     }
 
     @Override

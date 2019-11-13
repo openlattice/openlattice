@@ -23,7 +23,6 @@ package com.openlattice.linking
 
 import com.openlattice.data.EntityDataKey
 import com.openlattice.postgres.streams.PostgresIterable
-import com.openlattice.postgres.streams.StatementHolder
 import java.sql.Connection
 import java.util.*
 
@@ -32,9 +31,10 @@ import java.util.*
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 interface LinkingQueryService {
+
     /**
      * Inserts the results scoring pairs of elements within a cluster to persistent storage. The initial cluster usually
-     * consists of all scored pairs within a single block returned by the [Blocker].
+     * consists of all scored pairs within a single block returned by the [com.openlattice.linking.Blocker].
      *
      * @param clusterId A unique identifier for cluster that is being stored.
      * @param scores The scores pairs of elements within a cluster.
@@ -45,36 +45,43 @@ interface LinkingQueryService {
             clusterId: UUID,
             scores: Map<EntityDataKey, Map<EntityDataKey, Double>>): Int
 
-    fun getNeighborhoodScores(blockKey: EntityDataKey): Map<EntityDataKey, Double>
-    fun deleteMatchScore(blockKey: EntityDataKey, blockElement: EntityDataKey): Int
 
-    fun getOrderedBlocks(): PostgresIterable<Pair<EntityDataKey, Long>>
-    fun getClustersBySize(): PostgresIterable<Pair<EntityDataKey, Double>>
-    fun deleteNeighborhood(entity: EntityDataKey, positiveFeedbacks: List<EntityKeyPair>): Int
+    fun createLinks(linkingId: UUID, toAdd: Set<EntityDataKey>): Int
+
+    fun tombstoneLinks(linkingId: UUID, toRemove: Set<EntityDataKey>): Int
+
+    fun getClusterFromLinkingId(linkingId: UUID): Map<EntityDataKey, Map<EntityDataKey, Double>>
+
+    fun deleteNeighborhood(entity: EntityDataKey, positiveFeedbacks: Collection<EntityKeyPair>): Int
+
     fun deleteNeighborhoods(entitySetId: UUID, entityKeyIds: Set<UUID>): Int
 
     /**
      * Retrieve several clusters.
-     * @param clusterIds The ids for the clusters to load.
+     * @param dataKeys The ids for the clusters to load.
      * @return The graph of scores for each cluster requested.
      */
-    fun getClusters(clusterIds: Collection<UUID>): Map<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>>
-
+    fun getClustersForIds(dataKeys: Set<EntityDataKey>): Map<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>>
 
     fun deleteEntitySetNeighborhood(entitySetId: UUID): Int
 
-    fun updateLinkingTable(clusterId: UUID, newMember: EntityDataKey): Int
+    fun updateIdsTable(clusterId: UUID, newMember: EntityDataKey): Int
 
-    fun getEntitiesNeedingLinking(entitySetIds: Set<UUID>, limit: Int = 10000): PostgresIterable<Pair<UUID, UUID>>
-    fun getEntitiesNotLinked(entitySetIds: Set<UUID>, limit: Int = 10000): PostgresIterable<Pair<UUID, UUID>>
+    fun getEntitiesNeedingLinking(entitySetId: UUID, limit: Int = 10_000): PostgresIterable<EntityDataKey>
+
+    fun getEntitiesNotLinked(entitySetIds: Set<UUID>, limit: Int = 10_000): PostgresIterable<Pair<UUID, UUID>>
+
     fun getLinkableEntitySets(
             linkableEntityTypeIds: Set<UUID>,
             entitySetBlacklist: Set<UUID>,
             whitelist: Set<UUID>
     ): PostgresIterable<UUID>
 
-    fun getIdsOfClustersContaining(dataKeys: Set<EntityDataKey>): PostgresIterable<UUID>
     fun lockClustersForUpdates(clusters: Set<UUID>): Connection
+
+    fun getEntityKeyIdsOfLinkingIds(linkingIds: Set<UUID>): PostgresIterable<Pair<UUID, Set<UUID>>>
+
+    fun createOrUpdateLink(linkingId: UUID, cluster: Map<UUID, LinkedHashSet<UUID>>)
 }
 
 

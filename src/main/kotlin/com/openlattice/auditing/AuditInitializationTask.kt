@@ -16,7 +16,6 @@ import com.openlattice.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies.PostConstructInitializerTask
 import com.openlattice.tasks.Task
 import com.openlattice.users.Auth0SyncInitializationTask
-import com.openlattice.users.Auth0SyncTask
 import org.slf4j.LoggerFactory
 import java.util.*
 
@@ -42,7 +41,7 @@ class AuditInitializationTask(
             logger.info("EDM not yet initialized -- skipping audit initialization.")
             return
         }
-        dependencies.edmService.auditRecordEntitySetsManager.auditingTypes.intialize()
+        dependencies.entitySetManager.getAuditRecordEntitySetsManager().auditingTypes.intialize()
         logger.info("Creating any missing audit entity sets")
         ensureEdmEntitySetExists(dependencies)
         ensureAllEntitySetsHaveAuditEntitySets(dependencies)
@@ -73,34 +72,37 @@ class AuditInitializationTask(
     }
 
     private fun ensureEdmEntitySetExists(dependencies: AuditTaskDependencies) {
-        var edmAuditEntitySet = dependencies.edmService.getEntitySet(EDM_AUDIT_ENTITY_SET_NAME)
+        var edmAuditEntitySet = dependencies.entitySetManager.getEntitySet(EDM_AUDIT_ENTITY_SET_NAME)
 
         if (edmAuditEntitySet == null) {
 
             val admins = dependencies.spm.getAllUsersWithPrincipal(dependencies.spm.lookup(SystemRole.ADMIN.principal))
 
-            if (dependencies.edmService.auditRecordEntitySetsManager.auditingTypes.isAuditingInitialized()) {
+            if (dependencies.entitySetManager.getAuditRecordEntitySetsManager().auditingTypes.isAuditingInitialized()) {
 
-                edmAuditEntitySet = EntitySet(
-                        dependencies.edmService.auditRecordEntitySetsManager.auditingTypes.auditingEntityTypeId,
-                        EDM_AUDIT_ENTITY_SET_NAME,
-                        "EDM Audit Entity Set",
-                        Optional.of("Audit entity set for the entity data model"),
-                        ImmutableSet.of(),
-                        Optional.empty(),
-                        Optional.empty(),
-                        Optional.of(EnumSet.of(EntitySetFlag.AUDIT))
+                edmAuditEntitySet = dependencies.partitionManager.allocatePartitions(
+                        EntitySet(
+                                dependencies.entitySetManager.getAuditRecordEntitySetsManager().auditingTypes
+                                        .auditingEntityTypeId,
+                                EDM_AUDIT_ENTITY_SET_NAME,
+                                "EDM Audit Entity Set",
+                                Optional.of("Audit entity set for the entity data model"),
+                                ImmutableSet.of(),
+                                Optional.empty(),
+                                Optional.empty(),
+                                Optional.of(EnumSet.of(EntitySetFlag.AUDIT)),
+                                Optional.empty()),
+                        dependencies.partitionManager.getPartitionCount()
                 )
 
-                dependencies.edmService.createEntitySet(admins.first(), edmAuditEntitySet)
+                dependencies.entitySetManager.createEntitySet(admins.first(), edmAuditEntitySet)
             }
 
-            val edmAuditAclKeys = dependencies.edmService.auditRecordEntitySetsManager.auditingTypes.propertyTypeIds.values.map {
-                AclKey(
-                        edmAuditEntitySet.id, it
-                )
+            val edmAuditAclKeys = dependencies.entitySetManager.getAuditRecordEntitySetsManager().auditingTypes
+                    .propertyTypeIds.values.map {
+                AclKey(edmAuditEntitySet!!.id, it)
             }.toMutableSet()
-            edmAuditAclKeys.add(AclKey(edmAuditEntitySet.id))
+            edmAuditAclKeys.add(AclKey(edmAuditEntitySet!!.id))
 
             dependencies.authorizationManager.setPermission(
                     edmAuditAclKeys,
@@ -119,7 +121,7 @@ class AuditInitializationTask(
                     )
                 }
                 .forEach {
-                    dependencies.edmService.auditRecordEntitySetsManager.createAuditEntitySetForEntitySet(
+                    dependencies.entitySetManager.getAuditRecordEntitySetsManager().createAuditEntitySetForEntitySet(
                             it.value
                     )
                 }
@@ -130,8 +132,8 @@ class AuditInitializationTask(
                 .filter { it.value.activeAuditEdgeEntitySetId == null }
                 .forEach { (entitySetId, _) ->
                     logger.info("Creating missing audit edge entity set for entity set {}", entitySetId)
-                    dependencies.edmService.auditRecordEntitySetsManager.initializeAuditEdgeEntitySet( entitySetId )
-
+                    dependencies.entitySetManager.getAuditRecordEntitySetsManager()
+                            .initializeAuditEdgeEntitySet(entitySetId)
                 }
 
     }
@@ -140,9 +142,8 @@ class AuditInitializationTask(
         organizations.keys
                 .filter { !auditRecordEntitySetConfigurations.keys.contains(AclKey(it)) }
                 .forEach {
-                    dependencies.edmService.auditRecordEntitySetsManager.createAuditEntitySetForOrganization(
-                            it
-                    )
+                    dependencies.entitySetManager.getAuditRecordEntitySetsManager()
+                            .createAuditEntitySetForOrganization(it)
                 }
     }
 

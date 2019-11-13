@@ -3,15 +3,19 @@ package com.openlattice.hazelcast.serializers;
 import com.google.common.collect.LinkedHashMultimap;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.kryptnostic.rhizome.hazelcast.serializers.GuavaStreamSerializersKt;
+import com.openlattice.hazelcast.serializers.GuavaStreamSerializersKt;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
+import com.openlattice.data.DataExpiration;
 import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
+
 import java.io.DataInput;
 import java.io.IOException;
+import java.util.LinkedHashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.springframework.stereotype.Component;
 
@@ -51,9 +55,20 @@ public class MetadataUpdateStreamSerializer implements SelfRegisteringStreamSeri
         OptionalStreamSerializers.serialize( out, object.getPii(), ObjectDataOutput::writeBoolean );
         OptionalStreamSerializers.serialize( out, object.getDefaultShow(), ObjectDataOutput::writeBoolean );
         OptionalStreamSerializers.serialize( out, object.getUrl(), ObjectDataOutput::writeUTF );
+        // TODO: get rid of this setmultimap
         OptionalStreamSerializers
                 .serialize( out, object.getPropertyTags(), GuavaStreamSerializersKt::serializeSetMultimap );
         OptionalStreamSerializers.serialize( out, object.getOrganizationId(), UUIDStreamSerializer::serialize );
+        OptionalStreamSerializers.serialize( out,
+                object.getPartitions(),
+                ( output, elem ) -> output.writeIntArray( elem.stream().mapToInt( e -> e ).toArray() ) );
+        if ( object.getDataExpiration().isPresent() ) {
+            out.writeBoolean( true );
+            OptionalStreamSerializers
+                    .serialize( out, object.getDataExpiration(), DataExpirationStreamSerializer::serialize );
+        } else {
+            out.writeBoolean( false );
+        }
     }
 
     public static MetadataUpdate deserialize( ObjectDataInput in ) throws IOException {
@@ -70,6 +85,16 @@ public class MetadataUpdateStreamSerializer implements SelfRegisteringStreamSeri
                 .deserialize( in, GuavaStreamSerializersKt::deserializeLinkedHashMultimap );
         Optional<UUID> organizationId = OptionalStreamSerializers
                 .deserialize( in, UUIDStreamSerializer::deserialize );
+        Optional<LinkedHashSet<Integer>> partitions = OptionalStreamSerializers
+                .deserialize( in, input -> toLinkedHashSet( input.readIntArray() ) );
+        Optional<DataExpiration> dataExpiration;
+        boolean hasExpiration = in.readBoolean();
+        if ( hasExpiration ) {
+            dataExpiration = OptionalStreamSerializers.deserialize( in, DataExpirationStreamSerializer::deserialize );
+        } else {
+            dataExpiration = Optional.empty();
+        }
+
         return new MetadataUpdate( title,
                 description,
                 name,
@@ -79,6 +104,16 @@ public class MetadataUpdateStreamSerializer implements SelfRegisteringStreamSeri
                 defaultShow,
                 url,
                 propertyTags,
-                organizationId);
+                organizationId,
+                partitions,
+                dataExpiration );
+    }
+
+    private static LinkedHashSet<Integer> toLinkedHashSet( int[] array ) {
+        final var s = new LinkedHashSet<Integer>( array.length );
+        for ( int i = 0; i < array.length; ++i ) {
+            s.add( array[ i ] );
+        }
+        return s;
     }
 }

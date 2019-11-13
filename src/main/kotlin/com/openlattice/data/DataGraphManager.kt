@@ -27,13 +27,16 @@ import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking
 import com.openlattice.analysis.requests.FilteredNeighborsRankingAggregation
 import com.openlattice.data.integration.Association
 import com.openlattice.data.integration.Entity
+import com.openlattice.edm.set.ExpirationBase
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.core.NeighborSets
 import com.openlattice.graph.edge.Edge
+import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PostgresIterable
 import org.apache.commons.lang3.tuple.Pair
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import java.nio.ByteBuffer
+import java.time.OffsetDateTime
 import java.util.*
 import java.util.stream.Stream
 
@@ -62,23 +65,13 @@ interface DataGraphManager {
             entitySetId: UUID,
             entityKeyId: UUID,
             authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): SetMultimap<FullQualifiedName, Any>
+    ): Map<FullQualifiedName, Set<Any>>
 
     fun getLinkingEntity(
             entitySetIds: Set<UUID>,
             entityKeyId: UUID,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
-    ): SetMultimap<FullQualifiedName, Any>
-
-    //Soft deletes
-    fun clearEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent
-
-    /**
-     * Clears property data, id, edges of entities.
-     */
-    fun clearEntities(
-            entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): WriteEvent
+    ): Map<FullQualifiedName, Set<Any>>
 
     /**
      * Deletes property data, id, edges of association entities in batches.
@@ -89,36 +82,14 @@ interface DataGraphManager {
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
     ): List<WriteEvent>
 
-    fun clearEntityProperties(
-            entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): WriteEvent
-
-    //Hard deletes
-    /**
-     * Deletes property data, id, edges of all entities in entityset.
-     */
-    fun deleteEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent
-
-    /**
-     * Deletes property data, id, edges of entities.
-     */
-    fun deleteEntities(
-            entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): WriteEvent
-
     /**
      * Deletes property data, id, edges of association entities in batches.
      */
     fun deleteAssociationsBatch(
             entitySetId: UUID,
-            associationsEdgeKeys: PostgresIterable<DataEdgeKey>,
+            associationsEdgeKeys: Iterable<DataEdgeKey>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
     ): List<WriteEvent>
-
-
-    fun deleteEntityProperties(
-            entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): WriteEvent
 
     /*
      * Bulk endpoints for entities/associations
@@ -152,15 +123,11 @@ interface DataGraphManager {
 
     fun replacePropertiesInEntities(
             entitySetId: UUID,
-            replacementProperties: Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Any>>>,
+            replacementProperties: Map<UUID, Map<UUID, Set<Map<ByteBuffer, Any>>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): WriteEvent
 
-    fun createAssociations(
-            associations: Set<DataEdgeKey>,
-            srcAssociationEntitySetIds: Map<UUID, Set<UUID>>,
-            dstAssociationEntitySetIds: Map<UUID, Set<UUID>>
-    ): WriteEvent
+    fun createAssociations(associations: Set<DataEdgeKey>): WriteEvent
 
     fun createAssociations(
             associations: ListMultimap<UUID, DataEdge>,
@@ -212,5 +179,14 @@ interface DataGraphManager {
 
     fun getEdgesAndNeighborsForVertex(entitySetId: UUID, entityKeyId: UUID): Stream<Edge>
     fun getEdgeKeysOfEntitySet(entitySetId: UUID): PostgresIterable<DataEdgeKey>
-    fun getEdgesConnectedToEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): PostgresIterable<DataEdgeKey>
+    fun getEdgesConnectedToEntities(entitySetId: UUID, entityKeyIds: Set<UUID>, includeClearedEdges: Boolean): PostgresIterable<DataEdgeKey>
+    fun getExpiringEntitiesFromEntitySet(entitySetId: UUID,
+                                         expirationPolicy: DataExpiration,
+                                         dateTime: OffsetDateTime,
+                                         deleteType: DeleteType,
+                                         expirationPropertyType: Optional<PropertyType>
+    ): BasePostgresIterable<UUID>
+
+    fun getEdgeEntitySetsConnectedToEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): Set<UUID>
+    fun getEdgeEntitySetsConnectedToEntitySet(entitySetId: UUID): Set<UUID>
 }

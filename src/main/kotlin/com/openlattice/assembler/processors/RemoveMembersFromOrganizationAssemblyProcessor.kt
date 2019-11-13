@@ -22,20 +22,21 @@ package com.openlattice.assembler.processors
 
 import com.hazelcast.core.Offloadable
 import com.hazelcast.spi.ExecutionService
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.assembler.AssemblerConnectionManager
+import com.openlattice.assembler.AssemblerConnectionManagerDependent
 import com.openlattice.assembler.OrganizationAssembly
 import com.openlattice.assembler.PostgresDatabases
-import com.openlattice.organizations.PrincipalSet
+import com.openlattice.authorization.SecurablePrincipal
+import com.openlattice.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor
 import org.slf4j.LoggerFactory
-import java.lang.IllegalStateException
 import java.util.*
 
 private val logger = LoggerFactory.getLogger(RemoveMembersFromOrganizationAssemblyProcessor::class.java)
-private const val NOT_INITIALIZED = "Assembler Connection Manager not initialized."
 
-data class RemoveMembersFromOrganizationAssemblyProcessor(val members: PrincipalSet)
-    : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(), Offloadable {
+data class RemoveMembersFromOrganizationAssemblyProcessor(val principals: Collection<SecurablePrincipal>)
+    : AbstractReadOnlyRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(),
+        AssemblerConnectionManagerDependent<RemoveMembersFromOrganizationAssemblyProcessor>,
+        Offloadable {
 
     @Transient
     private var acm: AssemblerConnectionManager? = null
@@ -44,14 +45,16 @@ data class RemoveMembersFromOrganizationAssemblyProcessor(val members: Principal
         val organizationId = entry.key
         val assembly = entry.value
         if (assembly == null) {
-            logger.error("Encountered null assembly while trying to remove members $members from organization " +
+            logger.error("Encountered null assembly while trying to remove principals $principals from organization " +
                     "$organizationId.")
         } else {
             if (acm == null) {
-                throw IllegalStateException(NOT_INITIALIZED)
+                throw IllegalStateException(AssemblerConnectionManagerDependent.NOT_INITIALIZED)
             }
             val dbName = PostgresDatabases.buildOrganizationDatabaseName(organizationId)
-            acm!!.connect(dbName).use { dataSource -> acm!!.removeMembersFromOrganization(dbName, dataSource, members) }
+            acm!!.connect(dbName).use { dataSource ->
+                acm!!.removeMembersFromOrganization(dbName, dataSource, principals)
+            }
         }
 
         return null
@@ -61,7 +64,7 @@ data class RemoveMembersFromOrganizationAssemblyProcessor(val members: Principal
         return ExecutionService.OFFLOADABLE_EXECUTOR
     }
 
-    fun init(acm: AssemblerConnectionManager): RemoveMembersFromOrganizationAssemblyProcessor {
+    override fun init(acm: AssemblerConnectionManager): RemoveMembersFromOrganizationAssemblyProcessor {
         this.acm = acm
         return this
     }

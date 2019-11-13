@@ -1,5 +1,3 @@
-
-
 /*
  * Copyright (C) 2018. OpenLattice, Inc.
  *
@@ -24,10 +22,9 @@ package com.openlattice.hazelcast.serializers;
 
 import java.util.UUID;
 
-import org.apache.commons.lang3.RandomStringUtils;
+import com.openlattice.mapstores.TestDataFactory;
 
 import com.openlattice.data.TicketKey;
-import com.openlattice.hazelcast.serializers.TicketKeyStreamSerializer;
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest;
 
 public class TicketKeyStreamSerializerTest extends AbstractStreamSerializerTest<TicketKeyStreamSerializer, TicketKey> {
@@ -39,7 +36,7 @@ public class TicketKeyStreamSerializerTest extends AbstractStreamSerializerTest<
 
     @Override
     protected TicketKey createInput() {
-        return new TicketKey( RandomStringUtils.random( 10 ), UUID.randomUUID() );
+        return new TicketKey( TestDataFactory.random( 10 ), UUID.randomUUID() );
     }
 
 }

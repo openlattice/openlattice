@@ -24,19 +24,17 @@ import com.hazelcast.core.Offloadable
 import com.hazelcast.spi.ExecutionService
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.assembler.AssemblerConnectionManager
+import com.openlattice.assembler.AssemblerConnectionManagerDependent
 import com.openlattice.assembler.EntitySetAssemblyKey
 import com.openlattice.assembler.MaterializedEntitySet
 import com.openlattice.edm.EntitySet
-import com.openlattice.edm.type.PropertyType
 import com.openlattice.organization.OrganizationEntitySetFlag
 import java.time.OffsetDateTime
-import java.util.*
 
-private const val NOT_INITIALIZED = "Assembler Connection Manager not initialized."
-
-data class RefreshMaterializedEntitySetProcessor(
-        val entitySet: EntitySet, val authorizedPropertyTypes: Map<UUID, PropertyType>
-) : AbstractRhizomeEntryProcessor<EntitySetAssemblyKey, MaterializedEntitySet, Void?>(), Offloadable {
+data class RefreshMaterializedEntitySetProcessor(val entitySet: EntitySet)
+    : AbstractRhizomeEntryProcessor<EntitySetAssemblyKey, MaterializedEntitySet, Void?>(),
+        AssemblerConnectionManagerDependent<RefreshMaterializedEntitySetProcessor>,
+        Offloadable {
 
     @Transient
     private var acm: AssemblerConnectionManager? = null
@@ -48,8 +46,8 @@ data class RefreshMaterializedEntitySetProcessor(
             throw IllegalStateException("Encountered null materialized entity set while trying to refresh data in " +
                     "materialized view for entity set ${entitySet.id} in organization $organizationId.")
         } else {
-            acm?.refreshEntitySet(organizationId, entitySet, authorizedPropertyTypes)
-                    ?: throw IllegalStateException(NOT_INITIALIZED)
+            acm?.refreshEntitySet(organizationId, entitySet)
+                    ?: throw IllegalStateException(AssemblerConnectionManagerDependent.NOT_INITIALIZED)
 
             // Clear data unsync flag
             materializedEntitySet.flags.remove(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED)
@@ -66,7 +64,7 @@ data class RefreshMaterializedEntitySetProcessor(
         return ExecutionService.OFFLOADABLE_EXECUTOR
     }
 
-    fun init(acm: AssemblerConnectionManager): RefreshMaterializedEntitySetProcessor {
+    override fun init(acm: AssemblerConnectionManager): RefreshMaterializedEntitySetProcessor {
         this.acm = acm
         return this
     }

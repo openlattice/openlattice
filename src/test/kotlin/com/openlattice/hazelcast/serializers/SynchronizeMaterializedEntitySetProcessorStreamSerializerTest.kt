@@ -43,6 +43,19 @@ class SynchronizeMaterializedEntitySetProcessorStreamSerializerTest : AbstractSt
                         .map { it.id to it }
                         .toMap()
 
-        return SynchronizeMaterializedEntitySetProcessor(entitySet, propertyTypes)
+        val authorizedPropertyTypesOfPrincipals =
+                listOf(
+                        TestDataFactory.userPrincipal(),
+                        TestDataFactory.rolePrincipal(),
+                        TestDataFactory.userPrincipal()
+                ).map {
+                    it to setOf(
+                            TestDataFactory.propertyType(),
+                            TestDataFactory.propertyType(),
+                            TestDataFactory.propertyType()
+                    )
+                }.toMap()
+
+        return SynchronizeMaterializedEntitySetProcessor(entitySet, propertyTypes, authorizedPropertyTypesOfPrincipals)
     }
 }

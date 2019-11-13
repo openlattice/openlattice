@@ -22,16 +22,21 @@
 package com.openlattice.assembler.processors
 
 import com.hazelcast.core.Offloadable
+import com.hazelcast.core.ReadOnly
 import com.hazelcast.spi.ExecutionService
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.assembler.AssemblerConnectionManager
+import com.openlattice.assembler.AssemblerConnectionManagerDependent
 import com.openlattice.assembler.OrganizationAssembly
+import com.openlattice.authorization.Principal
 import java.util.UUID
 
 
-private const val NOT_INITIALIZED = "Assembler Connection Manager not initialized."
-
-class MaterializeEdgesProcessor : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(), Offloadable {
+data class MaterializeEdgesProcessor(val authorizedPrincipals: Set<Principal>)
+    : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(false),
+        AssemblerConnectionManagerDependent<MaterializeEdgesProcessor>,
+        Offloadable,
+        ReadOnly {
     @Transient
     private var acm: AssemblerConnectionManager? = null
 
@@ -42,8 +47,8 @@ class MaterializeEdgesProcessor : AbstractRhizomeEntryProcessor<UUID, Organizati
             throw IllegalStateException("Encountered null assembly while trying to materialize edges for " +
                     "organization $organizationId.")
         } else {
-            acm?.materializeEdges(organizationId, assembly.materializedEntitySets.keys)
-                    ?: throw IllegalStateException(NOT_INITIALIZED)
+            acm?.materializeEdges(organizationId, assembly.materializedEntitySets.keys, authorizedPrincipals)
+                    ?: throw IllegalStateException(AssemblerConnectionManagerDependent.NOT_INITIALIZED)
         }
 
         return null
@@ -53,17 +58,8 @@ class MaterializeEdgesProcessor : AbstractRhizomeEntryProcessor<UUID, Organizati
         return ExecutionService.OFFLOADABLE_EXECUTOR
     }
 
-    fun init(acm: AssemblerConnectionManager): MaterializeEdgesProcessor {
+    override fun init(acm: AssemblerConnectionManager): MaterializeEdgesProcessor {
         this.acm = acm
         return this
     }
-
-    override fun equals(other: Any?): Boolean {
-        return (other != null && other is MaterializeEdgesProcessor)
-    }
-
-    override fun hashCode(): Int {
-        return super.hashCode()
-    }
-
 }

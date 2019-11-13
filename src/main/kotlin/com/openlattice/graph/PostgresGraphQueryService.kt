@@ -29,7 +29,7 @@ import com.openlattice.data.EntityDataKey
 import com.openlattice.data.storage.MetadataOption
 import com.openlattice.data.storage.PostgresEntityDataQueryService
 import com.openlattice.data.storage.selectEntitySetWithCurrentVersionOfPropertyTypes
-import com.openlattice.datastore.services.EdmManager
+import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.DataTables.quote
@@ -37,8 +37,7 @@ import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable
-import com.openlattice.postgres.PostgresTable.EDGES
-import com.openlattice.postgres.PostgresTable.GRAPH_QUERIES
+import com.openlattice.postgres.PostgresTable.*
 import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
 import com.zaxxer.hikari.HikariDataSource
@@ -62,7 +61,7 @@ private val logger = LoggerFactory.getLogger(PostgresGraphQueryService::class.ja
 @Service
 class PostgresGraphQueryService(
         private val hds: HikariDataSource,
-        private val edm: EdmManager,
+        private val entitySetManager: EntitySetManager,
         private val pgDataService: PostgresEntityDataQueryService
 ) : GraphQueryService {
     @Timed
@@ -71,7 +70,7 @@ class PostgresGraphQueryService(
                 Supplier {
                     val connection = hds.connection
                     val ps = connection.prepareStatement(
-                            "SELECT ${PostgresColumn.ENTITY_SET_ID.name},${ID_VALUE.name} FROM ${PostgresTable.IDS.name} WHERE ${ID_VALUE.name} = ANY(?)"
+                            "SELECT ${PostgresColumn.ENTITY_SET_ID.name},${ID_VALUE.name} FROM ${PostgresTable.ENTITY_KEY_IDS.name} WHERE ${ID_VALUE.name} = ANY(?)"
                     )
                     val arr = PostgresArrays.createUuidArray(connection, ids)
                     ps.setArray(1, arr)
@@ -332,15 +331,18 @@ class PostgresGraphQueryService(
 
         entities.forEach { (entitySetId, data) ->
             val apt = authorizedPropertyTypes
-                    .getValue(entitySetId)
-                    .associateWith { propertyTypes.getValue(it) }
+                    .mapValues { (_, propertyTypeIds) ->
+                        propertyTypeIds.associateWith { propertyTypeId ->
+                            propertyTypes.getValue(propertyTypeId)
+                        }
+                    }
             val sw = Stopwatch.createStarted()
-            pgDataService.streamableEntitySetWithEntityKeyIdsAndPropertyTypeIds(
-                    entitySetId,
-                    Optional.of(data.keys),
+            pgDataService.getEntitiesWithPropertyTypeIds(
+                    mapOf(entitySetId to Optional.of(data.keys as Set<UUID>)),
                     apt,
+                    mapOf(),
                     EnumSet.of(MetadataOption.LAST_WRITE)
-            ).forEach { data[it.first] = it.second }
+            ).toMap().forEach { data[it.key] = it.value }
             logger.info("Loading data for entity set {} took {} ms", entitySetId, sw.elapsed(TimeUnit.MILLISECONDS))
         }
 
@@ -481,7 +483,7 @@ class PostgresGraphQueryService(
     ): List<AssociationFilterDefinition> {
         val entitySetsByType = getEntitySetsByEntityTypeIds(maybeEntityTypeIds)
         val entitySetsWithType = maybeEntitySetIds.map { entitySetIds ->
-            edm.getEntityTypeIdsByEntitySetIds(entitySetIds)
+            entitySetManager.getEntityTypeIdsByEntitySetIds(entitySetIds)
         }.orElse(emptyMap())
 
         return (entitySetsByType.map { (entityTypeId, entitySetIds) ->
@@ -548,7 +550,8 @@ class PostgresGraphQueryService(
             propertyTypeFqns: Map<UUID, String>,
             filter: Optional<Filter>
     ): String {
-        val tableSql = selectEntitySetWithCurrentVersionOfPropertyTypes(
+        val tableSql =
+                selectEntitySetWithCurrentVersionOfPropertyTypes(
                 filterDefinition.entitySetIds.associateWith { Optional.empty<Set<UUID>>() },
                 propertyTypeFqns,
                 setOf(),
@@ -586,10 +589,9 @@ class PostgresGraphQueryService(
         val dataKeys = dataKeysClause(dataKeys, EDGE_COMP_1.name, DST_ENTITY_SET_ID.name)
         val srcEntitySetIdsClause = "AND ${SRC_ENTITY_SET_ID.name} ${inClause(entitySetIds)}"
         val associationEntitySetIdsClause = "AND ${EDGE_ENTITY_SET_ID.name} ${inClause(associationEntitySetIds)}"
-        val componentTypeClause = "AND ${COMPONENT_TYPES.name} = ${ComponentType.SRC.ordinal}"
 
         //For this there is no dstEntitySet clause since the target is self.
-        return "SELECT * FROM ${EDGES.name} WHERE $dataKeys $srcEntitySetIdsClause $associationEntitySetIdsClause $componentTypeClause"
+        return "SELECT * FROM ${E.name} WHERE $dataKeys $srcEntitySetIdsClause $associationEntitySetIdsClause"
     }
 
     /**
@@ -604,9 +606,8 @@ class PostgresGraphQueryService(
         val idsClause = dataKeysClause(ids, EDGE_COMP_2.name, SRC_ENTITY_SET_ID.name)
         val associationEntitySetIdsClause = "AND ${EDGE_ENTITY_SET_ID.name} ${inClause(associationEntitySetIds)}"
         val dstEntitySetIdsClause = "AND ${DST_ENTITY_SET_ID.name} ${inClause(entitySetIds)}"
-        val componentTypeClause = "AND ${COMPONENT_TYPES.name} = ${ComponentType.DST.ordinal}"
 
-        return "SELECT * FROM ${EDGES.name} WHERE $idsClause $dstEntitySetIdsClause $associationEntitySetIdsClause $componentTypeClause"
+        return "SELECT * FROM ${EDGES.name} WHERE $idsClause $dstEntitySetIdsClause $associationEntitySetIdsClause"
     }
 
     /**
@@ -622,9 +623,8 @@ class PostgresGraphQueryService(
         val idsClause = "${EDGE_COMP_2.name} ${inClause(ids)}"
         val associationEntitySetIdsClause = "AND ${EDGE_ENTITY_SET_ID.name} ${inClause(associationEntitySetIds)}"
         val srcEntitySetIdsClause = "AND ${DST_ENTITY_SET_ID.name} ${inClause(entitySetIds)}"
-        val componentTypeClause = "AND ${COMPONENT_TYPES.name} = ${ComponentType.EDGE.ordinal}"
 
-        return "SELECT * FROM ${EDGES.name} WHERE $idsClause $srcEntitySetIdsClause $associationEntitySetIdsClause $componentTypeClause"
+        return "SELECT * FROM ${EDGES.name} WHERE $idsClause $srcEntitySetIdsClause $associationEntitySetIdsClause"
     }
 
     /**
@@ -640,9 +640,8 @@ class PostgresGraphQueryService(
         val idsClause = "${EDGE_COMP_1.name} ${inClause(ids)}"
         val associationEntitySetIdsClause = "AND ${EDGE_ENTITY_SET_ID.name} ${inClause(associationEntitySetIds)}"
         val dstEntitySetIdsClause = "AND ${DST_ENTITY_SET_ID.name} ${inClause(entitySetIds)}"
-        val componentTypeClause = "AND ${COMPONENT_TYPES.name} = ${ComponentType.EDGE.ordinal}"
 
-        return "SELECT * FROM ${EDGES.name} WHERE $idsClause $dstEntitySetIdsClause $associationEntitySetIdsClause $componentTypeClause"
+        return "SELECT * FROM ${EDGES.name} WHERE $idsClause $dstEntitySetIdsClause $associationEntitySetIdsClause"
     }
 
     private fun inClause(ids: Set<UUID>): String {
@@ -666,14 +665,14 @@ class PostgresGraphQueryService(
     ): MutableMap<UUID, MutableSet<UUID>> {
         return maybeEntityTypeIds.map { entityTypeIds ->
             entityTypeIds.associateWith { entityTypeId ->
-                edm.getEntitySetIdsOfType(entityTypeId).toMutableSet()
+                entitySetManager.getEntitySetIdsOfType(entityTypeId).toMutableSet()
             }.toMutableMap()
         }.orElse(mutableMapOf())
     }
 
     override fun getEntitySets(entityTypeIds: Optional<Set<UUID>>): List<UUID> {
         return entityTypeIds
-                .map(edm::getEntitySetsOfType)
+                .map(entitySetManager::getEntitySetsOfType)
                 .orElseGet { emptyList() }
                 .map(EntitySet::getId)
     }

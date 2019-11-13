@@ -25,7 +25,10 @@ import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.assembler.AssemblerConnectionManager
+import com.openlattice.assembler.AssemblerConnectionManagerDependent
 import com.openlattice.assembler.processors.MaterializeEntitySetProcessor
+import com.openlattice.authorization.Principal
+import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import org.springframework.stereotype.Component
 
@@ -35,9 +38,40 @@ import org.springframework.stereotype.Component
  */
 @Component
 class MaterializeEntitySetProcessorStreamSerializer
-    : SelfRegisteringStreamSerializer<MaterializeEntitySetProcessor>, AssemblerConnectionManagerDependent {
+    : SelfRegisteringStreamSerializer<MaterializeEntitySetProcessor>, AssemblerConnectionManagerDependent<Void?> {
 
-    private val entitySetSerializer = EntitySetStreamSerializer()
+    companion object {
+        @JvmStatic
+        fun serializeAuthorizedPropertyTypesOfPrincipals(
+                out: ObjectDataOutput, authorizedPropertyTypesOfPrincipals: Map<Principal, Set<PropertyType>>
+        ) {
+            out.writeInt(authorizedPropertyTypesOfPrincipals.size)
+            authorizedPropertyTypesOfPrincipals.forEach { (principal, authorizedPropertyTypes) ->
+                PrincipalStreamSerializer.serialize(out, principal)
+
+                out.writeInt(authorizedPropertyTypes.size)
+                authorizedPropertyTypes.forEach {
+                    PropertyTypeStreamSerializer.serialize(out, it)
+                }
+            }
+        }
+
+        @JvmStatic
+        fun deserializeAuthorizedPropertyTypesOfPrincipals(input: ObjectDataInput): Map<Principal, Set<PropertyType>> {
+            val principalsSize = input.readInt()
+            return ((0 until principalsSize).map {
+                val principal = PrincipalStreamSerializer.deserialize(input)
+
+                val authorizedPropertySize = input.readInt()
+                val authorizedPropertyTypes = ((0 until authorizedPropertySize).map {
+                    PropertyTypeStreamSerializer.deserialize(input)
+                }.toSet())
+
+                principal to authorizedPropertyTypes
+            }.toMap())
+        }
+    }
+
     private lateinit var acm: AssemblerConnectionManager
 
     override fun getTypeId(): Int {
@@ -52,28 +86,34 @@ class MaterializeEntitySetProcessorStreamSerializer
     }
 
     override fun write(out: ObjectDataOutput, obj: MaterializeEntitySetProcessor) {
-        entitySetSerializer.write(out, obj.entitySet)
+        EntitySetStreamSerializer.serialize(out, obj.entitySet)
 
-        out.writeInt(obj.authorizedPropertyTypes.size)
-
-        obj.authorizedPropertyTypes.forEach { propertyTypeId, propertyType ->
+        out.writeInt(obj.materializablePropertyTypes.size)
+        obj.materializablePropertyTypes.forEach { (propertyTypeId, propertyType) ->
             UUIDStreamSerializer.serialize(out, propertyTypeId)
             PropertyTypeStreamSerializer.serialize(out, propertyType)
         }
+
+        serializeAuthorizedPropertyTypesOfPrincipals(out, obj.authorizedPropertyTypesOfPrincipals)
     }
 
     override fun read(input: ObjectDataInput): MaterializeEntitySetProcessor {
-        val entitySet = entitySetSerializer.read(input)
+        val entitySet = EntitySetStreamSerializer.deserialize(input)
 
-        val size = input.readInt()
-        val authorizedPropertyTypes = ((0 until size).map {
+        val materializablePropertySize = input.readInt()
+        val materializablePropertyTypes = ((0 until materializablePropertySize).map {
             UUIDStreamSerializer.deserialize(input) to PropertyTypeStreamSerializer.deserialize(input)
         }.toMap())
 
-        return MaterializeEntitySetProcessor(entitySet, authorizedPropertyTypes).init(acm)
+        val authorizedPropertyTypesOfPrincipals = deserializeAuthorizedPropertyTypesOfPrincipals(input)
+
+        return MaterializeEntitySetProcessor(
+                entitySet, materializablePropertyTypes, authorizedPropertyTypesOfPrincipals
+        ).init(acm)
     }
 
-    override fun init(assemblerConnectionManager: AssemblerConnectionManager) {
-        this.acm = assemblerConnectionManager
+    override fun init(acm: AssemblerConnectionManager): Void? {
+        this.acm = acm
+        return null
     }
 }

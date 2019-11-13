@@ -22,17 +22,25 @@
 package com.openlattice.assembler.processors
 
 import com.hazelcast.core.Offloadable
+import com.hazelcast.core.ReadOnly
 import com.hazelcast.spi.ExecutionService
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.OrganizationAssembly
 import com.openlattice.assembler.PostgresDatabases
-import com.openlattice.organizations.PrincipalSet
+import com.openlattice.authorization.SecurablePrincipal
+import com.openlattice.assembler.AssemblerConnectionManagerDependent
+import com.openlattice.edm.EntitySet
+import com.openlattice.edm.type.PropertyType
 import java.lang.IllegalStateException
 import java.util.*
 
-data class AddMembersToOrganizationAssemblyProcessor(val newMembers: PrincipalSet)
-    : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(), Offloadable {
+data class AddMembersToOrganizationAssemblyProcessor(
+        val authorizedPropertyTypesOfEntitySetsByPrincipal: Map<SecurablePrincipal, Map<EntitySet, Collection<PropertyType>>>
+) : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(false),
+        AssemblerConnectionManagerDependent<AddMembersToOrganizationAssemblyProcessor>,
+        Offloadable,
+        ReadOnly {
 
     @Transient
     private lateinit var acm: AssemblerConnectionManager
@@ -41,11 +49,14 @@ data class AddMembersToOrganizationAssemblyProcessor(val newMembers: PrincipalSe
         val organizationId = entry.key
         val assembly = entry.value
         if (assembly == null) {
-            throw IllegalStateException("Encountered null assembly while trying to add new members $newMembers to " +
-                    "organization $organizationId.")
+            throw IllegalStateException("Encountered null assembly while trying to add new principals " +
+                    "${authorizedPropertyTypesOfEntitySetsByPrincipal.keys} to organization $organizationId.")
         } else {
             val dbName = PostgresDatabases.buildOrganizationDatabaseName(organizationId)
-            acm.connect(dbName).use { dataSource -> acm.addMembersToOrganization(dbName, dataSource, newMembers) }
+            acm.connect(dbName)
+                    .use { dataSource ->
+                        acm.addMembersToOrganization(dbName, dataSource, authorizedPropertyTypesOfEntitySetsByPrincipal)
+                    }
         }
 
         return null
@@ -55,9 +66,8 @@ data class AddMembersToOrganizationAssemblyProcessor(val newMembers: PrincipalSe
         return ExecutionService.OFFLOADABLE_EXECUTOR
     }
 
-    fun init(acm: AssemblerConnectionManager): AddMembersToOrganizationAssemblyProcessor {
+    override fun init(acm: AssemblerConnectionManager): AddMembersToOrganizationAssemblyProcessor {
         this.acm = acm
         return this
     }
-
 }

@@ -22,6 +22,7 @@
 package com.openlattice.authorization;
 
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 /**
@@ -33,7 +34,9 @@ public class PostgresUserApiTests extends HzAuthzTest {
     private static final String CRED2    = "test2";
     private static PostgresUserApi api;
 
-    static {
+    @BeforeClass
+    public static void init() {
+        HzAuthzTest.init();
         api = testServer.getContext().getBean( PostgresUserApi.class );
     }
 

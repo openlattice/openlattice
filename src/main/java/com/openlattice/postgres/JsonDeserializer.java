@@ -7,6 +7,7 @@ import com.google.common.collect.SetMultimap;
 import com.openlattice.data.storage.BinaryDataWithContentType;
 import com.openlattice.edm.type.PropertyType;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -19,6 +20,7 @@ import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.geo.Geospatial.Dimension;
 import org.apache.olingo.commons.api.edm.geo.Geospatial.Type;
@@ -30,9 +32,10 @@ import org.slf4j.LoggerFactory;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class JsonDeserializer {
-    private static final Logger         logger       = LoggerFactory.getLogger( JsonDeserializer.class );
-    private static final Base64.Decoder decoder      = Base64.getDecoder();
-    private static final Pattern geographyPointRegex = Pattern.compile("(\\-)?[0-9]+(\\.){1}[0-9]+(\\,){1}(\\-)?[0-9]+(\\.){1}[0-9]+");
+    private static final Logger         logger              = LoggerFactory.getLogger( JsonDeserializer.class );
+    private static final Base64.Decoder decoder             = Base64.getDecoder();
+    private static final Pattern        geographyPointRegex = Pattern
+            .compile( "(\\-)?[0-9]+(\\.){1}[0-9]+(\\,){1}(\\-)?[0-9]+(\\.){1}[0-9]+" );
 
     public static SetMultimap<UUID, Object> validateFormatAndNormalize(
             Map<UUID, Set<Object>> propertyValues,
@@ -50,43 +53,50 @@ public class JsonDeserializer {
         SetMultimap<UUID, Object> normalizedPropertyValues = HashMultimap.create();
 
         for ( Map.Entry<UUID, Set<Object>> entry : propertyValues.entrySet() ) {
-            final UUID propertyTypeId = entry.getKey();
-            final PropertyType propertyType = authorizedPropertiesWithDataType.get( propertyTypeId );
-            final EdmPrimitiveTypeKind dataType = propertyType.getDatatype();
-            Set<Object> valueSet = entry.getValue();
-            if ( valueSet != null ) {
-                //If enum values are specified for this property type, make sure only valid enum values have been
-                //provided for parsing.
-                if ( !propertyType.getEnumValues().isEmpty() ) {
-                    final var enumValues = propertyType.getEnumValues();
+            try {
+                final UUID propertyTypeId = entry.getKey();
+                final PropertyType propertyType = authorizedPropertiesWithDataType.get( propertyTypeId );
+                final EdmPrimitiveTypeKind dataType = propertyType.getDatatype();
+                Set<Object> valueSet = entry.getValue();
+                if ( valueSet != null ) {
+                    //If enum values are specified for this property type, make sure only valid enum values have been
+                    //provided for parsing.
+                    if ( !propertyType.getEnumValues().isEmpty() ) {
+                        final var enumValues = propertyType.getEnumValues();
 
-                    final var invalidEnumValues =
-                            valueSet.stream()
-                                    .filter( value -> !enumValues.contains( value ) )
-                                    .collect( Collectors.toList() );
+                        final var invalidEnumValues =
+                                valueSet.stream()
+                                        .filter( value -> !enumValues.contains( value ) )
+                                        .collect( Collectors.toList() );
 
-                    if ( !invalidEnumValues.isEmpty() ) {
-                        String errMsg =
-                                "Received invalid enum values " + invalidEnumValues.toString() + " for property type "
-                                        + propertyType.getType().getFullQualifiedNameAsString();
-                        logger.error( errMsg );
-                        throw new IllegalStateException( errMsg );
+                        if ( !invalidEnumValues.isEmpty() ) {
+                            String errMsg =
+                                    "Received invalid enum values " + invalidEnumValues.toString()
+                                            + " for property type "
+                                            + propertyType.getType().getFullQualifiedNameAsString();
+                            logger.error( errMsg );
+                            throw new IllegalStateException( errMsg );
+                        }
+                    }
+
+                    for ( Object value : valueSet ) {
+                        final var normalizedValue = validateFormatAndNormalize( dataType, propertyTypeId, value );
+                        if ( normalizedValue != null ) {
+                            normalizedPropertyValues.put( propertyTypeId, normalizedValue );
+                        } else {
+                            logger.error(
+                                    "Skipping null value when normalizing data {} for property type {}: {}",
+                                    valueSet,
+                                    entry.getKey(),
+                                    lazyMessage.get() );
+
+                        }
                     }
                 }
-
-                for ( Object value : valueSet ) {
-                    final var normalizedValue = validateFormatAndNormalize( dataType, propertyTypeId, value );
-                    if ( normalizedValue != null ) {
-                        normalizedPropertyValues.put( propertyTypeId, normalizedValue );
-                    } else {
-                        logger.error(
-                                "Skipping null value when normalizing data {} for property type {}: {}",
-                                valueSet,
-                                entry.getKey(),
-                                lazyMessage.get() );
-
-                    }
-                }
+            } catch ( Exception e ) {
+                throw new IllegalStateException(
+                        "Unable to write to property type " + entry.getKey() + " with values " + entry.getValue()
+                                .toString() + ": " + lazyMessage.get() );
             }
         }
 
@@ -222,7 +232,7 @@ public class JsonDeserializer {
                     if ( point.getGeoType() == Type.POINT && point.getDimension() == Dimension.GEOGRAPHY ) {
                         return point.getY() + "," + point.getX();
                     }
-                } else if ( value instanceof String && geographyPointRegex.matcher( ( String ) value ).matches() ) {
+                } else if ( value instanceof String && geographyPointRegex.matcher( (String) value ).matches() ) {
                     return value;
                 }
                 break;

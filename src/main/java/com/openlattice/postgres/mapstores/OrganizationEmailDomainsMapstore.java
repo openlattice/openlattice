@@ -5,12 +5,12 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.postgres.PostgresArrays;
 import com.openlattice.postgres.PostgresColumnDefinition;
 import com.openlattice.postgres.ResultSetAdapters;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import com.zaxxer.hikari.HikariDataSource;
-import org.apache.commons.lang3.RandomStringUtils;
 
 import java.sql.Array;
 import java.sql.PreparedStatement;
@@ -85,8 +85,8 @@ public class OrganizationEmailDomainsMapstore extends AbstractBasePostgresMapsto
     }
 
     @Override public DelegatedStringSet generateTestValue() {
-        return DelegatedStringSet.wrap( ImmutableSet.of( RandomStringUtils.randomAlphanumeric( 5 ),
-                RandomStringUtils.randomAlphanumeric( 5 ),
-                RandomStringUtils.randomAlphanumeric( 5 ) ) );
+        return DelegatedStringSet.wrap( ImmutableSet.of( TestDataFactory.randomAlphanumeric( 5 ),
+                TestDataFactory.randomAlphanumeric( 5 ),
+                TestDataFactory.randomAlphanumeric( 5 ) ) );
     }
 }

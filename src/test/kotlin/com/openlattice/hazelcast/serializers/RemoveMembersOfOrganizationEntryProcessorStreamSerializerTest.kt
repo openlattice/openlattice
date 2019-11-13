@@ -2,7 +2,7 @@ package com.openlattice.hazelcast.serializers
 
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest
 import com.openlattice.hazelcast.processors.RemoveMemberOfOrganizationEntryProcessor
-import org.apache.commons.lang3.RandomStringUtils
+import com.openlattice.mapstores.TestDataFactory
 
 class RemoveMembersOfOrganizationEntryProcessorStreamSerializerTest
     : AbstractStreamSerializerTest<RemoveMemberOfOrganizationEntryProcessorStreamSerializer,
@@ -13,7 +13,7 @@ class RemoveMembersOfOrganizationEntryProcessorStreamSerializerTest
     }
 
     override fun createInput(): RemoveMemberOfOrganizationEntryProcessor {
-        return RemoveMemberOfOrganizationEntryProcessor( setOf( RandomStringUtils.randomAlphabetic( 5 ) ) );
+        return RemoveMemberOfOrganizationEntryProcessor( setOf( TestDataFactory.randomAlphabetic( 5 ) ) )
     }
 
 }

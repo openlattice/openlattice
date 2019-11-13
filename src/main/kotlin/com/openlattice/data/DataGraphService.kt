@@ -21,28 +21,36 @@
 
 package com.openlattice.data
 
+import com.google.common.base.Stopwatch
 import com.google.common.collect.ListMultimap
 import com.google.common.collect.Multimaps
 import com.google.common.collect.SetMultimap
-import com.google.common.eventbus.EventBus
-import com.google.common.util.concurrent.ListenableFuture
 import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking
 import com.openlattice.analysis.requests.FilteredNeighborsRankingAggregation
 import com.openlattice.data.integration.Association
 import com.openlattice.data.integration.Entity
+import com.openlattice.data.storage.EntityDatastore
 import com.openlattice.data.storage.PostgresEntitySetSizesTask
-import com.openlattice.datastore.services.EdmManager
+import com.openlattice.edm.set.ExpirationBase
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.core.GraphService
 import com.openlattice.graph.core.NeighborSets
 import com.openlattice.graph.edge.Edge
+import com.openlattice.postgres.DataTables
+import com.openlattice.postgres.PostgresColumn
+import com.openlattice.postgres.PostgresDataTables
+import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PostgresIterable
 import org.apache.commons.lang3.tuple.Pair
+import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import java.nio.ByteBuffer
+import java.sql.Types
+import java.time.OffsetDateTime
+import java.time.ZoneId
 import java.util.*
-import java.util.concurrent.ExecutionException
+import java.util.concurrent.TimeUnit
 import java.util.stream.Stream
 import kotlin.collections.HashMap
 import kotlin.collections.HashSet
@@ -54,11 +62,9 @@ import kotlin.collections.HashSet
 private val logger = LoggerFactory.getLogger(DataGraphService::class.java)
 
 open class DataGraphService(
-        private val eventBus: EventBus,
         private val graphService: GraphService,
         private val idService: EntityKeyIdService,
         private val eds: EntityDatastore,
-        private val edmManager: EdmManager,
         private val entitySetSizesTask: PostgresEntitySetSizesTask
 
 ) : DataGraphManager {
@@ -66,22 +72,8 @@ open class DataGraphService(
         return idService.reserveEntityKeyIds(entityKeys)
     }
 
-
-    //TODO: Move to a utility class
     companion object {
-
-        @JvmStatic
-        fun tryGetAndLogErrors(f: ListenableFuture<*>) {
-            try {
-                f.get()
-            } catch (e: InterruptedException) {
-                logger.error("Future execution failed.", e)
-            } catch (e: ExecutionException) {
-                logger.error("Future execution failed.", e)
-            }
-        }
-
-        const val ASSOCIATION_SIZE = 30000
+        const val ASSOCIATION_SIZE = 30_000
     }
 
 
@@ -104,7 +96,7 @@ open class DataGraphService(
             entitySetId: UUID,
             entityKeyId: UUID,
             authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): SetMultimap<FullQualifiedName, Any> {
+    ): Map<FullQualifiedName, Set<Any>> {
         return eds.getEntities(
                 entitySetId,
                 setOf(entityKeyId),
@@ -116,7 +108,7 @@ open class DataGraphService(
             entitySetIds: Set<UUID>,
             entityKeyId: UUID,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
-    ): SetMultimap<FullQualifiedName, Any> {
+    ): Map<FullQualifiedName, Set<Any>> {
         return eds.getLinkingEntities(
                 entitySetIds.map { it to Optional.of(setOf(entityKeyId)) }.toMap(),
                 authorizedPropertyTypes
@@ -141,9 +133,17 @@ open class DataGraphService(
         return graphService.getEdgeKeysOfEntitySet(entitySetId)
     }
 
-    override fun getEdgesConnectedToEntities(entitySetId: UUID, entityKeyIds: Set<UUID>)
+    override fun getEdgesConnectedToEntities(entitySetId: UUID, entityKeyIds: Set<UUID>, includeClearedEdges: Boolean)
             : PostgresIterable<DataEdgeKey> {
-        return graphService.getEdgeKeysContainingEntities(entitySetId, entityKeyIds)
+        return graphService.getEdgeKeysContainingEntities(entitySetId, entityKeyIds, includeClearedEdges)
+    }
+
+    override fun getEdgeEntitySetsConnectedToEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): Set<UUID> {
+        return graphService.getEdgeEntitySetsConnectedToEntities(entitySetId, entityKeyIds)
+    }
+
+    override fun getEdgeEntitySetsConnectedToEntitySet(entitySetId: UUID): Set<UUID> {
+        return graphService.getEdgeEntitySetsConnectedToEntitySet(entitySetId)
     }
 
 
@@ -151,46 +151,6 @@ open class DataGraphService(
 
     private val groupEdges: (List<DataEdgeKey>) -> Map<UUID, Set<UUID>> = { edges ->
         edges.map { it.edge }.groupBy { it.entitySetId }.mapValues { it.value.map { it.entityKeyId }.toSet() }
-    }
-
-    override fun clearEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent {
-        // clear edges
-        var verticesCount = 0L
-        val dataEdgeKeys = getEdgeKeysOfEntitySet(entitySetId)
-        // since we cannot lock on entity set just on individual DataEdgeKeys, we do the delete in chunks
-        dataEdgeKeys.asSequence().chunked(ASSOCIATION_SIZE).forEach {
-            verticesCount += graphService.clearEdges(it)
-        }
-
-        //clear entities
-        val entityWriteEvent = eds.clearEntitySet(entitySetId, authorizedPropertyTypes)
-
-        logger.info("Cleared {} entities and {} vertices.", entityWriteEvent.numUpdates, verticesCount)
-        return entityWriteEvent
-    }
-
-    override fun clearEntities(
-            entitySetId: UUID,
-            entityKeyIds: Set<UUID>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): WriteEvent {
-        return clearEntityDataAndVertices(entitySetId, entityKeyIds, authorizedPropertyTypes)
-    }
-
-    private fun clearEntityDataAndVertices(
-            entitySetId: UUID,
-            entityKeyIds: Set<UUID>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): WriteEvent {
-        // clear edges
-        val dataEdgeKeys = getEdgesConnectedToEntities(entitySetId, entityKeyIds)
-        val verticesCount = graphService.clearEdges(dataEdgeKeys)
-
-        //clear entities
-        val entityWriteEvent = eds.clearEntities(entitySetId, entityKeyIds, authorizedPropertyTypes)
-
-        logger.info("Cleared {} entities and {} vertices.", entityWriteEvent.numUpdates, verticesCount)
-        return entityWriteEvent
     }
 
     override fun clearAssociationsBatch(
@@ -236,62 +196,9 @@ open class DataGraphService(
         return entityWriteEvent
     }
 
-    override fun clearEntityProperties(
-            entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): WriteEvent {
-        val propertyWriteEvent = eds.clearEntityData(entitySetId, entityKeyIds, authorizedPropertyTypes)
-        logger.info(
-                "Cleared properties {} of {} entities.",
-                authorizedPropertyTypes.values.map(PropertyType::getType), propertyWriteEvent.numUpdates
-        )
-
-        return propertyWriteEvent
-    }
-
-    override fun deleteEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent {
-        // delete edges
-        var verticesCount = 0L
-        val dataEdgeKeys = getEdgeKeysOfEntitySet(entitySetId)
-        // since we cannot lock on entity set just on individual DataEdgeKeys, we do the delete in chunks
-        dataEdgeKeys.asSequence().chunked(ASSOCIATION_SIZE).forEach {
-            verticesCount += graphService.deleteEdges(it).numUpdates
-        }
-
-        // delete entities
-        val entityWriteEvent = eds.deleteEntitySetData(entitySetId, authorizedPropertyTypes)
-
-        logger.info("Deleted {} entities and {} vertices.", entityWriteEvent.numUpdates, verticesCount)
-        return entityWriteEvent
-    }
-
-    override fun deleteEntities(
-            entitySetId: UUID,
-            entityKeyIds: Set<UUID>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): WriteEvent {
-        return deleteEntityDataAnVertices(entitySetId, entityKeyIds, authorizedPropertyTypes)
-    }
-
-    private fun deleteEntityDataAnVertices(
-            entitySetId: UUID,
-            entityKeyIds: Set<UUID>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): WriteEvent {
-        // delete edges
-        val dataEdgeKeys = getEdgesConnectedToEntities(entitySetId, entityKeyIds)
-        val verticesCount = graphService.deleteEdges(dataEdgeKeys).numUpdates
-
-        // delete entities
-        val entityWriteEvent = eds.deleteEntities(entitySetId, entityKeyIds, authorizedPropertyTypes)
-
-        logger.info("Deleted {} entities and {} vertices.", entityWriteEvent.numUpdates, verticesCount)
-
-        return entityWriteEvent
-    }
-
     override fun deleteAssociationsBatch(
             entitySetId: UUID,
-            associationsEdgeKeys: PostgresIterable<DataEdgeKey>,
+            associationsEdgeKeys: Iterable<DataEdgeKey>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
     ): List<WriteEvent> {
         var associationDeleteCount = 0
@@ -333,21 +240,6 @@ open class DataGraphService(
         return entityWriteEvent
     }
 
-    override fun deleteEntityProperties(
-            entitySetId: UUID,
-            entityKeyIds: Set<UUID>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): WriteEvent {
-        val propertyCount = eds.deleteEntityProperties(entitySetId, entityKeyIds, authorizedPropertyTypes)
-
-        logger.info(
-                "Deleted properties {} of {} entities.",
-                authorizedPropertyTypes.values.map(PropertyType::getType), propertyCount.numUpdates
-        )
-        return propertyCount
-    }
-
-
     /* Create */
 
     override fun integrateEntities(
@@ -366,7 +258,7 @@ open class DataGraphService(
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Map<EntityKey, UUID> {
         val ids = idService.getEntityKeyIds(entities.keys.map { EntityKey(entitySetId, it) }.toSet())
-        val identifiedEntities = ids.map { it.value to entities[it.key.entityId] }.toMap()
+        val identifiedEntities = ids.map { it.value to entities.getValue(it.key.entityId) }.toMap()
         eds.integrateEntities(entitySetId, identifiedEntities, authorizedPropertyTypes)
 
         return ids
@@ -410,18 +302,13 @@ open class DataGraphService(
 
     override fun replacePropertiesInEntities(
             entitySetId: UUID,
-            replacementProperties: Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Any>>>,
+            replacementProperties: Map<UUID, Map<UUID, Set<Map<ByteBuffer, Any>>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): WriteEvent {
         return eds.replacePropertiesInEntities(entitySetId, replacementProperties, authorizedPropertyTypes)
     }
 
-    override fun createAssociations(
-            associations: Set<DataEdgeKey>,
-            srcAssociationEntitySetIds: Map<UUID, Set<UUID>>,
-            dstAssociationEntitySetIds: Map<UUID, Set<UUID>>
-    ): WriteEvent {
-        checkAssociationEntityTypes(srcAssociationEntitySetIds, dstAssociationEntitySetIds)
+    override fun createAssociations(associations: Set<DataEdgeKey>): WriteEvent {
         return graphService.createEdges(associations)
     }
 
@@ -437,9 +324,6 @@ open class DataGraphService(
                 .forEach {
                     val entitySetId = it.key
 
-                    // check entity types of associations before creation
-                    checkAssociationEntityTypes(entitySetId, it.value)
-
                     val entities = it.value.map(DataEdge::getData)
                     val (ids, entityWrite) = createEntities(
                             entitySetId, entities, authorizedPropertiesByEntitySetId.getValue(entitySetId)
@@ -448,7 +332,9 @@ open class DataGraphService(
                     val edgeKeys = it.value.asSequence().mapIndexed { index, dataEdge ->
                         DataEdgeKey(dataEdge.src, dataEdge.dst, EntityDataKey(entitySetId, ids[index]))
                     }.toSet()
+                    val sw = Stopwatch.createStarted()
                     val edgeWrite = graphService.createEdges(edgeKeys)
+                    logger.info("graphService.createEdges (for {} edgeKeys) took {}", edgeKeys.size, sw.elapsed(TimeUnit.MILLISECONDS))
 
                     associationCreateEvents[entitySetId] = CreateAssociationEvent(ids, entityWrite, edgeWrite)
                 }
@@ -464,32 +350,11 @@ open class DataGraphService(
         val entityKeys = HashSet<EntityKey>(3 * associations.size)
         val entityKeyIds = HashMap<EntityKey, UUID>(3 * associations.size)
 
-        //Create graph structure and check entity types
-        val srcAssociationEntitySetIds = mutableMapOf<UUID, MutableSet<UUID>>() // edge-src
-        val dstAssociationEntitySetIds = mutableMapOf<UUID, MutableSet<UUID>>() // edge-dst
-        associations
-                .asSequence()
-                .forEach { association ->
-                    val srcEsId = association.src.entitySetId
-                    val dstEsId = association.dst.entitySetId
-                    val edgeEsId = association.key.entitySetId
-
-                    if (srcAssociationEntitySetIds.putIfAbsent(edgeEsId, mutableSetOf(srcEsId)) != null) {
-                        srcAssociationEntitySetIds.getValue(edgeEsId).add(srcEsId)
-                    }
-
-                    if (dstAssociationEntitySetIds.putIfAbsent(edgeEsId, mutableSetOf(dstEsId)) != null) {
-                        dstAssociationEntitySetIds.getValue(edgeEsId).add(dstEsId)
-                    }
-                }
-        checkAssociationEntityTypes(srcAssociationEntitySetIds, dstAssociationEntitySetIds)
-
         //Create the entities for the association and build list of required entity keys
         val integrationResults = associationsByEntitySet
                 .asSequence()
-                .map {
-                    val entitySetId = it.key
-                    val entities = it.value.asSequence()
+                .map { (entitySetId, entitySetAssociations) ->
+                    val entities = entitySetAssociations.asSequence()
                             .map { association ->
                                 entityKeys.add(association.src)
                                 entityKeys.add(association.dst)
@@ -539,76 +404,23 @@ open class DataGraphService(
             val entitiesToCreate = entitiesByEntitySet.getOrPut(entity.entitySetId) { mutableMapOf() }
             val entityDetails = entitiesToCreate.getOrPut(entity.entityId) { entity.details }
             if (entityDetails !== entity.details) {
-                entity.details.forEach { propertyTypeId, values ->
+                entity.details.forEach { (propertyTypeId, values) ->
                     entityDetails.getOrPut(propertyTypeId) { mutableSetOf() }.addAll(values)
                 }
             }
         }
 
         entitiesByEntitySet
-                .forEach { entitySetId, entitySet ->
+                .forEach { (entitySetId, entitySet) ->
                     integrateEntities(
                             entitySetId,
                             entitySet,
-                            authorizedPropertiesByEntitySetId[entitySetId]!!
+                            authorizedPropertiesByEntitySetId.getValue(entitySetId)
                     )
                 }
 
         integrateAssociations(associations, authorizedPropertiesByEntitySetId)
         return null
-    }
-
-    private fun checkAssociationEntityTypes(
-            srcAssociationEntitySetIds: Map<UUID, Set<UUID>>, dstAssociationEntitySetIds: Map<UUID, Set<UUID>>
-    ) {
-        val edgeEntitySetIds = srcAssociationEntitySetIds.keys
-        val associationTypeDetails = edmManager.getAssociationTypeDetailsByEntitySetIds(edgeEntitySetIds)
-
-        edgeEntitySetIds.forEach { edgeEntitySetId ->
-            val srcEntitySetIds = srcAssociationEntitySetIds.getValue(edgeEntitySetId)
-            val dstEntitySetIds = dstAssociationEntitySetIds.getValue(edgeEntitySetId)
-
-            val edgeAssociationType = associationTypeDetails.getValue(edgeEntitySetId)
-            val srcEntityTypes = edmManager.getEntityTypeIdsByEntitySetIds(srcEntitySetIds).values
-            val dstEntityTypes = edmManager.getEntityTypeIdsByEntitySetIds(dstEntitySetIds).values
-
-            // ensure, that src and dst entity types are part of src and dst entity types of AssociationType
-            if (!edgeAssociationType.src.containsAll(srcEntityTypes)) {
-                throw IllegalArgumentException(
-                        "One or more entity types of src entity sets $srcEntitySetIds differs " +
-                                "from allowed entity types (${edgeAssociationType.src}) in association type of entity set " +
-                                edgeEntitySetId
-                )
-            }
-
-            if (!edgeAssociationType.dst.containsAll(dstEntityTypes)) {
-                throw IllegalArgumentException(
-                        "One or more entity types of dst entity sets $dstEntitySetIds differs " +
-                                "from allowed entity types (${edgeAssociationType.dst}) in association type of entity set " +
-                                edgeEntitySetId
-                )
-            }
-        }
-    }
-
-    private fun checkAssociationEntityTypes(associationEntitySetId: UUID, associations: List<DataEdge>) {
-        val associationType = edmManager.getAssociationTypeByEntitySetId(associationEntitySetId)
-        if (associationType.associationEntityType.id == edmManager.auditRecordEntitySetsManager.auditingTypes.auditingEdgeEntityTypeId) {
-            return
-        }
-        associations.forEach {
-            // ensure, that DataEdge src and dst entity types are part of src and dst entity types of AssociationType
-            val srcEntityType = edmManager.getEntityTypeByEntitySetId(it.src.entitySetId)
-            val dstEntityType = edmManager.getEntityTypeByEntitySetId(it.dst.entitySetId)
-            if (!(associationType.src.contains(srcEntityType.id)
-                            && associationType.dst.contains(dstEntityType.id))) {
-                throw IllegalArgumentException(
-                        "Entity type of src/dst entity set in data keys {src(${it.src}), " +
-                                "dst(${it.dst})} differs from allowed entity types in association type " +
-                                associationType.associationEntityType.id
-                )
-            }
-        }
     }
 
     /* Top utilizers */
@@ -711,5 +523,49 @@ open class DataGraphService(
 //            entity
 //        }.stream()
         return Stream.empty()
+    }
+
+    override fun getExpiringEntitiesFromEntitySet(entitySetId: UUID, expirationPolicy: DataExpiration,
+                                                  dateTime: OffsetDateTime, deleteType: DeleteType,
+                                                  expirationPropertyType: Optional<PropertyType>): BasePostgresIterable<UUID> {
+        val sqlParams = getSqlParameters(expirationPolicy, dateTime, expirationPropertyType)
+        val expirationBaseColumn = sqlParams.first
+        val formattedDateMinusTTE = sqlParams.second
+        val sqlFormat = sqlParams.third
+        return eds.getExpiringEntitiesFromEntitySet(entitySetId, expirationBaseColumn, formattedDateMinusTTE,
+                sqlFormat, deleteType)
+    }
+
+    private fun getSqlParameters(expirationPolicy: DataExpiration, dateTime: OffsetDateTime, expirationPT: Optional<PropertyType>): Triple<String, Any, Int> {
+        val expirationBaseColumn: String
+        val formattedDateMinusTTE: Any
+        val sqlFormat: Int
+        val dateMinusTTEAsInstant = dateTime.toInstant().minusMillis(expirationPolicy.timeToExpiration)
+        when (expirationPolicy.expirationBase) {
+            ExpirationBase.DATE_PROPERTY -> {
+                val expirationPropertyType = expirationPT.get()
+                val columnData = Pair(expirationPropertyType.postgresIndexType,
+                        expirationPropertyType.datatype)
+                expirationBaseColumn = PostgresDataTables.getColumnDefinition(columnData.first, columnData.second).name
+                if (columnData.second == EdmPrimitiveTypeKind.Date) {
+                    formattedDateMinusTTE = OffsetDateTime.ofInstant(dateMinusTTEAsInstant, ZoneId.systemDefault()).toLocalDate()
+                    sqlFormat = Types.DATE
+                } else { //only other TypeKind for date property type is OffsetDateTime
+                    formattedDateMinusTTE = OffsetDateTime.ofInstant(dateMinusTTEAsInstant, ZoneId.systemDefault())
+                    sqlFormat = Types.TIMESTAMP_WITH_TIMEZONE
+                }
+            }
+            ExpirationBase.FIRST_WRITE -> {
+                expirationBaseColumn = "${PostgresColumn.VERSIONS.name}[array_upper(${PostgresColumn.VERSIONS.name},1)]" //gets the latest version from the versions column
+                formattedDateMinusTTE = dateMinusTTEAsInstant.toEpochMilli()
+                sqlFormat = Types.BIGINT
+            }
+            ExpirationBase.LAST_WRITE -> {
+                expirationBaseColumn = DataTables.LAST_WRITE.name
+                formattedDateMinusTTE = OffsetDateTime.ofInstant(dateMinusTTEAsInstant, ZoneId.systemDefault())
+                sqlFormat = Types.TIMESTAMP_WITH_TIMEZONE
+            }
+        }
+        return Triple(expirationBaseColumn, formattedDateMinusTTE, sqlFormat)
     }
 }

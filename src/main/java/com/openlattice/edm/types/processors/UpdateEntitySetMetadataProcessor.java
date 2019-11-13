@@ -20,46 +20,37 @@
 
 package com.openlattice.edm.types.processors;
 
+import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor;
+import com.openlattice.edm.EntitySet;
+import com.openlattice.edm.requests.MetadataUpdate;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 import java.util.Map.Entry;
 import java.util.UUID;
 
-import com.openlattice.edm.EntitySet;
-import com.openlattice.edm.requests.MetadataUpdate;
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor;
-
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-
-public class UpdateEntitySetMetadataProcessor extends AbstractRhizomeEntryProcessor<UUID, EntitySet, Object> {
-    private static final long    serialVersionUID = 5385727595860961157L;
-    @SuppressFBWarnings(value = "SE_BAD_FIELD", justification = "Custom Stream Serializer is implemented")
-    private final MetadataUpdate update;
+public class UpdateEntitySetMetadataProcessor extends AbstractRhizomeEntryProcessor<UUID, EntitySet, EntitySet> {
+    private static final long           serialVersionUID = 5385727595860961157L;
+    @SuppressFBWarnings( value = "SE_BAD_FIELD", justification = "Custom Stream Serializer is implemented" )
+    private final        MetadataUpdate update;
 
     public UpdateEntitySetMetadataProcessor( MetadataUpdate update ) {
         this.update = update;
     }
 
     @Override
-    public Object process( Entry<UUID, EntitySet> entry ) {
+    public EntitySet process( Entry<UUID, EntitySet> entry ) {
         EntitySet es = entry.getValue();
         if ( es != null ) {
-            if ( update.getTitle().isPresent() ) {
-                es.setTitle( update.getTitle().get() );
-            }
-            if ( update.getDescription().isPresent() ) {
-                es.setDescription( update.getDescription().get() );
-            }
-            if ( update.getName().isPresent() ) {
-                es.setName( update.getName().get() );
-            }
-            if ( update.getContacts().isPresent() ) {
-                es.setContacts( update.getContacts().get() );
-            }
-            if ( update.getOrganizationId().isPresent() ) {
-                es.setOrganizationId( update.getOrganizationId().get() );
-            }
+            update.getTitle().ifPresent( es::setTitle );
+            update.getDescription().ifPresent( es::setDescription );
+            update.getName().ifPresent( es::setName );
+            update.getContacts().ifPresent( es::setContacts );
+            update.getOrganizationId().ifPresent( es::setOrganizationId );
+            update.getPartitions().ifPresent( es::setPartitions );
+            update.getDataExpiration().ifPresent( es::setExpiration );
             entry.setValue( es );
         }
-        return null;
+        return es;
     }
 
     public MetadataUpdate getUpdate() {
@@ -76,13 +67,13 @@ public class UpdateEntitySetMetadataProcessor extends AbstractRhizomeEntryProces
 
     @Override
     public boolean equals( Object obj ) {
-        if ( this == obj ) return true;
-        if ( obj == null ) return false;
-        if ( getClass() != obj.getClass() ) return false;
+        if ( this == obj ) { return true; }
+        if ( obj == null ) { return false; }
+        if ( getClass() != obj.getClass() ) { return false; }
         UpdateEntitySetMetadataProcessor other = (UpdateEntitySetMetadataProcessor) obj;
         if ( update == null ) {
-            if ( other.update != null ) return false;
-        } else if ( !update.equals( other.update ) ) return false;
+            if ( other.update != null ) { return false; }
+        } else if ( !update.equals( other.update ) ) { return false; }
         return true;
     }
 

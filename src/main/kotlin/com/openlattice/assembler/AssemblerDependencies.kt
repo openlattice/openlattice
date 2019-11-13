@@ -21,33 +21,18 @@
 
 package com.openlattice.assembler
 
-import com.codahale.metrics.MetricRegistry
-import com.hazelcast.core.IMap
-import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.DbCredentialService
-import com.openlattice.authorization.securable.SecurableObjectType
-import com.openlattice.edm.EntitySet
-import com.openlattice.organizations.HazelcastOrganizationService
-import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.tasks.HazelcastTaskDependencies
 import com.zaxxer.hikari.HikariDataSource
-import java.util.*
 
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 data class AssemblerDependencies(
-        val assemblerConfiguration: AssemblerConfiguration,
         val hds: HikariDataSource,
-        val securePrincipalsManager: SecurePrincipalsManager,
-        val organizations: HazelcastOrganizationService,
         val dbCredentialService: DbCredentialService,
-        val entitySets: IMap<UUID, EntitySet>,
-        val assemblerConnectionManager: AssemblerConnectionManager,
-        val securableObjectTypes: IMap<AclKey, SecurableObjectType>,
-        val metricRegistry: MetricRegistry
-
+        val assemblerConnectionManager: AssemblerConnectionManager
 ) : HazelcastTaskDependencies {
     val target: HikariDataSource = assemblerConnectionManager.connect("postgres")
 }

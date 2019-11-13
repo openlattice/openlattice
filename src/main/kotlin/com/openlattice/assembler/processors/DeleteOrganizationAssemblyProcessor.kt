@@ -22,18 +22,23 @@
 package com.openlattice.assembler.processors
 
 import com.hazelcast.core.Offloadable
+import com.hazelcast.core.ReadOnly
 import com.hazelcast.spi.ExecutionService
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.OrganizationAssembly
+import com.openlattice.assembler.AssemblerConnectionManagerDependent
+import com.openlattice.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor
 import org.slf4j.LoggerFactory
 import java.lang.IllegalStateException
 import java.util.UUID
 
 private val logger = LoggerFactory.getLogger(DeleteOrganizationAssemblyProcessor::class.java)
-private const val NOT_INITIALIZED = "Assembler Connection Manager not initialized."
 
-class DeleteOrganizationAssemblyProcessor : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(), Offloadable {
+class DeleteOrganizationAssemblyProcessor
+    : AbstractReadOnlyRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(),
+        AssemblerConnectionManagerDependent<DeleteOrganizationAssemblyProcessor>,
+        Offloadable {
     @Transient
     private var acm: AssemblerConnectionManager? = null
 
@@ -43,7 +48,8 @@ class DeleteOrganizationAssemblyProcessor : AbstractRhizomeEntryProcessor<UUID, 
         if (assembly == null) {
             logger.error("Encountered null assembly while trying to delete organization assembly.")
         } else {
-            acm?.dropOrganizationDatabase(organizationId) ?: throw IllegalStateException(NOT_INITIALIZED)
+            acm?.dropOrganizationDatabase(organizationId)
+                    ?: throw IllegalStateException(AssemblerConnectionManagerDependent.NOT_INITIALIZED)
         }
 
         return null
@@ -53,7 +59,7 @@ class DeleteOrganizationAssemblyProcessor : AbstractRhizomeEntryProcessor<UUID, 
         return ExecutionService.OFFLOADABLE_EXECUTOR
     }
 
-    fun init(acm: AssemblerConnectionManager): DeleteOrganizationAssemblyProcessor {
+    override fun init(acm: AssemblerConnectionManager): DeleteOrganizationAssemblyProcessor {
         this.acm = acm
         return this
     }

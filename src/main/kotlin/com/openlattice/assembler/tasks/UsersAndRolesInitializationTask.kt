@@ -36,17 +36,17 @@ class UsersAndRolesInitializationTask : HazelcastInitializationTask<AssemblerDep
     override fun initialize(dependencies: AssemblerDependencies) {
         dependencies
                 .assemblerConnectionManager
-                .getAllRoles(dependencies.securePrincipalsManager)
+                .getAllRoles()
                 .map(dependencies.assemblerConnectionManager::createRole)
         dependencies
                 .assemblerConnectionManager
-                .getAllUsers(dependencies.securePrincipalsManager)
+                .getAllUsers()
                 .map(dependencies.assemblerConnectionManager::createUnprivilegedUser)
 
     }
 
     override fun after(): Set<Class<out HazelcastInitializationTask<*>>> {
-        return setOf(OrganizationsInitializationTask::class.java, AuthorizationInitializationTask::class.java)
+        return setOf(AuthorizationInitializationTask::class.java)
     }
 
     override fun getInitialDelay(): Long {

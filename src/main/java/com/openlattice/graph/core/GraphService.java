@@ -43,27 +43,14 @@ public interface GraphService {
 
     int clearEdges( Iterable<DataEdgeKey> keys );
 
-    int clearVerticesInEntitySetWithoutLocking( @Nonnull UUID entitySetId );
-
-    int clearVerticesWithoutLocking( @Nonnull UUID entitySetId, @Nonnull Set<UUID> vertices );
-
-    int clearVerticesOfAssociationsWithoutLocking( UUID entitySetId, Set<UUID> vertices );
-
     WriteEvent deleteEdges( Iterable<DataEdgeKey> keys );
-
-    int deleteVerticesInEntitySetWithoutLocking( UUID entitySetId );
-
-    int deleteVerticesWithoutLocking( UUID entitySetId, Set<UUID> vertices );
-
-    int deleteVerticesOfAssociationsWithoutLocking( UUID entitySetId, Set<UUID> vertices );
-
-    Edge getEdge( DataEdgeKey key );
-
-    Stream<Edge> getEdges( Set<DataEdgeKey> keys );
 
     PostgresIterable<DataEdgeKey> getEdgeKeysOfEntitySet( UUID entitySetId );
 
-    PostgresIterable<DataEdgeKey> getEdgeKeysContainingEntities( UUID entitySetId, Set<UUID> entityKeyIds );
+    PostgresIterable<DataEdgeKey> getEdgeKeysContainingEntities(
+            UUID entitySetId,
+            Set<UUID> entityKeyIds,
+            boolean includeClearedEdges );
 
     Stream<Edge> getEdgesAndNeighborsForVertex( UUID entitySetId, UUID vertexId );
 
@@ -71,11 +58,9 @@ public interface GraphService {
 
     Stream<Edge> getEdgesAndNeighborsForVerticesBulk( Set<UUID> entitySetIds, EntityNeighborsFilter filter );
 
-    Stream<IncrementableWeightId> topEntitiesOld(
-            int limit,
-            UUID entitySetId,
-            SetMultimap<UUID, UUID> srcFilters,
-            SetMultimap<UUID, UUID> dstFilters );
+    Set<UUID> getEdgeEntitySetsConnectedToEntities( UUID entitySetId, Set<UUID> entityKeyIds );
+
+    Set<UUID> getEdgeEntitySetsConnectedToEntitySet( UUID entitySetId );
 
     PostgresIterable<Map<String, Object>> computeTopEntities(
             int limit,
@@ -84,16 +69,6 @@ public interface GraphService {
             List<AuthorizedFilteredNeighborsRanking> details,
             boolean linked,
             Optional<UUID> linkingEntitySetId );
-
-    /**
-     * @param srcFilters Association type ids to neighbor entity set ids
-     * @param dstFilters Association type ids to neighbor entity set ids
-     */
-    IncrementableWeightId[] computeGraphAggregation(
-            int limit,
-            UUID entitySetId,
-            SetMultimap<UUID, UUID> srcFilters,
-            SetMultimap<UUID, UUID> dstFilters );
 
     List<NeighborSets> getNeighborEntitySets( Set<UUID> entitySetIds );
 }

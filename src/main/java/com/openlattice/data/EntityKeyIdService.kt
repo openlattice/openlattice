@@ -21,7 +21,6 @@
 
 package com.openlattice.data
 
-import com.openlattice.data.EntityKey
 import java.util.*
 
 /**
@@ -51,4 +50,6 @@ interface EntityKeyIdService {
     ): MutableMap<EntityKey, UUID>
 
     fun reserveEntityKeyIds(entityKeys: Set<EntityKey>): Set<UUID>
+
+    fun reserveLinkingIds( count: Int): List<UUID>
 }

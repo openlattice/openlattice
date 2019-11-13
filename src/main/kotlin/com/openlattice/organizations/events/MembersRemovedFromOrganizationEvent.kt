@@ -22,7 +22,7 @@
 
 package com.openlattice.organizations.events
 
-import com.openlattice.organizations.PrincipalSet
+import com.openlattice.organizations.SecurablePrincipalList
 import java.util.UUID
 
-data class MembersRemovedFromOrganizationEvent(val organizationId: UUID, val members: PrincipalSet)
+data class MembersRemovedFromOrganizationEvent(val organizationId: UUID, val members: SecurablePrincipalList)

@@ -32,25 +32,25 @@ import static com.openlattice.postgres.PostgresColumn.*;
  */
 public final class PostgresTable {
 
-    public static final PostgresTableDefinition ACL_KEYS                    =
+    public static final PostgresTableDefinition ACL_KEYS          =
             new PostgresTableDefinition( "acl_keys" )
                     .addColumns( NAME, SECURABLE_OBJECTID )
                     .primaryKey( NAME );
-    public static final PostgresTableDefinition APPS                        =
+    public static final PostgresTableDefinition APPS              =
             new PostgresTableDefinition( "apps" )
                     .addColumns( ID, NAME, TITLE, DESCRIPTION, CONFIG_TYPE_IDS, URL );
-    public static final PostgresTableDefinition APP_CONFIGS                 =
+    public static final PostgresTableDefinition APP_CONFIGS       =
             new PostgresTableDefinition( "app_configs" )
                     .addColumns( APP_ID, ORGANIZATION_ID, CONFIG_TYPE_ID, PostgresColumn.PERMISSIONS, ENTITY_SET_ID )
                     .primaryKey( APP_ID, ORGANIZATION_ID, CONFIG_TYPE_ID );
     //.setUnique( NAMESPACE, NAME ); //Not allowed by postgres xl
-    public static final PostgresTableDefinition APP_TYPES                   =
+    public static final PostgresTableDefinition APP_TYPES         =
             new PostgresTableDefinition( "app_types" )
                     .addColumns( ID, NAMESPACE, NAME, TITLE, DESCRIPTION, ENTITY_TYPE_ID );
-    public static final PostgresTableDefinition ASSOCIATION_TYPES           =
+    public static final PostgresTableDefinition ASSOCIATION_TYPES =
             new PostgresTableDefinition( "association_types" )
                     .addColumns( ID, SRC, DST, BIDIRECTIONAL );
-    public static final PostgresTableDefinition AUDIT_LOG                   =
+    public static final PostgresTableDefinition AUDIT_LOG         =
             new PostgresTableDefinition( "audit_log" )
                     .addColumns( ACL_KEY,
                             EVENT_TYPE,
@@ -62,7 +62,8 @@ public final class PostgresTable {
                             BLOCK_ID )
                     .primaryKey( ACL_KEY, EVENT_TYPE, PRINCIPAL_TYPE, PRINCIPAL_ID, TIME_UUID )
                     .setUnique( ACL_KEY, EVENT_TYPE, PRINCIPAL_TYPE, PRINCIPAL_ID, TIME_UUID );
-    public static final PostgresTableDefinition AUDIT_RECORD_ENTITY_SET_IDS =
+
+    public static final PostgresTableDefinition        AUDIT_RECORD_ENTITY_SET_IDS  =
             new PostgresTableDefinition( "audit_record_entity_set_ids" )
                     .addColumns( ACL_KEY,
                             AUDIT_RECORD_ENTITY_SET_ID,
@@ -70,12 +71,35 @@ public final class PostgresTable {
                             PostgresColumn.AUDIT_RECORD_ENTITY_SET_IDS,
                             AUDIT_EDGE_ENTITY_SET_IDS )
                     .primaryKey( ACL_KEY );
-
-    public static final PostgresTableDefinition DB_CREDS = new PostgresTableDefinition( "db_creds" )
-            .addColumns( PRINCIPAL_ID, CREDENTIAL )
-            .primaryKey( PRINCIPAL_ID );
-
-    public static final PostgresTableDefinition EDGES =
+    public static final PostgresTableDefinition        BASE_LONG_IDS                =
+            new PostgresTableDefinition( "base_long_ids" )
+                    .addColumns( SCOPE, BASE )
+                    .primaryKey( SCOPE );
+    public static final PostgresTableDefinition        DATA                         = PostgresDataTables
+            .buildDataTableDefinition();
+    public static final PostgresTableDefinition        DB_CREDS                     =
+            new PostgresTableDefinition( "db_creds" )
+                    .addColumns( PRINCIPAL_ID, CREDENTIAL )
+                    .primaryKey( PRINCIPAL_ID );
+    public static final PostgresTableDefinition        E                            =
+            new CitusDistributedTableDefinition( "e" )
+                    .addColumns(
+                            PARTITION,
+                            SRC_ENTITY_SET_ID,
+                            SRC_ENTITY_KEY_ID,
+                            DST_ENTITY_SET_ID,
+                            DST_ENTITY_KEY_ID,
+                            EDGE_ENTITY_SET_ID,
+                            EDGE_ENTITY_KEY_ID,
+                            VERSION,
+                            VERSIONS,
+                            PARTITIONS_VERSION )
+                    .primaryKey( PARTITION,
+                            SRC_ENTITY_KEY_ID,
+                            DST_ENTITY_KEY_ID,
+                            EDGE_ENTITY_KEY_ID )
+                    .distributionColumn( PARTITION );
+    public static final PostgresTableDefinition        EDGES                        =
             new CitusDistributedTableDefinition( "edges" )
                     .addColumns(
                             ID_VALUE,
@@ -89,7 +113,21 @@ public final class PostgresTable {
                             VERSIONS )
                     .primaryKey( ID, EDGE_COMP_1, EDGE_COMP_2, COMPONENT_TYPES )
                     .distributionColumn( ID_VALUE );
-
+    @Deprecated
+    public static final PostgresTableDefinition ENTITY_KEY_IDS =
+            new CitusDistributedTableDefinition( "entity_key_ids" )
+                    .addColumns( ENTITY_SET_ID,
+                            ID,
+                            LINKING_ID,
+                            VERSION,
+                            VERSIONS,
+                            LAST_WRITE,
+                            LAST_INDEX,
+                            LAST_LINK,
+                            LAST_PROPAGATE,
+                            LAST_MIGRATE,
+                            LAST_LINK_INDEX )
+                    .distributionColumn( ID );
     public static final PostgresTableDefinition        ENTITY_QUERIES               =
             new PostgresTableDefinition( "entity_graph_queries" )
                     .addColumns( QUERY_ID, ID_VALUE, CLAUSES )
@@ -103,9 +141,15 @@ public final class PostgresTable {
                             TITLE,
                             DESCRIPTION,
                             CONTACTS,
-                            PostgresColumn.LINKED_ENTITY_SETS,
+                            LINKED_ENTITY_SETS,
                             ORGANIZATION_ID,
-                            ENTITY_SET_FLAGS );
+                            ENTITY_SET_FLAGS,
+                            PARTITIONS,
+                            PARTITIONS_VERSION,
+                            TIME_TO_EXPIRATION,
+                            EXPIRATION_BASE_FLAG,
+                            EXPIRATION_DELETE_FLAG,
+                            EXPIRATION_START_ID );
     public static final PostgresTableDefinition        ENTITY_SET_PROPERTY_METADATA =
             new PostgresTableDefinition( "entity_set_property_metadata" )
                     .addColumns( ENTITY_SET_ID, PROPERTY_TYPE_ID, TITLE, DESCRIPTION, TAGS, SHOW )
@@ -126,6 +170,33 @@ public final class PostgresTable {
                             CATEGORY,
                             SHARDS );
     //.setUnique( NAMESPACE, NAME );
+    public static final PostgresTableDefinition        ENTITY_TYPE_COLLECTIONS      =
+            new PostgresTableDefinition( "entity_type_collections" )
+                    .addColumns(
+                            ID,
+                            NAMESPACE,
+                            NAME,
+                            TITLE,
+                            DESCRIPTION,
+                            SCHEMAS,
+                            TEMPLATE );
+    public static final PostgresTableDefinition        ENTITY_SET_COLLECTIONS       =
+            new PostgresTableDefinition( "entity_set_collections" )
+                    .addColumns(
+                            ID,
+                            NAME,
+                            TITLE,
+                            DESCRIPTION,
+                            CONTACTS,
+                            ENTITY_TYPE_COLLECTION_ID,
+                            ORGANIZATION_ID );
+    public static final PostgresTableDefinition        ENTITY_SET_COLLECTION_CONFIG =
+            new PostgresTableDefinition( "entity_set_collection_config" )
+                    .addColumns(
+                            ENTITY_SET_COLLECTION_ID,
+                            TEMPLATE_TYPE_ID,
+                            ENTITY_SET_ID )
+                    .primaryKey( ENTITY_SET_COLLECTION_ID, TEMPLATE_TYPE_ID );
     public static final PostgresTableDefinition        ENUM_TYPES                   =
             new PostgresTableDefinition( "enum_types" )
                     .addColumns( ID,
@@ -160,10 +231,10 @@ public final class PostgresTable {
                     PRINCIPAL_ID
             );
     public static final PostgresTableDefinition        IDS                          =
-            new CitusDistributedTableDefinition( "entity_key_ids" )
-                    .addColumns( ENTITY_SET_ID,
-                            ID,
-                            ENTITY_ID,
+            new CitusDistributedTableDefinition( "ids" )
+                    .addColumns( PARTITION,
+                            ENTITY_SET_ID,
+                            ID_VALUE,
                             LINKING_ID,
                             VERSION,
                             VERSIONS,
@@ -171,8 +242,11 @@ public final class PostgresTable {
                             LAST_INDEX,
                             LAST_LINK,
                             LAST_PROPAGATE,
-                            LAST_LINK_INDEX )
-                    .distributionColumn( ID );
+                            LAST_MIGRATE,
+                            LAST_LINK_INDEX,
+                            PARTITIONS_VERSION )
+                    .primaryKey( ID_VALUE, PARTITION )
+                    .distributionColumn( PARTITION );
     public static final PostgresTableDefinition        ID_GENERATION                =
             new PostgresTableDefinition( "id_gen" )
                     .primaryKey( PARTITION_INDEX )
@@ -191,7 +265,17 @@ public final class PostgresTable {
                             DST_ENTITY_SET_ID,
                             DST_ENTITY_KEY_ID );
 
-    public static final PostgresTableDefinition MATCHED_ENTITIES =
+    public static final PostgresTableDefinition LINKING_LOG =
+            new CitusDistributedTableDefinition( "linking_log" )
+                    .addColumns( LINKING_ID,
+                            ID_MAP,
+                            VERSION )
+                    .primaryKey( LINKING_ID,
+                            ID_MAP,
+                            VERSION )
+                    .distributionColumn( LINKING_ID );
+
+    public static final PostgresTableDefinition MATCHED_ENTITIES         =
             new CitusDistributedTableDefinition( "matched_entities" )
                     .addColumns( LINKING_ID,
                             SRC_ENTITY_SET_ID,
@@ -205,7 +289,6 @@ public final class PostgresTable {
                             DST_ENTITY_SET_ID,
                             DST_ENTITY_KEY_ID )
                     .distributionColumn( LINKING_ID );
-
     public static final PostgresTableDefinition MATERIALIZED_ENTITY_SETS =
             new PostgresTableDefinition( "materialized_entity_sets" )
                     .addColumns( ENTITY_SET_ID,
@@ -220,23 +303,21 @@ public final class PostgresTable {
                     .primaryKey( SECURABLE_OBJECTID );
     public static final PostgresTableDefinition ORGANIZATIONS            =
             new PostgresTableDefinition( "organizations" )
-                    .addColumns( ID, NULLABLE_TITLE, DESCRIPTION, ALLOWED_EMAIL_DOMAINS, MEMBERS, APP_IDS );
-    //.setUnique( NAME );
+                    .addColumns( ID, NULLABLE_TITLE, DESCRIPTION, ALLOWED_EMAIL_DOMAINS, MEMBERS, APP_IDS, PARTITIONS );
     public static final PostgresTableDefinition ORGANIZATION_ASSEMBLIES  =
             new PostgresTableDefinition( "organization_assemblies" )
                     .addColumns( ORGANIZATION_ID, INITIALIZED )
                     .primaryKey( ORGANIZATION_ID );
 
-    public static final PostgresTableDefinition PERMISSIONS =
+    public static final PostgresTableDefinition PERMISSIONS              =
             new PostgresTableDefinition( "permissions" )
                     .addColumns( ACL_KEY,
                             PRINCIPAL_TYPE,
                             PRINCIPAL_ID,
                             PostgresColumn.PERMISSIONS,
-                            PostgresColumn.EXPIRATION_DATE )
+                            EXPIRATION_DATE )
                     .primaryKey( ACL_KEY, PRINCIPAL_TYPE, PRINCIPAL_ID );
-
-    public static final PostgresTableDefinition PERSISTENT_SEARCHES =
+    public static final PostgresTableDefinition PERSISTENT_SEARCHES      =
             new PostgresTableDefinition( "persistent_searches" )
                     .addColumns( ID,
                             ACL_KEY,
@@ -246,27 +327,20 @@ public final class PostgresTable {
                             SEARCH_CONSTRAINTS,
                             ALERT_METADATA )
                     .setUnique( ID, ACL_KEY );
-
-    public static final PostgresTableDefinition PRINCIPALS        =
+    public static final PostgresTableDefinition PRINCIPALS               =
             new PostgresTableDefinition( "principals" )
                     .addColumns( ACL_KEY, PRINCIPAL_TYPE, PRINCIPAL_ID, NULLABLE_TITLE, DESCRIPTION )
                     .primaryKey( ACL_KEY )
                     .setUnique( PRINCIPAL_TYPE, PRINCIPAL_ID );
-    public static final PostgresTableDefinition PRINCIPAL_TREES   = new PostgresTableDefinition(
+    public static final PostgresTableDefinition PRINCIPAL_TREES          = new PostgresTableDefinition(
             "principal_trees" )
             .addColumns( ACL_KEY, PRINCIPAL_OF_ACL_KEY )
             .primaryKey( ACL_KEY, PRINCIPAL_OF_ACL_KEY );
-    public static final PostgresTableDefinition PROPAGATION_GRAPH = new PostgresTableDefinition(
-
+    public static final PostgresTableDefinition PROPAGATION_GRAPH        = new PostgresTableDefinition(
             "propagation_graph" )
             .addColumns( SRC_ENTITY_SET_ID, SRC_PROPERTY_TYPE_ID, DST_ENTITY_SET_ID, DST_PROPERTY_TYPE_ID )
             .primaryKey( SRC_ENTITY_SET_ID, SRC_PROPERTY_TYPE_ID, DST_ENTITY_SET_ID, DST_PROPERTY_TYPE_ID );
-    //    public static final PostgresTableDefinition        PROPAGATION_STATE            = new PostgresTableDefinition(
-    //            "propgation_state" )
-    //            .addColumns( ENTITY_SET_ID, ID_VALUE, PROPERTY_TYPE_ID, LAST_PROPAGATE, LAST_RECEIVED )
-    //            .primaryKey( ENTITY_SET_ID, ID_VALUE, PROPERTY_TYPE_ID );
-
-    public static final PostgresTableDefinition PROPERTY_TYPES =
+    public static final PostgresTableDefinition PROPERTY_TYPES           =
 
             new PostgresTableDefinition( "property_types" )
                     .addColumns( ID,
@@ -281,27 +355,33 @@ public final class PostgresTable {
                             ANALYZER,
                             MULTI_VALUED,
                             INDEX_TYPE );
-
-    public static final PostgresTableDefinition QUERIES =
+    //    public static final PostgresTableDefinition        PROPAGATION_STATE            = new PostgresTableDefinition(
+    //            "propgation_state" )
+    //            .addColumns( ENTITY_SET_ID, ID_VALUE, PROPERTY_TYPE_ID, LAST_PROPAGATE, LAST_RECEIVED )
+    //            .primaryKey( ENTITY_SET_ID, ID_VALUE, PROPERTY_TYPE_ID );
+    public static final PostgresTableDefinition QUERIES                  =
             new CitusDistributedTableDefinition( "queries" )
                     .addColumns( ENTITY_SET_ID, ID_VALUE, QUERY_ID, EXPIRATION, MATCH_ALL_IDS )
                     .primaryKey( ID_VALUE, QUERY_ID )
                     .distributionColumn( ID_VALUE )
                     .unlogged();
-
-    public static final PostgresTableDefinition REQUESTS          =
+    public static final PostgresTableDefinition REQUESTS                 =
             new PostgresTableDefinition( "requests" )
                     .addColumns( ACL_KEY, PRINCIPAL_TYPE, PRINCIPAL_ID, PostgresColumn.PERMISSIONS, REASON, STATUS )
                     .primaryKey( ACL_KEY, PRINCIPAL_TYPE, PRINCIPAL_ID );
-    public static final PostgresTableDefinition SCHEMA            =
+    public static final PostgresTableDefinition SCHEMA                   =
             new PostgresTableDefinition( "schemas" )
                     .addColumns( NAMESPACE, NAME_SET )
                     .primaryKey( NAMESPACE );
-    public static final PostgresTableDefinition SECURABLE_OBJECTS =
+    public static final PostgresTableDefinition SECURABLE_OBJECTS        =
             new PostgresTableDefinition( "securable_objects" )
                     .addColumns( ACL_KEY, SECURABLE_OBJECT_TYPE )
                     .primaryKey( ACL_KEY );
-    public static final PostgresTableDefinition SUBSCRIPTIONS     =
+    public static final PostgresTableDefinition SMS_INFORMATION          =
+            new PostgresTableDefinition( "sms_information" )
+                    .addColumns( PHONE_NUMBER, ORGANIZATION_ID, ENTITY_SET_IDS, TAGS )
+                    .primaryKey( PHONE_NUMBER, ORGANIZATION_ID );
+    public static final PostgresTableDefinition SUBSCRIPTIONS            =
             new PostgresTableDefinition( "subscriptions" )
                     .addColumns( ENTITY_SET_ID,
                             ID_VALUE,
@@ -310,17 +390,13 @@ public final class PostgresTable {
                             SRC_SELECTS,
                             DST_SELECTS,
                             CONTACT_TYPE,
-                            CONTACT_INFO)
+                            CONTACT_INFO )
                     .primaryKey( ID, PRINCIPAL_ID );
     public static final PostgresTableDefinition SYNC_IDS                 =
             new CitusDistributedTableDefinition( "sync_ids" )
                     .addColumns( ENTITY_SET_ID, ENTITY_ID, ID_VALUE )
                     .primaryKey( ENTITY_SET_ID, ENTITY_ID )
                     .distributionColumn( ENTITY_ID );
-    public static final PostgresTableDefinition VERTEX_IDS_AFTER_LINKING =
-            new PostgresTableDefinition( "vertex_ids_after_linking" )
-                    .addColumns( GRAPH_ID, VERTEX_ID, NEW_VERTEX_ID )
-                    .primaryKey( GRAPH_ID, VERTEX_ID );
 
     static {
         PRINCIPAL_TREES.addIndexes(
@@ -329,76 +405,71 @@ public final class PostgresTable {
                         .name( "principal_trees_acl_key_idx" )
                         .ifNotExists()
         );
-        EDGES.addIndexes(
-                new PostgresColumnsIndexDefinition( EDGES, ID_VALUE )
-                        .name( "edges_id_idx" )
+        E.addIndexes(
+                new PostgresColumnsIndexDefinition( E, SRC_ENTITY_KEY_ID )
+                        .name( "e_src_entity_key_id_idx" )
                         .ifNotExists(),
-                new PostgresColumnsIndexDefinition( EDGES, EDGE_COMP_1 )
-                        .name( "edges_edge_comp_1_idx" )
+                new PostgresColumnsIndexDefinition( E, DST_ENTITY_KEY_ID )
+                        .name( "e_dst_entity_key_id_idx" )
                         .ifNotExists(),
-                new PostgresColumnsIndexDefinition( EDGES, EDGE_COMP_2 )
-                        .name( "edges_edge_comp_2_idx" )
+                new PostgresColumnsIndexDefinition( E, EDGE_ENTITY_KEY_ID )
+                        .name( "e_edge_entity_key_id_idx" )
                         .ifNotExists(),
-                new PostgresColumnsIndexDefinition( EDGES, COMPONENT_TYPES )
-                        .name( "edges_comp_types_idx" )
+                new PostgresColumnsIndexDefinition( E, SRC_ENTITY_SET_ID )
+                        .name( "e_src_entity_set_id_idx" )
                         .ifNotExists(),
-                new PostgresColumnsIndexDefinition( EDGES, SRC_ENTITY_SET_ID )
-                        .name( "edges_src_entity_set_id_idx" )
+                new PostgresColumnsIndexDefinition( E, DST_ENTITY_SET_ID )
+                        .name( "e_dst_entity_set_id_idx" )
                         .ifNotExists(),
-                new PostgresColumnsIndexDefinition( EDGES, DST_ENTITY_SET_ID )
-                        .name( "edges_dst_entity_set_id_idx" )
-                        .ifNotExists(),
-                new PostgresColumnsIndexDefinition( EDGES, EDGE_ENTITY_SET_ID )
-                        .name( "edges_edge_entity_set_id_idx" )
+                new PostgresColumnsIndexDefinition( E, EDGE_ENTITY_SET_ID )
+                        .name( "e_edge_entity_set_id_idx" )
                         .ifNotExists() );
+
         IDS.addIndexes(
                 new PostgresColumnsIndexDefinition( IDS, ENTITY_SET_ID )
-                        .name( "entity_key_ids_entity_set_id_idx" )
-                        .ifNotExists(),
-                new PostgresColumnsIndexDefinition( IDS, ENTITY_SET_ID, ENTITY_ID )
-                        .name( "entity_key_ids_entity_set_id_entity_id_idx" )
+                        .name( "ids_entity_set_id_idx" )
                         .ifNotExists(),
                 new PostgresColumnsIndexDefinition( IDS, VERSION )
-                        .name( "entity_key_ids_version_idx" )
+                        .name( "ids_version_idx" )
                         .ifNotExists(),
                 new PostgresColumnsIndexDefinition( IDS, VERSIONS )
-                        .name( "entity_key_ids_versions_idx" )
+                        .name( "ids_versions_idx" )
                         .method( IndexType.GIN )
                         .ifNotExists(),
                 new PostgresColumnsIndexDefinition( IDS, LINKING_ID )
-                        .name( "entity_key_ids_linking_id_idx" )
+                        .name( "ids_linking_id_idx" )
                         .ifNotExists(),
                 new PostgresColumnsIndexDefinition( IDS, LAST_WRITE )
-                        .name( "entity_key_ids_last_write_idx" )
+                        .name( "ids_last_write_idx" )
                         .ifNotExists(),
                 new PostgresColumnsIndexDefinition( IDS, LAST_INDEX )
-                        .name( "entity_key_ids_last_index_idx" )
+                        .name( "ids_last_index_idx" )
                         .ifNotExists(),
                 new PostgresColumnsIndexDefinition( IDS, LAST_PROPAGATE )
-                        .name( "entity_key_ids_last_propagate_idx" )
+                        .name( "ids_last_propagate_idx" )
                         .ifNotExists(),
                 new PostgresColumnsIndexDefinition( IDS, LAST_LINK_INDEX )
-                        .name( "entity_key_ids_last_link_index_idx" )
+                        .name( "ids_last_link_index_idx" )
                         .ifNotExists(),
                 new PostgresExpressionIndexDefinition( IDS,
                         ENTITY_SET_ID.getName()
                                 + ",(" + LAST_INDEX.getName() + " < " + LAST_WRITE.getName() + ")"
                                 + ",(" + VERSION.getName() + " > 0)" )
-                        .name( "entity_key_ids_needing_indexing_idx" )
+                        .name( "ids_needing_indexing_idx" )
                         .ifNotExists(),
                 new PostgresExpressionIndexDefinition( IDS,
                         ENTITY_SET_ID.getName()
                                 + ",(" + LAST_INDEX.getName() + " < " + LAST_WRITE.getName() + ")"
                                 + ",(" + VERSION.getName() + " <= 0)" )
-                        .name( "entity_key_ids_needing_delete_index_idx" )
+                        .name( "ids_needing_delete_index_idx" )
                         .ifNotExists(),
-                new PostgresExpressionIndexDefinition( IDS,
+                new PostgresExpressionIndexDefinition( ENTITY_KEY_IDS,
                         ENTITY_SET_ID.getName()
                                 + ",(" + LAST_LINK.getName() + " < " + LAST_WRITE.getName() + ")"
                                 + ",(" + LAST_INDEX.getName() + " >= " + LAST_WRITE.getName() + ")"
                                 + ",(" + LAST_INDEX.getName() + " > '-infinity' )"
                                 + ",(" + VERSION.getName() + " > 0)" )
-                        .name( "entity_key_ids_needing_linking_idx" )
+                        .name( "ids_needing_linking_idx" )
                         .ifNotExists(),
                 new PostgresExpressionIndexDefinition( IDS,
                         ENTITY_SET_ID.getName()
@@ -407,20 +478,20 @@ public final class PostgresTable {
                                 + ",(" + LAST_INDEX.getName() + " >= " + LAST_WRITE.getName() + ")"
                                 + ",(" + LAST_LINK_INDEX.getName() + " < " + LAST_WRITE.getName() + ")"
                                 + ",(" + VERSION.getName() + " > 0)" )
-                        .name( "entity_key_ids_needing_linking_indexing_idx" )
+                        .name( "ids_needing_linking_indexing_idx" )
                         .ifNotExists(),
                 new PostgresExpressionIndexDefinition( IDS,
                         ENTITY_SET_ID.getName()
                                 + ",(" + LINKING_ID.getName() + " IS NOT NULL" + ")"
                                 + ",(" + LAST_LINK_INDEX.getName() + " < " + LAST_WRITE.getName() + ")"
                                 + ",(" + VERSION.getName() + " <= 0)" )
-                        .name( "entity_key_ids_needing_delete_linking_index_idx" )
+                        .name( "ids_needing_delete_linking_index_idx" )
                         .ifNotExists(),
                 new PostgresExpressionIndexDefinition( IDS,
                         ENTITY_SET_ID.getName()
                                 + ",(" + LAST_PROPAGATE.getName() + " < " + LAST_WRITE.getName() + ")"
                                 + ",(" + VERSION.getName() + " > 0)" )
-                        .name( "entity_key_ids_needing_propagation_idx" )
+                        .name( "ids_needing_propagation_idx" )
                         .ifNotExists()
         );
 

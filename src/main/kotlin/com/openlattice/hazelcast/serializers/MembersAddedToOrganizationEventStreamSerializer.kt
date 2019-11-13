@@ -32,15 +32,15 @@ import org.springframework.stereotype.Component
 class MembersAddedToOrganizationEventStreamSerializer
     : SelfRegisteringStreamSerializer<MembersAddedToOrganizationEvent> {
 
-    override fun write(out: ObjectDataOutput?, obj: MembersAddedToOrganizationEvent) {
+    override fun write(out: ObjectDataOutput, obj: MembersAddedToOrganizationEvent) {
         UUIDStreamSerializer.serialize(out, obj.organizationId)
-        PrincipalSetStreamSerializer().write(out, obj.newMembers)
+        SecurablePrincipalListStreamSerializer().write(out, obj.newMembers)
     }
 
     override fun read(input: ObjectDataInput): MembersAddedToOrganizationEvent {
         return MembersAddedToOrganizationEvent(
                 UUIDStreamSerializer.deserialize(input),
-                PrincipalSetStreamSerializer().read(input))
+                SecurablePrincipalListStreamSerializer().read(input))
     }
 
     override fun getTypeId(): Int {

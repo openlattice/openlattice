@@ -24,15 +24,16 @@ import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.assembler.AssemblerConnectionManager
+import com.openlattice.assembler.AssemblerConnectionManagerDependent
 import com.openlattice.assembler.processors.RefreshMaterializedEntitySetProcessor
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import org.springframework.stereotype.Component
 
 @Component
 class RefreshMaterializedEntitySetProcessorStreamSerializer
-    : SelfRegisteringStreamSerializer<RefreshMaterializedEntitySetProcessor>, AssemblerConnectionManagerDependent {
+    : SelfRegisteringStreamSerializer<RefreshMaterializedEntitySetProcessor>,
+        AssemblerConnectionManagerDependent<Void?> {
 
-    private val entitySetSerializer = EntitySetStreamSerializer()
     private lateinit var acm: AssemblerConnectionManager
 
     override fun getTypeId(): Int {
@@ -44,28 +45,16 @@ class RefreshMaterializedEntitySetProcessorStreamSerializer
     }
 
     override fun write(out: ObjectDataOutput, obj: RefreshMaterializedEntitySetProcessor) {
-        entitySetSerializer.write(out, obj.entitySet)
-
-        out.writeInt(obj.authorizedPropertyTypes.size)
-
-        obj.authorizedPropertyTypes.forEach { propertyTypeId, propertyType ->
-            UUIDStreamSerializer.serialize(out, propertyTypeId)
-            PropertyTypeStreamSerializer.serialize(out, propertyType)
-        }
+        EntitySetStreamSerializer.serialize(out, obj.entitySet)
     }
 
     override fun read(input: ObjectDataInput): RefreshMaterializedEntitySetProcessor {
-        val entitySet = entitySetSerializer.read(input)
-
-        val size = input.readInt()
-        val authorizedPropertyTypes = ((0 until size).map {
-            UUIDStreamSerializer.deserialize(input) to PropertyTypeStreamSerializer.deserialize(input)
-        }.toMap())
-
-        return RefreshMaterializedEntitySetProcessor(entitySet, authorizedPropertyTypes).init(acm)
+        val entitySet = EntitySetStreamSerializer.deserialize(input)
+        return RefreshMaterializedEntitySetProcessor(entitySet).init(acm)
     }
 
-    override fun init(assemblerConnectionManager: AssemblerConnectionManager) {
-        this.acm = assemblerConnectionManager
+    override fun init(acm: AssemblerConnectionManager): Void? {
+        this.acm = acm
+        return null
     }
 }
