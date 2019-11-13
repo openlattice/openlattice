@@ -48,7 +48,7 @@ class AppStreamSerializer : SelfRegisteringStreamSerializer<App> {
         val entityTypeCollectionId = UUIDStreamSerializer.deserialize(`in`)
 
         val numRoles = `in`.readInt()
-        val appRoles = (0 until numRoles).map { AppRoleStreamSerializer.deserialize(`in`) }.toSet()
+        val appRoles = (0 until numRoles).map { AppRoleStreamSerializer.deserialize(`in`) }.toMutableSet()
 
         val defaultSettings: Optional<Map<String, Any>> = Optional.of(mapper.readValue(`in`.readByteArray(), typeRef))
 
