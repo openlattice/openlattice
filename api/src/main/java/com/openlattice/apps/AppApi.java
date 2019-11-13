@@ -22,7 +22,6 @@ public interface AppApi {
     String ENTITY_SET_COLLECTION_ID = "entitySetCollectionId";
     String ID                       = "id";
     String ORGANIZATION_ID          = "organizationId";
-    String PREFIX                   = "prefix";
     String NAME                     = "name";
     String NAMESPACE                = "namespace";
     String APP_ID                   = "appId";
@@ -31,7 +30,6 @@ public interface AppApi {
     String ENTITY_SET_COLLECTION_ID_PATH = "/{" + ENTITY_SET_COLLECTION_ID + "}";
     String ID_PATH                       = "/{" + ID + "}";
     String ORGANIZATION_ID_PATH          = "/{" + ORGANIZATION_ID + "}";
-    String PREFIX_PATH                   = "/{" + PREFIX + "}";
     String NAME_PATH                     = "/{" + NAME + "}";
     String NAMESPACE_PATH                = "/{" + NAMESPACE + "}";
     String APP_ID_PATH                   = "/{" + APP_ID + "}";
@@ -78,7 +76,7 @@ public interface AppApi {
      * App Installation CRUD
      **/
 
-    @POST( BASE + INSTALL_PATH + ID_PATH + ORGANIZATION_ID_PATH + PREFIX_PATH )
+    @POST( BASE + INSTALL_PATH + ID_PATH + ORGANIZATION_ID_PATH )
     void installApp(
             @Path( ID ) UUID appId,
             @Path( ORGANIZATION_ID ) UUID organizationId,
