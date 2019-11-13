@@ -47,9 +47,6 @@ public interface AppApi {
     @POST( BASE )
     UUID createApp( @Body App app );
 
-    @POST( BASE )
-    List<UUID> createApps( @Body List<App> app );
-
     @GET( BASE + ID_PATH )
     App getApp( @Path( ID ) UUID id );
 
