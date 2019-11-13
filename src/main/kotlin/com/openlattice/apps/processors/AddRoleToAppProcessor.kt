@@ -10,6 +10,7 @@ class AddRoleToAppProcessor(val role: AppRole) : AbstractRhizomeEntryProcessor<U
     override fun process(entry: MutableMap.MutableEntry<UUID, App>): App? {
         val app = entry.value
         app.addRole(role)
+        entry.setValue(app)
         return app
     }
 

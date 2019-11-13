@@ -13,6 +13,7 @@ class UpdateAppConfigSettingsProcessor(
         val config = entry.value
         config.updateSettings(settingsToAdd)
         config.removeSettings(settingsToRemove)
+        entry.setValue(config)
         return config
     }
 

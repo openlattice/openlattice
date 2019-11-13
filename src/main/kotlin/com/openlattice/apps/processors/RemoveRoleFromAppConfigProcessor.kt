@@ -10,6 +10,7 @@ class RemoveRoleFromAppConfigProcessor(val roleId: UUID) : AbstractRhizomeEntryP
     override fun process(entry: MutableMap.MutableEntry<AppConfigKey, AppTypeSetting>): AppTypeSetting? {
         val setting = entry.value
         setting.removeRole(roleId)
+        entry.setValue(setting)
         return setting
     }
 

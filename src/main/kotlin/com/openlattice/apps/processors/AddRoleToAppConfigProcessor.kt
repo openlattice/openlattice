@@ -11,6 +11,7 @@ class AddRoleToAppConfigProcessor(val roleId: UUID, val roleAclKey: AclKey) : Ab
     override fun process(entry: MutableMap.MutableEntry<AppConfigKey, AppTypeSetting>): AppTypeSetting? {
         val setting = entry.value
         setting.addRole(roleId, roleAclKey)
+        entry.setValue(setting)
         return setting
     }
 
