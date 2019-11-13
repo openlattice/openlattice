@@ -474,6 +474,10 @@ public final class ResultSetAdapters {
         return rs.getObject( APP_ID.getName(), UUID.class );
     }
 
+    public static UUID configId( ResultSet rs ) throws SQLException {
+        return rs.getObject( CONFIG_ID.getName(), UUID.class );
+    }
+
     public static Set<UUID> entityKeyIds( ResultSet rs ) throws SQLException {
         return Sets.newHashSet( (UUID[]) rs.getArray( ENTITY_KEY_IDS_COL.getName() ).getArray() );
     }
@@ -693,7 +697,7 @@ public final class ResultSetAdapters {
     }
 
     public static AppTypeSetting appTypeSetting( ResultSet rs ) throws SQLException, IOException {
-        UUID id = id( rs );
+        UUID id = configId( rs );
         UUID entitySetCollectionId = entitySetCollectionId( rs );
         Map<UUID, AclKey> roles = roles( rs );
         Map<String, Object> settings = appSettings( rs );

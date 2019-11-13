@@ -41,8 +41,8 @@ public final class PostgresTable {
                     .addColumns( ID, NAME, TITLE, DESCRIPTION, ENTITY_TYPE_COLLECTION_ID, URL, ROLES, SETTINGS );
     public static final PostgresTableDefinition APP_CONFIGS                 =
             new PostgresTableDefinition( "app_configs" )
-                    .addColumns( APP_ID, ORGANIZATION_ID, ID, ENTITY_SET_COLLECTION_ID, ROLES, SETTINGS )
-                    .setUnique( APP_ID, ORGANIZATION_ID );
+                    .addColumns( APP_ID, ORGANIZATION_ID, CONFIG_ID, ENTITY_SET_COLLECTION_ID, ROLES, SETTINGS )
+                    .primaryKey( APP_ID, ORGANIZATION_ID );
     //.setUnique( NAMESPACE, NAME ); //Not allowed by postgres xl
     public static final PostgresTableDefinition ASSOCIATION_TYPES           =
             new PostgresTableDefinition( "association_types" )
