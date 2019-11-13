@@ -59,16 +59,11 @@ class DatasetController : DatasetApi, AuthorizingComponent {
     override fun addHBARecord(
             @PathVariable(ID) organizationId: UUID,
             @PathVariable(USER_ID) userId: String,
-            @PathVariable(CONNECTION_TYPE) connectionType: String,
+            @PathVariable(CONNECTION_TYPE) connectionType: PostgresConnectionType,
             @RequestBody ipAddresses: Set<String>
     ) {
         ensureOwnerAccess(AclKey(organizationId))
-
-        val connType = connectionType.toUpperCase()
-        if (!PostgresConnectionType.values().map{it.name}.contains(connType)) {
-            throw IllegalStateException("Invalid connection type $connectionType")
-        }
-        if (PostgresConnectionType.valueOf(connType) == PostgresConnectionType.LOCAL) {
+        if (connectionType == PostgresConnectionType.LOCAL) {
             checkState(ipAddresses.isEmpty(), "Local connections may not specify an IP address")
         } else {
             checkState(ipAddresses.isNotEmpty(), "Host connections must specify at least one IP address")
