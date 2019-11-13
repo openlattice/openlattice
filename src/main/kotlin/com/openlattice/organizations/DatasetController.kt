@@ -3,10 +3,7 @@ package com.openlattice.organizations
 import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Preconditions.checkState
 import com.google.common.net.InetAddresses
-import com.hazelcast.core.HazelcastInstance
-import com.hazelcast.core.IMap
 import com.openlattice.authorization.*
-import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organization.DatasetApi.Companion.CONTROLLER
 import com.openlattice.organization.DatasetApi
 import com.openlattice.organization.DatasetApi.Companion.COLUMN_NAME
@@ -30,11 +27,11 @@ import com.openlattice.organization.DatasetApi.Companion.USER_ID_PATH
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import com.openlattice.organization.OrganizationExternalDatabaseTable
 import com.openlattice.organization.OrganizationExternalDatabaseTableColumnsPair
+import com.openlattice.postgres.PostgresConnectionType
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.*
 import java.util.*
-import javax.annotation.PostConstruct
 import javax.inject.Inject
 
 @RestController
@@ -67,11 +64,16 @@ class DatasetController : DatasetApi, AuthorizingComponent {
     ) {
         ensureOwnerAccess(AclKey(organizationId))
 
-        if (connectionType == "local") {
+        val connType = connectionType.toUpperCase()
+        if (!PostgresConnectionType.values().map{it.name}.contains(connType)) {
+            throw IllegalStateException("Invalid connection type $connectionType")
+        }
+        if (PostgresConnectionType.valueOf(connType) == PostgresConnectionType.LOCAL) {
             checkState(ipAddresses.isEmpty(), "Local connections may not specify an IP address")
         } else {
             checkState(ipAddresses.isNotEmpty(), "Host connections must specify at least one IP address")
         }
+
         val invalidIpAddresses = ipAddresses.filter{ !InetAddresses.isInetAddress(it) }.toSet()
         if (invalidIpAddresses.isNotEmpty()) {
             throw IllegalStateException("Invalid IP adress(es): ${invalidIpAddresses.joinToString(", ")}")
