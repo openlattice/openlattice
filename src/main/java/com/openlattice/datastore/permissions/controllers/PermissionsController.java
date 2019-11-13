@@ -64,9 +64,6 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
     private ExternalDatabaseManagementService edms;
 
     @Inject
-    private HazelcastInstance hazelcastInstance;
-
-    @Inject
     private HazelcastSecurableObjectResolveTypeService securableObjectResolveTypeService;
 
     @Override
