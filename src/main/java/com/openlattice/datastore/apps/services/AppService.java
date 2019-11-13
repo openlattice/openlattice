@@ -106,6 +106,7 @@ public class AppService {
     }
 
     public UUID createApp( App app ) {
+        validateAppAndRoles( app );
         reservations.reserveIdAndValidateType( app, app::getName );
         apps.put( app.getId(), app );
         eventBus.post( new AppCreatedEvent( app ) );
@@ -132,6 +133,7 @@ public class AppService {
     }
 
     public UUID createNewAppRole( UUID appId, AppRole role ) {
+        validateAppAndRoles( appId, role );
         apps.executeOnKey( appId, new AddRoleToAppProcessor( role ) );
         return role.getId();
     }
@@ -159,8 +161,7 @@ public class AppService {
                 .getEntityTypeCollection( entitySetCollection.getEntityTypeCollectionId() );
         Map<UUID, EntityType> entityTypesById = edmService
                 .getEntityTypesAsMap( entityTypeCollection.getTemplate().stream()
-                        .map( CollectionTemplateType::getEntityTypeId ).collect(
-                                Collectors.toSet() ) );
+                        .map( CollectionTemplateType::getEntityTypeId ).collect( Collectors.toSet() ) );
         Map<UUID, EntitySet> entitySetsById = entitySetService
                 .getEntitySetsAsMap( Sets.newHashSet( entitySetCollection.getTemplate().values() ) );
 
@@ -168,7 +169,8 @@ public class AppService {
 
             /* Create the role if it doesn't already exist */
             String title = appRole.getTitle();
-            Principal rolePrincipal = new Principal( PrincipalType.ROLE, organizationId.toString() + "|" + title );
+            Principal rolePrincipal = new Principal( PrincipalType.ROLE,
+                    getNextAvailableName( organizationId.toString() + "|" + title ) );
             String description = appRole.getDescription();
             Role role = new Role( Optional.empty(), organizationId, rolePrincipal, title, Optional.of( description ) );
 
@@ -183,15 +185,18 @@ public class AppService {
             permissionsToGrant
                     .put( new AceKey( new AclKey( entitySetCollectionId ), appPrincipal ),
                             EnumSet.of( Permission.READ ) );
-            appRole.getPermissions().entrySet().forEach( entry -> {
-                Permission permission = entry.getKey();
-                entry.getValue().entrySet().forEach( entitySetEntry -> {
-                    UUID entitySetId = entitySetEntry.getKey();
-                    Set<UUID> propertyTypeIds = entitySetEntry.getValue()
+            appRole.getPermissions().forEach( ( permission, requiredTemplateTypes ) -> {
+
+                requiredTemplateTypes.forEach( ( templateTypeId, maybePropertyTypeIds ) -> {
+                    UUID entitySetId = entitySetCollection.getTemplate().get( templateTypeId );
+
+                    Set<UUID> propertyTypeIds = maybePropertyTypeIds
                             .orElse( entityTypesById.get( entitySetsById.get( entitySetId ).getEntityTypeId() )
                                     .getProperties() );
+
                     Streams.concat( Stream.of( new AclKey( entitySetId ) ),
                             propertyTypeIds.stream().map( id -> new AclKey( entitySetId, id ) ) ).forEach( ak -> {
+
                         AceKey aceKey = new AceKey( ak, rolePrincipal );
                         EnumSet<Permission> permissionEnumSet = permissionsToGrant
                                 .getOrDefault( aceKey, EnumSet.noneOf( Permission.class ) );
@@ -213,6 +218,24 @@ public class AppService {
         return roles;
     }
 
+    private String getNextAvailableName( String requestedName ) {
+
+        if ( !reservations.isReserved( requestedName ) ) {
+            return requestedName;
+        }
+
+        String base = requestedName + "_";
+        int counter = 0;
+        String attempt = base + counter;
+
+        while ( reservations.isReserved( attempt ) ) {
+            counter++;
+            attempt = base + counter;
+        }
+
+        return attempt;
+    }
+
     public void installAppAndCreateEntitySetCollection(
             UUID appId,
             UUID organizationId,
@@ -226,8 +249,8 @@ public class AppService {
         if ( entitySetCollectionId == null ) {
             entitySetCollectionId = collectionsManager.createEntitySetCollection( new EntitySetCollection(
                     Optional.empty(),
-                    app.getName(),
-                    app.getTitle(),
+                    getNextAvailableName( app.getName() + "_" + organizationId ),
+                    appInstallation.getPrefix() + " " + app.getTitle(),
                     Optional.of( app.getDescription() ),
                     app.getEntityTypeCollectionId(),
                     appInstallation.getTemplate(),
@@ -413,6 +436,32 @@ public class AppService {
         appConfigs.executeOnKey( appConfigKey,
                 new UpdateAppConfigSettingsProcessor( newAppSettings, ImmutableSet.of() ) );
 
+    }
+
+    private void validateAppAndRoles( UUID appId, AppRole appRole ) {
+        App app = getApp( appId );
+        app.addRole( appRole );
+        validateAppAndRoles( app );
+    }
+
+    private void validateAppAndRoles( App app ) {
+        EntityTypeCollection entityTypeCollection = collectionsManager
+                .getEntityTypeCollection( app.getEntityTypeCollectionId() );
+
+        Set<UUID> templateTypeIds = entityTypeCollection.getTemplate().stream().map( CollectionTemplateType::getId )
+                .collect( Collectors.toSet() );
+
+        app.getAppRoles().forEach( appRole -> {
+            appRole.getPermissions().values().stream().flatMap( map -> map.keySet().stream() )
+                    .forEach( templateTypeId -> {
+                        if ( !templateTypeIds.contains( templateTypeId ) ) {
+                            throw new IllegalArgumentException(
+                                    "Role " + appRole.getName() + " cannot be created for app " + app.getName()
+                                            + " because permissions were requested on an invalid collection template type: "
+                                            + templateTypeId );
+                        }
+                    } );
+        } );
     }
 
 }
