@@ -2,6 +2,7 @@ package com.openlattice.organizations
 
 import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Preconditions.checkState
+import com.google.common.net.InetAddresses
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
 import com.openlattice.authorization.*
@@ -54,9 +55,6 @@ class DatasetController : DatasetApi, AuthorizingComponent {
     private lateinit var securableObjectTypes: SecurableObjectResolveTypeService
 
     @Inject
-    private lateinit var hazelcastInstance: HazelcastInstance
-
-    @Inject
     private lateinit var aclKeyReservations: HazelcastAclKeyReservationService
 
     @Timed
@@ -68,10 +66,15 @@ class DatasetController : DatasetApi, AuthorizingComponent {
             @RequestBody ipAddresses: Set<String>
     ) {
         ensureOwnerAccess(AclKey(organizationId))
+
         if (connectionType == "local") {
             checkState(ipAddresses.isEmpty(), "Local connections may not specify an IP address")
         } else {
             checkState(ipAddresses.isNotEmpty(), "Host connections must specify at least one IP address")
+        }
+        val invalidIpAddresses = ipAddresses.filter{ !InetAddresses.isInetAddress(it) }.toSet()
+        if (invalidIpAddresses.isNotEmpty()) {
+            throw IllegalStateException("Invalid IP adress(es): ${invalidIpAddresses.joinToString(", ")}")
         }
         val userPrincipal = Principal(PrincipalType.USER, userId)
         edms.addHBARecord(organizationId, userPrincipal, connectionType, ipAddresses)
