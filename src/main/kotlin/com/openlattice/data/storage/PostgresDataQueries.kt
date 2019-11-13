@@ -321,7 +321,7 @@ fun optionalWhereClausesSingleEdk(
  *
  * 8 - version
  */
-internal fun buildUpsertEntitiesAndLinkedData(): String {
+fun buildUpsertEntitiesAndLinkedData(): String {
     val insertColumns = dataTableValueColumns.joinToString(",") { it.name }
 
     val metadataColumns = listOf(
@@ -542,7 +542,7 @@ internal val updateVersionsForPropertyTypesInEntitySet = "$updateVersionsForProp
  * 7. partitions
  * 8. partition version
  */
-internal fun updateVersionsForPropertyTypesInEntitiesInEntitySet(linking: Boolean = false): String {
+fun updateVersionsForPropertyTypesInEntitiesInEntitySet(linking: Boolean = false): String {
     val idsSql = if (linking) {
         "AND ${ORIGIN_ID.name} = ANY(?)"
     } else {
@@ -569,7 +569,7 @@ internal fun updateVersionsForPropertyTypesInEntitiesInEntitySet(linking: Boolea
  * 7. partitions
  * 8. partition version
  * 9. {origin ids}: only if linking
- * 10. value
+ * 10. hash
  */
 internal fun updateVersionsForPropertyValuesInEntitiesInEntitySet(linking: Boolean = false): String {
     return "${updateVersionsForPropertyTypesInEntitiesInEntitySet(linking)} AND ${HASH.name} = ? "

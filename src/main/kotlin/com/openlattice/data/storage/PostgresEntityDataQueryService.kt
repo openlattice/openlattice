@@ -319,7 +319,7 @@ class PostgresEntityDataQueryService(
                             entitySetId,
                             entityBatch,
                             authorizedPropertyTypes,
-                            version,
+                            version+1,
                             partitionsInfo.partitionsVersion,
                             partition,
                             awsPassthrough
