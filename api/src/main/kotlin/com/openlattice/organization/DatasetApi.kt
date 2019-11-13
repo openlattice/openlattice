@@ -1,5 +1,6 @@
 package com.openlattice.organization
 
+import com.openlattice.postgres.PostgresConnectionType
 import retrofit2.http.*
 import java.util.*
 
@@ -45,7 +46,7 @@ interface DatasetApi {
     fun addHBARecord(
             @Path(ID) organizationId: UUID,
             @Path(USER_ID) userId: String,
-            @Path(CONNECTION_TYPE) connectionType: String,
+            @Path(CONNECTION_TYPE) connectionType: PostgresConnectionType,
             @Body ipAddresses: Set<String>)
 
     /**
