@@ -58,28 +58,16 @@ public class AppController implements AppApi, AuthorizingComponent {
         return appService.getApps();
     }
 
-    //    @Timed
-    //    @Override
-    //    @RequestMapping(
-    //            method = RequestMethod.POST,
-    //            consumes = MediaType.APPLICATION_JSON_VALUE,
-    //            produces = MediaType.APPLICATION_JSON_VALUE )
-    //    @ResponseStatus( HttpStatus.OK )
+        @Timed
+        @Override
+        @RequestMapping(
+                method = RequestMethod.POST,
+                consumes = MediaType.APPLICATION_JSON_VALUE,
+                produces = MediaType.APPLICATION_JSON_VALUE )
+        @ResponseStatus( HttpStatus.OK )
     public UUID createApp( @RequestBody App app ) {
         ensureAdminAccess();
         return appService.createApp( app );
-    }
-
-    @Timed
-    @Override
-    @RequestMapping(
-            method = RequestMethod.POST,
-            consumes = MediaType.APPLICATION_JSON_VALUE,
-            produces = MediaType.APPLICATION_JSON_VALUE )
-    @ResponseStatus( HttpStatus.OK )
-    public List<UUID> createApps( @RequestBody List<App> apps ) {
-        ensureAdminAccess();
-        return apps.stream().map( appService::createApp ).collect( Collectors.toList() );
     }
 
     @Timed
