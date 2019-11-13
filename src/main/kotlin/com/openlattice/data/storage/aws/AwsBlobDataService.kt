@@ -24,8 +24,7 @@ import java.util.*
 import java.util.concurrent.Callable
 
 private val logger = LoggerFactory.getLogger(AwsBlobDataService::class.java)
-const val MULTIPART_THRESHOLD = 1_000_000L
-const val MIN_PART_SIZE = 10_000L
+const val MAX_ERROR_RETRIES = 5
 
 @Service
 class AwsBlobDataService(
@@ -35,7 +34,7 @@ class AwsBlobDataService(
 
     private val s3Credentials = BasicAWSCredentials(datastoreConfiguration.accessKeyId, datastoreConfiguration.secretAccessKey)
     private val s3 = newS3Client(datastoreConfiguration)
-    private val transferManager = newTransferManager(s3)
+    private val transferManager = TransferManagerBuilder.standard().withS3Client(s3).build()
 
     private final fun newS3Client(datastoreConfiguration: DatastoreConfiguration): AmazonS3 {
         val builder = AmazonS3ClientBuilder.standard()
@@ -43,18 +42,11 @@ class AwsBlobDataService(
         builder.credentials = AWSStaticCredentialsProvider(s3Credentials)
         val retryPolicy = RetryPolicy(
                 PredefinedRetryPolicies.DEFAULT_RETRY_CONDITION,
-                PredefinedBackoffStrategies.EqualJitterBackoffStrategy(1,2),
-                1,
+                PredefinedBackoffStrategies.SDKDefaultBackoffStrategy(), //TODO try jitter
+                MAX_ERROR_RETRIES,
                 false)
         builder.clientConfiguration = ClientConfiguration().withRetryPolicy(retryPolicy)
         return builder.build()
-    }
-
-    private final fun newTransferManager(s3: AmazonS3): TransferManager {
-        val txBuilder = TransferManagerBuilder.standard().withS3Client(s3)
-        txBuilder.multipartUploadThreshold = MULTIPART_THRESHOLD
-        txBuilder.minimumUploadPartSize = MIN_PART_SIZE
-        return txBuilder.build()
     }
     
     override fun putObject(s3Key: String, data: ByteArray, contentType: String) {
