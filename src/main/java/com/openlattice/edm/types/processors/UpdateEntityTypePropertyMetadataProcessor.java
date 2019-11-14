@@ -33,6 +33,14 @@ public class UpdateEntityTypePropertyMetadataProcessor extends
             if ( update.getDescription().isPresent() ) {
                 metadata.setDescription( update.getDescription().get() );
             }
+            if ( update.getDefaultShow().isPresent() ) {
+                metadata.setDefaultShow( update.getDefaultShow().get() );
+            }
+            if ( update.getPropertyTags().isPresent() && update.getPropertyTags().get()
+                    .containsKey( entry.getKey().getPropertyTypeId() ) ) {
+                metadata.setTags( update.getPropertyTags().get().get( entry.getKey().getPropertyTypeId() ).stream()
+                        .collect( Collectors.toCollection( LinkedHashSet::new ) ) );
+            }
             entry.setValue( metadata );
         }
         return null;

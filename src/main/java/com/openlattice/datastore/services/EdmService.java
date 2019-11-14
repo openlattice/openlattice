@@ -44,11 +44,6 @@ import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
 import com.openlattice.edm.set.EntitySetPropertyKey;
 import com.openlattice.edm.set.EntitySetPropertyMetadata;
 import com.openlattice.edm.type.*;
-import com.openlattice.edm.type.AssociationDetails;
-import com.openlattice.edm.type.AssociationType;
-import com.openlattice.edm.type.EntityType;
-import com.openlattice.edm.type.EntityTypePropertyMetadata;
-import com.openlattice.edm.type.PropertyType;
 import com.openlattice.edm.types.processors.*;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.hazelcast.HazelcastUtils;
@@ -56,6 +51,7 @@ import com.openlattice.postgres.PostgresQuery;
 import com.openlattice.postgres.PostgresTablesPod;
 import com.openlattice.postgres.mapstores.EntitySetMapstore;
 import com.openlattice.postgres.mapstores.EntityTypeMapstore;
+import com.openlattice.postgres.mapstores.EntityTypePropertyMetadataMapstore;
 import com.zaxxer.hikari.HikariDataSource;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
@@ -78,13 +74,13 @@ public class EdmService implements EdmManager {
 
     private static final Logger logger = LoggerFactory.getLogger( EdmService.class );
 
-    private final IMap<UUID, PropertyType>                              propertyTypes;
-    private final IMap<UUID, EntityType>                                entityTypes;
-    private final IMap<UUID, EntitySet>                                 entitySets;
-    private final IMap<String, UUID>                                    aclKeys;
-    private final IMap<UUID, String>                                    names;
-    private final IMap<UUID, AssociationType>                           associationTypes;
-    private final IMap<EntitySetPropertyKey, EntitySetPropertyMetadata> entitySetPropertyMetadata;
+    private final IMap<UUID, PropertyType>                                propertyTypes;
+    private final IMap<UUID, EntityType>                                  entityTypes;
+    private final IMap<UUID, EntitySet>                                   entitySets;
+    private final IMap<String, UUID>                                      aclKeys;
+    private final IMap<UUID, String>                                      names;
+    private final IMap<UUID, AssociationType>                             associationTypes;
+    private final IMap<EntitySetPropertyKey, EntitySetPropertyMetadata>   entitySetPropertyMetadata;
     private final IMap<EntityTypePropertyKey, EntityTypePropertyMetadata> entityTypePropertyMetadata;
 
     private final HazelcastAclKeyReservationService aclKeyReservations;
@@ -93,8 +89,8 @@ public class EdmService implements EdmManager {
     private final PostgresTypeManager               entityTypeManager;
     private final HazelcastSchemaManager            schemaManager;
 
-    private final HazelcastInstance            hazelcastInstance;
-    private final HikariDataSource             hds;
+    private final HazelcastInstance hazelcastInstance;
+    private final HikariDataSource  hds;
 
     @Inject
     private EventBus eventBus;
@@ -317,12 +313,18 @@ public class EdmService implements EdmManager {
 
     private void setupDefaultEntityTypePropertyMetadata( UUID entityTypeId ) {
         final var et = getEntityType( entityTypeId );
+        final var propertyTags = et.getPropertyTags();
+
+        Map<UUID, PropertyType> propertyTypeMap = getPropertyTypesAsMap( et.getProperties() );
         et.getProperties().forEach( propertyTypeId -> {
             EntityTypePropertyKey key = new EntityTypePropertyKey( entityTypeId, propertyTypeId );
-            PropertyType property = getPropertyType( propertyTypeId );
+            PropertyType property = propertyTypeMap.get( propertyTypeId );
             EntityTypePropertyMetadata metadata = new EntityTypePropertyMetadata(
                     property.getTitle(),
-                    property.getDescription() );
+                    property.getDescription(),
+                    new LinkedHashSet(propertyTags.get(propertyTypeId)),
+                    true
+                    );
             entityTypePropertyMetadata.put( key, metadata );
         } );
     }
@@ -479,7 +481,6 @@ public class EdmService implements EdmManager {
         return entityTypeManager.getPropertyTypes();
     }
 
-
     @Override
     public void addPropertyTypesToEntityType( UUID entityTypeId, Set<UUID> propertyTypeIds ) {
         Preconditions.checkArgument( checkPropertyTypesExist( propertyTypeIds ), "Some properties do not exist." );
@@ -490,7 +491,7 @@ public class EdmService implements EdmManager {
                 .collect( Collectors.toMap( Function.identity(), propertyTypes::tryLock ) );
         childrenIdsToLocks.values().forEach( locked -> {
             if ( !locked ) {
-                childrenIdsToLocks.forEach( (key, value) -> {
+                childrenIdsToLocks.forEach( ( key, value ) -> {
                     if ( value ) { propertyTypes.unlock( key ); }
                 } );
                 throw new IllegalStateException(
@@ -550,7 +551,7 @@ public class EdmService implements EdmManager {
                 eventBus.post( new AssociationTypeCreatedEvent( getAssociationType( id ) ) );
             }
         } );
-        childrenIdsToLocks.forEach( (key, value) -> {
+        childrenIdsToLocks.forEach( ( key, value ) -> {
             if ( value ) { propertyTypes.unlock( key ); }
         } );
     }
@@ -590,7 +591,7 @@ public class EdmService implements EdmManager {
                 .collect( Collectors.toMap( Function.identity(), propertyTypes::tryLock ) );
         childrenIdsToLocks.values().forEach( locked -> {
             if ( !locked ) {
-                childrenIdsToLocks.forEach( (key, value) -> {
+                childrenIdsToLocks.forEach( ( key, value ) -> {
                     if ( value ) { propertyTypes.unlock( key ); }
                 } );
                 throw new IllegalStateException(
@@ -1132,7 +1133,7 @@ public class EdmService implements EdmManager {
         cyclesAndConflicts.get( 0 ).forEach( idList -> idList.forEach( id -> idsToOutcome.put( id, true ) ) );
         cyclesAndConflicts.get( 1 ).forEach( idList -> idList.forEach( id -> idsToOutcome.put( id, false ) ) );
 
-        idsToOutcome.forEach( (id, shouldResolve) -> {
+        idsToOutcome.forEach( ( id, shouldResolve ) -> {
             switch ( idsToTypes.get( id ) ) {
                 case PropertyTypeInEntitySet:
                     if ( shouldResolve ) { updatedPropertyTypes.add( propertyTypesById.get( id ) ); } else {
@@ -1185,7 +1186,7 @@ public class EdmService implements EdmManager {
         SetMultimap<FullQualifiedName, UUID> internalFqnToId = HashMultimap.create();
         Map<FullQualifiedName, UUID> externalFqnToId = Maps.newHashMap();
 
-        idToType.forEach( (id, fqn) -> {
+        idToType.forEach( ( id, fqn ) -> {
             UUID conflictId = aclKeys.get( fqn.toString() );
             updatedIdToFqn.put( id, fqn );
             internalFqnToId.put( fqn, id );
@@ -1232,9 +1233,10 @@ public class EdmService implements EdmManager {
 
     @Override
     public Map<UUID, EntityTypePropertyMetadata> getAllEntityTypePropertyMetadata( UUID entityTypeId ) {
-        return getEntityType( entityTypeId ).getProperties().stream()
-                .collect( Collectors.toMap( propertyTypeId -> propertyTypeId,
-                        propertyTypeId -> getEntityTypePropertyMetadata( entityTypeId, propertyTypeId ) ) );
+        return entityTypePropertyMetadata
+                .entrySet( Predicates.equal( EntityTypePropertyMetadataMapstore.ENTITY_TYPE_INDEX, entityTypeId ) )
+                .stream()
+                .collect( Collectors.toMap( entry -> entry.getKey().getPropertyTypeId(), entry -> entry.getValue() ) );
     }
 
     @Override

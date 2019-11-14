@@ -10,6 +10,7 @@ import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.util.LinkedHashSet;
 
 @Component
 public class EntityTypePropertyMetadataStreamSerializer
@@ -19,13 +20,18 @@ public class EntityTypePropertyMetadataStreamSerializer
     public void write( ObjectDataOutput out, EntityTypePropertyMetadata object ) throws IOException {
         out.writeUTF( object.getTitle() );
         out.writeUTF( object.getDescription() );
+        out.writeObject (object.getTags() );
+        out.writeBoolean( object.getDefaultShow() );
     }
 
     @Override
     public EntityTypePropertyMetadata read( ObjectDataInput in ) throws IOException {
         String title = in.readUTF();
         String description = in.readUTF();
-        return new EntityTypePropertyMetadata( title, description );
+        LinkedHashSet tags = in.readObject();
+        Boolean defaultShow = in.readBoolean();
+
+        return new EntityTypePropertyMetadata( title, description, tags, defaultShow );
     }
 
     @Override

@@ -45,10 +45,7 @@ import com.openlattice.edm.set.EntitySetFlag;
 import com.openlattice.edm.set.EntitySetPropertyKey;
 import com.openlattice.edm.set.EntitySetPropertyMetadata;
 import com.openlattice.edm.set.ExpirationBase;
-import com.openlattice.edm.type.Analyzer;
-import com.openlattice.edm.type.AssociationType;
-import com.openlattice.edm.type.EntityType;
-import com.openlattice.edm.type.PropertyType;
+import com.openlattice.edm.type.*;
 import com.openlattice.graph.NeighborhoodQuery;
 import com.openlattice.graph.NeighborhoodSelection;
 import com.openlattice.graph.edge.Edge;
@@ -640,6 +637,22 @@ public final class ResultSetAdapters {
         boolean bidirectional = bidirectional( rs );
 
         return new AssociationType( Optional.empty(), src, dst, bidirectional );
+    }
+
+    public static EntityTypePropertyMetadata entityTypePropertyMetadata( ResultSet rs ) throws SQLException {
+        String title = title( rs );
+        String description = description( rs );
+        boolean show = show( rs );
+        LinkedHashSet<String> tags = new LinkedHashSet<>( Arrays
+                .asList( PostgresArrays.getTextArray( rs, PostgresColumn.TAGS_FIELD ) ) );
+
+        return new EntityTypePropertyMetadata( title, description, tags, show );
+    }
+
+    public static EntityTypePropertyKey entityTypePropertyKey( ResultSet rs ) throws SQLException {
+        UUID entitySetId = entitySetId( rs );
+        UUID propertyTypeId = propertyTypeId( rs );
+        return new EntityTypePropertyKey( entitySetId, propertyTypeId );
     }
 
     public static EntitySetPropertyMetadata entitySetPropertyMetadata( ResultSet rs ) throws SQLException {

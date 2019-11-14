@@ -154,6 +154,10 @@ public final class PostgresTable {
             new PostgresTableDefinition( "entity_set_property_metadata" )
                     .addColumns( ENTITY_SET_ID, PROPERTY_TYPE_ID, TITLE, DESCRIPTION, TAGS, SHOW )
                     .primaryKey( ENTITY_SET_ID, PROPERTY_TYPE_ID );
+    public static final PostgresTableDefinition        ENTITY_TYPE_PROPERTY_METADATA =
+            new PostgresTableDefinition( "entity_type_property_metadata" )
+                    .addColumns( ENTITY_TYPE_ID, PROPERTY_TYPE_ID, TITLE, DESCRIPTION, TAGS, SHOW )
+                    .primaryKey( ENTITY_TYPE_ID, PROPERTY_TYPE_ID );
     //.setUnique( NAMESPACE, NAME ); //Not allowed by postgres xl
     public static final PostgresTableDefinition        ENTITY_TYPES                 =
             new PostgresTableDefinition( "entity_types" )
