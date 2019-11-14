@@ -356,7 +356,10 @@ public class AppService {
                             .map( Map.Entry::getKey )
                             .collect( Collectors.toSet() );
 
-                    return new UserAppConfig( organizationId, entitySetCollectionId, availableRoles );
+                    return new UserAppConfig( organizationId,
+                            entitySetCollectionId,
+                            availableRoles,
+                            setting.getSettings() );
                 } ).filter( uac -> !uac.getRoles().isEmpty() )
                 .collect( Collectors.toList() );
     }
