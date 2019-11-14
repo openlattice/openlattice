@@ -14,7 +14,7 @@ import com.openlattice.client.serialization.SerializationConstants
  */
 
 data class PostgresAuthenticationRecord(
-        @JsonProperty(SerializationConstants.CONNECTION_TYPE) val connectionType: String,
+        @JsonProperty(SerializationConstants.CONNECTION_TYPE) val connectionType: PostgresConnectionType,
         @JsonProperty(SerializationConstants.DATABASE) val database: String,
         @JsonProperty(SerializationConstants.USERNAME) val username: String,
         @JsonProperty(SerializationConstants.IP_ADDRESSES) val ipAddresses: Set<String>,

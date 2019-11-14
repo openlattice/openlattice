@@ -41,6 +41,7 @@ import com.openlattice.organization.OrganizationExternalDatabaseTable;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.postgres.IndexType;
 import com.openlattice.postgres.PostgresAuthenticationRecord;
+import com.openlattice.postgres.PostgresConnectionType;
 import com.openlattice.postgres.PostgresDatatype;
 import com.openlattice.requests.PermissionsRequestDetails;
 import com.openlattice.requests.Request;
@@ -618,7 +619,7 @@ public final class TestDataFactory {
         String[] ipAddressesArray = { randomAlphanumeric( 5 ) };
         Set<String> ipAddresses = new HashSet<>( Arrays.asList( ipAddressesArray ) );
         return new PostgresAuthenticationRecord(
-                randomAlphanumeric( 5 ),
+                PostgresConnectionType.HOST,
                 randomAlphanumeric( 5 ),
                 randomAlphanumeric( 5 ),
                 ipAddresses,
