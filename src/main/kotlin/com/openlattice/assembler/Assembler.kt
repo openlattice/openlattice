@@ -568,6 +568,7 @@ class Assembler(
         }
     }
 
+
     private fun createOrUpdateProductionViewOfEntitySet(entitySetId: UUID) {
         val entitySet = entitySets.getValue(entitySetId)
         val entitySetPartitions = partitionManager.getEntitySetPartitionsInfo(entitySetId).partitions
