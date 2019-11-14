@@ -340,8 +340,8 @@ public class AppService {
         return appConfigs.entrySet( Predicates.and(
                 Predicates.equal( AppConfigMapstore.APP_ID, appId ),
                 Predicates.in( AppConfigMapstore.ORGANIZATION_ID,
-                        aclKeysByPrincipalType.getOrDefault( PrincipalType.ORGANIZATION, ImmutableSet.of() )
-                                .toArray( new UUID[] {} ) ) ) )
+                        (UUID[]) aclKeysByPrincipalType.getOrDefault( PrincipalType.ORGANIZATION, ImmutableSet.of() )
+                                .stream().map( aclKey -> aclKey.get( 0 ) ).toArray( UUID[]::new ) ) ) )
                 .stream().map( entry -> {
 
                     UUID organizationId = entry.getKey().getOrganizationId();
