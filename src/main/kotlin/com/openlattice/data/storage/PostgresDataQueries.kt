@@ -25,18 +25,20 @@ internal class PostgresDataQueries
 
 
 const val VALUE = "value"
-const val VALUES = "values"
 const val PROPERTIES = "properties"
 
 val dataTableColumnsSql = PostgresDataTables.dataTableColumns.joinToString(",") { it.name }
 
 // @formatter:off
-val detailedValueColumnsSql = "COALESCE( " + dataTableValueColumns.joinToString(",") {
-    "jsonb_agg(" +
-        "json_build_object('$VALUE',${it.name}, " +
-        "'${ENTITY_SET_ID.name}', ${ENTITY_SET_ID.name}, " +
-        "'${ID_VALUE.name}', ${ORIGIN_ID.name}" +
-    ")) FILTER ( WHERE ${it.name} IS NOT NULL) "
+val detailedValueColumnsSql =
+    "COALESCE( " + dataTableValueColumns.joinToString(",") {
+        "jsonb_agg(" +
+            "json_build_object(" +
+                "'$VALUE',${it.name}, " +
+                "'${ID_VALUE.name}', ${ORIGIN_ID.name}, " +
+                "'${LAST_WRITE.name}', ${LAST_WRITE.name}" +
+            ")" +
+        ") FILTER ( WHERE ${it.name} IS NOT NULL) "
 } + ") as $PROPERTIES"
 
 val valuesColumnsSql = "COALESCE( " + dataTableValueColumns.joinToString(",") {
@@ -49,13 +51,6 @@ val primaryKeyColumnNamesAsString = PostgresDataTables.buildDataTableDefinition(
         ","
 ) { it.name }
 
-val jsonValueColumnsSql = PostgresDataTables.dataColumns.entries
-        .joinToString(",") { (datatype, cols) ->
-            val (ni, bt) = cols
-            "COALESCE(jsonb_object_agg(${PROPERTY_TYPE_ID.name}, ${bt.name} || ${ni.name}) " +
-                    "FILTER (WHERE ${bt.name} IS NOT NULL OR ${ni.name} IS NOT NULL ),'{}') " +
-                    "as ${getMergedDataColumnName(datatype)}"
-        }
 
 /**
  * Builds a preparable SQL query for reading filterable data.
@@ -119,18 +114,6 @@ internal fun selectEntitiesGroupedByIdAndPropertyTypeId(
 /**
  * Returns the correspondent column name used for the metadata option with a comma prefix.
  */
-private fun mapMetaDataToColumnSql(metadataOption: MetadataOption): String {
-    return when (metadataOption) {
-        // TODO should be just last_write with comma prefix after empty rows are eliminated https://jira.openlattice.com/browse/LATTICE-2254
-        MetadataOption.LAST_WRITE -> ",max(${LAST_WRITE.name}) AS ${mapMetaDataToColumnName(metadataOption)}"
-        MetadataOption.ENTITY_KEY_IDS -> ORIGIN_ID.name
-        else -> throw UnsupportedOperationException("No implementation yet for metadata option $metadataOption")
-    }
-}
-
-/**
- * Returns the correspondent column name used for the metadata option with a comma prefix.
- */
 private fun mapOuterMetaDataToColumnSql(metadataOption: MetadataOption): String {
     return when (metadataOption) {
         // TODO should be just last_write with comma prefix after empty rows are eliminated https://jira.openlattice.com/browse/LATTICE-2254
@@ -158,14 +141,6 @@ private fun mapMetaDataToSelector(metadataOption: MetadataOption): String {
     return when (metadataOption) {
         MetadataOption.LAST_WRITE -> ",max(${LAST_WRITE.name}) AS ${mapMetaDataToColumnName(metadataOption)}"
         MetadataOption.ENTITY_KEY_IDS -> ",${ORIGIN_ID.name}"
-        else -> throw UnsupportedOperationException("No implementation yet for metadata option $metadataOption")
-    }
-}
-
-private fun isMetaDataAggregated(metadataOption: MetadataOption): Boolean {
-    return when (metadataOption) {
-        MetadataOption.ENTITY_KEY_IDS -> true
-        MetadataOption.LAST_WRITE -> true
         else -> throw UnsupportedOperationException("No implementation yet for metadata option $metadataOption")
     }
 }

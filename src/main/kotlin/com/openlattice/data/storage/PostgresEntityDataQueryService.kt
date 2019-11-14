@@ -16,9 +16,7 @@ import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.DATA
 import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.streams.BasePostgresIterable
-import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
-import com.openlattice.postgres.streams.StatementHolder
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.commons.lang3.NotImplementedException
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
@@ -31,8 +29,6 @@ import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.util.*
 import java.util.concurrent.atomic.AtomicLong
-import java.util.function.Function
-import java.util.function.Supplier
 import kotlin.streams.asStream
 
 const val S3_DELETE_BATCH_SIZE = 10_000
@@ -98,25 +94,55 @@ class PostgresEntityDataQueryService(
         return getEntitiesWithPropertyTypeIds(entityKeyIds, authorizedPropertyTypes, mapOf(), metadataOptions)
     }
 
+    /**
+     * Returns linked entity set data detailed in a Map mapped by linking id, (normal) entity set id, origin id,
+     * property type id and values respectively.
+     */
     @JvmOverloads
     fun getLinkedEntitiesByEntitySetIdWithOriginIds(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
-            extraMetadataOptions: EnumSet<MetadataOption> = EnumSet.noneOf(MetadataOption::class.java),
+            metadataOptions: EnumSet<MetadataOption> = EnumSet.noneOf(MetadataOption::class.java),
             propertyTypeFilters: Map<UUID, Set<Filter>> = mapOf(),
             version: Optional<Long> = Optional.empty()
-    ): BasePostgresIterable<Pair<UUID, Pair<UUID, Pair<UUID, MutableMap<UUID, MutableSet<Any>>>>>> {
-        val metadataOptions = extraMetadataOptions + MetadataOption.ENTITY_KEY_IDS
+    ): BasePostgresIterable<Pair<UUID, Pair<UUID, Map<UUID, MutableMap<UUID, MutableSet<Any>>>>>> {
         return getEntitySetIterable(
                 entityKeyIds,
                 authorizedPropertyTypes,
                 propertyTypeFilters,
                 metadataOptions,
                 version,
-                true
+                linking = true,
+                detailed = true
         ) { rs ->
             getEntityPropertiesByEntitySetIdOriginIdAndPropertyTypeId(
                     rs, authorizedPropertyTypes, metadataOptions, byteBlobDataManager
+            )
+        }
+    }
+
+    /**
+     * Returns linked entity set data detailed in a Map mapped by linking id, (normal) entity set id, origin id,
+     * property type full qualified name and values respectively.
+     */
+    @JvmOverloads
+    fun getLinkedEntitySetBreakDown(
+            entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
+            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
+            propertyTypeFilters: Map<UUID, Set<Filter>> = mapOf(),
+            version: Optional<Long> = Optional.empty()
+    ): BasePostgresIterable<Pair<UUID, Pair<UUID, Map<UUID, MutableMap<FullQualifiedName, MutableSet<Any>>>>>> {
+        return getEntitySetIterable(
+                entityKeyIds,
+                authorizedPropertyTypes,
+                propertyTypeFilters,
+                EnumSet.noneOf(MetadataOption::class.java),
+                version,
+                linking = true,
+                detailed = true
+        ) { rs ->
+            getEntityPropertiesByEntitySetIdOriginIdAndPropertyTypeFqn(
+                    rs, authorizedPropertyTypes, EnumSet.noneOf(MetadataOption::class.java), byteBlobDataManager
             )
         }
     }
@@ -158,6 +184,7 @@ class PostgresEntityDataQueryService(
             metadataOptions: Set<MetadataOption> = EnumSet.noneOf(MetadataOption::class.java),
             version: Optional<Long> = Optional.empty(),
             linking: Boolean = false,
+            detailed: Boolean = false,
             adapter: (ResultSet) -> T
     ): Sequence<T> {
         return getEntitySetIterable(
@@ -167,6 +194,7 @@ class PostgresEntityDataQueryService(
                 metadataOptions,
                 version,
                 linking,
+                detailed,
                 adapter
         ).asSequence()
     }
@@ -181,6 +209,7 @@ class PostgresEntityDataQueryService(
             metadataOptions: Set<MetadataOption> = EnumSet.noneOf(MetadataOption::class.java),
             version: Optional<Long> = Optional.empty(),
             linking: Boolean = false,
+            detailed: Boolean = false,
             adapter: (ResultSet) -> T
     ): BasePostgresIterable<T> {
         val propertyTypes = authorizedPropertyTypes.values.flatMap { it.values }.associateBy { it.id }
@@ -209,7 +238,8 @@ class PostgresEntityDataQueryService(
                 metadataOptions,
                 linking,
                 ids.isNotEmpty(),
-                partitions.isNotEmpty()
+                partitions.isNotEmpty(),
+                detailed
         )
 
         return BasePostgresIterable(PreparedStatementHolderSupplier(hds, sql, FETCH_SIZE) { ps ->
@@ -1134,27 +1164,6 @@ class PostgresEntityDataQueryService(
             WriteEvent(version, numUpdated + linksUpdated)
         }
 
-    }
-
-    private fun getLinkingIdsOfEntityKeyIds(entityKeyIds: Set<UUID>): Map<UUID, UUID> {
-        val sql = "SELECT ${ID.name}, ${LINKING_ID.name} FROM ${IDS.name} WHERE ${ID.name} = ANY(?) AND ${LINKING_ID.name} IS NOT NULL"
-
-        return PostgresIterable(
-                Supplier {
-                    val connection = hds.connection
-                    val stmt = connection.prepareStatement(sql)
-
-                    stmt.setArray(1, PostgresArrays.createUuidArray(connection, entityKeyIds))
-                    val rs = stmt.executeQuery()
-                    StatementHolder(connection, stmt, rs)
-                },
-                Function<ResultSet, Pair<UUID, UUID>> { rs ->
-                    val entityKeyId = ResultSetAdapters.id(rs)
-                    val linkingId = ResultSetAdapters.linkingId(rs)
-
-                    entityKeyId to linkingId
-                }
-        ).toMap()
     }
 
     fun getExpiringEntitiesFromEntitySet(
