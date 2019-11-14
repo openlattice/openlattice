@@ -7,11 +7,13 @@ import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import org.springframework.stereotype.Component
 import java.util.*
+import com.openlattice.postgres.PostgresDatatype
 
 @Component
 class OrganizationExternalDatabaseColumnStreamSerializer : SelfRegisteringStreamSerializer<OrganizationExternalDatabaseColumn> {
 
     companion object {
+        private val postgresDatatypes = PostgresDatatype.values()
         fun serialize(output: ObjectDataOutput, obj: OrganizationExternalDatabaseColumn) {
             UUIDStreamSerializer.serialize(output, obj.id)
             output.writeUTF(obj.name)
@@ -19,7 +21,7 @@ class OrganizationExternalDatabaseColumnStreamSerializer : SelfRegisteringStream
             output.writeUTF(obj.description)
             UUIDStreamSerializer.serialize(output, obj.tableId)
             UUIDStreamSerializer.serialize(output, obj.organizationId)
-            output.writeUTF(obj.dataType)
+            output.writeInt(obj.dataType.ordinal)
             output.writeBoolean(obj.primaryKey)
             output.writeInt(obj.ordinalPosition)
         }
@@ -31,7 +33,7 @@ class OrganizationExternalDatabaseColumnStreamSerializer : SelfRegisteringStream
             val description = input.readUTF()
             val tableId = UUIDStreamSerializer.deserialize(input)
             val orgId = UUIDStreamSerializer.deserialize(input)
-            val dataType = input.readUTF()
+            val dataType = postgresDatatypes[input.readInt()]
             val isPrimaryKey = input.readBoolean()
             val ordinalPosition = input.readInt()
             return OrganizationExternalDatabaseColumn(id, name, title, Optional.of(description), tableId, orgId, dataType, isPrimaryKey, ordinalPosition)

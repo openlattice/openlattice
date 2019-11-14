@@ -951,7 +951,7 @@ public final class ResultSetAdapters {
         Optional<String> description = Optional.ofNullable( description( ( rs ) ) );
         UUID tableId = tableId( rs );
         UUID organizationId = organizationId( rs );
-        String dataType = sqlDataType( rs );
+        PostgresDatatype dataType = sqlDataType( rs );
         Boolean isPrimaryKey = rs.getBoolean( IS_PRIMARY_KEY.getName() );
         Integer ordinalPosition = ordinalPosition( rs );
 
@@ -970,8 +970,9 @@ public final class ResultSetAdapters {
         return rs.getString( COLUMN_NAME.getName() );
     }
 
-    public static String sqlDataType( ResultSet rs ) throws SQLException {
-        return rs.getString( DATATYPE.getName() );
+    public static PostgresDatatype sqlDataType( ResultSet rs ) throws SQLException {
+        String dataType =  rs.getString( DATATYPE.getName() );
+        return PostgresDatatype.valueOf( dataType );
     }
 
     public static Integer ordinalPosition( ResultSet rs ) throws SQLException {
