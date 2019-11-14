@@ -26,7 +26,9 @@ public class UpdateEntityTypePropertyMetadataProcessorStreamSerializerTest exten
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
-                Optional.of( true ),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty());
