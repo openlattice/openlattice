@@ -1,5 +1,6 @@
 package com.openlattice.data.storage
 
+import com.codahale.metrics.annotation.Timed
 import com.google.common.collect.Multimaps
 import com.openlattice.IdConstants
 import com.openlattice.analysis.SqlBindInfo
@@ -281,6 +282,7 @@ class PostgresEntityDataQueryService(
      *
      * @return A write event summarizing the results of performing this operation.
      */
+    @Timed
     fun upsertEntities(
             entitySetId: UUID,
             entities: Map<UUID, Map<UUID, Set<Any>>>,
@@ -330,27 +332,24 @@ class PostgresEntityDataQueryService(
         val partitions = partitionsInfo.partitions.toList()
 
         entities.entries
-                .groupBy({ getPartition(it.key, partitions) }, { it.toPair() })
-                .mapValues { it.value.toMap() }
-                .asSequence().asStream().parallel()
-                .forEach { (partition, rawEntityBatch) ->
-
-                    val entityBatch = rawEntityBatch.mapValues { (entityKeyId, rawValue) ->
-                        return@mapValues if (awsPassthrough) {
-                            rawValue
+                .groupBy { getPartition(it.key, partitions) }
+                .forEach { (partition, batch) ->
+                    val entityBatch = batch.map { (entityKeyId, rawValue) ->
+                        return@map if (awsPassthrough) {
+                            entityKeyId to rawValue
                         } else {
-                            Multimaps.asMap(JsonDeserializer
+                            entityKeyId to Multimaps.asMap(JsonDeserializer
                                                     .validateFormatAndNormalize(rawValue, authorizedPropertyTypes)
                                                     { "Entity set $entitySetId with entity key id $entityKeyId" })
                         }
-                    }
+                    }.toMap()
 
                     tombstoneFn(version, entityBatch)
                     val upc = upsertEntities(
                             entitySetId,
                             entityBatch,
                             authorizedPropertyTypes,
-                            version,
+                            version+1,
                             partitionsInfo.partitionsVersion,
                             partition,
                             awsPassthrough
@@ -470,6 +469,7 @@ class PostgresEntityDataQueryService(
         return PostgresDataHasher.hashObject(s3Key, EdmPrimitiveTypeKind.String) to s3Key
     }
 
+    @Timed
     fun replaceEntities(
             entitySetId: UUID,
             entities: Map<UUID, Map<UUID, Set<Any>>>,
@@ -501,6 +501,7 @@ class PostgresEntityDataQueryService(
         )
     }
 
+    @Timed
     fun partialReplaceEntities(
             entitySetId: UUID,
             entities: Map<UUID, Map<UUID, Set<Any>>>,
@@ -534,6 +535,7 @@ class PostgresEntityDataQueryService(
         )
     }
 
+    @Timed
     fun replacePropertiesInEntities(
             entitySetId: UUID,
             replacementProperties: Map<UUID, Map<UUID, Set<Map<ByteBuffer, Any>>>>, // ekid -> ptid -> hashes -> shit
@@ -606,6 +608,7 @@ class PostgresEntityDataQueryService(
      *
      * NOTE: this function commits the tombstone transactions.
      */
+    @Timed
     fun clearEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent {
         return hds.connection.use { conn ->
             conn.autoCommit = false
