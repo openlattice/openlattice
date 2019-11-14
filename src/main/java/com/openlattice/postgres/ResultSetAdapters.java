@@ -996,7 +996,7 @@ public final class ResultSetAdapters {
     }
 
     public static PostgresAuthenticationRecord postgresAuthenticationRecord( ResultSet rs ) throws SQLException {
-        String connectionType = rs.getString( CONNECTION_TYPE.getName() );
+        PostgresConnectionType connectionType = connectionType( rs );
         String database = rs.getString( DATABASE.getName() );
         String userId = rs.getString( USERNAME.getName() );
         Set<String> ipAddresses = new LinkedHashSet<>( Arrays.asList( PostgresArrays.getTextArray( rs, IP_ADDRESSES.getName() ) ) );
@@ -1010,6 +1010,11 @@ public final class ResultSetAdapters {
 
     public static String username(ResultSet rs) throws SQLException {
         return rs.getString( USERNAME.getName() );
+    }
+
+    public static PostgresConnectionType connectionType(ResultSet rs) throws SQLException {
+        String connectionType = rs.getString( CONNECTION_TYPE.getName() );
+        return PostgresConnectionType.valueOf(connectionType);
     }
 
 }

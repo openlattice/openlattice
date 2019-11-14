@@ -6,14 +6,16 @@ import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.postgres.PostgresAuthenticationRecord
+import com.openlattice.postgres.PostgresConnectionType
 import org.springframework.stereotype.Component
 
 @Component
 class PostgresAuthenticationRecordStreamSerializer : SelfRegisteringStreamSerializer<PostgresAuthenticationRecord> {
 
     companion object{
+        private val connectionTypes = PostgresConnectionType.values()
         fun serialize(output: ObjectDataOutput, obj: PostgresAuthenticationRecord) {
-            output.writeUTF(obj.connectionType)
+            output.writeInt(obj.connectionType.ordinal)
             output.writeUTF(obj.database)
             output.writeUTF(obj.username)
             SetStreamSerializers.fastOrderedStringSetSerializeAsArray(output, obj.ipAddresses)
@@ -21,7 +23,7 @@ class PostgresAuthenticationRecordStreamSerializer : SelfRegisteringStreamSerial
         }
 
         fun deserialize(input: ObjectDataInput): PostgresAuthenticationRecord {
-            val connectionType = input.readUTF()
+            val connectionType = connectionTypes[input.readInt()]
             val database = input.readUTF()
             val username = input.readUTF()
             val ipAddresses = SetStreamSerializers.fastOrderedStringSetDeserializeAsArray(input)

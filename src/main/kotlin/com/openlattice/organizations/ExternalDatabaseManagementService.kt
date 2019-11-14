@@ -27,6 +27,7 @@ import com.openlattice.organizations.roles.SecurePrincipalsManager
 
 import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresAuthenticationRecord
+import com.openlattice.postgres.PostgresConnectionType
 import com.openlattice.postgres.PostgresPrivileges
 import com.openlattice.postgres.ResultSetAdapters.*
 import com.openlattice.postgres.streams.BasePostgresIterable
@@ -222,7 +223,7 @@ class ExternalDatabaseManagementService(
     }
 
     /*PERMISSIONS*/
-    fun addHBARecord(orgId: UUID, userPrincipal: Principal, connectionType: String, ipAddresses: Set<String>) {
+    fun addHBARecord(orgId: UUID, userPrincipal: Principal, connectionType: PostgresConnectionType, ipAddresses: Set<String>) {
         val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
         val username = getDBUser(userPrincipal.id)
         val record = PostgresAuthenticationRecord(

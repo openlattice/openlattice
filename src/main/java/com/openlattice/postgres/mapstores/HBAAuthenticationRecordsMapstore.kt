@@ -24,14 +24,14 @@ open class HBAAuthenticationRecordsMapstore(
                 value.ipAddresses.map { it })
 
         //create
-        ps.setString(index++, value.connectionType)
+        ps.setString(index++, value.connectionType.toString())
         ps.setString(index++, value.database)
 
         ps.setArray(index++, ipAddresses)
         ps.setString(index++, value.authenticationMethod)
 
         //update
-        ps.setString(index++, value.connectionType)
+        ps.setString(index++, value.connectionType.toString())
         ps.setString(index++, value.database)
         ps.setArray(index++, ipAddresses)
         ps.setString(index++, value.authenticationMethod)
