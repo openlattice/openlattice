@@ -189,8 +189,9 @@ class EdmTest : MultipleAuthenticatedUsersBase() {
     fun testEntityTypePropertyTypeMetadata() {
         val pt1 = createPropertyType()
         val et = createEntityType(pt1.id)
+        val newtitle = "New Title !";
         val update =  MetadataUpdate(
-                Optional.of("New Title !"),
+                Optional.of(newtitle),
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
@@ -205,9 +206,9 @@ class EdmTest : MultipleAuthenticatedUsersBase() {
                 Optional.empty()
         )
         edmApi.updateEntityTypePropertyMetadata( et.id , pt1.id, update )
-        var metadata = edmApi.getEntityTypePropertyMetadata(et.id, pt1.id);
+        val metadata = edmApi.getEntityTypePropertyMetadata(et.id, pt1.id);
         Assert.assertEquals(
-                "New Title !",
+                newtitle,
                 metadata.title
         )
         Assert.assertEquals(
