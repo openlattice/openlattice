@@ -53,6 +53,7 @@ class LinkingConfigurationTest : AbstractJacksonYamlSerializationTest<LinkingCon
                 setOf(UUID.randomUUID()),
                 RandomUtils.nextInt(),
                 RandomUtils.nextInt(),
+                RandomUtils.nextBoolean(),
                 listOf("blah.boo", "foo.fah")
                         .map(::FullQualifiedName)
                         .map(FullQualifiedName::getFullQualifiedNameAsString)
