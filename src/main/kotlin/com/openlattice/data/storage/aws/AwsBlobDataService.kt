@@ -54,8 +54,8 @@ class AwsBlobDataService(
         metadata.contentType = contentType
         val putRequest = PutObjectRequest(datastoreConfiguration.bucketName, s3Key, dataInputStream, metadata)
         val transferManager = TransferManagerBuilder.standard().withS3Client(s3).build()
-        val uploadJob = transferManager.upload(putRequest)
-        uploadJob.waitForCompletion()
+        val upload = transferManager.upload(putRequest)
+        upload.waitForCompletion()
         transferManager.shutdownNow(false)
     }
 
