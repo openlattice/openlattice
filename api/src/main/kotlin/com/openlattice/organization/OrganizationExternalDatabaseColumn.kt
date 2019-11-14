@@ -6,6 +6,7 @@ import com.openlattice.authorization.securable.AbstractSecurableObject
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.client.serialization.SerializationConstants
 import java.util.*
+import com.openlattice.postgres.PostgresDatatype
 
 /**
  * Creates a securable object for an organization's entire database
@@ -30,7 +31,7 @@ constructor(
         @JsonProperty(SerializationConstants.DESCRIPTION_FIELD) description: Optional<String>,
         @JsonProperty(SerializationConstants.TABLE_ID) var tableId: UUID,
         @JsonProperty(SerializationConstants.ORGANIZATION_ID) var organizationId: UUID,
-        @JsonProperty(SerializationConstants.DATATYPE_FIELD) var dataType: String,
+        @JsonProperty(SerializationConstants.DATATYPE_FIELD) var dataType: PostgresDatatype,
         @JsonProperty(SerializationConstants.PRIMARY_KEY) var primaryKey: Boolean,
         @JsonProperty(SerializationConstants.ORDINAL_POSITION) var ordinalPosition: Int
 ) : AbstractSecurableObject(id, title, description) {
@@ -42,7 +43,7 @@ constructor(
             description: Optional<String>,
             tableId: UUID,
             organizationId: UUID,
-            dataType: String,
+            dataType: PostgresDatatype,
             primaryKey: Boolean,
             ordinalPosition: Int
     ) : this(Optional.of(id), name, title, description, tableId, organizationId, dataType, primaryKey, ordinalPosition)

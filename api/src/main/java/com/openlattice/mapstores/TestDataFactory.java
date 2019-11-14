@@ -41,6 +41,7 @@ import com.openlattice.organization.OrganizationExternalDatabaseTable;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.postgres.IndexType;
 import com.openlattice.postgres.PostgresAuthenticationRecord;
+import com.openlattice.postgres.PostgresDatatype;
 import com.openlattice.requests.PermissionsRequestDetails;
 import com.openlattice.requests.Request;
 import com.openlattice.requests.RequestStatus;
@@ -597,7 +598,7 @@ public final class TestDataFactory {
                 Optional.of( randomAlphanumeric( 5 ) ),
                 table.getId(),
                 UUID.randomUUID(),
-                randomAlphabetic( 5 ),
+                PostgresDatatype.TEXT,
                 r.nextBoolean(),
                 r.nextInt( 1000 )
         );
