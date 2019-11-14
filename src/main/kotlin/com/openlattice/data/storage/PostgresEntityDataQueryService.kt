@@ -22,6 +22,7 @@ import org.apache.commons.lang3.NotImplementedException
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
+import org.springframework.stereotype.Service
 import java.nio.ByteBuffer
 import java.security.InvalidParameterException
 import java.sql.Connection
@@ -38,6 +39,7 @@ const val DEFAULT_BATCH_SIZE = 128_000
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
+@Service
 class PostgresEntityDataQueryService(
         private val hds: HikariDataSource,
         private val byteBlobDataManager: ByteBlobDataManager,
