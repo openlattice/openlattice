@@ -51,7 +51,7 @@ data class IndexerConfiguration(
         @JsonProperty(BACKGROUND_INDEXING_ENABLED) val backgroundIndexingEnabled: Boolean = true,
         @JsonProperty(BACKGROUND_LINKING_INDEXING_ENABLED) val backgroundLinkingIndexingEnabled: Boolean = true,
         @JsonProperty(BACKGROUND_EXPIRED_DATA_DELETION_ENABLED) val backgroundExpiredDataDeletionEnabled: Boolean = true,
-        @JsonProperty(BACKGROUND_EXTERNAL_DATABASE_SYNCING_ENABLED) val backgroundExternalDatabaseSyncingEnabled: Boolean = true
+        @JsonProperty(BACKGROUND_EXTERNAL_DATABASE_SYNCING_ENABLED) val backgroundExternalDatabaseSyncingEnabled: Boolean = true,
         @JsonProperty(BACKGROUND_DELETION_ENABLED) val backgroundDeletionEnabled: Boolean = true
 ) : Configuration {
     companion object {
