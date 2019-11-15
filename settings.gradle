@@ -16,7 +16,6 @@
  * You can contact the owner of the copyright at support@openlattice.com
  */
 
-rootProject.name='conductor-client'
 pluginManagement {
     repositories {
         maven {
@@ -24,3 +23,5 @@ pluginManagement {
         }
     }
 }
+
+rootProject.name='conductor-client'
