@@ -60,32 +60,26 @@ class DatasetController : DatasetApi, AuthorizingComponent {
             @PathVariable(ID) organizationId: UUID,
             @PathVariable(USER_ID) userId: String,
             @PathVariable(CONNECTION_TYPE) connectionType: PostgresConnectionType,
-            @RequestBody ipAddresses: Set<String>
+            @RequestBody ipAddress: String
     ) {
-        ensureOwnerAccess(AclKey(organizationId))
-        if (connectionType == PostgresConnectionType.LOCAL) {
-            checkState(ipAddresses.isEmpty(), "Local connections may not specify an IP address")
-        } else {
-            checkState(ipAddresses.isNotEmpty(), "Host connections must specify at least one IP address")
-        }
-
-        val invalidIpAddresses = ipAddresses.filter{ !InetAddresses.isInetAddress(it) }.toSet()
-        if (invalidIpAddresses.isNotEmpty()) {
-            throw IllegalStateException("Invalid IP adress(es): ${invalidIpAddresses.joinToString(", ")}")
-        }
+        //ensureOwnerAccess(AclKey(organizationId))
+        validateHBAParameters(connectionType, ipAddress)
         val userPrincipal = Principal(PrincipalType.USER, userId)
-        edms.addHBARecord(organizationId, userPrincipal, connectionType, ipAddresses)
+        edms.addHBARecord(organizationId, userPrincipal, connectionType, ipAddress)
     }
 
     @Timed
-    @DeleteMapping(path = [ID_PATH + USER_ID_PATH + EXTERNAL_DATABASE])
+    @DeleteMapping(path = [ID_PATH + USER_ID_PATH + CONNECTION_TYPE_PATH + EXTERNAL_DATABASE])
     override fun removeHBARecord(
             @PathVariable(ID) organizationId: UUID,
-            @PathVariable(USER_ID) userId: String
+            @PathVariable(USER_ID) userId: String,
+            @PathVariable(CONNECTION_TYPE) connectionType: PostgresConnectionType,
+            @RequestBody ipAddress: String
     ) {
         ensureOwnerAccess(AclKey(organizationId))
+        validateHBAParameters(connectionType, ipAddress)
         val userPrincipal = Principal(PrincipalType.USER, userId)
-        edms.removeHBARecord(organizationId, userPrincipal)
+        edms.removeHBARecord(organizationId, userPrincipal, connectionType, ipAddress)
     }
 
     @Timed
@@ -221,6 +215,18 @@ class DatasetController : DatasetApi, AuthorizingComponent {
     private fun getExternalDatabaseObjectIds( containingObjectId: UUID, names: Set<String>): Set<UUID> {
         val fqns = names.map{FullQualifiedName(containingObjectId.toString(), it).toString()}.toSet()
         return aclKeyReservations.getIds(fqns).toSet()
+    }
+
+    private fun validateHBAParameters(connectionType: PostgresConnectionType, ipAddress: String) {
+        if (connectionType == PostgresConnectionType.LOCAL) {
+            checkState(ipAddress.isEmpty(), "Local connections may not specify an IP address")
+        } else {
+            checkState(ipAddress.isNotEmpty(), "Host connections must specify at least one IP address")
+        }
+        val splitIpAddress = ipAddress.split("/")
+        if (!InetAddresses.isInetAddress(splitIpAddress[0]) || splitIpAddress.size != 2) {
+            throw IllegalStateException("Invalid IP address")
+        }
     }
 
     override fun getAuthorizationManager(): AuthorizationManager {

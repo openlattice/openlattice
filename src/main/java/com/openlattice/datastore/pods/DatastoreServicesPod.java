@@ -541,7 +541,8 @@ public class DatastoreServicesPod {
                 principalService(),
                 aclKeyReservationService(),
                 authorizationManager(),
-                organizationExternalDatabaseConfiguration);
+                organizationExternalDatabaseConfiguration,
+                hikariDataSource);
     }
 
     @PostConstruct
