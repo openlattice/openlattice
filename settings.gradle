@@ -19,7 +19,7 @@
 pluginManagement {
     repositories {
         maven {
-            url url 'https://artifactory.openlattice.com/artifactory/gradle-release-local/'
+            url 'https://artifactory.openlattice.com/artifactory/gradle-release/'
         }
     }
 }
