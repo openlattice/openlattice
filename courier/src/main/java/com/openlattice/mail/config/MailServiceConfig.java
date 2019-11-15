@@ -52,7 +52,7 @@ public final class MailServiceConfig implements Configuration {
             @JsonProperty( PASSWORD_PROPERTY ) String password ) {
 
         /*
-         * TODO: copy of MailServiceConfiguration.java from Rhizome; need to think about how configuration will work
+         * TODO: copy of MailServiceConfiguration.java from StandaloneRhizomeServer; need to think about how configuration will work
          */
 
         this.smtpHost = smtpHost;
