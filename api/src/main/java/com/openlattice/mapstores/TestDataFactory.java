@@ -616,13 +616,11 @@ public final class TestDataFactory {
     }
 
     public static PostgresAuthenticationRecord postgresAuthenticationRecord() {
-        String[] ipAddressesArray = { randomAlphanumeric( 5 ) };
-        Set<String> ipAddresses = new HashSet<>( Arrays.asList( ipAddressesArray ) );
         return new PostgresAuthenticationRecord(
                 PostgresConnectionType.HOST,
                 randomAlphanumeric( 5 ),
                 randomAlphanumeric( 5 ),
-                ipAddresses,
+                "0.0.0.0/0",
                 randomAlphanumeric( 5 )
         );
     }
