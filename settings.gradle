@@ -17,3 +17,10 @@
  */
 
 rootProject.name='conductor-client'
+pluginManagement {
+    repositories {
+        maven {
+            url url 'https://artifactory.openlattice.com/artifactory/gradle-release-local/'
+        }
+    }
+}
