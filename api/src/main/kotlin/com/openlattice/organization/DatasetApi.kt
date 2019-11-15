@@ -39,26 +39,31 @@ interface DatasetApi {
      * @param organizationId The organization's UUID
      * @param userId The user to be given trusted status
      * @param connectionType The connection type via which the user will be trusted
-     * @param ipAddresses The set of ip addresses (as strings) from which users
-     * will be trusted. This should be an empty set if the connectionType is local.
+     * @param ipAddress The ip addresses (as string) from which users
+     * will be trusted. This should be an empty string if the connectionType is local.
      */
     @POST(BASE + ID_PATH + USER_ID_PATH + CONNECTION_TYPE_PATH + EXTERNAL_DATABASE)
     fun addHBARecord(
             @Path(ID) organizationId: UUID,
             @Path(USER_ID) userId: String,
             @Path(CONNECTION_TYPE) connectionType: PostgresConnectionType,
-            @Body ipAddresses: Set<String>)
+            @Body ipAddress: String)
 
     /**
-     * Removes a user's record from the pg_hba config file
+     * Removes an authentication record to the pg_hba config file
+     * that restricts database access by ip address for a user
      * @param organizationId The organization's UUID
      * @param userId The user to be given trusted status
-     * will be trusted. This should be an empty set if the connectionType is local.
+     * @param connectionType The connection type via which the user will be trusted
+     * @param ipAddress The ip addresses (as string) from which users
+     * will be trusted. This should be an empty string if the connectionType is local.
      */
-    @DELETE(BASE + ID_PATH + USER_ID_PATH + EXTERNAL_DATABASE)
+    @DELETE(BASE + ID_PATH + USER_ID_PATH + CONNECTION_TYPE_PATH + EXTERNAL_DATABASE)
     fun removeHBARecord(
             @Path(ID) organizationId: UUID,
-            @Path(USER_ID) userId: String)
+            @Path(USER_ID) userId: String,
+            @Path(CONNECTION_TYPE) connectionType: PostgresConnectionType,
+            @Body ipAddress: String)
 
     //get
 
