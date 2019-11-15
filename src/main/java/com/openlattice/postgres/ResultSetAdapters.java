@@ -971,7 +971,7 @@ public final class ResultSetAdapters {
     }
 
     public static PostgresDatatype sqlDataType( ResultSet rs ) throws SQLException {
-        String dataType =  rs.getString( DATATYPE.getName() );
+        String dataType =  rs.getString( DATATYPE.getName() ).toUpperCase();
         return PostgresDatatype.valueOf( dataType );
     }
 
