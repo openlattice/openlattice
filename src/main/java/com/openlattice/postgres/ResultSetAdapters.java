@@ -999,12 +999,12 @@ public final class ResultSetAdapters {
         PostgresConnectionType connectionType = connectionType( rs );
         String database = rs.getString( DATABASE.getName() );
         String userId = rs.getString( USERNAME.getName() );
-        Set<String> ipAddresses = new LinkedHashSet<>( Arrays.asList( PostgresArrays.getTextArray( rs, IP_ADDRESSES.getName() ) ) );
+        String ipAddress = rs.getString( IP_ADDRESS.getName() );
         String authorizationMethod = rs.getString( AUTHENTICATION_METHOD.getName() );
         return new PostgresAuthenticationRecord( connectionType,
                 database,
                 userId,
-                ipAddresses,
+                ipAddress,
                 authorizationMethod );
     }
 

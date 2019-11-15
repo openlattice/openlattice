@@ -328,10 +328,6 @@ public class MapstoresPod {
         return new OrganizationExternalDatabaseColumnMapstore( hikariDataSource );
     }
 
-    @Bean SelfRegisteringMapStore<String, PostgresAuthenticationRecord> hbaAuthenticationRecordsMapstore() {
-        return new HBAAuthenticationRecordsMapstore( hikariDataSource );
-    }
-
     @Bean
     public Auth0TokenProvider auth0TokenProvider() {
         return new Auth0TokenProvider( auth0Configuration );

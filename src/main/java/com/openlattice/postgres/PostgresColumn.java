@@ -230,9 +230,9 @@ public final class PostgresColumn {
     public static final String                   ID_FIELD                          = "id";
     public static final PostgresColumnDefinition ID                                =
             new PostgresColumnDefinition( ID_FIELD, UUID ).primaryKey().notNull();
-    public static final String                   IP_ADDRESSES_FIELD                = "ip_addresses";
-    public static final PostgresColumnDefinition IP_ADDRESSES                      =
-            new PostgresColumnDefinition( IP_ADDRESSES_FIELD, TEXT_ARRAY );
+    public static final String                   IP_ADDRESS_FIELD                  = "ip_address";
+    public static final PostgresColumnDefinition IP_ADDRESS                        =
+            new PostgresColumnDefinition( IP_ADDRESS_FIELD, TEXT );
     public static final PostgresColumnDefinition ID_VALUE                          =
             new PostgresColumnDefinition( ID_FIELD, UUID );
     public static final String                   INDEX_TYPE_FIELD                  = "index_type";

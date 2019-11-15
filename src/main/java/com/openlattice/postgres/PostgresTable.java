@@ -237,9 +237,9 @@ public final class PostgresTable {
                             USERNAME,
                             DATABASE,
                             CONNECTION_TYPE,
-                            IP_ADDRESSES,
+                            IP_ADDRESS,
                             AUTHENTICATION_METHOD )
-            .primaryKey( USERNAME );
+            .primaryKey( USERNAME, DATABASE, CONNECTION_TYPE, IP_ADDRESS );
 
     public static final PostgresTableDefinition        IDS                          =
             new CitusDistributedTableDefinition( "ids" )

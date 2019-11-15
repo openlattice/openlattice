@@ -18,7 +18,7 @@ class PostgresAuthenticationRecordStreamSerializer : SelfRegisteringStreamSerial
             output.writeInt(obj.connectionType.ordinal)
             output.writeUTF(obj.database)
             output.writeUTF(obj.username)
-            SetStreamSerializers.fastOrderedStringSetSerializeAsArray(output, obj.ipAddresses)
+            output.writeUTF(obj.ipAddress)
             output.writeUTF(obj.authenticationMethod)
         }
 
@@ -26,9 +26,9 @@ class PostgresAuthenticationRecordStreamSerializer : SelfRegisteringStreamSerial
             val connectionType = connectionTypes[input.readInt()]
             val database = input.readUTF()
             val username = input.readUTF()
-            val ipAddresses = SetStreamSerializers.fastOrderedStringSetDeserializeAsArray(input)
+            val ipAddress = input.readUTF()
             val authenticationMethod = input.readUTF()
-            return PostgresAuthenticationRecord(connectionType, database, username,ipAddresses, authenticationMethod)
+            return PostgresAuthenticationRecord(connectionType, database, username, ipAddress, authenticationMethod)
         }
     }
 
