@@ -12,6 +12,7 @@ import kotlin.collections.HashMap
 private val logger = LoggerFactory.getLogger(PostgresDataSinkService::class.java)
 
 @Service
+@Deprecated("This needs to be removed")
 class PostgresDataSinkService {
     @Inject
     lateinit var dataQueryService: PostgresEntityDataQueryService

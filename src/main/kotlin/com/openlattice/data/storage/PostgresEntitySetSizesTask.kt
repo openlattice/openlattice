@@ -20,6 +20,8 @@
  */
 package com.openlattice.data.storage
 
+import com.openlattice.data.storage.PostgresEntitySetSizesInitializationTask.Companion.ENTITY_SET_SIZES_VIEW
+import com.openlattice.data.storage.PostgresEntitySetSizesInitializationTask.Companion.REFRESH_ENTITY_SET_COUNTS_VIEW
 import com.openlattice.postgres.PostgresColumn.COUNT
 import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
 import com.openlattice.tasks.HazelcastFixedRateTask

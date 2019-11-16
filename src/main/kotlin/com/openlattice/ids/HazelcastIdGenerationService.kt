@@ -19,7 +19,7 @@ class HazelcastIdGenerationService(clients: HazelcastClientProvider, private val
      */
     companion object {
         private const val MASK_LENGTH = 16
-        const val NUM_PARTITIONS = 1L shl MASK_LENGTH //65536
+        const val NUM_PARTITIONS = 1 shl MASK_LENGTH //65536
         private val logger = LoggerFactory.getLogger(HazelcastIdGenerationService::class.java)
     }
 
