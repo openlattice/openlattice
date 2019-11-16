@@ -357,7 +357,9 @@ class ExternalDatabaseManagementService(
             val principal = securePrincipalsManager.getSecurablePrincipalById(securablePrincipalId).principal
             val aceKey = AceKey(aclKey, principal)
             val permissions = EnumSet.noneOf(Permission::class.java)
-            if (privileges == PostgresPrivileges.values().toSet()) {
+            val ownerPrivileges = PostgresPrivileges.values().toMutableSet()
+            ownerPrivileges.remove(PostgresPrivileges.ALL)
+            if (privileges == ownerPrivileges) {
                 permissions.add(Permission.OWNER)
             }
             if (privileges.contains(PostgresPrivileges.SELECT)) {
