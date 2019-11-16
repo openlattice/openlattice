@@ -1,3 +1,11 @@
+pluginManagement {
+    repositories {
+        maven {
+            url 'https://artifactory.openlattice.com/artifactory/gradle-release/'
+        }
+    }
+}
+
 rootProject.name='openlattice'
 
 include 'api'
@@ -18,3 +26,4 @@ include 'socrates'
 include 'indexer'
 include 'transporter'
 include 'linker'
+
