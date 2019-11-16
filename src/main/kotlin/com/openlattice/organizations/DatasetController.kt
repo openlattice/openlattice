@@ -62,7 +62,7 @@ class DatasetController : DatasetApi, AuthorizingComponent {
             @PathVariable(CONNECTION_TYPE) connectionType: PostgresConnectionType,
             @RequestBody ipAddress: String
     ) {
-        //ensureOwnerAccess(AclKey(organizationId))
+        ensureOwnerAccess(AclKey(organizationId))
         validateHBAParameters(connectionType, ipAddress)
         val userPrincipal = Principal(PrincipalType.USER, userId)
         edms.addHBARecord(organizationId, userPrincipal, connectionType, ipAddress)
