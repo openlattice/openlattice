@@ -354,7 +354,8 @@ public class IndexerServicesPod {
                 principalService(),
                 aclKeyReservationService(),
                 authorizationManager(),
-                organizationExternalDatabaseConfiguration );
+                organizationExternalDatabaseConfiguration,
+                hikariDataSource);
     }
 
     @Bean( name = "auditingManager" )
