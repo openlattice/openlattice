@@ -3,7 +3,6 @@ package com.openlattice.organizations
 import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.openlattice.apps.AppConfigKey
 import com.openlattice.apps.AppTypeSetting
 import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.Principal
@@ -39,6 +38,17 @@ data class Organization(
     val id: UUID
         @JsonProperty(SerializationConstants.ID_FIELD)
         get() = securablePrincipal.id
+    val principal: Principal
+        @JsonProperty(SerializationConstants.PRINCIPAL)
+        get() = securablePrincipal.principal
+
+    val title: String
+        @JsonProperty(SerializationConstants.TITLE_FIELD)
+        get() = securablePrincipal.title
+    val description: String
+        @JsonProperty(SerializationConstants.DESCRIPTION_FIELD)
+        get() = securablePrincipal.description
+
 
     @JsonCreator
     constructor(
@@ -133,18 +143,5 @@ data class Organization(
         return securablePrincipal.aclKey
     }
 
-    @JsonProperty(SerializationConstants.PRINCIPAL)
-    fun getPrincipal(): Principal {
-        return securablePrincipal.principal
-    }
 
-    @JsonProperty(SerializationConstants.TITLE_FIELD)
-    fun getTitle(): String {
-        return securablePrincipal.title
-    }
-
-    @JsonProperty(SerializationConstants.DESCRIPTION_FIELD)
-    fun getDescription(): String {
-        return securablePrincipal.description
-    }
 }

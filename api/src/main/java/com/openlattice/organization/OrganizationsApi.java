@@ -41,6 +41,7 @@ public interface OrganizationsApi {
     String DESCRIPTION       = "/description";
     String EMAIL_DOMAIN      = "email-domain";
     String EMAIL_DOMAINS     = "/email-domains";
+    String AUTO_GRANT        = "/grants";
     String EMAIL_DOMAIN_PATH = "/{" + EMAIL_DOMAIN + ":.+}";
     String ENTITY_SETS       = "/entity-sets";
     // @formatter:on

@@ -293,14 +293,14 @@ public final class TestDataFactory {
                 organizationPrincipal(),
                 randomAlphanumeric( 5 ),
                 Optional.of( randomAlphanumeric( 5 ) ),
-                ImmutableSet.of( randomAlphanumeric( 5 ), randomAlphanumeric( 5 ) ),
-                ImmutableSet.of( userPrincipal() ),
-                ImmutableSet.of( role() ),
-                ImmutableSet.of( UUID.randomUUID() ),
+                Sets.newHashSet( randomAlphanumeric( 5 ), randomAlphanumeric( 5 ) ),
+                Sets.newHashSet( userPrincipal() ),
+                Sets.newHashSet( role() ),
+                Sets.newHashSet( UUID.randomUUID() ),
                 Optional.empty(),
                 Optional.of( Lists.newArrayList( 1, 2, 3 ) ),
-                ImmutableSet.of( randomAlphanumeric( 5 ), randomAlphanumeric( 5 ) ),
-                ImmutableSet.of( UUID.randomUUID() )
+                Sets.newHashSet( randomAlphanumeric( 5 ), randomAlphanumeric( 5 ) ),
+                Sets.newHashSet( UUID.randomUUID() )
         );
     }
 
