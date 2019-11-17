@@ -19,7 +19,6 @@
 package com.openlattice.client.serialization;
 
 public final class SerializationConstants {
-
     public static final String ACE                              = "ace";
     public static final String ACES                             = "aces";
     public static final String ACL                              = "acl";
@@ -56,6 +55,8 @@ public final class SerializationConstants {
     public static final String AUDIT_RECORD_ENTITY_SET_ID       = "auditRecordEntitySetId";
     public static final String AUDIT_RECORD_ENTITY_SET_IDS      = "auditRecordEntitySetIds";
     public static final String AUTHORIZED_OBJECTS               = "authorizedObjects";
+    public static final String AUTO_ENROLLMENTS                 = "autoEnrollments";
+    public static final String AUTO_GRANTS                      = "autoGrants";
     public static final String BASE_TYPE_FIELD                  = "baseType";
     public static final String BIDIRECTIONAL                    = "bidirectional";
     public static final String BLOCK_ID                         = "blockId";

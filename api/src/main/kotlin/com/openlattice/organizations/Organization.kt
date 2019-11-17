@@ -24,18 +24,19 @@ import java.util.*
 
 data class Organization(
         val securablePrincipal: OrganizationPrincipal,
-        val autoApprovedEmails: MutableSet<String>,
-        val members: MutableSet<Principal>,
-        val roles: MutableSet<Role>,
+        @JsonProperty(SerializationConstants.EMAILS_FIELD) val autoApprovedEmails: MutableSet<String>,
+        @JsonProperty(SerializationConstants.MEMBERS_FIELD) val members: MutableSet<Principal>,
+        @JsonProperty(SerializationConstants.ROLES) val roles: MutableSet<Role>,
+        @JsonProperty(SerializationConstants.SMS_ENTITY_SET_INFO)
         val smsEntitySetInfo: MutableSet<SmsEntitySetInformation>,
-        val partitions: MutableList<Int>,
-        val apps: MutableSet<UUID> = mutableSetOf(),
-        val appConfigs: Map<AppConfigKey, AppTypeSetting> = mutableMapOf(),
-        val autoEnrollments: MutableSet<String> = mutableSetOf(),
-        val autoGrants: MutableSet<UUID> = mutableSetOf()
+        @JsonProperty(SerializationConstants.PARTITIONS) val partitions: MutableList<Int>,
+        @JsonProperty(SerializationConstants.APPS) val apps: MutableSet<UUID> = mutableSetOf(),
+        val appConfigs: Map<UUID, Map<UUID, AppTypeSetting>> = mutableMapOf(),
+        @JsonProperty(SerializationConstants.AUTO_ENROLLMENTS) val autoEnrollments: MutableSet<String> = mutableSetOf(),
+        @JsonProperty(SerializationConstants.AUTO_GRANTS) val autoGrants: MutableSet<UUID> = mutableSetOf()
 ) {
 
-    val id : UUID
+    val id: UUID
         @JsonProperty(SerializationConstants.ID_FIELD)
         get() = securablePrincipal.id
 
@@ -51,7 +52,9 @@ data class Organization(
             @JsonProperty(SerializationConstants.APPS) apps: MutableSet<UUID>,
             @JsonProperty(SerializationConstants.SMS_ENTITY_SET_INFO)
             smsEntitySetInfo: Optional<MutableSet<SmsEntitySetInformation>>,
-            @JsonProperty(SerializationConstants.PARTITIONS) partitions: Optional<MutableList<Int>>
+            @JsonProperty(SerializationConstants.PARTITIONS) partitions: Optional<MutableList<Int>>,
+            @JsonProperty(SerializationConstants.AUTO_ENROLLMENTS) autoEnrollments: MutableSet<String> = mutableSetOf(),
+            @JsonProperty(SerializationConstants.AUTO_GRANTS) autoGrants: MutableSet<UUID> = mutableSetOf()
     ) : this(
             OrganizationPrincipal(id, principal, title, description),
             autoApprovedEmails,

@@ -298,7 +298,10 @@ public final class TestDataFactory {
                 ImmutableSet.of( role() ),
                 ImmutableSet.of( UUID.randomUUID() ),
                 Optional.empty(),
-                Optional.of( Lists.newArrayList( 1, 2, 3 ) ) );
+                Optional.of( Lists.newArrayList( 1, 2, 3 ) ),
+                ImmutableSet.of( randomAlphanumeric( 5 ), randomAlphanumeric( 5 ) ),
+                ImmutableSet.of( UUID.randomUUID() )
+        );
     }
 
     public static Principal organizationPrincipal() {
