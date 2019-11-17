@@ -1,8 +1,6 @@
 package com.openlattice.indexing.pods;
 
 import com.hazelcast.core.HazelcastInstance;
-import com.openlattice.data.storage.PostgresEntityDataQueryService;
-import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.graph.processing.processors.GraphProcessor;
 import com.openlattice.graph.processing.processors.SharedGraphProcessors;
 import com.zaxxer.hikari.HikariDataSource;
@@ -27,9 +25,6 @@ public class GraphProcessorPod {
 
 //    @Inject
 //    private EdmManager edmManager;
-
-    @Inject
-    private PostgresEntityDataQueryService dataQueryService;
 
     @Inject
     private HazelcastInstance hazelcastInstance;
