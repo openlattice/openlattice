@@ -22,7 +22,7 @@ class OrganizationMembersCleanupInitializationTask : HazelcastInitializationTask
                 .securableObjectTypes.getSecurableObjectsOfType(SecurableObjectType.Organization)
                 .mapNotNull(dependencies.securablePrincipalManager::getSecurablePrincipal)
                 .filter { principal -> principal !is OrganizationPrincipal }
-                .map { principal -> dependencies.organizationService.getOrganization(principal.id) }
+                .map { principal -> dependencies.organizationService.getOrganization(principal.id)!! }
                 .forEach { org ->
                     val forRemoval = org.members
                             .filterNot(dependencies.securablePrincipalManager::principalExists)

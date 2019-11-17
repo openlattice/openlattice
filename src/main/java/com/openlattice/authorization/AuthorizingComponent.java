@@ -85,8 +85,11 @@ public interface AuthorizingComponent {
         accessCheck( aclKey, EnumSet.of( Permission.LINK ) );
     }
 
+    default boolean isAdmin() {
+        return Principals.getCurrentPrincipals().contains( Principals.getAdminRole() );
+    }
     default void ensureAdminAccess() {
-        if ( !Principals.getCurrentPrincipals().contains( Principals.getAdminRole() ) ) {
+        if ( ! isAdmin() ) {
             throw new ForbiddenException( "Only admins are allowed to perform this action." );
         }
     }

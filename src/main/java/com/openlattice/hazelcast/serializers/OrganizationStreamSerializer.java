@@ -21,13 +21,17 @@
 package com.openlattice.hazelcast.serializers;
 
 import com.codahale.metrics.annotation.Timed;
+import com.dataloom.mappers.ObjectMappers;
+import com.esotericsoftware.kryo.util.ObjectMap;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.geekbeast.rhizome.hazelcast.serializers.AbstractJacksonStreamSerializer;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.authorization.Principal;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
-import com.openlattice.organization.Organization;
+import com.openlattice.organizations.Organization;
 import com.openlattice.organization.OrganizationPrincipal;
 import com.openlattice.organization.roles.Role;
 import java.io.IOException;
@@ -38,8 +42,13 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 
 @Component
-public class OrganizationStreamSerializer implements SelfRegisteringStreamSerializer<Organization> {
-    @Override public Class<? extends Organization> getClazz() {
+public class OrganizationStreamSerializer extends AbstractJacksonStreamSerializer<Organization> {
+    private static final ObjectMapper mapper = ObjectMappers.getSmileMapper();
+    public OrganizationStreamSerializer() {
+        super( Organization.class, mapper );
+    }
+
+    @Override public Class<Organization> getClazz() {
         return Organization.class;
     }
 
@@ -62,32 +71,38 @@ public class OrganizationStreamSerializer implements SelfRegisteringStreamSerial
     }
 
     public static void serialize( ObjectDataOutput out, Organization object ) throws IOException {
-        SecurablePrincipalStreamSerializer.serialize( out, object.getSecurablePrincipal() );
-        SetStreamSerializers.fastStringSetSerialize( out, object.getAutoApprovedEmails() );
-        SetStreamSerializers.fastUUIDSetSerialize( out, object.getApps() );
-        SetStreamSerializers.serialize( out, object.getMembers(), ( principal ) -> {
-            PrincipalStreamSerializer.serialize( out, principal );
-        } );
-        SetStreamSerializers.serialize( out, object.getRoles(), ( role ) -> {
-            RoleStreamSerializer.serialize( out, role );
-        } );
-
-        SetStreamSerializers
-                .serialize( out, object.getSmsEntitySetInfo(), SmsEntitySetInformationStreamSerializer::serialize );
-        out.writeIntArray( object.getPartitions().stream().mapToInt( it -> it ).toArray() );
+        out.writeByteArray( mapper.writeValueAsBytes( object ) );
+//        SecurablePrincipalStreamSerializer.serialize( out, object.getSecurablePrincipal() );
+//        SetStreamSerializers.fastStringSetSerialize( out, object.getAutoApprovedEmails() );
+//        SetStreamSerializers.fastUUIDSetSerialize( out, object.getApps() );
+//        SetStreamSerializers.serialize( out, object.getMembers(), ( principal ) -> {
+//            PrincipalStreamSerializer.serialize( out, principal );
+//        } );
+//        SetStreamSerializers.serialize( out, object.getRoles(), ( role ) -> {
+//            RoleStreamSerializer.serialize( out, role );
+//        } );
+//
+//        SetStreamSerializers
+//                .serialize( out, object.getSmsEntitySetInfo(), SmsEntitySetInformationStreamSerializer::serialize );
+//
+//        SetStreamSerializers
+//                .serialize( out, object.getApps(), AppStreamSerializer::serialize );
+//
+//        out.writeIntArray( object.getPartitions().stream().mapToInt( it -> it ).toArray() );
     }
 
     public static Organization deserialize( ObjectDataInput in ) throws IOException {
-        OrganizationPrincipal securablePrincipal = (OrganizationPrincipal) SecurablePrincipalStreamSerializer
-                .deserialize( in );
-        Set<String> autoApprovedEmails = SetStreamSerializers.fastStringSetDeserialize( in );
-        Set<UUID> apps = SetStreamSerializers.fastUUIDSetDeserialize( in );
-        Set<Principal> members = SetStreamSerializers.deserialize( in, PrincipalStreamSerializer::deserialize );
-        Set<Role> roles = SetStreamSerializers.deserialize( in, RoleStreamSerializer::deserialize );
-        final var smsEntitySetInfo = SetStreamSerializers
-                .deserialize( in, SmsEntitySetInformationStreamSerializer::deserialize );
-        final var parititions = Arrays.stream( in.readIntArray() ).boxed().collect( Collectors.toList() );
-
-        return new Organization( securablePrincipal, autoApprovedEmails, members, roles, apps, smsEntitySetInfo, parititions);
+//        OrganizationPrincipal securablePrincipal = (OrganizationPrincipal) SecurablePrincipalStreamSerializer
+//                .deserialize( in );
+//        Set<String> autoApprovedEmails = SetStreamSerializers.fastStringSetDeserialize( in );
+//        Set<UUID> apps = SetStreamSerializers.fastUUIDSetDeserialize( in );
+//        Set<Principal> members = SetStreamSerializers.deserialize( in, PrincipalStreamSerializer::deserialize );
+//        Set<Role> roles = SetStreamSerializers.deserialize( in, RoleStreamSerializer::deserialize );
+//        final var smsEntitySetInfo = SetStreamSerializers
+//                .deserialize( in, SmsEntitySetInformationStreamSerializer::deserialize );
+//        final var parititions = Arrays.stream( in.readIntArray() ).boxed().collect( Collectors.toList() );
+//
+//        return new Organization( securablePrincipal, autoApprovedEmails, members, roles, apps, smsEntitySetInfo, parititions);
+        return mapper.readValue(in.readByteArray(), Organization.class);
     }
 }

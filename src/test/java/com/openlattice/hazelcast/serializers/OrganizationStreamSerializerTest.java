@@ -22,7 +22,7 @@ package com.openlattice.hazelcast.serializers;
 
 import com.openlattice.hazelcast.serializers.OrganizationStreamSerializer;
 import com.openlattice.mapstores.TestDataFactory;
-import com.openlattice.organization.Organization;
+import com.openlattice.organizations.Organization;
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest;
 
 public class OrganizationStreamSerializerTest extends

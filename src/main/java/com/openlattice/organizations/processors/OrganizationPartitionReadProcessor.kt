@@ -12,9 +12,14 @@ private val logger = LoggerFactory.getLogger(OrganizationEntryProcessor::class.j
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-class OrganizationPartitionReadEntryProcessor : AbstractReadOnlyRhizomeEntryProcessor<UUID, Organization, DelegatedIntList>() {
-    override fun process(entry: MutableMap.MutableEntry<UUID, Organization?>): DelegatedIntList {
-        return DelegatedIntList(entry.value?.partitions ?: listOf())
+class OrganizationReadEntryProcessor(val read : (organization:Organization) -> Any ) : AbstractReadOnlyRhizomeEntryProcessor<UUID, Organization, Any?>() {
+    override fun process(entry: MutableMap.MutableEntry<UUID, Organization?>): Any? {
+        val organization = entry.value
+        return if( organization == null ) {
+            null
+        } else {
+            read( organization )
+        }
     }
 }
 

@@ -30,7 +30,6 @@ import com.openlattice.assembler.tasks.UsersAndRolesInitializationTask
 import com.openlattice.authorization.initializers.AuthorizationInitializationTask
 import com.openlattice.authorization.initializers.AuthorizationInitializationTask.Companion.GLOBAL_ADMIN_ROLE
 import com.openlattice.authorization.initializers.AuthorizationInitializationTask.Companion.OPENLATTICE_ROLE
-import com.openlattice.organization.Organization
 import com.openlattice.organization.OrganizationConstants.Companion.GLOBAL_ORG_PRINCIPAL
 import com.openlattice.organization.OrganizationConstants.Companion.OPENLATTICE_ORG_PRINCIPAL
 import com.openlattice.organizations.Organization

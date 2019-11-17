@@ -68,7 +68,6 @@ import com.openlattice.ids.Range;
 import com.openlattice.linking.mapstores.LinkingFeedbackMapstore;
 import com.openlattice.notifications.sms.SmsInformationMapstore;
 import com.openlattice.organizations.PrincipalSet;
-import com.openlattice.organizations.mapstores.OrganizationDefaultPartitionsMapstore;
 import com.openlattice.postgres.PostgresPod;
 import com.openlattice.postgres.PostgresTableManager;
 import com.openlattice.postgres.mapstores.AclKeysMapstore;
@@ -241,10 +240,10 @@ public class MapstoresPod {
         return new PostgresCredentialMapstore( hikariDataSource, pgUserApi() );
     }
 
-    @Bean
-    public SelfRegisteringMapStore<String, Auth0UserBasic> userMapstore() {
-        return new UserMapstore( auth0TokenProvider() );
-    }
+//    @Bean
+//    public SelfRegisteringMapStore<String, Auth0UserBasic> userMapstore() {
+//        return new UserMapstore(hikariDataSource);// auth0TokenProvider() );
+//    }
 
     @Bean
     public SelfRegisteringMapStore<EntitySetPropertyKey, EntitySetPropertyMetadata> entitySetPropertyMetadataMapstore() {
@@ -352,8 +351,4 @@ public class MapstoresPod {
         return new SmsInformationMapstore( hikariDataSource );
     }
 
-    @Bean
-    public OrganizationDefaultPartitionsMapstore organizationDefaultPartitionsMapstore() {
-        return new OrganizationDefaultPartitionsMapstore( hikariDataSource );
-    }
 }

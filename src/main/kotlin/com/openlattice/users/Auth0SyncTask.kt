@@ -83,140 +83,140 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies>, Hazelca
         return TimeUnit.MILLISECONDS
     }
 
-    override fun runTask() {
-        val ds = getDependency()
-
-        val membersOf: IMap<UUID, PrincipalSet> = ds.hazelcastInstance.getMap(HazelcastMap.ORGANIZATIONS_MEMBERS.name)
-
-        val users: IMap<String, User> = ds.hazelcastInstance.getMap(HazelcastMap.USERS.name)
-        val retrofit: Retrofit = RetrofitFactory.newClient(
-                ds.auth0TokenProvider.managementApiUrl
-        ) { ds.auth0TokenProvider.token }
-        val managementApi = ManagementAPI(ds.auth0Configuration.domain, ds.auth0TokenProvider.token)
-
-        val auth0ManagementApi = retrofit.create(Auth0ManagementApi::class.java)
-        val userRoleAclKey: AclKey = ds.spm.lookup(AuthorizationInitializationTask.GLOBAL_USER_ROLE.principal)
-        val adminRoleAclKey: AclKey = ds.spm.lookup(AuthorizationInitializationTask.GLOBAL_ADMIN_ROLE.principal)
-
-        val globalOrganizationAclKey: AclKey = ds.spm.lookup(
-                GLOBAL_ORG_PRINCIPAL
-        )
-        val openlatticeOrganizationAclKey: AclKey = ds.spm.lookup(
-                OPENLATTICE_ORG_PRINCIPAL
-        )
-        //Only one instance can populate and refresh the map. Unforunately, ILock is refusing to unlock causing issues
-        //So we implement a different gating mechanism. This may occasionally be wrong when cluster size changes.
-        logger.info("Refreshing user list from Auth0.")
-        try {
-            var page = 0
-
+    override fun runTask() {}
+//        val ds = getDependency()
+//
+//        val membersOf: IMap<UUID, PrincipalSet> = ds.hazelcastInstance.getMap(HazelcastMap.ORGANIZATIONS_MEMBERS.name)
+//
+//        val users: IMap<String, User> = ds.hazelcastInstance.getMap(HazelcastMap.USERS.name)
+//        val retrofit: Retrofit = RetrofitFactory.newClient(
+//                ds.auth0TokenProvider.managementApiUrl
+//        ) { ds.auth0TokenProvider.token }
+//        val managementApi = ManagementAPI(ds.auth0Configuration.domain, ds.auth0TokenProvider.token)
+//
+//        val auth0ManagementApi = retrofit.create(Auth0ManagementApi::class.java)
+//        val userRoleAclKey: AclKey = ds.spm.lookup(AuthorizationInitializationTask.GLOBAL_USER_ROLE.principal)
+//        val adminRoleAclKey: AclKey = ds.spm.lookup(AuthorizationInitializationTask.GLOBAL_ADMIN_ROLE.principal)
+//
+//        val globalOrganizationAclKey: AclKey = ds.spm.lookup(
+//                GLOBAL_ORG_PRINCIPAL
+//        )
+//        val openlatticeOrganizationAclKey: AclKey = ds.spm.lookup(
+//                OPENLATTICE_ORG_PRINCIPAL
+//        )
+//        //Only one instance can populate and refresh the map. Unforunately, ILock is refusing to unlock causing issues
+//        //So we implement a different gating mechanism. This may occasionally be wrong when cluster size changes.
+//        logger.info("Refreshing user list from Auth0.")
+//        try {
+//            var page = 0
+//
 //            var pageOfUsers: Set<Auth0UserBasic> = auth0ManagementApi.getAllUsers(page++, DEFAULT_PAGE_SIZE)!!
-            var pageOfUsers = getUsersPage(managementApi,page++ ).items
-            check(pageOfUsers.isNotEmpty() || users.isNotEmpty()) { "No users found." }
-            while (pageOfUsers.isNotEmpty()) {
-                logger.info("Loading page {} of {} auth0 users", page, pageOfUsers.size)
-                pageOfUsers
-                        .parallelStream()
-                        .forEach { user ->
-                            val userId = user.id
-                            users.set(userId, user)
-
-                            if (!ds.spm.principalExists(Principal(PrincipalType.USER, userId))) {
-                                createPrincipal(
-                                        user,
-                                        userId,
-                                        globalOrganizationAclKey,
-                                        userRoleAclKey,
-                                        openlatticeOrganizationAclKey,
-                                        adminRoleAclKey,
-                                        ds
-                                )
-                            }
-
-
-                            //If the user is an admin but doesn't have admin permissions grant him correct permissions.
-                            if (user.roles.contains(SystemRole.ADMIN.getName())) {
-                                val principal = ds.spm.getPrincipal(userId)
-                                if (!ds.spm.principalHasChildPrincipal(principal.aclKey, adminRoleAclKey)) {
-                                    ds.organizationService
-                                            .addRoleToPrincipalInOrganization(
-                                                    adminRoleAclKey[0],
-                                                    adminRoleAclKey[1],
-                                                    principal.principal
-                                            )
-                                }
-                            }
-                        }
-                pageOfUsers = auth0ManagementApi.getAllUsers(page++, DEFAULT_PAGE_SIZE)
-            }
-        } catch (ex: Exception) {
-            logger.error("Retrofit called failed during auth0 sync task.", ex)
-            return
-        }
-
-        val removeUsersPredicate = Predicates.lessThan(
-                UserMapstore.LOAD_TIME_INDEX,
-                OffsetDateTime.now().minus(6 * REFRESH_INTERVAL_MILLIS, ChronoUnit.MILLIS).toInstant().toEpochMilli()
-        ) as Predicate<String, Auth0UserBasic>?
-
-        val usersToRemove = users.keySet(removeUsersPredicate)
-        logger.info("Removing the following users: {}", usersToRemove)
-
-        /*
-         *  Need to remove members from their respective orgs here
-         */
-        membersOf.executeOnEntries(RemoveMemberOfOrganizationEntryProcessor(usersToRemove))
-
-        /*
-         * If we did not see a user in any of the pages we should delete that user.
-         * In the future we should consider persisting users to our own database so that we
-         * don't have to load all of them at startup.
-         */
-        users.removeAll(removeUsersPredicate)
-
-    }
-
-    private fun getUsersPage(managementApi: ManagementAPI, page: Int, pageSize: Int = DEFAULT_PAGE_SIZE): UsersPage {
-        return managementApi.users().list(
-                UserFilter().withSearchEngine("v3").withFields("user_id,email,nickname,app_metadata").withPage(
-                        page, pageSize
-                )
-        ).execute()
-    }
-
-    private fun createPrincipal(
-            user: User,
-            userId: String,
-            globalOrganizationAclKey: AclKey,
-            userRoleAclKey: AclKey,
-            openlatticeOrganizationAclKey: AclKey,
-            adminRoleAclKey: AclKey,
-            syncDependencies: Auth0SyncTaskDependencies
-    ) {
-        val principal = Principal(PrincipalType.USER, userId)
-        val title = if (user.nickname != null && user.nickname.isNotEmpty())
-            user.nickname
-        else
-            user.email
-
-        syncDependencies.spm.createSecurablePrincipalIfNotExists(
-                principal,
-                SecurablePrincipal(Optional.empty(), principal, title, Optional.empty())
-        )
-
-        if (user.roles.contains(SystemRole.AUTHENTICATED_USER.getName())) {
-            syncDependencies.organizationService.addMembers(globalOrganizationAclKey[0], ImmutableSet.of(principal))
-            syncDependencies.organizationService
-                    .addRoleToPrincipalInOrganization(userRoleAclKey[0], userRoleAclKey[1], principal)
-        }
-
-        if (user.roles.contains(SystemRole.ADMIN.getName())) {
-            syncDependencies.organizationService.addMembers(
-                    openlatticeOrganizationAclKey[0], ImmutableSet.of(principal)
-            )
-            syncDependencies.organizationService
-                    .addRoleToPrincipalInOrganization(adminRoleAclKey[0], adminRoleAclKey[1], principal)
-        }
-    }
+////            var pageOfUsers = getUsersPage(managementApi,page++ ).items
+//            check(pageOfUsers.isNotEmpty() || users.isNotEmpty()) { "No users found." }
+//            while (pageOfUsers.isNotEmpty()) {
+//                logger.info("Loading page {} of {} auth0 users", page, pageOfUsers.size)
+//                pageOfUsers
+//                        .parallelStream()
+//                        .forEach { user ->
+//                            val userId = user.id
+//                            users.set(userId, user)
+//
+//                            if (!ds.spm.principalExists(Principal(PrincipalType.USER, userId))) {
+//                                createPrincipal(
+//                                        user,
+//                                        userId,
+//                                        globalOrganizationAclKey,
+//                                        userRoleAclKey,
+//                                        openlatticeOrganizationAclKey,
+//                                        adminRoleAclKey,
+//                                        ds
+//                                )
+//                            }
+//
+//
+//                            //If the user is an admin but doesn't have admin permissions grant him correct permissions.
+//                            if (user.roles.contains(SystemRole.ADMIN.getName())) {
+//                                val principal = ds.spm.getPrincipal(userId)
+//                                if (!ds.spm.principalHasChildPrincipal(principal.aclKey, adminRoleAclKey)) {
+//                                    ds.organizationService
+//                                            .addRoleToPrincipalInOrganization(
+//                                                    adminRoleAclKey[0],
+//                                                    adminRoleAclKey[1],
+//                                                    principal.principal
+//                                            )
+//                                }
+//                            }
+//                        }
+//                pageOfUsers = auth0ManagementApi.getAllUsers(page++, DEFAULT_PAGE_SIZE)
+//            }
+//        } catch (ex: Exception) {
+//            logger.error("Retrofit called failed during auth0 sync task.", ex)
+//            return
+//        }
+//
+//        val removeUsersPredicate = Predicates.lessThan(
+//                UserMapstore.LOAD_TIME_INDEX,
+//                OffsetDateTime.now().minus(6 * REFRESH_INTERVAL_MILLIS, ChronoUnit.MILLIS).toInstant().toEpochMilli()
+//        ) as Predicate<String, Auth0UserBasic>?
+//
+//        val usersToRemove = users.keySet(removeUsersPredicate)
+//        logger.info("Removing the following users: {}", usersToRemove)
+//
+//        /*
+//         *  Need to remove members from their respective orgs here
+//         */
+//        membersOf.executeOnEntries(RemoveMemberOfOrganizationEntryProcessor(usersToRemove))
+//
+//        /*
+//         * If we did not see a user in any of the pages we should delete that user.
+//         * In the future we should consider persisting users to our own database so that we
+//         * don't have to load all of them at startup.
+//         */
+//        users.removeAll(removeUsersPredicate)
+//
+//    }
+//
+//    private fun getUsersPage(managementApi: ManagementAPI, page: Int, pageSize: Int = DEFAULT_PAGE_SIZE): UsersPage {
+//        return managementApi.users().list(
+//                UserFilter().withSearchEngine("v3").withFields("user_id,email,nickname,app_metadata").withPage(
+//                        page, pageSize
+//                )
+//        ).execute()
+//    }
+//
+//    private fun createPrincipal(
+//            user: User,
+//            userId: String,
+//            globalOrganizationAclKey: AclKey,
+//            userRoleAclKey: AclKey,
+//            openlatticeOrganizationAclKey: AclKey,
+//            adminRoleAclKey: AclKey,
+//            syncDependencies: Auth0SyncTaskDependencies
+//    ) {
+//        val principal = Principal(PrincipalType.USER, userId)
+//        val title = if (user.nickname != null && user.nickname.isNotEmpty())
+//            user.nickname
+//        else
+//            user.email
+//
+//        syncDependencies.spm.createSecurablePrincipalIfNotExists(
+//                principal,
+//                SecurablePrincipal(Optional.empty(), principal, title, Optional.empty())
+//        )
+//
+//        if (user.roles.contains(SystemRole.AUTHENTICATED_USER.getName())) {
+//            syncDependencies.organizationService.addMembers(globalOrganizationAclKey[0], ImmutableSet.of(principal))
+//            syncDependencies.organizationService
+//                    .addRoleToPrincipalInOrganization(userRoleAclKey[0], userRoleAclKey[1], principal)
+//        }
+//
+//        if (user.roles.contains(SystemRole.ADMIN.getName())) {
+//            syncDependencies.organizationService.addMembers(
+//                    openlatticeOrganizationAclKey[0], ImmutableSet.of(principal)
+//            )
+//            syncDependencies.organizationService
+//                    .addRoleToPrincipalInOrganization(adminRoleAclKey[0], adminRoleAclKey[1], principal)
+//        }
+//    }
 }
 

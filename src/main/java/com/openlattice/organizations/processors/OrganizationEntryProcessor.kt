@@ -11,7 +11,7 @@ private val logger = LoggerFactory.getLogger(OrganizationEntryProcessor::class.j
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-class OrganizationEntryProcessor(
+data class OrganizationEntryProcessor(
         val update: (organization: Organization) -> Unit
 ) : AbstractRhizomeEntryProcessor<UUID, Organization, Void?>() {
     override fun process(entry: MutableMap.MutableEntry<UUID, Organization?>): Void? {

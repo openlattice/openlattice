@@ -9,7 +9,7 @@ import com.openlattice.edm.types.processors.UpdateEntitySetMetadataProcessor
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organizations.Organization
 import com.openlattice.organizations.processors.OrganizationEntryProcessor
-import com.openlattice.organizations.processors.OrganizationPartitionReadEntryProcessor
+import com.openlattice.organizations.processors.OrganizationReadEntryProcessor
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.COUNT
 import com.openlattice.postgres.PostgresColumn.PARTITION
@@ -76,7 +76,7 @@ class PartitionManager @JvmOverloads constructor(
     }
 
     fun getDefaultPartitions(organizationId: UUID): List<Int> {
-        return organizations.executeOnKey(organizationId, OrganizationPartitionReadEntryProcessor()) as List<Int>
+        return organizations.executeOnKey(organizationId, OrganizationReadEntryProcessor { it.partitions }) as List<Int>
     }
 
     fun getEntitySetPartitionsInfo(entitySetId: UUID): PartitionsInfo {

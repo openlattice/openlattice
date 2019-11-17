@@ -20,8 +20,8 @@ class Auth0RoleMappingService ( val spm: SecurePrincipalsManager) {
             when( role ) {
                 SystemRole.ADMIN.name -> adminRoleAclKey
                 SystemRole.USER.name  -> userRoleAclKey
-                SystemRole.AUTHENTICATED_USER -> userRoleAclKey
-                else -> spm.getAllRolesInOrganization()
+                SystemRole.AUTHENTICATED_USER.name -> userRoleAclKey
+                else -> userRoleAclKey //spm.getAllRolesInOrganization()
             }
         }
     }

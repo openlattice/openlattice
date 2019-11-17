@@ -26,6 +26,9 @@ import java.util.*
 import java.util.stream.Stream
 import javax.inject.Inject
 import kotlin.streams.asSequence
+import java.util.UUID
+import com.openlattice.organizations.processors.OrganizationReadEntryProcessor
+
 
 /**
  * This class manages organizations.
@@ -113,7 +116,7 @@ class HazelcastOrganizationService(
         //Grant the creator of the organizations
         authorizations.addPermission(organization.getAclKey(), principal, EnumSet.allOf(Permission::class.java))
         //We add the user/role that created the organization to the admin role for the organization
-        addRoleToPrincipalInOrganization(organization.getId(), adminRole.id, principal)
+        addRoleToPrincipalInOrganization(organization.id, adminRole.id, principal)
         assembler.createOrganization(organization)
         eventBus.post(OrganizationCreatedEvent(organization))
     }
@@ -131,12 +134,18 @@ class HazelcastOrganizationService(
     }
 
     fun getOrganization(organizationId: UUID): Organization? {
-        val org = organizations.get(organizationId)
+        val org = organizations[organizationId]
         val roles = getRoles(organizationId)
 
         org?.roles?.addAll(roles)
 
         return org
+    }
+
+    fun getOrganizationApps(organizationId: UUID): Set<UUID> {
+        return organizations.executeOnKey(organizationId, OrganizationReadEntryProcessor {
+            it.apps
+        }) as Set<UUID>
     }
 
     fun getOrganizations(organizationIds: Stream<UUID>): Iterable<Organization> {
