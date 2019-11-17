@@ -23,6 +23,7 @@ package com.openlattice.users
 
 import com.hazelcast.core.HazelcastInstance
 import com.openlattice.auth0.Auth0TokenProvider
+import com.openlattice.authentication.Auth0Configuration
 import com.openlattice.authorization.DbCredentialService
 import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.organizations.roles.SecurePrincipalsManager
@@ -33,5 +34,6 @@ data class Auth0SyncTaskDependencies(
         val spm: SecurePrincipalsManager,
         val organizationService: HazelcastOrganizationService,
         val dbCredentialService: DbCredentialService,
-        val auth0TokenProvider: Auth0TokenProvider
+        val auth0TokenProvider: Auth0TokenProvider,
+        val auth0Configuration: Auth0Configuration
         ) : HazelcastTaskDependencies

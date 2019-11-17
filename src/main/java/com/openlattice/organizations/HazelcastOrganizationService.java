@@ -107,6 +107,7 @@ public class HazelcastOrganizationService {
     private final HazelcastAclKeyReservationService  reservations;
     private final SecurePrincipalsManager            securePrincipalsManager;
     private final IMap<UUID, String>                 titles;
+
     private final IMap<UUID, String>                 descriptions;
     private final IMap<UUID, DelegatedStringSet>     autoApprovedEmailDomainsOf;
     private final IMap<UUID, PrincipalSet>           membersOf;
@@ -117,6 +118,7 @@ public class HazelcastOrganizationService {
     private final Assembler                          assembler;
     private final PhoneNumberService                 phoneNumbers;
     private final PartitionManager                   partitionManager;
+
 
     @Inject
     private EventBus eventBus;
@@ -136,6 +138,7 @@ public class HazelcastOrganizationService {
         this.apps = hazelcastInstance.getMap( HazelcastMap.ORGANIZATION_APPS.name() );
         this.appConfigs = hazelcastInstance.getMap( HazelcastMap.APP_CONFIGS.name() );
         this.partitions = hazelcastInstance.getMap( HazelcastMap.ORGANIZATION_DEFAULT_PARTITIONS.name() );
+
         this.authorizations = authorizations;
         this.reservations = reservations;
         this.allMaps = ImmutableList.of( titles,

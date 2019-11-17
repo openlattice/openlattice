@@ -22,6 +22,11 @@
 package com.openlattice.users
 
 
+import com.auth0.client.auth.AuthAPI
+import com.auth0.client.mgmt.ManagementAPI
+import com.auth0.client.mgmt.filter.UserFilter
+import com.auth0.json.mgmt.users.User
+import com.auth0.json.mgmt.users.UsersPage
 import com.google.common.collect.ImmutableSet
 import com.hazelcast.core.IMap
 import com.hazelcast.query.Predicate
@@ -83,10 +88,12 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies>, Hazelca
 
         val membersOf: IMap<UUID, PrincipalSet> = ds.hazelcastInstance.getMap(HazelcastMap.ORGANIZATIONS_MEMBERS.name)
 
-        val users: IMap<String, Auth0UserBasic> = ds.hazelcastInstance.getMap(HazelcastMap.USERS.name)
+        val users: IMap<String, User> = ds.hazelcastInstance.getMap(HazelcastMap.USERS.name)
         val retrofit: Retrofit = RetrofitFactory.newClient(
                 ds.auth0TokenProvider.managementApiUrl
         ) { ds.auth0TokenProvider.token }
+        val managementApi = ManagementAPI(ds.auth0Configuration.domain, ds.auth0TokenProvider.token)
+
         val auth0ManagementApi = retrofit.create(Auth0ManagementApi::class.java)
         val userRoleAclKey: AclKey = ds.spm.lookup(AuthorizationInitializationTask.GLOBAL_USER_ROLE.principal)
         val adminRoleAclKey: AclKey = ds.spm.lookup(AuthorizationInitializationTask.GLOBAL_ADMIN_ROLE.principal)
@@ -102,14 +109,16 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies>, Hazelca
         logger.info("Refreshing user list from Auth0.")
         try {
             var page = 0
-            var pageOfUsers: Set<Auth0UserBasic> = auth0ManagementApi.getAllUsers(page++, DEFAULT_PAGE_SIZE)!!
+
+//            var pageOfUsers: Set<Auth0UserBasic> = auth0ManagementApi.getAllUsers(page++, DEFAULT_PAGE_SIZE)!!
+            var pageOfUsers = getUsersPage(managementApi,page++ ).items
             check(pageOfUsers.isNotEmpty() || users.isNotEmpty()) { "No users found." }
             while (pageOfUsers.isNotEmpty()) {
                 logger.info("Loading page {} of {} auth0 users", page, pageOfUsers.size)
                 pageOfUsers
                         .parallelStream()
                         .forEach { user ->
-                            val userId = user.userId
+                            val userId = user.id
                             users.set(userId, user)
 
                             if (!ds.spm.principalExists(Principal(PrincipalType.USER, userId))) {
@@ -123,6 +132,7 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies>, Hazelca
                                         ds
                                 )
                             }
+
 
                             //If the user is an admin but doesn't have admin permissions grant him correct permissions.
                             if (user.roles.contains(SystemRole.ADMIN.getName())) {
@@ -166,8 +176,17 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies>, Hazelca
 
     }
 
+    private fun getUsersPage(managementApi: ManagementAPI, page: Int, pageSize: Int = DEFAULT_PAGE_SIZE): UsersPage {
+        return managementApi.users().list(
+                UserFilter().withSearchEngine("v3").withFields("user_id,email,nickname,app_metadata").withPage(
+                        page, pageSize
+                )
+        ).execute()
+    }
+
     private fun createPrincipal(
-            user: Auth0UserBasic, userId: String,
+            user: User,
+            userId: String,
             globalOrganizationAclKey: AclKey,
             userRoleAclKey: AclKey,
             openlatticeOrganizationAclKey: AclKey,
@@ -200,3 +219,4 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies>, Hazelca
         }
     }
 }
+

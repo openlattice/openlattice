@@ -82,6 +82,7 @@ public enum HazelcastMap {
     PRINCIPAL_TREES,
     PROPERTY_TYPES,
     ORGANIZATION_APPS,
+    ORGANIZATIONS,
     NAMES,
     SCHEMAS,
     @Deprecated VISIBILITY,
