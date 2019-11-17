@@ -25,7 +25,7 @@ const val ID = "id"
 const val ID_PATH = "/{${ID}}"
 const val NAME = "name"
 const val NAME_PATH = "/{${NAME}}"
-It w
+
 interface AdminApi {
 
 
@@ -65,6 +65,7 @@ interface AdminApi {
     @POST(BASE + ID_PATH + PHONE)
     fun setOrganizationEntitySetInformation(
             @Path(ID) organizationId: UUID,
-            @Body entitySetInformationList: List<SmsEntitySetInformation>): Int?
+            @Body entitySetInformationList: List<SmsEntitySetInformation>
+    ): Int?
 
 }
