@@ -23,17 +23,17 @@ package com.openlattice.organizations.tasks
 
 import com.google.common.base.Preconditions.checkState
 import com.google.common.base.Stopwatch
-import com.google.common.collect.ImmutableSet
+import com.openlattice.IdConstants.GLOBAL_ORGANIZATION_ID
+import com.openlattice.IdConstants.OPENLATTICE_ORGANIZATION_ID
 import com.openlattice.assembler.tasks.ProductionViewSchemaInitializationTask
 import com.openlattice.assembler.tasks.UsersAndRolesInitializationTask
 import com.openlattice.authorization.initializers.AuthorizationInitializationTask
 import com.openlattice.authorization.initializers.AuthorizationInitializationTask.Companion.GLOBAL_ADMIN_ROLE
 import com.openlattice.authorization.initializers.AuthorizationInitializationTask.Companion.OPENLATTICE_ROLE
 import com.openlattice.organization.Organization
-import com.openlattice.IdConstants.GLOBAL_ORGANIZATION_ID
 import com.openlattice.organization.OrganizationConstants.Companion.GLOBAL_ORG_PRINCIPAL
-import com.openlattice.IdConstants.OPENLATTICE_ORGANIZATION_ID
 import com.openlattice.organization.OrganizationConstants.Companion.OPENLATTICE_ORG_PRINCIPAL
+import com.openlattice.organizations.Organization
 import com.openlattice.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies.PostConstructInitializerTask
 import com.openlattice.tasks.Task
@@ -120,10 +120,12 @@ class OrganizationsInitializationTask : HazelcastInitializationTask<Organization
                     GLOBAL_ORG_PRINCIPAL,
                     title,
                     Optional.empty(),
-                    ImmutableSet.of(),
-                    ImmutableSet.of(),
-                    ImmutableSet.of(),
-                    partitions
+                    mutableSetOf(),
+                    mutableSetOf(),
+                    mutableSetOf(),
+                    mutableSetOf(),
+                    Optional.of(mutableSetOf()),
+                    Optional.of(partitions.toMutableList())
             )
         }
 
@@ -135,10 +137,12 @@ class OrganizationsInitializationTask : HazelcastInitializationTask<Organization
                     OPENLATTICE_ORG_PRINCIPAL,
                     title,
                     Optional.empty(),
-                    ImmutableSet.of(),
-                    ImmutableSet.of(),
-                    ImmutableSet.of(),
-                    partitions
+                    mutableSetOf(),
+                    mutableSetOf(),
+                    mutableSetOf(),
+                    mutableSetOf(),
+                    Optional.of(mutableSetOf()),
+                    Optional.of(partitions.toMutableList())
             )
         }
     }

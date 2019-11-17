@@ -9,6 +9,7 @@ import com.openlattice.edm.types.processors.UpdateEntitySetMetadataProcessor
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organizations.Organization
 import com.openlattice.organizations.processors.OrganizationEntryProcessor
+import com.openlattice.organizations.processors.OrganizationPartitionReadEntryProcessor
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.COUNT
 import com.openlattice.postgres.PostgresColumn.PARTITION
@@ -34,7 +35,7 @@ class PartitionManager @JvmOverloads constructor(
 ) {
     private val partitionList = mutableListOf<Int>()
     private val entitySets = hazelcastInstance.getMap<UUID, EntitySet>(HazelcastMap.ENTITY_SETS.name)
-    private val organizations = hazelcastInstance.getMap<UUID, Organization> (HazelcastMap.ORGANIZATIONS.name )
+    private val organizations = hazelcastInstance.getMap<UUID, Organization>(HazelcastMap.ORGANIZATIONS.name)
 
     init {
         createMaterializedViewIfNotExists()
@@ -75,7 +76,7 @@ class PartitionManager @JvmOverloads constructor(
     }
 
     fun getDefaultPartitions(organizationId: UUID): List<Int> {
-        return organizations.executeOnKey(organizationId, OrganizationEntryProcessor)
+        return organizations.executeOnKey(organizationId, OrganizationPartitionReadEntryProcessor()) as List<Int>
     }
 
     fun getEntitySetPartitionsInfo(entitySetId: UUID): PartitionsInfo {

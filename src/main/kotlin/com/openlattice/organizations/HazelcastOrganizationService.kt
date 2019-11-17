@@ -13,19 +13,14 @@ import com.openlattice.authorization.initializers.AuthorizationInitializationTas
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.data.storage.partitions.DEFAULT_PARTITION_COUNT
 import com.openlattice.data.storage.partitions.PartitionManager
-import com.openlattice.datastore.util.Util
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.notifications.sms.PhoneNumberService
 import com.openlattice.notifications.sms.SmsEntitySetInformation
-import com.openlattice.organization.Organization
 import com.openlattice.organization.OrganizationPrincipal
 import com.openlattice.organization.roles.Role
 import com.openlattice.organizations.events.*
-import com.openlattice.organizations.processors.OrganizationAppRemover
 import com.openlattice.organizations.processors.OrganizationEntryProcessor
 import com.openlattice.organizations.roles.SecurePrincipalsManager
-import com.openlattice.rhizome.hazelcast.DelegatedStringSet
-import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.stream.Stream
@@ -60,15 +55,8 @@ class HazelcastOrganizationService(
         private val partitionManager: PartitionManager,
         private val assembler: Assembler
 ) {
-    //    private val titles: IMap<UUID, String>
-    private val organizations: IMap<UUID, Organization>
-//    private val descriptions: IMap<UUID, String>
-//    private val autoApprovedEmailDomainsOf: IMap<UUID, DelegatedStringSet>
-//    private val membersOf: IMap<UUID, PrincipalSet>
-//    private val apps: IMap<UUID, DelegatedUUIDSet>
-//    private val appConfigs: IMap<AppConfigKey, AppTypeSetting>
-//    private val partitions: IMap<UUID, DelegatedIntList>
-//    private val allMaps: List<IMap<UUID, *>>
+
+    private val organizations: IMap<UUID, Organization> = hazelcastInstance.getMap(HazelcastMap.ORGANIZATIONS.name)
 
 
     @Inject
@@ -76,26 +64,6 @@ class HazelcastOrganizationService(
 
     val numberOfPartitions: Int
         get() = partitionManager.getPartitionCount()
-
-    init {
-//        this.titles = hazelcastInstance.getMap(HazelcastMap.ORGANIZATIONS_TITLES.name)
-//        this.descriptions = hazelcastInstance.getMap(HazelcastMap.ORGANIZATIONS_DESCRIPTIONS.name)
-//        this.autoApprovedEmailDomainsOf = hazelcastInstance.getMap(HazelcastMap.ALLOWED_EMAIL_DOMAINS.name)
-//        this.membersOf = hazelcastInstance.getMap(HazelcastMap.ORGANIZATIONS_MEMBERS.name)
-//        this.apps = hazelcastInstance.getMap(HazelcastMap.ORGANIZATION_APPS.name)
-//        this.appConfigs = hazelcastInstance.getMap(HazelcastMap.APP_CONFIGS.name)
-//        this.partitions = hazelcastInstance.getMap(HazelcastMap.ORGANIZATION_DEFAULT_PARTITIONS.name)
-        this.organizations = hazelcastInstance.getMap(HazelcastMap.ORGANIZATIONS.name)
-//        this.allMaps = ImmutableList.of(
-//                titles,
-//                descriptions,
-//                autoApprovedEmailDomainsOf,
-//                membersOf,
-//                apps,
-//                partitions
-//        )
-        //        fixOrganizations();
-    }
 
     fun getOrganization(p: Principal): OrganizationPrincipal {
         return checkNotNull(securePrincipalsManager.getPrincipal(p.id) as OrganizationPrincipal)
@@ -119,8 +87,9 @@ class HazelcastOrganizationService(
         //Create the admin role for the organization and give it ownership of organization.
         val adminRole = createOrganizationAdminRole(organization.securablePrincipal)
         createRoleIfNotExists(principal, adminRole)
-        authorizations
-                .addPermission(organization.getAclKey(), adminRole.principal, EnumSet.allOf(Permission::class.java))
+        authorizations.addPermission(
+                organization.getAclKey(), adminRole.principal, EnumSet.allOf(Permission::class.java)
+        )
 
         /*
          * Roles shouldn't be members of an organizations.
@@ -250,7 +219,7 @@ class HazelcastOrganizationService(
     }
 
     private fun addMembers(orgAclKey: AclKey, members: Set<Principal>) {
-        require(orgAclKey.size == 1 ) { "Organization acl key should only be of length 1" }
+        require(orgAclKey.size == 1) { "Organization acl key should only be of length 1" }
 
         val nonUserPrincipals = members.filter { it.type != PrincipalType.USER }
         require(nonUserPrincipals.isEmpty()) { "Cannot add non-users principals $nonUserPrincipals to organization $orgAclKey" }
@@ -337,10 +306,10 @@ class HazelcastOrganizationService(
     }
 
     fun removeAppFromOrg(organizationId: UUID, appId: UUID) {
-        apps.executeOnKey(
-                organizationId,
-                OrganizationAppRemover(DelegatedUUIDSet.wrap(ImmutableSet.of(appId)))
-        )
+        organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
+            it.apps.remove(appId)
+        })
+
     }
 
     private fun fixOrganizations() {
@@ -356,46 +325,31 @@ class HazelcastOrganizationService(
             )
 
             logger.info("Setting titles, descriptions, and autoApproved e-mails domains if not present.")
-            if( !organizations.containsKey( organization.id ) ) {
-                organizations.put(
+            if (!organizations.containsKey(organization.id)) {
+                organizations.set(
                         organization.id,
                         Organization(
-                                organization,
+                                organization as OrganizationPrincipal,
                                 mutableSetOf(),
                                 mutableSetOf(),
                                 mutableSetOf(),
                                 mutableSetOf(),
-                                mutableListOf(),
-                                )
+                                mutableListOf()
+                        )
                 )
             }
             organizations.executeOnKey(organization.id,
                                        OrganizationEntryProcessor {
 
                                        })
-            (titles as java.util.Map<UUID, String>).putIfAbsent(organization.id, organization.title)
-            (descriptions as java.util.Map<UUID, String>).putIfAbsent(organization.id, organization.description)
-            (autoApprovedEmailDomainsOf as java.util.Map<UUID, DelegatedStringSet>).putIfAbsent(
-                    organization.id, DelegatedStringSet.wrap(
-                    HashSet()
-            )
-            )
-            (apps as java.util.Map<UUID, DelegatedUUIDSet>).putIfAbsent(
-                    organization.id, DelegatedUUIDSet.wrap(HashSet())
-            )
-            (membersOf as java.util.Map<UUID, PrincipalSet>).putIfAbsent(
-                    organization.id, PrincipalSet(
-                    ImmutableSet.of()
-            )
-            )
+
 
             logger.info("Synchronizing roles")
             val roles = securePrincipalsManager.getAllRolesInOrganization(organization.id)
             //Grant the organization principal read permission on each principal
             for (role in roles) {
                 authorizations.setSecurableObjectType(role.aclKey, SecurableObjectType.Role)
-                authorizations
-                        .addPermission(role.aclKey, organization.principal, EnumSet.of(Permission.READ))
+                authorizations.addPermission(role.aclKey, organization.principal, EnumSet.of(Permission.READ))
             }
 
             logger.info("Synchronizing members")
@@ -423,13 +377,7 @@ class HazelcastOrganizationService(
                                             AuthorizationInitializationTask.GLOBAL_ADMIN_ROLE.principal
                                     )
                             )
-                            /**
-                             *
-                             * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
-                             */
-                            class HazelcastOrganizationService {
-                    }
-            )
+                    )
             )
 
             addMembers(organization.id, adminPrincipals)
@@ -456,7 +404,8 @@ class HazelcastOrganizationService(
     }
 
     fun getDefaultPartitions(organizationId: UUID): List<Int> {
-        return Util.getSafely(partitions, organizationId)
+        //TODO: This is mainly a pass through for convenience, but could get messy.
+        return partitionManager.getDefaultPartitions(organizationId)
     }
 
     fun allocateDefaultPartitions(partitionCount: Int): List<Int> {
