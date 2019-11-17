@@ -400,7 +400,7 @@ public final class PostgresTable {
 
     public static final PostgresTableDefinition USERS =
             new PostgresTableDefinition( "users" )
-                    .addColumns( USER_ID, USER , EXPIRATION )
+                    .addColumns( USER_ID, USER, EXPIRATION )
                     .primaryKey( USER_ID );
 
     static {
@@ -557,6 +557,12 @@ public final class PostgresTable {
                 new PostgresColumnsIndexDefinition( MATERIALIZED_ENTITY_SETS, LAST_REFRESH )
                         .name( "materialized_entity_sets_last_refresh_idx" )
                         .ifNotExists() );
+
+        USERS.addIndexes(
+                new PostgresColumnsIndexDefinition( USERS, EXPIRATION )
+                        .name( "users_expiration_idx" )
+                        .ifNotExists()
+        );
     }
 
     private PostgresTable() {
