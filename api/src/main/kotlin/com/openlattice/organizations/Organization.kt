@@ -34,6 +34,11 @@ data class Organization(
         val autoEnrollments: MutableSet<String> = mutableSetOf(),
         val autoGrants: MutableSet<UUID> = mutableSetOf()
 ) {
+
+    val id : UUID
+        @JsonProperty(SerializationConstants.ID_FIELD)
+        get() = securablePrincipal.id
+
     @JsonCreator
     constructor(
             @JsonProperty(SerializationConstants.ID_FIELD) id: Optional<UUID>,
@@ -123,11 +128,6 @@ data class Organization(
     @JsonIgnore
     fun getAclKey(): AclKey {
         return securablePrincipal.aclKey
-    }
-
-    @JsonProperty(SerializationConstants.ID_FIELD)
-    fun getId(): UUID {
-        return securablePrincipal.id
     }
 
     @JsonProperty(SerializationConstants.PRINCIPAL)
