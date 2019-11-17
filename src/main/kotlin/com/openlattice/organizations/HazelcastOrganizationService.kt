@@ -1,5 +1,6 @@
 package com.openlattice.organizations
 
+import com.auth0.json.mgmt.users.User
 import com.google.common.collect.ImmutableSet
 import com.google.common.collect.Iterables
 import com.google.common.eventbus.EventBus
@@ -19,6 +20,7 @@ import com.openlattice.notifications.sms.SmsEntitySetInformation
 import com.openlattice.organization.OrganizationPrincipal
 import com.openlattice.organization.roles.Role
 import com.openlattice.organizations.events.*
+import com.openlattice.organizations.mapstores.AUTO_ENROLL
 import com.openlattice.organizations.processors.OrganizationEntryProcessor
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import org.slf4j.LoggerFactory
@@ -195,7 +197,7 @@ class HazelcastOrganizationService(
     }
 
     fun setAutoApprovedEmailDomains(organizationId: UUID, emailDomains: Set<String>) {
-        organizations.executeOnKey(organizationId,OrganizationEntryProcessor { organization ->
+        organizations.executeOnKey(organizationId, OrganizationEntryProcessor { organization ->
             organization.autoApprovedEmails.clear()
             organization.autoApprovedEmails.addAll(emailDomains)
         })
@@ -415,6 +417,14 @@ class HazelcastOrganizationService(
 
     fun allocateDefaultPartitions(partitionCount: Int): List<Int> {
         return partitionManager.allocateDefaultPartitions(partitionCount)
+    }
+
+    fun getAutoEnrollments(connection: String): Collection<Organization> {
+        return organizations.values(Predicates.equal(AUTO_ENROLL, connection))
+    }
+
+    fun removeUser(principal: Principal) {
+        organizations.executeOnEntries(OrganizationEntryProcessor { it.members.remove(principal) })
     }
 
     companion object {

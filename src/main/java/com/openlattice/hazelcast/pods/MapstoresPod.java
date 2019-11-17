@@ -22,6 +22,7 @@
 
 package com.openlattice.hazelcast.pods;
 
+import com.auth0.json.mgmt.users.User;
 import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
 import com.kryptnostic.rhizome.mapstores.SelfRegisteringMapStore;
@@ -54,7 +55,6 @@ import com.openlattice.collections.EntityTypeCollection;
 import com.openlattice.collections.mapstores.EntitySetCollectionConfigMapstore;
 import com.openlattice.collections.mapstores.EntitySetCollectionMapstore;
 import com.openlattice.collections.mapstores.EntityTypeCollectionMapstore;
-import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.set.EntitySetPropertyKey;
 import com.openlattice.edm.set.EntitySetPropertyMetadata;
@@ -67,7 +67,9 @@ import com.openlattice.ids.IdGenerationMapstore;
 import com.openlattice.ids.Range;
 import com.openlattice.linking.mapstores.LinkingFeedbackMapstore;
 import com.openlattice.notifications.sms.SmsInformationMapstore;
+import com.openlattice.organizations.Organization;
 import com.openlattice.organizations.PrincipalSet;
+import com.openlattice.organizations.mapstores.OrganizationsMapstore;
 import com.openlattice.postgres.PostgresPod;
 import com.openlattice.postgres.PostgresTableManager;
 import com.openlattice.postgres.mapstores.AclKeysMapstore;
@@ -240,10 +242,15 @@ public class MapstoresPod {
         return new PostgresCredentialMapstore( hikariDataSource, pgUserApi() );
     }
 
-//    @Bean
-//    public SelfRegisteringMapStore<String, Auth0UserBasic> userMapstore() {
-//        return new UserMapstore(hikariDataSource);// auth0TokenProvider() );
-//    }
+    @Bean
+    public SelfRegisteringMapStore<String, User> userMapstore() {
+        return new UserMapstore( hikariDataSource );
+    }
+
+    @Bean
+    public SelfRegisteringMapStore<UUID, Organization> organizationsMapstore() {
+        return new OrganizationsMapstore( hikariDataSource );
+    }
 
     @Bean
     public SelfRegisteringMapStore<EntitySetPropertyKey, EntitySetPropertyMetadata> entitySetPropertyMetadataMapstore() {
