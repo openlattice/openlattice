@@ -51,6 +51,7 @@ public interface OrganizationsApi {
     String INTEGRATION       = "/integration";
     String MEMBERS           = "/members";
     String PRINCIPALS        = "/principals";
+    String CONNECTIONS       = "/connections";
     String PRINCIPAL_ID      = "pid";
     String PRINCIPAL_ID_PATH = "/{" + PRINCIPAL_ID + "}";
     String REFRESH      = "/refresh";
@@ -257,5 +258,6 @@ public interface OrganizationsApi {
             @Path( ID ) UUID organizationId,
             @Path( ROLE_ID ) UUID roleId,
             @Path( USER_ID ) String userId );
+
 
 }

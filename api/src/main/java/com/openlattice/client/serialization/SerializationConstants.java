@@ -77,8 +77,8 @@ public final class SerializationConstants {
     public static final String DATATYPE_FIELD                   = "datatype";
     public static final String DATA_ID                          = "dataId";
     public static final String DEFAULT_SHOW                     = "defaultShow";
-    public static final String DELETE_TYPE                      = "deleteType";
     public static final String DEIDENTIFIED                     = "deidentified";
+    public static final String DELETE_TYPE                      = "deleteType";
     public static final String DESCENDING                       = "descending";
     public static final String DESCRIPTION_FIELD                = "description";
     public static final String DETAILS_FIELD                    = "details";
@@ -102,8 +102,8 @@ public final class SerializationConstants {
     public static final String ENTITY_ID_GENERATOR              = "entityIdGenerator";
     public static final String ENTITY_KEY_ID                    = "entityKeyId";
     public static final String ENTITY_KEY_IDS                   = "entityKeyIds";
-    public static final String ENTITY_LINKING_FEEDBACK          = "entityLinkingFeedback";
     public static final String ENTITY_KEY_PAIR                  = "entityKeyPair";
+    public static final String ENTITY_LINKING_FEEDBACK          = "entityLinkingFeedback";
     public static final String ENTITY_QUERIES                   = "entityQueries";
     public static final String ENTITY_SETS_ENTITY_KEY_MAPPINGS  = "entitySetsEntityKeyMappings";
     public static final String ENTITY_SETS_FIELD                = "entitySets";
@@ -114,8 +114,8 @@ public final class SerializationConstants {
     public static final String ENTITY_SET_NAME                  = "entitySetName";
     public static final String ENTITY_TYPE                      = "entityType";
     public static final String ENTITY_TYPES                     = "entityTypes";
-    public static final String ENTITY_TYPE_ID                   = "entityTypeId";
     public static final String ENTITY_TYPE_COLLECTION_ID        = "entityTypeCollectionId";
+    public static final String ENTITY_TYPE_ID                   = "entityTypeId";
     public static final String ENTITY_TYPE_IDS_FIELD            = "entityTypeIds";
     public static final String ENUM_VALUES                      = "enumValues";
     public static final String EVENT_TYPE                       = "auditEventType";
@@ -217,10 +217,11 @@ public final class SerializationConstants {
     public static final String SEARCH_FIELDS                    = "searchFields";
     public static final String SEARCH_TERM                      = "searchTerm";
     public static final String SECOND                           = "second";
+    public static final String SECURABLE_PRINCIPAL              = "securablePrincipal";
     public static final String SELF_AGGREGATIONS                = "selfAggregations";
     public static final String SHARDS                           = "shards";
-    public static final String SORT                             = "sort";
     public static final String SMS_ENTITY_SET_INFO              = "smsEntitySetInfo";
+    public static final String SORT                             = "sort";
     public static final String SRC                              = "src";
     public static final String SRC_ENTITY_INDEX                 = "srcEntityIndex";
     public static final String SRC_ENTITY_KEY_ID                = "srcEntityKeyId";

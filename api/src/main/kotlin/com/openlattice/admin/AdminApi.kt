@@ -25,12 +25,12 @@ const val ID = "id"
 const val ID_PATH = "/{${ID}}"
 const val NAME = "name"
 const val NAME_PATH = "/{${NAME}}"
-
+It w
 interface AdminApi {
 
 
     /**
-     * Reload the all the in meory caches.
+     * Reload the all the in memory caches.
      */
     @GET(BASE + RELOAD_CACHE)
     fun reloadCache()
