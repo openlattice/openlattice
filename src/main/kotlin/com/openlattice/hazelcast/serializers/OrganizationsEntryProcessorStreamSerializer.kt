@@ -1,7 +1,9 @@
 package com.openlattice.hazelcast.serializers
 
+import com.esotericsoftware.kryo.DefaultSerializer
 import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.serializers.ClosureSerializer
+import com.esotericsoftware.kryo.serializers.DefaultSerializers
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
@@ -20,8 +22,14 @@ import com.openlattice.rhizome.hazelcast.DelegatedStringSet
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet
 import com.openlattice.search.requests.SearchConstraints
 import org.objenesis.strategy.StdInstantiatorStrategy
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.io.ObjectInputStream
+import java.io.ObjectOutputStream
 import java.lang.invoke.SerializedLambda
+import java.util.function.Consumer
 import java.util.function.Function
 
 /**
@@ -29,40 +37,9 @@ import java.util.function.Function
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 @Component
-class OrganizationsEntryProcessorStreamSerializer :SelfRegisteringStreamSerializer<OrganizationEntryProcessor> {
-    private val kryoThreadLocal = object : ThreadLocal<Kryo>() {
-
-        override fun initialValue(): Kryo {
-            val kryo = Kryo()
-
-            // https://github.com/EsotericSoftware/kryo/blob/master/test/com/esotericsoftware/kryo/serializers/Java8ClosureSerializerTest.java
-            kryo.instantiatorStrategy = Kryo.DefaultInstantiatorStrategy(
-                    StdInstantiatorStrategy()
-            )
-            kryo.register(Array<Any>::class.java)
-            kryo.register(java.lang.Class::class.java)
-
-            kryo.register(Organization::class.java)
-            kryo.register(DelegatedStringSet::class.java, DelegatedStringSetKryoSerializer())
-            kryo.register(DelegatedUUIDSet::class.java, DelegatedUUIDSetKryoSerializer())
-            kryo.register(PrincipalSet::class.java, PrincipalSetKryoSerializer())
-
-            //Shared Lambdas
-            kryo.register(SerializedLambda::class.java)
-            kryo.register(AclKey::class.java, AclKeyKryoSerializer())
-
-            // always needed for closure serialization, also if
-            // registrationRequired=false
-            kryo.register(
-                    ClosureSerializer.Closure::class.java,
-                    ClosureSerializer()
-            )
-            kryo.register(OrganizationEntryProcessor::class.java,ClosureSerializer())
-
-            kryo.register(AclKey::class.java, AclKeyKryoSerializer())
-
-            return kryo
-        }
+class OrganizationsEntryProcessorStreamSerializer : SelfRegisteringStreamSerializer<OrganizationEntryProcessor> {
+    companion object {
+        private val logger = LoggerFactory.getLogger(OrganizationsEntryProcessorStreamSerializer::class.java)
     }
 
     override fun getTypeId(): Int {
@@ -74,10 +51,28 @@ class OrganizationsEntryProcessorStreamSerializer :SelfRegisteringStreamSerializ
     }
 
     override fun write(out: ObjectDataOutput, obj: OrganizationEntryProcessor) {
-        Jdk8StreamSerializers.serializeWithKryo(kryoThreadLocal.get(), out, obj, 32)
+        val baos = ByteArrayOutputStream()
+        val oos = ObjectOutputStream(baos)
+        oos.writeObject(obj)
+        oos.close()
+        oos.flush()
+        baos.close()
+
+        out.writeByteArray(baos.toByteArray())
     }
 
-    override fun read(input: ObjectDataInput): OrganizationEntryProcessor {
-        return Jdk8StreamSerializers.deserializeWithKryo(kryoThreadLocal.get(), input, 32) as OrganizationEntryProcessor
+    override fun read(input: ObjectDataInput): OrganizationEntryProcessor? {
+        val bais = ByteArrayInputStream(input.readByteArray())
+        val ois = ObjectInputStream(bais)
+        return try {
+            ois.readObject() as OrganizationEntryProcessor
+        } catch (e: ClassNotFoundException) {
+            logger.error("Unable to deserialize object because class not found. ", e)
+            OrganizationEntryProcessor { org ->
+                LoggerFactory.getLogger(OrganizationEntryProcessor::class.java)
+                        .error("This entry processor didn't de-serialize correctly.")
+            }
+        }
+
     }
 }

@@ -28,6 +28,7 @@ import javax.inject.Inject
 import kotlin.streams.asSequence
 import java.util.UUID
 import com.openlattice.organizations.processors.OrganizationReadEntryProcessor
+import java.util.function.Consumer
 
 
 /**
@@ -194,11 +195,11 @@ class HazelcastOrganizationService(
     }
 
     fun setAutoApprovedEmailDomains(organizationId: UUID, emailDomains: Set<String>) {
-        organizations.executeOnKey(organizationId,
-                                   OrganizationEntryProcessor { organization ->
-                                       organization.autoApprovedEmails.clear()
-                                       organization.autoApprovedEmails.addAll(emailDomains)
-                                   })
+        organizations.executeOnKey(organizationId,OrganizationEntryProcessor { organization ->
+            organization.autoApprovedEmails.clear()
+            organization.autoApprovedEmails.addAll(emailDomains)
+        })
+
     }
 
     fun addAutoApprovedEmailDomains(organizationId: UUID, emailDomains: Set<String>) {
@@ -347,11 +348,6 @@ class HazelcastOrganizationService(
                         )
                 )
             }
-            organizations.executeOnKey(organization.id,
-                                       OrganizationEntryProcessor {
-
-                                       })
-
 
             logger.info("Synchronizing roles")
             val roles = securePrincipalsManager.getAllRolesInOrganization(organization.id)
