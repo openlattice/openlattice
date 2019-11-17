@@ -35,8 +35,9 @@ import com.openlattice.edm.type.Analyzer;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
-import com.openlattice.organization.Organization;
+
 import com.openlattice.organization.roles.Role;
+import com.openlattice.organizations.Organization;
 import com.openlattice.postgres.IndexType;
 import com.openlattice.requests.PermissionsRequestDetails;
 import com.openlattice.requests.Request;

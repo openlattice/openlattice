@@ -21,6 +21,7 @@ package com.openlattice.organization;
 import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.notifications.sms.SmsEntitySetInformation;
 import com.openlattice.organization.roles.Role;
+import com.openlattice.organizations.Organization;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
