@@ -20,11 +20,26 @@
 
 package com.openlattice.controllers;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Predicates;
-import com.google.common.collect.*;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 import com.openlattice.assembler.Assembler;
-import com.openlattice.authorization.*;
+import com.openlattice.authorization.AccessCheck;
+import com.openlattice.authorization.AclKey;
+import com.openlattice.authorization.Authorization;
+import com.openlattice.authorization.AuthorizationManager;
+import com.openlattice.authorization.AuthorizingComponent;
+import com.openlattice.authorization.EdmAuthorizationHelper;
+import com.openlattice.authorization.Permission;
+import com.openlattice.authorization.Principal;
+import com.openlattice.authorization.PrincipalType;
+import com.openlattice.authorization.Principals;
+import com.openlattice.authorization.SecurableObjectResolveTypeService;
+import com.openlattice.authorization.SecurablePrincipal;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.authorization.util.AuthorizationUtils;
 import com.openlattice.controllers.exceptions.ForbiddenException;
@@ -32,17 +47,34 @@ import com.openlattice.controllers.exceptions.ResourceNotFoundException;
 import com.openlattice.datastore.services.EntitySetManager;
 import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.edm.type.PropertyType;
-import com.openlattice.organization.*;
+import com.openlattice.organization.OrganizationEntitySetFlag;
+import com.openlattice.organization.OrganizationIntegrationAccount;
+import com.openlattice.organization.OrganizationMember;
+import com.openlattice.organization.OrganizationPrincipal;
+import com.openlattice.organization.OrganizationsApi;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.HazelcastOrganizationService;
+import com.openlattice.organizations.Organization;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
+import java.util.Collection;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+import javax.inject.Inject;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.*;
-
-import javax.inject.Inject;
-import java.util.*;
-import java.util.stream.Collectors;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping( OrganizationsApi.CONTROLLER )
@@ -95,6 +127,8 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             value = { "", "/" },
             consumes = MediaType.APPLICATION_JSON_VALUE )
     public UUID createOrganizationIfNotExists( @RequestBody Organization organization ) {
+        checkArgument( organization.getAutoEnrollments().isEmpty() || isAdmin(),
+                "Must be admin to specify auto-enrollments" );
         organizations.createOrganization( Principals.getCurrentUser(), organization );
         securableObjectTypes.createSecurableObjectType( new AclKey( organization.getId() ),
                 SecurableObjectType.Organization );
@@ -512,18 +546,6 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
                 .map( Authorization::getAclKey ).collect( Collectors.toSet() );
     }
 
-    private static Organization filterRolesOfOrganization( Organization org, Set<AclKey> authorizedRoleAclKeys ) {
-        return new Organization(
-                org.getSecurablePrincipal(),
-                org.getAutoApprovedEmails(),
-                org.getMembers(),
-                Sets.filter( org.getRoles(), role -> authorizedRoleAclKeys.contains( role.getAclKey() ) ),
-                org.getApps(),
-                org.getSmsEntitySetInfo(),
-                org.getPartitions()
-        );
-    }
-
     @Timed
     @Override
     @GetMapping(
@@ -652,6 +674,21 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             throw new ForbiddenException( "EntitySet " + aclKey.toString() + " is not accessible by organization " +
                     "principal " + principal.getPrincipal().getId() + " ." );
         }
+    }
+
+    private static Organization filterRolesOfOrganization( Organization org, Set<AclKey> authorizedRoleAclKeys ) {
+        return new Organization(
+                org.getSecurablePrincipal(),
+                org.getAutoApprovedEmails(),
+                org.getMembers(),
+                Sets.filter( org.getRoles(), role -> authorizedRoleAclKeys.contains( role.getAclKey() ) ),
+                org.getSmsEntitySetInfo(),
+                org.getPartitions(),
+                org.getApps(),
+                org.getAppConfigs(),
+                org.getAutoEnrollments(),
+                org.getAutoGrants()
+        );
     }
 
 }
