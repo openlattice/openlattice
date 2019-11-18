@@ -33,7 +33,7 @@ import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.edm.type.EntityType
 import com.openlattice.mapstores.TestDataFactory.fqn
 import com.openlattice.mapstores.TestDataFactory.randomStringEntityData
-import com.openlattice.organization.Organization
+import com.openlattice.organizations.Organization
 import com.openlattice.organization.OrganizationEntitySetFlag
 import com.openlattice.postgres.PostgresColumn
 import com.openlattice.postgres.ResultSetAdapters

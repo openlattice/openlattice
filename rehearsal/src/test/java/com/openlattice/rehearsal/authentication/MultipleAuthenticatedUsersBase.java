@@ -46,7 +46,7 @@ import com.openlattice.entitysets.EntitySetsApi;
 import com.openlattice.linking.LinkingFeedbackApi;
 import com.openlattice.linking.RealtimeLinkingApi;
 import com.openlattice.mapstores.TestDataFactory;
-import com.openlattice.organization.Organization;
+import com.openlattice.organizations.Organization;
 import com.openlattice.organization.OrganizationsApi;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.postgres.IndexType;

@@ -23,7 +23,7 @@ package com.openlattice.rehearsal.organization
 import com.openlattice.authorization.*
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.EntityType
-import com.openlattice.organization.Organization
+import com.openlattice.organizations.Organization
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn
 import com.openlattice.rehearsal.SetupTestData
