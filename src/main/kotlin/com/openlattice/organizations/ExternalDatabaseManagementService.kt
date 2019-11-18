@@ -185,9 +185,12 @@ class ExternalDatabaseManagementService(
     fun deleteOrganizationExternalDatabaseTables(orgId: UUID, tableIds: Set<UUID>) {
         organizationExternalDatabaseTables.executeOnEntries(DeleteOrganizationExternalDatabaseTableEntryProcessor(), idsPredicate(tableIds))
         tableIds.forEach {
+            val aclKey = AclKey(orgId, it)
+            authorizationManager.deletePermissions(aclKey)
+            securableObjectTypes.remove(aclKey)
             aclKeyReservations.release(it)
-            val columnIds = organizationExternalDatabaseColumns.keySet(belongsToTable(it))
-            deleteOrganizationExternalDatabaseColumns(orgId, columnIds)
+            val columnIdsByTableId = mapOf(it to organizationExternalDatabaseColumns.keySet(belongsToTable(it)))
+            deleteOrganizationExternalDatabaseColumns(orgId, columnIdsByTableId)
         }
     }
 
@@ -195,13 +198,20 @@ class ExternalDatabaseManagementService(
         deleteOrganizationExternalDatabaseTables(orgId, setOf(tableId))
     }
 
-    fun deleteOrganizationExternalDatabaseColumns(orgId: UUID, columnIds: Set<UUID>) {
-        organizationExternalDatabaseColumns.executeOnEntries(DeleteOrganizationExternalDatabaseColumnsEntryProcessor(), idsPredicate(columnIds))
-        columnIds.forEach { aclKeyReservations.release(it) }
+    fun deleteOrganizationExternalDatabaseColumns(orgId: UUID, columnIdsByTableId: Map<UUID, Set<UUID>>) {
+        columnIdsByTableId.forEach { (tableId, columnIds) ->
+            organizationExternalDatabaseColumns.executeOnEntries(DeleteOrganizationExternalDatabaseColumnsEntryProcessor(), idsPredicate(columnIds))
+            columnIds.forEach {
+                val aclKey = AclKey(orgId, tableId, it)
+                authorizationManager.deletePermissions(aclKey)
+                securableObjectTypes.remove(aclKey)
+                aclKeyReservations.release(it)
+            }
+        }
     }
 
-    fun deleteOrganizationExternalDatabaseColumn(orgId: UUID, columnId: UUID) {
-        deleteOrganizationExternalDatabaseColumns(orgId, setOf(columnId))
+    fun deleteOrganizationExternalDatabaseColumn(orgId: UUID, tableId: UUID, columnId: UUID) {
+        deleteOrganizationExternalDatabaseColumns(orgId, mapOf(tableId to setOf(columnId)))
     }
 
     /**
@@ -369,12 +379,6 @@ class ExternalDatabaseManagementService(
                 permissions.add(Permission.WRITE)
             aces.executeOnKey(aceKey, PermissionMerger(permissions, objectType, OffsetDateTime.MAX))
         }
-    }
-
-    fun removePermissions(orgId: UUID, tableId: UUID, maybeColumnId: Optional<UUID>) {
-        val aclKey = AclKey(orgId, tableId)
-        maybeColumnId.ifPresent { aclKey.add(it) }
-        authorizationManager.deletePermissions(aclKey)
     }
 
     /*PRIVATE FUNCTIONS*/
