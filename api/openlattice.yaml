@@ -1234,7 +1234,7 @@ paths:
                 type: object
                 additionalProperties:
                   $ref: "#/components/propertyType"
-  /datastore/entity-sets/{entitySetId}/properties/{propertyTypeId}/:
+  /datastore/entity-sets/all/{entitySetId}/properties/{propertyTypeId}/:
     get:
       summary: Get specified property type metadata for an entity set.
       operationId: getEntitySetPropertyMetadata
@@ -3269,11 +3269,9 @@ components:
         description:
           type: string
         propertyTags:
-          type: object
-          additionalProperties:
-            type: array
-            items:
-              type: string
+          type: array
+          items:
+            type: string
         defaultShow:
           type: boolean
 

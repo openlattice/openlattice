@@ -33,6 +33,7 @@ import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.edm.type.Analyzer;
 import com.openlattice.edm.type.AssociationType;
+import com.openlattice.edm.type.EntityTypePropertyMetadata;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organization.Organization;
@@ -479,6 +480,15 @@ public final class TestDataFactory {
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty() );
+    }
+
+    public static EntityTypePropertyMetadata entityTypePropertyMetadata () {
+        return new EntityTypePropertyMetadata(
+                randomAlphanumeric( 100 ), // title
+                randomAlphanumeric( 100 ), // description
+                Sets.newLinkedHashSet( Arrays.asList( randomAlphanumeric( 5 ) ) ),
+                r.nextBoolean()
+        );
     }
 
     public static Map<UUID, Map<UUID, Set<Object>>> randomBinaryData(
