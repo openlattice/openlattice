@@ -65,7 +65,7 @@ import java.util.stream.Stream;
 
 @SuppressFBWarnings( value = "SECPR", justification = "Only used for testing." )
 public final class TestDataFactory {
-    public static final  GrantType[]           grants                  = GrantType.values();
+    private static final  GrantType[]           grants                  = GrantType.values();
     private static final SecurableObjectType[] securableObjectTypes    = SecurableObjectType.values();
     private static final Permission[]          permissions             = Permission.values();
     private static final Action[]              actions                 = Action.values();

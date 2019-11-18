@@ -28,7 +28,7 @@ data class Organization(
         @JsonProperty(SerializationConstants.ROLES) val roles: MutableSet<Role>,
         @JsonProperty(SerializationConstants.SMS_ENTITY_SET_INFO)
         val smsEntitySetInfo: MutableSet<SmsEntitySetInformation>,
-        @JsonProperty(SerializationConstants.PARTITIONS) val partitions: MutableList<Int>,
+        @JsonProperty(SerializationConstants.PARTITIONS) val partitions: MutableList<Int> = mutableListOf(),
         @JsonProperty(SerializationConstants.APPS) val apps: MutableSet<UUID> = mutableSetOf(),
         val appConfigs: Map<UUID, Map<UUID, AppTypeSetting>> = mutableMapOf(),
         @JsonProperty(SerializationConstants.AUTO_ENROLLMENTS) val autoEnrollments: MutableSet<String> = mutableSetOf(),
@@ -90,8 +90,6 @@ data class Organization(
             autoApprovedEmails,
             members,
             roles,
-            mutableSetOf(),
-            mutableListOf(),
             mutableSetOf()
     )
 
