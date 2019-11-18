@@ -148,8 +148,6 @@ class DatasetController : DatasetApi, AuthorizingComponent {
         val aclKey = AclKey(organizationId, tableId)
         ensureOwnerAccess(aclKey)
         ensureObjectCanBeDeleted(tableId)
-        authorizations.deletePermissions(aclKey)
-        securableObjectTypes.deleteSecurableObjectType(aclKey)
         edms.deleteOrganizationExternalDatabaseTable(organizationId, tableId)
     }
 
@@ -163,8 +161,6 @@ class DatasetController : DatasetApi, AuthorizingComponent {
         val aclKeys = tableIds.map { AclKey(organizationId, it) }.toSet()
         aclKeys.forEach { aclKey ->
             ensureOwnerAccess(aclKey)
-            authorizations.deletePermissions(aclKey)
-            securableObjectTypes.deleteSecurableObjectType(aclKey)
         }
         edms.deleteOrganizationExternalDatabaseTables(organizationId, tableIds)
     }
@@ -181,9 +177,7 @@ class DatasetController : DatasetApi, AuthorizingComponent {
         val aclKey = AclKey(organizationId, tableId, columnId)
         ensureOwnerAccess(aclKey)
         ensureObjectCanBeDeleted(columnId)
-        authorizations.deletePermissions(aclKey)
-        securableObjectTypes.deleteSecurableObjectType(aclKey)
-        edms.deleteOrganizationExternalDatabaseColumn(organizationId, columnId)
+        edms.deleteOrganizationExternalDatabaseColumn(organizationId, tableId, columnId)
     }
 
     @Timed
@@ -199,10 +193,8 @@ class DatasetController : DatasetApi, AuthorizingComponent {
         val aclKeys = columnIds.map { AclKey(organizationId, tableId, it) }.toSet()
         aclKeys.forEach { aclKey ->
             ensureOwnerAccess(aclKey)
-            authorizations.deletePermissions(aclKey)
-            securableObjectTypes.deleteSecurableObjectType(aclKey)
         }
-        edms.deleteOrganizationExternalDatabaseColumns(organizationId, columnIds)
+        edms.deleteOrganizationExternalDatabaseColumns(organizationId, mapOf(tableId to columnIds))
     }
 
     private fun getExternalDatabaseObjectId(containingObjectId: UUID, name: String): UUID {
