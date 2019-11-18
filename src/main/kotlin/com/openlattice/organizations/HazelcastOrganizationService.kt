@@ -1,6 +1,5 @@
 package com.openlattice.organizations
 
-import com.auth0.json.mgmt.users.User
 import com.google.common.collect.ImmutableSet
 import com.google.common.collect.Iterables
 import com.google.common.eventbus.EventBus
@@ -22,15 +21,13 @@ import com.openlattice.organization.roles.Role
 import com.openlattice.organizations.events.*
 import com.openlattice.organizations.mapstores.AUTO_ENROLL
 import com.openlattice.organizations.processors.OrganizationEntryProcessor
+import com.openlattice.organizations.processors.OrganizationReadEntryProcessor
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.stream.Stream
 import javax.inject.Inject
 import kotlin.streams.asSequence
-import java.util.UUID
-import com.openlattice.organizations.processors.OrganizationReadEntryProcessor
-import java.util.function.Consumer
 
 
 /**
@@ -61,9 +58,7 @@ class HazelcastOrganizationService(
         private val partitionManager: PartitionManager,
         private val assembler: Assembler
 ) {
-
     private val organizations: IMap<UUID, Organization> = hazelcastInstance.getMap(HazelcastMap.ORGANIZATIONS.name)
-
 
     @Inject
     private lateinit var eventBus: EventBus
@@ -109,7 +104,7 @@ class HazelcastOrganizationService(
         when (principal.type) {
             PrincipalType.USER ->
                 //Add the organization principal to the creator marking them as a member of the organization
-                addMembers(organization.getAclKey(), ImmutableSet.of(principal))
+                addMembers(organization.getAclKey(), ImmutableSet.of(principal), mapOf())
             PrincipalType.ROLE ->
                 //For a role we ensure that it has
                 logger.debug("Creating an organization with no members, but accessible by {}", principal)
@@ -177,7 +172,6 @@ class HazelcastOrganizationService(
         securePrincipalsManager.deletePrincipal(aclKey)
         organizations.delete(organizationId)
         reservations.release(organizationId)
-//        appConfigs.removeAll(Predicates.equal(AppConfigMapstore.ORGANIZATION_ID, organizationId))
         assembler.destroyOrganization(organizationId)
         eventBus.post(OrganizationDeletedEvent(organizationId))
     }
@@ -222,25 +216,53 @@ class HazelcastOrganizationService(
         return organizations[organizationId]?.members ?: setOf()
     }
 
-    fun addMembers(organizationId: UUID, members: Set<Principal>) {
-        addMembers(AclKey(organizationId), members)
+    fun addMembers(
+            organizationId: UUID, members: Set<Principal>, profiles: Map<Principal, Map<String, Set<String>>> = mapOf()
+    ) {
+        addMembers(AclKey(organizationId), members, profiles)
         val securablePrincipals = securePrincipalsManager.getSecurablePrincipals(members)
         eventBus!!.post(
                 MembersAddedToOrganizationEvent(organizationId, SecurablePrincipalList(securablePrincipals))
         )
     }
 
-    private fun addMembers(orgAclKey: AclKey, members: Set<Principal>) {
+    private fun addMembers(
+            orgAclKey: AclKey,
+            members: Set<Principal>,
+            profiles: Map<Principal, Map<String, Set<String>>>
+    ) {
         require(orgAclKey.size == 1) { "Organization acl key should only be of length 1" }
 
         val nonUserPrincipals = members.filter { it.type != PrincipalType.USER }
         require(nonUserPrincipals.isEmpty()) { "Cannot add non-users principals $nonUserPrincipals to organization $orgAclKey" }
         val organizationId = orgAclKey[0]
+        val organization = organizations.getValue(organizationId)
 
         organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
             it.members.addAll(members)
         })
 
+        /*
+         * Grant each member any of the roles, for which they meet the crieria.
+         */
+        members.forEach { member ->
+            organization.grants.forEach { (roleId, grant) ->
+                val profile = profiles.getValue(member)
+
+                val granted = when (grant.grantType) {
+                    GrantType.Auto -> true
+                    GrantType.Group -> grant.mappings.intersect(profile.getOrDefault("groups", setOf())).isNotEmpty()
+                    GrantType.Attribute -> grant.mappings.intersect(
+                            profile.getOrDefault("app_metadata", setOf())
+                    ).isNotEmpty()
+                    //Some grants aren't implemented yet.
+                    else -> false
+                }
+                if (granted) {
+                    addRoleToPrincipalInOrganization(organizationId, roleId, member)
+                }
+            }
+        }
         //Add the organization principal to each user
         members.map { principal ->
             //Grant read on the organization
@@ -298,7 +320,11 @@ class HazelcastOrganizationService(
 
     fun addRoleToPrincipalInOrganization(organizationId: UUID, roleId: UUID, principal: Principal) {
         val roleKey = AclKey(organizationId, roleId)
-        securePrincipalsManager.addPrincipalToPrincipal(roleKey, securePrincipalsManager.lookup(principal))
+        val userPrincipal = securePrincipalsManager.lookup(principal)
+
+        if (!securePrincipalsManager.principalHasChildPrincipal(userPrincipal, roleKey)) {
+            securePrincipalsManager.addPrincipalToPrincipal(roleKey, userPrincipal)
+        }
     }
 
     fun getRoles(organizationId: UUID): Set<Role> {
@@ -425,6 +451,12 @@ class HazelcastOrganizationService(
 
     fun removeUser(principal: Principal) {
         organizations.executeOnEntries(OrganizationEntryProcessor { it.members.remove(principal) })
+    }
+
+    fun updateRoleAutoGrant(organizationId: UUID, roleId: UUID, grant: Grant) {
+        organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
+            it.grants[roleId] = grant
+        })
     }
 
     companion object {
