@@ -37,6 +37,8 @@ import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
 
 import com.openlattice.organization.roles.Role;
+import com.openlattice.organizations.Grant;
+import com.openlattice.organizations.GrantType;
 import com.openlattice.organizations.Organization;
 import com.openlattice.postgres.IndexType;
 import com.openlattice.requests.PermissionsRequestDetails;
@@ -48,7 +50,9 @@ import com.openlattice.search.requests.PersistentSearch;
 import com.openlattice.search.requests.SearchConstraints;
 import com.openlattice.search.requests.SearchDetails;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.RandomUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.CharacterPredicates;
 import org.apache.commons.text.RandomStringGenerator;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
@@ -61,14 +65,14 @@ import java.util.stream.Stream;
 
 @SuppressFBWarnings( value = "SECPR", justification = "Only used for testing." )
 public final class TestDataFactory {
-    private static final SecurableObjectType[] securableObjectTypes = SecurableObjectType.values();
-    private static final Permission[]          permissions          = Permission.values();
-    private static final Action[]              actions              = Action.values();
-    private static final RequestStatus[]       requestStatuses      = RequestStatus.values();
-    private static final Analyzer[]            analyzers            = Analyzer.values();
-    private static final IndexType[]           INDEX_TYPES          = IndexType.values();
-    private static final Random                r                    = new Random();
-
+    public static final  GrantType[]           grants                  = GrantType.values();
+    private static final SecurableObjectType[] securableObjectTypes    = SecurableObjectType.values();
+    private static final Permission[]          permissions             = Permission.values();
+    private static final Action[]              actions                 = Action.values();
+    private static final RequestStatus[]       requestStatuses         = RequestStatus.values();
+    private static final Analyzer[]            analyzers               = Analyzer.values();
+    private static final IndexType[]           INDEX_TYPES             = IndexType.values();
+    private static final Random                r                       = new Random();
     private static final char[][]              allowedLetters          = { { 'a', 'z' }, { 'A', 'Z' } };
     private static final char[][]              allowedDigitsAndLetters = { { 'a', 'z' }, { 'A', 'Z' }, { '0', '9' } };
     private static final RandomStringGenerator random                  = new RandomStringGenerator.Builder()
@@ -300,8 +304,13 @@ public final class TestDataFactory {
                 Optional.empty(),
                 Optional.of( Lists.newArrayList( 1, 2, 3 ) ),
                 Sets.newHashSet( randomAlphanumeric( 5 ), randomAlphanumeric( 5 ) ),
-                Maps.newHSets.newHashSet( UUID.randomUUID() )
+                Maps.newHashMap( ImmutableMap.of( UUID.randomUUID(), grant() ) )
         );
+    }
+
+    public static Grant grant() {
+        return new Grant( grants[ r.nextInt( grants.length ) ],
+                Sets.newHashSet( RandomStringUtils.random( 10 ), RandomStringUtils.random( 10 ) ) );
     }
 
     public static Principal organizationPrincipal() {
