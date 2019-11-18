@@ -53,6 +53,7 @@ import com.openlattice.organization.OrganizationMember;
 import com.openlattice.organization.OrganizationPrincipal;
 import com.openlattice.organization.OrganizationsApi;
 import com.openlattice.organization.roles.Role;
+import com.openlattice.organizations.Grant;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.Organization;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
@@ -591,6 +592,18 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
 
     @Timed
     @Override
+    @PutMapping(
+            value = BASE + ID_PATH + PRINCIPALS + ROLES + ROLE_ID_PATH + GRANT,
+            consumes = MediaType.APPLICATION_JSON_VALUE
+    )
+    public Void updateRoleAutoGrant( UUID organizationId, UUID roleId, Grant grant ) {
+        ensureRoleAdminAccess( organizationId, roleId );
+        organizations.updateRoleAutoGrant(organizationId, roleId, grant );
+        return null;
+    }
+
+    @Timed
+    @Override
     @DeleteMapping(
             value = ID_PATH + PRINCIPALS + ROLES + ROLE_ID_PATH )
     public Void deleteRole( @PathVariable( ID ) UUID organizationId, @PathVariable( ROLE_ID ) UUID roleId ) {
@@ -687,7 +700,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
                 org.getApps(),
                 org.getAppConfigs(),
                 org.getAutoEnrollments(),
-                org.getAutoGrants()
+                org.getGrants()
         );
     }
 
