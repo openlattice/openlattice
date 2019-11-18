@@ -115,6 +115,13 @@ open class DataGraphService(
         ).iterator().next()
     }
 
+    override fun getLinkedEntitySetBreakDown(
+            linkingIdsByEntitySetId: Map<UUID, Optional<Set<UUID>>>,
+            authorizedPropertyTypesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>
+    ): Map<UUID, Map<UUID, Map<UUID, Map<FullQualifiedName, Set<Any>>>>> {
+        return eds.getLinkedEntitySetBreakDown(linkingIdsByEntitySetId, authorizedPropertyTypesByEntitySetId)
+    }
+
     override fun getNeighborEntitySets(entitySetIds: Set<UUID>): List<NeighborSets> {
         return graphService.getNeighborEntitySets(entitySetIds)
     }
