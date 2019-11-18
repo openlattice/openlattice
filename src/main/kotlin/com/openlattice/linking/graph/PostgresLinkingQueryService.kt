@@ -156,11 +156,10 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource, private val
                     val partitionsForEsid = getPartitionsAsPGArray(connection, esid)
                     ekids.forEach { ekid ->
                         ps.setObject(1, linkingId )
-                        ps.setInt(2, getPartition(linkingId,  partitionManager.getAllPartitions()))
-                        ps.setLong(3, version )
-                        ps.setObject( 4, esid )
-                        ps.setObject( 5, ekid )
-                        ps.setArray( 6, partitionsForEsid )
+                        ps.setLong(2, version )
+                        ps.setObject( 3, esid )
+                        ps.setObject( 4, ekid )
+                        ps.setArray( 5, partitionsForEsid )
                         ps.addBatch()
                     }
                 }
@@ -177,11 +176,10 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource, private val
                 toAdd.forEach { edk ->
                     val partitions = getPartitionsAsPGArray(connection, edk.entitySetId)
                     ps.setObject(1, linkingId) // ID value
-                    ps.setInt(2, getPartition(linkingId, partitionManager.getAllPartitions()))
-                    ps.setLong(3, version)
-                    ps.setObject(4, edk.entitySetId) // esid
-                    ps.setObject(5, edk.entityKeyId) // origin id
-                    ps.setArray(6, partitions)
+                    ps.setLong(2, version)
+                    ps.setObject(3, edk.entitySetId) // esid
+                    ps.setObject(4, edk.entityKeyId) // origin id
+                    ps.setArray(5, partitions)
                     ps.addBatch()
                 }
                 return ps.executeUpdate()

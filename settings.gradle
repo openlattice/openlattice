@@ -16,4 +16,12 @@
  * You can contact the owner of the copyright at support@openlattice.com
  */
 
+pluginManagement {
+    repositories {
+        maven {
+            url 'https://artifactory.openlattice.com/artifactory/gradle-release/'
+        }
+    }
+}
+
 rootProject.name='conductor-client'

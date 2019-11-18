@@ -19,7 +19,8 @@ class AwsDataSinkService(
     private val dqs = PostgresEntityDataQueryService(hds, byteBlobDataManager, partitionManager)
 
     fun generatePresignedUrls(
-            entities: List<S3EntityData>, authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
+            entities: List<S3EntityData>,
+            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
     ): List<String> {
         val data = mutableMapOf<UUID, MutableMap<UUID, MutableMap<UUID, MutableSet<Any>>>>()
         val urls = Lists.newArrayList<String>()
