@@ -74,7 +74,7 @@ class HazelcastOrganizationService(
         return securePrincipalsManager.maybeGetSecurablePrincipal(p)
     }
 
-    fun createOrganization(principal: Principal, organization: Organization) {
+    private fun initializeOrganizationPrincipals(principal: Principal, organization: Organization) {
         require(
                 securePrincipalsManager.createSecurablePrincipalIfNotExists(
                         principal,
@@ -83,7 +83,6 @@ class HazelcastOrganizationService(
         ) {
             "Unable to create securable principal for organization. This means the organization probably already exists."
         }
-        createOrganization(organization)
 
         //Create the admin role for the organization and give it ownership of organization.
         val adminRole = createOrganizationAdminRole(organization.securablePrincipal)
@@ -91,6 +90,14 @@ class HazelcastOrganizationService(
         authorizations.addPermission(
                 organization.getAclKey(), adminRole.principal, EnumSet.allOf(Permission::class.java)
         )
+        addRoleToPrincipalInOrganization(organization.id, adminRole.id, principal)
+
+        //Grant the creator of the organizations
+        authorizations.addPermission(organization.getAclKey(), principal, EnumSet.allOf(Permission::class.java))
+    }
+    fun createOrganization(principal: Principal, organization: Organization) {
+        initializeOrganizationPrincipals(principal, organization)
+        initializeOrganization(organization)
 
         /*
          * Roles shouldn't be members of an organizations.
@@ -111,16 +118,17 @@ class HazelcastOrganizationService(
             else -> throw IllegalStateException("Only users and roles can create organizations.")
         }//Fall throught by design
 
-        //Grant the creator of the organizations
-        authorizations.addPermission(organization.getAclKey(), principal, EnumSet.allOf(Permission::class.java))
+
         //We add the user/role that created the organization to the admin role for the organization
-        addRoleToPrincipalInOrganization(organization.id, adminRole.id, principal)
+
         assembler.createOrganization(organization)
         eventBus.post(OrganizationCreatedEvent(organization))
+        setSmsEntitySetInformation(organization.smsEntitySetInfo)
     }
 
-    fun createOrganization(organization: Organization) {
+    private fun initializeOrganization(organization: Organization) {
         val organizationId = organization.securablePrincipal.id
+        organizations.set(organizationId, organization)
 
         if (organization.partitions.isEmpty()) {
             organization.partitions.addAll(
@@ -128,7 +136,7 @@ class HazelcastOrganizationService(
             )
         }
 
-        setSmsEntitySetInformation(organization.smsEntitySetInfo)
+
     }
 
     fun getOrganization(organizationId: UUID): Organization? {
