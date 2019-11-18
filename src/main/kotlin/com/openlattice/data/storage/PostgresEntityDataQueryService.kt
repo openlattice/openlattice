@@ -341,8 +341,10 @@ class PostgresEntityDataQueryService(
                             entityKeyId to rawValue
                         } else {
                             entityKeyId to Multimaps.asMap(JsonDeserializer
-                                                    .validateFormatAndNormalize(rawValue, authorizedPropertyTypes)
-                                                    { "Entity set $entitySetId with entity key id $entityKeyId" })
+                                                                   .validateFormatAndNormalize(
+                                                                           rawValue, authorizedPropertyTypes
+                                                                   )
+                                                                   { "Entity set $entitySetId with entity key id $entityKeyId" })
                         }
                     }.toMap()
 
@@ -351,7 +353,7 @@ class PostgresEntityDataQueryService(
                             entitySetId,
                             entityBatch,
                             authorizedPropertyTypes,
-                            version+1,
+                            version + 1,
                             partitionsInfo.partitionsVersion,
                             partition,
                             awsPassthrough
@@ -722,7 +724,7 @@ class PostgresEntityDataQueryService(
     ): Int {
         // TODO delete also linking entity entries
         return hds.connection.use { connection ->
-            connection.autoCommit = false
+
 
             val propertyTypesArr = PostgresArrays.createUuidArray(connection, authorizedPropertyTypes.keys)
 
@@ -739,7 +741,7 @@ class PostgresEntityDataQueryService(
             ps.setArray(5, propertyTypesArr)
 
             val count = ps.executeUpdate()
-            connection.commit()
+
             count
         }
     }
@@ -782,7 +784,7 @@ class PostgresEntityDataQueryService(
     ): Int {
         // TODO also delete linking entities
         return hds.connection.use { connection ->
-            connection.autoCommit = false
+
 
             val idsArr = PostgresArrays.createUuidArray(connection, entities)
 
@@ -796,7 +798,6 @@ class PostgresEntityDataQueryService(
             ps.setInt(4, partitionVersion)
 
             val count = ps.executeUpdate()
-            connection.commit()
             count
         }
     }
