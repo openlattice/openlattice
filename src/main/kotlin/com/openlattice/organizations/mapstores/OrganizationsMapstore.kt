@@ -15,6 +15,7 @@ import com.openlattice.postgres.PostgresTable.ORGANIZATIONS
 import com.openlattice.postgres.ResultSetAdapters.organizationId
 import com.openlattice.postgres.mapstores.AbstractBasePostgresMapstore
 import com.zaxxer.hikari.HikariDataSource
+import org.springframework.stereotype.Component
 import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.util.*
@@ -25,6 +26,7 @@ const val AUTO_ENROLL = "autoEnroll[any]"
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
+@Component
 class OrganizationsMapstore(val hds: HikariDataSource) : AbstractBasePostgresMapstore<UUID, Organization>(
         HazelcastMap.ORGANIZATIONS.name, ORGANIZATIONS, hds
 ) {

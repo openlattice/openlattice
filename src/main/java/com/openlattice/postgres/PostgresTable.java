@@ -400,7 +400,7 @@ public final class PostgresTable {
 
     public static final PostgresTableDefinition USERS =
             new PostgresTableDefinition( "users" )
-                    .addColumns( USER_ID, USER, EXPIRATION )
+                    .addColumns( USER_ID, USER_DATA, EXPIRATION )
                     .primaryKey( USER_ID );
 
     static {

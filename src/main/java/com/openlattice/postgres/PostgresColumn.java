@@ -458,23 +458,22 @@ public final class PostgresColumn {
     public static final String                   TIME_UUID_FIELD                   = "time_uuid";
     public static final PostgresColumnDefinition TIME_UUID                         =
             new PostgresColumnDefinition( TIME_UUID_FIELD, UUID );
-    public static final String                   TITLE_FIELD                       = "title";
-    public static final PostgresColumnDefinition TITLE                             =
+    public static final String                   TITLE_FIELD     = "title";
+    public static final PostgresColumnDefinition TITLE           =
             new PostgresColumnDefinition( TITLE_FIELD, TEXT ).notNull();
-    public static final String                   URL_FIELD                         = "url";
-    public static final PostgresColumnDefinition URL                               =
+    public static final String                   URL_FIELD       = "url";
+    public static final PostgresColumnDefinition URL             =
             new PostgresColumnDefinition( URL_FIELD, TEXT );
-    public static final String                   USER_FIELD                        = "user";
-    public static final PostgresColumnDefinition USER                              = new PostgresColumnDefinition(
-            USER_FIELD,
-            JSONB )
-            .primaryKey();
-    public static final String                   USER_ID_FIELD                     = "user_id";
-    public static final PostgresColumnDefinition USER_ID                           = new PostgresColumnDefinition(
+    public static final String                   USER_DATA_FIELD = "user_data";
+    public static final PostgresColumnDefinition USER_DATA       = new PostgresColumnDefinition(
+            USER_DATA_FIELD,
+            JSONB );
+    public static final String                   USER_ID_FIELD   = "user_id";
+    public static final PostgresColumnDefinition USER_ID         = new PostgresColumnDefinition(
             USER_ID_FIELD,
             TEXT ).notNull();
-    public static final String                   VERSIONS_FIELD                    = "versions";
-    public static final PostgresColumnDefinition VERSIONS                          =
+    public static final String                   VERSIONS_FIELD  = "versions";
+    public static final PostgresColumnDefinition VERSIONS        =
             new PostgresColumnDefinition( VERSIONS_FIELD, BIGINT_ARRAY )
                     .withDefault( "ARRAY[-1]" ).notNull();
     public static final String                   VERSION_FIELD                     = "version";

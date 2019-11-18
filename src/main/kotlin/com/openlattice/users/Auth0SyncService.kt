@@ -4,7 +4,6 @@ import com.auth0.json.mgmt.users.User
 import com.dataloom.mappers.ObjectMappers
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.google.common.collect.ImmutableSet
-import com.hazelcast.core.Hazelcast
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
 import com.openlattice.authorization.*
@@ -19,6 +18,7 @@ import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.zaxxer.hikari.HikariDataSource
 import java.util.*
+import java.util.concurrent.Semaphore
 
 const val DELETE_BATCH_SIZE = 1024
 private val markUserSql = "UPDATE ${USERS.name} SET ${LAST_MARK.name} = now() WHERE ${USER_ID.name} = ?"
@@ -37,10 +37,21 @@ class Auth0SyncService(
     private val users: IMap<String, User> = hazelcastInstance.getMap(HazelcastMap.USERS.name)
 
     private val mapper = ObjectMappers.newJsonMapper()
-    private val userRoleAclKey: AclKey = spm.lookup(AuthorizationInitializationTask.GLOBAL_USER_ROLE.principal)
-    private val adminRoleAclKey: AclKey = spm.lookup(AuthorizationInitializationTask.GLOBAL_ADMIN_ROLE.principal)
-    private val openlatticeOrganizationAclKey: AclKey = spm.lookup(OrganizationConstants.OPENLATTICE_ORG_PRINCIPAL)
-    private val globalOrganizationAclKey: AclKey = spm.lookup(OrganizationConstants.GLOBAL_ORG_PRINCIPAL)
+    private lateinit var userRoleAclKey: AclKey
+    private lateinit var adminRoleAclKey: AclKey
+    private lateinit var openlatticeOrganizationAclKey: AclKey
+    private lateinit var globalOrganizationAclKey: AclKey
+
+    private val initializationMutex = Semaphore(1)
+
+    fun initialize() {
+        if (initializationMutex.tryAcquire()) {
+            userRoleAclKey = spm.lookup(AuthorizationInitializationTask.GLOBAL_USER_ROLE.principal)
+            adminRoleAclKey = spm.lookup(AuthorizationInitializationTask.GLOBAL_ADMIN_ROLE.principal)
+            openlatticeOrganizationAclKey = spm.lookup(OrganizationConstants.OPENLATTICE_ORG_PRINCIPAL)
+            globalOrganizationAclKey = spm.lookup(OrganizationConstants.GLOBAL_ORG_PRINCIPAL)
+        }
+    }
 
     fun syncUser(user: User) {
         ensureSecurablePrincipalExists(user)
@@ -113,7 +124,7 @@ class Auth0SyncService(
         return BasePostgresIterable(
                 PreparedStatementHolderSupplier(hds, expiredUsersSql, DELETE_BATCH_SIZE) { ps ->
                     ps.setLong(1, expirationThreshold)
-                }) { rs -> mapper.readValue<User>(rs.getString(USER.name)) }
+                }) { rs -> mapper.readValue<User>(rs.getString(USER_DATA.name)) }
     }
 
     private fun ensureSecurablePrincipalExists(user: User): Principal {
