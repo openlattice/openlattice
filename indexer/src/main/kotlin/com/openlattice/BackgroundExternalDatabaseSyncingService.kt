@@ -145,19 +145,19 @@ class BackgroundExternalDatabaseSyncingService(
         //check if tables have been deleted in the database
         val missingTableIds = organizationExternalDatabaseTables.keys - currentTableIds
         if (missingTableIds.isNotEmpty()) {
-            missingTableIds.forEach { edms.removePermissions(orgId, it, Optional.empty()) }
             edms.deleteOrganizationExternalDatabaseTables(orgId, missingTableIds)
             totalSynced += missingTableIds.size
         }
 
         //check if columns have been deleted in the database
         val missingColumnIds = organizationExternalDatabaseColumns.keys - currentColumnIds
+        val missingColumnsByTable = mutableMapOf<UUID, MutableSet<UUID>>()
         if (missingColumnIds.isNotEmpty()) {
             missingColumnIds.forEach {
                 val tableId = organizationExternalDatabaseColumns.getValue(it).tableId
-                edms.removePermissions(orgId, tableId, Optional.of(it))
+                missingColumnsByTable.getOrPut(tableId) { mutableSetOf() }.add(it)
             }
-            edms.deleteOrganizationExternalDatabaseColumns(orgId, missingColumnIds)
+            edms.deleteOrganizationExternalDatabaseColumns(orgId, missingColumnsByTable)
             totalSynced += missingColumnIds.size
         }
         return totalSynced
