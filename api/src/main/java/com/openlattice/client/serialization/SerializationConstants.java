@@ -56,7 +56,6 @@ public final class SerializationConstants {
     public static final String AUDIT_RECORD_ENTITY_SET_IDS      = "auditRecordEntitySetIds";
     public static final String AUTHORIZED_OBJECTS               = "authorizedObjects";
     public static final String AUTO_ENROLLMENTS                 = "autoEnrollments";
-    public static final String AUTO_GRANTS                      = "autoGrants";
     public static final String BASE_TYPE_FIELD                  = "baseType";
     public static final String BIDIRECTIONAL                    = "bidirectional";
     public static final String BLOCK_ID                         = "blockId";
@@ -132,6 +131,8 @@ public final class SerializationConstants {
     public static final String FLAGS_FIELD                      = "flags";
     public static final String FQN                              = "fqn";
     public static final String FUZZY                            = "fuzzy";
+    public static final String GRANTS                           = "grants";
+    public static final String GRANT_TYPE                       = "grantType";
     public static final String GROUPINGS                        = "groupings";
     public static final String GTE                              = "gte";
     public static final String HASH                             = "hash";
@@ -158,6 +159,7 @@ public final class SerializationConstants {
     public static final String LONGITUDE                        = "longitude";
     public static final String LOWERBOUND                       = "lowerbound";
     public static final String LTE                              = "lte";
+    public static final String MAPPINGS                         = "mappings";
     public static final String MATCH                            = "match";
     public static final String MAX_HITS                         = "maxHits";
     public static final String MEMBERS_FIELD                    = "members";

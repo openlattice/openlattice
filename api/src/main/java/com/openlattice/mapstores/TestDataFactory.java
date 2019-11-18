@@ -300,7 +300,7 @@ public final class TestDataFactory {
                 Optional.empty(),
                 Optional.of( Lists.newArrayList( 1, 2, 3 ) ),
                 Sets.newHashSet( randomAlphanumeric( 5 ), randomAlphanumeric( 5 ) ),
-                Sets.newHashSet( UUID.randomUUID() )
+                Maps.newHSets.newHashSet( UUID.randomUUID() )
         );
     }
 
