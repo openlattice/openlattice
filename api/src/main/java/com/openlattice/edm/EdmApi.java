@@ -547,7 +547,7 @@ public interface EdmApi {
 
     @POST( ENTITY_TYPE_BASE_PATH + ID_PATH + PROPERTY_TYPE_PATH + PROPERTY_TYPE_ID_PATH )
     Void updateEntityTypePropertyMetadata(
-            @Path( ID ) UUID entitySetId,
+            @Path( ID ) UUID entityTypeId,
             @Path( PROPERTY_TYPE_ID ) UUID propertyTypeId,
             @Body MetadataUpdate update );
 
