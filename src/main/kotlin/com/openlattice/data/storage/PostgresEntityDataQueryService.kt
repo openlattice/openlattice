@@ -428,7 +428,7 @@ class PostgresEntityDataQueryService(
 
             //Make data visible by marking new version in ids table.
             val upsertEntities = connection.prepareStatement(buildUpsertEntitiesAndLinkedData())
-            val updatedLinkedEntities = attempt(LinearBackoff(60000, 125)) {
+            val updatedLinkedEntities = attempt(LinearBackoff(60000, 125),32) {
                 upsertEntities.setObject(1, versionsArrays)
                 upsertEntities.setObject(2, version)
                 upsertEntities.setObject(3, version)
