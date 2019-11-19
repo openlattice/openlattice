@@ -55,7 +55,9 @@ import java.util.concurrent.locks.ReentrantLock
 const val EXPIRATION_MILLIS = 60_000L
 const val INDEX_RATE = 300_000L
 const val FETCH_SIZE = 128_000
-const val INDEX_SIZE = 32_000
+
+/** IMPORTANT! If this number is too big, elasticsearch will explode and everything will go down. Calibrate carefully. **/
+const val INDEX_SIZE = 1_000
 
 class BackgroundIndexingService(
         hazelcastInstance: HazelcastInstance,
