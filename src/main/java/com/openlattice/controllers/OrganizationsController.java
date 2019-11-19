@@ -128,7 +128,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             value = { "", "/" },
             consumes = MediaType.APPLICATION_JSON_VALUE )
     public UUID createOrganizationIfNotExists( @RequestBody Organization organization ) {
-        checkArgument( organization.getAutoEnrollments().isEmpty() || isAdmin(),
+        checkArgument( organization.getEnrollments().isEmpty() || isAdmin(),
                 "Must be admin to specify auto-enrollments" );
         organizations.createOrganization( Principals.getCurrentUser(), organization );
         securableObjectTypes.createSecurableObjectType( new AclKey( organization.getId() ),
@@ -699,7 +699,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
                 org.getPartitions(),
                 org.getApps(),
                 org.getAppConfigs(),
-                org.getAutoEnrollments(),
+                org.getEnrollments(),
                 org.getGrants()
         );
     }
