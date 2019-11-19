@@ -71,7 +71,7 @@ if (LINKER_XMX == 'null' || LINKER_XMX == null || LINKER_XMX == "") {
 }
 
 if (L_ARGS == 'null' || L_ARGS == null || L_ARGS == "") {
-    L_ARGS = 'local postgres dl4j'
+    L_ARGS = 'local postgres keras medialocal'
 }
 
 if (PARALLEL == 'null' || PARALLEL == null || PARALLEL == "") {
