@@ -55,7 +55,6 @@ public final class SerializationConstants {
     public static final String AUDIT_RECORD_ENTITY_SET_ID       = "auditRecordEntitySetId";
     public static final String AUDIT_RECORD_ENTITY_SET_IDS      = "auditRecordEntitySetIds";
     public static final String AUTHORIZED_OBJECTS               = "authorizedObjects";
-    public static final String AUTO_ENROLLMENTS                 = "autoEnrollments";
     public static final String BASE_TYPE_FIELD                  = "baseType";
     public static final String BIDIRECTIONAL                    = "bidirectional";
     public static final String BLOCK_ID                         = "blockId";
@@ -94,6 +93,7 @@ public final class SerializationConstants {
     public static final String ELAPSED_MILLIS                   = "elapsedMillis";
     public static final String EMAILS_FIELD                     = "emails";
     public static final String END                              = "end";
+    public static final String ENROLLMENTS                      = "enrollments";
     public static final String ENTITIES                         = "entities";
     public static final String ENTITY_COUNT                     = "entityCount";
     public static final String ENTITY_DEFINITIONS_FIELD         = "entityDefinitions";
