@@ -67,7 +67,7 @@ if (INDEXER_XMS == 'null' || INDEXER_XMS == null || INDEXER_XMS == "") {
 }
 
 if (INDEXER_XMX == 'null' || INDEXER_XMX == null || INDEXER_XMX == "") {
-    INDEXER_XMX = '-Xms4g'
+    INDEXER_XMX = '-Xmx4g'
 }
 
 if (INDEXER_ARGS == 'null' || INDEXER_ARGS == null || INDEXER_ARGS == "") {
