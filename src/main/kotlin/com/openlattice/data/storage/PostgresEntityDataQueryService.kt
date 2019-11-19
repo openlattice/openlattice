@@ -1,6 +1,8 @@
 package com.openlattice.data.storage
 
 import com.codahale.metrics.annotation.Timed
+import com.geekbeast.util.LinearBackoff
+import com.geekbeast.util.attempt
 import com.google.common.collect.Multimaps
 import com.openlattice.IdConstants
 import com.openlattice.analysis.SqlBindInfo
@@ -426,18 +428,17 @@ class PostgresEntityDataQueryService(
 
             //Make data visible by marking new version in ids table.
             val upsertEntities = connection.prepareStatement(buildUpsertEntitiesAndLinkedData())
-
-            upsertEntities.setObject(1, versionsArrays)
-            upsertEntities.setObject(2, version)
-            upsertEntities.setObject(3, version)
-            upsertEntities.setObject(4, entitySetId)
-            upsertEntities.setArray(5, entityKeyIdsArr)
-            upsertEntities.setInt(6, partition)
-            upsertEntities.setInt(7, partition)
-            upsertEntities.setLong(8, version)
-
-
-            val updatedLinkedEntities = upsertEntities.executeUpdate()
+            val updatedLinkedEntities = attempt(LinearBackoff(60000, 125),32) {
+                upsertEntities.setObject(1, versionsArrays)
+                upsertEntities.setObject(2, version)
+                upsertEntities.setObject(3, version)
+                upsertEntities.setObject(4, entitySetId)
+                upsertEntities.setArray(5, entityKeyIdsArr)
+                upsertEntities.setInt(6, partition)
+                upsertEntities.setInt(7, partition)
+                upsertEntities.setLong(8, version)
+                upsertEntities.executeUpdate()
+            }
             logger.debug("Updated $updatedLinkedEntities linked entities as part of insert.")
             updatedPropertyCounts
         }
