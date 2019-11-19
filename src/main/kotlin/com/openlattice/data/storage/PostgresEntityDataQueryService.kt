@@ -615,11 +615,9 @@ class PostgresEntityDataQueryService(
     @Timed
     fun clearEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent {
         return hds.connection.use { conn ->
-            conn.autoCommit = false
             val version = System.currentTimeMillis()
             tombstone(conn, entitySetId, authorizedPropertyTypes.values, version)
             val event = tombstone(conn, entitySetId, version)
-            conn.autoCommit = true
             event
         }
     }

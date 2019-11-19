@@ -335,6 +335,7 @@ fun buildUpsertEntitiesAndLinkedData(): String {
             "SELECT $metadataReadColumnsSql,$insertColumns FROM ${DATA.name} INNER JOIN " +
             "linking_map USING(${ENTITY_SET_ID.name},${ID.name},${PARTITION.name}) " +
             "WHERE ${LINKING_ID.name} IS NOT NULL AND version > ? " +
+            "ORDER BY ${ENTITY_SET_ID.name},${ID.name},${PARTITION.name},$PROPERTY_TYPE_ID,${HASH.name},${PARTITIONS_VERSION.name},${ORIGIN_ID.name}" +
             "ON CONFLICT ($primaryKeyColumnNamesAsString) " +
             "DO UPDATE SET $conflictClause"
 }
