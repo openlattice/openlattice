@@ -12,7 +12,7 @@ import com.openlattice.organizations.Organization
 import com.openlattice.postgres.PostgresColumn.ORGANIZATION
 import com.openlattice.postgres.PostgresColumnDefinition
 import com.openlattice.postgres.PostgresTable.ORGANIZATIONS
-import com.openlattice.postgres.ResultSetAdapters.organizationId
+import com.openlattice.postgres.ResultSetAdapters.id
 import com.openlattice.postgres.mapstores.AbstractBasePostgresMapstore
 import com.zaxxer.hikari.HikariDataSource
 import org.springframework.stereotype.Component
@@ -50,7 +50,7 @@ class OrganizationsMapstore(val hds: HikariDataSource) : AbstractBasePostgresMap
     }
 
     override fun mapToKey(rs: ResultSet): UUID {
-        return organizationId(rs)
+        return id(rs)
     }
 
     override fun bind(ps: PreparedStatement, key: UUID, offset: Int): Int {
