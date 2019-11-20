@@ -247,7 +247,7 @@ public interface OrganizationsApi {
             @Body String description );
 
     @PUT( BASE + ID_PATH + PRINCIPALS + ROLES + ROLE_ID_PATH + GRANT )
-    Void updateRoleAutoGrant(
+    Void updateRoleGrant(
             @Path( ID ) UUID organizationId,
             @Path( ROLE_ID ) UUID roleId,
             @Nonnull @Body Grant grant );
