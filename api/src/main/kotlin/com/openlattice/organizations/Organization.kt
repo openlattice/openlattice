@@ -30,7 +30,6 @@ data class Organization(
         val smsEntitySetInfo: MutableSet<SmsEntitySetInformation>,
         @JsonProperty(SerializationConstants.PARTITIONS) val partitions: MutableList<Int> = mutableListOf(),
         @JsonProperty(SerializationConstants.APPS) val apps: MutableSet<UUID> = mutableSetOf(),
-        val appConfigs: Map<UUID, Map<UUID, AppTypeSetting>> = mutableMapOf(),
         @JsonProperty(SerializationConstants.ENROLLMENTS) val enrollments: MutableSet<String> = mutableSetOf(),
         @JsonProperty(SerializationConstants.GRANTS) val grants: MutableMap<UUID, Grant> = mutableMapOf()
 ) {
