@@ -23,10 +23,9 @@ package com.openlattice.mail.services;
 import com.google.common.base.Preconditions;
 import com.hazelcast.core.IQueue;
 import com.openlattice.mail.RenderableEmailRequest;
-import com.openlattice.mail.config.HtmlEmailTemplate;
 import com.openlattice.mail.config.MailServiceConfig;
-import java.util.Set;
 import jodd.mail.Email;
+import jodd.mail.MailException;
 import jodd.mail.SendMailSession;
 import jodd.mail.SmtpServer;
 import jodd.mail.SmtpSslServer;
@@ -34,6 +33,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
+
+import java.util.Set;
 
 public class MailService {
     private final MailRenderer                   mailRenderer;
@@ -50,7 +51,7 @@ public class MailService {
         this.emailRequests = emailRequests;
         configureSmtpServer( config );
         this.mailRenderer = mailRenderer;
-        logger.info( "Mail Service successfull configured and initialized!" );
+        logger.info( "Mail Service successfully configured and initialized!" );
     }
 
     public void configureSmtpServer( MailServiceConfig config ) {
@@ -66,14 +67,6 @@ public class MailService {
         // TODO: figure out why we get above exception when plaintextOverTLS is false and port is 587 (works for 465)
         // .plaintextOverTLS(false)
         // .startTlsRequired(true);
-    }
-
-    public void upsertTemplate( HtmlEmailTemplate template ) {
-
-    }
-
-    public void deleteTemplate( String templateId ) {
-
     }
 
     protected Set<Email> renderEmail( RenderableEmailRequest emailRequest ) {
@@ -96,7 +89,11 @@ public class MailService {
     @Scheduled( fixedRate = 30000 )
     public void processEmailRequestsQueue() {
         SendMailSession session = smtpServer.createSession();
-        session.open();
+        try {
+            session.open();
+        } catch ( MailException ex ) {
+            logger.error( "Failure opening email session: {}", ex.getMessage());
+        }
 
         while ( !emailRequests.isEmpty() ) {
             RenderableEmailRequest emailRequest = null;
