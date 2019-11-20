@@ -17,16 +17,18 @@ import org.junit.Ignore
 import org.junit.Test
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.slf4j.event.Level
 import java.net.URL
 import java.util.*
 import java.util.concurrent.Executors
 import kotlin.math.pow
 import kotlin.math.sqrt
 
+
 class S3BenchmarkTest {
     private val logger: Logger = LoggerFactory.getLogger(S3BenchmarkTest::class.java)
-    private val NUM_BYTES = 30*1024*1024
-    private val NUM_OBJECTS = 50
+    private val NUM_BYTES = 4000
+    private val NUM_OBJECTS = 1000
 
     companion object {
         @JvmStatic
@@ -36,8 +38,8 @@ class S3BenchmarkTest {
         @BeforeClass
         @JvmStatic
         fun setUp() {
-            //val datastoreConfig = setUpAws()
-            val datastoreConfig = setUpLocal()
+            val datastoreConfig = setUpAws()
+            //val datastoreConfig = setUpLocal()
             val byteBlobDataManager = AwsBlobDataService(
                     datastoreConfig,
                     MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(2))
@@ -107,12 +109,12 @@ class S3BenchmarkTest {
         var count = 0
         for (key in keys) {
             if (useTM) {
-                StopWatch("Put", false).use {
+                StopWatch("Put" ).use {
                     byteBlobDataManager.putObjectWithTransferManager(key, data, "png")
                     durations.add(it.getDuration())
                 }
             } else {
-                StopWatch("Put", false).use {
+                StopWatch("Put" ).use {
                     byteBlobDataManager.putObject(key, data, "png")
                     durations.add(it.getDuration())
                 }
@@ -129,7 +131,7 @@ class S3BenchmarkTest {
         var count = 0
         val durations = mutableListOf<Long>()
         for (key in keys) {
-            StopWatch("Get", false).use {
+            StopWatch("Get" ).use {
                 val url = byteBlobDataManager.getObjects(listOf(key))[0] as URL
                 val connection = url.openConnection()
                 val inputStream = connection.getInputStream()
