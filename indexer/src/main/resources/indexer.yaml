@@ -2,6 +2,10 @@
 # Indexer Server Configuration
 ##
 error-reporting-email: outage@openlattice.com
+background-indexing-enabled: true
+background-linking-indexing-enabled: true
+background-expired-data-deletion-enabled: true
+background-deletion-enabled: true
 
 search:
   elasticsearchUrl: localhost
