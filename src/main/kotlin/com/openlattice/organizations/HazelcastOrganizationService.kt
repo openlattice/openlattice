@@ -20,7 +20,6 @@ import com.openlattice.organization.OrganizationPrincipal
 import com.openlattice.organization.roles.Role
 import com.openlattice.organizations.events.*
 import com.openlattice.organizations.mapstores.CONNECTIONS_INDEX
-import com.openlattice.organizations.mapstores.ENROLLMENTS_INDEX
 import com.openlattice.organizations.processors.OrganizationEntryProcessor
 import com.openlattice.organizations.processors.OrganizationReadEntryProcessor
 import com.openlattice.organizations.roles.SecurePrincipalsManager
