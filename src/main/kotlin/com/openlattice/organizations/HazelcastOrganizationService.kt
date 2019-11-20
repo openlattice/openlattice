@@ -259,7 +259,7 @@ class HazelcastOrganizationService(
                 val profile = profiles.getValue(member)
 
                 val granted = when (grant.grantType) {
-                    GrantType.Auto -> true
+                    GrantType.Connection -> true
                     GrantType.Group -> grant.mappings.intersect(profile.getOrDefault("groups", setOf())).isNotEmpty()
                     GrantType.Attribute -> grant.mappings.intersect(
                             profile.getOrDefault("app_metadata", setOf())
