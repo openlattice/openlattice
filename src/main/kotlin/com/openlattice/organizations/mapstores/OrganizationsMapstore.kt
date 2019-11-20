@@ -20,7 +20,7 @@ import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.util.*
 
-const val ENROLLMENTS_INDEX = "enrollments[any]"
+const val CONNECTIONS_INDEX = "connections[any]"
 const val GRANTS_INDEX = "grants.values[any]"
 /**
  *
@@ -64,7 +64,7 @@ class OrganizationsMapstore(val hds: HikariDataSource) : AbstractBasePostgresMap
 
     override fun getMapConfig(): MapConfig {
         return super.getMapConfig()
-                .addMapIndexConfig(MapIndexConfig(ENROLLMENTS_INDEX, false))
+                .addMapIndexConfig(MapIndexConfig(CONNECTIONS_INDEX, false))
                 .addMapIndexConfig(MapIndexConfig(GRANTS_INDEX, false))
                 .setInMemoryFormat(InMemoryFormat.OBJECT)
     }

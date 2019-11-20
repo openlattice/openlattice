@@ -19,6 +19,7 @@ import com.openlattice.notifications.sms.SmsEntitySetInformation
 import com.openlattice.organization.OrganizationPrincipal
 import com.openlattice.organization.roles.Role
 import com.openlattice.organizations.events.*
+import com.openlattice.organizations.mapstores.CONNECTIONS_INDEX
 import com.openlattice.organizations.mapstores.ENROLLMENTS_INDEX
 import com.openlattice.organizations.processors.OrganizationEntryProcessor
 import com.openlattice.organizations.processors.OrganizationReadEntryProcessor
@@ -95,6 +96,7 @@ class HazelcastOrganizationService(
         //Grant the creator of the organizations
         authorizations.addPermission(organization.getAclKey(), principal, EnumSet.allOf(Permission::class.java))
     }
+
     fun createOrganization(principal: Principal, organization: Organization) {
         initializeOrganizationPrincipals(principal, organization)
         initializeOrganization(organization)
@@ -259,7 +261,7 @@ class HazelcastOrganizationService(
                 val profile = profiles.getValue(member)
 
                 val granted = when (grant.grantType) {
-                    GrantType.Connection -> true
+                    GrantType.Automatic -> true
                     GrantType.Group -> grant.mappings.intersect(profile.getOrDefault("groups", setOf())).isNotEmpty()
                     GrantType.Attribute -> grant.mappings.intersect(
                             profile.getOrDefault("app_metadata", setOf())
@@ -455,7 +457,7 @@ class HazelcastOrganizationService(
     }
 
     fun getAutoEnrollments(connection: String): Collection<Organization> {
-        return organizations.values(Predicates.equal(ENROLLMENTS_INDEX, connection))
+        return organizations.values(Predicates.equal(CONNECTIONS_INDEX, connection))
     }
 
     fun removeUser(principal: Principal) {
@@ -465,6 +467,25 @@ class HazelcastOrganizationService(
     fun updateRoleAutoGrant(organizationId: UUID, roleId: UUID, grant: Grant) {
         organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
             it.grants[roleId] = grant
+        })
+    }
+
+    fun addConnections(organizationId: UUID, connections: Set<String>) {
+        organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
+            it.connections += connections
+        })
+    }
+
+    fun removeConnections(organizationId: UUID, connections: Set<String>) {
+        organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
+            it.connections -= connections
+        })
+    }
+
+    fun setConnections(organizationId: UUID, connections: Set<String>) {
+        organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
+            it.connections.clear()
+            it.connections.addAll(connections)
         })
     }
 
