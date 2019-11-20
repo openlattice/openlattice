@@ -9,6 +9,8 @@ import com.amazonaws.services.s3.model.DeleteObjectsRequest
 interface ByteBlobDataManager {
     fun putObject(s3Key: String, data: ByteArray, contentType: String)
 
+    fun putObjectWithTransferManager(s3Key: String, data: ByteArray, contentType: String)
+
     fun deleteObject(s3Key: String)
 
     fun getObjects(keys: Collection<Any>): List<Any>

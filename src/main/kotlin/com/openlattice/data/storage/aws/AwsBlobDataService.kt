@@ -21,9 +21,13 @@ import org.springframework.stereotype.Service
 import java.net.URL
 import java.util.*
 import java.util.concurrent.Callable
+import com.geekbeast.util.ExponentialBackoff
+import com.geekbeast.util.RetryStrategy
+import com.geekbeast.util.attempt
 
 private val logger = LoggerFactory.getLogger(AwsBlobDataService::class.java)
 const val MAX_ERROR_RETRIES = 5
+const val MAX_DELAY = 8L * 60L * 1000L
 
 @Service
 class AwsBlobDataService(
@@ -48,6 +52,21 @@ class AwsBlobDataService(
     }
     
     override fun putObject(s3Key: String, data: ByteArray, contentType: String) {
+        val metadata = ObjectMetadata()
+        val dataInputStream = data.inputStream()
+        metadata.contentLength = dataInputStream.available().toLong()
+        metadata.contentType = contentType
+        val putRequest = PutObjectRequest(datastoreConfiguration.bucketName, s3Key, dataInputStream, metadata)
+//        val transferManager = TransferManagerBuilder.standard().withS3Client(s3).build()
+//        val upload = transferManager.upload(putRequest)
+//        upload.waitForCompletion()
+//        transferManager.shutdownNow(false)
+        attempt(ExponentialBackoff(MAX_DELAY), MAX_ERROR_RETRIES) {
+            s3.putObject(putRequest)
+        }
+    }
+
+    override fun putObjectWithTransferManager(s3Key: String, data: ByteArray, contentType: String) {
         val metadata = ObjectMetadata()
         val dataInputStream = data.inputStream()
         metadata.contentLength = dataInputStream.available().toLong()

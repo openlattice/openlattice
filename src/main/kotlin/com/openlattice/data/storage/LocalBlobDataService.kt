@@ -42,6 +42,10 @@ class LocalBlobDataService(private val hds: HikariDataSource) : ByteBlobDataMana
         insertEntity(s3Key, data)
     }
 
+    override fun putObjectWithTransferManager(s3Key: String, data: ByteArray, contentType: String) {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
     override fun deleteObject(s3Key: String) {
         deleteEntity(s3Key)
     }
