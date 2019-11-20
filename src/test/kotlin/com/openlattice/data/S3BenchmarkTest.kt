@@ -70,7 +70,7 @@ class S3BenchmarkTest {
     }
 
     @Test
-    @Ignore
+    //@Ignore
     fun benchmarkS3() {
         val data = generateTestData()
 
