@@ -13,10 +13,6 @@ import com.openlattice.postgres.PostgresColumn.ORGANIZATION
 import com.openlattice.postgres.PostgresColumnDefinition
 import com.openlattice.postgres.PostgresTable.ORGANIZATIONS
 import com.openlattice.postgres.ResultSetAdapters.id
-<<<<<<< HEAD
-import com.openlattice.postgres.ResultSetAdapters.organizationId
-=======
->>>>>>> 037e62af151bc46845ab48b5a9bcfe90a3cc809a
 import com.openlattice.postgres.mapstores.AbstractBasePostgresMapstore
 import com.zaxxer.hikari.HikariDataSource
 import org.springframework.stereotype.Component
