@@ -21,7 +21,7 @@ import java.util.*
 import java.util.concurrent.Semaphore
 
 const val DELETE_BATCH_SIZE = 1024
-private val markUserSql = "UPDATE ${USERS.name} SET ${LAST_MARK.name} = now() WHERE ${USER_ID.name} = ?"
+private val markUserSql = "UPDATE ${USERS.name} SET ${EXPIRATION.name} = ? WHERE ${USER_ID.name} = ?"
 private val expiredUsersSql = "SELECT ${USER_ID.name} from ${USERS.name} WHERE ${EXPIRATION.name} < ? "
 
 /**
@@ -78,14 +78,15 @@ class Auth0SyncService(
 
     private fun markUser(user: User) {
         val userId = user.id
-        users.set(userId, user)
         markUser(userId)
+        users.set(userId, user)
     }
 
     private fun markUser(userId: String) {
         hds.connection.use { connection ->
             connection.prepareStatement(markUserSql).use { ps ->
-                ps.setString(1, userId)
+                ps.setLong(1, System.currentTimeMillis() )
+                ps.setString(2, userId)
                 ps.executeUpdate()
             }
         }

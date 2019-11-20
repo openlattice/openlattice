@@ -19,7 +19,7 @@ import com.openlattice.notifications.sms.SmsEntitySetInformation
 import com.openlattice.organization.OrganizationPrincipal
 import com.openlattice.organization.roles.Role
 import com.openlattice.organizations.events.*
-import com.openlattice.organizations.mapstores.AUTO_ENROLL
+import com.openlattice.organizations.mapstores.ENROLLMENTS_INDEX
 import com.openlattice.organizations.processors.OrganizationEntryProcessor
 import com.openlattice.organizations.processors.OrganizationReadEntryProcessor
 import com.openlattice.organizations.roles.SecurePrincipalsManager
@@ -455,7 +455,7 @@ class HazelcastOrganizationService(
     }
 
     fun getAutoEnrollments(connection: String): Collection<Organization> {
-        return organizations.values(Predicates.equal(AUTO_ENROLL, connection))
+        return organizations.values(Predicates.equal(ENROLLMENTS_INDEX, connection))
     }
 
     fun removeUser(principal: Principal) {

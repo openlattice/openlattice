@@ -12,6 +12,7 @@ import com.openlattice.organizations.Organization
 import com.openlattice.postgres.PostgresColumn.ORGANIZATION
 import com.openlattice.postgres.PostgresColumnDefinition
 import com.openlattice.postgres.PostgresTable.ORGANIZATIONS
+import com.openlattice.postgres.ResultSetAdapters.id
 import com.openlattice.postgres.ResultSetAdapters.organizationId
 import com.openlattice.postgres.mapstores.AbstractBasePostgresMapstore
 import com.zaxxer.hikari.HikariDataSource
@@ -20,8 +21,8 @@ import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.util.*
 
-const val AUTO_ENROLL = "autoEnroll[any]"
-
+const val ENROLLMENTS_INDEX = "enrollments[any]"
+const val GRANTS_INDEX = "grants.values[any]"
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -44,18 +45,18 @@ class OrganizationsMapstore(val hds: HikariDataSource) : AbstractBasePostgresMap
     }
 
     override fun bind(ps: PreparedStatement, key: UUID, value: Organization) {
-        var offset = bind(ps, key)
-        ps.setObject(offset++, mapper.writeValueAsString(value))
-        ps.setObject(offset++, mapper.writeValueAsString(value))
+        var offset = bind(ps, key, 1)
+        val orgJson = mapper.writeValueAsString(value)
+        ps.setObject(offset, orgJson)
     }
 
     override fun mapToKey(rs: ResultSet): UUID {
-        return organizationId(rs)
+        return id(rs)
     }
 
     override fun bind(ps: PreparedStatement, key: UUID, offset: Int): Int {
-        ps.setObject(1, key)
-        return 1
+        ps.setObject(offset, key)
+        return offset + 1
     }
 
     override fun mapToValue(rs: ResultSet): Organization {
@@ -64,7 +65,8 @@ class OrganizationsMapstore(val hds: HikariDataSource) : AbstractBasePostgresMap
 
     override fun getMapConfig(): MapConfig {
         return super.getMapConfig()
-                .addMapIndexConfig(MapIndexConfig(AUTO_ENROLL, false))
+                .addMapIndexConfig(MapIndexConfig(ENROLLMENTS_INDEX, false))
+                .addMapIndexConfig(MapIndexConfig(GRANTS_INDEX, false))
                 .setInMemoryFormat(InMemoryFormat.OBJECT)
     }
 
@@ -73,3 +75,4 @@ class OrganizationsMapstore(val hds: HikariDataSource) : AbstractBasePostgresMap
                 .setImplementation(this)
     }
 }
+
