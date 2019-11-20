@@ -12,12 +12,24 @@ data class Grant(
         @JsonProperty(SerializationConstants.MAPPINGS) val mappings: Set<String>  )
 
 enum class GrantType {
+    /**
+     * This role must be granted manually.
+     */
     Manual,
-    Auto,
+    /**
+     * Grant based on connection or manually
+     */
+    Connection,
+    /**
+     * Grant based on matching group membership or manually
+     */
     Group,
+    /**
+     * Grant based on matching SAML claims or manually
+     */
     Claim,
     /**
-     *
+     * Grant based on matching attributes or manually
      */
     Attribute
 }
