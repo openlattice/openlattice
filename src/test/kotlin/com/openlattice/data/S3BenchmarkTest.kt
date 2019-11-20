@@ -5,6 +5,7 @@ import com.amazonaws.regions.Regions
 import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.AmazonS3ClientBuilder
 import com.geekbeast.util.StopWatch
+import com.google.common.base.Stopwatch
 import com.google.common.util.concurrent.MoreExecutors
 import com.kryptnostic.rhizome.configuration.amazon.AmazonLaunchConfiguration
 import com.kryptnostic.rhizome.configuration.amazon.AwsLaunchConfiguration
@@ -21,6 +22,7 @@ import org.slf4j.event.Level
 import java.net.URL
 import java.util.*
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import kotlin.math.pow
 import kotlin.math.sqrt
 
@@ -109,19 +111,17 @@ class S3BenchmarkTest {
         var count = 0
         for (key in keys) {
             if (useTM) {
-                StopWatch("Put" ).use {
-                    byteBlobDataManager.putObjectWithTransferManager(key, data, "png")
-                    durations.add(it.getDuration())
-                }
+                val start = Stopwatch.createStarted()
+                byteBlobDataManager.putObjectWithTransferManager(key, data, "png")
+                durations.add(start.elapsed(TimeUnit.MILLISECONDS))
             } else {
-                StopWatch("Put" ).use {
-                    byteBlobDataManager.putObject(key, data, "png")
-                    durations.add(it.getDuration())
-                }
-                count++
-                if (count % 10 == 0) {
-                    logger.info("$count objects put")
-                }
+                val start = Stopwatch.createStarted()
+                byteBlobDataManager.putObject(key, data, "png")
+                durations.add(start.elapsed(TimeUnit.MILLISECONDS))
+            }
+            count++
+            if (count % 100 == 0) {
+                logger.info("$count objects put")
             }
         }
         return durations
@@ -131,16 +131,16 @@ class S3BenchmarkTest {
         var count = 0
         val durations = mutableListOf<Long>()
         for (key in keys) {
-            StopWatch("Get" ).use {
-                val url = byteBlobDataManager.getObjects(listOf(key))[0] as URL
-                val connection = url.openConnection()
-                val inputStream = connection.getInputStream()
-                val data = inputStream.readAllBytes()
-                durations.add(it.getDuration())
-                inputStream.close()
-            }
+            val start = Stopwatch.createStarted()
+            val url = byteBlobDataManager.getObjects(listOf(key))[0] as URL
+            val connection = url.openConnection()
+            val inputStream = connection.getInputStream()
+            val data = inputStream.readAllBytes()
+            durations.add(start.elapsed(TimeUnit.MILLISECONDS))
+            inputStream.close()
+
             count++
-            if (count % 10 == 0) {
+            if (count % 100 == 0) {
                 logger.info("$count objects gotten")
             }
         }
