@@ -19,12 +19,10 @@
 package com.openlattice.organization;
 
 import com.openlattice.directory.pojo.Auth0UserBasic;
-import com.openlattice.notifications.sms.SmsEntitySetInformation;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.Grant;
 import com.openlattice.organizations.Organization;
 import java.util.EnumSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -36,26 +34,17 @@ import retrofit2.http.HTTP;
 import retrofit2.http.POST;
 import retrofit2.http.PUT;
 import retrofit2.http.Path;
-import retrofit2.http.Query;
 
 public interface OrganizationsApi {
     // @formatter:off
 
-    String SERVICE           = "/datastore";
-    String CONTROLLER        = "/organizations";
-    String BASE              = SERVICE + CONTROLLER;
-
-
-    String PRINCIPAL_ID      = "pid";
-    String SET_ID            = "setId";
-    String TYPE              = "type";
-    String USER_ID           = "userId";
-
     String ASSEMBLE          = "/assemble";
     String CONNECTIONS       = "/connections";
+    String CONTROLLER        = "/organizations";
     String DESCRIPTION       = "/description";
     String EMAIL_DOMAIN      = "email-domain";
     String EMAIL_DOMAINS     = "/email-domains";
+    String EMAIL_DOMAIN_PATH = "/{" + EMAIL_DOMAIN + ":.+}";
     String ENTITY_SETS       = "/entity-sets";
     String GRANT             = "/grant";
     String ID                = "id";
@@ -63,18 +52,22 @@ public interface OrganizationsApi {
     String INTEGRATION       = "/integration";
     String MEMBERS           = "/members";
     String PRINCIPALS        = "/principals";
+    String PRINCIPAL_ID      = "pid";
+    String PRINCIPAL_ID_PATH = "/{" + PRINCIPAL_ID + "}";
     String REFRESH           = "/refresh";
     String REFRESH_RATE      = "/refresh-rate";
     String ROLES             = "/roles";
     String ROLE_ID           = "roleId";
+    String ROLE_ID_PATH      = "/{" + ROLE_ID + "}";
+    String SERVICE           = "/datastore";
+    String BASE              = SERVICE + CONTROLLER;
+    String SET_ID            = "setId";
+    String SET_ID_PATH       = "/{" + SET_ID + "}";
     String SYNCHRONIZE       = "/synchronize";
     String TITLE             = "/title";
-
-    String EMAIL_DOMAIN_PATH = "/{" + EMAIL_DOMAIN + ":.+}";
-    String PRINCIPAL_ID_PATH = "/{" + PRINCIPAL_ID + "}";
-    String ROLE_ID_PATH      = "/{" + ROLE_ID + "}";
-    String SET_ID_PATH       = "/{" + SET_ID + "}";
+    String TYPE              = "type";
     String TYPE_PATH         = "/{" + TYPE + "}";
+    String USER_ID           = "userId";
     String USER_ID_PATH      = "/{" + USER_ID + ":.*}";
 
     // @formatter:on
@@ -267,4 +260,13 @@ public interface OrganizationsApi {
             @Path( ROLE_ID ) UUID roleId,
             @Path( USER_ID ) String userId );
 
+    //Admin-only APIs
+    @POST( BASE + ID_PATH + CONNECTIONS )
+    Void addConnection( @Path( ID ) UUID organizationId, @Body Set<String> connections );
+
+    @PUT( BASE + ID_PATH + CONNECTIONS )
+    Void setConnections( @Path( ID ) UUID organizationId, @Body Set<String> connections );
+
+    @HTTP( path = BASE + ID_PATH + CONNECTIONS, method = "DELETE", hasBody = true )
+    Void removeConnections( @Path( ID ) UUID organizationId, @Body Set<String> connections );
 }

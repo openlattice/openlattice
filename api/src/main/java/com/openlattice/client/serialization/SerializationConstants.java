@@ -67,6 +67,7 @@ public final class SerializationConstants {
     public static final String COMPARISON                       = "comparison";
     public static final String CONFIG                           = "config";
     public static final String CONFLICTS                        = "conflicts";
+    public static final String CONNECTIONS                      = "connections";
     public static final String CONSTRAINTS                      = "constraints";
     public static final String CONTACTS                         = "contacts";
     public static final String COUNT                            = "count";
@@ -93,7 +94,6 @@ public final class SerializationConstants {
     public static final String ELAPSED_MILLIS                   = "elapsedMillis";
     public static final String EMAILS_FIELD                     = "emails";
     public static final String END                              = "end";
-    public static final String ENROLLMENTS                      = "enrollments";
     public static final String ENTITIES                         = "entities";
     public static final String ENTITY_COUNT                     = "entityCount";
     public static final String ENTITY_DEFINITIONS_FIELD         = "entityDefinitions";

@@ -17,9 +17,9 @@ enum class GrantType {
      */
     Manual,
     /**
-     * Grant based on connection or manually
+     * Grant based on organization membership or manually
      */
-    Connection,
+    Automatic,
     /**
      * Grant based on matching group membership or manually
      */

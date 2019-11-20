@@ -3,7 +3,6 @@ package com.openlattice.organizations
 import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.openlattice.apps.AppTypeSetting
 import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.Principal
 import com.openlattice.authorization.PrincipalType
@@ -30,7 +29,7 @@ data class Organization(
         val smsEntitySetInfo: MutableSet<SmsEntitySetInformation>,
         @JsonProperty(SerializationConstants.PARTITIONS) val partitions: MutableList<Int> = mutableListOf(),
         @JsonProperty(SerializationConstants.APPS) val apps: MutableSet<UUID> = mutableSetOf(),
-        @JsonProperty(SerializationConstants.ENROLLMENTS) val enrollments: MutableSet<String> = mutableSetOf(),
+        @JsonProperty(SerializationConstants.CONNECTIONS) val connections: MutableSet<String> = mutableSetOf(),
         @JsonProperty(SerializationConstants.GRANTS) val grants: MutableMap<UUID, Grant> = mutableMapOf()
 ) {
 
@@ -62,7 +61,7 @@ data class Organization(
             @JsonProperty(SerializationConstants.SMS_ENTITY_SET_INFO)
             smsEntitySetInfo: Optional<MutableSet<SmsEntitySetInformation>>,
             @JsonProperty(SerializationConstants.PARTITIONS) partitions: Optional<MutableList<Int>>,
-            @JsonProperty(SerializationConstants.ENROLLMENTS) enrollments: MutableSet<String> = mutableSetOf(),
+            @JsonProperty(SerializationConstants.CONNECTIONS) enrollments: MutableSet<String> = mutableSetOf(),
             @JsonProperty(SerializationConstants.GRANTS) grants: MutableMap<UUID, Grant> = mutableMapOf()
     ) : this(
             OrganizationPrincipal(id, principal, title, description),
@@ -72,7 +71,7 @@ data class Organization(
             smsEntitySetInfo.orElse(mutableSetOf<SmsEntitySetInformation>()),
             partitions.orElse(mutableListOf()),
             apps,
-            enrollments=enrollments
+            connections=enrollments
     )
 
 
