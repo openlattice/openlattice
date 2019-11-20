@@ -34,7 +34,6 @@ import com.openlattice.data.storage.entityKeyIdColumns
 import com.openlattice.data.storage.getPartition
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.data.storage.selectEntitySetWithCurrentVersionOfPropertyTypes
-import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.core.GraphService
@@ -84,7 +83,7 @@ class Graph(
                 .mapValues { it.value.partitionsVersion to it.value.partitions.toList() }
 
         hds.connection.use { connection ->
-            val ps = connection.prepareStatement(UPSERT_SQL)
+            val ps = connection.prepareStatement(EDGES_UPSERT_SQL)
             val version = System.currentTimeMillis()
             val versions = PostgresArrays.createLongArray(connection, ImmutableList.of(version))
 
@@ -92,36 +91,12 @@ class Graph(
                 keys.forEach { dataEdgeKey ->
                     bindColumnsForEdge(ps, dataEdgeKey, version, versions, partitionsInfoByEntitySet)
                 }
-
                 return WriteEvent(version, ps.executeBatch().sum())
             }
         }
     }
 
-    private fun bindColumnsForEdge(
-            ps: PreparedStatement,
-            dataEdgeKey: DataEdgeKey,
-            version: Long,
-            versions: java.sql.Array,
-            partitionsInfoByEntitySet: Map<UUID, Pair<Int, List<Int>>>) {
 
-        val edk = dataEdgeKey.src
-        val partitionsInfo = partitionsInfoByEntitySet.getValue(edk.entitySetId)
-
-        var index = 1
-
-        ps.setObject(index++, getPartition(edk.entityKeyId, partitionsInfo.second))
-        ps.setObject(index++, dataEdgeKey.src.entitySetId)
-        ps.setObject(index++, dataEdgeKey.src.entityKeyId)
-        ps.setObject(index++, dataEdgeKey.dst.entitySetId)
-        ps.setObject(index++, dataEdgeKey.dst.entityKeyId)
-        ps.setObject(index++, dataEdgeKey.edge.entitySetId)
-        ps.setObject(index++, dataEdgeKey.edge.entityKeyId)
-        ps.setLong(index++, version)
-        ps.setArray(index++, versions)
-        ps.setInt(index++, partitionsInfo.first)
-        ps.addBatch()
-    }
 
     private fun addKeyIds(ps: PreparedStatement, dataEdgeKey: DataEdgeKey, startIndex: Int = 1) {
         val edk = dataEdgeKey.src
@@ -501,10 +476,10 @@ class Graph(
                     val entityKeyIdArr = PostgresArrays.createUuidArray(connection, entityKeyIds)
 
                     val ps = connection.prepareStatement(query)
-                    ps.setObject(1, entitySetId)
-                    ps.setArray(2, entityKeyIdArr)
-                    ps.setObject(3, entitySetId)
-                    ps.setArray(4, entityKeyIdArr)
+                    ps.setArray(1, entityKeyIdArr)
+                    ps.setObject(2, entitySetId)
+                    ps.setArray(3, entityKeyIdArr)
+                    ps.setObject(4, entitySetId)
                     val rs = ps.executeQuery()
                     StatementHolder(connection, ps, rs)
                 },
@@ -679,7 +654,7 @@ internal fun getTopUtilizersFromDst(entitySetId: UUID, filters: SetMultimap<UUID
 }
 
 
-private val UPSERT_SQL = "INSERT INTO ${E.name} (${INSERT_COLUMNS.joinToString(",")}) VALUES (${(0 until INSERT_COLUMNS.size).joinToString(",") { "?" }}) " +
+val EDGES_UPSERT_SQL = "INSERT INTO ${E.name} (${INSERT_COLUMNS.joinToString(",")}) VALUES (${(0 until INSERT_COLUMNS.size).joinToString(",") { "?" }}) " +
         "ON CONFLICT (${KEY_COLUMNS.joinToString(",")}) " +
         "DO UPDATE SET version = EXCLUDED.version, versions = ${E.name}.versions || EXCLUDED.version"
 
@@ -914,4 +889,29 @@ internal fun entityCountColumnName(index: Int): String {
 
 internal fun associationCountColumnName(index: Int): String {
     return "${ASSOC}_${index}_count"
+}
+
+fun bindColumnsForEdge(
+        ps: PreparedStatement,
+        dataEdgeKey: DataEdgeKey,
+        version: Long,
+        versions: java.sql.Array,
+        partitionsInfoByEntitySet: Map<UUID, Pair<Int, List<Int>>>) {
+
+    val edk = dataEdgeKey.src
+    val partitionsInfo = partitionsInfoByEntitySet.getValue(edk.entitySetId)
+
+    var index = 1
+
+    ps.setObject(index++, getPartition(edk.entityKeyId, partitionsInfo.second))
+    ps.setObject(index++, dataEdgeKey.src.entitySetId)
+    ps.setObject(index++, dataEdgeKey.src.entityKeyId)
+    ps.setObject(index++, dataEdgeKey.dst.entitySetId)
+    ps.setObject(index++, dataEdgeKey.dst.entityKeyId)
+    ps.setObject(index++, dataEdgeKey.edge.entitySetId)
+    ps.setObject(index++, dataEdgeKey.edge.entityKeyId)
+    ps.setLong(index++, version)
+    ps.setArray(index++, versions)
+    ps.setInt(index++, partitionsInfo.first)
+    ps.addBatch()
 }

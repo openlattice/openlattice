@@ -6,15 +6,6 @@
 enable-persistence:  false
 session-clustering-enabled: false
 
-cassandra:
-    random-ports: true
-    embedded: true
-    ssl-enabled: false
-    keyspace: "sparks"
-    replication-factor: 1
-    seed-nodes:
-        - "localhost"
-
 hazelcast:
     server: true
     group: "local"
