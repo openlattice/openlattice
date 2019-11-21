@@ -22,6 +22,7 @@ package com.openlattice.controllers;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
+import com.auth0.json.mgmt.users.User;
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableSet;
@@ -45,7 +46,6 @@ import com.openlattice.authorization.util.AuthorizationUtils;
 import com.openlattice.controllers.exceptions.ForbiddenException;
 import com.openlattice.controllers.exceptions.ResourceNotFoundException;
 import com.openlattice.datastore.services.EntitySetManager;
-import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organization.OrganizationEntitySetFlag;
 import com.openlattice.organization.OrganizationIntegrationAccount;
@@ -119,7 +119,10 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
                         .map( AuthorizationUtils::getLastAclKeySafely )
         );
 
-        return Iterables.transform( orgs, org -> filterRolesOfOrganization( org, authorizedRoles ) );
+        return Iterables.transform( orgs, org -> {
+            org.getRoles().removeIf( role -> !authorizedRoles.contains( role ) );
+            return org;
+        } );
     }
 
     @Timed
@@ -146,8 +149,8 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         //TODO: Re-visit roles within an organization being defined as roles which have read on that organization.
         Organization org = organizations.getOrganization( organizationId );
         Set<AclKey> authorizedRoleAclKeys = getAuthorizedRoleAclKeys( org.getRoles() );
-
-        return filterRolesOfOrganization( org, authorizedRoleAclKeys );
+        org.getRoles().removeIf( role -> !authorizedRoleAclKeys.contains( role ) );
+        return org;
     }
 
     @Timed
@@ -598,7 +601,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     )
     public Void updateRoleGrant( UUID organizationId, UUID roleId, Grant grant ) {
         ensureRoleAdminAccess( organizationId, roleId );
-        organizations.updateRoleAutoGrant( organizationId, roleId, grant );
+        organizations.updateRoleGrant( organizationId, roleId, grant );
         return null;
     }
 
@@ -618,7 +621,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     @GetMapping(
             value = ID_PATH + PRINCIPALS + ROLES + ROLE_ID_PATH + MEMBERS,
             produces = MediaType.APPLICATION_JSON_VALUE )
-    public Iterable<Auth0UserBasic> getAllUsersOfRole(
+    public Iterable<User> getAllUsersOfRole(
             @PathVariable( ID ) UUID organizationId,
             @PathVariable( ROLE_ID ) UUID roleId ) {
         ensureRead( organizationId );
@@ -713,20 +716,6 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             throw new ForbiddenException( "EntitySet " + aclKey.toString() + " is not accessible by organization " +
                     "principal " + principal.getPrincipal().getId() + " ." );
         }
-    }
-
-    private static Organization filterRolesOfOrganization( Organization org, Set<AclKey> authorizedRoleAclKeys ) {
-        return new Organization(
-                org.getSecurablePrincipal(),
-                org.getEmailDomains(),
-                org.getMembers(),
-                Sets.filter( org.getRoles(), role -> authorizedRoleAclKeys.contains( role.getAclKey() ) ),
-                org.getSmsEntitySetInfo(),
-                org.getPartitions(),
-                org.getApps(),
-                org.getConnections(),
-                org.getGrants()
-        );
     }
 
 }
