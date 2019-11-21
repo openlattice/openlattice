@@ -188,23 +188,19 @@ class HazelcastOrganizationService(
     }
 
     fun updateTitle(organizationId: UUID, title: String) {
-        //This is really inefficient, but should be good enough
         val aclKey = AclKey(organizationId)
         securePrincipalsManager.updateTitle(aclKey, title)
-        val sp = securePrincipalsManager.getSecurablePrincipal(aclKey) as OrganizationPrincipal
         organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
-            it.securablePrincipal = sp
+            it.securablePrincipal.title = title
         })
         eventBus!!.post(OrganizationUpdatedEvent(organizationId, Optional.of(title), Optional.empty()))
     }
 
     fun updateDescription(organizationId: UUID, description: String) {
-        //This is really inefficient, but should be good enough
         val aclKey = AclKey(organizationId)
         securePrincipalsManager.updateDescription(aclKey, description)
-        val sp = securePrincipalsManager.getSecurablePrincipal(aclKey) as OrganizationPrincipal
         organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
-            it.securablePrincipal = sp
+            it.securablePrincipal.description = description
         })
         eventBus!!.post(OrganizationUpdatedEvent(organizationId, Optional.empty(), Optional.of(description)))
     }
@@ -280,7 +276,7 @@ class HazelcastOrganizationService(
         val organization = organizations.getValue(organizationId)
         members.forEach { member ->
             organization.grants.forEach { (roleId, grants) ->
-                grants.forEach { (_,grant) ->
+                grants.forEach { (_, grant) ->
                     val profile = profiles.getValue(member)
 
                     val granted = when (grant.grantType) {
