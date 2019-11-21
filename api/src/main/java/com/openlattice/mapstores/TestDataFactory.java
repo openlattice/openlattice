@@ -18,8 +18,25 @@
 
 package com.openlattice.mapstores;
 
-import com.google.common.collect.*;
-import com.openlattice.authorization.*;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.LinkedHashMultimap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Multimaps;
+import com.google.common.collect.SetMultimap;
+import com.google.common.collect.Sets;
+import com.openlattice.authorization.Ace;
+import com.openlattice.authorization.AceValue;
+import com.openlattice.authorization.Acl;
+import com.openlattice.authorization.AclData;
+import com.openlattice.authorization.AclKey;
+import com.openlattice.authorization.Action;
+import com.openlattice.authorization.Permission;
+import com.openlattice.authorization.Principal;
+import com.openlattice.authorization.PrincipalType;
 import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.AbstractSecurableType;
 import com.openlattice.authorization.securable.SecurableObjectType;
@@ -33,10 +50,9 @@ import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.edm.type.Analyzer;
 import com.openlattice.edm.type.AssociationType;
-import com.openlattice.edm.type.EntityTypePropertyMetadata;
 import com.openlattice.edm.type.EntityType;
+import com.openlattice.edm.type.EntityTypePropertyMetadata;
 import com.openlattice.edm.type.PropertyType;
-
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.Grant;
 import com.openlattice.organizations.GrantType;
@@ -51,22 +67,29 @@ import com.openlattice.search.requests.PersistentSearch;
 import com.openlattice.search.requests.SearchConstraints;
 import com.openlattice.search.requests.SearchDetails;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.time.OffsetDateTime;
+import java.util.Arrays;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Random;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.RandomUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.CharacterPredicates;
 import org.apache.commons.text.RandomStringGenerator;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
-import java.time.OffsetDateTime;
-import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
 @SuppressFBWarnings( value = "SECPR", justification = "Only used for testing." )
 public final class TestDataFactory {
-    private static final  GrantType[]           grants                  = GrantType.values();
+    private static final GrantType[]           grants                  = GrantType.values();
     private static final SecurableObjectType[] securableObjectTypes    = SecurableObjectType.values();
     private static final Permission[]          permissions             = Permission.values();
     private static final Action[]              actions                 = Action.values();
@@ -293,6 +316,8 @@ public final class TestDataFactory {
     }
 
     public static Organization organization() {
+        final var grant = grant();
+
         return new Organization(
                 Optional.of( UUID.randomUUID() ),
                 organizationPrincipal(),
@@ -305,7 +330,8 @@ public final class TestDataFactory {
                 Optional.empty(),
                 Optional.of( Lists.newArrayList( 1, 2, 3 ) ),
                 Sets.newHashSet( randomAlphanumeric( 5 ), randomAlphanumeric( 5 ) ),
-                Maps.newHashMap( ImmutableMap.of( UUID.randomUUID(), grant() ) )
+                Maps.newHashMap( ImmutableMap
+                        .of( UUID.randomUUID(), ImmutableMap.of( grant.getGrantType(), grant() ) ) )
         );
     }
 
@@ -497,7 +523,7 @@ public final class TestDataFactory {
                 Optional.empty() );
     }
 
-    public static EntityTypePropertyMetadata entityTypePropertyMetadata () {
+    public static EntityTypePropertyMetadata entityTypePropertyMetadata() {
         return new EntityTypePropertyMetadata(
                 randomAlphanumeric( 100 ), // title
                 randomAlphanumeric( 100 ), // description
