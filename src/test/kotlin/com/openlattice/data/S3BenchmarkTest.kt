@@ -40,7 +40,7 @@ class S3BenchmarkTest {
         @BeforeClass
         @JvmStatic
         fun setUp() {
-            //val datastoreConfig = setUpAws()
+//            val datastoreConfig = setUpAws()
             val datastoreConfig = setUpLocal()
             val byteBlobDataManager = AwsBlobDataService(
                     datastoreConfig,
