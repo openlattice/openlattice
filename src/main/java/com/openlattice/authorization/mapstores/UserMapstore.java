@@ -20,6 +20,7 @@
 
 package com.openlattice.authorization.mapstores;
 
+import static com.openlattice.postgres.PostgresColumn.USER_DATA;
 import static com.openlattice.postgres.PostgresColumn.USER_ID;
 import static com.openlattice.postgres.PostgresTable.USERS;
 
@@ -136,7 +137,7 @@ public class UserMapstore extends AbstractBasePostgresMapstore<String, User> {
 
     @Override protected User mapToValue( ResultSet rs ) throws SQLException {
         try {
-            return mapper.readValue( rs.getString( USERS.getName()), User.class );
+            return mapper.readValue( rs.getString( USER_DATA.getName()), User.class );
         } catch ( IOException e ) {
             throw new SQLException( "Unable to deserialize from JSONB.", e );
         }
