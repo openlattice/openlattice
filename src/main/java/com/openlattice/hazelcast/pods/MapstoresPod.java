@@ -203,31 +203,6 @@ public class MapstoresPod {
     }
 
     @Bean
-    public SelfRegisteringMapStore<UUID, String> orgTitlesMapstore() {
-        return new OrganizationTitlesMapstore( hikariDataSource );
-    }
-
-    @Bean
-    public SelfRegisteringMapStore<UUID, String> orgDescsMapstore() {
-        return new OrganizationDescriptionsMapstore( hikariDataSource );
-    }
-
-    @Bean
-    public SelfRegisteringMapStore<UUID, DelegatedStringSet> aaEmailDomainsMapstore() {
-        return new OrganizationEmailDomainsMapstore( hikariDataSource );
-    }
-
-    @Bean
-    public SelfRegisteringMapStore<UUID, PrincipalSet> membersMapstore() {
-        return new OrganizationMembersMapstore( hikariDataSource );
-    }
-
-    @Bean
-    public SelfRegisteringMapStore<UUID, DelegatedUUIDSet> orgAppsMapstore() {
-        return new OrganizationAppsMapstore( hikariDataSource );
-    }
-
-    @Bean
     public SelfRegisteringMapStore<UUID, AssociationType> edgeTypeMapstore() {
         return new AssociationTypeMapstore( hikariDataSource );
     }
