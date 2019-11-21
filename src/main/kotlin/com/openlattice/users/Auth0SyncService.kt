@@ -62,7 +62,7 @@ class Auth0SyncService(
         val principal = getPrincipal(user)
         val roles = getRoles(user)
         val sp = spm.getPrincipal(principal.id)
-        processOrganizationEnrollments(sp, principal, user.email)
+        processOrganizationEnrollments(sp, principal, user.email ?: "")
         markUser(user)
     }
 

@@ -17,7 +17,7 @@ import jodd.mail.EmailAddress
  * @return The roles of user
  */
 fun getRoles( user: User) : Set<String> {
-    return (user.appMetadata.getOrDefault("roles", listOf<String>()) as List<String>).toSet()
+    return ( ( user.appMetadata?.getOrDefault( "roles", listOf<String>()) ?: listOf<String>() )as List<String>).toSet()
 }
 
 fun getPrincipal(user: User): Principal {
