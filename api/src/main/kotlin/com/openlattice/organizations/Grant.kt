@@ -11,8 +11,8 @@ import com.openlattice.client.serialization.SerializationConstants
  */
 data class Grant(
         @JsonProperty(SerializationConstants.GRANT_TYPE) val grantType: GrantType,
-        @JsonProperty(SerializationConstants.ATTRIBUTE) val attribute : String = "",
-        @JsonProperty(SerializationConstants.MAPPINGS) val settings: Set<String>
+        @JsonProperty(SerializationConstants.MAPPINGS) val settings: Set<String>,
+        @JsonProperty(SerializationConstants.ATTRIBUTE) val attribute : String = ""
 ) {
     init {
         if( grantType==GrantType.Attributes ) {
