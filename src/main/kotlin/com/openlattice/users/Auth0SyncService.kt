@@ -50,7 +50,6 @@ class Auth0SyncService(
         if (initializationMutex.tryAcquire()) {
             userRoleAclKey = spm.lookup(AuthorizationInitializationTask.GLOBAL_USER_ROLE.principal)
             adminRoleAclKey = spm.lookup(AuthorizationInitializationTask.GLOBAL_ADMIN_ROLE.principal)
-            openlatticeOrganizationAclKey = spm.lookup(OrganizationConstants.OPENLATTICE_ORG_PRINCIPAL)
             globalOrganizationAclKey = spm.lookup(OrganizationConstants.GLOBAL_ORG_PRINCIPAL)
         }
     }
