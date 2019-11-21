@@ -57,21 +57,6 @@ class AwsBlobDataService(
         metadata.contentLength = dataInputStream.available().toLong()
         metadata.contentType = contentType
         val putRequest = PutObjectRequest(datastoreConfiguration.bucketName, s3Key, dataInputStream, metadata)
-//        val transferManager = TransferManagerBuilder.standard().withS3Client(s3).build()
-//        val upload = transferManager.upload(putRequest)
-//        upload.waitForCompletion()
-//        transferManager.shutdownNow(false)
-        attempt(ExponentialBackoff(MAX_DELAY), MAX_ERROR_RETRIES) {
-            s3.putObject(putRequest)
-        }
-    }
-
-    override fun putObjectWithTransferManager(s3Key: String, data: ByteArray, contentType: String) {
-        val metadata = ObjectMetadata()
-        val dataInputStream = data.inputStream()
-        metadata.contentLength = dataInputStream.available().toLong()
-        metadata.contentType = contentType
-        val putRequest = PutObjectRequest(datastoreConfiguration.bucketName, s3Key, dataInputStream, metadata)
         val transferManager = TransferManagerBuilder.standard().withS3Client(s3).build()
         val upload = transferManager.upload(putRequest)
         upload.waitForCompletion()
