@@ -65,6 +65,7 @@ import java.util.stream.Collectors;
  *
  * TODO: It reads EXPIRATION unnecessarily since it is not part of the object stored in memory. Minor optimization
  * to not read this,but would require some work on abstract mapstores.
+ *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class UserMapstore extends AbstractBasePostgresMapstore<String, User> {
@@ -76,18 +77,18 @@ public class UserMapstore extends AbstractBasePostgresMapstore<String, User> {
     }
 
     @Override protected int bind( PreparedStatement ps, String key, int offset ) throws SQLException {
-        ps.setInt( offset, offset++ );
-        return offset;
+        ps.setString( offset, key );
+        return offset + 1;
     }
 
     @Override public String generateTestKey() {
-        return RandomStringUtils.random(10);
+        return RandomStringUtils.random( 10 );
     }
 
     @Override public User generateTestValue() {
         final var user = new User( "conn" );
-        user.setAppMetadata( ImmutableMap.of("foo", ImmutableList.of("1","2","3")) );
-        user.setClientId( RandomStringUtils.random(8) );
+        user.setAppMetadata( ImmutableMap.of( "foo", ImmutableList.of( "1", "2", "3" ) ) );
+        user.setClientId( RandomStringUtils.random( 8 ) );
         user.setBlocked( RandomUtils.nextBoolean() );
         user.setEmail( "foobar@openlattice" );
         user.setId( RandomStringUtils.random( 8 ) );
@@ -97,12 +98,12 @@ public class UserMapstore extends AbstractBasePostgresMapstore<String, User> {
         user.setVerifyEmail( RandomUtils.nextBoolean() );
         user.setEmailVerified( RandomUtils.nextBoolean() );
         user.setNickname( RandomStringUtils.random( 10 ) );
-        user.setPassword( RandomStringUtils.random(8) );
-        user.setPicture( RandomStringUtils.random(8) );
+        user.setPassword( RandomStringUtils.random( 8 ) );
+        user.setPicture( RandomStringUtils.random( 8 ) );
         user.setPhoneVerified( RandomUtils.nextBoolean() );
         user.setVerifyPhoneNumber( RandomUtils.nextBoolean() );
         user.setPhoneNumber( RandomStringUtils.random( 8 ) );
-        user.setUserMetadata( ImmutableMap.of("bar", ImmutableList.of("4","5","6")) );
+        user.setUserMetadata( ImmutableMap.of( "bar", ImmutableList.of( "4", "5", "6" ) ) );
         return user;
     }
 
@@ -120,24 +121,23 @@ public class UserMapstore extends AbstractBasePostgresMapstore<String, User> {
     }
 
     @Override protected void bind( PreparedStatement ps, String key, User value ) throws SQLException {
-        ps.setString( 1, key );
+        var offset = bind( ps, key );
 
-        //TODO: Automate the ON CONFLICT clause.
         try {
-            ps.setString( 2, mapper.writeValueAsString( value ) );
-            ps.setLong( 3, System.currentTimeMillis() );
+            ps.setString( offset++, mapper.writeValueAsString( value ) );
+            ps.setLong( offset, System.currentTimeMillis() );
         } catch ( JsonProcessingException e ) {
             throw new SQLException( "Unable to serialize to JSONB.", e );
         }
     }
 
     @Override protected String mapToKey( ResultSet rs ) throws SQLException {
-        return rs.getString( USER_ID.getName());
+        return rs.getString( USER_ID.getName() );
     }
 
     @Override protected User mapToValue( ResultSet rs ) throws SQLException {
         try {
-            return mapper.readValue( rs.getString( USER_DATA.getName()), User.class );
+            return mapper.readValue( rs.getString( USER_DATA.getName() ), User.class );
         } catch ( IOException e ) {
             throw new SQLException( "Unable to deserialize from JSONB.", e );
         }
