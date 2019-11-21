@@ -20,8 +20,8 @@
 
 package com.openlattice.organizations.roles;
 
+import com.auth0.json.mgmt.users.User;
 import com.openlattice.authorization.*;
-import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.organization.roles.Role;
 import com.google.common.collect.SetMultimap;
 import com.hazelcast.query.Predicate;
@@ -87,13 +87,13 @@ public interface SecurePrincipalsManager {
     // Methods about users
     Collection<Principal> getAllUsersWithPrincipal( AclKey principal );
 
-    Collection<Auth0UserBasic> getAllUserProfilesWithPrincipal( AclKey principal );
+    Collection<User> getAllUserProfilesWithPrincipal( AclKey principal );
 
     boolean principalExists( Principal p );
 
     boolean isPrincipalIdAvailable( String principalId );
 
-    Auth0UserBasic getUser( String userId );
+    User getUser( String userId );
 
     Role getRole( UUID organizationId, UUID roleId );
 
