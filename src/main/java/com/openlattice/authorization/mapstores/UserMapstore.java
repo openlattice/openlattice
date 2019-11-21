@@ -125,8 +125,6 @@ public class UserMapstore extends AbstractBasePostgresMapstore<String, User> {
         try {
             ps.setString( 2, mapper.writeValueAsString( value ) );
             ps.setLong( 3, System.currentTimeMillis() );
-            ps.setString( 4, mapper.writeValueAsString( value ) );
-            ps.setLong( 5, System.currentTimeMillis() );
         } catch ( JsonProcessingException e ) {
             throw new SQLException( "Unable to serialize to JSONB.", e );
         }

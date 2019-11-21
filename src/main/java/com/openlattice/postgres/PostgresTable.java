@@ -303,7 +303,14 @@ public final class PostgresTable {
                     .primaryKey( SECURABLE_OBJECTID );
     public static final PostgresTableDefinition ORGANIZATIONS            =
             new PostgresTableDefinition( "organizations" )
-                    .addColumns( ID, NULLABLE_TITLE, DESCRIPTION, ALLOWED_EMAIL_DOMAINS, MEMBERS, APP_IDS, PARTITIONS, ORGANIZATION )
+                    .addColumns( ID,
+                            NULLABLE_TITLE,
+                            DESCRIPTION,
+                            ALLOWED_EMAIL_DOMAINS,
+                            MEMBERS,
+                            APP_IDS,
+                            PARTITIONS,
+                            ORGANIZATION )
                     .overwriteOnConflict();
     public static final PostgresTableDefinition ORGANIZATION_ASSEMBLIES  =
             new PostgresTableDefinition( "organization_assemblies" )
@@ -402,7 +409,8 @@ public final class PostgresTable {
     public static final PostgresTableDefinition USERS =
             new PostgresTableDefinition( "users" )
                     .addColumns( USER_ID, USER_DATA, EXPIRATION )
-                    .primaryKey( USER_ID );
+                    .primaryKey( USER_ID )
+                    .overwriteOnConflict();
 
     static {
         PRINCIPAL_TREES.addIndexes(
