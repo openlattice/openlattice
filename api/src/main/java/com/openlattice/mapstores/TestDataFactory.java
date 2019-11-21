@@ -311,6 +311,7 @@ public final class TestDataFactory {
 
     public static Grant grant() {
         return new Grant( grants[ r.nextInt( grants.length ) ],
+                RandomStringUtils.random( 8 ),
                 Sets.newHashSet( RandomStringUtils.random( 10 ), RandomStringUtils.random( 10 ) ) );
     }
 
