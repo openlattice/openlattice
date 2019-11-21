@@ -21,9 +21,9 @@ import java.sql.ResultSet
 import java.util.*
 
 const val CONNECTIONS_INDEX = "connections[any]"
-const val GRANTS_INDEX = "grants.values[any]"
 const val MEMBERS_INDEX = "members[any]"
 const val DOMAINS_INDEX = "emailDomains[any]"
+
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -67,7 +67,6 @@ class OrganizationsMapstore(val hds: HikariDataSource) : AbstractBasePostgresMap
     override fun getMapConfig(): MapConfig {
         return super.getMapConfig()
                 .addMapIndexConfig(MapIndexConfig(CONNECTIONS_INDEX, false))
-                .addMapIndexConfig(MapIndexConfig(GRANTS_INDEX, false))
                 .addMapIndexConfig(MapIndexConfig(MEMBERS_INDEX, false))
                 .setInMemoryFormat(InMemoryFormat.OBJECT)
     }
