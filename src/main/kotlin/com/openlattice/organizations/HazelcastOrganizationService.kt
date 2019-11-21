@@ -201,7 +201,7 @@ class HazelcastOrganizationService(
         return organizations[organizationId]?.emailDomains ?: setOf()
     }
 
-    fun setAutoApprovedEmailDomains(organizationId: UUID, emailDomains: Set<String>) {
+    fun setEmailDomains(organizationId: UUID, emailDomains: Set<String>) {
         organizations.executeOnKey(organizationId, OrganizationEntryProcessor { organization ->
             organization.emailDomains.clear()
             organization.emailDomains.addAll(emailDomains)
@@ -209,14 +209,14 @@ class HazelcastOrganizationService(
 
     }
 
-    fun addAutoApprovedEmailDomains(organizationId: UUID, emailDomains: Set<String>) {
+    fun addEmailDomains(organizationId: UUID, emailDomains: Set<String>) {
         organizations.executeOnKey(organizationId,
                                    OrganizationEntryProcessor { organization ->
                                        organization.emailDomains.addAll(emailDomains)
                                    })
     }
 
-    fun removeAutoApprovedEmailDomains(organizationId: UUID, emailDomains: Set<String>) {
+    fun removeEmailDomains(organizationId: UUID, emailDomains: Set<String>) {
         organizations.executeOnKey(organizationId,
                                    OrganizationEntryProcessor { organization ->
                                        organization.emailDomains.removeAll(emailDomains)
