@@ -658,7 +658,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     @Override
     @Timed
     @PostMapping( value = ID_PATH + CONNECTIONS, consumes = MediaType.APPLICATION_JSON_VALUE )
-    public Void addConnection( @PathVariable( ID ) UUID organizationId, @RequestBody Set<String> connections ) {
+    public Void addConnections( @PathVariable( ID ) UUID organizationId, @RequestBody Set<String> connections ) {
         ensureAdminAccess();
         organizations.addConnections( organizationId, connections );
         return null;
