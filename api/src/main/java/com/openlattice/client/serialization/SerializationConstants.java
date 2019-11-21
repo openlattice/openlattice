@@ -51,6 +51,7 @@ public final class SerializationConstants {
     public static final String ASSOCIATION_QUERIES              = "associationQueries";
     public static final String ASSOCIATION_TYPES                = "associationTypes";
     public static final String ASSOCIATION_TYPE_ID              = "associationTypeId";
+    public static final String ATTRIBUTE_KEY                    = "attributeKey";
     public static final String AUDIT_ID                         = "auditId";
     public static final String AUDIT_RECORD_ENTITY_SET_ID       = "auditRecordEntitySetId";
     public static final String AUDIT_RECORD_ENTITY_SET_IDS      = "auditRecordEntitySetIds";
@@ -222,6 +223,7 @@ public final class SerializationConstants {
     public static final String SECOND                           = "second";
     public static final String SECURABLE_PRINCIPAL              = "securablePrincipal";
     public static final String SELF_AGGREGATIONS                = "selfAggregations";
+    public static final String SETTINGS                         = "settings";
     public static final String SHARDS                           = "shards";
     public static final String SMS_ENTITY_SET_INFO              = "smsEntitySetInfo";
     public static final String SORT                             = "sort";
