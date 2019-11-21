@@ -47,7 +47,7 @@ data class Organization(
         @JsonProperty(SerializationConstants.DESCRIPTION_FIELD)
         get() = securablePrincipal.description
 
-    
+
     @JsonCreator
     constructor(
             @JsonProperty(SerializationConstants.ID_FIELD) id: Optional<UUID>,
