@@ -61,7 +61,7 @@ data class Organization(
             @JsonProperty(SerializationConstants.SMS_ENTITY_SET_INFO)
             smsEntitySetInfo: Optional<MutableSet<SmsEntitySetInformation>>,
             @JsonProperty(SerializationConstants.PARTITIONS) partitions: Optional<MutableList<Int>>,
-            @JsonProperty(SerializationConstants.CONNECTIONS) enrollments: MutableSet<String> = mutableSetOf(),
+            @JsonProperty(SerializationConstants.CONNECTIONS) connections: MutableSet<String> = mutableSetOf(),
             @JsonProperty(SerializationConstants.GRANTS) grants: MutableMap<UUID, Grant> = mutableMapOf()
     ) : this(
             OrganizationPrincipal(id, principal, title, description),
@@ -71,7 +71,8 @@ data class Organization(
             smsEntitySetInfo.orElse(mutableSetOf<SmsEntitySetInformation>()),
             partitions.orElse(mutableListOf()),
             apps,
-            connections=enrollments
+            connections,
+            grants
     )
 
 

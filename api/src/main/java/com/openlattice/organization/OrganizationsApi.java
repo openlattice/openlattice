@@ -262,7 +262,7 @@ public interface OrganizationsApi {
 
     //Admin-only APIs
     @POST( BASE + ID_PATH + CONNECTIONS )
-    Void addConnection( @Path( ID ) UUID organizationId, @Body Set<String> connections );
+    Void addConnections( @Path( ID ) UUID organizationId, @Body Set<String> connections );
 
     @PUT( BASE + ID_PATH + CONNECTIONS )
     Void setConnections( @Path( ID ) UUID organizationId, @Body Set<String> connections );
