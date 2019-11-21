@@ -40,8 +40,8 @@ class S3BenchmarkTest {
         @BeforeClass
         @JvmStatic
         fun setUp() {
-            val datastoreConfig = setUpAws()
-            //val datastoreConfig = setUpLocal()
+            //val datastoreConfig = setUpAws()
+            val datastoreConfig = setUpLocal()
             val byteBlobDataManager = AwsBlobDataService(
                     datastoreConfig,
                     MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(2))
@@ -72,7 +72,7 @@ class S3BenchmarkTest {
     }
 
     @Test
-    //@Ignore
+    @Ignore
     fun benchmarkS3() {
         val data = generateTestData()
 
