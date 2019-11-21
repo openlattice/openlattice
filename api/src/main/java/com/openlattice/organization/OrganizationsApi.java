@@ -182,13 +182,13 @@ public interface OrganizationsApi {
      * @param emailDomains The e-mail domain to add to the auto-approval list.
      */
     @POST( BASE + ID_PATH + EMAIL_DOMAINS )
-    Void addAutoApprovedEmailDomains( @Path( ID ) UUID organizationId, @Body Set<String> emailDomains );
+    Void addEmailDomains( @Path( ID ) UUID organizationId, @Body Set<String> emailDomains );
 
     @HTTP(
             method = "DELETE",
             hasBody = true,
             path = BASE + ID_PATH + EMAIL_DOMAINS )
-    Void removeAutoApprovedEmailDomains( @Path( ID ) UUID organizationId, @Body Set<String> emailDomain );
+    Void removeEmailDomains( @Path( ID ) UUID organizationId, @Body Set<String> emailDomain );
 
     /**
      * Adds a single e-mail domain to the auto-approval list. This will fail for users who are not an owner of the
@@ -198,7 +198,7 @@ public interface OrganizationsApi {
      * @param emailDomain The e-mail domain to add to the auto-approval list.
      */
     @PUT( BASE + ID_PATH + EMAIL_DOMAINS + EMAIL_DOMAIN_PATH )
-    Void addAutoApprovedEmailDomain( @Path( ID ) UUID organizationId, @Path( EMAIL_DOMAIN ) String emailDomain );
+    Void addEmailDomain( @Path( ID ) UUID organizationId, @Path( EMAIL_DOMAIN ) String emailDomain );
 
     /**
      * Removes a single e-mail domain to the auto-approval list. This will fail for users who are not an owner of the
@@ -208,7 +208,7 @@ public interface OrganizationsApi {
      * @param emailDomain The e-mail domain to add to the auto-approval list.
      */
     @DELETE( BASE + ID_PATH + EMAIL_DOMAINS + EMAIL_DOMAIN_PATH )
-    Void removeAutoApprovedEmailDomain( @Path( ID ) UUID organizationId, @Path( EMAIL_DOMAIN ) String emailDomain );
+    Void removeEmailDomain( @Path( ID ) UUID organizationId, @Path( EMAIL_DOMAIN ) String emailDomain );
 
     //Endpoints about members
     @GET( BASE + ID_PATH + PRINCIPALS + MEMBERS )

@@ -22,7 +22,7 @@ import java.util.*
 
 data class Organization(
         val securablePrincipal: OrganizationPrincipal,
-        @JsonProperty(SerializationConstants.EMAILS_FIELD) val autoApprovedEmails: MutableSet<String>,
+        @JsonProperty(SerializationConstants.EMAIL_DOMAINS) val emailDomains: MutableSet<String>,
         @JsonProperty(SerializationConstants.MEMBERS_FIELD) val members: MutableSet<Principal>,
         @JsonProperty(SerializationConstants.ROLES) val roles: MutableSet<Role>,
         @JsonProperty(SerializationConstants.SMS_ENTITY_SET_INFO)
@@ -54,7 +54,7 @@ data class Organization(
             @JsonProperty(SerializationConstants.PRINCIPAL) principal: Principal,
             @JsonProperty(SerializationConstants.TITLE_FIELD) title: String,
             @JsonProperty(SerializationConstants.DESCRIPTION_FIELD) description: Optional<String>,
-            @JsonProperty(SerializationConstants.EMAILS_FIELD) autoApprovedEmails: MutableSet<String>,
+            @JsonProperty(SerializationConstants.EMAIL_DOMAINS) autoApprovedEmails: MutableSet<String>,
             @JsonProperty(SerializationConstants.MEMBERS_FIELD) members: MutableSet<Principal>,
             @JsonProperty(SerializationConstants.ROLES) roles: MutableSet<Role>,
             @JsonProperty(SerializationConstants.APPS) apps: MutableSet<UUID>,

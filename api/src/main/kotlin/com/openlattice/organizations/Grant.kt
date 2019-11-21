@@ -28,7 +28,7 @@ data class Grant(
         }
     }
 
-    private fun isValidEmailDomain(email: String ) : Boolean {
+    fun isValidEmailDomain(email: String ) : Boolean {
         val atIndex = email.indexOf("@")
         return (atIndex != - 1) && ( atIndex != (email.length-1))
     }
