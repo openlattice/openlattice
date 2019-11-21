@@ -54,24 +54,18 @@ class Auth0SyncService(
     }
 
     fun syncUser(user: User) {
+        //Figure out which users need to be added to which organizations.
+        //Since we don't want to do O( # organizations ) for each user, we need to lookup organizations on a per user
+        //basis and see if the user needs to be added.
         ensureSecurablePrincipalExists(user)
         val principal = getPrincipal(user)
         val roles = getRoles(user)
-        processAutoEnrollments(principal, roles)
+        val sp = spm.getPrincipal(principal.id)
+        processConnections(sp, principal)
         markUser(user)
     }
 
-//    private fun mapRoles(user: User, roles: Set<String>) {
-//        roles.map { role ->
-//            when (role) {
-//                SystemRole.ADMIN.name -> adminRoleAclKey
-//                SystemRole.USER.name -> userRoleAclKey
-//                SystemRole.AUTHENTICATED_USER.name -> userRoleAclKey
-//                else -> userRoleAclKey //spm.getAllRolesInOrganization()
-//            }
-//        }
-//    }
-
+//
     private fun getConnection(user: Principal): String {
         return user.id.substring(0, user.id.indexOf("|"))
     }
@@ -92,33 +86,16 @@ class Auth0SyncService(
         }
     }
 
-    private fun processAutoEnrollments(principal: Principal, roles: Set<String>) {
+    private fun processConnections( sp: SecurablePrincipal, principal: Principal ) {
+        val connection = getConnection(principal);
+        val missingOrgs = orgService.getOrganizationsWithoutUserAndWithConnection( connection , principal )
 
-        //First do hard coded built-ins
-        val sp = spm.getPrincipal(principal.id)
-        if (roles.contains(SystemRole.AUTHENTICATED_USER.getName()) &&
-                !spm.principalHasChildPrincipal(sp.aclKey, userRoleAclKey)) {
-            orgService.addMembers(globalOrganizationAclKey[0], ImmutableSet.of(principal))
-            orgService.addRoleToPrincipalInOrganization(userRoleAclKey[0], userRoleAclKey[1], principal)
+        missingOrgs.forEach { orgId ->
+            orgService.addMembers(orgId,setOf(principal))
         }
-
-        if (roles.contains(SystemRole.ADMIN.getName()) &&
-                !spm.principalHasChildPrincipal(sp.aclKey, adminRoleAclKey)) {
-            orgService.addMembers(openlatticeOrganizationAclKey[0], ImmutableSet.of(principal))
-            orgService.addRoleToPrincipalInOrganization(adminRoleAclKey[0], adminRoleAclKey[1], principal)
-        }
-
-        orgService
-                .getAutoEnrollments(getConnection(principal))
-                .forEach { org ->
-                    //Only add to org if they aren't already a member.
-                    if (!org.members.contains(principal)) {
-                        orgService.addMembers(org.id, setOf(principal))
-                    }
-                }
-
 
     }
+
 
     fun getExpiredUsers(): BasePostgresIterable<User> {
         val expirationThreshold = System.currentTimeMillis() - 6 * REFRESH_INTERVAL_MILLIS

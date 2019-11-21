@@ -20,6 +20,7 @@ import com.openlattice.organization.OrganizationPrincipal
 import com.openlattice.organization.roles.Role
 import com.openlattice.organizations.events.*
 import com.openlattice.organizations.mapstores.CONNECTIONS_INDEX
+import com.openlattice.organizations.mapstores.MEMBERS_INDEX
 import com.openlattice.organizations.processors.OrganizationEntryProcessor
 import com.openlattice.organizations.processors.OrganizationReadEntryProcessor
 import com.openlattice.organizations.roles.SecurePrincipalsManager
@@ -246,25 +247,38 @@ class HazelcastOrganizationService(
         val nonUserPrincipals = members.filter { it.type != PrincipalType.USER }
         require(nonUserPrincipals.isEmpty()) { "Cannot add non-users principals $nonUserPrincipals to organization $orgAclKey" }
         val organizationId = orgAclKey[0]
-        val organization = organizations.getValue(organizationId)
+
 
         organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
             it.members.addAll(members)
         })
+        grantOrganizationPrincipals(organizationId, members, orgAclKey, profiles)
+    }
 
+    private fun grantOrganizationPrincipals(
+            organizationId: UUID,
+            members: Set<Principal>,
+            orgAclKey: AclKey = AclKey(organizationId),
+            profiles: Map<Principal, Map<String, Set<String>>> = mapOf()
+    ) {
         /*
          * Grant each member any of the roles, for which they meet the crieria.
          */
+        val organization = organizations.getValue(organizationId)
         members.forEach { member ->
             organization.grants.forEach { (roleId, grant) ->
                 val profile = profiles.getValue(member)
 
                 val granted = when (grant.grantType) {
                     GrantType.Automatic -> true
-                    GrantType.Group -> grant.mappings.intersect(profile.getOrDefault("groups", setOf())).isNotEmpty()
-                    GrantType.Attribute -> grant.mappings.intersect(
-                            profile.getOrDefault("app_metadata", setOf())
-                    ).isNotEmpty()
+                    GrantType.Groups -> grant.settings.intersect(profile.getOrDefault("groups", setOf())).isNotEmpty()
+                    GrantType.Roles -> grant.settings.intersect(profile.getOrDefault("roles", setOf())).isNotEmpty()
+                    GrantType.Attributes -> grant.settings
+                            .intersect(profile.getOrDefault(grant.attribute, setOf()))
+                            .isNotEmpty()
+                    GrantType.EmailDomain -> grant.settings.map { it.substring(it.indexOf("@")) }
+                            .intersect(profile.getOrDefault("domains", setOf()))
+                            .isNotEmpty()
                     //Some grants aren't implemented yet.
                     else -> false
                 }
@@ -455,10 +469,6 @@ class HazelcastOrganizationService(
         return partitionManager.allocateDefaultPartitions(partitionCount)
     }
 
-    fun getAutoEnrollments(connection: String): Collection<Organization> {
-        return organizations.values(Predicates.equal(CONNECTIONS_INDEX, connection))
-    }
-
     fun removeUser(principal: Principal) {
         organizations.executeOnEntries(OrganizationEntryProcessor { it.members.remove(principal) })
     }
@@ -487,6 +497,20 @@ class HazelcastOrganizationService(
             it.connections.addAll(connections)
         })
     }
+
+    fun getOrganizationsWithConnection(connection: String): Set<UUID> {
+        return organizations.keySet(Predicates.equal(CONNECTIONS_INDEX, connection))
+    }
+
+    fun getOrganizationsWithoutUserAndWithConnection(connection: String, principal: Principal): Set<UUID> {
+        return organizations.keySet(
+                Predicates.and(
+                        Predicates.equal(CONNECTIONS_INDEX, connection),
+                        Predicates.`in`(MEMBERS_INDEX, principal)
+                )
+        )
+    }
+
 
     companion object {
 
