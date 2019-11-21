@@ -192,7 +192,7 @@ class HazelcastOrganizationService(
         val aclKey = AclKey(organizationId)
         securePrincipalsManager.updateTitle(aclKey, title)
         val sp = securePrincipalsManager.getSecurablePrincipal(aclKey) as OrganizationPrincipal
-        organizations.executeOnKey(organizationId, OrganizationEntryProcessor{
+        organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
             it.securablePrincipal = sp
         })
         eventBus!!.post(OrganizationUpdatedEvent(organizationId, Optional.of(title), Optional.empty()))
@@ -203,7 +203,7 @@ class HazelcastOrganizationService(
         val aclKey = AclKey(organizationId)
         securePrincipalsManager.updateDescription(aclKey, description)
         val sp = securePrincipalsManager.getSecurablePrincipal(aclKey) as OrganizationPrincipal
-        organizations.executeOnKey(organizationId, OrganizationEntryProcessor{
+        organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
             it.securablePrincipal = sp
         })
         eventBus!!.post(OrganizationUpdatedEvent(organizationId, Optional.empty(), Optional.of(description)))
@@ -279,24 +279,28 @@ class HazelcastOrganizationService(
          */
         val organization = organizations.getValue(organizationId)
         members.forEach { member ->
-            organization.grants.forEach { (roleId, grant) ->
-                val profile = profiles.getValue(member)
+            organization.grants.forEach { (roleId, grants) ->
+                grants.forEach { (_,grant) ->
+                    val profile = profiles.getValue(member)
 
-                val granted = when (grant.grantType) {
-                    GrantType.Automatic -> true
-                    GrantType.Groups -> grant.mappings.intersect(profile.getOrDefault("groups", setOf())).isNotEmpty()
-                    GrantType.Roles -> grant.mappings.intersect(profile.getOrDefault("roles", setOf())).isNotEmpty()
-                    GrantType.Attributes -> grant.mappings
-                            .intersect(profile.getOrDefault(grant.attribute, setOf()))
-                            .isNotEmpty()
-                    GrantType.EmailDomain -> grant.mappings.map { it.substring(it.indexOf("@")) }
-                            .intersect(profile.getOrDefault("domains", setOf()))
-                            .isNotEmpty()
-                    //Some grants aren't implemented yet.
-                    else -> false
-                }
-                if (granted) {
-                    addRoleToPrincipalInOrganization(organizationId, roleId, member)
+                    val granted = when (grant.grantType) {
+                        GrantType.Automatic -> true
+                        GrantType.Groups -> grant.mappings.intersect(
+                                profile.getOrDefault("groups", setOf())
+                        ).isNotEmpty()
+                        GrantType.Roles -> grant.mappings.intersect(profile.getOrDefault("roles", setOf())).isNotEmpty()
+                        GrantType.Attributes -> grant.mappings
+                                .intersect(profile.getOrDefault(grant.attribute, setOf()))
+                                .isNotEmpty()
+                        GrantType.EmailDomain -> grant.mappings.map { it.substring(it.indexOf("@")) }
+                                .intersect(profile.getOrDefault("domains", setOf()))
+                                .isNotEmpty()
+                        //Some grants aren't implemented yet.
+                        else -> false
+                    }
+                    if (granted) {
+                        addRoleToPrincipalInOrganization(organizationId, roleId, member)
+                    }
                 }
             }
         }
@@ -486,9 +490,9 @@ class HazelcastOrganizationService(
         organizations.executeOnEntries(OrganizationEntryProcessor { it.members.remove(principal) })
     }
 
-    fun updateRoleAutoGrant(organizationId: UUID, roleId: UUID, grant: Grant) {
+    fun updateRoleGrant(organizationId: UUID, roleId: UUID, grant: Grant) {
         organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
-            it.grants[roleId] = grant
+            it.grants.getOrPut(roleId) { mutableMapOf() }[grant.grantType] = grant
         })
     }
 

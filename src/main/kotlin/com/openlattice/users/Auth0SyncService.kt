@@ -5,13 +5,12 @@ import com.dataloom.mappers.ObjectMappers
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
-import com.openlattice.authorization.AclKey
+import com.openlattice.IdConstants
 import com.openlattice.authorization.Principal
 import com.openlattice.authorization.PrincipalType
 import com.openlattice.authorization.SecurablePrincipal
-import com.openlattice.authorization.initializers.AuthorizationInitializationTask
+import com.openlattice.authorization.SystemRole
 import com.openlattice.hazelcast.HazelcastMap
-import com.openlattice.organization.OrganizationConstants
 import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.postgres.PostgresColumn.*
@@ -20,7 +19,6 @@ import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.zaxxer.hikari.HikariDataSource
 import java.util.*
-import java.util.concurrent.Semaphore
 
 const val DELETE_BATCH_SIZE = 1024
 private val markUserSql = "UPDATE ${USERS.name} SET ${EXPIRATION.name} = ? WHERE ${USER_ID.name} = ?"
@@ -39,20 +37,7 @@ class Auth0SyncService(
     private val users: IMap<String, User> = hazelcastInstance.getMap(HazelcastMap.USERS.name)
 
     private val mapper = ObjectMappers.newJsonMapper()
-    private lateinit var userRoleAclKey: AclKey
-    private lateinit var adminRoleAclKey: AclKey
-    private lateinit var openlatticeOrganizationAclKey: AclKey
-    private lateinit var globalOrganizationAclKey: AclKey
 
-    private val initializationMutex = Semaphore(1)
-
-    fun initialize() {
-        if (initializationMutex.tryAcquire()) {
-            userRoleAclKey = spm.lookup(AuthorizationInitializationTask.GLOBAL_USER_ROLE.principal)
-            adminRoleAclKey = spm.lookup(AuthorizationInitializationTask.GLOBAL_ADMIN_ROLE.principal)
-            globalOrganizationAclKey = spm.lookup(OrganizationConstants.GLOBAL_ORG_PRINCIPAL)
-        }
-    }
 
     fun syncUser(user: User) {
         //Figure out which users need to be added to which organizations.
@@ -62,6 +47,7 @@ class Auth0SyncService(
         val principal = getPrincipal(user)
         val roles = getRoles(user)
         val sp = spm.getPrincipal(principal.id)
+        processGlobalEnrollments(sp, principal, user)
         processOrganizationEnrollments(sp, principal, user.email ?: "")
         markUser(user)
     }
@@ -87,13 +73,22 @@ class Auth0SyncService(
         }
     }
 
+    private fun processGlobalEnrollments(sp: SecurablePrincipal, principal: Principal, user: User) {
+        if (getRoles(user).contains(SystemRole.ADMIN.name)) {
+            orgService.addMembers(IdConstants.GLOBAL_ORGANIZATION_ID.id, setOf(principal))
+        }
+
+    }
+
     private fun processOrganizationEnrollments(sp: SecurablePrincipal, principal: Principal, emailDomain: String) {
-        val connection = getConnection(principal);
+        val connection = getConnection(principal)
+
         val missingOrgsForEmailDomains = if (emailDomain.isNotBlank()) {
             orgService.getOrganizationsWithoutUserAndWithDomains(
                     connection, emailDomain
             )
         } else setOf()
+
         val missingOrgsForConnections = orgService.getOrganizationsWithoutUserAndWithConnection(connection, principal)
 
 
