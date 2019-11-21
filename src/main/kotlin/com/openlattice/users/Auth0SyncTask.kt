@@ -84,7 +84,6 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies>, Hazelca
 
     override fun runTask() {
         val ds = getDependency()
-        ds.users.initialize()
 
         logger.info("Refreshing user list from Auth0.")
         try {
