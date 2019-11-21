@@ -189,11 +189,17 @@ class HazelcastOrganizationService(
 
     fun updateTitle(organizationId: UUID, title: String) {
         securePrincipalsManager.updateTitle(AclKey(organizationId), title)
+        organizations.executeOnKey(organizationId, OrganizationEntryProcessor{
+            it.title = title
+        })
         eventBus!!.post(OrganizationUpdatedEvent(organizationId, Optional.of(title), Optional.empty()))
     }
 
     fun updateDescription(organizationId: UUID, description: String) {
         securePrincipalsManager.updateDescription(AclKey(organizationId), description)
+        organizations.executeOnKey(organizationId, OrganizationEntryProcessor{
+            it.description = description
+        })
         eventBus!!.post(OrganizationUpdatedEvent(organizationId, Optional.empty(), Optional.of(description)))
     }
 
@@ -272,12 +278,12 @@ class HazelcastOrganizationService(
 
                 val granted = when (grant.grantType) {
                     GrantType.Automatic -> true
-                    GrantType.Groups -> grant.settings.intersect(profile.getOrDefault("groups", setOf())).isNotEmpty()
-                    GrantType.Roles -> grant.settings.intersect(profile.getOrDefault("roles", setOf())).isNotEmpty()
-                    GrantType.Attributes -> grant.settings
+                    GrantType.Groups -> grant.mappings.intersect(profile.getOrDefault("groups", setOf())).isNotEmpty()
+                    GrantType.Roles -> grant.mappings.intersect(profile.getOrDefault("roles", setOf())).isNotEmpty()
+                    GrantType.Attributes -> grant.mappings
                             .intersect(profile.getOrDefault(grant.attribute, setOf()))
                             .isNotEmpty()
-                    GrantType.EmailDomain -> grant.settings.map { it.substring(it.indexOf("@")) }
+                    GrantType.EmailDomain -> grant.mappings.map { it.substring(it.indexOf("@")) }
                             .intersect(profile.getOrDefault("domains", setOf()))
                             .isNotEmpty()
                     //Some grants aren't implemented yet.
