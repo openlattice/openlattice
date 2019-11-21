@@ -239,6 +239,16 @@ public interface OrganizationsApi {
             @Path( ROLE_ID ) UUID roleId,
             @Body String description );
 
+    /**
+     * Each organization can have one grant for each grant type per role. Most grant types accept multiple mappings
+     * if multiple settings are required.
+     *
+     * @param organizationId The organziation id for which to update the grant.
+     * @param roleId The role for which to update the grant.
+     * @param grant The grant to update.
+     *
+     * @return Nothing.
+     */
     @PUT( BASE + ID_PATH + PRINCIPALS + ROLES + ROLE_ID_PATH + GRANT )
     Void updateRoleGrant(
             @Path( ID ) UUID organizationId,

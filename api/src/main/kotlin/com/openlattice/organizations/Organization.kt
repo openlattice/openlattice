@@ -30,7 +30,9 @@ data class Organization(
         @JsonProperty(SerializationConstants.PARTITIONS) val partitions: MutableList<Int> = mutableListOf(),
         @JsonProperty(SerializationConstants.APPS) val apps: MutableSet<UUID> = mutableSetOf(),
         @JsonProperty(SerializationConstants.CONNECTIONS) val connections: MutableSet<String> = mutableSetOf(),
-        @JsonProperty(SerializationConstants.GRANTS) val grants: MutableMap<UUID, Set<Grant>> = mutableMapOf()
+        @JsonProperty(
+                SerializationConstants.GRANTS
+        ) val grants: MutableMap<UUID, MutableMap<GrantType, Grant>> = mutableMapOf()
 ) {
 
     val id: UUID
@@ -64,7 +66,9 @@ data class Organization(
             smsEntitySetInfo: Optional<MutableSet<SmsEntitySetInformation>>,
             @JsonProperty(SerializationConstants.PARTITIONS) partitions: Optional<MutableList<Int>>,
             @JsonProperty(SerializationConstants.CONNECTIONS) connections: MutableSet<String> = mutableSetOf(),
-            @JsonProperty(SerializationConstants.GRANTS) grants: MutableMap<UUID, Set<Grant>> = mutableMapOf()
+            @JsonProperty(
+                    SerializationConstants.GRANTS
+            ) grants: MutableMap<UUID, MutableMap<GrantType, Grant>> = mutableMapOf()
     ) : this(
             OrganizationPrincipal(id, principal, title, description),
             emailDomains,
