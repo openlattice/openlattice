@@ -4,7 +4,6 @@ import com.amazonaws.regions.Region
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.AmazonS3ClientBuilder
-import com.geekbeast.util.StopWatch
 import com.google.common.base.Stopwatch
 import com.google.common.util.concurrent.MoreExecutors
 import com.kryptnostic.rhizome.configuration.amazon.AmazonLaunchConfiguration
@@ -18,7 +17,6 @@ import org.junit.Ignore
 import org.junit.Test
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import org.slf4j.event.Level
 import java.net.URL
 import java.util.*
 import java.util.concurrent.Executors
@@ -26,12 +24,12 @@ import java.util.concurrent.TimeUnit
 import kotlin.math.pow
 import kotlin.math.sqrt
 
+const val NUM_BYTES = 4000
+const val NUM_OBJECTS = 1000
+const val LOG_STEP = 100
 
 class S3BenchmarkTest {
     private val logger: Logger = LoggerFactory.getLogger(S3BenchmarkTest::class.java)
-    private val NUM_BYTES = 4000
-    private val NUM_OBJECTS = 1000
-
     companion object {
         @JvmStatic
         private lateinit var byteBlobDataManager: ByteBlobDataManager
@@ -76,13 +74,8 @@ class S3BenchmarkTest {
     fun benchmarkS3() {
         val data = generateTestData()
 
-        //USING RETRYABLE
-        val putDurationsUsingRetryable = getPutObjectDurations(data, false)
-        printStats(putDurationsUsingRetryable)
-
-        //USING TRANSFERMANAGER
-        val putDurationsUsingTM = getPutObjectDurations(data, true)
-        printStats(putDurationsUsingTM)
+        val putDurations = getPutObjectDurations(data, true)
+        printStats(putDurations)
 
         val getDurations = getGetObjectDurations()
         printStats(getDurations)
@@ -114,7 +107,7 @@ class S3BenchmarkTest {
             byteBlobDataManager.putObject(key, data, "png")
             durations.add(start.elapsed(TimeUnit.MILLISECONDS))
             count++
-            if (count % 100 == 0) {
+            if (count % LOG_STEP == 0) {
                 logger.info("$count objects put")
             }
         }
@@ -134,7 +127,7 @@ class S3BenchmarkTest {
             inputStream.close()
 
             count++
-            if (count % 100 == 0) {
+            if (count % LOG_STEP == 0) {
                 logger.info("$count objects gotten")
             }
         }
