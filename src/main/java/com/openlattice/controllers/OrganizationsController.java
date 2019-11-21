@@ -481,13 +481,13 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     @Override
     @GetMapping(
             value = ID_PATH + PRINCIPALS + MEMBERS )
-    public Iterable<OrganizationMember<User>> getMembers( @PathVariable( ID ) UUID organizationId ) {
+    public Iterable<OrganizationMember> getMembers( @PathVariable( ID ) UUID organizationId ) {
         ensureRead( organizationId );
         Set<Principal> members = organizations.getMembers( organizationId );
         Collection<SecurablePrincipal> securablePrincipals = principalService.getSecurablePrincipals( members );
         return securablePrincipals
                 .stream()
-                .map( sp -> new OrganizationMember<>( sp,
+                .map( sp -> new OrganizationMember( sp,
                         principalService.getUser( sp.getName() ),
                         principalService.getAllPrincipals( sp ) ) )::iterator;
 
