@@ -22,6 +22,7 @@ package com.openlattice.controllers;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
+import com.auth0.json.mgmt.users.User;
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableSet;
@@ -45,7 +46,6 @@ import com.openlattice.authorization.util.AuthorizationUtils;
 import com.openlattice.controllers.exceptions.ForbiddenException;
 import com.openlattice.controllers.exceptions.ResourceNotFoundException;
 import com.openlattice.datastore.services.EntitySetManager;
-import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organization.OrganizationEntitySetFlag;
 import com.openlattice.organization.OrganizationIntegrationAccount;
@@ -478,13 +478,13 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     @Override
     @GetMapping(
             value = ID_PATH + PRINCIPALS + MEMBERS )
-    public Iterable<OrganizationMember> getMembers( @PathVariable( ID ) UUID organizationId ) {
+    public Iterable<OrganizationMember<User>> getMembers( @PathVariable( ID ) UUID organizationId ) {
         ensureRead( organizationId );
         Set<Principal> members = organizations.getMembers( organizationId );
         Collection<SecurablePrincipal> securablePrincipals = principalService.getSecurablePrincipals( members );
         return securablePrincipals
                 .stream()
-                .map( sp -> new OrganizationMember( sp,
+                .map( sp -> new OrganizationMember<>( sp,
                         principalService.getUser( sp.getName() ),
                         principalService.getAllPrincipals( sp ) ) )::iterator;
 
@@ -618,7 +618,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     @GetMapping(
             value = ID_PATH + PRINCIPALS + ROLES + ROLE_ID_PATH + MEMBERS,
             produces = MediaType.APPLICATION_JSON_VALUE )
-    public Iterable<Auth0UserBasic> getAllUsersOfRole(
+    public Iterable<User> getAllUsersOfRole(
             @PathVariable( ID ) UUID organizationId,
             @PathVariable( ROLE_ID ) UUID roleId ) {
         ensureRead( organizationId );
