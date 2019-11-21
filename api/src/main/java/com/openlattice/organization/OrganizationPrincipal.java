@@ -45,13 +45,15 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.SecurablePrincipal;
+
+import java.io.Serializable;
 import java.util.Optional;
 import java.util.UUID;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class OrganizationPrincipal extends SecurablePrincipal {
+public class OrganizationPrincipal extends SecurablePrincipal implements Serializable {
     @JsonCreator
     public OrganizationPrincipal(
             @JsonProperty( SerializationConstants.ID_FIELD ) Optional<UUID> id,
