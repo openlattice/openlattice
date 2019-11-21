@@ -13,7 +13,7 @@ import java.util.*
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-class OrganizationEntryProcessorStreamSerializerTest : AbstractStreamSerializerTest<OrganizationsEntryProcessorStreamSerializer, OrganizationEntryProcessor>(), Serializable {
+class OrganizationEntryProcessorStreamSerializerTest : AbstractStreamSerializerTest<OrganizationsEntryProcessorStreamSerializer, OrganizationEntryProcessor>() {
     private var test  = RandomStringUtils.random(32)
     private val inputOrganization = TestDataFactory.organization()
     private val outputOrganization = Organization(
