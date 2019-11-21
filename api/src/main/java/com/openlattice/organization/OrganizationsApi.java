@@ -18,7 +18,7 @@
 
 package com.openlattice.organization;
 
-import com.openlattice.directory.pojo.Auth0UserBasic;
+import com.auth0.json.mgmt.users.User;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.Grant;
 import com.openlattice.organizations.Organization;
@@ -212,7 +212,7 @@ public interface OrganizationsApi {
 
     //Endpoints about members
     @GET( BASE + ID_PATH + PRINCIPALS + MEMBERS )
-    Iterable<OrganizationMember> getMembers( @Path( ID ) UUID organizationId );
+    Iterable<OrganizationMember<User>> getMembers( @Path( ID ) UUID organizationId );
 
     @PUT( BASE + ID_PATH + PRINCIPALS + MEMBERS + USER_ID_PATH )
     Void addMember( @Path( ID ) UUID organizationId, @Path( USER_ID ) String userId );
@@ -249,7 +249,7 @@ public interface OrganizationsApi {
     Void deleteRole( @Path( ID ) UUID organizationId, @Path( ROLE_ID ) UUID roleId );
 
     @GET( BASE + ID_PATH + PRINCIPALS + ROLES + ROLE_ID_PATH + MEMBERS )
-    Iterable<Auth0UserBasic> getAllUsersOfRole( @Path( ID ) UUID organizationId, @Path( ROLE_ID ) UUID roleId );
+    Iterable<User> getAllUsersOfRole( @Path( ID ) UUID organizationId, @Path( ROLE_ID ) UUID roleId );
 
     @PUT( BASE + ID_PATH + PRINCIPALS + ROLES + ROLE_ID_PATH + MEMBERS + USER_ID_PATH )
     Void addRoleToUser( @Path( ID ) UUID organizationId, @Path( ROLE_ID ) UUID roleId, @Path( USER_ID ) String userId );

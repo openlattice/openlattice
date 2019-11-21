@@ -213,6 +213,7 @@ dependencies {
     compile "org.yaml:snakeyaml:${snakeyaml_version}"
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+    compile "com.auth0:auth0:${project.auth0_version}"
 
     if (project.hasProperty('developmentMode') && project.developmentMode) {
         logger.quiet(project.name + " using project dependencies.")
