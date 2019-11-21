@@ -47,14 +47,14 @@ data class Organization(
         @JsonProperty(SerializationConstants.DESCRIPTION_FIELD)
         get() = securablePrincipal.description
 
-
+    
     @JsonCreator
     constructor(
             @JsonProperty(SerializationConstants.ID_FIELD) id: Optional<UUID>,
             @JsonProperty(SerializationConstants.PRINCIPAL) principal: Principal,
             @JsonProperty(SerializationConstants.TITLE_FIELD) title: String,
             @JsonProperty(SerializationConstants.DESCRIPTION_FIELD) description: Optional<String>,
-            @JsonProperty(SerializationConstants.EMAIL_DOMAINS) autoApprovedEmails: MutableSet<String>,
+            @JsonProperty(SerializationConstants.EMAIL_DOMAINS) emailDomains: MutableSet<String> = mutableSetOf(),
             @JsonProperty(SerializationConstants.MEMBERS_FIELD) members: MutableSet<Principal>,
             @JsonProperty(SerializationConstants.ROLES) roles: MutableSet<Role>,
             @JsonProperty(SerializationConstants.APPS) apps: MutableSet<UUID>,
@@ -65,7 +65,7 @@ data class Organization(
             @JsonProperty(SerializationConstants.GRANTS) grants: MutableMap<UUID, Grant> = mutableMapOf()
     ) : this(
             OrganizationPrincipal(id, principal, title, description),
-            autoApprovedEmails,
+            emailDomains,
             members,
             roles,
             smsEntitySetInfo.orElse(mutableSetOf<SmsEntitySetInformation>()),
