@@ -40,7 +40,7 @@ class S3BenchmarkTest {
         @BeforeClass
         @JvmStatic
         fun setUp() {
-//            val datastoreConfig = setUpAws()
+//          val datastoreConfig = setUpAws()
             val datastoreConfig = setUpLocal()
             val byteBlobDataManager = AwsBlobDataService(
                     datastoreConfig,
@@ -110,15 +110,9 @@ class S3BenchmarkTest {
         val durations = mutableListOf<Long>()
         var count = 0
         for (key in keys) {
-            if (useTM) {
-                val start = Stopwatch.createStarted()
-                byteBlobDataManager.putObjectWithTransferManager(key, data, "png")
-                durations.add(start.elapsed(TimeUnit.MILLISECONDS))
-            } else {
-                val start = Stopwatch.createStarted()
-                byteBlobDataManager.putObject(key, data, "png")
-                durations.add(start.elapsed(TimeUnit.MILLISECONDS))
-            }
+            val start = Stopwatch.createStarted()
+            byteBlobDataManager.putObject(key, data, "png")
+            durations.add(start.elapsed(TimeUnit.MILLISECONDS))
             count++
             if (count % 100 == 0) {
                 logger.info("$count objects put")
