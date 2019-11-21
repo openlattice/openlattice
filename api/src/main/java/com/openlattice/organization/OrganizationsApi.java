@@ -212,7 +212,7 @@ public interface OrganizationsApi {
 
     //Endpoints about members
     @GET( BASE + ID_PATH + PRINCIPALS + MEMBERS )
-    Iterable<OrganizationMember<User>> getMembers( @Path( ID ) UUID organizationId );
+    Iterable<OrganizationMember> getMembers( @Path( ID ) UUID organizationId );
 
     @PUT( BASE + ID_PATH + PRINCIPALS + MEMBERS + USER_ID_PATH )
     Void addMember( @Path( ID ) UUID organizationId, @Path( USER_ID ) String userId );

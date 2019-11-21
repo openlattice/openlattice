@@ -191,7 +191,7 @@ dependencies {
     compile "org.xerial.snappy:snappy-java:${snappy_version}"
     compile "net.jpountz.lz4:lz4:${lz4_version}"
     compile "com.squareup.retrofit2:retrofit:${retrofit2_version}"
-
+    compile "com.auth0:auth0:${project.auth0_version}"
     /*
      * JACKSON SERIALIZATION
      * YAML via SnakeYaml

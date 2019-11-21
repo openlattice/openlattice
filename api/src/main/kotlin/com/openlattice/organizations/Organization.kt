@@ -21,7 +21,7 @@ import java.util.*
  */
 
 data class Organization(
-        val securablePrincipal: OrganizationPrincipal,
+        var securablePrincipal: OrganizationPrincipal,
         @JsonProperty(SerializationConstants.EMAIL_DOMAINS) val emailDomains: MutableSet<String>,
         @JsonProperty(SerializationConstants.MEMBERS_FIELD) val members: MutableSet<Principal>,
         @JsonProperty(SerializationConstants.ROLES) val roles: MutableSet<Role>,
@@ -30,12 +30,13 @@ data class Organization(
         @JsonProperty(SerializationConstants.PARTITIONS) val partitions: MutableList<Int> = mutableListOf(),
         @JsonProperty(SerializationConstants.APPS) val apps: MutableSet<UUID> = mutableSetOf(),
         @JsonProperty(SerializationConstants.CONNECTIONS) val connections: MutableSet<String> = mutableSetOf(),
-        @JsonProperty(SerializationConstants.GRANTS) val grants: MutableMap<UUID, Grant> = mutableMapOf()
+        @JsonProperty(SerializationConstants.GRANTS) val grants: MutableMap<UUID, Set<Grant>> = mutableMapOf()
 ) {
 
     val id: UUID
         @JsonProperty(SerializationConstants.ID_FIELD)
         get() = securablePrincipal.id
+
     val principal: Principal
         @JsonProperty(SerializationConstants.PRINCIPAL)
         get() = securablePrincipal.principal
@@ -43,6 +44,7 @@ data class Organization(
     val title: String
         @JsonProperty(SerializationConstants.TITLE_FIELD)
         get() = securablePrincipal.title
+
     val description: String
         @JsonProperty(SerializationConstants.DESCRIPTION_FIELD)
         get() = securablePrincipal.description
@@ -62,7 +64,7 @@ data class Organization(
             smsEntitySetInfo: Optional<MutableSet<SmsEntitySetInformation>>,
             @JsonProperty(SerializationConstants.PARTITIONS) partitions: Optional<MutableList<Int>>,
             @JsonProperty(SerializationConstants.CONNECTIONS) connections: MutableSet<String> = mutableSetOf(),
-            @JsonProperty(SerializationConstants.GRANTS) grants: MutableMap<UUID, Grant> = mutableMapOf()
+            @JsonProperty(SerializationConstants.GRANTS) grants: MutableMap<UUID, Set<Grant>> = mutableMapOf()
     ) : this(
             OrganizationPrincipal(id, principal, title, description),
             emailDomains,

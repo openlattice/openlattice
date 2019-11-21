@@ -6,12 +6,12 @@ import com.openlattice.client.serialization.SerializationConstants
 /**
  * @param grantType The [GrantType] for this grant.
  * @param attribute The attribute to be used for doing grant matching. Ignored when [grantType] != [GrantType.Attributes]
- * @param settings The settings to be matched on for this grant. Currently, it is simple equality matching.
+ * @param mappings The settings to be matched on for this grant. Currently, it is simple equality matching.
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 data class Grant(
         @JsonProperty(SerializationConstants.GRANT_TYPE) val grantType: GrantType,
-        @JsonProperty(SerializationConstants.MAPPINGS) val settings: Set<String>,
+        @JsonProperty(SerializationConstants.MAPPINGS) val mappings: Set<String>,
         @JsonProperty(SerializationConstants.ATTRIBUTE) val attribute : String = ""
 ) {
     init {
@@ -21,7 +21,7 @@ data class Grant(
             }
         } else if( grantType == GrantType.EmailDomain ) {
             //TODO: Do better e-mail validation here
-            val invalidDomains = settings.filterNot ( ::isValidEmailDomain )
+            val invalidDomains = mappings.filterNot (::isValidEmailDomain )
             require( invalidDomains.isEmpty() ) {
                 "The following domains were not valid e-mails: $invalidDomains"
             }
