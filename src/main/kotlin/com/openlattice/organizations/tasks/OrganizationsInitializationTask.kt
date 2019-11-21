@@ -117,10 +117,12 @@ class OrganizationsInitializationTask : HazelcastInitializationTask<Organization
             )
         }
 
-        private fun globalGrants(): MutableMap<UUID, Set<Grant>> {
+        private fun globalGrants(): MutableMap<UUID, MutableMap<GrantType, Grant>> {
             return mutableMapOf(
-                    GLOBAL_USER_ROLE.id to mutableSetOf(Grant(GrantType.Automatic,  setOf())),
-                    GLOBAL_ADMIN_ROLE.id to mutableSetOf(Grant(GrantType.Roles, setOf(SystemRole.ADMIN.name)))
+                    GLOBAL_USER_ROLE.id to mutableMapOf(GrantType.Automatic to Grant(GrantType.Automatic, setOf())),
+                    GLOBAL_ADMIN_ROLE.id to mutableMapOf(
+                            GrantType.Roles to Grant(GrantType.Roles, setOf(SystemRole.ADMIN.name))
+                    )
             )
 
         }
