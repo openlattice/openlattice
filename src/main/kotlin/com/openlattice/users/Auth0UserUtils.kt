@@ -5,6 +5,8 @@ import com.openlattice.authorization.Principal
 import com.openlattice.authorization.PrincipalType
 import com.openlattice.authorization.SystemRole
 import com.openlattice.organizations.roles.SecurePrincipalsManager
+import jodd.mail.Email
+import jodd.mail.EmailAddress
 
 /**
  *
@@ -20,4 +22,20 @@ fun getRoles( user: User) : Set<String> {
 
 fun getPrincipal(user: User): Principal {
     return Principal(PrincipalType.USER, user.id)
+}
+
+fun getEmailDomain( user: User ) : String {
+    return getEmailDomain(user.email)
+}
+
+fun getEmailDomain(email: String): String {
+    require( isValidEmail(email) ) {
+        "Email $email is not valid e-mail address."
+    }
+    return email.substring(email.indexOf("@"))
+}
+
+fun isValidEmail(email: String ) : Boolean {
+    val atIndex = email.indexOf("@")
+    return (atIndex != - 1) && ( atIndex != (email.length-1))
 }

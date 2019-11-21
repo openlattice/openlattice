@@ -20,6 +20,7 @@ import com.openlattice.organization.OrganizationPrincipal
 import com.openlattice.organization.roles.Role
 import com.openlattice.organizations.events.*
 import com.openlattice.organizations.mapstores.CONNECTIONS_INDEX
+import com.openlattice.organizations.mapstores.DOMAINS_INDEX
 import com.openlattice.organizations.mapstores.MEMBERS_INDEX
 import com.openlattice.organizations.processors.OrganizationEntryProcessor
 import com.openlattice.organizations.processors.OrganizationReadEntryProcessor
@@ -163,7 +164,7 @@ class HazelcastOrganizationService(
                 .map { org ->
                     Organization(
                             org.securablePrincipal,
-                            org.autoApprovedEmails,
+                            org.emailDomains,
                             org.members,
                             //TODO: If you're an organization you can view its roles.
                             org.roles,
@@ -196,14 +197,14 @@ class HazelcastOrganizationService(
         eventBus!!.post(OrganizationUpdatedEvent(organizationId, Optional.empty(), Optional.of(description)))
     }
 
-    fun getAutoApprovedEmailDomains(organizationId: UUID): Set<String> {
-        return organizations[organizationId]?.autoApprovedEmails ?: setOf()
+    fun getEmailDomains(organizationId: UUID): Set<String> {
+        return organizations[organizationId]?.emailDomains ?: setOf()
     }
 
     fun setAutoApprovedEmailDomains(organizationId: UUID, emailDomains: Set<String>) {
         organizations.executeOnKey(organizationId, OrganizationEntryProcessor { organization ->
-            organization.autoApprovedEmails.clear()
-            organization.autoApprovedEmails.addAll(emailDomains)
+            organization.emailDomains.clear()
+            organization.emailDomains.addAll(emailDomains)
         })
 
     }
@@ -211,14 +212,14 @@ class HazelcastOrganizationService(
     fun addAutoApprovedEmailDomains(organizationId: UUID, emailDomains: Set<String>) {
         organizations.executeOnKey(organizationId,
                                    OrganizationEntryProcessor { organization ->
-                                       organization.autoApprovedEmails.addAll(emailDomains)
+                                       organization.emailDomains.addAll(emailDomains)
                                    })
     }
 
     fun removeAutoApprovedEmailDomains(organizationId: UUID, emailDomains: Set<String>) {
         organizations.executeOnKey(organizationId,
                                    OrganizationEntryProcessor { organization ->
-                                       organization.autoApprovedEmails.removeAll(emailDomains)
+                                       organization.emailDomains.removeAll(emailDomains)
                                    })
     }
 
@@ -507,6 +508,15 @@ class HazelcastOrganizationService(
                 Predicates.and(
                         Predicates.equal(CONNECTIONS_INDEX, connection),
                         Predicates.`in`(MEMBERS_INDEX, principal)
+                )
+        )
+    }
+
+    fun getOrganizationsWithoutUserAndWithDomains(connection: String, emailDomain: String): Set<UUID> {
+        return organizations.keySet(
+                Predicates.and(
+                        Predicates.equal(CONNECTIONS_INDEX, connection),
+                        Predicates.`in`(DOMAINS_INDEX, emailDomain)
                 )
         )
     }

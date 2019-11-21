@@ -18,7 +18,7 @@ class OrganizationEntryProcessorStreamSerializerTest : AbstractStreamSerializerT
     private val inputOrganization = TestDataFactory.organization()
     private val outputOrganization = Organization(
             inputOrganization.securablePrincipal,
-            inputOrganization.autoApprovedEmails.toMutableSet(),
+            inputOrganization.emailDomains.toMutableSet(),
             inputOrganization.members.toMutableSet(),
             inputOrganization.roles.toMutableSet(),
             inputOrganization.smsEntitySetInfo.toMutableSet(),
@@ -33,20 +33,20 @@ class OrganizationEntryProcessorStreamSerializerTest : AbstractStreamSerializerT
         val t  = RandomStringUtils.random(32)
         test = t
         return OrganizationEntryProcessor {
-            it.autoApprovedEmails.add(t)
+            it.emailDomains.add(t)
         }
     }
 
     override fun testOutput(inputObject: OrganizationEntryProcessor, outputObject: OrganizationEntryProcessor) {
 //        super.testOutput(inputObject, outputObject)
-        Assert.assertFalse(inputOrganization.autoApprovedEmails.contains(test))
-        Assert.assertFalse(outputOrganization.autoApprovedEmails.contains(test))
+        Assert.assertFalse(inputOrganization.emailDomains.contains(test))
+        Assert.assertFalse(outputOrganization.emailDomains.contains(test))
 
         inputObject.process(mutableMapOf(UUID.randomUUID() to inputOrganization).entries.first())
         outputObject.process(mutableMapOf(UUID.randomUUID() to outputOrganization as Organization?).entries.first())
 
-        Assert.assertTrue(inputOrganization.autoApprovedEmails.contains(test))
-        Assert.assertTrue(outputOrganization.autoApprovedEmails.contains(test))
+        Assert.assertTrue(inputOrganization.emailDomains.contains(test))
+        Assert.assertTrue(outputOrganization.emailDomains.contains(test))
 
     }
 }

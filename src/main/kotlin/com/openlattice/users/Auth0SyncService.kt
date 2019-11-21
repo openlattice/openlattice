@@ -3,10 +3,12 @@ package com.openlattice.users
 import com.auth0.json.mgmt.users.User
 import com.dataloom.mappers.ObjectMappers
 import com.fasterxml.jackson.module.kotlin.readValue
-import com.google.common.collect.ImmutableSet
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
-import com.openlattice.authorization.*
+import com.openlattice.authorization.AclKey
+import com.openlattice.authorization.Principal
+import com.openlattice.authorization.PrincipalType
+import com.openlattice.authorization.SecurablePrincipal
 import com.openlattice.authorization.initializers.AuthorizationInitializationTask
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organization.OrganizationConstants
@@ -61,11 +63,11 @@ class Auth0SyncService(
         val principal = getPrincipal(user)
         val roles = getRoles(user)
         val sp = spm.getPrincipal(principal.id)
-        processConnections(sp, principal)
+        processOrganizationEnrollments(sp, principal, user.email)
         markUser(user)
     }
 
-//
+    //
     private fun getConnection(user: Principal): String {
         return user.id.substring(0, user.id.indexOf("|"))
     }
@@ -79,19 +81,25 @@ class Auth0SyncService(
     private fun markUser(userId: String) {
         hds.connection.use { connection ->
             connection.prepareStatement(markUserSql).use { ps ->
-                ps.setLong(1, System.currentTimeMillis() )
+                ps.setLong(1, System.currentTimeMillis())
                 ps.setString(2, userId)
                 ps.executeUpdate()
             }
         }
     }
 
-    private fun processConnections( sp: SecurablePrincipal, principal: Principal ) {
+    private fun processOrganizationEnrollments(sp: SecurablePrincipal, principal: Principal, emailDomain: String) {
         val connection = getConnection(principal);
-        val missingOrgs = orgService.getOrganizationsWithoutUserAndWithConnection( connection , principal )
+        val missingOrgsForEmailDomains = if (emailDomain.isNotBlank()) {
+            orgService.getOrganizationsWithoutUserAndWithDomains(
+                    connection, emailDomain
+            )
+        } else setOf()
+        val missingOrgsForConnections = orgService.getOrganizationsWithoutUserAndWithConnection(connection, principal)
 
-        missingOrgs.forEach { orgId ->
-            orgService.addMembers(orgId,setOf(principal))
+
+        (missingOrgsForEmailDomains + missingOrgsForConnections).forEach { orgId ->
+            orgService.addMembers(orgId, setOf(principal))
         }
 
     }
