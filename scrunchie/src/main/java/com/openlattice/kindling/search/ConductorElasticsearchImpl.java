@@ -38,7 +38,7 @@ import com.openlattice.edm.type.Analyzer;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
-import com.openlattice.organization.Organization;
+import com.openlattice.organizations.Organization;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
 import com.openlattice.search.SortDefinition;
@@ -432,6 +432,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             String typeName,
             List<PropertyType> propertyTypes ) {
         Map<String, Object> keywordMapping = ImmutableMap.of( TYPE, KEYWORD );
+        Map<String, Object> dateTimeMapping = ImmutableMap.of( TYPE, DATE );
         // securable_object_row type mapping
         Map<String, Object> entityTypeDataMapping = Maps.newHashMap();
         Map<String, Object> fieldMappings = Maps.newHashMap();
@@ -440,7 +441,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         Map<String, Object> entityPropertiesMapping = Maps.newHashMap();
 
         entityPropertiesMapping.put( ENTITY_SET_ID_KEY_ID.getId().toString(), keywordMapping );
-        entityPropertiesMapping.put( LAST_WRITE_ID.getId().toString(), keywordMapping );
+        entityPropertiesMapping.put( LAST_WRITE_ID.getId().toString(), dateTimeMapping );
 
         for ( PropertyType propertyType : propertyTypes ) {
 
