@@ -21,7 +21,6 @@
 
 package com.openlattice.organizations.tasks
 
-import com.google.common.base.Preconditions.checkState
 import com.google.common.base.Stopwatch
 import com.openlattice.IdConstants.GLOBAL_ORGANIZATION_ID
 import com.openlattice.assembler.tasks.ProductionViewSchemaInitializationTask
@@ -56,13 +55,19 @@ class OrganizationsInitializationTask : HazelcastInitializationTask<Organization
         val defaultPartitions = organizationService.allocateDefaultPartitions(organizationService.numberOfPartitions)
 
         if (globalOrg.isPresent) {
+            val org = globalOrg.get()
+            mergeGrants(organizationService.getOrganization(org.id)!!)
             logger.info(
                     "Expected id = {}, Actual id = {}",
                     GLOBAL_ORGANIZATION_ID.id,
-                    globalOrg.get().id
+                    org.id
             )
-            checkState(GLOBAL_ORGANIZATION_ID.id == globalOrg.get().id)
+            require(GLOBAL_ORGANIZATION_ID.id == org.id) {
+                "Mistmatch in expected global org id and read global org id"
+            }
         } else {
+            val org = createGlobalOrg(defaultPartitions)
+            mergeGrants(org)
             organizationService.createOrganization(
                     GLOBAL_ADMIN_ROLE.principal,
                     createGlobalOrg(defaultPartitions)
@@ -72,6 +77,24 @@ class OrganizationsInitializationTask : HazelcastInitializationTask<Organization
         logger.info("Bootstrapping for organizations took {} ms", sw.elapsed(TimeUnit.MILLISECONDS))
     }
 
+    private fun mergeGrants(org: Organization) {
+        globalGrants().forEach { (roleId, grantMap) ->
+            grantMap.forEach { (grantType, grant) ->
+                org.grants.getOrPut(roleId) { grantMap }[grantType] = grant
+            }
+        }
+    }
+
+    private fun globalGrants(): MutableMap<UUID, MutableMap<GrantType, Grant>> {
+        val userPrincipal = getDependency().spm.lookupRole(GLOBAL_USER_ROLE.principal)
+        val adminPrincipal = getDependency().spm.lookupRole(GLOBAL_ADMIN_ROLE.principal)
+        return mutableMapOf(
+                userPrincipal.id to mutableMapOf(GrantType.Automatic to Grant(GrantType.Automatic, setOf())),
+                adminPrincipal.id to mutableMapOf(
+                        GrantType.Roles to Grant(GrantType.Roles, setOf(SystemRole.ADMIN.principal.id))
+                )
+        )
+    }
 
     override fun getInitialDelay(): Long {
         return 0
@@ -112,18 +135,10 @@ class OrganizationsInitializationTask : HazelcastInitializationTask<Organization
                     mutableSetOf(),
                     mutableSetOf(),
                     Optional.of(mutableSetOf()),
-                    Optional.of(partitions.toMutableList()),
-                    grants = globalGrants()
+                    Optional.of(partitions.toMutableList())
             )
         }
 
-        private fun globalGrants(): MutableMap<UUID, MutableMap<GrantType, Grant>> {
-            return mutableMapOf(
-                    GLOBAL_USER_ROLE.id to mutableMapOf(GrantType.Automatic to Grant(GrantType.Automatic, setOf())),
-                    GLOBAL_ADMIN_ROLE.id to mutableMapOf(
-                            GrantType.Roles to Grant(GrantType.Roles, setOf(SystemRole.ADMIN.principal.id))
-                    )
-            )
-        }
+
     }
 }
