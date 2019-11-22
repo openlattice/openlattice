@@ -2,6 +2,7 @@ package com.openlattice.organizations
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.openlattice.client.serialization.SerializationConstants
+import org.apache.commons.validator.routines.EmailValidator
 
 /**
  * @param grantType The [GrantType] for this grant.
@@ -12,25 +13,25 @@ import com.openlattice.client.serialization.SerializationConstants
 data class Grant(
         @JsonProperty(SerializationConstants.GRANT_TYPE) val grantType: GrantType,
         @JsonProperty(SerializationConstants.MAPPINGS) val mappings: Set<String>,
-        @JsonProperty(SerializationConstants.ATTRIBUTE) val attribute : String = ""
+        @JsonProperty(SerializationConstants.ATTRIBUTE) val attribute: String = ""
 ) {
     init {
-        if( grantType==GrantType.Attributes ) {
-            require(attribute.isNotBlank() ) {
+        if (grantType == GrantType.Attributes) {
+            require(attribute.isNotBlank()) {
                 "Attribute key must not be blank for Attributes grant type."
             }
-        } else if( grantType == GrantType.EmailDomain ) {
+        } else if (grantType == GrantType.EmailDomain) {
             //TODO: Do better e-mail validation here
-            val invalidDomains = mappings.filterNot (::isValidEmailDomain )
-            require( invalidDomains.isEmpty() ) {
+            val invalidDomains = mappings.filterNot(::isValidEmailDomain)
+            require(invalidDomains.isEmpty()) {
                 "The following domains were not valid e-mails: $invalidDomains"
             }
         }
     }
 
-    fun isValidEmailDomain(email: String ) : Boolean {
+    fun isValidEmailDomain(email: String): Boolean {
         val atIndex = email.indexOf("@")
-        return (atIndex != - 1) && ( atIndex != (email.length-1))
+        return (atIndex != -1) && (atIndex != (email.length - 1)) && EmailValidator.getInstance().isValid(email)
     }
 }
 
