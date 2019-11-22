@@ -596,7 +596,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     @Timed
     @Override
     @PutMapping(
-            value = BASE + ID_PATH + PRINCIPALS + ROLES + ROLE_ID_PATH + GRANT,
+            value = ID_PATH + PRINCIPALS + ROLES + ROLE_ID_PATH + GRANT,
             consumes = MediaType.APPLICATION_JSON_VALUE
     )
     public Void updateRoleGrant(
