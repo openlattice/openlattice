@@ -72,7 +72,7 @@ constructor(
         textingExecutor.execute {
             Stream.generate { twilioQueue.take() }.forEach { (organizationId, messageEntitySetId, messageContents, toPhoneNumber) ->
                 //Not very efficient.
-                val phone = organizations.getOrganization(organizationId).smsEntitySetInfo
+                val phone = organizations.getOrganization(organizationId)!!.smsEntitySetInfo
                         .flatMap { (phoneNumber, _, entitySetIds, _) -> entitySetIds.map { it to phoneNumber } }
                         .toMap()
                         .getValue(messageEntitySetId)
