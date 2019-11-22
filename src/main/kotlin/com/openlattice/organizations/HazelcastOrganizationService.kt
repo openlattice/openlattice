@@ -26,7 +26,7 @@ import com.openlattice.organizations.mapstores.MEMBERS_INDEX
 import com.openlattice.organizations.processors.OrganizationEntryProcessor
 import com.openlattice.organizations.processors.OrganizationReadEntryProcessor
 import com.openlattice.organizations.roles.SecurePrincipalsManager
-import com.openlattice.users.getUserProfile
+import com.openlattice.users.getAppMetadata
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.stream.Stream
@@ -242,7 +242,7 @@ class HazelcastOrganizationService(
     fun addMembers(
             organizationId: UUID, members: Set<Principal>,
             profiles: Map<Principal, Map<String, Set<String>>> = members
-                    .associateWith { getUserProfile(users.getValue(it.id)) }
+                    .associateWith { getAppMetadata(users.getValue(it.id)) }
     ) {
         addMembers(AclKey(organizationId), members, profiles)
         val securablePrincipals = securePrincipalsManager.getSecurablePrincipals(members)
