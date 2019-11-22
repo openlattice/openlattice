@@ -53,7 +53,7 @@ import java.util.UUID;
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class OrganizationPrincipal extends SecurablePrincipal implements Serializable {
+public class OrganizationPrincipal extends SecurablePrincipal {
     @JsonCreator
     public OrganizationPrincipal(
             @JsonProperty( SerializationConstants.ID_FIELD ) Optional<UUID> id,
