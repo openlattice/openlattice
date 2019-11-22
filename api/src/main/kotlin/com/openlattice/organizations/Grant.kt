@@ -2,7 +2,8 @@ package com.openlattice.organizations
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.openlattice.client.serialization.SerializationConstants
-import org.apache.commons.validator.routines.EmailValidator
+import com.openlattice.users.isValidEmail
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 
 /**
  * @param grantType The [GrantType] for this grant.
@@ -10,6 +11,10 @@ import org.apache.commons.validator.routines.EmailValidator
  * @param mappings The settings to be matched on for this grant. Currently, it is simple equality matching.
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
+@SuppressFBWarnings(
+        value = ["BC_BAD_CAST_TO_ABSTRACT_COLLECTION"],
+        justification = "Spotbugs and kotlin don't always get along"
+)
 data class Grant(
         @JsonProperty(SerializationConstants.GRANT_TYPE) val grantType: GrantType,
         @JsonProperty(SerializationConstants.MAPPINGS) val mappings: Set<String>,
@@ -22,16 +27,11 @@ data class Grant(
             }
         } else if (grantType == GrantType.EmailDomain) {
             //TODO: Do better e-mail validation here
-            val invalidDomains = mappings.filterNot(::isValidEmailDomain)
+            val invalidDomains = mappings.filterNot(::isValidEmail)
             require(invalidDomains.isEmpty()) {
                 "The following domains were not valid e-mails: $invalidDomains"
             }
         }
-    }
-
-    fun isValidEmailDomain(email: String): Boolean {
-        val atIndex = email.indexOf("@")
-        return (atIndex != -1) && (atIndex != (email.length - 1)) && EmailValidator.getInstance().isValid(email)
     }
 }
 
