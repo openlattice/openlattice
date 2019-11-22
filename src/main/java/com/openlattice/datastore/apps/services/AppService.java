@@ -45,6 +45,7 @@ import com.openlattice.edm.events.AppDeletedEvent;
 import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.hazelcast.HazelcastMap;
+import com.openlattice.organizations.Organization;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
@@ -218,22 +219,17 @@ public class AppService {
         return roles;
     }
 
-    private String getNextAvailableName( String requestedName ) {
+    private String getNextAvailableName( String name ) {
 
-        if ( !reservations.isReserved( requestedName ) ) {
-            return requestedName;
-        }
+        String nameAttempt = name;
+        int counter = 1;
 
-        String base = requestedName + "_";
-        int counter = 0;
-        String attempt = base + counter;
-
-        while ( reservations.isReserved( attempt ) ) {
+        while ( reservations.isReserved( nameAttempt ) ) {
+            nameAttempt = name + "_" + counter;
             counter++;
-            attempt = base + counter;
         }
 
-        return attempt;
+        return nameAttempt;
     }
 
     public void installAppAndCreateEntitySetCollection(

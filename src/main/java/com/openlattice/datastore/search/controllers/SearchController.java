@@ -38,7 +38,7 @@ import com.openlattice.datastore.apps.services.AppService;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.EntitySetManager;
 import com.openlattice.edm.EntitySet;
-import com.openlattice.organization.Organization;
+import com.openlattice.organizations.Organization;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.search.SearchApi;

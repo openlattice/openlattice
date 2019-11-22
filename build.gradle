@@ -58,7 +58,7 @@ if (DS_XMS == 'null' || DS_XMS == null || DS_XMS == "") {
 }
 
 if (DS_XMX == 'null' || DS_XMX == null || DS_XMX == "") {
-    DS_XMX = '-Xms4g'
+    DS_XMX = '-Xmx4g'
 }
 
 if (DS_ARGS == 'null' || DS_ARGS == null || DS_ARGS == "") {

@@ -29,11 +29,9 @@ import com.openlattice.organizations.HazelcastOrganizationService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
-import retrofit2.http.Path;
 
 import javax.inject.Inject;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping( AppApi.CONTROLLER )
@@ -58,13 +56,13 @@ public class AppController implements AppApi, AuthorizingComponent {
         return appService.getApps();
     }
 
-        @Timed
-        @Override
-        @RequestMapping(
-                method = RequestMethod.POST,
-                consumes = MediaType.APPLICATION_JSON_VALUE,
-                produces = MediaType.APPLICATION_JSON_VALUE )
-        @ResponseStatus( HttpStatus.OK )
+    @Timed
+    @Override
+    @RequestMapping(
+            method = RequestMethod.POST,
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE )
+    @ResponseStatus( HttpStatus.OK )
     public UUID createApp( @RequestBody App app ) {
         ensureAdminAccess();
         return appService.createApp( app );
