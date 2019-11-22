@@ -20,27 +20,18 @@
 
 package com.openlattice.mail.pods;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.kryptnostic.rhizome.configuration.ConfigurationConstants.Profiles;
-import com.kryptnostic.rhizome.configuration.amazon.AmazonLaunchConfiguration;
-import com.kryptnostic.rhizome.configuration.amazon.AwsLaunchConfiguration;
-import com.kryptnostic.rhizome.emails.configuration.MailServiceConfiguration;
-import com.openlattice.ResourceConfigurationLoader;
-import java.io.IOException;
-
-import javax.inject.Inject;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-
+import com.kryptnostic.rhizome.configuration.service.ConfigurationService;
 import com.openlattice.mail.config.MailServiceConfig;
 import com.openlattice.mail.config.MailServiceRequirements;
 import com.openlattice.mail.services.MailRenderer;
 import com.openlattice.mail.services.MailService;
-import com.kryptnostic.rhizome.configuration.service.ConfigurationService;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.Profile;
+
+import javax.inject.Inject;
+import java.io.IOException;
 
 /**
  * This is the plugin pod that will activate a mail service lambda
@@ -58,6 +49,9 @@ public class MailServicePod {
 
     @Inject
     private MailServiceConfig mailServiceConfig;
+
+    @Inject
+    private ApplicationContext context;
 
     @Bean
     public MailService mailService() throws IOException {
