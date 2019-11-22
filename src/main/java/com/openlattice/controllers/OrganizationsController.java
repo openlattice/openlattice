@@ -599,7 +599,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             value = BASE + ID_PATH + PRINCIPALS + ROLES + ROLE_ID_PATH + GRANT,
             consumes = MediaType.APPLICATION_JSON_VALUE
     )
-    public Void updateRoleGrant( UUID organizationId, UUID roleId, Grant grant ) {
+    public Void updateRoleGrant( UUID organizationId, UUID roleId, @RequestBody Grant grant ) {
         ensureRoleAdminAccess( organizationId, roleId );
         organizations.updateRoleGrant( organizationId, roleId, grant );
         return null;
