@@ -25,13 +25,13 @@ fun getEmailDomain(user: User): String {
     return getEmailDomain(user.email)
 }
 
-fun getUserProfile( user: User ) : Map<String, Set<String>> {
-    return user.appMetadata?.mapValues {(_,value) ->
-        when( value ) {
-            !is Collection<*> -> setOf(value as String)
-            else -> (value as Collection<String>).toSet()
-        }
-    } ?: mapOf()
+fun getAppMetadata(user: User): Map<String, Set<String>> {
+    return user.appMetadata.mapValues { (_, v) ->
+        when (v) {
+            is String -> listOf(v)
+            else -> v as Collection<String>
+        }.toSet()
+    }
 }
 
 fun getEmailDomain(email: String): String {
