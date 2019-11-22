@@ -30,7 +30,7 @@ interface AdminApi {
 
 
     /**
-     * Reload the all the in meory caches.
+     * Reload the all the in memory caches.
      */
     @GET(BASE + RELOAD_CACHE)
     fun reloadCache()
@@ -65,6 +65,7 @@ interface AdminApi {
     @POST(BASE + ID_PATH + PHONE)
     fun setOrganizationEntitySetInformation(
             @Path(ID) organizationId: UUID,
-            @Body entitySetInformationList: List<SmsEntitySetInformation>): Int?
+            @Body entitySetInformationList: List<SmsEntitySetInformation>
+    ): Int?
 
 }

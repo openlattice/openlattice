@@ -28,9 +28,7 @@ enum class IdConstants(val id: UUID) {
 
     /* Organizations */
 
-    OPENLATTICE_ORGANIZATION_ID(UUID(0L, 0L)),
     GLOBAL_ORGANIZATION_ID(UUID(1L, 0L)),
-    ROOT_PRINCIPAL_ID(UUID(0L, 1L)),
 
 
     /* ElasticSearch */
