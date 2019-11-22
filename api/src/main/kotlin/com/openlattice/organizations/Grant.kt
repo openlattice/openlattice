@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.openlattice.client.serialization.SerializationConstants
 import com.openlattice.users.isValidEmail
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
+import java.io.Serializable
 
 /**
  * @param grantType The [GrantType] for this grant.
@@ -15,11 +16,12 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
         value = ["BC_BAD_CAST_TO_ABSTRACT_COLLECTION"],
         justification = "Spotbugs and kotlin don't always get along"
 )
+
 data class Grant(
-        @JsonProperty(SerializationConstants.GRANT_TYPE) val grantType: GrantType,
-        @JsonProperty(SerializationConstants.MAPPINGS) val mappings: Set<String>,
-        @JsonProperty(SerializationConstants.ATTRIBUTE) val attribute: String = ""
-) {
+        @JsonProperty(SerializationConstants.GRANT_TYPE) var grantType: GrantType,
+        @JsonProperty(SerializationConstants.MAPPINGS) var mappings: Set<String>,
+        @JsonProperty(SerializationConstants.ATTRIBUTE) var attribute: String = ""
+) : Serializable {
     init {
         if (grantType == GrantType.Attributes) {
             require(attribute.isNotBlank()) {
@@ -34,6 +36,7 @@ data class Grant(
         }
     }
 }
+
 
 enum class GrantType {
     /**
