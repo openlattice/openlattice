@@ -25,6 +25,15 @@ fun getEmailDomain(user: User): String {
     return getEmailDomain(user.email)
 }
 
+fun getUserProfile( user: User ) : Map<String, Set<String>> {
+    return user.appMetadata?.mapValues {(_,value) ->
+        when( value ) {
+            !is Collection<*> -> setOf(value as String)
+            else -> (value as Collection<String>).toSet()
+        }
+    } ?: mapOf()
+}
+
 fun getEmailDomain(email: String): String {
     require(isValidEmail(email)) {
         "Email $email is not valid e-mail address."
