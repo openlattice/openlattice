@@ -36,7 +36,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-@JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include= JsonTypeInfo.As.PROPERTY, property="@class")
+@JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, property="@class")
 public class SecurablePrincipal extends AbstractSecurableObject {
     private final AclKey    aclKey;
     private final Principal principal;
