@@ -38,7 +38,7 @@ class OrganizationsControllerTest : MultipleAuthenticatedUsersBase() {
 
         val usersOfRole1 = organizationsApi.getAllUsersOfRole(organizationID, roleId).toList()
         Assert.assertEquals(1, usersOfRole1.size)
-        Assert.assertEquals(user1.id, usersOfRole1[0].userId)
+        Assert.assertEquals(user1.id, usersOfRole1[0].id)
 
         // try to add role to user2 with user1
         loginAs("user1")
