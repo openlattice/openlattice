@@ -20,29 +20,62 @@
 
 package com.openlattice.controllers;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
+import com.auth0.json.mgmt.users.User;
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Predicates;
-import com.google.common.collect.*;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 import com.openlattice.assembler.Assembler;
-import com.openlattice.authorization.*;
+import com.openlattice.authorization.AccessCheck;
+import com.openlattice.authorization.AclKey;
+import com.openlattice.authorization.Authorization;
+import com.openlattice.authorization.AuthorizationManager;
+import com.openlattice.authorization.AuthorizingComponent;
+import com.openlattice.authorization.EdmAuthorizationHelper;
+import com.openlattice.authorization.Permission;
+import com.openlattice.authorization.Principal;
+import com.openlattice.authorization.PrincipalType;
+import com.openlattice.authorization.Principals;
+import com.openlattice.authorization.SecurableObjectResolveTypeService;
+import com.openlattice.authorization.SecurablePrincipal;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.authorization.util.AuthorizationUtils;
 import com.openlattice.controllers.exceptions.ForbiddenException;
 import com.openlattice.controllers.exceptions.ResourceNotFoundException;
 import com.openlattice.datastore.services.EntitySetManager;
-import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.edm.type.PropertyType;
-import com.openlattice.organization.*;
+import com.openlattice.organization.OrganizationEntitySetFlag;
+import com.openlattice.organization.OrganizationIntegrationAccount;
+import com.openlattice.organization.OrganizationMember;
+import com.openlattice.organization.OrganizationPrincipal;
+import com.openlattice.organization.OrganizationsApi;
 import com.openlattice.organization.roles.Role;
+import com.openlattice.organizations.Grant;
 import com.openlattice.organizations.HazelcastOrganizationService;
+import com.openlattice.organizations.Organization;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
+import java.util.Collection;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+import javax.inject.Inject;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.*;
-
-import javax.inject.Inject;
-import java.util.*;
-import java.util.stream.Collectors;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping( OrganizationsApi.CONTROLLER )
@@ -86,7 +119,10 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
                         .map( AuthorizationUtils::getLastAclKeySafely )
         );
 
-        return Iterables.transform( orgs, org -> filterRolesOfOrganization( org, authorizedRoles ) );
+        return Iterables.transform( orgs, org -> {
+            org.getRoles().removeIf( role -> !authorizedRoles.contains( role ) );
+            return org;
+        } );
     }
 
     @Timed
@@ -95,6 +131,8 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             value = { "", "/" },
             consumes = MediaType.APPLICATION_JSON_VALUE )
     public UUID createOrganizationIfNotExists( @RequestBody Organization organization ) {
+        checkArgument( organization.getConnections().isEmpty() || isAdmin(),
+                "Must be admin to specify auto-enrollments" );
         organizations.createOrganization( Principals.getCurrentUser(), organization );
         securableObjectTypes.createSecurableObjectType( new AclKey( organization.getId() ),
                 SecurableObjectType.Organization );
@@ -111,8 +149,8 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         //TODO: Re-visit roles within an organization being defined as roles which have read on that organization.
         Organization org = organizations.getOrganization( organizationId );
         Set<AclKey> authorizedRoleAclKeys = getAuthorizedRoleAclKeys( org.getRoles() );
-
-        return filterRolesOfOrganization( org, authorizedRoleAclKeys );
+        org.getRoles().removeIf( role -> !authorizedRoleAclKeys.contains( role ) );
+        return org;
     }
 
     @Timed
@@ -372,7 +410,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             produces = MediaType.APPLICATION_JSON_VALUE )
     public Set<String> getAutoApprovedEmailDomains( @PathVariable( ID ) UUID organizationId ) {
         ensureOwner( organizationId );
-        return organizations.getAutoApprovedEmailDomains( organizationId );
+        return organizations.getEmailDomains( organizationId );
     }
 
     @Timed
@@ -384,8 +422,8 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     public Void setAutoApprovedEmailDomain(
             @PathVariable( ID ) UUID organizationId,
             @RequestBody Set<String> emailDomains ) {
-        ensureOwner( organizationId );
-        organizations.setAutoApprovedEmailDomains( organizationId, emailDomains );
+        ensureAdminAccess();
+        organizations.setEmailDomains( organizationId, emailDomains );
         return null;
     }
 
@@ -394,11 +432,11 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     @PostMapping(
             value = ID_PATH + EMAIL_DOMAINS,
             produces = MediaType.APPLICATION_JSON_VALUE )
-    public Void addAutoApprovedEmailDomains(
+    public Void addEmailDomains(
             @PathVariable( ID ) UUID organizationId,
             @RequestBody Set<String> emailDomains ) {
-        ensureOwner( organizationId );
-        organizations.addAutoApprovedEmailDomains( organizationId, emailDomains );
+        ensureAdminAccess();
+        organizations.addEmailDomains( organizationId, emailDomains );
         return null;
     }
 
@@ -407,11 +445,11 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     @DeleteMapping(
             value = ID_PATH + EMAIL_DOMAINS,
             consumes = MediaType.APPLICATION_JSON_VALUE )
-    public Void removeAutoApprovedEmailDomains(
+    public Void removeEmailDomains(
             @PathVariable( ID ) UUID organizationId,
             @RequestBody Set<String> emailDomains ) {
-        ensureOwner( organizationId );
-        organizations.removeAutoApprovedEmailDomains( organizationId, emailDomains );
+        ensureAdminAccess();
+        organizations.removeEmailDomains( organizationId, emailDomains );
         return null;
     }
 
@@ -419,11 +457,11 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     @Override
     @PutMapping(
             value = ID_PATH + EMAIL_DOMAINS + EMAIL_DOMAIN_PATH )
-    public Void addAutoApprovedEmailDomain(
+    public Void addEmailDomain(
             @PathVariable( ID ) UUID organizationId,
             @PathVariable( EMAIL_DOMAIN ) String emailDomain ) {
-        ensureOwner( organizationId );
-        organizations.addAutoApprovedEmailDomains( organizationId, ImmutableSet.of( emailDomain ) );
+        ensureAdminAccess();
+        organizations.addEmailDomains( organizationId, ImmutableSet.of( emailDomain ) );
         return null;
     }
 
@@ -431,11 +469,11 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     @Override
     @DeleteMapping(
             value = ID_PATH + EMAIL_DOMAINS + EMAIL_DOMAIN_PATH )
-    public Void removeAutoApprovedEmailDomain(
+    public Void removeEmailDomain(
             @PathVariable( ID ) UUID organizationId,
             @PathVariable( EMAIL_DOMAIN ) String emailDomain ) {
-        ensureOwner( organizationId );
-        organizations.removeAutoApprovedEmailDomains( organizationId, ImmutableSet.of( emailDomain ) );
+        ensureAdminAccess();
+        organizations.removeEmailDomains( organizationId, ImmutableSet.of( emailDomain ) );
         return null;
     }
 
@@ -512,18 +550,6 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
                 .map( Authorization::getAclKey ).collect( Collectors.toSet() );
     }
 
-    private static Organization filterRolesOfOrganization( Organization org, Set<AclKey> authorizedRoleAclKeys ) {
-        return new Organization(
-                org.getSecurablePrincipal(),
-                org.getAutoApprovedEmails(),
-                org.getMembers(),
-                Sets.filter( org.getRoles(), role -> authorizedRoleAclKeys.contains( role.getAclKey() ) ),
-                org.getApps(),
-                org.getSmsEntitySetInfo(),
-                org.getPartitions()
-        );
-    }
-
     @Timed
     @Override
     @GetMapping(
@@ -569,6 +595,18 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
 
     @Timed
     @Override
+    @PutMapping(
+            value = BASE + ID_PATH + PRINCIPALS + ROLES + ROLE_ID_PATH + GRANT,
+            consumes = MediaType.APPLICATION_JSON_VALUE
+    )
+    public Void updateRoleGrant( UUID organizationId, UUID roleId, Grant grant ) {
+        ensureRoleAdminAccess( organizationId, roleId );
+        organizations.updateRoleGrant( organizationId, roleId, grant );
+        return null;
+    }
+
+    @Timed
+    @Override
     @DeleteMapping(
             value = ID_PATH + PRINCIPALS + ROLES + ROLE_ID_PATH )
     public Void deleteRole( @PathVariable( ID ) UUID organizationId, @PathVariable( ROLE_ID ) UUID roleId ) {
@@ -583,7 +621,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     @GetMapping(
             value = ID_PATH + PRINCIPALS + ROLES + ROLE_ID_PATH + MEMBERS,
             produces = MediaType.APPLICATION_JSON_VALUE )
-    public Iterable<Auth0UserBasic> getAllUsersOfRole(
+    public Iterable<User> getAllUsersOfRole(
             @PathVariable( ID ) UUID organizationId,
             @PathVariable( ROLE_ID ) UUID roleId ) {
         ensureRead( organizationId );
@@ -617,6 +655,32 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
 
         organizations.removeRoleFromUser( new AclKey( organizationId, roleId ),
                 new Principal( PrincipalType.USER, userId ) );
+        return null;
+    }
+
+    @Override
+    @Timed
+    @PostMapping( value = ID_PATH + CONNECTIONS, consumes = MediaType.APPLICATION_JSON_VALUE )
+    public Void addConnections( @PathVariable( ID ) UUID organizationId, @RequestBody Set<String> connections ) {
+        ensureAdminAccess();
+        organizations.addConnections( organizationId, connections );
+        return null;
+    }
+
+    @Timed
+    @PutMapping( value = ID_PATH + CONNECTIONS, consumes = MediaType.APPLICATION_JSON_VALUE )
+    @Override
+    public Void setConnections( @PathVariable( ID ) UUID organizationId, @RequestBody Set<String> connections ) {
+        ensureAdminAccess();
+        organizations.setConnections( organizationId, connections );
+        return null;
+    }
+
+    @Timed
+    @DeleteMapping( value = ID_PATH + CONNECTIONS, consumes = MediaType.APPLICATION_JSON_VALUE )
+    @Override
+    public Void removeConnections( @PathVariable( ID ) UUID organizationId, @RequestBody Set<String> connections ) {
+        organizations.removeConnections( organizationId, connections );
         return null;
     }
 

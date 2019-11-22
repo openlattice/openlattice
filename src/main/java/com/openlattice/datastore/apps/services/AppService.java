@@ -56,7 +56,7 @@ import com.openlattice.edm.events.AppTypeDeletedEvent;
 import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.edm.set.EntitySetFlag;
 import com.openlattice.hazelcast.HazelcastMap;
-import com.openlattice.organization.Organization;
+import com.openlattice.organizations.Organization;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
@@ -151,7 +151,7 @@ public class AppService {
         String nameAttempt = name;
         int counter = 1;
         while ( reservations.isReserved( nameAttempt ) ) {
-            nameAttempt = name + "_" + String.valueOf( counter );
+            nameAttempt = name + "_" + counter;
             counter++;
         }
         return nameAttempt;
@@ -298,12 +298,18 @@ public class AppService {
         Map<UUID, Organization> orgsById = StreamUtil.stream( organizations )
                 .collect( Collectors.toMap( org -> org.getId(), Function.identity() ) );
 
-        Map<UUID, Map<AppConfigKey, AppTypeSetting>> orgsToSettings = orgsById.keySet().stream()
+
+        Map<UUID, Map<AppConfigKey, AppTypeSetting>> orgsToSettings = orgsById
+                .keySet()
+                .stream()
                 .filter( orgId -> organizationService.getOrganizationApps( orgId ).contains( appId ) )
                 .collect( Collectors
-                        .toMap( Function.identity(), orgId -> appConfigs.getAll( app.getAppTypeIds().stream()
-                                .map( id -> new AppConfigKey( appId, orgId, id ) ).collect(
-                                        Collectors.toSet() ) ) ) );
+                        .toMap( Function.identity(), orgId -> appConfigs.getAll(
+                                app.getAppTypeIds()
+                                        .stream()
+                                        .map( id -> new AppConfigKey( appId, orgId, id ) )
+                                        .collect( Collectors.toSet() )
+                        )  ));
 
         Set<AccessCheck> accessChecks = orgsToSettings.values().stream().flatMap( map -> map.values().stream() )
                 .map( setting -> new AccessCheck( new AclKey( setting.getEntitySetId() ),
