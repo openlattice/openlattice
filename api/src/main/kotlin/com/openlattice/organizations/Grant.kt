@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.openlattice.client.serialization.SerializationConstants
 import com.openlattice.users.isValidEmail
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
+import java.io.Serializable
 
 /**
  * @param grantType The [GrantType] for this grant.
@@ -19,7 +20,7 @@ data class Grant(
         @JsonProperty(SerializationConstants.GRANT_TYPE) val grantType: GrantType,
         @JsonProperty(SerializationConstants.MAPPINGS) val mappings: Set<String>,
         @JsonProperty(SerializationConstants.ATTRIBUTE) val attribute: String = ""
-) {
+) : Serializable {
     init {
         if (grantType == GrantType.Attributes) {
             require(attribute.isNotBlank()) {
