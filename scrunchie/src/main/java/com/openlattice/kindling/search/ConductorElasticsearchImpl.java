@@ -435,6 +435,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             String typeName,
             List<PropertyType> propertyTypes ) {
         Map<String, Object> keywordMapping = ImmutableMap.of( TYPE, KEYWORD );
+        Map<String, Object> dateTimeMapping = ImmutableMap.of( TYPE, DATE );
         // securable_object_row type mapping
         Map<String, Object> entityTypeDataMapping = Maps.newHashMap();
         Map<String, Object> fieldMappings = Maps.newHashMap();
@@ -443,7 +444,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         Map<String, Object> entityPropertiesMapping = Maps.newHashMap();
 
         entityPropertiesMapping.put( ENTITY_SET_ID_KEY_ID.getId().toString(), keywordMapping );
-        entityPropertiesMapping.put( LAST_WRITE_ID.getId().toString(), keywordMapping );
+        entityPropertiesMapping.put( LAST_WRITE_ID.getId().toString(), dateTimeMapping );
 
         for ( PropertyType propertyType : propertyTypes ) {
 
