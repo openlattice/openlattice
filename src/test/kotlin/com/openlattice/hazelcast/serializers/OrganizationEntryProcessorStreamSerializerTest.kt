@@ -14,7 +14,7 @@ import java.util.*
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 class OrganizationEntryProcessorStreamSerializerTest : AbstractStreamSerializerTest<OrganizationsEntryProcessorStreamSerializer, OrganizationEntryProcessor>() {
-    private var test  = RandomStringUtils.random(32)
+    private var test = RandomStringUtils.random(32)
     private val inputOrganization = TestDataFactory.organization()
     private val outputOrganization = Organization(
             inputOrganization.securablePrincipal,
@@ -30,10 +30,12 @@ class OrganizationEntryProcessorStreamSerializerTest : AbstractStreamSerializerT
     }
 
     override fun createInput(): OrganizationEntryProcessor {
-        val t  = RandomStringUtils.random(32)
+        val t = RandomStringUtils.random(32)
         test = t
+        val grant = TestDataFactory.grant()
         return OrganizationEntryProcessor {
             it.emailDomains.add(t)
+            it.grants.getOrPut(UUID.randomUUID()) { mutableMapOf() }[grant.grantType] = grant
         }
     }
 
