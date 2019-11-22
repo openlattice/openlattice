@@ -8,8 +8,8 @@ import java.util.*
 data class AppInstallation(
         @JsonProperty(SerializationConstants.ENTITY_SET_COLLECTION_ID) val entitySetCollectionId: UUID?,
         @JsonProperty(SerializationConstants.PREFIX) val prefix: String?,
-        @JsonProperty(SerializationConstants.TEMPLATE) val template: Map<UUID, UUID>?,
-        @JsonProperty(SerializationConstants.SETTINGS) val settings: Map<String, Any>?) {
+        @JsonProperty(SerializationConstants.TEMPLATE) val template: MutableMap<UUID, UUID>?,
+        @JsonProperty(SerializationConstants.SETTINGS) val settings: MutableMap<String, Any>?) {
 
     init {
 

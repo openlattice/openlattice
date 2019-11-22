@@ -219,7 +219,6 @@ public final class SerializationConstants {
     public static final String RESULT                           = "result";
     public static final String RESULT_SUMMARY                   = "resultSummary";
     public static final String ROLES                            = "roles";
-    public static final String SETTINGS                         = "settings";
     public static final String SCHEMA                           = "schema";
     public static final String SCHEMAS                          = "schemas";
     public static final String SEARCH_FIELDS                    = "searchFields";

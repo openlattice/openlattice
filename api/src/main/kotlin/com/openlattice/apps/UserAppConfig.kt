@@ -8,5 +8,5 @@ data class UserAppConfig(
         @JsonProperty(SerializationConstants.ORGANIZATION_ID) val organizationId: UUID,
         @JsonProperty(SerializationConstants.ENTITY_SET_COLLECTION_ID) val entitySetCollectionId: UUID,
         @JsonProperty(SerializationConstants.ROLES) val roles: Set<UUID>,
-        @JsonProperty(SerializationConstants.SETTINGS) val settings: Map<String, Object>
+        @JsonProperty(SerializationConstants.SETTINGS) val settings: Map<String, Any>
 )
