@@ -120,7 +120,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         );
 
         return Iterables.transform( orgs, org -> {
-            org.getRoles().removeIf( role -> !authorizedRoles.contains( role ) );
+            org.getRoles().removeIf( role -> !authorizedRoles.contains( role.getAclKey() ) );
             return org;
         } );
     }
@@ -149,7 +149,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         //TODO: Re-visit roles within an organization being defined as roles which have read on that organization.
         Organization org = organizations.getOrganization( organizationId );
         Set<AclKey> authorizedRoleAclKeys = getAuthorizedRoleAclKeys( org.getRoles() );
-        org.getRoles().removeIf( role -> !authorizedRoleAclKeys.contains( role ) );
+        org.getRoles().removeIf( role -> !authorizedRoleAclKeys.contains( role.getAclKey() ) );
         return org;
     }
 
