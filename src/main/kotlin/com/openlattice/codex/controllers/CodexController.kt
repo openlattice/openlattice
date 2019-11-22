@@ -12,7 +12,7 @@ import com.openlattice.collections.CollectionsManager
 import com.openlattice.controllers.exceptions.BadRequestException
 import com.openlattice.data.DataApi
 import com.openlattice.data.DataEdgeKey
-import com.openlattice.datastore.apps.services.AppService
+import com.openlattice.apps.services.AppService
 import com.openlattice.hazelcast.HazelcastQueue
 import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.postgres.mapstores.AppConfigMapstore

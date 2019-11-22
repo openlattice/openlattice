@@ -34,7 +34,7 @@ import com.openlattice.authorization.util.AuthorizationUtils;
 import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.requests.NeighborEntityDetails;
 import com.openlattice.data.requests.NeighborEntityIds;
-import com.openlattice.datastore.apps.services.AppService;
+import com.openlattice.apps.services.AppService;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.EntitySetManager;
 import com.openlattice.edm.EntitySet;
