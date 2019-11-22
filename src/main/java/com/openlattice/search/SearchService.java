@@ -20,9 +20,11 @@
 
 package com.openlattice.search;
 
+import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION;
+
 import com.codahale.metrics.MetricRegistry;
-import com.codahale.metrics.annotation.Timed;
 import com.codahale.metrics.Timer;
+import com.codahale.metrics.annotation.Timed;
 import com.dataloom.streams.StreamUtil;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.HashMultimap;
@@ -90,7 +92,7 @@ import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.graph.core.GraphService;
 import com.openlattice.graph.edge.Edge;
-import com.openlattice.organization.Organization;
+import com.openlattice.organizations.Organization;
 import com.openlattice.organizations.events.OrganizationCreatedEvent;
 import com.openlattice.organizations.events.OrganizationDeletedEvent;
 import com.openlattice.organizations.events.OrganizationUpdatedEvent;
@@ -102,12 +104,6 @@ import com.openlattice.search.requests.EntityNeighborsFilter;
 import com.openlattice.search.requests.SearchConstraints;
 import com.openlattice.search.requests.SearchResult;
 import com.openlattice.search.requests.SearchTerm;
-import kotlin.Pair;
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.inject.Inject;
 import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.Collection;
@@ -122,8 +118,11 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
-import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION;
+import javax.inject.Inject;
+import kotlin.Pair;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class SearchService {
     private static final Logger logger = LoggerFactory.getLogger( SearchService.class );
