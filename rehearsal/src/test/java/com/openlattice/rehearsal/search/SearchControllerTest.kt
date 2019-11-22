@@ -4,6 +4,7 @@ import com.google.common.base.Strings
 import com.google.common.collect.ImmutableList
 import com.openlattice.authorization.*
 import com.openlattice.data.DataEdgeKey
+import com.openlattice.data.DeleteType
 import com.openlattice.data.EntityDataKey
 import com.openlattice.edm.EdmConstants
 import com.openlattice.mapstores.TestDataFactory
@@ -281,6 +282,103 @@ class SearchControllerTest : MultipleAuthenticatedUsersBase() {
         Assert.assertEquals(setOf(dst.id), neighborData6[ids.random()]!![edge.id]!!.keySet())
 
         loginAs("admin")
+    }
+
+    @Test
+    fun testEntityDeletion() {
+        // create 2 entities
+        val et = createEntityType()
+        val es = createEntitySet(et)
+
+        val testData = TestDataFactory.randomStringEntityData(2, et.properties).values.toList()
+        val entities = dataApi.createEntities(es.id, testData).toSet().zip(testData).toMap()
+
+        // should be indexed automatically
+        val id1 = entities.keys.first()
+        val id2 = entities.keys.last()
+        val searchAll = SearchTerm("*", 0, 10)
+        var searchedEntities = searchApi.executeEntitySetDataQuery(es.id, searchAll)
+
+        Assert.assertEquals(2, searchedEntities.numHits)
+        searchedEntities.hits.forEach { entityData ->
+            val id = UUID.fromString(entityData.getValue(EdmConstants.ID_FQN).first() as String)
+            Assert.assertTrue(entities.keys.contains(id))
+        }
+
+
+        /* Hard delete */
+        dataApi.deleteEntity(es.id, id1, DeleteType.Hard)
+
+        // should be un-indexed automatically
+        searchedEntities = searchApi.executeEntitySetDataQuery(es.id, searchAll)
+
+        Assert.assertEquals(1, searchedEntities.numHits)
+        Assert.assertEquals(
+                id2,
+                UUID.fromString(searchedEntities.hits.first().getValue(EdmConstants.ID_FQN).first() as String)
+        )
+
+
+        /* Soft delete */
+        dataApi.deleteEntity(es.id, id2, DeleteType.Soft)
+
+        // should be un-indexed in background job
+        Thread.sleep(30_000L)
+        searchedEntities = searchApi.executeEntitySetDataQuery(es.id, searchAll)
+        Assert.assertEquals(0, searchedEntities.numHits)
+    }
+
+    @Test
+    fun testEntitySetDataDeletion() {
+        // create 2 entity sets
+        val et = createEntityType()
+        val es1 = createEntitySet(et)
+        val es2 = createEntitySet(et)
+
+        // add data
+        val testData = TestDataFactory.randomStringEntityData(1, et.properties).values.toList()
+        val id1 = dataApi.createEntities(es1.id, testData).first()
+        val id2 = dataApi.createEntities(es2.id, testData).first()
+
+        // should be indexed automatically
+        val searchAll = SearchTerm("*", 0, 10)
+        var searchedEntities1 = searchApi.executeEntitySetDataQuery(es1.id, searchAll)
+        var searchedEntities2 = searchApi.executeEntitySetDataQuery(es2.id, searchAll)
+
+        Assert.assertEquals(1, searchedEntities1.numHits)
+        Assert.assertEquals(1, searchedEntities2.numHits)
+        Assert.assertEquals(
+                id1,
+                UUID.fromString(searchedEntities1.hits.first().getValue(EdmConstants.ID_FQN).first() as String)
+        )
+        Assert.assertEquals(
+                id2,
+                UUID.fromString(searchedEntities2.hits.first().getValue(EdmConstants.ID_FQN).first() as String)
+        )
+
+        /* Hard delete */
+        dataApi.deleteAllEntitiesFromEntitySet(es1.id, DeleteType.Hard)
+
+        // should be indexed automatically
+        searchedEntities1 = searchApi.executeEntitySetDataQuery(es1.id, searchAll)
+        searchedEntities2 = searchApi.executeEntitySetDataQuery(es2.id, searchAll)
+        Assert.assertEquals(0, searchedEntities1.numHits)
+        Assert.assertEquals(1, searchedEntities2.numHits)
+        Assert.assertEquals(
+                id2,
+                UUID.fromString(searchedEntities2.hits.first().getValue(EdmConstants.ID_FQN).first() as String)
+        )
+
+
+        /* Soft delete */
+        dataApi.deleteAllEntitiesFromEntitySet(es2.id, DeleteType.Soft)
+
+        // should be un-indexed in background job
+        Thread.sleep(30_000L)
+        searchedEntities1 = searchApi.executeEntitySetDataQuery(es1.id, searchAll)
+        searchedEntities2 = searchApi.executeEntitySetDataQuery(es2.id, searchAll)
+        Assert.assertEquals(0, searchedEntities1.numHits)
+        Assert.assertEquals(0, searchedEntities2.numHits)
     }
 
 }
