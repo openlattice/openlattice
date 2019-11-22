@@ -16,10 +16,11 @@ import java.io.Serializable
         value = ["BC_BAD_CAST_TO_ABSTRACT_COLLECTION"],
         justification = "Spotbugs and kotlin don't always get along"
 )
+
 data class Grant(
-        @JsonProperty(SerializationConstants.GRANT_TYPE) val grantType: GrantType,
-        @JsonProperty(SerializationConstants.MAPPINGS) val mappings: Set<String>,
-        @JsonProperty(SerializationConstants.ATTRIBUTE) val attribute: String = ""
+        @JsonProperty(SerializationConstants.GRANT_TYPE) var grantType: GrantType,
+        @JsonProperty(SerializationConstants.MAPPINGS) var mappings: Set<String>,
+        @JsonProperty(SerializationConstants.ATTRIBUTE) var attribute: String = ""
 ) : Serializable {
     init {
         if (grantType == GrantType.Attributes) {
@@ -35,6 +36,7 @@ data class Grant(
         }
     }
 }
+
 
 enum class GrantType {
     /**
