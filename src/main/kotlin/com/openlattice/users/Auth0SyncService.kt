@@ -73,8 +73,11 @@ class Auth0SyncService(
     }
 
     private fun processGlobalEnrollments(sp: SecurablePrincipal, principal: Principal, user: User) {
-        if (getRoles(user).contains(SystemRole.ADMIN.name)) {
-            orgService.addMembers(IdConstants.GLOBAL_ORGANIZATION_ID.id, setOf(principal))
+        if (getRoles(user).contains(SystemRole.ADMIN.getName())) {
+            orgService.addMembers(
+                    IdConstants.GLOBAL_ORGANIZATION_ID.id,
+                    setOf(principal),
+                    mapOf(principal to getAppMetadata(user)))
         }
 
     }

@@ -96,4 +96,5 @@ public enum HazelcastMap {
     SECURABLE_OBJECT_TYPES,
     TOKEN_ACCEPTANCE_TIME,
     USERS,
+    TRIGGERS
 }
