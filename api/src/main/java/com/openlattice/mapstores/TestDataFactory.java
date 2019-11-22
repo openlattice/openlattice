@@ -336,10 +336,20 @@ public final class TestDataFactory {
     }
 
     public static Grant grant() {
-        return new Grant( grants[ r.nextInt( grants.length ) ],
-                Sets.newHashSet( RandomStringUtils.random( 10 ), RandomStringUtils.random( 10 ) ),
-                RandomStringUtils.random( 8 )
-        );
+        final var grantType = grants[ r.nextInt( grants.length ) ];
+        final var emailSet = Sets.newHashSet( "foo@bar.com" );
+        final var otherSet = Sets.newHashSet( RandomStringUtils.random( 10 ), RandomStringUtils.random( 10 ) );
+        if ( grantType.equals( GrantType.EmailDomain ) ) {
+            return new Grant( grantType,
+                    emailSet,
+                    RandomStringUtils.random( 8 )
+            );
+        } else {
+            return new Grant( grantType,
+                    otherSet,
+                    RandomStringUtils.random( 8 )
+            );
+        }
     }
 
     public static Principal organizationPrincipal() {
