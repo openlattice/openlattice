@@ -277,8 +277,7 @@ class HazelcastOrganizationService(
         members.forEach { member ->
             organization.grants.forEach { (roleId, grants) ->
                 grants.forEach { (_, grant) ->
-                    val profile = profiles.getValue(member)
-
+                    val profile = profiles.getOrElse(member) { mapOf() }
                     val granted = when (grant.grantType) {
                         GrantType.Automatic -> true
                         GrantType.Groups -> grant.mappings.intersect(
