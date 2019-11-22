@@ -16,26 +16,35 @@ import jodd.mail.EmailAddress
 /**
  * @return The roles of user
  */
-fun getRoles( user: User) : Set<String> {
-    return ( ( user.appMetadata?.getOrDefault( "roles", listOf<String>()) ?: listOf<String>() )as List<String>).toSet()
+fun getRoles(user: User): Set<String> {
+    return ((user.appMetadata?.getOrDefault("roles", listOf<String>()) ?: listOf<String>()) as List<String>).toSet()
 }
 
 fun getPrincipal(user: User): Principal {
     return Principal(PrincipalType.USER, user.id)
 }
 
-fun getEmailDomain( user: User ) : String {
+fun getEmailDomain(user: User): String {
     return getEmailDomain(user.email)
 }
 
 fun getEmailDomain(email: String): String {
-    require( isValidEmail(email) ) {
+    require(isValidEmail(email)) {
         "Email $email is not valid e-mail address."
     }
     return email.substring(email.indexOf("@"))
 }
 
-fun isValidEmail(email: String ) : Boolean {
+fun getAppMetadata(user: User): Map<String, Set<String>> {
+    return user.appMetadata.mapValues { (k, v) ->
+        when (v) {
+            is String -> listOf(v)
+            else -> v as Collection<String>
+        }.toSet()
+    }
+}
+
+fun isValidEmail(email: String): Boolean {
     val atIndex = email.indexOf("@")
-    return (atIndex != - 1) && ( atIndex != (email.length-1))
+    return (atIndex != -1) && (atIndex != (email.length - 1))
 }
