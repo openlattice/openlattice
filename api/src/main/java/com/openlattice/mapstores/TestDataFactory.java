@@ -35,12 +35,11 @@ import com.openlattice.data.EntityKey;
 import com.openlattice.edm.EdmDetails;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.requests.MetadataUpdate;
-import com.openlattice.edm.type.Analyzer;
-import com.openlattice.edm.type.AssociationType;
-import com.openlattice.edm.type.EntityType;
-import com.openlattice.edm.type.PropertyType;
-import com.openlattice.organization.Organization;
+import com.openlattice.edm.type.*;
 import com.openlattice.organization.roles.Role;
+import com.openlattice.organizations.Grant;
+import com.openlattice.organizations.GrantType;
+import com.openlattice.organizations.Organization;
 import com.openlattice.postgres.IndexType;
 import com.openlattice.requests.PermissionsRequestDetails;
 import com.openlattice.requests.Request;
@@ -51,6 +50,7 @@ import com.openlattice.search.requests.PersistentSearch;
 import com.openlattice.search.requests.SearchConstraints;
 import com.openlattice.search.requests.SearchDetails;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.commons.text.CharacterPredicates;
 import org.apache.commons.text.RandomStringGenerator;
@@ -64,14 +64,14 @@ import java.util.stream.Stream;
 
 @SuppressFBWarnings( value = "SECPR", justification = "Only used for testing." )
 public final class TestDataFactory {
-    private static final SecurableObjectType[] securableObjectTypes = SecurableObjectType.values();
-    private static final Permission[]          permissions          = Permission.values();
-    private static final Action[]              actions              = Action.values();
-    private static final RequestStatus[]       requestStatuses      = RequestStatus.values();
-    private static final Analyzer[]            analyzers            = Analyzer.values();
-    private static final IndexType[]           INDEX_TYPES          = IndexType.values();
-    private static final Random                r                    = new Random();
-
+    private static final GrantType[]           grants                  = GrantType.values();
+    private static final SecurableObjectType[] securableObjectTypes    = SecurableObjectType.values();
+    private static final Permission[]          permissions             = Permission.values();
+    private static final Action[]              actions                 = Action.values();
+    private static final RequestStatus[]       requestStatuses         = RequestStatus.values();
+    private static final Analyzer[]            analyzers               = Analyzer.values();
+    private static final IndexType[]           INDEX_TYPES             = IndexType.values();
+    private static final Random                r                       = new Random();
     private static final char[][]              allowedLetters          = { { 'a', 'z' }, { 'A', 'Z' } };
     private static final char[][]              allowedDigitsAndLetters = { { 'a', 'z' }, { 'A', 'Z' }, { '0', '9' } };
     private static final RandomStringGenerator random                  = new RandomStringGenerator.Builder()
@@ -291,17 +291,40 @@ public final class TestDataFactory {
     }
 
     public static Organization organization() {
+        final var grant = grant();
+
         return new Organization(
                 Optional.of( UUID.randomUUID() ),
                 organizationPrincipal(),
                 randomAlphanumeric( 5 ),
                 Optional.of( randomAlphanumeric( 5 ) ),
-                ImmutableSet.of( randomAlphanumeric( 5 ), randomAlphanumeric( 5 ) ),
-                ImmutableSet.of( userPrincipal() ),
-                ImmutableSet.of( role() ),
-                ImmutableSet.of( UUID.randomUUID() ),
+                Sets.newHashSet( randomAlphanumeric( 5 ), randomAlphanumeric( 5 ) ),
+                Sets.newHashSet( userPrincipal() ),
+                Sets.newHashSet( role() ),
+                Sets.newHashSet( UUID.randomUUID() ),
                 Optional.empty(),
-                Optional.of( Lists.newArrayList( 1, 2, 3 ) ) );
+                Optional.of( Lists.newArrayList( 1, 2, 3 ) ),
+                Sets.newHashSet( randomAlphanumeric( 5 ), randomAlphanumeric( 5 ) ),
+                Maps.newHashMap( ImmutableMap
+                        .of( UUID.randomUUID(), ImmutableMap.of( grant.getGrantType(), grant() ) ) )
+        );
+    }
+
+    public static Grant grant() {
+        final var grantType = grants[ r.nextInt( grants.length ) ];
+        final var emailSet = Sets.newHashSet( "foo@bar.com" );
+        final var otherSet = Sets.newHashSet( RandomStringUtils.random( 10 ), RandomStringUtils.random( 10 ) );
+        if ( grantType.equals( GrantType.EmailDomain ) ) {
+            return new Grant( grantType,
+                    emailSet,
+                    RandomStringUtils.random( 8 )
+            );
+        } else {
+            return new Grant( grantType,
+                    otherSet,
+                    RandomStringUtils.random( 8 )
+            );
+        }
     }
 
     public static Principal organizationPrincipal() {
@@ -483,6 +506,15 @@ public final class TestDataFactory {
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty() );
+    }
+
+    public static EntityTypePropertyMetadata entityTypePropertyMetadata() {
+        return new EntityTypePropertyMetadata(
+                randomAlphanumeric( 100 ), // title
+                randomAlphanumeric( 100 ), // description
+                Sets.newLinkedHashSet( Arrays.asList( randomAlphanumeric( 5 ) ) ),
+                r.nextBoolean()
+        );
     }
 
     public static Map<UUID, Map<UUID, Set<Object>>> randomBinaryData(

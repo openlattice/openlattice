@@ -4,11 +4,11 @@ import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.PrincipalType;
 import com.openlattice.client.serialization.SerializationConstants;
-import com.openlattice.organization.Organization;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.openlattice.authorization.SecurablePrincipal;
 
+import com.openlattice.organizations.Organization;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
