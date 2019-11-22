@@ -515,19 +515,21 @@ class HazelcastOrganizationService(
         return organizations.keySet(Predicates.equal(CONNECTIONS_INDEX, connection))
     }
 
-    fun getOrganizationsWithoutUserAndWithConnection(connection: String, principal: Principal): Set<UUID> {
+    fun getOrganizationsWithoutUserAndWithConnection(connections: Collection<String>, principal: Principal): Set<UUID> {
         return organizations.keySet(
                 Predicates.and(
-                        Predicates.equal(CONNECTIONS_INDEX, connection),
+                        Predicates.`in`(CONNECTIONS_INDEX, *connections.toTypedArray()),
                         Predicates.`in`(MEMBERS_INDEX, principal)
                 )
         )
     }
 
-    fun getOrganizationsWithoutUserAndWithDomains(connection: String, emailDomain: String): Set<UUID> {
+    fun getOrganizationsWithoutUserAndWithConnectionsAndDomains(
+            connections: Collection<String>, emailDomain: String
+    ): Set<UUID> {
         return organizations.keySet(
                 Predicates.and(
-                        Predicates.equal(CONNECTIONS_INDEX, connection),
+                        Predicates.`in`(CONNECTIONS_INDEX, *connections.toTypedArray()),
                         Predicates.`in`(DOMAINS_INDEX, emailDomain)
                 )
         )

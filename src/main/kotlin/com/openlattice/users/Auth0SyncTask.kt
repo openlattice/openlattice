@@ -125,7 +125,7 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies>, Hazelca
         return managementApi.users().list(
                 UserFilter()
                         .withSearchEngine("v3")
-                        .withFields("user_id,email,nickname,app_metadata",true)
+                        .withFields("user_id,email,nickname,app_metadata,identities",true)
                         .withPage(page, pageSize)
         ).execute()
     }
