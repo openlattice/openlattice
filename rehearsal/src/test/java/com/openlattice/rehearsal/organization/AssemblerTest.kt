@@ -13,7 +13,7 @@ import com.openlattice.data.UpdateType
 import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.launchpad.configuration.*
 import com.openlattice.mapstores.TestDataFactory
-import com.openlattice.organization.Organization
+import com.openlattice.organizations.Organization
 import com.openlattice.organization.OrganizationEntitySetFlag
 import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresColumn.ENTITY_KEY_IDS_COL

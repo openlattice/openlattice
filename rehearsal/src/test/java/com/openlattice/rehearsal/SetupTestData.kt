@@ -24,13 +24,10 @@ package com.openlattice.rehearsal
 import com.openlattice.authentication.AuthenticationTest
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
 import com.openlattice.shuttle.MissionControl
-import com.openlattice.shuttle.Shuttle
-import com.openlattice.shuttle.ShuttleCli
+import com.openlattice.shuttle.ShuttleCliOptions
 import com.openlattice.shuttle.main
-import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.junit.Test
 import java.io.File
-import java.util.*
 
 /**
  * Helper functions for integrating data before running tests.
@@ -64,11 +61,11 @@ open class SetupTestData : MultipleAuthenticatedUsersBase() {
             val email = getUserInfo(SetupEnvironment.admin).email
 
             main(arrayOf(
-                    "-${ShuttleCli.FLIGHT}=$flightFile",
-                    "-${ShuttleCli.CSV}=$dataFile",
-                    "-${ShuttleCli.ENVIRONMENT}=LOCAL",
-                    "-${ShuttleCli.TOKEN}=$tokenAdmin",
-                    "-${ShuttleCli.CREATE}=$email"))
+                    "-${ShuttleCliOptions.FLIGHT}=$flightFile",
+                    "-${ShuttleCliOptions.CSV}=$dataFile",
+                    "-${ShuttleCliOptions.ENVIRONMENT}=LOCAL",
+                    "-${ShuttleCliOptions.TOKEN}=$tokenAdmin",
+                    "-${ShuttleCliOptions.CREATE}=$email"))
         }
 
         /**
