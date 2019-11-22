@@ -1,8 +1,6 @@
 package com.openlattice.apps.processors;
 
 import com.openlattice.apps.App;
-import com.openlattice.apps.AppConfigKey;
-import com.openlattice.apps.AppTypeSetting;
 import com.openlattice.authorization.Permission;
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor;
 

@@ -20,11 +20,12 @@
 
 package com.openlattice.hazelcast.serializers;
 
+import com.openlattice.apps.AppConfigKey;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
-import com.openlattice.apps.AppConfigKey;
+
 import java.io.IOException;
 import java.util.UUID;
 import org.springframework.stereotype.Component;

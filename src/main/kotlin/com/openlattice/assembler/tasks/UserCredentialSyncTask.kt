@@ -78,8 +78,4 @@ class UserCredentialSyncTask : HazelcastInitializationTask<AssemblerDependencies
     override fun getDependenciesClass(): Class<out AssemblerDependencies> {
         return AssemblerDependencies::class.java
     }
-
-    override fun isRunOnceAcrossCluster(): Boolean {
-        return false
-    }
 }

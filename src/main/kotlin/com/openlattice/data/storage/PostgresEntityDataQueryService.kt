@@ -1,6 +1,8 @@
 package com.openlattice.data.storage
 
 import com.codahale.metrics.annotation.Timed
+import com.geekbeast.util.LinearBackoff
+import com.geekbeast.util.attempt
 import com.google.common.collect.Multimaps
 import com.openlattice.IdConstants
 import com.openlattice.analysis.SqlBindInfo
@@ -341,8 +343,10 @@ class PostgresEntityDataQueryService(
                             entityKeyId to rawValue
                         } else {
                             entityKeyId to Multimaps.asMap(JsonDeserializer
-                                                    .validateFormatAndNormalize(rawValue, authorizedPropertyTypes)
-                                                    { "Entity set $entitySetId with entity key id $entityKeyId" })
+                                                                   .validateFormatAndNormalize(
+                                                                           rawValue, authorizedPropertyTypes
+                                                                   )
+                                                                   { "Entity set $entitySetId with entity key id $entityKeyId" })
                         }
                     }.toMap()
 
@@ -351,7 +355,7 @@ class PostgresEntityDataQueryService(
                             entitySetId,
                             entityBatch,
                             authorizedPropertyTypes,
-                            version+1,
+                            version + 1,
                             partitionsInfo.partitionsVersion,
                             partition,
                             awsPassthrough
@@ -424,18 +428,17 @@ class PostgresEntityDataQueryService(
 
             //Make data visible by marking new version in ids table.
             val upsertEntities = connection.prepareStatement(buildUpsertEntitiesAndLinkedData())
-
-            upsertEntities.setObject(1, versionsArrays)
-            upsertEntities.setObject(2, version)
-            upsertEntities.setObject(3, version)
-            upsertEntities.setObject(4, entitySetId)
-            upsertEntities.setArray(5, entityKeyIdsArr)
-            upsertEntities.setInt(6, partition)
-            upsertEntities.setInt(7, partition)
-            upsertEntities.setLong(8, version)
-
-
-            val updatedLinkedEntities = upsertEntities.executeUpdate()
+            val updatedLinkedEntities = attempt(LinearBackoff(60000, 125),32) {
+                upsertEntities.setObject(1, versionsArrays)
+                upsertEntities.setObject(2, version)
+                upsertEntities.setObject(3, version)
+                upsertEntities.setObject(4, entitySetId)
+                upsertEntities.setArray(5, entityKeyIdsArr)
+                upsertEntities.setInt(6, partition)
+                upsertEntities.setInt(7, partition)
+                upsertEntities.setLong(8, version)
+                upsertEntities.executeUpdate()
+            }
             logger.debug("Updated $updatedLinkedEntities linked entities as part of insert.")
             updatedPropertyCounts
         }
@@ -613,11 +616,9 @@ class PostgresEntityDataQueryService(
     @Timed
     fun clearEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent {
         return hds.connection.use { conn ->
-            conn.autoCommit = false
             val version = System.currentTimeMillis()
             tombstone(conn, entitySetId, authorizedPropertyTypes.values, version)
             val event = tombstone(conn, entitySetId, version)
-            conn.autoCommit = true
             event
         }
     }
@@ -722,7 +723,7 @@ class PostgresEntityDataQueryService(
     ): Int {
         // TODO delete also linking entity entries
         return hds.connection.use { connection ->
-            connection.autoCommit = false
+
 
             val propertyTypesArr = PostgresArrays.createUuidArray(connection, authorizedPropertyTypes.keys)
 
@@ -739,7 +740,7 @@ class PostgresEntityDataQueryService(
             ps.setArray(5, propertyTypesArr)
 
             val count = ps.executeUpdate()
-            connection.commit()
+
             count
         }
     }
@@ -782,7 +783,7 @@ class PostgresEntityDataQueryService(
     ): Int {
         // TODO also delete linking entities
         return hds.connection.use { connection ->
-            connection.autoCommit = false
+
 
             val idsArr = PostgresArrays.createUuidArray(connection, entities)
 
@@ -796,7 +797,6 @@ class PostgresEntityDataQueryService(
             ps.setInt(4, partitionVersion)
 
             val count = ps.executeUpdate()
-            connection.commit()
             count
         }
     }

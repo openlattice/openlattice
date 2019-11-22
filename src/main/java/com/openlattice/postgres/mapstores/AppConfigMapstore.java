@@ -5,24 +5,19 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openlattice.apps.AppConfigKey;
 import com.openlattice.apps.AppTypeSetting;
-import com.openlattice.authorization.Permission;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MapIndexConfig;
 import com.hazelcast.config.MapStoreConfig;
 import com.openlattice.mapstores.TestDataFactory;
-import com.openlattice.postgres.PostgresArrays;
 import com.openlattice.postgres.PostgresTable;
 import com.openlattice.postgres.ResultSetAdapters;
 import com.zaxxer.hikari.HikariDataSource;
 
 import java.io.IOException;
-import java.sql.Array;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.EnumSet;
-import java.util.UUID;
 
 public class AppConfigMapstore extends AbstractBasePostgresMapstore<AppConfigKey, AppTypeSetting> {
     public static final String APP_ID          = "__key#appId";

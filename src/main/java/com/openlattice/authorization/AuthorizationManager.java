@@ -24,6 +24,7 @@ package com.openlattice.authorization;
 
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.collect.SetMultimap;
+import com.hazelcast.query.Predicate;
 import com.openlattice.authorization.paging.AuthorizedObjectsSearchResult;
 import com.openlattice.authorization.securable.SecurableObjectType;
 
@@ -160,6 +161,12 @@ public interface AuthorizationManager {
             Set<Principal> principal,
             SecurableObjectType objectType,
             EnumSet<Permission> permissions );
+
+    @Timed Stream<AclKey> getAuthorizedObjectsOfType(
+            Set<Principal> principals,
+            SecurableObjectType objectType,
+            EnumSet<Permission> permissions,
+            Predicate additionalFilter );
 
     AuthorizedObjectsSearchResult getAuthorizedObjectsOfType(
             NavigableSet<Principal> principals,

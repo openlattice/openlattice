@@ -110,9 +110,6 @@ public final class PostgresColumn {
     public static final String                   DATA_ID_FIELD                     = "data_id";
     public static final PostgresColumnDefinition DATA_ID                           =
             new PostgresColumnDefinition( DATA_ID_FIELD, UUID );
-    public static final String                   EXPIRATION_DELETE_FLAG_FIELD      = "expiration_delete_flag";
-    public static final PostgresColumnDefinition EXPIRATION_DELETE_FLAG            =
-            new PostgresColumnDefinition( EXPIRATION_DELETE_FLAG_FIELD, TEXT );
     public static final String                   DESCRIPTION_FIELD                 = "description";
     public static final PostgresColumnDefinition DESCRIPTION                       =
             new PostgresColumnDefinition( DESCRIPTION_FIELD, TEXT );
@@ -153,6 +150,9 @@ public final class PostgresColumn {
     public static final String                   ENTITY_KEY_IDS_FIELD              = "entity_key_ids";
     public static final PostgresColumnDefinition ENTITY_KEY_IDS_COL                =
             new PostgresColumnDefinition( ENTITY_KEY_IDS_FIELD, UUID_ARRAY );
+    public static final String                   ENTITY_SET_COLLECTION_ID_FIELD    = "entity_set_collection_id";
+    public static final PostgresColumnDefinition ENTITY_SET_COLLECTION_ID          =
+            new PostgresColumnDefinition( ENTITY_SET_COLLECTION_ID_FIELD, UUID ).notNull();
     public static final String                   ENTITY_SET_FLAGS_FIELD            = "flags";
     public static final PostgresColumnDefinition ENTITY_SET_FLAGS                  =
             new PostgresColumnDefinition( ENTITY_SET_FLAGS_FIELD, TEXT_ARRAY )
@@ -169,9 +169,6 @@ public final class PostgresColumn {
     public static final String                   ENTITY_TYPE_COLLECTION_ID_FIELD   = "entity_type_collection_id";
     public static final PostgresColumnDefinition ENTITY_TYPE_COLLECTION_ID         =
             new PostgresColumnDefinition( ENTITY_TYPE_COLLECTION_ID_FIELD, UUID ).notNull();
-    public static final String                   ENTITY_SET_COLLECTION_ID_FIELD    = "entity_set_collection_id";
-    public static final PostgresColumnDefinition ENTITY_SET_COLLECTION_ID          =
-            new PostgresColumnDefinition( ENTITY_SET_COLLECTION_ID_FIELD, UUID ).notNull();
     public static final String                   ENTITY_TYPE_ID_FIELD              = "entity_type_id";
     public static final PostgresColumnDefinition ENTITY_TYPE_ID                    =
             new PostgresColumnDefinition( ENTITY_TYPE_ID_FIELD, UUID ).notNull();
@@ -183,17 +180,20 @@ public final class PostgresColumn {
     public static final String                   EVENT_TYPE_FIELD                  = "event_type";
     public static final PostgresColumnDefinition EVENT_TYPE                        =
             new PostgresColumnDefinition( EVENT_TYPE_FIELD, TEXT );
+    public static final String                   EXPIRATION_BASE_FLAG_FIELD        = "expiration_base_flag";
+    public static final PostgresColumnDefinition EXPIRATION_BASE_FLAG              =
+            new PostgresColumnDefinition( EXPIRATION_BASE_FLAG_FIELD, TEXT );
     public static final String                   EXPIRATION_DATE_FIELD             = "expiration_date";
     public static final PostgresColumnDefinition EXPIRATION_DATE                   =
             new PostgresColumnDefinition( EXPIRATION_DATE_FIELD, TIMESTAMPTZ )
                     .withDefault( "'infinity'" )
                     .notNull();
+    public static final String                   EXPIRATION_DELETE_FLAG_FIELD      = "expiration_delete_flag";
+    public static final PostgresColumnDefinition EXPIRATION_DELETE_FLAG            =
+            new PostgresColumnDefinition( EXPIRATION_DELETE_FLAG_FIELD, TEXT );
     public static final String                   EXPIRATION_FIELD                  = "expiration";
     public static final PostgresColumnDefinition EXPIRATION                        =
             new PostgresColumnDefinition( EXPIRATION_FIELD, BIGINT );
-    public static final String                   EXPIRATION_BASE_FLAG_FIELD        = "expiration_base_flag";
-    public static final PostgresColumnDefinition EXPIRATION_BASE_FLAG              =
-            new PostgresColumnDefinition( EXPIRATION_BASE_FLAG_FIELD, TEXT );
     public static final String                   EXPIRATION_START_ID_FIELD         = "expiration_start_id";
     public static final PostgresColumnDefinition EXPIRATION_START_ID               =
             new PostgresColumnDefinition( EXPIRATION_START_ID_FIELD, UUID );
@@ -206,12 +206,12 @@ public final class PostgresColumn {
     public static final String                   HASH_FIELD                        = "hash";
     public static final PostgresColumnDefinition HASH                              =
             new PostgresColumnDefinition( HASH_FIELD, BYTEA ).notNull();
-    public static final String                   ID_MAP_FIELD                      = "ids_map";
-    public static final PostgresColumnDefinition ID_MAP                            =
-            new PostgresColumnDefinition( ID_MAP_FIELD, JSONB );
     public static final String                   ID_FIELD                          = "id";
     public static final PostgresColumnDefinition ID                                =
             new PostgresColumnDefinition( ID_FIELD, UUID ).primaryKey().notNull();
+    public static final String                   ID_MAP_FIELD                      = "ids_map";
+    public static final PostgresColumnDefinition ID_MAP                            =
+            new PostgresColumnDefinition( ID_MAP_FIELD, JSONB );
     public static final PostgresColumnDefinition ID_VALUE                          =
             new PostgresColumnDefinition( ID_FIELD, UUID );
     public static final String                   INDEX_TYPE_FIELD                  = "index_type";
@@ -229,6 +229,12 @@ public final class PostgresColumn {
     public static final String                   LAST_LINK_INDEX_FIELD             = "last_link_index";
     public static final PostgresColumnDefinition LAST_LINK_INDEX                   = new PostgresColumnDefinition(
             LAST_LINK_INDEX_FIELD,
+            TIMESTAMPTZ )
+            .withDefault( "'-infinity'" )
+            .notNull();
+    public static final String                   LAST_MARK_FIELD                   = "last_mark";
+    public static final PostgresColumnDefinition LAST_MARK                         = new PostgresColumnDefinition(
+            LAST_MARK_FIELD,
             TIMESTAMPTZ )
             .withDefault( "'-infinity'" )
             .notNull();
@@ -308,9 +314,10 @@ public final class PostgresColumn {
     public static final String                   NULLABLE_TITLE_FIELD              = "title";
     public static final PostgresColumnDefinition NULLABLE_TITLE                    =
             new PostgresColumnDefinition( NULLABLE_TITLE_FIELD, TEXT );
-    public static final String                   TIME_TO_EXPIRATION_FIELD          = "time_to_expiration";
-    public static final PostgresColumnDefinition TIME_TO_EXPIRATION                =
-            new PostgresColumnDefinition( TIME_TO_EXPIRATION_FIELD, BIGINT );
+    public static final String                   ORGANIZATION_FIELD                = "organization";
+    public static final PostgresColumnDefinition ORGANIZATION                      = new PostgresColumnDefinition(
+            ORGANIZATION_FIELD,
+            JSONB ).notNull();
     public static final String                   ORGANIZATION_ID_FIELD             = "organization_id";
     public static final PostgresColumnDefinition ORGANIZATION_ID                   =
             new PostgresColumnDefinition( ORGANIZATION_ID_FIELD, UUID ).notNull();
@@ -452,6 +459,9 @@ public final class PostgresColumn {
     public static final String                   TEMPLATE_TYPE_ID_FIELD            = "template_type_id";
     public static final PostgresColumnDefinition TEMPLATE_TYPE_ID                  = new PostgresColumnDefinition(
             TEMPLATE_TYPE_ID_FIELD, UUID ).notNull();
+    public static final String                   TIME_TO_EXPIRATION_FIELD          = "time_to_expiration";
+    public static final PostgresColumnDefinition TIME_TO_EXPIRATION                =
+            new PostgresColumnDefinition( TIME_TO_EXPIRATION_FIELD, BIGINT );
     public static final String                   TIME_UUID_FIELD                   = "time_uuid";
     public static final PostgresColumnDefinition TIME_UUID                         =
             new PostgresColumnDefinition( TIME_UUID_FIELD, UUID );
@@ -461,6 +471,14 @@ public final class PostgresColumn {
     public static final String                   URL_FIELD                         = "url";
     public static final PostgresColumnDefinition URL                               =
             new PostgresColumnDefinition( URL_FIELD, TEXT );
+    public static final String                   USER_DATA_FIELD                   = "user_data";
+    public static final PostgresColumnDefinition USER_DATA                         = new PostgresColumnDefinition(
+            USER_DATA_FIELD,
+            JSONB );
+    public static final String                   USER_ID_FIELD                     = "user_id";
+    public static final PostgresColumnDefinition USER_ID                           = new PostgresColumnDefinition(
+            USER_ID_FIELD,
+            TEXT ).notNull();
     public static final String                   VERSIONS_FIELD                    = "versions";
     public static final PostgresColumnDefinition VERSIONS                          =
             new PostgresColumnDefinition( VERSIONS_FIELD, BIGINT_ARRAY )

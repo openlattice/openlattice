@@ -29,7 +29,7 @@ import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
-import com.openlattice.organization.Organization;
+import com.openlattice.organizations.Organization;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
 import com.openlattice.search.requests.EntityDataKeySearchResult;

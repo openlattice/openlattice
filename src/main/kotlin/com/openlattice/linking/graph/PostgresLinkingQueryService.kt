@@ -282,11 +282,11 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource, private val
     }
 
     override fun deleteEntitySetNeighborhood(entitySetId: UUID): Int {
-        hds.connection.use {
-            it.prepareStatement(DELETE_ENTITY_SET_NEIGHBORHOOD_SQL).use {
-                it.setObject(1, entitySetId)
-                it.setObject(2, entitySetId)
-                return it.executeUpdate()
+        hds.connection.use { connection ->
+            connection.prepareStatement(DELETE_ENTITY_SET_NEIGHBORHOOD_SQL).use { ps ->
+                ps.setObject(1, entitySetId)
+                ps.setObject(2, entitySetId)
+                return ps.executeUpdate()
             }
         }
     }

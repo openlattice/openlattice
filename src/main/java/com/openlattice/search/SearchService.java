@@ -55,7 +55,7 @@ import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.graph.core.GraphService;
 import com.openlattice.graph.edge.Edge;
-import com.openlattice.organization.Organization;
+import com.openlattice.organizations.Organization;
 import com.openlattice.organizations.events.OrganizationCreatedEvent;
 import com.openlattice.organizations.events.OrganizationDeletedEvent;
 import com.openlattice.organizations.events.OrganizationUpdatedEvent;

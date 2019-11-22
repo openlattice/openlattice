@@ -20,12 +20,9 @@
 
 package com.openlattice.hazelcast.serializers;
 
-import com.openlattice.hazelcast.serializers.AppConfigKeyStreamSerializer;
-import com.openlattice.apps.AppConfigKey;
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest;
+import com.openlattice.apps.AppConfigKey;
 import com.openlattice.mapstores.TestDataFactory;
-
-import java.util.UUID;
 
 public class AppConfigKeyStreamSerializerTest
         extends AbstractStreamSerializerTest<AppConfigKeyStreamSerializer, AppConfigKey> {

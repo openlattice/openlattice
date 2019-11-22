@@ -25,7 +25,7 @@ import com.openlattice.organizations.events.OrganizationCreatedEvent;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
-import com.openlattice.organization.Organization;
+import com.openlattice.organizations.Organization;
 import java.io.IOException;
 import org.springframework.stereotype.Component;
 
