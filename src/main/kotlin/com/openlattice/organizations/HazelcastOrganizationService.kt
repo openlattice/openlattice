@@ -1,5 +1,6 @@
 package com.openlattice.organizations
 
+import com.auth0.json.mgmt.users.User
 import com.google.common.collect.ImmutableSet
 import com.google.common.collect.Iterables
 import com.google.common.eventbus.EventBus
@@ -25,6 +26,7 @@ import com.openlattice.organizations.mapstores.MEMBERS_INDEX
 import com.openlattice.organizations.processors.OrganizationEntryProcessor
 import com.openlattice.organizations.processors.OrganizationReadEntryProcessor
 import com.openlattice.organizations.roles.SecurePrincipalsManager
+import com.openlattice.users.getAppMetadata
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.stream.Stream
@@ -61,6 +63,7 @@ class HazelcastOrganizationService(
         private val assembler: Assembler
 ) {
     private val organizations: IMap<UUID, Organization> = hazelcastInstance.getMap(HazelcastMap.ORGANIZATIONS.name)
+    private val users: IMap<String, User> = hazelcastInstance.getMap(HazelcastMap.USERS.name)
 
     @Inject
     private lateinit var eventBus: EventBus
@@ -237,7 +240,9 @@ class HazelcastOrganizationService(
 
     @JvmOverloads
     fun addMembers(
-            organizationId: UUID, members: Set<Principal>, profiles: Map<Principal, Map<String, Set<String>>> = mapOf()
+            organizationId: UUID, members: Set<Principal>,
+            profiles: Map<Principal, Map<String, Set<String>>> = members
+                    .associateWith { getAppMetadata(users.getValue(it.id)) }
     ) {
         addMembers(AclKey(organizationId), members, profiles)
         val securablePrincipals = securePrincipalsManager.getSecurablePrincipals(members)
@@ -277,8 +282,7 @@ class HazelcastOrganizationService(
         members.forEach { member ->
             organization.grants.forEach { (roleId, grants) ->
                 grants.forEach { (_, grant) ->
-                    val profile = profiles.getValue(member)
-
+                    val profile = profiles.getOrElse(member) { mapOf() }
                     val granted = when (grant.grantType) {
                         GrantType.Automatic -> true
                         GrantType.Groups -> grant.mappings.intersect(
@@ -515,19 +519,21 @@ class HazelcastOrganizationService(
         return organizations.keySet(Predicates.equal(CONNECTIONS_INDEX, connection))
     }
 
-    fun getOrganizationsWithoutUserAndWithConnection(connection: String, principal: Principal): Set<UUID> {
+    fun getOrganizationsWithoutUserAndWithConnection(connections: Collection<String>, principal: Principal): Set<UUID> {
         return organizations.keySet(
                 Predicates.and(
-                        Predicates.equal(CONNECTIONS_INDEX, connection),
+                        Predicates.`in`(CONNECTIONS_INDEX, *connections.toTypedArray()),
                         Predicates.`in`(MEMBERS_INDEX, principal)
                 )
         )
     }
 
-    fun getOrganizationsWithoutUserAndWithDomains(connection: String, emailDomain: String): Set<UUID> {
+    fun getOrganizationsWithoutUserAndWithConnectionsAndDomains(
+            connections: Collection<String>, emailDomain: String
+    ): Set<UUID> {
         return organizations.keySet(
                 Predicates.and(
-                        Predicates.equal(CONNECTIONS_INDEX, connection),
+                        Predicates.`in`(CONNECTIONS_INDEX, *connections.toTypedArray()),
                         Predicates.`in`(DOMAINS_INDEX, emailDomain)
                 )
         )

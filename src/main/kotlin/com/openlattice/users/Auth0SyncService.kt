@@ -47,13 +47,16 @@ class Auth0SyncService(
         val roles = getRoles(user)
         val sp = spm.getPrincipal(principal.id)
         processGlobalEnrollments(sp, principal, user)
-        processOrganizationEnrollments(sp, principal, user.email ?: "")
+        processOrganizationEnrollments(user, sp, principal, user.email ?: "")
         markUser(user)
     }
 
-    //
-    private fun getConnection(user: Principal): String {
-        return user.id.substring(0, user.id.indexOf("|"))
+    /**
+     * @param user The user for which to read the identities.
+     * @return A map of providers to connections for the specified user.
+     */
+    private fun getConnections(user: User): Map<String, String> {
+        return user.identities.associateBy({ it.provider }, { it.connection })
     }
 
     private fun markUser(user: User) {
@@ -77,21 +80,24 @@ class Auth0SyncService(
             orgService.addMembers(
                     IdConstants.GLOBAL_ORGANIZATION_ID.id,
                     setOf(principal),
-                    mapOf(principal to getAppMetadata(user)))
+                    mapOf(principal to getAppMetadata(user))
+            )
         }
 
     }
 
-    private fun processOrganizationEnrollments(sp: SecurablePrincipal, principal: Principal, emailDomain: String) {
-        val connection = getConnection(principal)
+    private fun processOrganizationEnrollments(
+            user: User, sp: SecurablePrincipal, principal: Principal, emailDomain: String
+    ) {
+        val connections = getConnections(user).values
 
         val missingOrgsForEmailDomains = if (emailDomain.isNotBlank()) {
-            orgService.getOrganizationsWithoutUserAndWithDomains(
-                    connection, emailDomain
+            orgService.getOrganizationsWithoutUserAndWithConnectionsAndDomains(
+                    connections, emailDomain
             )
         } else setOf()
 
-        val missingOrgsForConnections = orgService.getOrganizationsWithoutUserAndWithConnection(connection, principal)
+        val missingOrgsForConnections = orgService.getOrganizationsWithoutUserAndWithConnection(connections, principal)
 
 
         (missingOrgsForEmailDomains + missingOrgsForConnections).forEach { orgId ->
