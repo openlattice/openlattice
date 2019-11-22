@@ -24,6 +24,7 @@ package com.openlattice.rehearsal.edm
 import com.google.common.collect.ImmutableList
 import com.openlattice.data.requests.EntitySetSelection
 import com.openlattice.data.requests.FileType
+import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.edm.type.AssociationType
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.rehearsal.assertException
@@ -182,5 +183,38 @@ class EdmTest : MultipleAuthenticatedUsersBase() {
                 { edmApi.getEntityType(et.id) },
                 "Entity type of id ${et.id} does not exists."
         )
+    }
+
+    @Test
+    fun testEntityTypePropertyTypeMetadata() {
+        val pt1 = createPropertyType()
+        val et = createEntityType(pt1.id)
+        val newtitle = "New Title !";
+        val update =  MetadataUpdate(
+                Optional.of(newtitle),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty()
+        )
+        edmApi.updateEntityTypePropertyMetadata( et.id , pt1.id, update )
+        val metadata = edmApi.getEntityTypePropertyMetadata(et.id, pt1.id);
+        Assert.assertEquals(
+                newtitle,
+                metadata.title
+        )
+        Assert.assertEquals(
+                pt1.description,
+                metadata.description
+        )
+
     }
 }
