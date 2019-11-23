@@ -112,7 +112,7 @@ class Auth0SyncService(
 
     fun getExpiredUsers(): BasePostgresIterable<User> {
         val expirationThreshold = System.currentTimeMillis() - 6 * REFRESH_INTERVAL_MILLIS
-        return BasePostgresIterable(
+        return BasePostgresIterable<User>(
                 PreparedStatementHolderSupplier(hds, expiredUsersSql, DELETE_BATCH_SIZE) { ps ->
                     ps.setLong(1, expirationThreshold)
                 }) { rs -> mapper.readValue(rs.getString(USER_DATA.name)) }
