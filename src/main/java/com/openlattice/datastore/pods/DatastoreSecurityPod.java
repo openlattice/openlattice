@@ -43,6 +43,7 @@ public class DatastoreSecurityPod extends Auth0SecurityPod {
                 .antMatchers( HttpMethod.OPTIONS ).permitAll()
                 .antMatchers( HttpMethod.POST, "/datastore/principals/users/" ).authenticated()
                 .antMatchers( HttpMethod.PUT, "/datastore/principals/users/*" ).authenticated()
+                .antMatchers( HttpMethod.GET, "/datastore/principals/users/activate" ).authenticated()
                 .antMatchers( HttpMethod.GET, "/datastore/edm/**" ).permitAll()
                 .antMatchers( "/datastore/data/entitydata/*" ).permitAll()
                 .antMatchers( "/datastore/**" ).authenticated();
