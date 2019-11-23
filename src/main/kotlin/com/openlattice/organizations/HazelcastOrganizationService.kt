@@ -222,16 +222,16 @@ class HazelcastOrganizationService(
 
     fun addEmailDomains(organizationId: UUID, emailDomains: Set<String>) {
         organizations.executeOnKey(organizationId,
-                                   OrganizationEntryProcessor { organization ->
-                                       organization.emailDomains.addAll(emailDomains)
-                                   })
+                OrganizationEntryProcessor { organization ->
+                    organization.emailDomains.addAll(emailDomains)
+                })
     }
 
     fun removeEmailDomains(organizationId: UUID, emailDomains: Set<String>) {
         organizations.executeOnKey(organizationId,
-                                   OrganizationEntryProcessor { organization ->
-                                       organization.emailDomains.removeAll(emailDomains)
-                                   })
+                OrganizationEntryProcessor { organization ->
+                    organization.emailDomains.removeAll(emailDomains)
+                })
     }
 
     fun getMembers(organizationId: UUID): Set<Principal> {
@@ -348,7 +348,8 @@ class HazelcastOrganizationService(
     fun createRoleIfNotExists(callingUser: Principal, role: Role) {
         val organizationId = role.organizationId
         val orgPrincipal = securePrincipalsManager
-                .getSecurablePrincipal(AclKey(organizationId)) as OrganizationPrincipal
+                .getSecurablePrincipal(AclKey(organizationId))
+
         /*
          * We set the organization to be the owner of the principal and grant everyone in the organization read access
          * to the principal. This is done so that anyone in the organization can see the principal and the owners of
@@ -356,7 +357,19 @@ class HazelcastOrganizationService(
          * instantiating the role in the postgres materialized views server.
          */
         securePrincipalsManager.createSecurablePrincipalIfNotExists(callingUser, role)
+
         authorizations.addPermission(role.aclKey, orgPrincipal.principal, EnumSet.of(Permission.READ))
+
+        /*
+         * Grant the organization admin role OWNER permissions on the new role,
+         * unless the organization admin role is the one being created.
+         */
+        val orgAdminRole = Principal(
+                PrincipalType.ROLE,
+                constructOrganizationAdminRolePrincipalId(orgPrincipal))
+        if (orgAdminRole != role.principal) {
+            authorizations.addPermission(role.aclKey, orgAdminRole, EnumSet.allOf(Permission::class.java))
+        }
     }
 
     fun addRoleToPrincipalInOrganization(organizationId: UUID, roleId: UUID, principal: Principal) {
@@ -544,15 +557,23 @@ class HazelcastOrganizationService(
 
         private val logger = LoggerFactory.getLogger(HazelcastOrganizationService::class.java)
 
+        private fun constructOrganizationAdminRolePrincipalTitle(organization: SecurablePrincipal): String {
+            return organization.name + " - ADMIN"
+        }
+
+        private fun constructOrganizationAdminRolePrincipalId(organization: SecurablePrincipal): String {
+            return organization.id.toString() + "|" + constructOrganizationAdminRolePrincipalTitle(organization)
+        }
+
         private fun createOrganizationAdminRole(organization: SecurablePrincipal): Role {
-            val principaleTitle = organization.name + " - ADMIN"
-            val principalId = organization.id.toString() + "|" + principaleTitle
+            val principalTitle = constructOrganizationAdminRolePrincipalTitle(organization)
+            val principalId = constructOrganizationAdminRolePrincipalId(organization)
             val rolePrincipal = Principal(PrincipalType.ROLE, principalId)
             return Role(
                     Optional.empty(),
                     organization.id,
                     rolePrincipal,
-                    principaleTitle,
+                    principalTitle,
                     Optional.of("Administrators of this organization")
             )
         }
