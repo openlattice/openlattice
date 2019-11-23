@@ -24,6 +24,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
 import com.auth0.client.auth.AuthAPI;
+import com.auth0.client.mgmt.ManagementAPI;
+import com.auth0.client.mgmt.filter.UserFilter;
 import com.auth0.exception.Auth0Exception;
 import com.auth0.json.auth.UserInfo;
 import com.codahale.metrics.annotation.Timed;
@@ -37,8 +39,6 @@ import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.PrincipalType;
 import com.openlattice.authorization.Principals;
 import com.openlattice.authorization.SecurablePrincipal;
-import com.openlattice.authorization.SystemRole;
-import com.openlattice.authorization.initializers.AuthorizationInitializationTask;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.directory.MaterializedViewAccount;
 import com.openlattice.directory.PrincipalApi;
@@ -47,10 +47,9 @@ import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.directory.pojo.DirectedAclKeys;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
-import java.util.Collection;
+import com.openlattice.users.Auth0SyncService;
 import java.util.EnumSet;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -81,6 +80,11 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
     private AuthorizationManager    authorizations;
     @Inject
     private AuthAPI                 authApi;
+    @Inject
+    private ManagementAPI           managementApi;
+
+    @Inject
+    private Auth0SyncService syncService;
 
     @Timed
     @Override
@@ -156,14 +160,14 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
             path = USERS,
             method = RequestMethod.POST,
             consumes = MediaType.TEXT_PLAIN_VALUE )
-    public Collection<SecurablePrincipal> activateUser( @RequestBody String accessToken ) {
+    public Void activateUser( @RequestBody String accessToken ) {
         Principal principal = checkNotNull( Principals.getCurrentUser() );
 
         UserInfo userInfo;
 
         Map<String, Object> values;
-        String userId;
-        String tokenUserId;
+        final String userId;
+        final String tokenUserId;
 
         try {
             userInfo = checkNotNull( authApi.userInfo( accessToken ).execute() );
@@ -174,49 +178,17 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
                     "User %s in header does not match user %s retrieved by access token.",
                     userId,
                     tokenUserId );
+
+            final var user = managementApi.users().get( userId, new UserFilter()
+                    .withSearchEngine( "v3" )
+                    .withFields( "user_id,email,nickname,app_metadata,identities", true )
+                    .withPage( 0, 100 ) ).execute();
+
+            syncService.syncUser( user );
         } catch ( IllegalArgumentException | Auth0Exception e ) {
             throw new BadCredentialsException( "Unable to retrieve user profile information from auth0", e );
         }
-
-        //Auth0UserBasic user = spm.getUser( principal.getId() );
-        if ( !spm.principalExists( principal ) ) {
-            //TODO: Store more useful information in Auth0 about the user
-            //We create securable principal first as db creds can be reset separately
-            String title = (String) values.get( "name" );
-
-            if ( StringUtils.isBlank( title ) ) {
-                title = (String) values.get( "nickname" );
-            }
-
-            if ( StringUtils.isBlank( title ) ) {
-                title = (String) values.get( "email" );
-            }
-
-            if ( StringUtils.isBlank( title ) ) {
-                title = tokenUserId;
-            }
-
-            spm.createSecurablePrincipalIfNotExists( principal,
-                    new SecurablePrincipal( Optional.empty(), principal, title, Optional.empty() ) );
-
-            dbCredService.getOrCreateUserCredentials( userId );
-        }
-
-        AclKey userAclKey = spm.lookup( principal );
-
-        AclKey userRoleAclKey = spm.lookup( AuthorizationInitializationTask.GLOBAL_USER_ROLE.getPrincipal() );
-        AclKey adminRoleAclKey = spm.lookup( AuthorizationInitializationTask.GLOBAL_ADMIN_ROLE.getPrincipal() );
-        Auth0UserBasic user = userDirectoryService.getUser( userId );
-
-        if ( user.getRoles().contains( SystemRole.AUTHENTICATED_USER.getName() ) ) {
-            spm.addPrincipalToPrincipal( userRoleAclKey, userAclKey );
-        }
-
-        if ( user.getRoles().contains( SystemRole.ADMIN.getName() ) ) {
-            spm.addPrincipalToPrincipal( adminRoleAclKey, userAclKey );
-        }
-
-        return spm.getAllPrincipals( spm.getSecurablePrincipal( userAclKey ) );
+        return null;
     }
 
     @Timed
@@ -226,8 +198,8 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
             method = RequestMethod.GET,
             produces = MediaType.APPLICATION_JSON_VALUE )
     public MaterializedViewAccount getMaterializedViewAccount() {
-        final var principal =  PostgresRoles.buildPostgresUsername( Principals.getCurrentSecurablePrincipal() );
-        return new MaterializedViewAccount(principal, dbCredService.getDbCredential( principal) );
+        final var principal = PostgresRoles.buildPostgresUsername( Principals.getCurrentSecurablePrincipal() );
+        return new MaterializedViewAccount( principal, dbCredService.getDbCredential( principal ) );
     }
 
     @Timed
@@ -259,7 +231,6 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
     public AuthorizationManager getAuthorizationManager() {
         return authorizations;
     }
-
 
     @Timed
     @Override
