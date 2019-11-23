@@ -196,7 +196,7 @@ public class DatastoreServicesPod {
     public Auth0SyncService auth0SyncService() {
         return new Auth0SyncService( hazelcastInstance, hikariDataSource, principalService(), organizationsManager() );
     }
-    
+
     @Bean
     public AuthorizationQueryService authorizationQueryService() {
         return new AuthorizationQueryService( hikariDataSource, hazelcastInstance );

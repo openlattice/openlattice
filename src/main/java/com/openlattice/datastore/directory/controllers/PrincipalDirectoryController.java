@@ -157,29 +157,14 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
     @Timed
     @Override
     @RequestMapping(
-            path = USERS,
-            method = RequestMethod.POST,
+            path = USERS + ACTIVATE,
+            method = RequestMethod.GET,
             consumes = MediaType.TEXT_PLAIN_VALUE )
-    public Void activateUser( @RequestBody String accessToken ) {
+    public Void activateUser( ) {
         Principal principal = checkNotNull( Principals.getCurrentUser() );
 
-        UserInfo userInfo;
-
-        Map<String, Object> values;
-        final String userId;
-        final String tokenUserId;
-
         try {
-            userInfo = checkNotNull( authApi.userInfo( accessToken ).execute() );
-            values = userInfo.getValues();
-            userId = principal.getId();
-            tokenUserId = (String) values.get( "sub" );
-            checkState( StringUtils.equals( userId, tokenUserId ),
-                    "User %s in header does not match user %s retrieved by access token.",
-                    userId,
-                    tokenUserId );
-
-            final var user = managementApi.users().get( userId, new UserFilter()
+            final var user = managementApi.users().get( principal.getId(), new UserFilter()
                     .withSearchEngine( "v3" )
                     .withFields( "user_id,email,nickname,app_metadata,identities", true )
                     .withPage( 0, 100 ) ).execute();
