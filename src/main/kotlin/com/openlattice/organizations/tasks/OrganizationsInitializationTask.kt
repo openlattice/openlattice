@@ -59,7 +59,7 @@ class OrganizationsInitializationTask : HazelcastInitializationTask<Organization
             val org = organizationService.getOrganization(orgPrincipal.id)!!
             mergeGrants(org)
             org.grants.forEach {
-                (roleId, grantMap) -> grantMap.values.forEach{
+                (roleId, grantMap) -> grantMap.values.forEach {
                     grant -> organizationService.updateRoleGrant(orgPrincipal.id, roleId, grant)
                 }
             }
