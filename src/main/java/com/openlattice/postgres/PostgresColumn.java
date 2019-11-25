@@ -187,9 +187,6 @@ public final class PostgresColumn {
     public static final String                   ENTITY_TYPE_COLLECTION_ID_FIELD   = "entity_type_collection_id";
     public static final PostgresColumnDefinition ENTITY_TYPE_COLLECTION_ID         =
             new PostgresColumnDefinition( ENTITY_TYPE_COLLECTION_ID_FIELD, UUID ).notNull();
-    public static final String                   ENTITY_SET_COLLECTION_ID_FIELD    = "entity_set_collection_id";
-    public static final PostgresColumnDefinition ENTITY_SET_COLLECTION_ID          =
-            new PostgresColumnDefinition( ENTITY_SET_COLLECTION_ID_FIELD, UUID ).notNull();
     public static final String                   ENTITY_TYPE_ID_FIELD              = "entity_type_id";
     public static final PostgresColumnDefinition ENTITY_TYPE_ID                    =
             new PostgresColumnDefinition( ENTITY_TYPE_ID_FIELD, UUID ).notNull();
@@ -503,20 +500,6 @@ public final class PostgresColumn {
     public static final String                   USERNAME_FIELD                    = "username";
     public static final PostgresColumnDefinition USERNAME                          =
             new PostgresColumnDefinition( USERNAME_FIELD, TEXT );
-    public static final String                   VERSIONS_FIELD                    = "versions";
-    public static final PostgresColumnDefinition VERSIONS                          =
-    public static final String                   TIME_TO_EXPIRATION_FIELD          = "time_to_expiration";
-    public static final PostgresColumnDefinition TIME_TO_EXPIRATION                =
-            new PostgresColumnDefinition( TIME_TO_EXPIRATION_FIELD, BIGINT );
-    public static final String                   TIME_UUID_FIELD                   = "time_uuid";
-    public static final PostgresColumnDefinition TIME_UUID                         =
-            new PostgresColumnDefinition( TIME_UUID_FIELD, UUID );
-    public static final String                   TITLE_FIELD     = "title";
-    public static final PostgresColumnDefinition TITLE           =
-            new PostgresColumnDefinition( TITLE_FIELD, TEXT ).notNull();
-    public static final String                   URL_FIELD       = "url";
-    public static final PostgresColumnDefinition URL             =
-            new PostgresColumnDefinition( URL_FIELD, TEXT );
     public static final String                   USER_DATA_FIELD = "user_data";
     public static final PostgresColumnDefinition USER_DATA       = new PostgresColumnDefinition(
             USER_DATA_FIELD,
