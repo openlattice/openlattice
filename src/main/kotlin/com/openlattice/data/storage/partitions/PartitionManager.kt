@@ -1,6 +1,5 @@
 package com.openlattice.data.storage.partitions
 
-import com.geekbeast.rhizome.hazelcast.DelegatedIntList
 import com.google.common.base.Preconditions.checkArgument
 import com.hazelcast.core.HazelcastInstance
 import com.openlattice.edm.EntitySet
@@ -8,6 +7,9 @@ import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.edm.types.processors.UpdateEntitySetMetadataProcessor
 import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.organizations.Organization
+import com.openlattice.organizations.processors.OrganizationEntryProcessor
+import com.openlattice.organizations.processors.OrganizationReadEntryProcessor
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.COUNT
 import com.openlattice.postgres.PostgresColumn.PARTITION
@@ -18,6 +20,7 @@ import com.zaxxer.hikari.HikariDataSource
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import java.util.*
+import java.util.function.Consumer
 
 const val DEFAULT_PARTITION_COUNT = 2
 
@@ -27,13 +30,13 @@ const val DEFAULT_PARTITION_COUNT = 2
  */
 @Service
 class PartitionManager @JvmOverloads constructor(
-        hazelcastInstance: HazelcastInstance, private val hds: HikariDataSource, partitions: Int = 257
+        hazelcastInstance: HazelcastInstance,
+        private val hds: HikariDataSource,
+        partitions: Int = 257
 ) {
     private val partitionList = mutableListOf<Int>()
     private val entitySets = hazelcastInstance.getMap<UUID, EntitySet>(HazelcastMap.ENTITY_SETS.name)
-    private val defaultPartitions = hazelcastInstance.getMap<UUID, DelegatedIntList>(
-            HazelcastMap.ORGANIZATION_DEFAULT_PARTITIONS.name
-    )
+    private val organizations = hazelcastInstance.getMap<UUID, Organization>(HazelcastMap.ORGANIZATIONS.name)
 
     init {
         createMaterializedViewIfNotExists()
@@ -66,11 +69,15 @@ class PartitionManager @JvmOverloads constructor(
     }
 
     fun setDefaultPartitions(organizationId: UUID, partitions: List<Int>) {
-        defaultPartitions.set(organizationId, DelegatedIntList(partitions))
+        organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
+            it.partitions.clear()
+            it.partitions.addAll(partitions)
+        })
+
     }
 
     fun getDefaultPartitions(organizationId: UUID): List<Int> {
-        return defaultPartitions.getValue(organizationId)
+        return organizations.executeOnKey(organizationId, OrganizationReadEntryProcessor { it.partitions }) as List<Int>
     }
 
     fun getEntitySetPartitionsInfo(entitySetId: UUID): PartitionsInfo {

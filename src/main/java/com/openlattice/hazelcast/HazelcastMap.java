@@ -38,7 +38,6 @@ public enum HazelcastMap {
     DB_CREDS,
     DELETION_LOCKS,
     EDGES,
-    ORGANIZATION_DEFAULT_PARTITIONS,
     ENTITY_DATA,
     ENTITY_LINKING_LOCKS,
     ENTITY_SET_COLLECTION_CONFIG,
@@ -82,6 +81,7 @@ public enum HazelcastMap {
     PRINCIPAL_TREES,
     PROPERTY_TYPES,
     ORGANIZATION_APPS,
+    ORGANIZATIONS,
     NAMES,
     SCHEMAS,
     @Deprecated VISIBILITY,
@@ -96,4 +96,5 @@ public enum HazelcastMap {
     SECURABLE_OBJECT_TYPES,
     TOKEN_ACCEPTANCE_TIME,
     USERS,
+    TRIGGERS
 }
