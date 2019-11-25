@@ -167,6 +167,55 @@ paths:
               schema:
                 type: string
                 format: uuid
+  /datastore/edm/entity/type/key/{entityTypeId}/{propertyTypeId}:
+    put:
+      summary: Adds a primary key with a given ID to an entity type with a given ID.
+      operationId: addPrimaryKeyToEntityType
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      parameters:
+        - name: entityTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: propertyTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success
+    delete:
+      summary: Removes a primary key with a given ID from an entity type with a given ID.
+      operationId: removePrimaryKeyFromEntityType
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      parameters:
+        - name: entityTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: propertyTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success
   /datastore/edm/entity/type/{entityTypeId}/{propertyTypeId}:
     put:
       summary: Updates the EntityType definition for the given EntityType UUID by adding the given PropertyType UUID.
@@ -1185,7 +1234,7 @@ paths:
                 type: object
                 additionalProperties:
                   $ref: "#/components/propertyType"
-  /datastore/entity-sets/{entitySetId}/properties/{propertyTypeId}/:
+  /datastore/entity-sets/all/{entitySetId}/properties/{propertyTypeId}/:
     get:
       summary: Get specified property type metadata for an entity set.
       operationId: getEntitySetPropertyMetadata
@@ -1526,6 +1575,82 @@ paths:
             application/json:
               schema:
                 type: integer
+    put:
+      summary: Perform one of the following bulk update operations on entities (type = Merge) adds new properties without affecting existing data, (type = PartialReplace) replaces all values for supplied property types, but does not not affect other property types for an entity, (type = Replace) replaces all entity data with the supplied properties.
+      operationId: updateEntitiesInEntitySet
+      parameters:
+        - name: entitySetId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [Merge, Replace, PartialReplace]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    type: string
+      tags:
+        - data
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: "Success"
+          content:
+            application/json:
+              schema:
+                type: integer
+  /datastore/data/set:
+    post:
+      summary: Creates a new set of entities.
+      operationId: createEntities
+      parameters:
+        - name: entitySetId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties:
+                type: array
+                items:
+                  type: string
+      tags:
+        - data
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: "Edges"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                  format: uuid
   /datastore/data/set/{entitySetId}/all:
     delete:
       summary: Clears the Entity matching the given Entity id and all of its neighbor Entities
@@ -1574,6 +1699,41 @@ paths:
             application/json:
               schema:
                 type: integer
+  /datastore/data/{entitySetId}/{entityKeyId}:
+    get:
+      summary: Loads a single entity by its entityKeyId and entitySetId
+      operationId: getEntity
+      parameters:
+        - name: entitySetId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: entityKeyId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      tags:
+        - data
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: An entity details object, with property type FQNs as keys.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    type: string
+      
+    
 
   ############################
   ## DATA INTEGRATIONS APIs ##
@@ -3220,11 +3380,9 @@ components:
         description:
           type: string
         propertyTags:
-          type: object
-          additionalProperties:
-            type: array
-            items:
-              type: string
+          type: array
+          items:
+            type: string
         defaultShow:
           type: boolean
 
