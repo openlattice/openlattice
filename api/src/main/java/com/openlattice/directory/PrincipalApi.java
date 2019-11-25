@@ -21,14 +21,16 @@ package com.openlattice.directory;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.SecurablePrincipal;
-import com.openlattice.directory.pojo.DirectedAclKeys;
 import com.openlattice.directory.pojo.Auth0UserBasic;
+import com.openlattice.directory.pojo.DirectedAclKeys;
 import com.openlattice.organization.roles.Role;
-import retrofit2.http.*;
-
-import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
+import retrofit2.http.Body;
+import retrofit2.http.DELETE;
+import retrofit2.http.GET;
+import retrofit2.http.POST;
+import retrofit2.http.Path;
 
 public interface PrincipalApi {
     /*
@@ -48,13 +50,14 @@ public interface PrincipalApi {
     /*
      * Fixed paths
      */
-    String EMAIL   = "/email";
-    String ROLES   = "/roles";
-    String SEARCH  = "/search";
-    String USERS   = "/users";
-    String DB      = "/db";
-    String CURRENT = "/current";
-    String UPDATE  = "/update";
+    String ACTIVATE = "/activate";
+    String CURRENT  = "/current";
+    String DB       = "/db";
+    String EMAIL    = "/email";
+    String ROLES    = "/roles";
+    String SEARCH   = "/search";
+    String UPDATE   = "/update";
+    String USERS    = "/users";
 
     String SEARCH_EMAIL = SEARCH + EMAIL;
 
@@ -98,8 +101,8 @@ public interface PrincipalApi {
      * @param accessToken An access token that can be used to retrieve the user profile.
      * @return Nothing
      */
-    @POST( BASE + USERS )
-    Collection<SecurablePrincipal> activateUser( @Body String accessToken );
+    @GET( BASE + USERS + ACTIVATE )
+    Void activateUser();
 
     @POST( BASE + UPDATE )
     Void addPrincipalToPrincipal( @Body DirectedAclKeys directedAclKeys );

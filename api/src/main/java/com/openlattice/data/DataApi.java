@@ -58,6 +58,7 @@ public interface DataApi {
     String FILE_TYPE             = "fileType";
     String NEIGHBORS             = "neighbors";
     String PARTIAL               = "partial";
+    String DETAILED              = "detailed";
     String PROPERTY_TYPE_ID      = "propertyTypeId";
     String PROPERTY_TYPE_ID_PATH = "{" + PROPERTY_TYPE_ID + "}";
     /*
@@ -269,7 +270,7 @@ public interface DataApi {
      *
      * @param entitySetId The entity set which the request entity belongs to.
      * @param entityKeyId The id of the requested entity.
-     * @return A enttity details object, with property type FQNs as keys.
+     * @return A entity details object, with property type FQNs as keys.
      */
     @GET( BASE + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH )
     Map<FullQualifiedName, Set<Object>> getEntity(
@@ -281,4 +282,18 @@ public interface DataApi {
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Path( ENTITY_KEY_ID ) UUID entityKeyId,
             @Path( PROPERTY_TYPE_ID ) UUID propertyTypeId );
+
+    /**
+     * Loads a linked entity set breakdown with the selected linked entities and properties.
+     *
+     * @param linkedEntitySetId The id of the linked entity set to load.
+     * @param selection The selection of properties and linking ids to load.
+     * @return Returns linked entity set data detailed in a Map mapped by linking id, (normal) entity set id, origin id,
+     * property type full qualified name and values respectively.
+     */
+    @GET( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + DETAILED  )
+    Map<UUID, Map<UUID, Map<UUID, Map<FullQualifiedName, Set<Object>>>>> loadLinkedEntitySetBreakdown(
+            @Path( ENTITY_SET_ID ) UUID linkedEntitySetId,
+            @Body EntitySetSelection selection
+    );
 }
