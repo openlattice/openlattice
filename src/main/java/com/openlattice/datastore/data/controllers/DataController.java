@@ -181,39 +181,21 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             EntitySetSelection selection ) {
         if ( authz.checkIfHasPermissions(
                 new AclKey( entitySetId ), Principals.getCurrentPrincipals(), READ_PERMISSION ) ) {
+            final var entitySet = entitySetService.getEntitySet( entitySetId );
+            checkState( entitySet != null, "Could not find entity set with id: %s", entitySetId );
 
             Optional<Set<UUID>> entityKeyIds = ( selection == null ) ? Optional.empty() : selection.getEntityKeyIds();
-            Optional<Set<UUID>> propertyTypeIds = ( selection == null ) ? Optional.empty() : selection.getProperties();
+            final var selectedProperties = getSelectedProperties( entitySetId, selection );
 
-            final Set<UUID> allProperties = authzHelper.getAllPropertiesOnEntitySet( entitySetId );
-            final Set<UUID> selectedProperties = propertyTypeIds.orElse( allProperties );
-            checkState( allProperties.equals( selectedProperties ) || allProperties.containsAll( selectedProperties ),
-                    "Selected properties are not property types of entity set %s", entitySetId );
-
-            final var entitySet = entitySetService.getEntitySet( entitySetId );
-            Set<UUID> normalEntitySetIds;
-            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesOfEntitySets;
-
-            checkState( entitySet != null, "Could not find entity set with id: " + entitySetId.toString() );
-
-            if ( entitySet.isLinking() ) {
-                normalEntitySetIds = Sets.newHashSet( entitySet.getLinkedEntitySets() );
-                checkState( !normalEntitySetIds.isEmpty(),
-                        "Linked entity sets are empty for linking entity set %s", entitySetId );
-
-                normalEntitySetIds.forEach( esId -> ensureReadAccess( new AclKey( esId ) ) );
-
-                authorizedPropertyTypesOfEntitySets = authzHelper
-                        .getAuthorizedPropertyTypesByNormalEntitySet( entitySet, selectedProperties, READ_PERMISSION );
-
-            } else {
-                normalEntitySetIds = Set.of( entitySetId );
-                authorizedPropertyTypesOfEntitySets = authzHelper
-                        .getAuthorizedPropertyTypes( normalEntitySetIds, selectedProperties, READ_PERMISSION );
-            }
+            final var normalEntitySetIds = ( entitySet.isLinking() )
+                    ? Sets.newHashSet( entitySet.getLinkedEntitySets() )
+                    : Set.of( entitySetId );
 
             final Map<UUID, Optional<Set<UUID>>> entityKeyIdsOfEntitySets = normalEntitySetIds.stream()
                     .collect( Collectors.toMap( esId -> esId, esId -> entityKeyIds ) );
+            final var authorizedPropertyTypesOfEntitySets = getAuthorizedPropertyTypesForEntitySetRead(
+                    entitySet, normalEntitySetIds, selectedProperties
+            );
 
             final var authorizedPropertyTypes = authorizedPropertyTypesOfEntitySets.values().iterator().next();
             final LinkedHashSet<String> orderedPropertyNames = new LinkedHashSet<>( authorizedPropertyTypes.size() );
@@ -232,6 +214,39 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             throw new ForbiddenException( "Insufficient permissions to read the entity set " + entitySetId
                     + " or it doesn't exists." );
         }
+    }
+
+    private Set<UUID> getSelectedProperties( UUID entitySetId, EntitySetSelection selection ) {
+        Optional<Set<UUID>> propertyTypeIds = ( selection == null ) ? Optional.empty() : selection.getProperties();
+        final Set<UUID> allProperties = authzHelper.getAllPropertiesOnEntitySet( entitySetId );
+        final Set<UUID> selectedProperties = propertyTypeIds.orElse( allProperties );
+        checkState( allProperties.equals( selectedProperties ) || allProperties.containsAll( selectedProperties ),
+                "Selected properties are not property types of entity set %s", entitySetId );
+
+        return selectedProperties;
+    }
+
+    private Map<UUID, Map<UUID, PropertyType>> getAuthorizedPropertyTypesForEntitySetRead(
+            EntitySet entitySet,
+            Set<UUID> normalEntitySetIds,
+            Set<UUID> selectedProperties
+    ) {
+        Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesOfEntitySets;
+
+        if ( entitySet.isLinking() ) {
+            checkState( !normalEntitySetIds.isEmpty(),
+                    "Linked entity sets are empty for linking entity set %s", entitySet.getId() );
+            normalEntitySetIds.forEach( esId -> ensureReadAccess( new AclKey( esId ) ) );
+
+            authorizedPropertyTypesOfEntitySets = authzHelper
+                    .getAuthorizedPropertyTypesByNormalEntitySet( entitySet, selectedProperties, READ_PERMISSION );
+
+        } else {
+            authorizedPropertyTypesOfEntitySets = authzHelper
+                    .getAuthorizedPropertyTypes( normalEntitySetIds, selectedProperties, READ_PERMISSION );
+        }
+
+        return authorizedPropertyTypesOfEntitySets;
     }
 
     @Override
@@ -876,6 +891,35 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             return dgm.getEntity( entitySetId, entityKeyId, authorizedPropertyTypes )
                     .get( propertyTypeFqn );
         }
+    }
+
+    @Timed
+    @Override
+    @GetMapping(
+            path = "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + DETAILED,
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    public Map<UUID, Map<UUID, Map<UUID, Map<FullQualifiedName, Set<Object>>>>> loadLinkedEntitySetBreakdown(
+            @PathVariable( ENTITY_SET_ID ) UUID linkedEntitySetId,
+            @RequestBody EntitySetSelection selection ) {
+        ensureReadAccess( new AclKey( linkedEntitySetId ) );
+
+        final var entitySet = entitySetService.getEntitySet( linkedEntitySetId );
+        checkState(
+                entitySet != null, "Could not find entity set with id: %s", linkedEntitySetId
+        );
+
+        final var selectedProperties = getSelectedProperties( linkedEntitySetId, selection );
+        final var normalEntitySetIds = Sets.newHashSet( entitySet.getLinkedEntitySets() );
+        final var authorizedPropertyTypesOfEntitySets = getAuthorizedPropertyTypesForEntitySetRead(
+                entitySet, normalEntitySetIds, selectedProperties
+        );
+
+        Optional<Set<UUID>> entityKeyIds = ( selection == null ) ? Optional.empty() : selection.getEntityKeyIds();
+        final var entityKeyIdsOfEntitySets = normalEntitySetIds.stream()
+                .collect( Collectors.toMap( esId -> esId, esId -> entityKeyIds ) );
+
+        return dgm.getLinkedEntitySetBreakDown( entityKeyIdsOfEntitySets, authorizedPropertyTypesOfEntitySets );
     }
 
     private UUID getCurrentUserId() {
