@@ -107,8 +107,8 @@ class BackgroundLinkingIndexingService(
     private val linkingIndexingWorker = executor.submit {
         generateSequence(indexCandidates::take)
                 .chunked(LINKING_INDEX_SIZE)
-                //.asStream()
-                //.parallel()
+                .asStream()
+                .parallel()
                 .forEach { candidateBatch ->
                     if (!indexerConfiguration.backgroundLinkingIndexingEnabled) {
                         return@forEach
@@ -131,8 +131,8 @@ class BackgroundLinkingIndexingService(
     private val linkingUnIndexingWorker = executor.submit {
         generateSequence(unIndexCandidates::take)
                 .chunked(LINKING_INDEX_SIZE)
-                //.asStream()
-                //.parallel()
+                .asStream()
+                .parallel()
                 .forEach { candidateBatch ->
                     if (!indexerConfiguration.backgroundLinkingIndexingEnabled) {
                         return@forEach
