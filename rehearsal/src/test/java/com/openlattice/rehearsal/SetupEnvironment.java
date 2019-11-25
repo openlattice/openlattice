@@ -124,14 +124,15 @@ public class SetupEnvironment {
         String idUser2 = ( String ) jwtUser2.getPrincipal();
         String idUser3 = ( String ) jwtUser3.getPrincipal();
 
-        Collection<SecurablePrincipal> rolesAdmin = retrofit.create( PrincipalApi.class )
-                .activateUser( thAdmin.getAccessToken() );
-        Collection<SecurablePrincipal> rolesUser1 = retrofit1.create( PrincipalApi.class )
-                .activateUser( thUser1.getAccessToken() );
-        Collection<SecurablePrincipal> rolesUser2 = retrofit2.create( PrincipalApi.class )
-                .activateUser( thUser2.getAccessToken() );
-        Collection<SecurablePrincipal> rolesUser3 = retrofit3.create( PrincipalApi.class )
-                .activateUser( thUser3.getAccessToken() );
+        retrofit.create( PrincipalApi.class ).activateUser();
+        retrofit1.create( PrincipalApi.class ).activateUser();
+        retrofit2.create( PrincipalApi.class ).activateUser();
+        retrofit3.create( PrincipalApi.class ).activateUser();
+
+        final var rolesAdmin = retrofit.create(PrincipalApi.class).getCurrentRoles();
+        final var rolesUser1 = retrofit1.create(PrincipalApi.class).getCurrentRoles();
+        final var rolesUser2 = retrofit2.create(PrincipalApi.class).getCurrentRoles();
+        final var rolesUser3 = retrofit3.create(PrincipalApi.class).getCurrentRoles();
 
         ensurePrincipalHasPrincipalsWithName( rolesAdmin, "admin" );
 
