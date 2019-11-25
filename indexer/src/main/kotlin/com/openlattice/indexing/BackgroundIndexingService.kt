@@ -289,7 +289,7 @@ class BackgroundIndexingService(
         }
 
         val indexCount = if (markAsIndexed) {
-            dataManager.markAsIndexed(mapOf(entitySet.id to batchToIndex), false)
+            dataManager.markAsIndexed(mapOf(entitySet.id to batchToIndex))
         } else {
             batchToIndex.size
         }
@@ -318,7 +318,7 @@ class BackgroundIndexingService(
         if (batchToIndex.isNotEmpty()
                 && elasticsearchApi.deleteEntityDataBulk(entitySet.entityTypeId, batchToIndex.keys)) {
             indexCount = if (markAsIndexed) {
-                dataManager.markAsIndexed(mapOf(entitySet.id to batchToIndex), false)
+                dataManager.markAsIndexed(mapOf(entitySet.id to batchToIndex))
             } else {
                 batchToIndex.size
             }
