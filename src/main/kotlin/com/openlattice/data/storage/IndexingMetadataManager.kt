@@ -8,22 +8,26 @@ import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.IDS
 import com.zaxxer.hikari.HikariDataSource
+import java.sql.Connection
+import java.sql.PreparedStatement
 import java.time.OffsetDateTime
 import java.util.*
 
 
 class IndexingMetadataManager(private val hds: HikariDataSource, private val partitionManager: PartitionManager) {
 
+    /**
+     * Marks entities as indexed by setting last_index = last_write.
+     * @param entityKeyIdsWithLastWrite Map of (normal) entity_set_id to id to last_write.
+     */
     fun markAsIndexed(
-            entityKeyIdsWithLastWrite: Map<UUID, Map<UUID, OffsetDateTime>>, // entity_set_id -> id -> last_write
-            linking: Boolean
+            entityKeyIdsWithLastWrite: Map<UUID, Map<UUID, OffsetDateTime>> // entity_set_id -> id -> last_write
     ): Int {
         val entitySetPartitions = partitionManager.getEntitySetsPartitionsInfo(entityKeyIdsWithLastWrite.keys)
 
         return hds.connection.use { connection ->
-            val updateSql = if (linking) updateLastLinkingIndexSql else updateLastIndexSql
 
-            connection.prepareStatement(updateSql).use { stmt ->
+            connection.prepareStatement(updateLastIndexSql).use { stmt ->
 
                 entityKeyIdsWithLastWrite.forEach { (entitySetId, entities) ->
 
@@ -35,20 +39,14 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
                             .mapValues { it.value.toMap() }
                             .forEach { (partition, entitiesWithLastWrite) ->
 
-                                entitiesWithLastWrite.entries
-                                        .groupBy { it.value }
-                                        .mapValues { it.value.map { it.key } }
-                                        .forEach { (lastWrite, entities) ->
-
-                                            val idsArray = PostgresArrays.createUuidArray(connection, entities)
-                                            stmt.setObject(1, lastWrite)
-                                            stmt.setObject(2, entitySetId)
-                                            stmt.setArray(3, idsArray)
-                                            stmt.setInt(4, partition)
-                                            stmt.setInt(5, partitionVersion)
-
-                                            stmt.addBatch()
-                                        }
+                                prepareIndexQuery(
+                                        connection,
+                                        stmt,
+                                        entitySetId,
+                                        partition,
+                                        partitionVersion,
+                                        entitiesWithLastWrite
+                                )
                             }
                 }
                 stmt.executeBatch().sum()
@@ -57,17 +55,81 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
     }
 
     /**
+     * Marks linking entities as indexed by setting last_index = last_write.
+     * @param linkingIdsWithLastWrite Map of (normal) entity_set_id to origin id to linking_id to last_write.
+     */
+    fun markLinkingEntitiesAsIndexed(
+            linkingIdsWithLastWrite: Map<UUID, Map<UUID, Map<UUID, OffsetDateTime>>>
+    ): Int {
+        val entitySetPartitions = partitionManager.getEntitySetsPartitionsInfo(linkingIdsWithLastWrite.keys)
+
+        return hds.connection.use { connection ->
+
+            connection.prepareStatement(updateLastLinkingIndexSql).use { stmt ->
+
+                linkingIdsWithLastWrite.forEach { (entitySetId, entities) ->
+
+                    val partitionsInfo = entitySetPartitions.getValue(entitySetId)
+                    val partitions = partitionsInfo.partitions.toList()
+                    val partitionVersion = partitionsInfo.partitionsVersion
+                    entities.entries
+                            .groupBy({ getPartition(it.key, partitions) }, { it.toPair() })
+                            .mapValues { it.value.toMap() }
+                            .forEach { (partition, linkingIdsByOriginId) ->
+
+                                linkingIdsByOriginId.values.forEach { linkingIdsWithLastWrite ->
+
+                                    prepareIndexQuery(
+                                            connection,
+                                            stmt,
+                                            entitySetId,
+                                            partition,
+                                            partitionVersion,
+                                            linkingIdsWithLastWrite
+                                    )
+                                }
+
+                            }
+                }
+                stmt.executeBatch().sum()
+            }
+        }
+    }
+
+    private fun prepareIndexQuery(
+            connection: Connection,
+            stmt: PreparedStatement,
+            entitySetId: UUID,
+            partition: Int,
+            partitionVersion: Int,
+            idsWithLastWrite: Map<UUID, OffsetDateTime>
+    ) {
+        idsWithLastWrite.entries
+                .groupBy { it.value }
+                .mapValues { it.value.map { it.key } }
+                .forEach { (lastWrite, entities) ->
+
+                    val idsArray = PostgresArrays.createUuidArray(connection, entities)
+                    stmt.setObject(1, lastWrite)
+                    stmt.setObject(2, entitySetId)
+                    stmt.setArray(3, idsArray)
+                    stmt.setInt(4, partition)
+                    stmt.setInt(5, partitionVersion)
+
+                    stmt.addBatch()
+                }
+    }
+
+    /**
      * Sets the last_index/last_link_index of provided entities to current datetime. Used when un-indexing entities
      * after deletion.
-     * @param entityKeyIds Map of (normal) entity set ids and either entity key ids or linking ids, depending on
-     * [linking].
-     * @param linking Denotes, if the provided ids are linking ids or not.
+     * @param entityKeyIds Map of (normal) entity set ids to entity key ids.
      */
-    fun markAsUnIndexed(entityKeyIds: Map<UUID, Set<UUID>>, linking: Boolean): Int {
+    fun markAsUnIndexed(entityKeyIds: Map<UUID, Set<UUID>>): Int {
         val entitySetPartitions = partitionManager.getEntitySetsPartitionsInfo(entityKeyIds.keys)
 
         return hds.connection.use { connection ->
-            val updateSql = if (linking) markLastLinkingIndexSql else markLastIndexSql
+            val updateSql = markLastIndexSql
 
             connection.prepareStatement(updateSql).use { stmt ->
 
@@ -190,7 +252,6 @@ private val entityKeyIdsInEntitySet =
 private val linkingIdsInEntitySet =
         " ${ENTITY_SET_ID.name} = ? " +
         "AND ${LINKING_ID.name} = ANY(?) " +
-        "AND ${LINKING_ID.name} IS NOT NULL " +
         "AND ${PARTITION.name} = ? " +
         "AND ${PARTITIONS_VERSION.name} = ? "
 
@@ -238,16 +299,6 @@ private val markLastIndexSql = "UPDATE ${IDS.name} SET ${LAST_INDEX.name} = 'now
 /**
  * Arguments of preparable sql in order:
  * 1. entity set id
- * 2. linking ids (uuid array)
- * 3. partition
- * 4. partition version
- */
-private val markLastLinkingIndexSql =
-        "UPDATE ${IDS.name} SET ${LAST_LINK_INDEX.name} = 'now()' WHERE $linkingIdsInEntitySet"
-
-/**
- * Arguments of preparable sql in order:
- * 1. entity set id
  * 3. partitions (int array)
  * 4. partition version
  */
@@ -266,16 +317,6 @@ fun markEntitySetsAsNeedsToBeIndexedSql(linking: Boolean): String {
     return "UPDATE ${IDS.name} SET $updateColumn = '-infinity()' " +
             "WHERE ${ENTITY_SET_ID.name} = ANY(?) AND ${PARTITION.name} = ANY(?)"
 }
-
-/**
- * Arguments of preparable sql in order:
- * 1. entity set id
- * 2. entity key ids (uuid array)
- * 3. partition
- * 4. partition version
- */
-private val markIdsAsNeedToBeIndexedSql =
-        "UPDATE ${IDS.name} SET ${LAST_INDEX.name} = '-infinity()' WHERE $entityKeyIdsInEntitySet"
 
 /**
  * Arguments of preparable sql in order:
