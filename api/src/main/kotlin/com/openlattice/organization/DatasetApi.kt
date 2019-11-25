@@ -4,35 +4,32 @@ import com.openlattice.postgres.PostgresConnectionType
 import retrofit2.http.*
 import java.util.*
 
+const val SERVICE = "/datastore"
+const val CONTROLLER = "/organization-database"
+const val BASE = SERVICE + CONTROLLER
+
+const val EXTERNAL_DATABASE = "/external-database"
+const val EXTERNAL_DATABASE_COLUMN = "/external-database-column"
+const val EXTERNAL_DATABASE_TABLE = "/external-database-table"
+const val DATA = "/data"
+
+const val ID = "id"
+const val ID_PATH = "/{$ID}"
+const val TABLE_NAME = "tableName"
+const val TABLE_NAME_PATH = "/{$TABLE_NAME}"
+const val TABLE_ID = "tableID"
+const val TABLE_ID_PATH = "/{$TABLE_ID}"
+const val COLUMN_NAME = "columnName"
+const val COLUMN_NAME_PATH = "/{$COLUMN_NAME}"
+const val ROW_COUNT = "rowCount"
+const val ROW_COUNT_PATH = "/{$ROW_COUNT}"
+const val USER_ID = "userId"
+const val USER_ID_PATH = "/{$USER_ID}"
+const val CONNECTION_TYPE = "connectionType"
+const val CONNECTION_TYPE_PATH = "/{$CONNECTION_TYPE}"
+
 interface DatasetApi {
-
-    companion object {
-        /* These determine the service routing */
-        const val SERVICE = "/datastore"
-        const val CONTROLLER = "/organization-database"
-        const val BASE = SERVICE + CONTROLLER
-
-        const val EXTERNAL_DATABASE = "/external-database"
-        const val EXTERNAL_DATABASE_COLUMN = "/external-database-column"
-        const val EXTERNAL_DATABASE_TABLE = "/external-database-table"
-        const val DATA = "/data"
-
-        const val ID = "id"
-        const val ID_PATH = "/{$ID}"
-        const val TABLE_NAME = "tableName"
-        const val TABLE_NAME_PATH = "/{$TABLE_NAME}"
-        const val TABLE_ID = "tableID"
-        const val TABLE_ID_PATH = "/{$TABLE_ID}"
-        const val COLUMN_NAME = "columnName"
-        const val COLUMN_NAME_PATH = "/{$COLUMN_NAME}"
-        const val ROW_COUNT = "rowCount"
-        const val ROW_COUNT_PATH = "/{$ROW_COUNT}"
-        const val USER_ID = "userId"
-        const val USER_ID_PATH = "/{$USER_ID}"
-        const val CONNECTION_TYPE = "connectionType"
-        const val CONNECTION_TYPE_PATH = "/{$CONNECTION_TYPE}"
-    }
-
+    
     /**
      * Adds an authentication record to the pg_hba config file
      * that restricts database access by ip address for a user
