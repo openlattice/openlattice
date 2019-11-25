@@ -476,10 +476,10 @@ class Graph(
                     val entityKeyIdArr = PostgresArrays.createUuidArray(connection, entityKeyIds)
 
                     val ps = connection.prepareStatement(query)
-                    ps.setObject(1, entitySetId)
-                    ps.setArray(2, entityKeyIdArr)
-                    ps.setObject(3, entitySetId)
-                    ps.setArray(4, entityKeyIdArr)
+                    ps.setArray(1, entityKeyIdArr)
+                    ps.setObject(2, entitySetId)
+                    ps.setArray(3, entityKeyIdArr)
+                    ps.setObject(4, entitySetId)
                     val rs = ps.executeQuery()
                     StatementHolder(connection, ps, rs)
                 },

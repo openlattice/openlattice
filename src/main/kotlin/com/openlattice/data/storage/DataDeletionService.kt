@@ -364,7 +364,7 @@ class DataDeletionService(
             dgm.getEdgeEntitySetsConnectedToEntities(entitySetId, entityKeyIds.get())
         } else {
             dgm.getEdgeEntitySetsConnectedToEntitySet(entitySetId)
-        }
+        } + entitySetId
 
         val edgeEntitySets = entitySetManager.getEntitySetsAsMap(edgeEntitySetIds).values
         val nonAuditEdgeEntitySets = edgeEntitySets.filter { !it.flags.contains(EntitySetFlag.AUDIT) }

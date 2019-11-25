@@ -148,7 +148,7 @@ class AssemblerConnectionManager(
      * provided.
      */
     fun createOrganizationDatabase(organizationId: UUID) {
-        val organization = organizations.getOrganization(organizationId)
+        val organization = organizations.getOrganization(organizationId)!!
         val dbName = buildOrganizationDatabaseName(organizationId)
         createOrganizationDatabase(organizationId, dbName)
 

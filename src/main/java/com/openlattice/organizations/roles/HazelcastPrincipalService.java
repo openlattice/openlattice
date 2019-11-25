@@ -24,6 +24,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.openlattice.authorization.mapstores.PrincipalMapstore.PRINCIPAL_ID_INDEX;
 
+import com.auth0.json.mgmt.users.User;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -47,7 +48,6 @@ import com.openlattice.authorization.projections.PrincipalProjection;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.controllers.exceptions.TypeExistsException;
 import com.openlattice.datastore.util.Util;
-import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.processors.NestedPrincipalMerger;
@@ -79,7 +79,7 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
     private final HazelcastAclKeyReservationService     reservations;
     private final IMap<AclKey, SecurablePrincipal>      principals;
     private final IMap<AclKey, AclKeySet>               principalTrees; // RoleName -> Member RoleNames
-    private final IMap<String, Auth0UserBasic>          users;
+    private final IMap<String, User>                    users;
     private final IMap<List<UUID>, SecurableObjectType> securableObjectTypes;
     private final EventBus                              eventBus;
 
@@ -255,7 +255,7 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
     public Collection<SecurablePrincipal> getAllPrincipalsWithPrincipal( AclKey aclKey ) {
         //We start from the bottom layer and use predicates to sweep up the tree and enumerate all roles with this role.
         Set<AclKey> parentLayer = principalTrees.keySet( hasSecurablePrincipal( aclKey ) );
-        final Set<AclKey> principalsWithPrincipal = new HashSet<>(parentLayer);
+        final Set<AclKey> principalsWithPrincipal = new HashSet<>( parentLayer );
 
         while ( !parentLayer.isEmpty() ) {
             parentLayer = parentLayer
@@ -288,7 +288,7 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
     }
 
     @Override
-    public Collection<Auth0UserBasic> getAllUserProfilesWithPrincipal( AclKey principal ) {
+    public Collection<User> getAllUserProfilesWithPrincipal( AclKey principal ) {
         return users.getAll( getAllUsersWithPrincipal( principal )
                 .stream()
                 .map( Principal::getId )
@@ -322,7 +322,7 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
     }
 
     @Override
-    public Auth0UserBasic getUser( String userId ) {
+    public User getUser( String userId ) {
         return Util.getSafely( users, userId );
     }
 
