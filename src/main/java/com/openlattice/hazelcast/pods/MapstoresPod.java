@@ -69,7 +69,6 @@ import com.openlattice.linking.mapstores.LinkingFeedbackMapstore;
 import com.openlattice.notifications.sms.SmsInformationMapstore;
 import com.openlattice.organization.OrganizationExternalDatabaseColumn;
 import com.openlattice.organization.OrganizationExternalDatabaseTable;
-import com.openlattice.organizations.mapstores.OrganizationDefaultPartitionsMapstore;
 import com.openlattice.organizations.mapstores.OrganizationExternalDatabaseColumnMapstore;
 import com.openlattice.organizations.mapstores.OrganizationExternalDatabaseTableMapstore;
 import com.openlattice.organizations.Organization;
