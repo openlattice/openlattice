@@ -29,7 +29,7 @@ const val CONNECTION_TYPE = "connectionType"
 const val CONNECTION_TYPE_PATH = "/{$CONNECTION_TYPE}"
 
 interface DatasetApi {
-    
+
     /**
      * Adds an authentication record to the pg_hba config file
      * that restricts database access by ip address for a user
