@@ -148,8 +148,10 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         ensureRead( organizationId );
         //TODO: Re-visit roles within an organization being defined as roles which have read on that organization.
         Organization org = organizations.getOrganization( organizationId );
-        Set<AclKey> authorizedRoleAclKeys = getAuthorizedRoleAclKeys( org.getRoles() );
-        org.getRoles().removeIf( role -> !authorizedRoleAclKeys.contains( role.getAclKey() ) );
+        if ( org != null ) {
+            Set<AclKey> authorizedRoleAclKeys = getAuthorizedRoleAclKeys( org.getRoles() );
+            org.getRoles().removeIf( role -> !authorizedRoleAclKeys.contains( role.getAclKey() ) );
+        }
         return org;
     }
 
@@ -193,6 +195,9 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             @RequestBody EnumSet<OrganizationEntitySetFlag> flagFilter ) {
         ensureRead( organizationId );
         final var orgPrincipal = organizations.getOrganizationPrincipal( organizationId );
+        if( orgPrincipal == null ) {
+            return null;
+        }
         final var internal = entitySetManager.getEntitySetsForOrganization( organizationId );
         final var external = authorizations.getAuthorizedObjectsOfType(
                 orgPrincipal.getPrincipal(),
