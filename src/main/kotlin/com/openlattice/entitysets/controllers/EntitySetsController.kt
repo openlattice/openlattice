@@ -24,11 +24,6 @@ import com.google.common.base.Preconditions
 import com.google.common.collect.ImmutableMap
 import com.google.common.collect.Lists
 import com.google.common.collect.Maps
-import com.openlattice.IdConstants
-import com.openlattice.auditing.AuditEventType
-import com.openlattice.auditing.AuditRecordEntitySetsManager
-import com.openlattice.auditing.AuditableEvent
-import com.openlattice.auditing.AuditingComponent
 import com.openlattice.auditing.*
 import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.SecurableObjectType
@@ -73,7 +68,8 @@ import kotlin.streams.asSequence
 
 @SuppressFBWarnings(
         value = ["BC_BAD_CAST_TO_ABSTRACT_COLLECTION"],
-        justification = "Allowing kotlin collection mapping cast to List")
+        justification = "Allowing kotlin collection mapping cast to List"
+)
 @RestController
 @RequestMapping(EntitySetsApi.CONTROLLER)
 class EntitySetsController @Inject
@@ -184,15 +180,16 @@ constructor(
     @Timed
     @RequestMapping(path = ["", "/"], method = [RequestMethod.GET], produces = [MediaType.APPLICATION_JSON_VALUE])
     override fun getEntitySets(): Set<EntitySet> {
-        return authorizations.getAuthorizedObjectsOfType(
+        val entitySetIds =  authorizations.getAuthorizedObjectsOfType(
                 Principals.getCurrentPrincipals(),
                 SecurableObjectType.EntitySet,
                 EnumSet.of(Permission.READ)
         )
                 .asSequence()
                 .map { AuthorizationUtils.getLastAclKeySafely(it) }
-                .map { entitySetManager.getEntitySet(it)!! }
                 .toSet()
+
+        return  entitySetManager.getEntitySetsAsMap(entitySetIds).values.toSet()
     }
 
 
@@ -235,7 +232,9 @@ constructor(
         // linking entitysets have no entities or associations
         val deleted = if (!entitySet.isLinking) {
             // associations need to be deleted first, because edges are deleted in DataGraphManager.deleteEntitySet call
-            deletionManager.clearOrDeleteEntitySetIfAuthorized(entitySetId, DeleteType.Hard, Principals.getCurrentPrincipals())
+            deletionManager.clearOrDeleteEntitySetIfAuthorized(
+                    entitySetId, DeleteType.Hard, Principals.getCurrentPrincipals()
+            )
         } else WriteEvent(System.currentTimeMillis(), 1)
 
         entitySetManager.deleteEntitySet(entitySetId)
@@ -442,7 +441,8 @@ constructor(
     )
     override fun getExpiringEntitiesFromEntitySet(
             @PathVariable(ID) entitySetId: UUID,
-            @RequestBody dateTime: String): Set<UUID> {
+            @RequestBody dateTime: String
+    ): Set<UUID> {
         ensureReadAccess(AclKey(entitySetId))
         val es = getEntitySet(entitySetId)
         check(es.hasExpirationPolicy()) { "Entity set ${es.name} does not have an expiration policy" }
