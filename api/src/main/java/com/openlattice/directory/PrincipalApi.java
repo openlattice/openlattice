@@ -98,10 +98,9 @@ public interface PrincipalApi {
      * Activates a user in the OpenLattice system. This call must be made once before a user will be available for use
      * in authorization policies.
      *
-     * @param accessToken An access token that can be used to retrieve the user profile.
      * @return Nothing
      */
-    @GET( BASE + USERS + ACTIVATE )
+    @GET( BASE + ACTIVATE )
     Void activateUser();
 
     @POST( BASE + UPDATE )
