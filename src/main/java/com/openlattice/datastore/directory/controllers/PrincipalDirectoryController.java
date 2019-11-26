@@ -157,9 +157,8 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
     @Timed
     @Override
     @RequestMapping(
-            path = USERS + ACTIVATE,
-            method = RequestMethod.GET,
-            consumes = MediaType.TEXT_PLAIN_VALUE )
+            path = ACTIVATE,
+            method = RequestMethod.GET )
     public Void activateUser( ) {
         Principal principal = checkNotNull( Principals.getCurrentUser() );
 
