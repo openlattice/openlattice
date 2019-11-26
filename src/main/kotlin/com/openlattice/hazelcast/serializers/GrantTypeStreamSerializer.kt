@@ -7,10 +7,12 @@ import com.openlattice.organizations.GrantType
 import org.springframework.stereotype.Component
 
 @Component
-class GrantTypeStreamSerializer : AbstractEnumSerializer<GrantType>(GrantType::class.java) {
+class GrantTypeStreamSerializer : AbstractEnumSerializer<GrantType>() {
 
     companion object {
+        @JvmStatic
         fun serialize(out: ObjectDataOutput, `object`: GrantType) =  AbstractEnumSerializer.serialize(out, `object`)
+        @JvmStatic
         fun deserialize(`in`: ObjectDataInput ): GrantType = deserialize(GrantType::class.java, `in`) as GrantType
     }
 

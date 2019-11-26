@@ -243,5 +243,6 @@ public enum StreamSerializerTypeIds {
     AUTH0_USER,
     ORGANIZATION_ENTRY_PROCESSOR,
     GRANT,
-    GRANT_TYPE
+    GRANT_TYPE,
+    ENTITY_SET_FLAG
 }

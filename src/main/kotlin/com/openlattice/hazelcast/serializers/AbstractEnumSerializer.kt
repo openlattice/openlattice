@@ -7,7 +7,7 @@ import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 
-abstract class AbstractEnumSerializer<T : Enum<T>>(private val targetClass: Class<T> ) : SelfRegisteringStreamSerializer<Enum<T>> {
+abstract class AbstractEnumSerializer<T : Enum<T>> : SelfRegisteringStreamSerializer<Enum<T>> {
 
     companion object {
         private val enumCache: LoadingCache<Class<*>, Array<*>> = CacheBuilder.newBuilder().build( CacheLoader.from { key ->
@@ -31,6 +31,6 @@ abstract class AbstractEnumSerializer<T : Enum<T>>(private val targetClass: Clas
     }
 
     override fun read(`in`: ObjectDataInput): Enum<T> {
-        return deserialize( targetClass, `in` ) as Enum<T>
+        return deserialize( this.clazz, `in` ) as Enum<T>
     }
 }
