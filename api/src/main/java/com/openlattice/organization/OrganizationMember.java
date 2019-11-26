@@ -38,11 +38,11 @@
 
 package com.openlattice.organization;
 
-import com.openlattice.client.serialization.SerializationConstants;
-import com.openlattice.directory.pojo.Auth0UserBasic;
+import com.auth0.json.mgmt.users.User;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.openlattice.authorization.SecurablePrincipal;
+import com.openlattice.client.serialization.SerializationConstants;
 import java.util.Collection;
 
 /**
@@ -50,13 +50,13 @@ import java.util.Collection;
  */
 public class OrganizationMember {
     private final SecurablePrincipal             principal;
-    private final Auth0UserBasic                 profile;
+    private final User                              profile;
     private final Collection<SecurablePrincipal> roles;
 
     @JsonCreator
     public OrganizationMember(
             @JsonProperty( SerializationConstants.PRINCIPAL ) SecurablePrincipal principal,
-            @JsonProperty( SerializationConstants.PROFILE_FIELD ) Auth0UserBasic profile,
+            @JsonProperty( SerializationConstants.PROFILE_FIELD ) User profile,
             @JsonProperty( SerializationConstants.ROLES ) Collection<SecurablePrincipal> roles ) {
         this.principal = principal;
         this.profile = profile;
@@ -69,7 +69,7 @@ public class OrganizationMember {
     }
 
     @JsonProperty( SerializationConstants.PROFILE_FIELD )
-    public Auth0UserBasic getProfile() {
+    public User getProfile() {
         return profile;
     }
 

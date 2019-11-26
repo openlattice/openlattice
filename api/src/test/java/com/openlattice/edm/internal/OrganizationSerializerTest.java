@@ -20,7 +20,7 @@ package com.openlattice.edm.internal;
 
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.openlattice.mapstores.TestDataFactory;
-import com.openlattice.organization.Organization;
+import com.openlattice.organizations.Organization;
 import com.openlattice.serializer.AbstractJacksonSerializationTest;
 import org.junit.BeforeClass;
 
