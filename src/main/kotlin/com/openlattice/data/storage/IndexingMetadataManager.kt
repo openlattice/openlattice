@@ -57,6 +57,8 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
     /**
      * Marks linking entities as indexed by setting last_index = last_write.
      * @param linkingIdsWithLastWrite Map of (normal) entity_set_id to origin id to linking_id to last_write.
+     * @return The number of rows affected by this update: the number of normal entities associated to the provided
+     * linking ids.
      */
     fun markLinkingEntitiesAsIndexed(
             linkingIdsWithLastWrite: Map<UUID, Map<UUID, Map<UUID, OffsetDateTime>>>
@@ -77,18 +79,20 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
                             .mapValues { it.value.toMap() }
                             .forEach { (partition, linkingIdsByOriginId) ->
 
-                                linkingIdsByOriginId.values.forEach { linkingIdsWithLastWrite ->
+                                val mergedLinkingIdsWithLastWrite = linkingIdsByOriginId.values
+                                        .fold(mutableMapOf<UUID, OffsetDateTime>()) { acc, map ->
+                                            acc.putAll(map)
+                                            acc
+                                        }
 
-                                    prepareIndexQuery(
-                                            connection,
-                                            stmt,
-                                            entitySetId,
-                                            partition,
-                                            partitionVersion,
-                                            linkingIdsWithLastWrite
-                                    )
-                                }
-
+                                prepareIndexQuery(
+                                        connection,
+                                        stmt,
+                                        entitySetId,
+                                        partition,
+                                        partitionVersion,
+                                        mergedLinkingIdsWithLastWrite
+                                )
                             }
                 }
                 stmt.executeBatch().sum()
