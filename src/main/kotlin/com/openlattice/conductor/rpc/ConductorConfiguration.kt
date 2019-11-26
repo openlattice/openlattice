@@ -6,10 +6,9 @@ import com.kryptnostic.rhizome.configuration.Configuration
 import com.kryptnostic.rhizome.configuration.ConfigurationKey
 import com.kryptnostic.rhizome.configuration.SimpleConfigurationKey
 import com.kryptnostic.rhizome.configuration.annotation.ReloadableConfiguration
+import java.util.*
 
 
-private val REPORT_EMAIL_ADDRESS_FIELD = "reportEmailAddress"
-private val SEARCH_CONFIGURATION_FIELD = "searchConfiguration"
 private val key = SimpleConfigurationKey("conductor.yaml")
 
 /**
@@ -20,7 +19,7 @@ private val key = SimpleConfigurationKey("conductor.yaml")
 class ConductorConfiguration(
         @JsonProperty("reportEmailAddress") val reportEmailAddress: String,
         @JsonProperty("searchConfiguration") val searchConfiguration: SearchConfiguration,
-        @JsonProperty("bootstrap-connection") val connection: String
+        @JsonProperty("bootstrap-connection") val connection: Optional<Set<String>>
 ) : Configuration {
     @JsonIgnore
     override fun getKey(): ConfigurationKey {
