@@ -58,13 +58,7 @@ public class EntitySetStreamSerializer implements SelfRegisteringStreamSerialize
             EntitySetFlagStreamSerializer.serialize( out, flag );
         }
 
-        var partitions = new int[ object.getPartitions().size() ];
-        var index = 0;
-        for ( var partition : object.getPartitions() ) {
-            partitions[ index++ ] = partition;
-        }
-
-        out.writeIntArray( partitions );
+        StreamSerializers.serializeIntList( out, object.getPartitions() );
 
         out.writeInt( object.getPartitionsVersion() );
 
@@ -97,12 +91,7 @@ public class EntitySetStreamSerializer implements SelfRegisteringStreamSerialize
             flags.add( EntitySetFlagStreamSerializer.deserialize( in ) );
         }
 
-        var partitionsArray = in.readIntArray();
-        LinkedHashSet<Integer> partitions = Sets.newLinkedHashSetWithExpectedSize( partitionsArray.length );
-
-        for ( var p : partitionsArray ) {
-            partitions.add( p );
-        }
+        LinkedHashSet<Integer> partitions = (LinkedHashSet<Integer>)StreamSerializers.deserializeIntList( in, Sets.newLinkedHashSet() );
 
         int partitionsVersion = in.readInt();
 
