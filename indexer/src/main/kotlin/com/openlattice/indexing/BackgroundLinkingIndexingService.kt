@@ -217,7 +217,7 @@ class BackgroundLinkingIndexingService(
         // get data for linking id by entity set ids and property ids
         // (normal)entity_set_id/linking_id
         val dirtyLinkingIdsByEntitySetIds = linkingEntityKeyIdsWithLastWrite.keys.associateWith {
-            Optional.of(linkingEntityKeyIdsWithLastWrite.values.flatMap { it.keys }.toSet())
+            Optional.of(linkingEntityKeyIdsWithLastWrite.values.flatMap { it.values.flatMap { it.keys } }.toSet())
         }
         val propertyTypesOfEntitySets = linkingEntityKeyIdsWithLastWrite.keys.associateWith { personPropertyTypes } // entity_set_id/property_type_id/property_type
         val linkedEntityData = dataStore // linking_id/(normal)entity_set_id/entity_key_id/property_type_id
@@ -260,6 +260,7 @@ class BackgroundLinkingIndexingService(
     /**
      * @param linkingIdsWithLastWrite Map of entity_set_id -> origin id -> linking_id -> last_write
      * @param dataByLinkingId Map of linking_id -> entity_set_id -> id -> property_type_id -> data
+     * @return Returns the number of normal entities that are associated to the linking ids, that got indexed.
      */
     private fun indexLinkedEntities(
             linkingIdsWithLastWrite: Map<UUID, Map<UUID, Map<UUID, OffsetDateTime>>>,
@@ -274,6 +275,7 @@ class BackgroundLinkingIndexingService(
     /**
      * @param linkingIdsWithLastWrite Map of entity_set_id -> origin_id -> linking_id -> last_write
      * @param linkingIds Set of linking_ids to delete from elasticsearch.
+     * @return Returns the number of normal entities that are associated to the linking ids, that got un-indexed.
      */
     private fun unIndexLinkedEntities(
             linkingIdsWithLastWrite: Map<UUID, Map<UUID, Map<UUID, OffsetDateTime>>>,
