@@ -58,6 +58,7 @@ class OrganizationsInitializationTask : HazelcastInitializationTask<Organization
             val orgPrincipal = globalOrg.get()
             val org = organizationService.getOrganization(orgPrincipal.id)!!
             mergeGrants(org)
+            org.connections.add(dependencies.configuration.connection)
             org.grants.forEach {
                 (roleId, grantMap) -> grantMap.values.forEach {
                     grant -> organizationService.updateRoleGrant(orgPrincipal.id, roleId, grant)
@@ -74,6 +75,7 @@ class OrganizationsInitializationTask : HazelcastInitializationTask<Organization
         } else {
             val org = createGlobalOrg(defaultPartitions)
             mergeGrants(org)
+            org.connections.add(dependencies.configuration.connection)
             organizationService.createOrganization(
                     GLOBAL_ADMIN_ROLE.principal,
                     createGlobalOrg(defaultPartitions)
