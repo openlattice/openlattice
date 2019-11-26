@@ -166,14 +166,9 @@ class BackgroundLinkingIndexingService(
             it.first.forEach { rawEntityDataKey ->
                 val (entitySetId, originId) = rawEntityDataKey.split("|").map { UUID.fromString(it) }
 
-                if (!linkingEntityKeyIdsWithLastWrite.containsKey(entitySetId)) {
-                    linkingEntityKeyIdsWithLastWrite[entitySetId] = mutableMapOf()
-                }
-
-                if (!linkingEntityKeyIdsWithLastWrite.getValue(entitySetId).containsKey(originId)) {
-                    linkingEntityKeyIdsWithLastWrite.getValue(entitySetId)[originId] = mutableMapOf()
-                }
-                linkingEntityKeyIdsWithLastWrite.getValue(entitySetId).getValue(originId)[linkingId] = lastWrite
+                linkingEntityKeyIdsWithLastWrite
+                        .getOrPut(entitySetId) { mutableMapOf() }
+                        .getOrPut(originId) { mutableMapOf() }[linkingId] = lastWrite
             }
             linkingIds.add(linkingId)
         }
