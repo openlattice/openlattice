@@ -708,7 +708,7 @@ fun upsertPropertyValueSql(propertyType: PropertyType): String {
     ).joinToString(",") { it.name }
 
     return "INSERT INTO ${DATA.name} ($metadataColumnsSql,${insertColumn.name}) " +
-            "VALUES (?,?,?,?,?,now(),?,?,?,?) " +
+            "VALUES (?,?,?,?,?,now(),?,?,?) " +
             "ON CONFLICT ($primaryKeyColumnNamesAsString) " +
             "DO UPDATE SET " +
             "${VERSIONS.name} = ${DATA.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
@@ -748,7 +748,7 @@ fun upsertPropertyValueLinkingRowSql(propertyType: PropertyType): String {
     ).joinToString(",") { it.name }
 // @formatter:off
     return "INSERT INTO ${DATA.name} ($metadataColumnsSql,${insertColumn.name},${ORIGIN_ID.name}) " +
-            "VALUES (?,?,?,?,?,now(),?,?,?,?,?) " +
+            "VALUES (?,?,?,?,?,now(),?,?,?,?) " +
             "ON CONFLICT ($primaryKeyColumnNamesAsString) " +
             "DO UPDATE SET " +
             "${VERSIONS.name} = ${DATA.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
