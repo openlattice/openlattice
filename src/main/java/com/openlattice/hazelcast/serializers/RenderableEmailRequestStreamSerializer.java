@@ -35,8 +35,7 @@ public class RenderableEmailRequestStreamSerializer implements SelfRegisteringSt
         writeOptional( out, object.getByteArrayAttachment(), ( objectDataOutput, byteArrayAttachments ) -> {
             objectDataOutput.writeInt( byteArrayAttachments.length );
 
-            for ( int i = 0; i < byteArrayAttachments.length; i++ ) {
-                EmailAttachment attachment = byteArrayAttachments[ i ];
+            for ( EmailAttachment attachment : byteArrayAttachments ) {
                 objectDataOutput.writeUTF( attachment.getContentType() );
                 objectDataOutput.writeUTF( attachment.getContentId() );
                 objectDataOutput.writeUTF( attachment.getName() );

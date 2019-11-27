@@ -37,8 +37,8 @@ public class EntityKeyListStreamSerializer implements SelfRegisteringStreamSeria
 
     @Override public void write( ObjectDataOutput out, EntityKey[] object ) throws IOException {
         out.writeInt( object.length );
-        for (int i = 0; i < object.length; i++ ) {
-            EntityKeyStreamSerializer.serialize( out, object[i] );
+        for ( EntityKey entityKey : object ) {
+            EntityKeyStreamSerializer.serialize( out, entityKey );
         }
     }
 
