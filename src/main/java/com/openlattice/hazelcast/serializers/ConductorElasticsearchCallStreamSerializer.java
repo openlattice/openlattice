@@ -47,18 +47,19 @@ import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
 import com.openlattice.search.requests.SearchConstraints;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import org.objenesis.strategy.StdInstantiatorStrategy;
+import org.springframework.stereotype.Component;
+
 import java.io.IOException;
 import java.lang.invoke.SerializedLambda;
 import java.util.UUID;
 import java.util.function.Function;
-import org.objenesis.strategy.StdInstantiatorStrategy;
-import org.springframework.stereotype.Component;
 
 @SuppressWarnings( "rawtypes" )
 @Component
 public class ConductorElasticsearchCallStreamSerializer
         implements SelfRegisteringStreamSerializer<ConductorElasticsearchCall> {
-    private static final ThreadLocal<Kryo> kryoThreadLocal = new ThreadLocal<Kryo>() {
+    private static final ThreadLocal<Kryo> kryoThreadLocal = new ThreadLocal<>() {
 
         @Override
         protected Kryo initialValue() {

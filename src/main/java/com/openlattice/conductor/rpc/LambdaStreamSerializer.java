@@ -43,7 +43,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 @Component
 public class LambdaStreamSerializer implements SelfRegisteringStreamSerializer<Runnable> {
-    private static final ThreadLocal<Kryo> kryoThreadLocal = new ThreadLocal<Kryo>() {
+    private static final ThreadLocal<Kryo> kryoThreadLocal = new ThreadLocal<>() {
 
         @Override
         protected Kryo initialValue() {

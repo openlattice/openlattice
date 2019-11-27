@@ -39,7 +39,7 @@ public class FuturesAdapter {
      * Based on Guava Futures.addCallback Impl
      */
     public static <T> ListenableFuture<T> wrap( ICompletableFuture<T> hzFuture ) {
-        return new ICompletableFutureWrapper<T>( hzFuture );
+        return new ICompletableFutureWrapper<>( hzFuture );
     }
 
     public static class ICompletableFutureWrapper<T> implements ListenableFuture<T> {
@@ -78,7 +78,7 @@ public class FuturesAdapter {
 
         @Override
         public void addListener( Runnable listener, Executor executor ) {
-            future.andThen( new ExecutionCallback<T>() {
+            future.andThen( new ExecutionCallback<>() {
 
                 @Override
                 public void onResponse( T response ) {

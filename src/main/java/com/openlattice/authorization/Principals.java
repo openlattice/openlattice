@@ -56,7 +56,7 @@ public final class Principals {
             users = CacheBuilder
                     .newBuilder()
                     .expireAfterWrite( 1, TimeUnit.SECONDS )
-                    .build( new CacheLoader<String, SecurablePrincipal>() {
+                    .build( new CacheLoader<>() {
                         @Override public SecurablePrincipal load( String principalId ) throws Exception {
                             return spm.getPrincipal( principalId );
                         }
@@ -65,7 +65,7 @@ public final class Principals {
             principals = CacheBuilder
                     .newBuilder()
                     .expireAfterWrite( 30, TimeUnit.SECONDS )
-                    .build( new CacheLoader<String, NavigableSet<Principal>>() {
+                    .build( new CacheLoader<>() {
                         @Override public NavigableSet<Principal> load( String principalId ) throws Exception {
                             SecurablePrincipal sp = users.getUnchecked( principalId );
                             Collection<SecurablePrincipal> securablePrincipals = spm.getAllPrincipals( sp );

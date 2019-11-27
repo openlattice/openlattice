@@ -80,7 +80,7 @@ public class AceFuture implements ListenableFuture<Ace> {
 
     @Override
     public void addListener( Runnable listener, Executor executor ) {
-        futureAceValue.andThen( new ExecutionCallback<AceValue>() {
+        futureAceValue.andThen( new ExecutionCallback<>() {
 
             @Override
             public void onResponse( AceValue response ) {

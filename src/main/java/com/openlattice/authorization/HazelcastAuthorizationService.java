@@ -687,7 +687,7 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
     }
 
     private static EnumMap<Permission, Boolean> noAccess( EnumSet<Permission> permissions ) {
-        EnumMap<Permission, Boolean> pm = new EnumMap<Permission, Boolean>( Permission.class );
+        EnumMap<Permission, Boolean> pm = new EnumMap<>( Permission.class );
         for ( Permission p : permissions ) {
             pm.put( p, false );
         }

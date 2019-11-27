@@ -42,7 +42,7 @@ import org.springframework.stereotype.Component;
 @SuppressWarnings( "rawtypes" )
 @Component
 public class CallableStreamSerializer implements SelfRegisteringStreamSerializer<Callable> {
-    private static final ThreadLocal<Kryo> kryoThreadLocal = new ThreadLocal<Kryo>() {
+    private static final ThreadLocal<Kryo> kryoThreadLocal = new ThreadLocal<>() {
 
         @Override
         protected Kryo initialValue() {
