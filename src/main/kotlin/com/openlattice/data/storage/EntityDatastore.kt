@@ -19,8 +19,6 @@ import java.util.stream.Stream
  */
 interface EntityDatastore {
 
-    fun getEntityKeyIdsInEntitySet(entitySetId: UUID): BasePostgresIterable<UUID>
-
     fun getEntities(
             entitySetId: UUID,
             ids: Set<UUID>,

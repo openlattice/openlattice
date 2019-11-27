@@ -54,11 +54,6 @@ class PostgresEntityDatastore(
 
 
     @Timed
-    override fun getEntityKeyIdsInEntitySet(entitySetId: UUID): BasePostgresIterable<UUID> {
-        return dataQueryService.getEntityKeyIdsInEntitySet(entitySetId)
-    }
-
-    @Timed
     override fun createOrUpdateEntities(
             entitySetId: UUID,
             entities: Map<UUID, Map<UUID, Set<Any>>>,
