@@ -306,9 +306,7 @@ public class SearchService {
             // - let background task take soft deletes
             if ( event.getDeleteType() == DeleteType.Hard ) {
                 final var markAsIndexedContext = markAsIndexedTimer.time();
-                indexingMetadataManager.markAsUnIndexed(
-                        Map.of( event.getEntitySetId(), event.getEntityKeyIds() ), false
-                );
+                indexingMetadataManager.markAsUnIndexed( Map.of( event.getEntitySetId(), event.getEntityKeyIds() ) );
                 markAsIndexedContext.stop();
             }
         }
@@ -394,8 +392,7 @@ public class SearchService {
                                             ( OffsetDateTime ) entity.getValue()
                                                     .get( IdConstants.LAST_WRITE_ID.getId() ).iterator().next()
                             ) )
-                    ),
-                    false
+                    )
             );
             markAsIndexedContext.stop();
         }
