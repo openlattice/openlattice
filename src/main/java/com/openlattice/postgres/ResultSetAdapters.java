@@ -830,11 +830,7 @@ public final class ResultSetAdapters {
     }
 
     private static UUID[] readNullableUuidArray( UUID[] nullable ) {
-        if ( nullable == null ) {
-            return new UUID[0];
-        } else {
-            return nullable;
-        }
+        return Objects.requireNonNullElseGet( nullable, () -> new UUID[ 0 ] );
     }
 
     public static UUID auditEdgeEntitySetId( ResultSet rs ) throws SQLException {
