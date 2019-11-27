@@ -373,7 +373,6 @@ val upsertEntitiesSql = "UPDATE ${IDS.name} " +
  * Preparable sql to lock entities with the following bind order:
  * 1. entity key ids
  * 2. partition
- * 3. partition version
  */
 internal val lockEntitiesSql = "SELECT 1 FROM ${IDS.name} " +
         "WHERE ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ? " +
@@ -402,7 +401,7 @@ internal val updateVersionsForEntitySet = "UPDATE ${IDS.name} " +
                 "END, " +
             "${LAST_WRITE.name} = 'now()' " +
         "WHERE ${ENTITY_SET_ID.name} = ? "
-// TODO do we need partition + partition version here??
+// TODO do we need partition here??
 // @formatter:on
 /**
  * Preparable SQL that upserts a version and sets last write to current datetime for all entities in a given entity set
