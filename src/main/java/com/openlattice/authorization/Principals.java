@@ -25,7 +25,6 @@ package com.openlattice.authorization;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 
-import com.openlattice.organizations.PrincipalSet;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;

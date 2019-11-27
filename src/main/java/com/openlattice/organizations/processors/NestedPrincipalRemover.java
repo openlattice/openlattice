@@ -23,8 +23,6 @@ package com.openlattice.organizations.processors;
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRemover;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.AclKeySet;
-import java.util.List;
-import java.util.UUID;
 
 public class NestedPrincipalRemover extends AbstractRemover<AclKey, AclKeySet, AclKey> {
 

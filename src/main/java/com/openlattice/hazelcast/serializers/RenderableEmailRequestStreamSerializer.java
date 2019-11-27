@@ -8,9 +8,10 @@ import com.kryptnostic.rhizome.hazelcast.serializers.IoPerformingFunction;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.openlattice.mail.RenderableEmailRequest;
-import java.io.IOException;
 import jodd.mail.EmailAttachment;
 import org.springframework.stereotype.Component;
+
+import java.io.IOException;
 
 @Component
 public class RenderableEmailRequestStreamSerializer implements SelfRegisteringStreamSerializer<RenderableEmailRequest> {

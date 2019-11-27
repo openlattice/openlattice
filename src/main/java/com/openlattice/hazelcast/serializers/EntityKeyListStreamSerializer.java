@@ -20,13 +20,14 @@
 
 package com.openlattice.hazelcast.serializers;
 
-import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.data.EntityKey;
-import java.io.IOException;
+import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import org.springframework.stereotype.Component;
+
+import java.io.IOException;
 
 @Component
 public class EntityKeyListStreamSerializer implements SelfRegisteringStreamSerializer<EntityKey[]> {

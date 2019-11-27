@@ -5,7 +5,6 @@ import com.google.common.collect.Sets;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
-import java.io.Serializable;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
