@@ -50,6 +50,7 @@ import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.users.Auth0SyncService;
 import java.util.EnumSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -121,8 +122,8 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
         return Principals.getCurrentPrincipals()
                 .stream()
                 .filter( principal -> principal.getType().equals( PrincipalType.ROLE ) )
-                .map( principal -> spm.lookup( principal ) )
-                .filter( aclKey -> aclKey != null )
+                .map( spm::lookup )
+                .filter( Objects::nonNull )
                 .map( aclKey -> spm.getSecurablePrincipal( aclKey ) )
                 .collect( Collectors.toSet() );
     }
