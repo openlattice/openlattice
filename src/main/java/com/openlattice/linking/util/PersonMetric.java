@@ -22,25 +22,26 @@ package com.openlattice.linking.util;
 
 import com.google.common.collect.Sets;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
-
-import java.util.*;
-import java.util.function.BiFunction;
-
 import org.apache.commons.codec.language.DoubleMetaphone;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
+
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.function.BiFunction;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public enum PersonMetric {
-    FIRST_NAME_STRING( jaroWinkler( ( e, map ) -> PersonProperties.getFirstName( e, map ) ) ),
-    FIRST_NAME_METAPHONE( metaphone( ( e, map ) -> PersonProperties.getFirstName( e, map ) ) ),
-    FIRST_NAME_METAPHONE_ALT( metaphoneAlternate( ( e, map ) -> PersonProperties.getFirstName( e, map ) ) ),
-    FIRST_NAME_LHS_PRESENCE( lhs( ( e, map ) -> PersonProperties.getHasFirstName( e, map ) ) ),
-    FIRST_NAME_RHS_PRESENCE( rhs( ( e, map ) -> PersonProperties.getHasFirstName( e, map ) ) ),
-    FIRST_NAME_LHS_PROBA( lhsdouble( ( e, map) -> PersonProperties.getFirstProba (e, map ) ) ),
-    FIRST_NAME_RHS_PROBA( rhsdouble( ( e, map) -> PersonProperties.getFirstProba (e, map ) ) ),
+    FIRST_NAME_STRING( jaroWinkler( PersonProperties::getFirstName ) ),
+    FIRST_NAME_METAPHONE( metaphone( PersonProperties::getFirstName ) ),
+    FIRST_NAME_METAPHONE_ALT( metaphoneAlternate( PersonProperties::getFirstName ) ),
+    FIRST_NAME_LHS_PRESENCE( lhs( PersonProperties::getHasFirstName ) ),
+    FIRST_NAME_RHS_PRESENCE( rhs( PersonProperties::getHasFirstName ) ),
+    FIRST_NAME_LHS_PROBA( lhsdouble( PersonProperties::getFirstProba ) ),
+    FIRST_NAME_RHS_PROBA( rhsdouble( PersonProperties::getFirstProba ) ),
 
     MIDDLE_NAME_STRING( jaroWinkler( ( e, map ) -> DelegatedStringSet.wrap( Sets.newHashSet() ) ) ),
     MIDDLE_NAME_METAPHONE( metaphone( ( e, map ) -> DelegatedStringSet.wrap( Sets.newHashSet() ) ) ),
@@ -48,34 +49,34 @@ public enum PersonMetric {
     MIDDLE_NAME_LHS_PRESENCE( lhs( ( e, map ) -> 0 ) ),
     MIDDLE_NAME_RHS_PRESENCE( rhs( ( e, map ) -> 0 ) ),
 
-    LAST_NAME_STRING( jaroWinkler( ( e, map ) -> PersonProperties.getLastName( e, map ) ) ),
-    LAST_NAME_METAPHONE( metaphone( ( e, map ) -> PersonProperties.getLastName( e, map ) ) ),
-    LAST_NAME_METAPHONE_ALT( metaphoneAlternate( ( e, map ) -> PersonProperties.getLastName( e, map ) ) ),
-    LAST_NAME_LHS_PRESENCE( lhs( ( e, map ) -> PersonProperties.getHasLastName( e, map ) ) ),
-    LAST_NAME_RHS_PRESENCE( rhs( ( e, map ) -> PersonProperties.getHasLastName( e, map ) ) ),
-    LAST_NAME_LHS_PROBA( lhsdouble( ( e, map) -> PersonProperties.getLastProba (e, map ) ) ),
-    LAST_NAME_RHS_PROBA( rhsdouble( ( e, map) -> PersonProperties.getLastProba (e, map ) ) ),
+    LAST_NAME_STRING( jaroWinkler( PersonProperties::getLastName ) ),
+    LAST_NAME_METAPHONE( metaphone( PersonProperties::getLastName ) ),
+    LAST_NAME_METAPHONE_ALT( metaphoneAlternate( PersonProperties::getLastName ) ),
+    LAST_NAME_LHS_PRESENCE( lhs( PersonProperties::getHasLastName ) ),
+    LAST_NAME_RHS_PRESENCE( rhs( PersonProperties::getHasLastName ) ),
+    LAST_NAME_LHS_PROBA( lhsdouble( PersonProperties::getLastProba ) ),
+    LAST_NAME_RHS_PROBA( rhsdouble( PersonProperties::getLastProba ) ),
 
-    SEX_STRING( jaroWinkler( ( e, map ) -> PersonProperties.getSex( e, map ) ) ),
-    SEX_LHS_PRESENCE( lhs( ( e, map ) -> PersonProperties.getHasSex( e, map ) ) ),
-    SEX_RHS_PRESENCE( rhs( ( e, map ) -> PersonProperties.getHasSex( e, map ) ) ),
+    SEX_STRING( jaroWinkler( PersonProperties::getSex ) ),
+    SEX_LHS_PRESENCE( lhs( PersonProperties::getHasSex ) ),
+    SEX_RHS_PRESENCE( rhs( PersonProperties::getHasSex ) ),
 
-    DOB_STRING( jaroWinkler( ( e, map ) -> PersonProperties.getDob( e, map ) ) ),
-    DOB_LHS_PRESENCE( lhs( ( e, map ) -> PersonProperties.getHasDob( e, map ) ) ),
-    DOB_RHS_PRESENCE( rhs( ( e, map ) -> PersonProperties.getHasDob( e, map ) ) ),
+    DOB_STRING( jaroWinkler( PersonProperties::getDob ) ),
+    DOB_LHS_PRESENCE( lhs( PersonProperties::getHasDob ) ),
+    DOB_RHS_PRESENCE( rhs( PersonProperties::getHasDob ) ),
     DOB_DIFF( dobStr() ),
 
-    RACE_STRING( jaroWinkler( ( e, map ) -> PersonProperties.getRace( e, map ) ) ),
-    RACE_LHS_PRESENCE( lhs( ( e, map ) -> PersonProperties.getHasRace( e, map ) ) ),
-    RACE_RHS_PRESENCE( rhs( ( e, map ) -> PersonProperties.getHasRace( e, map ) ) ),
+    RACE_STRING( jaroWinkler( PersonProperties::getRace ) ),
+    RACE_LHS_PRESENCE( lhs( PersonProperties::getHasRace ) ),
+    RACE_RHS_PRESENCE( rhs( PersonProperties::getHasRace ) ),
 
-    ETHNICITY_STRING( jaroWinkler( ( e, map ) -> PersonProperties.getEthnicity( e, map ) ) ),
-    ETHNICITY_LHS_PRESENCE( lhs( ( e, map ) -> PersonProperties.getHasEthnicity( e, map ) ) ),
-    ETHNICITY_RHS_PRESENCE( rhs( ( e, map ) -> PersonProperties.getHasEthnicity( e, map ) ) ),
+    ETHNICITY_STRING( jaroWinkler( PersonProperties::getEthnicity ) ),
+    ETHNICITY_LHS_PRESENCE( lhs( PersonProperties::getHasEthnicity ) ),
+    ETHNICITY_RHS_PRESENCE( rhs( PersonProperties::getHasEthnicity ) ),
 
-    SSN_STRING( jaroWinkler( ( e, map ) -> PersonProperties.getSsn( e, map ) ) ),
-    SSN_LHS_PRESENCE( lhs( ( e, map ) -> PersonProperties.getHasSsn( e, map ) ) ),
-    SSN_RHS_PRESENCE( rhs( ( e, map ) -> PersonProperties.getHasSsn( e, map ) ) );
+    SSN_STRING( jaroWinkler( PersonProperties::getSsn ) ),
+    SSN_LHS_PRESENCE( lhs( PersonProperties::getHasSsn ) ),
+    SSN_RHS_PRESENCE( rhs( PersonProperties::getHasSsn ) );
 
 
     private static final Set<PersonMetric> metricsList     = Sets.newHashSet( PersonMetric.values() );
