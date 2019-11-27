@@ -3,7 +3,6 @@ package com.openlattice.search.renderers
 import com.google.common.base.Optional
 import com.google.common.collect.Lists
 import com.google.common.collect.Maps
-import com.google.common.collect.SetMultimap
 import com.openlattice.mail.RenderableEmailRequest
 import com.openlattice.search.requests.PersistentSearch
 import jodd.mail.EmailAttachment

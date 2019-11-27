@@ -22,9 +22,6 @@
 package com.openlattice.authorization.mapstores
 
 import com.codahale.metrics.annotation.Timed
-import com.google.common.cache.CacheBuilder
-import com.google.common.cache.CacheLoader
-import com.google.common.cache.LoadingCache
 import com.google.common.collect.ImmutableList
 import com.hazelcast.config.MapConfig
 import com.hazelcast.config.MapIndexConfig
@@ -44,7 +41,6 @@ import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.sql.ResultSet
-import java.util.concurrent.TimeUnit
 import java.util.function.Function
 import java.util.function.Supplier
 

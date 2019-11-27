@@ -5,13 +5,11 @@ import com.google.common.collect.SetMultimap
 import com.openlattice.data.DeleteType
 import com.openlattice.data.EntitySetData
 import com.openlattice.data.WriteEvent
-import com.openlattice.edm.set.ExpirationBase
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PostgresIterable
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import java.nio.ByteBuffer
-import java.time.OffsetDateTime
 import java.util.*
 import java.util.stream.Stream
 

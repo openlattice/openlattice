@@ -1,16 +1,13 @@
 package com.openlattice.search.renderers
 
 import com.google.common.base.Optional
-import com.google.common.collect.HashMultimap
 import com.google.common.collect.Maps
-import com.google.common.collect.SetMultimap
 import com.openlattice.data.requests.NeighborEntityDetails
 import com.openlattice.mail.RenderableEmailRequest
 import com.openlattice.search.requests.PersistentSearch
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import java.time.LocalDate
 import java.time.OffsetDateTime
-import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.*
 

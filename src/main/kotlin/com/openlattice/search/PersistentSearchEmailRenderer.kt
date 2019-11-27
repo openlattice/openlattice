@@ -1,6 +1,5 @@
 package com.openlattice.search
 
-import com.google.common.collect.SetMultimap
 import com.openlattice.data.requests.NeighborEntityDetails
 import com.openlattice.mail.RenderableEmailRequest
 import com.openlattice.search.renderers.AlprAlertEmailRenderer
