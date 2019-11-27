@@ -21,13 +21,11 @@
 package com.openlattice.datastore.directory.controllers;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
 
 import com.auth0.client.auth.AuthAPI;
 import com.auth0.client.mgmt.ManagementAPI;
 import com.auth0.client.mgmt.filter.UserFilter;
 import com.auth0.exception.Auth0Exception;
-import com.auth0.json.auth.UserInfo;
 import com.codahale.metrics.annotation.Timed;
 import com.openlattice.assembler.PostgresRoles;
 import com.openlattice.authorization.AclKey;
@@ -54,7 +52,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
-import org.apache.commons.lang.StringUtils;
+
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.DeleteMapping;
