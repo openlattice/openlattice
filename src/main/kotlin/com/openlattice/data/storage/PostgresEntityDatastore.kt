@@ -1,5 +1,6 @@
 package com.openlattice.data.storage
 
+import com.codahale.metrics.MetricRegistry
 import com.codahale.metrics.annotation.Timed
 import com.google.common.collect.*
 import com.google.common.eventbus.EventBus
@@ -35,7 +36,8 @@ import javax.inject.Inject
 class PostgresEntityDatastore(
         private val dataQueryService: PostgresEntityDataQueryService,
         private val postgresEdmManager: PostgresEdmManager,
-        private val entitySetManager: EntitySetManager
+        private val entitySetManager: EntitySetManager,
+        metricRegistry: MetricRegistry
 ) : EntityDatastore {
 
     companion object {
@@ -52,11 +54,17 @@ class PostgresEntityDatastore(
     @Inject
     private lateinit var linkingQueryService: LinkingQueryService
 
+    private val getEntitiesTimer = metricRegistry.timer(
+            MetricRegistry.name(
+                    PostgresEntityDatastore::class.java, "getEntities"
+            )
+    )
+    private val getLinkedEntitiesTimer = metricRegistry.timer(
+            MetricRegistry.name(
+                    PostgresEntityDatastore::class.java, "getEntities(linked)"
+            )
+    )
 
-    @Timed
-    override fun getEntityKeyIdsInEntitySet(entitySetId: UUID): BasePostgresIterable<UUID> {
-        return dataQueryService.getEntityKeyIdsInEntitySet(entitySetId)
-    }
 
     @Timed
     override fun createOrUpdateEntities(
@@ -216,10 +224,14 @@ class PostgresEntityDatastore(
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
             linking: Boolean
     ): EntitySetData<FullQualifiedName> {
-
+        val context = if (linking) {
+            getLinkedEntitiesTimer.time()
+        } else {
+            getEntitiesTimer.time()
+        }
         //If the query generated exceed 33.5M UUIDs good chance that it exceed Postgres's 1 GB max query buffer size
 
-        return EntitySetData(
+        val entitySetData = EntitySetData(
                 orderedPropertyTypes,
                 dataQueryService.getEntitiesWithPropertyTypeFqns(
                         entityKeyIds,
@@ -231,6 +243,10 @@ class PostgresEntityDatastore(
                 ).values.asIterable()
 
         )
+
+        context.stop()
+
+        return entitySetData
     }
 
     @Timed
@@ -263,18 +279,6 @@ class PostgresEntityDatastore(
                 emptyMap(),
                 metadataOptions
         ).values.stream()
-    }
-
-    @Timed
-    override fun getEntitiesById(
-            entitySetId: UUID,
-            ids: Set<UUID>,
-            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
-    ): Map<UUID, Map<FullQualifiedName, Set<Any>>> {
-        return dataQueryService.getEntitiesWithPropertyTypeFqns(
-                ImmutableMap.of(entitySetId, Optional.of(ids)),
-                authorizedPropertyTypes
-        )
     }
 
     @Timed
@@ -345,6 +349,7 @@ class PostgresEntityDatastore(
         return linkedDataMap
     }
 
+    @Timed
     override fun getLinkedEntitySetBreakDown(
             linkingIdsByEntitySetId: Map<UUID, Optional<Set<UUID>>>,
             authorizedPropertyTypesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>)
@@ -499,11 +504,16 @@ class PostgresEntityDatastore(
         return propertyWriteEvent
     }
 
-    override fun getExpiringEntitiesFromEntitySet(entitySetId: UUID, expirationBaseColumn: String, formattedDateMinusTTE: Any,
-                                                  sqlFormat: Int, deletedType: DeleteType): BasePostgresIterable<UUID> {
-        return dataQueryService
-                .getExpiringEntitiesFromEntitySet(entitySetId, expirationBaseColumn, formattedDateMinusTTE,
-                        sqlFormat, deletedType)
+    override fun getExpiringEntitiesFromEntitySet(
+            entitySetId: UUID,
+            expirationBaseColumn: String,
+            formattedDateMinusTTE: Any,
+            sqlFormat: Int,
+            deleteType: DeleteType
+    ): BasePostgresIterable<UUID> {
+        return dataQueryService.getExpiringEntitiesFromEntitySet(
+                entitySetId, expirationBaseColumn, formattedDateMinusTTE, sqlFormat, deleteType
+        )
     }
 
 }
