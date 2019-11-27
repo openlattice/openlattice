@@ -81,6 +81,7 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 import java.time.OffsetDateTime;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -232,8 +233,8 @@ public final class TestDataFactory {
         UUID ptId = propertyTypes.iterator().next();
         return new AssociationType(
                 Optional.of( et ),
-                Sets.newLinkedHashSet( Arrays.asList( ptId ) ),
-                Sets.newLinkedHashSet( Arrays.asList( ptId ) ),
+                Sets.newLinkedHashSet( Collections.singletonList( ptId ) ),
+                Sets.newLinkedHashSet( Collections.singletonList( ptId ) ),
                 false );
     }
 
@@ -543,7 +544,7 @@ public final class TestDataFactory {
         return new EntityTypePropertyMetadata(
                 randomAlphanumeric( 100 ), // title
                 randomAlphanumeric( 100 ), // description
-                Sets.newLinkedHashSet( Arrays.asList( randomAlphanumeric( 5 ) ) ),
+                Sets.newLinkedHashSet( Collections.singletonList( randomAlphanumeric( 5 ) ) ),
                 r.nextBoolean()
         );
     }
