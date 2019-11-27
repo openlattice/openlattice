@@ -18,9 +18,6 @@
 
 package com.openlattice.edm;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -31,6 +28,7 @@ import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.client.serialization.SerializationConstants;
 import com.openlattice.data.DataExpiration;
 import com.openlattice.edm.set.EntitySetFlag;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.Collection;
 import java.util.EnumSet;
@@ -41,9 +39,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-import org.apache.commons.lang3.StringUtils;
-
-import javax.swing.*;
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Describes an entity set and associated metadata, including the active audit record entity set.

@@ -21,8 +21,6 @@
 
 package com.openlattice.admin.indexing
 
-import com.openlattice.admin.RELOAD_CACHE
-import com.openlattice.authorization.Principal
 import retrofit2.http.*
 import java.util.*
 

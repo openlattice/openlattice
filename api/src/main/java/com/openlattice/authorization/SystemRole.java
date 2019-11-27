@@ -55,6 +55,6 @@ public enum SystemRole {
     }
     
     public static String[] valuesAsArray() {
-        return allRoles.toArray( new String[ allRoles.size() ] );
+        return allRoles.toArray( new String[ 0 ] );
     }
 };

@@ -21,13 +21,7 @@
 
 package com.openlattice.graph
 
-import com.google.common.collect.ListMultimap
-import com.google.common.collect.SetMultimap
-import com.openlattice.data.requests.NeighborEntityDetails
-import com.openlattice.graph.query.GraphQuery
-import com.openlattice.graph.query.GraphQueryState
 import retrofit2.http.Body
-import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Path
 import java.util.*

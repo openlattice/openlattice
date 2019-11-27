@@ -23,7 +23,6 @@ package com.openlattice.graph
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.openlattice.client.serialization.SerializationConstants
-import java.util.*
 
 data class SimpleAssociationConstraint(
 //        @JsonProperty(SerializationConstants.ASSOCIATION_TYPE_ID) val associationTypeId: UUID,
