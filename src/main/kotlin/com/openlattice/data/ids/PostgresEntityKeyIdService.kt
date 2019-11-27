@@ -52,15 +52,14 @@ import kotlin.collections.HashMap
 private val entityKeysSql = "SELECT * FROM ${IDS.name} WHERE ${ID.name} = ANY(?) "
 private val entityKeyIdsSql = "SELECT * FROM ${SYNC_IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${ENTITY_ID.name} = ANY(?) "
 private val entityKeyIdSql = "SELECT * FROM ${SYNC_IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${ENTITY_ID.name} = ? "
-private val INSERT_SQL = "INSERT INTO ${IDS.name} (${ENTITY_SET_ID.name},${ID.name},${PARTITION.name},${PARTITIONS_VERSION.name}) VALUES(?,?,?,?)"
+private val INSERT_SQL = "INSERT INTO ${IDS.name} (${ENTITY_SET_ID.name},${ID.name},${PARTITION.name}) VALUES(?,?,?)"
 private val INSERT_ID_TO_DATA_SQL = "INSERT INTO ${DATA.name} (" +
         "${ENTITY_SET_ID.name}," +
         "${ID.name}," +
         "${PARTITION.name}," +
-        "${PARTITIONS_VERSION.name}," +
         "${PROPERTY_TYPE_ID.name}," +
         "${VERSION.name}," +
-        "${HASH.name}) VALUES (?,?,?,?,?,?,?)"
+        "${HASH.name}) VALUES (?,?,?,?,?,?)"
 private val INSERT_SYNC_SQL = "INSERT INTO ${SYNC_IDS.name} (${ENTITY_SET_ID.name},${ENTITY_ID.name},${ID.name}) VALUES(?,?,?)"
 private val logger = LoggerFactory.getLogger(PostgresEntityKeyIdService::class.java)
 
@@ -99,16 +98,14 @@ class PostgresEntityKeyIdService(
                 insertIds.setObject(1, entitySetId)
                 insertIds.setObject(2, entityKeyId)
                 insertIds.setInt(3, partition)
-                insertIds.setInt(4, partitionsInfo.partitionsVersion)
                 insertIds.addBatch()
 
                 insertToData.setObject(1, entitySetId)
                 insertToData.setObject(2, entityKeyId)
                 insertToData.setInt(3, partition)
-                insertToData.setInt(4, partitionsInfo.partitionsVersion)
-                insertToData.setObject(5, IdConstants.ID_ID.id)
-                insertToData.setLong(6, System.currentTimeMillis())
-                insertToData.setObject(7, PostgresDataHasher.hashObject(entityKeyId, EdmPrimitiveTypeKind.Guid))
+                insertToData.setObject(4, IdConstants.ID_ID.id)
+                insertToData.setLong(5, System.currentTimeMillis())
+                insertToData.setObject(6, PostgresDataHasher.hashObject(entityKeyId, EdmPrimitiveTypeKind.Guid))
                 insertToData.addBatch()
             }
 
@@ -133,7 +130,7 @@ class PostgresEntityKeyIdService(
         val partitionsByEntitySet = partitionManager.getEntitySetsPartitionsInfo(
                 entityKeyIds.keys.map { it.entitySetId }.toSet()
         )
-                .mapValues { it.value.partitions.toList() to it.value.partitionsVersion }
+                .mapValues { it.value.partitions.toList() }
 
         conn.use { connection ->
             connection.autoCommit = false
@@ -151,22 +148,19 @@ class PostgresEntityKeyIdService(
             val insertToData = connection.prepareStatement(INSERT_ID_TO_DATA_SQL)
 
             entityKeyIds.forEach {
-                val partition = getPartition(it.value, partitionsByEntitySet.getValue(it.key.entitySetId).first)
-                val partitionsVersion = partitionsByEntitySet.getValue(it.key.entitySetId).second
+                val partition = getPartition(it.value, partitionsByEntitySet.getValue(it.key.entitySetId))
 
                 insertIds.setObject(1, it.key.entitySetId)
                 insertIds.setObject(2, it.value)
                 insertIds.setInt(3, partition)
-                insertIds.setInt(4, partitionsVersion)
                 insertIds.addBatch()
 
                 insertToData.setObject(1, it.key.entitySetId)
                 insertToData.setObject(2, it.value)
                 insertToData.setInt(3, partition)
-                insertToData.setInt(4, partitionsVersion)
-                insertToData.setObject(5, IdConstants.ID_ID.id)
-                insertToData.setLong(6, System.currentTimeMillis())
-                insertToData.setObject(7, PostgresDataHasher.hashObject(it.value, EdmPrimitiveTypeKind.Guid))
+                insertToData.setObject(4, IdConstants.ID_ID.id)
+                insertToData.setLong(5, System.currentTimeMillis())
+                insertToData.setObject(6, PostgresDataHasher.hashObject(it.value, EdmPrimitiveTypeKind.Guid))
                 insertToData.addBatch()
             }
 
@@ -246,7 +240,7 @@ class PostgresEntityKeyIdService(
         val ids = idGenerationService.getNextIds(count)
         storeEntityKeyIdReservations(
                 IdConstants.LINKING_ENTITY_SET_ID.id, ids,
-                PartitionsInfo(partitionManager.getAllPartitions().toSet(), 0)
+                PartitionsInfo(partitionManager.getAllPartitions().toSet())
         )
         return ids.toList()
     }

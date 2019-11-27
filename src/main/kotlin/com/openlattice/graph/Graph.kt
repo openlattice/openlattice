@@ -80,7 +80,7 @@ class Graph(
     override fun createEdges(keys: MutableSet<DataEdgeKey>): WriteEvent {
         val partitionsInfoByEntitySet = partitionManager.getEntitySetsPartitionsInfo(keys.flatMap { listOf(it.src, it.dst, it.edge) }
                 .map { it.entitySetId }.toSet())
-                .mapValues { it.value.partitionsVersion to it.value.partitions.toList() }
+                .mapValues { it.value.partitions.toList() }
 
         hds.connection.use { connection ->
             val ps = connection.prepareStatement(EDGES_UPSERT_SQL)
@@ -896,14 +896,14 @@ fun bindColumnsForEdge(
         dataEdgeKey: DataEdgeKey,
         version: Long,
         versions: java.sql.Array,
-        partitionsInfoByEntitySet: Map<UUID, Pair<Int, List<Int>>>) {
+        partitionsInfoByEntitySet: Map<UUID, List<Int>>) {
 
     val edk = dataEdgeKey.src
-    val partitionsInfo = partitionsInfoByEntitySet.getValue(edk.entitySetId)
+    val partitions = partitionsInfoByEntitySet.getValue(edk.entitySetId)
 
     var index = 1
 
-    ps.setObject(index++, getPartition(edk.entityKeyId, partitionsInfo.second))
+    ps.setObject(index++, getPartition(edk.entityKeyId, partitions))
     ps.setObject(index++, dataEdgeKey.src.entitySetId)
     ps.setObject(index++, dataEdgeKey.src.entityKeyId)
     ps.setObject(index++, dataEdgeKey.dst.entitySetId)
@@ -912,6 +912,5 @@ fun bindColumnsForEdge(
     ps.setObject(index++, dataEdgeKey.edge.entityKeyId)
     ps.setLong(index++, version)
     ps.setArray(index++, versions)
-    ps.setInt(index++, partitionsInfo.first)
     ps.addBatch()
 }

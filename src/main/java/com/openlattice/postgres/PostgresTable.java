@@ -92,8 +92,7 @@ public final class PostgresTable {
                             EDGE_ENTITY_SET_ID,
                             EDGE_ENTITY_KEY_ID,
                             VERSION,
-                            VERSIONS,
-                            PARTITIONS_VERSION )
+                            VERSIONS )
                     .primaryKey( PARTITION,
                             SRC_ENTITY_KEY_ID,
                             DST_ENTITY_KEY_ID,
@@ -145,7 +144,6 @@ public final class PostgresTable {
                             ORGANIZATION_ID,
                             ENTITY_SET_FLAGS,
                             PARTITIONS,
-                            PARTITIONS_VERSION,
                             TIME_TO_EXPIRATION,
                             EXPIRATION_BASE_FLAG,
                             EXPIRATION_DELETE_FLAG,
@@ -243,8 +241,7 @@ public final class PostgresTable {
                             LAST_LINK,
                             LAST_PROPAGATE,
                             LAST_MIGRATE,
-                            LAST_LINK_INDEX,
-                            PARTITIONS_VERSION )
+                            LAST_LINK_INDEX )
                     .primaryKey( ID_VALUE, PARTITION )
                     .distributionColumn( PARTITION );
     public static final PostgresTableDefinition        ID_GENERATION                =
