@@ -25,7 +25,6 @@ import com.google.common.collect.HashMultimap
 import com.google.common.collect.SetMultimap
 import com.openlattice.authorization.EdmAuthorizationHelper
 import com.openlattice.authorization.Permission
-import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.graph.EntityQueryVisitor
 import com.openlattice.graph.query.AbstractEntityQuery
