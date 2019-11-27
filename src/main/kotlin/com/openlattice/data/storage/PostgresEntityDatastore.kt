@@ -1,5 +1,6 @@
 package com.openlattice.data.storage
 
+import com.codahale.metrics.MetricRegistry
 import com.codahale.metrics.annotation.Timed
 import com.google.common.collect.*
 import com.google.common.eventbus.EventBus
@@ -51,6 +52,19 @@ class PostgresEntityDatastore(
 
     @Inject
     private lateinit var linkingQueryService: LinkingQueryService
+
+    @Inject
+    private lateinit var metricRegistry: MetricRegistry
+    private val getEntitiesTimer = metricRegistry.timer(
+            MetricRegistry.name(
+                    PostgresEntityDatastore::class.java, "getEntities"
+            )
+    )
+    private val getLinkedEntitiesTimer = metricRegistry.timer(
+            MetricRegistry.name(
+                    PostgresEntityDatastore::class.java, "getEntities(linked)"
+            )
+    )
 
 
     @Timed
@@ -211,10 +225,14 @@ class PostgresEntityDatastore(
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
             linking: Boolean
     ): EntitySetData<FullQualifiedName> {
-
+        val context = if (linking) {
+            getLinkedEntitiesTimer.time()
+        } else {
+            getEntitiesTimer.time()
+        }
         //If the query generated exceed 33.5M UUIDs good chance that it exceed Postgres's 1 GB max query buffer size
 
-        return EntitySetData(
+        val entitySetData = EntitySetData(
                 orderedPropertyTypes,
                 dataQueryService.getEntitiesWithPropertyTypeFqns(
                         entityKeyIds,
@@ -226,6 +244,10 @@ class PostgresEntityDatastore(
                 ).values.asIterable()
 
         )
+
+        context.stop()
+
+        return entitySetData
     }
 
     @Timed

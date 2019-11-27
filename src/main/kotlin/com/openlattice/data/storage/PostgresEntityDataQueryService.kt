@@ -20,7 +20,6 @@ import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.zaxxer.hikari.HikariDataSource
-import org.apache.commons.lang3.NotImplementedException
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
@@ -301,10 +300,10 @@ class PostgresEntityDataQueryService(
                             entityKeyId to rawValue
                         } else {
                             entityKeyId to Multimaps.asMap(JsonDeserializer
-                                                                   .validateFormatAndNormalize(
-                                                                           rawValue, authorizedPropertyTypes
-                                                                   )
-                                                                   { "Entity set $entitySetId with entity key id $entityKeyId" })
+                                    .validateFormatAndNormalize(
+                                            rawValue, authorizedPropertyTypes
+                                    )
+                                    { "Entity set $entitySetId with entity key id $entityKeyId" })
                         }
                     }.toMap()
 
@@ -386,7 +385,7 @@ class PostgresEntityDataQueryService(
 
             //Make data visible by marking new version in ids table.
             val upsertEntities = connection.prepareStatement(buildUpsertEntitiesAndLinkedData())
-            val updatedLinkedEntities = attempt(LinearBackoff(60000, 125),32) {
+            val updatedLinkedEntities = attempt(LinearBackoff(60000, 125), 32) {
                 upsertEntities.setObject(1, versionsArrays)
                 upsertEntities.setObject(2, version)
                 upsertEntities.setObject(3, version)
