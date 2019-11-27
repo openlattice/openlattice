@@ -20,7 +20,6 @@ package com.openlattice.search.requests;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.SetMultimap;
 import com.openlattice.client.serialization.SerializationConstants;
 import java.io.Serializable;
 import java.util.List;
