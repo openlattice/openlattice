@@ -156,7 +156,6 @@ class BackgroundIndexedEntitiesDeletionService(
                     val partitionsArray = PostgresArrays.createIntArray(it.connection, entitySet.partitions)
                     it.setObject(1, entitySet.id)
                     it.setArray(2, partitionsArray)
-                    it.setInt(3, entitySet.partitionsVersion)
                 }
         ) { rs -> ResultSetAdapters.id(rs) }
     }
@@ -172,7 +171,6 @@ class BackgroundIndexedEntitiesDeletionService(
             "WHERE " +
                 "${ENTITY_SET_ID.name} = ? AND " +
                 "${PARTITION.name} = ANY(?) AND " +
-                "${PARTITIONS_VERSION.name} = ? AND " +
                 "${VERSION.name} = 0 AND " +
                 "( " +
                     "(${LAST_INDEX.name} >= ${LAST_WRITE.name}) " +

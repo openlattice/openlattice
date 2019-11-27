@@ -169,7 +169,6 @@ class BackgroundIndexingService(
         return "SELECT ${ID.name}, ${LAST_WRITE.name} FROM ${IDS.name} " +
                 "WHERE ${ENTITY_SET_ID.name} = ? " +
                 "AND ${PARTITION.name} = ANY(?) " +
-                "AND ${PARTITIONS_VERSION.name} = ? " +
                 "AND $versionsClause " +
                 "AND $dirtyIdsClause "
     }
@@ -183,7 +182,6 @@ class BackgroundIndexingService(
                 PreparedStatementHolderSupplier(hds, getEntityDataKeysQuery(reindexAll, getTombstoned), FETCH_SIZE) {
                     it.setObject(1, entitySet.id)
                     it.setArray(2, PostgresArrays.createIntArray(it.connection, entitySet.partitions))
-                    it.setInt(3, entitySet.partitionsVersion)
                 }
         ) { ResultSetAdapters.id(it) to ResultSetAdapters.lastWriteTyped(it) }
     }
