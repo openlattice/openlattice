@@ -5,9 +5,8 @@ import com.google.common.cache.CacheLoader
 import com.google.common.cache.LoadingCache
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
-import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 
-abstract class AbstractEnumSerializer<T : Enum<T>> : SelfRegisteringStreamSerializer<Enum<T>> {
+abstract class AbstractEnumSerializer<T : Enum<T>> : TestableSelfRegisteringStreamSerializer<Enum<T>> {
 
     companion object {
         private val enumCache: LoadingCache<Class<*>, Array<*>> = CacheBuilder.newBuilder().build( CacheLoader.from { key ->

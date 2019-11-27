@@ -23,4 +23,8 @@ class GrantTypeStreamSerializer : AbstractEnumSerializer<GrantType>() {
     override fun getClazz(): Class<out Enum<GrantType>> {
         return GrantType::class.java
     }
+
+    override fun generateTestValue(): Enum<GrantType> {
+        return GrantType.Manual
+    }
 }

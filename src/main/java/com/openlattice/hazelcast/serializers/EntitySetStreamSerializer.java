@@ -103,7 +103,7 @@ public class EntitySetStreamSerializer implements SelfRegisteringStreamSerialize
             expiration = null;
         }
 
-        EntitySet es = new EntitySet(
+        return new EntitySet(
                 id,
                 entityTypeId,
                 name,
@@ -116,8 +116,6 @@ public class EntitySetStreamSerializer implements SelfRegisteringStreamSerialize
                 partitions,
                 partitionsVersion,
                 expiration );
-
-        return es;
     }
 
     @Override
