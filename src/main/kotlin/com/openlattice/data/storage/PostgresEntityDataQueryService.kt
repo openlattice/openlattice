@@ -56,16 +56,14 @@ class PostgresEntityDataQueryService(
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
             propertyTypeFilters: Map<UUID, Set<Filter>> = mapOf(),
             metadataOptions: Set<MetadataOption> = EnumSet.noneOf(MetadataOption::class.java),
-            version: Optional<Long> = Optional.empty(),
-            linking: Boolean = false
+            version: Optional<Long> = Optional.empty()
     ): BasePostgresIterable<Pair<UUID, Map<UUID, Set<Any>>>> {
         return getEntitySetIterable(
                 entityKeyIds,
                 authorizedPropertyTypes,
                 propertyTypeFilters,
                 metadataOptions,
-                version,
-                linking
+                version
         ) { rs ->
             getEntityPropertiesByPropertyTypeId(rs, authorizedPropertyTypes, metadataOptions, byteBlobDataManager)
         }
