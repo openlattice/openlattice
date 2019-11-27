@@ -27,6 +27,6 @@ data class DatastoreConfiguration(
     }
 
     override fun getKey(): ConfigurationKey {
-        return key
+        return DatastoreConfiguration.key
     }
 }
