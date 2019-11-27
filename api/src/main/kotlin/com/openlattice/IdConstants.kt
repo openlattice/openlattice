@@ -54,6 +54,7 @@ enum class IdConstants(val id: UUID) {
     // entity set ids
     CONTACT_INFO_ENTITY_SET_ID(UUID(8, 20)),
     LINKING_PERSON_ENTITY_SET_ID(UUID(9, 20)),
+    FLIGHT_ENTITY_SET_ID(UUID(11, 20)),
 
     // system
     SYSTEM_ID(UUID(10, 20)),
