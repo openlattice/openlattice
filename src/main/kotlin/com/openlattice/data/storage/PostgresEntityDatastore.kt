@@ -266,18 +266,6 @@ class PostgresEntityDatastore(
     }
 
     @Timed
-    override fun getEntitiesById(
-            entitySetId: UUID,
-            ids: Set<UUID>,
-            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
-    ): Map<UUID, Map<FullQualifiedName, Set<Any>>> {
-        return dataQueryService.getEntitiesWithPropertyTypeFqns(
-                ImmutableMap.of(entitySetId, Optional.of(ids)),
-                authorizedPropertyTypes
-        )
-    }
-
-    @Timed
     override fun getLinkingEntities(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>

@@ -34,12 +34,6 @@ interface EntityDatastore {
             metadataOptions: EnumSet<MetadataOption>
     ): Stream<MutableMap<FullQualifiedName, MutableSet<Any>>>
 
-    fun getEntitiesById(
-            entitySetId: UUID,
-            ids: Set<UUID>,
-            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
-    ): Map<UUID, Map<FullQualifiedName, Set<Any>>>
-
     fun getLinkingEntities(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
