@@ -36,7 +36,8 @@ import javax.inject.Inject
 class PostgresEntityDatastore(
         private val dataQueryService: PostgresEntityDataQueryService,
         private val postgresEdmManager: PostgresEdmManager,
-        private val entitySetManager: EntitySetManager
+        private val entitySetManager: EntitySetManager,
+        metricRegistry: MetricRegistry
 ) : EntityDatastore {
 
     companion object {
@@ -53,8 +54,6 @@ class PostgresEntityDatastore(
     @Inject
     private lateinit var linkingQueryService: LinkingQueryService
 
-    @Inject
-    private lateinit var metricRegistry: MetricRegistry
     private val getEntitiesTimer = metricRegistry.timer(
             MetricRegistry.name(
                     PostgresEntityDatastore::class.java, "getEntities"
