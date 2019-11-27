@@ -35,7 +35,6 @@ import java.util.concurrent.atomic.AtomicLong
 import kotlin.streams.asStream
 
 const val S3_DELETE_BATCH_SIZE = 10_000
-const val DEFAULT_BATCH_SIZE = 128_000
 
 /**
  *
@@ -219,13 +218,18 @@ class PostgresEntityDataQueryService(
         val propertyTypes = authorizedPropertyTypes.values.flatMap { it.values }.associateBy { it.id }
         val entitySetIds = entityKeyIds.keys
         val ids = entityKeyIds.values.flatMap { it.orElse(emptySet()) }.toSet()
+        // For linking queries we use all the partitions of participating entity sets, since cannot narrow down the
+        // partitions due to the lack of origin ids
         val partitions = entityKeyIds.flatMap { (entitySetId, maybeEntityKeyIds) ->
-            val entitySetPartitions = if (linking) partitionManager.getAllPartitions() else partitionManager.getEntitySetPartitionsInfo(
-                    entitySetId
-            ).partitions.toList()
-            maybeEntityKeyIds.map {
-                getPartitionsInfo(it, entitySetPartitions)
-            }.orElse(entitySetPartitions)
+            val entitySetPartitions = partitionManager.getEntitySetPartitionsInfo(entitySetId).partitions.toList()
+
+            if (!linking) {
+                maybeEntityKeyIds.map {
+                    getPartitionsInfo(it, entitySetPartitions)
+                }.orElse(entitySetPartitions)
+            } else {
+                entitySetPartitions
+            }
         }.toSet()
         var startIndex = 2
         if (ids.isNotEmpty()) {
@@ -266,7 +270,7 @@ class PostgresEntityDataQueryService(
             if (partitions.isNotEmpty()) {
                 metaBinders.add(
                         SqlBinder(
-                                SqlBindInfo(bindIndex++, PostgresArrays.createIntArray(ps.connection, partitions)),
+                                SqlBindInfo(bindIndex, PostgresArrays.createIntArray(ps.connection, partitions)),
                                 ::doBind
                         )
                 )
