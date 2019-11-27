@@ -345,6 +345,7 @@ class PostgresEntityDatastore(
         return linkedDataMap
     }
 
+    @Timed
     override fun getLinkedEntitySetBreakDown(
             linkingIdsByEntitySetId: Map<UUID, Optional<Set<UUID>>>,
             authorizedPropertyTypesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>)
@@ -499,11 +500,16 @@ class PostgresEntityDatastore(
         return propertyWriteEvent
     }
 
-    override fun getExpiringEntitiesFromEntitySet(entitySetId: UUID, expirationBaseColumn: String, formattedDateMinusTTE: Any,
-                                                  sqlFormat: Int, deletedType: DeleteType): BasePostgresIterable<UUID> {
-        return dataQueryService
-                .getExpiringEntitiesFromEntitySet(entitySetId, expirationBaseColumn, formattedDateMinusTTE,
-                        sqlFormat, deletedType)
+    override fun getExpiringEntitiesFromEntitySet(
+            entitySetId: UUID,
+            expirationBaseColumn: String,
+            formattedDateMinusTTE: Any,
+            sqlFormat: Int,
+            deleteType: DeleteType
+    ): BasePostgresIterable<UUID> {
+        return dataQueryService.getExpiringEntitiesFromEntitySet(
+                entitySetId, expirationBaseColumn, formattedDateMinusTTE, sqlFormat, deleteType
+        )
     }
 
 }
