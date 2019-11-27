@@ -113,7 +113,6 @@ public class EntitySet extends AbstractSecurableObject {
             UUID organizationId,
             EnumSet<EntitySetFlag> flags,
             LinkedHashSet<Integer> partitions,
-            int partitionsVersion,
             DataExpiration expiration
     ) {
         super( id, title, description );
@@ -130,7 +129,6 @@ public class EntitySet extends AbstractSecurableObject {
         this.contacts = Sets.newHashSet( contacts );
         this.organizationId = organizationId;
         this.partitions.addAll( partitions );
-        this.partitionsVersion = partitionsVersion;
         this.expiration = expiration;
     }
 
@@ -261,8 +259,7 @@ public class EntitySet extends AbstractSecurableObject {
         if ( !super.equals( o ) )
             return false;
         EntitySet entitySet = (EntitySet) o;
-        return partitionsVersion == entitySet.partitionsVersion &&
-                Objects.equals( entityTypeId, entitySet.entityTypeId ) &&
+        return Objects.equals( entityTypeId, entitySet.entityTypeId ) &&
                 Objects.equals( linkedEntitySets, entitySet.linkedEntitySets ) &&
                 Objects.equals( flags, entitySet.flags ) &&
                 Objects.equals( partitions, entitySet.partitions ) &&
@@ -282,7 +279,6 @@ public class EntitySet extends AbstractSecurableObject {
                 name,
                 contacts,
                 organizationId,
-                partitionsVersion,
                 expiration );
     }
 
@@ -307,7 +303,6 @@ public class EntitySet extends AbstractSecurableObject {
 
     void addPartitions( Collection<Integer> partitions ) {
         this.partitions.addAll( partitions );
-        partitionsVersion++;
     }
 
     @JsonIgnore
