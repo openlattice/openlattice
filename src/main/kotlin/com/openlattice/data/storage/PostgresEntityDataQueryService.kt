@@ -10,7 +10,6 @@ import com.openlattice.analysis.requests.Filter
 import com.openlattice.data.DeleteType
 import com.openlattice.data.WriteEvent
 import com.openlattice.data.storage.partitions.PartitionManager
-import com.openlattice.data.storage.partitions.PartitionsInfo
 import com.openlattice.data.util.PostgresDataHasher
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.*
@@ -220,9 +219,9 @@ class PostgresEntityDataQueryService(
         val entitySetIds = entityKeyIds.keys
         val ids = entityKeyIds.values.flatMap { it.orElse(emptySet()) }.toSet()
         val partitions = entityKeyIds.flatMap { (entitySetId, maybeEntityKeyIds) ->
-            val entitySetPartitions = if (linking) partitionManager.getAllPartitions() else partitionManager.getEntitySetPartitionsInfo(
+            val entitySetPartitions = if (linking) partitionManager.getAllPartitions() else partitionManager.getEntitySetPartitions(
                     entitySetId
-            ).partitions.toList()
+            ).toList()
             maybeEntityKeyIds.map {
                 getPartitionsInfo(it, entitySetPartitions)
             }.orElse(entitySetPartitions)
@@ -282,7 +281,7 @@ class PostgresEntityDataQueryService(
      * @param authorizedPropertyTypes The authorized property types for the insertion.
      * @param awsPassthrough True if the data will be stored directly in AWS via another means and all that is being
      * provided is the s3 prefix and key.
-     * @param partitionsInfo Contains the partition information for the requested entity set.
+     * @param partitions Contains the partition information for the requested entity set.
      *
      * @return A write event summarizing the results of performing this operation.
      */
@@ -292,7 +291,7 @@ class PostgresEntityDataQueryService(
             entities: Map<UUID, Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>,
             awsPassthrough: Boolean = false,
-            partitionsInfo: PartitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
+            partitions: List<Int> = partitionManager.getEntitySetPartitions(entitySetId).toList()
     ): WriteEvent {
         val version = System.currentTimeMillis()
 
@@ -304,7 +303,7 @@ class PostgresEntityDataQueryService(
                 entities,
                 authorizedPropertyTypes,
                 version,
-                partitionsInfo,
+                partitions,
                 awsPassthrough
         )
     }
@@ -316,7 +315,7 @@ class PostgresEntityDataQueryService(
      * @param entities The entities to update or insert.
      * @param authorizedPropertyTypes The authorized property types for the insertion.
      * @param version The version to use for upserting.
-     * @param partitionsInfo Contains the partition information for the requested entity set.
+     * @param partitions Contains the partition information for the requested entity set.
      * @param awsPassthrough True if the data will be stored directly in AWS via another means and all that is being
      * provided is the s3 prefix and key.
      *
@@ -328,12 +327,11 @@ class PostgresEntityDataQueryService(
             entities: Map<UUID, Map<UUID, Set<Any>>>, // ekids ->
             authorizedPropertyTypes: Map<UUID, PropertyType>,
             version: Long,
-            partitionsInfo: PartitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId),
+            partitions: List<Int> = partitionManager.getEntitySetPartitions(entitySetId).toList(),
             awsPassthrough: Boolean = false
     ): WriteEvent {
         var updatedEntityCount = 0
         var updatedPropertyCounts = 0
-        val partitions = partitionsInfo.partitions.toList()
 
         entities.entries
                 .groupBy { getPartition(it.key, partitions) }
@@ -476,7 +474,7 @@ class PostgresEntityDataQueryService(
             entitySetId: UUID,
             entities: Map<UUID, Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>,
-            partitionsInfo: PartitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
+            partitions: List<Int> = partitionManager.getEntitySetPartitions(entitySetId).toList()
     ): WriteEvent {
 
         val propertyTypes = authorizedPropertyTypes.values
@@ -489,7 +487,7 @@ class PostgresEntityDataQueryService(
                     entityBatch.keys,
                     propertyTypes,
                     version,
-                    partitionsInfo
+                    partitions
             )
         }
 
@@ -499,7 +497,7 @@ class PostgresEntityDataQueryService(
                 entities,
                 authorizedPropertyTypes,
                 System.currentTimeMillis(),
-                partitionsInfo
+                partitions
         )
     }
 
@@ -508,7 +506,7 @@ class PostgresEntityDataQueryService(
             entitySetId: UUID,
             entities: Map<UUID, Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>,
-            partitionsInfo: PartitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
+            partitions: List<Int> = partitionManager.getEntitySetPartitions(entitySetId).toList()
     ): WriteEvent {
 
         // Is the overhead from including irrelevant property types in a bulk delete really worse than performing individual queries? :thinking-face:
@@ -522,7 +520,7 @@ class PostgresEntityDataQueryService(
                                 setOf(entityKeyId),
                                 entity.keys.map { authorizedPropertyTypes.getValue(it) }.toSet(),
                                 version,
-                                partitionsInfo
+                                partitions
                         )
                     }
                 }
@@ -533,7 +531,7 @@ class PostgresEntityDataQueryService(
                 entities,
                 authorizedPropertyTypes,
                 System.currentTimeMillis(),
-                partitionsInfo
+                partitions
         )
     }
 
@@ -544,7 +542,7 @@ class PostgresEntityDataQueryService(
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): WriteEvent {
         //We expect controller to have performed access control checks upstream.
-        val partitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
+        val partitions = partitionManager.getEntitySetPartitions(entitySetId).toList()
 
         val tombstoneFn: (Long, Map<UUID, Map<UUID, Set<Any>>>) -> Unit =
                 { version: Long, entityBatch: Map<UUID, Map<UUID, Set<Any>>> ->
@@ -553,7 +551,7 @@ class PostgresEntityDataQueryService(
                             entitySetId,
                             replacementProperties.filter { ids.contains(it.key) },
                             version,
-                            partitionsInfo
+                            partitions
                     )
                 }
 
@@ -570,7 +568,7 @@ class PostgresEntityDataQueryService(
                 replacementValues,
                 authorizedPropertyTypes,
                 System.currentTimeMillis(),
-                partitionsInfo
+                partitions
         )
 
     }
@@ -626,13 +624,13 @@ class PostgresEntityDataQueryService(
      * @param entityKeyIds The entity key ids to tombstone.
      * @param authorizedPropertyTypes The property types the user is allowed to tombstone. We assume that authorization
      * checks are enforced at a higher level and that this just streamlines issuing the necessary queries.
-     * @param partitionsInfo Contains the partition information for the requested entity set.
+     * @param partitions Contains the partition information for the requested entity set.
      */
     fun clearEntities(
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
             authorizedPropertyTypes: Map<UUID, PropertyType>,
-            partitionsInfo: PartitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
+            partitions: List<Int> = partitionManager.getEntitySetPartitions(entitySetId).toList()
     ): WriteEvent {
 
         val version = System.currentTimeMillis()
@@ -643,9 +641,9 @@ class PostgresEntityDataQueryService(
                     entityKeyIds,
                     authorizedPropertyTypes.values,
                     version,
-                    partitionsInfo
+                    partitions
             )
-            tombstoneIdsTable(conn, entitySetId, entityKeyIds, version, partitionsInfo)
+            tombstoneIdsTable(conn, entitySetId, entityKeyIds, version, partitions)
         }
     }
 
@@ -656,13 +654,13 @@ class PostgresEntityDataQueryService(
      * @param authorizedPropertyTypes The property types the user is requested and is allowed to tombstone. We assume
      * that authorization checks are enforced at a higher level and that this just streamlines issuing the necessary
      * queries.
-     * @param partitionsInfo Contains the partition information for the requested entity set.
+     * @param partitions Contains the partition information for the requested entity set.
      */
     fun clearEntityData(
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
             authorizedPropertyTypes: Map<UUID, PropertyType>,
-            partitionsInfo: PartitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
+            partitions: Set<Int> = partitionManager.getEntitySetPartitions(entitySetId)
     ): WriteEvent {
         val version = System.currentTimeMillis()
 
@@ -672,7 +670,7 @@ class PostgresEntityDataQueryService(
                     entityKeyIds,
                     authorizedPropertyTypes.values,
                     version,
-                    partitionsInfo
+                    partitions.toList()
             )
             return@use writeEvent
         }
@@ -685,7 +683,7 @@ class PostgresEntityDataQueryService(
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
             authorizedPropertyTypes: Map<UUID, PropertyType>,
-            partitionsInfo: PartitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
+            partitions: List<Int> = partitionManager.getEntitySetPartitions(entitySetId).toList()
     ): WriteEvent {
         // TODO same as deleteEntityDataAndEntities?
         // Delete properties from S3
@@ -695,7 +693,6 @@ class PostgresEntityDataQueryService(
             }
         }
 
-        val partitions = partitionsInfo.partitions.toList()
         val numUpdates = entityKeyIds
                 .groupBy { getPartition(it, partitions) }
                 .map { (partition, entities) ->
@@ -746,7 +743,7 @@ class PostgresEntityDataQueryService(
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
             authorizedPropertyTypes: Map<UUID, PropertyType>,
-            partitionsInfo: PartitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
+            partitions: List<Int> = partitionManager.getEntitySetPartitions(entitySetId).toList()
     ): WriteEvent {
         // Delete properties from S3
         authorizedPropertyTypes.map { property ->
@@ -755,7 +752,6 @@ class PostgresEntityDataQueryService(
             }
         }
 
-        val partitions = partitionsInfo.partitions.toList()
         val numUpdates = entityKeyIds
                 .groupBy { getPartition(it, partitions) }
                 .map { (partition, entities) ->
@@ -862,11 +858,11 @@ class PostgresEntityDataQueryService(
      * Tombstones (to version = 0) entity key ids belonging to the requested entity set in [IDS] table.
      */
     fun tombstoneDeletedEntitySet(entitySetId: UUID): WriteEvent {
-        val partitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
+        val partitions = partitionManager.getEntitySetPartitions(entitySetId)
 
         val numUpdates = hds.connection.use {
             val ps = it.prepareStatement(zeroVersionsForEntitySet)
-            val partitionsArr = PostgresArrays.createIntArray(it, partitionsInfo.partitions)
+            val partitionsArr = PostgresArrays.createIntArray(it, partitions)
 
             ps.setObject(1, entitySetId)
             ps.setArray(2, partitionsArr)
@@ -880,8 +876,7 @@ class PostgresEntityDataQueryService(
      * Deletes entities from [IDS] table.
      */
     fun deleteEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): WriteEvent {
-        val partitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
-        val partitions = partitionsInfo.partitions.toList()
+        val partitions = partitionManager.getEntitySetPartitions(entitySetId).toList()
 
         val numUpdates = hds.connection.use { conn ->
             val ps = conn.prepareStatement(deleteEntityKeys)
@@ -905,8 +900,7 @@ class PostgresEntityDataQueryService(
      * Tombstones (to version = 0) entities in [IDS] table.
      */
     fun tombstoneDeletedEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): WriteEvent {
-        val partitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
-        val partitions = partitionsInfo.partitions.toList()
+        val partitions = partitionManager.getEntitySetPartitions(entitySetId).toList()
 
         val numUpdates = hds.connection.use { conn ->
             val ps = conn.prepareStatement(zeroVersionsForEntitiesInEntitySet)
@@ -984,16 +978,15 @@ class PostgresEntityDataQueryService(
      * @param entitySetId The entity set id for which to tombstone entries.
      * @param entityKeyIds The entity key ids for which to tombstone entries.
      * @param version Version to be used for tombstoning.
-     * @param partitionsInfo Contains the partition information for the requested entity set.
+     * @param partitions Contains the partition information for the requested entity set.
      */
     private fun tombstoneIdsTable(
             conn: Connection,
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
             version: Long,
-            partitionsInfo: PartitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
+            partitions: List<Int> = partitionManager.getEntitySetPartitions(entitySetId).toList()
     ): WriteEvent {
-        val partitions = partitionsInfo.partitions.toList()
         val entityKeyIdsArr = PostgresArrays.createUuidArray(conn, entityKeyIds)
 
         val partitionsArr = PostgresArrays.createIntArray(conn, entityKeyIds.map { getPartition(it, partitions) })
@@ -1021,7 +1014,7 @@ class PostgresEntityDataQueryService(
      * @param entityKeyIds The entity key ids for which to tombstone entries.
      * @param propertyTypesToTombstone A collection of property types to tombstone
      * @param version Version to be used for tombstoning.
-     * @param partitionsInfo Contains the partition info for the requested entity set.
+     * @param partitions Contains the partition info for the requested entity set.
      *
      * @return A write event object containing a summary of the operation useful for auditing purposes.
      */
@@ -1030,13 +1023,12 @@ class PostgresEntityDataQueryService(
             entityKeyIds: Set<UUID>,
             propertyTypesToTombstone: Collection<PropertyType>,
             version: Long,
-            partitionsInfo: PartitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
+            partitions: List<Int> = partitionManager.getEntitySetPartitions(entitySetId).toList()
     ): WriteEvent {
 
         return hds.connection.use { conn ->
             val propertyTypeIdsArr = PostgresArrays.createUuidArray(conn, propertyTypesToTombstone.map { it.id })
             val entityKeyIdsArr = PostgresArrays.createUuidArray(conn, entityKeyIds)
-            val partitions = partitionsInfo.partitions.toList()
             val partitionsArr = PostgresArrays.createIntArray(conn, entityKeyIds.map { getPartition(it, partitions) })
 
             val numUpdated = conn.prepareStatement(updateVersionsForPropertyTypesInEntitiesInEntitySet()).use { ps ->
@@ -1086,11 +1078,10 @@ class PostgresEntityDataQueryService(
             entitySetId: UUID,
             entities: Map<UUID, Map<UUID, Set<Map<ByteBuffer, Any>>>>,
             version: Long,
-            partitionsInfo: PartitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
+            partitions: List<Int> = partitionManager.getEntitySetPartitions(entitySetId).toList()
     ): WriteEvent {
         return hds.connection.use { conn ->
             val entityKeyIds = entities.keys
-            val partitions = partitionsInfo.partitions.toList()
             val entityKeyIdsArr = PostgresArrays.createUuidArray(conn, entityKeyIds)
             val partitionsArr = PostgresArrays.createIntArray(
                     conn, entities.keys.map {
@@ -1152,8 +1143,7 @@ class PostgresEntityDataQueryService(
             sqlFormat: Int,
             deleteType: DeleteType
     ): BasePostgresIterable<UUID> {
-        val partitionsInfo: PartitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
-        val partitions = PostgresArrays.createIntArray(hds.connection, partitionsInfo.partitions)
+        val partitions = PostgresArrays.createIntArray(hds.connection, partitionManager.getEntitySetPartitions(entitySetId))
         return BasePostgresIterable(
                 PreparedStatementHolderSupplier(
                         hds,

@@ -29,7 +29,6 @@ import com.openlattice.data.EntityKey
 import com.openlattice.data.EntityKeyIdService
 import com.openlattice.data.storage.getPartition
 import com.openlattice.data.storage.partitions.PartitionManager
-import com.openlattice.data.storage.partitions.PartitionsInfo
 import com.openlattice.data.util.PostgresDataHasher
 import com.openlattice.hazelcast.HazelcastClient
 import com.openlattice.hazelcast.HazelcastMap
@@ -82,9 +81,7 @@ class PostgresEntityKeyIdService(
 
     private fun storeEntityKeyIdReservations(
             entitySetId: UUID, entityKeyIds: Set<UUID>,
-            partitionsInfo: PartitionsInfo = partitionManager.getEntitySetPartitionsInfo(
-                    entitySetId
-            )
+            partitions: Set<Int> = partitionManager.getEntitySetPartitions(entitySetId)
     ) {
         hds.connection.use { connection ->
             connection.autoCommit = false
@@ -93,7 +90,7 @@ class PostgresEntityKeyIdService(
             val insertToData = connection.prepareStatement(INSERT_ID_TO_DATA_SQL)
 
             entityKeyIds.forEach { entityKeyId ->
-                val partition = getPartition(entityKeyId, partitionsInfo.partitions.toList())
+                val partition = getPartition(entityKeyId, partitions.toList())
 
                 insertIds.setObject(1, entitySetId)
                 insertIds.setObject(2, entityKeyId)
@@ -127,10 +124,9 @@ class PostgresEntityKeyIdService(
     private fun storeEntityKeyIds(
             entityKeyIds: Map<EntityKey, UUID>, conn: Connection = hds.connection
     ): Map<EntityKey, UUID> {
-        val partitionsByEntitySet = partitionManager.getEntitySetsPartitionsInfo(
+        val partitionsByEntitySet = partitionManager.getEntitySetsPartitions(
                 entityKeyIds.keys.map { it.entitySetId }.toSet()
-        )
-                .mapValues { it.value.partitions.toList() }
+        ).mapValues { it.value.toList() }
 
         conn.use { connection ->
             connection.autoCommit = false
@@ -240,7 +236,7 @@ class PostgresEntityKeyIdService(
         val ids = idGenerationService.getNextIds(count)
         storeEntityKeyIdReservations(
                 IdConstants.LINKING_ENTITY_SET_ID.id, ids,
-                PartitionsInfo(partitionManager.getAllPartitions().toSet())
+                partitionManager.getAllPartitions().toSet()
         )
         return ids.toList()
     }

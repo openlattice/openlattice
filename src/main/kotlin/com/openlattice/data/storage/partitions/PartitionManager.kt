@@ -80,15 +80,15 @@ class PartitionManager @JvmOverloads constructor(
         return organizations.executeOnKey(organizationId, OrganizationReadEntryProcessor { it.partitions }) as List<Int>
     }
 
-    fun getEntitySetPartitionsInfo(entitySetId: UUID): PartitionsInfo {
+    fun getEntitySetPartitions(entitySetId: UUID): Set<Int> {
         //TODO: Consider doing this using an entry processor
         val entitySet = entitySets.getValue(entitySetId)
-        return PartitionsInfo(entitySet.partitions)
+        return entitySet.partitions
     }
 
-    fun getEntitySetsPartitionsInfo(entitySetIds: Set<UUID>): Map<UUID, PartitionsInfo> {
+    fun getEntitySetsPartitions(entitySetIds: Set<UUID>): Map<UUID, Set<Int>> {
         val entitySets = entitySets.getAll(entitySetIds).values
-        return entitySets.map { it.id to PartitionsInfo(it.partitions) }.toMap()
+        return entitySets.map { it.id to it.partitions }.toMap()
     }
 
     /**

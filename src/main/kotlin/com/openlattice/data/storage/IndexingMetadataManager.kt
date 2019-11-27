@@ -18,7 +18,7 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
             entityKeyIdsWithLastWrite: Map<UUID, Map<UUID, OffsetDateTime>>, // entity_set_id -> id -> last_write
             linking: Boolean
     ): Int {
-        val entitySetPartitions = partitionManager.getEntitySetsPartitionsInfo(entityKeyIdsWithLastWrite.keys)
+        val entitySetPartitions = partitionManager.getEntitySetsPartitions(entityKeyIdsWithLastWrite.keys)
 
         return hds.connection.use { connection ->
             val updateSql = if (linking) updateLastLinkingIndexSql else updateLastIndexSql
@@ -27,8 +27,7 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
 
                 entityKeyIdsWithLastWrite.forEach { (entitySetId, entities) ->
 
-                    val partitionsInfo = entitySetPartitions.getValue(entitySetId)
-                    val partitions = partitionsInfo.partitions.toList()
+                    val partitions = entitySetPartitions.getValue(entitySetId).toList()
                     entities.entries
                             .groupBy({ getPartition(it.key, partitions) }, { it.toPair() })
                             .mapValues { it.value.toMap() }
@@ -62,7 +61,7 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
      * @param linking Denotes, if the provided ids are linking ids or not.
      */
     fun markAsUnIndexed(entityKeyIds: Map<UUID, Set<UUID>>, linking: Boolean): Int {
-        val entitySetPartitions = partitionManager.getEntitySetsPartitionsInfo(entityKeyIds.keys)
+        val entitySetPartitions = partitionManager.getEntitySetsPartitions(entityKeyIds.keys)
 
         return hds.connection.use { connection ->
             val updateSql = if (linking) markLastLinkingIndexSql else markLastIndexSql
@@ -71,8 +70,7 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
 
                 entityKeyIds.forEach { (entitySetId, entities) ->
 
-                    val partitionsInfo = entitySetPartitions.getValue(entitySetId)
-                    val partitions = partitionsInfo.partitions.toList()
+                    val partitions = entitySetPartitions.getValue(entitySetId).toList()
 
                     entities.groupBy { getPartition(it, partitions) }
                             .forEach { (partition, entities) ->
@@ -96,8 +94,7 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
      * @param entitySetId The id of the (normal) entity set id.
      */
     fun markAsUnIndexed(entitySetId: UUID): Int {
-        val partitionInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
-        val partitions = partitionInfo.partitions.toList()
+        val partitions = partitionManager.getEntitySetPartitions(entitySetId)
 
         return hds.connection.use { connection ->
             connection.prepareStatement(markEntitySetLastIndexSql).use { stmt ->
@@ -112,9 +109,7 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
 
 
     fun markEntitySetsAsNeedsToBeIndexed(entitySetIds: Set<UUID>, linking: Boolean): Int {
-        val entitySetPartitions = partitionManager.getEntitySetsPartitionsInfo(entitySetIds).values
-                .flatMap { it.partitions }
-                .toSet()
+        val entitySetPartitions = partitionManager.getEntitySetsPartitions(entitySetIds).values.flatten()
 
         return hds.connection.use { connection ->
             val updateSql = markEntitySetsAsNeedsToBeIndexedSql(linking)
@@ -135,13 +130,12 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
                 .mapValues {
                     it.value.map { it.entityKeyId }
                 }
-        val entitySetPartitions = partitionManager.getEntitySetsPartitionsInfo(linkingEntityKeys.keys)
+        val entitySetPartitions = partitionManager.getEntitySetsPartitions(linkingEntityKeys.keys)
 
         hds.connection.use { connection ->
             connection.prepareStatement(markAsNeedsToBeLinkedSql).use { stmt ->
                 linkingEntityKeys.forEach { (entitySetId, linkingIds) ->
-                    val partitionsInfo = entitySetPartitions.getValue(entitySetId)
-                    val partitions = partitionsInfo.partitions.toList()
+                    val partitions = entitySetPartitions.getValue(entitySetId).toList()
 
                     linkingIds.groupBy { getPartition(it, partitions) }
                             .forEach { (partition, linkingIds) ->

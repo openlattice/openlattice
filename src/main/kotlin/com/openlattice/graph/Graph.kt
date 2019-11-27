@@ -78,9 +78,9 @@ class Graph(
     /* Create */
 
     override fun createEdges(keys: MutableSet<DataEdgeKey>): WriteEvent {
-        val partitionsInfoByEntitySet = partitionManager.getEntitySetsPartitionsInfo(keys.flatMap { listOf(it.src, it.dst, it.edge) }
+        val partitionsInfoByEntitySet = partitionManager.getEntitySetsPartitions(keys.flatMap { listOf(it.src, it.dst, it.edge) }
                 .map { it.entitySetId }.toSet())
-                .mapValues { it.value.partitions.toList() }
+                .mapValues { it.value.toList() }
 
         hds.connection.use { connection ->
             val ps = connection.prepareStatement(EDGES_UPSERT_SQL)
@@ -100,8 +100,8 @@ class Graph(
 
     private fun addKeyIds(ps: PreparedStatement, dataEdgeKey: DataEdgeKey, startIndex: Int = 1) {
         val edk = dataEdgeKey.src
-        val partitionInfo = partitionManager.getEntitySetPartitionsInfo(edk.entitySetId)
-        val partition = getPartition(edk.entityKeyId, partitionInfo.partitions.toList())
+        val partitions = partitionManager.getEntitySetPartitions(edk.entitySetId)
+        val partition = getPartition(edk.entityKeyId, partitions.toList())
         ps.setObject(startIndex, partition)
         ps.setObject(startIndex + 1, dataEdgeKey.src.entityKeyId)
         ps.setObject(startIndex + 2, dataEdgeKey.dst.entityKeyId)
