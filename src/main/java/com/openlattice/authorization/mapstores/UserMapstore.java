@@ -20,6 +20,16 @@
 
 package com.openlattice.authorization.mapstores;
 
+import static com.openlattice.postgres.PostgresColumn.USER_DATA;
+import static com.openlattice.postgres.PostgresColumn.USER_ID;
+import static com.openlattice.postgres.PostgresTable.USERS;
+
+import com.auth0.json.mgmt.users.User;
+import com.dataloom.mappers.ObjectMappers;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.hazelcast.config.InMemoryFormat;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MapIndexConfig;
@@ -31,7 +41,16 @@ import com.openlattice.client.RetrofitFactory;
 import com.openlattice.datastore.services.Auth0ManagementApi;
 import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.hazelcast.HazelcastMap;
+import com.openlattice.postgres.mapstores.AbstractBasePostgresMapstore;
+import com.zaxxer.hikari.HikariDataSource;
+import java.io.IOException;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import jodd.util.RandomString;
+import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.lang3.NotImplementedException;
+import org.apache.commons.lang3.RandomUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import retrofit2.Retrofit;
@@ -42,79 +61,86 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
+ * Implementation of persistence layer for users from auth0.
+ *
+ * TODO: It reads EXPIRATION unnecessarily since it is not part of the object stored in memory. Minor optimization
+ * to not read this,but would require some work on abstract mapstores.
+ *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class UserMapstore implements TestableSelfRegisteringMapStore<String, Auth0UserBasic> {
-    public static final String LOAD_TIME_INDEX = "loadTime";
-    private static final Logger logger            = LoggerFactory.getLogger( UserMapstore.class );
-    private static final int    DEFAULT_PAGE_SIZE = 100;
-    private static final int    TTL_SECONDS       = 360;
-    private final Retrofit           retrofit;
-    private final Auth0ManagementApi auth0ManagementApi;
+public class UserMapstore extends AbstractBasePostgresMapstore<String, User> {
+    private static final Logger       logger = LoggerFactory.getLogger( UserMapstore.class );
+    private final        ObjectMapper mapper = ObjectMappers.newJsonMapper();
 
-    public UserMapstore( Auth0TokenProvider auth0TokenProvider ) {
-        retrofit = RetrofitFactory.newClient( auth0TokenProvider.getManagementApiUrl(), auth0TokenProvider::getToken );
-        auth0ManagementApi = retrofit.create( Auth0ManagementApi.class );
+    public UserMapstore( final HikariDataSource hds ) {
+        super( HazelcastMap.USERS.name(), USERS, hds );
     }
 
-    @Override public String getMapName() {
-        return HazelcastMap.USERS.name();
-    }
-
-    @Override public String getTable() {
-        //There is no table for auth0
-        return null;
+    @Override protected int bind( PreparedStatement ps, String key, int offset ) throws SQLException {
+        ps.setString( offset, key );
+        return offset + 1;
     }
 
     @Override public String generateTestKey() {
-        return null;
+        return RandomStringUtils.random( 10 );
     }
 
-    @Override public Auth0UserBasic generateTestValue() {
-        return null;
+    @Override public User generateTestValue() {
+        final var user = new User( "conn" );
+        user.setAppMetadata( ImmutableMap.of( "foo", ImmutableList.of( "1", "2", "3" ) ) );
+        user.setClientId( RandomStringUtils.random( 8 ) );
+        user.setBlocked( RandomUtils.nextBoolean() );
+        user.setEmail( "foobar@openlattice" );
+        user.setId( RandomStringUtils.random( 8 ) );
+        user.setFamilyName( "bar" );
+        user.setGivenName( "foo" );
+        user.setName( "Foo bar" );
+        user.setVerifyEmail( RandomUtils.nextBoolean() );
+        user.setEmailVerified( RandomUtils.nextBoolean() );
+        user.setNickname( RandomStringUtils.random( 10 ) );
+        user.setPassword( RandomStringUtils.random( 8 ) );
+        user.setPicture( RandomStringUtils.random( 8 ) );
+        user.setPhoneVerified( RandomUtils.nextBoolean() );
+        user.setVerifyPhoneNumber( RandomUtils.nextBoolean() );
+        user.setPhoneNumber( RandomStringUtils.random( 8 ) );
+        user.setUserMetadata( ImmutableMap.of( "bar", ImmutableList.of( "4", "5", "6" ) ) );
+        return user;
     }
 
     @Override public MapConfig getMapConfig() {
         return new MapConfig( getMapName() )
-                .setInMemoryFormat( InMemoryFormat.OBJECT )
-                .setTimeToLiveSeconds( TTL_SECONDS )
-                .addMapIndexConfig( new MapIndexConfig( LOAD_TIME_INDEX, true ) )
+                .setInMemoryFormat( InMemoryFormat.BINARY )
                 .setMapStoreConfig( getMapStoreConfig() );
     }
 
     @Override public MapStoreConfig getMapStoreConfig() {
         return new MapStoreConfig()
                 .setImplementation( this )
-                .setEnabled( false );
+                .setEnabled( true );
 
     }
 
-    @Override public void store( String key, Auth0UserBasic value ) {
-        throw new NotImplementedException( "Auth0 persistence not implemented." );
+    @Override protected void bind( PreparedStatement ps, String key, User value ) throws SQLException {
+        var offset = bind( ps, key );
+
+        try {
+            ps.setString( offset++, mapper.writeValueAsString( value ) );
+            ps.setLong( offset, System.currentTimeMillis() );
+        } catch ( JsonProcessingException e ) {
+            throw new SQLException( "Unable to serialize to JSONB.", e );
+        }
     }
 
-    @Override public void storeAll( Map<String, Auth0UserBasic> map ) {
-        throw new NotImplementedException( "Auth0 persistence not implemented." );
+    @Override protected String mapToKey( ResultSet rs ) throws SQLException {
+        return rs.getString( USER_ID.getName() );
     }
 
-    @Override public void delete( String key ) {
-        throw new NotImplementedException( "Auth0 persistence not implemented." );
+    @Override protected User mapToValue( ResultSet rs ) throws SQLException {
+        try {
+            return mapper.readValue( rs.getString( USER_DATA.getName() ), User.class );
+        } catch ( IOException e ) {
+            throw new SQLException( "Unable to deserialize from JSONB.", e );
+        }
     }
 
-    @Override public void deleteAll( Collection<String> keys ) {
-        throw new NotImplementedException( "Auth0 persistence not implemented." );
-    }
-
-    @Override public Auth0UserBasic load( String userId ) {
-        return auth0ManagementApi.getUser( userId );
-    }
-
-    @Override public Map<String, Auth0UserBasic> loadAll( Collection<String> keys ) {
-        return keys.stream()
-                .collect( Collectors.toMap( Function.identity(), this::load ) );
-    }
-
-    @Override public Iterable<String> loadAllKeys() {
-        return null;
-    }
 }

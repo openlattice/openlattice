@@ -64,12 +64,12 @@ class MaterializePermissionSyncTask : HazelcastFixedRateTask<MaterializedEntityS
         getDependency().materializedEntitySets.keySet(materializedPermissionUnsynchronizedPredicate())
                 .groupBy { it.organizationId }
                 .forEach { (organizationId, entitySetAssemblyKeys) ->
-                    val organizationPrincipal = getDependency().organizations.getOrganizationPrincipal( organizationId )
+                    val organizationPrincipal = getDependency().organizations.getOrganizationPrincipal(organizationId)!!
                     val entitySetIds = entitySetAssemblyKeys.map { it.entitySetId }.toSet()
                     val materializablePropertyTypes = getDependency().authzHelper.getAuthorizedPropertiesOnEntitySets(
                             entitySetIds,
-                            EnumSet.of( Permission.MATERIALIZE ),
-                            setOf( organizationPrincipal.principal )
+                            EnumSet.of(Permission.MATERIALIZE),
+                            setOf(organizationPrincipal.principal)
                     )
 
                     getDependency().assembler.updateMaterializedEntitySet(

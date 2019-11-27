@@ -22,8 +22,10 @@
 package com.openlattice.organizations.tasks
 
 import com.openlattice.organizations.HazelcastOrganizationService
+import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.tasks.HazelcastTaskDependencies
 
 data class OrganizationsInitializationDependencies(
-        val organizationService: HazelcastOrganizationService
+        val organizationService: HazelcastOrganizationService,
+        val spm: SecurePrincipalsManager
 ) : HazelcastTaskDependencies

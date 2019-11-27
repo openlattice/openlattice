@@ -44,13 +44,12 @@ import com.openlattice.data.storage.selectPropertyTypesOfEntitySetColumnar
 import com.openlattice.datastore.util.Util
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.events.*
-import com.openlattice.assembler.processors.IsAssemblyInitializedEntryProcessor
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap.*
-import com.openlattice.organization.Organization
 import com.openlattice.organization.OrganizationEntitySetFlag
 import com.openlattice.organization.OrganizationIntegrationAccount
+import com.openlattice.organizations.Organization
 import com.openlattice.organizations.events.MembersAddedToOrganizationEvent
 import com.openlattice.organizations.events.MembersRemovedFromOrganizationEvent
 import com.openlattice.organizations.roles.SecurePrincipalsManager

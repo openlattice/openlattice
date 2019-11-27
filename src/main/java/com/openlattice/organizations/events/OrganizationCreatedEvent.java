@@ -22,7 +22,7 @@
 
 package com.openlattice.organizations.events;
 
-import com.openlattice.organization.Organization;
+import com.openlattice.organizations.Organization;
 
 public class OrganizationCreatedEvent {
 

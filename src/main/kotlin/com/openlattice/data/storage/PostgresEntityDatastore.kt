@@ -329,26 +329,49 @@ class PostgresEntityDatastore(
         )
 
         // linking_id/entity_set_id/origin_id/property_type_id
-        val linkedDataMap = HashMap<UUID, MutableMap<UUID, MutableMap<UUID, MutableMap<UUID, MutableSet<Any>>>>>()
+        val linkedDataMap = HashMap<UUID, MutableMap<UUID, Map<UUID, MutableMap<UUID, MutableSet<Any>>>>>()
         linkedEntityDataStream.forEach {
             val linkingId = it.first
             val entitySetId = it.second.first
-            val entityKeyId = it.second.second.first
-            val entityData = it.second.second.second
+            val entityDataById = it.second.second
 
             if (linkedDataMap.containsKey(linkingId)) {
-                if (linkedDataMap.getValue(linkingId).containsKey(entitySetId)) {
-                    linkedDataMap.getValue(linkingId).getValue(entitySetId)[entityKeyId] = entityData
-                } else {
-                    linkedDataMap.getValue(linkingId)[entitySetId] = mutableMapOf(entityKeyId to entityData)
-                }
+                linkedDataMap.getValue(linkingId)[entitySetId] = entityDataById
             } else {
-                linkedDataMap[linkingId] = mutableMapOf(entitySetId to mutableMapOf(entityKeyId to entityData))
+                linkedDataMap[linkingId] = mutableMapOf(entitySetId to entityDataById)
             }
         }
 
         return linkedDataMap
     }
+
+    override fun getLinkedEntitySetBreakDown(
+            linkingIdsByEntitySetId: Map<UUID, Optional<Set<UUID>>>,
+            authorizedPropertyTypesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>)
+            : Map<UUID, Map<UUID, Map<UUID, Map<FullQualifiedName, Set<Any>>>>> {
+        // pair<linking_id to pair<entity_set_id to pair<origin_id to property_data>>>
+        val linkedEntityDataStream = dataQueryService.getLinkedEntitySetBreakDown(
+                linkingIdsByEntitySetId,
+                authorizedPropertyTypesByEntitySetId
+        )
+
+        // linking_id/entity_set_id/origin_id/property_type_id
+        val linkedDataMap = HashMap<UUID, MutableMap<UUID, Map<UUID, MutableMap<FullQualifiedName, MutableSet<Any>>>>>()
+        linkedEntityDataStream.forEach {
+            val linkingId = it.first
+            val entitySetId = it.second.first
+            val entityDataById = it.second.second
+
+            if (linkedDataMap.containsKey(linkingId)) {
+                linkedDataMap.getValue(linkingId)[entitySetId] = entityDataById
+            } else {
+                linkedDataMap[linkingId] = mutableMapOf(entitySetId to entityDataById)
+            }
+        }
+
+        return linkedDataMap
+    }
+
 
     //TODO: Can be made more efficient if we are getting across same type.
     /**
