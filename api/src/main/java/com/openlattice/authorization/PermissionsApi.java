@@ -20,9 +20,7 @@ package com.openlattice.authorization;
 
 import retrofit2.http.*;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * @author Ho Chung Siu
@@ -36,8 +34,9 @@ public interface PermissionsApi {
     String CONTROLLER = "/permissions";
     String BASE       = SERVICE + CONTROLLER;
 
-    String EXPLAIN = "/explain";
-    String UPDATE = "/update";
+    String EXPLAIN       = "/explain";
+    String UPDATE        = "/update";
+
 
     /**
      * Adds, removes, or sets the ace for a particular acl key. Successful only if user is the owner of acl key.
