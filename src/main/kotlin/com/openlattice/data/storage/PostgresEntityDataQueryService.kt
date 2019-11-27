@@ -51,24 +51,6 @@ class PostgresEntityDataQueryService(
     }
 
     @JvmOverloads
-    fun getEntityKeyIdsInEntitySet(
-            entitySetId: UUID,
-            version: Optional<Long> = Optional.empty()
-    ): BasePostgresIterable<UUID> {
-        if (version.isPresent) {
-            throw NotImplementedException("BLAME MTR. Not yet implemented.")
-        }
-
-        return BasePostgresIterable(
-                PreparedStatementHolderSupplier(
-                        hds,
-                        "SELECT ${ID_VALUE.name} FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${VERSION.name} > 0",
-                        FETCH_SIZE
-                ) { ps -> ps.setObject(1, entitySetId) }
-        ) { rs -> ResultSetAdapters.id(rs) }
-    }
-
-    @JvmOverloads
     fun getEntitiesWithPropertyTypeIds(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
@@ -174,32 +156,6 @@ class PostgresEntityDataQueryService(
                     byteBlobDataManager
             )
         }.toMap()
-    }
-
-
-    /**
-     * Note: for linking queries, linking id and entity set id will be returned, thus data won't be merged by linking id
-     */
-    private fun <T> getEntitySetSequence(
-            entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
-            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
-            propertyTypeFilters: Map<UUID, Set<Filter>> = mapOf(),
-            metadataOptions: Set<MetadataOption> = EnumSet.noneOf(MetadataOption::class.java),
-            version: Optional<Long> = Optional.empty(),
-            linking: Boolean = false,
-            detailed: Boolean = false,
-            adapter: (ResultSet) -> T
-    ): Sequence<T> {
-        return getEntitySetIterable(
-                entityKeyIds,
-                authorizedPropertyTypes,
-                propertyTypeFilters,
-                metadataOptions,
-                version,
-                linking,
-                detailed,
-                adapter
-        ).asSequence()
     }
 
     /**
