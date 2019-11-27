@@ -120,7 +120,7 @@ public class ApiClient implements ApiFactoryFactory {
             apiCache = CacheBuilder.newBuilder()
                     .maximumSize( 100 )
                     .initialCapacity( 10 )
-                    .build( new CacheLoader<Class<?>, Object>() {
+                    .build( new CacheLoader<>() {
                         private final Supplier<ApiFactory> apiFactory = Suppliers.memoize( retrofitSupplier::get );
 
                         @Override
