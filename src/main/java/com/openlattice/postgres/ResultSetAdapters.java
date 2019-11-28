@@ -584,7 +584,6 @@ public final class ResultSetAdapters {
         final var organization = rs.getObject( ORGANIZATION_ID_FIELD, UUID.class );
         final var flags = entitySetFlags( rs );
         final var partitions = partitions( rs );
-        final var partitionVersion = partitionVersions( rs );
         final var expirationData = dataExpiration( rs );
         return new EntitySet( id,
                 entityTypeId,
@@ -596,7 +595,6 @@ public final class ResultSetAdapters {
                 organization,
                 flags,
                 new LinkedHashSet<>( Arrays.asList( partitions ) ),
-                partitionVersion,
                 expirationData );
     }
 
