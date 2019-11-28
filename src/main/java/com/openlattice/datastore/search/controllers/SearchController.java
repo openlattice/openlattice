@@ -705,7 +705,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
                         getAccessibleObjects( SecurableObjectType.Organization,
                                 EnumSet.of( Permission.READ ) ) // TODO: other access check??
                                 .parallel()
-                                .filter( o -> o != null )
+                                .filter( Objects::nonNull )
                                 .map( AuthorizationUtils::getLastAclKeySafely ) ) );
         searchService.triggerAllOrganizationsIndex( allOrganizations );
         return null;

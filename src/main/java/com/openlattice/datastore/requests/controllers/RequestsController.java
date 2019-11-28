@@ -45,6 +45,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.inject.Inject;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -133,7 +134,7 @@ public class RequestsController implements RequestsApi, AuthorizingComponent {
     private Function<AclKey, Stream<Status>> getStatusesInStatus( RequestStatus requestStatus ) {
         return aclKey -> owns( aclKey ) ? hrm.getStatusesForAllUser( aclKey, requestStatus )
                 : hrm.getStatuses( Stream.of( new AceKey( aclKey, Principals.getCurrentUser() ) ) )
-                        .filter( o -> o != null )
+                        .filter( Objects::nonNull )
                         .filter( status -> status.getStatus().equals( requestStatus ) );
     }
 
