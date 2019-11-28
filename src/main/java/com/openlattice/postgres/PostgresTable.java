@@ -234,6 +234,17 @@ public final class PostgresTable {
                     ENTITY_SET_ID,
                     PRINCIPAL_ID
             );
+
+    public static final PostgresTableDefinition HBA_AUTHENTICATION_RECORDS          =
+            new PostgresTableDefinition( "hba_authentication_records" )
+                    .addColumns(
+                            USERNAME,
+                            DATABASE,
+                            CONNECTION_TYPE,
+                            IP_ADDRESS,
+                            AUTHENTICATION_METHOD )
+            .primaryKey( USERNAME, DATABASE, CONNECTION_TYPE, IP_ADDRESS );
+
     public static final PostgresTableDefinition        IDS                          =
             new CitusDistributedTableDefinition( "ids" )
                     .addColumns( PARTITION,
@@ -321,7 +332,30 @@ public final class PostgresTable {
                     .addColumns( ORGANIZATION_ID, INITIALIZED )
                     .primaryKey( ORGANIZATION_ID );
 
-    public static final PostgresTableDefinition PERMISSIONS         =
+
+    public static final PostgresTableDefinition ORGANIZATION_EXTERNAL_DATABASE_COLUMN =
+            new PostgresTableDefinition( "organization_external_database_columns" )
+                    .addColumns(
+                            ID,
+                            NAME,
+                            TITLE,
+                            DESCRIPTION,
+                            TABLE_ID,
+                            ORGANIZATION_ID,
+                            DATATYPE,
+                            IS_PRIMARY_KEY,
+                            ORDINAL_POSITION);
+
+    public static final PostgresTableDefinition ORGANIZATION_EXTERNAL_DATABASE_TABLE =
+            new PostgresTableDefinition( "organization_external_database_tables" )
+                    .addColumns(
+                            ID,
+                            NAME,
+                            TITLE,
+                            DESCRIPTION,
+                            ORGANIZATION_ID );
+
+    public static final PostgresTableDefinition PERMISSIONS              =
             new PostgresTableDefinition( "permissions" )
                     .addColumns( ACL_KEY,
                             PRINCIPAL_TYPE,

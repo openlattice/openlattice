@@ -24,7 +24,7 @@ package com.openlattice.authorization;
 
 import com.openlattice.authorization.securable.SecurableObjectType;
 
-import com.openlattice.authorization.AclKey;
+import java.util.List;
 import java.util.Set;
 
 public interface SecurableObjectResolveTypeService {
@@ -36,4 +36,6 @@ public interface SecurableObjectResolveTypeService {
     SecurableObjectType getSecurableObjectType( AclKey aclKey );
 
     Set<AclKey> getSecurableObjectsOfType( SecurableObjectType type );
+
+    Set<AclKey> getOrganizationExternalDatabaseAclKeys( Set<AclKey> aclKeys);
 }

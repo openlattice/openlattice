@@ -737,8 +737,6 @@ class AssemblerConnectionManager(
             connection.createStatement().use { statement ->
                 logger.info("Granting usage on $MATERIALIZED_VIEWS_SCHEMA schema and revoking from $PUBLIC_SCHEMA schema for users: $userIds")
                 statement.execute("GRANT USAGE ON SCHEMA $MATERIALIZED_VIEWS_SCHEMA TO $userIdsSql")
-                //Don't allow users to access public schema which will contain foreign data wrapper tables.
-                statement.execute("REVOKE USAGE ON SCHEMA $PUBLIC_SCHEMA FROM $userIdsSql")
                 //Set the search path for the user
                 logger.info("Setting search_path to $MATERIALIZED_VIEWS_SCHEMA for users $userIds")
                 userIds.forEach { userId ->
