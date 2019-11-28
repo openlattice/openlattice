@@ -20,12 +20,13 @@
 
 package com.openlattice.mail;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
 import com.openlattice.serializer.AbstractJacksonSerializationTest;
-import java.util.Map;
 import jodd.mail.EmailAttachment;
 import org.junit.Test;
+
+import java.util.Map;
+import java.util.Optional;
 
 public class RenderableEmailRequestTest extends AbstractJacksonSerializationTest<RenderableEmailRequest> {
 
@@ -39,15 +40,15 @@ public class RenderableEmailRequestTest extends AbstractJacksonSerializationTest
         map.put( "key1", "value1" );
         map.put( "key2", "value2" );
         return new RenderableEmailRequest(
-                Optional.absent(),
+                Optional.empty(),
                 new String[] { "outage@openlattice.com" },
-                Optional.absent(),
-                Optional.absent(),
+                Optional.empty(),
+                Optional.empty(),
                 "OutageTemplate",
                 Optional.of( "Outage" ),
                 Optional.of( map ),
                 Optional.of( new EmailAttachment[] {} ),
-                Optional.absent() );
+                Optional.empty() );
     }
 
     @Override
@@ -59,30 +60,30 @@ public class RenderableEmailRequestTest extends AbstractJacksonSerializationTest
         expected = IllegalStateException.class )
     public void testNoTo() {
         new RenderableEmailRequest(
-                Optional.<String> absent(),
+                Optional.<String> empty(),
                 new String[] {},
-                Optional.<String[]> absent(),
-                Optional.<String[]> absent(),
+                Optional.<String[]> empty(),
+                Optional.<String[]> empty(),
                 "TemplateName",
-                Optional.<String> absent(),
-                Optional.<Object> absent(),
+                Optional.<String> empty(),
+                Optional.<Object> empty(),
                 Optional.of( new EmailAttachment[] {} ),
-                Optional.absent() );
+                Optional.empty() );
     }
 
     @Test(
         expected = NullPointerException.class )
     public void testNullTo() {
         new RenderableEmailRequest(
-                Optional.<String> absent(),
+                Optional.<String> empty(),
                 null,
-                Optional.<String[]> absent(),
-                Optional.<String[]> absent(),
+                Optional.<String[]> empty(),
+                Optional.<String[]> empty(),
                 "",
-                Optional.<String> absent(),
-                Optional.<Object> absent(),
+                Optional.<String> empty(),
+                Optional.<Object> empty(),
                 Optional.of( new EmailAttachment[] {} ),
-                Optional.absent() );
+                Optional.empty() );
     }
 
 }

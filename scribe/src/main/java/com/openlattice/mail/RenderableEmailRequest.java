@@ -20,26 +20,25 @@
 
 package com.openlattice.mail;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import jodd.mail.EmailAttachment;
 import org.apache.commons.lang3.StringUtils;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
-
+import java.util.Optional;
 
 public class RenderableEmailRequest extends EmailRequest {
-    private static final String               TEMPLATE_PATH_FIELD    = "templatePath";
-    private static final String               SUBJECT_FIELD          = "subject";
-    private static final String               TEMPLATE_OBJS_FIELD    = "templateObjs";
-    private static final String               ATTACHMENTS_FIELD      = "attachments";
-    private static final String               ATTACHMENT_PATHS_FIELD = "attachmentPaths";
-    private final Optional<String>            subject;
-    private final String                      templatePath;
-    private final Optional<Object>            templateObjs;
-    private final Optional<EmailAttachment[]> byteArrayAttachment;
-    private final Optional<String[]>          attachmentPaths;
+    private static final String                      TEMPLATE_PATH_FIELD    = "templatePath";
+    private static final String                      SUBJECT_FIELD          = "subject";
+    private static final String                      TEMPLATE_OBJS_FIELD    = "templateObjs";
+    private static final String                      ATTACHMENTS_FIELD      = "attachments";
+    private static final String                      ATTACHMENT_PATHS_FIELD = "attachmentPaths";
+    private final        Optional<String>            subject;
+    private final        String                      templatePath;
+    private final        Optional<Object>            templateObjs;
+    private final        Optional<EmailAttachment[]> byteArrayAttachment;
+    private final        Optional<String[]>          attachmentPaths;
 
     @JsonCreator
     public RenderableEmailRequest(

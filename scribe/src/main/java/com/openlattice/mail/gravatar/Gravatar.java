@@ -20,25 +20,23 @@
 
 package com.openlattice.mail.gravatar;
 
+import com.google.common.collect.ImmutableMap;
+import com.openlattice.mail.MailServiceClient;
+import com.openlattice.mail.RenderableEmailRequest;
 import com.openlattice.mail.requirements.ScribeRequirements;
 import com.openlattice.mail.templates.EmailTemplate;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.lang3.StringUtils;
+
+import javax.inject.Inject;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
-
-import javax.inject.Inject;
-
-import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.commons.lang3.StringUtils;
-
-import com.openlattice.mail.MailServiceClient;
-import com.openlattice.mail.RenderableEmailRequest;
-import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableMap;
+import java.util.Optional;
 
 public class Gravatar {
     private final static int    DEFAULT_SIZE       = 80;
@@ -69,7 +67,7 @@ public class Gravatar {
     }
 
     private String formatUrlParameters() {
-        List<String> params = new ArrayList<String>();
+        List<String> params = new ArrayList<>();
         if ( size != DEFAULT_SIZE )
             params.add( "s=" + size );
         params.add( "d=" + DEFAULT_AVATAR_URL );
@@ -90,15 +88,15 @@ public class Gravatar {
         
         MailServiceClient mailService = new MailServiceClient( requirements.getEmailQueue() );
         RenderableEmailRequest emailRequest = new RenderableEmailRequest(
-                Optional.of( EmailTemplate.getCourierEmailAddress() ),
+                java.util.Optional.of( EmailTemplate.getCourierEmailAddress() ),
                 new String[] { "outage@openlattice.com" },
-                Optional.absent(),
-                Optional.absent(),
+                Optional.empty(),
+                Optional.empty(),
                 EmailTemplate.INTERNAL_ERROR.getPath(),
-                Optional.of( EmailTemplate.INTERNAL_ERROR.getSubject() ),
-                Optional.of( ImmutableMap.of( "message", sw.toString() ) ),
-                Optional.absent(),
-                Optional.absent());
+                java.util.Optional.of( EmailTemplate.INTERNAL_ERROR.getSubject() ),
+                java.util.Optional.of( ImmutableMap.of( "message", sw.toString() ) ),
+                Optional.empty(),
+                Optional.empty());
         mailService.spool( emailRequest );
         
     }
