@@ -430,20 +430,15 @@ public class AppService {
         edmService.getEntityType( appTypes.get( key.getAppTypeId() ).getEntityTypeId() ).getProperties()
                 .forEach( propertyTypeId -> {
                     AclKey aclKeys = new AclKey( entitySetId, propertyTypeId );
-                    appRoles.entrySet().forEach( entry -> {
-                        Permission permission = entry.getKey();
-                        Principal rolePrincipal = entry.getValue();
-                        authorizationService.addPermission( aclKeys, rolePrincipal, EnumSet.of( permission ) );
-                    } );
+                    appRoles.forEach( ( permission, rolePrincipal ) -> authorizationService
+                            .addPermission( aclKeys, rolePrincipal, EnumSet.of( permission ) ) );
 
                     owners.forEach( owner -> authorizationService.addPermission( aclKeys, owner, allPermissions ) );
 
                     authorizationService.addPermission( aclKeys, appPrincipal, allPermissions );
                 } );
 
-        appRoles.entrySet().forEach( entry -> {
-            Permission permission = entry.getKey();
-            Principal rolePrincipal = entry.getValue();
+        appRoles.forEach( ( permission, rolePrincipal ) -> {
             authorizationService
                     .addPermission( new AclKey( entitySetId ), rolePrincipal, EnumSet.of( permission ) );
             edmService.getEntityType( appTypes.get( key.getAppTypeId() ).getEntityTypeId() ).getProperties()

@@ -74,6 +74,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
@@ -119,10 +120,10 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
                         .map( AuthorizationUtils::getLastAclKeySafely )
         );
 
-        return Iterables.transform( orgs, org -> {
+        return StreamSupport.stream( orgs.spliterator(), false ).map( org -> {
             org.getRoles().removeIf( role -> !authorizedRoles.contains( role.getAclKey() ) );
             return org;
-        } );
+        } ).collect( Collectors.toList() );
     }
 
     @Timed
