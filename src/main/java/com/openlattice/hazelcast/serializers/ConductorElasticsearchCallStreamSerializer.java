@@ -59,48 +59,44 @@ import java.util.function.Function;
 @Component
 public class ConductorElasticsearchCallStreamSerializer
         implements SelfRegisteringStreamSerializer<ConductorElasticsearchCall> {
-    private static final ThreadLocal<Kryo> kryoThreadLocal = new ThreadLocal<>() {
+    private static final ThreadLocal<Kryo> kryoThreadLocal = ThreadLocal.withInitial( () -> {
+        Kryo kryo = new Kryo();
 
-        @Override
-        protected Kryo initialValue() {
-            Kryo kryo = new Kryo();
+        // https://github.com/EsotericSoftware/kryo/blob/master/test/com/esotericsoftware/kryo/serializers/Java8ClosureSerializerTest.java
+        kryo.setInstantiatorStrategy(
+                new Kryo.DefaultInstantiatorStrategy(
+                        new StdInstantiatorStrategy() ) );
+        kryo.register( Object[].class );
+        kryo.register( Class.class );
 
-            // https://github.com/EsotericSoftware/kryo/blob/master/test/com/esotericsoftware/kryo/serializers/Java8ClosureSerializerTest.java
-            kryo.setInstantiatorStrategy(
-                    new Kryo.DefaultInstantiatorStrategy(
-                            new StdInstantiatorStrategy() ) );
-            kryo.register( Object[].class );
-            kryo.register( java.lang.Class.class );
-
-            kryo.register( Organization.class);
-            kryo.register( DelegatedStringSet.class, new DelegatedStringSetKryoSerializer() );
-            kryo.register( DelegatedUUIDSet.class, new DelegatedUUIDSetKryoSerializer() );
-            kryo.register( PrincipalSet.class, new PrincipalSetKryoSerializer() );
+        kryo.register( Organization.class);
+        kryo.register( DelegatedStringSet.class, new DelegatedStringSetKryoSerializer() );
+        kryo.register( DelegatedUUIDSet.class, new DelegatedUUIDSetKryoSerializer() );
+        kryo.register( PrincipalSet.class, new PrincipalSetKryoSerializer() );
 
 
-            // Shared Lambdas
-            kryo.register( ElasticsearchLambdas.class );
-            kryo.register( EntityDataLambdas.class, new EntityDataLambdasStreamSerializer() );
-            kryo.register( BulkEntityDataLambdas.class, new BulkEntityDataLambdasStreamSerializer() );
-            kryo.register( BulkLinkedDataLambdas.class, new BulkLinkedDataLambdasStreamSerializer() );
-            kryo.register( ReIndexEntitySetMetadataLambdas.class, new ReIndexEntitySetMetadataLambdasStreamSerializer() );
-            kryo.register( SearchConstraints.class, new SearchConstraintsStreamSerializer() );
-            kryo.register( SearchWithConstraintsLambda.class, new SearchWithConstraintsLambdaStreamSerializer() );
-            kryo.register( SerializedLambda.class );
-            kryo.register( AclKey.class, new AclKeyKryoSerializer() );
+        // Shared Lambdas
+        kryo.register( ElasticsearchLambdas.class );
+        kryo.register( EntityDataLambdas.class, new EntityDataLambdasStreamSerializer() );
+        kryo.register( BulkEntityDataLambdas.class, new BulkEntityDataLambdasStreamSerializer() );
+        kryo.register( BulkLinkedDataLambdas.class, new BulkLinkedDataLambdasStreamSerializer() );
+        kryo.register( ReIndexEntitySetMetadataLambdas.class, new ReIndexEntitySetMetadataLambdasStreamSerializer() );
+        kryo.register( SearchConstraints.class, new SearchConstraintsStreamSerializer() );
+        kryo.register( SearchWithConstraintsLambda.class, new SearchWithConstraintsLambdaStreamSerializer() );
+        kryo.register( SerializedLambda.class );
+        kryo.register( AclKey.class, new AclKeyKryoSerializer() );
 
-            // always needed for closure serialization, also if
-            // registrationRequired=false
-            kryo.register( ClosureSerializer.Closure.class,
-                    new ClosureSerializer() );
-            kryo.register( Function.class,
-                    new ClosureSerializer() );
+        // always needed for closure serialization, also if
+        // registrationRequired=false
+        kryo.register( ClosureSerializer.Closure.class,
+                new ClosureSerializer() );
+        kryo.register( Function.class,
+                new ClosureSerializer() );
 
-            kryo.register( AclKey.class, new AclKeyKryoSerializer() );
+        kryo.register( AclKey.class, new AclKeyKryoSerializer() );
 
-            return kryo;
-        }
-    };
+        return kryo;
+    } );
 
     private ConductorElasticsearchApi api;
 

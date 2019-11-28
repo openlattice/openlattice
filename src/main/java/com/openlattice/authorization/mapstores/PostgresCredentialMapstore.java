@@ -76,7 +76,7 @@ public class PostgresCredentialMapstore extends AbstractBasePostgresMapstore<Str
 
     @Override public void storeAll( Map<String, String> map ) {
         super.storeAll( map );
-        map.entrySet().forEach( p -> dcqs.setUserCredential( p.getKey(), p.getValue() ) );
+        map.forEach( ( key, value ) -> dcqs.setUserCredential( key, value ) );
     }
 
     @Override public void delete( String key ) {
