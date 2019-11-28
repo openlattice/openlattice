@@ -23,7 +23,6 @@ package com.openlattice.controllers;
 import com.auth0.json.mgmt.users.User;
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.openlattice.assembler.Assembler;
 import com.openlattice.authorization.AccessCheck;
@@ -71,6 +70,7 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -111,12 +111,12 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     public Iterable<Organization> getOrganizations() {
 
         Set<AclKey> authorizedRoles = getAccessibleObjects( SecurableObjectType.Role, EnumSet.of( Permission.READ ) )
-                .filter( o -> o != null ).collect( Collectors.toSet() );
+                .filter( Objects::nonNull ).collect( Collectors.toSet() );
 
         Iterable<Organization> orgs = organizations.getOrganizations(
                 getAccessibleObjects( SecurableObjectType.Organization, EnumSet.of( Permission.READ ) )
                         .parallel()
-                        .filter( o -> o != null )
+                        .filter( Objects::nonNull )
                         .map( AuthorizationUtils::getLastAclKeySafely )
         );
 
