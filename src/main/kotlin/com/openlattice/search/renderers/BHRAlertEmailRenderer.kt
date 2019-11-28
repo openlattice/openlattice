@@ -1,6 +1,5 @@
 package com.openlattice.search.renderers
 
-import com.google.common.base.Optional
 import com.google.common.collect.Maps
 import com.openlattice.data.requests.NeighborEntityDetails
 import com.openlattice.mail.RenderableEmailRequest
@@ -191,13 +190,13 @@ class BHRAlertEmailRenderer {
             return RenderableEmailRequest(
                     Optional.of(FROM_EMAIL),
                     arrayOf(userEmail),
-                    Optional.absent(),
-                    Optional.absent(),
+                    Optional.empty(),
+                    Optional.empty(),
                     TEMPLATE_PATH,
                     Optional.of(subject),
                     Optional.of(templateObjects),
-                    Optional.absent(),
-                    Optional.absent()
+                    Optional.empty(),
+                    Optional.empty()
             )
         }
     }

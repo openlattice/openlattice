@@ -1,6 +1,5 @@
 package com.openlattice.hazelcast.serializers;
 
-import com.google.common.base.Optional;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.hazelcast.serializers.IoPerformingBiConsumer;
@@ -12,6 +11,7 @@ import jodd.mail.EmailAttachment;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.util.Optional;
 
 @Component
 public class RenderableEmailRequestStreamSerializer implements SelfRegisteringStreamSerializer<RenderableEmailRequest> {
@@ -114,6 +114,6 @@ public class RenderableEmailRequestStreamSerializer implements SelfRegisteringSt
             return Optional.of( c.apply( input ) );
         }
 
-        return Optional.absent();
+        return Optional.empty();
     }
 }
