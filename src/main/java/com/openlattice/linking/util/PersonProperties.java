@@ -93,9 +93,7 @@ public class PersonProperties {
         mapper.registerModule(new AfterburnerModule());
         CsvSchema schema = mapper.schemaFor(Name.class).withHeader();
         MappingIterator<Name> iter = mapper.readerFor(Name.class).with(schema).readValues(Resources.getResource(namefile));
-        iter.forEachRemaining(n -> {
-            m.put(n.getName(), n.getProb());
-        });
+        iter.forEachRemaining(n -> m.put(n.getName(), n.getProb()) );
         return m;
     }
 

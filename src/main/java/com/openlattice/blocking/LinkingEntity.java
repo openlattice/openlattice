@@ -45,7 +45,7 @@ public class LinkingEntity {
         values.asMap().entrySet().forEach( entry -> {
             DelegatedStringSet stringValues = DelegatedStringSet
                     .wrap( entry.getValue().stream().filter( value -> value != null && value.toString() != null )
-                            .map( value -> value.toString() ).collect(
+                            .map( Object::toString ).collect(
                                     Collectors.toSet() ) );
             entity.put( entry.getKey(), stringValues );
         } );

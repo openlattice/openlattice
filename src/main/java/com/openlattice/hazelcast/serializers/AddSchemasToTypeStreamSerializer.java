@@ -37,16 +37,13 @@ import org.springframework.stereotype.Component;
 public class AddSchemasToTypeStreamSerializer implements SelfRegisteringStreamSerializer<AddSchemasToType> {
     @Override
     public void write( ObjectDataOutput out, AddSchemasToType object ) throws IOException {
-        SetStreamSerializers.serialize( out, object.getSchemas(), ( FullQualifiedName schema ) -> {
-            FullQualifiedNameStreamSerializer.serialize( out, schema );
-        } );
+        SetStreamSerializers.serialize( out, object.getSchemas(), ( FullQualifiedName schema ) -> FullQualifiedNameStreamSerializer.serialize( out, schema ) );
     }
 
     @Override
     public AddSchemasToType read( ObjectDataInput in ) throws IOException {
-        Set<FullQualifiedName> schemas = SetStreamSerializers.deserialize( in, ( ObjectDataInput dataInput ) -> {
-            return FullQualifiedNameStreamSerializer.deserialize( dataInput );
-        } );
+        Set<FullQualifiedName> schemas = SetStreamSerializers.deserialize( in,
+                FullQualifiedNameStreamSerializer::deserialize );
         return new AddSchemasToType( schemas );
     }
 

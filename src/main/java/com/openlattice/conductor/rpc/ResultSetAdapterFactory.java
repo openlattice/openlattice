@@ -66,7 +66,7 @@ public final class ResultSetAdapterFactory {
                                     mapTypenameToFullQualifiedName.get( definitions.get( index ).getName() ),
                                     row.getObject( index ) ),
                             ( lhs, rhs ) -> lhs.putAll( rhs.build() ),
-                            builder -> builder.build() ) );
+                            ImmutableSetMultimap.Builder::build ) );
         };
     }
 
