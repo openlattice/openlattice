@@ -25,7 +25,6 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.Arrays.asList;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.openlattice.graph.BooleanClauseVisitor;
 import com.openlattice.graph.query.AbstractBooleanClauses.And;
 import com.openlattice.graph.query.AbstractBooleanClauses.Or;
 import java.util.HashSet;

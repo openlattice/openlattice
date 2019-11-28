@@ -21,14 +21,7 @@
 
 package com.openlattice.graph.query;
 
-import static java.util.Arrays.asList;
-
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.function.Function;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;

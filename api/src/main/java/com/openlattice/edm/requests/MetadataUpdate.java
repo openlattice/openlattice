@@ -35,8 +35,6 @@ import java.util.UUID;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
-import javax.xml.crypto.Data;
-
 /**
  * Used for updating metadata of property type, entity type, or entity set. Non-existent fields for the specific object
  * would be ignored.
