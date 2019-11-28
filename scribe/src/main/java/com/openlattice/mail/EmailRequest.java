@@ -20,27 +20,26 @@
 
 package com.openlattice.mail;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.util.Arrays;
-
-import org.apache.commons.lang3.StringUtils;
-
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import org.apache.commons.lang3.StringUtils;
+
+import java.util.Arrays;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 public class EmailRequest {
-    protected static final String    FROM_FIELD = "from";
-    protected static final String    TO_FIELD   = "to";
-    protected static final String    CC_FIELD   = "cc";
-    protected static final String    BCC_FIELD  = "bcc";
-    private final Optional<String>   from;
-    private final String[]           to;
-    private final Optional<String[]> cc;
-    private final Optional<String[]> bcc;
+    protected static final String             FROM_FIELD = "from";
+    protected static final String             TO_FIELD   = "to";
+    protected static final String             CC_FIELD   = "cc";
+    protected static final String             BCC_FIELD  = "bcc";
+    private final          Optional<String>   from;
+    private final          String[]           to;
+    private final          Optional<String[]> cc;
+    private final          Optional<String[]> bcc;
 
     public EmailRequest(
             Optional<String> from,
@@ -49,15 +48,8 @@ public class EmailRequest {
             Optional<String[]> bcc ) {
 
         this.from = Preconditions.checkNotNull( from );
-        this.to = ImmutableList.copyOf( Iterables.filter( Arrays.asList( Preconditions.checkNotNull( to ) ),
-                new Predicate<String>() {
-
-                    @Override
-                    public boolean apply( String input ) {
-                        return StringUtils.isNotBlank( input );
-                    }
-
-                } ) ).toArray( new String[ 0 ] );
+        this.to = ImmutableList.copyOf( Arrays.asList( Preconditions.checkNotNull( to ) ).stream()
+                .filter( input -> StringUtils.isNotBlank( input ) ).collect( Collectors.toList() ) ).toArray( new String[ 0 ] );
         this.cc = Preconditions.checkNotNull( cc );
         this.bcc = Preconditions.checkNotNull( bcc );
         Preconditions.checkState( this.to.length > 0 );
