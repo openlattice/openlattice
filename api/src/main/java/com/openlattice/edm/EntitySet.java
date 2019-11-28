@@ -92,7 +92,11 @@ public class EntitySet extends AbstractSecurableObject {
         //        checkArgument( contacts != null && !contacts.isEmpty(), "Contacts cannot be blank." );
         this.name = name;
         this.entityTypeId = checkNotNull( entityTypeId );
-        this.contacts = Sets.newHashSet( contacts );
+        if (contacts instanceof HashSet) {
+            this.contacts = contacts;
+        } else {
+            this.contacts = Sets.newHashSet( contacts );
+        }
         this.organizationId = organizationId.orElse( IdConstants.GLOBAL_ORGANIZATION_ID.getId() );
         partitions.ifPresent( this.partitions::addAll );
         this.expiration = expiration.orElse( null );
@@ -124,7 +128,11 @@ public class EntitySet extends AbstractSecurableObject {
         //        checkArgument( contacts != null && !contacts.isEmpty(), "Contacts cannot be blank." );
         this.name = name;
         this.entityTypeId = checkNotNull( entityTypeId );
-        this.contacts = Sets.newHashSet( contacts );
+        if (contacts instanceof HashSet) {
+            this.contacts = contacts;
+        } else {
+            this.contacts = Sets.newHashSet( contacts );
+        }
         this.organizationId = organizationId;
         this.partitions.addAll( partitions );
         this.partitionsVersion = partitionsVersion;
