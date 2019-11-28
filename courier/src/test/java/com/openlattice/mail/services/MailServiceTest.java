@@ -22,6 +22,7 @@ package com.openlattice.mail.services;
 
 import com.openlattice.mail.templates.EmailTemplate;
 import java.io.IOException;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -37,7 +38,6 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import com.openlattice.mail.RenderableEmailRequest;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.hazelcast.core.IQueue;
 
@@ -57,14 +57,14 @@ public class MailServiceTest extends GreenMailTest {
         RenderableEmailRequest emailRequest = new RenderableEmailRequest(
                 Optional.of( EmailTemplate.getCourierEmailAddress() ),
                 toAddresses,
-                Optional.absent(),
-                Optional.absent(),
+                Optional.empty(),
+                Optional.empty(),
                 EmailTemplate.SERVICE_OUTAGE.getPath(),
                 Optional.of( EmailTemplate.SERVICE_OUTAGE.getSubject() ),
                 Optional.of( ImmutableMap
                         .of( "name", "Master Chief", "avatar-path", "the path", "registration-url", "test" ) ),
-                Optional.absent(),
-                Optional.absent() );
+                Optional.empty(),
+                Optional.empty() );
 
         CountDownLatch latch = new CountDownLatch( 1 );
         Lock lock = new ReentrantLock();
