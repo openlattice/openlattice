@@ -25,8 +25,6 @@ import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
-import java.lang.IllegalArgumentException
-import java.lang.IllegalStateException
 import java.sql.SQLException
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -475,7 +473,7 @@ internal fun buildGetActivePropertiesSql(
         listOf(ENTITY_SET_ID.name, ID_VALUE.name)
                 .union(propertyTypes.map {
                     val alias = propertyAliases[it.value.type] ?: it.value.type.fullQualifiedNameAsString
-                    "${quote(it.value.type.fullQualifiedNameAsString)} AS ${DataTables.quote(alias)}"
+                    "${quote(it.value.type.fullQualifiedNameAsString)} AS ${quote(alias)}"
                 })
                 .joinToString(separator = ", ")
     }

@@ -1199,7 +1199,7 @@ class PostgresEntityDataQueryService(
         if (deleteType == DeleteType.Soft) {
             ignoredClearedEntitiesClause = "AND ${VERSION.name} >= 0 "
         }
-        return "SELECT ${ID.name} FROM ${PostgresTable.DATA.name} " +
+        return "SELECT ${ID.name} FROM ${DATA.name} " +
                 "WHERE ${ENTITY_SET_ID.name} = ? " +
                 "AND ${PARTITION.name} = ANY(?) " +
                 "AND ${PARTITIONS_VERSION.name} = ? " +

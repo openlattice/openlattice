@@ -201,13 +201,13 @@ class AlprAlertEmailRenderer {
             return RenderableEmailRequest(
                     Optional.of(FROM_EMAIL),
                     arrayOf(userEmail),
-                    Optional.absent(),
-                    Optional.absent(),
+                    Optional.empty(),
+                    Optional.empty(),
                     TEMPLATE_PATH,
                     Optional.of(subject),
                     Optional.of(templateObjects),
                     Optional.of(attachments),
-                    Optional.absent()
+                    Optional.empty()
             )
         }
     }
