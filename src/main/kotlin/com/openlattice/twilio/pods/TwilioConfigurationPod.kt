@@ -37,8 +37,8 @@ class TwilioConfigurationPod {
     )
     fun awsTwilioConfiguration() : TwilioConfiguration {
         val config = ResourceConfigurationLoader.loadConfigurationFromS3(
-                awsS3!!,
-                awsLaunchConfig!!.bucket,
+                awsS3,
+                awsLaunchConfig.bucket,
                 awsLaunchConfig.folder,
                 TwilioConfiguration::class.java
         )
