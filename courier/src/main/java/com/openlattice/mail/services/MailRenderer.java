@@ -48,12 +48,12 @@ public class MailRenderer {
 
     @VisibleForTesting
     public static boolean isNotBlacklisted( String to ) {
-        return !REGISTRATION_DOMAIN_BLACKLIST.stream().anyMatch( ( domain ) -> to.contains( domain ) );
+        return !REGISTRATION_DOMAIN_BLACKLIST.stream().anyMatch( to::contains );
     }
 
     protected Set<Email> renderEmail( RenderableEmailRequest emailRequest ) {
         Iterable<String> toAddresses = Iterables.filter( Arrays.asList( emailRequest.getTo() ),
-                ( String address ) -> isNotBlacklisted( address ) );
+                MailRenderer::isNotBlacklisted );
         logger.info( "filtered e-mail addresses that are blacklisted." );
 
         if ( Iterables.size( toAddresses ) < 1 ) {
@@ -87,15 +87,15 @@ public class MailRenderer {
                     .htmlMessage( templateHtml );
             if ( emailRequest.getByteArrayAttachment().isPresent() ) {
                 EmailAttachment[] attachments = emailRequest.getByteArrayAttachment().get();
-                for ( int i = 0; i < attachments.length; i++ ) {
-                    email.attachment( attachments[ i ] );
+                for ( EmailAttachment attachment : attachments ) {
+                    email.attachment( attachment );
                 }
             }
 
             if ( emailRequest.getAttachmentPaths().isPresent() ) {
                 String[] paths = emailRequest.getAttachmentPaths().get();
-                for ( int i = 0; i < paths.length; i++ ) {
-                    email.attachment( EmailAttachment.with().content( paths[ i ] ) );
+                for ( String path : paths ) {
+                    email.attachment( EmailAttachment.with().content( path ) );
                 }
             }
 
