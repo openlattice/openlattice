@@ -22,10 +22,7 @@
 package com.openlattice.graph
 
 import com.fasterxml.jackson.annotation.JsonCreator
-import com.fasterxml.jackson.annotation.JsonIgnore
-import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.google.common.base.Preconditions.checkState
 import com.openlattice.analysis.requests.Filter
 import com.openlattice.analysis.requests.WeightedRankingAggregation
 import com.openlattice.client.serialization.SerializationConstants

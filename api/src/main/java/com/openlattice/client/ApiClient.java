@@ -18,7 +18,6 @@
 
 package com.openlattice.client;
 
-import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
@@ -41,6 +40,7 @@ import org.slf4j.LoggerFactory;
 import retrofit2.Retrofit;
 
 import java.util.concurrent.ExecutionException;
+import java.util.function.Supplier;
 
 public class ApiClient implements ApiFactoryFactory {
 
@@ -62,7 +62,7 @@ public class ApiClient implements ApiFactoryFactory {
     public ApiClient( SerializableSupplier<String> jwtToken ) {
         this( () -> {
             final Retrofit retrofit = RetrofitFactory.newClient( jwtToken );
-            return (ApiFactory) clazz -> retrofit.create( clazz );
+            return (ApiFactory) retrofit::create;
         } );
     }
 
@@ -120,8 +120,8 @@ public class ApiClient implements ApiFactoryFactory {
             apiCache = CacheBuilder.newBuilder()
                     .maximumSize( 100 )
                     .initialCapacity( 10 )
-                    .build( new CacheLoader<Class<?>, Object>() {
-                        private final Supplier<ApiFactory> apiFactory = Suppliers.memoize( retrofitSupplier::get );
+                    .build( new CacheLoader<>() {
+                        private final Supplier<ApiFactory> apiFactory = Suppliers.memoize( retrofitSupplier::get )::get;
 
                         @Override
                         public Object load( Class<?> key ) throws Exception {

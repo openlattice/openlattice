@@ -24,7 +24,6 @@ import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.edm.set.EntitySetPropertyMetadata
 import com.openlattice.edm.type.PropertyType
 import retrofit2.http.*
-import java.time.OffsetDateTime
 import java.util.*
 
 

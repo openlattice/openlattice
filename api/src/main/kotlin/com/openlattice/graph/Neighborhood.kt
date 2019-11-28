@@ -21,7 +21,6 @@
 
 package com.openlattice.graph
 
-import com.openlattice.data.Property
 import java.util.*
 
 /**

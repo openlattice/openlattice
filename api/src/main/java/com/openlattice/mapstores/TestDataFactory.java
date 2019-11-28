@@ -72,8 +72,16 @@ import com.openlattice.search.requests.PersistentSearch;
 import com.openlattice.search.requests.SearchConstraints;
 import com.openlattice.search.requests.SearchDetails;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.commons.lang3.RandomUtils;
+import org.apache.commons.text.CharacterPredicates;
+import org.apache.commons.text.RandomStringGenerator;
+import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
+
 import java.time.OffsetDateTime;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -85,12 +93,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.commons.lang3.RandomUtils;
-import org.apache.commons.text.CharacterPredicates;
-import org.apache.commons.text.RandomStringGenerator;
-import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 @SuppressFBWarnings( value = "SECPR", justification = "Only used for testing." )
 public final class TestDataFactory {
@@ -231,8 +233,8 @@ public final class TestDataFactory {
         UUID ptId = propertyTypes.iterator().next();
         return new AssociationType(
                 Optional.of( et ),
-                Sets.newLinkedHashSet( Arrays.asList( ptId ) ),
-                Sets.newLinkedHashSet( Arrays.asList( ptId ) ),
+                Sets.newLinkedHashSet( Collections.singletonList( ptId ) ),
+                Sets.newLinkedHashSet( Collections.singletonList( ptId ) ),
                 false );
     }
 
@@ -542,7 +544,7 @@ public final class TestDataFactory {
         return new EntityTypePropertyMetadata(
                 randomAlphanumeric( 100 ), // title
                 randomAlphanumeric( 100 ), // description
-                Sets.newLinkedHashSet( Arrays.asList( randomAlphanumeric( 5 ) ) ),
+                Sets.newLinkedHashSet( Collections.singletonList( randomAlphanumeric( 5 ) ) ),
                 r.nextBoolean()
         );
     }
