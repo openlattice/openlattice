@@ -196,7 +196,7 @@ class HazelcastOrganizationService(
         organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
             it.securablePrincipal.title = title
         })
-        eventBus!!.post(OrganizationUpdatedEvent(organizationId, Optional.of(title), Optional.empty()))
+        eventBus.post(OrganizationUpdatedEvent(organizationId, Optional.of(title), Optional.empty()))
     }
 
     fun updateDescription(organizationId: UUID, description: String) {
@@ -205,7 +205,7 @@ class HazelcastOrganizationService(
         organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
             it.securablePrincipal.description = description
         })
-        eventBus!!.post(OrganizationUpdatedEvent(organizationId, Optional.empty(), Optional.of(description)))
+        eventBus.post(OrganizationUpdatedEvent(organizationId, Optional.empty(), Optional.of(description)))
     }
 
     fun getEmailDomains(organizationId: UUID): Set<String> {
@@ -246,7 +246,7 @@ class HazelcastOrganizationService(
     ) {
         addMembers(AclKey(organizationId), members, profiles)
         val securablePrincipals = securePrincipalsManager.getSecurablePrincipals(members)
-        eventBus!!.post(
+        eventBus.post(
                 MembersAddedToOrganizationEvent(organizationId, SecurablePrincipalList(securablePrincipals))
         )
     }

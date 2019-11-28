@@ -1,22 +1,14 @@
 package com.openlattice.subscriptions
 
-import com.hazelcast.core.HazelcastInstance
-import com.hazelcast.core.IMap
 import com.hazelcast.core.IQueue
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.EdmAuthorizationHelper
 import com.openlattice.codex.MessageRequest
-import com.openlattice.edm.EntitySet
-import com.openlattice.edm.type.EntityType
-import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.GraphQueryService
-import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.mail.MailServiceClient
 import com.openlattice.organizations.roles.SecurePrincipalsManager
-import com.openlattice.search.SearchService
 import com.openlattice.tasks.HazelcastTaskDependencies
 import com.zaxxer.hikari.HikariDataSource
-import java.util.*
 
 /**
  *

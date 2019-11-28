@@ -17,7 +17,7 @@ class EntitySetFlagStreamSerializer : AbstractEnumSerializer<EntitySetFlag>() {
     }
 
     override fun getTypeId(): Int {
-        return StreamSerializerTypeIds.ENTITY_SET_FLAG.ordinal;
+        return StreamSerializerTypeIds.ENTITY_SET_FLAG.ordinal
     }
 
     override fun getClazz(): Class<out Enum<EntitySetFlag>> {

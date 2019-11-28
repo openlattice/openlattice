@@ -81,7 +81,7 @@ public class AuthorizationAggregatorStreamSerializer
     public static void serializePermissionEntry( ObjectDataOutput out, EnumMap<Permission, Boolean> object )
             throws IOException {
         PermissionMergerStreamSerializer
-                .serialize( out, object.entrySet().stream().filter( e -> e.getValue() ).map(
+                .serialize( out, object.entrySet().stream().filter( Entry::getValue ).map(
                         Entry::getKey )::iterator );
         PermissionMergerStreamSerializer
                 .serialize( out, object.entrySet().stream().filter( e -> !e.getValue() ).map(

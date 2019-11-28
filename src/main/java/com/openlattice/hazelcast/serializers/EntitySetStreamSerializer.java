@@ -60,8 +60,6 @@ public class EntitySetStreamSerializer implements SelfRegisteringStreamSerialize
 
         StreamSerializers.serializeIntList( out, object.getPartitions() );
 
-        out.writeInt( object.getPartitionsVersion() );
-
         if ( object.getExpiration() != null ) {
             out.writeBoolean( true );
             DataExpirationStreamSerializer.serialize( out, object.getExpiration() );
@@ -93,8 +91,6 @@ public class EntitySetStreamSerializer implements SelfRegisteringStreamSerialize
 
         LinkedHashSet<Integer> partitions = (LinkedHashSet<Integer>)StreamSerializers.deserializeIntList( in, Sets.newLinkedHashSet() );
 
-        int partitionsVersion = in.readInt();
-
         DataExpiration expiration;
         boolean hasExpiration = in.readBoolean();
         if ( hasExpiration ) {
@@ -114,7 +110,6 @@ public class EntitySetStreamSerializer implements SelfRegisteringStreamSerialize
                 organizationId,
                 flags,
                 partitions,
-                partitionsVersion,
                 expiration );
     }
 

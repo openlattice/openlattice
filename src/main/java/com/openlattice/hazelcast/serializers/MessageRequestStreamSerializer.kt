@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component
 class MessageRequestStreamSerializer : SelfRegisteringStreamSerializer<MessageRequest> {
 
     override fun getTypeId(): Int {
-        return StreamSerializerTypeIds.MESSAGE_REQUEST.ordinal;
+        return StreamSerializerTypeIds.MESSAGE_REQUEST.ordinal
     }
 
     override fun getClazz(): Class<out MessageRequest> {

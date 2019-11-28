@@ -1,7 +1,5 @@
 package com.openlattice.collections.mapstores
 
-import com.dataloom.mappers.ObjectMappers
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.hazelcast.config.InMemoryFormat
 import com.hazelcast.config.MapConfig
 import com.hazelcast.config.MapIndexConfig

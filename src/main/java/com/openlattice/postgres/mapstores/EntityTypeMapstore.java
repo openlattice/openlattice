@@ -7,7 +7,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MapIndexConfig;
-import com.hazelcast.config.MapStoreConfig;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.mapstores.TestDataFactory;

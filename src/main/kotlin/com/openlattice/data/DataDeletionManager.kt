@@ -1,7 +1,6 @@
 package com.openlattice.data
 
 import com.openlattice.authorization.Principal
-import com.openlattice.search.requests.EntityNeighborsFilter
 import java.util.*
 
 interface DataDeletionManager {

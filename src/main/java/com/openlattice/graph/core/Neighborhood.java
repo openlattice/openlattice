@@ -21,16 +21,17 @@
 package com.openlattice.graph.core;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
+
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -60,8 +61,8 @@ public class Neighborhood {
                 .map( dstTypeId -> neighborhood.getOrDefault( dstTypeId, ImmutableMap.of() ) )
                 .map( dstEntityKeyIds -> dstEntityKeyIds.getOrDefault( edgeTypeId, ImmutableSetMultimap.of() ) )
                 .mapToInt( edgeEntityKeyIds ->
-                        dstEntityKeyId.<Collection<UUID>>transform( edgeEntityKeyIds::get )
-                                .or( edgeEntityKeyIds.values() )
+                        dstEntityKeyId.<Collection<UUID>>map( edgeEntityKeyIds::get )
+                                .orElseGet( edgeEntityKeyIds::values )
                                 .size() )
                 .sum();
     }
@@ -102,7 +103,7 @@ public class Neighborhood {
     }
 
     public int count( Set<UUID> dstTypeIds, UUID edgeTypeId ) {
-        return count( dstTypeIds, edgeTypeId, Optional.absent() );
+        return count( dstTypeIds, edgeTypeId, Optional.empty() );
     }
 
     @Override public boolean equals( Object o ) {

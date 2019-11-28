@@ -1,7 +1,6 @@
 package com.openlattice.postgres.mapstores;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MapIndexConfig;
 import com.openlattice.auditing.AuditRecordEntitySetConfiguration;

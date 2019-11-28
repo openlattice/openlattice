@@ -62,8 +62,8 @@ class AssemblerConfigurationPod {
     )
     fun awsAssemblerConfiguration() : AssemblerConfiguration {
         val config = ResourceConfigurationLoader.loadConfigurationFromS3(
-                awsS3!!,
-                awsLaunchConfig!!.bucket,
+                awsS3,
+                awsLaunchConfig.bucket,
                 awsLaunchConfig.folder,
                 AssemblerConfiguration::class.java
         )

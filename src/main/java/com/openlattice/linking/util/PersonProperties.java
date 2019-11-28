@@ -23,6 +23,7 @@ package com.openlattice.linking.util;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
 import com.fasterxml.jackson.dataformat.csv.CsvSchema;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
@@ -31,21 +32,19 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.io.Resources;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
-import com.fasterxml.jackson.databind.MappingIterator;
-
-import java.io.IOException;
-import java.text.DecimalFormat;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.text.DecimalFormat;
 import java.time.LocalDate;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 public class PersonProperties {
     private static final Logger            logger            = LoggerFactory.getLogger( PersonProperties.class );
@@ -93,9 +92,7 @@ public class PersonProperties {
         mapper.registerModule(new AfterburnerModule());
         CsvSchema schema = mapper.schemaFor(Name.class).withHeader();
         MappingIterator<Name> iter = mapper.readerFor(Name.class).with(schema).readValues(Resources.getResource(namefile));
-        iter.forEachRemaining(n -> {
-            m.put(n.getName(), n.getProb());
-        });
+        iter.forEachRemaining(n -> m.put(n.getName(), n.getProb()) );
         return m;
     }
 
@@ -108,7 +105,7 @@ public class PersonProperties {
 
     public static int valueIsPresent( Map<UUID, DelegatedStringSet> entity, UUID propertyTypeId ) {
         if ( !entity.containsKey( propertyTypeId )
-                || entity.get( propertyTypeId ).stream().filter( StringUtils::isNotBlank ).count() == 0 ) { return 0; }
+                || entity.get( propertyTypeId ).stream().noneMatch( StringUtils::isNotBlank ) ) { return 0; }
         return 1;
     }
 
