@@ -179,7 +179,7 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
         Map<Principal, List<List<Principal>>> principalToPrincipalPaths = aceStream.collect( Collectors
                 .toMap( Ace::getPrincipal, ace -> Lists.newArrayList( Lists.newArrayList() ) ) );
         principalToPrincipalPaths.forEach( ( p, pl ) -> {
-            List<Principal> path = new ArrayList<Principal>( Collections.singletonList( p ) );
+            List<Principal> path = new ArrayList<>( Collections.singletonList( p ) );
             pl.add( path );
         } );
 
