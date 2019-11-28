@@ -19,8 +19,6 @@ import java.util.stream.Stream
  */
 interface EntityDatastore {
 
-    fun getEntityKeyIdsInEntitySet(entitySetId: UUID): BasePostgresIterable<UUID>
-
     fun getEntities(
             entitySetId: UUID,
             ids: Set<UUID>,
@@ -33,12 +31,6 @@ interface EntityDatastore {
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
             metadataOptions: EnumSet<MetadataOption>
     ): Stream<MutableMap<FullQualifiedName, MutableSet<Any>>>
-
-    fun getEntitiesById(
-            entitySetId: UUID,
-            ids: Set<UUID>,
-            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
-    ): Map<UUID, Map<FullQualifiedName, Set<Any>>>
 
     fun getLinkingEntities(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
@@ -192,7 +184,12 @@ interface EntityDatastore {
             entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
     ): WriteEvent
 
-    fun getExpiringEntitiesFromEntitySet(entitySetId: UUID, expirationBaseColumn: String, formattedDateMinusTTE: Any,
-                                         sqlFormat: Int, deleteType: DeleteType) : BasePostgresIterable<UUID>
+    fun getExpiringEntitiesFromEntitySet(
+            entitySetId: UUID,
+            expirationBaseColumn: String,
+            formattedDateMinusTTE: Any,
+            sqlFormat: Int,
+            deleteType: DeleteType
+    ) : BasePostgresIterable<UUID>
 
 }

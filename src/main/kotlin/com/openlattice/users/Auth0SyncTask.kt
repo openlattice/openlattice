@@ -71,7 +71,7 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies>, Hazelca
             var pageOfUsers = getUsersPage(ds.managementApi, page++).items
             require(pageOfUsers.isNotEmpty()) { "No users found." }
             while (pageOfUsers.isNotEmpty()) {
-                logger.info("Loading page {} of {} auth0 users", page, pageOfUsers.size)
+                logger.info("Loading page {} of {} auth0 users", page-1, pageOfUsers.size)
                 pageOfUsers
                         .parallelStream()
                         .forEach(ds.users::syncUser)

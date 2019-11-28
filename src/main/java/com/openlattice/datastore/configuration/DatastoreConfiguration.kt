@@ -18,7 +18,8 @@ data class DatastoreConfiguration(
         @JsonProperty(REGION_NAME) val regionName: String,
         @JsonProperty(TIME_TO_LIVE) val timeToLive: Long,
         @JsonProperty(ACCESS_KEY_ID) val accessKeyId: String,
-        @JsonProperty(SECRET_ACCESS_KEY) val secretAccessKey: String): Configuration {
+        @JsonProperty(SECRET_ACCESS_KEY) val secretAccessKey: String
+) : Configuration {
 
     companion object {
         @JvmStatic
