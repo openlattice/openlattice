@@ -20,11 +20,8 @@
 
 package com.openlattice.controllers;
 
-import static com.google.common.base.Preconditions.checkArgument;
-
 import com.auth0.json.mgmt.users.User;
 import com.codahale.metrics.annotation.Timed;
-import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
@@ -57,14 +54,6 @@ import com.openlattice.organizations.Grant;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.Organization;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
-import java.util.Collection;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
-import javax.inject.Inject;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -76,6 +65,17 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+
+import javax.inject.Inject;
+import java.util.Collection;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+import static com.google.common.base.Preconditions.checkArgument;
 
 @RestController
 @RequestMapping( OrganizationsApi.CONTROLLER )
@@ -110,12 +110,12 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     public Iterable<Organization> getOrganizations() {
 
         Set<AclKey> authorizedRoles = getAccessibleObjects( SecurableObjectType.Role, EnumSet.of( Permission.READ ) )
-                .filter( Predicates.notNull()::apply ).collect( Collectors.toSet() );
+                .filter( o -> o != null ).collect( Collectors.toSet() );
 
         Iterable<Organization> orgs = organizations.getOrganizations(
                 getAccessibleObjects( SecurableObjectType.Organization, EnumSet.of( Permission.READ ) )
                         .parallel()
-                        .filter( Predicates.notNull()::apply )
+                        .filter( o -> o != null )
                         .map( AuthorizationUtils::getLastAclKeySafely )
         );
 
