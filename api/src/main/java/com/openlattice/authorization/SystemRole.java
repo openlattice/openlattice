@@ -35,7 +35,7 @@ public enum SystemRole {
     private static final Set<String> allRoles;
 
     static {
-        allRoles = Stream.of( values() ).map( role -> role.getName() ).collect( Collectors.toSet() );
+        allRoles = Stream.of( values() ).map( SystemRole::getName ).collect( Collectors.toSet() );
     }
 
     private SystemRole( String principalId ) {

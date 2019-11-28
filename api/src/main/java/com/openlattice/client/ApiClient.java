@@ -62,7 +62,7 @@ public class ApiClient implements ApiFactoryFactory {
     public ApiClient( SerializableSupplier<String> jwtToken ) {
         this( () -> {
             final Retrofit retrofit = RetrofitFactory.newClient( jwtToken );
-            return (ApiFactory) clazz -> retrofit.create( clazz );
+            return (ApiFactory) retrofit::create;
         } );
     }
 
