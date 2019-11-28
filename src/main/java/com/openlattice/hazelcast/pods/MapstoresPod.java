@@ -67,40 +67,31 @@ import com.openlattice.ids.IdGenerationMapstore;
 import com.openlattice.ids.Range;
 import com.openlattice.linking.mapstores.LinkingFeedbackMapstore;
 import com.openlattice.notifications.sms.SmsInformationMapstore;
+import com.openlattice.organization.OrganizationExternalDatabaseColumn;
+import com.openlattice.organization.OrganizationExternalDatabaseTable;
 import com.openlattice.organizations.Organization;
+import com.openlattice.organizations.mapstores.OrganizationExternalDatabaseColumnMapstore;
+import com.openlattice.organizations.mapstores.OrganizationExternalDatabaseTableMapstore;
 import com.openlattice.organizations.mapstores.OrganizationsMapstore;
 import com.openlattice.postgres.PostgresPod;
 import com.openlattice.postgres.PostgresTableManager;
-import com.openlattice.postgres.mapstores.AclKeysMapstore;
-import com.openlattice.postgres.mapstores.AppConfigMapstore;
-import com.openlattice.postgres.mapstores.AppMapstore;
-import com.openlattice.postgres.mapstores.AppTypeMapstore;
-import com.openlattice.postgres.mapstores.AssociationTypeMapstore;
-import com.openlattice.postgres.mapstores.AuditRecordEntitySetConfigurationMapstore;
-import com.openlattice.postgres.mapstores.EntitySetMapstore;
-import com.openlattice.postgres.mapstores.EntitySetPropertyMetadataMapstore;
-import com.openlattice.postgres.mapstores.EntityTypeMapstore;
-import com.openlattice.postgres.mapstores.MaterializedEntitySetMapStore;
-import com.openlattice.postgres.mapstores.NamesMapstore;
-import com.openlattice.postgres.mapstores.OrganizationAssemblyMapstore;
-import com.openlattice.postgres.mapstores.RequestsMapstore;
-import com.openlattice.postgres.mapstores.SchemasMapstore;
-import com.openlattice.postgres.mapstores.SecurableObjectTypeMapstore;
+import com.openlattice.postgres.mapstores.*;
 import com.openlattice.requests.Status;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import com.zaxxer.hikari.HikariDataSource;
-import java.io.IOException;
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.UUID;
-import javax.inject.Inject;
 import org.jdbi.v3.core.Jdbi;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+
+import javax.inject.Inject;
+import java.io.IOException;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.UUID;
 
 @Configuration
 @Import( { PostgresPod.class, Auth0Pod.class } )
@@ -304,6 +295,16 @@ public class MapstoresPod {
     @Bean
     public SelfRegisteringMapStore<CollectionTemplateKey, UUID> entitySetCollectionConfigMapstore() {
         return new EntitySetCollectionConfigMapstore( hikariDataSource );
+    }
+
+    @Bean
+    public SelfRegisteringMapStore<UUID, OrganizationExternalDatabaseTable> organizationExternalDatabaseTableMapstore() {
+        return new OrganizationExternalDatabaseTableMapstore( hikariDataSource );
+    }
+
+    @Bean
+    public SelfRegisteringMapStore<UUID, OrganizationExternalDatabaseColumn> organizationExternalDatabaseColumnMapstore() {
+        return new OrganizationExternalDatabaseColumnMapstore( hikariDataSource );
     }
 
     @Bean
