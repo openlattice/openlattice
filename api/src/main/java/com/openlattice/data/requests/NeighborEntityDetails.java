@@ -20,13 +20,14 @@ package com.openlattice.data.requests;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import com.openlattice.client.serialization.SerializationConstants;
 import com.openlattice.edm.EntitySet;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
+
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 public class NeighborEntityDetails {
     private final EntitySet                              associationEntitySet;
@@ -79,9 +80,9 @@ public class NeighborEntityDetails {
         this(
                 associationEntitySet,
                 associationDetails,
-                Optional.absent(),
-                Optional.absent(),
-                Optional.absent(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
                 entityIsSrc );
     }
 
