@@ -20,24 +20,22 @@
 
 package com.openlattice.mail.services;
 
-import com.openlattice.mail.RenderableEmailRequest;
-import com.openlattice.mail.exceptions.InvalidTemplateException;
-import com.openlattice.mail.templates.EmailTemplate;
-import com.openlattice.mail.utils.TemplateUtils;
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.Set;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
-
+import com.openlattice.mail.RenderableEmailRequest;
+import com.openlattice.mail.exceptions.InvalidTemplateException;
+import com.openlattice.mail.templates.EmailTemplate;
+import com.openlattice.mail.utils.TemplateUtils;
 import jodd.mail.Email;
 import jodd.mail.EmailAttachment;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Set;
 
 public class MailRenderer {
     private Logger                   logger                        = LoggerFactory
@@ -48,12 +46,12 @@ public class MailRenderer {
 
     @VisibleForTesting
     public static boolean isNotBlacklisted( String to ) {
-        return !REGISTRATION_DOMAIN_BLACKLIST.stream().anyMatch( ( domain ) -> to.contains( domain ) );
+        return !REGISTRATION_DOMAIN_BLACKLIST.stream().anyMatch( to::contains );
     }
 
     protected Set<Email> renderEmail( RenderableEmailRequest emailRequest ) {
         Iterable<String> toAddresses = Iterables.filter( Arrays.asList( emailRequest.getTo() ),
-                ( String address ) -> isNotBlacklisted( address ) );
+                MailRenderer::isNotBlacklisted );
         logger.info( "filtered e-mail addresses that are blacklisted." );
 
         if ( Iterables.size( toAddresses ) < 1 ) {
@@ -70,7 +68,7 @@ public class MailRenderer {
         }
         String templateHtml = TemplateUtils.DEFAULT_TEMPLATE_COMPILER
                 .compile( template )
-                .execute( emailRequest.getTemplateObjs().or( new Object() ) );
+                .execute( emailRequest.getTemplateObjs().orElse( new Object() ) );
 
         /*
          * when someone invites multiple people, we want to spool an individual invite for each person. as such, we need
@@ -81,21 +79,21 @@ public class MailRenderer {
         for ( String toAddress : toAddresses ) {
 
             Email email = Email.create()
-                    .from( emailRequest.getFrom().or( EmailTemplate.getCourierEmailAddress() ) )
+                    .from( emailRequest.getFrom().orElse( EmailTemplate.getCourierEmailAddress() ) )
                     .to( toAddress )
-                    .subject( emailRequest.getSubject().or( "" ) )
+                    .subject( emailRequest.getSubject().orElse( "" ) )
                     .htmlMessage( templateHtml );
             if ( emailRequest.getByteArrayAttachment().isPresent() ) {
                 EmailAttachment[] attachments = emailRequest.getByteArrayAttachment().get();
-                for ( int i = 0; i < attachments.length; i++ ) {
-                    email.attachment( attachments[ i ] );
+                for ( EmailAttachment attachment : attachments ) {
+                    email.attachment( attachment );
                 }
             }
 
             if ( emailRequest.getAttachmentPaths().isPresent() ) {
                 String[] paths = emailRequest.getAttachmentPaths().get();
-                for ( int i = 0; i < paths.length; i++ ) {
-                    email.attachment( EmailAttachment.with().content( paths[ i ] ) );
+                for ( String path : paths ) {
+                    email.attachment( EmailAttachment.with().content( path ) );
                 }
             }
 

@@ -31,9 +31,7 @@ import com.samskivert.mustache.Mustache;
 public final class TemplateUtils {
 
     public static final Mustache.Compiler DEFAULT_TEMPLATE_COMPILER = Mustache.compiler()
-            .withLoader( templateResourcePath -> {
-                return new StringReader( loadTemplate( templateResourcePath ) );
-            } );
+            .withLoader( templateResourcePath -> new StringReader( loadTemplate( templateResourcePath ) ) );
 
     private TemplateUtils() {}
 
