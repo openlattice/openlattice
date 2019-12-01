@@ -25,7 +25,6 @@ import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Preconditions.checkArgument
 import com.openlattice.authorization.*
 import com.openlattice.controllers.exceptions.ForbiddenException
-import com.openlattice.data.requests.NeighborEntityDetails
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.*
