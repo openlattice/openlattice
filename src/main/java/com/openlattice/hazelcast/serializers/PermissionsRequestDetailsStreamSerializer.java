@@ -65,22 +65,14 @@ public class PermissionsRequestDetailsStreamSerializer
     }
 
     public static void serialize( ObjectDataOutput out, PermissionsRequestDetails object ) throws IOException {
-        StreamSerializerUtils.serializeFromMap( out, object.getPermissions(), ( UUID key ) -> {
-            UUIDStreamSerializer.serialize( out, key );
-        }, ( EnumSet<Permission> permissions ) -> {
-            StreamSerializerUtils.serializeFromPermissionEnumSet( out, permissions );
-        } );
+        StreamSerializerUtils.serializeFromMap( out, object.getPermissions(), ( UUID key ) -> UUIDStreamSerializer.serialize( out, key ), ( EnumSet<Permission> permissions ) -> StreamSerializerUtils.serializeFromPermissionEnumSet( out, permissions ) );
         out.writeInt( object.getStatus().ordinal() );
     }
     
     public static PermissionsRequestDetails deserialize( ObjectDataInput in ) throws IOException {
         Map<UUID, EnumSet<Permission>> permissions = StreamSerializerUtils.deserializeToMap( in,
-                ( ObjectDataInput dataInput ) -> {
-                    return UUIDStreamSerializer.deserialize( dataInput );
-                },
-                ( ObjectDataInput dataInput ) -> {
-                    return StreamSerializerUtils.deserializeToPermissionEnumSet( dataInput );
-                } );
+                UUIDStreamSerializer::deserialize,
+                StreamSerializerUtils::deserializeToPermissionEnumSet );
         RequestStatus st = status[ in.readInt() ];
         return new PermissionsRequestDetails( permissions, st );
     }

@@ -28,12 +28,13 @@ import com.openlattice.postgres.PostgresColumn;
 import com.openlattice.postgres.PostgresTable;
 import com.openlattice.postgres.mapstores.AbstractBasePostgresMapstore;
 import com.zaxxer.hikari.HikariDataSource;
+import org.apache.commons.lang.RandomStringUtils;
+
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.Map;
-import org.apache.commons.lang.RandomStringUtils;
 
 /**
  * This mapstore assumes that initial first time creation of user in postgres is handled externally.
@@ -75,7 +76,7 @@ public class PostgresCredentialMapstore extends AbstractBasePostgresMapstore<Str
 
     @Override public void storeAll( Map<String, String> map ) {
         super.storeAll( map );
-        map.entrySet().forEach( p -> dcqs.setUserCredential( p.getKey(), p.getValue() ) );
+        map.forEach( ( key, value ) -> dcqs.setUserCredential( key, value ) );
     }
 
     @Override public void delete( String key ) {
@@ -84,7 +85,7 @@ public class PostgresCredentialMapstore extends AbstractBasePostgresMapstore<Str
     }
 
     @Override public void deleteAll( Collection<String> keys ) {
-        keys.forEach( u -> dcqs.deleteUser( u ) );
+        keys.forEach( dcqs::deleteUser );
         super.deleteAll( keys );
     }
 

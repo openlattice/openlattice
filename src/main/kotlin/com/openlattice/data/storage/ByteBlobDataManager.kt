@@ -3,7 +3,6 @@ package com.openlattice.data.storage
 import com.amazonaws.HttpMethod
 import java.net.URL
 import java.util.*
-import com.amazonaws.services.s3.model.DeleteObjectsRequest
 
 
 interface ByteBlobDataManager {

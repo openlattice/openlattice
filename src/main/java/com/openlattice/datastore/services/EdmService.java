@@ -67,6 +67,7 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -450,7 +451,8 @@ public class EdmService implements EdmManager {
 
     @Override
     public Iterable<AssociationType> getAssociationTypes() {
-        return Iterables.transform( entityTypeManager.getAssociationTypeIds(), this::getAssociationType );
+        return StreamSupport.stream( entityTypeManager.getAssociationTypeIds().spliterator(), false )
+                .map( this::getAssociationType ).collect( Collectors.toList() );
     }
 
     @Override

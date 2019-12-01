@@ -1,9 +1,8 @@
 package com.openlattice.search.renderers
 
-import com.google.common.base.Optional
+import java.util.Optional
 import com.google.common.collect.Lists
 import com.google.common.collect.Maps
-import com.google.common.collect.SetMultimap
 import com.openlattice.mail.RenderableEmailRequest
 import com.openlattice.search.requests.PersistentSearch
 import jodd.mail.EmailAttachment
@@ -202,13 +201,13 @@ class AlprAlertEmailRenderer {
             return RenderableEmailRequest(
                     Optional.of(FROM_EMAIL),
                     arrayOf(userEmail),
-                    Optional.absent(),
-                    Optional.absent(),
+                    Optional.empty(),
+                    Optional.empty(),
                     TEMPLATE_PATH,
                     Optional.of(subject),
                     Optional.of(templateObjects),
                     Optional.of(attachments),
-                    Optional.absent()
+                    Optional.empty()
             )
         }
     }

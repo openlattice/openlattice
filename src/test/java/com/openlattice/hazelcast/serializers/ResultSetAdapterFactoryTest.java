@@ -22,7 +22,21 @@
 
 package com.openlattice.hazelcast.serializers;
 
-import static org.junit.Assert.assertEquals;
+import com.datastax.driver.core.Cluster;
+import com.datastax.driver.core.PoolingOptions;
+import com.datastax.driver.core.ProtocolVersion;
+import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.Row;
+import com.datastax.driver.core.Session;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.SetMultimap;
+import com.kryptnostic.rhizome.configuration.RhizomeConfiguration;
+import com.kryptnostic.rhizome.configuration.cassandra.CassandraConfiguration;
+import com.kryptnostic.rhizome.configuration.service.ConfigurationService;
+import com.openlattice.conductor.rpc.ResultSetAdapterFactory;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -34,23 +48,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.function.Function;
 
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
-
-import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.PoolingOptions;
-import com.datastax.driver.core.ProtocolVersion;
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Row;
-import com.datastax.driver.core.Session;
-import com.google.common.base.Function;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.SetMultimap;
-import com.openlattice.conductor.rpc.ResultSetAdapterFactory;
-import com.kryptnostic.rhizome.configuration.RhizomeConfiguration;
-import com.kryptnostic.rhizome.configuration.cassandra.CassandraConfiguration;
-import com.kryptnostic.rhizome.configuration.service.ConfigurationService;
+import static org.junit.Assert.assertEquals;
 
 public class ResultSetAdapterFactoryTest {
     static ResultSet                      rs;
@@ -164,8 +164,8 @@ public class ResultSetAdapterFactoryTest {
 
     // @Test
     public void test() {
-        Function<Row, SetMultimap<FullQualifiedName, Object>> function = ResultSetAdapterFactory.toSetMultimap( map );
-        Iterable<SetMultimap<FullQualifiedName, Object>> convertedData = Iterables.transform( rs, function );
+        Function<Row, @Nullable SetMultimap<FullQualifiedName, Object>> function = ResultSetAdapterFactory.toSetMultimap( map );
+        Iterable<SetMultimap<FullQualifiedName, Object>> convertedData = Iterables.transform( rs, function::apply );
 
         // Initialize set for convertedData
         Set<SetMultimap<FullQualifiedName, Object>> convertedDataSet = new HashSet<SetMultimap<FullQualifiedName, Object>>();
