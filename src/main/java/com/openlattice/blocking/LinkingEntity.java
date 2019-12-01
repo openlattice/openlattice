@@ -5,7 +5,6 @@ import com.google.common.collect.Sets;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
-import java.io.Serializable;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -43,12 +42,12 @@ public class LinkingEntity {
     }
 
     public void addAll( SetMultimap<UUID, Object> values ) {
-        values.asMap().entrySet().forEach( entry -> {
+        values.asMap().forEach( ( key, value1 ) -> {
             DelegatedStringSet stringValues = DelegatedStringSet
-                    .wrap( entry.getValue().stream().filter( value -> value != null && value.toString() != null )
-                            .map( value -> value.toString() ).collect(
+                    .wrap( value1.stream().filter( value -> value != null && value.toString() != null )
+                            .map( Object::toString ).collect(
                                     Collectors.toSet() ) );
-            entity.put( entry.getKey(), stringValues );
+            entity.put( key, stringValues );
         } );
     }
 

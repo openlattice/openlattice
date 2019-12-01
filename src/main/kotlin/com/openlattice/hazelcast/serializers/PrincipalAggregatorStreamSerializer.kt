@@ -24,7 +24,7 @@ class PrincipalAggregatorStreamSerializer : SelfRegisteringStreamSerializer<Prin
     override fun write(output: ObjectDataOutput, value: PrincipalAggregator) {
         output.writeInt(value.getResult().size)
         value.getResult().forEach {
-            AclKeyStreamSerializer.serialize(output, it.key);
+            AclKeyStreamSerializer.serialize(output, it.key)
             PrincipalSetStreamSerializer().write(output, it.value)
         }
     }

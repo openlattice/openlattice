@@ -1,6 +1,5 @@
 package com.openlattice.organizations.processors
 
-import com.geekbeast.rhizome.hazelcast.DelegatedIntList
 import com.openlattice.organizations.Organization
 import com.openlattice.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor
 import org.slf4j.LoggerFactory

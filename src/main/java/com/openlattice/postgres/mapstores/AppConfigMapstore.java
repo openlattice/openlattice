@@ -31,7 +31,7 @@ public class AppConfigMapstore extends AbstractBasePostgresMapstore<AppConfigKey
         bind( ps, key, 1 );
 
         Array permissions = PostgresArrays.createTextArray( ps.getConnection(),
-                value.getPermissions().stream().map( permission -> permission.toString() ) );
+                value.getPermissions().stream().map( Enum::toString ) );
 
         ps.setArray( 4, permissions );
         ps.setObject( 5, value.getEntitySetId() );

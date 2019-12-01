@@ -38,12 +38,8 @@ public class AssociationTypeStreamSerializer implements SelfRegisteringStreamSer
 
     @Override
     public void write( ObjectDataOutput out, AssociationType object ) throws IOException {
-        SetStreamSerializers.serialize( out, object.getSrc(), ( UUID key ) -> {
-            UUIDStreamSerializer.serialize( out, key );
-        } );
-        SetStreamSerializers.serialize( out, object.getDst(), ( UUID property ) -> {
-            UUIDStreamSerializer.serialize( out, property );
-        } );
+        SetStreamSerializers.serialize( out, object.getSrc(), ( UUID key ) -> UUIDStreamSerializer.serialize( out, key ) );
+        SetStreamSerializers.serialize( out, object.getDst(), ( UUID property ) -> UUIDStreamSerializer.serialize( out, property ) );
         out.writeBoolean( object.isBidirectional() );
 
         EntityType maybeEntityType = object.getAssociationEntityType();

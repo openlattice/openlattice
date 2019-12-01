@@ -2,7 +2,6 @@ package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
-import com.openlattice.hazelcast.StreamSerializerTypeIds
 
 abstract class NoOpSelfRegisteringStreamSerializer<T>: SelfRegisteringStreamSerializer<T> {
 

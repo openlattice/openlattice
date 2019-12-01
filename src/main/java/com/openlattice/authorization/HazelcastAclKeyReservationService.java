@@ -47,7 +47,7 @@ public class HazelcastAclKeyReservationService {
     /**
      * This keeps mapping between SecurableObjectTypes that aren't associated to names and their placeholder names.
      */
-    private static final EnumMap<SecurableObjectType, String> RESERVED_NAMES_AS_MAP = new EnumMap<SecurableObjectType, String>(
+    private static final EnumMap<SecurableObjectType, String> RESERVED_NAMES_AS_MAP = new EnumMap<>(
             SecurableObjectType.class );
     private static final Set<String>                          RESERVED_NAMES        = ImmutableSet
             .copyOf( RESERVED_NAMES_AS_MAP.values() );

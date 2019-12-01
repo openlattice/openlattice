@@ -581,7 +581,6 @@ public final class ResultSetAdapters {
         final var organization = rs.getObject( ORGANIZATION_ID_FIELD, UUID.class );
         final var flags = entitySetFlags( rs );
         final var partitions = partitions( rs );
-        final var partitionVersion = partitionVersions( rs );
         final var expirationData = dataExpiration( rs );
         return new EntitySet( id,
                 entityTypeId,
@@ -593,7 +592,6 @@ public final class ResultSetAdapters {
                 organization,
                 flags,
                 new LinkedHashSet<>( Arrays.asList( partitions ) ),
-                partitionVersion,
                 expirationData );
     }
 
@@ -851,11 +849,7 @@ public final class ResultSetAdapters {
     }
 
     private static UUID[] readNullableUuidArray( UUID[] nullable ) {
-        if ( nullable == null ) {
-            return new UUID[ 0 ];
-        } else {
-            return nullable;
-        }
+        return Objects.requireNonNullElseGet( nullable, () -> new UUID[ 0 ] );
     }
 
     public static UUID auditEdgeEntitySetId( ResultSet rs ) throws SQLException {

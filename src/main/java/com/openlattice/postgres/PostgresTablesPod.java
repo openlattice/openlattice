@@ -21,6 +21,7 @@
 package com.openlattice.postgres;
 
 import java.lang.reflect.Modifier;
+import java.util.Objects;
 import java.util.stream.Stream;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -47,6 +48,6 @@ public class PostgresTablesPod {
                         return null;
                     }
                 } )
-                .filter( type -> type != null );
+                .filter( Objects::nonNull );
     }
 }

@@ -23,7 +23,6 @@
 package com.openlattice.datastore.services;
 
 import com.hazelcast.map.EntryProcessor;
-import com.openlattice.auditing.AuditRecordEntitySetsManager;
 import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.edm.EntityDataModel;
 import com.openlattice.edm.EntityDataModelDiff;

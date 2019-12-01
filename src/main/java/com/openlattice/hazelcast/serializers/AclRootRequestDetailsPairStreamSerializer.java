@@ -22,33 +22,30 @@
 
 package com.openlattice.hazelcast.serializers;
 
-import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
+import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.openlattice.requests.AclRootRequestDetailsPair;
 import com.openlattice.requests.PermissionsRequestDetails;
+import org.springframework.stereotype.Component;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
-import org.springframework.stereotype.Component;
 
 @Component
 public class AclRootRequestDetailsPairStreamSerializer implements SelfRegisteringStreamSerializer<AclRootRequestDetailsPair> {
 
     @Override
     public void write( ObjectDataOutput out, AclRootRequestDetailsPair object ) throws IOException {
-        StreamSerializerUtils.serializeFromList( out, object.getAclRoot(), ( UUID key ) -> {
-            UUIDStreamSerializer.serialize( out, key );
-        } );
+        StreamSerializerUtils.serializeFromList( out, object.getAclRoot(), ( UUID key ) -> UUIDStreamSerializer.serialize( out, key ) );
         PermissionsRequestDetailsStreamSerializer.serialize( out, object.getDetails() );
     }
 
     @Override
     public AclRootRequestDetailsPair read( ObjectDataInput in ) throws IOException {
-        List<UUID> aclRoot = StreamSerializerUtils.deserializeToList( in, ( ObjectDataInput dataInput ) -> {
-            return UUIDStreamSerializer.deserialize( dataInput );
-        } );
+        List<UUID> aclRoot = StreamSerializerUtils.deserializeToList( in, UUIDStreamSerializer::deserialize );
         PermissionsRequestDetails details = PermissionsRequestDetailsStreamSerializer.deserialize( in );
         return new AclRootRequestDetailsPair( aclRoot, details );
     }
