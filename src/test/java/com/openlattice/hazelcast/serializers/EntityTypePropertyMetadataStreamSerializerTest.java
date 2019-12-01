@@ -1,5 +1,6 @@
 package com.openlattice.hazelcast.serializers;
 
+import com.google.common.collect.Sets;
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest;
 import com.openlattice.edm.type.EntityTypePropertyMetadata;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -7,6 +8,7 @@ import org.apache.commons.lang3.RandomStringUtils;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
+import org.apache.commons.lang3.RandomUtils;
 
 import static org.junit.Assert.*;
 
@@ -22,7 +24,11 @@ public class EntityTypePropertyMetadataStreamSerializerTest
 
     @Override
     protected EntityTypePropertyMetadata createInput() {
-        return new EntityTypePropertyMetadata( "title", "description" );
+        return new EntityTypePropertyMetadata(
+                "title",
+                "description",
+                Sets.newLinkedHashSet( Arrays.asList( "foo", "bar" ) ),
+                RandomUtils.nextBoolean() );
     }
 
 }
