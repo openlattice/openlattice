@@ -9,12 +9,17 @@ import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import com.openlattice.organization.OrganizationExternalDatabaseTable
 import com.openlattice.organization.OrganizationExternalDatabaseTableColumnsPair
 import com.openlattice.postgres.PostgresConnectionType
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.*
 import java.util.*
 import javax.inject.Inject
 
+
+@SuppressFBWarnings(
+        value = ["BC_BAD_CAST_TO_ABSTRACT_COLLECTION"],
+        justification = "Allowing kotlin collection mapping cast to List")
 @RestController
 @RequestMapping(CONTROLLER)
 class DatasetController : DatasetApi, AuthorizingComponent {
