@@ -78,12 +78,10 @@ public final class EntitySets {
     }
 
     public static Predicate filterByEntitySetIdAndSyncIdPairs( Map<UUID, UUID> entitySetAndSyncIdPairs ) {
-        Predicate[] pairPredicates = entitySetAndSyncIdPairs.entrySet().stream().map( entry -> {
-            return Predicates.and(
-                    Predicates.equal( "__key#entitySetId", entry.getKey() ),
-                    Predicates.equal( "__key#syncId", entry.getValue() )
-            );
-        } ).collect( Collectors.toList() ).toArray( new Predicate[] {} );
+        Predicate[] pairPredicates = entitySetAndSyncIdPairs.entrySet().stream().map( entry -> Predicates.and(
+                Predicates.equal( "__key#entitySetId", entry.getKey() ),
+                Predicates.equal( "__key#syncId", entry.getValue() )
+        ) ).collect( Collectors.toList() ).toArray( new Predicate[] {} );
         return Predicates.or( pairPredicates );
     }
 

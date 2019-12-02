@@ -20,7 +20,6 @@ import com.zaxxer.hikari.HikariDataSource
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import java.util.*
-import java.util.function.Consumer
 
 const val DEFAULT_PARTITION_COUNT = 2
 

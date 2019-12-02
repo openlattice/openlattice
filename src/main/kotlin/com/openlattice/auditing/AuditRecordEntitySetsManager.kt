@@ -238,8 +238,8 @@ class AuditRecordEntitySetsManager(
             AuditEntitySetsConfiguration(null, null)
         } else {
             AuditEntitySetsConfiguration(
-                    auditEntitySetConfiguration?.activeAuditRecordEntitySetId,
-                    auditEntitySetConfiguration?.activeAuditEdgeEntitySetId
+                    auditEntitySetConfiguration.activeAuditRecordEntitySetId,
+                    auditEntitySetConfiguration.activeAuditEdgeEntitySetId
             )
         }
 

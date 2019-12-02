@@ -111,8 +111,8 @@ public class MetadataUpdateStreamSerializer implements SelfRegisteringStreamSeri
 
     private static LinkedHashSet<Integer> toLinkedHashSet( int[] array ) {
         final var s = new LinkedHashSet<Integer>( array.length );
-        for ( int i = 0; i < array.length; ++i ) {
-            s.add( array[ i ] );
+        for ( int value : array ) {
+            s.add( value );
         }
         return s;
     }

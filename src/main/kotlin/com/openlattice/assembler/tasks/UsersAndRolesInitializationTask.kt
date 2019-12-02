@@ -21,9 +21,8 @@
 
 package com.openlattice.assembler.tasks
 
-import com.openlattice.assembler.*
+import com.openlattice.assembler.AssemblerDependencies
 import com.openlattice.authorization.initializers.AuthorizationInitializationTask
-import com.openlattice.organizations.tasks.OrganizationsInitializationTask
 import com.openlattice.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.Task
 import java.util.concurrent.TimeUnit

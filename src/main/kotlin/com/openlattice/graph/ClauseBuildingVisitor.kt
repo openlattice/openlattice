@@ -25,7 +25,6 @@ import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.query.AbstractBooleanClauses
 import com.openlattice.graph.query.BooleanClauses
 import com.openlattice.graph.query.ComparisonClause
-import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import java.util.*
 
 /**

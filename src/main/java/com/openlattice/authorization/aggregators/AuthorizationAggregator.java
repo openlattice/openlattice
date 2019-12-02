@@ -20,20 +20,20 @@
 
 package com.openlattice.authorization.aggregators;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
 import com.hazelcast.aggregation.Aggregator;
-import java.util.EnumMap;
-import java.util.EnumSet;
-import java.util.Map;
-import java.util.Map.Entry;
-
 import com.openlattice.authorization.AceKey;
 import com.openlattice.authorization.AceValue;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.Permission;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.EnumMap;
+import java.util.EnumSet;
+import java.util.Map;
+import java.util.Map.Entry;
+
+import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -72,7 +72,7 @@ public class AuthorizationAggregator extends Aggregator<Entry<AceKey, AceValue>,
             EnumMap<Permission, Boolean> otherPermissions = other.permissionsMap.get( permissionEntry.getKey() );
             for ( Entry<Permission, Boolean> e : otherPermissions.entrySet() ) {
                 Permission p = e.getKey();
-                permissions.put( p, permissions.get( p ).booleanValue() || e.getValue().booleanValue() );
+                permissions.put( p, permissions.get( p ) || e.getValue() );
             }
         }
     }

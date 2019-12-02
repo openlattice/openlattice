@@ -22,6 +22,7 @@ package com.openlattice.organizations.roles;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
+import static com.openlattice.authorization.mapstores.PrincipalMapstore.PRINCIPAL_ID_INDEX;
 
 import com.auth0.json.mgmt.users.User;
 import com.google.common.base.MoreObjects;
@@ -384,6 +385,12 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
 
     private static Predicate hasSecurablePrincipal( AclKey principalAclKey ) {
         return Predicates.and( Predicates.equal( "this.index[any]", principalAclKey.getIndex() ) );
+    }
+
+    @Override
+    public SecurablePrincipal getSecurablePrincipalById( UUID id ) {
+        return principals.values( Predicates.equal( PRINCIPAL_ID_INDEX, id ) )
+                .stream().findFirst().get();
     }
 
 }

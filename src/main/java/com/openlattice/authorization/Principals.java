@@ -25,7 +25,6 @@ package com.openlattice.authorization;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 
-import com.openlattice.organizations.PrincipalSet;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
@@ -57,7 +56,7 @@ public final class Principals {
             users = CacheBuilder
                     .newBuilder()
                     .expireAfterWrite( 1, TimeUnit.SECONDS )
-                    .build( new CacheLoader<String, SecurablePrincipal>() {
+                    .build( new CacheLoader<>() {
                         @Override public SecurablePrincipal load( String principalId ) throws Exception {
                             return spm.getPrincipal( principalId );
                         }
@@ -66,7 +65,7 @@ public final class Principals {
             principals = CacheBuilder
                     .newBuilder()
                     .expireAfterWrite( 30, TimeUnit.SECONDS )
-                    .build( new CacheLoader<String, NavigableSet<Principal>>() {
+                    .build( new CacheLoader<>() {
                         @Override public NavigableSet<Principal> load( String principalId ) throws Exception {
                             SecurablePrincipal sp = users.getUnchecked( principalId );
                             Collection<SecurablePrincipal> securablePrincipals = spm.getAllPrincipals( sp );

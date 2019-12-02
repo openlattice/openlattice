@@ -20,7 +20,6 @@
 
 package com.openlattice.data.storage;
 
-import com.google.common.collect.SetMultimap;
 import com.hazelcast.core.Offloadable;
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor;
 import java.util.Map.Entry;

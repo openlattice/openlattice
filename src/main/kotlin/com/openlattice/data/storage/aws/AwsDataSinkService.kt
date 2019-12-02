@@ -4,7 +4,6 @@ import com.amazonaws.HttpMethod
 import com.google.common.collect.Lists
 import com.openlattice.data.integration.S3EntityData
 import com.openlattice.data.storage.ByteBlobDataManager
-import com.openlattice.data.storage.IndexingMetadataManager
 import com.openlattice.data.storage.PostgresEntityDataQueryService
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.edm.type.PropertyType

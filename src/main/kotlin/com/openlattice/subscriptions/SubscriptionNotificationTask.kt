@@ -67,17 +67,17 @@ class SubscriptionNotificationTask : HazelcastFixedRateTask<SubscriptionNotifica
 
                             dependencies.mailServiceClient.spool(
                                     RenderableEmailRequest(
-                                            com.google.common.base.Optional.of("notifications@openlattice.com"),
+                                            Optional.of("notifications@openlattice.com"),
                                             arrayOf(contact),
-                                            com.google.common.base.Optional.absent(),
-                                            com.google.common.base.Optional.absent(),
+                                            Optional.empty(),
+                                            Optional.empty(),
                                             "mail/templates/shared/CodexAlertTemplate.mustache",
-                                            com.google.common.base.Optional.of(
+                                            Optional.of(
                                                     "One of your subscriptions was involved in an event."
                                             ),
-                                            com.google.common.base.Optional.of(data),
-                                            com.google.common.base.Optional.absent(),
-                                            com.google.common.base.Optional.absent()
+                                            Optional.of(data),
+                                            Optional.empty(),
+                                            Optional.empty()
                                     )
                             )
                         }

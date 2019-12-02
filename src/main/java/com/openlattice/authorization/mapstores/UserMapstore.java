@@ -32,14 +32,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.hazelcast.config.InMemoryFormat;
 import com.hazelcast.config.MapConfig;
-import com.hazelcast.config.MapIndexConfig;
 import com.hazelcast.config.MapStoreConfig;
-import com.kryptnostic.rhizome.mapstores.TestableSelfRegisteringMapStore;
-import com.openlattice.auth0.Auth0TokenProvider;
-import com.openlattice.authentication.Auth0Configuration;
-import com.openlattice.client.RetrofitFactory;
-import com.openlattice.datastore.services.Auth0ManagementApi;
-import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.postgres.mapstores.AbstractBasePostgresMapstore;
 import com.zaxxer.hikari.HikariDataSource;
@@ -47,18 +40,11 @@ import java.io.IOException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import jodd.util.RandomString;
+
 import org.apache.commons.lang.RandomStringUtils;
-import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.RandomUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import retrofit2.Retrofit;
-
-import java.util.Collection;
-import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * Implementation of persistence layer for users from auth0.

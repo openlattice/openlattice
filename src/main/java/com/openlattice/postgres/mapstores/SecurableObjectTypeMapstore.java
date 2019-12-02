@@ -4,6 +4,7 @@ import static com.openlattice.postgres.PostgresTable.SECURABLE_OBJECTS;
 
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MapIndexConfig;
+import com.hazelcast.query.QueryConstants;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.authorization.AclKey;
@@ -16,6 +17,7 @@ import java.sql.SQLException;
 import java.util.UUID;
 
 public class SecurableObjectTypeMapstore extends AbstractBasePostgresMapstore<AclKey, SecurableObjectType> {
+    public static final String ACL_KEY_INDEX = "__key#index";
     public static final String SECURABLE_OBJECT_TYPE_INDEX = "this";
 
     public SecurableObjectTypeMapstore( HikariDataSource hds ) {
@@ -45,6 +47,7 @@ public class SecurableObjectTypeMapstore extends AbstractBasePostgresMapstore<Ac
 
     @Override public MapConfig getMapConfig() {
         return super.getMapConfig()
+                .addMapIndexConfig( new MapIndexConfig( ACL_KEY_INDEX, false ) )
                 .addMapIndexConfig( new MapIndexConfig( SECURABLE_OBJECT_TYPE_INDEX, false ) );
     }
 

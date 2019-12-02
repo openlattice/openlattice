@@ -24,20 +24,22 @@ package com.openlattice.conductor.rpc;
 
 import com.datastax.driver.core.ColumnDefinitions;
 import com.datastax.driver.core.Row;
-import com.google.common.base.Function;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.SetMultimap;
 import com.openlattice.edm.type.PropertyType;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collector;
-import java.util.stream.IntStream;
 import org.apache.olingo.commons.api.data.Entity;
 import org.apache.olingo.commons.api.data.Property;
 import org.apache.olingo.commons.api.data.ValueType;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import org.checkerframework.checker.nullness.qual.Nullable;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collector;
+import java.util.stream.IntStream;
 
 public final class ResultSetAdapterFactory {
 
@@ -51,7 +53,7 @@ public final class ResultSetAdapterFactory {
      * @return a Function that converts Row to SetMultimap, which has FullQualifiedName as a key and Row value as the
      *         corresponding value.
      */
-    public static Function<Row, SetMultimap<FullQualifiedName, Object>> toSetMultimap(
+    public static Function<Row, @Nullable SetMultimap<FullQualifiedName, Object>> toSetMultimap(
             final Map<String, FullQualifiedName> mapTypenameToFullQualifiedName ) {
         return ( Row row ) -> {
             List<ColumnDefinitions.Definition> definitions = row.getColumnDefinitions().asList();
@@ -64,7 +66,7 @@ public final class ResultSetAdapterFactory {
                                     mapTypenameToFullQualifiedName.get( definitions.get( index ).getName() ),
                                     row.getObject( index ) ),
                             ( lhs, rhs ) -> lhs.putAll( rhs.build() ),
-                            builder -> builder.build() ) );
+                            ImmutableSetMultimap.Builder::build ) );
         };
     }
 

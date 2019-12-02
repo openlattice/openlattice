@@ -32,7 +32,6 @@ import com.openlattice.authorization.AceValue;
 
 import java.time.OffsetDateTime;
 import java.util.EnumSet;
-import java.util.Map;
 
 public class PermissionMerger extends AbstractMerger<AceKey, AceValue, Permission> {
     private static final long serialVersionUID = -3504613417625318717L;

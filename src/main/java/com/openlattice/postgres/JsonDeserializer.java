@@ -1,12 +1,16 @@
 package com.openlattice.postgres;
 
-import static com.google.common.base.Preconditions.checkState;
-
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.SetMultimap;
 import com.openlattice.data.storage.BinaryDataWithContentType;
 import com.openlattice.edm.type.PropertyType;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
+import org.apache.olingo.commons.api.edm.geo.Geospatial.Dimension;
+import org.apache.olingo.commons.api.edm.geo.Geospatial.Type;
+import org.apache.olingo.commons.api.edm.geo.Point;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.time.LocalDate;
@@ -21,12 +25,7 @@ import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
-import org.apache.olingo.commons.api.edm.geo.Geospatial.Dimension;
-import org.apache.olingo.commons.api.edm.geo.Geospatial.Type;
-import org.apache.olingo.commons.api.edm.geo.Point;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static com.google.common.base.Preconditions.checkState;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;

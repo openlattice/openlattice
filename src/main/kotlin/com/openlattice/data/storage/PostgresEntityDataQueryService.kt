@@ -19,7 +19,6 @@ import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.zaxxer.hikari.HikariDataSource
-import org.apache.commons.lang3.NotImplementedException
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
@@ -34,7 +33,6 @@ import java.util.concurrent.atomic.AtomicLong
 import kotlin.streams.asStream
 
 const val S3_DELETE_BATCH_SIZE = 10_000
-const val DEFAULT_BATCH_SIZE = 128_000
 
 /**
  *
@@ -51,39 +49,19 @@ class PostgresEntityDataQueryService(
     }
 
     @JvmOverloads
-    fun getEntityKeyIdsInEntitySet(
-            entitySetId: UUID,
-            version: Optional<Long> = Optional.empty()
-    ): BasePostgresIterable<UUID> {
-        if (version.isPresent) {
-            throw NotImplementedException("BLAME MTR. Not yet implemented.")
-        }
-
-        return BasePostgresIterable(
-                PreparedStatementHolderSupplier(
-                        hds,
-                        "SELECT ${ID_VALUE.name} FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${VERSION.name} > 0",
-                        FETCH_SIZE
-                ) { ps -> ps.setObject(1, entitySetId) }
-        ) { rs -> ResultSetAdapters.id(rs) }
-    }
-
-    @JvmOverloads
     fun getEntitiesWithPropertyTypeIds(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
             propertyTypeFilters: Map<UUID, Set<Filter>> = mapOf(),
             metadataOptions: Set<MetadataOption> = EnumSet.noneOf(MetadataOption::class.java),
-            version: Optional<Long> = Optional.empty(),
-            linking: Boolean = false
+            version: Optional<Long> = Optional.empty()
     ): BasePostgresIterable<Pair<UUID, Map<UUID, Set<Any>>>> {
         return getEntitySetIterable(
                 entityKeyIds,
                 authorizedPropertyTypes,
                 propertyTypeFilters,
                 metadataOptions,
-                version,
-                linking
+                version
         ) { rs ->
             getEntityPropertiesByPropertyTypeId(rs, authorizedPropertyTypes, metadataOptions, byteBlobDataManager)
         }
@@ -176,32 +154,6 @@ class PostgresEntityDataQueryService(
         }.toMap()
     }
 
-
-    /**
-     * Note: for linking queries, linking id and entity set id will be returned, thus data won't be merged by linking id
-     */
-    private fun <T> getEntitySetSequence(
-            entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
-            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
-            propertyTypeFilters: Map<UUID, Set<Filter>> = mapOf(),
-            metadataOptions: Set<MetadataOption> = EnumSet.noneOf(MetadataOption::class.java),
-            version: Optional<Long> = Optional.empty(),
-            linking: Boolean = false,
-            detailed: Boolean = false,
-            adapter: (ResultSet) -> T
-    ): Sequence<T> {
-        return getEntitySetIterable(
-                entityKeyIds,
-                authorizedPropertyTypes,
-                propertyTypeFilters,
-                metadataOptions,
-                version,
-                linking,
-                detailed,
-                adapter
-        ).asSequence()
-    }
-
     /**
      * Note: for linking queries, linking id and entity set id will be returned, thus data won't be merged by linking id
      */
@@ -218,13 +170,18 @@ class PostgresEntityDataQueryService(
         val propertyTypes = authorizedPropertyTypes.values.flatMap { it.values }.associateBy { it.id }
         val entitySetIds = entityKeyIds.keys
         val ids = entityKeyIds.values.flatMap { it.orElse(emptySet()) }.toSet()
+        // For linking queries we use all the partitions of participating entity sets, since cannot narrow down the
+        // partitions due to the lack of origin ids
         val partitions = entityKeyIds.flatMap { (entitySetId, maybeEntityKeyIds) ->
-            val entitySetPartitions = if (linking) partitionManager.getAllPartitions() else partitionManager.getEntitySetPartitions(
-                    entitySetId
-            ).toList()
-            maybeEntityKeyIds.map {
-                getPartitionsInfo(it, entitySetPartitions)
-            }.orElse(entitySetPartitions)
+            val entitySetPartitions = partitionManager.getEntitySetPartitions(entitySetId).toList()
+
+            if (!linking) {
+                maybeEntityKeyIds.map {
+                    getPartitionsInfo(it, entitySetPartitions)
+                }.orElse(entitySetPartitions)
+            } else {
+                entitySetPartitions
+            }
         }.toSet()
         var startIndex = 2
         if (ids.isNotEmpty()) {
@@ -265,7 +222,7 @@ class PostgresEntityDataQueryService(
             if (partitions.isNotEmpty()) {
                 metaBinders.add(
                         SqlBinder(
-                                SqlBindInfo(bindIndex++, PostgresArrays.createIntArray(ps.connection, partitions)),
+                                SqlBindInfo(bindIndex, PostgresArrays.createIntArray(ps.connection, partitions)),
                                 ::doBind
                         )
                 )
@@ -341,10 +298,10 @@ class PostgresEntityDataQueryService(
                             entityKeyId to rawValue
                         } else {
                             entityKeyId to Multimaps.asMap(JsonDeserializer
-                                                                   .validateFormatAndNormalize(
-                                                                           rawValue, authorizedPropertyTypes
-                                                                   )
-                                                                   { "Entity set $entitySetId with entity key id $entityKeyId" })
+                                    .validateFormatAndNormalize(
+                                            rawValue, authorizedPropertyTypes
+                                    )
+                                    { "Entity set $entitySetId with entity key id $entityKeyId" })
                         }
                     }.toMap()
 
@@ -423,7 +380,7 @@ class PostgresEntityDataQueryService(
 
             //Make data visible by marking new version in ids table.
             val upsertEntities = connection.prepareStatement(buildUpsertEntitiesAndLinkedData())
-            val updatedLinkedEntities = attempt(LinearBackoff(60000, 125),32) {
+            val updatedLinkedEntities = attempt(LinearBackoff(60000, 125), 32) {
                 upsertEntities.setObject(1, versionsArrays)
                 upsertEntities.setObject(2, version)
                 upsertEntities.setObject(3, version)
@@ -1164,7 +1121,7 @@ class PostgresEntityDataQueryService(
         if (deleteType == DeleteType.Soft) {
             ignoredClearedEntitiesClause = "AND ${VERSION.name} >= 0 "
         }
-        return "SELECT ${ID.name} FROM ${PostgresTable.DATA.name} " +
+        return "SELECT ${ID.name} FROM ${DATA.name} " +
                 "WHERE ${ENTITY_SET_ID.name} = ? " +
                 "AND ${PARTITION.name} = ANY(?) " +
                 "AND ${PROPERTY_TYPE_ID.name} != ? " +

@@ -43,9 +43,7 @@ public class NestedPrincipalMergerStreamSerializer implements SelfRegisteringStr
 
     @Override
     public void write( ObjectDataOutput out, NestedPrincipalMerger object ) throws IOException {
-        SetStreamSerializers.serialize( out, object.getBackingCollection(), aclKey -> {
-            AclKeyStreamSerializer.serialize( out, aclKey );
-        } );
+        SetStreamSerializers.serialize( out, object.getBackingCollection(), aclKey -> AclKeyStreamSerializer.serialize( out, aclKey ) );
     }
 
     @Override public NestedPrincipalMerger read( ObjectDataInput in ) throws IOException {
