@@ -1,0 +1,7 @@
+entity-type: "ol.flight"
+fqns:
+  DEFINITION: "flight.definition"
+  ARGS: "flight.args"
+  CONTACT: "flight.contact"
+  SQL: "flight.sql"
+  PKEY: "flight.primaryKeyColumns"
