@@ -23,9 +23,6 @@ package com.openlattice.graph
 
 import com.openlattice.analysis.requests.Filter
 import com.openlattice.edm.type.PropertyType
-import com.openlattice.graph.query.GraphQuery
-import com.openlattice.graph.query.GraphQueryState
-import com.openlattice.graph.query.GraphQueryState.Option
 import java.util.*
 
 /**

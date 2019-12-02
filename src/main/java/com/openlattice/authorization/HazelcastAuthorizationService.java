@@ -63,6 +63,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -566,7 +567,7 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
                 //                .peek( ps -> logger.info( "Implementing class: {}", ps.getClass().getCanonicalName
                 //                () ) )
                 .map( AceValue::getPermissions )
-                .filter( permissions -> permissions != null )
+                .filter( Objects::nonNull )
                 .forEach( objectPermissions::addAll );
         return objectPermissions;
     }
@@ -687,7 +688,7 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
     }
 
     private static EnumMap<Permission, Boolean> noAccess( EnumSet<Permission> permissions ) {
-        EnumMap<Permission, Boolean> pm = new EnumMap<Permission, Boolean>( Permission.class );
+        EnumMap<Permission, Boolean> pm = new EnumMap<>( Permission.class );
         for ( Permission p : permissions ) {
             pm.put( p, false );
         }

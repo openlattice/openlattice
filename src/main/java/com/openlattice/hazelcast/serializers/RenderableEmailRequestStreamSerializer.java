@@ -1,6 +1,5 @@
 package com.openlattice.hazelcast.serializers;
 
-import com.google.common.base.Optional;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.hazelcast.serializers.IoPerformingBiConsumer;
@@ -8,9 +7,11 @@ import com.kryptnostic.rhizome.hazelcast.serializers.IoPerformingFunction;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.openlattice.mail.RenderableEmailRequest;
-import java.io.IOException;
 import jodd.mail.EmailAttachment;
 import org.springframework.stereotype.Component;
+
+import java.io.IOException;
+import java.util.Optional;
 
 @Component
 public class RenderableEmailRequestStreamSerializer implements SelfRegisteringStreamSerializer<RenderableEmailRequest> {
@@ -34,8 +35,7 @@ public class RenderableEmailRequestStreamSerializer implements SelfRegisteringSt
         writeOptional( out, object.getByteArrayAttachment(), ( objectDataOutput, byteArrayAttachments ) -> {
             objectDataOutput.writeInt( byteArrayAttachments.length );
 
-            for ( int i = 0; i < byteArrayAttachments.length; i++ ) {
-                EmailAttachment attachment = byteArrayAttachments[ i ];
+            for ( EmailAttachment attachment : byteArrayAttachments ) {
                 objectDataOutput.writeUTF( attachment.getContentType() );
                 objectDataOutput.writeUTF( attachment.getContentId() );
                 objectDataOutput.writeUTF( attachment.getName() );
@@ -114,6 +114,6 @@ public class RenderableEmailRequestStreamSerializer implements SelfRegisteringSt
             return Optional.of( c.apply( input ) );
         }
 
-        return Optional.absent();
+        return Optional.empty();
     }
 }

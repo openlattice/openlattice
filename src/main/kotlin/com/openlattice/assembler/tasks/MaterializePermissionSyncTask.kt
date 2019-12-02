@@ -22,21 +22,14 @@ package com.openlattice.assembler.tasks
 
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
-import com.openlattice.assembler.EntitySetAssemblyKey
 import com.openlattice.assembler.MaterializedEntitySetsDependencies
 import com.openlattice.authorization.Permission
 import com.openlattice.organization.OrganizationEntitySetFlag
-import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.mapstores.MaterializedEntitySetMapStore
-import com.openlattice.postgres.streams.PostgresIterable
-import com.openlattice.postgres.streams.StatementHolder
 import com.openlattice.tasks.HazelcastFixedRateTask
 import com.openlattice.tasks.Task
-import java.sql.ResultSet
 import java.util.*
 import java.util.concurrent.TimeUnit
-import java.util.function.Function
-import java.util.function.Supplier
 
 
 class MaterializePermissionSyncTask : HazelcastFixedRateTask<MaterializedEntitySetsDependencies> {

@@ -23,7 +23,6 @@ package com.openlattice.authorization;
 
 import org.jdbi.v3.sqlobject.customizer.Bind;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
-import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;

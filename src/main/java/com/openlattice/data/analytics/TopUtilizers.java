@@ -36,7 +36,7 @@ public class TopUtilizers {
     public TopUtilizers( int limit ) {
         Preconditions.checkArgument( limit > 0, "Number of top utilizers must be non-zero" );
         this.limit = limit;
-        this.utilizers = new ConcurrentSkipListSet<LongWeightedId>();
+        this.utilizers = new ConcurrentSkipListSet<>();
     }
 
     public void accumulate( LongWeightedId id ) {

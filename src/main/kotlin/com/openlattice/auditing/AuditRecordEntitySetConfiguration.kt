@@ -21,8 +21,6 @@
 
 package com.openlattice.auditing
 
-import com.openlattice.authorization.AclKey
-import com.openlattice.hazelcast.StreamSerializerTypeIds
 import java.util.*
 
 /**

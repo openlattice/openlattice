@@ -41,17 +41,13 @@ import java.util.UUID;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class KryoSetMultimapStreamSerializer implements SelfRegisteringStreamSerializer<SetMultimap> {
-    private static final ThreadLocal<Kryo> kryoThreadLocal = new ThreadLocal<Kryo>() {
-
-        @Override
-        protected Kryo initialValue() {
-            Kryo kryo = new Kryo();
-            kryo.register( UUID.class, new UUIDSerializer() );
-            HashMultimapSerializer.registerSerializers( kryo );
-            ImmutableMultimapSerializer.registerSerializers( kryo );
-            return kryo;
-        }
-    };
+    private static final ThreadLocal<Kryo> kryoThreadLocal = ThreadLocal.withInitial( () -> {
+        Kryo kryo = new Kryo();
+        kryo.register( UUID.class, new UUIDSerializer() );
+        HashMultimapSerializer.registerSerializers( kryo );
+        ImmutableMultimapSerializer.registerSerializers( kryo );
+        return kryo;
+    } );
 
     @Override public Class<SetMultimap> getClazz() {
         return SetMultimap.class;

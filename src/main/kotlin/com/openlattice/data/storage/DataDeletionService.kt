@@ -1,10 +1,9 @@
 package com.openlattice.data.storage
 
 import com.google.common.collect.Iterables
+import com.google.common.collect.Lists
 import com.google.common.collect.Sets
-import com.google.common.collect.*
 import com.openlattice.IdConstants
-import com.openlattice.auditing.AuditEventType
 import com.openlattice.auditing.AuditRecordEntitySetsManager
 import com.openlattice.auditing.AuditableEvent
 import com.openlattice.authorization.*
@@ -22,7 +21,6 @@ import com.openlattice.postgres.streams.PostgresIterable
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.stream.Collectors
-import java.util.stream.Stream
 import kotlin.math.max
 
 /*

@@ -70,15 +70,9 @@ public class EntityTypeStreamSerializer implements SelfRegisteringStreamSerializ
         FullQualifiedNameStreamSerializer.serialize( out, object.getType() );
         out.writeUTF( object.getTitle() );
         out.writeUTF( object.getDescription() );
-        SetStreamSerializers.serialize( out, object.getSchemas(), ( FullQualifiedName schema ) -> {
-            FullQualifiedNameStreamSerializer.serialize( out, schema );
-        } );
-        SetStreamSerializers.serialize( out, object.getKey(), ( UUID key ) -> {
-            UUIDStreamSerializer.serialize( out, key );
-        } );
-        SetStreamSerializers.serialize( out, object.getProperties(), ( UUID property ) -> {
-            UUIDStreamSerializer.serialize( out, property );
-        } );
+        SetStreamSerializers.serialize( out, object.getSchemas(), ( FullQualifiedName schema ) -> FullQualifiedNameStreamSerializer.serialize( out, schema ) );
+        SetStreamSerializers.serialize( out, object.getKey(), ( UUID key ) -> UUIDStreamSerializer.serialize( out, key ) );
+        SetStreamSerializers.serialize( out, object.getProperties(), ( UUID property ) -> UUIDStreamSerializer.serialize( out, property ) );
 
         // TODO: get rid of this setmultimap
         GuavaStreamSerializersKt.serializeSetMultimap( out, object.getPropertyTags() );
@@ -100,9 +94,8 @@ public class EntityTypeStreamSerializer implements SelfRegisteringStreamSerializ
         final FullQualifiedName type = FullQualifiedNameStreamSerializer.deserialize( in );
         final String title = in.readUTF();
         final Optional<String> description = Optional.of( in.readUTF() );
-        final Set<FullQualifiedName> schemas = SetStreamSerializers.deserialize( in, ( ObjectDataInput dataInput ) -> {
-            return FullQualifiedNameStreamSerializer.deserialize( dataInput );
-        } );
+        final Set<FullQualifiedName> schemas = SetStreamSerializers.deserialize( in,
+                FullQualifiedNameStreamSerializer::deserialize );
         final LinkedHashSet<UUID> keys = SetStreamSerializers.orderedDeserialize( in, UUIDStreamSerializer::deserialize );
         final LinkedHashSet<UUID> properties = SetStreamSerializers.orderedDeserialize( in,
                 UUIDStreamSerializer::deserialize );

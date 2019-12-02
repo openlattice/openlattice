@@ -37,10 +37,8 @@ import com.openlattice.controllers.exceptions.TypeExistsException;
 import com.openlattice.datastore.util.Util;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.hazelcast.HazelcastMap;
-import java.util.EnumMap;
-import java.util.EnumSet;
-import java.util.Set;
-import java.util.UUID;
+
+import java.util.*;
 import java.util.function.Supplier;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
@@ -49,7 +47,7 @@ public class HazelcastAclKeyReservationService {
     /**
      * This keeps mapping between SecurableObjectTypes that aren't associated to names and their placeholder names.
      */
-    private static final EnumMap<SecurableObjectType, String> RESERVED_NAMES_AS_MAP = new EnumMap<SecurableObjectType, String>(
+    private static final EnumMap<SecurableObjectType, String> RESERVED_NAMES_AS_MAP = new EnumMap<>(
             SecurableObjectType.class );
     private static final Set<String>                          RESERVED_NAMES        = ImmutableSet
             .copyOf( RESERVED_NAMES_AS_MAP.values() );
@@ -80,6 +78,10 @@ public class HazelcastAclKeyReservationService {
 
     public UUID getId( String name ) {
         return Util.getSafely( aclKeys, name );
+    }
+
+    public Collection<UUID> getIds(Set<String> names) {
+        return Util.getSafely( aclKeys, names ).values();
     }
 
     public boolean isReserved( String name ) {

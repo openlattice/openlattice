@@ -28,6 +28,8 @@ import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.edm.schemas.processors.SchemaRemover;
+
+import java.io.DataInput;
 import java.io.IOException;
 import java.util.Set;
 import org.springframework.stereotype.Component;
@@ -37,16 +39,12 @@ public class SchemaRemoverStreamSerializer implements SelfRegisteringStreamSeria
 
     @Override
     public void write( ObjectDataOutput out, SchemaRemover object ) throws IOException {
-        SetStreamSerializers.serialize( out, object.getBackingCollection(), ( String name ) -> {
-            out.writeUTF( name );
-        } );
+        SetStreamSerializers.serialize( out, object.getBackingCollection(), out::writeUTF );
     }
 
     @Override
     public SchemaRemover read( ObjectDataInput in ) throws IOException {
-        Set<String> names = SetStreamSerializers.deserialize( in, ( ObjectDataInput dataInput ) -> {
-            return dataInput.readUTF();
-        } );
+        Set<String> names = SetStreamSerializers.deserialize( in, DataInput::readUTF );
         return new SchemaRemover( names );
     }
 
