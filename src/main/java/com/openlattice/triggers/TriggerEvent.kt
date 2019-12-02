@@ -4,5 +4,7 @@ package com.openlattice.triggers
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-class TriggerEvent {
-}
+data class TriggerEvent(
+        val nodes: Set<String>,
+        val name: String
+)

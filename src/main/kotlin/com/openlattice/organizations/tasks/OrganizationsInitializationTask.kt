@@ -55,19 +55,27 @@ class OrganizationsInitializationTask : HazelcastInitializationTask<Organization
         val defaultPartitions = organizationService.allocateDefaultPartitions(organizationService.numberOfPartitions)
 
         if (globalOrg.isPresent) {
-            val org = globalOrg.get()
-            mergeGrants(organizationService.getOrganization(org.id)!!)
+            val orgPrincipal = globalOrg.get()
+            val org = organizationService.getOrganization(orgPrincipal.id)!!
+            mergeGrants(org)
+            dependencies.configuration.connection.ifPresent { org.connections.addAll(it) }
+            org.grants.forEach {
+                (roleId, grantMap) -> grantMap.values.forEach {
+                    grant -> organizationService.updateRoleGrant(orgPrincipal.id, roleId, grant)
+                }
+            }
             logger.info(
                     "Expected id = {}, Actual id = {}",
                     GLOBAL_ORGANIZATION_ID.id,
-                    org.id
+                    orgPrincipal.id
             )
-            require(GLOBAL_ORGANIZATION_ID.id == org.id) {
+            require(GLOBAL_ORGANIZATION_ID.id == orgPrincipal.id) {
                 "Mistmatch in expected global org id and read global org id"
             }
         } else {
             val org = createGlobalOrg(defaultPartitions)
             mergeGrants(org)
+            dependencies.configuration.connection.ifPresent { org.connections.addAll(it) }
             organizationService.createOrganization(
                     GLOBAL_ADMIN_ROLE.principal,
                     createGlobalOrg(defaultPartitions)

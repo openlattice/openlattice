@@ -20,11 +20,9 @@
 
 package com.openlattice.graph.core;
 
-import com.google.common.collect.SetMultimap;
 import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking;
 import com.openlattice.data.DataEdgeKey;
 import com.openlattice.data.WriteEvent;
-import com.openlattice.data.analytics.IncrementableWeightId;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.graph.edge.Edge;
 import com.openlattice.postgres.streams.PostgresIterable;
@@ -32,7 +30,6 @@ import com.openlattice.search.requests.EntityNeighborsFilter;
 
 import java.util.*;
 import java.util.stream.Stream;
-import javax.annotation.Nonnull;
 
 /**
  * Graph Object supporting CRUD operations of vertices and edges to the graph.

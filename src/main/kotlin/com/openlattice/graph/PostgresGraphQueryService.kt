@@ -70,7 +70,7 @@ class PostgresGraphQueryService(
                 Supplier {
                     val connection = hds.connection
                     val ps = connection.prepareStatement(
-                            "SELECT ${PostgresColumn.ENTITY_SET_ID.name},${ID_VALUE.name} FROM ${PostgresTable.ENTITY_KEY_IDS.name} WHERE ${ID_VALUE.name} = ANY(?)"
+                            "SELECT ${PostgresColumn.ENTITY_SET_ID.name},${ID_VALUE.name} FROM ${ENTITY_KEY_IDS.name} WHERE ${ID_VALUE.name} = ANY(?)"
                     )
                     val arr = PostgresArrays.createUuidArray(connection, ids)
                     ps.setArray(1, arr)
@@ -78,7 +78,7 @@ class PostgresGraphQueryService(
                     StatementHolder(connection, ps, ps.executeQuery())
                 },
                 Function {
-                    return@Function it.getObject(PostgresColumn.ID_VALUE.name, UUID::class.java) to
+                    return@Function it.getObject(ID_VALUE.name, UUID::class.java) to
                             it.getObject(PostgresColumn.ENTITY_SET_ID.name, UUID::class.java)
                 }
         ).toMap()
@@ -678,7 +678,7 @@ class PostgresGraphQueryService(
     }
 }
 
-private val idsClause = "${PostgresColumn.ID_VALUE.name} IN ("
+private val idsClause = "${ID_VALUE.name} IN ("
 private val entitySetIdsClause = "${PostgresColumn.ENTITY_SET_ID.name} IN ("
 
 const val TTL_MILLIS = 10 * 60 * 1000

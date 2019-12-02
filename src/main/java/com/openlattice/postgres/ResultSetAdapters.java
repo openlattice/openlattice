@@ -45,10 +45,7 @@ import com.openlattice.edm.set.EntitySetFlag;
 import com.openlattice.edm.set.EntitySetPropertyKey;
 import com.openlattice.edm.set.EntitySetPropertyMetadata;
 import com.openlattice.edm.set.ExpirationBase;
-import com.openlattice.edm.type.Analyzer;
-import com.openlattice.edm.type.AssociationType;
-import com.openlattice.edm.type.EntityType;
-import com.openlattice.edm.type.PropertyType;
+import com.openlattice.edm.type.*;
 import com.openlattice.graph.NeighborhoodQuery;
 import com.openlattice.graph.NeighborhoodSelection;
 import com.openlattice.graph.edge.Edge;
@@ -59,6 +56,8 @@ import com.openlattice.linking.EntityKeyPair;
 import com.openlattice.linking.EntityLinkingFeedback;
 import com.openlattice.notifications.sms.SmsEntitySetInformation;
 import com.openlattice.notifications.sms.SmsInformationKey;
+import com.openlattice.organization.OrganizationExternalDatabaseColumn;
+import com.openlattice.organization.OrganizationExternalDatabaseTable;
 import com.openlattice.organization.OrganizationEntitySetFlag;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.PrincipalSet;
@@ -96,21 +95,22 @@ import static com.openlattice.postgres.PostgresColumn.*;
  */
 public final class ResultSetAdapters {
 
-    private static final Logger                                               logger               = LoggerFactory
+    private static final Logger       logger  = LoggerFactory
             .getLogger( ResultSetAdapters.class );
-    private static final Decoder                                              DECODER              = Base64
+    private static final Decoder      DECODER = Base64
             .getMimeDecoder();
-    private static final ObjectMapper                                         mapper               = ObjectMappers
+    private static final ObjectMapper mapper  = ObjectMappers
             .newJsonMapper();
-    private static final TypeReference<Map<String, Object>>                   alertMetadataTypeRef = new TypeReference<Map<String, Object>>() {
+
+    private static final TypeReference<Map<String, Object>>                   alertMetadataTypeRef = new TypeReference<>() {
     };
-    private static final TypeReference<Map<String, Object>>                   appSettingsTypeRef   = new TypeReference<Map<String, Object>>() {
+    private static final TypeReference<LinkedHashSet<CollectionTemplateType>> templateTypeRef      = new TypeReference<>() {
     };
-    private static final TypeReference<LinkedHashSet<CollectionTemplateType>> templateTypeRef      = new TypeReference<LinkedHashSet<CollectionTemplateType>>() {
+    private static final TypeReference<Map<String, Object>>                   appSettingsTypeRef   = new TypeReference<>() {
     };
-    private static final TypeReference<Set<AppRole>>                          appRoleTypeRef       = new TypeReference<Set<AppRole>>() {
+    private static final TypeReference<Set<AppRole>>                          appRoleTypeRef       = new TypeReference<>() {
     };
-    private static final TypeReference<Map<UUID, AclKey>>                     rolesTypeRef         = new TypeReference<Map<UUID, AclKey>>() {
+    private static final TypeReference<Map<UUID, AclKey>>                     rolesTypeRef         = new TypeReference<>() {
     };
 
     @NotNull
@@ -490,6 +490,10 @@ public final class ResultSetAdapters {
         return rs.getObject( ORGANIZATION_ID.getName(), UUID.class );
     }
 
+    public static UUID tableId( ResultSet rs ) throws SQLException {
+        return rs.getObject( TABLE_ID.getName(), UUID.class );
+    }
+
     public static String nullableTitle( ResultSet rs ) throws SQLException {
         return rs.getString( NULLABLE_TITLE.getName() );
     }
@@ -580,7 +584,6 @@ public final class ResultSetAdapters {
         final var organization = rs.getObject( ORGANIZATION_ID_FIELD, UUID.class );
         final var flags = entitySetFlags( rs );
         final var partitions = partitions( rs );
-        final var partitionVersion = partitionVersions( rs );
         final var expirationData = dataExpiration( rs );
         return new EntitySet( id,
                 entityTypeId,
@@ -592,7 +595,6 @@ public final class ResultSetAdapters {
                 organization,
                 flags,
                 new LinkedHashSet<>( Arrays.asList( partitions ) ),
-                partitionVersion,
                 expirationData );
     }
 
@@ -644,6 +646,22 @@ public final class ResultSetAdapters {
         boolean bidirectional = bidirectional( rs );
 
         return new AssociationType( Optional.empty(), src, dst, bidirectional );
+    }
+
+    public static EntityTypePropertyMetadata entityTypePropertyMetadata( ResultSet rs ) throws SQLException {
+        String title = title( rs );
+        String description = description( rs );
+        boolean show = show( rs );
+        LinkedHashSet<String> tags = new LinkedHashSet<>( Arrays
+                .asList( PostgresArrays.getTextArray( rs, PostgresColumn.TAGS_FIELD ) ) );
+
+        return new EntityTypePropertyMetadata( title, description, tags, show );
+    }
+
+    public static EntityTypePropertyKey entityTypePropertyKey( ResultSet rs ) throws SQLException {
+        UUID entitySetId = entitySetId( rs );
+        UUID propertyTypeId = propertyTypeId( rs );
+        return new EntityTypePropertyKey( entitySetId, propertyTypeId );
     }
 
     public static EntitySetPropertyMetadata entitySetPropertyMetadata( ResultSet rs ) throws SQLException {
@@ -840,11 +858,7 @@ public final class ResultSetAdapters {
     }
 
     private static UUID[] readNullableUuidArray( UUID[] nullable ) {
-        if ( nullable == null ) {
-            return new UUID[ 0 ];
-        } else {
-            return nullable;
-        }
+        return Objects.requireNonNullElseGet( nullable, () -> new UUID[ 0 ] );
     }
 
     public static UUID auditEdgeEntitySetId( ResultSet rs ) throws SQLException {
@@ -934,7 +948,89 @@ public final class ResultSetAdapters {
         return new CollectionTemplateKey( entitySetCollectionId, templateTypeId );
     }
 
+    public static OrganizationExternalDatabaseTable organizationExternalDatabaseTable( ResultSet rs )
+            throws SQLException {
+        UUID id = id( rs );
+        String name = name( rs );
+        String title = title( rs );
+        Optional<String> description = Optional.ofNullable( description( ( rs ) ) );
+        UUID organizationId = organizationId( rs );
+
+        return new OrganizationExternalDatabaseTable( id, name, title, description, organizationId );
+    }
+
+    public static OrganizationExternalDatabaseColumn organizationExternalDatabaseColumn( ResultSet rs )
+            throws SQLException {
+        UUID id = id( rs );
+        String name = name( rs );
+        String title = title( rs );
+        Optional<String> description = Optional.ofNullable( description( ( rs ) ) );
+        UUID tableId = tableId( rs );
+        UUID organizationId = organizationId( rs );
+        PostgresDatatype dataType = sqlDataType( rs );
+        Boolean isPrimaryKey = rs.getBoolean( IS_PRIMARY_KEY.getName() );
+        Integer ordinalPosition = ordinalPosition( rs );
+
+        return new OrganizationExternalDatabaseColumn( id,
+                name,
+                title,
+                description,
+                tableId,
+                organizationId,
+                dataType,
+                isPrimaryKey,
+                ordinalPosition );
+    }
+
+    public static String columnName( ResultSet rs ) throws SQLException {
+        return rs.getString( COLUMN_NAME.getName() );
+    }
+
+    public static PostgresDatatype sqlDataType( ResultSet rs ) throws SQLException {
+        String dataType = rs.getString( DATATYPE.getName() ).toUpperCase();
+        return PostgresDatatype.valueOf( dataType );
+    }
+
+    public static Integer ordinalPosition( ResultSet rs ) throws SQLException {
+        return rs.getInt( ORDINAL_POSITION.getName() );
+    }
+
+    public static String constraintType( ResultSet rs ) throws SQLException {
+        return rs.getString( CONSTRAINT_TYPE.getName() );
+    }
+
+    public static String privilegeType( ResultSet rs ) throws SQLException {
+        return rs.getString( PRIVILEGE_TYPE.getName() );
+    }
+
+    public static String user( ResultSet rs ) throws SQLException {
+        return rs.getString( USER.getName() );
+    }
+
     public static UUID originId( ResultSet rs ) throws SQLException {
         return rs.getObject( ORIGIN_ID.getName(), UUID.class );
     }
+
+    public static PostgresAuthenticationRecord postgresAuthenticationRecord( ResultSet rs ) throws SQLException {
+        PostgresConnectionType connectionType = connectionType( rs );
+        String database = rs.getString( DATABASE.getName() );
+        String userId = rs.getString( USERNAME.getName() );
+        String ipAddress = rs.getString( IP_ADDRESS.getName() );
+        String authorizationMethod = rs.getString( AUTHENTICATION_METHOD.getName() );
+        return new PostgresAuthenticationRecord( connectionType,
+                database,
+                userId,
+                ipAddress,
+                authorizationMethod );
+    }
+
+    public static String username( ResultSet rs ) throws SQLException {
+        return rs.getString( USERNAME.getName() );
+    }
+
+    public static PostgresConnectionType connectionType( ResultSet rs ) throws SQLException {
+        String connectionType = rs.getString( CONNECTION_TYPE.getName() );
+        return PostgresConnectionType.valueOf( connectionType );
+    }
+
 }

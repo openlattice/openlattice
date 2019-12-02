@@ -1,7 +1,6 @@
 package com.openlattice.graph.processing.processors
 
 import com.openlattice.analysis.requests.ValueFilter
-import com.openlattice.postgres.DataTables
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.springframework.stereotype.Component
 import java.time.temporal.ChronoUnit

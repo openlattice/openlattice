@@ -22,7 +22,6 @@
 
 package com.openlattice.authorization;
 
-import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
@@ -81,7 +80,7 @@ public class AceFuture implements ListenableFuture<Ace> {
 
     @Override
     public void addListener( Runnable listener, Executor executor ) {
-        futureAceValue.andThen( new ExecutionCallback<AceValue>() {
+        futureAceValue.andThen( new ExecutionCallback<>() {
 
             @Override
             public void onResponse( AceValue response ) {

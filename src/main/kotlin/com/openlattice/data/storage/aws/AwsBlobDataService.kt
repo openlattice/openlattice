@@ -1,24 +1,33 @@
 package com.openlattice.data.storage.aws
 
 import com.amazonaws.AmazonServiceException
+import com.amazonaws.ClientConfiguration
 import com.amazonaws.HttpMethod
 import com.amazonaws.SdkClientException
 import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
+import com.amazonaws.retry.RetryPolicy
+import com.amazonaws.retry.PredefinedBackoffStrategies
+import com.amazonaws.retry.PredefinedRetryPolicies
 import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.AmazonS3ClientBuilder
 import com.amazonaws.services.s3.model.*
+import com.amazonaws.services.s3.transfer.TransferManagerBuilder
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.openlattice.data.storage.ByteBlobDataManager
 import com.openlattice.datastore.configuration.DatastoreConfiguration
-//import org.apache.tika.Tika
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.net.URL
 import java.util.*
 import java.util.concurrent.Callable
+import com.geekbeast.util.ExponentialBackoff
+import com.geekbeast.util.RetryStrategy
+import com.geekbeast.util.attempt
 
 private val logger = LoggerFactory.getLogger(AwsBlobDataService::class.java)
+const val MAX_ERROR_RETRIES = 5
+const val MAX_DELAY = 8L * 60L * 1000L
 
 @Service
 class AwsBlobDataService(
@@ -27,13 +36,18 @@ class AwsBlobDataService(
 ) : ByteBlobDataManager {
 
     private val s3Credentials = BasicAWSCredentials(datastoreConfiguration.accessKeyId, datastoreConfiguration.secretAccessKey)
-
     private val s3 = newS3Client(datastoreConfiguration)
 
-    fun newS3Client(datastoreConfiguration: DatastoreConfiguration): AmazonS3 {
+    private final fun newS3Client(datastoreConfiguration: DatastoreConfiguration): AmazonS3 {
         val builder = AmazonS3ClientBuilder.standard()
         builder.region = datastoreConfiguration.regionName
         builder.credentials = AWSStaticCredentialsProvider(s3Credentials)
+        val retryPolicy = RetryPolicy(
+                PredefinedRetryPolicies.DEFAULT_RETRY_CONDITION,
+                PredefinedBackoffStrategies.SDKDefaultBackoffStrategy(), //TODO try jitter
+                MAX_ERROR_RETRIES,
+                false)
+        builder.clientConfiguration = ClientConfiguration().withRetryPolicy(retryPolicy)
         return builder.build()
     }
     
@@ -43,8 +57,10 @@ class AwsBlobDataService(
         metadata.contentLength = dataInputStream.available().toLong()
         metadata.contentType = contentType
         val putRequest = PutObjectRequest(datastoreConfiguration.bucketName, s3Key, dataInputStream, metadata)
-        s3.putObject(putRequest)
-
+        val transferManager = TransferManagerBuilder.standard().withS3Client(s3).build()
+        val upload = transferManager.upload(putRequest)
+        upload.waitForCompletion()
+        transferManager.shutdownNow(false)
     }
 
     override fun deleteObjects(s3Keys: List<String>) {

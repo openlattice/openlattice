@@ -38,16 +38,13 @@ public class RemoveSchemasFromTypeStreamSerializer implements SelfRegisteringStr
 
     @Override
     public void write( ObjectDataOutput out, RemoveSchemasFromType object ) throws IOException {
-        SetStreamSerializers.serialize( out, object.getSchemas(), ( FullQualifiedName schema ) -> {
-            FullQualifiedNameStreamSerializer.serialize( out, schema );
-        } );
+        SetStreamSerializers.serialize( out, object.getSchemas(), ( FullQualifiedName schema ) -> FullQualifiedNameStreamSerializer.serialize( out, schema ) );
     }
 
     @Override
     public RemoveSchemasFromType read( ObjectDataInput in ) throws IOException {
-        Set<FullQualifiedName> schemas = SetStreamSerializers.deserialize( in, ( ObjectDataInput dataInput ) -> {
-            return FullQualifiedNameStreamSerializer.deserialize( dataInput );
-        } );
+        Set<FullQualifiedName> schemas = SetStreamSerializers.deserialize( in,
+                FullQualifiedNameStreamSerializer::deserialize );
         return new RemoveSchemasFromType( schemas );
     }
 

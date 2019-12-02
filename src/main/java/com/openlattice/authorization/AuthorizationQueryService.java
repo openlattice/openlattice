@@ -214,7 +214,7 @@ public class AuthorizationQueryService {
         int count = 1;
 
         ps.setArray( count, PostgresArrays
-                .createTextArray( connection, permissions.stream().map( permission -> permission.name() ) ) );
+                .createTextArray( connection, permissions.stream().map( Enum::name ) ) );
         count++;
 
         if ( securableObjectType.isPresent() ) {

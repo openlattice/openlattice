@@ -42,28 +42,24 @@ import org.springframework.stereotype.Component;
 @SuppressWarnings( "rawtypes" )
 @Component
 public class CallableStreamSerializer implements SelfRegisteringStreamSerializer<Callable> {
-    private static final ThreadLocal<Kryo> kryoThreadLocal = new ThreadLocal<Kryo>() {
+    private static final ThreadLocal<Kryo> kryoThreadLocal = ThreadLocal.withInitial( () -> {
+        Kryo kryo = new Kryo();
+        // Stuff from
+        // https://github.com/EsotericSoftware/kryo/blob/master/test/com/esotericsoftware/kryo/serializers/Java8ClosureSerializerTest.java
+        kryo.setInstantiatorStrategy( new Kryo.DefaultInstantiatorStrategy( new StdInstantiatorStrategy() ) );
+        kryo.register( Object[].class );
+        kryo.register( Class.class );
 
-        @Override
-        protected Kryo initialValue() {
-            Kryo kryo = new Kryo();
-            // Stuff from
-            // https://github.com/EsotericSoftware/kryo/blob/master/test/com/esotericsoftware/kryo/serializers/Java8ClosureSerializerTest.java
-            kryo.setInstantiatorStrategy( new Kryo.DefaultInstantiatorStrategy( new StdInstantiatorStrategy() ) );
-            kryo.register( Object[].class );
-            kryo.register( java.lang.Class.class );
+        // Shared Lambdas
+        kryo.register( SerializedLambda.class );
 
-            // Shared Lambdas
-            kryo.register( SerializedLambda.class );
+        // always needed for closure serialization, also if registrationRequired=false
+        kryo.register( ClosureSerializer.Closure.class, new ClosureSerializer() );
 
-            // always needed for closure serialization, also if registrationRequired=false
-            kryo.register( ClosureSerializer.Closure.class, new ClosureSerializer() );
+        kryo.register( Callable.class, new ClosureSerializer() );
 
-            kryo.register( Callable.class, new ClosureSerializer() );
-
-            return kryo;
-        }
-    };
+        return kryo;
+    } );
 
     @Override
     @SuppressFBWarnings

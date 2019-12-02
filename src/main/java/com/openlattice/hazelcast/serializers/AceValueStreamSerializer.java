@@ -30,9 +30,7 @@ import com.openlattice.authorization.securable.SecurableObjectType;
 
 import java.io.IOException;
 import java.time.OffsetDateTime;
-import java.util.Date;
 import java.util.EnumSet;
-import java.util.Optional;
 
 import org.springframework.stereotype.Component;
 

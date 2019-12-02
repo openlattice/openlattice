@@ -22,7 +22,7 @@ import java.util.*
 
 const val DELETE_BATCH_SIZE = 1024
 private val markUserSql = "UPDATE ${USERS.name} SET ${EXPIRATION.name} = ? WHERE ${USER_ID.name} = ?"
-private val expiredUsersSql = "SELECT ${USER_ID.name} from ${USERS.name} WHERE ${EXPIRATION.name} < ? "
+private val expiredUsersSql = "SELECT ${USER_DATA.name} from ${USERS.name} WHERE ${EXPIRATION.name} < ? "
 
 /**
  *
@@ -87,7 +87,10 @@ class Auth0SyncService(
     }
 
     private fun processOrganizationEnrollments(
-            user: User, sp: SecurablePrincipal, principal: Principal, emailDomain: String
+            user: User,
+            sp: SecurablePrincipal,
+            principal: Principal,
+            emailDomain: String
     ) {
         val connections = getConnections(user).values
 
@@ -109,10 +112,10 @@ class Auth0SyncService(
 
     fun getExpiredUsers(): BasePostgresIterable<User> {
         val expirationThreshold = System.currentTimeMillis() - 6 * REFRESH_INTERVAL_MILLIS
-        return BasePostgresIterable(
+        return BasePostgresIterable<User>(
                 PreparedStatementHolderSupplier(hds, expiredUsersSql, DELETE_BATCH_SIZE) { ps ->
                     ps.setLong(1, expirationThreshold)
-                }) { rs -> mapper.readValue<User>(rs.getString(USER_DATA.name)) }
+                }) { rs -> mapper.readValue(rs.getString(USER_DATA.name)) }
     }
 
     private fun ensureSecurablePrincipalExists(user: User): Principal {

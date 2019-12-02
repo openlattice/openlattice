@@ -115,4 +115,6 @@ public interface SecurePrincipalsManager {
      * @param permissions Set of permission to check for
      */
     Set<Principal> getAuthorizedPrincipalsOnSecurableObject( AclKey key, EnumSet<Permission> permissions );
+
+    SecurablePrincipal getSecurablePrincipalById( UUID id );
 }

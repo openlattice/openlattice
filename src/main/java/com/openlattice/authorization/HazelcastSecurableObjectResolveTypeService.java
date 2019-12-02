@@ -28,7 +28,8 @@ import com.openlattice.hazelcast.HazelcastMap;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.openlattice.postgres.mapstores.SecurableObjectTypeMapstore;
-import java.util.Set;
+
+import java.util.*;
 
 public class HazelcastSecurableObjectResolveTypeService implements SecurableObjectResolveTypeService {
 
@@ -59,4 +60,19 @@ public class HazelcastSecurableObjectResolveTypeService implements SecurableObje
         return securableObjectTypes
                 .keySet( Predicates.equal( SecurableObjectTypeMapstore.SECURABLE_OBJECT_TYPE_INDEX, type ) );
     }
+
+    @Override
+    public Set<AclKey> getOrganizationExternalDatabaseAclKeys( Set<AclKey> aclKeys ) {
+        return securableObjectTypes.keySet(
+                Predicates.and( Predicates.in(SecurableObjectTypeMapstore.ACL_KEY_INDEX, aclKeys.stream().map( AclKey::getIndex ).toArray( String[]::new ) ),
+                        Predicates.or(
+                                Predicates.equal( SecurableObjectTypeMapstore.SECURABLE_OBJECT_TYPE_INDEX,
+                                        SecurableObjectType.OrganizationExternalDatabaseColumn ),
+                                Predicates.equal( SecurableObjectTypeMapstore.SECURABLE_OBJECT_TYPE_INDEX,
+                                        SecurableObjectType.OrganizationExternalDatabaseTable )
+                        )
+                )
+        );
+    }
+
 }
