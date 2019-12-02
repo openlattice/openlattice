@@ -30,7 +30,6 @@ import com.openlattice.authorization.AuthorizingComponent
 import com.openlattice.authorization.DbCredentialService
 import com.openlattice.authorization.Principals
 import com.openlattice.datastore.services.EdmManager
-import com.openlattice.datastore.services.EdmService
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.directory.MaterializedViewAccount
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings

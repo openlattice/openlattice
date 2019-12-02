@@ -21,13 +21,11 @@
 package com.openlattice.datastore.directory.controllers;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
 
 import com.auth0.client.auth.AuthAPI;
 import com.auth0.client.mgmt.ManagementAPI;
 import com.auth0.client.mgmt.filter.UserFilter;
 import com.auth0.exception.Auth0Exception;
-import com.auth0.json.auth.UserInfo;
 import com.codahale.metrics.annotation.Timed;
 import com.openlattice.assembler.PostgresRoles;
 import com.openlattice.authorization.AclKey;
@@ -50,11 +48,12 @@ import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.users.Auth0SyncService;
 import java.util.EnumSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
-import org.apache.commons.lang.StringUtils;
+
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -122,7 +121,7 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
                 .stream()
                 .filter( principal -> principal.getType().equals( PrincipalType.ROLE ) )
                 .map( principal -> spm.lookup( principal ) )
-                .filter( aclKey -> aclKey != null )
+                .filter( Objects::nonNull )
                 .map( aclKey -> spm.getSecurablePrincipal( aclKey ) )
                 .collect( Collectors.toSet() );
     }
@@ -157,9 +156,8 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
     @Timed
     @Override
     @RequestMapping(
-            path = USERS + ACTIVATE,
-            method = RequestMethod.GET,
-            consumes = MediaType.TEXT_PLAIN_VALUE )
+            path = ACTIVATE,
+            method = RequestMethod.GET)
     public Void activateUser( ) {
         Principal principal = checkNotNull( Principals.getCurrentUser() );
 

@@ -746,7 +746,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                 Optional.empty()
         ) );
 
-        return Long.valueOf( writeEvent.getNumUpdates() );
+        return (long) writeEvent.getNumUpdates();
 
     }
 
