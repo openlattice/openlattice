@@ -23,7 +23,7 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
     fun markAsIndexed(
             entityKeyIdsWithLastWrite: Map<UUID, Map<UUID, OffsetDateTime>> // entity_set_id -> id -> last_write
     ): Int {
-        val entitySetPartitions = partitionManager.getEntitySetsPartitions(entityKeyIdsWithLastWrite.keys)
+        val entitySetPartitions = partitionManager.getPartitionsByEntitySetId(entityKeyIdsWithLastWrite.keys)
 
         return hds.connection.use { connection ->
 
@@ -60,7 +60,7 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
     fun markLinkingEntitiesAsIndexed(
             linkingIdsWithLastWrite: Map<UUID, Map<UUID, Map<UUID, OffsetDateTime>>>
     ): Int {
-        val entitySetPartitions = partitionManager.getEntitySetsPartitions(linkingIdsWithLastWrite.keys)
+        val entitySetPartitions = partitionManager.getPartitionsByEntitySetId(linkingIdsWithLastWrite.keys)
 
         return hds.connection.use { connection ->
 
@@ -122,7 +122,7 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
      * @param entityKeyIds Map of (normal) entity set ids to entity key ids.
      */
     fun markAsUnIndexed(entityKeyIds: Map<UUID, Set<UUID>>): Int {
-        val entitySetPartitions = partitionManager.getEntitySetsPartitions(entityKeyIds.keys)
+        val entitySetPartitions = partitionManager.getPartitionsByEntitySetId(entityKeyIds.keys)
 
         return hds.connection.use { connection ->
             val updateSql = markLastIndexSql
@@ -170,7 +170,7 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
 
 
     fun markEntitySetsAsNeedsToBeIndexed(entitySetIds: Set<UUID>, linking: Boolean): Int {
-        val entitySetPartitions = partitionManager.getEntitySetsPartitions(entitySetIds).values.flatten()
+        val entitySetPartitions = partitionManager.getPartitionsByEntitySetId(entitySetIds).values.flatten()
 
         return hds.connection.use { connection ->
             val updateSql = markEntitySetsAsNeedsToBeIndexedSql(linking)
@@ -191,7 +191,7 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
                 .mapValues {
                     it.value.map { it.entityKeyId }
                 }
-        val entitySetPartitions = partitionManager.getEntitySetsPartitions(linkingEntityKeys.keys)
+        val entitySetPartitions = partitionManager.getPartitionsByEntitySetId(linkingEntityKeys.keys)
 
         hds.connection.use { connection ->
             connection.prepareStatement(markAsNeedsToBeLinkedSql).use { stmt ->

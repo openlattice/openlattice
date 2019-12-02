@@ -124,7 +124,7 @@ class PostgresEntityKeyIdService(
     private fun storeEntityKeyIds(
             entityKeyIds: Map<EntityKey, UUID>, conn: Connection = hds.connection
     ): Map<EntityKey, UUID> {
-        val partitionsByEntitySet = partitionManager.getEntitySetsPartitions(
+        val partitionsByEntitySet = partitionManager.getPartitionsByEntitySetId(
                 entityKeyIds.keys.map { it.entitySetId }.toSet()
         ).mapValues { it.value.toList() }
 

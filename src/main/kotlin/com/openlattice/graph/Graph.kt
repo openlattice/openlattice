@@ -78,7 +78,7 @@ class Graph(
     /* Create */
 
     override fun createEdges(keys: MutableSet<DataEdgeKey>): WriteEvent {
-        val partitionsInfoByEntitySet = partitionManager.getEntitySetsPartitions(keys.flatMap { listOf(it.src, it.dst, it.edge) }
+        val partitionsInfoByEntitySet = partitionManager.getPartitionsByEntitySetId(keys.flatMap { listOf(it.src, it.dst, it.edge) }
                 .map { it.entitySetId }.toSet())
                 .mapValues { it.value.toList() }
 
