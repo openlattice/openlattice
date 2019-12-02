@@ -36,11 +36,16 @@ import com.openlattice.edm.EdmDetails;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.edm.type.*;
+import com.openlattice.organization.OrganizationExternalDatabaseColumn;
+import com.openlattice.organization.OrganizationExternalDatabaseTable;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.Grant;
 import com.openlattice.organizations.GrantType;
 import com.openlattice.organizations.Organization;
 import com.openlattice.postgres.IndexType;
+import com.openlattice.postgres.PostgresAuthenticationRecord;
+import com.openlattice.postgres.PostgresConnectionType;
+import com.openlattice.postgres.PostgresDatatype;
 import com.openlattice.requests.PermissionsRequestDetails;
 import com.openlattice.requests.Request;
 import com.openlattice.requests.RequestStatus;
@@ -201,8 +206,8 @@ public final class TestDataFactory {
         UUID ptId = propertyTypes.iterator().next();
         return new AssociationType(
                 Optional.of( et ),
-                Sets.newLinkedHashSet( Arrays.asList( ptId ) ),
-                Sets.newLinkedHashSet( Arrays.asList( ptId ) ),
+                Sets.newLinkedHashSet( Collections.singletonList( ptId ) ),
+                Sets.newLinkedHashSet( Collections.singletonList( ptId ) ),
                 false );
     }
 
@@ -512,7 +517,7 @@ public final class TestDataFactory {
         return new EntityTypePropertyMetadata(
                 randomAlphanumeric( 100 ), // title
                 randomAlphanumeric( 100 ), // description
-                Sets.newLinkedHashSet( Arrays.asList( randomAlphanumeric( 5 ) ) ),
+                Sets.newLinkedHashSet( Collections.singletonList( randomAlphanumeric( 5 ) ) ),
                 r.nextBoolean()
         );
     }
@@ -661,6 +666,41 @@ public final class TestDataFactory {
                 ImmutableMap
                         .of( UUID.randomUUID(), aclKey(), UUID.randomUUID(), aclKey(), UUID.randomUUID(), aclKey() ),
                 app().getDefaultSettings() );
+    }
+
+    public static OrganizationExternalDatabaseColumn organizationExternalDatabaseColumn() {
+        OrganizationExternalDatabaseTable table = organizationExternalDatabaseTable();
+        return new OrganizationExternalDatabaseColumn(
+                UUID.randomUUID(),
+                randomAlphanumeric( 5 ),
+                randomAlphanumeric( 5 ),
+                Optional.of( randomAlphanumeric( 5 ) ),
+                table.getId(),
+                UUID.randomUUID(),
+                PostgresDatatype.TEXT,
+                r.nextBoolean(),
+                r.nextInt( 1000 )
+        );
+    }
+
+    public static OrganizationExternalDatabaseTable organizationExternalDatabaseTable() {
+        return new OrganizationExternalDatabaseTable(
+                UUID.randomUUID(),
+                randomAlphanumeric( 5 ),
+                randomAlphanumeric( 5 ),
+                Optional.of( randomAlphanumeric( 5 ) ),
+                UUID.randomUUID()
+        );
+    }
+
+    public static PostgresAuthenticationRecord postgresAuthenticationRecord() {
+        return new PostgresAuthenticationRecord(
+                PostgresConnectionType.HOST,
+                randomAlphanumeric( 5 ),
+                randomAlphanumeric( 5 ),
+                "0.0.0.0/0",
+                randomAlphanumeric( 5 )
+        );
     }
 
 }

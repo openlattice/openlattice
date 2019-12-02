@@ -55,6 +55,7 @@ public final class SerializationConstants {
     public static final String AUDIT_ID                         = "auditId";
     public static final String AUDIT_RECORD_ENTITY_SET_ID       = "auditRecordEntitySetId";
     public static final String AUDIT_RECORD_ENTITY_SET_IDS      = "auditRecordEntitySetIds";
+    public static final String AUTHENTICATION_METHOD            = "authenticationMethod";
     public static final String AUTHORIZED_OBJECTS               = "authorizedObjects";
     public static final String BASE_TYPE_FIELD                  = "baseType";
     public static final String BIDIRECTIONAL                    = "bidirectional";
@@ -65,15 +66,19 @@ public final class SerializationConstants {
     public static final String CHILD_CLAUSES                    = "childClauses";
     public static final String CHILD_QUERIES                    = "childQueries";
     public static final String CLAUSES                          = "clauses";
+    public static final String COLUMNS                          = "columns";
+    public static final String COLUMN_IDS_BY_TABLE_ID           = "columnIdsByTableId";
     public static final String COMPARISON                       = "comparison";
     public static final String CONFIG                           = "config";
     public static final String CONFLICTS                        = "conflicts";
     public static final String CONNECTIONS                      = "connections";
+    public static final String CONNECTION_TYPE                  = "connectionType";
     public static final String CONSTRAINTS                      = "constraints";
     public static final String CONTACTS                         = "contacts";
     public static final String COUNT                            = "count";
     public static final String CURRENT_ENTITY_SET               = "currentEntitySet";
     public static final String DATA                             = "data";
+    public static final String DATABASE                         = "database";
     public static final String DATASOURCE_IDS                   = "datasourceIds";
     public static final String DATATYPE_FIELD                   = "datatype";
     public static final String DATA_ID                          = "dataId";
@@ -145,6 +150,7 @@ public final class SerializationConstants {
     public static final String INCLUDE_FIELD                    = "include";
     public static final String INDEXING                         = "indexing";
     public static final String INDEX_TYPE                       = "indexType";
+    public static final String IP_ADDRESSES                     = "ipAddresses";
     public static final String IS_DST                           = "isDst";
     public static final String IS_OWNER                         = "isOwner";
     public static final String KEYWORD                          = "kw";
@@ -184,6 +190,7 @@ public final class SerializationConstants {
     public static final String NEIGHBOR_TYPE_ID                 = "neighborTypeId";
     public static final String NUM_HITS                         = "numHits";
     public static final String OPERATION_ID                     = "operationId";
+    public static final String ORDINAL_POSITION                 = "ordinalPosition";
     public static final String ORGANIZATION                     = "organization";
     public static final String ORGANIZATION_ID                  = "organizationId";
     public static final String ORIENTATION                      = "orientation";
@@ -196,6 +203,7 @@ public final class SerializationConstants {
     public static final String PII_FIELD                        = "pii";
     public static final String PREFIX                           = "prefix";
     public static final String PRESENT                          = "present";
+    public static final String PRIMARY_KEY                      = "primaryKey";
     public static final String PRINCIPAL                        = "principal";
     public static final String PRINCIPAL_PATHS                  = "principalPaths";
     public static final String PROFILE_FIELD                    = "profile";
@@ -241,6 +249,8 @@ public final class SerializationConstants {
     public static final String SYNC_IDS                         = "syncIds";
     public static final String SYNC_TICKETS                     = "syncTickets";
     public static final String TAGS                             = "tags";
+    public static final String TABLE                            = "table";
+    public static final String TABLE_ID                         = "tableId";
     public static final String TARGET                           = "target";
     public static final String TEMPLATE                         = "template";
     public static final String TIMESTAMP                        = "timestamp";
@@ -253,6 +263,7 @@ public final class SerializationConstants {
     public static final String UPPERBOUND                       = "upperbound";
     public static final String URL                              = "url";
     public static final String USER_ID                          = "userId";
+    public static final String USERNAME                         = "username";
     public static final String VALUES                           = "values";
     public static final String VALUE_FIELD                      = "value";
     public static final String VALUE_MAPPER                     = "valueMapper";

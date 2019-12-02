@@ -34,5 +34,7 @@ public enum SecurableObjectType {
     App,
     Principal,
     Role,
-    Unknown
+    Unknown,
+    OrganizationExternalDatabaseTable,
+    OrganizationExternalDatabaseColumn
 }

@@ -46,7 +46,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.SecurablePrincipal;
 
-import java.io.Serializable;
 import java.util.Optional;
 import java.util.UUID;
 

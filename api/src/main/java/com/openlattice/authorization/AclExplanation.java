@@ -20,7 +20,6 @@ package com.openlattice.authorization;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.UUID;
 
 import com.openlattice.client.serialization.SerializationConstants;
 import com.fasterxml.jackson.annotation.JsonCreator;
