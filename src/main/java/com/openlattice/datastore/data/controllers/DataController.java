@@ -560,8 +560,8 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
 
         //Ensure that we can write properties.
         final SetMultimap<UUID, UUID> requiredPropertyTypes = requiredAssociationPropertyTypes( associations );
+        ensureEntitySetsCanBeWritten( requiredPropertyTypes.keySet() );
         accessCheck( aclKeysForAccessCheck( requiredPropertyTypes, WRITE_PERMISSION ) );
-        // TODO check not audit
 
         final Map<UUID, PropertyType> authorizedPropertyTypes = edmService
                 .getPropertyTypesAsMap( ImmutableSet.copyOf( requiredPropertyTypes.values() ) );
