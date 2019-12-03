@@ -183,10 +183,8 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
         final Set<UUID> entitySetIds = data.stream().map( S3EntityData::getEntitySetId ).collect(
                 Collectors.toSet() );
         final SetMultimap<UUID, UUID> propertyIdsByEntitySet = HashMultimap.create();
-        data.forEach( entity -> {
-            propertyIdsByEntitySet
-                    .put( entity.getEntitySetId(), entity.getPropertyTypeId() );
-        } );
+        data.forEach( entity -> propertyIdsByEntitySet
+                .put( entity.getEntitySetId(), entity.getPropertyTypeId() ) );
 
         //Ensure that we have read access to entity set metadata.
         entitySetIds.forEach( entitySetId -> ensureReadAccess( new AclKey( entitySetId ) ) );

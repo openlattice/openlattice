@@ -21,7 +21,6 @@
 package com.openlattice.datastore.requests.controllers;
 
 import com.codahale.metrics.annotation.Timed;
-import com.google.common.base.Predicates;
 import com.openlattice.authorization.AceKey;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.AuthorizationManager;
@@ -33,11 +32,6 @@ import com.openlattice.requests.RequestStatus;
 import com.openlattice.requests.RequestsApi;
 import com.openlattice.requests.Status;
 import com.openlattice.requests.util.RequestUtil;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Function;
-import java.util.stream.Stream;
-import javax.inject.Inject;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -48,6 +42,13 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import javax.inject.Inject;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Stream;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -133,7 +134,7 @@ public class RequestsController implements RequestsApi, AuthorizingComponent {
     private Function<AclKey, Stream<Status>> getStatusesInStatus( RequestStatus requestStatus ) {
         return aclKey -> owns( aclKey ) ? hrm.getStatusesForAllUser( aclKey, requestStatus )
                 : hrm.getStatuses( Stream.of( new AceKey( aclKey, Principals.getCurrentUser() ) ) )
-                        .filter( Predicates.notNull()::apply )
+                        .filter( Objects::nonNull )
                         .filter( status -> status.getStatus().equals( requestStatus ) );
     }
 

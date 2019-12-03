@@ -21,7 +21,6 @@
 package com.openlattice.datastore.apps.controllers;
 
 import com.codahale.metrics.annotation.Timed;
-import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableSet;
 import com.openlattice.apps.App;
 import com.openlattice.apps.AppApi;
@@ -36,8 +35,8 @@ import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.authorization.util.AuthorizationUtils;
 import com.openlattice.datastore.apps.services.AppService;
 import com.openlattice.edm.requests.MetadataUpdate;
-import com.openlattice.organizations.Organization;
 import com.openlattice.organizations.HazelcastOrganizationService;
+import com.openlattice.organizations.Organization;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -52,6 +51,7 @@ import javax.inject.Inject;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
@@ -222,9 +222,9 @@ public class AppController implements AppApi, AuthorizingComponent {
     private Iterable<Organization> getAvailableOrgs() {
         return getAccessibleObjects( SecurableObjectType.Organization,
                 EnumSet.of( Permission.READ ) )
-                .filter( Predicates.notNull()::apply ).map( AuthorizationUtils::getLastAclKeySafely )
+                .filter( Objects::nonNull ).map( AuthorizationUtils::getLastAclKeySafely )
                 .map( organizations::getOrganization )
-                .filter( organization -> organization != null )::iterator;
+                .filter( Objects::nonNull )::iterator;
     }
 
     @Timed
