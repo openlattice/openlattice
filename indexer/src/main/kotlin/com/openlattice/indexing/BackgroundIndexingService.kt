@@ -161,7 +161,7 @@ class BackgroundIndexingService(
      */
     private fun getEntityDataKeysQuery(reindexAll: Boolean = false, getTombstoned: Boolean = false): String {
         val dirtyIdsClause = if (!reindexAll) {
-            "${LAST_INDEX.name} < ${LAST_WRITE.name}"
+            "AND ${LAST_INDEX.name} < ${LAST_WRITE.name}"
         } else {
             ""
         }
@@ -171,7 +171,7 @@ class BackgroundIndexingService(
                 "WHERE ${ENTITY_SET_ID.name} = ? " +
                 "AND ${PARTITION.name} = ANY(?) " +
                 "AND $versionsClause " +
-                "AND $dirtyIdsClause "
+                dirtyIdsClause
     }
 
     private fun getEntityDataKeys(
