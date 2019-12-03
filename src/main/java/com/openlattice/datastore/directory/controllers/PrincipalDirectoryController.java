@@ -119,7 +119,7 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
         return Principals.getCurrentPrincipals()
                 .stream()
                 .filter( principal -> principal.getType().equals( PrincipalType.ROLE ) )
-                .map( principal -> spm.lookup( principal ) )
+                .map( spm::lookup )
                 .filter( Objects::nonNull )
                 .map( aclKey -> spm.getSecurablePrincipal( aclKey ) )
                 .collect( Collectors.toSet() );
@@ -190,7 +190,6 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
             path = USERS + SEARCH + SEARCH_QUERY_PATH,
             produces = MediaType.APPLICATION_JSON_VALUE )
     public Map<String, Auth0UserBasic> searchAllUsers( @PathVariable( SEARCH_QUERY ) String searchQuery ) {
-
         String wildcardSearchQuery = searchQuery + "*";
         return userDirectoryService.searchAllUsers( wildcardSearchQuery );
     }
