@@ -313,7 +313,7 @@ public class IndexerServicesPod {
 
     @Bean
     public EntityDatastore entityDatastore() {
-        return new PostgresEntityDatastore( dataQueryService(), edmManager(), entitySetManager() );
+        return new PostgresEntityDatastore( dataQueryService(), edmManager(), entitySetManager(), metricRegistry );
     }
 
     @Bean
