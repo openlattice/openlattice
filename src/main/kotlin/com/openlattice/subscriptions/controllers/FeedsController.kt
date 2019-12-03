@@ -1,7 +1,6 @@
 package com.openlattice.subscriptions.controllers
 
 import com.codahale.metrics.annotation.Timed
-import com.openlattice.analysis.requests.WrittenTwoWeeksFilter
 import com.openlattice.authorization.*
 import com.openlattice.graph.GraphQueryService
 import com.openlattice.graph.Neighborhood

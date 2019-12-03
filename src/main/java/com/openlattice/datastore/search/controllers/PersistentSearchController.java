@@ -1,8 +1,6 @@
 package com.openlattice.datastore.search.controllers;
 
 import com.codahale.metrics.annotation.Timed;
-import com.openlattice.authorization.AclKey;
-import com.openlattice.authorization.Principals;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.search.PersistentSearchApi;
 import com.openlattice.search.PersistentSearchService;
