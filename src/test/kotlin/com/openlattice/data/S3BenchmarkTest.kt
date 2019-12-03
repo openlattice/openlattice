@@ -64,7 +64,7 @@ class S3BenchmarkTest {
 
         private fun getS3Client(config: AmazonLaunchConfiguration): AmazonS3 {
             val builder = AmazonS3ClientBuilder.standard()
-            builder.region = Region.getRegion(config.region.or(Regions.DEFAULT_REGION)).name
+            builder.region = Region.getRegion(config.region.orElse(Regions.DEFAULT_REGION)).name
             return builder.build()
         }
     }

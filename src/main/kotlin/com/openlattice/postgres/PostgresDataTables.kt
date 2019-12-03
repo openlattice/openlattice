@@ -51,8 +51,7 @@ class PostgresDataTables {
                 LAST_WRITE,
                 LAST_PROPAGATE,
                 VERSION,
-                VERSIONS,
-                PARTITIONS_VERSION
+                VERSIONS
         )
 
         val dataTableValueColumns = btreeIndexedColumns + nonIndexedColumns
@@ -95,7 +94,7 @@ class PostgresDataTables {
 
             val tableDefinition = CitusDistributedTableDefinition("data")
                     .addColumns(*columns)
-                    .primaryKey(ENTITY_SET_ID, ID_VALUE, ORIGIN_ID, PARTITION, PROPERTY_TYPE_ID, HASH, PARTITIONS_VERSION)
+                    .primaryKey(ENTITY_SET_ID, ID_VALUE, ORIGIN_ID, PARTITION, PROPERTY_TYPE_ID, HASH)
                     .distributionColumn(PARTITION)
 
             tableDefinition.addIndexes(
@@ -126,10 +125,6 @@ class PostgresDataTables {
                     .name(quote(prefix + "_property_type_id_idx"))
                     .ifNotExists()
                     .desc()
-            val partitionsVersionIndex = PostgresColumnsIndexDefinition(tableDefinition, PARTITIONS_VERSION)
-                    .name(quote(prefix + "_partitions_version_id_idx"))
-                    .ifNotExists()
-                    .desc()
 
             val currentPropertiesForEntitySetIndex = PostgresColumnsIndexDefinition(
                     tableDefinition, ENTITY_SET_ID, VERSION
@@ -155,7 +150,6 @@ class PostgresDataTables {
                     versionIndex,
                     lastWriteIndex,
                     propertyTypeIdIndex,
-                    partitionsVersionIndex,
                     currentPropertiesForEntitySetIndex,
                     currentPropertiesForEntityIndex,
                     readDataIndex

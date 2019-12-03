@@ -312,14 +312,12 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource, private val
     }
 
     private fun getPartitionsAsPGArray(connection: Connection, entitySetId: UUID ): Array? {
-        val partitions = partitionManager.getEntitySetPartitionsInfo(entitySetId).partitions
+        val partitions = partitionManager.getEntitySetPartitions(entitySetId)
         return PostgresArrays.createIntArray(connection, partitions)
     }
 
     private fun getPartitionsAsPGArray(connection: Connection, entitySetIds: Set<UUID>): Array? {
-        val partitions = partitionManager.getEntitySetsPartitionsInfo(entitySetIds).values
-                .flatMap { it.partitions }
-                .toSet()
+        val partitions = partitionManager.getPartitionsByEntitySetId(entitySetIds).values.flatten()
         return PostgresArrays.createIntArray(connection, partitions)
     }
 }
