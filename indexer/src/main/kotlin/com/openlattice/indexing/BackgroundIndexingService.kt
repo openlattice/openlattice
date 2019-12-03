@@ -29,6 +29,7 @@ import com.hazelcast.query.Predicates
 import com.hazelcast.query.QueryConstants
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi
 import com.openlattice.data.storage.IndexingMetadataManager
+import com.openlattice.data.storage.MetadataOption
 import com.openlattice.data.storage.PostgresEntityDataQueryService
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.EntityType
@@ -268,7 +269,10 @@ class BackgroundIndexingService(
         val esb = Stopwatch.createStarted()
         val entitiesById = dataQueryService.getEntitiesWithPropertyTypeIds(
                 mapOf(entitySet.id to Optional.of(batchToIndex.keys)),
-                mapOf(entitySet.id to propertyTypeMap)).toMap()
+                mapOf(entitySet.id to propertyTypeMap),
+                mapOf(),
+                EnumSet.of(MetadataOption.LAST_WRITE)
+        ).toMap()
 
         logger.info("Loading data for indexEntities took {} ms", esb.elapsed(TimeUnit.MILLISECONDS))
 
