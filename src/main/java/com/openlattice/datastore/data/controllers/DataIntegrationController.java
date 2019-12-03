@@ -207,17 +207,16 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
     @Override
     @PutMapping( "/" + EDGES )
     public int createEdges( @RequestBody Set<DataEdgeKey> associations ) {
-        final var entitySetIdChecks = new HashMap<AclKey, EnumSet<Permission>>();
+        final Set<UUID> entitySetIds = Sets.newHashSet();
         associations.forEach(
                 association -> {
-                    entitySetIdChecks.put( new AclKey( association.getEdge().getEntitySetId() ), WRITE_PERMISSION );
-                    entitySetIdChecks.put( new AclKey( association.getSrc().getEntitySetId() ), WRITE_PERMISSION );
-                    entitySetIdChecks.put( new AclKey( association.getDst().getEntitySetId() ), WRITE_PERMISSION );
+                    entitySetIds.add( association.getEdge().getEntitySetId() );
+                    entitySetIds.add( association.getSrc().getEntitySetId() );
+                    entitySetIds.add( association.getDst().getEntitySetId() );
                 }
         );
 
-        //Ensure that we have read access to entity sets.
-        accessCheck( entitySetIdChecks );
+        checkPermissionsOnEntitySetIds( entitySetIds, WRITE_PERMISSION );
 
         //Allowed entity types check
         dataGraphServiceHelper.checkEdgeEntityTypes( associations );
@@ -252,15 +251,15 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
                 }
         );
 
-        checkPermissionsOnEntitySetIds( entitySetIds );
+        checkPermissionsOnEntitySetIds( entitySetIds, READ_PERMISSION );
 
         return entitySetIds;
     }
 
-    private void checkPermissionsOnEntitySetIds( Set<UUID> entitySetIds ) {
+    private void checkPermissionsOnEntitySetIds( Set<UUID> entitySetIds, EnumSet<Permission> permissions ) {
         //Ensure that we have access to entity sets.
         ensureEntitySetsCanBeWritten( entitySetIds );
-        accessCheck( entitySetIds.stream().collect( Collectors.toMap( AclKey::new, id -> READ_PERMISSION ) ) );
+        accessCheck( entitySetIds.stream().collect( Collectors.toMap( AclKey::new, id -> permissions ) ) );
     }
 
     private void ensureEntitySetsCanBeWritten( Set<UUID> entitySetIds ) {
