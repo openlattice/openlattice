@@ -82,6 +82,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.openlattice.IdConstants.*;
+import static com.openlattice.IdConstants.ENTITY_SET_ID_KEY_ID;
 import static java.util.stream.Collectors.toSet;
 
 public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
@@ -898,12 +899,10 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         }
 
         BoolQueryBuilder entitySetQuery = QueryBuilders.boolQuery().minimumShouldMatch( 1 );
-        entitySetIds.forEach( entitySetId -> {
-            entitySetQuery.should(
-                    QueryBuilders.termQuery( getFieldName( ENTITY_SET_ID_KEY_ID.getId() ),
-                            entitySetId.toString() )
-            );
-        } );
+        entitySetIds.forEach( entitySetId -> entitySetQuery.should(
+                QueryBuilders.termQuery( getFieldName( ENTITY_SET_ID_KEY_ID.getId() ),
+                        entitySetId.toString() )
+        ) );
 
         query.must( QueryBuilders.nestedQuery( ENTITY, entitySetQuery, ScoreMode.Max ) );
 
@@ -1322,7 +1321,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             Map<String, Object> entitySetMap = Maps.newHashMap();
             entitySetMap.put( ENTITY_SET, entry.getKey() );
             entitySetMap.put( PROPERTY_TYPES,
-                    entry.getValue().stream().map( id -> propertyTypes.get( id ) ).collect( Collectors.toList() ) );
+                    entry.getValue().stream().map( propertyTypes::get ).collect( Collectors.toList() ) );
             return entitySetMap;
         } ).collect( Collectors.toList() );
 
