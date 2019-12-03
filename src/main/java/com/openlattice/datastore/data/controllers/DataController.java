@@ -346,7 +346,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     @PutMapping( value = "/" + ASSOCIATION, consumes = MediaType.APPLICATION_JSON_VALUE )
     public Integer createAssociations( @RequestBody Set<DataEdgeKey> associations ) {
 
-        Set<UUID> entitySetIds = getEntitySetIdsFromCollection( associations, this::getEntitySetIdsFromDataEdgeKey );
+        Set<UUID> entitySetIds = getEntitySetIdsFromCollection( associations, this::streamEntitySetIds );
         checkPermissionsOnEntitySetIds( entitySetIds, EnumSet.of( Permission.READ, Permission.WRITE ) );
 
         //Allowed entity types check
@@ -447,8 +447,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             consumes = MediaType.APPLICATION_JSON_VALUE )
     public ListMultimap<UUID, UUID> createAssociations( @RequestBody ListMultimap<UUID, DataEdge> associations ) {
         //Ensure that we have read access to entity set metadata.
-        Set<UUID> entitySetIds = getEntitySetIdsFromCollection( associations.values(),
-                this::getEntitySetIdsFromDataEdge );
+        Set<UUID> entitySetIds = getEntitySetIdsFromCollection( associations.values(), this::streamEntitySetIds );
         checkPermissionsOnEntitySetIds( entitySetIds, READ_PERMISSION );
 
         //Ensure that we can write properties.
@@ -579,7 +578,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         final ListMultimap<UUID, UUID> associationEntityKeyIds;
 
         Set<UUID> entitySetIds = getEntitySetIdsFromCollection( data.getAssociations().values(),
-                this::getEntitySetIdsFromDataAssociation );
+                this::streamEntitySetIds );
         checkPermissionsOnEntitySetIds( entitySetIds, READ_PERMISSION );
 
         //First create the entities so we have entity key ids to work with
@@ -992,15 +991,15 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         return OffsetDateTime.ofInstant( Instant.ofEpochMilli( epochTime ), ZoneId.systemDefault() );
     }
 
-    private Stream<UUID> getEntitySetIdsFromDataAssociation( DataAssociation association ) {
+    private Stream<UUID> streamEntitySetIds( DataAssociation association ) {
         return Stream.of( association.getSrcEntitySetId(), association.getDstEntitySetId() );
     }
 
-    private Stream<UUID> getEntitySetIdsFromDataEdge( DataEdge dataEdge ) {
+    private Stream<UUID> streamEntitySetIds( DataEdge dataEdge ) {
         return Stream.of( dataEdge.getSrc().getEntitySetId(), dataEdge.getDst().getEntitySetId() );
     }
 
-    private Stream<UUID> getEntitySetIdsFromDataEdgeKey( DataEdgeKey dataEdgeKey ) {
+    private Stream<UUID> streamEntitySetIds( DataEdgeKey dataEdgeKey ) {
         return Stream.of( dataEdgeKey.getEdge().getEntitySetId(),
                 dataEdgeKey.getSrc().getEntitySetId(),
                 dataEdgeKey.getDst().getEntitySetId() );
