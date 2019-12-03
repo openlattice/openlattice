@@ -223,6 +223,7 @@ public final class PostgresTable {
                             DEFAULT_STORAGE,
                             S3_BUCKET,
                             FLIGHT,
+                            CONTACTS,
                             RECURRING)
                     .primaryKey( NAME, ENVIRONMENT );
 
