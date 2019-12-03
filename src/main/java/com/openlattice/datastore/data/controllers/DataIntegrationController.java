@@ -207,7 +207,7 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
     @Override
     @PutMapping( "/" + EDGES )
     public int createEdges( @RequestBody Set<DataEdgeKey> associations ) {
-        final Set<UUID> entitySetIds = Sets.newHashSet();
+        final Set<UUID> entitySetIds = Sets.newHashSetWithExpectedSize( associations.size() * 3 );;
         associations.forEach(
                 association -> {
                     entitySetIds.add( association.getEdge().getEntitySetId() );
@@ -241,7 +241,7 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
     private Set<UUID> performAccessChecksOnEntitiesAndAssociations(
             Set<Association> associations,
             Set<Entity> entities ) {
-        final Set<UUID> entitySetIds = Sets.newHashSet();
+        final Set<UUID> entitySetIds = Sets.newHashSetWithExpectedSize( (associations.size() * 3) + entities.size() );
         entities.forEach( entity -> entitySetIds.add( entity.getEntitySetId() ) );
         associations.forEach(
                 association -> {
