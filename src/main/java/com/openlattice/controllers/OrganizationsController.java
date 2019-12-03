@@ -49,6 +49,7 @@ import com.openlattice.organization.OrganizationMember;
 import com.openlattice.organization.OrganizationPrincipal;
 import com.openlattice.organization.OrganizationsApi;
 import com.openlattice.organization.roles.Role;
+import com.openlattice.organizations.ExternalDatabaseManagementService;
 import com.openlattice.organizations.Grant;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.Organization;
@@ -102,6 +103,9 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
 
     @Inject
     private EdmAuthorizationHelper authzHelper;
+
+    @Inject
+    private ExternalDatabaseManagementService edms;
 
     @Timed
     @Override
@@ -166,6 +170,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         ensureObjectCanBeDeleted( organizationId );
 
         organizations.destroyOrganization( organizationId );
+        edms.deleteOrganizationExternalDatabase( organizationId );
         authorizations.deletePermissions( aclKey );
         securableObjectTypes.deleteSecurableObjectType( new AclKey( organizationId ) );
         return null;
@@ -520,6 +525,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             @PathVariable( USER_ID ) String userId ) {
         ensureOwnerAccess( new AclKey( organizationId ) );
         organizations.removeMembers( organizationId, ImmutableSet.of( new Principal( PrincipalType.USER, userId ) ) );
+        edms.revokeAllPrivilegesFromMember( organizationId, userId );
         return null;
     }
 
