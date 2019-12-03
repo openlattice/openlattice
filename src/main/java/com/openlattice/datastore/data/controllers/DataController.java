@@ -346,7 +346,8 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     @PutMapping( value = "/" + ASSOCIATION, consumes = MediaType.APPLICATION_JSON_VALUE )
     public Integer createAssociations( @RequestBody Set<DataEdgeKey> associations ) {
 
-        performAccessChecksOnDataEdgeKeys( associations );
+        Set<UUID> entitySetIds = getEntitySetIdsFromCollection( associations, this::getEntitySetIdsFromDataEdgeKey );
+        checkPermissionsOnEntitySetIds( entitySetIds, EnumSet.of( Permission.READ, Permission.WRITE ) );
 
         //Allowed entity types check
         dataGraphServiceHelper.checkEdgeEntityTypes( associations );
@@ -446,7 +447,9 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             consumes = MediaType.APPLICATION_JSON_VALUE )
     public ListMultimap<UUID, UUID> createAssociations( @RequestBody ListMultimap<UUID, DataEdge> associations ) {
         //Ensure that we have read access to entity set metadata.
-        performAccessChecksOnDataEdges( associations );
+        Set<UUID> entitySetIds = getEntitySetIdsFromCollection( associations.values(),
+                this::getEntitySetIdsFromDataEdge );
+        checkPermissionsOnEntitySetIds( entitySetIds, READ_PERMISSION );
 
         //Ensure that we can write properties.
         final SetMultimap<UUID, UUID> requiredPropertyTypes = requiredAssociationPropertyTypes( associations );
@@ -575,7 +578,9 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         final ListMultimap<UUID, UUID> entityKeyIds = ArrayListMultimap.create();
         final ListMultimap<UUID, UUID> associationEntityKeyIds;
 
-        performAccessChecksOnDataAssociations( data.getAssociations(), data.getEntities().keySet() );
+        Set<UUID> entitySetIds = getEntitySetIdsFromCollection( data.getAssociations().values(),
+                this::getEntitySetIdsFromDataAssociation );
+        checkPermissionsOnEntitySetIds( entitySetIds, READ_PERMISSION );
 
         //First create the entities so we have entity key ids to work with
         Multimaps.asMap( data.getEntities() )
@@ -987,42 +992,24 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         return OffsetDateTime.ofInstant( Instant.ofEpochMilli( epochTime ), ZoneId.systemDefault() );
     }
 
-    private void performAccessChecksOnDataAssociations( ListMultimap<UUID, DataAssociation> associations, Set<UUID> otherEntitySetIds ) {
-        final Set<UUID> entitySetIds = Sets.union( associations.keySet(), otherEntitySetIds );
-        associations.values().forEach(
-                association -> {
-                    entitySetIds.add( association.getSrcEntitySetId() );
-                    entitySetIds.add( association.getDstEntitySetId() );
-                }
-        );
-
-        checkPermissionsOnEntitySetIds(entitySetIds, READ_PERMISSION);
+    private Stream<UUID> getEntitySetIdsFromDataAssociation( DataAssociation association ) {
+        return Stream.of( association.getSrcEntitySetId(), association.getDstEntitySetId() );
     }
 
-    private void performAccessChecksOnDataEdges( ListMultimap<UUID, DataEdge> associations ) {
-        final Set<UUID> entitySetIds = associations.keySet();
-        associations.values().forEach(
-                association -> {
-                    entitySetIds.add( association.getSrc().getEntitySetId() );
-                    entitySetIds.add( association.getDst().getEntitySetId() );
-                }
-        );
-
-        checkPermissionsOnEntitySetIds(entitySetIds, READ_PERMISSION);
+    private Stream<UUID> getEntitySetIdsFromDataEdge( DataEdge dataEdge ) {
+        return Stream.of( dataEdge.getSrc().getEntitySetId(), dataEdge.getDst().getEntitySetId() );
     }
 
-    private void performAccessChecksOnDataEdgeKeys( Set<DataEdgeKey> associations ) {
-        final Set<UUID> entitySetIds = Sets.newHashSet();
+    private Stream<UUID> getEntitySetIdsFromDataEdgeKey( DataEdgeKey dataEdgeKey ) {
+        return Stream.of( dataEdgeKey.getEdge().getEntitySetId(),
+                dataEdgeKey.getSrc().getEntitySetId(),
+                dataEdgeKey.getDst().getEntitySetId() );
+    }
 
-        associations.forEach(
-                association -> {
-                    entitySetIds.add( association.getEdge().getEntitySetId() );
-                    entitySetIds.add( association.getSrc().getEntitySetId() );
-                    entitySetIds.add( association.getDst().getEntitySetId() );
-                }
-        );
-
-        checkPermissionsOnEntitySetIds(entitySetIds, EnumSet.of( Permission.READ, Permission.WRITE ));
+    private <T> Set<UUID> getEntitySetIdsFromCollection(
+            Collection<T> items,
+            Function<T, Stream<UUID>> transformation ) {
+        return items.stream().flatMap( transformation ).collect( Collectors.toSet() );
     }
 
     private void checkPermissionsOnEntitySetIds( Set<UUID> entitySetIds, EnumSet<Permission> permissions ) {

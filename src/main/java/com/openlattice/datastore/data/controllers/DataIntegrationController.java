@@ -116,10 +116,9 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
             @RequestBody Set<Association> associations,
             @RequestParam( value = DETAILED_RESULTS, required = false, defaultValue = "false" )
                     boolean detailedResults ) {
-        performAccessChecksOnEntitiesAndAssociations( associations, ImmutableSet.of() );
-        final Set<UUID> associationEntitySets = associations.stream()
-                .map( association -> association.getKey().getEntitySetId() )
-                .collect( Collectors.toSet() );
+        Set<UUID> associationEntitySets = performAccessChecksOnEntitiesAndAssociations( associations,
+                ImmutableSet.of() );
+
         //Ensure that we have read access to entity set metadata.
         accessCheck( aclKeysForAccessCheck( requiredAssociationPropertyTypes( associations ), WRITE_PERMISSION ) );
 
@@ -151,25 +150,15 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
                     boolean detailedResults ) {
         final Set<Entity> entities = data.getEntities();
         final Set<Association> associations = data.getAssociations();
-        performAccessChecksOnEntitiesAndAssociations( associations, entities );
-
-        final Set<UUID> entitySets = entities.stream()
-                .map( entity -> entity.getKey().getEntitySetId() )
-                .collect( Collectors.toSet() );
-
-        final Set<UUID> associationEntitySets = associations.stream()
-                .map( association -> association.getKey().getEntitySetId() )
-                .collect( Collectors.toSet() );
-
+        Set<UUID> entitySetIds = performAccessChecksOnEntitiesAndAssociations( associations, entities );
 
         accessCheck( aclKeysForAccessCheck( requiredEntityPropertyTypes( entities ), WRITE_PERMISSION ) );
         accessCheck( aclKeysForAccessCheck( requiredAssociationPropertyTypes( associations ), WRITE_PERMISSION ) );
 
         final Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySet =
-                Stream.concat( entitySets.stream(), associationEntitySets.stream() )
-                        .collect( Collectors.toMap( Function.identity(),
-                                entitySetId -> authzHelper.getAuthorizedPropertyTypes(
-                                        entitySetId, WRITE_PERMISSION ) ) );
+                entitySetIds.stream().collect( Collectors.toMap( Function.identity(),
+                        entitySetId -> authzHelper.getAuthorizedPropertyTypes(
+                                entitySetId, WRITE_PERMISSION ) ) );
         dataGraphServiceHelper.checkAssociationEntityTypes( associations );
         return dgm.integrateEntitiesAndAssociations( entities, associations, authorizedPropertyTypesByEntitySet );
     }
@@ -250,7 +239,9 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
         return propertyTypesByEntitySet;
     }
 
-    private void performAccessChecksOnEntitiesAndAssociations( Set<Association> associations, Set<Entity> entities ) {
+    private Set<UUID> performAccessChecksOnEntitiesAndAssociations(
+            Set<Association> associations,
+            Set<Entity> entities ) {
         final Set<UUID> entitySetIds = Sets.newHashSet();
         entities.forEach( entity -> entitySetIds.add( entity.getEntitySetId() ) );
         associations.forEach(
@@ -261,13 +252,15 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
                 }
         );
 
-        checkPermissionsOnEntitySetIds( entitySetIds, READ_PERMISSION );
+        checkPermissionsOnEntitySetIds( entitySetIds );
+
+        return entitySetIds;
     }
 
-    private void checkPermissionsOnEntitySetIds( Set<UUID> entitySetIds, EnumSet<Permission> permissions ) {
-        //Ensure that we have write access to entity sets.
+    private void checkPermissionsOnEntitySetIds( Set<UUID> entitySetIds ) {
+        //Ensure that we have access to entity sets.
         ensureEntitySetsCanBeWritten( entitySetIds );
-        accessCheck( entitySetIds.stream().collect( Collectors.toMap( AclKey::new, id -> permissions ) ) );
+        accessCheck( entitySetIds.stream().collect( Collectors.toMap( AclKey::new, id -> READ_PERMISSION ) ) );
     }
 
     private void ensureEntitySetsCanBeWritten( Set<UUID> entitySetIds ) {
