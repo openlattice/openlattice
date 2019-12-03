@@ -1,7 +1,13 @@
 entity-type: "ol.flight"
 fqns:
+  NAME: "flight.name"
   DEFINITION: "flight.definition"
   ARGS: "flight.args"
   CONTACT: "flight.contact"
   SQL: "flight.sql"
   PKEY: "flight.primaryKeyColumns"
+  ENVIRONMENT: "flight.environment"
+credentials:
+  flightName:
+    username: "username"
+    password: "password"
