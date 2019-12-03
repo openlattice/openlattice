@@ -53,7 +53,6 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
-
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -157,8 +156,8 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
     @Override
     @RequestMapping(
             path = ACTIVATE,
-            method = RequestMethod.GET)
-    public Void activateUser( ) {
+            method = RequestMethod.GET )
+    public Void activateUser() {
         Principal principal = checkNotNull( Principals.getCurrentUser() );
 
         try {
