@@ -29,6 +29,7 @@ import com.hazelcast.query.Predicates
 import com.hazelcast.query.QueryConstants
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi
 import com.openlattice.data.storage.IndexingMetadataManager
+import com.openlattice.data.storage.MetadataOption
 import com.openlattice.data.storage.PostgresEntityDataQueryService
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.EntityType
@@ -160,7 +161,7 @@ class BackgroundIndexingService(
      */
     private fun getEntityDataKeysQuery(reindexAll: Boolean = false, getTombstoned: Boolean = false): String {
         val dirtyIdsClause = if (!reindexAll) {
-            "${LAST_INDEX.name} < ${LAST_WRITE.name}"
+            "AND ${LAST_INDEX.name} < ${LAST_WRITE.name}"
         } else {
             ""
         }
@@ -169,9 +170,8 @@ class BackgroundIndexingService(
         return "SELECT ${ID.name}, ${LAST_WRITE.name} FROM ${IDS.name} " +
                 "WHERE ${ENTITY_SET_ID.name} = ? " +
                 "AND ${PARTITION.name} = ANY(?) " +
-                "AND ${PARTITIONS_VERSION.name} = ? " +
                 "AND $versionsClause " +
-                "AND $dirtyIdsClause "
+                dirtyIdsClause
     }
 
     private fun getEntityDataKeys(
@@ -183,7 +183,6 @@ class BackgroundIndexingService(
                 PreparedStatementHolderSupplier(hds, getEntityDataKeysQuery(reindexAll, getTombstoned), FETCH_SIZE) {
                     it.setObject(1, entitySet.id)
                     it.setArray(2, PostgresArrays.createIntArray(it.connection, entitySet.partitions))
-                    it.setInt(3, entitySet.partitionsVersion)
                 }
         ) { ResultSetAdapters.id(it) to ResultSetAdapters.lastWriteTyped(it) }
     }
@@ -270,7 +269,10 @@ class BackgroundIndexingService(
         val esb = Stopwatch.createStarted()
         val entitiesById = dataQueryService.getEntitiesWithPropertyTypeIds(
                 mapOf(entitySet.id to Optional.of(batchToIndex.keys)),
-                mapOf(entitySet.id to propertyTypeMap)).toMap()
+                mapOf(entitySet.id to propertyTypeMap),
+                mapOf(),
+                EnumSet.of(MetadataOption.LAST_WRITE)
+        ).toMap()
 
         logger.info("Loading data for indexEntities took {} ms", esb.elapsed(TimeUnit.MILLISECONDS))
 
