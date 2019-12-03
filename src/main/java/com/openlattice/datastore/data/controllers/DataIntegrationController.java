@@ -21,10 +21,9 @@
 package com.openlattice.datastore.data.controllers;
 
 import com.codahale.metrics.annotation.Timed;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.SetMultimap;
+import com.google.common.collect.*;
 import com.openlattice.authorization.*;
+import com.openlattice.controllers.exceptions.ForbiddenException;
 import com.openlattice.data.*;
 import com.openlattice.data.graph.DataGraphServiceHelper;
 import com.openlattice.data.integration.Association;
@@ -34,6 +33,8 @@ import com.openlattice.data.integration.S3EntityData;
 import com.openlattice.data.storage.PostgresDataSinkService;
 import com.openlattice.data.storage.aws.AwsDataSinkService;
 import com.openlattice.datastore.services.EdmService;
+import com.openlattice.datastore.services.EntitySetService;
+import com.openlattice.edm.set.EntitySetFlag;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.search.SearchService;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -45,8 +46,8 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.openlattice.authorization.EdmAuthorizationHelper.WRITE_PERMISSION;
-import static com.openlattice.authorization.EdmAuthorizationHelper.aclKeysForAccessCheck;
+import static com.openlattice.authorization.EdmAuthorizationHelper.*;
+import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION;
 
 @RestController
 @RequestMapping( DataIntegrationApi.CONTROLLER )
@@ -78,6 +79,9 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
     @Inject
     private DataGraphServiceHelper dataGraphServiceHelper;
 
+    @Inject
+    private EntitySetService entitySetService;
+
     @Override
     public AuthorizationManager getAuthorizationManager() {
         return authz;
@@ -91,6 +95,7 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
             @RequestParam( value = DETAILED_RESULTS, required = false, defaultValue = "false" ) boolean detailedResults,
             @RequestBody Map<String, Map<UUID, Set<Object>>> entities ) {
         //Ensure that we have read access to entity set metadata.
+        ensureEntitySetsCanBeWritten( ImmutableSet.of( entitySetId ) );
         ensureReadAccess( new AclKey( entitySetId ) );
         //Load authorized property types
         final Map<UUID, PropertyType> authorizedPropertyTypes = authzHelper
@@ -111,17 +116,17 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
             @RequestBody Set<Association> associations,
             @RequestParam( value = DETAILED_RESULTS, required = false, defaultValue = "false" )
                     boolean detailedResults ) {
+        performAccessChecksOnEntitiesAndAssociations( associations, ImmutableSet.of() );
         final Set<UUID> associationEntitySets = associations.stream()
                 .map( association -> association.getKey().getEntitySetId() )
                 .collect( Collectors.toSet() );
         //Ensure that we have read access to entity set metadata.
-        associationEntitySets.forEach( entitySetId -> ensureReadAccess( new AclKey( entitySetId ) ) );
         accessCheck( aclKeysForAccessCheck( requiredAssociationPropertyTypes( associations ), WRITE_PERMISSION ) );
 
         final Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySet = authzHelper
                 .getAuthorizedPropertiesOnEntitySets(
                         associationEntitySets,
-                        WRITE_PERMISSION ,
+                        WRITE_PERMISSION,
                         Principals.getCurrentPrincipals()
                 );
 
@@ -146,6 +151,7 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
                     boolean detailedResults ) {
         final Set<Entity> entities = data.getEntities();
         final Set<Association> associations = data.getAssociations();
+        performAccessChecksOnEntitiesAndAssociations( associations, entities );
 
         final Set<UUID> entitySets = entities.stream()
                 .map( entity -> entity.getKey().getEntitySetId() )
@@ -155,9 +161,6 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
                 .map( association -> association.getKey().getEntitySetId() )
                 .collect( Collectors.toSet() );
 
-        //Ensure that we have read access to entity set metadata.
-        entitySets.forEach( entitySetId -> ensureReadAccess( new AclKey( entitySetId ) ) );
-        associationEntitySets.forEach( entitySetId -> ensureReadAccess( new AclKey( entitySetId ) ) );
 
         accessCheck( aclKeysForAccessCheck( requiredEntityPropertyTypes( entities ), WRITE_PERMISSION ) );
         accessCheck( aclKeysForAccessCheck( requiredAssociationPropertyTypes( associations ), WRITE_PERMISSION ) );
@@ -245,6 +248,33 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
         entities.forEach( entity -> propertyTypesByEntitySet
                 .putAll( entity.getEntitySetId(), entity.getDetails().keySet() ) );
         return propertyTypesByEntitySet;
+    }
+
+    private void performAccessChecksOnEntitiesAndAssociations( Set<Association> associations, Set<Entity> entities ) {
+        final Set<UUID> entitySetIds = Sets.newHashSet();
+        entities.forEach( entity -> entitySetIds.add( entity.getEntitySetId() ) );
+        associations.forEach(
+                association -> {
+                    entitySetIds.add( association.getSrc().getEntitySetId() );
+                    entitySetIds.add( association.getDst().getEntitySetId() );
+                    entitySetIds.add( association.getKey().getEntitySetId() );
+                }
+        );
+
+        checkPermissionsOnEntitySetIds( entitySetIds, READ_PERMISSION );
+    }
+
+    private void checkPermissionsOnEntitySetIds( Set<UUID> entitySetIds, EnumSet<Permission> permissions ) {
+        //Ensure that we have write access to entity sets.
+        ensureEntitySetsCanBeWritten( entitySetIds );
+        accessCheck( entitySetIds.stream().collect( Collectors.toMap( AclKey::new, id -> permissions ) ) );
+    }
+
+    private void ensureEntitySetsCanBeWritten( Set<UUID> entitySetIds ) {
+        if ( entitySetService.entitySetsContainFlag( entitySetIds, EntitySetFlag.AUDIT ) ) {
+            throw new ForbiddenException( "You cannot modify data of entity sets " + entitySetIds.toString()
+                    + " because at least one is an audit entity set." );
+        }
     }
 
 }
