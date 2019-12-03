@@ -22,7 +22,6 @@ package com.openlattice.datastore.search.controllers;
 
 import com.codahale.metrics.annotation.Timed;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Predicates;
 import com.google.common.collect.*;
 import com.openlattice.auditing.AuditEventType;
 import com.openlattice.auditing.AuditableEvent;
@@ -38,8 +37,8 @@ import com.openlattice.apps.services.AppService;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.EntitySetManager;
 import com.openlattice.edm.EntitySet;
-import com.openlattice.organizations.Organization;
 import com.openlattice.organizations.HazelcastOrganizationService;
+import com.openlattice.organizations.Organization;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.search.SearchApi;
 import com.openlattice.search.SearchService;
@@ -693,7 +692,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
                         getAccessibleObjects( SecurableObjectType.Organization,
                                 EnumSet.of( Permission.READ ) ) // TODO: other access check??
                                 .parallel()
-                                .filter( Predicates.notNull()::apply )
+                                .filter( Objects::nonNull )
                                 .map( AuthorizationUtils::getLastAclKeySafely ) ) );
         searchService.triggerAllOrganizationsIndex( allOrganizations );
         return null;

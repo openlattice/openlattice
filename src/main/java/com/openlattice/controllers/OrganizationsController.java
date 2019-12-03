@@ -20,13 +20,9 @@
 
 package com.openlattice.controllers;
 
-import static com.google.common.base.Preconditions.checkArgument;
-
 import com.auth0.json.mgmt.users.User;
 import com.codahale.metrics.annotation.Timed;
-import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.openlattice.assembler.Assembler;
 import com.openlattice.authorization.AccessCheck;
@@ -57,14 +53,6 @@ import com.openlattice.organizations.Grant;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.Organization;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
-import java.util.Collection;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
-import javax.inject.Inject;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -76,6 +64,19 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+
+import javax.inject.Inject;
+import java.util.Collection;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
+
+import static com.google.common.base.Preconditions.checkArgument;
 
 @RestController
 @RequestMapping( OrganizationsApi.CONTROLLER )
@@ -110,19 +111,19 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     public Iterable<Organization> getOrganizations() {
 
         Set<AclKey> authorizedRoles = getAccessibleObjects( SecurableObjectType.Role, EnumSet.of( Permission.READ ) )
-                .filter( Predicates.notNull()::apply ).collect( Collectors.toSet() );
+                .filter( Objects::nonNull ).collect( Collectors.toSet() );
 
         Iterable<Organization> orgs = organizations.getOrganizations(
                 getAccessibleObjects( SecurableObjectType.Organization, EnumSet.of( Permission.READ ) )
                         .parallel()
-                        .filter( Predicates.notNull()::apply )
+                        .filter( Objects::nonNull )
                         .map( AuthorizationUtils::getLastAclKeySafely )
         );
 
-        return Iterables.transform( orgs, org -> {
+        return StreamSupport.stream( orgs.spliterator(), false ).map( org -> {
             org.getRoles().removeIf( role -> !authorizedRoles.contains( role.getAclKey() ) );
             return org;
-        } );
+        } ).collect( Collectors.toList() );
     }
 
     @Timed
@@ -148,8 +149,10 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         ensureRead( organizationId );
         //TODO: Re-visit roles within an organization being defined as roles which have read on that organization.
         Organization org = organizations.getOrganization( organizationId );
-        Set<AclKey> authorizedRoleAclKeys = getAuthorizedRoleAclKeys( org.getRoles() );
-        org.getRoles().removeIf( role -> !authorizedRoleAclKeys.contains( role.getAclKey() ) );
+        if ( org != null ) {
+            Set<AclKey> authorizedRoleAclKeys = getAuthorizedRoleAclKeys( org.getRoles() );
+            org.getRoles().removeIf( role -> !authorizedRoleAclKeys.contains( role.getAclKey() ) );
+        }
         return org;
     }
 
@@ -193,6 +196,9 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             @RequestBody EnumSet<OrganizationEntitySetFlag> flagFilter ) {
         ensureRead( organizationId );
         final var orgPrincipal = organizations.getOrganizationPrincipal( organizationId );
+        if( orgPrincipal == null ) {
+            return null;
+        }
         final var internal = entitySetManager.getEntitySetsForOrganization( organizationId );
         final var external = authorizations.getAuthorizedObjectsOfType(
                 orgPrincipal.getPrincipal(),

@@ -21,6 +21,7 @@
 package com.openlattice.datastore.pods;
 
 import com.amazonaws.services.s3.AmazonS3;
+import com.auth0.client.mgmt.ManagementAPI;
 import com.codahale.metrics.MetricRegistry;
 import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -31,6 +32,7 @@ import com.hazelcast.core.HazelcastInstance;
 import com.kryptnostic.rhizome.configuration.ConfigurationConstants;
 import com.kryptnostic.rhizome.configuration.amazon.AmazonLaunchConfiguration;
 import com.openlattice.analysis.AnalysisService;
+import com.openlattice.apps.services.AppService;
 import com.openlattice.assembler.*;
 import com.openlattice.assembler.pods.AssemblerConfigurationPod;
 import com.openlattice.assembler.tasks.UserCredentialSyncTask;
@@ -51,7 +53,6 @@ import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.openlattice.data.storage.*;
 import com.openlattice.data.storage.aws.AwsDataSinkService;
 import com.openlattice.data.storage.partitions.PartitionManager;
-import com.openlattice.apps.services.AppService;
 import com.openlattice.datastore.services.*;
 import com.openlattice.directory.UserDirectoryService;
 import com.openlattice.edm.PostgresEdmManager;
@@ -83,6 +84,7 @@ import com.openlattice.tasks.PostConstructInitializerTaskDependencies;
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies.PostConstructInitializerTask;
 import com.openlattice.twilio.TwilioConfiguration;
 import com.openlattice.twilio.pods.TwilioConfigurationPod;
+import com.openlattice.users.Auth0SyncService;
 import com.zaxxer.hikari.HikariDataSource;
 import org.jdbi.v3.core.Jdbi;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -152,6 +154,16 @@ public class DatastoreServicesPod {
         FullQualifiedNameJacksonSerializer.registerWithMapper( mapper );
 
         return mapper;
+    }
+
+    @Bean
+    public ManagementAPI managementAPI() {
+        return new ManagementAPI( auth0Configuration.getDomain(), auth0TokenProvider().getToken() );
+    }
+
+    @Bean
+    public Auth0SyncService auth0SyncService() {
+        return new Auth0SyncService( hazelcastInstance, hikariDataSource, principalService(), organizationsManager() );
     }
 
     @Bean
@@ -248,7 +260,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public EntityDatastore entityDatastore() {
-        return new PostgresEntityDatastore( dataQueryService(), pgEdmManager(), entitySetManager() );
+        return new PostgresEntityDatastore( dataQueryService(), pgEdmManager(), entitySetManager(), metricRegistry );
     }
 
     @Bean

@@ -22,8 +22,8 @@ package com.openlattice.datastore.apps.controllers;
 
 import com.codahale.metrics.annotation.Timed;
 import com.openlattice.apps.*;
-import com.openlattice.authorization.*;
 import com.openlattice.apps.services.AppService;
+import com.openlattice.authorization.*;
 import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import org.springframework.http.HttpStatus;
