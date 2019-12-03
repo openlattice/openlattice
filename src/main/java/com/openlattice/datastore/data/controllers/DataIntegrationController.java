@@ -34,6 +34,7 @@ import com.openlattice.data.storage.PostgresDataSinkService;
 import com.openlattice.data.storage.aws.AwsDataSinkService;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.EntitySetService;
+import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.set.EntitySetFlag;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.search.SearchService;
@@ -207,7 +208,8 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
     @Override
     @PutMapping( "/" + EDGES )
     public int createEdges( @RequestBody Set<DataEdgeKey> associations ) {
-        final Set<UUID> entitySetIds = Sets.newHashSetWithExpectedSize( associations.size() * 3 );;
+        final Set<UUID> entitySetIds = Sets.newHashSetWithExpectedSize( associations.size() * 3 );
+        ;
         associations.forEach(
                 association -> {
                     entitySetIds.add( association.getEdge().getEntitySetId() );
@@ -241,7 +243,7 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
     private Set<UUID> performAccessChecksOnEntitiesAndAssociations(
             Set<Association> associations,
             Set<Entity> entities ) {
-        final Set<UUID> entitySetIds = Sets.newHashSetWithExpectedSize( (associations.size() * 3) + entities.size() );
+        final Set<UUID> entitySetIds = Sets.newHashSetWithExpectedSize( ( associations.size() * 3 ) + entities.size() );
         entities.forEach( entity -> entitySetIds.add( entity.getEntitySetId() ) );
         associations.forEach(
                 association -> {
@@ -264,8 +266,11 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
 
     private void ensureEntitySetsCanBeWritten( Set<UUID> entitySetIds ) {
         if ( entitySetService.entitySetsContainFlag( entitySetIds, EntitySetFlag.AUDIT ) ) {
-            throw new ForbiddenException( "You cannot modify data of entity sets " + entitySetIds.toString()
-                    + " because at least one is an audit entity set." );
+            Set<UUID> auditEntitySetIds = entitySetService.getEntitySetsAsMap( entitySetIds ).values().stream()
+                    .filter( it -> it.getFlags().contains( EntitySetFlag.AUDIT ) ).map( EntitySet::getId ).collect(
+                            Collectors.toSet() );
+            throw new ForbiddenException( "You cannot modify data of entity sets " + auditEntitySetIds.toString()
+                    + " because they are audit entity sets." );
         }
     }
 

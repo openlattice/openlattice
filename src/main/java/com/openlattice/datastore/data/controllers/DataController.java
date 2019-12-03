@@ -1023,8 +1023,11 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
 
     private void ensureEntitySetsCanBeWritten( Set<UUID> entitySetIds ) {
         if ( entitySetService.entitySetsContainFlag( entitySetIds, EntitySetFlag.AUDIT ) ) {
-            throw new ForbiddenException( "You cannot modify data of entity sets " + entitySetIds.toString()
-                    + " because at least one is an audit entity set." );
+            Set<UUID> auditEntitySetIds = entitySetService.getEntitySetsAsMap( entitySetIds ).values().stream()
+                    .filter( it -> it.getFlags().contains( EntitySetFlag.AUDIT ) ).map( EntitySet::getId ).collect(
+                            Collectors.toSet() );
+            throw new ForbiddenException( "You cannot modify data of entity sets " + auditEntitySetIds.toString()
+                    + " because they are audit entity sets." );
         }
     }
 
