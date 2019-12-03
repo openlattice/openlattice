@@ -212,6 +212,20 @@ public final class PostgresTable {
                             ANALYZER,
                             MULTI_VALUED,
                             INDEX_TYPE );
+
+    public static final PostgresTableDefinition FLIGHTS =
+            new PostgresTableDefinition( "flights" )
+                    .addColumns( NAME,
+                            SQL,
+                            //SRC somehow
+                            SRC_PKEY_COLUMNS,
+                            ENVIRONMENT,
+                            DEFAULT_STORAGE,
+                            S3_BUCKET,
+                            FLIGHT,
+                            RECURRING)
+                    .primaryKey( NAME, ENVIRONMENT );
+
     public static final PostgresTableDefinition        GRAPH_QUERIES                =
             new PostgresTableDefinition( "graph_queries" )
                     .addColumns( QUERY_ID, QUERY, STATE, START_TIME )
