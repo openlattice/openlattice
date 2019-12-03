@@ -213,3 +213,16 @@ tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
         freeCompilerArgs += '-Xjvm-default=compatibility'
     }
 }
+
+
+jar {
+    doFirst {
+        manifest {
+            attributes "Class-Path": configurations.runtime.files.collect { it.getName() }.join(" ")
+        }
+    }
+}
+
+startScripts {
+    classpath = files(jar.archivePath)
+}
