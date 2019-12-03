@@ -53,7 +53,6 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
-
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -120,7 +119,7 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
         return Principals.getCurrentPrincipals()
                 .stream()
                 .filter( principal -> principal.getType().equals( PrincipalType.ROLE ) )
-                .map( principal -> spm.lookup( principal ) )
+                .map( spm::lookup )
                 .filter( Objects::nonNull )
                 .map( aclKey -> spm.getSecurablePrincipal( aclKey ) )
                 .collect( Collectors.toSet() );
@@ -157,8 +156,8 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
     @Override
     @RequestMapping(
             path = ACTIVATE,
-            method = RequestMethod.GET)
-    public Void activateUser( ) {
+            method = RequestMethod.GET )
+    public Void activateUser() {
         Principal principal = checkNotNull( Principals.getCurrentUser() );
 
         try {
@@ -191,7 +190,6 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
             path = USERS + SEARCH + SEARCH_QUERY_PATH,
             produces = MediaType.APPLICATION_JSON_VALUE )
     public Map<String, Auth0UserBasic> searchAllUsers( @PathVariable( SEARCH_QUERY ) String searchQuery ) {
-
         String wildcardSearchQuery = searchQuery + "*";
         return userDirectoryService.searchAllUsers( wildcardSearchQuery );
     }
