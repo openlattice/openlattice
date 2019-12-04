@@ -62,35 +62,38 @@ class BackgroundExternalDatabaseSyncingService(
     @Scheduled(fixedRate = SCAN_RATE)
     fun scanOrganizationDatabases() {
         logger.info("Starting background external database sync task.")
-        if (taskLock.tryLock()) {
-            try {
-                if (indexerConfiguration.backgroundExternalDatabaseSyncingEnabled) {
-                    val timer = Stopwatch.createStarted()
-                    val lockedOrganizationIds = organizationTitles.keys
-                            .filter { it != IdConstants.OPENLATTICE_ORGANIZATION_ID.id && it != IdConstants.GLOBAL_ORGANIZATION_ID.id }
-                            .filter { tryLockOrganization(it) }
-                            .shuffled()
+        
+        if (!indexerConfiguration.backgroundExternalDatabaseSyncingEnabled) {
+            logger.info("Skipping external database syncing as it is not enabled.")
+            return
+        }
 
-                    val totalSynced = lockedOrganizationIds
-                            .parallelStream()
-                            .mapToInt {
-                                syncOrganizationDatabases(it)
-                            }
-                            .sum()
-
-                    lockedOrganizationIds.forEach(this::deleteIndexingLock)
-
-                    logger.info("Completed syncing {} database objects in {}",
-                            totalSynced,
-                            timer)
-                } else {
-                    logger.info("Skipping external database syncing as it is not enabled.")
-                }
-            } finally {
-                taskLock.unlock()
-            }
-        } else {
+        if (!taskLock.tryLock()) {
             logger.info("Not starting new external database sync task as an existing one is running")
+            return
+        }
+
+        try {
+            val timer = Stopwatch.createStarted()
+            val lockedOrganizationIds = organizationTitles.keys
+                    .filter { it != IdConstants.OPENLATTICE_ORGANIZATION_ID.id && it != IdConstants.GLOBAL_ORGANIZATION_ID.id }
+                    .filter { tryLockOrganization(it) }
+                    .shuffled()
+
+            val totalSynced = lockedOrganizationIds
+                    .parallelStream()
+                    .mapToInt {
+                        syncOrganizationDatabases(it)
+                    }
+                    .sum()
+
+            lockedOrganizationIds.forEach(this::deleteIndexingLock)
+
+            logger.info("Completed syncing {} database objects in {}",
+                    totalSynced,
+                    timer)
+        } finally {
+            taskLock.unlock()
         }
     }
 
