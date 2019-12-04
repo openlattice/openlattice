@@ -45,10 +45,8 @@ import javax.inject.Inject;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static com.openlattice.authorization.EdmAuthorizationHelper.*;
-import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION;
 
 @RestController
 @RequestMapping( DataIntegrationApi.CONTROLLER )
