@@ -95,13 +95,13 @@ class BackgroundLinkingIndexingService(
      * Queue containing linking ids, which need to be re-indexed in elasticsearch.
      */
     private val indexCandidates = hazelcastInstance
-            .getQueue<Triple<List<String>, UUID, OffsetDateTime>>(HazelcastQueue.LINKING_INDEXING.name)
+            .getQueue<Triple<List<Array<UUID>>, UUID, OffsetDateTime>>(HazelcastQueue.LINKING_INDEXING.name)
 
     /**
      * Queue containing linking ids, which need to be un-indexed (deleted) from elasticsearch.
      */
     private val unIndexCandidates = hazelcastInstance
-            .getQueue<Triple<List<String>, UUID, OffsetDateTime>>(HazelcastQueue.LINKING_UNINDEXING.name)
+            .getQueue<Triple<List<Array<UUID>>, UUID, OffsetDateTime>>(HazelcastQueue.LINKING_UNINDEXING.name)
 
     @Suppress("UNUSED")
     private val linkingIndexingWorker = executor.submit {
@@ -154,7 +154,7 @@ class BackgroundLinkingIndexingService(
     }
 
     private fun mapCandidates(
-            candidates: List<Triple<List<String>, UUID, OffsetDateTime>>
+            candidates: List<Triple<List<Array<UUID>>, UUID, OffsetDateTime>>
     ): Pair<Map<UUID, Map<UUID, Map<UUID, OffsetDateTime>>>, Set<UUID>> {
 
         // entity set id -> linking id -> last write
@@ -163,14 +163,16 @@ class BackgroundLinkingIndexingService(
         candidates.forEach {
             val linkingId = it.second
             val lastWrite = it.third
-            it.first.forEach { rawEntityDataKey ->
-                val (entitySetId, originId) = rawEntityDataKey.split("|").map { UUID.fromString(it) }
+
+            it.first.forEach { entityDataKey ->
+                val (entitySetId, originId) = entityDataKey
 
                 linkingEntityKeyIdsWithLastWrite
                         .getOrPut(entitySetId) { mutableMapOf() }
                         .getOrPut(originId) { mutableMapOf() }[linkingId] = lastWrite
+
+                linkingIds.add(linkingId)
             }
-            linkingIds.add(linkingId)
         }
 
         return linkingEntityKeyIdsWithLastWrite to linkingIds
@@ -301,14 +303,14 @@ class BackgroundLinkingIndexingService(
 
     /**
      * Returns the linking ids, which are needing to be indexed along with last_write and their entity set ids and
-     * origin ids as a string in the format: "entity_set_id|origin_id".
+     * origin ids as a list of arrays with 2 elements.
      * Either because of property change or because of partial entity deletion(soft or hard) from the cluster.
      */
-    private fun getDirtyLinkingIds(): BasePostgresIterable<Triple<List<String>, UUID, OffsetDateTime>> {
+    private fun getDirtyLinkingIds(): BasePostgresIterable<Triple<List<Array<UUID>>, UUID, OffsetDateTime>> {
         return BasePostgresIterable(
                 StatementHolderSupplier(hds, selectDirtyLinkingIds, FETCH_SIZE)
         ) { rs ->
-            val entityDataKeysRaw = PostgresArrays.getTextArray(rs, ENTITY_DATA_KEY).toList()
+            val entityDataKeysRaw = PostgresArrays.getUuidArrayOfArrays(rs, ENTITY_DATA_KEY)!!.toList()
             Triple(
                     entityDataKeysRaw,
                     ResultSetAdapters.linkingId(rs),
@@ -320,13 +322,13 @@ class BackgroundLinkingIndexingService(
 
     /**
      * Returns the linking ids which are needing to be un-indexed (to delete those documents) along with last_write and
-     * their entity set ids and origin ids as a string in the format: "entity_set_id|origin_id".
+     * their entity set ids and origin ids as a list of arrays with 2 elements.
      */
-    private fun getDeletedLinkingIds(): BasePostgresIterable<Triple<List<String>, UUID, OffsetDateTime>> {
+    private fun getDeletedLinkingIds(): BasePostgresIterable<Triple<List<Array<UUID>>, UUID, OffsetDateTime>> {
         return BasePostgresIterable(
                 StatementHolderSupplier(hds, selectDeletedLinkingIds, FETCH_SIZE)
         ) { rs ->
-            val entityDataKeysRaw = PostgresArrays.getTextArray(rs, ENTITY_DATA_KEY).toList()
+            val entityDataKeysRaw = PostgresArrays.getUuidArrayOfArrays(rs, ENTITY_DATA_KEY)!!.toList()
             Triple(
                     entityDataKeysRaw,
                     ResultSetAdapters.linkingId(rs),
@@ -337,6 +339,7 @@ class BackgroundLinkingIndexingService(
 }
 
 internal const val ENTITY_DATA_KEY = "entity_data_key"
+internal const val KEYS = "keys"
 
 /**
  * Select linking ids, where ALL normal entities are cleared or deleted.
@@ -345,7 +348,7 @@ internal val selectDeletedLinkingIds =
         // @formatter:off
         "SELECT " +
                 "${LINKING_ID.name}, " +
-                "array_agg(${ENTITY_SET_ID.name} || '|' || ${ID.name}) AS $ENTITY_DATA_KEY, " +
+                "array_agg(ARRAY[${ENTITY_SET_ID.name}, ${ID.name}]) AS $ENTITY_DATA_KEY, " +
                 "max(${LAST_WRITE.name}) AS ${LAST_WRITE.name} " +
         "FROM ${IDS.name} " +
         "WHERE " +
@@ -380,8 +383,9 @@ internal val selectDirtyLinkingIds =
             "FROM ${IDS.name} " +
             "WHERE ${LINKING_ID.name} IS NOT NULL " +
                 "AND ${VERSION.name} > 0 ) " +
-        "SELECT ${LINKING_ID.name}, " +
-                "array_agg(${ENTITY_SET_ID.name} || '|' || ${ID.name}) AS $ENTITY_DATA_KEY, " +
+         "SELECT " +
+                "${LINKING_ID.name}, " +
+                "array_agg(ARRAY[${ENTITY_SET_ID.name}, ${ID.name}]) AS $ENTITY_DATA_KEY, " +
                 "max(${LAST_WRITE.name}) AS ${LAST_WRITE.name} " +
         "FROM $withAlias " +
         "WHERE ${LAST_INDEX.name} >= ${LAST_WRITE.name} AND " +
@@ -389,8 +393,9 @@ internal val selectDirtyLinkingIds =
               "${LAST_LINK_INDEX.name} < ${LAST_WRITE.name} " +
         "GROUP BY ${LINKING_ID.name} " +
         "UNION ALL " +
-        "SELECT ${LINKING_ID.name}, " +
-                "array_agg(${ENTITY_SET_ID.name} || '|' || ${ID.name}) AS $ENTITY_DATA_KEY, " +
+        "SELECT " +
+                "${LINKING_ID.name}, " +
+                "array_agg(ARRAY[${ENTITY_SET_ID.name}, ${ID.name}]) AS $ENTITY_DATA_KEY, " +
                 "max(${LAST_WRITE.name}) AS ${LAST_WRITE.name} " +
         "FROM ${IDS.name} " +
         "WHERE ${LINKING_ID.name} IN " +
@@ -406,5 +411,5 @@ internal val selectDirtyLinkingIds =
                 "( SELECT ${ENTITY_SET_ID.name} " +
                   "FROM $withAlias ) " +
             "AND ${LINKING_ID.name} IS NOT NULL " +
-        "GROUP BY ${LINKING_ID.name} "
+        "GROUP BY ${LINKING_ID.name}"
         // @formatter:on
