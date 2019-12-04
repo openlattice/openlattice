@@ -82,9 +82,6 @@ class IndexingService(
     private val indexingPartitionList = hazelcastInstance.getMap<UUID, DelegatedIntList>(
             HazelcastMap.INDEXING_PARTITION_LIST.name
     )
-    private val indexingPartitionsVersion = hazelcastInstance.getMap<UUID, Int>(
-            HazelcastMap.INDEXING_PARTITIONS_VERSION.name
-    )
     private val indexingQueue = hazelcastInstance.getQueue<UUID>(HazelcastQueue.INDEXING.name)
     private val indexingLock = ReentrantLock()
 
@@ -105,15 +102,11 @@ class IndexingService(
                     try {
                         val entitySet = entitySets.getValue(entitySetId)
                         var cursor = indexingProgress.getOrPut(entitySetId) { LB_UUID }
-                        val currentPartitionsInfo = partitionManager.getEntitySetPartitionsInfo(entitySetId)
-
-                        indexingPartitionsVersion.getOrPut(
-                                entitySetId
-                        ) { currentPartitionsInfo.partitionsVersion }
+                        val currentPartitions = partitionManager.getEntitySetPartitionsInfo(entitySetId)
 
                         val partitions = indexingPartitionList.getOrPut(entitySetId) {
                             DelegatedIntList(
-                                    currentPartitionsInfo.partitions.toList()
+                                    currentPartitions.partitions.toList()
                             )
                         }
                         val partitionCursor = indexingPartitionProgress.getOrPut(entitySetId) { 0 }
@@ -175,7 +168,6 @@ class IndexingService(
                             indexingLock.lock()
                             indexingJobs.delete(entitySetId)
                             indexingProgress.delete(entitySetId)
-                            indexingPartitionsVersion.delete(entitySetId)
                             indexingPartitionList.delete(entitySetId)
                             indexingPartitionProgress.delete(entitySetId)
                         } finally {

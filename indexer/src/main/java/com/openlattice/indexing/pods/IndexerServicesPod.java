@@ -313,7 +313,7 @@ public class IndexerServicesPod {
 
     @Bean
     public EntityDatastore entityDatastore() {
-        return new PostgresEntityDatastore( dataQueryService(), edmManager(), entitySetManager() );
+        return new PostgresEntityDatastore( dataQueryService(), edmManager(), entitySetManager(), metricRegistry );
     }
 
     @Bean
@@ -343,13 +343,13 @@ public class IndexerServicesPod {
 
     @Bean( name = "auditingManager" )
     @Profile( { ConfigurationConstants.Profiles.AWS_CONFIGURATION_PROFILE,
-            ConfigurationConstants.Profiles.AWS_TESTING_PROFILE, AuditingProfiles.LOCAL_AWS_AUDITING_PROFILE } )
+            ConfigurationConstants.Profiles.AWS_TESTING_PROFILE, ConfigurationConstants.Auditing.LOCAL_AWS_AUDITING_PROFILE } )
     public AuditingManager s3AuditingService() {
         return new S3AuditingService( auditingConfiguration, longIdService(), defaultObjectMapper );
     }
 
     @Bean( name = "auditingManager" )
-    @Profile( AuditingProfiles.LOCAL_AUDITING_PROFILE )
+    @Profile( ConfigurationConstants.Auditing.LOCAL_AUDITING_PROFILE )
     public AuditingManager localAuditingService() {
         return new LocalAuditingService( dataGraphService(), auditRecordEntitySetsManager(), defaultObjectMapper );
     }
