@@ -89,7 +89,8 @@ public class EntitySetStreamSerializer implements SelfRegisteringStreamSerialize
             flags.add( EntitySetFlagStreamSerializer.deserialize( in ) );
         }
 
-        LinkedHashSet<Integer> partitions = (LinkedHashSet<Integer>)StreamSerializers.deserializeIntList( in, Sets.newLinkedHashSet() );
+        LinkedHashSet<Integer> partitions = (LinkedHashSet<Integer>) StreamSerializers
+                .deserializeIntList( in, Sets.newLinkedHashSet() );
 
         DataExpiration expiration;
         boolean hasExpiration = in.readBoolean();
