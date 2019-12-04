@@ -48,6 +48,7 @@ import com.openlattice.data.EntityKey;
 import com.openlattice.edm.EdmDetails;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.requests.MetadataUpdate;
+import com.openlattice.edm.set.EntitySetFlag;
 import com.openlattice.edm.type.Analyzer;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
@@ -102,6 +103,7 @@ public final class TestDataFactory {
     private static final Action[]              actions                 = Action.values();
     private static final RequestStatus[]       requestStatuses         = RequestStatus.values();
     private static final Analyzer[]            analyzers               = Analyzer.values();
+    private static final EntitySetFlag[]       entitySetFlags          = EntitySetFlag.values();
     private static final IndexType[]           INDEX_TYPES             = IndexType.values();
     private static final Random                r                       = new Random();
     private static final char[][]              allowedLetters          = { { 'a', 'z' }, { 'A', 'Z' } };
@@ -686,6 +688,10 @@ public final class TestDataFactory {
                 "0.0.0.0/0",
                 randomAlphanumeric( 5 )
         );
+    }
+
+    public static EntitySetFlag entitySetFlag() {
+        return entitySetFlags[ r.nextInt( entitySetFlags.length ) ];
     }
 
 }
