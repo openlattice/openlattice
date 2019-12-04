@@ -78,6 +78,7 @@ public final class SerializationConstants {
     public static final String DATATYPE_FIELD                   = "datatype";
     public static final String DATA_ID                          = "dataId";
     public static final String DEFAULT_SHOW                     = "defaultShow";
+    public static final String DEFAULT_STORAGE                  = "defaultStorage";
     public static final String DEIDENTIFIED                     = "deidentified";
     public static final String DELETE_TYPE                      = "deleteType";
     public static final String DESCENDING                       = "descending";
@@ -120,6 +121,7 @@ public final class SerializationConstants {
     public static final String ENTITY_TYPE_ID                   = "entityTypeId";
     public static final String ENTITY_TYPE_IDS_FIELD            = "entityTypeIds";
     public static final String ENUM_VALUES                      = "enumValues";
+    public static final String ENVIRONMENT                      = "environment";
     public static final String EVENT_TYPE                       = "auditEventType";
     public static final String EXACT                            = "exact";
     public static final String EXACT_SEARCH_FIELDS              = "exactSearchFields";
@@ -131,6 +133,7 @@ public final class SerializationConstants {
     public static final String FILTERS                          = "filters";
     public static final String FIRST                            = "first";
     public static final String FLAGS_FIELD                      = "flags";
+    public static final String FLIGHT                           = "flight";
     public static final String FQN                              = "fqn";
     public static final String FUZZY                            = "fuzzy";
     public static final String GRANTS                           = "grants";
@@ -189,6 +192,7 @@ public final class SerializationConstants {
     public static final String PAGING_TOKEN                     = "pagingToken";
     public static final String PARENT_TYPE_FIELD                = "parentType";
     public static final String PARTITIONS                       = "partitions";
+    public static final String PERIOD                           = "period";
     public static final String PERMISSIONS                      = "permissions";
     public static final String PERMISSIONS_MAP                  = "permissionsMap";
     public static final String PHONE_NUMBER                     = "phoneNumber";
@@ -210,6 +214,7 @@ public final class SerializationConstants {
     public static final String QUEUE_SIZE                       = "queueSize";
     public static final String RADIUS                           = "radius";
     public static final String REASON                           = "reason";
+    public static final String RECURRING                        = "recurring";
     public static final String REQUEST                          = "request";
     public static final String REQUESTING_USER                  = "requestingUser";
     public static final String REQUEST_ID                       = "requestId";
@@ -217,6 +222,7 @@ public final class SerializationConstants {
     public static final String RESULT                           = "result";
     public static final String RESULT_SUMMARY                   = "resultSummary";
     public static final String ROLES                            = "roles";
+    public static final String S3_BUCKET                        = "s3Bucket";
     public static final String SCHEMA                           = "schema";
     public static final String SCHEMAS                          = "schemas";
     public static final String SEARCH_FIELDS                    = "searchFields";
@@ -228,10 +234,12 @@ public final class SerializationConstants {
     public static final String SHARDS                           = "shards";
     public static final String SMS_ENTITY_SET_INFO              = "smsEntitySetInfo";
     public static final String SORT                             = "sort";
+    public static final String SQL                              = "sql";
     public static final String SRC                              = "src";
     public static final String SRC_ENTITY_INDEX                 = "srcEntityIndex";
     public static final String SRC_ENTITY_KEY_ID                = "srcEntityKeyId";
     public static final String SRC_ENTITY_SET_ID                = "srcEntitySetId";
+    public static final String SRC_PKEY_COLUMNS                 = "srcPrimaryKeyColumns";
     public static final String START                            = "start";
     public static final String STATE                            = "state";
     public static final String STATUS                           = "status";
