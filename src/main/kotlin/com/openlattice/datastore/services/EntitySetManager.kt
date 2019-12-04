@@ -94,4 +94,7 @@ interface EntitySetManager {
     fun removeDataExpirationPolicy(entitySetId: UUID)
 
     fun getAuditRecordEntitySetsManager(): AuditRecordEntitySetsManager
+
+    fun containsFlag(entitySetId: UUID, flag: EntitySetFlag): Boolean
+    fun entitySetsContainFlag(entitySetIds: Set<UUID>, flag: EntitySetFlag): Boolean
 }
