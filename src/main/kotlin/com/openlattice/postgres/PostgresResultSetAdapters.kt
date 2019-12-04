@@ -177,7 +177,7 @@ fun readJsonDataColumnsWithId(
                 }
 
                 if (metadataOptions.contains(MetadataOption.LAST_WRITE)) {
-                    val lastWrite = rs.getObject(PostgresColumn.LAST_WRITE_FIELD, OffsetDateTime::class.java)
+                    val lastWrite = lastWriteTyped(rs)
                     entities.getValue(originId)[LAST_WRITE_ID.id] = mutableSetOf<Any>(lastWrite)
                 }
             }
