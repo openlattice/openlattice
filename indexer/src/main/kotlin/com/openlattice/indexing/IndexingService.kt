@@ -102,11 +102,11 @@ class IndexingService(
                     try {
                         val entitySet = entitySets.getValue(entitySetId)
                         var cursor = indexingProgress.getOrPut(entitySetId) { LB_UUID }
-                        val currentPartitions = partitionManager.getEntitySetPartitions(entitySetId)
+                        val currentPartitions = partitionManager.getEntitySetPartitionsInfo(entitySetId)
 
                         val partitions = indexingPartitionList.getOrPut(entitySetId) {
                             DelegatedIntList(
-                                    currentPartitions.toList()
+                                    currentPartitions.partitions.toList()
                             )
                         }
                         val partitionCursor = indexingPartitionProgress.getOrPut(entitySetId) { 0 }

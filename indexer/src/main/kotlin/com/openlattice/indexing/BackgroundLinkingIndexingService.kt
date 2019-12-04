@@ -254,7 +254,7 @@ class BackgroundLinkingIndexingService(
         if (!elasticsearchApi.createBulkLinkedData(personEntityType.id, dataByLinkingId)) {
             return 0
         }
-        return dataManager.markAsIndexed(linkingIdsWithLastWrite, true)
+        return dataManager.markAsIndexed(linkingIdsWithLastWrite)
     }
 
     /**
@@ -268,7 +268,7 @@ class BackgroundLinkingIndexingService(
         if (!elasticsearchApi.deleteEntityDataBulk(personEntityType.id, linkingIds)) {
             return 0
         }
-        return dataManager.markAsIndexed(linkingIdsWithLastWrite, true)
+        return dataManager.markAsIndexed(linkingIdsWithLastWrite)
     }
 
     private fun lock(linkingIds: Collection<UUID>) {
