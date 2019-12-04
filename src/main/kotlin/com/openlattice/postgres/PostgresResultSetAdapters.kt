@@ -166,6 +166,7 @@ fun readJsonDataColumnsWithId(
     detailedEntity.forEach { (propertyTypeId, details) ->
         // only select properties which are authorized
         if (propertyTypes.keys.contains(propertyTypeId)) {
+            val lastWrite = lastWriteTyped(rs)
             details.forEach { entityDetail ->
                 val originId = UUID.fromString(entityDetail[PostgresColumn.ID_VALUE.name] as String)
                 val propertyValue = entityDetail.getValue(VALUE)
@@ -177,7 +178,6 @@ fun readJsonDataColumnsWithId(
                 }
 
                 if (metadataOptions.contains(MetadataOption.LAST_WRITE)) {
-                    val lastWrite = rs.getObject(PostgresColumn.LAST_WRITE_FIELD) as OffsetDateTime
                     entities.getValue(originId)[LAST_WRITE_ID.id] = mutableSetOf<Any>(lastWrite)
                 }
             }
