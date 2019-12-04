@@ -96,7 +96,9 @@ class Auth0SyncService(
 
         val missingOrgsForEmailDomains = if (emailDomain.isNotBlank()) {
             orgService.getOrganizationsWithoutUserAndWithConnectionsAndDomains(
-                    connections, emailDomain
+                    principal,
+                    connections,
+                    emailDomain
             )
         } else setOf()
 

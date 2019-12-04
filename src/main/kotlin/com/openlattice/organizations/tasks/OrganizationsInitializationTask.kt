@@ -122,7 +122,7 @@ class OrganizationsInitializationTask : HazelcastInitializationTask<Organization
     }
 
     override fun getName(): String {
-        return Task.ORGANIZATION_BOOTSTRAP.name
+        return Task.ORGANIZATION_INITIALIZATION.name
     }
 
     override fun getDependenciesClass(): Class<out OrganizationsInitializationDependencies> {
