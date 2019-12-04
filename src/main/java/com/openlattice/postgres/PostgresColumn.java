@@ -113,9 +113,6 @@ public final class PostgresColumn {
     public static final String                   DATA_ID_FIELD                     = "data_id";
     public static final PostgresColumnDefinition DATA_ID                           =
             new PostgresColumnDefinition( DATA_ID_FIELD, UUID );
-    public static final String                   DEFAULT_STORAGE_FIELD             = "default_storage";
-    public static final PostgresColumnDefinition DEFAULT_STORAGE                   =
-            new PostgresColumnDefinition( DEFAULT_STORAGE_FIELD, TEXT );
     public static final String                   DESCRIPTION_FIELD                 = "description";
     public static final PostgresColumnDefinition DESCRIPTION                       =
             new PostgresColumnDefinition( DESCRIPTION_FIELD, TEXT );
@@ -183,9 +180,6 @@ public final class PostgresColumn {
             new PostgresColumnDefinition( ENUM_VALUES_FIELD, TEXT_ARRAY )
                     .withDefault( "'{}'" )
                     .notNull();
-    public static final String                   ENVIRONMENT_FIELD                 = "environment";
-    public static final PostgresColumnDefinition ENVIRONMENT                       =
-            new PostgresColumnDefinition( ENVIRONMENT_FIELD, TEXT ).notNull();
     public static final String                   EVENT_TYPE_FIELD                  = "event_type";
     public static final PostgresColumnDefinition EVENT_TYPE                        =
             new PostgresColumnDefinition( EVENT_TYPE_FIELD, TEXT );
@@ -212,9 +206,6 @@ public final class PostgresColumn {
     public static final String                   FLAGS_FIELD                       = "flags";
     public static final PostgresColumnDefinition FLAGS                             =
             new PostgresColumnDefinition( FLAGS_FIELD, BOOLEAN ).notNull();
-    public static final String                   FLIGHT_FIELD                      = "flight";
-    public static final PostgresColumnDefinition FLIGHT                            =
-            new PostgresColumnDefinition( FLIGHT_FIELD, TEXT ).notNull();
     public static final String                   HASH_FIELD                        = "hash";
     public static final PostgresColumnDefinition HASH                              =
             new PostgresColumnDefinition( HASH_FIELD, BYTEA ).notNull();
@@ -233,6 +224,9 @@ public final class PostgresColumn {
     public static final String                   INITIALIZED_FIELD                 = "initialized";
     public static final PostgresColumnDefinition INITIALIZED                       =
             new PostgresColumnDefinition( INITIALIZED_FIELD, BOOLEAN );
+    public static final String INTEGRATION_FIELD = "integration";
+    public static final PostgresColumnDefinition INTEGRATION =
+            new PostgresColumnDefinition( INTEGRATION_FIELD, JSONB ).notNull();
     public static final String                   KEY_FIELD                         = "key";
     public static final PostgresColumnDefinition KEY                               =
             new PostgresColumnDefinition( KEY_FIELD, UUID_ARRAY ).notNull();
@@ -393,15 +387,9 @@ public final class PostgresColumn {
     public static final String                   REASON_FIELD                      = "reason";
     public static final PostgresColumnDefinition REASON                            =
             new PostgresColumnDefinition( REASON_FIELD, TEXT );
-    public static final String                   RECURRING_FIELD                   = "recurring";
-    public static final PostgresColumnDefinition RECURRING                         =
-            new PostgresColumnDefinition( RECURRING_FIELD, BOOLEAN ).notNull();
     public static final String                   REFRESH_RATE_FIELD                = "refresh_rate";
     public static final PostgresColumnDefinition REFRESH_RATE                      =
             new PostgresColumnDefinition( REFRESH_RATE_FIELD, BIGINT );
-    public static final String                   S3_BUCKET_FIELD                   = "s3bucket";
-    public static final PostgresColumnDefinition S3_BUCKET                         =
-            new PostgresColumnDefinition( S3_BUCKET_FIELD, TEXT );
     public static final String                   SCHEMAS_FIELD                     = "schemas";
     public static final PostgresColumnDefinition SCHEMAS                           =
             new PostgresColumnDefinition( SCHEMAS_FIELD, TEXT_ARRAY ).notNull();
@@ -429,9 +417,6 @@ public final class PostgresColumn {
     public static final String                   SHOW_FIELD                        = "show";
     public static final PostgresColumnDefinition SHOW                              =
             new PostgresColumnDefinition( SHOW_FIELD, BOOLEAN ).notNull();
-    public static final String                   SQL_FIELD                         = "sql";
-    public static final PostgresColumnDefinition SQL                               =
-            new PostgresColumnDefinition( SQL_FIELD, TEXT ).notNull();
     public static final String                   SRC_ENTITY_KEY_ID_FIELD           = "src_entity_key_id";
     public static final PostgresColumnDefinition SRC_ENTITY_KEY_ID                 =
             new PostgresColumnDefinition( SRC_ENTITY_KEY_ID_FIELD, UUID );
@@ -444,9 +429,6 @@ public final class PostgresColumn {
     public static final String                   SRC_LINKING_VERTEX_ID_FIELD       = "src_linking_vertex_id";
     public static final PostgresColumnDefinition SRC_LINKING_VERTEX_ID             =
             new PostgresColumnDefinition( SRC_LINKING_VERTEX_ID_FIELD, UUID );
-    public static final String                   SRC_PKEY_COLUMNS_FIELD            = "src_pkey_columns";
-    public static final PostgresColumnDefinition SRC_PKEY_COLUMNS                  =
-            new PostgresColumnDefinition( SRC_PKEY_COLUMNS_FIELD, TEXT_ARRAY );
     public static final PostgresColumnDefinition SRC_PROPERTY_TYPE_ID              =
             new PostgresColumnDefinition( PROPERTY_TYPE_ID_FIELD, UUID ).notNull();
     // filters applied to incoming edges
