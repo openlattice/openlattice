@@ -598,10 +598,6 @@ public final class ResultSetAdapters {
                 expirationData );
     }
 
-    public static int partitionVersions( ResultSet rs ) throws SQLException {
-        return rs.getInt( PARTITIONS_VERSION_FIELD );
-    }
-
     public static Integer[] partitions( ResultSet rs ) throws SQLException {
         return PostgresArrays.getIntArray( rs, PARTITIONS_FIELD );
     }

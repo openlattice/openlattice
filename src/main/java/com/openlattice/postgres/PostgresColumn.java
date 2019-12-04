@@ -362,10 +362,6 @@ public final class PostgresColumn {
     public static final PostgresColumnDefinition PARTITIONS                        = new PostgresColumnDefinition(
             PARTITIONS_FIELD,
             INTEGER_ARRAY ).notNull().withDefault( "'{}'" );
-    public static final String                   PARTITIONS_VERSION_FIELD          = "partitions_version";
-    public static final PostgresColumnDefinition PARTITIONS_VERSION                = new PostgresColumnDefinition(
-            PARTITIONS_VERSION_FIELD,
-            INTEGER ).notNull();
     public static final String                   PARTITION_FIELD                   = "partition";
     public static final PostgresColumnDefinition PARTITION                         = new PostgresColumnDefinition(
             PARTITION_FIELD,

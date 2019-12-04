@@ -308,8 +308,7 @@ fun buildUpsertEntitiesAndLinkedData(): String {
             HASH,
             LAST_WRITE,
             VERSION,
-            VERSIONS,
-            PARTITIONS_VERSION
+            VERSIONS
     )
     val metadataColumnsSql = metadataColumns.joinToString(",") { it.name }
 
@@ -322,8 +321,7 @@ fun buildUpsertEntitiesAndLinkedData(): String {
             HASH.name,
             LAST_WRITE.name,
             VERSION.name,
-            VERSIONS.name,
-            PARTITIONS_VERSION.name
+            VERSIONS.name
     ).joinToString(",")
 
     val conflictClause = (metadataColumns + dataTableValueColumns).joinToString(
@@ -335,7 +333,7 @@ fun buildUpsertEntitiesAndLinkedData(): String {
             "SELECT $metadataReadColumnsSql,$insertColumns FROM ${DATA.name} INNER JOIN " +
             "linking_map USING(${ENTITY_SET_ID.name},${ID.name},${PARTITION.name}) " +
             "WHERE ${LINKING_ID.name} IS NOT NULL AND version > ? " +
-            "ORDER BY ${ENTITY_SET_ID.name},${ID.name},${PARTITION.name},${PROPERTY_TYPE_ID.name},${HASH.name},${PARTITIONS_VERSION.name},${ORIGIN_ID.name} " +
+            "ORDER BY ${ENTITY_SET_ID.name},${ID.name},${PARTITION.name},${PROPERTY_TYPE_ID.name},${HASH.name},${ORIGIN_ID.name} " +
             "ON CONFLICT ($primaryKeyColumnNamesAsString) " +
             "DO UPDATE SET $conflictClause"
 }
@@ -375,10 +373,9 @@ val upsertEntitiesSql = "UPDATE ${IDS.name} " +
  * Preparable sql to lock entities with the following bind order:
  * 1. entity key ids
  * 2. partition
- * 3. partition version
  */
 internal val lockEntitiesSql = "SELECT 1 FROM ${IDS.name} " +
-        "WHERE ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ? AND ${PARTITIONS_VERSION.name} = ? " +
+        "WHERE ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ? " +
         "FOR UPDATE"
 
 /**
@@ -404,7 +401,7 @@ internal val updateVersionsForEntitySet = "UPDATE ${IDS.name} " +
                 "END, " +
             "${LAST_WRITE.name} = 'now()' " +
         "WHERE ${ENTITY_SET_ID.name} = ? "
-// TODO do we need partition + partition version here??
+// TODO do we need partition here??
 // @formatter:on
 /**
  * Preparable SQL that upserts a version and sets last write to current datetime for all entities in a given entity set
@@ -418,13 +415,10 @@ internal val updateVersionsForEntitySet = "UPDATE ${IDS.name} " +
  * 4. entity set id
  * 5. entity key ids (uuid array)
  * 6. partitions (int array)
- * 7. partition version
  */
 internal val updateVersionsForEntitiesInEntitySet = "$updateVersionsForEntitySet " +
         "AND ${ID_VALUE.name} = ANY(?) " +
-        "AND ${PARTITION.name} = ANY(?) " +
-        "AND ${PARTITIONS_VERSION.name} = ? "
-
+        "AND ${PARTITION.name} = ANY(?) "
 
 /**
  * Preparable SQL that zeroes out the version and sets last write to current datetime for all entities in a given
@@ -434,7 +428,6 @@ internal val updateVersionsForEntitiesInEntitySet = "$updateVersionsForEntitySet
  *
  * 1. entity set id
  * 2. partition (uuid array)
- * 3. partition version
  */
 // @formatter:off
 internal val zeroVersionsForEntitySet = "UPDATE ${IDS.name} " +
@@ -444,8 +437,7 @@ internal val zeroVersionsForEntitySet = "UPDATE ${IDS.name} " +
             "${LAST_WRITE.name} = 'now()' " +
         "WHERE " +
             "${ENTITY_SET_ID.name} = ? AND " +
-            "${PARTITION.name} = ANY(?) AND " +
-            "${PARTITIONS_VERSION.name} = ? "
+            "${PARTITION.name} = ANY(?) "
 // @formatter:on
 
 
@@ -457,8 +449,7 @@ internal val zeroVersionsForEntitySet = "UPDATE ${IDS.name} " +
  *
  * 1. entity set id
  * 2. partition (uuid array)
- * 3. partition version
- * 4. id (uuid array)
+ * 3. id (uuid array)
  */
 internal val zeroVersionsForEntitiesInEntitySet = "$zeroVersionsForEntitySet AND ${ID.name} = ANY(?) "
 
@@ -516,7 +507,6 @@ internal val updateVersionsForPropertyTypesInEntitySet = "$updateVersionsForProp
  *    IF LINKING    checks against ORIGIN_ID
  *    ELSE          checks against ID column
  * 7. partitions
- * 8. partition version
  */
 fun updateVersionsForPropertyTypesInEntitiesInEntitySet(linking: Boolean = false): String {
     val idsSql = if (linking) {
@@ -526,8 +516,7 @@ fun updateVersionsForPropertyTypesInEntitiesInEntitySet(linking: Boolean = false
     }
 
     return "$updateVersionsForPropertyTypesInEntitySet $idsSql " +
-            "AND ${PARTITION.name} = ANY(?) " +
-            "AND ${PARTITIONS_VERSION.name} = ? "
+            "AND ${PARTITION.name} = ANY(?) "
 }
 
 /**
@@ -543,9 +532,8 @@ fun updateVersionsForPropertyTypesInEntitiesInEntitySet(linking: Boolean = false
  * 5. property type ids
  * 6. entity key ids (if linking: linking ids)
  * 7. partitions
- * 8. partition version
- * 9. {origin ids}: only if linking
- * 10. hash
+ * 8. {origin ids}: only if linking
+ * 9. hash
  */
 internal fun updateVersionsForPropertyValuesInEntitiesInEntitySet(linking: Boolean = false): String {
     return "${updateVersionsForPropertyTypesInEntitiesInEntitySet(linking)} AND ${HASH.name} = ? "
@@ -598,11 +586,10 @@ internal val deleteEntitySetEntityKeys = "DELETE FROM ${IDS.name} WHERE ${ENTITY
  * 1. entity set id
  * 2. entity key ids
  * 3. partition
- * 4. partition version
- * 5. property type ids
+ * 4. property type ids
  */
 internal val deletePropertiesOfEntitiesInEntitySet = "DELETE FROM ${DATA.name} " +
-        "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ? AND ${PARTITIONS_VERSION.name} = ? AND ${PROPERTY_TYPE_ID.name} = ANY(?) "
+        "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ? AND ${PROPERTY_TYPE_ID.name} = ANY(?) "
 
 /**
  * Preparable SQL deletes all property values of entities and entity key id in a given entity set in [DATA]
@@ -612,10 +599,9 @@ internal val deletePropertiesOfEntitiesInEntitySet = "DELETE FROM ${DATA.name} "
  * 1. entity set id
  * 2. entity key ids
  * 3. partition
- * 4. partition version
  */
 internal val deleteEntitiesInEntitySet = "DELETE FROM ${DATA.name} " +
-        "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ? AND ${PARTITIONS_VERSION.name} = ? "
+        "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ? "
 
 /**
  * Preparable SQL deletes all entities in a given entity set in [IDS]
@@ -625,14 +611,12 @@ internal val deleteEntitiesInEntitySet = "DELETE FROM ${DATA.name} " +
  * 1. entity set id
  * 2. entity key ids
  * 3. partition
- * 4. partition version
  */
 // @formatter:off
 internal val deleteEntityKeys =
         "$deleteEntitySetEntityKeys AND " +
             "${ID.name} = ANY(?) AND " +
-            "${PARTITION.name} = ? AND " +
-            "${PARTITIONS_VERSION.name} = ? "
+            "${PARTITION.name} = ? "
 // @formatter:on
 
 /**
@@ -707,8 +691,7 @@ fun getMergedDataColumnName(datatype: PostgresDatatype): String {
  *     LAST_WRITE = now()
  * 6.  VERSION,
  * 7.  VERSIONS
- * 8.  PARTITIONS_VERSION
- * 9.  Value Column
+ * 8.  Value Column
  */
 fun upsertPropertyValueSql(propertyType: PropertyType): String {
     val insertColumn = getColumnDefinition(propertyType.postgresIndexType, propertyType.datatype)
@@ -720,17 +703,15 @@ fun upsertPropertyValueSql(propertyType: PropertyType): String {
             HASH,
             LAST_WRITE,
             VERSION,
-            VERSIONS,
-            PARTITIONS_VERSION
+            VERSIONS
     ).joinToString(",") { it.name }
 
     return "INSERT INTO ${DATA.name} ($metadataColumnsSql,${insertColumn.name}) " +
-            "VALUES (?,?,?,?,?,now(),?,?,?,?) " +
+            "VALUES (?,?,?,?,?,now(),?,?,?) " +
             "ON CONFLICT ($primaryKeyColumnNamesAsString) " +
             "DO UPDATE SET " +
             "${VERSIONS.name} = ${DATA.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
             "${LAST_WRITE.name} = GREATEST(${DATA.name}.${LAST_WRITE.name},EXCLUDED.${LAST_WRITE.name}), " +
-            "${PARTITIONS_VERSION.name} = EXCLUDED.${PARTITIONS_VERSION.name}, " +
             "${VERSION.name} = CASE " +
             "WHEN abs(${DATA.name}.${VERSION.name}) <= EXCLUDED.${VERSION.name} " +
             "THEN EXCLUDED.${VERSION.name} " +
@@ -749,9 +730,8 @@ fun upsertPropertyValueSql(propertyType: PropertyType): String {
  *     LAST_WRITE = now()
  * 6.  VERSION,
  * 7.  VERSIONS
- * 8.  PARTITIONS_VERSION
- * 9.  Value Column
- * 10. ORIGIN ID        --> expects entity key id
+ * 8.  Value Column
+ * 9. ORIGIN ID        --> expects entity key id
  */
 fun upsertPropertyValueLinkingRowSql(propertyType: PropertyType): String {
     val insertColumn = getColumnDefinition(propertyType.postgresIndexType, propertyType.datatype)
@@ -763,17 +743,15 @@ fun upsertPropertyValueLinkingRowSql(propertyType: PropertyType): String {
             HASH,
             LAST_WRITE,
             VERSION,
-            VERSIONS,
-            PARTITIONS_VERSION
+            VERSIONS
     ).joinToString(",") { it.name }
 // @formatter:off
     return "INSERT INTO ${DATA.name} ($metadataColumnsSql,${insertColumn.name},${ORIGIN_ID.name}) " +
-            "VALUES (?,?,?,?,?,now(),?,?,?,?,?) " +
+            "VALUES (?,?,?,?,?,now(),?,?,?,?) " +
             "ON CONFLICT ($primaryKeyColumnNamesAsString) " +
             "DO UPDATE SET " +
             "${VERSIONS.name} = ${DATA.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
             "${LAST_WRITE.name} = GREATEST(${DATA.name}.${LAST_WRITE.name},EXCLUDED.${LAST_WRITE.name}), " +
-            "${PARTITIONS_VERSION.name} = EXCLUDED.${PARTITIONS_VERSION.name}, " +
             "${VERSION.name} = CASE WHEN abs(${DATA.name}.${VERSION.name}) <= EXCLUDED.${VERSION.name} " +
                 "THEN EXCLUDED.${VERSION.name} " +
                 "ELSE ${DATA.name}.${VERSION.name} " +
@@ -814,7 +792,6 @@ fun createOrUpdateLinkFromEntity(): String {
             "DO UPDATE SET " +
                 "${VERSIONS.name} = ${DATA.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
                 "${LAST_WRITE.name} = GREATEST(${DATA.name}.${LAST_WRITE.name},EXCLUDED.${LAST_WRITE.name}), " +
-                "${PARTITIONS_VERSION.name} = EXCLUDED.${PARTITIONS_VERSION.name}, " +
                 "${VERSION.name} = CASE " +
                     "WHEN abs(${DATA.name}.${VERSION.name}) <= EXCLUDED.${VERSION.name} " +
                     "THEN EXCLUDED.${VERSION.name} " +
