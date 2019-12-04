@@ -20,6 +20,7 @@
 
 package com.openlattice.linking.pods;
 
+import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.geekbeast.hazelcast.HazelcastClientProvider;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -110,6 +111,9 @@ public class LinkerPostConfigurationServicesPod {
     @Inject
     private ObjectMapper defaultObjectMapper;
 
+    @Inject
+    private MetricRegistry metricRegistry;
+
     @Bean
     public HazelcastIdGenerationService idGeneration() {
         return new HazelcastIdGenerationService( hazelcastClientProvider,executor );
@@ -154,7 +158,7 @@ public class LinkerPostConfigurationServicesPod {
 
     @Bean
     public EntityDatastore entityDatastore() {
-        return new PostgresEntityDatastore( dataQueryService(), pgEdmManager, entitySetManager );
+        return new PostgresEntityDatastore( dataQueryService(), pgEdmManager, entitySetManager, metricRegistry );
     }
 
     @Bean
