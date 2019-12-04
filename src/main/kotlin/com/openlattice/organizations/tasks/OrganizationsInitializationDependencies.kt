@@ -27,7 +27,8 @@ import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.tasks.HazelcastTaskDependencies
 
-data class OrganizationsInitializationDependencies(
+
+data class OrganizationsInitializationDependencies @JvmOverloads constructor(
         val organizationService: HazelcastOrganizationService,
         val spm: SecurePrincipalsManager,
         val configuration: ConductorConfiguration
