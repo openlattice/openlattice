@@ -339,7 +339,6 @@ class BackgroundLinkingIndexingService(
 }
 
 internal const val ENTITY_DATA_KEY = "entity_data_key"
-internal const val KEYS = "keys"
 
 /**
  * Select linking ids, where ALL normal entities are cleared or deleted.
