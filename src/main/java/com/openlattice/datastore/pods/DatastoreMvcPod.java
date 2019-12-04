@@ -40,6 +40,7 @@ import com.openlattice.datastore.search.controllers.SearchController;
 import com.openlattice.datastore.util.DataStoreExceptionHandler;
 import com.openlattice.entitysets.controllers.EntitySetsController;
 import com.openlattice.graph.controllers.GraphController;
+import com.openlattice.organizations.DatasetController;
 import com.openlattice.subscriptions.controllers.FeedsController;
 import com.openlattice.subscriptions.controllers.SubscriptionController;
 import com.openlattice.web.converters.CsvHttpMessageConverter;
@@ -71,7 +72,8 @@ import java.util.List;
                 DataStoreExceptionHandler.class, EntitySetsController.class, AnalysisController.class,
                 RequestsController.class, AppController.class, GraphController.class,
                 PersistentSearchController.class, AdminController.class, AssemblyAnalyzationController.class,
-                SubscriptionController.class, FeedsController.class, CodexController.class, CollectionsController.class
+                SubscriptionController.class, FeedsController.class, CodexController.class, CollectionsController.class,
+                DatasetController.class
         },
         includeFilters = @ComponentScan.Filter(
                 value = { org.springframework.stereotype.Controller.class,

@@ -70,7 +70,10 @@ import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.linking.PostgresLinkingFeedbackService;
 import com.openlattice.linking.graph.PostgresLinkingQueryService;
 import com.openlattice.notifications.sms.PhoneNumberService;
+import com.openlattice.organizations.ExternalDatabaseManagementService;
 import com.openlattice.organizations.HazelcastOrganizationService;
+import com.openlattice.organizations.OrganizationExternalDatabaseConfiguration;
+import com.openlattice.organizations.pods.OrganizationExternalDatabaseConfigurationPod;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.PostgresTableManager;
@@ -103,7 +106,8 @@ import static com.openlattice.datastore.util.Util.returnAndLog;
         Auth0Pod.class,
         ByteBlobServicePod.class,
         AssemblerConfigurationPod.class,
-        TwilioConfigurationPod.class
+        TwilioConfigurationPod.class,
+        OrganizationExternalDatabaseConfigurationPod.class
 } )
 public class DatastoreServicesPod {
 
@@ -142,6 +146,9 @@ public class DatastoreServicesPod {
 
     @Inject
     private HazelcastClientProvider hazelcastClientProvider;
+
+    @Inject
+    private OrganizationExternalDatabaseConfiguration organizationExternalDatabaseConfiguration;
 
     @Bean
     public PostgresUserApi pgUserApi() {
@@ -533,6 +540,18 @@ public class DatastoreServicesPod {
                 entityDatastore(),
                 graphApi()
         );
+    }
+
+    @Bean
+    public ExternalDatabaseManagementService edms() {
+        return new ExternalDatabaseManagementService(
+                hazelcastInstance,
+                assemblerConnectionManager(),
+                principalService(),
+                aclKeyReservationService(),
+                authorizationManager(),
+                organizationExternalDatabaseConfiguration,
+                hikariDataSource);
     }
 
     @PostConstruct
