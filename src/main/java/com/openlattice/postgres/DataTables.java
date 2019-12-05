@@ -44,7 +44,7 @@ public class DataTables {
     public static final PostgresColumnDefinition LAST_WRITE     = new PostgresColumnDefinition(
             LAST_WRITE_FIELD,
             TIMESTAMPTZ )
-            .withDefault( "'-infinity'" )
+            .withDefault( "now()" )
             .notNull();
     public static final  PostgresColumnDefinition READERS        = new PostgresColumnDefinition(
             "readers",
