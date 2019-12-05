@@ -104,8 +104,9 @@ class BackgroundLinkingIndexingService(
             .getQueue<Triple<List<Array<UUID>>, UUID, OffsetDateTime>>(HazelcastQueue.LINKING_UNINDEXING.name)
 
     @Suppress("UNUSED")
-    private val linkingIndexingWorker = executor.submit {
-        generateSequence(indexCandidates::take)
+    @Scheduled(fixedRate = LINKING_INDEX_RATE)
+    fun linkingIndexing() {
+        generateSequence(indexCandidates::poll)
                 .chunked(LINKING_INDEX_SIZE)
                 .asStream()
                 .parallel()
@@ -114,22 +115,25 @@ class BackgroundLinkingIndexingService(
                         return@forEach
                     }
 
-                    val (linkingEntityKeyIdsWithLastWrite, linkingIds) = mapCandidates(candidateBatch)
+                    executor.submit {
+                        val (linkingEntityKeyIdsWithLastWrite, linkingIds) = mapCandidates(candidateBatch)
 
-                    try {
-                        lock(linkingIds)
-                        index(linkingEntityKeyIdsWithLastWrite, linkingIds)
-                    } catch (ex: Exception) {
-                        logger.error("Unable to index linking entity with from batch of linking ids $linkingIds.", ex)
-                    } finally {
-                        unLock(linkingIds)
+                        try {
+                            lock(linkingIds)
+                            index(linkingEntityKeyIdsWithLastWrite, linkingIds)
+                        } catch (ex: Exception) {
+                            logger.error("Unable to index linking entity with from batch of linking ids $linkingIds.", ex)
+                        } finally {
+                            unLock(linkingIds)
+                        }
                     }
                 }
     }
 
     @Suppress("UNUSED")
-    private val linkingUnIndexingWorker = executor.submit {
-        generateSequence(unIndexCandidates::take)
+    @Scheduled(fixedRate = LINKING_INDEX_RATE)
+    fun linkingUnIndexing() {
+        generateSequence(unIndexCandidates::poll)
                 .chunked(LINKING_INDEX_SIZE)
                 .asStream()
                 .parallel()
@@ -138,17 +142,19 @@ class BackgroundLinkingIndexingService(
                         return@forEach
                     }
 
-                    val (linkingEntityKeyIdsWithLastWrite, linkingIds) = mapCandidates(candidateBatch)
+                    executor.submit {
+                        val (linkingEntityKeyIdsWithLastWrite, linkingIds) = mapCandidates(candidateBatch)
 
-                    try {
-                        lock(linkingIds)
-                        unIndex(linkingEntityKeyIdsWithLastWrite, linkingIds)
-                    } catch (ex: Exception) {
-                        logger.error(
-                                "Unable to un-index linking entity with from batch of linking ids $linkingIds.", ex
-                        )
-                    } finally {
-                        unLock(linkingIds)
+                        try {
+                            lock(linkingIds)
+                            unIndex(linkingEntityKeyIdsWithLastWrite, linkingIds)
+                        } catch (ex: Exception) {
+                            logger.error(
+                                    "Unable to un-index linking entity with from batch of linking ids $linkingIds.", ex
+                            )
+                        } finally {
+                            unLock(linkingIds)
+                        }
                     }
                 }
     }
@@ -340,15 +346,22 @@ class BackgroundLinkingIndexingService(
 
 internal const val ENTITY_DATA_KEY = "entity_data_key"
 
+internal val needsLinkingIndexing =
+        // @formatter:off
+        "${LAST_INDEX.name} >= ${LAST_WRITE.name} AND "+
+        "${LAST_LINK.name} >= ${LAST_WRITE.name} AND " +
+        "${LAST_LINK_INDEX.name} < ${LAST_WRITE.name} "
+        // @formatter:on
+
 /**
  * Select linking ids, where ALL normal entities are cleared or deleted.
  */
 internal val selectDeletedLinkingIds =
         // @formatter:off
         "SELECT " +
-                "${LINKING_ID.name}, " +
-                "array_agg(ARRAY[${ENTITY_SET_ID.name}, ${ID.name}]) AS $ENTITY_DATA_KEY, " +
-                "max(${LAST_WRITE.name}) AS ${LAST_WRITE.name} " +
+            "${LINKING_ID.name}, " +
+            "array_agg(ARRAY[${ENTITY_SET_ID.name}, ${ID.name}]) AS $ENTITY_DATA_KEY, " +
+            "max(${LAST_WRITE.name}) AS ${LAST_WRITE.name} " +
         "FROM ${IDS.name} " +
         "WHERE " +
             "${LINKING_ID.name} NOT IN ( " +
@@ -358,7 +371,8 @@ internal val selectDeletedLinkingIds =
                     "${LINKING_ID.name} IS NOT NULL AND " +
                     "${VERSION.name} > 0 " +
                 ") AND " +
-            "${LINKING_ID.name} IS NOT NULL " +
+            "${LINKING_ID.name} IS NOT NULL AND " +
+            needsLinkingIndexing +
         "GROUP BY ${LINKING_ID.name}"
         // @formatter:on
 
@@ -372,7 +386,8 @@ internal const val withAlias = "valid_linking_entities"
 internal val selectDirtyLinkingIds =
         // @formatter:off
         "WITH $withAlias AS " +
-            "(SELECT ${LINKING_ID.name}, " +
+        "(" +
+            "SELECT ${LINKING_ID.name}, " +
                     "${ID.name}, " +
                     "${ENTITY_SET_ID.name}, " +
                     "${LAST_WRITE.name}, " +
@@ -380,35 +395,38 @@ internal val selectDirtyLinkingIds =
                     "${LAST_LINK.name}, " +
                     "${LAST_LINK_INDEX.name} " +
             "FROM ${IDS.name} " +
-            "WHERE ${LINKING_ID.name} IS NOT NULL " +
-                "AND ${VERSION.name} > 0 ) " +
-         "SELECT " +
-                "${LINKING_ID.name}, " +
-                "array_agg(ARRAY[${ENTITY_SET_ID.name}, ${ID.name}]) AS $ENTITY_DATA_KEY, " +
-                "max(${LAST_WRITE.name}) AS ${LAST_WRITE.name} " +
-        "FROM $withAlias " +
-        "WHERE ${LAST_INDEX.name} >= ${LAST_WRITE.name} AND " +
-              "${LAST_LINK.name} >= ${LAST_WRITE.name} AND " +
-              "${LAST_LINK_INDEX.name} < ${LAST_WRITE.name} " +
-        "GROUP BY ${LINKING_ID.name} " +
-        "UNION ALL " +
+            "WHERE " +
+                "${LINKING_ID.name} IS NOT NULL AND " +
+                "${VERSION.name} > 0 " +
+        ") " +
         "SELECT " +
-                "${LINKING_ID.name}, " +
-                "array_agg(ARRAY[${ENTITY_SET_ID.name}, ${ID.name}]) AS $ENTITY_DATA_KEY, " +
-                "max(${LAST_WRITE.name}) AS ${LAST_WRITE.name} " +
+            "${LINKING_ID.name}, " +
+            "array_agg(ARRAY[${ENTITY_SET_ID.name}, ${ID.name}]) AS $ENTITY_DATA_KEY, " +
+            "max(${LAST_WRITE.name}) AS ${LAST_WRITE.name} " +
+        "FROM $withAlias " +
+        "WHERE $needsLinkingIndexing " +
+        "GROUP BY ${LINKING_ID.name} " +
+
+        "UNION ALL " +
+
+        "SELECT " +
+            "${LINKING_ID.name}, " +
+            "array_agg(ARRAY[${ENTITY_SET_ID.name}, ${ID.name}]) AS $ENTITY_DATA_KEY, " +
+            "max(${LAST_WRITE.name}) AS ${LAST_WRITE.name} " +
         "FROM ${IDS.name} " +
-        "WHERE ${LINKING_ID.name} IN " +
-            "( SELECT ${LINKING_ID.name} " +
-                "FROM ${IDS.name} " +
-                "WHERE " +
-                    "${LINKING_ID.name} IS NOT NULL AND " +
-                    "${VERSION.name} <= 0 ) " +
-            "AND ${LINKING_ID.name} IN " +
-                "( SELECT ${LINKING_ID.name} " +
-                  "FROM $withAlias ) " +
-            "AND ${ENTITY_SET_ID.name} IN " +
-                "( SELECT ${ENTITY_SET_ID.name} " +
-                  "FROM $withAlias ) " +
-            "AND ${LINKING_ID.name} IS NOT NULL " +
+        "WHERE " +
+            "${LINKING_ID.name} IS NOT NULL AND " +
+            "${VERSION.name} <= 0 AND " +
+            "$needsLinkingIndexing AND " +
+            "${LINKING_ID.name} IN " +
+                "( " +
+                    "SELECT ${LINKING_ID.name} " +
+                    "FROM $withAlias " +
+                ") AND " +
+            "${ENTITY_SET_ID.name} IN " +
+                "( " +
+                    "SELECT ${ENTITY_SET_ID.name} " +
+                    "FROM $withAlias " +
+                ") " +
         "GROUP BY ${LINKING_ID.name}"
         // @formatter:on
