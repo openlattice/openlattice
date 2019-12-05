@@ -353,6 +353,12 @@ internal val needsLinkingIndexing =
         "${LAST_LINK_INDEX.name} < ${LAST_WRITE.name} "
         // @formatter:on
 
+internal val needsLinkingUnIndexing =
+        // @formatter:off
+        "${LAST_INDEX.name} >= ${LAST_WRITE.name} AND "+
+        "${LAST_LINK_INDEX.name} < ${LAST_WRITE.name} "
+        // @formatter:on
+
 /**
  * Select linking ids, where ALL normal entities are cleared or deleted.
  */
@@ -372,7 +378,7 @@ internal val selectDeletedLinkingIds =
                     "${VERSION.name} > 0 " +
                 ") AND " +
             "${LINKING_ID.name} IS NOT NULL AND " +
-            needsLinkingIndexing +
+            needsLinkingUnIndexing +
         "GROUP BY ${LINKING_ID.name}"
         // @formatter:on
 
@@ -417,7 +423,7 @@ internal val selectDirtyLinkingIds =
         "WHERE " +
             "${LINKING_ID.name} IS NOT NULL AND " +
             "${VERSION.name} <= 0 AND " +
-            "$needsLinkingIndexing AND " +
+            "$needsLinkingUnIndexing AND " +
             "${LINKING_ID.name} IN " +
                 "( " +
                     "SELECT ${LINKING_ID.name} " +
