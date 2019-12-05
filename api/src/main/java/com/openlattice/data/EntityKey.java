@@ -64,7 +64,6 @@ public class EntityKey implements Comparable<EntityKey> {
     }
 
     @Override public int hashCode() {
-
         return Objects.hash( entitySetId, entityId );
     }
 

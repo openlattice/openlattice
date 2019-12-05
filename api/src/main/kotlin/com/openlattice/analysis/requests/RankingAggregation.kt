@@ -23,7 +23,6 @@ package com.openlattice.analysis.requests
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.openlattice.client.serialization.SerializationConstants.NEIGHBOR_AGGREGATIONS
-import com.openlattice.client.serialization.SerializationConstants.SELF_AGGREGATIONS
 
 /**
  * Used to represent a entity neighborhood ranking aggregation request.

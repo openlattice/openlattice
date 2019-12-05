@@ -18,11 +18,11 @@
 
 package com.openlattice.edm.type;
 
-import com.openlattice.client.serialization.SerializationConstants;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
+import com.openlattice.client.serialization.SerializationConstants;
 
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -42,7 +42,7 @@ public class LinkingEntityType {
             @JsonProperty( SerializationConstants.DEIDENTIFIED ) Optional<Boolean> deidentified ) {
         this.linkingEntityType = linkingEntityType;
         this.linkedEntityTypes = linkedEntityTypes;
-        this.deidentified = deidentified.or( true );
+        this.deidentified = deidentified.orElse( true );
     }
 
     @JsonProperty( SerializationConstants.ENTITY_TYPE )

@@ -59,6 +59,7 @@ public interface OrganizationsApi {
     String ROLES             = "/roles";
     String ROLE_ID           = "roleId";
     String ROLE_ID_PATH      = "/{" + ROLE_ID + "}";
+
     String SERVICE           = "/datastore";
     String BASE              = SERVICE + CONTROLLER;
     String SET_ID            = "setId";
