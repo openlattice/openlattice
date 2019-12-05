@@ -22,20 +22,14 @@
 
 package com.openlattice.hazelcast.serializers;
 
-import com.google.common.base.Optional;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
-import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.data.EntityDataKey;
-import com.openlattice.edm.type.EntityType;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import java.io.IOException;
-import java.util.LinkedHashSet;
-import java.util.Set;
 import java.util.UUID;
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
+
 import org.springframework.stereotype.Component;
 
 @Component

@@ -22,6 +22,7 @@
 
 package com.openlattice.hazelcast.serializers;
 
+import com.google.common.collect.Sets;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers;
@@ -49,23 +50,15 @@ public class EntitySetStreamSerializer implements SelfRegisteringStreamSerialize
         out.writeUTF( object.getName() );
         out.writeUTF( object.getTitle() );
         out.writeUTF( object.getDescription() );
-        SetStreamSerializers.serialize( out, object.getContacts(), ObjectDataOutput::writeUTF );
+        SetStreamSerializers.fastStringSetSerialize( out, object.getContacts() );
         SetStreamSerializers.fastUUIDSetSerialize( out, object.getLinkedEntitySets() );
         UUIDStreamSerializer.serialize( out, object.getOrganizationId() );
         out.writeInt( object.getFlags().size() );
         for ( EntitySetFlag flag : object.getFlags() ) {
-            out.writeUTF( flag.toString() );
+            EntitySetFlagStreamSerializer.serialize( out, flag );
         }
 
-        var partitions = new int[ object.getPartitions().size() ];
-        var index = 0;
-        for ( var partition : object.getPartitions() ) {
-            partitions[ index++ ] = partition;
-        }
-
-        out.writeIntArray( partitions );
-
-        out.writeInt( object.getPartitionsVersion() );
+        StreamSerializers.serializeIntList( out, object.getPartitions() );
 
         if ( object.getExpiration() != null ) {
             out.writeBoolean( true );
@@ -86,24 +79,18 @@ public class EntitySetStreamSerializer implements SelfRegisteringStreamSerialize
         String name = in.readUTF();
         String title = in.readUTF();
         String description = in.readUTF();
-        Set<String> contacts = SetStreamSerializers.deserialize( in, ObjectDataInput::readUTF );
+        Set<String> contacts = SetStreamSerializers.fastStringSetDeserialize( in );
         Set<UUID> linkedEntitySets = SetStreamSerializers.fastUUIDSetDeserialize( in );
         UUID organizationId = UUIDStreamSerializer.deserialize( in );
 
         int numFlags = in.readInt();
         EnumSet<EntitySetFlag> flags = EnumSet.noneOf( EntitySetFlag.class );
         for ( int i = 0; i < numFlags; i++ ) {
-            flags.add( EntitySetFlag.valueOf( in.readUTF() ) );
+            flags.add( EntitySetFlagStreamSerializer.deserialize( in ) );
         }
 
-        var partitionsArray = in.readIntArray();
-        var partitions = new LinkedHashSet<Integer>( partitionsArray.length );
-
-        for ( var p : partitionsArray ) {
-            partitions.add( p );
-        }
-
-        int partitionsVersion = in.readInt();
+        LinkedHashSet<Integer> partitions = (LinkedHashSet<Integer>) StreamSerializers
+                .deserializeIntList( in, Sets.newLinkedHashSet() );
 
         DataExpiration expiration;
         boolean hasExpiration = in.readBoolean();
@@ -113,7 +100,7 @@ public class EntitySetStreamSerializer implements SelfRegisteringStreamSerialize
             expiration = null;
         }
 
-        EntitySet es = new EntitySet(
+        return new EntitySet(
                 id,
                 entityTypeId,
                 name,
@@ -124,10 +111,7 @@ public class EntitySetStreamSerializer implements SelfRegisteringStreamSerialize
                 organizationId,
                 flags,
                 partitions,
-                partitionsVersion,
                 expiration );
-
-        return es;
     }
 
     @Override

@@ -15,7 +15,7 @@ class PrincipalSetKryoSerializer:Serializer<PrincipalSet>() {
         output?.writeInt( `object`!!.size )
         `object`!!.forEach {
             output!!.writeInt( it.type.ordinal )
-            output!!.writeString( it.id )
+            output.writeString( it.id )
         }
     }
 

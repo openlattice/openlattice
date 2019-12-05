@@ -13,7 +13,7 @@ class DelegatedUUIDSetKryoSerializer: Serializer<DelegatedUUIDSet>() {
         output?.writeInt( `object`!!.size )
         `object`!!.forEach {
             output!!.writeLong( it.leastSignificantBits )
-            output!!.writeLong( it.mostSignificantBits )
+            output.writeLong( it.mostSignificantBits )
         }
     }
 

@@ -45,10 +45,7 @@ import com.openlattice.edm.set.EntitySetFlag;
 import com.openlattice.edm.set.EntitySetPropertyKey;
 import com.openlattice.edm.set.EntitySetPropertyMetadata;
 import com.openlattice.edm.set.ExpirationBase;
-import com.openlattice.edm.type.Analyzer;
-import com.openlattice.edm.type.AssociationType;
-import com.openlattice.edm.type.EntityType;
-import com.openlattice.edm.type.PropertyType;
+import com.openlattice.edm.type.*;
 import com.openlattice.graph.NeighborhoodQuery;
 import com.openlattice.graph.NeighborhoodSelection;
 import com.openlattice.graph.edge.Edge;
@@ -59,6 +56,8 @@ import com.openlattice.linking.EntityKeyPair;
 import com.openlattice.linking.EntityLinkingFeedback;
 import com.openlattice.notifications.sms.SmsEntitySetInformation;
 import com.openlattice.notifications.sms.SmsInformationKey;
+import com.openlattice.organization.OrganizationExternalDatabaseColumn;
+import com.openlattice.organization.OrganizationExternalDatabaseTable;
 import com.openlattice.organization.OrganizationEntitySetFlag;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.PrincipalSet;
@@ -101,9 +100,11 @@ public final class ResultSetAdapters {
     private static final ObjectMapper                                         mapper               = ObjectMappers
             .newJsonMapper();
     private static final TypeReference<Map<String, Object>>                   alertMetadataTypeRef =
-            new TypeReference<>() {};
+            new TypeReference<>() {
+            };
     private static final TypeReference<LinkedHashSet<CollectionTemplateType>> templateTypeRef      =
-            new TypeReference<>() {};
+            new TypeReference<>() {
+            };
 
     @NotNull
     public static SmsInformationKey smsInformationKey(
@@ -146,11 +147,11 @@ public final class ResultSetAdapters {
     }
 
     public static UUID clusterId( ResultSet rs ) throws SQLException {
-        return ( UUID ) rs.getObject( LINKING_ID_FIELD );
+        return (UUID) rs.getObject( LINKING_ID_FIELD );
     }
 
     public static GraphQueryState graphQueryState( ResultSet rs ) throws SQLException {
-        final UUID queryId = ( UUID ) rs.getObject( QUERY_ID.getName() );
+        final UUID queryId = (UUID) rs.getObject( QUERY_ID.getName() );
         final State state = State.valueOf( rs.getString( STATE.getName() ) );
         final long startTime = rs.getLong( START_TIME.getName() );
         return new GraphQueryState(
@@ -166,14 +167,14 @@ public final class ResultSetAdapters {
     }
 
     public static EntityDataKey srcEntityDataKey( ResultSet rs ) throws SQLException {
-        final UUID srcEntitySetId = ( UUID ) rs.getObject( SRC_ENTITY_SET_ID_FIELD );
-        final UUID srcEntityKeyId = ( UUID ) rs.getObject( SRC_ENTITY_KEY_ID_FIELD );
+        final UUID srcEntitySetId = (UUID) rs.getObject( SRC_ENTITY_SET_ID_FIELD );
+        final UUID srcEntityKeyId = (UUID) rs.getObject( SRC_ENTITY_KEY_ID_FIELD );
         return new EntityDataKey( srcEntitySetId, srcEntityKeyId );
     }
 
     public static EntityDataKey dstEntityDataKey( ResultSet rs ) throws SQLException {
-        final UUID dstEntitySetId = ( UUID ) rs.getObject( DST_ENTITY_SET_ID_FIELD );
-        final UUID dstEntityKeyId = ( UUID ) rs.getObject( DST_ENTITY_KEY_ID_FIELD );
+        final UUID dstEntitySetId = (UUID) rs.getObject( DST_ENTITY_SET_ID_FIELD );
+        final UUID dstEntityKeyId = (UUID) rs.getObject( DST_ENTITY_KEY_ID_FIELD );
         return new EntityDataKey( dstEntitySetId, dstEntityKeyId );
     }
 
@@ -219,7 +220,7 @@ public final class ResultSetAdapters {
     public static Edge edge( ResultSet rs ) throws SQLException {
         DataEdgeKey key = edgeKey( rs );
         long version = rs.getLong( VERSION.getName() );
-        List<Long> versions = Arrays.asList( ( Long[] ) rs.getArray( VERSIONS.getName() ).getArray() );
+        List<Long> versions = Arrays.asList( (Long[]) rs.getArray( VERSIONS.getName() ).getArray() );
 
         return new Edge( key, version, versions );
     }
@@ -242,7 +243,7 @@ public final class ResultSetAdapters {
     }
 
     public static EntityKey entityKey( ResultSet rs ) throws SQLException {
-        UUID entitySetId = ( UUID ) rs.getObject( ENTITY_SET_ID_FIELD );
+        UUID entitySetId = (UUID) rs.getObject( ENTITY_SET_ID_FIELD );
         String entityId = rs.getString( ENTITY_ID_FIELD );
         return new EntityKey( entitySetId, entityId );
     }
@@ -359,7 +360,7 @@ public final class ResultSetAdapters {
     }
 
     public static Set<FullQualifiedName> schemas( ResultSet rs ) throws SQLException {
-        return Arrays.stream( ( String[] ) rs.getArray( SCHEMAS.getName() ).getArray() ).map( FullQualifiedName::new )
+        return Arrays.stream( (String[]) rs.getArray( SCHEMAS.getName() ).getArray() ).map( FullQualifiedName::new )
                 .collect( Collectors.toSet() );
     }
 
@@ -396,7 +397,7 @@ public final class ResultSetAdapters {
     }
 
     public static LinkedHashSet<UUID> linkedHashSetUUID( ResultSet rs, String colName ) throws SQLException {
-        return Arrays.stream( ( UUID[] ) rs.getArray( colName ).getArray() )
+        return Arrays.stream( (UUID[]) rs.getArray( colName ).getArray() )
                 .collect( Collectors.toCollection( LinkedHashSet::new ) );
     }
 
@@ -425,7 +426,7 @@ public final class ResultSetAdapters {
     }
 
     public static Set<String> contacts( ResultSet rs ) throws SQLException {
-        return Sets.newHashSet( ( String[] ) rs.getArray( CONTACTS.getName() ).getArray() );
+        return Sets.newHashSet( (String[]) rs.getArray( CONTACTS.getName() ).getArray() );
     }
 
     public static LinkedHashSet<UUID> src( ResultSet rs ) throws SQLException {
@@ -453,7 +454,7 @@ public final class ResultSetAdapters {
     }
 
     public static LinkedHashSet<String> members( ResultSet rs ) throws SQLException {
-        return Arrays.stream( ( String[] ) rs.getArray( MEMBERS.getName() ).getArray() )
+        return Arrays.stream( (String[]) rs.getArray( MEMBERS.getName() ).getArray() )
                 .collect( Collectors
                         .toCollection( LinkedHashSet::new ) );
     }
@@ -475,7 +476,7 @@ public final class ResultSetAdapters {
     }
 
     public static Set<UUID> entityKeyIds( ResultSet rs ) throws SQLException {
-        return Sets.newHashSet( ( UUID[] ) rs.getArray( ENTITY_KEY_IDS_COL.getName() ).getArray() );
+        return Sets.newHashSet( (UUID[]) rs.getArray( ENTITY_KEY_IDS_COL.getName() ).getArray() );
     }
 
     public static UUID securableObjectId( ResultSet rs ) throws SQLException {
@@ -484,6 +485,10 @@ public final class ResultSetAdapters {
 
     public static UUID organizationId( ResultSet rs ) throws SQLException {
         return rs.getObject( ORGANIZATION_ID.getName(), UUID.class );
+    }
+
+    public static UUID tableId( ResultSet rs ) throws SQLException {
+        return rs.getObject( TABLE_ID.getName(), UUID.class );
     }
 
     public static String nullableTitle( ResultSet rs ) throws SQLException {
@@ -576,7 +581,6 @@ public final class ResultSetAdapters {
         final var organization = rs.getObject( ORGANIZATION_ID_FIELD, UUID.class );
         final var flags = entitySetFlags( rs );
         final var partitions = partitions( rs );
-        final var partitionVersion = partitionVersions( rs );
         final var expirationData = dataExpiration( rs );
         return new EntitySet( id,
                 entityTypeId,
@@ -588,12 +592,7 @@ public final class ResultSetAdapters {
                 organization,
                 flags,
                 new LinkedHashSet<>( Arrays.asList( partitions ) ),
-                partitionVersion,
                 expirationData );
-    }
-
-    public static int partitionVersions( ResultSet rs ) throws SQLException {
-        return rs.getInt( PARTITIONS_VERSION_FIELD );
     }
 
     public static Integer[] partitions( ResultSet rs ) throws SQLException {
@@ -609,9 +608,9 @@ public final class ResultSetAdapters {
         final var deleteType = deleteType( rs );
         final var startDateProperty = startDateProperty( rs );
         return new DataExpiration( timeToExpiration,
-                    expirationBase,
-                    deleteType,
-                    Optional.ofNullable( startDateProperty ) );
+                expirationBase,
+                deleteType,
+                Optional.ofNullable( startDateProperty ) );
     }
 
     public static Long timeToExpiration( ResultSet rs ) throws SQLException {
@@ -626,7 +625,7 @@ public final class ResultSetAdapters {
 
     public static DeleteType deleteType( ResultSet rs ) throws SQLException {
         String deleteType = rs.getString( EXPIRATION_DELETE_FLAG_FIELD );
-        if ( deleteType != null) { return DeleteType.valueOf( deleteType ); }
+        if ( deleteType != null ) { return DeleteType.valueOf( deleteType ); }
         return null;
     }
 
@@ -640,6 +639,22 @@ public final class ResultSetAdapters {
         boolean bidirectional = bidirectional( rs );
 
         return new AssociationType( Optional.empty(), src, dst, bidirectional );
+    }
+
+    public static EntityTypePropertyMetadata entityTypePropertyMetadata( ResultSet rs ) throws SQLException {
+        String title = title( rs );
+        String description = description( rs );
+        boolean show = show( rs );
+        LinkedHashSet<String> tags = new LinkedHashSet<>( Arrays
+                .asList( PostgresArrays.getTextArray( rs, PostgresColumn.TAGS_FIELD ) ) );
+
+        return new EntityTypePropertyMetadata( title, description, tags, show );
+    }
+
+    public static EntityTypePropertyKey entityTypePropertyKey( ResultSet rs ) throws SQLException {
+        UUID entitySetId = entitySetId( rs );
+        UUID propertyTypeId = propertyTypeId( rs );
+        return new EntityTypePropertyKey( entitySetId, propertyTypeId );
     }
 
     public static EntitySetPropertyMetadata entitySetPropertyMetadata( ResultSet rs ) throws SQLException {
@@ -681,7 +696,7 @@ public final class ResultSetAdapters {
         if ( usersArray == null ) {
             return PrincipalSet.wrap( ImmutableSet.of() );
         }
-        Stream<String> users = Arrays.stream( ( String[] ) usersArray.getArray() );
+        Stream<String> users = Arrays.stream( (String[]) usersArray.getArray() );
         return PrincipalSet
                 .wrap( users.map( user -> new Principal( PrincipalType.USER, user ) ).collect( Collectors.toSet() ) );
     }
@@ -719,7 +734,7 @@ public final class ResultSetAdapters {
     }
 
     public static UUID linkingId( ResultSet rs ) throws SQLException {
-        return ( UUID ) rs.getObject( LINKING_ID.getName() );
+        return (UUID) rs.getObject( LINKING_ID.getName() );
     }
 
     public static OffsetDateTime lastWriteTyped( ResultSet rs ) throws SQLException {
@@ -727,7 +742,7 @@ public final class ResultSetAdapters {
     }
 
     public static Boolean linking( ResultSet rs ) throws SQLException {
-        return ( Boolean ) rs.getObject( LINKING.getName() );
+        return (Boolean) rs.getObject( LINKING.getName() );
     }
 
     public static LinkedHashSet<UUID> linkedEntitySets( ResultSet rs ) throws SQLException {
@@ -735,9 +750,9 @@ public final class ResultSetAdapters {
     }
 
     public static PropertyUsageSummary propertyUsageSummary( ResultSet rs ) throws SQLException {
-        UUID entityTypeID = ( UUID ) rs.getObject( ENTITY_TYPE_ID_FIELD );
+        UUID entityTypeID = (UUID) rs.getObject( ENTITY_TYPE_ID_FIELD );
         String entitySetName = rs.getString( ENTITY_SET_NAME_FIELD );
-        UUID entitySetId = ( UUID ) rs.getObject( ENTITY_SET_ID_FIELD );
+        UUID entitySetId = (UUID) rs.getObject( ENTITY_SET_ID_FIELD );
         long count = count( rs );
         return new PropertyUsageSummary( entityTypeID, entitySetName, entitySetId, count );
     }
@@ -830,11 +845,7 @@ public final class ResultSetAdapters {
     }
 
     private static UUID[] readNullableUuidArray( UUID[] nullable ) {
-        if ( nullable == null ) {
-            return new UUID[0];
-        } else {
-            return nullable;
-        }
+        return Objects.requireNonNullElseGet( nullable, () -> new UUID[ 0 ] );
     }
 
     public static UUID auditEdgeEntitySetId( ResultSet rs ) throws SQLException {
@@ -924,7 +935,89 @@ public final class ResultSetAdapters {
         return new CollectionTemplateKey( entitySetCollectionId, templateTypeId );
     }
 
+    public static OrganizationExternalDatabaseTable organizationExternalDatabaseTable( ResultSet rs )
+            throws SQLException {
+        UUID id = id( rs );
+        String name = name( rs );
+        String title = title( rs );
+        Optional<String> description = Optional.ofNullable( description( ( rs ) ) );
+        UUID organizationId = organizationId( rs );
+
+        return new OrganizationExternalDatabaseTable( id, name, title, description, organizationId );
+    }
+
+    public static OrganizationExternalDatabaseColumn organizationExternalDatabaseColumn( ResultSet rs )
+            throws SQLException {
+        UUID id = id( rs );
+        String name = name( rs );
+        String title = title( rs );
+        Optional<String> description = Optional.ofNullable( description( ( rs ) ) );
+        UUID tableId = tableId( rs );
+        UUID organizationId = organizationId( rs );
+        PostgresDatatype dataType = sqlDataType( rs );
+        Boolean isPrimaryKey = rs.getBoolean( IS_PRIMARY_KEY.getName() );
+        Integer ordinalPosition = ordinalPosition( rs );
+
+        return new OrganizationExternalDatabaseColumn( id,
+                name,
+                title,
+                description,
+                tableId,
+                organizationId,
+                dataType,
+                isPrimaryKey,
+                ordinalPosition );
+    }
+
+    public static String columnName( ResultSet rs ) throws SQLException {
+        return rs.getString( COLUMN_NAME.getName() );
+    }
+
+    public static PostgresDatatype sqlDataType( ResultSet rs ) throws SQLException {
+        String dataType =  rs.getString( DATATYPE.getName() ).toUpperCase();
+        return PostgresDatatype.valueOf( dataType );
+    }
+
+    public static Integer ordinalPosition( ResultSet rs ) throws SQLException {
+        return rs.getInt( ORDINAL_POSITION.getName() );
+    }
+
+    public static String constraintType( ResultSet rs ) throws SQLException {
+        return rs.getString( CONSTRAINT_TYPE.getName() );
+    }
+
+    public static String privilegeType( ResultSet rs ) throws SQLException {
+        return rs.getString( PRIVILEGE_TYPE.getName() );
+    }
+
+    public static String user( ResultSet rs ) throws SQLException {
+        return rs.getString( USER.getName() );
+    }
+
     public static UUID originId( ResultSet rs ) throws SQLException {
         return rs.getObject( ORIGIN_ID.getName(), UUID.class );
     }
+
+    public static PostgresAuthenticationRecord postgresAuthenticationRecord( ResultSet rs ) throws SQLException {
+        PostgresConnectionType connectionType = connectionType( rs );
+        String database = rs.getString( DATABASE.getName() );
+        String userId = rs.getString( USERNAME.getName() );
+        String ipAddress = rs.getString( IP_ADDRESS.getName() );
+        String authorizationMethod = rs.getString( AUTHENTICATION_METHOD.getName() );
+        return new PostgresAuthenticationRecord( connectionType,
+                database,
+                userId,
+                ipAddress,
+                authorizationMethod );
+    }
+
+    public static String username(ResultSet rs) throws SQLException {
+        return rs.getString( USERNAME.getName() );
+    }
+
+    public static PostgresConnectionType connectionType(ResultSet rs) throws SQLException {
+        String connectionType = rs.getString( CONNECTION_TYPE.getName() );
+        return PostgresConnectionType.valueOf(connectionType);
+    }
+
 }

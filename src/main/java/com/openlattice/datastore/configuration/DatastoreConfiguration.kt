@@ -1,7 +1,7 @@
 package com.openlattice.datastore.configuration
 
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.kryptnostic.rhizome.configuration.Configuration;
+import com.kryptnostic.rhizome.configuration.Configuration
 import com.kryptnostic.rhizome.configuration.ConfigurationKey
 import com.kryptnostic.rhizome.configuration.SimpleConfigurationKey
 import com.kryptnostic.rhizome.configuration.annotation.ReloadableConfiguration
@@ -18,7 +18,8 @@ data class DatastoreConfiguration(
         @JsonProperty(REGION_NAME) val regionName: String,
         @JsonProperty(TIME_TO_LIVE) val timeToLive: Long,
         @JsonProperty(ACCESS_KEY_ID) val accessKeyId: String,
-        @JsonProperty(SECRET_ACCESS_KEY) val secretAccessKey: String): Configuration {
+        @JsonProperty(SECRET_ACCESS_KEY) val secretAccessKey: String
+) : Configuration {
 
     companion object {
         @JvmStatic
@@ -27,6 +28,6 @@ data class DatastoreConfiguration(
     }
 
     override fun getKey(): ConfigurationKey {
-        return key
+        return DatastoreConfiguration.key
     }
 }

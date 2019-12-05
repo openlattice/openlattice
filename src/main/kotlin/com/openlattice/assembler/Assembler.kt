@@ -569,7 +569,7 @@ class Assembler(
 
     private fun createOrUpdateProductionViewOfEntitySet(entitySetId: UUID) {
         val entitySet = entitySets.getValue(entitySetId)
-        val entitySetPartitions = partitionManager.getEntitySetPartitionsInfo(entitySetId).partitions
+        val entitySetPartitions = partitionManager.getEntitySetPartitions(entitySetId)
         val authorizedPropertyTypes = propertyTypes
                 .getAll(entityTypes.getValue(entitySets.getValue(entitySetId).entityTypeId).properties)
                 .filter { it.key != IdConstants.ID_ID.id } //filter out @id

@@ -28,6 +28,8 @@ import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
+
+import java.io.DataInput;
 import java.io.IOException;
 import java.util.Set;
 import org.springframework.stereotype.Component;
@@ -37,16 +39,12 @@ public class EmailDomainsMergerStreamSerializer implements SelfRegisteringStream
 
     @Override
     public void write( ObjectDataOutput out, EmailDomainsMerger object ) throws IOException {
-        SetStreamSerializers.serialize( out, object.getBackingCollection(), ( String emailDomain ) -> {
-            out.writeUTF( emailDomain );
-        } );
+        SetStreamSerializers.serialize( out, object.getBackingCollection(), out::writeUTF );
     }
 
     @Override
     public EmailDomainsMerger read( ObjectDataInput in ) throws IOException {
-        Set<String> emailDomains = SetStreamSerializers.deserialize( in, ( ObjectDataInput dataInput ) -> {
-            return dataInput.readUTF();
-        } );
+        Set<String> emailDomains = SetStreamSerializers.deserialize( in, DataInput::readUTF );
         return new EmailDomainsMerger( emailDomains );
     }
 

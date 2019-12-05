@@ -2,9 +2,6 @@ package com.openlattice.graph.processing.processors
 
 import com.openlattice.analysis.requests.ValueFilter
 import org.apache.olingo.commons.api.edm.FullQualifiedName
-import org.springframework.transaction.annotation.Propagation
-import java.time.OffsetDateTime
-import java.util.*
 
 interface GraphProcessor {
     /**

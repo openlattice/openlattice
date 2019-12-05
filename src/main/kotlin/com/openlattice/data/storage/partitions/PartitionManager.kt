@@ -20,7 +20,6 @@ import com.zaxxer.hikari.HikariDataSource
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import java.util.*
-import java.util.function.Consumer
 
 const val DEFAULT_PARTITION_COUNT = 2
 
@@ -80,15 +79,15 @@ class PartitionManager @JvmOverloads constructor(
         return organizations.executeOnKey(organizationId, OrganizationReadEntryProcessor { it.partitions }) as List<Int>
     }
 
-    fun getEntitySetPartitionsInfo(entitySetId: UUID): PartitionsInfo {
+    fun getEntitySetPartitions(entitySetId: UUID): Set<Int> {
         //TODO: Consider doing this using an entry processor
         val entitySet = entitySets.getValue(entitySetId)
-        return PartitionsInfo(entitySet.partitions, entitySet.partitionsVersion)
+        return entitySet.partitions
     }
 
-    fun getEntitySetsPartitionsInfo(entitySetIds: Set<UUID>): Map<UUID, PartitionsInfo> {
+    fun getPartitionsByEntitySetId(entitySetIds: Set<UUID>): Map<UUID, Set<Int>> {
         val entitySets = entitySets.getAll(entitySetIds).values
-        return entitySets.map { it.id to PartitionsInfo(it.partitions, it.partitionsVersion) }.toMap()
+        return entitySets.map { it.id to it.partitions }.toMap()
     }
 
     /**

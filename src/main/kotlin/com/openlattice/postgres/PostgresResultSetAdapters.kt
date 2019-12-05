@@ -2,15 +2,13 @@ package com.openlattice.postgres
 
 import com.dataloom.mappers.ObjectMappers
 import com.fasterxml.jackson.module.kotlin.readValue
-import com.openlattice.IdConstants
+import com.openlattice.IdConstants.LAST_WRITE_ID
 import com.openlattice.data.storage.ByteBlobDataManager
 import com.openlattice.data.storage.MetadataOption
 import com.openlattice.data.storage.PROPERTIES
 import com.openlattice.data.storage.VALUE
 import com.openlattice.edm.EdmConstants.Companion.ID_FQN
 import com.openlattice.edm.EdmConstants.Companion.LAST_WRITE_FQN
-import com.openlattice.IdConstants.LAST_WRITE_ID
-import com.openlattice.postgres.PostgresMetaDataProperties.LAST_WRITE
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.ResultSetAdapters.*
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
@@ -168,6 +166,7 @@ fun readJsonDataColumnsWithId(
     detailedEntity.forEach { (propertyTypeId, details) ->
         // only select properties which are authorized
         if (propertyTypes.keys.contains(propertyTypeId)) {
+            val lastWrite = lastWriteTyped(rs)
             details.forEach { entityDetail ->
                 val originId = UUID.fromString(entityDetail[PostgresColumn.ID_VALUE.name] as String)
                 val propertyValue = entityDetail.getValue(VALUE)
@@ -179,7 +178,6 @@ fun readJsonDataColumnsWithId(
                 }
 
                 if (metadataOptions.contains(MetadataOption.LAST_WRITE)) {
-                    val lastWrite = entityDetail[LAST_WRITE.name] as OffsetDateTime
                     entities.getValue(originId)[LAST_WRITE_ID.id] = mutableSetOf<Any>(lastWrite)
                 }
             }

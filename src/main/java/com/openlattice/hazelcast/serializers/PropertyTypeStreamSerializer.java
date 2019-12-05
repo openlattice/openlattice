@@ -82,7 +82,7 @@ public class PropertyTypeStreamSerializer implements SelfRegisteringStreamSerial
         String title = in.readUTF();
         Optional<String> description = Optional.of( in.readUTF() );
         Set<FullQualifiedName> schemas = SetStreamSerializers.deserialize( in,
-                ( ObjectDataInput dataInput ) -> FullQualifiedNameStreamSerializer.deserialize( dataInput ) );
+                FullQualifiedNameStreamSerializer::deserialize );
         EdmPrimitiveTypeKind datatype = edmTypes[ in.readInt() ];
         Optional<Boolean> piiField = Optional.of( in.readBoolean() );
         Optional<Analyzer> analyzer = Optional.of( analyzers[ in.readInt() ] );

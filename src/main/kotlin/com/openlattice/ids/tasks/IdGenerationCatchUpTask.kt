@@ -21,7 +21,6 @@
 
 package com.openlattice.ids.tasks
 
-import com.openlattice.ids.IdCatchupEntryProcessor
 import com.openlattice.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.Task
 
