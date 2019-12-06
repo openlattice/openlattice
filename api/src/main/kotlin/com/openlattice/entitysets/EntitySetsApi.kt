@@ -44,7 +44,8 @@ interface EntitySetsApi {
         const val ID = "id"
         const val ID_PATH = "/{$ID}"
 
-
+        const val BY_ID_PATH = "/by-id"
+        const val BY_NAME_PATH = "/by-name"
         const val IDS_PATH = "/ids"
 
         const val NAME = "name"
@@ -110,6 +111,12 @@ interface EntitySetsApi {
      */
     @GET(BASE + ALL + ID_PATH)
     fun getEntitySet(@Path(ID) entitySetId: UUID): EntitySet
+
+    @POST(BASE + BY_ID_PATH)
+    fun getEntitySetsById(@Body entitySetIds: Set<UUID>): Map<UUID, EntitySet>
+
+    @POST(BASE + BY_NAME_PATH)
+    fun getEntitySetsByName(@Body entitySetNames: Set<String>): Map<String, EntitySet>
 
     @POST(BASE + ALL + METADATA_PATH)
     fun getPropertyMetadataForEntitySets(@Body entitySetIds: Set<UUID>): Map<UUID, Map<UUID, EntitySetPropertyMetadata>>
