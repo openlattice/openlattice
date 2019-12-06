@@ -324,10 +324,12 @@ class BackgroundLinkingService
      * @return Null if locked, expiration in millis otherwise.
      */
     private fun lockOrGetExpiration(candidate: EntityDataKey): Long? {
-        return linkingLocks.putIfAbsent(
-                candidate,
-                Instant.now().plusMillis(LINKING_BATCH_TIMEOUT_MILLIS).toEpochMilli()
-        )
+            return linkingLocks.putIfAbsent(
+                    candidate,
+                    Instant.now().plusMillis(LINKING_BATCH_TIMEOUT_MILLIS).toEpochMilli(),
+                    LINKING_BATCH_TIMEOUT_MILLIS,
+                    TimeUnit.MILLISECONDS
+            )
     }
 
     /**
@@ -337,7 +339,7 @@ class BackgroundLinkingService
         try {
             linkingLocks.lock(candidate)
 
-            return linkingLocks.set(
+            linkingLocks.set(
                     candidate,
                     Instant.now().plusMillis(LINKING_BATCH_TIMEOUT_MILLIS).toEpochMilli()
             )
