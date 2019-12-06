@@ -70,7 +70,13 @@ fun getEntityPropertiesByEntitySetIdOriginIdAndPropertyTypeId(
     val entitySetId = entitySetId(rs)
     val propertyTypes = authorizedPropertyTypes.getValue(entitySetId)
 
-    val entities = readJsonDataColumnsWithId(rs, propertyTypes, byteBlobDataManager, metadataOptions)
+    val lastWrite = if (metadataOptions.contains(MetadataOption.LAST_WRITE)) {
+        Optional.of(lastWriteTyped(rs))
+    } else {
+        Optional.empty()
+    }
+
+    val entities = readJsonDataColumnsWithId(rs, propertyTypes, byteBlobDataManager, lastWrite)
 
     return id to (entitySetId to entities)
 }
@@ -90,7 +96,13 @@ fun getEntityPropertiesByEntitySetIdOriginIdAndPropertyTypeFqn(
     val entitySetId = entitySetId(rs)
     val propertyTypes = authorizedPropertyTypes.getValue(entitySetId)
 
-    val entities = readJsonDataColumnsWithId(rs, propertyTypes, byteBlobDataManager, metadataOptions)
+    val lastWrite = if (metadataOptions.contains(MetadataOption.LAST_WRITE)) {
+        Optional.of(lastWriteTyped(rs))
+    } else {
+        Optional.empty()
+    }
+
+    val entities = readJsonDataColumnsWithId(rs, propertyTypes, byteBlobDataManager, lastWrite)
 
     val entityByFqn = entities.mapValues { (_, propertyValues) ->
         propertyValues.mapKeys {
@@ -157,16 +169,17 @@ fun readJsonDataColumnsWithId(
         rs: ResultSet,
         propertyTypes: Map<UUID, PropertyType>,
         byteBlobDataManager: ByteBlobDataManager,
-        metadataOptions: Set<MetadataOption>
+        lastWrite: Optional<OffsetDateTime>
 ): MutableMap<UUID, MutableMap<UUID, MutableSet<Any>>> {
+    val lastWriteIncluded = lastWrite.isPresent
 
     val detailedEntity = mapper.readValue<MutableMap<UUID, MutableSet<MutableMap<String, Any>>>>(rs.getString(PROPERTIES))
-    // origin id -> property type id -> values
-    val entities = mutableMapOf<UUID, MutableMap<UUID, MutableSet<Any>>>()
+
+    val entities = mutableMapOf<UUID, MutableMap<UUID, MutableSet<Any>>>() // origin id -> property type id -> values
     detailedEntity.forEach { (propertyTypeId, details) ->
         // only select properties which are authorized
         if (propertyTypes.keys.contains(propertyTypeId)) {
-            val lastWrite = lastWriteTyped(rs)
+
             details.forEach { entityDetail ->
                 val originId = UUID.fromString(entityDetail[PostgresColumn.ID_VALUE.name] as String)
                 val propertyValue = entityDetail.getValue(VALUE)
@@ -177,8 +190,8 @@ fun readJsonDataColumnsWithId(
                     entities.getValue(originId)[propertyTypeId] = mutableSetOf(propertyValue)
                 }
 
-                if (metadataOptions.contains(MetadataOption.LAST_WRITE)) {
-                    entities.getValue(originId)[LAST_WRITE_ID.id] = mutableSetOf<Any>(lastWrite)
+                if (lastWriteIncluded) {
+                    entities.getValue(originId)[LAST_WRITE_ID.id] = mutableSetOf<Any>(lastWrite.get())
                 }
             }
         }
