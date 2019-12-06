@@ -198,9 +198,10 @@ constructor(
     @RequestMapping(
             path = [BY_ID_PATH],
             method = [RequestMethod.POST],
+            consumes = [MediaType.APPLICATION_JSON_VALUE],
             produces = [MediaType.APPLICATION_JSON_VALUE]
     )
-    override fun getEntitySetsById(entitySetIds: Set<UUID>): Map<UUID, EntitySet> {
+    override fun getEntitySetsById(@RequestBody entitySetIds: Set<UUID>): Map<UUID, EntitySet> {
 
         entitySetIds.forEach { entitySetId -> ensureReadAccess(AclKey(entitySetId)) }
 
@@ -229,9 +230,10 @@ constructor(
     @RequestMapping(
             path = [BY_NAME_PATH],
             method = [RequestMethod.POST],
+            consumes = [MediaType.APPLICATION_JSON_VALUE],
             produces = [MediaType.APPLICATION_JSON_VALUE]
     )
-    override fun getEntitySetsByName(entitySetNames: Set<String>): Map<String, EntitySet> {
+    override fun getEntitySetsByName(@RequestBody entitySetNames: Set<String>): Map<String, EntitySet> {
 
         val entitySetIds = edmManager.getAclKeyIds(entitySetNames).values.toSet()
         entitySetIds.forEach { entitySetId -> ensureReadAccess(AclKey(entitySetId)) }
