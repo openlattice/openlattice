@@ -105,7 +105,7 @@ class BackgroundLinkingService
                         .asSequence()
                         .filter { linkableTypes.contains(it.entityTypeId) }
                         .flatMap { es ->
-                            lqs.getEntitiesNeedingLinking(es.id, 2 * configuration.loadSize)
+                            val forLinking = lqs.getEntitiesNeedingLinking(es.id, 2 * configuration.loadSize)
                                     .asSequence()
                                     .filter {
                                         val expiration = lockOrGetExpiration(it)
@@ -117,7 +117,8 @@ class BackgroundLinkingService
                                             true
                                         } else expiration == null
                                     }
-
+                            logger.info("Entities needing linking: {}", forLinking)
+                            forLinking
                         }
                         .chunked(configuration.loadSize)
                         .forEach { keys ->
