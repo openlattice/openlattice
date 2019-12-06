@@ -57,7 +57,8 @@ data class LinkingConfiguration(
         @JsonProperty(BATCH_SIZE) val batchSize: Int = 10,
         @JsonProperty(LOAD_SIZE) val loadSize: Int = 100,
         @JsonProperty(BACKGROUND_LINKING_ENABLED) val backgroundLinkingEnabled: Boolean = true,
-        @JsonProperty(ENTITY_TYPES_FIELD) private val entityTypesFqns: Set<String> = DEFAULT_ENTITY_TYPES
+        @JsonProperty(ENTITY_TYPES_FIELD) private val entityTypesFqns: Set<String> = DEFAULT_ENTITY_TYPES,
+        @JsonProperty("parallelism") val parallelism : Int = Runtime.getRuntime().availableProcessors()
 ) : Configuration {
     companion object {
         @JvmStatic
