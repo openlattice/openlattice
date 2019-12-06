@@ -205,8 +205,10 @@ constructor(
         entitySetIds.forEach { entitySetId -> ensureReadAccess(AclKey(entitySetId)) }
 
         val entitySets = entitySetManager.getEntitySetsAsMap(entitySetIds)
+
         val now = OffsetDateTime.now()
-        entitySets.forEach { (entitySetId: UUID) -> recordEvent(
+        val events = Lists.newArrayList<AuditableEvent>()
+        entitySets.forEach { (entitySetId: UUID) -> events.add(
                 AuditableEvent(
                         getCurrentUserId(),
                         AclKey(entitySetId),
@@ -218,6 +220,7 @@ constructor(
                         Optional.empty()
                 )
         )}
+        recordEvents(events)
 
         return entitySets
     }
@@ -234,7 +237,9 @@ constructor(
         entitySetIds.forEach { entitySetId -> ensureReadAccess(AclKey(entitySetId)) }
 
         val entitySets = entitySetManager.getEntitySetsAsMap(entitySetIds)
+
         val now = OffsetDateTime.now()
+        val events = Lists.newArrayList<AuditableEvent>()
         entitySets.forEach { (entitySetId: UUID) -> recordEvent(
                 AuditableEvent(
                         getCurrentUserId(),
@@ -247,6 +252,7 @@ constructor(
                         Optional.empty()
                 )
         )}
+        recordEvents(events)
 
         return entitySets.mapKeys { entry -> entry.value.name }
     }
