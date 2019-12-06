@@ -1699,6 +1699,47 @@ paths:
             application/json:
               schema:
                 type: integer
+  /datastore/data/set/{entitySetId}/detailed:
+    post:
+      summary: Loads a linked entity set breakdown with the selected linked entities and properties.
+      operationId: loadLinkedEntitySetBreakdown
+      parameters:
+        - name: linkedEntitySetId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/entitySetSelection"
+      tags:
+        - data
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: "Success"
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+                  additionalProperties:
+                    type: object
+                    additionalProperties:
+                      type: object
+                      additionalProperties:
+                        type: array
+                        items:
+                          type: object
   /datastore/data/{entitySetId}/{entityKeyId}:
     get:
       summary: Loads a single entity by its entityKeyId and entitySetId
@@ -1732,8 +1773,8 @@ paths:
                   type: array
                   items:
                     type: string
-      
-    
+
+
 
   ############################
   ## DATA INTEGRATIONS APIs ##
