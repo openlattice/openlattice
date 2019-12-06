@@ -82,8 +82,12 @@ class BackgroundLinkingService
     private val enqueuer = executor.submit {
         try {
             while (true) {
-                logger.info("Starting to queue linking candidates from all entity sets.")
-                pgEdmManager.allEntitySets
+                //TODO: Switch to unlimited entity sets
+
+                val ess = entitySets.values
+
+                logger.info("Starting to queue linking candidates from entity sets {}", ess)
+                ess
                         .asSequence()
                         .filter { linkableTypes.contains(it.entityTypeId) }
                         .flatMap { es ->
