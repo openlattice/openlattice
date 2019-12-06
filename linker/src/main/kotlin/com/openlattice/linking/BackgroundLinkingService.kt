@@ -128,8 +128,9 @@ class BackgroundLinkingService
                         }
                         .chunked(configuration.loadSize)
                         .forEach { keys ->
-                            logger.info(
-                                    "Queuing entities needing linking {} from ({}).",
+                            candidates.addAll(keys)
+                            logger.debug(
+                                    "Queued entities needing linking {} from ({}).",
                                     keys,
                                     entitySets.getAll(keys.map { it.entitySetId }.toSet()).values.map { it.name }
                             )
