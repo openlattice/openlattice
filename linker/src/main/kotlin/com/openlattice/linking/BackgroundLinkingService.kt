@@ -111,6 +111,7 @@ class BackgroundLinkingService
                                         val expiration = lockOrGetExpiration(it)
                                         logger.info("Considering candidate {} with expiration {}", it, expiration)
                                         if (expiration != null && Instant.now().toEpochMilli() > expiration) {
+                                            logger.info("Refreshing expiration for {}", it )
                                             //Assume original lock holder died, probably somewhat unsafe
                                             refreshExpiration(it)
                                             true
