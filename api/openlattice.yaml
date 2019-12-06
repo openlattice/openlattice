@@ -1699,7 +1699,7 @@ paths:
             application/json:
               schema:
                 type: integer
-  /datastore/data/set/{entitySetId}/detailed:
+  /datastore/data/set/{linkedEntitySetId}/detailed:
     post:
       summary: Loads a linked entity set breakdown with the selected linked entities and properties.
       operationId: loadLinkedEntitySetBreakdown
@@ -1739,7 +1739,7 @@ paths:
                       additionalProperties:
                         type: array
                         items:
-                          type: object
+                          type: string
   /datastore/data/{entitySetId}/{entityKeyId}:
     get:
       summary: Loads a single entity by its entityKeyId and entitySetId
