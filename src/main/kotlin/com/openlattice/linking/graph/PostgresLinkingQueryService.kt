@@ -56,7 +56,7 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource, private val
         connection.autoCommit = false
 
         val psLocks = connection.prepareStatement(LOCK_CLUSTERS_SQL)
-        clusters.forEach {
+        clusters.toSortedSet().forEach {
             psLocks.setObject(1, it)
             psLocks.addBatch()
         }
