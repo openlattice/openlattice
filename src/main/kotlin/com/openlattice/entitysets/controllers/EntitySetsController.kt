@@ -205,15 +205,16 @@ constructor(
         entitySetIds.forEach { entitySetId -> ensureReadAccess(AclKey(entitySetId)) }
 
         val entitySets = entitySetManager.getEntitySetsAsMap(entitySetIds)
+        val now = OffsetDateTime.now()
         entitySets.forEach { (entitySetId: UUID) -> recordEvent(
                 AuditableEvent(
                         getCurrentUserId(),
                         AclKey(entitySetId),
                         AuditEventType.READ_ENTITY_SET,
-                        "Entity set read through EntitySetApi.getEntitySetsById",
+                        "EntitySet read through EntitySetApi.getEntitySetsById",
                         Optional.empty(),
                         ImmutableMap.of(),
-                        OffsetDateTime.now(),
+                        now,
                         Optional.empty()
                 )
         )}
@@ -233,15 +234,16 @@ constructor(
         entitySetIds.forEach { entitySetId -> ensureReadAccess(AclKey(entitySetId)) }
 
         val entitySets = entitySetManager.getEntitySetsAsMap(entitySetIds)
+        val now = OffsetDateTime.now()
         entitySets.forEach { (entitySetId: UUID) -> recordEvent(
                 AuditableEvent(
                         getCurrentUserId(),
                         AclKey(entitySetId),
                         AuditEventType.READ_ENTITY_SET,
-                        "Entity set read through EntitySetApi.getEntitySetsByName",
+                        "EntitySet read through EntitySetApi.getEntitySetsByName",
                         Optional.empty(),
                         ImmutableMap.of(),
-                        OffsetDateTime.now(),
+                        now,
                         Optional.empty()
                 )
         )}
