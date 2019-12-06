@@ -79,6 +79,7 @@ class BackgroundLinkingService
     private val entitySets = hazelcastInstance.getMap<UUID, EntitySet>(HazelcastMap.ENTITY_SETS.name)
 
     private val linkingLocks = hazelcastInstance.getMap<EntityDataKey, Long>(HazelcastMap.LINKING_LOCKS.name)
+    private val linkingSet = hazelcastInstance.getSet<EntityDataKey>("linking_set")
 
     private val enqueuer = executor.submit {
         try {
@@ -88,18 +89,18 @@ class BackgroundLinkingService
                 val ess = entitySets.values
 
                 //TODO: Make this entry processor for safety.
-                linkingLocks.forEach { (k, expiration) ->
-                    if (Instant.now().toEpochMilli() >= expiration) {
-                        try {
-                            linkingLocks.lock(k)
-                            if (linkingLocks[k] == expiration) {
-                                linkingLocks.delete(k)
-                            }
-                        } finally {
-                            linkingLocks.unlock(k)
-                        }
-                    }
-                }
+//                linkingLocks.forEach { (k, expiration) ->
+//                    if (Instant.now().toEpochMilli() >= expiration) {
+//                        try {
+//                            linkingLocks.lock(k)
+//                            if (linkingLocks[k] == expiration) {
+//                                linkingLocks.delete(k)
+//                            }
+//                        } finally {
+//                            linkingLocks.unlock(k)
+//                        }
+//                    }
+//                }
                 logger.info("Starting to queue linking candidates from entity sets {}", ess)
                 ess
                         .asSequence()
@@ -107,19 +108,20 @@ class BackgroundLinkingService
                         .flatMap { es ->
                             val forLinking = lqs.getEntitiesNeedingLinking(es.id, 2 * configuration.loadSize)
                                     .filter {
-                                        val expiration = lockOrGetExpiration(it)
-                                        logger.info(
-                                                "Considering candidate {} with expiration {} at {}",
-                                                it,
-                                                expiration,
-                                                Instant.now().toEpochMilli()
-                                        )
-                                        if (expiration != null && Instant.now().toEpochMilli() >= expiration) {
-                                            logger.info("Refreshing expiration for {}", it)
-                                            //Assume original lock holder died, probably somewhat unsafe
-                                            refreshExpiration(it)
-                                            true
-                                        } else expiration == null
+                                        !linkingSet.contains(it)
+//                                        val expiration = lockOrGetExpiration(it)
+//                                        logger.info(
+//                                                "Considering candidate {} with expiration {} at {}",
+//                                                it,
+//                                                expiration,
+//                                                Instant.now().toEpochMilli()
+//                                        )
+//                                        if (expiration != null && Instant.now().toEpochMilli() >= expiration) {
+//                                            logger.info("Refreshing expiration for {}", it)
+//                                            //Assume original lock holder died, probably somewhat unsafe
+//                                            refreshExpiration(it)
+//                                            true
+//                                        } else expiration == null
                                     }
                             logger.info("Entities needing linking: {}", forLinking)
                             forLinking.asSequence()
@@ -152,7 +154,8 @@ class BackgroundLinkingService
                         } catch (ex: Exception) {
                             logger.error("Unable to link $candidate. ", ex)
                         } finally {
-                            unlock(candidate)
+                            linkingSet.remove(candidate)
+//                            unlock(candidate)
                             limiter.release()
                         }
                     }
