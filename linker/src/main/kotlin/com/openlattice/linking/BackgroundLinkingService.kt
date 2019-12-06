@@ -108,7 +108,10 @@ class BackgroundLinkingService
                             val forLinking = lqs.getEntitiesNeedingLinking(es.id, 2 * configuration.loadSize)
                                     .filter {
                                         val expiration = lockOrGetExpiration(it)
-                                        logger.info("Considering candidate {} with expiration {}", it, expiration)
+                                        logger.info("Considering candidate {} with expiration {} at {}",
+                                                    it,
+                                                    expiration,
+                                                    Instant.now().toEpochMilli())
                                         if (expiration != null && Instant.now().toEpochMilli() > expiration) {
                                             logger.info("Refreshing expiration for {}", it )
                                             //Assume original lock holder died, probably somewhat unsafe
