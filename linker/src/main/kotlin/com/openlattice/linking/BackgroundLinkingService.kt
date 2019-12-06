@@ -89,7 +89,7 @@ class BackgroundLinkingService
 
                 //TODO: Make this entry processor for safety.
                 linkingLocks.forEach { (k, expiration) ->
-                    if (Instant.now().toEpochMilli() > expiration) {
+                    if (Instant.now().toEpochMilli() >= expiration) {
                         try {
                             linkingLocks.lock(k)
                             if (linkingLocks[k] == expiration) {
@@ -108,12 +108,14 @@ class BackgroundLinkingService
                             val forLinking = lqs.getEntitiesNeedingLinking(es.id, 2 * configuration.loadSize)
                                     .filter {
                                         val expiration = lockOrGetExpiration(it)
-                                        logger.info("Considering candidate {} with expiration {} at {}",
-                                                    it,
-                                                    expiration,
-                                                    Instant.now().toEpochMilli())
-                                        if (expiration != null && Instant.now().toEpochMilli() > expiration) {
-                                            logger.info("Refreshing expiration for {}", it )
+                                        logger.info(
+                                                "Considering candidate {} with expiration {} at {}",
+                                                it,
+                                                expiration,
+                                                Instant.now().toEpochMilli()
+                                        )
+                                        if (expiration != null && Instant.now().toEpochMilli() >= expiration) {
+                                            logger.info("Refreshing expiration for {}", it)
                                             //Assume original lock holder died, probably somewhat unsafe
                                             refreshExpiration(it)
                                             true
@@ -324,12 +326,24 @@ class BackgroundLinkingService
      * @return Null if locked, expiration in millis otherwise.
      */
     private fun lockOrGetExpiration(candidate: EntityDataKey): Long? {
-            return linkingLocks.putIfAbsent(
-                    candidate,
-                    Instant.now().plusMillis(LINKING_BATCH_TIMEOUT_MILLIS).toEpochMilli(),
-                    LINKING_BATCH_TIMEOUT_MILLIS,
-                    TimeUnit.MILLISECONDS
-            )
+        try {
+            linkingLocks.lock(candidate)
+
+            val expiration = linkingLocks[candidate]
+            if (expiration == null || Instant.now().toEpochMilli() > expiration) {
+                logger.info("Lock or get is refreshing expiration for {}", candidate)
+                refreshExpiration(candidate)
+            }
+            return expiration
+        } finally {
+            linkingLocks.unlock(candidate)
+        }
+//             linkingLocks.putIfAbsent(
+//                    candidate,
+//                    Instant.now().plusMillis(LINKING_BATCH_TIMEOUT_MILLIS).toEpochMilli(),
+//                    LINKING_BATCH_TIMEOUT_MILLIS,
+//                    TimeUnit.MILLISECONDS
+//            )
     }
 
     /**
@@ -341,7 +355,9 @@ class BackgroundLinkingService
 
             linkingLocks.set(
                     candidate,
-                    Instant.now().plusMillis(LINKING_BATCH_TIMEOUT_MILLIS).toEpochMilli()
+                    Instant.now().plusMillis(LINKING_BATCH_TIMEOUT_MILLIS).toEpochMilli(),
+                    LINKING_BATCH_TIMEOUT_MILLIS,
+                    TimeUnit.MILLISECONDS
             )
         } finally {
             linkingLocks.unlock(candidate)
