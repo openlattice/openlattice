@@ -36,7 +36,7 @@ class PostgresLinkingLogService(
     private fun updateCluster(linkingId: UUID, linkedEntities: Map<UUID, Set<UUID>>) {
         hds.connection.use { conn ->
             conn.prepareStatement(ADD_LINK_SQL).use { ps ->
-                linkedEntities.forEach { esid, ekids ->
+                linkedEntities.forEach { (esid, ekids) ->
                     val asRay = PostgresArrays.createTextArray(conn, listOf(esid.toString()))
                     ps.setArray(1, asRay)
                     ps.setString(2, esid.toString())
@@ -53,7 +53,7 @@ class PostgresLinkingLogService(
     override fun clearEntitiesFromCluster(linkingId: UUID, linkedEntities: Map<UUID, Set<UUID>>) {
         hds.connection.use { conn ->
             conn.prepareStatement(REMOVE_ENTITY_SQL).use { ps ->
-                linkedEntities.forEach { esid, ekids ->
+                linkedEntities.forEach { (esid, ekids) ->
                     val ekidsArray = PostgresArrays.createTextArray(conn, ekids.stream().map { it.toString() } )
                     ps.setString(1, esid.toString())
                     ps.setArray(2, ekidsArray )
