@@ -46,6 +46,7 @@ import java.util.*
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
+import kotlin.math.exp
 
 internal const val REFRESH_PROPERTY_TYPES_INTERVAL_MILLIS = 30000L
 internal const val LINKING_BATCH_TIMEOUT_MILLIS = 120000L
@@ -88,10 +89,10 @@ class BackgroundLinkingService
 
                 //TODO: Make this entry processor for safety.
                 linkingLocks.forEach { (k, expiration) ->
-                    if( Instant.now().toEpochMilli() > expiration ) {
+                    if (Instant.now().toEpochMilli() > expiration) {
                         try {
                             linkingLocks.lock(k)
-                            if( linkingLocks[k] == expiration ) {
+                            if (linkingLocks[k] == expiration) {
                                 linkingLocks.delete(k)
                             }
                         } finally {
@@ -107,8 +108,8 @@ class BackgroundLinkingService
                             lqs.getEntitiesNeedingLinking(es.id, 2 * configuration.loadSize)
                                     .asSequence()
                                     .filter {
-                                        logger.info("Considering candidate {}", it)
                                         val expiration = lockOrGetExpiration(it)
+                                        logger.info("Considering candidate {} with expiration {}", it, expiration)
                                         if (expiration != null && Instant.now().toEpochMilli() > expiration) {
                                             //Assume original lock holder died, probably somewhat unsafe
                                             refreshExpiration(it)
