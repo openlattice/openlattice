@@ -905,8 +905,9 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
 
     @Timed
     @Override
-    @GetMapping(
+    @PostMapping(
             path = "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + DETAILED,
+            consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE
     )
     public Map<UUID, Map<UUID, Map<UUID, Map<FullQualifiedName, Set<Object>>>>> loadLinkedEntitySetBreakdown(
