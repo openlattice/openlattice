@@ -45,6 +45,8 @@ import com.openlattice.edm.set.EntitySetPropertyMetadata
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.entitysets.EntitySetsApi
 import com.openlattice.entitysets.EntitySetsApi.Companion.ALL
+import com.openlattice.entitysets.EntitySetsApi.Companion.BY_ID_PATH
+import com.openlattice.entitysets.EntitySetsApi.Companion.BY_NAME_PATH
 import com.openlattice.entitysets.EntitySetsApi.Companion.EXPIRATION_PATH
 import com.openlattice.entitysets.EntitySetsApi.Companion.ID
 import com.openlattice.entitysets.EntitySetsApi.Companion.IDS_PATH
@@ -189,9 +191,63 @@ constructor(
                 .map { AuthorizationUtils.getLastAclKeySafely(it) }
                 .toSet()
 
-        return  entitySetManager.getEntitySetsAsMap(entitySetIds).values.toSet()
+        return entitySetManager.getEntitySetsAsMap(entitySetIds).values.toSet()
     }
 
+    @Timed
+    @RequestMapping(
+            path = [BY_ID_PATH],
+            method = [RequestMethod.POST],
+            produces = [MediaType.APPLICATION_JSON_VALUE]
+    )
+    override fun getEntitySetsById(entitySetIds: Set<UUID>): Map<UUID, EntitySet> {
+
+        entitySetIds.forEach { entitySetId -> ensureReadAccess(AclKey(entitySetId)) }
+
+        val entitySets = entitySetManager.getEntitySetsAsMap(entitySetIds)
+        entitySets.forEach { (entitySetId: UUID) -> recordEvent(
+                AuditableEvent(
+                        getCurrentUserId(),
+                        AclKey(entitySetId),
+                        AuditEventType.READ_ENTITY_SET,
+                        "Entity set read through EntitySetApi.getEntitySetsById",
+                        Optional.empty(),
+                        ImmutableMap.of(),
+                        OffsetDateTime.now(),
+                        Optional.empty()
+                )
+        )}
+
+        return entitySets
+    }
+
+    @Timed
+    @RequestMapping(
+            path = [BY_NAME_PATH],
+            method = [RequestMethod.POST],
+            produces = [MediaType.APPLICATION_JSON_VALUE]
+    )
+    override fun getEntitySetsByName(entitySetNames: Set<String>): Map<String, EntitySet> {
+
+        val entitySetIds = edmManager.getAclKeyIds(entitySetNames).values.toSet()
+        entitySetIds.forEach { entitySetId -> ensureReadAccess(AclKey(entitySetId)) }
+
+        val entitySets = entitySetManager.getEntitySetsAsMap(entitySetIds)
+        entitySets.forEach { (entitySetId: UUID) -> recordEvent(
+                AuditableEvent(
+                        getCurrentUserId(),
+                        AclKey(entitySetId),
+                        AuditEventType.READ_ENTITY_SET,
+                        "Entity set read through EntitySetApi.getEntitySetsByName",
+                        Optional.empty(),
+                        ImmutableMap.of(),
+                        OffsetDateTime.now(),
+                        Optional.empty()
+                )
+        )}
+
+        return entitySets.mapKeys { entry -> entry.value.name }
+    }
 
     @Timed
     @RequestMapping(path = [ALL + ID_PATH], method = [RequestMethod.GET], produces = [MediaType.APPLICATION_JSON_VALUE])
