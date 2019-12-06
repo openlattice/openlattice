@@ -203,24 +203,20 @@ constructor(
     )
     override fun getEntitySetsById(@RequestBody entitySetIds: Set<UUID>): Map<UUID, EntitySet> {
 
-        entitySetIds.forEach { entitySetId -> ensureReadAccess(AclKey(entitySetId)) }
-
+        accessCheck(entitySetIds.map { AclKey(it) to EnumSet.of(Permission.READ) }.toMap())
         val entitySets = entitySetManager.getEntitySetsAsMap(entitySetIds)
 
         val now = OffsetDateTime.now()
-        val events = Lists.newArrayList<AuditableEvent>()
-        entitySets.forEach { (entitySetId: UUID) -> events.add(
-                AuditableEvent(
-                        getCurrentUserId(),
-                        AclKey(entitySetId),
-                        AuditEventType.READ_ENTITY_SET,
-                        "EntitySet read through EntitySetsApi.getEntitySetsById",
-                        Optional.empty(),
-                        ImmutableMap.of(),
-                        now,
-                        Optional.empty()
-                )
-        )}
+        val events = entitySets.map { AuditableEvent(
+                getCurrentUserId(),
+                AclKey(it.key),
+                AuditEventType.READ_ENTITY_SET,
+                "EntitySet read through EntitySetsApi.getEntitySetsById",
+                Optional.empty(),
+                ImmutableMap.of(),
+                now,
+                Optional.empty()
+        ) }.toList()
         recordEvents(events)
 
         return entitySets
@@ -236,24 +232,20 @@ constructor(
     override fun getEntitySetsByName(@RequestBody entitySetNames: Set<String>): Map<String, EntitySet> {
 
         val entitySetIds = edmManager.getAclKeyIds(entitySetNames).values.toSet()
-        entitySetIds.forEach { entitySetId -> ensureReadAccess(AclKey(entitySetId)) }
-
+        accessCheck(entitySetIds.map { AclKey(it) to EnumSet.of(Permission.READ) }.toMap())
         val entitySets = entitySetManager.getEntitySetsAsMap(entitySetIds)
 
         val now = OffsetDateTime.now()
-        val events = Lists.newArrayList<AuditableEvent>()
-        entitySets.forEach { (entitySetId: UUID) -> recordEvent(
-                AuditableEvent(
-                        getCurrentUserId(),
-                        AclKey(entitySetId),
-                        AuditEventType.READ_ENTITY_SET,
-                        "EntitySet read through EntitySetsApi.getEntitySetsByName",
-                        Optional.empty(),
-                        ImmutableMap.of(),
-                        now,
-                        Optional.empty()
-                )
-        )}
+        val events = entitySets.map { AuditableEvent(
+                getCurrentUserId(),
+                AclKey(it.key),
+                AuditEventType.READ_ENTITY_SET,
+                "EntitySet read through EntitySetsApi.getEntitySetsByName",
+                Optional.empty(),
+                ImmutableMap.of(),
+                now,
+                Optional.empty()
+        ) }.toList()
         recordEvents(events)
 
         return entitySets.mapKeys { entry -> entry.value.name }
