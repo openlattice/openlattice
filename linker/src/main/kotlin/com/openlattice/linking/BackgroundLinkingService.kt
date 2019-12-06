@@ -86,14 +86,35 @@ class BackgroundLinkingService
 
                 val ess = entitySets.values
 
+                //TODO: Make this entry processor for safety.
+                linkingLocks.forEach { (k, expiration) ->
+                    if( Instant.now().toEpochMilli() > expiration ) {
+                        try {
+                            linkingLocks.lock(k)
+                            if( linkingLocks[k] == expiration ) {
+                                linkingLocks.delete(k)
+                            }
+                        } finally {
+                            linkingLocks.unlock(k)
+                        }
+                    }
+                }
                 logger.info("Starting to queue linking candidates from entity sets {}", ess)
                 ess
                         .asSequence()
                         .filter { linkableTypes.contains(it.entityTypeId) }
                         .flatMap { es ->
-                            lqs.getEntitiesNeedingLinking(es.id, configuration.loadSize)
+                            lqs.getEntitiesNeedingLinking(es.id, 2 * configuration.loadSize)
                                     .asSequence()
-                                    .filter { lockOrGetExpiration(it) == null }
+                                    .filter {
+                                        val expiration = lockOrGetExpiration(it)
+                                        if (expiration != null && Instant.now().toEpochMilli() > expiration) {
+                                            //Assume original lock holder died, probably somewhat unsafe
+                                            refreshExpiration(it)
+                                            true
+                                        } else expiration == null
+                                    }
+
                         }
                         .chunked(configuration.loadSize)
                         .forEach { keys ->
@@ -300,8 +321,23 @@ class BackgroundLinkingService
         return linkingLocks.putIfAbsent(
                 candidate,
                 Instant.now().plusMillis(LINKING_BATCH_TIMEOUT_MILLIS).toEpochMilli()
-
         )
+    }
+
+    /**
+     * @return Null if locked, expiration in millis otherwise.
+     */
+    private fun refreshExpiration(candidate: EntityDataKey) {
+        try {
+            linkingLocks.lock(candidate)
+
+            return linkingLocks.set(
+                    candidate,
+                    Instant.now().plusMillis(LINKING_BATCH_TIMEOUT_MILLIS).toEpochMilli()
+            )
+        } finally {
+            linkingLocks.unlock(candidate)
+        }
     }
 
     private fun isLinkingEnabled(): Boolean {
