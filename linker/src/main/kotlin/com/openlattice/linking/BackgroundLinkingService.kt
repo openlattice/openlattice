@@ -96,7 +96,7 @@ class BackgroundLinkingService
                                     .filter {
 //                                        !linkingSet.contains(it)
                                         val expiration = lockOrGetExpiration(it)
-                                        logger.info(
+                                        logger.debug(
                                                 "Considering candidate {} with expiration {} at {}",
                                                 it,
                                                 expiration,
@@ -115,7 +115,7 @@ class BackgroundLinkingService
                         .chunked(configuration.loadSize)
                         .forEach { keys ->
                             candidates.addAll(keys)
-                            logger.debug(
+                            logger.info(
                                     "Queued entities needing linking {} from ({}).",
                                     keys,
                                     entitySets.getAll(keys.map { it.entitySetId }.toSet()).values.map { it.name }
