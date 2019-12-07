@@ -20,10 +20,21 @@
 
 package com.openlattice.postgres;
 
+import static com.openlattice.postgres.PostgresDatatype.BIGINT;
+import static com.openlattice.postgres.PostgresDatatype.BIGINT_ARRAY;
+import static com.openlattice.postgres.PostgresDatatype.BOOLEAN;
+import static com.openlattice.postgres.PostgresDatatype.BYTEA;
+import static com.openlattice.postgres.PostgresDatatype.INTEGER;
+import static com.openlattice.postgres.PostgresDatatype.INTEGER_ARRAY;
+import static com.openlattice.postgres.PostgresDatatype.JSONB;
+import static com.openlattice.postgres.PostgresDatatype.TEXT;
+import static com.openlattice.postgres.PostgresDatatype.TEXT_ARRAY;
+import static com.openlattice.postgres.PostgresDatatype.TIMESTAMPTZ;
+import static com.openlattice.postgres.PostgresDatatype.UUID;
+import static com.openlattice.postgres.PostgresDatatype.UUID_ARRAY;
+
 import com.openlattice.IdConstants;
 import com.openlattice.edm.type.Analyzer;
-
-import static com.openlattice.postgres.PostgresDatatype.*;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -119,12 +130,12 @@ public final class PostgresColumn {
     public static final String                   CREDENTIAL_FIELD                  = "cred";
     public static final PostgresColumnDefinition CREDENTIAL                        =
             new PostgresColumnDefinition( CREDENTIAL_FIELD, TEXT ).notNull();
-    public static final String                   DATATYPE_FIELD                    = "datatype";
-    public static final PostgresColumnDefinition DATATYPE                          =
-            new PostgresColumnDefinition( DATATYPE_FIELD, TEXT ).notNull();
     public static final String                   DATABASE_FIELD                    = "database";
     public static final PostgresColumnDefinition DATABASE                          =
             new PostgresColumnDefinition( DATABASE_FIELD, TEXT );
+    public static final String                   DATATYPE_FIELD                    = "datatype";
+    public static final PostgresColumnDefinition DATATYPE                          =
+            new PostgresColumnDefinition( DATATYPE_FIELD, TEXT ).notNull();
     public static final String                   DATA_ID_FIELD                     = "data_id";
     public static final PostgresColumnDefinition DATA_ID                           =
             new PostgresColumnDefinition( DATA_ID_FIELD, UUID );
@@ -227,9 +238,6 @@ public final class PostgresColumn {
     public static final String                   ID_FIELD                          = "id";
     public static final PostgresColumnDefinition ID                                =
             new PostgresColumnDefinition( ID_FIELD, UUID ).primaryKey().notNull();
-    public static final String                   IP_ADDRESS_FIELD                  = "ip_address";
-    public static final PostgresColumnDefinition IP_ADDRESS                        =
-            new PostgresColumnDefinition( IP_ADDRESS_FIELD, TEXT );
     public static final String                   ID_MAP_FIELD                      = "ids_map";
     public static final PostgresColumnDefinition ID_MAP                            =
             new PostgresColumnDefinition( ID_MAP_FIELD, JSONB );
@@ -242,6 +250,9 @@ public final class PostgresColumn {
     public static final String                   INITIALIZED_FIELD                 = "initialized";
     public static final PostgresColumnDefinition INITIALIZED                       =
             new PostgresColumnDefinition( INITIALIZED_FIELD, BOOLEAN );
+    public static final String                   IP_ADDRESS_FIELD                  = "ip_address";
+    public static final PostgresColumnDefinition IP_ADDRESS                        =
+            new PostgresColumnDefinition( IP_ADDRESS_FIELD, TEXT );
     public static final String                   IS_PRIMARY_KEY_FIELD              = "is_primary_key";
     public static final PostgresColumnDefinition IS_PRIMARY_KEY                    =
             new PostgresColumnDefinition( IS_PRIMARY_KEY_FIELD, BOOLEAN ).notNull();
@@ -338,9 +349,6 @@ public final class PostgresColumn {
     public static final String                   NULLABLE_TITLE_FIELD              = "title";
     public static final PostgresColumnDefinition NULLABLE_TITLE                    =
             new PostgresColumnDefinition( NULLABLE_TITLE_FIELD, TEXT );
-    public static final String                   TIME_TO_EXPIRATION_FIELD          = "time_to_expiration";
-    public static final PostgresColumnDefinition TIME_TO_EXPIRATION                =
-            new PostgresColumnDefinition( TIME_TO_EXPIRATION_FIELD, BIGINT );
     public static final String                   ORDINAL_POSITION_FIELD            = "ordinal_position";
     public static final PostgresColumnDefinition ORDINAL_POSITION                  =
             new PostgresColumnDefinition( ORDINAL_POSITION_FIELD, INTEGER ).notNull();
@@ -481,6 +489,9 @@ public final class PostgresColumn {
     public static final String                   TEMPLATE_TYPE_ID_FIELD            = "template_type_id";
     public static final PostgresColumnDefinition TEMPLATE_TYPE_ID                  = new PostgresColumnDefinition(
             TEMPLATE_TYPE_ID_FIELD, UUID ).notNull();
+    public static final String                   TIME_TO_EXPIRATION_FIELD          = "time_to_expiration";
+    public static final PostgresColumnDefinition TIME_TO_EXPIRATION                =
+            new PostgresColumnDefinition( TIME_TO_EXPIRATION_FIELD, BIGINT );
     public static final String                   TIME_UUID_FIELD                   = "time_uuid";
     public static final PostgresColumnDefinition TIME_UUID                         =
             new PostgresColumnDefinition( TIME_UUID_FIELD, UUID );
@@ -490,22 +501,22 @@ public final class PostgresColumn {
     public static final String                   URL_FIELD                         = "url";
     public static final PostgresColumnDefinition URL                               =
             new PostgresColumnDefinition( URL_FIELD, TEXT );
-    public static final String                   USER_FIELD                        = "user";
-    public static final PostgresColumnDefinition USER                              =
-            new PostgresColumnDefinition( USER_FIELD, TEXT );
     public static final String                   USERNAME_FIELD                    = "username";
     public static final PostgresColumnDefinition USERNAME                          =
             new PostgresColumnDefinition( USERNAME_FIELD, TEXT );
-    public static final String                   USER_DATA_FIELD = "user_data";
-    public static final PostgresColumnDefinition USER_DATA       = new PostgresColumnDefinition(
+    public static final String                   USER_DATA_FIELD                   = "user_data";
+    public static final PostgresColumnDefinition USER_DATA                         = new PostgresColumnDefinition(
             USER_DATA_FIELD,
             JSONB );
-    public static final String                   USER_ID_FIELD   = "user_id";
-    public static final PostgresColumnDefinition USER_ID         = new PostgresColumnDefinition(
+    public static final String                   USER_FIELD                        = "user";
+    public static final PostgresColumnDefinition USER                              =
+            new PostgresColumnDefinition( USER_FIELD, TEXT );
+    public static final String                   USER_ID_FIELD                     = "user_id";
+    public static final PostgresColumnDefinition USER_ID                           = new PostgresColumnDefinition(
             USER_ID_FIELD,
             TEXT ).notNull();
-    public static final String                   VERSIONS_FIELD  = "versions";
-    public static final PostgresColumnDefinition VERSIONS        =
+    public static final String                   VERSIONS_FIELD                    = "versions";
+    public static final PostgresColumnDefinition VERSIONS                          =
             new PostgresColumnDefinition( VERSIONS_FIELD, BIGINT_ARRAY )
                     .withDefault( "ARRAY[-1]" ).notNull();
     public static final String                   VERSION_FIELD                     = "version";
