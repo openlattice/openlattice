@@ -1442,6 +1442,95 @@ paths:
               schema:
                 type: integer
             
+  ###################
+  ## DATA SET APIs ##
+  ###################
+  
+  /datastore/organization-database/{organizationId}/external-database-table:
+    get:
+      summary: Gets all OrganizationExternalDatabaseTable objects for an organization
+      operationId: getExternalDatabaseTables
+      tags: [dataset]
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/OrganizationExternalDatabaseTable"
+  /datastore/organization-database/{organizationId}/external-database-table/external-database-column:
+    get:
+      summary: Gets a map of all OrganizationExternalDatabaseTable objects to OrganizationExternalDatabase columns that are contained within each table.
+      operationId: getExternalDatabaseTablesWithColumns
+      tags: [dataset]
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    $ref: "#/components/OrganizationExternalDatabaseColumn"
+  /datastore/organization-database/{organizationId}/{tableId}/external-database-table/external-database-column:
+    get:
+      summary: Gets an object containing an OrganizationExternalDatabaseTable object and its OrganizationExternalDatabase columns for an organization
+      operationId: getExternalDatabaseTableWithColumns
+      tags: [dataset]
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: tableId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                
+                additionalProperties:
+                  type: array
+                  items:
+                    $ref: "#/components/OrganizationExternalDatabaseTableColumnsPair"
+
+
 
   ###############
   ## DATA APIs ##
@@ -2326,6 +2415,34 @@ paths:
       responses:
         "200":
           description: Success
+  /datastore/organizations/{organizationId}/integration:
+    get:
+      summary: Get the integrations account for an organization from the organizationId
+      operationId: getOrganizationIntegrationAccount
+      tags:
+        - organizations
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    type: string
+                  credential:
+                    type: string
   /datastore/organizations/{organizationId}/entity-sets:
     get:
       summary: Get the entity sets for an organization for a certain filter
@@ -3937,7 +4054,60 @@ components:
               type: array
               items:
                 type: string
-            
+    OrganizationExternalDatabaseTable:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        organizationId:
+          type: string
+          format: uuid
+    OrganizationExternalDatabaseColumn:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        tableId:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+        dataType:
+          type: string
+          enum: [SMALLINT, SMALLINT_ARRAY, INTEGER, INTEGER_ARRAY, BIGINT, BIGINT_ARRAY, DECIMAL, NUMERIC, DOUBLE, DOUBLE_ARRAY, SERIAL, BIGSERIAL, BYTEA, BYTEA_ARRAY, BOOLEAN, BOOLEAN_ARRAY, DATE, DATE_ARRAY, TIME, TIME_ARRAY, TIMETZ, TIMETZ_ARRAY, TIMESTAMPTZ, TIMESTAMPTZ_ARRAY, UUID, UUID_ARRAY, UUID_ARRAY_ARRAY, TEXT, TEXT_ARRAY, JSONB]
+        primaryKey:
+          type: boolean
+        ordinalPosition:
+          type: integer
+    OrganizationExternalDatabaseTableColumnsPair:
+      type: object
+      properties:
+        table:
+          $ref: "#/components/OrganizationExternalDatabaseTable"
+        columns:
+          type: array
+          items:
+            $ref: "#/components/OrganizationExternalDatabaseColumn"
+
+          
+          
+          
+                  
     entityDataKey:
       type: object
       properties:
