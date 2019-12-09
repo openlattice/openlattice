@@ -58,7 +58,7 @@ class ExternalDatabaseManagementService(
     private val organizationExternalDatabaseTables: IMap<UUID, OrganizationExternalDatabaseTable> = hazelcastInstance.getMap(HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_TABLE.name)
     private val hbaAuthenticationRecordsMapstore: IMap<String, PostgresAuthenticationRecord> = hazelcastInstance.getMap(HazelcastMap.HBA_AUTHENTICATION_RECORDS.name)
     private val securableObjectTypes: IMap<AclKey, SecurableObjectType> = hazelcastInstance.getMap(HazelcastMap.SECURABLE_OBJECT_TYPES.name)
-    private val organizationTitles: IMap<UUID, String> = hazelcastInstance.getMap(HazelcastMap.ORGANIZATIONS_TITLES.name)
+    private val organizations: IMap<UUID, Organization> = hazelcastInstance.getMap(HazelcastMap.ORGANIZATIONS.name)
     private val aces: IMap<AceKey, AceValue> = hazelcastInstance.getMap(HazelcastMap.PERMISSIONS.name)
     private val logger = LoggerFactory.getLogger(ExternalDatabaseManagementService::class.java)
     private val primaryKeyConstraint = "PRIMARY KEY"
@@ -119,7 +119,7 @@ class ExternalDatabaseManagementService(
 
     /*GET*/
     fun getOrganizationIds(): Set<UUID> {
-        return organizationTitles.keys
+        return organizations.keys
     }
 
     fun getExternalDatabaseTables(orgId: UUID): Set<OrganizationExternalDatabaseTable> {
