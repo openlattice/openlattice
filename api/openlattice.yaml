@@ -1740,7 +1740,6 @@ paths:
                         type: array
                         items:
                           type: string
-                          format: uuid
   /datastore/data/{entitySetId}/{entityKeyId}:
     get:
       summary: Loads a single entity by its entityKeyId and entitySetId
