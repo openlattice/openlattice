@@ -67,7 +67,7 @@ class AuditRecordEntitySetsManager(
     )
 
     private val organizations = hazelcastInstance.getMap<UUID, Organization>(
-            HazelcastMap.ORGANIZATIONS_TITLES.name
+            HazelcastMap.ORGANIZATIONS.name
     )
 
     private val edmAuditTypes = setOf(
