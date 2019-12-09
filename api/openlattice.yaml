@@ -1955,7 +1955,7 @@ paths:
             application/json:
               schema:
                 $ref: "components/dataSearchResult"
-  /datastore/search/{entitySetId}/{entityId}:
+  /datastore/search/{entitySetId}/{entityKeyId}:
     get:
       summary: Executes a search for all neighbors of an entity that are connected by an association
       operationId: executeEntityNeighborSearch
@@ -1966,7 +1966,7 @@ paths:
           schema:
             type: string
             format: uuid
-        - name: entityId
+        - name: entityKeyId
           in: path
           required: true
           schema:
