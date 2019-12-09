@@ -3120,11 +3120,9 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      name: HttpAuthorization
     openlattice_auth:
       type: apiKey
       in: header
-      name: Authorization
 
   schemas:
     fullQualifiedName:
