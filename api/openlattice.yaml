@@ -1469,7 +1469,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/OrganizationExternalDatabaseTable"
+                  $ref: "components/OrganizationExternalDatabaseTable"
   /datastore/organization-database/{organizationId}/external-database-table/external-database-column:
     get:
       summary: Gets a map of all OrganizationExternalDatabaseTable objects to OrganizationExternalDatabase columns that are contained within each table.
@@ -1495,7 +1495,7 @@ paths:
                 additionalProperties:
                   type: array
                   items:
-                    $ref: "#/components/OrganizationExternalDatabaseColumn"
+                    $ref: "components/OrganizationExternalDatabaseColumn"
   /datastore/organization-database/{organizationId}/{tableId}/external-database-table/external-database-column:
     get:
       summary: Gets an object containing an OrganizationExternalDatabaseTable object and its OrganizationExternalDatabase columns for an organization
@@ -1524,11 +1524,8 @@ paths:
             application/json:
               schema:
                 type: object
-                
                 additionalProperties:
-                  type: array
-                  items:
-                    $ref: "#/components/OrganizationExternalDatabaseTableColumnsPair"
+                  $ref: "components/OrganizationExternalDatabaseTableColumnsPair"
 
 
 
@@ -4097,11 +4094,11 @@ components:
       type: object
       properties:
         table:
-          $ref: "#/components/OrganizationExternalDatabaseTable"
+          $ref: "components/OrganizationExternalDatabaseTable"
         columns:
           type: array
           items:
-            $ref: "#/components/OrganizationExternalDatabaseColumn"
+            $ref: "components/OrganizationExternalDatabaseColumn"
 
           
           
