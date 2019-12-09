@@ -538,7 +538,6 @@ class PostgresEntityDataQueryService(
      * Tombstones all entities in an entity set in both [IDS] and [DATA] table.
      */
     private fun tombstone(conn: Connection, entitySetId: UUID, version: Long): WriteEvent {
-        check(!conn.autoCommit) { "Connection auto-commit must be disabled" }
 
         val numUpdated = conn.prepareStatement(updateVersionsForEntitySet).use { ps ->
             ps.setLong(1, -version)
