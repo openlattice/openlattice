@@ -11,6 +11,7 @@ import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.edm.tasks.EdmSyncInitializerTask
 import com.openlattice.edm.type.EntityType
 import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.organizations.Organization
 import com.openlattice.organizations.tasks.OrganizationsInitializationTask
 import com.openlattice.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies.PostConstructInitializerTask
@@ -27,7 +28,7 @@ class AuditInitializationTask(
 
     private val entityTypes = hazelcastInstance.getMap<UUID, EntityType>(HazelcastMap.ENTITY_TYPES.name)
     private val entitySets = hazelcastInstance.getMap<UUID, EntitySet>(HazelcastMap.ENTITY_SETS.name)
-    private val organizations = hazelcastInstance.getMap<UUID, String>(HazelcastMap.ORGANIZATIONS_TITLES.name)
+    private val organizations = hazelcastInstance.getMap<UUID, Organization>(HazelcastMap.ORGANIZATIONS.name)
     private val auditRecordEntitySetConfigurations = hazelcastInstance.getMap<AclKey, AuditRecordEntitySetConfiguration>(
             HazelcastMap.AUDIT_RECORD_ENTITY_SETS.name
     )
