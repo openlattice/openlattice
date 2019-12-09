@@ -240,7 +240,8 @@ class HazelcastOrganizationService(
 
     @JvmOverloads
     fun addMembers(
-            organizationId: UUID, members: Set<Principal>,
+            organizationId: UUID,
+            members: Set<Principal>,
             profiles: Map<Principal, Map<String, Set<String>>> = members
                     .associateWith { getAppMetadata(users.getValue(it.id)) }
     ) {
