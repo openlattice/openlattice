@@ -301,11 +301,9 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource, private val
                     val ps = connection.prepareStatement(buildEntityKeyIdsOfLinkingIdsSql(normalEntitySetIds != null))
                     val linkingIdsArray = PostgresArrays.createUuidArray(connection, linkingIds)
 
-                    val partitions = PostgresArrays.createIntArray( connection, getPartitionsInfo( linkingIds, partitionManager.getAllPartitions() ))
-                    ps.setArray(1, partitions)
-                    ps.setArray(2, linkingIdsArray)
+                    ps.setArray(1, linkingIdsArray)
                     if (normalEntitySetIds != null) {
-                        ps.setArray(3, PostgresArrays.createUuidArray(connection, normalEntitySetIds))
+                        ps.setArray(2, PostgresArrays.createUuidArray(connection, normalEntitySetIds))
                     }
                     val rs = ps.executeQuery()
                     StatementHolder(connection, ps, rs)
@@ -366,16 +364,14 @@ internal fun buildFilterEntityKeyPairs(entityKeyPairs: Collection<EntityKeyPair>
 /**
  * Returns SQL to select normal entity key ids of linking ids. Bind order is as folows:
  *
- * 1. partitions
- * 2. linkingIds
- * 3. (only if filterEntitySetIds is true) normalEntitySetIds
+ * 1. linkingIds
+ * 2. (only if filterEntitySetIds is true) normalEntitySetIds
  */
 internal fun buildEntityKeyIdsOfLinkingIdsSql(filterEntitySetIds: Boolean): String {
     val maybeEntitySetIdsClause = if (filterEntitySetIds) "AND ${ENTITY_SET_ID.name} = ANY(?) " else ""
 
     return "SELECT ${LINKING_ID.name}, array_agg(${ID.name}) AS ${ENTITY_KEY_IDS_COL.name} " +
             "FROM ${IDS.name} " +
-            "WHERE ${PARTITION.name} = ANY(?) " +
             "AND ${VERSION.name} > 0 " +
             "AND ${LINKING_ID.name} IS NOT NULL " +
             "AND ${LINKING_ID.name} = ANY( ? ) " +
