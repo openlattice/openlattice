@@ -34,6 +34,7 @@ import com.openlattice.edm.processors.CreateOrUpdateAuditRecordEntitySetsProcess
 import com.openlattice.edm.processors.UpdateAuditEdgeEntitySetIdProcessor
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.organizations.Organization
 import com.openlattice.postgres.mapstores.AuditRecordEntitySetConfigurationMapstore.ANY_AUDITING_ENTITY_SETS
 import com.openlattice.postgres.mapstores.AuditRecordEntitySetConfigurationMapstore.ANY_EDGE_AUDITING_ENTITY_SETS
 import org.slf4j.LoggerFactory
@@ -65,7 +66,7 @@ class AuditRecordEntitySetsManager(
             HazelcastMap.AUDIT_RECORD_ENTITY_SETS.name
     )
 
-    private val organizationTitles = hazelcastInstance.getMap<UUID, String>(
+    private val organizations = hazelcastInstance.getMap<UUID, Organization>(
             HazelcastMap.ORGANIZATIONS_TITLES.name
     )
 
@@ -106,7 +107,7 @@ class AuditRecordEntitySetsManager(
 
     fun createAuditEntitySetForOrganization(organizationId: UUID) {
         if (auditingTypes.isAuditingInitialized()) {
-            val name = organizationTitles[organizationId]!!
+            val name = organizations[organizationId]!!.title
             createAuditEntitySet(name, AclKey(organizationId), ImmutableSet.of(), organizationId)
         }
     }
