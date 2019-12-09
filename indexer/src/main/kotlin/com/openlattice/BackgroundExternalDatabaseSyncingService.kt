@@ -13,6 +13,7 @@ import com.openlattice.indexing.configuration.IndexerConfiguration
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import com.openlattice.organization.OrganizationExternalDatabaseTable
 import com.openlattice.organizations.ExternalDatabaseManagementService
+import com.openlattice.organizations.Organization
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
@@ -37,7 +38,7 @@ class BackgroundExternalDatabaseSyncingService(
     private val organizationExternalDatabaseColumns: IMap<UUID, OrganizationExternalDatabaseColumn> = hazelcastInstance.getMap(HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_COLUMN.name)
     private val organizationExternalDatabaseTables: IMap<UUID, OrganizationExternalDatabaseTable> = hazelcastInstance.getMap(HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_TABLE.name)
     private val aclKeys: IMap<String, UUID> = hazelcastInstance.getMap(HazelcastMap.ACL_KEYS.name)
-    private val organizationTitles: IMap<UUID, String> = hazelcastInstance.getMap(HazelcastMap.ORGANIZATIONS_TITLES.name)
+    private val organizations: IMap<UUID, Organization> = hazelcastInstance.getMap(HazelcastMap.ORGANIZATIONS.name)
     private val expirationLocks: IMap<UUID, Long> = hazelcastInstance.getMap(HazelcastMap.EXPIRATION_LOCKS.name)
 
 
@@ -75,7 +76,7 @@ class BackgroundExternalDatabaseSyncingService(
 
         try {
             val timer = Stopwatch.createStarted()
-            val lockedOrganizationIds = organizationTitles.keys
+            val lockedOrganizationIds = organizations.keys
                     .filter { it != IdConstants.GLOBAL_ORGANIZATION_ID.id }
                     .filter { tryLockOrganization(it) }
                     .shuffled()
