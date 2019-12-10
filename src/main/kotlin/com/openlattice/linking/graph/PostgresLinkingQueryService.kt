@@ -56,7 +56,7 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource, private val
         connection.autoCommit = false
 
         val psLocks = connection.prepareStatement(LOCK_CLUSTERS_SQL)
-        clusters.forEach {
+        clusters.toSortedSet().forEach {
             psLocks.setObject(1, it)
             psLocks.addBatch()
         }
@@ -291,16 +291,26 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource, private val
         }
     }
 
-    override fun getEntityKeyIdsOfLinkingIds(linkingIds: Set<UUID>): PostgresIterable<Pair<UUID, Set<UUID>>> {
+    override fun getEntityKeyIdsOfLinkingIds(
+            linkingIds: Set<UUID>,
+            normalEntitySetIds: Set<UUID>?
+    ): PostgresIterable<Pair<UUID, Set<UUID>>> {
         return PostgresIterable(
                 Supplier {
                     val connection = hds.connection
-                    val ps = connection.prepareStatement(ENTITY_KEY_IDS_OF_LINKING_IDS_SQL)
+                    val ps = connection.prepareStatement(buildEntityKeyIdsOfLinkingIdsSql(normalEntitySetIds != null))
                     val linkingIdsArray = PostgresArrays.createUuidArray(connection, linkingIds)
 
-                    val partitions = PostgresArrays.createIntArray( connection, getPartitionsInfo( linkingIds, partitionManager.getAllPartitions() ))
-                    ps.setArray(1, partitions)
-                    ps.setArray(2, linkingIdsArray)
+                    ps.setArray(1, linkingIdsArray)
+                    if (normalEntitySetIds != null) {
+
+                        /* Note: this inclusion may or may not speed up the function, depending how many partitions are
+                           covered by all the normal entity sets requested */
+                        val allPartitionsOfNormalEntitySets = partitionManager.getPartitionsByEntitySetId(normalEntitySetIds).values.flatten()
+
+                        ps.setArray(2, PostgresArrays.createUuidArray(connection, normalEntitySetIds))
+                        ps.setArray(3, PostgresArrays.createIntArray(connection, allPartitionsOfNormalEntitySets))
+                    }
                     val rs = ps.executeQuery()
                     StatementHolder(connection, ps, rs)
                 },
@@ -357,6 +367,27 @@ internal fun buildFilterEntityKeyPairs(entityKeyPairs: Collection<EntityKeyPair>
     }
 }
 
+/**
+ * Returns SQL to select normal entity key ids of linking ids. Bind order is as folows:
+ *
+ * 1. linkingIds
+ * 2. (only if filterEntitySetIds is true) normalEntitySetIds
+ * 3. (only if filterEntitySetIds is true) partitions
+ */
+internal fun buildEntityKeyIdsOfLinkingIdsSql(filterEntitySetIds: Boolean): String {
+    val maybeEntitySetIdsClause = if (filterEntitySetIds)
+        "AND ${ENTITY_SET_ID.name} = ANY(?) AND ${PARTITIONS.name} = ANY(?) "
+    else ""
+
+    return "SELECT ${LINKING_ID.name}, array_agg(${ID.name}) AS ${ENTITY_KEY_IDS_COL.name} " +
+            "FROM ${IDS.name} " +
+            "WHERE ${VERSION.name} > 0 " +
+            "AND ${LINKING_ID.name} IS NOT NULL " +
+            "AND ${LINKING_ID.name} = ANY( ? ) " +
+            maybeEntitySetIdsClause +
+            "GROUP BY ${LINKING_ID.name}"
+}
+
 private val LOCK_CLUSTERS_SQL = "SELECT 1 FROM ${MATCHED_ENTITIES.name} WHERE ${LINKING_ID.name} = ? FOR UPDATE"
 
 private val CLUSTER_CONTAINING_SQL = "SELECT * FROM ${MATCHED_ENTITIES.name} WHERE ${LINKING_ID.name} = ANY(?)"
@@ -401,8 +432,3 @@ private val ENTITY_KEY_IDS_NOT_LINKED = "SELECT ${ENTITY_SET_ID.name},${ID.name}
 private val LINKABLE_ENTITY_SET_IDS = "SELECT ${ID.name} " +
         "FROM ${ENTITY_SETS.name} " +
         "WHERE ${ENTITY_TYPE_ID.name} = ANY(?) AND NOT ${ID.name} = ANY(?) AND ${ID.name} = ANY(?) "
-
-private val ENTITY_KEY_IDS_OF_LINKING_IDS_SQL = "SELECT ${LINKING_ID.name}, array_agg(${ID.name}) AS ${ENTITY_KEY_IDS_COL.name} " +
-        "FROM ${IDS.name} " +
-        "WHERE ${PARTITION.name} = ANY(?) AND ${VERSION.name} > 0 AND ${LINKING_ID.name} IS NOT NULL AND ${LINKING_ID.name} = ANY( ? ) " +
-        "GROUP BY ${LINKING_ID.name}"

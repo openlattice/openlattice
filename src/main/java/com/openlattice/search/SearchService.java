@@ -59,7 +59,6 @@ import com.openlattice.organizations.Organization;
 import com.openlattice.organizations.events.OrganizationCreatedEvent;
 import com.openlattice.organizations.events.OrganizationDeletedEvent;
 import com.openlattice.organizations.events.OrganizationUpdatedEvent;
-import com.openlattice.postgres.streams.PostgresIterable;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
 import com.openlattice.search.requests.*;
 import kotlin.Pair;
@@ -522,8 +521,9 @@ public class SearchService {
         Set<UUID> allBaseEntitySetIds = Sets.newHashSet( entitySetIds );
 
         if ( linkingEntitySets.size() > 0 ) {
-            entityKeyIdsByLinkingId = getEntityKeyIdsByLinkingIds( entityKeyIds ).stream()
-                    .collect( Collectors.toMap( Pair::getFirst, Pair::getSecond ) );
+            Set<UUID> normalEntitySetIds = linkingEntitySets.stream().flatMap( es -> es.getLinkedEntitySets().stream() )
+                    .collect( Collectors.toSet() );
+            entityKeyIdsByLinkingId = getEntityKeyIdsByLinkingIds( entityKeyIds, normalEntitySetIds );
             entityKeyIdsByLinkingId.values().forEach( entityKeyIds::addAll );
             entityKeyIds.removeAll( entityKeyIdsByLinkingId.keySet() ); // remove linking ids
 
@@ -711,7 +711,7 @@ public class SearchService {
 
     @Timed
     public Map<UUID, Map<UUID, SetMultimap<UUID, NeighborEntityIds>>> executeLinkingEntityNeighborIdsSearch(
-            Set<UUID> linkedEntitySetIds,
+            Set<UUID> normalEntitySetIds,
             EntityNeighborsFilter filter,
             Set<Principal> principals ) {
         if ( filter.getAssociationEntitySetIds().isPresent() && filter.getAssociationEntitySetIds().get().isEmpty() ) {
@@ -720,15 +720,14 @@ public class SearchService {
 
         Set<UUID> linkingIds = filter.getEntityKeyIds();
 
-        PostgresIterable<Pair<UUID, Set<UUID>>> entityKeyIdsByLinkingIds = getEntityKeyIdsByLinkingIds( linkingIds );
+        Map<UUID, Set<UUID>> entityKeyIdsByLinkingIds = getEntityKeyIdsByLinkingIds( linkingIds, normalEntitySetIds );
 
-        Set<UUID> entityKeyIds = entityKeyIdsByLinkingIds.stream()
-                .flatMap( entityKeyIdsOfLinkingId -> entityKeyIdsOfLinkingId.getSecond().stream() )
+        Set<UUID> entityKeyIds = entityKeyIdsByLinkingIds.values().stream().flatMap( Set::stream )
                 .collect( Collectors.toSet() );
 
         // Will return only entries, where there is at least 1 neighbor
         Map<UUID, Map<UUID, SetMultimap<UUID, NeighborEntityIds>>> entityNeighbors = executeEntityNeighborIdsSearch(
-                linkedEntitySetIds,
+                normalEntitySetIds,
                 new EntityNeighborsFilter( entityKeyIds,
                         filter.getSrcEntitySetIds(),
                         filter.getDstEntitySetIds(),
@@ -739,14 +738,14 @@ public class SearchService {
             return entityNeighbors;
         }
 
-        return entityKeyIdsByLinkingIds.stream()
+        return entityKeyIdsByLinkingIds.entrySet().stream()
                 .filter( entityKeyIdsOfLinkingId ->
-                        entityNeighbors.keySet().stream().anyMatch( entityKeyIdsOfLinkingId.getSecond()::contains ) )
+                        entityNeighbors.keySet().stream().anyMatch( entityKeyIdsOfLinkingId.getValue()::contains ) )
                 .collect( Collectors.toMap(
-                        Pair::getFirst, // linking_id
+                        Map.Entry::getKey, // linking_id
                         entityKeyIdsOfLinkingId -> {
                             Map<UUID, SetMultimap<UUID, NeighborEntityIds>> neighborIds = Maps.newHashMap();
-                            entityKeyIdsOfLinkingId.getSecond().stream()
+                            entityKeyIdsOfLinkingId.getValue().stream()
                                     .filter( entityNeighbors::containsKey )
                                     .forEach( entityKeyId ->
                                             entityNeighbors.get( entityKeyId ).forEach( ( entityKey, neighbors ) -> {
@@ -856,9 +855,11 @@ public class SearchService {
         }
     }
 
-    private PostgresIterable<Pair<UUID, Set<UUID>>> getEntityKeyIdsByLinkingIds(
-            Set<UUID> linkingIds ) {
-        return dataManager.getEntityKeyIdsOfLinkingIds( linkingIds );
+    private Map<UUID, Set<UUID>> getEntityKeyIdsByLinkingIds(
+            Set<UUID> linkingIds,
+            Set<UUID> normalEntitySetIds ) {
+        return dataManager.getEntityKeyIdsOfLinkingIds( linkingIds, normalEntitySetIds ).stream()
+                .collect( Collectors.toMap( Pair::getFirst, Pair::getSecond ) );
     }
 
     public static UUID getEntityKeyId( Map<FullQualifiedName, Set<Object>> entity ) {

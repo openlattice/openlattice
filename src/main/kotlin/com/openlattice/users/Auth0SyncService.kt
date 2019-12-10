@@ -46,6 +46,9 @@ class Auth0SyncService(
         val principal = getPrincipal(user)
         val roles = getRoles(user)
         val sp = spm.getPrincipal(principal.id)
+
+        //Update the user in the users table before attempting processing.
+        users.putIfAbsent( principal.id, user)
         processGlobalEnrollments(sp, principal, user)
         processOrganizationEnrollments(user, sp, principal, user.email ?: "")
         markUser(user)

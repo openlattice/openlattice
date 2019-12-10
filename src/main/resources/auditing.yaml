@@ -11,3 +11,4 @@ fqns:
   PRINCIPAL: "ol.userid"
   TIMESTAMP: "general.datetime"
   OPERATION_ID: "ol.auditeventid"
+enabled: false
