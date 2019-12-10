@@ -20,7 +20,6 @@
  */
 package com.openlattice.indexing
 
-import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Stopwatch
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.hazelcast.core.HazelcastInstance
@@ -46,13 +45,12 @@ import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.StatementHolderSupplier
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
-import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.util.*
+import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
-import kotlin.streams.asStream
 
 internal const val LINKING_INDEXING_TIMEOUT_MILLIS = 120_000L // 2 min
 internal const val LINKING_INDEX_RATE = 120_000L // 2 min
@@ -103,60 +101,99 @@ class BackgroundLinkingIndexingService(
     private val unIndexCandidates = hazelcastInstance
             .getQueue<Triple<List<Array<UUID>>, UUID, OffsetDateTime>>(HazelcastQueue.LINKING_UNINDEXING.name)
 
+    private val limiter = Semaphore(indexerConfiguration.parallelism)
+
+
     @Suppress("UNUSED")
-    @Scheduled(fixedRate = LINKING_INDEX_RATE)
-    fun linkingIndexing() {
-        generateSequence(indexCandidates::poll)
-                .chunked(LINKING_INDEX_SIZE)
-                .asStream()
-                .parallel()
-                .forEach { candidateBatch ->
-                    if (!indexerConfiguration.backgroundLinkingIndexingEnabled) {
-                        return@forEach
-                    }
-
-                    executor.submit {
-                        val (linkingEntityKeyIdsWithLastWrite, linkingIds) = mapCandidates(candidateBatch)
-
-                        try {
-                            lock(linkingIds)
-                            index(linkingEntityKeyIdsWithLastWrite, linkingIds)
-                        } catch (ex: Exception) {
-                            logger.error("Unable to index linking entity with from batch of linking ids $linkingIds.", ex)
-                        } finally {
-                            unLock(linkingIds)
-                        }
-                    }
-                }
+    private val updateIndexCandidateWorker = if (isLinkingIndexingEnabled()) executor.submit {
+        while (true) {
+            try {
+                logger.info("Registering linking ids needing indexing.")
+                getDirtyLinkingIds().filter {
+                    val expiration = lock(it.second)
+                    if (expiration != null && Instant.now().toEpochMilli() >= expiration) {
+                        logger.info("Refreshing expiration for linking id {}", it.second)
+                        //Assume original lock holder died, probably somewhat unsafe
+                        refreshExpiration(it.second)
+                        false
+                    } else expiration == null
+                }.forEach(indexCandidates::put)
+            } catch (ex: Exception) {
+                logger.info("Encountered error while updating candidates for linking indexing.", ex)
+            } finally {
+                Thread.sleep(LINKING_INDEX_RATE)
+            }
+        }
+    } else {
+        null
     }
 
     @Suppress("UNUSED")
-    @Scheduled(fixedRate = LINKING_INDEX_RATE)
-    fun linkingUnIndexing() {
-        generateSequence(unIndexCandidates::poll)
+    private val updateUnIndexCandidateWorker = if (isLinkingIndexingEnabled()) executor.submit {
+        while (true) {
+            try {
+                logger.info("Registering linking ids needing un-indexing.")
+                getDeletedLinkingIds().filter {
+                    val expiration = lock(it.second)
+                    if (expiration != null && Instant.now().toEpochMilli() >= expiration) {
+                        logger.info("Refreshing expiration for linking id {}", it.second)
+                        //Assume original lock holder died, probably somewhat unsafe
+                        refreshExpiration(it.second)
+                        false
+                    } else expiration == null
+                }.forEach(unIndexCandidates::put)
+            } catch (ex: Exception) {
+                logger.info("Encountered error while updating candidates for linking un-indexing.", ex)
+            } finally {
+                Thread.sleep(LINKING_INDEX_RATE)
+            }
+        }
+    } else {
+        null
+    }
+
+    @Suppress("UNUSED")
+    private val linkingIndexingWorker = if (isLinkingIndexingEnabled()) executor.submit {
+        generateSequence(indexCandidates::take)
                 .chunked(LINKING_INDEX_SIZE)
-                .asStream()
-                .parallel()
                 .forEach { candidateBatch ->
-                    if (!indexerConfiguration.backgroundLinkingIndexingEnabled) {
-                        return@forEach
-                    }
+                    limiter.acquire()
+                    val (linkingEntityKeyIdsWithLastWrite, linkingIds) = mapCandidates(candidateBatch)
 
-                    executor.submit {
-                        val (linkingEntityKeyIdsWithLastWrite, linkingIds) = mapCandidates(candidateBatch)
-
-                        try {
-                            lock(linkingIds)
-                            unIndex(linkingEntityKeyIdsWithLastWrite, linkingIds)
-                        } catch (ex: Exception) {
-                            logger.error(
-                                    "Unable to un-index linking entity with from batch of linking ids $linkingIds.", ex
-                            )
-                        } finally {
-                            unLock(linkingIds)
-                        }
+                    try {
+                        index(linkingEntityKeyIdsWithLastWrite, linkingIds)
+                    } catch (ex: Exception) {
+                        logger.error("Unable to index linking entity with from batch of linking ids $linkingIds.", ex)
+                    } finally {
+                        unLock(linkingIds)
+                        limiter.release()
                     }
                 }
+    } else {
+        null
+    }
+
+    @Suppress("UNUSED")
+    private val linkingUnIndexingWorker = if (isLinkingIndexingEnabled()) executor.submit {
+        generateSequence(unIndexCandidates::take)
+                .chunked(LINKING_INDEX_SIZE)
+                .forEach { candidateBatch ->
+                    limiter.acquire()
+                    val (linkingEntityKeyIdsWithLastWrite, linkingIds) = mapCandidates(candidateBatch)
+
+                    try {
+                        unIndex(linkingEntityKeyIdsWithLastWrite, linkingIds)
+                    } catch (ex: Exception) {
+                        logger.error(
+                                "Unable to un-index linking entity with from batch of linking ids $linkingIds.", ex
+                        )
+                    } finally {
+                        unLock(linkingIds)
+                        limiter.release()
+                    }
+                }
+    } else {
+        null
     }
 
     private fun mapCandidates(
@@ -182,26 +219,6 @@ class BackgroundLinkingIndexingService(
         }
 
         return linkingEntityKeyIdsWithLastWrite to linkingIds
-    }
-
-    @Timed
-    @Suppress("UNUSED")
-    @Scheduled(fixedRate = LINKING_INDEX_RATE)
-    fun updateCandidateList() {
-        if (!indexerConfiguration.backgroundLinkingIndexingEnabled) {
-            return
-        }
-        try {
-            executor.submit {
-                logger.info("Registering linking ids needing indexing.")
-                getDirtyLinkingIds().forEach(indexCandidates::put)
-
-                logger.info("Registering linking ids needing un-indexing.")
-                getDeletedLinkingIds().forEach(unIndexCandidates::put)
-            }
-        } catch (ex: Exception) {
-            logger.info("Encountered error while updating candidates for linking indexing.", ex)
-        }
     }
 
     /**
@@ -290,21 +307,36 @@ class BackgroundLinkingIndexingService(
         return dataManager.markLinkingEntitiesAsIndexed(linkingIdsWithLastWrite)
     }
 
-    private fun lock(linkingIds: Collection<UUID>) {
-        linkingIds.forEach { linkingId ->
-            val existingExpiration = linkingIndexingLocks.putIfAbsent(
+    private fun lock(linkingId: UUID): Long? {
+        return linkingIndexingLocks.putIfAbsent(
+                linkingId,
+                Instant.now().plusMillis(LINKING_INDEXING_TIMEOUT_MILLIS).toEpochMilli(),
+                LINKING_INDEXING_TIMEOUT_MILLIS,
+                TimeUnit.MILLISECONDS
+        )
+    }
+
+    private fun refreshExpiration(linkingId: UUID) {
+        try {
+            linkingIndexingLocks.lock(linkingId)
+
+            linkingIndexingLocks.putIfAbsent(
                     linkingId,
-                    Instant.now().plusMillis(LINKING_INDEXING_TIMEOUT_MILLIS).toEpochMilli()
+                    Instant.now().plusMillis(LINKING_INDEXING_TIMEOUT_MILLIS).toEpochMilli(),
+                    LINKING_INDEXING_TIMEOUT_MILLIS,
+                    TimeUnit.MILLISECONDS
             )
-            check(existingExpiration == null) {
-                "Unable to lock $linkingId. Existing lock expires at $existingExpiration."
-            }
+        } finally {
+            linkingIndexingLocks.unlock(linkingId)
         }
     }
 
-
     private fun unLock(linkingIds: Collection<UUID>) {
         linkingIds.forEach(linkingIndexingLocks::delete)
+    }
+
+    private fun isLinkingIndexingEnabled(): Boolean {
+        return indexerConfiguration.backgroundLinkingIndexingEnabled
     }
 
     /**
