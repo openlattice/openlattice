@@ -1622,8 +1622,7 @@ paths:
               additionalProperties:
                 type: object
                 additionalProperties:
-                  type:
-                    $ref: "#/components/schemas/dataEdge"
+                  $ref: "#/components/schemas/dataEdge"
       tags:
         - data
       security:
@@ -1838,7 +1837,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/entityNeighborsFilter"
+                  $ref: "#/components/schemas/EntityNeighborsFilter"
       tags:
         - data
       security:
