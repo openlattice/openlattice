@@ -37,6 +37,9 @@ class S3AuditingService(
         if (auditingConfiguration.awsS3ClientConfiguration.isEmpty) {
             throw IllegalStateException("Auditing configuration from auditing.yaml must include S3 configuration details.")
         }
+        if (!auditingConfiguration.enabled) {
+            throw IllegalStateException("Auditing configuration for s3 should not be disabled")
+        }
     }
 
     private val partitions = auditingConfiguration.partitions
