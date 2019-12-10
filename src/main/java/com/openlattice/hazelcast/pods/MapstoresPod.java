@@ -250,7 +250,7 @@ public class MapstoresPod {
     public QueueConfigurer linkingIndexingQueueConfigurer() {
         return config -> config
                 .setName( HazelcastQueue.LINKING_INDEXING.name() )
-                .setMaxSize( 128_000 )
+                .setMaxSize( 10_000 )
                 .setBackupCount( 1 );
     }
 
@@ -258,7 +258,7 @@ public class MapstoresPod {
     public QueueConfigurer linkingUnIndexingQueueConfigurer() {
         return config -> config
                 .setName( HazelcastQueue.LINKING_UNINDEXING.name() )
-                .setMaxSize( 128_000 )
+                .setMaxSize( 10_000 )
                 .setBackupCount( 1 );
     }
 
