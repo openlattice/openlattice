@@ -196,6 +196,7 @@ public final class SerializationConstants {
     public static final String ORGANIZATION_ID                  = "organizationId";
     public static final String ORIENTATION                      = "orientation";
     public static final String PAGING_TOKEN                     = "pagingToken";
+    public static final String PATH                             = "path";
     public static final String PARENT_TYPE_FIELD                = "parentType";
     public static final String PARTITIONS                       = "partitions";
     public static final String PERIOD                           = "period";
