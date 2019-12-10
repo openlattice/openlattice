@@ -13,10 +13,12 @@ data class AppInstallation(
 
     init {
 
-        Preconditions.checkArgument(entitySetCollectionId != null || template != null,
-                "entitySetCollectionId and template cannot both be empty for AppInstallation")
-
-        if (entitySetCollectionId != null) {
+        if (entitySetCollectionId == null) {
+            Preconditions.checkArgument(template != null,
+                    "entitySetCollectionId and template cannot both be empty for AppInstallation")
+            Preconditions
+                    .checkArgument(prefix != null, "AppInstallation cannot specify template but not prefix.")
+        } else {
             Preconditions.checkArgument(prefix != null && template != null,
                     "If AppInstallation specifies entitySetCollectionId, prefix and template must be empty.")
         }
