@@ -372,7 +372,7 @@ internal fun buildEntityKeyIdsOfLinkingIdsSql(filterEntitySetIds: Boolean): Stri
 
     return "SELECT ${LINKING_ID.name}, array_agg(${ID.name}) AS ${ENTITY_KEY_IDS_COL.name} " +
             "FROM ${IDS.name} " +
-            "AND ${VERSION.name} > 0 " +
+            "WHERE ${VERSION.name} > 0 " +
             "AND ${LINKING_ID.name} IS NOT NULL " +
             "AND ${LINKING_ID.name} = ANY( ? ) " +
             maybeEntitySetIdsClause +
