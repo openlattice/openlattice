@@ -107,51 +107,6 @@ class BackgroundLinkingIndexingService(
 
     private val limiter = Semaphore(indexerConfiguration.parallelism)
 
-
-    @Suppress("UNUSED")
-    @Scheduled(fixedRate = LINKING_INDEX_RATE)
-    private fun updateIndexCandidates() {
-        if (isLinkingIndexingEnabled()) {
-            executor.submit {
-                try {
-                    logger.info("Registering linking ids needing indexing.")
-                    getDirtyLinkingIds().filter {
-                        val expiration = lock(it.second)
-                        if (expiration != null && Instant.now().toEpochMilli() >= expiration) {
-                            logger.info("Refreshing expiration for linking id {}", it.second)
-                            refreshExpiration(it.second)
-                            false
-                        } else expiration == null
-                    }.forEach(indexCandidates::put)
-                } catch (ex: Exception) {
-                    logger.info("Encountered error while updating candidates for linking indexing.", ex)
-                }
-            }
-        }
-    }
-
-    @Suppress("UNUSED")
-    @Scheduled(fixedRate = LINKING_INDEX_RATE)
-    private fun updateUnIndexCandidates() {
-        if (isLinkingIndexingEnabled()) {
-            executor.submit {
-                try {
-                    logger.info("Registering linking ids needing un-indexing.")
-                    getDeletedLinkingIds().filter {
-                        val expiration = lock(it.second)
-                        if (expiration != null && Instant.now().toEpochMilli() >= expiration) {
-                            logger.info("Refreshing expiration for linking id {}", it.second)
-                            refreshExpiration(it.second)
-                            false
-                        } else expiration == null
-                    }.forEach(unIndexCandidates::put)
-                } catch (ex: Exception) {
-                    logger.info("Encountered error while updating candidates for linking un-indexing.", ex)
-                }
-            }
-        }
-    }
-
     @Suppress("UNUSED")
     @Scheduled(fixedRate = LINKING_INDEX_RATE)
     private fun linkingIndexing() {
@@ -213,6 +168,51 @@ class BackgroundLinkingIndexingService(
                     )
                 } catch (ex: DistributedObjectDestroyedException) {
                     logger.error("Linking un-indexing queue destroyed.", ex)
+                }
+            }
+        }
+    }
+
+
+    @Suppress("UNUSED")
+    @Scheduled(fixedRate = LINKING_INDEX_RATE)
+    private fun updateIndexCandidates() {
+        if (isLinkingIndexingEnabled()) {
+            executor.submit {
+                try {
+                    logger.info("Registering linking ids needing indexing.")
+                    getDirtyLinkingIds().filter {
+                        val expiration = lock(it.second)
+                        if (expiration != null && Instant.now().toEpochMilli() >= expiration) {
+                            logger.info("Refreshing expiration for linking id {}", it.second)
+                            refreshExpiration(it.second)
+                            false
+                        } else expiration == null
+                    }.forEach(indexCandidates::put)
+                } catch (ex: Exception) {
+                    logger.info("Encountered error while updating candidates for linking indexing.", ex)
+                }
+            }
+        }
+    }
+
+    @Suppress("UNUSED")
+    @Scheduled(fixedRate = LINKING_INDEX_RATE)
+    private fun updateUnIndexCandidates() {
+        if (isLinkingIndexingEnabled()) {
+            executor.submit {
+                try {
+                    logger.info("Registering linking ids needing un-indexing.")
+                    getDeletedLinkingIds().filter {
+                        val expiration = lock(it.second)
+                        if (expiration != null && Instant.now().toEpochMilli() >= expiration) {
+                            logger.info("Refreshing expiration for linking id {}", it.second)
+                            refreshExpiration(it.second)
+                            false
+                        } else expiration == null
+                    }.forEach(unIndexCandidates::put)
+                } catch (ex: Exception) {
+                    logger.info("Encountered error while updating candidates for linking un-indexing.", ex)
                 }
             }
         }
