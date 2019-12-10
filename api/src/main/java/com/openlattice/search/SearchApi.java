@@ -65,13 +65,13 @@ public interface SearchApi {
     String ENTITY_SET_ID   = "entitySetId";
     String ORGANIZATION_ID = "organizationId";
     String NUM_RESULTS     = "numResults";
-    String ENTITY_ID       = "entityId";
+    String ENTITY_KEY_ID   = "entityKeyId";
     String START           = "start";
 
     String ENTITY_SET_ID_PATH   = "/{" + ENTITY_SET_ID + "}";
     String ORGANIZATION_ID_PATH = "/{" + ORGANIZATION_ID + "}";
     String NUM_RESULTS_PATH     = "/{" + NUM_RESULTS + "}";
-    String ENTITY_ID_PATH       = "/{" + ENTITY_ID + "}";
+    String ENTITY_KEY_ID_PATH   = "/{" + ENTITY_KEY_ID + "}";
     String START_PATH           = "/{" + START + "}";
 
     int MAX_SEARCH_RESULTS = 10000;
@@ -259,10 +259,10 @@ public interface SearchApi {
      * @param entityKeyId the entity key id of the entity
      * @return A list of objects containing information about the neighbor and association
      */
-    @GET( BASE + ENTITY_SET_ID_PATH + ENTITY_ID_PATH )
+    @GET( BASE + ENTITY_SET_ID_PATH + ENTITY_KEY_ID_PATH )
     List<NeighborEntityDetails> executeEntityNeighborSearch(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
-            @Path( ENTITY_ID ) UUID entityKeyId );
+            @Path( ENTITY_KEY_ID ) UUID entityKeyId );
 
     /**
      * Executes a search for all neighbors of multiple entities of the same entity set that are connected by an
