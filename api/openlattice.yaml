@@ -1533,7 +1533,29 @@ paths:
   ## DATA APIs ##
   ###############
 
-  /datastore/data/associations/:
+  /datastore/data:
+    post:
+      summary: Create entity and assocation 
+      operationId: createEntityAndAssociationData
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataGraph"
+      tags:
+        - data
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: "DataGraphIds"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataGraphIds"
+  /datastore/data/association:
     post:
       summary: Creates a new set of associations.
       operationId: createAssociations
@@ -1559,6 +1581,61 @@ paths:
                 type: object
                 additionalProperties:
                   type: object
+    put:
+      summary: Creates a new set of associations.
+      operationId: createAssociationSet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/dataEdgeKey"
+      tags:
+        - data
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: "An Entity Set definition"
+          content:
+            application/json:
+              schema:
+                type: integer
+    patch:
+      summary: Replace Association Data
+      operationId: replaceAssociationData
+      parameters:
+        - name: partial
+          in: query
+          required: true
+          schema:
+            type: boolean
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties:
+                type: object
+                additionalProperties:
+                  type:
+                    $ref: "#/components/schemas/dataEdge"
+      tags:
+        - data
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: "Success"
+          content:
+            application/json:
+              schema:
+                type: integer              
   /datastore/data/set/{entitySetId}:
     get:
       summary: Gets an iterable containing the entity data, using property type FQNs as key
@@ -1697,6 +1774,79 @@ paths:
       responses:
         "200":
           description: "Success"
+          content:
+            application/json:
+              schema:
+                type: integer              
+    patch:
+      summary: Replaces Entity Properties
+      operationId: replaceEntityProperties
+      parameters:
+        - name: entitySetId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    type: object
+                    additionalProperties:
+                      type: string
+      tags:
+        - data
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: "Success"
+          content:
+            application/json:
+              schema:
+                type: integer      
+  /datastore/data/set/{entitySetId}/neighbors:
+    post:
+      summary: Deletes the entities matching the given entity ids and all of its neighbor entities provided in the filter.
+      operationId: deleteEntitiesAndNeighbors
+      parameters:
+        - name: entitySetId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [Soft, Hard]
+      requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/entityNeighborsFilter"
+      tags:
+        - data
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: "A long"
           content:
             application/json:
               schema:
@@ -1859,8 +2009,76 @@ paths:
                   type: array
                   items:
                     type: string
-
-
+    delete:
+      summary: Deletes a single entity from an entity set.
+      operationId: deleteEntity
+      parameters:
+        - name: entitySetId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: entityKeyId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [Soft, Hard]
+      tags:
+        - data
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: "Success"
+  /datastore/data/{entitySetId}/{entityKeyId}/properties:
+    delete:
+      summary: Deletes properties from an entity.
+      operationId: deleteEntityProperties
+      parameters:
+        - name: entitySetId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: entityKeyId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [Soft, Hard]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: string
+                format: uuid
+      tags:
+        - data
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: "Success"
 
   ############################
   ## DATA INTEGRATIONS APIs ##
@@ -3934,6 +4152,16 @@ components:
       type: object
       properties:
         src:
+          $ref: "#/components/schemas/entityDataKey"
+        dst:
+          $ref: "#/components/schemas/entityDataKey"
+        edge:
+          $ref: "#/components/schemas/entityDataKey"
+    dataEdgeKey:
+      type: object
+      description: Set of associations to create. An association is the triple of source, destination, and edge entity key ids.
+      properties:
+        src:
           type: string
           format: uuid
         dst:
@@ -3941,6 +4169,59 @@ components:
           format: uuid
         data:
           $ref: "#/components/schemas/dataMap"
+    DataGraph:
+      type: object
+      properties:
+        entities:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: object
+              additionalProperties:
+                type: array
+                items:
+                  type: string
+        associations:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              $ref: "#/components/schemas/DataAssociation"
+    
+    DataAssociation:
+      type: object
+      properties:
+        srcEntitySetId:
+          description: the ID of the source entity set
+          type: string
+          format: uuid
+        srcEntityIndex:
+          description: The index of an entity 
+          type: string
+          format: uuid
+        srcEntityKeyId:
+          description: An existing entityKeyId
+          type: string
+          format: uuid
+    DataGraphIds:
+      type: object
+      properties:
+        entityKeyIds:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+              format: uuid
+        entitySetIds:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+              format: uuid
+
     dataMap:
       type: object
       additionalProperties:
@@ -4300,7 +4581,29 @@ components:
             $ref: "#/components/schemas/OrganizationExternalDatabaseColumn"
 
           
-          
+    EntityNeighborsFilter:
+      type: object
+      properties:
+        entityKeyIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        srcEntitySetIds:
+          type: array         
+          items:
+            type: string
+            format: uuid
+        dstEntitySetIds:
+          type: array         
+          items:
+            type: string
+            format: uuid
+        associationEntitySetIds:
+          type: array         
+          items:
+            type: string
+            format: uuid
           
                   
     entityDataKey:
