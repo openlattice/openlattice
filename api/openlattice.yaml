@@ -1535,7 +1535,7 @@ paths:
 
   /datastore/data:
     post:
-      summary: Create entity and assocation 
+      summary: Create entities and assocations
       operationId: createEntityAndAssociationData
       requestBody:
         required: true
