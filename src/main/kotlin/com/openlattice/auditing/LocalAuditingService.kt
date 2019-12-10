@@ -22,6 +22,9 @@ class LocalAuditingService(
 
         val auditingConfiguration = ares.auditingTypes
 
+        if (!auditingConfiguration.enabled()) {
+            return 0
+        }
         if (!auditingConfiguration.isAuditingInitialized()) {
             return 0
         }
