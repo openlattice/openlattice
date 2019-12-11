@@ -68,6 +68,12 @@ class AppService(
     @Inject
     private lateinit var eventBus: EventBus
 
+    companion object {
+        fun getAppPrincipalId(appId: UUID, organizationId: UUID): String? {
+            return "$appId|$organizationId"
+        }
+    }
+
     fun getApps(): Iterable<App> {
         return apps.values
     }
@@ -120,7 +126,7 @@ class AppService(
             organizationId: UUID,
             entitySetCollectionId: UUID,
             appPrincipal: Principal,
-            userPrincipal: Principal): Map<UUID, AclKey> {
+            userPrincipal: Principal): MutableMap<UUID, AclKey> {
         val permissionsToGrant = Maps.newHashMap<AceKey, EnumSet<Permission>>()
 
         val entitySetCollection = collectionsManager.getEntitySetCollection(entitySetCollectionId)
@@ -164,7 +170,7 @@ class AppService(
             }
 
             it.id!! to aclKey!!
-        }
+        }.toMutableMap()
 
         /* Grant the required permissions to app roles */
         authorizationService.setPermissions(permissionsToGrant)
@@ -222,7 +228,7 @@ class AppService(
             organizationId: UUID,
             entitySetCollectionId: UUID,
             principal: Principal,
-            settings: Map<String, Any>) {
+            settings: MutableMap<String, Any>) {
 
         val appId = app.id
 
@@ -262,8 +268,7 @@ class AppService(
     }
 
     private fun getAppPrincipal(appConfigKey: AppConfigKey): Principal {
-        return Principal(PrincipalType.APP,
-                AppConfig.getAppPrincipalId(appConfigKey.appId, appConfigKey.organizationId))
+        return Principal(PrincipalType.APP, getAppPrincipalId(appConfigKey.appId, appConfigKey.organizationId))
     }
 
     fun uninstallApp(appId: UUID, organizationId: UUID) {
