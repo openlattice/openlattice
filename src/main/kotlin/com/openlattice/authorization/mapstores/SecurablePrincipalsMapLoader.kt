@@ -10,15 +10,13 @@ import com.openlattice.organizations.roles.SecurePrincipalsManager
 import org.apache.commons.lang3.NotImplementedException
 import org.apache.commons.lang3.RandomStringUtils
 import java.util.*
-import javax.inject.Inject
 
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 class SecurablePrincipalsMapLoader : TestableSelfRegisteringMapStore<String, SecurablePrincipal> {
-    @Inject
-    lateinit var spm: SecurePrincipalsManager
+    private lateinit var spm: SecurePrincipalsManager
 
     override fun getMapName(): String {
         return HazelcastMap.SECURABLE_PRINCIPALS.name
@@ -75,6 +73,10 @@ class SecurablePrincipalsMapLoader : TestableSelfRegisteringMapStore<String, Sec
 
     override fun delete(key: String) {
         throw NotImplementedException("This is a read only map loader.")
+    }
+
+    fun initSpm(spm: SecurePrincipalsManager) {
+        this.spm = spm
     }
 
 }
