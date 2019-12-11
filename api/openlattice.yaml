@@ -1838,7 +1838,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/entityNeighborsFilter"
+                  $ref: "#/components/schemas/EntityNeighborsFilter"
       tags:
         - data
       security:
