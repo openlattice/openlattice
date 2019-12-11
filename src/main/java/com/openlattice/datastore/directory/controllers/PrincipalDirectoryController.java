@@ -155,9 +155,9 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
     @Timed
     @Override
     @RequestMapping(
-            path = ACTIVATE,
+            path = SYNC,
             method = RequestMethod.GET )
-    public Void sync() {
+    public Void syncCallingUser() {
         Principal principal = checkNotNull( Principals.getCurrentUser() );
 
         try {

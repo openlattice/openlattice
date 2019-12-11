@@ -20,11 +20,28 @@
 
 package com.openlattice.datastore.data.controllers;
 
+import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION;
+import static com.openlattice.authorization.EdmAuthorizationHelper.WRITE_PERMISSION;
+import static com.openlattice.authorization.EdmAuthorizationHelper.aclKeysForAccessCheck;
+
 import com.codahale.metrics.annotation.Timed;
-import com.google.common.collect.*;
-import com.openlattice.authorization.*;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.SetMultimap;
+import com.google.common.collect.Sets;
+import com.openlattice.authorization.AclKey;
+import com.openlattice.authorization.AuthorizationManager;
+import com.openlattice.authorization.AuthorizingComponent;
+import com.openlattice.authorization.EdmAuthorizationHelper;
+import com.openlattice.authorization.Permission;
+import com.openlattice.authorization.Principals;
 import com.openlattice.controllers.exceptions.ForbiddenException;
-import com.openlattice.data.*;
+import com.openlattice.data.DataEdgeKey;
+import com.openlattice.data.DataGraphManager;
+import com.openlattice.data.DataIntegrationApi;
+import com.openlattice.data.EntityKey;
+import com.openlattice.data.IntegrationResults;
 import com.openlattice.data.graph.DataGraphServiceHelper;
 import com.openlattice.data.integration.Association;
 import com.openlattice.data.integration.BulkDataCreation;
@@ -38,15 +55,25 @@ import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.set.EntitySetFlag;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.search.SearchService;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.web.bind.annotation.*;
-
-import javax.inject.Inject;
-import java.util.*;
+import java.util.Collection;
+import java.util.EnumSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
-import static com.openlattice.authorization.EdmAuthorizationHelper.*;
+import javax.inject.Inject;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping( DataIntegrationApi.CONTROLLER )
