@@ -50,12 +50,12 @@ public interface PrincipalApi {
     /*
      * Fixed paths
      */
-    String ACTIVATE = "/activate";
     String CURRENT  = "/current";
     String DB       = "/db";
     String EMAIL    = "/email";
     String ROLES    = "/roles";
     String SEARCH   = "/search";
+    String SYNC     = "/sync";
     String UPDATE   = "/update";
     String USERS    = "/users";
 
@@ -100,8 +100,8 @@ public interface PrincipalApi {
      *
      * @return Nothing
      */
-    @GET( BASE + ACTIVATE )
-    Void sync();
+    @GET( BASE + SYNC )
+    Void syncCallingUser();
 
     @POST( BASE + UPDATE )
     Void addPrincipalToPrincipal( @Body DirectedAclKeys directedAclKeys );
