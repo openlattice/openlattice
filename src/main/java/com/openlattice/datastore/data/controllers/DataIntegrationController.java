@@ -54,6 +54,7 @@ import com.openlattice.datastore.services.EntitySetService;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.set.EntitySetFlag;
 import com.openlattice.edm.type.PropertyType;
+import com.openlattice.graph.query.GraphQueryState.Option;
 import com.openlattice.search.SearchService;
 import java.util.Collection;
 import java.util.EnumSet;
@@ -142,6 +143,9 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
             @RequestBody Set<Association> associations,
             @RequestParam( value = DETAILED_RESULTS, required = false, defaultValue = "false" )
                     boolean detailedResults ) {
+        if ( associations.isEmpty() ) {
+            return new IntegrationResults( 0, 0, Optional.empty(), Optional.empty() );
+        }
         Set<UUID> associationEntitySets = performAccessChecksOnEntitiesAndAssociations( associations,
                 ImmutableSet.of() );
 
@@ -176,6 +180,11 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
                     boolean detailedResults ) {
         final Set<Entity> entities = data.getEntities();
         final Set<Association> associations = data.getAssociations();
+
+        if ( entities.isEmpty() && associations.isEmpty() ) {
+            return new IntegrationResults( 0, 0, Optional.empty(), Optional.empty() );
+        }
+
         Set<UUID> entitySetIds = performAccessChecksOnEntitiesAndAssociations( associations, entities );
 
         accessCheck( aclKeysForAccessCheck( requiredEntityPropertyTypes( entities ), WRITE_PERMISSION ) );
@@ -251,20 +260,6 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
         return dgm.createAssociations( associations ).getNumUpdates();
     }
 
-    private static SetMultimap<UUID, UUID> requiredAssociationPropertyTypes( Set<Association> associations ) {
-        final SetMultimap<UUID, UUID> propertyTypesByEntitySet = HashMultimap.create();
-        associations.forEach( association -> propertyTypesByEntitySet
-                .putAll( association.getKey().getEntitySetId(), association.getDetails().keySet() ) );
-        return propertyTypesByEntitySet;
-    }
-
-    private static SetMultimap<UUID, UUID> requiredEntityPropertyTypes( Set<Entity> entities ) {
-        final SetMultimap<UUID, UUID> propertyTypesByEntitySet = HashMultimap.create();
-        entities.forEach( entity -> propertyTypesByEntitySet
-                .putAll( entity.getEntitySetId(), entity.getDetails().keySet() ) );
-        return propertyTypesByEntitySet;
-    }
-
     private Set<UUID> performAccessChecksOnEntitiesAndAssociations(
             Set<Association> associations,
             Set<Entity> entities ) {
@@ -297,6 +292,20 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
             throw new ForbiddenException( "You cannot modify data of entity sets " + auditEntitySetIds.toString()
                     + " because they are audit entity sets." );
         }
+    }
+
+    private static SetMultimap<UUID, UUID> requiredAssociationPropertyTypes( Set<Association> associations ) {
+        final SetMultimap<UUID, UUID> propertyTypesByEntitySet = HashMultimap.create();
+        associations.forEach( association -> propertyTypesByEntitySet
+                .putAll( association.getKey().getEntitySetId(), association.getDetails().keySet() ) );
+        return propertyTypesByEntitySet;
+    }
+
+    private static SetMultimap<UUID, UUID> requiredEntityPropertyTypes( Set<Entity> entities ) {
+        final SetMultimap<UUID, UUID> propertyTypesByEntitySet = HashMultimap.create();
+        entities.forEach( entity -> propertyTypesByEntitySet
+                .putAll( entity.getEntitySetId(), entity.getDetails().keySet() ) );
+        return propertyTypesByEntitySet;
     }
 
 }
