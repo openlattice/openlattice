@@ -25,10 +25,10 @@ package com.openlattice.authorization;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 
-import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import java.util.Collection;
 import java.util.NavigableSet;
 import java.util.TreeSet;
@@ -43,10 +43,11 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 public final class Principals {
-    private static final Logger logger = LoggerFactory.getLogger( Principals.class );
-    private static final Lock startupLock = new ReentrantLock();
-    private static LoadingCache<String, SecurablePrincipal>      users;
-    private static LoadingCache<String, NavigableSet<Principal>> principals;
+    private static final Logger                                        logger      = LoggerFactory
+            .getLogger( Principals.class );
+    private static final Lock                                          startupLock = new ReentrantLock();
+    private static       LoadingCache<String, SecurablePrincipal>      users;
+    private static       LoadingCache<String, NavigableSet<Principal>> principals;
 
     private Principals() {
     }
@@ -74,7 +75,8 @@ public final class Principals {
                             }
                             NavigableSet<Principal> currentPrincipals = new TreeSet<>();
                             currentPrincipals.add( sp.getPrincipal() );
-                            securablePrincipals.stream().map( SecurablePrincipal::getPrincipal )
+                            securablePrincipals.stream()
+                                    .map( SecurablePrincipal::getPrincipal )
                                     .forEach( currentPrincipals::add );
                             return currentPrincipals;
                         }
@@ -85,7 +87,7 @@ public final class Principals {
         }
     }
 
-    public static void requireOrganization( Principal principal ) {
+    public static void ensureOrganization( Principal principal ) {
         checkArgument( principal.getType().equals( PrincipalType.ORGANIZATION ) );
     }
 
@@ -136,6 +138,7 @@ public final class Principals {
     }
 
     public static void invalidatePrincipalCache( String principalId ) {
+        users.invalidate( principalId );
         principals.invalidate( principalId );
     }
 }
