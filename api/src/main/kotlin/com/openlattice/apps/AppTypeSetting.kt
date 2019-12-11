@@ -12,7 +12,7 @@ data class AppTypeSetting(
         @JsonProperty(SerializationConstants.SETTINGS) val settings: MutableMap<String, Any>
 ) {
 
-    fun updateSettings(settingsUpdates: Map<String, Object>) {
+    fun updateSettings(settingsUpdates: Map<String, Any>) {
         settings.putAll(settingsUpdates)
     }
 
