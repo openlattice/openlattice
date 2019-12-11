@@ -376,7 +376,7 @@ internal fun buildFilterEntityKeyPairs(entityKeyPairs: Collection<EntityKeyPair>
  */
 internal fun buildEntityKeyIdsOfLinkingIdsSql(filterEntitySetIds: Boolean): String {
     val maybeEntitySetIdsClause = if (filterEntitySetIds)
-        "AND ${ENTITY_SET_ID.name} = ANY(?) AND ${PARTITIONS.name} = ANY(?) "
+        "AND ${ENTITY_SET_ID.name} = ANY(?) AND ${PARTITION.name} = ANY(?) "
     else ""
 
     return "SELECT ${LINKING_ID.name}, array_agg(${ID.name}) AS ${ENTITY_KEY_IDS_COL.name} " +
