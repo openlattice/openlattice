@@ -185,24 +185,24 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
         }
     }
 
-    fun markAsNeedsToBeLinked(linkingEntityDataKeys: Set<EntityDataKey>): Int {
-        val linkingEntityKeys = linkingEntityDataKeys
+    fun markAsNeedsToBeLinked(normalEntityDataKeys: Set<EntityDataKey>): Int {
+        val normalEntityKeys = normalEntityDataKeys
                 .groupBy { it.entitySetId }
                 .mapValues {
                     it.value.map { it.entityKeyId }
                 }
-        val entitySetPartitions = partitionManager.getPartitionsByEntitySetId(linkingEntityKeys.keys)
+        val entitySetPartitions = partitionManager.getPartitionsByEntitySetId(normalEntityKeys.keys)
 
         hds.connection.use { connection ->
             connection.prepareStatement(markAsNeedsToBeLinkedSql).use { stmt ->
-                linkingEntityKeys.forEach { (entitySetId, linkingIds) ->
+                normalEntityKeys.forEach { (entitySetId, normalIds) ->
                     val partitions = entitySetPartitions.getValue(entitySetId).toList()
 
-                    linkingIds.groupBy { getPartition(it, partitions) }
-                            .forEach { (partition, linkingIds) ->
-                                val linkingIdsArray = PostgresArrays.createUuidArray(connection, linkingIds)
+                    normalIds.groupBy { getPartition(it, partitions) }
+                            .forEach { (partition, normalEntityKeyIds) ->
+                                val normalEntityKeyIdsArray = PostgresArrays.createUuidArray(connection, normalEntityKeyIds)
                                 stmt.setObject(1, entitySetId)
-                                stmt.setArray(2, linkingIdsArray)
+                                stmt.setArray(2, normalEntityKeyIdsArray)
                                 stmt.setInt(3, partition)
 
                                 stmt.addBatch()
@@ -296,10 +296,10 @@ fun markEntitySetsAsNeedsToBeIndexedSql(linking: Boolean): String {
 /**
  * Arguments of preparable sql in order:
  * 1. entity set id
- * 2. linking ids (uuid array)
+ * 2. normal entity key ids (uuid array)
  * 3. partition
  */
 private val markAsNeedsToBeLinkedSql =
-        "UPDATE ${IDS.name} SET ${LAST_LINK.name} = '-infinity()' WHERE ${VERSION.name} > 0 AND $linkingIdsInEntitySet"
+        "UPDATE ${IDS.name} SET ${LAST_LINK.name} = '-infinity()' WHERE ${VERSION.name} > 0 AND $entityKeyIdsInEntitySet"
 
 // @formatter:on
