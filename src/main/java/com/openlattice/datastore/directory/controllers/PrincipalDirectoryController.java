@@ -157,7 +157,7 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
     @RequestMapping(
             path = ACTIVATE,
             method = RequestMethod.GET )
-    public Void activateUser() {
+    public Void sync() {
         Principal principal = checkNotNull( Principals.getCurrentUser() );
 
         try {
@@ -167,6 +167,7 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
                     .withPage( 0, 100 ) ).execute();
 
             syncService.syncUser( user );
+            Principals.invalidatePrincipalCache( user.getId() );
         } catch ( IllegalArgumentException | Auth0Exception e ) {
             throw new BadCredentialsException( "Unable to retrieve user profile information from auth0", e );
         }
