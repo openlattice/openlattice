@@ -2,13 +2,13 @@ package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
-import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.apps.processors.UpdateDefaultAppSettingsProcessor
 import com.openlattice.hazelcast.StreamSerializerTypeIds
+import com.openlattice.mapstores.TestDataFactory
 import org.springframework.stereotype.Component
 
 @Component
-class UpdateDefaultAppSettingsProcessorStreamSerializer : SelfRegisteringStreamSerializer<UpdateDefaultAppSettingsProcessor> {
+class UpdateDefaultAppSettingsProcessorStreamSerializer : TestableSelfRegisteringStreamSerializer<UpdateDefaultAppSettingsProcessor> {
     override fun getTypeId(): Int {
         return StreamSerializerTypeIds.UPDATE_DEFAULT_APP_SETTINGS_PROCESSOR.ordinal
     }
@@ -37,5 +37,9 @@ class UpdateDefaultAppSettingsProcessorStreamSerializer : SelfRegisteringStreamS
         }
 
         return UpdateDefaultAppSettingsProcessor(settings)
+    }
+
+    override fun generateTestValue(): UpdateDefaultAppSettingsProcessor {
+        return UpdateDefaultAppSettingsProcessor(TestDataFactory.app().defaultSettings)
     }
 }
