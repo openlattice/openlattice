@@ -738,7 +738,7 @@ public final class ResultSetAdapters {
         UUID entityTypeCollectionId = entityTypeCollectionId( rs );
         String url = url( rs );
         Set<AppRole> appRoles = appRoles( rs );
-        Optional<Map<String, Object>> settings = Optional.of( appSettings( rs ) );
+        Map<String, Object> settings = appSettings( rs );
         return new App( id, name, title, description, url, entityTypeCollectionId, appRoles, settings );
     }
 
