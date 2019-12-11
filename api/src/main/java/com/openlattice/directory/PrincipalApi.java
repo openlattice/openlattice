@@ -101,7 +101,7 @@ public interface PrincipalApi {
      * @return Nothing
      */
     @GET( BASE + ACTIVATE )
-    Void activateUser();
+    Void sync();
 
     @POST( BASE + UPDATE )
     Void addPrincipalToPrincipal( @Body DirectedAclKeys directedAclKeys );
