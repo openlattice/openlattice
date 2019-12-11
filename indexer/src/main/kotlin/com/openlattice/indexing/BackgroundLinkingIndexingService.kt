@@ -118,7 +118,7 @@ class BackgroundLinkingIndexingService(
     @Suppress("UNUSED")
     @Scheduled(fixedRate = LINKING_INDEX_RATE)
     private fun linkingIndexing() {
-        if (isLinkingIndexingEnabled()) {
+        if (!isLinkingIndexingEnabled()) {
             return
         }
         executor.submit {
@@ -150,7 +150,7 @@ class BackgroundLinkingIndexingService(
     @Suppress("UNUSED")
     @Scheduled(fixedRate = LINKING_INDEX_RATE)
     private fun linkingUnIndexing() {
-        if (isLinkingIndexingEnabled()) {
+        if (!isLinkingIndexingEnabled()) {
             return
         }
         executor.submit {
@@ -183,16 +183,17 @@ class BackgroundLinkingIndexingService(
     @Suppress("UNUSED")
     @Scheduled(fixedRate = LINKING_INDEX_RATE)
     private fun updateIndexCandidates() {
-        if (isLinkingIndexingEnabled()) {
-            executor.submit {
-                try {
-                    logger.info("Registering linking ids needing indexing.")
-                    getDirtyLinkingIds()
-                            .filter { lockOrRefresh(it.second) }
-                            .forEach(indexCandidates::put)
-                } catch (ex: Exception) {
-                    logger.info("Encountered error while updating candidates for linking indexing.", ex)
-                }
+        if (!isLinkingIndexingEnabled()) {
+            return
+        }
+        executor.submit {
+            try {
+                logger.info("Registering linking ids needing indexing.")
+                getDirtyLinkingIds()
+                        .filter { lockOrRefresh(it.second) }
+                        .forEach(indexCandidates::put)
+            } catch (ex: Exception) {
+                logger.info("Encountered error while updating candidates for linking indexing.", ex)
             }
         }
     }
@@ -200,16 +201,17 @@ class BackgroundLinkingIndexingService(
     @Suppress("UNUSED")
     @Scheduled(fixedRate = LINKING_INDEX_RATE)
     private fun updateUnIndexCandidates() {
-        if (isLinkingIndexingEnabled()) {
-            executor.submit {
-                try {
-                    logger.info("Registering linking ids needing un-indexing.")
-                    getDeletedLinkingIds()
-                            .filter { lockOrRefresh(it.second) }
-                            .forEach(unIndexCandidates::put)
-                } catch (ex: Exception) {
-                    logger.info("Encountered error while updating candidates for linking un-indexing.", ex)
-                }
+        if (!isLinkingIndexingEnabled()) {
+            return
+        }
+        executor.submit {
+            try {
+                logger.info("Registering linking ids needing un-indexing.")
+                getDeletedLinkingIds()
+                        .filter { lockOrRefresh(it.second) }
+                        .forEach(unIndexCandidates::put)
+            } catch (ex: Exception) {
+                logger.info("Encountered error while updating candidates for linking un-indexing.", ex)
             }
         }
     }
