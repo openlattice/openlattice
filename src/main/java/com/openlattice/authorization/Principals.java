@@ -135,4 +135,7 @@ public final class Principals {
         return getPrincipalId( SecurityContextHolder.getContext().getAuthentication() );
     }
 
+    public static void invalidatePrincipalCache( String principalId ) {
+        principals.invalidate( principalId );
+    }
 }
