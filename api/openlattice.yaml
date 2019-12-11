@@ -2004,7 +2004,7 @@ paths:
           application/json:
             schema:
               type: array
-              name: entityKeyIds
+              description: entityKeyIds
               items:
                 type: string
                 format: uuid
@@ -2023,7 +2023,7 @@ paths:
                 additionalProperties:
                   type: array
                   items:
-                  $ref: "#/components/schemas/neighborEntityDetails"
+                    $ref: "#/components/schemas/neighborEntityDetails"
   /datastore/search/{entitySetId}/neighbors/advanced:
     post:
       summary: Executes a search for all neighbors of multiple entities of the same entity set that are connected by an association
@@ -2167,19 +2167,19 @@ paths:
   /datastore/search/entity-sets/{start}/{numResults}:
     get:
       summary: Executes a search over all existing entity sets to populate the home page. The path parameters instruct which page to return and how large the page should be.
-      operationId: searchEntitySetData
+      operationId: getEntitySets
       parameters:
         - name: start
-          summary: The first result number to return
+          description: The first result number to return
           in: path
           required: true
           schema:
             type: integer
         - name: numResults
-          summary: The total number of results to return
+          description: The total number of results to return
           in: path
           required: true
-          schem:
+          schema:
             type: integer
       tags:
         - search
@@ -2188,6 +2188,7 @@ paths:
         - http_auth: []
       responses:
         "200":
+          description: "Success"
           content:
             application/json:
               schema:
@@ -4208,7 +4209,7 @@ components:
           type: boolean
     Search:
       type: object
-      summary: A JSON object that contains between three and five parameters. Required parameters are "start" and "maxHits, which specify the hit number to start returning results on for paging and the maximum number of hits to return. Optional parameters are "query" (specifies the keywords used to perform the search), "eid" (UUID of the entity type of the entity sets that will be returned), and "pid" (a set of UUIDs of property types belonging to the entity sets that will be returned). All three of these parameters are optional, but at least one must be specified otherwise an error will be thrown. If eid and pid are both specified, the pid param will be ignored.
+      description: A JSON object that contains between three and five parameters. Required parameters are "start" and "maxHits, which specify the hit number to start returning results on for paging and the maximum number of hits to return. Optional parameters are "query" (specifies the keywords used to perform the search), "eid" (UUID of the entity type of the entity sets that will be returned), and "pid" (a set of UUIDs of property types belonging to the entity sets that will be returned). All three of these parameters are optional, but at least one must be specified otherwise an error will be thrown. If eid and pid are both specified, the pid param will be ignored.
       properties:
         keyword:
           type: string
@@ -4226,7 +4227,7 @@ components:
           type: integer
     SearchResult:
       type: object
-      summary: A search result object, containing the total number of hits for the given query, and the hits themselves.
+      description: A search result object, containing the total number of hits for the given query, and the hits themselves.
       properties:
         numHits: 
           type: integer
