@@ -4160,7 +4160,7 @@ components:
           $ref: "#/components/schemas/entityDataKey"
     dataEdgeKey:
       type: object
-      description: Set of associations to create. An association is the triple of source, destination, and edge entity key ids.
+      description: Set of associations to create. An association is the triple of source, destination, and edge entity data keys.
       properties:
         src:
           type: string
