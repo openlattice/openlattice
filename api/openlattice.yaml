@@ -681,7 +681,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/associationType"
     delete:
-      summary: Delete the AssociationType definition for the given AssociationType UUID.
+      summary: Deletes the AssociationType definition for the given AssociationType UUID.
       operationId: deleteAssociationType
       tags:
         - edm
@@ -1057,7 +1057,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/entitySet"
     post:
-      summary: Create new EntitySet definitions if they don't exist.
+      summary: Creates new EntitySet definitions if they don't exist.
       operationId: createEntitySets
       requestBody:
         required: true
@@ -1535,7 +1535,7 @@ paths:
 
   /datastore/data:
     post:
-      summary: Create entities and assocations
+      summary: Creates entities and assocations
       operationId: createEntityAndAssociationData
       requestBody:
         required: true
@@ -1605,7 +1605,7 @@ paths:
               schema:
                 type: integer
     patch:
-      summary: Replace Association Data
+      summary: Replaces Association Data
       operationId: replaceAssociationData
       parameters:
         - name: partial
@@ -2738,7 +2738,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/organization"
     post:
-      summary: Create an organization if it doesn't exist.
+      summary: Creates an organization if it doesn't exist.
       operationId: createOrganizationIfNotExists
       tags:
         - organizations
@@ -3135,7 +3135,7 @@ paths:
           description: Success
   /datastore/organizations/roles:
     post:
-      summary: Create role
+      summary: Creates role
       operationId: createRole
       tags:
         - organizations
