@@ -54,33 +54,6 @@ public final class Principals {
         if ( startupLock.tryLock() ) {
             users = hazelcastInstance.<String, SecurablePrincipal>getMap( HazelcastMap.PRINCIPALS.name() );
             principals = hazelcastInstance.<String, NavigableSet<Principal>>getMap( HazelcastMap.PRINCIPALS.name() );
-            //            users = CacheBuilder
-            //                    .newBuilder()
-            //                    .expireAfterWrite( 1, TimeUnit.SECONDS )
-            //                    .build( new CacheLoader<>() {
-            //                        @Override public SecurablePrincipal load( String principalId ) throws Exception {
-            //                            return spm.getPrincipal( principalId );
-            //                        }
-            //                    } );
-            //
-            //            principals = CacheBuilder
-            //                    .newBuilder()
-            //                    .expireAfterWrite( 30, TimeUnit.SECONDS )
-            //                    .build( new CacheLoader<>() {
-            //                        @Override public NavigableSet<Principal> load( String principalId ) throws Exception {
-            //                            SecurablePrincipal sp = users.getUnchecked( principalId );
-            //                            Collection<SecurablePrincipal> securablePrincipals = spm.getAllPrincipals( sp );
-            //                            if ( securablePrincipals == null ) {
-            //                                return null;
-            //                            }
-            //                            NavigableSet<Principal> currentPrincipals = new TreeSet<>();
-            //                            currentPrincipals.add( sp.getPrincipal() );
-            //                            securablePrincipals.stream()
-            //                                    .map( SecurablePrincipal::getPrincipal )
-            //                                    .forEach( currentPrincipals::add );
-            //                            return currentPrincipals;
-            //                        }
-            //                    } );
         } else {
             logger.error( "Principals security processing can only be initialized once." );
             throw new IllegalStateException( "Principals context already initialized." );

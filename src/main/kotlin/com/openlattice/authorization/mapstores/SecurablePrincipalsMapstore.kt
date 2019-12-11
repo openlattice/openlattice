@@ -55,7 +55,7 @@ class SecurablePrincipalsMapLoader : TestableSelfRegisteringMapStore<String, Sec
     override fun getMapConfig(): MapConfig {
         return MapConfig(mapName)
                 .setMaxIdleSeconds(300)
-                .setMapStoreConfig(mapStoreConfig):q
+                .setMapStoreConfig(mapStoreConfig)
     }
 
     override fun getMapStoreConfig(): MapStoreConfig {
