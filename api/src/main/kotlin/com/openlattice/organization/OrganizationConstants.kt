@@ -27,8 +27,5 @@ class OrganizationConstants {
     companion object {
         @JvmField
         val GLOBAL_ORG_PRINCIPAL = Principal(PrincipalType.ORGANIZATION, "globalOrg")
-
-        @JvmField
-        val OPENLATTICE_ORG_PRINCIPAL = Principal(PrincipalType.ORGANIZATION, "openlatticeOrg")
     }
 }

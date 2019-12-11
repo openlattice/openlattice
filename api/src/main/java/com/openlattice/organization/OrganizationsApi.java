@@ -18,14 +18,15 @@
 
 package com.openlattice.organization;
 
-import com.openlattice.directory.pojo.Auth0UserBasic;
-import com.openlattice.notifications.sms.SmsEntitySetInformation;
+import com.auth0.json.mgmt.users.User;
 import com.openlattice.organization.roles.Role;
+import com.openlattice.organizations.Grant;
+import com.openlattice.organizations.Organization;
 import java.util.EnumSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import javax.annotation.Nonnull;
 import retrofit2.http.Body;
 import retrofit2.http.DELETE;
 import retrofit2.http.GET;
@@ -35,17 +36,17 @@ import retrofit2.http.PUT;
 import retrofit2.http.Path;
 
 public interface OrganizationsApi {
-    String ASSEMBLE     = "/assemble";
+    // @formatter:off
+
+    String ASSEMBLE          = "/assemble";
+    String CONNECTIONS       = "/connections";
     String CONTROLLER        = "/organizations";
     String DESCRIPTION       = "/description";
     String EMAIL_DOMAIN      = "email-domain";
     String EMAIL_DOMAINS     = "/email-domains";
     String EMAIL_DOMAIN_PATH = "/{" + EMAIL_DOMAIN + ":.+}";
     String ENTITY_SETS       = "/entity-sets";
-    // @formatter:on
-    /*
-     * Acutal path elements
-     */
+    String GRANT             = "/grant";
     String ID                = "id";
     String ID_PATH           = "/{" + ID + "}";
     String INTEGRATION       = "/integration";
@@ -53,25 +54,24 @@ public interface OrganizationsApi {
     String PRINCIPALS        = "/principals";
     String PRINCIPAL_ID      = "pid";
     String PRINCIPAL_ID_PATH = "/{" + PRINCIPAL_ID + "}";
-    String REFRESH      = "/refresh";
-    String REFRESH_RATE = "/refresh-rate";
+    String REFRESH           = "/refresh";
+    String REFRESH_RATE      = "/refresh-rate";
     String ROLES             = "/roles";
-    String ROLE_ID      = "roleId";
-    String ROLE_ID_PATH = "/{" + ROLE_ID + "}";
-    /*
-     * These determine the service routing for the LB
-     */
-    // @formatter:off
+    String ROLE_ID           = "roleId";
+    String ROLE_ID_PATH      = "/{" + ROLE_ID + "}";
+
     String SERVICE           = "/datastore";
     String BASE              = SERVICE + CONTROLLER;
-    String SET_ID       = "setId";
-    String SET_ID_PATH  = "/{" + SET_ID + "}";
-    String SYNCHRONIZE  = "/synchronize";
+    String SET_ID            = "setId";
+    String SET_ID_PATH       = "/{" + SET_ID + "}";
+    String SYNCHRONIZE       = "/synchronize";
     String TITLE             = "/title";
     String TYPE              = "type";
     String TYPE_PATH         = "/{" + TYPE + "}";
-    String USER_ID      = "userId";
-    String USER_ID_PATH = "/{" + USER_ID + ":.*}";
+    String USER_ID           = "userId";
+    String USER_ID_PATH      = "/{" + USER_ID + ":.*}";
+
+    // @formatter:on
 
     @GET( BASE )
     Iterable<Organization> getOrganizations();
@@ -156,13 +156,13 @@ public interface OrganizationsApi {
 
     /**
      * Disables automatic refresh of a materialized entity set in the requested organization.
+     *
      * @param organizationId The id of the organization in which to disable automatic refresh of the materialized entity
-     *                       set.
+     * set.
      * @param entitySetId The id of the entity set, which not to refresh automatically.
      */
     @DELETE( BASE + ID_PATH + SET_ID_PATH + REFRESH_RATE )
     Void deleteRefreshRate( @Path( ID ) UUID organizationId, @Path( SET_ID ) UUID entitySetId );
-
 
     @PUT( BASE + ID_PATH + TITLE )
     Void updateTitle( @Path( ID ) UUID organziationId, @Body String title );
@@ -183,13 +183,13 @@ public interface OrganizationsApi {
      * @param emailDomains The e-mail domain to add to the auto-approval list.
      */
     @POST( BASE + ID_PATH + EMAIL_DOMAINS )
-    Void addAutoApprovedEmailDomains( @Path( ID ) UUID organizationId, @Body Set<String> emailDomains );
+    Void addEmailDomains( @Path( ID ) UUID organizationId, @Body Set<String> emailDomains );
 
     @HTTP(
             method = "DELETE",
             hasBody = true,
             path = BASE + ID_PATH + EMAIL_DOMAINS )
-    Void removeAutoApprovedEmailDomains( @Path( ID ) UUID organizationId, @Body Set<String> emailDomain );
+    Void removeEmailDomains( @Path( ID ) UUID organizationId, @Body Set<String> emailDomain );
 
     /**
      * Adds a single e-mail domain to the auto-approval list. This will fail for users who are not an owner of the
@@ -199,7 +199,7 @@ public interface OrganizationsApi {
      * @param emailDomain The e-mail domain to add to the auto-approval list.
      */
     @PUT( BASE + ID_PATH + EMAIL_DOMAINS + EMAIL_DOMAIN_PATH )
-    Void addAutoApprovedEmailDomain( @Path( ID ) UUID organizationId, @Path( EMAIL_DOMAIN ) String emailDomain );
+    Void addEmailDomain( @Path( ID ) UUID organizationId, @Path( EMAIL_DOMAIN ) String emailDomain );
 
     /**
      * Removes a single e-mail domain to the auto-approval list. This will fail for users who are not an owner of the
@@ -209,7 +209,7 @@ public interface OrganizationsApi {
      * @param emailDomain The e-mail domain to add to the auto-approval list.
      */
     @DELETE( BASE + ID_PATH + EMAIL_DOMAINS + EMAIL_DOMAIN_PATH )
-    Void removeAutoApprovedEmailDomain( @Path( ID ) UUID organizationId, @Path( EMAIL_DOMAIN ) String emailDomain );
+    Void removeEmailDomain( @Path( ID ) UUID organizationId, @Path( EMAIL_DOMAIN ) String emailDomain );
 
     //Endpoints about members
     @GET( BASE + ID_PATH + PRINCIPALS + MEMBERS )
@@ -240,14 +240,27 @@ public interface OrganizationsApi {
             @Path( ROLE_ID ) UUID roleId,
             @Body String description );
 
+    /**
+     * Each organization can have one grant for each grant type per role. Most grant types accept multiple mappings
+     * if multiple settings are required.
+     *
+     * @param organizationId The organziation id for which to update the grant.
+     * @param roleId The role for which to update the grant.
+     * @param grant The grant to update.
+     *
+     * @return Nothing.
+     */
+    @PUT( BASE + ID_PATH + PRINCIPALS + ROLES + ROLE_ID_PATH + GRANT )
+    Void updateRoleGrant(
+            @Path( ID ) UUID organizationId,
+            @Path( ROLE_ID ) UUID roleId,
+            @Nonnull @Body Grant grant );
+
     @DELETE( BASE + ID_PATH + PRINCIPALS + ROLES + ROLE_ID_PATH )
     Void deleteRole( @Path( ID ) UUID organizationId, @Path( ROLE_ID ) UUID roleId );
 
     @GET( BASE + ID_PATH + PRINCIPALS + ROLES + ROLE_ID_PATH + MEMBERS )
-    Iterable<Auth0UserBasic> getAllUsersOfRole( @Path( ID ) UUID organizationId, @Path( ROLE_ID ) UUID roleId );
-
-    //    @GET( BASE + ID_PATH + MEMBERS )
-    //    SetMultimap<SecurablePrincipal,SecurablePrincipal> getUsersAndRoles( UUID organizationsId );
+    Iterable<User> getAllUsersOfRole( @Path( ID ) UUID organizationId, @Path( ROLE_ID ) UUID roleId );
 
     @PUT( BASE + ID_PATH + PRINCIPALS + ROLES + ROLE_ID_PATH + MEMBERS + USER_ID_PATH )
     Void addRoleToUser( @Path( ID ) UUID organizationId, @Path( ROLE_ID ) UUID roleId, @Path( USER_ID ) String userId );
@@ -258,4 +271,13 @@ public interface OrganizationsApi {
             @Path( ROLE_ID ) UUID roleId,
             @Path( USER_ID ) String userId );
 
+    //Admin-only APIs
+    @POST( BASE + ID_PATH + CONNECTIONS )
+    Void addConnections( @Path( ID ) UUID organizationId, @Body Set<String> connections );
+
+    @PUT( BASE + ID_PATH + CONNECTIONS )
+    Void setConnections( @Path( ID ) UUID organizationId, @Body Set<String> connections );
+
+    @HTTP( path = BASE + ID_PATH + CONNECTIONS, method = "DELETE", hasBody = true )
+    Void removeConnections( @Path( ID ) UUID organizationId, @Body Set<String> connections );
 }

@@ -66,7 +66,7 @@ public class LookupEntitiesRequest {
     			.stream()
     			.collect(Collectors.toMap(
     						entry -> new FullQualifiedName( entry.getKey() ),
-    						entry -> entry.getValue()
+                        Map.Entry::getValue
     					)
     			);
     	

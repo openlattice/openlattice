@@ -21,8 +21,6 @@
 
 package com.openlattice.organization
 
-import java.util.*
-
 /**
  * Object model for returning organization integration account to the front-end.
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;

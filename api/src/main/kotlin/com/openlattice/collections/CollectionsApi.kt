@@ -1,8 +1,5 @@
 package com.openlattice.collections
 
-import com.openlattice.collections.CollectionTemplateType
-import com.openlattice.collections.EntitySetCollection
-import com.openlattice.collections.EntityTypeCollection
 import com.openlattice.edm.requests.MetadataUpdate
 import retrofit2.http.*
 import java.util.*

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.LinkedHashMultimap;
 import com.openlattice.client.serialization.SerializationConstants;
+import com.openlattice.data.DataExpiration;
 import com.openlattice.postgres.IndexType;
 
 import java.util.LinkedHashSet;
@@ -47,6 +48,7 @@ public class MetadataUpdate {
     // Specific to entity set
     private Optional<String>                           name;
     private Optional<Set<String>>                      contacts;
+    private Optional<DataExpiration>                   dataExpiration;
     // Specific to property type/entity type
     private Optional<FullQualifiedName>                type;
     // Specific to property type
@@ -72,7 +74,8 @@ public class MetadataUpdate {
                     Optional<LinkedHashMultimap<UUID, String>> propertyTags,
             @JsonProperty( SerializationConstants.INDEX_TYPE ) Optional<IndexType> indexType,
             @JsonProperty( SerializationConstants.ORGANIZATION_ID ) Optional<UUID> organizationId,
-            @JsonProperty( SerializationConstants.PARTITIONS ) Optional<LinkedHashSet<Integer>> partitions ) {
+            @JsonProperty( SerializationConstants.PARTITIONS ) Optional<LinkedHashSet<Integer>> partitions,
+            @JsonProperty( SerializationConstants.EXPIRATION ) Optional<DataExpiration> dataExpiration ) {
         // WARNING These checks have to be consistent with the same check elsewhere.
         Preconditions.checkArgument( !title.isPresent() || StringUtils.isNotBlank( title.get() ),
                 "Title cannot be blank." );
@@ -96,6 +99,7 @@ public class MetadataUpdate {
         this.indexType = indexType;
         this.organizationId = organizationId;
         this.partitions = partitions;
+        this.dataExpiration = dataExpiration;
     }
 
     public MetadataUpdate(
@@ -109,7 +113,8 @@ public class MetadataUpdate {
             Optional<String> url,
             Optional<LinkedHashMultimap<UUID, String>> propertyTags,
             Optional<UUID> organizationId,
-            Optional<LinkedHashSet<Integer>> partitions ) {
+            Optional<LinkedHashSet<Integer>> partitions,
+            Optional<DataExpiration> dataExpiration ) {
         this( title,
                 description,
                 name,
@@ -121,7 +126,8 @@ public class MetadataUpdate {
                 propertyTags,
                 Optional.empty(),
                 organizationId,
-                partitions );
+                partitions,
+                dataExpiration );
     }
 
     @JsonProperty( SerializationConstants.TITLE_FIELD )
@@ -184,6 +190,11 @@ public class MetadataUpdate {
         return partitions;
     }
 
+    @JsonProperty( SerializationConstants.EXPIRATION )
+    public Optional<DataExpiration> getDataExpiration() {
+        return dataExpiration;
+    }
+
     @Override public String toString() {
         return "MetadataUpdate{" +
                 "title=" + title +
@@ -198,6 +209,7 @@ public class MetadataUpdate {
                 ", propertyTags=" + propertyTags +
                 ", organizationId=" + organizationId +
                 ", partitions=" + partitions +
+                ", dataExpiration=" + dataExpiration +
                 '}';
     }
 
@@ -216,7 +228,8 @@ public class MetadataUpdate {
                 url.equals( that.url ) &&
                 propertyTags.equals( that.propertyTags ) &&
                 organizationId.equals( that.organizationId ) &&
-                partitions.equals( that.partitions );
+                partitions.equals( that.partitions ) &&
+                dataExpiration.equals( that.dataExpiration );
     }
 
     @Override public int hashCode() {
@@ -231,7 +244,8 @@ public class MetadataUpdate {
                 url,
                 propertyTags,
                 organizationId,
-                partitions );
+                partitions,
+                dataExpiration );
     }
 
     //TODO: Delete the code below as it doesn't seem to be used.
@@ -245,6 +259,7 @@ public class MetadataUpdate {
                 Optional.empty(),
                 update.getType(),
                 update.getPii(),
+                Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
@@ -264,6 +279,7 @@ public class MetadataUpdate {
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
+                Optional.empty(),
                 Optional.empty() );
     }
 
@@ -273,6 +289,7 @@ public class MetadataUpdate {
                 update.getDescription(),
                 update.getName(),
                 update.getContacts(),
+                Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
@@ -294,6 +311,7 @@ public class MetadataUpdate {
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
+                Optional.empty(),
                 Optional.empty() );
     }
 
@@ -309,6 +327,7 @@ public class MetadataUpdate {
                 update.getUrl(),
                 Optional.empty(),
                 Optional.empty(),
+                Optional.empty(),
                 Optional.empty() );
     }
 
@@ -319,6 +338,7 @@ public class MetadataUpdate {
                 Optional.empty(),
                 Optional.empty(),
                 update.getType(),
+                Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
@@ -339,6 +359,7 @@ public class MetadataUpdate {
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
+                Optional.empty(),
                 Optional.empty() );
     }
 
@@ -354,6 +375,7 @@ public class MetadataUpdate {
                 Optional.empty(),
                 Optional.empty(),
                 update.getOrganizationId(),
+                Optional.empty(),
                 Optional.empty() );
     }
 }

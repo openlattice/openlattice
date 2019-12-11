@@ -18,8 +18,25 @@
 
 package com.openlattice.mapstores;
 
-import com.google.common.collect.*;
-import com.openlattice.authorization.*;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.LinkedHashMultimap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Multimaps;
+import com.google.common.collect.SetMultimap;
+import com.google.common.collect.Sets;
+import com.openlattice.authorization.Ace;
+import com.openlattice.authorization.AceValue;
+import com.openlattice.authorization.Acl;
+import com.openlattice.authorization.AclData;
+import com.openlattice.authorization.AclKey;
+import com.openlattice.authorization.Action;
+import com.openlattice.authorization.Permission;
+import com.openlattice.authorization.Principal;
+import com.openlattice.authorization.PrincipalType;
 import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.AbstractSecurableType;
 import com.openlattice.authorization.securable.SecurableObjectType;
@@ -31,13 +48,22 @@ import com.openlattice.data.EntityKey;
 import com.openlattice.edm.EdmDetails;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.requests.MetadataUpdate;
+import com.openlattice.edm.set.EntitySetFlag;
 import com.openlattice.edm.type.Analyzer;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
+import com.openlattice.edm.type.EntityTypePropertyMetadata;
 import com.openlattice.edm.type.PropertyType;
-import com.openlattice.organization.Organization;
+import com.openlattice.organization.OrganizationExternalDatabaseColumn;
+import com.openlattice.organization.OrganizationExternalDatabaseTable;
 import com.openlattice.organization.roles.Role;
+import com.openlattice.organizations.Grant;
+import com.openlattice.organizations.GrantType;
+import com.openlattice.organizations.Organization;
 import com.openlattice.postgres.IndexType;
+import com.openlattice.postgres.PostgresAuthenticationRecord;
+import com.openlattice.postgres.PostgresConnectionType;
+import com.openlattice.postgres.PostgresDatatype;
 import com.openlattice.requests.PermissionsRequestDetails;
 import com.openlattice.requests.Request;
 import com.openlattice.requests.RequestStatus;
@@ -47,6 +73,7 @@ import com.openlattice.search.requests.PersistentSearch;
 import com.openlattice.search.requests.SearchConstraints;
 import com.openlattice.search.requests.SearchDetails;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.commons.text.CharacterPredicates;
 import org.apache.commons.text.RandomStringGenerator;
@@ -54,20 +81,31 @@ import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 import java.time.OffsetDateTime;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Random;
+import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @SuppressFBWarnings( value = "SECPR", justification = "Only used for testing." )
 public final class TestDataFactory {
-    private static final SecurableObjectType[] securableObjectTypes = SecurableObjectType.values();
-    private static final Permission[]          permissions          = Permission.values();
-    private static final Action[]              actions              = Action.values();
-    private static final RequestStatus[]       requestStatuses      = RequestStatus.values();
-    private static final Analyzer[]            analyzers            = Analyzer.values();
-    private static final IndexType[]           INDEX_TYPES          = IndexType.values();
-    private static final Random                r                    = new Random();
-
+    private static final GrantType[]           grants                  = GrantType.values();
+    private static final SecurableObjectType[] securableObjectTypes    = SecurableObjectType.values();
+    private static final Permission[]          permissions             = Permission.values();
+    private static final Action[]              actions                 = Action.values();
+    private static final RequestStatus[]       requestStatuses         = RequestStatus.values();
+    private static final Analyzer[]            analyzers               = Analyzer.values();
+    private static final EntitySetFlag[]       entitySetFlags          = EntitySetFlag.values();
+    private static final IndexType[]           INDEX_TYPES             = IndexType.values();
+    private static final Random                r                       = new Random();
     private static final char[][]              allowedLetters          = { { 'a', 'z' }, { 'A', 'Z' } };
     private static final char[][]              allowedDigitsAndLetters = { { 'a', 'z' }, { 'A', 'Z' }, { '0', '9' } };
     private static final RandomStringGenerator random                  = new RandomStringGenerator.Builder()
@@ -197,8 +235,8 @@ public final class TestDataFactory {
         UUID ptId = propertyTypes.iterator().next();
         return new AssociationType(
                 Optional.of( et ),
-                Sets.newLinkedHashSet( Arrays.asList( ptId ) ),
-                Sets.newLinkedHashSet( Arrays.asList( ptId ) ),
+                Sets.newLinkedHashSet( Collections.singletonList( ptId ) ),
+                Sets.newLinkedHashSet( Collections.singletonList( ptId ) ),
                 false );
     }
 
@@ -287,17 +325,40 @@ public final class TestDataFactory {
     }
 
     public static Organization organization() {
+        final var grant = grant();
+
         return new Organization(
                 Optional.of( UUID.randomUUID() ),
                 organizationPrincipal(),
                 randomAlphanumeric( 5 ),
                 Optional.of( randomAlphanumeric( 5 ) ),
-                ImmutableSet.of( randomAlphanumeric( 5 ), randomAlphanumeric( 5 ) ),
-                ImmutableSet.of( userPrincipal() ),
-                ImmutableSet.of( role() ),
-                ImmutableSet.of( UUID.randomUUID() ),
+                Sets.newHashSet( randomAlphanumeric( 5 ), randomAlphanumeric( 5 ) ),
+                Sets.newHashSet( userPrincipal() ),
+                Sets.newHashSet( role() ),
+                Sets.newHashSet( UUID.randomUUID() ),
                 Optional.empty(),
-                Optional.of( Lists.newArrayList( 1, 2, 3 ) ) );
+                Optional.of( Lists.newArrayList( 1, 2, 3 ) ),
+                Sets.newHashSet( randomAlphanumeric( 5 ), randomAlphanumeric( 5 ) ),
+                Maps.newHashMap( ImmutableMap
+                        .of( UUID.randomUUID(), ImmutableMap.of( grant.getGrantType(), grant() ) ) )
+        );
+    }
+
+    public static Grant grant() {
+        final var grantType = grants[ r.nextInt( grants.length ) ];
+        final var emailSet = Sets.newHashSet( "foo@bar.com" );
+        final var otherSet = Sets.newHashSet( RandomStringUtils.random( 10 ), RandomStringUtils.random( 10 ) );
+        if ( grantType.equals( GrantType.EmailDomain ) ) {
+            return new Grant( grantType,
+                    emailSet,
+                    RandomStringUtils.random( 8 )
+            );
+        } else {
+            return new Grant( grantType,
+                    otherSet,
+                    RandomStringUtils.random( 8 )
+            );
+        }
     }
 
     public static Principal organizationPrincipal() {
@@ -481,6 +542,15 @@ public final class TestDataFactory {
                 Optional.empty() );
     }
 
+    public static EntityTypePropertyMetadata entityTypePropertyMetadata() {
+        return new EntityTypePropertyMetadata(
+                randomAlphanumeric( 100 ), // title
+                randomAlphanumeric( 100 ), // description
+                Sets.newLinkedHashSet( Collections.singletonList( randomAlphanumeric( 5 ) ) ),
+                r.nextBoolean()
+        );
+    }
+
     public static Map<UUID, Map<UUID, Set<Object>>> randomBinaryData(
             int numberOfEntries,
             UUID keyType,
@@ -519,7 +589,8 @@ public final class TestDataFactory {
                 Optional.of( randomAlphanumeric( 4 ) ),
                 Optional.of( propertyTags ),
                 Optional.of( UUID.randomUUID() ),
-                Optional.of( new LinkedHashSet<>( Arrays.asList( 1, 2, 3, 4 ) ) ) );
+                Optional.of( new LinkedHashSet<>( Arrays.asList( 1, 2, 3, 4 ) ) ),
+                Optional.empty() );
     }
 
     public static SearchDetails searchDetails() {
@@ -582,6 +653,45 @@ public final class TestDataFactory {
                         randomAlphanumeric( 5 ) ),
                 UUID.randomUUID()
         );
+    }
+
+    public static OrganizationExternalDatabaseColumn organizationExternalDatabaseColumn() {
+        OrganizationExternalDatabaseTable table = organizationExternalDatabaseTable();
+        return new OrganizationExternalDatabaseColumn(
+                UUID.randomUUID(),
+                randomAlphanumeric( 5 ),
+                randomAlphanumeric( 5 ),
+                Optional.of( randomAlphanumeric( 5 ) ),
+                table.getId(),
+                UUID.randomUUID(),
+                PostgresDatatype.TEXT,
+                r.nextBoolean(),
+                r.nextInt( 1000 )
+        );
+    }
+
+    public static OrganizationExternalDatabaseTable organizationExternalDatabaseTable() {
+        return new OrganizationExternalDatabaseTable(
+                UUID.randomUUID(),
+                randomAlphanumeric( 5 ),
+                randomAlphanumeric( 5 ),
+                Optional.of( randomAlphanumeric( 5 ) ),
+                UUID.randomUUID()
+        );
+    }
+
+    public static PostgresAuthenticationRecord postgresAuthenticationRecord() {
+        return new PostgresAuthenticationRecord(
+                PostgresConnectionType.HOST,
+                randomAlphanumeric( 5 ),
+                randomAlphanumeric( 5 ),
+                "0.0.0.0/0",
+                randomAlphanumeric( 5 )
+        );
+    }
+
+    public static EntitySetFlag entitySetFlag() {
+        return entitySetFlags[ r.nextInt( entitySetFlags.length ) ];
     }
 
 }

@@ -19,7 +19,6 @@
 package com.openlattice.client.serialization;
 
 public final class SerializationConstants {
-
     public static final String ACE                              = "ace";
     public static final String ACES                             = "aces";
     public static final String ACL                              = "acl";
@@ -52,9 +51,11 @@ public final class SerializationConstants {
     public static final String ASSOCIATION_QUERIES              = "associationQueries";
     public static final String ASSOCIATION_TYPES                = "associationTypes";
     public static final String ASSOCIATION_TYPE_ID              = "associationTypeId";
+    public static final String ATTRIBUTE                        = "attribute";
     public static final String AUDIT_ID                         = "auditId";
     public static final String AUDIT_RECORD_ENTITY_SET_ID       = "auditRecordEntitySetId";
     public static final String AUDIT_RECORD_ENTITY_SET_IDS      = "auditRecordEntitySetIds";
+    public static final String AUTHENTICATION_METHOD            = "authenticationMethod";
     public static final String AUTHORIZED_OBJECTS               = "authorizedObjects";
     public static final String BASE_TYPE_FIELD                  = "baseType";
     public static final String BIDIRECTIONAL                    = "bidirectional";
@@ -65,19 +66,26 @@ public final class SerializationConstants {
     public static final String CHILD_CLAUSES                    = "childClauses";
     public static final String CHILD_QUERIES                    = "childQueries";
     public static final String CLAUSES                          = "clauses";
+    public static final String COLUMNS                          = "columns";
+    public static final String COLUMN_IDS_BY_TABLE_ID           = "columnIdsByTableId";
     public static final String COMPARISON                       = "comparison";
     public static final String CONFIG                           = "config";
     public static final String CONFLICTS                        = "conflicts";
+    public static final String CONNECTIONS                      = "connections";
+    public static final String CONNECTION_TYPE                  = "connectionType";
     public static final String CONSTRAINTS                      = "constraints";
     public static final String CONTACTS                         = "contacts";
     public static final String COUNT                            = "count";
     public static final String CURRENT_ENTITY_SET               = "currentEntitySet";
     public static final String DATA                             = "data";
+    public static final String DATABASE                         = "database";
     public static final String DATASOURCE_IDS                   = "datasourceIds";
     public static final String DATATYPE_FIELD                   = "datatype";
     public static final String DATA_ID                          = "dataId";
     public static final String DEFAULT_SHOW                     = "defaultShow";
     public static final String DEIDENTIFIED                     = "deidentified";
+    public static final String DELETE_TYPE                      = "deleteType";
+    public static final String DESCENDING                       = "descending";
     public static final String DESCRIPTION_FIELD                = "description";
     public static final String DETAILS_FIELD                    = "details";
     public static final String DIFF                             = "diff";
@@ -91,6 +99,7 @@ public final class SerializationConstants {
     public static final String EDM_TEMPLATES_FIELD              = "edmTemplates";
     public static final String ELAPSED_MILLIS                   = "elapsedMillis";
     public static final String EMAILS_FIELD                     = "emails";
+    public static final String EMAIL_DOMAINS                    = "emailDomains";
     public static final String END                              = "end";
     public static final String ENTITIES                         = "entities";
     public static final String ENTITY_COUNT                     = "entityCount";
@@ -100,6 +109,8 @@ public final class SerializationConstants {
     public static final String ENTITY_ID_GENERATOR              = "entityIdGenerator";
     public static final String ENTITY_KEY_ID                    = "entityKeyId";
     public static final String ENTITY_KEY_IDS                   = "entityKeyIds";
+    public static final String ENTITY_KEY_PAIR                  = "entityKeyPair";
+    public static final String ENTITY_LINKING_FEEDBACK          = "entityLinkingFeedback";
     public static final String ENTITY_QUERIES                   = "entityQueries";
     public static final String ENTITY_SETS_ENTITY_KEY_MAPPINGS  = "entitySetsEntityKeyMappings";
     public static final String ENTITY_SETS_FIELD                = "entitySets";
@@ -110,8 +121,8 @@ public final class SerializationConstants {
     public static final String ENTITY_SET_NAME                  = "entitySetName";
     public static final String ENTITY_TYPE                      = "entityType";
     public static final String ENTITY_TYPES                     = "entityTypes";
-    public static final String ENTITY_TYPE_ID                   = "entityTypeId";
     public static final String ENTITY_TYPE_COLLECTION_ID        = "entityTypeCollectionId";
+    public static final String ENTITY_TYPE_ID                   = "entityTypeId";
     public static final String ENTITY_TYPE_IDS_FIELD            = "entityTypeIds";
     public static final String ENUM_VALUES                      = "enumValues";
     public static final String EVENT_TYPE                       = "auditEventType";
@@ -127,6 +138,8 @@ public final class SerializationConstants {
     public static final String FLAGS_FIELD                      = "flags";
     public static final String FQN                              = "fqn";
     public static final String FUZZY                            = "fuzzy";
+    public static final String GRANTS                           = "grants";
+    public static final String GRANT_TYPE                       = "grantType";
     public static final String GROUPINGS                        = "groupings";
     public static final String GTE                              = "gte";
     public static final String HASH                             = "hash";
@@ -136,7 +149,7 @@ public final class SerializationConstants {
     public static final String INCLUDE_FIELD                    = "include";
     public static final String INDEXING                         = "indexing";
     public static final String INDEX_TYPE                       = "indexType";
-    public static final String IS_DESCENDING                    = "isDescending";
+    public static final String IP_ADDRESSES                     = "ipAddresses";
     public static final String IS_DST                           = "isDst";
     public static final String IS_OWNER                         = "isOwner";
     public static final String KEYWORD                          = "kw";
@@ -150,11 +163,11 @@ public final class SerializationConstants {
     public static final String LINKED_ENTITY_SETS               = "linkedEntitySets";
     public static final String LINKING                          = "linking";
     public static final String LINKING_ENTITY                   = "linkingEntity";
-    public static final String LINKING_FEEDBACK                 = "linkingFeedback";
     public static final String LINKING_PROPERTIES_FIELD         = "linkingProperties";
     public static final String LONGITUDE                        = "longitude";
     public static final String LOWERBOUND                       = "lowerbound";
     public static final String LTE                              = "lte";
+    public static final String MAPPINGS                         = "mappings";
     public static final String MATCH                            = "match";
     public static final String MAX_HITS                         = "maxHits";
     public static final String MEMBERS_FIELD                    = "members";
@@ -186,7 +199,9 @@ public final class SerializationConstants {
     public static final String PERMISSIONS_MAP                  = "permissionsMap";
     public static final String PHONE_NUMBER                     = "phoneNumber";
     public static final String PII_FIELD                        = "pii";
+    public static final String ORDINAL_POSITION                 = "ordinalPosition";
     public static final String PRESENT                          = "present";
+    public static final String PRIMARY_KEY                      = "primaryKey";
     public static final String PRINCIPAL                        = "principal";
     public static final String PRINCIPAL_PATHS                  = "principalPaths";
     public static final String PROFILE_FIELD                    = "profile";
@@ -215,10 +230,12 @@ public final class SerializationConstants {
     public static final String SEARCH_FIELDS                    = "searchFields";
     public static final String SEARCH_TERM                      = "searchTerm";
     public static final String SECOND                           = "second";
+    public static final String SECURABLE_PRINCIPAL              = "securablePrincipal";
     public static final String SELF_AGGREGATIONS                = "selfAggregations";
+    public static final String SETTINGS                         = "settings";
     public static final String SHARDS                           = "shards";
-    public static final String SORT                             = "sort";
     public static final String SMS_ENTITY_SET_INFO              = "smsEntitySetInfo";
+    public static final String SORT                             = "sort";
     public static final String SRC                              = "src";
     public static final String SRC_ENTITY_INDEX                 = "srcEntityIndex";
     public static final String SRC_ENTITY_KEY_ID                = "srcEntityKeyId";
@@ -230,6 +247,8 @@ public final class SerializationConstants {
     public static final String SYNC_IDS                         = "syncIds";
     public static final String SYNC_TICKETS                     = "syncTickets";
     public static final String TAGS                             = "tags";
+    public static final String TABLE                            = "table";
+    public static final String TABLE_ID                         = "tableId";
     public static final String TARGET                           = "target";
     public static final String TEMPLATE                         = "template";
     public static final String TIMESTAMP                        = "timestamp";
@@ -242,6 +261,7 @@ public final class SerializationConstants {
     public static final String UPPERBOUND                       = "upperbound";
     public static final String URL                              = "url";
     public static final String USER_ID                          = "userId";
+    public static final String USERNAME                         = "username";
     public static final String VALUES                           = "values";
     public static final String VALUE_FIELD                      = "value";
     public static final String VALUE_MAPPER                     = "valueMapper";
