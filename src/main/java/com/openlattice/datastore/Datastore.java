@@ -51,7 +51,7 @@ public class Datastore extends BaseRhizomeServer {
             PostgresPod.class,
             SharedStreamSerializersPod.class,
             TaskSchedulerPod.class,
-            NearCachesPod.class
+            NearCachesPod.class,
     };
 
     private static final Class<?>[] rhizomePods   = new Class<?>[] {
