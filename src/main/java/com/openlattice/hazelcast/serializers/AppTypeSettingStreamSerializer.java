@@ -23,17 +23,16 @@ package com.openlattice.hazelcast.serializers;
 import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Maps;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.apps.AppTypeSetting;
 import com.openlattice.authorization.AclKey;
-import com.openlattice.authorization.Principal;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -65,7 +64,7 @@ public class AppTypeSettingStreamSerializer implements SelfRegisteringStreamSeri
         UUID entitySetCollectionId = UUIDStreamSerializer.deserialize( in );
 
         int roleMapSize = in.readInt();
-        Map<UUID, AclKey> roleMap = new HashMap<>( roleMapSize );
+        Map<UUID, AclKey> roleMap = Maps.newHashMapWithExpectedSize( roleMapSize );
 
         for ( int i = 0; i < roleMapSize; i++ ) {
             UUID roleId = UUIDStreamSerializer.deserialize( in );
