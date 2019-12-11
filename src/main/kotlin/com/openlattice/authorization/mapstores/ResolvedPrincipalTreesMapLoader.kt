@@ -22,7 +22,8 @@ import javax.inject.Inject
  * In memory cache of resolved principal trees
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-class PrincipalTreesMapLoader : TestableSelfRegisteringMapStore<String, NavigableSet<Principal>> {
+class ResolvedPrincipalTreesMapLoader : TestableSelfRegisteringMapStore<String, NavigableSet<Principal>> {
+
     @Inject
     private lateinit var spm: SecurePrincipalsManager
     private lateinit var principals: IMap<String, SecurablePrincipal>
@@ -63,15 +64,6 @@ class PrincipalTreesMapLoader : TestableSelfRegisteringMapStore<String, Navigabl
         return MapConfig(mapName)
                 .setMaxIdleSeconds(300)
                 .setMapStoreConfig(mapStoreConfig)
-                .setNearCacheConfig(
-                        //The default settings here should be good enough (LRU, 10K size)
-                        //We cache local entries because in memory format is different from map (binary)
-                        NearCacheConfig(HazelcastMap.RESOLVED_PRINCIPAL_TREES.name + "_authentication")
-                                .setInvalidateOnChange(true)
-                                .setInMemoryFormat(InMemoryFormat.OBJECT)
-                                .setCacheLocalEntries(true)
-                                .setMaxIdleSeconds(30)
-                )
     }
 
     override fun getMapStoreConfig(): MapStoreConfig {

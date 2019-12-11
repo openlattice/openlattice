@@ -25,14 +25,11 @@ package com.openlattice.authorization;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
+import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.core.IMap;
+import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
-import java.util.Collection;
 import java.util.NavigableSet;
-import java.util.TreeSet;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import javax.annotation.Nonnull;
@@ -43,44 +40,46 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 public final class Principals {
-    private static final Logger                                        logger      = LoggerFactory
+    private static final Logger                                logger      = LoggerFactory
             .getLogger( Principals.class );
-    private static final Lock                                          startupLock = new ReentrantLock();
-    private static       LoadingCache<String, SecurablePrincipal>      users;
-    private static       LoadingCache<String, NavigableSet<Principal>> principals;
+    private static final Lock                                  startupLock = new ReentrantLock();
+    private static       IMap<String, SecurablePrincipal>      users;
+    private static       IMap<String, NavigableSet<Principal>> principals;
 
     private Principals() {
     }
 
-    public static void init( SecurePrincipalsManager spm ) {
+    public static void init( SecurePrincipalsManager spm, HazelcastInstance hazelcastInstance ) {
         if ( startupLock.tryLock() ) {
-            users = CacheBuilder
-                    .newBuilder()
-                    .expireAfterWrite( 1, TimeUnit.SECONDS )
-                    .build( new CacheLoader<>() {
-                        @Override public SecurablePrincipal load( String principalId ) throws Exception {
-                            return spm.getPrincipal( principalId );
-                        }
-                    } );
-
-            principals = CacheBuilder
-                    .newBuilder()
-                    .expireAfterWrite( 30, TimeUnit.SECONDS )
-                    .build( new CacheLoader<>() {
-                        @Override public NavigableSet<Principal> load( String principalId ) throws Exception {
-                            SecurablePrincipal sp = users.getUnchecked( principalId );
-                            Collection<SecurablePrincipal> securablePrincipals = spm.getAllPrincipals( sp );
-                            if ( securablePrincipals == null ) {
-                                return null;
-                            }
-                            NavigableSet<Principal> currentPrincipals = new TreeSet<>();
-                            currentPrincipals.add( sp.getPrincipal() );
-                            securablePrincipals.stream()
-                                    .map( SecurablePrincipal::getPrincipal )
-                                    .forEach( currentPrincipals::add );
-                            return currentPrincipals;
-                        }
-                    } );
+            users = hazelcastInstance.<String, SecurablePrincipal>getMap( HazelcastMap.PRINCIPALS.name() );
+            principals = hazelcastInstance.<String, NavigableSet<Principal>>getMap( HazelcastMap.PRINCIPALS.name() );
+            //            users = CacheBuilder
+            //                    .newBuilder()
+            //                    .expireAfterWrite( 1, TimeUnit.SECONDS )
+            //                    .build( new CacheLoader<>() {
+            //                        @Override public SecurablePrincipal load( String principalId ) throws Exception {
+            //                            return spm.getPrincipal( principalId );
+            //                        }
+            //                    } );
+            //
+            //            principals = CacheBuilder
+            //                    .newBuilder()
+            //                    .expireAfterWrite( 30, TimeUnit.SECONDS )
+            //                    .build( new CacheLoader<>() {
+            //                        @Override public NavigableSet<Principal> load( String principalId ) throws Exception {
+            //                            SecurablePrincipal sp = users.getUnchecked( principalId );
+            //                            Collection<SecurablePrincipal> securablePrincipals = spm.getAllPrincipals( sp );
+            //                            if ( securablePrincipals == null ) {
+            //                                return null;
+            //                            }
+            //                            NavigableSet<Principal> currentPrincipals = new TreeSet<>();
+            //                            currentPrincipals.add( sp.getPrincipal() );
+            //                            securablePrincipals.stream()
+            //                                    .map( SecurablePrincipal::getPrincipal )
+            //                                    .forEach( currentPrincipals::add );
+            //                            return currentPrincipals;
+            //                        }
+            //                    } );
         } else {
             logger.error( "Principals security processing can only be initialized once." );
             throw new IllegalStateException( "Principals context already initialized." );
@@ -106,7 +105,7 @@ public final class Principals {
     }
 
     public static SecurablePrincipal getCurrentSecurablePrincipal() {
-        return users.getUnchecked( getCurrentPrincipalId() );
+        return users.get( getCurrentPrincipalId() );
     }
 
     public static Principal getUserPrincipal( String principalId ) {
@@ -114,11 +113,11 @@ public final class Principals {
     }
 
     public static NavigableSet<Principal> getUserPrincipals( String principalId ) {
-        return principals.getUnchecked( principalId );
+        return principals.get( principalId );
     }
 
     public static NavigableSet<Principal> getCurrentPrincipals() {
-        return principals.getUnchecked( getCurrentPrincipalId() );
+        return principals.get( getCurrentPrincipalId() );
     }
 
     public static Principal getAdminRole() {
@@ -138,7 +137,7 @@ public final class Principals {
     }
 
     public static void invalidatePrincipalCache( String principalId ) {
-        users.invalidate( principalId );
-        principals.invalidate( principalId );
+        users.evict( principalId );
+        principals.evict( principalId );
     }
 }

@@ -47,6 +47,8 @@ import com.openlattice.authorization.mapstores.PermissionMapstore;
 import com.openlattice.authorization.mapstores.PostgresCredentialMapstore;
 import com.openlattice.authorization.mapstores.PrincipalMapstore;
 import com.openlattice.authorization.mapstores.PrincipalTreesMapstore;
+import com.openlattice.authorization.mapstores.ResolvedPrincipalTreesMapLoader;
+import com.openlattice.authorization.mapstores.SecurablePrincipalsMapLoader;
 import com.openlattice.authorization.mapstores.UserMapstore;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.collections.CollectionTemplateKey;
@@ -327,4 +329,12 @@ public class MapstoresPod {
         return new SmsInformationMapstore( hikariDataSource );
     }
 
+    @Bean
+    public SecurablePrincipalsMapLoader securablePrincipalsMapLoader() {
+        return new SecurablePrincipalsMapLoader( );
+    }
+    @Bean
+    public ResolvedPrincipalTreesMapLoader resolvedPrincipalTreesMapLoader() {
+        return new ResolvedPrincipalTreesMapLoader();
+    }
 }

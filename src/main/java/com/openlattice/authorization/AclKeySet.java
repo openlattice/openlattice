@@ -22,6 +22,7 @@ package com.openlattice.authorization;
 
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -48,4 +49,7 @@ public class AclKeySet extends HashSet<AclKey> {
         return this.stream().map( AclKey::getIndex ).collect( Collectors.toSet() );
     }
 
+    @Override public boolean contains( Object o ) {
+        return super.contains( o );
+    }
 }
