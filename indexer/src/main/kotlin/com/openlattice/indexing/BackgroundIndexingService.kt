@@ -24,9 +24,6 @@ package com.openlattice.indexing
 import com.google.common.base.Stopwatch
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
-import com.hazelcast.query.Predicate
-import com.hazelcast.query.Predicates
-import com.hazelcast.query.QueryConstants
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi
 import com.openlattice.data.storage.IndexingMetadataManager
 import com.openlattice.data.storage.MetadataOption
@@ -78,22 +75,7 @@ class BackgroundIndexingService(
 
     private val indexingLocks: IMap<UUID, Long> = hazelcastInstance.getMap(HazelcastMap.INDEXING_LOCKS.name)
 
-    init {
-        indexingLocks.addIndex(QueryConstants.THIS_ATTRIBUTE_NAME.value(), true)
-    }
-
     private val taskLock = ReentrantLock()
-
-    @Suppress("UNCHECKED_CAST", "UNUSED")
-    @Scheduled(fixedRate = EXPIRATION_MILLIS)
-    fun scavengeIndexingLocks() {
-        indexingLocks.removeAll(
-                Predicates.lessThan(
-                        QueryConstants.THIS_ATTRIBUTE_NAME.value(),
-                        System.currentTimeMillis()
-                ) as Predicate<UUID, Long>
-        )
-    }
 
     @Suppress("UNUSED")
     @Scheduled(fixedRate = INDEX_RATE)
@@ -114,7 +96,7 @@ class BackgroundIndexingService(
             //We shuffle entity sets to make sure we have a chance to work share and index everything
             val lockedEntitySets = entitySets.values
                     .shuffled()
-                    .filter { tryLockEntitySet(it) }
+                    .filter { tryLockEntitySet(it.id) == null }
                     .filter { it.name != "OpenLattice Audit Entity Set" } //TODO: Clean out audit entity set from prod
 
             val totalIndexed = lockedEntitySets
@@ -344,18 +326,33 @@ class BackgroundIndexingService(
         return indexCount
     }
 
-    private fun tryLockEntitySet(entitySet: EntitySet): Boolean {
-        return indexingLocks.putIfAbsent(entitySet.id, System.currentTimeMillis() + EXPIRATION_MILLIS) == null
+    fun refreshExpiration(esId: UUID) {
+        try {
+            indexingLocks.lock(esId)
+
+            indexingLocks.putIfAbsent(
+                    esId,
+                    Instant.now().plusMillis(EXPIRATION_MILLIS).toEpochMilli(),
+                    EXPIRATION_MILLIS,
+                    TimeUnit.MILLISECONDS
+            )
+        } finally {
+            indexingLocks.unlock(esId)
+        }
+    }
+
+    private fun tryLockEntitySet(esId: UUID): Long? {
+        return indexingLocks.putIfAbsent(
+                esId,
+                Instant.now().plusMillis(EXPIRATION_MILLIS).toEpochMilli(),
+                EXPIRATION_MILLIS,
+                TimeUnit.MILLISECONDS
+        )
     }
 
     private fun deleteIndexingLock(entitySet: EntitySet) {
         indexingLocks.delete(entitySet.id)
     }
-
-    private fun updateExpiration(entitySet: EntitySet) {
-        indexingLocks.set(entitySet.id, System.currentTimeMillis() + EXPIRATION_MILLIS)
-    }
-
     private fun getBatch(entityKeyIdStream: Iterator<Pair<UUID, OffsetDateTime>>): Map<UUID, OffsetDateTime> {
         val entityKeyIds = HashMap<UUID, OffsetDateTime>(INDEX_SIZE)
 
