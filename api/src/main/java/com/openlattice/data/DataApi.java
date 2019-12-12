@@ -149,7 +149,7 @@ public interface DataApi {
      * Creates a new set of associations.
      *
      * @param associations Set of associations to create. An association is the triple of source, destination, and edge
-     *                     entitiy key ids.
+     *                     entitiy data keys.
      */
     @PUT( BASE + "/" + ASSOCIATION )
     Integer createAssociations( @Body Set<DataEdgeKey> associations );
@@ -291,7 +291,7 @@ public interface DataApi {
      * @return Returns linked entity set data detailed in a Map mapped by linking id, (normal) entity set id, origin id,
      * property type full qualified name and values respectively.
      */
-    @GET( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + DETAILED  )
+    @POST( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + DETAILED  )
     Map<UUID, Map<UUID, Map<UUID, Map<FullQualifiedName, Set<Object>>>>> loadLinkedEntitySetBreakdown(
             @Path( ENTITY_SET_ID ) UUID linkedEntitySetId,
             @Body EntitySetSelection selection
