@@ -149,7 +149,7 @@ public interface DataApi {
      * Creates a new set of associations.
      *
      * @param associations Set of associations to create. An association is the triple of source, destination, and edge
-     *                     entitiy key ids.
+     *                     entitiy data keys.
      */
     @PUT( BASE + "/" + ASSOCIATION )
     Integer createAssociations( @Body Set<DataEdgeKey> associations );
