@@ -118,100 +118,85 @@ class BackgroundLinkingIndexingService(
     @Suppress("UNUSED")
     @Scheduled(fixedRate = LINKING_INDEX_RATE)
     private fun linkingIndexing() {
-        if (!isLinkingIndexingEnabled()) {
-            return
-        }
-        executor.submit {
-            try {
-                logger.info("Starting background linking indexing task.")
-                val esw = Stopwatch.createStarted()
-                generateSequence(indexCandidates::poll)
-                        .chunked(LINKING_INDEX_SIZE)
-                        .forEach { candidateBatch ->
-                            limiter.acquire()
-                            val (linkingEntityKeyIdsWithLastWrite, linkingIds) = mapCandidates(candidateBatch)
-
-                            try {
-                                index(linkingEntityKeyIdsWithLastWrite, linkingIds)
-                            } catch (ex: Exception) {
-                                logger.error("Unable to index batch of linking ids $linkingIds.", ex)
-                            } finally {
-                                unLock(linkingIds)
-                                limiter.release()
-                            }
-                        }
-                logger.info("Finished background linking indexing task in ${esw.elapsed(TimeUnit.MILLISECONDS)} ms.")
-            } catch (ex: DistributedObjectDestroyedException) {
-                logger.error("Linking indexing queue destroyed.", ex)
-            }
-        }
+        submitIndexingTask(indexCandidates, true)
     }
 
     @Suppress("UNUSED")
     @Scheduled(fixedRate = LINKING_INDEX_RATE)
     private fun linkingUnIndexing() {
+        submitIndexingTask(unIndexCandidates, false)
+    }
+
+    private fun submitIndexingTask(
+            candidates: IQueue<Triple<List<Array<UUID>>, UUID, OffsetDateTime>>,
+            createMode: Boolean
+    ) {
         if (!isLinkingIndexingEnabled()) {
             return
         }
+
+        val taskName = if (createMode) "index" else "un-index"
         executor.submit {
             try {
-                logger.info("Starting background linking indexing task.")
+                logger.info("Starting background linking $taskName task.")
                 val esw = Stopwatch.createStarted()
-                generateSequence(unIndexCandidates::poll)
+
+                generateSequence(candidates::poll)
                         .chunked(LINKING_INDEX_SIZE)
                         .forEach { candidateBatch ->
+
                             limiter.acquire()
                             val (linkingEntityKeyIdsWithLastWrite, linkingIds) = mapCandidates(candidateBatch)
 
                             try {
-                                unIndex(linkingEntityKeyIdsWithLastWrite, linkingIds)
+                                if (createMode) {
+                                    index(linkingEntityKeyIdsWithLastWrite, linkingIds)
+                                } else {
+                                    unIndex(linkingEntityKeyIdsWithLastWrite, linkingIds)
+                                }
                             } catch (ex: Exception) {
-                                logger.error("Unable to un-index from batch of linking ids $linkingIds.", ex)
+                                logger.error("Unable to $taskName from batch of linking ids $linkingIds.", ex)
                             } finally {
                                 unLock(linkingIds)
                                 limiter.release()
                             }
                         }
-                logger.info("Finished background linking un-indexing task in ${esw.elapsed(TimeUnit.MILLISECONDS)} ms.")
+                logger.info("Finished background linking $taskName task in ${esw.elapsed(TimeUnit.MILLISECONDS)} ms.")
             } catch (ex: DistributedObjectDestroyedException) {
-                logger.error("Linking un-indexing queue destroyed.", ex)
-            }
-        }
-    }
-
-
-    @Suppress("UNUSED")
-    @Scheduled(fixedRate = LINKING_INDEX_RATE)
-    private fun updateIndexCandidates() {
-        if (!isLinkingIndexingEnabled()) {
-            return
-        }
-        executor.submit {
-            try {
-                logger.info("Registering linking ids needing indexing.")
-                getDirtyLinkingIds()
-                        .filter { lockOrRefresh(it.second) }
-                        .forEach(indexCandidates::put)
-            } catch (ex: Exception) {
-                logger.info("Encountered error while updating candidates for linking indexing.", ex)
+                logger.error("Linking $taskName queue destroyed.", ex)
             }
         }
     }
 
     @Suppress("UNUSED")
     @Scheduled(fixedRate = LINKING_INDEX_RATE)
-    private fun updateUnIndexCandidates() {
+    private fun updateCandidates() {
+        submitEnqueueTask(indexCandidates, true)
+        submitEnqueueTask(unIndexCandidates, false)
+    }
+
+    private fun submitEnqueueTask(
+            candidates: IQueue<Triple<List<Array<UUID>>, UUID, OffsetDateTime>>,
+            createMode: Boolean
+    ) {
         if (!isLinkingIndexingEnabled()) {
             return
         }
+        val taskName = if (createMode) "indexing" else "un-indexing"
         executor.submit {
             try {
-                logger.info("Registering linking ids needing un-indexing.")
-                getDeletedLinkingIds()
+                logger.info("Registering linking ids needing $taskName.")
+
+                if (createMode) {
+                    getDirtyLinkingIds()
+                } else {
+                    getDeletedLinkingIds()
+                }
                         .filter { lockOrRefresh(it.second) }
-                        .forEach(unIndexCandidates::put)
+                        .forEach(candidates::put)
+
             } catch (ex: Exception) {
-                logger.info("Encountered error while updating candidates for linking un-indexing.", ex)
+                logger.info("Encountered error while updating candidates for linking $taskName.", ex)
             }
         }
     }
