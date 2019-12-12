@@ -24,6 +24,9 @@ package com.openlattice.assembler
 import com.codahale.metrics.MetricRegistry
 import com.codahale.metrics.MetricRegistry.name
 import com.codahale.metrics.Timer
+import com.google.common.cache.CacheBuilder
+import com.google.common.cache.CacheLoader
+import com.google.common.cache.LoadingCache
 import com.google.common.eventbus.EventBus
 import com.google.common.eventbus.Subscribe
 import com.openlattice.assembler.PostgresDatabases.Companion.buildOrganizationDatabaseName
@@ -54,6 +57,7 @@ import org.springframework.stereotype.Component
 import java.sql.Connection
 import java.sql.Statement
 import java.util.*
+import java.util.concurrent.TimeUnit
 import java.util.function.Function
 import java.util.function.Supplier
 import kotlin.NoSuchElementException
@@ -75,6 +79,10 @@ class AssemblerConnectionManager(
         metricRegistry: MetricRegistry
 ) {
 
+    private val perDbCache: LoadingCache<String, HikariDataSource> = CacheBuilder
+            .newBuilder()
+            .expireAfterAccess(1, TimeUnit.HOURS)
+            .build(cacheLoader())
     private val target: HikariDataSource = connect("postgres")
     private val materializeAllTimer: Timer =
             metricRegistry.timer(name(AssemblerConnectionManager::class.java, "materializeAll"))
@@ -106,7 +114,7 @@ class AssemblerConnectionManager(
         }
 
         @JvmStatic
-        fun connect(dbName: String, config: Properties, useSsl: Boolean): HikariDataSource {
+        fun createDataSource(dbName: String, config: Properties, useSsl: Boolean): HikariDataSource {
             config.computeIfPresent("jdbcUrl") { _, jdbcUrl ->
                 "${(jdbcUrl as String).removeSuffix(
                         "/"
@@ -120,16 +128,24 @@ class AssemblerConnectionManager(
         }
     }
 
-    fun connect(dbName: String): HikariDataSource {
-        return connect(dbName, assemblerConfiguration.server.clone() as Properties, assemblerConfiguration.ssl)
+    fun cacheLoader(): CacheLoader<String,HikariDataSource> {
+        return CacheLoader.from { dbName ->
+            createDataSource(dbName!!, assemblerConfiguration.server.clone() as Properties, assemblerConfiguration.ssl)
+        }
     }
 
+    fun connect(dbName: String): HikariDataSource {
+        return perDbCache.get(dbName)
+    }
+
+    /* TODO: use #perDbCache or delete.
+     */
     fun connect(dbName: String, account: MaterializedViewAccount): HikariDataSource {
         val config = assemblerConfiguration.server.clone() as Properties
         config["username"] = account.username
         config["password"] = account.credential
 
-        return connect(dbName, config, assemblerConfiguration.ssl)
+        return createDataSource(dbName, config, assemblerConfiguration.ssl)
     }
 
     @Subscribe
