@@ -92,7 +92,7 @@ class PartitionManager @JvmOverloads constructor(
 
     /**
      * Performs the initial allocation of partitions for an entity set based on default partitions for the organization
-     * it belongs to or all partitions if an audit entity set
+     * it belongs to
      * entity sets.
      *
      * @param entitySet The entity set to allocate partitions for.
@@ -109,7 +109,7 @@ class PartitionManager @JvmOverloads constructor(
 
     /**
      * Performs the initial allocation of partitions for an entity set based on default partitions for the organization
-     * it belongs to or all partitions if an audit entity set
+     * it belongs to
      * entity sets.
      *
      * @param entitySetId The entity set to allocate partitions for.
@@ -124,13 +124,11 @@ class PartitionManager @JvmOverloads constructor(
 
     private fun computePartitions(entitySet: EntitySet, partitionCount: Int): List<Int> {
         val defaults = getDefaultPartitions(entitySet.organizationId)
-        return when {
-            entitySet.flags.contains(EntitySetFlag.AUDIT) -> Collections.unmodifiableList(partitionList)
-            else -> if (defaults.size < partitionCount) {
-                defaults + partitionList.toList().shuffled().take(partitionCount - defaults.size)
-            } else {
-                defaults
-            }
+
+        return if (defaults.size < partitionCount) {
+            defaults + partitionList.toList().shuffled().take(partitionCount - defaults.size)
+        } else {
+            defaults
         }
     }
 
