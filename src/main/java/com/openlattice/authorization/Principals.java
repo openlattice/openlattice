@@ -25,7 +25,6 @@ package com.openlattice.authorization;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 
-import com.google.common.collect.ImmutableSet;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.openlattice.hazelcast.HazelcastMap;
@@ -44,7 +43,7 @@ public final class Principals {
     private static final Logger                                logger      = LoggerFactory
             .getLogger( Principals.class );
     private static final Lock                                  startupLock = new ReentrantLock();
-    private static       IMap<String, SecurablePrincipal>      users;
+    private static       IMap<String, SecurablePrincipal>      securablePrincipals;
     private static       IMap<String, NavigableSet<Principal>> principals;
 
     private Principals() {
@@ -52,8 +51,8 @@ public final class Principals {
 
     public static void init( SecurePrincipalsManager spm, HazelcastInstance hazelcastInstance ) {
         if ( startupLock.tryLock() ) {
-            users = hazelcastInstance.<String, SecurablePrincipal>getMap( HazelcastMap.PRINCIPALS.name() );
-            principals = hazelcastInstance.<String, NavigableSet<Principal>>getMap( HazelcastMap.PRINCIPALS.name() );
+            securablePrincipals = hazelcastInstance.getMap( HazelcastMap.SECURABLE_PRINCIPALS.name() );
+            principals = hazelcastInstance.getMap( HazelcastMap.PRINCIPALS.name() );
         } else {
             logger.error( "Principals security processing can only be initialized once." );
             throw new IllegalStateException( "Principals context already initialized." );
@@ -79,7 +78,7 @@ public final class Principals {
     }
 
     public static SecurablePrincipal getCurrentSecurablePrincipal() {
-        return users.get( getCurrentPrincipalId() );
+        return securablePrincipals.get( getCurrentPrincipalId() );
     }
 
     public static Principal getUserPrincipal( String principalId ) {
@@ -111,10 +110,8 @@ public final class Principals {
     }
 
     public static void invalidatePrincipalCache( String principalId ) {
-        users.evict( principalId );
+        securablePrincipals.evict( principalId );
         principals.evict( principalId );
-        users.loadAll( ImmutableSet.of( principalId ), true );
-        principals.loadAll( ImmutableSet.of( principalId ), true );
     }
 }
 
