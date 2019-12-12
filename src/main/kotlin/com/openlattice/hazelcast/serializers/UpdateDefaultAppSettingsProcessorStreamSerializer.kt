@@ -34,7 +34,7 @@ class UpdateDefaultAppSettingsProcessorStreamSerializer : TestableSelfRegisterin
             val value: Any = `in`.readObject<Any>()
 
             key to value
-        }
+        }.toMutableMap()
 
         return UpdateDefaultAppSettingsProcessor(settings)
     }
