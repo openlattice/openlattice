@@ -333,15 +333,21 @@ class BackgroundLinkingIndexingService(
      * Returns true, if the linking entity is not yet locked to be processed and false otherwise.
      */
     private fun lockOrRefresh(linkingId: UUID): Boolean {
-        val expiration = lockOrGet(linkingId)
-        // expiration should be >= now, otherwise entry should be evicted
-        if (expiration != null && Instant.now().toEpochMilli() <= expiration) {
-            // if it is about to expire (but not yet processed), we refresh the expiration/time to live
-            logger.info("Refreshing expiration for linking id {}", linkingId)
-            refreshExpiration(linkingId)
-        }
+        try {
+            linkingIndexingLocks.lock(linkingId)
 
-        return expiration == null
+            val expiration = lockOrGet(linkingId)
+            // expiration should be >= now, otherwise entry should be evicted
+            if (expiration != null && Instant.now().toEpochMilli() <= expiration) {
+                // if it is about to expire (but not yet processed), we refresh the expiration/time to live
+                logger.info("Refreshing expiration for linking id {}", linkingId)
+                refreshExpiration(linkingId)
+            }
+
+            return expiration == null
+        } finally {
+            linkingIndexingLocks.unlock(linkingId)
+        }
     }
 
     /**
@@ -360,18 +366,12 @@ class BackgroundLinkingIndexingService(
      * Refreshes expiration and time to live for the specified linking id.
      */
     private fun refreshExpiration(linkingId: UUID) {
-        try {
-            linkingIndexingLocks.lock(linkingId)
-
-            linkingIndexingLocks.set(
-                    linkingId,
-                    Instant.now().plusMillis(LINKING_INDEXING_TIMEOUT_MILLIS).toEpochMilli(),
-                    LINKING_INDEXING_TIMEOUT_MILLIS,
-                    TimeUnit.MILLISECONDS
-            )
-        } finally {
-            linkingIndexingLocks.unlock(linkingId)
-        }
+        linkingIndexingLocks.set(
+                linkingId,
+                Instant.now().plusMillis(LINKING_INDEXING_TIMEOUT_MILLIS).toEpochMilli(),
+                LINKING_INDEXING_TIMEOUT_MILLIS,
+                TimeUnit.MILLISECONDS
+        )
     }
 
     private fun unLock(linkingIds: Collection<UUID>) {
