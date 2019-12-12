@@ -655,7 +655,7 @@ public final class TestDataFactory {
                         randomAlphanumeric( 5 ),
                         false,
                         randomAlphanumeric( 5 ),
-                        RandomUtils.nextInt( 0, 10000 ) );
+                        RandomUtils.nextInt( 0, 10000 ) ) );
     }
 
     public static AppConfigKey appConfigKey() {
