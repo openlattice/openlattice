@@ -99,15 +99,7 @@ public class PrincipalMapstore extends AbstractBasePostgresMapstore<AclKey, Secu
                 .addMapIndexConfig( new MapIndexConfig( PRINCIPAL_INDEX, false ) )
                 .addMapIndexConfig( new MapIndexConfig( PRINCIPAL_ID_INDEX, false ) )
                 .addMapIndexConfig( new MapIndexConfig( "aclKey[0]", false ) )
-                .addMapIndexConfig( new MapIndexConfig( "principalType", false ) )
-                .setNearCacheConfig(
-                        //The default settings here should be good enough (LRU, 10K size)
-                        new NearCacheConfig( HazelcastMap.PRINCIPALS.name() + "_authentication" )
-                            .setInvalidateOnChange( true )
-                            .setInMemoryFormat( InMemoryFormat.OBJECT )
-                            .setCacheLocalEntries( true )
-                            .setMaxIdleSeconds( 30 )
-                );
+                .addMapIndexConfig( new MapIndexConfig( "principalType", false ) );
     }
 
 }
