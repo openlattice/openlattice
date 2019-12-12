@@ -11,10 +11,6 @@ function runPsqlOnNode {
   sudo docker exec $1 psql -U postgres -c "$2"
 }
 
-function runPsqlOnNodeWithOLDB {
-  sudo docker exec $1 psql -U postgres -d openlattice -c "$2"
-}
-
 function runPsqlFileOnNodeWithOLDB {
   sudo docker exec $1 psql -U postgres -d openlattice -f $2
 }
@@ -30,9 +26,9 @@ sleep 5
 # sudo docker exec citus_master psql -U postgres -c "SELECT * FROM master_get_active_worker_nodes();"
 NODES=`runPsqlOnNode citus_master "SELECT * FROM master_get_active_worker_nodes();"  | grep worker | cut -d ' ' -f 2`
 
+echo "current nodes: "
 for i in $NODES
 do
-  echo "current nodes: "
   echo "$i"
 done
 
