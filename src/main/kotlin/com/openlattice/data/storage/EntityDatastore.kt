@@ -66,7 +66,10 @@ interface EntityDatastore {
             authorizedPropertyTypesByEntitySet: Map<UUID, Map<UUID, PropertyType>>
     ): ListMultimap<UUID, MutableMap<FullQualifiedName, MutableSet<Any>>>
 
-    fun getEntityKeyIdsOfLinkingIds(linkingIds: Set<UUID>): PostgresIterable<Pair<UUID, Set<UUID>>>
+    fun getEntityKeyIdsOfLinkingIds(
+            linkingIds: Set<UUID>,
+            normalEntitySetIds: Set<UUID>? = null
+    ): PostgresIterable<Pair<UUID, Set<UUID>>>
 
     /**
      * Creates entities if they do not exist and then adds the provided properties to specified entities.

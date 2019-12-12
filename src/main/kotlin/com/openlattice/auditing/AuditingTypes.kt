@@ -81,6 +81,10 @@ class AuditingTypes(
         }
     }
 
+    fun enabled(): Boolean {
+        return auditingConfiguration.enabled
+    }
+
     fun isAuditingInitialized(): Boolean {
         if (!initialized) {
             intialize()

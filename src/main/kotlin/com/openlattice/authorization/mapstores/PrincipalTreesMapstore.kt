@@ -23,9 +23,8 @@ package com.openlattice.authorization.mapstores
 
 import com.codahale.metrics.annotation.Timed
 import com.google.common.collect.ImmutableList
-import com.hazelcast.config.MapConfig
-import com.hazelcast.config.MapIndexConfig
-import com.hazelcast.config.MapStoreConfig
+import com.google.common.collect.ImmutableSortedSet
+import com.hazelcast.config.*
 import com.kryptnostic.rhizome.mapstores.TestableSelfRegisteringMapStore
 import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.AclKeySet
@@ -41,6 +40,7 @@ import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.sql.ResultSet
+import java.util.*
 import java.util.function.Function
 import java.util.function.Supplier
 
@@ -125,9 +125,10 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
                     ResultSetAdapters.aclKey(it) to ResultSetAdapters.principalOfAclKey(it)
                 }
         )
-        val map: MutableMap<AclKey, AclKeySet> = mutableMapOf()
+        val map = mutableMapOf<AclKey, AclKeySet>()
         data.forEach { map.getOrPut(it.first) { AclKeySet() }.add(it.second) }
-        (map.keys - keys).forEach { map.putIfAbsent(it, AclKeySet()) }
+        ( keys - map.keys ).forEach { map[it] = AclKeySet() }
+
         return map
     }
 
@@ -162,6 +163,7 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
     override fun generateTestValue(): AclKeySet {
         return AclKeySet(ImmutableList.of(generateTestKey(), generateTestKey(), generateTestKey()))
     }
+
 
     override fun getMapStoreConfig(): MapStoreConfig {
         return MapStoreConfig()

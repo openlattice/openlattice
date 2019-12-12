@@ -22,15 +22,17 @@ package com.openlattice.authorization.mapstores;
 
 import static com.openlattice.postgres.PostgresTable.PRINCIPALS;
 
-import com.openlattice.hazelcast.HazelcastMap;
-import com.openlattice.mapstores.TestDataFactory;
-import com.openlattice.organization.roles.Role;
+import com.hazelcast.config.InMemoryFormat;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MapIndexConfig;
 import com.hazelcast.config.MapStoreConfig;
 import com.hazelcast.config.MapStoreConfig.InitialLoadMode;
+import com.hazelcast.config.NearCacheConfig;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.SecurablePrincipal;
+import com.openlattice.hazelcast.HazelcastMap;
+import com.openlattice.mapstores.TestDataFactory;
+import com.openlattice.organization.roles.Role;
 import com.openlattice.postgres.PostgresArrays;
 import com.openlattice.postgres.ResultSetAdapters;
 import com.openlattice.postgres.mapstores.AbstractBasePostgresMapstore;
@@ -43,9 +45,9 @@ import java.sql.SQLException;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class PrincipalMapstore extends AbstractBasePostgresMapstore<AclKey, SecurablePrincipal> {
-    public static final String PRINCIPAL_INDEX = "principal";
     public static final String PRINCIPAL_ID_INDEX = "id";
-    private static Role TEST_ROLE = TestDataFactory.role();
+    public static final String PRINCIPAL_INDEX    = "principal";
+    private static      Role   TEST_ROLE          = TestDataFactory.role();
 
     public PrincipalMapstore( HikariDataSource hds ) {
         super( HazelcastMap.PRINCIPALS.name(), PRINCIPALS, hds );
@@ -99,4 +101,5 @@ public class PrincipalMapstore extends AbstractBasePostgresMapstore<AclKey, Secu
                 .addMapIndexConfig( new MapIndexConfig( "aclKey[0]", false ) )
                 .addMapIndexConfig( new MapIndexConfig( "principalType", false ) );
     }
+
 }

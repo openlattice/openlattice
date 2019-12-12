@@ -538,7 +538,6 @@ class PostgresEntityDataQueryService(
      * Tombstones all entities in an entity set in both [IDS] and [DATA] table.
      */
     private fun tombstone(conn: Connection, entitySetId: UUID, version: Long): WriteEvent {
-        check(!conn.autoCommit) { "Connection auto-commit must be disabled" }
 
         val numUpdated = conn.prepareStatement(updateVersionsForEntitySet).use { ps ->
             ps.setLong(1, -version)
@@ -678,8 +677,6 @@ class PostgresEntityDataQueryService(
 
             val idsArr = PostgresArrays.createUuidArray(connection, entities)
 
-            lockEntitiesForUpdate(connection, idsArr, partition)
-
             // Delete entity properties from data table
             val ps = connection.prepareStatement(deletePropertiesOfEntitiesInEntitySet)
             ps.setObject(1, entitySetId)
@@ -731,8 +728,6 @@ class PostgresEntityDataQueryService(
 
 
             val idsArr = PostgresArrays.createUuidArray(connection, entities)
-
-            lockEntitiesForUpdate(connection, idsArr, partition)
 
             // Delete entity properties from data table
             val ps = connection.prepareStatement(deleteEntitiesInEntitySet)
@@ -878,21 +873,6 @@ class PostgresEntityDataQueryService(
         }.sum()
 
         return WriteEvent(System.currentTimeMillis(), numUpdates)
-    }
-
-    private fun lockEntitiesForUpdate(
-            connection: Connection,
-            idsArr: java.sql.Array,
-            partition: Int
-    ) {
-
-        check(!connection.autoCommit) { "Connection auto-commit must be disabled" }
-
-        // Acquire entity key id locks
-        val rowLocks = connection.prepareStatement(lockEntitiesSql)
-        rowLocks.setArray(1, idsArr)
-        rowLocks.setInt(2, partition)
-        rowLocks.executeQuery()
     }
 
     /**

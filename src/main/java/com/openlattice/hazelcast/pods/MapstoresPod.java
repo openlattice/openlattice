@@ -47,6 +47,8 @@ import com.openlattice.authorization.mapstores.PermissionMapstore;
 import com.openlattice.authorization.mapstores.PostgresCredentialMapstore;
 import com.openlattice.authorization.mapstores.PrincipalMapstore;
 import com.openlattice.authorization.mapstores.PrincipalTreesMapstore;
+import com.openlattice.authorization.mapstores.ResolvedPrincipalTreesMapLoader;
+import com.openlattice.authorization.mapstores.SecurablePrincipalsMapLoader;
 import com.openlattice.authorization.mapstores.UserMapstore;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.collections.CollectionTemplateKey;
@@ -250,7 +252,7 @@ public class MapstoresPod {
     public QueueConfigurer linkingIndexingQueueConfigurer() {
         return config -> config
                 .setName( HazelcastQueue.LINKING_INDEXING.name() )
-                .setMaxSize( 128_000 )
+                .setMaxSize( 10_000 )
                 .setBackupCount( 1 );
     }
 
@@ -258,7 +260,7 @@ public class MapstoresPod {
     public QueueConfigurer linkingUnIndexingQueueConfigurer() {
         return config -> config
                 .setName( HazelcastQueue.LINKING_UNINDEXING.name() )
-                .setMaxSize( 128_000 )
+                .setMaxSize( 10_000 )
                 .setBackupCount( 1 );
     }
 
@@ -327,4 +329,12 @@ public class MapstoresPod {
         return new SmsInformationMapstore( hikariDataSource );
     }
 
+    @Bean
+    public SecurablePrincipalsMapLoader securablePrincipalsMapLoader() {
+        return new SecurablePrincipalsMapLoader( );
+    }
+    @Bean
+    public ResolvedPrincipalTreesMapLoader resolvedPrincipalTreesMapLoader() {
+        return new ResolvedPrincipalTreesMapLoader();
+    }
 }
