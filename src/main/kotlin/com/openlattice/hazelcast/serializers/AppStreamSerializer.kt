@@ -15,7 +15,7 @@ class AppStreamSerializer : SelfRegisteringStreamSerializer<App> {
 
     companion object {
         private val mapper = ObjectMappers.getJsonMapper()
-        private val typeRef = object : TypeReference<Map<String, Any>>() {}
+        private val typeRef = object : TypeReference<MutableMap<String, Any>>() {}
     }
 
     override fun getTypeId(): Int {
@@ -50,7 +50,7 @@ class AppStreamSerializer : SelfRegisteringStreamSerializer<App> {
         val numRoles = `in`.readInt()
         val appRoles = (0 until numRoles).map { AppRoleStreamSerializer.deserialize(`in`) }.toMutableSet()
 
-        val defaultSettings: Optional<Map<String, Any>> = Optional.of(mapper.readValue(`in`.readByteArray(), typeRef))
+        val defaultSettings: MutableMap<String, Any> = mapper.readValue(`in`.readByteArray(), typeRef)
 
         return App(id, name, title, description, url, entityTypeCollectionId, appRoles, defaultSettings)
 
