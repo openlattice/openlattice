@@ -48,8 +48,4 @@ public class AclKeySet extends HashSet<AclKey> {
     public Set<String> getIndex() {
         return this.stream().map( AclKey::getIndex ).collect( Collectors.toSet() );
     }
-
-    @Override public boolean contains( Object o ) {
-        return super.contains( o );
-    }
 }
