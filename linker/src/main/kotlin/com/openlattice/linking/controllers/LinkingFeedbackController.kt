@@ -26,11 +26,11 @@ import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
 import com.openlattice.data.EntityDataKey
-import com.openlattice.data.storage.EntityDatastore
 import com.openlattice.data.storage.IndexingMetadataManager
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.linking.*
+import com.openlattice.linking.graph.PostgresLinkingQueryService
 import com.openlattice.linking.util.PersonMetric
 import com.openlattice.linking.util.PersonProperties
 import org.slf4j.LoggerFactory
@@ -48,7 +48,7 @@ constructor(
         private val matcher: Matcher,
         private val dataLoader: DataLoader,
         private val edm: EdmManager,
-        private val entityDataStore: EntityDatastore,
+        private val linkingQueryService: PostgresLinkingQueryService,
         private val dataManager: IndexingMetadataManager,
         private val entitySetManager: EntitySetManager
 ) : LinkingFeedbackApi, AuthorizingComponent {
@@ -113,7 +113,7 @@ constructor(
 
     private fun linkingFeedbackCheck(entityDataKeys: Set<EntityDataKey>, linkingEntityDataKey: EntityDataKey) {
         val linkingEntitySet = entitySetManager.getEntitySet(linkingEntityDataKey.entitySetId)!!
-        val entityKeyIdsOfLinkingId = entityDataStore.getEntityKeyIdsOfLinkingIds(
+        val entityKeyIdsOfLinkingId = linkingQueryService.getEntityKeyIdsOfLinkingIds(
                 setOf(linkingEntityDataKey.entityKeyId),
                 linkingEntitySet.linkedEntitySets
         ).first().second
