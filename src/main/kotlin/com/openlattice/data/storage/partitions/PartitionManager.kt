@@ -100,8 +100,8 @@ class PartitionManager @JvmOverloads constructor(
      *
      * @return Returns the entity set that was passed which has been modified with its partition allocation.
      */
-    fun allocatePartitions(entitySet: EntitySet, partitionCount: Int = getPartitionCount()): EntitySet {
-        isValidAllocation(partitionCount)
+    fun allocatePartitions(entitySet: EntitySet, partitionCount: Int? = null): EntitySet {
+        if (partitionCount != null) isValidAllocation(partitionCount)
         val allocatedPartitions = computePartitions(entitySet, partitionCount)
         entitySet.setPartitions(allocatedPartitions)
         return entitySet
@@ -122,10 +122,10 @@ class PartitionManager @JvmOverloads constructor(
         setEntitySetPartitions(entitySetId, allocatedPartitions)
     }
 
-    private fun computePartitions(entitySet: EntitySet, partitionCount: Int): List<Int> {
+    private fun computePartitions(entitySet: EntitySet, partitionCount: Int?): List<Int> {
         val defaults = getDefaultPartitions(entitySet.organizationId)
 
-        return if (defaults.size < partitionCount) {
+        return if (partitionCount != null && defaults.size < partitionCount) {
             defaults + partitionList.toList().shuffled().take(partitionCount - defaults.size)
         } else {
             defaults
