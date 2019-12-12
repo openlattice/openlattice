@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
 if [[ $1 == *help || $1 == -h ]]
 then
@@ -8,23 +8,22 @@ then
 fi
 
 function runPsqlOnNode {
-  sudo docker exec $1 psql -U postgres -c "$2"
+  docker exec $1 psql -U postgres -c "$2"
 }
 
 function runPsqlFileOnNodeWithOLDB {
-  sudo docker exec $1 psql -U postgres -d openlattice -f $2
+  docker exec $1 psql -U postgres -d openlattice -f $2
 }
 
 function runPsqlFileOnNode {
-  sudo docker exec $1 psql -U postgres -f $2
+  docker exec $1 psql -U postgres -f $2
 }
 
 MASTER_EXTERNAL_PORT=5433 COMPOSE_PROJECT_NAME=citus docker-compose up --scale worker=2 -d
 
 sleep 5
 
-# sudo docker exec citus_master psql -U postgres -c "SELECT * FROM master_get_active_worker_nodes();"
-NODES=`runPsqlOnNode citus_master "SELECT * FROM master_get_active_worker_nodes();"  | grep worker | cut -d ' ' -f 2`
+NODES=$(runPsqlOnNode citus_master "SELECT * FROM master_get_active_worker_nodes();"  | grep worker | cut -d ' ' -f 2)
 
 echo "current nodes: "
 for i in $NODES
@@ -32,21 +31,21 @@ do
   echo "$i"
 done
 
-sudo docker cp init_ol_db.sql citus_master:/opt/
-sudo docker cp init_ol_db.sql citus_worker_1:/opt/
-sudo docker cp init_ol_db.sql citus_worker_2:/opt/
+docker cp init_ol_db.sql citus_master:/opt/
+docker cp init_ol_db.sql citus_worker_1:/opt/
+docker cp init_ol_db.sql citus_worker_2:/opt/
 
-sudo docker cp init_citus.sql citus_master:/opt/
-sudo docker cp init_citus.sql citus_worker_1:/opt/
-sudo docker cp init_citus.sql citus_worker_2:/opt/
+docker cp init_citus.sql citus_master:/opt/
+docker cp init_citus.sql citus_worker_1:/opt/
+docker cp init_citus.sql citus_worker_2:/opt/
 
-sudo docker cp create_user.sql citus_master:/opt/
-sudo docker cp create_user.sql citus_worker_1:/opt/
-sudo docker cp create_user.sql citus_worker_2:/opt/
+docker cp create_user.sql citus_master:/opt/
+docker cp create_user.sql citus_worker_1:/opt/
+docker cp create_user.sql citus_worker_2:/opt/
 
-sudo docker cp alter_user.sql citus_master:/opt/
-sudo docker cp alter_user.sql citus_worker_1:/opt/
-sudo docker cp alter_user.sql citus_worker_2:/opt/
+docker cp alter_user.sql citus_master:/opt/
+docker cp alter_user.sql citus_worker_1:/opt/
+docker cp alter_user.sql citus_worker_2:/opt/
 
 runPsqlFileOnNode citus_master /opt/init_ol_db.sql
 runPsqlFileOnNode citus_worker_1 /opt/init_ol_db.sql
