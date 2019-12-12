@@ -2,8 +2,6 @@
 
 dir="$(cd "$(dirname "${BASH_SOURCE[0]}" )" && pwd)"
 
-echo "$dir"
-
 if [[ $1 == *help || $1 == -h ]]
 then
   echo "usage: initCitus"
@@ -16,7 +14,7 @@ fi
 
 function runPsql {
   container=$1
-  docker exec "$container" psql -U postgres "$@"
+  docker exec ${container} psql -U postgres "${@:2}"
 }
 
 MASTER_EXTERNAL_PORT=5433 COMPOSE_PROJECT_NAME=citus docker-compose -f "$dir"/docker-compose.yml up --scale worker=2 -d
