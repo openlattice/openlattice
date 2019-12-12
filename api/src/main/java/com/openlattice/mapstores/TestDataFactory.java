@@ -650,12 +650,12 @@ public final class TestDataFactory {
                 randomAlphanumeric( 5 ),
                 UUID.randomUUID(),
                 ImmutableSet.of( appRole(), appRole(), appRole() ),
-                Optional.of( ImmutableMap.of( randomAlphanumeric( 5 ),
+                ImmutableMap.of( randomAlphanumeric( 5 ),
                         randomAlphanumeric( 5 ),
                         randomAlphanumeric( 5 ),
                         false,
                         randomAlphanumeric( 5 ),
-                        RandomUtils.nextInt( 0, 10000 ) ) ) );
+                        RandomUtils.nextInt( 0, 10000 ) );
     }
 
     public static AppConfigKey appConfigKey() {
