@@ -30,11 +30,11 @@ sleep 5
 # sudo docker exec citus_master psql -U postgres -c "SELECT * FROM master_get_active_worker_nodes();"
 NODES=`runPsqlOnNode citus_master "SELECT * FROM master_get_active_worker_nodes();"  | grep worker | cut -d ' ' -f 2`
 
-# echo "Nodes: $NODES\n\n"
-# for i in $NODES
-# do
-  # sudo docker cp init_ol_db.sql $i:/opt/
-# done
+for i in $NODES
+do
+  echo "current nodes: "
+  echo "$i"
+done
 
 sudo docker cp init_ol_db.sql citus_master:/opt/
 sudo docker cp init_ol_db.sql citus_worker_1:/opt/
@@ -51,8 +51,6 @@ sudo docker cp create_user.sql citus_worker_2:/opt/
 sudo docker cp alter_user.sql citus_master:/opt/
 sudo docker cp alter_user.sql citus_worker_1:/opt/
 sudo docker cp alter_user.sql citus_worker_2:/opt/
-
-sudo docker exec -it citus_master cat /opt/init_ol_db.sql
 
 runPsqlFileOnNode citus_master /opt/init_ol_db.sql
 runPsqlFileOnNode citus_worker_1 /opt/init_ol_db.sql
