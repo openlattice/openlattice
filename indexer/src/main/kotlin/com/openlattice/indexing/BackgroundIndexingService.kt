@@ -45,10 +45,13 @@ import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
+import java.time.Instant
 import java.time.OffsetDateTime
 import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
+import java.util.stream.StreamSupport
+import kotlin.streams.asSequence
 
 const val EXPIRATION_MILLIS = 60_000L
 const val INDEX_RATE = 300_000L
@@ -212,25 +215,21 @@ class BackgroundIndexingService(
         )
 
         val esw = Stopwatch.createStarted()
-        val entityKeyIdsWithLastWrite = getEntityDataKeys(entitySet, reindexAll, indexTombstoned)
-
         val propertyTypes = getPropertyTypeForEntityType(entitySet.entityTypeId)
 
-        var indexCount = 0
-        var entityKeyIdsIterator = entityKeyIdsWithLastWrite.iterator()
+        val entityKeyIdsWithLastWrite = getEntityDataKeys(entitySet, reindexAll, indexTombstoned)
 
-        while (entityKeyIdsIterator.hasNext()) {
-            updateExpiration(entitySet)
-            while (entityKeyIdsIterator.hasNext()) {
-                val batch = getBatch(entityKeyIdsIterator)
-                indexCount += if (indexTombstoned) {
-                    unindexEntities(entitySet, batch, !reindexAll)
-                } else {
-                    indexEntities(entitySet, batch, propertyTypes, !reindexAll)
+        val indexCount = StreamSupport.stream( entityKeyIdsWithLastWrite.spliterator(), false )
+                .asSequence()
+                .chunked(INDEX_SIZE)
+                .sumBy {
+                    refreshExpiration( entitySet.id )
+                    if ( indexTombstoned ) {
+                        unindexEntities(entitySet, it.toMap(), !reindexAll)
+                    } else {
+                        indexEntities(entitySet, it.toMap(), propertyTypes, !reindexAll)
+                    }
                 }
-            }
-            entityKeyIdsIterator = entityKeyIdsWithLastWrite.iterator()
-        }
 
         logger.info(
                 "Finished indexing {} elements from entity set {} in {} ms",
@@ -352,17 +351,5 @@ class BackgroundIndexingService(
 
     private fun deleteIndexingLock(entitySet: EntitySet) {
         indexingLocks.delete(entitySet.id)
-    }
-    private fun getBatch(entityKeyIdStream: Iterator<Pair<UUID, OffsetDateTime>>): Map<UUID, OffsetDateTime> {
-        val entityKeyIds = HashMap<UUID, OffsetDateTime>(INDEX_SIZE)
-
-        var i = 0
-        while (entityKeyIdStream.hasNext() && i < INDEX_SIZE) {
-            val entityWithLastWrite = entityKeyIdStream.next()
-            entityKeyIds[entityWithLastWrite.first] = entityWithLastWrite.second
-            ++i
-        }
-
-        return entityKeyIds
     }
 }
