@@ -24,9 +24,7 @@ import com.openlattice.tasks.Task
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import java.sql.ResultSet
-import java.sql.Timestamp
 import java.time.OffsetDateTime
-import java.time.ZoneId
 import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.function.Function
@@ -116,11 +114,7 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
     private fun getLatestRead(vehicleReads: List<Map<FullQualifiedName, Set<Any>>>): OffsetDateTime? {
         return vehicleReads
                 .flatMap { it[EdmConstants.LAST_WRITE_FQN] ?: emptySet() }
-                .map {
-                    logger.info("New read datetime as string: {}", it)
-                    val localDateTime = Timestamp.valueOf(it.toString()).toLocalDateTime()
-                    OffsetDateTime.of(localDateTime, ZoneId.systemDefault().rules.getOffset(localDateTime))
-                }.max()
+                .map { it as OffsetDateTime }.max()
     }
 
     private fun getHitEntityKeyIds(hits: List<Map<FullQualifiedName, Set<Any>>>): Set<UUID> {
