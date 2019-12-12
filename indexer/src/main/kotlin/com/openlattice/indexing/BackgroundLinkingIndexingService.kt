@@ -329,8 +329,8 @@ class BackgroundLinkingIndexingService(
 
 
     /**
-     * Checks if linking id is already "locked" in [linkingIndexingLocks] map.
-     * If it's not, it returns true, if it is, the function refreshes the expiration of the entry and returns false.
+     * Checks if linking id is already "locked" in [linkingIndexingLocks] map and refreshes its expiration.
+     * Returns true, if the linking entity is not yet locked to be processed and false otherwise.
      */
     private fun lockOrRefresh(linkingId: UUID): Boolean {
         val expiration = lockOrGet(linkingId)
@@ -356,6 +356,9 @@ class BackgroundLinkingIndexingService(
         )
     }
 
+    /**
+     * Refreshes expiration and time to live for the specified linking id.
+     */
     private fun refreshExpiration(linkingId: UUID) {
         try {
             linkingIndexingLocks.lock(linkingId)
