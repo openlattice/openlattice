@@ -4,7 +4,7 @@ import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcesso
 import com.openlattice.apps.App
 import java.util.*
 
-class UpdateDefaultAppSettingsProcessor(val newSettings: Map<String, Any>) : AbstractRhizomeEntryProcessor<UUID, App, App>() {
+class UpdateDefaultAppSettingsProcessor(val newSettings: MutableMap<String, Any>) : AbstractRhizomeEntryProcessor<UUID, App, App>() {
 
     override fun process(entry: MutableMap.MutableEntry<UUID, App>): App? {
         val app = entry.value
