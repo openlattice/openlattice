@@ -1,7 +1,9 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
-docker-compose stop
+dir="$(cd "$(dirname "${BASH_SOURCE[0]}" )" && pwd)"
 
-yes | docker-compose rm
+MASTER_EXTERNAL_PORT=5433 COMPOSE_PROJECT_NAME=citus docker-compose -f "$dir"/docker-compose.yml down
 
-docker-compose ps
+yes | docker-compose -f "$dir"/docker-compose.yml rm
+
+docker ps
