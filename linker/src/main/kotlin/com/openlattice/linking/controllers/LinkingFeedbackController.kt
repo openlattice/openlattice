@@ -113,8 +113,10 @@ constructor(
 
     private fun linkingFeedbackCheck(entityDataKeys: Set<EntityDataKey>, linkingEntityDataKey: EntityDataKey) {
         val linkingEntitySet = entitySetManager.getEntitySet(linkingEntityDataKey.entitySetId)!!
-        val entityKeyIdsOfLinkingId = entityDataStore
-                .getEntityKeyIdsOfLinkingIds(setOf(linkingEntityDataKey.entityKeyId)).first().second
+        val entityKeyIdsOfLinkingId = entityDataStore.getEntityKeyIdsOfLinkingIds(
+                setOf(linkingEntityDataKey.entityKeyId),
+                linkingEntitySet.linkedEntitySets
+        ).first().second
 
         entityDataKeys.forEach { entityDataKey ->
             if (!linkingEntitySet.linkedEntitySets.contains(entityDataKey.entitySetId)) {
