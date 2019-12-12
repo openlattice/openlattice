@@ -344,7 +344,7 @@ class AppService(
         eventBus.post(AppCreatedEvent(getApp(appId)))
     }
 
-    fun updateDefaultAppSettings(appId: UUID, defaultSettings: Map<String, Any>) {
+    fun updateDefaultAppSettings(appId: UUID, defaultSettings: MutableMap<String, Any>) {
 
         val app = getApp(appId)
         val oldSettings = app.defaultSettings
