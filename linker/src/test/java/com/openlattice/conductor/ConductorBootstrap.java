@@ -30,29 +30,23 @@ import org.slf4j.LoggerFactory;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class ConductorBootstrap {
+
     protected static final Linker LINKER;
 
     static {
-        LINKER = new Linker();
         final var logger = LoggerFactory.getLogger( ConductorBootstrap.class );
-        if ( NetworkUtils.isRunningOnHost( "bamboo.openlattice.com" ) ) {
-            LoggerFactory.getLogger( ConductorBootstrap.class ).info( "Running on bamboo!" );
-            try {
+        LINKER = new Linker();
+        try {
+            if ( NetworkUtils.isRunningOnHost( "bamboo.openlattice.com" ) ) {
+                logger.info( "Running on bamboo!" );
                 LINKER.start( "awstest", "postgres", "keras" );
-            } catch ( Exception e ) {
-                logger.error( "Unable to bootstrap condcutor with profiles: {}",
-                        LINKER.getContext().getEnvironment().getActiveProfiles() );
-                throw new IllegalStateException( "Unable to to boostrap conductor");
-            }
-        } else {
-            LoggerFactory.getLogger( ConductorBootstrap.class ).info( "Not running on bamboo!" );
-            try {
+            } else {
+                logger.info( "Not running on bamboo!" );
                 LINKER.start( "local", "postgres", "keras" );
-            } catch ( Exception e ) {
-                logger.error( "Unable to bootstrap condcutor with profiles: {}",
-                        LINKER.getContext().getEnvironment().getActiveProfiles() );
-                throw new IllegalStateException( "Unable to to boostrap conductor");
             }
+        } catch ( Exception e ) {
+            logger.error( "Unable to bootstrap condcutor with profiles: {}",
+                    (Object[]) LINKER.getContext().getEnvironment().getActiveProfiles() );
         }
     }
 
