@@ -120,9 +120,6 @@ public class IndexerServicesPod {
     private MetricRegistry metricRegistry;
 
     @Inject
-    ObjectMapper defaultObjectMapper;
-
-    @Inject
     private HazelcastClientProvider hazelcastClientProvider;
 
     @Inject
@@ -362,13 +359,13 @@ public class IndexerServicesPod {
     @Profile( { ConfigurationConstants.Profiles.AWS_CONFIGURATION_PROFILE,
             ConfigurationConstants.Profiles.AWS_TESTING_PROFILE, AuditingProfiles.LOCAL_AWS_AUDITING_PROFILE } )
     public AuditingManager s3AuditingService() {
-        return new S3AuditingService( auditingConfiguration, longIdService(), defaultObjectMapper );
+        return new S3AuditingService( auditingConfiguration, longIdService(), defaultObjectMapper() );
     }
 
     @Bean( name = "auditingManager" )
     @Profile( AuditingProfiles.LOCAL_AUDITING_PROFILE )
     public AuditingManager localAuditingService() {
-        return new LocalAuditingService( dataGraphService(), auditRecordEntitySetsManager(), defaultObjectMapper );
+        return new LocalAuditingService( dataGraphService(), auditRecordEntitySetsManager(), defaultObjectMapper() );
     }
 
     @Bean

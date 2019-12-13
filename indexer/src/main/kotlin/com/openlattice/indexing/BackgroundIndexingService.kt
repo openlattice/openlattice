@@ -325,16 +325,11 @@ class BackgroundIndexingService(
         return indexCount
     }
 
-    fun refreshExpiration(esId: UUID) {
+    private fun refreshExpiration(esId: UUID) {
         try {
             indexingLocks.lock(esId)
 
-            indexingLocks.putIfAbsent(
-                    esId,
-                    Instant.now().plusMillis(EXPIRATION_MILLIS).toEpochMilli(),
-                    EXPIRATION_MILLIS,
-                    TimeUnit.MILLISECONDS
-            )
+            tryLockEntitySet(esId)
         } finally {
             indexingLocks.unlock(esId)
         }
@@ -350,6 +345,11 @@ class BackgroundIndexingService(
     }
 
     private fun deleteIndexingLock(entitySet: EntitySet) {
-        indexingLocks.delete(entitySet.id)
+        try {
+            indexingLocks.lock(entitySet.id)
+            indexingLocks.delete(entitySet.id)
+        } finally {
+            indexingLocks.unlock(entitySet.id)
+        }
     }
 }
