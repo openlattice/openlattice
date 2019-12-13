@@ -29,16 +29,7 @@ class ResolvedPrincipalTreesMapLoader : TestableSelfRegisteringMapStore<String, 
     }
 
     override fun generateTestValue(): SortedPrincipalSet {
-        return SortedPrincipalSet(
-                mutableListOf(
-                        SecurablePrincipal(
-                                Optional.empty(),
-                                TestDataFactory.userPrincipal(),
-                                "foobar",
-                                Optional.empty()
-                        )
-                )
-        )
+        return SortedPrincipalSet(sortedSetOf(TestDataFactory.userPrincipal()))
     }
 
     override fun store(key: String, value: SortedPrincipalSet) {

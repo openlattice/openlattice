@@ -31,6 +31,7 @@ import com.google.common.collect.Sets;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.openlattice.hazelcast.HazelcastMap;
+import com.openlattice.organizations.SortedPrincipalSet;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import java.util.LinkedHashSet;
 import java.util.NavigableSet;
@@ -44,10 +45,10 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 public final class Principals {
-    private static final Logger                                logger      = LoggerFactory
+    private static final Logger                           logger      = LoggerFactory
             .getLogger( Principals.class );
-    private static final Lock                                  startupLock = new ReentrantLock();
-    private static       IMap<String, SecurablePrincipal>      securablePrincipals;
+    private static final Lock                             startupLock = new ReentrantLock();
+    private static       IMap<String, SecurablePrincipal> securablePrincipals;
     private static       IMap<String, SortedPrincipalSet> principals;
 
     private Principals() {
@@ -94,7 +95,7 @@ public final class Principals {
     }
 
     public static NavigableSet<Principal> getCurrentPrincipals() {
-        return MoreObjects.firstNonNull( principals.get( getCurrentPrincipalId() ), Sets.newLinkedHashSet() );
+        return MoreObjects.firstNonNull( principals.get( getCurrentPrincipalId() ), ImmutableSortedSet.of() );
     }
 
     public static Principal getAdminRole() {

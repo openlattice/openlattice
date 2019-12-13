@@ -17,6 +17,7 @@ import com.openlattice.authorization.mapstores.SecurablePrincipalAccumulator
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.organizations.SecurablePrincipalList
+import com.openlattice.organizations.SortedPrincipalSet
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.USERS
@@ -88,8 +89,8 @@ class Auth0SyncService(
     }
 
     private fun syncAuthenticationCache( principalId: String ) {
-        val sp = getPrincipal(principalId) ?: return null
-        val securablePrincipals = getAllPrincipals(sp) ?: return null
+        val sp = getPrincipal(principalId) ?: return
+        val securablePrincipals = getAllPrincipals(sp) ?: return
 
         val currentPrincipals: NavigableSet<Principal> = TreeSet()
         currentPrincipals.add(sp.principal)
