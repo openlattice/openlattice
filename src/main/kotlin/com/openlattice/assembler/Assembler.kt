@@ -682,7 +682,7 @@ class Assembler(
         }
 
         override fun initialize(dependencies: Assembler) {
-            dependencies.entitySets.keys.forEach(dependencies::createOrUpdateProductionViewOfEntitySet)
+//            dependencies.entitySets.keys.forEach(dependencies::createOrUpdateProductionViewOfEntitySet)
         }
 
         override fun after(): Set<Class<out HazelcastInitializationTask<*>>> {
