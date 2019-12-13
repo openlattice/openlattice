@@ -160,6 +160,7 @@ public final class TestDataFactory {
             case ORGANIZATION:
                 principal = organizationPrincipal();
                 break;
+            case USER:
             default:
                 principal = userPrincipal();
         }
@@ -615,7 +616,7 @@ public final class TestDataFactory {
     }
 
     public static SearchConstraints simpleSearchConstraints() {
-        return SearchConstraints.simpleSearchConstraints( new UUID[] { UUID.randomUUID() },
+        return SearchConstraints.simpleSearchConstraints( new UUID[]{ UUID.randomUUID() },
                 r.nextInt( 1000 ),
                 r.nextInt( 1000 ),
                 randomAlphanumeric( 10 ) );
