@@ -22,13 +22,11 @@ package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
-import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.SecurablePrincipal
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.organizations.SecurablePrincipalList
 import org.springframework.stereotype.Component
-import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.random.Random
 
@@ -36,35 +34,17 @@ import kotlin.random.Random
 class SecurablePrincipalListStreamSerializer
     : ListStreamSerializer<SecurablePrincipalList, SecurablePrincipal>(SecurablePrincipalList::class.java) {
 
-    companion object {
-        @JvmStatic
-        fun createSecurablePrincipalList(): SecurablePrincipalList {
-            return if (Random.nextBoolean()) {
-                SecurablePrincipalList(
-                        mutableListOf(
-                                SecurablePrincipal(
-                                        AclKey(UUID.randomUUID()),
-                                        TestDataFactory.userPrincipal(),
-                                        TestDataFactory.randomAlphanumeric(10),
-                                        Optional.of(TestDataFactory.randomAlphanumeric(10))
-                                ),
-                                SecurablePrincipal(
-                                        AclKey(UUID.randomUUID()),
-                                        TestDataFactory.userPrincipal(),
-                                        TestDataFactory.randomAlphanumeric(10),
-                                        Optional.of(TestDataFactory.randomAlphanumeric(10))
-                                )
-                        )
-                )
-            } else {
-                SecurablePrincipalList(mutableListOf())
-            }
-        }
-    }
-
-
     override fun generateTestValue(): SecurablePrincipalList {
-        return createSecurablePrincipalList()
+        return if (Random.nextBoolean()) {
+            SecurablePrincipalList(
+                    mutableListOf(
+                            TestDataFactory.securableUserPrincipal(),
+                            TestDataFactory.securableUserPrincipal()
+                    )
+            )
+        } else {
+            SecurablePrincipalList(mutableListOf())
+        }
     }
 
     override fun getTypeId(): Int {

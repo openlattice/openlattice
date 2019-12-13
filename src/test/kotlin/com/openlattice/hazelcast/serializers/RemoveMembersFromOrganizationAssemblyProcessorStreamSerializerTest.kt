@@ -23,6 +23,8 @@ package com.openlattice.hazelcast.serializers
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.processors.RemoveMembersFromOrganizationAssemblyProcessor
+import com.openlattice.mapstores.TestDataFactory
+import com.openlattice.organizations.SecurablePrincipalList
 import org.mockito.Mockito
 
 class RemoveMembersFromOrganizationAssemblyProcessorStreamSerializerTest
@@ -37,7 +39,12 @@ class RemoveMembersFromOrganizationAssemblyProcessorStreamSerializerTest
 
     override fun createInput(): RemoveMembersFromOrganizationAssemblyProcessor {
         return RemoveMembersFromOrganizationAssemblyProcessor(
-                SecurablePrincipalListStreamSerializer.createSecurablePrincipalList()
+                SecurablePrincipalList(
+                        mutableListOf(
+                                TestDataFactory.securableUserPrincipal(),
+                                TestDataFactory.securableUserPrincipal()
+                        )
+                )
         )
     }
 }
