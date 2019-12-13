@@ -60,6 +60,8 @@ import com.openlattice.authorization.HazelcastSecurableObjectResolveTypeService;
 import com.openlattice.authorization.PostgresUserApi;
 import com.openlattice.authorization.Principals;
 import com.openlattice.authorization.SecurableObjectResolveTypeService;
+import com.openlattice.authorization.mapstores.ResolvedPrincipalTreesMapLoader;
+import com.openlattice.authorization.mapstores.SecurablePrincipalsMapLoader;
 import com.openlattice.collections.CollectionsManager;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.DataDeletionManager;
@@ -180,6 +182,12 @@ public class DatastoreServicesPod {
 
     @Inject
     private OrganizationExternalDatabaseConfiguration organizationExternalDatabaseConfiguration;
+
+    @Inject
+    private SecurablePrincipalsMapLoader spml;
+
+    @Inject
+    private ResolvedPrincipalTreesMapLoader rptml;
 
     @Bean
     public PostgresUserApi pgUserApi() {
@@ -585,11 +593,15 @@ public class DatastoreServicesPod {
                 aclKeyReservationService(),
                 authorizationManager(),
                 organizationExternalDatabaseConfiguration,
-                hikariDataSource);
+                hikariDataSource );
     }
 
     @PostConstruct
     void initPrincipals() {
-        Principals.init( principalService() );
+        final var spm = principalService();
+        spml.initSpm( spm );
+        rptml.initSpm( spm );
+        rptml.initPrincipalsMapstore( hazelcastInstance );
+        Principals.init( spm, hazelcastInstance );
     }
 }

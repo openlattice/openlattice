@@ -27,6 +27,7 @@ import com.auth0.client.mgmt.ManagementAPI;
 import com.auth0.client.mgmt.filter.UserFilter;
 import com.auth0.exception.Auth0Exception;
 import com.codahale.metrics.annotation.Timed;
+import com.google.common.eventbus.EventBus;
 import com.openlattice.assembler.PostgresRoles;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.AuthorizationManager;
@@ -80,9 +81,10 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
     private AuthAPI                 authApi;
     @Inject
     private ManagementAPI           managementApi;
-
     @Inject
-    private Auth0SyncService syncService;
+    private Auth0SyncService        syncService;
+    @Inject
+    private EventBus                eventBus;
 
     @Timed
     @Override
@@ -155,9 +157,9 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
     @Timed
     @Override
     @RequestMapping(
-            path = ACTIVATE,
+            path = SYNC,
             method = RequestMethod.GET )
-    public Void activateUser() {
+    public Void syncCallingUser() {
         Principal principal = checkNotNull( Principals.getCurrentUser() );
 
         try {
@@ -167,6 +169,8 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
                     .withPage( 0, 100 ) ).execute();
 
             syncService.syncUser( user );
+            Principals.invalidatePrincipalCache( user.getId() );
+
         } catch ( IllegalArgumentException | Auth0Exception e ) {
             throw new BadCredentialsException( "Unable to retrieve user profile information from auth0", e );
         }
