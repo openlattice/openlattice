@@ -19,7 +19,6 @@ class NearCachesPod {
         return NearCacheConfig(HazelcastMap.SECURABLE_PRINCIPALS.name)
                 .setInvalidateOnChange(true)
                 .setInMemoryFormat(InMemoryFormat.OBJECT)
-                .setCacheLocalEntries(true)
                 .setMaxIdleSeconds(30)
     }
 
@@ -30,7 +29,6 @@ class NearCachesPod {
         return NearCacheConfig(HazelcastMap.RESOLVED_PRINCIPAL_TREES.name)
                 .setInvalidateOnChange(true)
                 .setInMemoryFormat(InMemoryFormat.OBJECT)
-                .setCacheLocalEntries(true)
                 .setMaxIdleSeconds(30)
     }
 }
