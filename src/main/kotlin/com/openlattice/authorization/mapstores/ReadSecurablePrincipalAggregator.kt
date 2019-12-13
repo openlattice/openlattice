@@ -18,7 +18,9 @@ class ReadSecurablePrincipalAggregator(
 
     override fun combine(aggregator: Aggregator<*, *>) {
         val castAggregator = aggregator as ReadSecurablePrincipalAggregator
-        sp = castAggregator.sp
+        if (sp == null) {
+            sp = castAggregator.sp
+        }
     }
 
     override fun aggregate(): SecurablePrincipal? {
