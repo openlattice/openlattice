@@ -68,7 +68,12 @@ class SecurablePrincipalsMapLoader : TestableSelfRegisteringMapStore<String, Sec
     }
 
     override fun loadAll(keys: MutableCollection<String>): Map<String, SecurablePrincipal> {
-        return keys.associateWith { spm.getPrincipal(it) }
+        return principals.aggregate(
+                SecurablePrincipalAccumulator(),
+                Predicates.`in`(
+                        PrincipalMapstore.PRINCIPAL_INDEX, *keys.toTypedArray()
+                ) as Predicate<AclKey, SecurablePrincipal>
+        ).map { it.principal.id to it }.toMap()
     }
 
     override fun load(principalId: String): SecurablePrincipal {
