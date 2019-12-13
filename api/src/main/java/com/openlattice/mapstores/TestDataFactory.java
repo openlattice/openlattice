@@ -389,7 +389,7 @@ public final class TestDataFactory {
     }
 
     public static Grant grant() {
-        final var grantType = grants[r.nextInt( grants.length )];
+        final var grantType = grants[ r.nextInt( grants.length ) ];
         final var emailSet = Sets.newHashSet( "foo@bar.com" );
         final var otherSet = Sets.newHashSet( RandomStringUtils.random( 10 ), RandomStringUtils.random( 10 ) );
         if ( grantType.equals( GrantType.EmailDomain ) ) {
@@ -428,7 +428,7 @@ public final class TestDataFactory {
     }
 
     public static SecurableObjectType securableObjectType() {
-        return securableObjectTypes[r.nextInt( securableObjectTypes.length )];
+        return securableObjectTypes[ r.nextInt( securableObjectTypes.length ) ];
     }
 
     public static EnumSet<Permission> permissions() {
@@ -466,7 +466,7 @@ public final class TestDataFactory {
     public static AclData aclData() {
         return new AclData(
                 acl(),
-                actions[r.nextInt( actions.length )] );
+                actions[ r.nextInt( actions.length ) ] );
     }
 
     public static AclKey aclKey() {
@@ -500,7 +500,7 @@ public final class TestDataFactory {
     }
 
     public static RequestStatus requestStatus() {
-        return requestStatuses[r.nextInt( requestStatuses.length )];
+        return requestStatuses[ r.nextInt( requestStatuses.length ) ];
     }
 
     public static Request request() {
@@ -615,7 +615,7 @@ public final class TestDataFactory {
     }
 
     public static SearchConstraints simpleSearchConstraints() {
-        return SearchConstraints.simpleSearchConstraints( new UUID[]{ UUID.randomUUID() },
+        return SearchConstraints.simpleSearchConstraints( new UUID[] { UUID.randomUUID() },
                 r.nextInt( 1000 ),
                 r.nextInt( 1000 ),
                 randomAlphanumeric( 10 ) );
@@ -708,7 +708,7 @@ public final class TestDataFactory {
     }
 
     public static EntitySetFlag entitySetFlag() {
-        return entitySetFlags[r.nextInt( entitySetFlags.length )];
+        return entitySetFlags[ r.nextInt( entitySetFlags.length ) ];
     }
 
 }
