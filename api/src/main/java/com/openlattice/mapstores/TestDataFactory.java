@@ -296,7 +296,7 @@ public final class TestDataFactory {
                 EdmPrimitiveTypeKind.Date,
                 Optional.of( r.nextBoolean() ),
                 Optional.of( Analyzer.STANDARD ),
-                Optional.of( INDEX_TYPES[r.nextInt( INDEX_TYPES.length )] ) );
+                Optional.of( indexType() ) );
     }
 
     public static PropertyType dateTimePropertyType() {
@@ -309,11 +309,11 @@ public final class TestDataFactory {
                 EdmPrimitiveTypeKind.DateTimeOffset,
                 Optional.of( r.nextBoolean() ),
                 Optional.of( Analyzer.STANDARD ),
-                Optional.of( INDEX_TYPES[r.nextInt( INDEX_TYPES.length )] ) );
+                Optional.of( indexType() ) );
     }
 
     public static PropertyType propertyType() {
-        return propertyType( INDEX_TYPES[r.nextInt( INDEX_TYPES.length )] );
+        return propertyType( indexType() );
     }
 
     public static PropertyType propertyType( IndexType postgresIndexType ) {
@@ -325,7 +325,7 @@ public final class TestDataFactory {
                 ImmutableSet.of(),
                 EdmPrimitiveTypeKind.String,
                 Optional.of( r.nextBoolean() ),
-                Optional.of( analyzers[r.nextInt( analyzers.length )] ),
+                Optional.of( analyzer() ),
                 Optional.of( postgresIndexType ) );
     }
 
@@ -338,8 +338,34 @@ public final class TestDataFactory {
                 ImmutableSet.of(),
                 EdmPrimitiveTypeKind.Binary,
                 Optional.of( r.nextBoolean() ),
-                Optional.of( analyzers[r.nextInt( analyzers.length )] ),
+                Optional.of( analyzer() ),
                 Optional.of( IndexType.NONE ) );
+    }
+
+    public static PropertyType propertyType( EdmPrimitiveTypeKind type ) {
+        switch ( type ) {
+            case String:
+                return propertyType();
+            default:
+                return new PropertyType(
+                        UUID.randomUUID(),
+                        fqn(),
+                        randomAlphanumeric( 5 ),
+                        Optional.of( randomAlphanumeric( 5 ) ),
+                        ImmutableSet.of(),
+                        type,
+                        Optional.of( r.nextBoolean() ),
+                        Optional.empty(),
+                        Optional.of( indexType() ) );
+        }
+    }
+
+    public static Analyzer analyzer() {
+        return analyzers[r.nextInt( analyzers.length )];
+    }
+
+    public static IndexType indexType() {
+        return INDEX_TYPES[r.nextInt( INDEX_TYPES.length )];
     }
 
     public static Organization organization() {
@@ -513,33 +539,6 @@ public final class TestDataFactory {
 
     public static EntityKey entityKey( UUID entitySetId ) {
         return new EntityKey( entitySetId, random( 10 ).replace( Character.MIN_VALUE, '0' ) );
-    }
-
-    public static PropertyType propertyType( EdmPrimitiveTypeKind type ) {
-        switch ( type ) {
-            case String:
-                return new PropertyType(
-                        UUID.randomUUID(),
-                        fqn(),
-                        randomAlphanumeric( 5 ),
-                        Optional.of( randomAlphanumeric( 5 ) ),
-                        ImmutableSet.of(),
-                        type,
-                        Optional.of( r.nextBoolean() ),
-                        Optional.of( analyzers[r.nextInt( analyzers.length )] ),
-                        Optional.of( INDEX_TYPES[r.nextInt( INDEX_TYPES.length )] ) );
-            default:
-                return new PropertyType(
-                        UUID.randomUUID(),
-                        fqn(),
-                        randomAlphanumeric( 5 ),
-                        Optional.of( randomAlphanumeric( 5 ) ),
-                        ImmutableSet.of(),
-                        type,
-                        Optional.of( r.nextBoolean() ),
-                        Optional.empty(),
-                        Optional.of( INDEX_TYPES[r.nextInt( INDEX_TYPES.length )] ) );
-        }
     }
 
     public static EntityType entityTypesFromKeyAndTypes( PropertyType key, PropertyType... propertyTypes ) {
