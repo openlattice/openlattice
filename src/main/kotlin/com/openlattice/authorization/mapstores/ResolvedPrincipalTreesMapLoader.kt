@@ -108,7 +108,7 @@ class ResolvedPrincipalTreesMapLoader : TestableSelfRegisteringMapStore<String, 
 
         return principals.aggregate(
                 SecurablePrincipalAccumulator(),
-                Predicates.`in`("_key", *roles.toTypedArray()) as Predicate<AclKey, SecurablePrincipal>)
+                Predicates.`in`("__key", *roles.toTypedArray()) as Predicate<AclKey, SecurablePrincipal>)
 
     }
 
