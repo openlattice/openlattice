@@ -599,8 +599,7 @@ public class DatastoreServicesPod {
     @PostConstruct
     void initPrincipals() {
         final var spm = principalService();
-        spml.initSpm( spm );
-        rptml.initSpm( spm );
+        spml.initPrincipalsMapstore( hazelcastInstance );
         rptml.initPrincipalsMapstore( hazelcastInstance );
         Principals.init( spm, hazelcastInstance );
     }
