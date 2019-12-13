@@ -361,11 +361,11 @@ public final class TestDataFactory {
     }
 
     public static Analyzer analyzer() {
-        return analyzers[r.nextInt( analyzers.length )];
+        return analyzers[ r.nextInt( analyzers.length ) ];
     }
 
     public static IndexType indexType() {
-        return INDEX_TYPES[r.nextInt( INDEX_TYPES.length )];
+        return INDEX_TYPES[ r.nextInt( INDEX_TYPES.length ) ];
     }
 
     public static Organization organization() {
