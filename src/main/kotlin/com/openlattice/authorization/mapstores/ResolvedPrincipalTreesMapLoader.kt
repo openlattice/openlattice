@@ -139,7 +139,7 @@ class ResolvedPrincipalTreesMapLoader : TestableSelfRegisteringMapStore<String, 
     }
 
     fun initPrincipalsMapstore(hazelcastInstance: HazelcastInstance) {
-        this.principals = hazelcastInstance.getMap(HazelcastMap.SECURABLE_PRINCIPALS.name)
+        this.principals = hazelcastInstance.getMap(HazelcastMap.PRINCIPALS.name)
         this.principalTrees = hazelcastInstance.getMap(HazelcastMap.PRINCIPAL_TREES.name)
     }
 
