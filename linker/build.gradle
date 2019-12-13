@@ -113,6 +113,16 @@ jacoco {
     toolVersion = "0.8.2"
 }
 
+spotbugs {
+    reportLevel = 'high'
+    toolVersion = "${spotbugs_annotations_version}"
+}
+tasks.withType(com.github.spotbugs.SpotBugsTask) {
+    reports {
+        xml.enabled = false
+        html.enabled = true
+    }
+}
 
 configurations {
     provided
