@@ -84,21 +84,6 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies>, Hazelca
             return
         }
 
-        /*
-         * If we did not see a user in any of the pages we should delete that user from the users table and all
-         * organizations.
-         */
-
-        val usersToRemove = ds.users.getExpiredUsers()
-        logger.info("Removing the following users: {}", usersToRemove)
-        usersToRemove
-                .map(::getPrincipal)
-                .forEach { principal ->
-                    ds.organizationService.removeUser(principal)
-                    ds.users.remove(principal.id)
-                }
-
-
     }
 
     private fun getUsersPage(managementApi: ManagementAPI, page: Int, pageSize: Int = DEFAULT_PAGE_SIZE): UsersPage {
