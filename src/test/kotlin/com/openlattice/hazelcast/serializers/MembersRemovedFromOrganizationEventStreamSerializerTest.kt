@@ -33,7 +33,7 @@ class MembersRemovedFromOrganizationEventStreamSerializerTest
     override fun createInput(): MembersRemovedFromOrganizationEvent {
         return MembersRemovedFromOrganizationEvent(
                 UUID.randomUUID(),
-                SecurablePrincipalListStreamSerializerTest.createSecurablePrincipalList()
+                SecurablePrincipalListStreamSerializer.createSecurablePrincipalList()
         )
     }
 }

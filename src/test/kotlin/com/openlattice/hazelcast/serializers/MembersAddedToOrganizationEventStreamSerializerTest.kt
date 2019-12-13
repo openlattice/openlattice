@@ -34,7 +34,7 @@ class MembersAddedToOrganizationEventStreamSerializerTest
     override fun createInput(): MembersAddedToOrganizationEvent {
         return MembersAddedToOrganizationEvent(
                 UUID.randomUUID(),
-                SecurablePrincipalListStreamSerializerTest.createSecurablePrincipalList()
+                SecurablePrincipalListStreamSerializer.createSecurablePrincipalList()
         )
     }
 }

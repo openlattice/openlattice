@@ -39,7 +39,7 @@ class AddMembersToOrganizationAssemblyProcessorStreamSerializerTest
 
     override fun createInput(): AddMembersToOrganizationAssemblyProcessor {
         val authorizedPropertyTypesOfEntitySetsByPrincipal =
-                SecurablePrincipalListStreamSerializerTest.createSecurablePrincipalList().associateWith {
+                SecurablePrincipalListStreamSerializer.createSecurablePrincipalList().associateWith {
                     listOf(TestDataFactory.entitySet()).associateWith {
                         listOf(TestDataFactory.propertyType(), TestDataFactory.propertyType())
                     }

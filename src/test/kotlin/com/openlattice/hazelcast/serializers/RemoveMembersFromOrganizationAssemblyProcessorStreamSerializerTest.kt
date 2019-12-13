@@ -31,12 +31,13 @@ class RemoveMembersFromOrganizationAssemblyProcessorStreamSerializerTest
     override fun createSerializer(): RemoveMembersFromOrganizationAssemblyProcessorStreamSerializer {
         val processorSerializer = RemoveMembersFromOrganizationAssemblyProcessorStreamSerializer()
         processorSerializer.init(Mockito.mock(AssemblerConnectionManager::class.java))
+        processorSerializer.initSplss(SecurablePrincipalListStreamSerializer())
         return processorSerializer
     }
 
     override fun createInput(): RemoveMembersFromOrganizationAssemblyProcessor {
         return RemoveMembersFromOrganizationAssemblyProcessor(
-                SecurablePrincipalListStreamSerializerTest.createSecurablePrincipalList()
+                SecurablePrincipalListStreamSerializer.createSecurablePrincipalList()
         )
     }
 }
