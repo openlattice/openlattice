@@ -28,15 +28,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
-import com.openlattice.authorization.Ace;
-import com.openlattice.authorization.AceValue;
-import com.openlattice.authorization.Acl;
-import com.openlattice.authorization.AclData;
-import com.openlattice.authorization.AclKey;
-import com.openlattice.authorization.Action;
-import com.openlattice.authorization.Permission;
-import com.openlattice.authorization.Principal;
-import com.openlattice.authorization.PrincipalType;
+import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.AbstractSecurableType;
 import com.openlattice.authorization.securable.SecurableObjectType;
@@ -152,6 +144,29 @@ public final class TestDataFactory {
 
     public static Principal rolePrincipal() {
         return new Principal( PrincipalType.ROLE, randomAlphanumeric( 5 ) );
+    }
+
+    public static SecurablePrincipal securableUserPrincipal() {
+        return securablePrincipal( PrincipalType.USER );
+    }
+
+    public static SecurablePrincipal securablePrincipal( PrincipalType type ) {
+        // TODO after Java 13: use switch expression
+        Principal principal;
+        if ( type == PrincipalType.ROLE ) {
+            principal = rolePrincipal();
+        } else if ( type == PrincipalType.ORGANIZATION ) {
+            principal = organizationPrincipal();
+        } else {
+            principal = userPrincipal();
+        }
+
+        return new SecurablePrincipal(
+                new AclKey( UUID.randomUUID() ),
+                principal,
+                randomAlphanumeric( 10 ),
+                Optional.of( randomAlphanumeric( 10 ) )
+        );
     }
 
     public static EntityType entityType( PropertyType... keys ) {
@@ -278,7 +293,7 @@ public final class TestDataFactory {
                 EdmPrimitiveTypeKind.Date,
                 Optional.of( r.nextBoolean() ),
                 Optional.of( Analyzer.STANDARD ),
-                Optional.of( INDEX_TYPES[ r.nextInt( INDEX_TYPES.length ) ] ) );
+                Optional.of( INDEX_TYPES[r.nextInt( INDEX_TYPES.length )] ) );
     }
 
     public static PropertyType dateTimePropertyType() {
@@ -291,11 +306,11 @@ public final class TestDataFactory {
                 EdmPrimitiveTypeKind.DateTimeOffset,
                 Optional.of( r.nextBoolean() ),
                 Optional.of( Analyzer.STANDARD ),
-                Optional.of( INDEX_TYPES[ r.nextInt( INDEX_TYPES.length ) ] ) );
+                Optional.of( INDEX_TYPES[r.nextInt( INDEX_TYPES.length )] ) );
     }
 
     public static PropertyType propertyType() {
-        return propertyType( INDEX_TYPES[ r.nextInt( INDEX_TYPES.length ) ] );
+        return propertyType( INDEX_TYPES[r.nextInt( INDEX_TYPES.length )] );
     }
 
     public static PropertyType propertyType( IndexType postgresIndexType ) {
@@ -307,7 +322,7 @@ public final class TestDataFactory {
                 ImmutableSet.of(),
                 EdmPrimitiveTypeKind.String,
                 Optional.of( r.nextBoolean() ),
-                Optional.of( analyzers[ r.nextInt( analyzers.length ) ] ),
+                Optional.of( analyzers[r.nextInt( analyzers.length )] ),
                 Optional.of( postgresIndexType ) );
     }
 
@@ -320,7 +335,7 @@ public final class TestDataFactory {
                 ImmutableSet.of(),
                 EdmPrimitiveTypeKind.Binary,
                 Optional.of( r.nextBoolean() ),
-                Optional.of( analyzers[ r.nextInt( analyzers.length ) ] ),
+                Optional.of( analyzers[r.nextInt( analyzers.length )] ),
                 Optional.of( IndexType.NONE ) );
     }
 
@@ -345,7 +360,7 @@ public final class TestDataFactory {
     }
 
     public static Grant grant() {
-        final var grantType = grants[ r.nextInt( grants.length ) ];
+        final var grantType = grants[r.nextInt( grants.length )];
         final var emailSet = Sets.newHashSet( "foo@bar.com" );
         final var otherSet = Sets.newHashSet( RandomStringUtils.random( 10 ), RandomStringUtils.random( 10 ) );
         if ( grantType.equals( GrantType.EmailDomain ) ) {
@@ -384,7 +399,7 @@ public final class TestDataFactory {
     }
 
     public static SecurableObjectType securableObjectType() {
-        return securableObjectTypes[ r.nextInt( securableObjectTypes.length ) ];
+        return securableObjectTypes[r.nextInt( securableObjectTypes.length )];
     }
 
     public static EnumSet<Permission> permissions() {
@@ -422,7 +437,7 @@ public final class TestDataFactory {
     public static AclData aclData() {
         return new AclData(
                 acl(),
-                actions[ r.nextInt( actions.length ) ] );
+                actions[r.nextInt( actions.length )] );
     }
 
     public static AclKey aclKey() {
@@ -456,7 +471,7 @@ public final class TestDataFactory {
     }
 
     public static RequestStatus requestStatus() {
-        return requestStatuses[ r.nextInt( requestStatuses.length ) ];
+        return requestStatuses[r.nextInt( requestStatuses.length )];
     }
 
     public static Request request() {
@@ -508,8 +523,8 @@ public final class TestDataFactory {
                         ImmutableSet.of(),
                         type,
                         Optional.of( r.nextBoolean() ),
-                        Optional.of( analyzers[ r.nextInt( analyzers.length ) ] ),
-                        Optional.of( INDEX_TYPES[ r.nextInt( INDEX_TYPES.length ) ] ) );
+                        Optional.of( analyzers[r.nextInt( analyzers.length )] ),
+                        Optional.of( INDEX_TYPES[r.nextInt( INDEX_TYPES.length )] ) );
             default:
                 return new PropertyType(
                         UUID.randomUUID(),
@@ -520,7 +535,7 @@ public final class TestDataFactory {
                         type,
                         Optional.of( r.nextBoolean() ),
                         Optional.empty(),
-                        Optional.of( INDEX_TYPES[ r.nextInt( INDEX_TYPES.length ) ] ) );
+                        Optional.of( INDEX_TYPES[r.nextInt( INDEX_TYPES.length )] ) );
         }
     }
 
@@ -598,7 +613,7 @@ public final class TestDataFactory {
     }
 
     public static SearchConstraints simpleSearchConstraints() {
-        return SearchConstraints.simpleSearchConstraints( new UUID[] { UUID.randomUUID() },
+        return SearchConstraints.simpleSearchConstraints( new UUID[]{ UUID.randomUUID() },
                 r.nextInt( 1000 ),
                 r.nextInt( 1000 ),
                 randomAlphanumeric( 10 ) );
@@ -691,7 +706,7 @@ public final class TestDataFactory {
     }
 
     public static EntitySetFlag entitySetFlag() {
-        return entitySetFlags[ r.nextInt( entitySetFlags.length ) ];
+        return entitySetFlags[r.nextInt( entitySetFlags.length )];
     }
 
 }
