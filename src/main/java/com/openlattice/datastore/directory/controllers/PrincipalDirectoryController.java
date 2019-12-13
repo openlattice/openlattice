@@ -160,6 +160,13 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
             path = SYNC,
             method = RequestMethod.GET )
     public Void syncCallingUser() {
+        /*
+         * Important note: getCurrentUser() reads the principal id directly from auth token.
+         *
+         * This is safe since token has been validated and has an auth0 assigned unique id.
+         *
+         * It is very important that this is the *first* call for a new user. W
+         */
         Principal principal = checkNotNull( Principals.getCurrentUser() );
 
         try {
