@@ -31,7 +31,7 @@ import com.openlattice.tasks.Task
 import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
 
-const val REFRESH_INTERVAL_MILLIS = 30_000L
+const val REFRESH_INTERVAL_MILLIS = 120_000L
 private const val DEFAULT_PAGE_SIZE = 100
 private val logger = LoggerFactory.getLogger(Auth0SyncTask::class.java)
 

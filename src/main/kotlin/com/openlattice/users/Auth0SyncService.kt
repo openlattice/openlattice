@@ -12,11 +12,10 @@ import com.openlattice.IdConstants
 import com.openlattice.authorization.*
 import com.openlattice.authorization.mapstores.AccumulatingReadAggregator
 import com.openlattice.authorization.mapstores.PrincipalMapstore
-import com.openlattice.authorization.mapstores.ReadAggregator
+import com.openlattice.authorization.mapstores.ReadSecurablePrincipalAggregator
 import com.openlattice.authorization.mapstores.SecurablePrincipalAccumulator
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organizations.HazelcastOrganizationService
-import com.openlattice.organizations.SecurablePrincipalList
 import com.openlattice.organizations.SortedPrincipalSet
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.postgres.PostgresColumn.*
@@ -135,7 +134,7 @@ class Auth0SyncService(
         //This will always only be called on users. If it needs to be fixed for other types than an additional index
         //will have to be added.
         return principals.aggregate(
-                ReadAggregator<AclKey, SecurablePrincipal>(),
+                ReadSecurablePrincipalAggregator(),
                 Predicates.equal(
                         PrincipalMapstore.PRINCIPAL_INDEX, Principals.getUserPrincipal(principalId)
                 ) as Predicate<AclKey, SecurablePrincipal>
