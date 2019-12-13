@@ -23,4 +23,6 @@ package com.openlattice.organizations
 import com.openlattice.authorization.SecurablePrincipal
 
 class SecurablePrincipalList(private val securablePrincipals: MutableList<SecurablePrincipal>)
-    : MutableList<SecurablePrincipal>  by securablePrincipals
+    : MutableList<SecurablePrincipal>  by securablePrincipals {
+
+}
