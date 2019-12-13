@@ -116,7 +116,7 @@ class Auth0SyncService(
         var nextLayer: Set<AclKey> = roles
 
         while (nextLayer.isNotEmpty()) {
-            nextLayer = getLayer(nextLayer)
+            nextLayer = getLayer(nextLayer) - roles
             roles.addAll(nextLayer)
         }
 
