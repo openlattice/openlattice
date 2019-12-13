@@ -24,17 +24,16 @@ package com.openlattice.authorization;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
-import static com.openlattice.authorization.mapstores.PrincipalMapstore.PRINCIPAL_INDEX;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSortedSet;
-import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
-import com.hazelcast.query.Predicates;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.organizations.SortedPrincipalSet;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
+import java.util.LinkedHashSet;
 import java.util.NavigableSet;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -49,16 +48,16 @@ public final class Principals {
     private static final Logger                           logger      = LoggerFactory
             .getLogger( Principals.class );
     private static final Lock                             startupLock = new ReentrantLock();
-    private static       IMap<AclKey, SecurablePrincipal> principals;
-    private static       IMap<String, SortedPrincipalSet> resolvedPrincipalTrees;
+    private static       IMap<String, SecurablePrincipal> securablePrincipals;
+    private static       IMap<String, SortedPrincipalSet> principals;
 
     private Principals() {
     }
 
     public static void init( SecurePrincipalsManager spm, HazelcastInstance hazelcastInstance ) {
         if ( startupLock.tryLock() ) {
-            principals = hazelcastInstance.getMap( HazelcastMap.PRINCIPALS.name() );
-            resolvedPrincipalTrees = hazelcastInstance.getMap( HazelcastMap.RESOLVED_PRINCIPAL_TREES.name() );
+            securablePrincipals = hazelcastInstance.getMap( HazelcastMap.SECURABLE_PRINCIPALS.name() );
+            principals = hazelcastInstance.getMap( HazelcastMap.RESOLVED_PRINCIPAL_TREES.name() );
         } else {
             logger.error( "Principals security processing can only be initialized once." );
             throw new IllegalStateException( "Principals context already initialized." );
@@ -84,8 +83,7 @@ public final class Principals {
     }
 
     public static SecurablePrincipal getCurrentSecurablePrincipal() {
-        final var maybePrincipal = principals.values( Predicates.equal( PRINCIPAL_INDEX, getCurrentPrincipalId() ) );
-
+        return securablePrincipals.get( getCurrentPrincipalId() );
     }
 
     public static Principal getUserPrincipal( String principalId ) {
@@ -93,12 +91,11 @@ public final class Principals {
     }
 
     public static NavigableSet<Principal> getUserPrincipals( String principalId ) {
-        return resolvedPrincipalTrees.get( principalId );
+        return principals.get( principalId );
     }
 
     public static NavigableSet<Principal> getCurrentPrincipals() {
-        return MoreObjects
-                .firstNonNull( resolvedPrincipalTrees.get( getCurrentPrincipalId() ), ImmutableSortedSet.of() );
+        return MoreObjects.firstNonNull( principals.get( getCurrentPrincipalId() ), ImmutableSortedSet.of() );
     }
 
     public static Principal getAdminRole() {
@@ -118,8 +115,8 @@ public final class Principals {
     }
 
     public static void invalidatePrincipalCache( String principalId ) {
+        securablePrincipals.evict( principalId );
         principals.evict( principalId );
-        resolvedPrincipalTrees.evict( principalId );
     }
 }
 
