@@ -29,12 +29,15 @@ import com.openlattice.assembler.processors.RemoveMembersFromOrganizationAssembl
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.organizations.SecurablePrincipalList
 import org.springframework.stereotype.Component
+import javax.inject.Inject
 
 @Component
 class RemoveMembersFromOrganizationAssemblyProcessorStreamSerializer
     : SelfRegisteringStreamSerializer<RemoveMembersFromOrganizationAssemblyProcessor>,
-        AssemblerConnectionManagerDependent<Void?> {
+      AssemblerConnectionManagerDependent<Void?> {
     private lateinit var acm: AssemblerConnectionManager
+    @Inject
+    private lateinit var splss: SecurablePrincipalListStreamSerializer
 
     override fun getTypeId(): Int {
         return StreamSerializerTypeIds.REMOVE_MEMBERS_FROM_ORGANIZATION_ASSEMBLY_PROCESSOR.ordinal
@@ -46,7 +49,7 @@ class RemoveMembersFromOrganizationAssemblyProcessorStreamSerializer
 
 
     override fun write(out: ObjectDataOutput, obj: RemoveMembersFromOrganizationAssemblyProcessor) {
-        SecurablePrincipalListStreamSerializer().write(out, SecurablePrincipalList(obj.principals))
+        splss.write(out, SecurablePrincipalList(obj.principals.toMutableList()))
     }
 
     override fun read(input: ObjectDataInput): RemoveMembersFromOrganizationAssemblyProcessor {

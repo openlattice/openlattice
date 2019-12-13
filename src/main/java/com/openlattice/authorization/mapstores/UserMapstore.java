@@ -94,15 +94,16 @@ public class UserMapstore extends AbstractBasePostgresMapstore<String, User> {
     }
 
     @Override public MapConfig getMapConfig() {
-        return new MapConfig( getMapName() )
+        return super.getMapConfig()
                 .setInMemoryFormat( InMemoryFormat.BINARY )
                 .setMapStoreConfig( getMapStoreConfig() );
     }
 
     @Override public MapStoreConfig getMapStoreConfig() {
-        return new MapStoreConfig()
+        return super.getMapStoreConfig()
                 .setImplementation( this )
-                .setEnabled( true );
+                .setEnabled( true )
+                .setInitialLoadMode( MapStoreConfig.InitialLoadMode.EAGER );
 
     }
 

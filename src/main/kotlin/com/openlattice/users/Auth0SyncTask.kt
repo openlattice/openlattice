@@ -31,7 +31,7 @@ import com.openlattice.tasks.Task
 import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
 
-const val REFRESH_INTERVAL_MILLIS = 30_000L
+const val REFRESH_INTERVAL_MILLIS = 120_000L
 private const val DEFAULT_PAGE_SIZE = 100
 private val logger = LoggerFactory.getLogger(Auth0SyncTask::class.java)
 
@@ -83,21 +83,6 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies>, Hazelca
             logger.error("Retrofit called failed during auth0 sync task.", ex)
             return
         }
-
-        /*
-         * If we did not see a user in any of the pages we should delete that user from the users table and all
-         * organizations.
-         */
-
-        val usersToRemove = ds.users.getExpiredUsers()
-        logger.info("Removing the following users: {}", usersToRemove)
-        usersToRemove
-                .map(::getPrincipal)
-                .forEach { principal ->
-                    ds.organizationService.removeUser(principal)
-                    ds.users.remove(principal.id)
-                }
-
 
     }
 
