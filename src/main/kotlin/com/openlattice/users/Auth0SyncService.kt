@@ -3,21 +3,27 @@ package com.openlattice.users
 import com.auth0.json.mgmt.users.User
 import com.dataloom.mappers.ObjectMappers
 import com.fasterxml.jackson.module.kotlin.readValue
+import com.google.common.collect.ImmutableList
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
+import com.hazelcast.query.Predicate
+import com.hazelcast.query.Predicates
 import com.openlattice.IdConstants
-import com.openlattice.authorization.Principal
-import com.openlattice.authorization.PrincipalType
-import com.openlattice.authorization.SecurablePrincipal
-import com.openlattice.authorization.SystemRole
+import com.openlattice.authorization.*
+import com.openlattice.authorization.mapstores.AccumulatingReadAggregator
+import com.openlattice.authorization.mapstores.PrincipalMapstore
+import com.openlattice.authorization.mapstores.ReadSecurablePrincipalAggregator
+import com.openlattice.authorization.mapstores.SecurablePrincipalAccumulator
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organizations.HazelcastOrganizationService
+import com.openlattice.organizations.SortedPrincipalSet
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.USERS
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.zaxxer.hikari.HikariDataSource
+import org.slf4j.LoggerFactory
 import java.util.*
 
 const val DELETE_BATCH_SIZE = 1024
@@ -34,14 +40,21 @@ class Auth0SyncService(
         private val spm: SecurePrincipalsManager,
         private val orgService: HazelcastOrganizationService
 ) {
+    companion object {
+        private val logger = LoggerFactory.getLogger(Auth0SyncService::class.java)
+    }
     private val users: IMap<String, User> = hazelcastInstance.getMap(HazelcastMap.USERS.name)
-
+    private val principals = hazelcastInstance.getMap<AclKey,SecurablePrincipal>(HazelcastMap.PRINCIPALS.name)
+    private val authnPrincipalCache = hazelcastInstance.getMap<String,SecurablePrincipal>(HazelcastMap.SECURABLE_PRINCIPALS.name)
+    private val authnRolesCache = hazelcastInstance.getMap<String, SortedPrincipalSet>(HazelcastMap.RESOLVED_PRINCIPAL_TREES.name)
+    private val principalTrees = hazelcastInstance.getMap<AclKey,AclKeySet>(HazelcastMap.PRINCIPAL_TREES.name)
     private val mapper = ObjectMappers.newJsonMapper()
 
     fun syncUser(user: User) {
         //Figure out which users need to be added to which organizations.
         //Since we don't want to do O( # organizations ) for each user, we need to lookup organizations on a per user
         //basis and see if the user needs to be added.
+        logger.info("Synchronizg user ${user.id}")
         ensureSecurablePrincipalExists(user)
         val principal = getPrincipal(user)
         val roles = getRoles(user)
@@ -51,6 +64,8 @@ class Auth0SyncService(
         users.putIfAbsent( principal.id, user)
         processGlobalEnrollments(sp, principal, user)
         processOrganizationEnrollments(user, sp, principal, user.email ?: "")
+        logger.info("Syncing authentication cache for ${principal.id}")
+        syncAuthenticationCache(principal.id)
         markUser(user)
     }
 
@@ -78,6 +93,46 @@ class Auth0SyncService(
         }
     }
 
+    private fun syncAuthenticationCache( principalId: String ) {
+        val sp = getPrincipal(principalId) ?: return
+        authnPrincipalCache.set( principalId, sp )
+        val securablePrincipals = getAllPrincipals(sp) ?: return
+
+        val currentPrincipals: NavigableSet<Principal> = TreeSet()
+        currentPrincipals.add(sp.principal)
+        securablePrincipals.stream()
+                .map(SecurablePrincipal::getPrincipal)
+                .forEach { currentPrincipals.add(it) }
+
+        authnRolesCache.set( principalId, SortedPrincipalSet(currentPrincipals))
+    }
+
+    private fun getLayer(aclKeys: Set<AclKey>): AclKeySet {
+        return AclKeySet( principalTrees.getAll(aclKeys).values.flatMap { it.value } )
+    }
+
+    private fun getAllPrincipals(sp: SecurablePrincipal): Collection<SecurablePrincipal>? {
+        val roles = getLayer(setOf(sp.aclKey))
+        var nextLayer: Set<AclKey> = roles
+
+        while (nextLayer.isNotEmpty()) {
+            nextLayer = getLayer(nextLayer) - roles
+            roles.addAll(nextLayer)
+        }
+
+        return principals.getAll(roles).values
+    }
+
+
+    private fun getPrincipal(principalId: String): SecurablePrincipal? {
+        return principals.aggregate(
+                ReadSecurablePrincipalAggregator(),
+                Predicates.equal(
+                        PrincipalMapstore.PRINCIPAL_INDEX, Principals.getUserPrincipal(principalId)
+                ) as Predicate<AclKey, SecurablePrincipal>
+        )
+
+    }
     private fun processGlobalEnrollments(sp: SecurablePrincipal, principal: Principal, user: User) {
         if (getRoles(user).contains(SystemRole.ADMIN.getName())) {
             orgService.addMembers(
@@ -146,5 +201,6 @@ class Auth0SyncService(
 
 
 }
+
 
 

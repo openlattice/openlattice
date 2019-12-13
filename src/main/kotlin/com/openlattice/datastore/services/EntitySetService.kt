@@ -103,7 +103,7 @@ open class EntitySetService(
         ensureValidEntitySet(entitySet)
 
         if (entitySet.partitions.isEmpty()) {
-            partitionManager.allocatePartitions(entitySet, partitionManager.getPartitionCount())
+            partitionManager.allocatePartitions(entitySet)
         }
 
         if (entityType.category == SecurableObjectType.AssociationType) {

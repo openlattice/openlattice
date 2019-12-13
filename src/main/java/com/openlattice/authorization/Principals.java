@@ -25,11 +25,15 @@ package com.openlattice.authorization;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 
-import com.google.common.collect.ImmutableSet;
+import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableSortedSet;
+import com.google.common.collect.Sets;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.openlattice.hazelcast.HazelcastMap;
+import com.openlattice.organizations.SortedPrincipalSet;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
+import java.util.LinkedHashSet;
 import java.util.NavigableSet;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -41,19 +45,19 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 public final class Principals {
-    private static final Logger                                logger      = LoggerFactory
+    private static final Logger                           logger      = LoggerFactory
             .getLogger( Principals.class );
-    private static final Lock                                  startupLock = new ReentrantLock();
-    private static       IMap<String, SecurablePrincipal>      users;
-    private static       IMap<String, NavigableSet<Principal>> principals;
+    private static final Lock                             startupLock = new ReentrantLock();
+    private static       IMap<String, SecurablePrincipal> securablePrincipals;
+    private static       IMap<String, SortedPrincipalSet> principals;
 
     private Principals() {
     }
 
     public static void init( SecurePrincipalsManager spm, HazelcastInstance hazelcastInstance ) {
         if ( startupLock.tryLock() ) {
-            users = hazelcastInstance.<String, SecurablePrincipal>getMap( HazelcastMap.PRINCIPALS.name() );
-            principals = hazelcastInstance.<String, NavigableSet<Principal>>getMap( HazelcastMap.PRINCIPALS.name() );
+            securablePrincipals = hazelcastInstance.getMap( HazelcastMap.SECURABLE_PRINCIPALS.name() );
+            principals = hazelcastInstance.getMap( HazelcastMap.RESOLVED_PRINCIPAL_TREES.name() );
         } else {
             logger.error( "Principals security processing can only be initialized once." );
             throw new IllegalStateException( "Principals context already initialized." );
@@ -79,7 +83,7 @@ public final class Principals {
     }
 
     public static SecurablePrincipal getCurrentSecurablePrincipal() {
-        return users.get( getCurrentPrincipalId() );
+        return securablePrincipals.get( getCurrentPrincipalId() );
     }
 
     public static Principal getUserPrincipal( String principalId ) {
@@ -91,7 +95,7 @@ public final class Principals {
     }
 
     public static NavigableSet<Principal> getCurrentPrincipals() {
-        return principals.get( getCurrentPrincipalId() );
+        return MoreObjects.firstNonNull( principals.get( getCurrentPrincipalId() ), ImmutableSortedSet.of() );
     }
 
     public static Principal getAdminRole() {
@@ -111,10 +115,8 @@ public final class Principals {
     }
 
     public static void invalidatePrincipalCache( String principalId ) {
-        users.evict( principalId );
+        securablePrincipals.evict( principalId );
         principals.evict( principalId );
-        users.loadAll( ImmutableSet.of( principalId ), true );
-        principals.loadAll( ImmutableSet.of( principalId ), true );
     }
 }
 

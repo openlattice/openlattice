@@ -248,7 +248,7 @@ class HazelcastOrganizationService(
         addMembers(AclKey(organizationId), members, profiles)
         val securablePrincipals = securePrincipalsManager.getSecurablePrincipals(members)
         eventBus.post(
-                MembersAddedToOrganizationEvent(organizationId, SecurablePrincipalList(securablePrincipals))
+                MembersAddedToOrganizationEvent(organizationId, SecurablePrincipalList(securablePrincipals.toMutableList()))
         )
     }
 
@@ -333,7 +333,7 @@ class HazelcastOrganizationService(
         eventBus.post(
                 MembersRemovedFromOrganizationEvent(
                         organizationId,
-                        SecurablePrincipalList(securablePrincipals)
+                        SecurablePrincipalList(securablePrincipals.toMutableList())
                 )
         )
     }

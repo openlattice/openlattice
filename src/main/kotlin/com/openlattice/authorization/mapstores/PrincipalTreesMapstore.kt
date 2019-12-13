@@ -127,7 +127,6 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
         )
         val map = mutableMapOf<AclKey, AclKeySet>()
         data.forEach { map.getOrPut(it.first) { AclKeySet() }.add(it.second) }
-        ( keys - map.keys ).forEach { map[it] = AclKeySet() }
 
         return map
     }
