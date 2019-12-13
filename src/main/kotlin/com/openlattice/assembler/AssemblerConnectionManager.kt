@@ -138,8 +138,7 @@ class AssemblerConnectionManager(
         return perDbCache.get(dbName)
     }
 
-    /* TODO: use #perDbCache or delete.
-     */
+    @Deprecated(message = "doesn't use the connection pool cache", replaceWith = ReplaceWith(expression = "#connect(String)"))
     fun connect(dbName: String, account: MaterializedViewAccount): HikariDataSource {
         val config = assemblerConfiguration.server.clone() as Properties
         config["username"] = account.username
