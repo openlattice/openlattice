@@ -25,6 +25,8 @@ package com.openlattice.authorization;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 
+import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableSortedSet;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.openlattice.hazelcast.HazelcastMap;
@@ -90,7 +92,7 @@ public final class Principals {
     }
 
     public static NavigableSet<Principal> getCurrentPrincipals() {
-        return principals.get( getCurrentPrincipalId() );
+        return MoreObjects.firstNonNull( principals.get( getCurrentPrincipalId() ), ImmutableSortedSet.of() );
     }
 
     public static Principal getAdminRole() {
