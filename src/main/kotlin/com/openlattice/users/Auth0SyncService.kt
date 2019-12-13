@@ -3,15 +3,20 @@ package com.openlattice.users
 import com.auth0.json.mgmt.users.User
 import com.dataloom.mappers.ObjectMappers
 import com.fasterxml.jackson.module.kotlin.readValue
+import com.google.common.collect.ImmutableList
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
+import com.hazelcast.query.Predicate
+import com.hazelcast.query.Predicates
 import com.openlattice.IdConstants
-import com.openlattice.authorization.Principal
-import com.openlattice.authorization.PrincipalType
-import com.openlattice.authorization.SecurablePrincipal
-import com.openlattice.authorization.SystemRole
+import com.openlattice.authorization.*
+import com.openlattice.authorization.mapstores.AccumulatingReadAggregator
+import com.openlattice.authorization.mapstores.PrincipalMapstore
+import com.openlattice.authorization.mapstores.ReadAggregator
+import com.openlattice.authorization.mapstores.SecurablePrincipalAccumulator
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organizations.HazelcastOrganizationService
+import com.openlattice.organizations.SecurablePrincipalList
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.USERS
@@ -35,7 +40,10 @@ class Auth0SyncService(
         private val orgService: HazelcastOrganizationService
 ) {
     private val users: IMap<String, User> = hazelcastInstance.getMap(HazelcastMap.USERS.name)
-
+    private val principals = hazelcastInstance.getMap<AclKey,SecurablePrincipal>(HazelcastMap.PRINCIPALS.name)
+    private val authnPrincipalCache = hazelcastInstance.getMap<String,SecurablePrincipal>(HazelcastMap.SECURABLE_PRINCIPALS.name)
+    private val authnRolesCache = hazelcastInstance.getMap<String, SecurablePrincipalList>(HazelcastMap.RESOLVED_PRINCIPAL_TREES.name)
+    private val principalTrees = hazelcastInstance.getMap<AclKey,AclKeySet>(HazelcastMap.PRINCIPAL_TREES.name)
     private val mapper = ObjectMappers.newJsonMapper()
 
     fun syncUser(user: User) {
@@ -51,6 +59,7 @@ class Auth0SyncService(
         users.putIfAbsent( principal.id, user)
         processGlobalEnrollments(sp, principal, user)
         processOrganizationEnrollments(user, sp, principal, user.email ?: "")
+        syncAuthenticationCache(principal.id)
         markUser(user)
     }
 
@@ -78,6 +87,59 @@ class Auth0SyncService(
         }
     }
 
+    private fun syncAuthenticationCache( principalId: String ) {
+        val sp = getPrincipal(principalId) ?: return null
+        val securablePrincipals = getAllPrincipals(sp) ?: return null
+
+        val currentPrincipals: NavigableSet<Principal> = TreeSet()
+        currentPrincipals.add(sp.principal)
+        securablePrincipals.stream()
+                .map(SecurablePrincipal::getPrincipal)
+                .forEach { currentPrincipals.add(it) }
+
+        authnRolesCache.set( principalId, SortedPrincipalSet(currentPrincipals))
+    }
+
+    private fun getLayer(aclKeys: Set<AclKey>): AclKeySet? {
+        return principalTrees.aggregate(
+                AccumulatingReadAggregator<AclKey>(),
+                Predicates.`in`("__key", *aclKeys.toTypedArray()) as Predicate<AclKey, AclKeySet>
+        )
+    }
+
+    private fun getAllPrincipals(sp: SecurablePrincipal): Collection<SecurablePrincipal>? {
+        val roles = getLayer(setOf(sp.aclKey)) ?: return ImmutableList.of()
+        var nextLayer: Set<AclKey> = roles
+
+        while (nextLayer.isNotEmpty()) {
+            nextLayer = getLayer(nextLayer) ?: setOf()
+            roles.addAll(nextLayer)
+        }
+
+        return principals.aggregate(
+                SecurablePrincipalAccumulator(),
+                Predicates.`in`("__key", *roles.toTypedArray()) as Predicate<AclKey, SecurablePrincipal>
+        )
+
+    }
+
+
+    private fun getPrincipal(principalId: String): SecurablePrincipal? {
+//        val principal = aclKeys.aggregate(
+//                ReadAggregator<String, UUID>(),
+//                Predicates.equal("__key", principalId) as Predicate<String, UUID>
+//        )
+
+        //This will always only be called on users. If it needs to be fixed for other types than an additional index
+        //will have to be added.
+        return principals.aggregate(
+                ReadAggregator<AclKey, SecurablePrincipal>(),
+                Predicates.equal(
+                        PrincipalMapstore.PRINCIPAL_INDEX, Principals.getUserPrincipal(principalId)
+                ) as Predicate<AclKey, SecurablePrincipal>
+        )
+
+    }
     private fun processGlobalEnrollments(sp: SecurablePrincipal, principal: Principal, user: User) {
         if (getRoles(user).contains(SystemRole.ADMIN.getName())) {
             orgService.addMembers(
@@ -146,5 +208,6 @@ class Auth0SyncService(
 
 
 }
+
 
 

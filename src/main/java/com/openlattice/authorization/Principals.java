@@ -27,10 +27,12 @@ import static com.google.common.base.Preconditions.checkState;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSortedSet;
+import com.google.common.collect.Sets;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
+import java.util.LinkedHashSet;
 import java.util.NavigableSet;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -46,7 +48,7 @@ public final class Principals {
             .getLogger( Principals.class );
     private static final Lock                                  startupLock = new ReentrantLock();
     private static       IMap<String, SecurablePrincipal>      securablePrincipals;
-    private static       IMap<String, NavigableSet<Principal>> principals;
+    private static       IMap<String, LinkedHashSet<Principal>> principals;
 
     private Principals() {
     }
@@ -87,12 +89,12 @@ public final class Principals {
         return new Principal( PrincipalType.USER, principalId );
     }
 
-    public static NavigableSet<Principal> getUserPrincipals( String principalId ) {
+    public static LinkedHashSet<Principal> getUserPrincipals( String principalId ) {
         return principals.get( principalId );
     }
 
-    public static NavigableSet<Principal> getCurrentPrincipals() {
-        return MoreObjects.firstNonNull( principals.get( getCurrentPrincipalId() ), ImmutableSortedSet.of() );
+    public static LinkedHashSet<Principal> getCurrentPrincipals() {
+        return MoreObjects.firstNonNull( principals.get( getCurrentPrincipalId() ), Sets.newLinkedHashSet() );
     }
 
     public static Principal getAdminRole() {
