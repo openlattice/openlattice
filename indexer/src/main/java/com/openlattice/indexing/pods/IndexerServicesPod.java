@@ -387,6 +387,6 @@ public class IndexerServicesPod {
 
     @PostConstruct
     void initPrincipals() {
-        Principals.init( principalService() );
+        Principals.init( principalService(), hazelcastInstance );
     }
 }
