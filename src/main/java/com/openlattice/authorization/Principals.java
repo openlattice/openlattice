@@ -52,7 +52,7 @@ public final class Principals {
     public static void init( SecurePrincipalsManager spm, HazelcastInstance hazelcastInstance ) {
         if ( startupLock.tryLock() ) {
             securablePrincipals = hazelcastInstance.getMap( HazelcastMap.SECURABLE_PRINCIPALS.name() );
-            principals = hazelcastInstance.getMap( HazelcastMap.PRINCIPALS.name() );
+            principals = hazelcastInstance.getMap( HazelcastMap.RESOLVED_PRINCIPAL_TREES.name() );
         } else {
             logger.error( "Principals security processing can only be initialized once." );
             throw new IllegalStateException( "Principals context already initialized." );
