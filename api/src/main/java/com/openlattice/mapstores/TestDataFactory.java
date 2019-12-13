@@ -153,12 +153,15 @@ public final class TestDataFactory {
     public static SecurablePrincipal securablePrincipal( PrincipalType type ) {
         // TODO after Java 13: use switch expression
         Principal principal;
-        if ( type == PrincipalType.ROLE ) {
-            principal = rolePrincipal();
-        } else if ( type == PrincipalType.ORGANIZATION ) {
-            principal = organizationPrincipal();
-        } else {
-            principal = userPrincipal();
+        switch ( type ) {
+            case ROLE:
+                principal = rolePrincipal();
+                break;
+            case ORGANIZATION:
+                principal = organizationPrincipal();
+                break;
+            default:
+                principal = userPrincipal();
         }
 
         return new SecurablePrincipal(
