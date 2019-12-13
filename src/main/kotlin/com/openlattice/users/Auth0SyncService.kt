@@ -90,6 +90,7 @@ class Auth0SyncService(
 
     private fun syncAuthenticationCache( principalId: String ) {
         val sp = getPrincipal(principalId) ?: return
+        authnPrincipalCache.set( principalId, sp )
         val securablePrincipals = getAllPrincipals(sp) ?: return
 
         val currentPrincipals: NavigableSet<Principal> = TreeSet()
