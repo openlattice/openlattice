@@ -89,7 +89,7 @@ class IndexingService(
         //Add back in jobs that did not complete but are still registered.
         val jobIds = indexingJobs.keys
         jobIds.removeIf(indexingQueue::contains)
-        logger.info("Re-adding the following jobs that were registered but not in the queue: {}", jobIds)
+        logger.info("Re-adding the following jobs that were registered but not in the queue: $jobIds")
         if (jobIds.isNotEmpty()) {
             //If jobIds is empty it will add all entity sets for indexing.
             queueForIndexing( jobIds.map { it to emptySet<UUID>() }.toMap() )
@@ -197,7 +197,7 @@ class IndexingService(
         }
 
         entitiesForIndexing.forEach { (entitySetId, entityKeyIds) ->
-            logger.info("Creating job to index entity set {} for the following entities {}", entitySetId, entityKeyIds)
+            logger.info("Creating job to index entity set $entitySetId for the following entities $entityKeyIds")
             indexingJobs.putIfAbsent(entitySetId, DelegatedUUIDSet.wrap(HashSet()))
             indexingJobs.executeOnKey(entitySetId, UUIDKeyToUUIDSetMerger(entityKeyIds))
             indexingQueue.put(entitySetId)
