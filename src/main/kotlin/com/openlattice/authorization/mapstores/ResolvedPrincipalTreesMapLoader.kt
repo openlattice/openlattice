@@ -23,8 +23,6 @@ import java.util.*
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 class ResolvedPrincipalTreesMapLoader : TestableSelfRegisteringMapStore<String, NavigableSet<Principal>> {
-    private lateinit var spm: SecurePrincipalsManager
-    private lateinit var aclKeys: IMap<String, UUID>
     private lateinit var principals: IMap<AclKey, SecurablePrincipal>
     private lateinit var principalTrees: IMap<AclKey, AclKeySet>
     override fun getMapName(): String {
@@ -134,9 +132,7 @@ class ResolvedPrincipalTreesMapLoader : TestableSelfRegisteringMapStore<String, 
         throw NotImplementedException("This is a read only map loader.")
     }
 
-    fun initSpm(spm: SecurePrincipalsManager) {
-        this.spm = spm
-    }
+
 
     fun initPrincipalsMapstore(hazelcastInstance: HazelcastInstance) {
         this.principals = hazelcastInstance.getMap(HazelcastMap.PRINCIPALS.name)
