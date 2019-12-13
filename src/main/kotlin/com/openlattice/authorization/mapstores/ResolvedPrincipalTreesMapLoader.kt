@@ -1,13 +1,16 @@
 package com.openlattice.authorization.mapstores
 
+import com.google.common.collect.ImmutableList
 import com.google.common.collect.ImmutableSortedSet
 import com.hazelcast.config.MapConfig
 import com.hazelcast.config.MapStoreConfig
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
+import com.hazelcast.query.Predicate
+import com.hazelcast.query.Predicates
 import com.kryptnostic.rhizome.mapstores.TestableSelfRegisteringMapStore
-import com.openlattice.authorization.Principal
-import com.openlattice.authorization.SecurablePrincipal
+import com.openlattice.authorization.*
+import com.openlattice.authorization.mapstores.PrincipalMapstore.PRINCIPAL_INDEX
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.organizations.roles.SecurePrincipalsManager
@@ -21,8 +24,9 @@ import java.util.*
  */
 class ResolvedPrincipalTreesMapLoader : TestableSelfRegisteringMapStore<String, NavigableSet<Principal>> {
     private lateinit var spm: SecurePrincipalsManager
-    private lateinit var principals: IMap<String, SecurablePrincipal>
-
+    private lateinit var aclKeys: IMap<String, UUID>
+    private lateinit var principals: IMap<AclKey, SecurablePrincipal>
+    private lateinit var principalTrees: IMap<AclKey, AclKeySet>
     override fun getMapName(): String {
         return HazelcastMap.RESOLVED_PRINCIPAL_TREES.name
     }
@@ -69,12 +73,14 @@ class ResolvedPrincipalTreesMapLoader : TestableSelfRegisteringMapStore<String, 
     }
 
     override fun loadAll(keys: MutableCollection<String>): Map<String, NavigableSet<Principal>> {
-        return keys.associateWith { load(it) }
+        return keys
+                .associateWith(this::load)
+                .filterValues { it != null } as Map<String, NavigableSet<Principal>>
     }
 
-    override fun load(principalId: String): NavigableSet<Principal> {
-        val sp = principals[principalId] ?: return ImmutableSortedSet.of()
-        val securablePrincipals = spm.getAllPrincipals(sp) ?: return ImmutableSortedSet.of()
+    override fun load(principalId: String): NavigableSet<Principal>? {
+        val sp = getPrincipal(principalId) ?: return null
+        val securablePrincipals = getAllPrincipals(sp) ?: return null
 
         val currentPrincipals: NavigableSet<Principal> = TreeSet()
         currentPrincipals.add(sp.principal)
@@ -84,16 +90,57 @@ class ResolvedPrincipalTreesMapLoader : TestableSelfRegisteringMapStore<String, 
         return currentPrincipals
     }
 
+    private fun getLayer(aclKeys: Set<AclKey>): AclKeySet? {
+        return principalTrees.aggregate(
+                AccumulatingReadAggregator<AclKey>(),
+                Predicates.`in`("__key", *aclKeys.toTypedArray()) as Predicate<AclKey, AclKeySet>
+        )
+    }
+
+    private fun getAllPrincipals(sp: SecurablePrincipal): Collection<SecurablePrincipal>? {
+        val roles = getLayer(setOf(sp.aclKey)) ?: return ImmutableList.of()
+        var nextLayer: Set<AclKey> = roles
+
+        while (nextLayer.isNotEmpty()) {
+            nextLayer = getLayer(nextLayer) ?: setOf()
+            roles.addAll(nextLayer)
+        }
+
+        return principals.aggregate(
+                SecurablePrincipalAccumulator(),
+                Predicates.`in`("_key", *roles.toTypedArray()) as Predicate<AclKey, SecurablePrincipal>)
+
+    }
+
+
+    private fun getPrincipal(principalId: String): SecurablePrincipal? {
+//        val principal = aclKeys.aggregate(
+//                ReadAggregator<String, UUID>(),
+//                Predicates.equal("__key", principalId) as Predicate<String, UUID>
+//        )
+
+        //This will always only be called on users. If it needs to be fixed for other types than an additional index
+        //will have to be added.
+        return principals.aggregate(
+                ReadAggregator<AclKey, SecurablePrincipal>(),
+                Predicates.equal(
+                        PRINCIPAL_INDEX, Principals.getUserPrincipal(principalId)
+                ) as Predicate<AclKey, SecurablePrincipal>
+        )
+
+    }
+
     override fun delete(key: String) {
         throw NotImplementedException("This is a read only map loader.")
     }
 
     fun initSpm(spm: SecurePrincipalsManager) {
-        this.spm = spm;
+        this.spm = spm
     }
 
     fun initPrincipalsMapstore(hazelcastInstance: HazelcastInstance) {
         this.principals = hazelcastInstance.getMap(HazelcastMap.SECURABLE_PRINCIPALS.name)
+        this.principalTrees = hazelcastInstance.getMap(HazelcastMap.PRINCIPAL_TREES.name)
     }
 
 }

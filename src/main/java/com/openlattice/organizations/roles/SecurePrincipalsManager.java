@@ -27,6 +27,8 @@ import com.google.common.collect.SetMultimap;
 import com.hazelcast.query.Predicate;
 
 import java.util.*;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public interface SecurePrincipalsManager {
 
@@ -45,7 +47,7 @@ public interface SecurePrincipalsManager {
      */
     SecurablePrincipal getSecurablePrincipal( AclKey aclKey );
 
-    SecurablePrincipal getPrincipal( String principalId );
+    @Nonnull SecurablePrincipal getPrincipal( String principalId );
 
     Optional<SecurablePrincipal> maybeGetSecurablePrincipal( Principal p );
 
