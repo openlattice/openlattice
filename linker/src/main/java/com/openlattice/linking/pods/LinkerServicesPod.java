@@ -317,7 +317,7 @@ public class LinkerServicesPod {
 
     @PostConstruct
     void initPrincipals() {
-        Principals.init( principalService() );
+        Principals.init( principalService() , hazelcastInstance );
     }
 
     @Bean
