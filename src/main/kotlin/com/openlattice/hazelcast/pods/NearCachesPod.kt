@@ -16,7 +16,7 @@ class NearCachesPod {
     fun authenticationPrincipalsCache(): NearCacheConfig {
         //The default settings here should be good enough (LRU, 10K size)
         //We cache local entries because in memory format is different from map (binary)
-        return NearCacheConfig(HazelcastMap.SECURABLE_PRINCIPALS.name + "_authentication")
+        return NearCacheConfig(HazelcastMap.SECURABLE_PRINCIPALS.name)
                 .setInvalidateOnChange(true)
                 .setInMemoryFormat(InMemoryFormat.OBJECT)
                 .setCacheLocalEntries(true)
@@ -27,7 +27,7 @@ class NearCachesPod {
     fun authenticationResolvedPrincipalTreesCache(): NearCacheConfig {
         //The default settings here should be good enough (LRU, 10K size)
         //We cache local entries because in memory format is different from map (binary)
-        return NearCacheConfig(HazelcastMap.RESOLVED_PRINCIPAL_TREES.name + "_authentication")
+        return NearCacheConfig(HazelcastMap.RESOLVED_PRINCIPAL_TREES.name)
                 .setInvalidateOnChange(true)
                 .setInMemoryFormat(InMemoryFormat.OBJECT)
                 .setCacheLocalEntries(true)

@@ -101,38 +101,24 @@ class Auth0SyncService(
         authnRolesCache.set( principalId, SortedPrincipalSet(currentPrincipals))
     }
 
-    private fun getLayer(aclKeys: Set<AclKey>): AclKeySet? {
-        return principalTrees.aggregate(
-                AccumulatingReadAggregator<AclKey>(),
-                Predicates.`in`("__key", *aclKeys.toTypedArray()) as Predicate<AclKey, AclKeySet>
-        )
+    private fun getLayer(aclKeys: Set<AclKey>): AclKeySet {
+        return AclKeySet( principalTrees.getAll(aclKeys).values.flatMap { it.value } )
     }
 
     private fun getAllPrincipals(sp: SecurablePrincipal): Collection<SecurablePrincipal>? {
-        val roles = getLayer(setOf(sp.aclKey)) ?: return ImmutableList.of()
+        val roles = getLayer(setOf(sp.aclKey))
         var nextLayer: Set<AclKey> = roles
 
         while (nextLayer.isNotEmpty()) {
-            nextLayer = getLayer(nextLayer) ?: setOf()
+            nextLayer = getLayer(nextLayer)
             roles.addAll(nextLayer)
         }
 
-        return principals.aggregate(
-                SecurablePrincipalAccumulator(),
-                Predicates.`in`("__key", *roles.toTypedArray()) as Predicate<AclKey, SecurablePrincipal>
-        )
-
+        return principals.getAll(roles).values
     }
 
 
     private fun getPrincipal(principalId: String): SecurablePrincipal? {
-//        val principal = aclKeys.aggregate(
-//                ReadAggregator<String, UUID>(),
-//                Predicates.equal("__key", principalId) as Predicate<String, UUID>
-//        )
-
-        //This will always only be called on users. If it needs to be fixed for other types than an additional index
-        //will have to be added.
         return principals.aggregate(
                 ReadSecurablePrincipalAggregator(),
                 Predicates.equal(
