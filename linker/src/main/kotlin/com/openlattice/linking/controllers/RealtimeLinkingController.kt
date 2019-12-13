@@ -4,13 +4,15 @@ import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.linking.*
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestMethod
 import org.springframework.web.bind.annotation.RestController
-import java.util.UUID
+import java.util.*
 import javax.inject.Inject
+import kotlin.collections.HashSet
 
 @RestController
 @RequestMapping(RealtimeLinkingApi.CONTROLLER)
@@ -33,6 +35,10 @@ class RealtimeLinkingController(
         return authz
     }
 
+    @SuppressFBWarnings(
+            value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"],
+            justification = "lateinit prevents NPE here"
+    )
     @RequestMapping(
             path = [RealtimeLinkingApi.FINISHED + RealtimeLinkingApi.SET],
             method = [RequestMethod.GET],

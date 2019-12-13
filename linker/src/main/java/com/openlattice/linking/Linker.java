@@ -47,7 +47,7 @@ import com.openlattice.tasks.pods.TaskSchedulerPod;
  */
 public class Linker extends BaseRhizomeServer {
 
-    public static final Class<?>[] conductorPods = new Class<?>[]{
+    private static final Class<?>[] conductorPods = new Class<?>[]{
             AuditingConfigurationPod.class,
             Auth0Pod.class,
             AwsS3Pod.class,
@@ -63,7 +63,7 @@ public class Linker extends BaseRhizomeServer {
             TaskSchedulerPod.class
     };
 
-    public static final Class<?>[] webPods = new Class<?>[]{ LinkerServletsPod.class, LinkerSecurityPod.class };
+    private static final Class<?>[] webPods = new Class<?>[]{ LinkerServletsPod.class, LinkerSecurityPod.class };
 
     static {
         ObjectMappers.foreach( FullQualifiedNameJacksonSerializer::registerWithMapper );
@@ -74,8 +74,8 @@ public class Linker extends BaseRhizomeServer {
     }
 
     @Override
-    public void start( String... activeProfiles ) throws Exception {
-        super.start( activeProfiles );
+    public void start( String... profiles ) throws Exception {
+        super.start( profiles );
         getContext().getBean( MailService.class ).processEmailRequestsQueue();
     }
 
