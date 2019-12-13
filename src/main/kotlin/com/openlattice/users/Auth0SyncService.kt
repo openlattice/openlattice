@@ -23,6 +23,7 @@ import com.openlattice.postgres.PostgresTable.USERS
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.zaxxer.hikari.HikariDataSource
+import org.slf4j.LoggerFactory
 import java.util.*
 
 const val DELETE_BATCH_SIZE = 1024
@@ -39,6 +40,9 @@ class Auth0SyncService(
         private val spm: SecurePrincipalsManager,
         private val orgService: HazelcastOrganizationService
 ) {
+    companion object {
+        private val logger = LoggerFactory.getLogger(Auth0SyncService::class.java)
+    }
     private val users: IMap<String, User> = hazelcastInstance.getMap(HazelcastMap.USERS.name)
     private val principals = hazelcastInstance.getMap<AclKey,SecurablePrincipal>(HazelcastMap.PRINCIPALS.name)
     private val authnPrincipalCache = hazelcastInstance.getMap<String,SecurablePrincipal>(HazelcastMap.SECURABLE_PRINCIPALS.name)
@@ -50,6 +54,7 @@ class Auth0SyncService(
         //Figure out which users need to be added to which organizations.
         //Since we don't want to do O( # organizations ) for each user, we need to lookup organizations on a per user
         //basis and see if the user needs to be added.
+        logger.info("Synchronizg user ${user.id}")
         ensureSecurablePrincipalExists(user)
         val principal = getPrincipal(user)
         val roles = getRoles(user)
@@ -59,6 +64,7 @@ class Auth0SyncService(
         users.putIfAbsent( principal.id, user)
         processGlobalEnrollments(sp, principal, user)
         processOrganizationEnrollments(user, sp, principal, user.email ?: "")
+        logger.info("Syncing authentication cache for ${principal.id}")
         syncAuthenticationCache(principal.id)
         markUser(user)
     }
