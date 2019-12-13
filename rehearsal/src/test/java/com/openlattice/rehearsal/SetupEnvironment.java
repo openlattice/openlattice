@@ -124,10 +124,10 @@ public class SetupEnvironment {
         String idUser2 = ( String ) jwtUser2.getPrincipal();
         String idUser3 = ( String ) jwtUser3.getPrincipal();
 
-        retrofit.create( PrincipalApi.class ).activateUser();
-        retrofit1.create( PrincipalApi.class ).activateUser();
-        retrofit2.create( PrincipalApi.class ).activateUser();
-        retrofit3.create( PrincipalApi.class ).activateUser();
+        retrofit.create( PrincipalApi.class ).syncCallingUser();
+        retrofit1.create( PrincipalApi.class ).syncCallingUser();
+        retrofit2.create( PrincipalApi.class ).syncCallingUser();
+        retrofit3.create( PrincipalApi.class ).syncCallingUser();
 
         final var rolesAdmin = retrofit.create(PrincipalApi.class).getCurrentRoles();
         final var rolesUser1 = retrofit1.create(PrincipalApi.class).getCurrentRoles();
