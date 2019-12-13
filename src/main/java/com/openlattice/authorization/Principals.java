@@ -48,7 +48,7 @@ public final class Principals {
             .getLogger( Principals.class );
     private static final Lock                                  startupLock = new ReentrantLock();
     private static       IMap<String, SecurablePrincipal>      securablePrincipals;
-    private static       IMap<String, LinkedHashSet<Principal>> principals;
+    private static       IMap<String, SortedPrincipalSet> principals;
 
     private Principals() {
     }
@@ -89,11 +89,11 @@ public final class Principals {
         return new Principal( PrincipalType.USER, principalId );
     }
 
-    public static LinkedHashSet<Principal> getUserPrincipals( String principalId ) {
+    public static NavigableSet<Principal> getUserPrincipals( String principalId ) {
         return principals.get( principalId );
     }
 
-    public static LinkedHashSet<Principal> getCurrentPrincipals() {
+    public static NavigableSet<Principal> getCurrentPrincipals() {
         return MoreObjects.firstNonNull( principals.get( getCurrentPrincipalId() ), Sets.newLinkedHashSet() );
     }
 

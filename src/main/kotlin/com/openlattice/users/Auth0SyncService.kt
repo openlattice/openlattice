@@ -42,7 +42,7 @@ class Auth0SyncService(
     private val users: IMap<String, User> = hazelcastInstance.getMap(HazelcastMap.USERS.name)
     private val principals = hazelcastInstance.getMap<AclKey,SecurablePrincipal>(HazelcastMap.PRINCIPALS.name)
     private val authnPrincipalCache = hazelcastInstance.getMap<String,SecurablePrincipal>(HazelcastMap.SECURABLE_PRINCIPALS.name)
-    private val authnRolesCache = hazelcastInstance.getMap<String, SecurablePrincipalList>(HazelcastMap.RESOLVED_PRINCIPAL_TREES.name)
+    private val authnRolesCache = hazelcastInstance.getMap<String, SortedPrincipalSet>(HazelcastMap.RESOLVED_PRINCIPAL_TREES.name)
     private val principalTrees = hazelcastInstance.getMap<AclKey,AclKeySet>(HazelcastMap.PRINCIPAL_TREES.name)
     private val mapper = ObjectMappers.newJsonMapper()
 

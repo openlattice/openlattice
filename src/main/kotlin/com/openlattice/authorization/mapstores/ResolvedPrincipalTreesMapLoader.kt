@@ -6,7 +6,7 @@ import com.kryptnostic.rhizome.mapstores.TestableSelfRegisteringMapStore
 import com.openlattice.authorization.SecurablePrincipal
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.mapstores.TestDataFactory
-import com.openlattice.organizations.SecurablePrincipalList
+import com.openlattice.organizations.SortedPrincipalSet
 import org.apache.commons.lang3.NotImplementedException
 import org.apache.commons.lang3.RandomStringUtils
 import java.util.*
@@ -15,7 +15,7 @@ import java.util.*
  * In memory cache of resolved principal trees
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-class ResolvedPrincipalTreesMapLoader : TestableSelfRegisteringMapStore<String, SecurablePrincipalList> {
+class ResolvedPrincipalTreesMapLoader : TestableSelfRegisteringMapStore<String, SortedPrincipalSet> {
     override fun getMapName(): String {
         return HazelcastMap.RESOLVED_PRINCIPAL_TREES.name
     }
@@ -28,8 +28,8 @@ class ResolvedPrincipalTreesMapLoader : TestableSelfRegisteringMapStore<String, 
         return ""
     }
 
-    override fun generateTestValue(): SecurablePrincipalList {
-        return SecurablePrincipalList(
+    override fun generateTestValue(): SortedPrincipalSet {
+        return SortedPrincipalSet(
                 mutableListOf(
                         SecurablePrincipal(
                                 Optional.empty(),
@@ -41,7 +41,7 @@ class ResolvedPrincipalTreesMapLoader : TestableSelfRegisteringMapStore<String, 
         )
     }
 
-    override fun store(key: String, value: SecurablePrincipalList) {
+    override fun store(key: String, value: SortedPrincipalSet) {
         throw NotImplementedException("This is a read only map loader.")
     }
 
@@ -53,7 +53,7 @@ class ResolvedPrincipalTreesMapLoader : TestableSelfRegisteringMapStore<String, 
         throw NotImplementedException("This is a read only map loader.")
     }
 
-    override fun storeAll(map: Map<String, SecurablePrincipalList>) {
+    override fun storeAll(map: Map<String, SortedPrincipalSet>) {
         throw NotImplementedException("This is a read only map loader.")
     }
 
@@ -70,11 +70,11 @@ class ResolvedPrincipalTreesMapLoader : TestableSelfRegisteringMapStore<String, 
                 .setInitialLoadMode(MapStoreConfig.InitialLoadMode.EAGER)
     }
 
-    override fun loadAll(keys: MutableCollection<String>): Map<String, SecurablePrincipalList> {
+    override fun loadAll(keys: MutableCollection<String>): Map<String, SortedPrincipalSet> {
         throw NotImplementedException("This is a read only a cache.")
     }
 
-    override fun load(principalId: String): SecurablePrincipalList? {
+    override fun load(principalId: String): SortedPrincipalSet? {
         throw NotImplementedException("This is a read only a cache.")
     }
 
