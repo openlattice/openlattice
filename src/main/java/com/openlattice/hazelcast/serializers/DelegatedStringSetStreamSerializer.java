@@ -24,14 +24,18 @@ import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.google.common.collect.Sets;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
+import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
+
 import java.io.IOException;
+import java.util.Set;
+
 import org.springframework.stereotype.Component;
 
 @Component
 public class DelegatedStringSetStreamSerializer extends SetStreamSerializer<DelegatedStringSet, String> {
 
-    public DelegatedStringSetStreamSerializer( ) {
+    public DelegatedStringSetStreamSerializer() {
         super( DelegatedStringSet.class );
     }
 
@@ -55,4 +59,10 @@ public class DelegatedStringSetStreamSerializer extends SetStreamSerializer<Dele
         out.writeUTF( element );
     }
 
+    @Override
+    public DelegatedStringSet generateTestValue() {
+        return new DelegatedStringSet(
+                Set.of( TestDataFactory.randomAlphabetic( 5 ), TestDataFactory.randomAlphanumeric( 10 ) )
+        );
+    }
 }
