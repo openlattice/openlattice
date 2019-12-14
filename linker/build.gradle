@@ -30,11 +30,12 @@ buildscript {
 
 
 plugins {
-    id "application"
-    id "java"
-    id "eclipse"
-    id "idea"
-    id "jacoco"
+    id 'application'
+    id 'checkstyle'
+    id 'java'
+    id 'eclipse'
+    id 'idea'
+    id 'jacoco'
     id 'maven-publish'
     id 'signing'
     id 'com.github.spotbugs' version '3.0.0'
@@ -108,6 +109,17 @@ run {
 }
 
 println "Enabled profiles: " + Arrays.toString(run.args)
+
+checkstyle {
+  toolVersion = "${checkstyle_version}"
+  config project.resources.text.fromUri('https://raw.githubusercontent.com/openlattice/gradles/master/checkstyle.xml')
+}
+tasks.withType(Checkstyle) {
+    reports {
+        xml.enabled = false
+        html.enabled = true
+    }
+}
 
 spotbugs {
     toolVersion = '3.1.12'
@@ -224,4 +236,3 @@ jar {
 startScripts {
     classpath = files(jar.archivePath)
 }
-
