@@ -22,6 +22,8 @@
 package com.openlattice.hazelcast.serializers
 
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest
+import com.openlattice.mapstores.TestDataFactory
+import com.openlattice.organizations.SecurablePrincipalList
 import com.openlattice.organizations.events.MembersAddedToOrganizationEvent
 import java.util.UUID
 
@@ -34,7 +36,12 @@ class MembersAddedToOrganizationEventStreamSerializerTest
     override fun createInput(): MembersAddedToOrganizationEvent {
         return MembersAddedToOrganizationEvent(
                 UUID.randomUUID(),
-                SecurablePrincipalListStreamSerializerTest.createSecurablePrincipalList()
+                SecurablePrincipalList(
+                        mutableListOf(
+                                TestDataFactory.securableUserPrincipal(),
+                                TestDataFactory.securableUserPrincipal()
+                        )
+                )
         )
     }
 }
