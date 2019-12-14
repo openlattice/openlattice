@@ -121,10 +121,6 @@ tasks.withType(Checkstyle) {
     }
 }
 
-spotbugs {
-    toolVersion = '3.1.12'
-}
-
 jacoco {
     toolVersion = "0.8.2"
 }
