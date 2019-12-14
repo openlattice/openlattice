@@ -175,8 +175,8 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
                     .withFields( "user_id,email,nickname,app_metadata,identities", true )
                     .withPage( 0, 100 ) ).execute();
 
-            syncService.syncUser( user );
             Principals.invalidatePrincipalCache( user.getId() );
+            syncService.syncUser( user );
 
         } catch ( IllegalArgumentException | Auth0Exception e ) {
             throw new BadCredentialsException( "Unable to retrieve user profile information from auth0", e );
