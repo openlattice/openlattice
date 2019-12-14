@@ -400,9 +400,13 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         //Ensure that we have read access to entity set metadata.
         ensureReadAccess( new AclKey( entitySetId ) );
         ensureEntitySetCanBeWritten( entitySetId );
+        final var requiredPropertyTypes = entities.stream()
+                .flatMap(  entity ->  entity.keySet().stream() )
+                .collect( Collectors.toSet() );
         //Load authorized property types
         final Map<UUID, PropertyType> authorizedPropertyTypes = authzHelper
                 .getAuthorizedPropertyTypes( entitySetId, WRITE_PERMISSION );
+        accessCheck( authorizedPropertyTypes, requiredPropertyTypes );
         Pair<List<UUID>, WriteEvent> entityKeyIdsToWriteEvent = dgm
                 .createEntities( entitySetId, entities, authorizedPropertyTypes );
         List<UUID> entityKeyIds = entityKeyIdsToWriteEvent.getKey();
@@ -978,6 +982,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                 .forEach( de -> propertyTypesByEntitySet.putAll( esId, de.getData().keySet() ) ) );
         return propertyTypesByEntitySet;
     }
+
 
     private static Set<UUID> requiredEntitySetPropertyTypes( Map<UUID, Map<UUID, Set<Object>>> entities ) {
         return entities.values().stream().map( Map::keySet ).flatMap( Set::stream )
