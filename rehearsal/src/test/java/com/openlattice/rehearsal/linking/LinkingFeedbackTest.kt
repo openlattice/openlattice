@@ -82,6 +82,20 @@ class LinkingFeedbackTest : SetupTestData() {
             )
 
             waitForBackgroundServices()
+
+            val linkedData = searchApi.searchEntitySetData(
+                    SearchConstraints.simpleSearchConstraints(
+                            arrayOf(linkingEntitySet.id), 0, 100, "*")).hits
+            linkingId = linkedData.map {
+                UUID.fromString(it.getValue(EdmConstants.ID_FQN).first() as String)
+            }.toSet().first()
+            val matchedEntities = realtimeLinkingApi.getMatchedEntitiesForLinkingId(linkingId)
+
+            // skip 1, so not all of them gets positive feedback
+            allEntities = ImmutableSet.copyOf(matchedEntities
+                    .flatMap { setOf(it.entityPair.first, it.entityPair.second) }).toList()
+
+            nonLinkingEntity = allEntities[Random.nextInt(allEntities.size)]
         }
 
         @JvmStatic
@@ -117,17 +131,9 @@ class LinkingFeedbackTest : SetupTestData() {
 
     @Test
     fun testA_addPositiveFeedback() {
-        val linkedData = searchApi.searchEntitySetData(
-                SearchConstraints.simpleSearchConstraints(
-                        arrayOf(linkingEntitySet.id), 0, 100, "*")).hits
-        linkingId = linkedData.map {
-            UUID.fromString(it.getValue(EdmConstants.ID_FQN).first() as String)
-        }.toSet().first()
         val matchedEntities = realtimeLinkingApi.getMatchedEntitiesForLinkingId(linkingId)
 
         // skip 1, so not all of them gets positive feedback
-        allEntities = ImmutableSet.copyOf(matchedEntities
-                .flatMap { setOf(it.entityPair.first, it.entityPair.second) }).toList()
         val linkedEntities = allEntities.drop(1).toSet()
         linkingFeedbackApi.addLinkingFeedback(
                 LinkingFeedback(EntityDataKey(linkingEntitySet.id, linkingId), linkedEntities, setOf()))
@@ -165,7 +171,6 @@ class LinkingFeedbackTest : SetupTestData() {
     fun testB_addNegativeFeedback() {
         val matchedEntities = realtimeLinkingApi.getMatchedEntitiesForLinkingId(linkingId)
 
-        nonLinkingEntity = allEntities[Random.nextInt(allEntities.size)]
         val linkedEntities = (allEntities - nonLinkingEntity).toSet()
 
         linkingFeedbackApi.addLinkingFeedback(

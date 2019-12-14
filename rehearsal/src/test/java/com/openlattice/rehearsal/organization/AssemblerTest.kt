@@ -1150,6 +1150,10 @@ class AssemblerTest : AssemblerTestBase() {
 
     }
 
+        @SuppressFBWarnings(
+            value = ["SQL_PREPARED_STATEMENT_GENERATED_FROM_NONCONSTANT_STRING"],
+            justification = "Perfectly safe string generation"
+    )
     @Test
     fun testRunIntegrationWithOrganizationUser() {
         val organization2 = createOrganization()
