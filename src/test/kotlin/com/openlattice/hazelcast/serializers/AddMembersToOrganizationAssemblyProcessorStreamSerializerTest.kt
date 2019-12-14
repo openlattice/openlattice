@@ -25,7 +25,9 @@ import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTes
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.processors.AddMembersToOrganizationAssemblyProcessor
 import com.openlattice.mapstores.TestDataFactory
+import com.openlattice.organizations.SecurablePrincipalList
 import org.mockito.Mockito
+import kotlin.random.Random
 
 class AddMembersToOrganizationAssemblyProcessorStreamSerializerTest
     : AbstractStreamSerializerTest<AddMembersToOrganizationAssemblyProcessorStreamSerializer,
@@ -38,12 +40,18 @@ class AddMembersToOrganizationAssemblyProcessorStreamSerializerTest
     }
 
     override fun createInput(): AddMembersToOrganizationAssemblyProcessor {
-        val authorizedPropertyTypesOfEntitySetsByPrincipal =
-                SecurablePrincipalListStreamSerializerTest.createSecurablePrincipalList().associateWith {
-                    listOf(TestDataFactory.entitySet()).associateWith {
-                        listOf(TestDataFactory.propertyType(), TestDataFactory.propertyType())
-                    }
-                }
+        val principalList = SecurablePrincipalList(
+                mutableListOf(
+                        TestDataFactory.securableUserPrincipal(),
+                        TestDataFactory.securableUserPrincipal()
+                )
+        )
+
+        val authorizedPropertyTypesOfEntitySetsByPrincipal = principalList.associateWith {
+            listOf(TestDataFactory.entitySet()).associateWith {
+                listOf(TestDataFactory.propertyType(), TestDataFactory.propertyType())
+            }
+        }
 
         return AddMembersToOrganizationAssemblyProcessor(authorizedPropertyTypesOfEntitySetsByPrincipal)
     }
