@@ -20,6 +20,7 @@
  */
 package com.openlattice.hazelcast.serializers
 
+import com.google.common.annotations.VisibleForTesting
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
@@ -36,8 +37,9 @@ class RemoveMembersFromOrganizationAssemblyProcessorStreamSerializer
     : SelfRegisteringStreamSerializer<RemoveMembersFromOrganizationAssemblyProcessor>,
       AssemblerConnectionManagerDependent<Void?> {
     private lateinit var acm: AssemblerConnectionManager
+
     @Inject
-    private lateinit var splss: SecurablePrincipalListStreamSerializer
+    private lateinit var splss : SecurablePrincipalListStreamSerializer
 
     override fun getTypeId(): Int {
         return StreamSerializerTypeIds.REMOVE_MEMBERS_FROM_ORGANIZATION_ASSEMBLY_PROCESSOR.ordinal
@@ -60,5 +62,10 @@ class RemoveMembersFromOrganizationAssemblyProcessorStreamSerializer
     override fun init(acm: AssemblerConnectionManager): Void? {
         this.acm = acm
         return null
+    }
+
+    @VisibleForTesting
+    fun initSplss(splss: SecurablePrincipalListStreamSerializer) {
+        this.splss = splss
     }
 }
