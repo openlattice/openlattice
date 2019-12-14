@@ -1152,7 +1152,7 @@ class AssemblerTest : AssemblerTestBase() {
     }
 
     @SuppressFBWarnings(
-            value = ["SQL_PREPARED_STATEMENT_GENERATED_FROM_NONCONSTANT_STRING"],
+            value = ["SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE"],
             justification = "Perfectly safe string generation"
     )
     @Test
