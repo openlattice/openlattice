@@ -22,9 +22,9 @@ package com.openlattice.datastore.pods;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openlattice.admin.AdminController;
+import com.openlattice.analysis.assembler.AssemblyAnalyzationController;
 import com.openlattice.codex.controllers.CodexController;
 import com.openlattice.collection.CollectionsController;
-import com.openlattice.analysis.assembler.AssemblyAnalyzationController;
 import com.openlattice.controllers.OrganizationsController;
 import com.openlattice.data.DataApi;
 import com.openlattice.datastore.analysis.controllers.AnalysisController;
@@ -47,6 +47,7 @@ import com.openlattice.web.converters.CsvHttpMessageConverter;
 import com.openlattice.web.converters.YamlHttpMessageConverter;
 import com.openlattice.web.mediatypes.CustomMediaType;
 import com.ryantenney.metrics.spring.config.annotation.EnableMetrics;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
@@ -103,8 +104,12 @@ public class DatastoreMvcPod extends WebMvcConfigurationSupport {
         converters.add( new YamlHttpMessageConverter() );
     }
 
-    // TODO: We need to lock this down. Since all endpoints are stateless + authenticated this is more a
+    // TODO(LATTICE-2346): We need to lock this down. Since all endpoints are stateless + authenticated this is more a
     // defense-in-depth measure.
+    @SuppressFBWarnings(
+            value = {"PERMISSIVE_CORS"},
+            justification = "LATTICE-2346"
+    )
     @Override
     protected void addCorsMappings( CorsRegistry registry ) {
         registry
