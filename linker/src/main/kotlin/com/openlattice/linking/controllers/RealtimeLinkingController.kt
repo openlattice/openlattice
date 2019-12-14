@@ -30,7 +30,6 @@ class RealtimeLinkingController(
     private val whitelist = lc.whitelist
     private val linkableTypes = edm.getEntityTypeUuids(lc.entityTypes)
 
-
     override fun getAuthorizationManager(): AuthorizationManager {
         return authz
     }

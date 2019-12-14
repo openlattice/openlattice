@@ -21,12 +21,15 @@
 
 package com.openlattice.conductor.auth0;
 
+import com.google.common.collect.Sets;
+import com.kryptnostic.rhizome.configuration.ConfigurationConstants;
 import com.openlattice.auth0.Auth0TokenProvider;
 import com.openlattice.authentication.Auth0Configuration;
 import com.openlattice.conductor.ConductorBootstrap;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;
+import org.springframework.context.support.AbstractApplicationContext;
 
 /**
  * In order to pass this you must have an auth0.yaml file with correct information for client credentials grants.
@@ -34,12 +37,18 @@ import org.junit.Test;
 public class Auth0TokenProviderTest extends ConductorBootstrap {
     @Test
     public void testAuth0TokenProvider() {
-        Auth0Configuration configuration = LINKER.getContext().getBean( Auth0Configuration.class );
-        Assert.assertNotNull( configuration );
-        Assert.assertTrue( StringUtils.isNotBlank( configuration.getClientSecret() ) );
-        Assert.assertTrue( StringUtils.isNotBlank( configuration.getManagementApiUrl() ) );
-        Assert.assertTrue( StringUtils.isNotBlank( configuration.getClientId() ) );
-        Auth0TokenProvider provider = new Auth0TokenProvider( configuration );
-        Assert.assertTrue( StringUtils.isNotBlank( provider.getToken() ) );
+        try ( AbstractApplicationContext context = LINKER.getContext() ) {
+
+            if ( Sets.newHashSet( context.getEnvironment().getActiveProfiles() )
+                    .contains( ConfigurationConstants.Profiles.AWS_TESTING_PROFILE ) ) {
+                Auth0Configuration configuration = context.getBean( Auth0Configuration.class );
+                Assert.assertNotNull( configuration );
+                Assert.assertTrue( StringUtils.isNotBlank( configuration.getClientSecret() ) );
+                Assert.assertTrue( StringUtils.isNotBlank( configuration.getManagementApiUrl() ) );
+                Assert.assertTrue( StringUtils.isNotBlank( configuration.getClientId() ) );
+                Auth0TokenProvider provider = new Auth0TokenProvider( configuration );
+                Assert.assertTrue( StringUtils.isNotBlank( provider.getToken() ) );
+            }
+        }
     }
 }

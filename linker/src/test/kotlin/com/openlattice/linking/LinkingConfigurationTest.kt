@@ -25,8 +25,8 @@ import com.openlattice.conductor.rpc.SearchConfiguration
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.serializer.AbstractJacksonYamlSerializationTest
+import com.openlattice.serializer.AbstractJacksonYamlSerializationTest.registerModule
 import org.apache.commons.lang.math.RandomUtils
-
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.junit.BeforeClass
 import java.util.*
@@ -56,11 +56,13 @@ class LinkingConfigurationTest : AbstractJacksonYamlSerializationTest<LinkingCon
                 RandomUtils.nextBoolean(),
                 listOf("blah.boo", "foo.fah")
                         .map(::FullQualifiedName)
-                        .map(FullQualifiedName::getFullQualifiedNameAsString)
                         .toSet()
         )
     }
 
+    override fun logResult(result: SerializationResult<LinkingConfiguration?>) {
+        logger.info("Json: {}", result.jsonString)
+    }
 
     override fun getClazz(): Class<LinkingConfiguration> {
         return LinkingConfiguration::class.java

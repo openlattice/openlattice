@@ -43,7 +43,7 @@ private const val SEARCH_CONFIGURATION = "searchConfiguration"
 private const val BATCH_SIZE = "batch-size"
 private const val LOAD_SIZE = "load-size"
 private const val BACKGROUND_LINKING_ENABLED = "background-linking-enabled"
-private val DEFAULT_ENTITY_TYPES = setOf(PersonProperties.PERSON_TYPE_FQN.fullQualifiedNameAsString)
+private val DEFAULT_ENTITY_TYPES = setOf(PersonProperties.PERSON_TYPE_FQN)
 
 /**
  * Configuration class for linking.
@@ -57,16 +57,13 @@ data class LinkingConfiguration(
         @JsonProperty(BATCH_SIZE) val batchSize: Int = 10,
         @JsonProperty(LOAD_SIZE) val loadSize: Int = 100,
         @JsonProperty(BACKGROUND_LINKING_ENABLED) val backgroundLinkingEnabled: Boolean = true,
-        @JsonProperty(ENTITY_TYPES_FIELD) private val entityTypesFqns: Set<String> = DEFAULT_ENTITY_TYPES,
+        @JsonProperty(ENTITY_TYPES_FIELD) val entityTypes: Set<FullQualifiedName> = DEFAULT_ENTITY_TYPES,
         @JsonProperty("parallelism") val parallelism : Int = Runtime.getRuntime().availableProcessors()
 ) : Configuration {
     companion object {
         @JvmStatic
         private val configKey = SimpleConfigurationKey(CONFIG_YAML_NAME)
     }
-
-    val entityTypes: Set<FullQualifiedName> = entityTypesFqns.map { FullQualifiedName(it) }.toSet()
-
 
     @JsonIgnore
     override fun getKey(): ConfigurationKey {
