@@ -22,6 +22,7 @@ import com.openlattice.postgres.PostgresColumn.ID
 import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.rehearsal.assertException
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.junit.Assert
 import org.junit.BeforeClass
 import org.junit.Test
@@ -1150,7 +1151,7 @@ class AssemblerTest : AssemblerTestBase() {
 
     }
 
-        @SuppressFBWarnings(
+    @SuppressFBWarnings(
             value = ["SQL_PREPARED_STATEMENT_GENERATED_FROM_NONCONSTANT_STRING"],
             justification = "Perfectly safe string generation"
     )
