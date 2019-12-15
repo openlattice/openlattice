@@ -175,7 +175,6 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
                     .withFields( "user_id,email,nickname,app_metadata,identities", true )
                     .withPage( 0, 100 ) ).execute();
 
-            Principals.invalidatePrincipalCache( user.getId() );
             syncService.syncUser( user );
 
         } catch ( IllegalArgumentException | Auth0Exception e ) {
