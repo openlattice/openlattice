@@ -48,7 +48,7 @@ class TestAssemblerConnectionManager {
             val dbName = PostgresDatabases.buildOrganizationDatabaseName(organizationId)
             val connectionConfig = config.orElse(assemblerConfiguration.server.clone() as Properties)
 
-            return AssemblerConnectionManager.connect(dbName, connectionConfig, assemblerConfiguration.ssl)
+            return AssemblerConnectionManager.createDataSource(dbName, connectionConfig, assemblerConfiguration.ssl)
         }
 
         /**
