@@ -12,8 +12,10 @@ import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.PERSISTENT_SEARCHES
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.mapstores.EntitySetMapstore
+import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
+import com.openlattice.postgres.streams.StatementHolderSupplier
 import com.openlattice.search.requests.DataSearchResult
 import com.openlattice.search.requests.EntityNeighborsFilter
 import com.openlattice.search.requests.PersistentSearch
@@ -203,17 +205,9 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
 
         val dependencies = getDependency()
 
-        val persistentSearchesById = PostgresIterable(Supplier<StatementHolder> {
-            val connection = dependencies.hds.connection
-            connection.autoCommit = false
-            val stmt = connection.createStatement()
-            stmt.fetchSize = 32000
-            val rs = stmt.executeQuery(LOAD_ACTIVE_ALERTS_SQL)
-            connection.autoCommit = true
-            StatementHolder(connection, stmt, rs)
-        }, Function<ResultSet, Pair<AclKey, PersistentSearch>> {
-            ResultSetAdapters.aclKey(it) to ResultSetAdapters.persistentSearch(it)
-        }).toMap()
+        val persistentSearchesById = BasePostgresIterable(
+                StatementHolderSupplier(dependencies.hds, LOAD_ACTIVE_ALERTS_SQL, 32_000)
+        ) { ResultSetAdapters.aclKey(it) to ResultSetAdapters.persistentSearch(it) }.toMap()
 
         logger.info("Loaded {} active persistent searches.", persistentSearchesById.size)
 
