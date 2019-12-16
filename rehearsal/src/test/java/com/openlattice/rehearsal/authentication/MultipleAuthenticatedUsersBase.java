@@ -81,9 +81,9 @@ import org.junit.Assert;
 import retrofit2.Retrofit;
 
 public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
-    private final static Map<String, Retrofit> retrofitMap = new HashMap<>();
-    private final static Map<String, Retrofit> linkerRetrofitMap = new HashMap<>();
-    private final static Map<String, OkHttpClient> httpClientMap = new HashMap<>();
+    private final static Map<String, Retrofit> retrofitMap = new HashMap<>(5);
+    private final static Map<String, Retrofit> linkerRetrofitMap = new HashMap<>(1);
+    private final static Map<String, OkHttpClient> httpClientMap = new HashMap<>(3);
 
     protected static EdmApi edmApi;
     protected static PermissionsApi permissionsApi;
