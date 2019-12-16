@@ -36,17 +36,20 @@ public class ConductorBootstrap {
     static {
         final var logger = LoggerFactory.getLogger( ConductorBootstrap.class );
         LINKER = new Linker();
+        String[] profiles = new String[3];
+        profiles[0] = "postgres";
+        profiles[1] = "keras";
+        if ( NetworkUtils.isRunningOnHost( "bamboo.openlattice.com" ) ) {
+            logger.info( "Running on bamboo!" );
+            profiles[2] = "awstest";
+        } else {
+            logger.info( "Not running on bamboo!" );
+            profiles[2] = "local";
+        }
         try {
-            if ( NetworkUtils.isRunningOnHost( "bamboo.openlattice.com" ) ) {
-                logger.info( "Running on bamboo!" );
-                LINKER.start( "awstest", "postgres", "keras" );
-            } else {
-                logger.info( "Not running on bamboo!" );
-                LINKER.start( "local", "postgres", "keras" );
-            }
+            LINKER.start( profiles );
         } catch ( Exception e ) {
-            logger.error( "Unable to bootstrap condcutor with profiles: {}",
-                    (Object[]) LINKER.getContext().getEnvironment().getActiveProfiles() );
+            logger.error( "Unable to bootstrap conductor with profiles: " + profiles);
         }
     }
 
