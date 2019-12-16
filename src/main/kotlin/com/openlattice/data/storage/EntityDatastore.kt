@@ -68,8 +68,8 @@ interface EntityDatastore {
 
     fun getEntityKeyIdsOfLinkingIds(
             linkingIds: Set<UUID>,
-            normalEntitySetIds: Set<UUID>? = null
-    ): PostgresIterable<Pair<UUID, Set<UUID>>>
+            normalEntitySetIds: Set<UUID>
+    ): BasePostgresIterable<Pair<UUID, Set<UUID>>>
 
     /**
      * Creates entities if they do not exist and then adds the provided properties to specified entities.
