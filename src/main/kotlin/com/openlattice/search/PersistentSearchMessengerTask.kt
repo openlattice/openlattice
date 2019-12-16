@@ -198,33 +198,45 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
     }
 
     override fun runTask() {
+
         logger.info("Loading new writes for persistent searches and sending alerts")
 
         val dependencies = getDependency()
-        val totalSearchesUpdated = dependencies.hds.connection.use { outConnection ->
-            outConnection.prepareStatement(updateLastReadSql()).use { ps ->
-                PostgresIterable(Supplier<StatementHolder> {
-                    val connection = dependencies.hds.connection
-                    connection.autoCommit = false
-                    val stmt = connection.createStatement()
-                    stmt.fetchSize = 32000
-                    val rs = stmt.executeQuery(LOAD_ACTIVE_ALERTS_SQL)
-                    connection.autoCommit = true
-                    StatementHolder(connection, stmt, rs)
-                }, Function<ResultSet, Pair<AclKey, PersistentSearch>> {
-                    ResultSetAdapters.aclKey(it) to ResultSetAdapters.persistentSearch(it)
-                }).forEach { (aclKey, search) ->
-                    val latestRead = findNewWritesForAlert(aclKey, search)
-                    if (latestRead != null) {
-                        ps.setObject(1, latestRead)
-                        ps.setObject(2, search.id)
-                        if (logger.isDebugEnabled) {
-                            logger.debug("Updating last read for $aclKey and $search")
-                        } else {
-                            logger.info("Updating last read for $aclKey and ${search.id}")
-                        }
-                        ps.addBatch()
+
+        val persistentSearchesById = PostgresIterable(Supplier<StatementHolder> {
+            val connection = dependencies.hds.connection
+            connection.autoCommit = false
+            val stmt = connection.createStatement()
+            stmt.fetchSize = 32000
+            val rs = stmt.executeQuery(LOAD_ACTIVE_ALERTS_SQL)
+            connection.autoCommit = true
+            StatementHolder(connection, stmt, rs)
+        }, Function<ResultSet, Pair<AclKey, PersistentSearch>> {
+            ResultSetAdapters.aclKey(it) to ResultSetAdapters.persistentSearch(it)
+        }).toMap()
+
+        logger.info("Loaded {} active persistent searches.", persistentSearchesById.size)
+
+        val lastWritesForMessagesSent = persistentSearchesById.mapNotNull { (aclKey, search) ->
+            val latestRead = findNewWritesForAlert(aclKey, search)
+            latestRead?.let { search to latestRead }
+        }
+
+        logger.info("Sent {} notifications for persistent searches.", lastWritesForMessagesSent.size)
+
+        val totalSearchesUpdated = dependencies.hds.connection.use { connection ->
+
+            connection.prepareStatement(updateLastReadSql()).use { ps ->
+
+                lastWritesForMessagesSent.forEach { (search, latestRead) ->
+                    ps.setObject(1, latestRead)
+                    ps.setObject(2, search.id)
+                    if (logger.isDebugEnabled) {
+                        logger.debug("Updating last read for $search")
+                    } else {
+                        logger.info("Updating last read for ${search.id}")
                     }
+                    ps.addBatch()
                 }
                 ps.executeBatch().sum()
             }
