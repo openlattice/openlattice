@@ -85,10 +85,9 @@ class LinkingFeedbackTest : SetupTestData() {
 
             val linkedData = searchApi.searchEntitySetData(
                     SearchConstraints.simpleSearchConstraints(
-                            arrayOf(linkingEntitySet.id), 0, 100, "*")).hits
-            linkingId = linkedData.map {
-                UUID.fromString(it.getValue(EdmConstants.ID_FQN).first() as String)
-            }.toSet().first()
+                            arrayOf(linkingEntitySet.id), 0, 100, "*")).hits.first()
+            linkingId = UUID.fromString( linkedData.getValue(EdmConstants.ID_FQN).first() as String )
+
             val matchedEntities = realtimeLinkingApi.getMatchedEntitiesForLinkingId(linkingId)
 
             // skip 1, so not all of them gets positive feedback
