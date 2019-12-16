@@ -22,7 +22,11 @@
 package com.openlattice.conductor;
 
 import com.geekbeast.rhizome.NetworkUtils;
+import com.kryptnostic.rhizome.configuration.ConfigurationConstants;
+import com.openlattice.auditing.AuditingProfiles;
+import com.openlattice.datastore.constants.DatastoreProfiles;
 import com.openlattice.indexing.Indexer;
+import com.openlattice.postgres.PostgresPod;
 import org.apache.http.util.Args;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,8 +40,16 @@ public class ConductorBootstrap {
 
     protected static final Indexer INDEXER;
 
-    private static String[] localArgs = {"local", "postgres", "medialocal", "auditlocal"};
-    private static String[] bambooArgs = {"awstest", "postgres"};
+    private static String[] localArgs = {
+            ConfigurationConstants.Profiles.LOCAL_CONFIGURATION_PROFILE,
+            PostgresPod.PROFILE,
+            DatastoreProfiles.MEDIA_LOCAL_PROFILE,
+            AuditingProfiles.LOCAL_AUDITING_PROFILE
+    };
+    private static String[] bambooArgs = {
+            ConfigurationConstants.Profiles.AWS_TESTING_PROFILE,
+            PostgresPod.PROFILE
+    };
 
     static {
         final var logger = LoggerFactory.getLogger( ConductorBootstrap.class );
