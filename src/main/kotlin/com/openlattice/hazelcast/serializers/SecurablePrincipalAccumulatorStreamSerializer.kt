@@ -17,7 +17,7 @@ import org.springframework.stereotype.Component
 @Component
 class SecurablePrincipalAccumulatorStreamSerializer : TestableSelfRegisteringStreamSerializer<SecurablePrincipalAccumulator> {
     override fun generateTestValue(): SecurablePrincipalAccumulator {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return SecurablePrincipalAccumulator()
     }
 
     override fun getTypeId(): Int {

@@ -9,7 +9,7 @@ import com.openlattice.organizations.SecurablePrincipalList
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-class SecurablePrincipalAccumulator(
+data class SecurablePrincipalAccumulator(
         var v: SecurablePrincipalList? = null
 ) : Aggregator<MutableMap.MutableEntry<AclKey, SecurablePrincipal>, SecurablePrincipalList>() {
     override fun accumulate(input: MutableMap.MutableEntry<AclKey, SecurablePrincipal>) {

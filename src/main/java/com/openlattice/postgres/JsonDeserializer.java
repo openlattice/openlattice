@@ -95,7 +95,7 @@ public class JsonDeserializer {
             } catch ( Exception e ) {
                 throw new IllegalStateException(
                         "Unable to write to property type " + entry.getKey() + " with values " + entry.getValue()
-                                .toString() + ": " + lazyMessage.get() );
+                                .toString() + ": " + lazyMessage.get(), e );
             }
         }
 
