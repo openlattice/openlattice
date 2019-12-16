@@ -22,11 +22,18 @@
 package com.openlattice.conductor;
 
 import com.geekbeast.rhizome.NetworkUtils;
+import com.kryptnostic.rhizome.configuration.ConfigurationConstants;
+import com.openlattice.auditing.AuditingProfiles;
+import com.openlattice.datastore.constants.DatastoreProfiles;
 import com.openlattice.linking.Linker;
+import com.openlattice.linking.Matcher;
+import com.openlattice.postgres.PostgresPod;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
+
+import static com.openlattice.linking.MatcherKt.KERAS;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -35,8 +42,19 @@ public class ConductorBootstrap {
 
     protected static final Linker LINKER;
 
-    private static String[] localArgs = {"local", "postgres", "keras", "medialocal", "auditlocal"};
-    private static String[] bambooArgs = {"awstest", "postgres", "keras"};
+    private static String[] localArgs = {
+            ConfigurationConstants.Profiles.LOCAL_CONFIGURATION_PROFILE,
+            PostgresPod.PROFILE,
+            KERAS,
+            DatastoreProfiles.MEDIA_LOCAL_PROFILE,
+            AuditingProfiles.LOCAL_AUDITING_PROFILE
+    };
+    private static String[] bambooArgs = {
+            ConfigurationConstants.Profiles.AWS_TESTING_PROFILE,
+            PostgresPod.PROFILE,
+            KERAS
+    };
+
 
     static {
         final var logger = LoggerFactory.getLogger( ConductorBootstrap.class );
