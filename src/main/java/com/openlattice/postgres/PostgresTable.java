@@ -98,6 +98,7 @@ public final class PostgresTable {
                             DST_ENTITY_KEY_ID,
                             EDGE_ENTITY_KEY_ID )
                     .distributionColumn( PARTITION );
+    @Deprecated
     public static final PostgresTableDefinition        EDGES                        =
             new CitusDistributedTableDefinition( "edges" )
                     .addColumns(
