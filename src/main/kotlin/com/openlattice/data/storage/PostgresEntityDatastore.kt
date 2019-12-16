@@ -418,8 +418,8 @@ class PostgresEntityDatastore(
     @Timed
     override fun getEntityKeyIdsOfLinkingIds(
             linkingIds: Set<UUID>,
-            normalEntitySetIds: Set<UUID>?
-    ): PostgresIterable<Pair<UUID, Set<UUID>>> {
+            normalEntitySetIds: Set<UUID>
+    ): BasePostgresIterable<Pair<UUID, Set<UUID>>> {
         return linkingQueryService.getEntityKeyIdsOfLinkingIds(linkingIds, normalEntitySetIds)
     }
 

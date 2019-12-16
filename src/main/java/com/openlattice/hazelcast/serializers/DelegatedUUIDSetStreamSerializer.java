@@ -24,9 +24,13 @@ import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.google.common.collect.Sets;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
+import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
+
 import java.io.IOException;
+import java.util.Set;
 import java.util.UUID;
+
 import org.springframework.stereotype.Component;
 
 @Component
@@ -56,4 +60,8 @@ public class DelegatedUUIDSetStreamSerializer extends SetStreamSerializer<Delega
         UUIDStreamSerializer.serialize( out, element );
     }
 
+    @Override
+    public DelegatedUUIDSet generateTestValue() {
+        return new DelegatedUUIDSet( Set.of( UUID.randomUUID(), UUID.randomUUID() ) );
+    }
 }

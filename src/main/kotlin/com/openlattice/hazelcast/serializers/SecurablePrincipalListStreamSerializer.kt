@@ -24,12 +24,28 @@ import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.openlattice.authorization.SecurablePrincipal
 import com.openlattice.hazelcast.StreamSerializerTypeIds
+import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.organizations.SecurablePrincipalList
 import org.springframework.stereotype.Component
+import kotlin.collections.ArrayList
+import kotlin.random.Random
 
 @Component
 class SecurablePrincipalListStreamSerializer
     : ListStreamSerializer<SecurablePrincipalList, SecurablePrincipal>(SecurablePrincipalList::class.java) {
+
+    override fun generateTestValue(): SecurablePrincipalList {
+        return if (Random.nextBoolean()) {
+            SecurablePrincipalList(
+                    mutableListOf(
+                            TestDataFactory.securableUserPrincipal(),
+                            TestDataFactory.securableUserPrincipal()
+                    )
+            )
+        } else {
+            SecurablePrincipalList(mutableListOf())
+        }
+    }
 
     override fun getTypeId(): Int {
         return StreamSerializerTypeIds.SECURABLE_PRINCIPAL_LIST.ordinal
