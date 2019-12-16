@@ -30,6 +30,7 @@ import com.openlattice.authentication.AuthenticationTestRequestOptions;
 import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.Principals;
 import com.openlattice.authorization.SecurablePrincipal;
+import com.openlattice.authorization.SystemRole;
 import com.openlattice.client.RetrofitFactory;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.openlattice.directory.PrincipalApi;
@@ -134,12 +135,12 @@ public class SetupEnvironment {
         final var rolesUser2 = retrofit2.create(PrincipalApi.class).getCurrentRoles();
         final var rolesUser3 = retrofit3.create(PrincipalApi.class).getCurrentRoles();
 
-        ensurePrincipalHasPrincipalsWithName( rolesAdmin, "admin" );
+        ensurePrincipalHasPrincipalsWithName( rolesAdmin, SystemRole.ADMIN.getName() );
 
-        ensurePrincipalHasPrincipalsWithName( rolesAdmin, "AuthenticatedUser" );
-        ensurePrincipalHasPrincipalsWithName( rolesUser1, "AuthenticatedUser" );
-        ensurePrincipalHasPrincipalsWithName( rolesUser2, "AuthenticatedUser" );
-        ensurePrincipalHasPrincipalsWithName( rolesUser3, "AuthenticatedUser" );
+        ensurePrincipalHasPrincipalsWithName( rolesAdmin, SystemRole.AUTHENTICATED_USER.getName() );
+        ensurePrincipalHasPrincipalsWithName( rolesUser1, SystemRole.AUTHENTICATED_USER.getName() );
+        ensurePrincipalHasPrincipalsWithName( rolesUser2, SystemRole.AUTHENTICATED_USER.getName() );
+        ensurePrincipalHasPrincipalsWithName( rolesUser3, SystemRole.AUTHENTICATED_USER.getName() );
 
         admin = toPrincipal( idAdmin );
         user1 = toPrincipal( idUser1 );
