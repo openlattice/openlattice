@@ -23,9 +23,11 @@ package com.openlattice.conductor;
 
 import com.geekbeast.rhizome.NetworkUtils;
 import com.openlattice.indexing.Indexer;
-import kotlin.jvm.Throws;
+import org.apache.http.util.Args;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Arrays;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -34,23 +36,24 @@ public class ConductorBootstrap {
 
     protected static final Indexer INDEXER;
 
+    private static String[] localArgs = {"local", "postgres", "medialocal", "auditlocal"};
+    private static String[] bambooArgs = {"awstest", "postgres"};
+
     static {
         final var logger = LoggerFactory.getLogger( ConductorBootstrap.class );
         INDEXER = new Indexer();
-        String[] profiles = new String[3];
-        profiles[0] = "postgres";
-        profiles[1] = "keras";
+        String[] profiles;
         if ( NetworkUtils.isRunningOnHost( "bamboo.openlattice.com" ) ) {
             logger.info( "Running on bamboo!" );
-            profiles[2] = "awstest";
+            profiles = bambooArgs;
         } else {
             logger.info( "Not running on bamboo!" );
-            profiles[2] = "local";
+            profiles = localArgs;
         }
         try {
             INDEXER.start( profiles );
         } catch ( Exception e ) {
-            logger.error( "Unable to bootstrap conductor with profiles: " + profiles);
+            logger.error( "Unable to bootstrap conductor with profiles: " + Arrays.toString( profiles ) );
         }
     }
 
