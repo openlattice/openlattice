@@ -27,6 +27,7 @@ import com.openlattice.linking.controllers.LinkingFeedbackController;
 import com.openlattice.linking.controllers.RealtimeLinkingController;
 import com.openlattice.linking.controllers.util.LinkerExceptionHandler;
 import com.ryantenney.metrics.spring.config.annotation.EnableMetrics;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
@@ -61,6 +62,12 @@ public class LinkerMvcPod extends WebMvcConfigurationSupport {
     @Inject
     private LinkerSecurityPod linkerSecurityPod;
 
+    // TODO(LATTICE-2346): We need to lock this down. Since all endpoints are stateless + authenticated this is more a
+    // defense-in-depth measure.
+    @SuppressFBWarnings(
+            value = {"PERMISSIVE_CORS"},
+            justification = "LATTICE-2346"
+    )
     @Override
     protected void addCorsMappings( CorsRegistry registry ) {
         registry
