@@ -22,6 +22,7 @@
 package com.openlattice.linking
 
 import com.openlattice.data.EntityDataKey
+import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PostgresIterable
 import java.sql.Connection
 import java.util.*
@@ -67,22 +68,22 @@ interface LinkingQueryService {
 
     fun updateIdsTable(clusterId: UUID, newMember: EntityDataKey): Int
 
-    fun getEntitiesNeedingLinking(entitySetId: UUID, limit: Int = 10_000): PostgresIterable<EntityDataKey>
+    fun getEntitiesNeedingLinking(entitySetId: UUID, limit: Int = 10_000): BasePostgresIterable<EntityDataKey>
 
-    fun getEntitiesNotLinked(entitySetIds: Set<UUID>, limit: Int = 10_000): PostgresIterable<Pair<UUID, UUID>>
+    fun getEntitiesNotLinked(entitySetIds: Set<UUID>, limit: Int = 10_000): BasePostgresIterable<Pair<UUID, UUID>>
 
     fun getLinkableEntitySets(
             linkableEntityTypeIds: Set<UUID>,
             entitySetBlacklist: Set<UUID>,
             whitelist: Set<UUID>
-    ): PostgresIterable<UUID>
+    ): BasePostgresIterable<UUID>
 
     fun lockClustersForUpdates(clusters: Set<UUID>): Connection
 
     fun getEntityKeyIdsOfLinkingIds(
             linkingIds: Set<UUID>,
-            normalEntitySetIds: Set<UUID>? = null
-    ): PostgresIterable<Pair<UUID, Set<UUID>>>
+            normalEntitySetIds: Set<UUID>
+    ): BasePostgresIterable<Pair<UUID, Set<UUID>>>
 
     fun createOrUpdateLink(linkingId: UUID, cluster: Map<UUID, LinkedHashSet<UUID>>)
 }

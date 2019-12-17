@@ -3,13 +3,11 @@ package com.openlattice.authorization.mapstores
 import com.hazelcast.config.MapConfig
 import com.hazelcast.config.MapStoreConfig
 import com.kryptnostic.rhizome.mapstores.TestableSelfRegisteringMapStore
-import com.openlattice.authorization.SecurablePrincipal
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.organizations.SortedPrincipalSet
 import org.apache.commons.lang3.NotImplementedException
 import org.apache.commons.lang3.RandomStringUtils
-import java.util.*
 
 /**
  * In memory cache of resolved principal trees
