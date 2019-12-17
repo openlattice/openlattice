@@ -24,6 +24,7 @@ package com.openlattice.rehearsal;
 import static com.google.common.base.Preconditions.checkState;
 
 import com.auth0.json.auth.TokenHolder;
+import com.geekbeast.util.RunOnce;
 import com.google.common.util.concurrent.RateLimiter;
 import com.openlattice.authentication.AuthenticationTest;
 import com.openlattice.authentication.AuthenticationTestRequestOptions;
@@ -38,8 +39,10 @@ import com.openlattice.directory.pojo.Auth0UserBasic;
 import java.util.Collection;
 
 import com.openlattice.rhizome.proxy.RetrofitBuilders;
+import kotlin.Unit;
 import okhttp3.OkHttpClient;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,23 +66,30 @@ public class SetupEnvironment {
             .setUsernameOrEmail( "tests3@openlattice.com" )
             .setPassword( "abracadabra" );
 
-    protected static final Principal admin;
-    protected static final Principal user1;
-    protected static final Principal user2;
-    protected static final Principal user3;
-    protected static final Retrofit retrofit;
-    protected static final Retrofit retrofitLinker;
-    protected static final Retrofit retrofit1;
-    protected static final Retrofit retrofit2;
-    protected static final Retrofit retrofit3;
-    protected static final Retrofit retrofitProd;
-    protected static final OkHttpClient httpClient;
-    protected static final OkHttpClient httpClient1;
-    protected static final OkHttpClient httpClient2;
+    protected static Principal admin;
+    protected static Principal user1;
+    protected static Principal user2;
+    protected static Principal user3;
+    protected static Retrofit retrofit;
+    protected static Retrofit retrofitLinker;
+    protected static Retrofit retrofit1;
+    protected static Retrofit retrofit2;
+    protected static Retrofit retrofit3;
+    protected static Retrofit retrofitProd;
+    protected static OkHttpClient httpClient;
+    protected static OkHttpClient httpClient1;
+    protected static OkHttpClient httpClient2;
 
     protected static final Logger logger = LoggerFactory.getLogger( SetupEnvironment.class );
 
-    static {
+    static RunOnce runOnce = new RunOnce(SetupEnvironment::initialize);
+
+    @BeforeClass
+    public static void setupEnvironment() {
+        runOnce.get();
+    }
+
+    private static Unit initialize() {
         RateLimiter limiter = RateLimiter.create( .5 );
 
         limiter.acquire();
@@ -124,10 +134,10 @@ public class SetupEnvironment {
         String idUser2 = ( String ) jwtUser2.getPrincipal();
         String idUser3 = ( String ) jwtUser3.getPrincipal();
 
-        retrofit.create( PrincipalApi.class ).activateUser();
-        retrofit1.create( PrincipalApi.class ).activateUser();
-        retrofit2.create( PrincipalApi.class ).activateUser();
-        retrofit3.create( PrincipalApi.class ).activateUser();
+        retrofit.create( PrincipalApi.class ).syncCallingUser();
+        retrofit1.create( PrincipalApi.class ).syncCallingUser();
+        retrofit2.create( PrincipalApi.class ).syncCallingUser();
+        retrofit3.create( PrincipalApi.class ).syncCallingUser();
 
         final var rolesAdmin = retrofit.create(PrincipalApi.class).getCurrentRoles();
         final var rolesUser1 = retrofit1.create(PrincipalApi.class).getCurrentRoles();
@@ -148,6 +158,8 @@ public class SetupEnvironment {
 
         //Comment out this line for local testing.
 //        TestEdmConfigurer.setupDatamodel( retrofit.create( EdmApi.class ) );
+
+        return Unit.INSTANCE;
     }
 
     public static Auth0UserBasic getUserInfo( Principal principal ) {
