@@ -166,11 +166,11 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             HttpServletResponse response ) {
         setContentDisposition( response, entitySetId.toString(), fileType );
         setDownloadContentType( response, fileType );
-        return loadEntitySetData( entitySetId, selection, fileType );
+        return loadSelectedEntitySetData( entitySetId, selection, fileType );
     }
 
     @Override
-    public EntitySetData<FullQualifiedName> loadEntitySetData(
+    public EntitySetData<FullQualifiedName> loadSelectedEntitySetData(
             UUID entitySetId,
             EntitySetSelection selection,
             FileType fileType ) {
@@ -344,7 +344,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     @Override
     @Timed
     @PutMapping( value = "/" + ASSOCIATION, consumes = MediaType.APPLICATION_JSON_VALUE )
-    public Integer createAssociations( @RequestBody Set<DataEdgeKey> associations ) {
+    public Integer createEdges( @RequestBody Set<DataEdgeKey> associations ) {
 
         Set<UUID> entitySetIds = getEntitySetIdsFromCollection( associations, this::streamEntitySetIds );
         checkPermissionsOnEntitySetIds( entitySetIds, EnumSet.of( Permission.READ, Permission.WRITE ) );
@@ -860,7 +860,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     @GetMapping(
             path = "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH + "/" + PROPERTY_TYPE_ID_PATH,
             produces = MediaType.APPLICATION_JSON_VALUE )
-    public Set<Object> getEntity(
+    public Set<Object> getEntityPropertyValues(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId,
             @PathVariable( PROPERTY_TYPE_ID ) UUID propertyTypeId ) {
