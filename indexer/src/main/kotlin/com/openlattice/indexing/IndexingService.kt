@@ -197,7 +197,7 @@ class IndexingService(
         }
 
         entitiesForIndexing.forEach { (entitySetId, entityKeyIds) ->
-            logger.info("Creating job to index entity set {} for the following entities {}", entitySetId, entityKeyIds)
+            logger.info("Creating job to index entity set $entitySetId for the following entities $entityKeyIds")
             indexingJobs.putIfAbsent(entitySetId, DelegatedUUIDSet.wrap(HashSet()))
             indexingJobs.executeOnKey(entitySetId, UUIDKeyToUUIDSetMerger(entityKeyIds))
             indexingQueue.put(entitySetId)
