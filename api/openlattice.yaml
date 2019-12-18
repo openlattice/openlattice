@@ -1581,7 +1581,7 @@ paths:
                   type: object
     put:
       summary: Creates a new set of associations.
-      operationId: createAssociationSet
+      operationId: createEdges
       requestBody:
         required: true
         content:
@@ -1664,7 +1664,7 @@ paths:
                       type: string
     post:
       summary: Gets a list of entities by UUIDs
-      operationId: loadFilteredEntitySetData
+      operationId: loadSelectedEntitySetData
       parameters:
         - name: entitySetId
           in: path
