@@ -1564,9 +1564,7 @@ paths:
         content:
           application/json:
             schema:
-              type: array
-              items:
-                $ref: "#/components/schemas/dataEdgeMap"
+              $ref: "#/components/schemas/dataEdgeMap"
       tags:
         - data
       security:
@@ -4197,7 +4195,9 @@ components:
     dataEdgeMap:
       type: object
       additionalProperties:
-        $ref: "#/components/schemas/dataEdge"
+        type: array
+        items:
+          $ref: "#/components/schemas/dataEdge"
     dataEdge:
       type: object
       properties:
@@ -4205,20 +4205,24 @@ components:
           $ref: "#/components/schemas/entityDataKey"
         dst:
           $ref: "#/components/schemas/entityDataKey"
-        edge:
-          $ref: "#/components/schemas/entityDataKey"
+        data:
+          type: object
+          properties:
+            additionalProperties:
+              type: array
+              items:
+                type: string
+                format: uuid
     dataEdgeKey:
       type: object
       description: Set of associations to create. An association is the triple of source, destination, and edge entity data keys.
       properties:
         src:
-          type: string
-          format: uuid
+          $ref: entityDataKey
         dst:
-          type: string
-          format: uuid
-        data:
-          $ref: "#/components/schemas/dataMap"
+          $ref: entityDataKey
+        edge:
+          $ref: entityDataKey
     DataGraph:
       type: object
       properties:
@@ -4272,10 +4276,6 @@ components:
               type: string
               format: uuid
 
-    dataMap:
-      type: object
-      additionalProperties:
-        type: string
     role:
       type: object
       properties:
