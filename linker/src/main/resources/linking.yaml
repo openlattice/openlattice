@@ -1,11 +1,13 @@
-
 searchConfiguration:
   elasticsearchUrl: localhost
   elasticsearchCluster: openlattice
   elasticsearchPort: 9300
 
 entity-types:
-  - "general.person"
+  [
+    {namespace: general, name: person}
+  ]
+
 block-size: 1000
 blacklist:
   - c5512075-bbf4-4b74-80f3-391dbaf0bc7d
