@@ -1565,7 +1565,7 @@ paths:
           application/json:
             schema:
               type: object
-              description: Set of associations to create. Keys are association entity set ids and values for each keys are the data to be created.
+              description: Set of associations to create. Keys are association entity set ids and values for each keys are the data to be created. AssociationEntityId's are not generated based on the key.
               properties: 
                 additionalProperties:
                   type: array
@@ -4216,7 +4216,6 @@ components:
               type: array
               items:
                 type: string
-                format: uuid
     dataEdgeKey:
       type: object
       description: Set of associations to create. An association is the triple of source, destination, and edge entity data keys.
