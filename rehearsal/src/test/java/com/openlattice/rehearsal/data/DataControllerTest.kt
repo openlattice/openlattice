@@ -89,7 +89,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                 .toList()
         val entities = dataApi.createEntities(es.id, testData).toSet().zip(testData).toMap()
         val ess = EntitySetSelection(Optional.of(et.properties))
-        val results1 = Sets.newHashSet(dataApi.loadEntitySetData(es.id, ess, FileType.json))
+        val results1 = Sets.newHashSet(dataApi.loadSelectedEntitySetData(es.id, ess, FileType.json))
 
         Assert.assertEquals(numberOfEntries.toLong(), results1.size.toLong())
         results1.forEach {
@@ -103,7 +103,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
             }
         }
 
-        // optional/nullable EntitySetSelection in loadEntitySetData cannot be tested from here, only manually
+        // optional/nullable EntitySetSelection in loadSelectedEntitySetData cannot be tested from here, only manually
         // Retrofit will throw java.lang.IllegalArgumentException: Body parameter value must not be null.
     }
 
@@ -117,7 +117,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                 .toList()
         dataApi.createEntities(es.id, testData)
         val ess = EntitySetSelection(Optional.empty(), Optional.empty())
-        val results = Sets.newHashSet(dataApi.loadEntitySetData(es.id, ess, FileType.json))
+        val results = Sets.newHashSet(dataApi.loadSelectedEntitySetData(es.id, ess, FileType.json))
 
         Assert.assertEquals(numberOfEntries.toLong(), results.size.toLong())
     }
@@ -135,7 +135,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         dataApi.createEntities(es.id, testData)
 
         val ess = EntitySetSelection(Optional.of(et.properties))
-        val results = Sets.newHashSet(dataApi.loadEntitySetData(es.id, ess, FileType.json))
+        val results = Sets.newHashSet(dataApi.loadSelectedEntitySetData(es.id, ess, FileType.json))
 
         Assert.assertEquals(numberOfEntries.toLong(), results.size.toLong())
     }
@@ -156,7 +156,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                 Optional.of(et.properties),
                 Optional.of(HashSet(ids))
         )
-        val data = ImmutableList.copyOf(dataApi.loadEntitySetData(es.id, ess, FileType.json))
+        val data = ImmutableList.copyOf(dataApi.loadSelectedEntitySetData(es.id, ess, FileType.json))
         val indexActual = index(data)
 
         //Remove the extra properties for easier equals.
@@ -181,7 +181,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                 Optional.of(setOf(ids[0]))
         )
         val data2 = ImmutableList
-                .copyOf(dataApi.loadEntitySetData(es.id, ess2, FileType.json))
+                .copyOf(dataApi.loadSelectedEntitySetData(es.id, ess2, FileType.json))
 
         val indexActual2 = index(data2)
 
@@ -230,7 +230,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                     EntityDataKey(esEdge.id, idsEdge[index])
             )
         }.toSet()
-        val createdEdges = dataApi.createAssociations(edges)
+        val createdEdges = dataApi.createEdges(edges)
 
         Assert.assertNotNull(createdEdges)
         Assert.assertEquals(edges.size * 3, createdEdges)
@@ -245,7 +245,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         loginAs("user1")
         assertException(
-                { dataApi.createAssociations(edges) },
+                { dataApi.createEdges(edges) },
                 "Insufficient permissions to perform operation."
         )
         loginAs("admin")
@@ -254,7 +254,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         permissionsApi.updateAcl(AclData(newAcl3, Action.ADD))
 
         loginAs("user1")
-        dataApi.createAssociations(edges)
+        dataApi.createEdges(edges)
         loginAs("admin")
     }
 
@@ -297,7 +297,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         // when loading entitysets, the result is grouped by entity key id
         createdEdges.values().map { it.toString() }
 
-        val actualEdgeData = dataApi.loadEntitySetData(es.id, ess, FileType.json)
+        val actualEdgeData = dataApi.loadSelectedEntitySetData(es.id, ess, FileType.json)
         val edgesCreatedData = edgesToBeCreated[edgeData.first]
         actualEdgeData.mapIndexed { index, de ->
             val edgeDataLookup = lookupEdgeDataByFqn(
@@ -347,7 +347,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         dataApi.createAssociations(edgesToBeCreated)
 
 
-        // Test for createAssociations( Set<DataEdgeKey> associations )
+        // Test for createEdges( Set<DataEdgeKey> associations )
         val edge2 = createEdgeEntityType()
         val esEdge2 = createEntitySet(edge2)
 
@@ -367,7 +367,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         }.toSet()
 
         assertException(
-                { dataApi.createAssociations(edges) },
+                { dataApi.createEdges(edges) },
                 "differs from allowed entity types ([]) in association type of entity set ${esEdge2.id}"
         )
 
@@ -380,7 +380,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
     @Test
     fun testCreateBidirectionalEdgesWithDifferentEntityTypes() {
-        // Test for createAssociations
+        // Test for createEdges
         val edge = createEdgeEntityType()
         val esEdge = createEntitySet(edge)
         val src = createEntityType()
@@ -419,7 +419,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         // try to create edges opposite direction
         assertException(
-                { dataApi.createAssociations(edgesToBeCreated2) },
+                { dataApi.createEdges(edgesToBeCreated2) },
                 "differs from allowed entity types src=[${src.id}], dst=[] in bidirectional association type of " +
                         "entity set ${esEdge.id}"
         )
@@ -431,7 +431,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         dataApi.createAssociations(edgesToBeCreated1)
 
         // create edges is opposite direction
-        dataApi.createAssociations(edgesToBeCreated2)
+        dataApi.createEdges(edgesToBeCreated2)
     }
 
     private fun lookupEdgeDataByFqn(edgeData: MutableMap<UUID, MutableCollection<Any>>):
@@ -518,7 +518,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         //added transformValues()
         dataApi.createEntities(es.id, testData)
         val ess = EntitySetSelection(Optional.of(et.properties))
-        val results = Sets.newHashSet(dataApi.loadEntitySetData(es.id, ess, FileType.json))
+        val results = Sets.newHashSet(dataApi.loadSelectedEntitySetData(es.id, ess, FileType.json))
 
         Assert.assertEquals(testData.size.toLong(), results.size.toLong())
         val result = results.iterator().next()
@@ -548,7 +548,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                 .filter { random.nextBoolean() }
                 .toSet()
         val ess = EntitySetSelection(Optional.of(selectedProperties))
-        val results = dataApi.loadEntitySetData(es.id, ess, null)
+        val results = dataApi.loadSelectedEntitySetData(es.id, ess, null)
 
         // check results
         // For each entity, collect its property value in one set, and collect all these sets together.
@@ -617,7 +617,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         edmApi.updatePropertyTypeMetadata(pt.id, update)
 
         val ess = EntitySetSelection(Optional.of(et.properties))
-        val results = Sets.newHashSet(dataApi.loadEntitySetData(es.id, ess, FileType.json))
+        val results = Sets.newHashSet(dataApi.loadSelectedEntitySetData(es.id, ess, FileType.json))
 
         val fqns = results.iterator().next().keys()
         Assert.assertEquals(1, fqns.asSequence().filter { it.namespace == newNameSpace }.count())
@@ -639,12 +639,12 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         val ess = EntitySetSelection(Optional.of(et.properties), Optional.of(HashSet(ids)))
 
 
-        /* loadEntitySetData */
+        /* loadSelectedEntitySetData */
 
         // try to read data with no permissions on it
         loginAs("user1")
         assertException(
-                { dataApi.loadEntitySetData(es.id, ess, FileType.json) },
+                { dataApi.loadSelectedEntitySetData(es.id, ess, FileType.json) },
                 "Insufficient permissions to read the entity set ${es.id} or it doesn't exists."
         )
         loginAs("admin")
@@ -655,7 +655,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         permissionsApi.updateAcl(AclData(esReadAcl, Action.ADD))
 
         loginAs("user1")
-        val noData = ImmutableList.copyOf(dataApi.loadEntitySetData(es.id, ess, FileType.json))
+        val noData = ImmutableList.copyOf(dataApi.loadSelectedEntitySetData(es.id, ess, FileType.json))
         Assert.assertEquals(numberOfEntries, noData.size)
         noData.forEach { Assert.assertEquals(setOf(EdmConstants.ID_FQN), it.asMap().keys) }
         loginAs("admin")
@@ -666,7 +666,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         val pt1ReadAcl = Acl(AclKey(es.id, pt1.id), setOf(Ace(user1, readPermission, OffsetDateTime.MAX)))
         permissionsApi.updateAcl(AclData(pt1ReadAcl, Action.ADD))
         loginAs("user1")
-        val pt1Data = ImmutableList.copyOf(dataApi.loadEntitySetData(es.id, ess, FileType.json))
+        val pt1Data = ImmutableList.copyOf(dataApi.loadSelectedEntitySetData(es.id, ess, FileType.json))
         Assert.assertEquals(numberOfEntries, pt1Data.size)
         pt1Data.forEach { Assert.assertEquals(setOf(EdmConstants.ID_FQN, pt1.type), it.asMap().keys) }
         loginAs("admin")
@@ -679,7 +679,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         }
 
         loginAs("user1")
-        val dataAll = ImmutableList.copyOf(dataApi.loadEntitySetData(es.id, ess, FileType.json))
+        val dataAll = ImmutableList.copyOf(dataApi.loadSelectedEntitySetData(es.id, ess, FileType.json))
         val indexActualAll = index(dataAll)
 
         //Remove the extra properties for easier equals.
@@ -693,7 +693,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         loginAs("admin")
 
 
-        /* getEntity */
+        /* getEntity, getEntityPropertyValues */
 
         val et2 = createEntityType()
         val es2 = createEntitySet(et2)
@@ -711,7 +711,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                 "Object [${es2.id}] is not accessible."
         )
         assertException(
-                { dataApi.getEntity(es2.id, id, property) },
+                { dataApi.getEntityPropertyValues(es2.id, id, property) },
                 "Object [${es2.id}] is not accessible."
         )
         loginAs("admin")
@@ -726,7 +726,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         noData2.forEach { Assert.assertEquals(EdmConstants.ID_FQN, it.key) }
 
         assertException(
-                { dataApi.getEntity(es2.id, id, property) },
+                { dataApi.getEntityPropertyValues(es2.id, id, property) },
                 "Object [${es2.id}, $property] is not accessible."
         )
         loginAs("admin")
@@ -741,7 +741,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         val ptData1 = dataApi.getEntity(es2.id, id)
         Assert.assertEquals(1, ptData1[EdmConstants.ID_FQN]!!.size)
         Assert.assertEquals(setOf(EdmConstants.ID_FQN, pt.type), ptData1.keys)
-        val ptData2 = dataApi.getEntity(es2.id, id, property)
+        val ptData2 = dataApi.getEntityPropertyValues(es2.id, id, property)
         Assert.assertEquals(1, ptData2.size)
         Assert.assertEquals(entries2[0][property], ptData2)
         loginAs("admin")
@@ -760,7 +760,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         val fqns = et2.properties.map { edmApi.getPropertyType(it).type }.toMutableSet()
         fqns.add(EdmConstants.ID_FQN)
         Assert.assertEquals(fqns, dataAll1.keys)
-        val dataAll2 = dataApi.getEntity(es2.id, id, property)
+        val dataAll2 = dataApi.getEntityPropertyValues(es2.id, id, property)
         Assert.assertEquals(1, dataAll2.size)
         Assert.assertEquals(entries2[0][property], dataAll2)
 
@@ -804,7 +804,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                     EntityDataKey(esEdge.id, idsEdge[index])
             )
         }.toSet()
-        dataApi.createAssociations(edges)
+        dataApi.createEdges(edges)
 
 
         /*   HARD DELETE   */
@@ -991,11 +991,11 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         val newEntityIds = dataApi.createEntities(es.id, entries)
 
         val ess = EntitySetSelection(Optional.of(personEt.properties))
-        Assert.assertEquals(numberOfEntries, dataApi.loadEntitySetData(es.id, ess, FileType.json).toList().size)
+        Assert.assertEquals(numberOfEntries, dataApi.loadSelectedEntitySetData(es.id, ess, FileType.json).toList().size)
 
         dataApi.deleteEntities(es.id, setOf(newEntityIds[0]), DeleteType.Hard)
 
-        val loadedEntries = dataApi.loadEntitySetData(es.id, ess, FileType.json).toList()
+        val loadedEntries = dataApi.loadSelectedEntitySetData(es.id, ess, FileType.json).toList()
 
         Assert.assertEquals(numberOfEntries - 1, loadedEntries.size)
         Assert.assertTrue(loadedEntries.none {
@@ -1003,7 +1003,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         })
 
         dataApi.deleteEntities(es.id, newEntityIds.drop(1).toSet(), DeleteType.Hard)
-        Assert.assertEquals(0, dataApi.loadEntitySetData(es.id, ess, FileType.json).toList().size)
+        Assert.assertEquals(0, dataApi.loadSelectedEntitySetData(es.id, ess, FileType.json).toList().size)
 
         /* Association entity set */
         val et = createEdgeEntityType()
@@ -1030,14 +1030,14 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         val createdEdges = dataApi.createAssociations(edgesToBeCreated)[aes.id]
 
         val aess = EntitySetSelection(Optional.of(et.properties))
-        Assert.assertEquals(numberOfEntries, dataApi.loadEntitySetData(aes.id, aess, FileType.json).toList().size)
+        Assert.assertEquals(numberOfEntries, dataApi.loadSelectedEntitySetData(aes.id, aess, FileType.json).toList().size)
 
         dataApi.deleteEntities(aes.id, setOf(createdEdges[0]), DeleteType.Soft)
-        val loadedAssociations = dataApi.loadEntitySetData(aes.id, aess, FileType.json).toList()
+        val loadedAssociations = dataApi.loadSelectedEntitySetData(aes.id, aess, FileType.json).toList()
         Assert.assertEquals(numberOfEntries - 1, loadedAssociations.size)
 
         dataApi.deleteEntities(aes.id, createdEdges.drop(1).toSet(), DeleteType.Soft)
-        Assert.assertEquals(0, dataApi.loadEntitySetData(aes.id, aess, FileType.json).toList().size)
+        Assert.assertEquals(0, dataApi.loadSelectedEntitySetData(aes.id, aess, FileType.json).toList().size)
     }
 
     @Test
@@ -1074,20 +1074,20 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                     EntityDataKey(esEdge.id, idsEdge[index])
             )
         }.toSet()
-        dataApi.createAssociations(edges)
+        dataApi.createEdges(edges)
 
 
         // hard delete 1st entity
         dataApi.deleteEntities(es.id, setOf(newEntityIds[0]), DeleteType.Hard)
 
         val ess1 = EntitySetSelection(Optional.of(personEt.properties))
-        val loadedEntries1 = dataApi.loadEntitySetData(es.id, ess1, FileType.json).toList()
+        val loadedEntries1 = dataApi.loadSelectedEntitySetData(es.id, ess1, FileType.json).toList()
 
         val essDst1 = EntitySetSelection(Optional.of(dst.properties))
-        val loadedEntriesDst1 = dataApi.loadEntitySetData(esDst.id, essDst1, FileType.json).toList()
+        val loadedEntriesDst1 = dataApi.loadSelectedEntitySetData(esDst.id, essDst1, FileType.json).toList()
 
         val essEdge1 = EntitySetSelection(Optional.of(edge.properties))
-        val loadedEntriesEdge1 = dataApi.loadEntitySetData(esEdge.id, essEdge1, FileType.json).toList()
+        val loadedEntriesEdge1 = dataApi.loadSelectedEntitySetData(esEdge.id, essEdge1, FileType.json).toList()
 
         Assert.assertEquals(numberOfEntries - 1, loadedEntries1.size)
         Assert.assertEquals(numberOfEntries - 1, loadedEntriesEdge1.size)
@@ -1106,13 +1106,13 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         dataApi.deleteEntities(es.id, setOf(newEntityIds[numberOfEntries - 1]), DeleteType.Soft)
 
         val ess2 = EntitySetSelection(Optional.of(personEt.properties))
-        val loadedEntries2 = dataApi.loadEntitySetData(es.id, ess2, FileType.json).toList()
+        val loadedEntries2 = dataApi.loadSelectedEntitySetData(es.id, ess2, FileType.json).toList()
 
         val essDst2 = EntitySetSelection(Optional.of(dst.properties))
-        val loadedEntriesDst = dataApi.loadEntitySetData(esDst.id, essDst2, FileType.json).toList()
+        val loadedEntriesDst = dataApi.loadSelectedEntitySetData(esDst.id, essDst2, FileType.json).toList()
 
         val essEdge2 = EntitySetSelection(Optional.of(edge.properties))
-        val loadedEntriesEdge2 = dataApi.loadEntitySetData(esEdge.id, essEdge2, FileType.json).toList()
+        val loadedEntriesEdge2 = dataApi.loadSelectedEntitySetData(esEdge.id, essEdge2, FileType.json).toList()
 
         Assert.assertEquals(numberOfEntries - 2, loadedEntries2.size)
         Assert.assertEquals(numberOfEntries - 2, loadedEntriesEdge2.size)
@@ -1163,18 +1163,18 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                     EntityDataKey(esEdge.id, idsEdge[index])
             )
         }.toSet()
-        dataApi.createAssociations(edges)
+        dataApi.createEdges(edges)
 
         dataApi.deleteAllEntitiesFromEntitySet(es.id, DeleteType.Hard)
 
         val ess1 = EntitySetSelection(Optional.of(personEt.properties))
-        val loadedEntries1 = dataApi.loadEntitySetData(es.id, ess1, FileType.json).toList()
+        val loadedEntries1 = dataApi.loadSelectedEntitySetData(es.id, ess1, FileType.json).toList()
 
         val essDst1 = EntitySetSelection(Optional.of(dst.properties))
-        val loadedEntriesDst1 = dataApi.loadEntitySetData(esDst.id, essDst1, FileType.json).toList()
+        val loadedEntriesDst1 = dataApi.loadSelectedEntitySetData(esDst.id, essDst1, FileType.json).toList()
 
         val essEdge1 = EntitySetSelection(Optional.of(edge.properties))
-        val loadedEntriesEdge1 = dataApi.loadEntitySetData(esEdge.id, essEdge1, FileType.json).toList()
+        val loadedEntriesEdge1 = dataApi.loadSelectedEntitySetData(esEdge.id, essEdge1, FileType.json).toList()
 
         Assert.assertEquals(0, loadedEntries1.size)
         Assert.assertEquals(0, loadedEntriesEdge1.size)
@@ -1198,18 +1198,18 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                     EntityDataKey(esEdge.id, idsEdge2[index])
             )
         }.toSet()
-        dataApi.createAssociations(edges2)
+        dataApi.createEdges(edges2)
 
         dataApi.deleteAllEntitiesFromEntitySet(es.id, DeleteType.Soft)
 
         val ess2 = EntitySetSelection(Optional.of(personEt.properties))
-        val loadedEntries2 = dataApi.loadEntitySetData(es.id, ess2, FileType.json).toList()
+        val loadedEntries2 = dataApi.loadSelectedEntitySetData(es.id, ess2, FileType.json).toList()
 
         val essDst2 = EntitySetSelection(Optional.of(dst.properties))
-        val loadedEntriesDst = dataApi.loadEntitySetData(esDst.id, essDst2, FileType.json).toList()
+        val loadedEntriesDst = dataApi.loadSelectedEntitySetData(esDst.id, essDst2, FileType.json).toList()
 
         val essEdge2 = EntitySetSelection(Optional.of(edge.properties))
-        val loadedEntriesEdge2 = dataApi.loadEntitySetData(esEdge.id, essEdge2, FileType.json).toList()
+        val loadedEntriesEdge2 = dataApi.loadSelectedEntitySetData(esEdge.id, essEdge2, FileType.json).toList()
 
         Assert.assertEquals(0, loadedEntries2.size)
         Assert.assertEquals(0, loadedEntriesEdge2.size)
@@ -1237,14 +1237,14 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         val newEntityIds = dataApi.createEntities(es.id, people)
 
         val ess = EntitySetSelection(Optional.of(personEt.properties))
-        Assert.assertEquals(numberOfEntries, dataApi.loadEntitySetData(es.id, ess, FileType.json).toList().size)
+        Assert.assertEquals(numberOfEntries, dataApi.loadSelectedEntitySetData(es.id, ess, FileType.json).toList().size)
 
         val entityId = newEntityIds[0]
         dataApi.deleteEntityProperties(es.id, entityId, setOf(EdmTestConstants.personGivenNameId), DeleteType.Hard)
 
         val loadedEntity = dataApi.getEntity(es.id, entityId)
 
-        Assert.assertEquals(numberOfEntries, dataApi.loadEntitySetData(es.id, ess, FileType.json).toList().size)
+        Assert.assertEquals(numberOfEntries, dataApi.loadSelectedEntitySetData(es.id, ess, FileType.json).toList().size)
         Assert.assertFalse(loadedEntity.keys.contains(EdmTestConstants.personGivenNameFqn))
     }
 
@@ -1288,7 +1288,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                     EntityDataKey(esEdgeDst1.id, idsEdgeDst1[index])
             )
         }.toSet()
-        dataApi.createAssociations(edgesDst1)
+        dataApi.createEdges(edgesDst1)
         val edgesSrc1 = ids1.mapIndexed { index, _ ->
             DataEdgeKey(
                     EntityDataKey(esSrc1.id, idsSrc1[index]),
@@ -1296,7 +1296,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                     EntityDataKey(esEdgeSrc1.id, idsEdgeSrc1[index])
             )
         }.toSet()
-        dataApi.createAssociations(edgesSrc1)
+        dataApi.createEdges(edgesSrc1)
 
         // delete from all neighbors
         val deleteCount1 = dataApi.deleteEntitiesAndNeighbors(
@@ -1309,23 +1309,23 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         // test if there is really no data
         val ess1 = EntitySetSelection(Optional.of(et1.properties))
-        val loadedEntities1 = dataApi.loadEntitySetData(es1.id, ess1, FileType.json).toList()
+        val loadedEntities1 = dataApi.loadSelectedEntitySetData(es1.id, ess1, FileType.json).toList()
         Assert.assertEquals(0, loadedEntities1.size)
 
         val essSrc1 = EntitySetSelection(Optional.of(src1.properties))
-        val loadedSrcEntities1 = dataApi.loadEntitySetData(esSrc1.id, essSrc1, FileType.json).toList()
+        val loadedSrcEntities1 = dataApi.loadSelectedEntitySetData(esSrc1.id, essSrc1, FileType.json).toList()
         Assert.assertEquals(0, loadedSrcEntities1.size)
 
         val essEdgeSrc1 = EntitySetSelection(Optional.of(edgeSrc1.properties))
-        val loadedEdgeSrcEntities1 = dataApi.loadEntitySetData(esEdgeSrc1.id, essEdgeSrc1, FileType.json).toList()
+        val loadedEdgeSrcEntities1 = dataApi.loadSelectedEntitySetData(esEdgeSrc1.id, essEdgeSrc1, FileType.json).toList()
         Assert.assertEquals(0, loadedEdgeSrcEntities1.size)
 
         val essDst1 = EntitySetSelection(Optional.of(dst1.properties))
-        val loadedDstEntities1 = dataApi.loadEntitySetData(esDst1.id, essDst1, FileType.json).toList()
+        val loadedDstEntities1 = dataApi.loadSelectedEntitySetData(esDst1.id, essDst1, FileType.json).toList()
         Assert.assertEquals(0, loadedDstEntities1.size)
 
         val essEdgeDst1 = EntitySetSelection(Optional.of(edgeDst1.properties))
-        val loadedEdgeDstEntities1 = dataApi.loadEntitySetData(esEdgeDst1.id, essEdgeDst1, FileType.json).toList()
+        val loadedEdgeDstEntities1 = dataApi.loadSelectedEntitySetData(esEdgeDst1.id, essEdgeDst1, FileType.json).toList()
         Assert.assertEquals(0, loadedEdgeDstEntities1.size)
 
 
@@ -1367,7 +1367,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                     EntityDataKey(esEdgeDst2.id, idsEdgeDst2[index])
             )
         }.toSet()
-        dataApi.createAssociations(edgesDst2)
+        dataApi.createEdges(edgesDst2)
         val edgesSrc2 = ids2.mapIndexed { index, _ ->
             DataEdgeKey(
                     EntityDataKey(esSrc2.id, idsSrc2[index]),
@@ -1375,7 +1375,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                     EntityDataKey(esEdgeSrc2.id, idsEdgeSrc2[index])
             )
         }.toSet()
-        dataApi.createAssociations(edgesSrc2)
+        dataApi.createEdges(edgesSrc2)
 
         // delete from only src neighbor
         val deleteCount2 = dataApi.deleteEntitiesAndNeighbors(
@@ -1388,26 +1388,26 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         // test if there is really no data, what is deleted and data which is not
         val ess2 = EntitySetSelection(Optional.of(et2.properties))
-        val loadedEntities2 = dataApi.loadEntitySetData(es2.id, ess2, FileType.json).toList()
+        val loadedEntities2 = dataApi.loadSelectedEntitySetData(es2.id, ess2, FileType.json).toList()
         Assert.assertEquals(0, loadedEntities2.size)
 
         val essSrc2 = EntitySetSelection(Optional.of(src2.properties))
-        val loadedSrcEntities2 = dataApi.loadEntitySetData(esSrc2.id, essSrc2, FileType.json).toList()
+        val loadedSrcEntities2 = dataApi.loadSelectedEntitySetData(esSrc2.id, essSrc2, FileType.json).toList()
         Assert.assertEquals(0, loadedSrcEntities2.size)
 
         val essEdgeSrc2 = EntitySetSelection(Optional.of(edgeSrc2.properties))
-        val loadedEdgeSrcEntities2 = dataApi.loadEntitySetData(esEdgeSrc2.id, essEdgeSrc2, FileType.json).toList()
+        val loadedEdgeSrcEntities2 = dataApi.loadSelectedEntitySetData(esEdgeSrc2.id, essEdgeSrc2, FileType.json).toList()
         Assert.assertEquals(0, loadedEdgeSrcEntities2.size)
 
         val essDst2 = EntitySetSelection(Optional.of(dst2.properties))
-        val loadedDstEntities2 = dataApi.loadEntitySetData(esDst2.id, essDst2, FileType.json).toList()
+        val loadedDstEntities2 = dataApi.loadSelectedEntitySetData(esDst2.id, essDst2, FileType.json).toList()
         Assert.assertEquals(numberOfEntries, loadedDstEntities2.size)
         loadedDstEntities2.forEach {
             idsDst2.contains(UUID.fromString(it[EdmConstants.ID_FQN].first() as String))
         }
 
         val essEdgeDst2 = EntitySetSelection(Optional.of(edgeDst2.properties))
-        val loadedEdgeDstEntities2 = dataApi.loadEntitySetData(esEdgeDst2.id, essEdgeDst2, FileType.json).toList()
+        val loadedEdgeDstEntities2 = dataApi.loadSelectedEntitySetData(esEdgeDst2.id, essEdgeDst2, FileType.json).toList()
         Assert.assertEquals(0, loadedEdgeDstEntities2.size)
     }
 
