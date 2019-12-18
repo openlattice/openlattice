@@ -129,7 +129,7 @@ constructor(
 
     fun createAssociationsFromMessage() {
         val deks = setOf<DataEdgeKey>()
-        val createAssociations = dataApi.createAssociations(deks)
+        val createAssociations = dataApi.createEdges(deks)
     }
 
     override fun getAuthorizationManager(): AuthorizationManager {
