@@ -1564,7 +1564,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/dataEdgeMap"
+              type: object
+              description: Set of associations to create. Keys are association entity set ids and values for each keys are the data to be created.
+              properties: 
+                additionalProperties:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/dataEdge"
       tags:
         - data
       security:
@@ -1578,7 +1584,10 @@ paths:
               schema:
                 type: object
                 additionalProperties:
-                  type: object
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
     put:
       summary: Creates a new set of associations.
       operationId: createEdges
@@ -1587,6 +1596,7 @@ paths:
         content:
           application/json:
             schema:
+              description: Set of associations to create. An association is the triple of source, destination, and edge entitiy data keys.
               type: array
               items:
                 $ref: "#/components/schemas/dataEdgeKey"
@@ -4192,12 +4202,6 @@ components:
           type: string
         description:
           type: string
-    dataEdgeMap:
-      type: object
-      additionalProperties:
-        type: array
-        items:
-          $ref: "#/components/schemas/dataEdge"
     dataEdge:
       type: object
       properties:
