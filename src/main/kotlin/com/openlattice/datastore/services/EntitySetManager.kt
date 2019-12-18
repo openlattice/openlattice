@@ -34,11 +34,11 @@ import java.util.UUID
 
 interface EntitySetManager {
 
-    fun createEntitySet(principal: Principal, entitySet: EntitySet)
+    fun createEntitySet(principal: Principal, entitySet: EntitySet): UUID
 
     // Warning: This method is used only in creating linked entity set, where entity set owner may not own all the
     // property types.
-    fun createEntitySet(principal: Principal, entitySet: EntitySet, ownablePropertyTypeIds: Set<UUID>)
+    fun createEntitySet(principal: Principal, entitySet: EntitySet, ownablePropertyTypeIds: Set<UUID>): UUID
 
     fun deleteEntitySet(entitySetId: UUID)
 
