@@ -40,6 +40,7 @@ import com.openlattice.postgres.mapstores.AuditRecordEntitySetConfigurationMapst
 import org.slf4j.LoggerFactory
 import java.time.OffsetDateTime
 import java.util.*
+import kotlin.collections.LinkedHashSet
 
 const val EDM_AUDIT_ENTITY_SET_NAME = "edm_audit_entity_set"
 
@@ -99,7 +100,8 @@ class AuditRecordEntitySetsManager(
                     name,
                     AclKey(auditedEntitySet.id),
                     auditedEntitySet.contacts,
-                    auditedEntitySet.organizationId
+                    auditedEntitySet.organizationId,
+                    auditedEntitySet.partitions
             )
         }
 
@@ -112,11 +114,16 @@ class AuditRecordEntitySetsManager(
         }
     }
 
-    private fun createAuditEntitySet(name: String, aclKey: AclKey, contacts: Set<String>, organizationId: UUID) {
+    private fun createAuditEntitySet(
+            name: String,
+            aclKey: AclKey,
+            contacts: Set<String>,
+            organizationId: UUID,
+            partitions: Set<Int> = LinkedHashSet()) {
         createAuditEntitySet(
                 aclKey,
-                buildAuditEntitySet(name, aclKey, contacts, organizationId),
-                buildAuditEdgeEntitySet(name, aclKey, contacts, organizationId)
+                buildAuditEntitySet(name, aclKey, contacts, organizationId, partitions),
+                buildAuditEdgeEntitySet(name, aclKey, contacts, organizationId, partitions)
         )
     }
 
@@ -171,7 +178,8 @@ class AuditRecordEntitySetsManager(
                     securableObjectTypes[aclKey]?.name ?: "Missing Type",
                     aclKey,
                     auditEntitySet.contacts,
-                    auditEntitySet.organizationId
+                    auditEntitySet.organizationId,
+                    auditEntitySet.partitions
             )
             val newEdgeAclKey = AclKey(newAuditEdgeEntitySet.id)
 
@@ -290,14 +298,16 @@ class AuditRecordEntitySetsManager(
                 securableObjectTypes[aclKey]?.name ?: "Missing Type",
                 aclKey,
                 auditEntitySet.contacts,
-                auditEntitySet.organizationId
+                auditEntitySet.organizationId,
+                auditEntitySet.partitions
         )
 
         val newAuditEdgeEntitySet = buildAuditEdgeEntitySet(
                 securableObjectTypes[aclKey]?.name ?: "Missing Type",
                 aclKey,
                 auditEntitySet.contacts,
-                auditEntitySet.organizationId
+                auditEntitySet.organizationId,
+                auditEntitySet.partitions
         )
 
         createAuditEntitySet(aclKey, newAuditEntitySet, newAuditEdgeEntitySet)
@@ -337,7 +347,8 @@ class AuditRecordEntitySetsManager(
             name: String,
             aclKey: AclKey,
             contacts: Set<String>,
-            organizationId: UUID
+            organizationId: UUID,
+            partitions: Set<Int>
     ): EntitySet {
         val entitySetName = buildName(aclKey) + "_edges"
         val auditingEdgeEntityTypeId = auditingTypes.auditingEdgeEntityTypeId
@@ -351,17 +362,22 @@ class AuditRecordEntitySetsManager(
                 Optional.empty(),
                 Optional.of(organizationId),
                 Optional.of(EnumSet.of(EntitySetFlag.AUDIT)),
-                Optional.empty()
+                Optional.of(partitions as LinkedHashSet<Int>)
         )
 
-        return partitionManager.allocatePartitions(entitySet, partitionManager.getPartitionCount())
+        if (partitions.isEmpty()) {
+            return partitionManager.allocatePartitions(entitySet, partitionManager.getPartitionCount())
+        }
+
+        return entitySet
     }
 
     private fun buildAuditEntitySet(
             name: String,
             aclKey: AclKey,
             contacts: Set<String>,
-            organizationId: UUID
+            organizationId: UUID,
+            partitions: Set<Int>
     ): EntitySet {
         val entitySetName = buildName(aclKey)
         val auditingEntityTypeId = auditingTypes.auditingEntityTypeId
@@ -375,10 +391,14 @@ class AuditRecordEntitySetsManager(
                 Optional.empty(),
                 Optional.of(organizationId),
                 Optional.of(EnumSet.of(EntitySetFlag.AUDIT)),
-                Optional.empty()
+                Optional.of(partitions as LinkedHashSet<Int>)
         )
 
-        return partitionManager.allocatePartitions(entitySet, partitionManager.getPartitionCount())
+        if (partitions.isEmpty()) {
+            return partitionManager.allocatePartitions(entitySet, partitionManager.getPartitionCount())
+        }
+
+        return entitySet
     }
 
     private fun buildName(aclKey: AclKey): String {

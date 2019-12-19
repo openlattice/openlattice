@@ -12,8 +12,10 @@ import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.PERSISTENT_SEARCHES
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.mapstores.EntitySetMapstore
+import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
+import com.openlattice.postgres.streams.StatementHolderSupplier
 import com.openlattice.search.requests.DataSearchResult
 import com.openlattice.search.requests.EntityNeighborsFilter
 import com.openlattice.search.requests.PersistentSearch
@@ -24,9 +26,7 @@ import com.openlattice.tasks.Task
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import java.sql.ResultSet
-import java.sql.Timestamp
 import java.time.OffsetDateTime
-import java.time.ZoneId
 import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.function.Function
@@ -116,11 +116,7 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
     private fun getLatestRead(vehicleReads: List<Map<FullQualifiedName, Set<Any>>>): OffsetDateTime? {
         return vehicleReads
                 .flatMap { it[EdmConstants.LAST_WRITE_FQN] ?: emptySet() }
-                .map {
-                    logger.info("New read datetime as string: {}", it)
-                    val localDateTime = Timestamp.valueOf(it.toString()).toLocalDateTime()
-                    OffsetDateTime.of(localDateTime, ZoneId.systemDefault().rules.getOffset(localDateTime))
-                }.max()
+                .map { it as OffsetDateTime }.max()
     }
 
     private fun getHitEntityKeyIds(hits: List<Map<FullQualifiedName, Set<Any>>>): Set<UUID> {
@@ -204,33 +200,37 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
     }
 
     override fun runTask() {
+
         logger.info("Loading new writes for persistent searches and sending alerts")
 
         val dependencies = getDependency()
-        val totalSearchesUpdated = dependencies.hds.connection.use { outConnection ->
-            outConnection.prepareStatement(updateLastReadSql()).use { ps ->
-                PostgresIterable(Supplier<StatementHolder> {
-                    val connection = dependencies.hds.connection
-                    connection.autoCommit = false
-                    val stmt = connection.createStatement()
-                    stmt.fetchSize = 32000
-                    val rs = stmt.executeQuery(LOAD_ACTIVE_ALERTS_SQL)
-                    connection.autoCommit = true
-                    StatementHolder(connection, stmt, rs)
-                }, Function<ResultSet, Pair<AclKey, PersistentSearch>> {
-                    ResultSetAdapters.aclKey(it) to ResultSetAdapters.persistentSearch(it)
-                }).forEach { (aclKey, search) ->
-                    val latestRead = findNewWritesForAlert(aclKey, search)
-                    if (latestRead != null) {
-                        ps.setObject(1, latestRead)
-                        ps.setObject(2, search.id)
-                        if (logger.isDebugEnabled) {
-                            logger.debug("Updating last read for $aclKey and $search")
-                        } else {
-                            logger.info("Updating last read for $aclKey and ${search.id}")
-                        }
-                        ps.addBatch()
+
+        val persistentSearchesById = BasePostgresIterable(
+                StatementHolderSupplier(dependencies.hds, LOAD_ACTIVE_ALERTS_SQL, 32_000)
+        ) { ResultSetAdapters.aclKey(it) to ResultSetAdapters.persistentSearch(it) }.toMap()
+
+        logger.info("Loaded {} active persistent searches.", persistentSearchesById.size)
+
+        val lastWritesForMessagesSent = persistentSearchesById.mapNotNull { (aclKey, search) ->
+            val latestRead = findNewWritesForAlert(aclKey, search)
+            latestRead?.let { search to latestRead }
+        }
+
+        logger.info("Sent {} notifications for persistent searches.", lastWritesForMessagesSent.size)
+
+        val totalSearchesUpdated = dependencies.hds.connection.use { connection ->
+
+            connection.prepareStatement(updateLastReadSql()).use { ps ->
+
+                lastWritesForMessagesSent.forEach { (search, latestRead) ->
+                    ps.setObject(1, latestRead)
+                    ps.setObject(2, search.id)
+                    if (logger.isDebugEnabled) {
+                        logger.debug("Updating last read for $search")
+                    } else {
+                        logger.info("Updating last read for ${search.id}")
                     }
+                    ps.addBatch()
                 }
                 ps.executeBatch().sum()
             }

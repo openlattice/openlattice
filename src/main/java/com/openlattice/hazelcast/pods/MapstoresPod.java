@@ -313,4 +313,13 @@ public class MapstoresPod {
         return new SmsInformationMapstore( hikariDataSource );
     }
 
+    @Bean
+    public SecurablePrincipalsMapLoader securablePrincipalsMapLoader() {
+        return new SecurablePrincipalsMapLoader();
+    }
+
+    @Bean
+    public ResolvedPrincipalTreesMapLoader resolvedPrincipalTreesMapLoader() {
+        return new ResolvedPrincipalTreesMapLoader();
+    }
 }

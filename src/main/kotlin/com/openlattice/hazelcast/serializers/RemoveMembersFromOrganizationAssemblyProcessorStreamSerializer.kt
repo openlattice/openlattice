@@ -20,6 +20,7 @@
  */
 package com.openlattice.hazelcast.serializers
 
+import com.google.common.annotations.VisibleForTesting
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
@@ -29,12 +30,16 @@ import com.openlattice.assembler.processors.RemoveMembersFromOrganizationAssembl
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.organizations.SecurablePrincipalList
 import org.springframework.stereotype.Component
+import javax.inject.Inject
 
 @Component
 class RemoveMembersFromOrganizationAssemblyProcessorStreamSerializer
     : SelfRegisteringStreamSerializer<RemoveMembersFromOrganizationAssemblyProcessor>,
-        AssemblerConnectionManagerDependent<Void?> {
+      AssemblerConnectionManagerDependent<Void?> {
     private lateinit var acm: AssemblerConnectionManager
+
+    @Inject
+    private lateinit var splss : SecurablePrincipalListStreamSerializer
 
     override fun getTypeId(): Int {
         return StreamSerializerTypeIds.REMOVE_MEMBERS_FROM_ORGANIZATION_ASSEMBLY_PROCESSOR.ordinal
@@ -46,7 +51,7 @@ class RemoveMembersFromOrganizationAssemblyProcessorStreamSerializer
 
 
     override fun write(out: ObjectDataOutput, obj: RemoveMembersFromOrganizationAssemblyProcessor) {
-        SecurablePrincipalListStreamSerializer().write(out, SecurablePrincipalList(obj.principals))
+        splss.write(out, SecurablePrincipalList(obj.principals.toMutableList()))
     }
 
     override fun read(input: ObjectDataInput): RemoveMembersFromOrganizationAssemblyProcessor {
@@ -57,5 +62,10 @@ class RemoveMembersFromOrganizationAssemblyProcessorStreamSerializer
     override fun init(acm: AssemblerConnectionManager): Void? {
         this.acm = acm
         return null
+    }
+
+    @VisibleForTesting
+    fun initSplss(splss: SecurablePrincipalListStreamSerializer) {
+        this.splss = splss
     }
 }

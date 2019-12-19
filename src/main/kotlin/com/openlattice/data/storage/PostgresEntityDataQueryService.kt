@@ -317,7 +317,7 @@ class PostgresEntityDataQueryService(
                     //For now we can't track how many entities were updated in a call transactionally.
                     //If we want to check how many entities were written at a specific version that is possible but
                     //expensive.
-                    updatedEntityCount += entities.size
+                    updatedEntityCount += batch.size
                     updatedPropertyCounts += upc
                 }
 

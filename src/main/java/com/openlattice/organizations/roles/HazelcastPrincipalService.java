@@ -20,10 +20,6 @@
 
 package com.openlattice.organizations.roles;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
-import static com.openlattice.authorization.mapstores.PrincipalMapstore.PRINCIPAL_ID_INDEX;
-
 import com.auth0.json.mgmt.users.User;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
@@ -34,15 +30,7 @@ import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.hazelcast.query.Predicate;
 import com.hazelcast.query.Predicates;
-import com.openlattice.authorization.AclKey;
-import com.openlattice.authorization.AclKeySet;
-import com.openlattice.authorization.AuthorizationManager;
-import com.openlattice.authorization.AuthorizingComponent;
-import com.openlattice.authorization.HazelcastAclKeyReservationService;
-import com.openlattice.authorization.Permission;
-import com.openlattice.authorization.Principal;
-import com.openlattice.authorization.PrincipalType;
-import com.openlattice.authorization.SecurablePrincipal;
+import com.openlattice.authorization.*;
 import com.openlattice.authorization.mapstores.PrincipalMapstore;
 import com.openlattice.authorization.projections.PrincipalProjection;
 import com.openlattice.authorization.securable.SecurableObjectType;
@@ -56,21 +44,18 @@ import com.openlattice.organizations.roles.processors.PrincipalDescriptionUpdate
 import com.openlattice.organizations.roles.processors.PrincipalTitleUpdater;
 import com.openlattice.principals.RoleCreatedEvent;
 import com.openlattice.principals.UserCreatedEvent;
-
-import java.util.Collection;
-import java.util.EnumSet;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import javax.annotation.Nullable;
-
+import org.apache.commons.lang3.NotImplementedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.annotation.Nullable;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
+import static com.openlattice.authorization.mapstores.PrincipalMapstore.PRINCIPAL_ID_INDEX;
 
 public class HazelcastPrincipalService implements SecurePrincipalsManager, AuthorizingComponent {
 
@@ -207,8 +192,7 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
 
     @Override
     public SetMultimap<SecurablePrincipal, SecurablePrincipal> getRolesForUsersInOrganization( UUID organizationId ) {
-        //  new PagingPredicate<>();
-        return null;
+        throw new NotImplementedException( "This hasn't been implemented yet." );
     }
 
     @Override
