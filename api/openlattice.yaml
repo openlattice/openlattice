@@ -2038,6 +2038,43 @@ paths:
       responses:
         "200":
           description: "Success"
+  /datastore/data/{entitySetId}/{entityKeyId}/{propertyTypeId}:
+    get:
+      summary: Loads property  values for a single entity by its entityKeyId, entitySetId and propertyTypeId
+      operationId: getEntityPropertyValues
+      parameters:
+        - name: entitySetId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: entityKeyId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: propertyTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      tags:
+        - data
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: An entity details object, with property type FQNs as keys.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
   /datastore/data/{entitySetId}/{entityKeyId}/properties:
     delete:
       summary: Deletes properties from an entity.
