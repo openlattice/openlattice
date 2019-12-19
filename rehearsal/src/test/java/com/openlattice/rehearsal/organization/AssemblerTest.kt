@@ -84,7 +84,7 @@ class AssemblerTest : AssemblerTestBase() {
             )
         }.toSet()
 
-        dataApi.createAssociations(edges)
+        dataApi.createEdges(edges)
 
         // add permissions to 1 user, 1 role and 1 organization on src entity set for grant select sanity check
         val readPermission = EnumSet.of(Permission.READ)
@@ -414,7 +414,7 @@ class AssemblerTest : AssemblerTestBase() {
                     EntityDataKey(esEdge.id, idsEdge[index])
             )
         }.toSet()
-        dataApi.createAssociations(edges)
+        dataApi.createEdges(edges)
 
         // re-materialize src entity set
         organizationsApi.assembleEntitySets(organizationID, mapOf(esSrc.id to null))
@@ -872,7 +872,7 @@ class AssemblerTest : AssemblerTestBase() {
             )
         }.toSet()
 
-        dataApi.createAssociations(edges)
+        dataApi.createEdges(edges)
 
         // add permission to src entity set and it's properties to organization principal for materialization
         grantMaterializePermissions(organization, esSrc, src.properties)

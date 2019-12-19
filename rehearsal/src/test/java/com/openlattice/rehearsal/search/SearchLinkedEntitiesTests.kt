@@ -454,7 +454,7 @@ class SearchLinkedEntitiesTests : SetupTestData() {
             }
             DataEdgeKey(src, EntityDataKey(dst.id, idsDst[index]), EntityDataKey(edge.id, idsEdge[index]))
         }.toSet()
-        dataApi.createAssociations(edges)
+        dataApi.createEdges(edges)
 
         val data = ImmutableList.copyOf(dataApi.loadEntitySetData(esLinking.id, ess, FileType.json))
         val linkingIds = data.map { UUID.fromString(it[EdmConstants.ID_FQN].first() as String) }
