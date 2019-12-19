@@ -2068,7 +2068,7 @@ paths:
         - http_auth: []
       responses:
         "200":
-          description: An entity details object, with property type FQNs as keys.
+          description: A set of values
           content:
             application/json:
               schema:
