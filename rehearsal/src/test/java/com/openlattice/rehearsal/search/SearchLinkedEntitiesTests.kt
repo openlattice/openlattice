@@ -394,8 +394,8 @@ class SearchLinkedEntitiesTests : SetupTestData() {
         val esId2 = entitySetsApi.getEntitySetId(importedEntitySets.keys.last())
 
         val ess = EntitySetSelection(Optional.of(personEt.properties))
-        val esData1 = dataApi.loadEntitySetData(esId1, ess, FileType.json).toList()
-        val esData2 = dataApi.loadEntitySetData(esId2, ess, FileType.json).toList()
+        val esData1 = dataApi.loadSelectedEntitySetData(esId1, ess, FileType.json).toList()
+        val esData2 = dataApi.loadSelectedEntitySetData(esId2, ess, FileType.json).toList()
 
         val esLinking = createEntitySet(personEt, true, setOf(esId1, esId2))
 
@@ -456,7 +456,7 @@ class SearchLinkedEntitiesTests : SetupTestData() {
         }.toSet()
         dataApi.createEdges(edges)
 
-        val data = ImmutableList.copyOf(dataApi.loadEntitySetData(esLinking.id, ess, FileType.json))
+        val data = ImmutableList.copyOf(dataApi.loadSelectedEntitySetData(esLinking.id, ess, FileType.json))
         val linkingIds = data.map { UUID.fromString(it[EdmConstants.ID_FQN].first() as String) }
         val linkingId = linkingIds.random()
 
