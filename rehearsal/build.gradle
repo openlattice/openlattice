@@ -81,7 +81,8 @@ dependencies {
         testCompile( project(path: ":rhizome-client", configuration: "tests"))
     } else {
         logger.quiet(project.name + " using jar dependencies.")
-        testCompile "com.openlattice:conductor-client:${conductor_client_version}"
+        testCompile "com.openlattice:conductor:${conductor_version}"
+        testCompile "com.openlattice:datastore:${datastore_version}"
         testCompile "com.openlattice:shuttle:${shuttle_version}"
         testCompile "com.openlattice:launchpad:${launchpad_version}"
 

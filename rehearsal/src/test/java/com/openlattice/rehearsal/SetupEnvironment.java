@@ -114,14 +114,9 @@ public class SetupEnvironment {
 
         RetrofitFactory.configureObjectMapper( FullQualifiedNameJacksonSerializer::registerWithMapper );
 
-        retrofit = RetrofitFactory
-                .newClient( RetrofitFactory.Environment.TESTING, () -> tokenAdmin, new ThrowingCallAdapterFactory() );
-        retrofitLinker = RetrofitFactory.newClient(
-                RetrofitFactory.Environment.TESTING_LINKER,
-                () -> tokenAdmin,
-                new ThrowingCallAdapterFactory() );
-        retrofit1 = RetrofitFactory
-                .newClient( RetrofitFactory.Environment.TESTING, () -> tokenUser1, new ThrowingCallAdapterFactory() );
+        retrofit = RetrofitFactory.newClient( RetrofitFactory.Environment.TESTING, () -> tokenAdmin, new ThrowingCallAdapterFactory() );
+        retrofitLinker = RetrofitFactory.newClient( RetrofitFactory.Environment.TESTING_LINKER, () -> tokenAdmin, new ThrowingCallAdapterFactory() );
+        retrofit1 = RetrofitFactory.newClient( RetrofitFactory.Environment.TESTING, () -> tokenUser1, new ThrowingCallAdapterFactory() );
         retrofit2 = RetrofitFactory.newClient( RetrofitFactory.Environment.TESTING, () -> tokenUser2 );
         retrofit3 = RetrofitFactory.newClient( RetrofitFactory.Environment.TESTING, () -> tokenUser3 );
         retrofitProd = RetrofitFactory.newClient( RetrofitFactory.Environment.PRODUCTION );

@@ -89,7 +89,8 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
             "user2", retrofit2,
             "user3", retrofit3,
             "prod", retrofitProd );
-    private static final Map<String, Retrofit> linkerRetrofitMap = ImmutableMap.of( "admin", retrofitLinker );
+    private static final Map<String, Retrofit> linkerRetrofitMap = ImmutableMap.of(
+            "admin", retrofitLinker );
     private static final Map<String, OkHttpClient> httpClientMap = ImmutableMap.of(
             "admin", httpClient,
             "user1", httpClient1,
