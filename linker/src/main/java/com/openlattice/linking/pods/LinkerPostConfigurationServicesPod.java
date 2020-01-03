@@ -170,7 +170,6 @@ public class LinkerPostConfigurationServicesPod {
     public BackgroundLinkingService linkingService() throws IOException {
         return new BackgroundLinkingService( executor,
                 hazelcastInstance,
-                pgEdmManager,
                 blocker(),
                 matcher,
                 idService(),
