@@ -3703,12 +3703,57 @@ components:
             $ref: "#/components/schemas/fullQualifiedName"
         datatype:
           type: string
+          enum: [
+            Binary,
+            Boolean,
+            Byte,
+            SByte,
+            Date,
+            DateTimeOffset,
+            TimeOfDay,
+            Duration,
+            Decimal,
+            Single,
+            Double,
+            Guid,
+            Int16,
+            Int32,
+            Int64,
+            String,
+            Stream,
+            Geography,
+            GeographyPoint,
+            GeographyLineString,
+            GeographyPolygon,
+            GeographyMultiPoint,
+            GeographyMultiLineString,
+            GeographyMultiPolygon,
+            GeographyCollection,
+            Geometry,
+            GeometryPoint,
+            GeometryLineString,
+            GeometryPolygon,
+            GeometryMultiPoint,
+            GeometryMultiLineString,
+            GeometryMultiPolygon,
+            GeometryCollection
+            ]
         piiField:
           type: boolean
         multiValued:
           type: boolean
         analyzer:
           type: string
+          enum: [NONE, METAPHONE, STANDARD, NOT_ANALYZED]
+        enumValues:
+          type: array
+          items:
+            type: string
+        indexType:
+          type: string
+          enum: [BTREE, HASH, GIN, NONE]
+      
+          
     entityType:
       title: An entity type
       type: object
