@@ -1858,13 +1858,13 @@ paths:
             application/json:
               schema:
                 type: integer
-  /datastore/data/set:
+  /datastore/data/set/:
     post:
       summary: Creates a new set of entities.
       operationId: createEntities
       parameters:
-        - name: entitySetId
-          in: path
+        - name: setId
+          in: query
           required: true
           schema:
             type: string
@@ -1874,11 +1874,13 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties:
-                type: array
-                items:
-                  type: string
+              type: array
+              items:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    type: string
       tags:
         - data
       security:
@@ -3748,12 +3750,57 @@ components:
             $ref: "#/components/schemas/fullQualifiedName"
         datatype:
           type: string
-        piiField:
+          enum: [
+            Binary,
+            Boolean,
+            Byte,
+            SByte,
+            Date,
+            DateTimeOffset,
+            TimeOfDay,
+            Duration,
+            Decimal,
+            Single,
+            Double,
+            Guid,
+            Int16,
+            Int32,
+            Int64,
+            String,
+            Stream,
+            Geography,
+            GeographyPoint,
+            GeographyLineString,
+            GeographyPolygon,
+            GeographyMultiPoint,
+            GeographyMultiLineString,
+            GeographyMultiPolygon,
+            GeographyCollection,
+            Geometry,
+            GeometryPoint,
+            GeometryLineString,
+            GeometryPolygon,
+            GeometryMultiPoint,
+            GeometryMultiLineString,
+            GeometryMultiPolygon,
+            GeometryCollection
+            ]
+        pii:
           type: boolean
         multiValued:
           type: boolean
         analyzer:
           type: string
+          enum: [NONE, METAPHONE, STANDARD, NOT_ANALYZED]
+        enumValues:
+          type: array
+          items:
+            type: string
+        indexType:
+          type: string
+          enum: [BTREE, HASH, GIN, NONE]
+      
+          
     entityType:
       title: An entity type
       type: object
