@@ -21,32 +21,23 @@
 
 package com.openlattice.linking
 
-import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Stopwatch
 import com.google.common.collect.Sets
-import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.ListeningExecutorService
-import com.hazelcast.aggregation.Aggregators
 import com.hazelcast.core.HazelcastInstance
-import com.hazelcast.query.Predicate
-import com.hazelcast.query.Predicates
-import com.hazelcast.query.QueryConstants
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.EntityKeyIdService
 import com.openlattice.edm.EntitySet
-import com.openlattice.edm.PostgresEdmManager
+import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.HazelcastQueue
 import org.slf4j.LoggerFactory
-import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import java.sql.Connection
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.locks.ReentrantLock
-import kotlin.math.exp
 
 internal const val REFRESH_PROPERTY_TYPES_INTERVAL_MILLIS = 30000L
 internal const val LINKING_BATCH_TIMEOUT_MILLIS = 120000L
@@ -59,8 +50,7 @@ internal const val MINIMUM_SCORE = 0.75
 class BackgroundLinkingService
 (
         private val executor: ListeningExecutorService,
-        private val hazelcastInstance: HazelcastInstance,
-        private val pgEdmManager: PostgresEdmManager,
+        hazelcastInstance: HazelcastInstance,
         private val blocker: Blocker,
         private val matcher: Matcher,
         private val ids: EntityKeyIdService,
@@ -79,8 +69,8 @@ class BackgroundLinkingService
     private val entitySets = hazelcastInstance.getMap<UUID, EntitySet>(HazelcastMap.ENTITY_SETS.name)
 
     private val linkingLocks = hazelcastInstance.getMap<EntityDataKey, Long>(HazelcastMap.LINKING_LOCKS.name)
-    private val linkingSet = hazelcastInstance.getSet<EntityDataKey>("linking_set")
 
+    @Suppress("UNUSED")
     private val enqueuer = executor.submit {
         try {
             while (true) {
@@ -90,7 +80,7 @@ class BackgroundLinkingService
                 logger.info("Starting to queue linking candidates from entity sets {}", ess)
                 ess
                         .asSequence()
-                        .filter { linkableTypes.contains(it.entityTypeId) }
+                        .filter { linkableTypes.contains(it.entityTypeId) && !it.flags.contains(EntitySetFlag.LINKING) }
                         .flatMap { es ->
                             val forLinking = lqs.getEntitiesNeedingLinking(es.id, 2 * configuration.loadSize)
                                     .filter {
@@ -328,12 +318,12 @@ class BackgroundLinkingService
 //        } finally {
 //            linkingLocks.unlock(candidate)
 //        }
-       return      linkingLocks.putIfAbsent(
-                    candidate,
-                    Instant.now().plusMillis(LINKING_BATCH_TIMEOUT_MILLIS).toEpochMilli(),
-                    LINKING_BATCH_TIMEOUT_MILLIS,
-                    TimeUnit.MILLISECONDS
-            )
+        return linkingLocks.putIfAbsent(
+                candidate,
+                Instant.now().plusMillis(LINKING_BATCH_TIMEOUT_MILLIS).toEpochMilli(),
+                LINKING_BATCH_TIMEOUT_MILLIS,
+                TimeUnit.MILLISECONDS
+        )
     }
 
     /**
