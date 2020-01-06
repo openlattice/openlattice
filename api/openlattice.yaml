@@ -1564,9 +1564,13 @@ paths:
         content:
           application/json:
             schema:
-              type: array
-              items:
-                $ref: "#/components/schemas/dataEdgeMap"
+              type: object
+              description: Set of associations to create. Keys are association entity set ids and values for each keys are the data to be created. AssociationEntityId's are not generated based on the key.
+              properties: 
+                additionalProperties:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/dataEdge"
       tags:
         - data
       security:
@@ -1580,15 +1584,19 @@ paths:
               schema:
                 type: object
                 additionalProperties:
-                  type: object
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
     put:
       summary: Creates a new set of associations.
-      operationId: createAssociationSet
+      operationId: createEdges
       requestBody:
         required: true
         content:
           application/json:
             schema:
+              description: Set of associations to create. An association is the triple of source, destination, and edge entitiy data keys.
               type: array
               items:
                 $ref: "#/components/schemas/dataEdgeKey"
@@ -1666,7 +1674,7 @@ paths:
                       type: string
     post:
       summary: Gets a list of entities by UUIDs
-      operationId: loadFilteredEntitySetData
+      operationId: loadSelectedEntitySetData
       parameters:
         - name: entitySetId
           in: path
@@ -2040,6 +2048,43 @@ paths:
       responses:
         "200":
           description: "Success"
+  /datastore/data/{entitySetId}/{entityKeyId}/{propertyTypeId}:
+    get:
+      summary: Loads property  values for a single entity by its entityKeyId, entitySetId and propertyTypeId
+      operationId: getEntityPropertyValues
+      parameters:
+        - name: entitySetId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: entityKeyId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: propertyTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      tags:
+        - data
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: A set of values
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
   /datastore/data/{entitySetId}/{entityKeyId}/properties:
     delete:
       summary: Deletes properties from an entity.
@@ -4241,10 +4286,6 @@ components:
           type: string
         description:
           type: string
-    dataEdgeMap:
-      type: object
-      additionalProperties:
-        $ref: "#/components/schemas/dataEdge"
     dataEdge:
       type: object
       properties:
@@ -4252,20 +4293,23 @@ components:
           $ref: "#/components/schemas/entityDataKey"
         dst:
           $ref: "#/components/schemas/entityDataKey"
-        edge:
-          $ref: "#/components/schemas/entityDataKey"
+        data:
+          type: object
+          properties:
+            additionalProperties:
+              type: array
+              items:
+                type: string
     dataEdgeKey:
       type: object
       description: Set of associations to create. An association is the triple of source, destination, and edge entity data keys.
       properties:
         src:
-          type: string
-          format: uuid
+          $ref: entityDataKey
         dst:
-          type: string
-          format: uuid
-        data:
-          $ref: "#/components/schemas/dataMap"
+          $ref: entityDataKey
+        edge:
+          $ref: entityDataKey
     DataGraph:
       type: object
       properties:
@@ -4319,10 +4363,6 @@ components:
               type: string
               format: uuid
 
-    dataMap:
-      type: object
-      additionalProperties:
-        type: string
     role:
       type: object
       properties:
