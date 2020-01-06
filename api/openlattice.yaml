@@ -1850,13 +1850,13 @@ paths:
             application/json:
               schema:
                 type: integer
-  /datastore/data/set:
+  /datastore/data/set/:
     post:
       summary: Creates a new set of entities.
       operationId: createEntities
       parameters:
-        - name: entitySetId
-          in: path
+        - name: setId
+          in: query
           required: true
           schema:
             type: string
@@ -1866,11 +1866,13 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties:
-                type: array
-                items:
-                  type: string
+              type: array
+              items:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    type: string
       tags:
         - data
       security:
@@ -3738,7 +3740,7 @@ components:
             GeometryMultiPolygon,
             GeometryCollection
             ]
-        piiField:
+        pii:
           type: boolean
         multiValued:
           type: boolean
