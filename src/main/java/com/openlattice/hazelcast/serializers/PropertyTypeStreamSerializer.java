@@ -74,6 +74,7 @@ public class PropertyTypeStreamSerializer implements SelfRegisteringStreamSerial
         out.writeBoolean( object.isPii() );
         out.writeInt( object.getAnalyzer().ordinal() );
         out.writeInt( object.getPostgresIndexType().ordinal() );
+        SetStreamSerializers.fastStringSetSerialize( out, object.getEnumValues() );
     }
 
     public static PropertyType deserialize( ObjectDataInput in ) throws IOException {
@@ -87,7 +88,8 @@ public class PropertyTypeStreamSerializer implements SelfRegisteringStreamSerial
         Optional<Boolean> piiField = Optional.of( in.readBoolean() );
         Optional<Analyzer> analyzer = Optional.of( analyzers[ in.readInt() ] );
         Optional<IndexType> indexMethod = Optional.of( INDEX_TYPES[ in.readInt() ] );
-        return new PropertyType( id, type, title, description, schemas, datatype, piiField, analyzer, indexMethod );
+        Optional<Set<String>> enumValues = Optional.of( SetStreamSerializers.orderedFastStringSetDeserialize( in ));
+        return new PropertyType( id, type, title, description, schemas, datatype, enumValues, piiField, analyzer, indexMethod );
     }
 
     @Override

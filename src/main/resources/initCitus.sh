@@ -14,10 +14,10 @@ fi
 
 function runPsql {
   container=$1
-  docker exec ${container} psql -U postgres "${@:2}"
+  docker exec "${container}" psql -U postgres "${@:2}"
 }
 
-MASTER_EXTERNAL_PORT=5433 COMPOSE_PROJECT_NAME=citus docker-compose -f "$dir"/docker-compose.yml up --scale worker=2 -d
+MASTER_EXTERNAL_PORT=5433 docker-compose -p citus -f "$dir"/docker-compose.yml up --scale worker=2 -d
 
 sleep 5
 
