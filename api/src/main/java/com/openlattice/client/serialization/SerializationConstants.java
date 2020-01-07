@@ -139,6 +139,7 @@ public final class SerializationConstants {
     public static final String FIRST                            = "first";
     public static final String FLAGS_FIELD                      = "flags";
     public static final String FLIGHT                           = "flight";
+    public static final String FLIGHT_PLAN_PARAMETERS           = "flightPlanParameters";
     public static final String FQN                              = "fqn";
     public static final String FUZZY                            = "fuzzy";
     public static final String GRANTS                           = "grants";
