@@ -20,7 +20,7 @@ public class EntitySetPropertyMetadataMapstore
         extends AbstractBasePostgresMapstore<EntitySetPropertyKey, EntitySetPropertyMetadata> {
 
     public EntitySetPropertyMetadataMapstore( HikariDataSource hds ) {
-        super( HazelcastMap.ENTITY_SET_PROPERTY_METADATA.name(), ENTITY_SET_PROPERTY_METADATA, hds );
+        super( HazelcastMap.ENTITY_SET_PROPERTY_METADATA, ENTITY_SET_PROPERTY_METADATA, hds );
     }
 
     @Override protected void bind(

@@ -87,14 +87,13 @@ class Assembler(
 
 ) : HazelcastTaskDependencies, AssemblerConnectionManagerDependent<Void?> {
 
-    private val entitySets = hazelcast.getMap<UUID, EntitySet>(ENTITY_SETS.name)
-    private val entityTypes = hazelcast.getMap<UUID, EntityType>(ENTITY_TYPES.name)
-    private val propertyTypes = hazelcast.getMap<UUID, PropertyType>(PROPERTY_TYPES.name)
-    private val assemblies = hazelcast.getMap<UUID, OrganizationAssembly>(ASSEMBLIES.name)
-    private val materializedEntitySets = hazelcast
-            .getMap<EntitySetAssemblyKey, MaterializedEntitySet>(MATERIALIZED_ENTITY_SETS.name)
-    private val securableObjectTypes = hazelcast.getMap<AclKey, SecurableObjectType>(SECURABLE_OBJECT_TYPES.name)
-    private val principals = hazelcast.getMap<AclKey, SecurablePrincipal>(PRINCIPALS.name)
+    private val entitySets = ENTITY_SETS.getMap( hazelcast )
+    private val entityTypes = ENTITY_TYPES.getMap( hazelcast )
+    private val propertyTypes = PROPERTY_TYPES.getMap( hazelcast )
+    private val assemblies = ASSEMBLIES.getMap( hazelcast )
+    private val materializedEntitySets = MATERIALIZED_ENTITY_SETS.getMap( hazelcast )
+    private val securableObjectTypes = SECURABLE_OBJECT_TYPES.getMap( hazelcast )
+    private val principals = PRINCIPALS.getMap( hazelcast )
 
     private val createOrganizationTimer = metricRegistry.timer(name(Assembler::class.java, "createOrganization"))
     private val deleteOrganizationTimer = metricRegistry.timer(name(Assembler::class.java, "deleteOrganization"))

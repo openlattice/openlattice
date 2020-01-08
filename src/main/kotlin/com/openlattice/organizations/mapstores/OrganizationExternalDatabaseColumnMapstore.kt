@@ -20,7 +20,7 @@ const val ORGANIZATION_ID_INDEX = "organizationId"
 open class OrganizationExternalDatabaseColumnMapstore(
         hds: HikariDataSource
 ) : AbstractBasePostgresMapstore<UUID, OrganizationExternalDatabaseColumn>
-(HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_COLUMN.name, PostgresTable.ORGANIZATION_EXTERNAL_DATABASE_COLUMN, hds) {
+(HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_COLUMN, PostgresTable.ORGANIZATION_EXTERNAL_DATABASE_COLUMN, hds) {
 
     override fun bind(ps: PreparedStatement, key: UUID, value: OrganizationExternalDatabaseColumn) {
         var index = bind(ps, key, 1)

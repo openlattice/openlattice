@@ -70,8 +70,8 @@ class PostgresEntityKeyIdService(
         private val partitionManager: PartitionManager
 ) : EntityKeyIdService {
     private val hazelcastInstance = hazelcastClients.getClient(HazelcastClient.IDS.name)
-    private val idRefCounts = hazelcastInstance.getMap<EntityKey, Long>(HazelcastMap.ID_REF_COUNTS.name)
-    private val idMap = hazelcastInstance.getMap<EntityKey, UUID>(HazelcastMap.ID_CACHE.name)
+    private val idRefCounts = HazelcastMap.ID_REF_COUNTS.getMap( hazelcastInstance )
+    private val idMap = HazelcastMap.ID_CACHE.getMap( hazelcastInstance )
 
     private fun genEntityKeyIds(entityIds: Set<EntityKey>): Map<EntityKey, UUID> {
         val ids = idGenerationService.getNextIds(entityIds.size)

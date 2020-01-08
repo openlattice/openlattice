@@ -24,7 +24,7 @@ public class AppConfigMapstore extends AbstractBasePostgresMapstore<AppConfigKey
     public static final String ORGANIZATION_ID = "__key#organizationId";
 
     public AppConfigMapstore( HikariDataSource hds ) {
-        super( HazelcastMap.APP_CONFIGS.name(), PostgresTable.APP_CONFIGS, hds );
+        super( HazelcastMap.APP_CONFIGS, PostgresTable.APP_CONFIGS, hds );
     }
 
     @Override protected void bind( PreparedStatement ps, AppConfigKey key, AppTypeSetting value ) throws SQLException {

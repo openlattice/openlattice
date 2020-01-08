@@ -54,12 +54,12 @@ class ExternalDatabaseManagementService(
         private val hds: HikariDataSource
 ) {
 
-    private val organizationExternalDatabaseColumns: IMap<UUID, OrganizationExternalDatabaseColumn> = hazelcastInstance.getMap(HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_COLUMN.name)
-    private val organizationExternalDatabaseTables: IMap<UUID, OrganizationExternalDatabaseTable> = hazelcastInstance.getMap(HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_TABLE.name)
-    private val hbaAuthenticationRecordsMapstore: IMap<String, PostgresAuthenticationRecord> = hazelcastInstance.getMap(HazelcastMap.HBA_AUTHENTICATION_RECORDS.name)
-    private val securableObjectTypes: IMap<AclKey, SecurableObjectType> = hazelcastInstance.getMap(HazelcastMap.SECURABLE_OBJECT_TYPES.name)
-    private val organizations: IMap<UUID, Organization> = hazelcastInstance.getMap(HazelcastMap.ORGANIZATIONS.name)
-    private val aces: IMap<AceKey, AceValue> = hazelcastInstance.getMap(HazelcastMap.PERMISSIONS.name)
+    private val organizationExternalDatabaseColumns: IMap<UUID, OrganizationExternalDatabaseColumn> = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_COLUMN.getMap( hazelcastInstance )
+    private val organizationExternalDatabaseTables: IMap<UUID, OrganizationExternalDatabaseTable> = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_TABLE.getMap( hazelcastInstance )
+    private val hbaAuthenticationRecordsMapstore: IMap<String, PostgresAuthenticationRecord> = HazelcastMap.HBA_AUTHENTICATION_RECORDS.getMap( hazelcastInstance )
+    private val securableObjectTypes: IMap<AclKey, SecurableObjectType> = HazelcastMap.SECURABLE_OBJECT_TYPES.getMap( hazelcastInstance )
+    private val organizations: IMap<UUID, Organization> = HazelcastMap.ORGANIZATIONS.getMap( hazelcastInstance )
+    private val aces: IMap<AceKey, AceValue> = HazelcastMap.PERMISSIONS.getMap( hazelcastInstance )
     private val logger = LoggerFactory.getLogger(ExternalDatabaseManagementService::class.java)
     private val primaryKeyConstraint = "PRIMARY KEY"
     private val FETCH_SIZE = 100_000

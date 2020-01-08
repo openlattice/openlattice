@@ -87,15 +87,15 @@ open class EntitySetService(
         private val logger = LoggerFactory.getLogger(EntitySetManager::class.java)
     }
 
-    private val entitySets: IMap<UUID, EntitySet> = hazelcastInstance.getMap(HazelcastMap.ENTITY_SETS.name)
-    private val entityTypes: IMap<UUID, EntityType> = hazelcastInstance.getMap(HazelcastMap.ENTITY_TYPES.name)
+    private val entitySets: IMap<UUID, EntitySet> = HazelcastMap.ENTITY_SETS.getMap( hazelcastInstance )
+    private val entityTypes: IMap<UUID, EntityType> = HazelcastMap.ENTITY_TYPES.getMap( hazelcastInstance )
     private val associationTypes: IMap<UUID, AssociationType> =
-            hazelcastInstance.getMap(HazelcastMap.ASSOCIATION_TYPES.name)
-    private val propertyTypes: IMap<UUID, PropertyType> = hazelcastInstance.getMap(HazelcastMap.PROPERTY_TYPES.name)
+            HazelcastMap.ASSOCIATION_TYPES.getMap( hazelcastInstance )
+    private val propertyTypes: IMap<UUID, PropertyType> = HazelcastMap.PROPERTY_TYPES.getMap( hazelcastInstance )
     private val entitySetPropertyMetadata: IMap<EntitySetPropertyKey, EntitySetPropertyMetadata> =
-            hazelcastInstance.getMap(HazelcastMap.ENTITY_SET_PROPERTY_METADATA.name)
+            HazelcastMap.ENTITY_SET_PROPERTY_METADATA.getMap( hazelcastInstance )
 
-    private val aclKeys: IMap<String, UUID> = hazelcastInstance.getMap(HazelcastMap.ACL_KEYS.name)
+    private val aclKeys: IMap<String, UUID> = HazelcastMap.ACL_KEYS.getMap( hazelcastInstance )
 
 
     override fun createEntitySet(principal: Principal, entitySet: EntitySet) {

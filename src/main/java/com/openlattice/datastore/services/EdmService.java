@@ -111,14 +111,14 @@ public class EdmService implements EdmManager {
         this.schemaManager = schemaManager;
         this.hazelcastInstance = hazelcastInstance;
         this.hds = hds;
-        this.propertyTypes = hazelcastInstance.getMap( HazelcastMap.PROPERTY_TYPES.name() );
-        this.entityTypes = hazelcastInstance.getMap( HazelcastMap.ENTITY_TYPES.name() );
-        this.entitySets = hazelcastInstance.getMap( HazelcastMap.ENTITY_SETS.name() );
-        this.names = hazelcastInstance.getMap( HazelcastMap.NAMES.name() );
-        this.aclKeys = hazelcastInstance.getMap( HazelcastMap.ACL_KEYS.name() );
-        this.associationTypes = hazelcastInstance.getMap( HazelcastMap.ASSOCIATION_TYPES.name() );
-        this.entitySetPropertyMetadata = hazelcastInstance.getMap( HazelcastMap.ENTITY_SET_PROPERTY_METADATA.name() );
-        this.entityTypePropertyMetadata = hazelcastInstance.getMap( HazelcastMap.ENTITY_TYPE_PROPERTY_METADATA.name() );
+        this.propertyTypes = HazelcastMap.PROPERTY_TYPES.getMap( hazelcastInstance );
+        this.entityTypes = HazelcastMap.ENTITY_TYPES.getMap( hazelcastInstance );
+        this.entitySets = HazelcastMap.ENTITY_SETS.getMap( hazelcastInstance );
+        this.names = HazelcastMap.NAMES.getMap( hazelcastInstance );
+        this.aclKeys = HazelcastMap.ACL_KEYS.getMap( hazelcastInstance );
+        this.associationTypes = HazelcastMap.ASSOCIATION_TYPES.getMap( hazelcastInstance );
+        this.entitySetPropertyMetadata = HazelcastMap.ENTITY_SET_PROPERTY_METADATA.getMap( hazelcastInstance );
+        this.entityTypePropertyMetadata = HazelcastMap.ENTITY_TYPE_PROPERTY_METADATA.getMap( hazelcastInstance );
         this.aclKeyReservations = aclKeyReservations;
         propertyTypes.values().forEach( propertyType -> logger.debug( "Property type read: {}", propertyType ) );
         entityTypes.values().forEach( entityType -> logger.debug( "Object type read: {}", entityType ) );
@@ -127,8 +127,8 @@ public class EdmService implements EdmManager {
     @Override
     public void clearTables() {
         eventBus.post( new ClearAllDataEvent() );
-        for ( int i = 0; i < HazelcastMap.values().length; i++ ) {
-            hazelcastInstance.getMap( HazelcastMap.values()[ i ].name() ).clear();
+        for (HazelcastMap<?, ?> map : HazelcastMap.values()) {
+            map.getMap( hazelcastInstance ).clear();
         }
         try ( java.sql.Connection connection = hds.getConnection() ) {
             new PostgresTablesPod().postgresTables().tables().forEach( table -> {
