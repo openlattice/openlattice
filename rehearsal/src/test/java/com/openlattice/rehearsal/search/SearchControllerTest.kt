@@ -303,16 +303,15 @@ class SearchControllerTest : MultipleAuthenticatedUsersBase() {
         val et = createEntityType()
         val es = createEntitySet(et)
 
-        val testData = TestDataFactory.randomStringEntityData(2, et.properties).values.toList()
+        val testData = TestDataFactory.randomStringEntityData(6, et.properties).values.toList()
         val entities = dataApi.createEntities(es.id, testData).toSet().zip(testData).toMap()
 
         // should be indexed automatically
-        val id1 = entities.keys.first()
-        val id2 = entities.keys.last()
+        val idsList = entities.keys.toList()
         val searchAll = SearchTerm("*", 0, 10)
         var searchedEntities = searchApi.executeEntitySetDataQuery(es.id, searchAll)
 
-        Assert.assertEquals(2, searchedEntities.numHits)
+        Assert.assertEquals(6, searchedEntities.numHits)
         searchedEntities.hits.forEach { entityData ->
             val id = UUID.fromString(entityData.getValue(EdmConstants.ID_FQN).first() as String)
             Assert.assertTrue(entities.keys.contains(id))
@@ -320,20 +319,46 @@ class SearchControllerTest : MultipleAuthenticatedUsersBase() {
 
 
         /* Hard delete */
-        dataApi.deleteEntity(es.id, id1, DeleteType.Hard)
+        // 1 entity
+        dataApi.deleteEntity(es.id, idsList[0], DeleteType.Hard)
 
         // should be deleted automatically
         searchedEntities = searchApi.executeEntitySetDataQuery(es.id, searchAll)
 
-        Assert.assertEquals(1, searchedEntities.numHits)
-        Assert.assertEquals(
-                id2,
-                UUID.fromString(searchedEntities.hits.first().getValue(EdmConstants.ID_FQN).first() as String)
-        )
+        Assert.assertEquals(5, searchedEntities.numHits)
+        searchedEntities.hits.forEach { entityData ->
+            val id = UUID.fromString(entityData.getValue(EdmConstants.ID_FQN).first() as String)
+            Assert.assertFalse(id == idsList[0])
+        }
+
+        // multiple entities
+        dataApi.deleteEntities(es.id, setOf(idsList[1], idsList[2]), DeleteType.Hard)
+
+        // should be deleted automatically
+        searchedEntities = searchApi.executeEntitySetDataQuery(es.id, searchAll)
+
+        Assert.assertEquals(3, searchedEntities.numHits)
+        searchedEntities.hits.forEach { entityData ->
+            val id = UUID.fromString(entityData.getValue(EdmConstants.ID_FQN).first() as String)
+            Assert.assertFalse(id == idsList[1])
+            Assert.assertFalse(id == idsList[2])
+        }
 
 
         /* Soft delete */
-        dataApi.deleteEntity(es.id, id2, DeleteType.Soft)
+        // 1 entity
+        dataApi.deleteEntity(es.id, idsList[3], DeleteType.Soft)
+
+        // should be deleted automatically
+        searchedEntities = searchApi.executeEntitySetDataQuery(es.id, searchAll)
+        Assert.assertEquals(2, searchedEntities.numHits)
+        searchedEntities.hits.forEach { entityData ->
+            val id = UUID.fromString(entityData.getValue(EdmConstants.ID_FQN).first() as String)
+            Assert.assertFalse(id == idsList[3])
+        }
+
+        // multiple entities
+        dataApi.deleteEntities(es.id, setOf(idsList[4], idsList[5]), DeleteType.Soft)
 
         // should be deleted automatically
         searchedEntities = searchApi.executeEntitySetDataQuery(es.id, searchAll)
@@ -348,7 +373,7 @@ class SearchControllerTest : MultipleAuthenticatedUsersBase() {
         val es2 = createEntitySet(et)
 
         // add data
-        val testData = TestDataFactory.randomStringEntityData(1, et.properties).values.toList()
+        val testData = TestDataFactory.randomStringEntityData(2, et.properties).values.toList()
         val id1 = dataApi.createEntities(es1.id, testData).first()
         val id2 = dataApi.createEntities(es2.id, testData).first()
 
@@ -357,8 +382,8 @@ class SearchControllerTest : MultipleAuthenticatedUsersBase() {
         var searchedEntities1 = searchApi.executeEntitySetDataQuery(es1.id, searchAll)
         var searchedEntities2 = searchApi.executeEntitySetDataQuery(es2.id, searchAll)
 
-        Assert.assertEquals(1, searchedEntities1.numHits)
-        Assert.assertEquals(1, searchedEntities2.numHits)
+        Assert.assertEquals(2, searchedEntities1.numHits)
+        Assert.assertEquals(2, searchedEntities2.numHits)
         Assert.assertEquals(
                 id1,
                 UUID.fromString(searchedEntities1.hits.first().getValue(EdmConstants.ID_FQN).first() as String)
@@ -375,7 +400,7 @@ class SearchControllerTest : MultipleAuthenticatedUsersBase() {
         searchedEntities1 = searchApi.executeEntitySetDataQuery(es1.id, searchAll)
         searchedEntities2 = searchApi.executeEntitySetDataQuery(es2.id, searchAll)
         Assert.assertEquals(0, searchedEntities1.numHits)
-        Assert.assertEquals(1, searchedEntities2.numHits)
+        Assert.assertEquals(2, searchedEntities2.numHits)
         Assert.assertEquals(
                 id2,
                 UUID.fromString(searchedEntities2.hits.first().getValue(EdmConstants.ID_FQN).first() as String)
@@ -390,6 +415,24 @@ class SearchControllerTest : MultipleAuthenticatedUsersBase() {
         searchedEntities2 = searchApi.executeEntitySetDataQuery(es2.id, searchAll)
         Assert.assertEquals(0, searchedEntities1.numHits)
         Assert.assertEquals(0, searchedEntities2.numHits)
+    }
+
+    @Test
+    fun testMaxHitsSearch() {
+        // create 10 entities
+        val et = createEntityType()
+        val es = createEntitySet(et)
+
+        val numberOfEntities = 10
+        val testData = TestDataFactory.randomStringEntityData(numberOfEntities, et.properties).values.toList()
+        val entities = dataApi.createEntities(es.id, testData).toSet().zip(testData).toMap()
+
+        val searchMax1 = SearchTerm("*", 0, 1)
+        var searchedEntities = searchApi.executeEntitySetDataQuery(es.id, searchMax1)
+
+        // should yield 1 hit, but 10 totalHits
+        Assert.assertEquals(1, searchedEntities.hits.size)
+        Assert.assertEquals(numberOfEntities, searchedEntities.numHits)
     }
 
 }
