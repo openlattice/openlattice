@@ -93,7 +93,7 @@ class SearchControllerTest : MultipleAuthenticatedUsersBase() {
                     EntityDataKey(edge.id, idsEdge[index])
             )
         }.toSet()
-        dataApi.createAssociations(edges)
+        dataApi.createEdges(edges)
 
 
         // setup basic search parameters

@@ -21,8 +21,10 @@
 package com.openlattice.rehearsal.authentication;
 
 import com.google.common.base.Charsets;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Streams;
 import com.openlattice.analysis.AnalysisApi;
 import com.openlattice.authorization.AccessCheck;
@@ -81,9 +83,19 @@ import org.junit.Assert;
 import retrofit2.Retrofit;
 
 public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
-    private final static Map<String, Retrofit> retrofitMap = new HashMap<>();
-    private final static Map<String, Retrofit> linkerRetrofitMap = new HashMap<>();
-    private final static Map<String, OkHttpClient> httpClientMap = new HashMap<>();
+    private static final Map<String, Retrofit> retrofitMap = ImmutableMap.of(
+            "admin", retrofit,
+            "user1", retrofit1,
+            "user2", retrofit2,
+            "user3", retrofit3,
+            "prod", retrofitProd );
+    private static final Map<String, Retrofit> linkerRetrofitMap = ImmutableMap.of(
+            "admin", retrofitLinker );
+    private static final Map<String, OkHttpClient> httpClientMap = ImmutableMap.of(
+            "admin", httpClient,
+            "user1", httpClient1,
+            "user2", httpClient2
+    );
 
     protected static EdmApi edmApi;
     protected static PermissionsApi permissionsApi;
@@ -99,20 +111,6 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
     protected static PrincipalApi principalApi;
 
     protected static OkHttpClient currentHttpClient;
-
-    static {
-        retrofitMap.put( "admin", retrofit );
-        retrofitMap.put( "user1", retrofit1 );
-        retrofitMap.put( "user2", retrofit2 );
-        retrofitMap.put( "user3", retrofit3 );
-        retrofitMap.put( "prod", retrofitProd );
-        linkerRetrofitMap.put( "admin", retrofitLinker );
-
-        httpClientMap.put( "admin", httpClient );
-        httpClientMap.put( "user1", httpClient1 );
-        httpClientMap.put( "user2", httpClient2 );
-
-    }
 
     /**
      * Auxiliary functions
