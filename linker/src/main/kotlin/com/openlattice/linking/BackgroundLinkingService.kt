@@ -66,9 +66,9 @@ class BackgroundLinkingService
     }
 
 
-    private val entitySets = hazelcastInstance.getMap<UUID, EntitySet>(HazelcastMap.ENTITY_SETS.name)
+    private val entitySets = HazelcastMap.ENTITY_SETS.getMap( hazelcastInstance )
 
-    private val linkingLocks = hazelcastInstance.getMap<EntityDataKey, Long>(HazelcastMap.LINKING_LOCKS.name)
+    private val linkingLocks = HazelcastMap.LINKING_LOCKS.getMap( hazelcastInstance )
 
     @Suppress("UNUSED")
     private val enqueuer = executor.submit {
