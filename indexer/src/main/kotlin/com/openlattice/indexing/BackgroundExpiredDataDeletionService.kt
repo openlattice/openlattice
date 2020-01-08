@@ -47,8 +47,8 @@ class BackgroundExpiredDataDeletionService(
         private val logger = LoggerFactory.getLogger(BackgroundExpiredDataDeletionService::class.java)!!
     }
 
-    private val entitySets: IMap<UUID, EntitySet> = hazelcastInstance.getMap(HazelcastMap.ENTITY_SETS.name)
-    private val expirationLocks: IMap<UUID, Long> = hazelcastInstance.getMap(HazelcastMap.EXPIRATION_LOCKS.name)
+    private val entitySets: IMap<UUID, EntitySet> = HazelcastMap.ENTITY_SETS.getMap( hazelcastInstance )
+    private val expirationLocks: IMap<UUID, Long> = HazelcastMap.EXPIRATION_LOCKS.getMap( hazelcastInstance )
 
     @Inject
     private lateinit var edm: EdmManager

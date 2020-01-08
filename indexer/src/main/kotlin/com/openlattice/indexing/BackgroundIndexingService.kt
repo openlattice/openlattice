@@ -72,11 +72,11 @@ class BackgroundIndexingService(
         private val logger = LoggerFactory.getLogger(BackgroundIndexingService::class.java)!!
     }
 
-    private val propertyTypes: IMap<UUID, PropertyType> = hazelcastInstance.getMap(HazelcastMap.PROPERTY_TYPES.name)
-    private val entityTypes: IMap<UUID, EntityType> = hazelcastInstance.getMap(HazelcastMap.ENTITY_TYPES.name)
-    private val entitySets: IMap<UUID, EntitySet> = hazelcastInstance.getMap(HazelcastMap.ENTITY_SETS.name)
+    private val propertyTypes: IMap<UUID, PropertyType> = HazelcastMap.PROPERTY_TYPES.getMap( hazelcastInstance )
+    private val entityTypes: IMap<UUID, EntityType> = HazelcastMap.ENTITY_TYPES.getMap( hazelcastInstance )
+    private val entitySets: IMap<UUID, EntitySet> = HazelcastMap.ENTITY_SETS.getMap( hazelcastInstance )
 
-    private val indexingLocks: IMap<UUID, Long> = hazelcastInstance.getMap(HazelcastMap.INDEXING_LOCKS.name)
+    private val indexingLocks: IMap<UUID, Long> = HazelcastMap.INDEXING_LOCKS.getMap( hazelcastInstance )
 
     private val taskLock = ReentrantLock()
 

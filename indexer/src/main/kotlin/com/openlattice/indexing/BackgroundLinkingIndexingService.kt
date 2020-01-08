@@ -73,8 +73,8 @@ class BackgroundLinkingIndexingService(
         const val LINKING_INDEX_SIZE = 100
     }
 
-    private val propertyTypes: IMap<UUID, PropertyType> = hazelcastInstance.getMap(HazelcastMap.PROPERTY_TYPES.name)
-    private val entityTypes: IMap<UUID, EntityType> = hazelcastInstance.getMap(HazelcastMap.ENTITY_TYPES.name)
+    private val propertyTypes: IMap<UUID, PropertyType> = HazelcastMap.PROPERTY_TYPES.getMap( hazelcastInstance )
+    private val entityTypes: IMap<UUID, EntityType> = HazelcastMap.ENTITY_TYPES.getMap( hazelcastInstance )
 
     // TODO if at any point there are more linkable entity types, this must change
     private val personEntityType = entityTypes.values(
@@ -87,9 +87,7 @@ class BackgroundLinkingIndexingService(
     // TODO if at any point there are more linkable entity types, this must change
     private val personPropertyTypes = propertyTypes.getAll(personEntityType.properties)
 
-    private val linkingIndexingLocks: IMap<UUID, Long> = hazelcastInstance.getMap(
-            HazelcastMap.LINKING_INDEXING_LOCKS.name
-    )
+    private val linkingIndexingLocks: IMap<UUID, Long> = HazelcastMap.LINKING_INDEXING_LOCKS.getMap( hazelcastInstance )
 
     /**
      * Queue containing linking ids, which need to be re-indexed in elasticsearch.
