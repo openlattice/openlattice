@@ -36,19 +36,19 @@ data class RemoveMembersFromOrganizationAssemblyProcessor(val principals: Collec
         Offloadable {
 
     @Transient
-    private var acm: AssemblerConnectionManager? = null
+    private lateinit var acm: AssemblerConnectionManager
 
     override fun process(entry: MutableMap.MutableEntry<UUID, OrganizationAssembly?>): Void? {
         val organizationId = entry.key
         val assembly = entry.value
-        assembly ?: throw IllegalStateException("Encountered null assembly while trying to remove principals " +
-                "$principals from organization $organizationId.")
+        check(assembly != null) {
+            "Encountered null assembly while trying to remove principals $principals from organization $organizationId."
+        }
 
+        check(::acm.isInitialized) { AssemblerConnectionManagerDependent.NOT_INITIALIZED }
         val dbName = PostgresDatabases.buildOrganizationDatabaseName(organizationId)
-        acm?.connect(dbName)?.let { dataSource ->
-            acm!!.removeMembersFromOrganization(dbName, dataSource, principals)
-        } ?: throw IllegalStateException(AssemblerConnectionManagerDependent.NOT_INITIALIZED)
-        
+        acm.connect(dbName).let { dataSource -> acm.removeMembersFromOrganization(dbName, dataSource, principals) }
+
         return null
     }
 

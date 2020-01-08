@@ -42,18 +42,21 @@ data class AddMembersToOrganizationAssemblyProcessor(
         ReadOnly {
 
     @Transient
-    private var acm: AssemblerConnectionManager? = null
+    private lateinit var acm: AssemblerConnectionManager
 
     override fun process(entry: MutableMap.MutableEntry<UUID, OrganizationAssembly?>): Void? {
         val organizationId = entry.key
         val assembly = entry.value
-        assembly ?: throw IllegalStateException("Encountered null assembly while trying to add new principals " +
-                "${authorizedPropertyTypesOfEntitySetsByPrincipal.keys} to organization $organizationId.")
+        check(assembly != null) {
+            "Encountered null assembly while trying to add new principals " +
+                    "${authorizedPropertyTypesOfEntitySetsByPrincipal.keys} to organization $organizationId."
+        }
 
+        check(::acm.isInitialized) { AssemblerConnectionManagerDependent.NOT_INITIALIZED }
         val dbName = PostgresDatabases.buildOrganizationDatabaseName(organizationId)
-        acm?.connect(dbName)?.let { dataSource ->
-            acm!!.addMembersToOrganization(dbName, dataSource, authorizedPropertyTypesOfEntitySetsByPrincipal)
-        } ?: throw IllegalStateException(AssemblerConnectionManagerDependent.NOT_INITIALIZED)
+        acm.connect(dbName).let { dataSource ->
+            acm.addMembersToOrganization(dbName, dataSource, authorizedPropertyTypesOfEntitySetsByPrincipal)
+        }
 
         return null
     }
