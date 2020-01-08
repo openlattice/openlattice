@@ -26,13 +26,12 @@ import com.hazelcast.core.ReadOnly
 import com.hazelcast.spi.ExecutionService
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.assembler.AssemblerConnectionManager
+import com.openlattice.assembler.AssemblerConnectionManagerDependent
 import com.openlattice.assembler.OrganizationAssembly
 import com.openlattice.assembler.PostgresDatabases
 import com.openlattice.authorization.SecurablePrincipal
-import com.openlattice.assembler.AssemblerConnectionManagerDependent
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
-import java.lang.IllegalStateException
 import java.util.*
 
 data class AddMembersToOrganizationAssemblyProcessor(
@@ -43,21 +42,18 @@ data class AddMembersToOrganizationAssemblyProcessor(
         ReadOnly {
 
     @Transient
-    private lateinit var acm: AssemblerConnectionManager
+    private var acm: AssemblerConnectionManager? = null
 
     override fun process(entry: MutableMap.MutableEntry<UUID, OrganizationAssembly?>): Void? {
         val organizationId = entry.key
         val assembly = entry.value
-        if (assembly == null) {
-            throw IllegalStateException("Encountered null assembly while trying to add new principals " +
-                    "${authorizedPropertyTypesOfEntitySetsByPrincipal.keys} to organization $organizationId.")
-        } else {
-            val dbName = PostgresDatabases.buildOrganizationDatabaseName(organizationId)
-            acm.connect(dbName)
-                    .use { dataSource ->
-                        acm.addMembersToOrganization(dbName, dataSource, authorizedPropertyTypesOfEntitySetsByPrincipal)
-                    }
-        }
+        assembly ?: throw IllegalStateException("Encountered null assembly while trying to add new principals " +
+                "${authorizedPropertyTypesOfEntitySetsByPrincipal.keys} to organization $organizationId.")
+
+        val dbName = PostgresDatabases.buildOrganizationDatabaseName(organizationId)
+        acm?.connect(dbName)?.let { dataSource ->
+            acm!!.addMembersToOrganization(dbName, dataSource, authorizedPropertyTypesOfEntitySetsByPrincipal)
+        } ?: throw IllegalStateException(AssemblerConnectionManagerDependent.NOT_INITIALIZED)
 
         return null
     }
