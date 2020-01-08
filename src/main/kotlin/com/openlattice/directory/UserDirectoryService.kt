@@ -22,9 +22,9 @@
 package com.openlattice.directory
 
 import com.auth0.json.mgmt.users.User
-import com.codahale.metrics.annotation.Timed
 import com.google.common.collect.ImmutableMap
 import com.hazelcast.core.HazelcastInstance
+import com.hazelcast.core.IMap
 import com.openlattice.auth0.Auth0TokenProvider
 import com.openlattice.client.RetrofitFactory
 import com.openlattice.datastore.services.Auth0ManagementApi
@@ -39,24 +39,22 @@ open class UserDirectoryService(auth0TokenProvider: Auth0TokenProvider, hazelcas
         const val DEFAULT_PAGE_SIZE = 100
     }
 
-    //TODO: Switch over to a Hazelcast map to relieve pressure from Auth0
-    private val users = hazelcastInstance.getMap<String, User>(HazelcastMap.USERS.name)
+    private val users: IMap<String, User> = hazelcastInstance.getMap(HazelcastMap.USERS.name)
 
     private var auth0ManagementApi = RetrofitFactory
             .newClient(auth0TokenProvider.managementApiUrl) { auth0TokenProvider.token }
             .create(Auth0ManagementApi::class.java)
 
 
-    @Timed
-    fun getAllUsers(): Map<String, User> {
+    open fun getAllUsers(): Map<String, User> {
         return ImmutableMap.copyOf(users)
     }
 
-    @Timed
     fun getUser(userId: String): User {
         return users.getValue(userId)
     }
 
+    //TODO: Switch over to a Hazelcast map to relieve pressure from Auth0
     fun searchAllUsers(searchQuery: String): Map<String, Auth0UserBasic> {
 
         var page = 0
