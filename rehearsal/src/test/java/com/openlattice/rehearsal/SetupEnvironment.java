@@ -21,9 +21,7 @@
 
 package com.openlattice.rehearsal;
 
-import static com.google.common.base.Preconditions.checkState;
-
-import com.auth0.json.auth.TokenHolder;
+import com.auth0.json.mgmt.users.User;
 import com.geekbeast.util.RunOnce;
 import com.google.common.util.concurrent.RateLimiter;
 import com.openlattice.authentication.AuthenticationTest;
@@ -35,20 +33,18 @@ import com.openlattice.authorization.SystemRole;
 import com.openlattice.client.RetrofitFactory;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.openlattice.directory.PrincipalApi;
-import com.openlattice.directory.pojo.Auth0UserBasic;
-
-import java.util.Collection;
-
 import com.openlattice.rhizome.proxy.RetrofitBuilders;
 import kotlin.Unit;
 import okhttp3.OkHttpClient;
-import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
 import retrofit2.Retrofit;
+
+import java.util.Collection;
+
+import static com.google.common.base.Preconditions.checkState;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -100,13 +96,6 @@ public class SetupEnvironment {
         Authentication jwtUser2 = AuthenticationTest.getAuthentication( authOptions2 );
         Authentication jwtUser3 = AuthenticationTest.getAuthentication( authOptions3 );
 
-        limiter.acquire();
-        TokenHolder thAdmin = AuthenticationTest.tokenHolder();
-        TokenHolder thUser1 = AuthenticationTest.tokenHolder( authOptions1 );
-        limiter.acquire();
-        TokenHolder thUser2 = AuthenticationTest.tokenHolder( authOptions2 );
-        TokenHolder thUser3 = AuthenticationTest.tokenHolder( authOptions3 );
-
         String tokenAdmin = ( String ) jwtAdmin.getCredentials();
         String tokenUser1 = ( String ) jwtUser1.getCredentials();
         String tokenUser2 = ( String ) jwtUser2.getCredentials();
@@ -152,14 +141,11 @@ public class SetupEnvironment {
         user2 = toPrincipal( idUser2 );
         user3 = toPrincipal( idUser3 );
 
-        //Comment out this line for local testing.
-//        TestEdmConfigurer.setupDatamodel( retrofit.create( EdmApi.class ) );
-
         return Unit.INSTANCE;
     }
 
-    public static Auth0UserBasic getUserInfo( Principal principal ) {
-        PrincipalApi pApi = retrofit.create( PrincipalApi.class );
+    public static User getUserInfo( Principal principal ) {
+        PrincipalApi pApi = getApiAdmin( PrincipalApi.class );
         return pApi.getUser( principal.getId() );
     }
 
