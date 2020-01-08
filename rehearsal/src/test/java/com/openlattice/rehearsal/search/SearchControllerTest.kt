@@ -61,21 +61,22 @@ class SearchControllerTest : MultipleAuthenticatedUsersBase() {
          - executeEntityNeighborSearch, executeFilteredEntityNeighborSearch, executeFilteredEntityNeighborIdsSearch */
 
         // create data with admin
-        val at = createEdgeEntityType()
         val et = createEntityType()
-        val pt = et.properties.random()
-        val propertyType = edmApi.getPropertyType(pt)
-        val apt = at.properties.random()
-        val associationPropertyType = edmApi.getPropertyType(apt)
-
         val es = createEntitySet(et)
         val dst = createEntitySet(et)
-        val edge = createEntitySet(at)
+        val edgeEt = createEdgeEntityType()
+        val edge = createEntitySet(edgeEt)
+        createAssociationType(edgeEt, setOf(et), setOf(et))
+
+        val pt = et.properties.random()
+        val propertyType = edmApi.getPropertyType(pt)
+        val apt = edgeEt.properties.random()
+        val associationPropertyType = edmApi.getPropertyType(apt)
 
         val numberOfEntries = 10
         val testData = TestDataFactory.randomStringEntityData(numberOfEntries, et.properties)
         val testDataDst = TestDataFactory.randomStringEntityData(numberOfEntries, et.properties)
-        val testDataEdge = TestDataFactory.randomStringEntityData(numberOfEntries, at.properties)
+        val testDataEdge = TestDataFactory.randomStringEntityData(numberOfEntries, edgeEt.properties)
 
         val entries = ImmutableList.copyOf(testData.values)
         val ids = dataApi.createEntities(es.id, entries)
@@ -140,19 +141,16 @@ class SearchControllerTest : MultipleAuthenticatedUsersBase() {
         loginAs("user1")
 
         val noEntitySetData4 = searchApi.searchEntitySetData(simpleSearchConstraint)
-        Assert.assertEquals(numberOfEntries, noEntitySetData4.numHits.toInt())
-        Assert.assertEquals(numberOfEntries, noEntitySetData4.hits.size)
-        Assert.assertEquals(setOf(EdmConstants.ID_FQN), noEntitySetData4.hits[0].keys)
+        Assert.assertEquals(0, noEntitySetData4.numHits.toInt())
+        Assert.assertEquals(0, noEntitySetData4.hits.size)
 
         val noEntitySetData5 = searchApi.executeEntitySetDataQuery(es.id, searchTerm)
-        Assert.assertEquals(numberOfEntries, noEntitySetData5.numHits.toInt())
-        Assert.assertEquals(numberOfEntries, noEntitySetData5.hits.size)
-        Assert.assertEquals(setOf(EdmConstants.ID_FQN), noEntitySetData5.hits[0].keys)
+        Assert.assertEquals(0, noEntitySetData5.numHits.toInt())
+        Assert.assertEquals(0, noEntitySetData5.hits.size)
 
         val noEntitySetData6 = searchApi.executeAdvancedEntitySetDataQuery(es.id, advancedSearchTerm)
-        Assert.assertEquals(numberOfEntries, noEntitySetData6.numHits.toInt())
-        Assert.assertEquals(numberOfEntries, noEntitySetData6.hits.size)
-        Assert.assertEquals(setOf(EdmConstants.ID_FQN), noEntitySetData6.hits[0].keys)
+        Assert.assertEquals(0, noEntitySetData6.numHits.toInt())
+        Assert.assertEquals(0, noEntitySetData6.hits.size)
 
         val noNeighborData4 = searchApi.executeEntityNeighborSearch(es.id, id)
         Assert.assertEquals(1, noNeighborData4.size)
@@ -187,27 +185,39 @@ class SearchControllerTest : MultipleAuthenticatedUsersBase() {
         val ptData1 = searchApi.searchEntitySetData(simpleSearchConstraint)
         Assert.assertEquals(numberOfEntries, ptData1.numHits.toInt())
         Assert.assertEquals(numberOfEntries, ptData1.hits.size)
-        Assert.assertEquals(setOf(EdmConstants.ID_FQN, propertyType.type), ptData1.hits[0].keys)
+        Assert.assertEquals(
+                setOf(EdmConstants.ID_FQN, EdmConstants.LAST_WRITE_FQN, propertyType.type),
+                ptData1.hits[0].keys
+        )
 
         val ptData2 = searchApi.executeEntitySetDataQuery(es.id, searchTerm)
         Assert.assertEquals(numberOfEntries, ptData2.numHits.toInt())
         Assert.assertEquals(numberOfEntries, ptData2.hits.size)
-        Assert.assertEquals(setOf(EdmConstants.ID_FQN, propertyType.type), ptData2.hits[0].keys)
+        Assert.assertEquals(setOf(EdmConstants.ID_FQN, EdmConstants.LAST_WRITE_FQN, propertyType.type), ptData2.hits[0].keys)
 
         val ptData3 = searchApi.executeAdvancedEntitySetDataQuery(es.id, advancedSearchTerm)
         Assert.assertEquals(numberOfEntries, ptData3.numHits.toInt())
         Assert.assertEquals(numberOfEntries, ptData3.hits.size)
-        Assert.assertEquals(setOf(EdmConstants.ID_FQN, propertyType.type), ptData3.hits[0].keys)
+        Assert.assertEquals(setOf(EdmConstants.ID_FQN, EdmConstants.LAST_WRITE_FQN, propertyType.type), ptData3.hits[0].keys)
 
         val neighborData1 = searchApi.executeEntityNeighborSearch(es.id, id)
         Assert.assertEquals(1, neighborData1.size)
-        Assert.assertEquals(setOf(EdmConstants.ID_FQN, associationPropertyType.type), neighborData1[0].associationDetails.keys)
+        Assert.assertEquals(
+                setOf(EdmConstants.ID_FQN, associationPropertyType.type),
+                neighborData1[0].associationDetails.keys
+        )
         Assert.assertEquals(setOf(EdmConstants.ID_FQN, propertyType.type), neighborData1[0].neighborDetails.get().keys)
 
         val neighborData2 = searchApi.executeFilteredEntityNeighborSearch(es.id, neighborsFilter)
         Assert.assertEquals(numberOfEntries, neighborData2.size)
-        Assert.assertEquals(setOf(EdmConstants.ID_FQN, associationPropertyType.type), neighborData2[ids.random()]!![0].associationDetails.keys)
-        Assert.assertEquals(setOf(EdmConstants.ID_FQN, propertyType.type), neighborData2[ids.random()]!![0].neighborDetails.get().keys)
+        Assert.assertEquals(
+                setOf(EdmConstants.ID_FQN, associationPropertyType.type),
+                neighborData2[ids.random()]!![0].associationDetails.keys
+        )
+        Assert.assertEquals(
+                setOf(EdmConstants.ID_FQN, propertyType.type),
+                neighborData2[ids.random()]!![0].neighborDetails.get().keys
+        )
 
         val neighborData3 = searchApi.executeFilteredEntityNeighborIdsSearch(es.id, neighborsFilter)
         Assert.assertEquals(numberOfEntries, neighborData3.size)
@@ -228,7 +238,7 @@ class SearchControllerTest : MultipleAuthenticatedUsersBase() {
                     Action.ADD))
         }
 
-        at.properties.forEach {
+        edgeEt.properties.forEach {
             permissionsApi.updateAcl(AclData(
                     Acl(AclKey(edge.id, it), setOf(Ace(user1, readPermission, OffsetDateTime.MAX))),
                     Action.ADD))
@@ -240,27 +250,30 @@ class SearchControllerTest : MultipleAuthenticatedUsersBase() {
         Assert.assertEquals(numberOfEntries, searchResult1.numHits.toInt())
         Assert.assertEquals(numberOfEntries, searchResult1.hits.size)
         Assert.assertEquals(
-                et.properties.map { edmApi.getPropertyType(it).type }.toSet() + setOf(EdmConstants.ID_FQN),
+                et.properties.map { edmApi.getPropertyType(it).type }.toSet()
+                        + setOf(EdmConstants.ID_FQN, EdmConstants.LAST_WRITE_FQN),
                 searchResult1.hits[0].keys)
 
         val searchResult2 = searchApi.executeEntitySetDataQuery(es.id, searchTerm)
         Assert.assertEquals(numberOfEntries, searchResult2.numHits.toInt())
         Assert.assertEquals(numberOfEntries, searchResult2.hits.size)
         Assert.assertEquals(
-                et.properties.map { edmApi.getPropertyType(it).type }.toSet() + setOf(EdmConstants.ID_FQN),
+                et.properties.map { edmApi.getPropertyType(it).type }.toSet()
+                        + setOf(EdmConstants.ID_FQN, EdmConstants.LAST_WRITE_FQN),
                 searchResult2.hits[0].keys)
 
         val searchResult3 = searchApi.executeAdvancedEntitySetDataQuery(es.id, advancedSearchTerm)
         Assert.assertEquals(numberOfEntries, searchResult3.numHits.toInt())
         Assert.assertEquals(numberOfEntries, searchResult3.hits.size)
         Assert.assertEquals(
-                et.properties.map { edmApi.getPropertyType(it).type }.toSet() + setOf(EdmConstants.ID_FQN),
+                et.properties.map { edmApi.getPropertyType(it).type }.toSet()
+                        + setOf(EdmConstants.ID_FQN, EdmConstants.LAST_WRITE_FQN),
                 searchResult3.hits[0].keys)
 
         val neighborData4 = searchApi.executeEntityNeighborSearch(es.id, id)
         Assert.assertEquals(1, neighborData4.size)
         Assert.assertEquals(
-                at.properties.map { edmApi.getPropertyType(it).type }.toSet() + setOf(EdmConstants.ID_FQN),
+                edgeEt.properties.map { edmApi.getPropertyType(it).type }.toSet() + setOf(EdmConstants.ID_FQN),
                 neighborData4[0].associationDetails.keys)
         Assert.assertEquals(
                 et.properties.map { edmApi.getPropertyType(it).type }.toSet() + setOf(EdmConstants.ID_FQN),
@@ -269,7 +282,7 @@ class SearchControllerTest : MultipleAuthenticatedUsersBase() {
         val neighborData5 = searchApi.executeFilteredEntityNeighborSearch(es.id, neighborsFilter)
         Assert.assertEquals(numberOfEntries, neighborData5.size)
         Assert.assertEquals(
-                at.properties.map { edmApi.getPropertyType(it).type }.toSet() + setOf(EdmConstants.ID_FQN),
+                edgeEt.properties.map { edmApi.getPropertyType(it).type }.toSet() + setOf(EdmConstants.ID_FQN),
                 neighborData5[ids.random()]!![0].associationDetails.keys)
         Assert.assertEquals(
                 et.properties.map { edmApi.getPropertyType(it).type }.toSet() + setOf(EdmConstants.ID_FQN),
@@ -309,7 +322,7 @@ class SearchControllerTest : MultipleAuthenticatedUsersBase() {
         /* Hard delete */
         dataApi.deleteEntity(es.id, id1, DeleteType.Hard)
 
-        // should be un-indexed automatically
+        // should be deleted automatically
         searchedEntities = searchApi.executeEntitySetDataQuery(es.id, searchAll)
 
         Assert.assertEquals(1, searchedEntities.numHits)
@@ -322,8 +335,7 @@ class SearchControllerTest : MultipleAuthenticatedUsersBase() {
         /* Soft delete */
         dataApi.deleteEntity(es.id, id2, DeleteType.Soft)
 
-        // should be un-indexed in background job
-        Thread.sleep(30_000L)
+        // should be deleted automatically
         searchedEntities = searchApi.executeEntitySetDataQuery(es.id, searchAll)
         Assert.assertEquals(0, searchedEntities.numHits)
     }
@@ -359,7 +371,7 @@ class SearchControllerTest : MultipleAuthenticatedUsersBase() {
         /* Hard delete */
         dataApi.deleteAllEntitiesFromEntitySet(es1.id, DeleteType.Hard)
 
-        // should be indexed automatically
+        // should be deleted automatically
         searchedEntities1 = searchApi.executeEntitySetDataQuery(es1.id, searchAll)
         searchedEntities2 = searchApi.executeEntitySetDataQuery(es2.id, searchAll)
         Assert.assertEquals(0, searchedEntities1.numHits)
@@ -373,8 +385,7 @@ class SearchControllerTest : MultipleAuthenticatedUsersBase() {
         /* Soft delete */
         dataApi.deleteAllEntitiesFromEntitySet(es2.id, DeleteType.Soft)
 
-        // should be un-indexed in background job
-        Thread.sleep(30_000L)
+        // should be deleted automatically
         searchedEntities1 = searchApi.executeEntitySetDataQuery(es1.id, searchAll)
         searchedEntities2 = searchApi.executeEntitySetDataQuery(es2.id, searchAll)
         Assert.assertEquals(0, searchedEntities1.numHits)

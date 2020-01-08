@@ -30,6 +30,6 @@ class PrincipalControllerTest : MultipleAuthenticatedUsersBase() {
     @Test
     fun testLoadUser() {
         val adminUser = principalApi.getUser(admin.id)
-        Assert.assertTrue(adminUser.roles.contains("admin"))
+        Assert.assertTrue((adminUser.appMetadata.getValue("roles") as Collection<String>).contains("admin"))
     }
 }
