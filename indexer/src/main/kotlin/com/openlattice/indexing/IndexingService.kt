@@ -72,7 +72,7 @@ class IndexingService(
 ) {
     private val propertyTypes = HazelcastMap.PROPERTY_TYPES.getMap( hazelcastInstance )
     private val entityTypes = HazelcastMap.ENTITY_TYPES.getMap( hazelcastInstance )
-    private val entitySets: IMap<UUID, EntitySet> = HazelcastMap.ENTITY_SETS.getMap( hazelcastInstance )
+    private val entitySets = HazelcastMap.ENTITY_SETS.getMap( hazelcastInstance )
 
     private val indexingJobs = HazelcastMap.INDEXING_JOBS.getMap( hazelcastInstance )
     private val indexingProgress = HazelcastMap.INDEXING_PROGRESS.getMap( hazelcastInstance )

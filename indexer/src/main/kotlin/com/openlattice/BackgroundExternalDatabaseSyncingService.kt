@@ -35,11 +35,11 @@ class BackgroundExternalDatabaseSyncingService(
         private val logger = LoggerFactory.getLogger(BackgroundExternalDatabaseSyncingService::class.java)
     }
 
-    private val organizationExternalDatabaseColumns: IMap<UUID, OrganizationExternalDatabaseColumn> = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_COLUMN.getMap( hazelcastInstance )
-    private val organizationExternalDatabaseTables: IMap<UUID, OrganizationExternalDatabaseTable> = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_TABLE.getMap( hazelcastInstance )
-    private val aclKeys: IMap<String, UUID> = HazelcastMap.ACL_KEYS.getMap( hazelcastInstance )
-    private val organizations: IMap<UUID, Organization> = HazelcastMap.ORGANIZATIONS.getMap( hazelcastInstance )
-    private val expirationLocks: IMap<UUID, Long> = HazelcastMap.EXPIRATION_LOCKS.getMap( hazelcastInstance )
+    private val organizationExternalDatabaseColumns = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_COLUMN.getMap( hazelcastInstance )
+    private val organizationExternalDatabaseTables = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_TABLE.getMap( hazelcastInstance )
+    private val aclKeys = HazelcastMap.ACL_KEYS.getMap( hazelcastInstance )
+    private val organizations = HazelcastMap.ORGANIZATIONS.getMap( hazelcastInstance )
+    private val expirationLocks = HazelcastMap.EXPIRATION_LOCKS.getMap( hazelcastInstance )
 
 
     init {

@@ -65,9 +65,9 @@ class BackgroundIndexedEntitiesDeletionService(
         private val logger = LoggerFactory.getLogger(BackgroundIndexedEntitiesDeletionService::class.java)
     }
 
-    private val entitySets: IMap<UUID, EntitySet> = HazelcastMap.ENTITY_SETS.getMap( hazelcastInstance )
+    private val entitySets = HazelcastMap.ENTITY_SETS.getMap( hazelcastInstance )
 
-    private val deletionLocks: IMap<UUID, Long> = HazelcastMap.DELETION_LOCKS.getMap( hazelcastInstance )
+    private val deletionLocks = HazelcastMap.DELETION_LOCKS.getMap( hazelcastInstance )
 
     init {
         deletionLocks.addIndex(QueryConstants.THIS_ATTRIBUTE_NAME.value(), true)
