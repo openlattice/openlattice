@@ -56,6 +56,7 @@ open class UserDirectoryService(auth0TokenProvider: Auth0TokenProvider, hazelcas
 
     //TODO: Switch over to a Hazelcast map to relieve pressure from Auth0
     fun searchAllUsers(searchQuery: String): Map<String, Auth0UserBasic> {
+        logger.info("Searching auth0 users with query: $searchQuery")
 
         var page = 0
         var pageOfUsers = auth0ManagementApi.searchAllUsers(searchQuery, page++, DEFAULT_PAGE_SIZE)
