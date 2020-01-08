@@ -112,7 +112,7 @@ class DataControllerLinkingTest : SetupTestData() {
             Thread.sleep(2000)
         }
 
-        val data = ImmutableList.copyOf(dataApi.loadEntitySetData(esLinking.id, ess, FileType.json))
+        val data = ImmutableList.copyOf(dataApi.loadSelectedEntitySetData(esLinking.id, ess, FileType.json))
 
         //Remove the extra properties for easier equals.
         data.forEach {
@@ -152,7 +152,7 @@ class DataControllerLinkingTest : SetupTestData() {
         }
 
         val data = ImmutableList.copyOf(
-                dataApi.loadEntitySetData(
+                dataApi.loadSelectedEntitySetData(
                         esLinking.id,
                         EntitySetSelection(Optional.of(setOf(personGivenNamePropertyId)), Optional.empty()),
                         FileType.json
@@ -163,7 +163,7 @@ class DataControllerLinkingTest : SetupTestData() {
 
         linkingIds.forEach {
             val ess = EntitySetSelection(Optional.of(setOf(personGivenNamePropertyId)), Optional.of(setOf(it)))
-            val linkedEntity = ImmutableList.copyOf(dataApi.loadEntitySetData(esLinking.id, ess, FileType.json))
+            val linkedEntity = ImmutableList.copyOf(dataApi.loadSelectedEntitySetData(esLinking.id, ess, FileType.json))
 
             Assert.assertArrayEquals(
                     arrayOf(indexedData[it]?.get(EdmTestConstants.personGivenNameFqn)),
@@ -200,7 +200,7 @@ class DataControllerLinkingTest : SetupTestData() {
         }
 
         val ess = EntitySetSelection(Optional.of(personEt.properties), Optional.empty())
-        val data = ImmutableList.copyOf(dataApi.loadEntitySetData(esLinking.id, ess, FileType.json))
+        val data = ImmutableList.copyOf(dataApi.loadSelectedEntitySetData(esLinking.id, ess, FileType.json))
         val linkingIds = data.map { UUID.fromString(it[EdmConstants.ID_FQN].first() as String) }
 
         val arrayPattern = "Object \\[(.*?)\\]".toRegex()
@@ -232,7 +232,7 @@ class DataControllerLinkingTest : SetupTestData() {
         // try to read data with no permissions on it
         loginAs("user1")
         assertException(
-                { dataApi.loadEntitySetData(esLinking.id, ess, FileType.json) },
+                { dataApi.loadSelectedEntitySetData(esLinking.id, ess, FileType.json) },
                 "Insufficient permissions to read the entity set ${esLinking.id} or it doesn't exists."
         )
         loginAs("admin")
@@ -242,7 +242,7 @@ class DataControllerLinkingTest : SetupTestData() {
 
         try {
             loginAs("user1")
-            dataApi.loadEntitySetData(esLinking.id, ess, FileType.json)
+            dataApi.loadSelectedEntitySetData(esLinking.id, ess, FileType.json)
             Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             val esUuid = arrayPattern.find(e.undeclaredThrowable.message!!)!!.groupValues[1]
@@ -259,7 +259,7 @@ class DataControllerLinkingTest : SetupTestData() {
         }
 
         loginAs("user1")
-        val noData = ImmutableList.copyOf(dataApi.loadEntitySetData(esLinking.id, ess, FileType.json))
+        val noData = ImmutableList.copyOf(dataApi.loadSelectedEntitySetData(esLinking.id, ess, FileType.json))
         Assert.assertEquals(linkingIds.size, noData.size)
         noData.forEach { Assert.assertEquals(setOf(EdmConstants.ID_FQN), it.asMap().keys) }
         loginAs("admin")
@@ -275,7 +275,7 @@ class DataControllerLinkingTest : SetupTestData() {
         }
 
         loginAs("user1")
-        val givenNameData = ImmutableList.copyOf(dataApi.loadEntitySetData(esLinking.id, ess, FileType.json))
+        val givenNameData = ImmutableList.copyOf(dataApi.loadSelectedEntitySetData(esLinking.id, ess, FileType.json))
         Assert.assertEquals(linkingIds.size, givenNameData.size)
         givenNameData.forEach {
             Assert.assertEquals(setOf(EdmConstants.ID_FQN, EdmTestConstants.personGivenNameFqn), it.asMap().keys)
@@ -292,7 +292,7 @@ class DataControllerLinkingTest : SetupTestData() {
         }
 
         loginAs("user1")
-        val dataAll = ImmutableList.copyOf(dataApi.loadEntitySetData(esLinking.id, ess, FileType.json))
+        val dataAll = ImmutableList.copyOf(dataApi.loadSelectedEntitySetData(esLinking.id, ess, FileType.json))
         Assert.assertEquals(linkingIds.size, dataAll.size)
         dataAll.forEach {
             Assert.assertEquals(
@@ -333,7 +333,7 @@ class DataControllerLinkingTest : SetupTestData() {
                 "Object [${esLinking.id}] is not accessible."
         )
         assertException(
-                { dataApi.getEntity(esLinking.id, id, EdmTestConstants.personGivenNameId) },
+                { dataApi.getEntityPropertyValues(esLinking.id, id, EdmTestConstants.personGivenNameId) },
                 "Object [${esLinking.id}] is not accessible."
         )
         loginAs("admin")
@@ -352,7 +352,7 @@ class DataControllerLinkingTest : SetupTestData() {
         }
 
         try {
-            dataApi.getEntity(esLinking.id, id, EdmTestConstants.personGivenNameId)
+            dataApi.getEntityPropertyValues(esLinking.id, id, EdmTestConstants.personGivenNameId)
             Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             val esUuid = arrayPattern.find(e.undeclaredThrowable.message!!)!!.groupValues[1]
@@ -374,7 +374,7 @@ class DataControllerLinkingTest : SetupTestData() {
         noData2.forEach { Assert.assertEquals(EdmConstants.ID_FQN, it.key) }
 
         assertException(
-                { dataApi.getEntity(esLinking.id, id, EdmTestConstants.personGivenNameId) },
+                { dataApi.getEntityPropertyValues(esLinking.id, id, EdmTestConstants.personGivenNameId) },
                 "Not authorized to read property type ${EdmTestConstants.personGivenNameId} in " +
                         "one or more normal entity sets of linking entity set ${esLinking.id}"
         )
@@ -397,7 +397,7 @@ class DataControllerLinkingTest : SetupTestData() {
         Assert.assertEquals(1, ptData1[EdmConstants.ID_FQN]!!.size)
         Assert.assertEquals(setOf(EdmConstants.ID_FQN, EdmTestConstants.personGivenNameFqn), ptData1.keys)
 
-        val ptData2 = dataApi.getEntity(esLinking.id, id, EdmTestConstants.personGivenNameId)
+        val ptData2 = dataApi.getEntityPropertyValues(esLinking.id, id, EdmTestConstants.personGivenNameId)
         Assert.assertEquals(1, ptData2.size)
 
         loginAs("admin")
@@ -423,7 +423,7 @@ class DataControllerLinkingTest : SetupTestData() {
                 dataAll1.keys
         )
 
-        val dataAll2 = dataApi.getEntity(esLinking.id, id, EdmTestConstants.personGivenNameId)
+        val dataAll2 = dataApi.getEntityPropertyValues(esLinking.id, id, EdmTestConstants.personGivenNameId)
         Assert.assertEquals(1, dataAll2.size)
 
         loginAs("admin")

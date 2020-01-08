@@ -13,15 +13,14 @@ import com.openlattice.data.UpdateType
 import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.launchpad.configuration.*
 import com.openlattice.mapstores.TestDataFactory
-import com.openlattice.organizations.Organization
 import com.openlattice.organization.OrganizationEntitySetFlag
+import com.openlattice.organizations.Organization
 import com.openlattice.postgres.DataTables.quote
-import com.openlattice.postgres.PostgresColumn.ENTITY_KEY_IDS_COL
-import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
-import com.openlattice.postgres.PostgresColumn.ID
+import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.rehearsal.assertException
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.junit.Assert
 import org.junit.BeforeClass
 import org.junit.Test
@@ -85,7 +84,7 @@ class AssemblerTest : AssemblerTestBase() {
             )
         }.toSet()
 
-        dataApi.createAssociations(edges)
+        dataApi.createEdges(edges)
 
         // add permissions to 1 user, 1 role and 1 organization on src entity set for grant select sanity check
         val readPermission = EnumSet.of(Permission.READ)
@@ -415,7 +414,7 @@ class AssemblerTest : AssemblerTestBase() {
                     EntityDataKey(esEdge.id, idsEdge[index])
             )
         }.toSet()
-        dataApi.createAssociations(edges)
+        dataApi.createEdges(edges)
 
         // re-materialize src entity set
         organizationsApi.assembleEntitySets(organizationID, mapOf(esSrc.id to null))
@@ -873,7 +872,7 @@ class AssemblerTest : AssemblerTestBase() {
             )
         }.toSet()
 
-        dataApi.createAssociations(edges)
+        dataApi.createEdges(edges)
 
         // add permission to src entity set and it's properties to organization principal for materialization
         grantMaterializePermissions(organization, esSrc, src.properties)
@@ -1150,6 +1149,10 @@ class AssemblerTest : AssemblerTestBase() {
 
     }
 
+    @SuppressFBWarnings(
+            value = ["SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE"],
+            justification = "Perfectly safe string generation"
+    )
     @Test
     fun testRunIntegrationWithOrganizationUser() {
         val organization2 = createOrganization()

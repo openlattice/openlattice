@@ -34,7 +34,6 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.junit.Assert
 import org.junit.BeforeClass
 import org.junit.Test
-import java.lang.reflect.UndeclaredThrowableException
 import java.util.*
 import kotlin.collections.LinkedHashSet
 
@@ -109,7 +108,7 @@ class EdmTest : MultipleAuthenticatedUsersBase() {
         dataApi.createEntities(es1.id, entries)
 
         val ess = EntitySetSelection(Optional.of(EdmTestConstants.personEt.properties))
-        Assert.assertEquals(numberOfEntries, dataApi.loadEntitySetData(es1.id, ess, FileType.json).toList().size)
+        Assert.assertEquals(numberOfEntries, dataApi.loadSelectedEntitySetData(es1.id, ess, FileType.json).toList().size)
 
         entitySetsApi.deleteEntitySet(es1.id)
 
@@ -148,27 +147,27 @@ class EdmTest : MultipleAuthenticatedUsersBase() {
         val ids1 = dataApi.createEntities(es.id, ImmutableList.copyOf(testData1.values)).toSet()
 
         val ess1 = EntitySetSelection(Optional.empty(), Optional.of(ids1))
-        Assert.assertEquals(3, dataApi.loadEntitySetData(es.id, ess1, FileType.json).first().keySet().size)
+        Assert.assertEquals(3, dataApi.loadSelectedEntitySetData(es.id, ess1, FileType.json).first().keySet().size)
         Assert.assertEquals(2, edmApi.getEntityType(et.id).properties.size)
 
         val pt2 = createPropertyType()
         edmApi.addPropertyTypeToEntityType(et.id, pt2.id)
         Assert.assertEquals((et.properties + pt2.id), edmApi.getEntityType(et.id).properties)
-        Assert.assertEquals(3, dataApi.loadEntitySetData(es.id, ess1, FileType.json).first().keySet().size)
+        Assert.assertEquals(3, dataApi.loadSelectedEntitySetData(es.id, ess1, FileType.json).first().keySet().size)
 
         val testData2 = TestDataFactory.randomStringEntityData(1, (et.properties + pt2.id))
         val ids2 = dataApi.createEntities(es.id, ImmutableList.copyOf(testData2.values)).toSet()
         val ess2 = EntitySetSelection(Optional.empty(), Optional.of(ids1 + ids2))
         Assert.assertEquals(
                 4,
-                dataApi.loadEntitySetData(es.id, ess2, FileType.json).map { it.keySet() }.flatten().toSet().size
+                dataApi.loadSelectedEntitySetData(es.id, ess2, FileType.json).map { it.keySet() }.flatten().toSet().size
         )
 
         (et.properties + pt2.id).forEach {
             edmApi.forceRemovePropertyTypeFromEntityType(et.id, it)
         }
         Assert.assertEquals(0, edmApi.getEntityType(et.id).properties.size)
-        val esData = dataApi.loadEntitySetData(es.id, ess2, FileType.json)
+        val esData = dataApi.loadSelectedEntitySetData(es.id, ess2, FileType.json)
         Assert.assertEquals(1, esData.first().size())
 
         assertException(
