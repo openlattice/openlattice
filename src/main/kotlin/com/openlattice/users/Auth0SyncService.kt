@@ -40,7 +40,7 @@ class Auth0SyncService(
     companion object {
         private val logger = LoggerFactory.getLogger(Auth0SyncService::class.java)
     }
-    private val users: IMap<String, User> = HazelcastMap.USERS.getMap( hazelcastInstance )
+    private val users = HazelcastMap.USERS.getMap( hazelcastInstance )
     private val principals = HazelcastMap.PRINCIPALS.getMap( hazelcastInstance )
     private val authnPrincipalCache = HazelcastMap.SECURABLE_PRINCIPALS.getMap( hazelcastInstance )
     private val authnRolesCache = HazelcastMap.RESOLVED_PRINCIPAL_TREES.getMap( hazelcastInstance )

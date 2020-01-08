@@ -54,12 +54,12 @@ class ExternalDatabaseManagementService(
         private val hds: HikariDataSource
 ) {
 
-    private val organizationExternalDatabaseColumns: IMap<UUID, OrganizationExternalDatabaseColumn> = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_COLUMN.getMap( hazelcastInstance )
-    private val organizationExternalDatabaseTables: IMap<UUID, OrganizationExternalDatabaseTable> = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_TABLE.getMap( hazelcastInstance )
-    private val hbaAuthenticationRecordsMapstore: IMap<String, PostgresAuthenticationRecord> = HazelcastMap.HBA_AUTHENTICATION_RECORDS.getMap( hazelcastInstance )
-    private val securableObjectTypes: IMap<AclKey, SecurableObjectType> = HazelcastMap.SECURABLE_OBJECT_TYPES.getMap( hazelcastInstance )
-    private val organizations: IMap<UUID, Organization> = HazelcastMap.ORGANIZATIONS.getMap( hazelcastInstance )
-    private val aces: IMap<AceKey, AceValue> = HazelcastMap.PERMISSIONS.getMap( hazelcastInstance )
+    private val organizationExternalDatabaseColumns = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_COLUMN.getMap( hazelcastInstance )
+    private val organizationExternalDatabaseTables = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_TABLE.getMap( hazelcastInstance )
+    private val hbaAuthenticationRecordsMapstore = HazelcastMap.HBA_AUTHENTICATION_RECORDS.getMap( hazelcastInstance )
+    private val securableObjectTypes = HazelcastMap.SECURABLE_OBJECT_TYPES.getMap( hazelcastInstance )
+    private val organizations = HazelcastMap.ORGANIZATIONS.getMap( hazelcastInstance )
+    private val aces = HazelcastMap.PERMISSIONS.getMap( hazelcastInstance )
     private val logger = LoggerFactory.getLogger(ExternalDatabaseManagementService::class.java)
     private val primaryKeyConstraint = "PRIMARY KEY"
     private val FETCH_SIZE = 100_000

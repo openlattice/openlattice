@@ -87,15 +87,15 @@ open class EntitySetService(
         private val logger = LoggerFactory.getLogger(EntitySetManager::class.java)
     }
 
-    private val entitySets: IMap<UUID, EntitySet> = HazelcastMap.ENTITY_SETS.getMap( hazelcastInstance )
-    private val entityTypes: IMap<UUID, EntityType> = HazelcastMap.ENTITY_TYPES.getMap( hazelcastInstance )
+    private val entitySets = HazelcastMap.ENTITY_SETS.getMap( hazelcastInstance )
+    private val entityTypes = HazelcastMap.ENTITY_TYPES.getMap( hazelcastInstance )
     private val associationTypes: IMap<UUID, AssociationType> =
             HazelcastMap.ASSOCIATION_TYPES.getMap( hazelcastInstance )
-    private val propertyTypes: IMap<UUID, PropertyType> = HazelcastMap.PROPERTY_TYPES.getMap( hazelcastInstance )
+    private val propertyTypes = HazelcastMap.PROPERTY_TYPES.getMap( hazelcastInstance )
     private val entitySetPropertyMetadata: IMap<EntitySetPropertyKey, EntitySetPropertyMetadata> =
             HazelcastMap.ENTITY_SET_PROPERTY_METADATA.getMap( hazelcastInstance )
 
-    private val aclKeys: IMap<String, UUID> = HazelcastMap.ACL_KEYS.getMap( hazelcastInstance )
+    private val aclKeys = HazelcastMap.ACL_KEYS.getMap( hazelcastInstance )
 
 
     override fun createEntitySet(principal: Principal, entitySet: EntitySet) {
