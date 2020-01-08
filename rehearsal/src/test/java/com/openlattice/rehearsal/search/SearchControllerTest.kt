@@ -15,6 +15,7 @@ import org.junit.BeforeClass
 import org.junit.Test
 import java.time.OffsetDateTime
 import java.util.*
+import kotlin.random.Random
 
 class SearchControllerTest : MultipleAuthenticatedUsersBase() {
     companion object {
@@ -299,7 +300,7 @@ class SearchControllerTest : MultipleAuthenticatedUsersBase() {
 
     @Test
     fun testEntityDeletion() {
-        // create 2 entities
+        // create 6 entities
         val et = createEntityType()
         val es = createEntitySet(et)
 
@@ -423,16 +424,88 @@ class SearchControllerTest : MultipleAuthenticatedUsersBase() {
         val et = createEntityType()
         val es = createEntitySet(et)
 
-        val numberOfEntities = 10
+        val numberOfEntities = 20
         val testData = TestDataFactory.randomStringEntityData(numberOfEntities, et.properties).values.toList()
-        val entities = dataApi.createEntities(es.id, testData).toSet().zip(testData).toMap()
+        dataApi.createEntities(es.id, testData).toSet().zip(testData).toMap()
+        Thread.sleep(1000)
+
+        val searchMax0 = SearchTerm("*", 0, 0)
+        var searchedEntities = searchApi.executeEntitySetDataQuery(es.id, searchMax0)
+
+        // should yield 0 hits and 0 totalHits
+        Assert.assertEquals(0, searchedEntities.hits.size)
+        Assert.assertEquals(numberOfEntities, searchedEntities.numHits.toInt())
 
         val searchMax1 = SearchTerm("*", 0, 1)
-        var searchedEntities = searchApi.executeEntitySetDataQuery(es.id, searchMax1)
+        searchedEntities = searchApi.executeEntitySetDataQuery(es.id, searchMax1)
 
         // should yield 1 hit, but 10 totalHits
         Assert.assertEquals(1, searchedEntities.hits.size)
-        Assert.assertEquals(numberOfEntities, searchedEntities.numHits)
+        Assert.assertEquals(numberOfEntities, searchedEntities.numHits.toInt())
+
+        val searchMax5 = SearchTerm("*", 0, 5)
+        searchedEntities = searchApi.executeEntitySetDataQuery(es.id, searchMax5)
+
+        // should yield 5 hits, but 10 totalHits
+        Assert.assertEquals(5, searchedEntities.hits.size)
+        Assert.assertEquals(numberOfEntities, searchedEntities.numHits.toInt())
+
+        val searchMax10 = SearchTerm("*", 0, 10)
+        searchedEntities = searchApi.executeEntitySetDataQuery(es.id, searchMax10)
+
+        // should yield 10 hits and 10 totalHits
+        Assert.assertEquals(numberOfEntities, searchedEntities.hits.size)
+        Assert.assertEquals(numberOfEntities, searchedEntities.numHits.toInt())
+
+        val searchFrom2Max5 = SearchTerm("*", 2, 5)
+        searchedEntities = searchApi.executeEntitySetDataQuery(es.id, searchFrom2Max5)
+
+        // should yield 4 hits and 10 totalHits
+        Assert.assertEquals(4, searchedEntities.hits.size)
+        Assert.assertEquals(numberOfEntities, searchedEntities.numHits.toInt())
+    }
+
+    @Test
+    fun testMaxHitsSearchAfterDelete() {
+        // create 100 entities
+        val et = createEntityType()
+        val es = createEntitySet(et)
+
+        val numberOfEntities = 100
+        val testData = TestDataFactory.randomStringEntityData(numberOfEntities, et.properties).values.toList()
+        val entities = dataApi.createEntities(es.id, testData).toSet().zip(testData).toMap()
+
+        // should be indexed automatically
+        val idsList = entities.keys.toList()
+        val searchAll = SearchTerm("*", 0, numberOfEntities)
+        var searchedEntities = searchApi.executeEntitySetDataQuery(es.id, searchAll)
+
+        Assert.assertEquals(numberOfEntities, searchedEntities.numHits.toInt())
+        searchedEntities.hits.forEach { entityData ->
+            val id = UUID.fromString(entityData.getValue(EdmConstants.ID_FQN).first() as String)
+            Assert.assertTrue(entities.keys.contains(id))
+        }
+
+        // Delete multiple entities
+        val numberOfDeletes = 50
+        val deletedIds = (0 until numberOfDeletes).map {
+            idsList[Random.nextInt(numberOfEntities)]
+        }
+        dataApi.deleteEntities(es.id, deletedIds.toSet(), DeleteType.values()[Random.nextInt(2)])
+
+        // should be deleted automatically
+        searchedEntities = searchApi.executeEntitySetDataQuery(es.id, searchAll)
+        Assert.assertEquals(numberOfEntities - numberOfDeletes, searchedEntities.numHits.toInt())
+        Assert.assertEquals(numberOfEntities - numberOfDeletes, searchedEntities.hits.size)
+
+
+        // search with setting maxHits
+        val limit = 25
+        val searchLimited = SearchTerm("*", 0, limit)
+
+        searchedEntities = searchApi.executeEntitySetDataQuery(es.id, searchLimited)
+        Assert.assertEquals(numberOfEntities - numberOfDeletes, searchedEntities.numHits.toInt())
+        Assert.assertEquals(limit, searchedEntities.hits.size)
     }
 
 }
