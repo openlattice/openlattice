@@ -265,6 +265,14 @@ public class MapstoresPod {
     }
 
     @Bean
+    public QueueConfigurer integrationJobQueueConfigurer() {
+        return config -> config
+                .setName(HazelcastQueue.INTEGRATION_JOBS.name() )
+                .setMaxSize( 100 )
+                .setBackupCount( 1 );
+    }
+
+    @Bean
     public SelfRegisteringMapStore<UUID, App> appMapstore() {
         return new AppMapstore( hikariDataSource );
     }

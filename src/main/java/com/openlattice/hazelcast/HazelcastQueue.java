@@ -35,5 +35,5 @@ public enum HazelcastQueue {
     TWILIO,
     SIGNAL,
     LINKING_UNINDEXING,
-    INTEGRATION
+    INTEGRATION_JOBS
 }
