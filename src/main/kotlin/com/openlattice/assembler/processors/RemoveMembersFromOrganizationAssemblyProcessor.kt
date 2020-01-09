@@ -28,10 +28,7 @@ import com.openlattice.assembler.OrganizationAssembly
 import com.openlattice.assembler.PostgresDatabases
 import com.openlattice.authorization.SecurablePrincipal
 import com.openlattice.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor
-import org.slf4j.LoggerFactory
 import java.util.*
-
-private val logger = LoggerFactory.getLogger(RemoveMembersFromOrganizationAssemblyProcessor::class.java)
 
 data class RemoveMembersFromOrganizationAssemblyProcessor(val principals: Collection<SecurablePrincipal>)
     : AbstractReadOnlyRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(),
@@ -39,23 +36,18 @@ data class RemoveMembersFromOrganizationAssemblyProcessor(val principals: Collec
         Offloadable {
 
     @Transient
-    private var acm: AssemblerConnectionManager? = null
+    private lateinit var acm: AssemblerConnectionManager
 
     override fun process(entry: MutableMap.MutableEntry<UUID, OrganizationAssembly?>): Void? {
         val organizationId = entry.key
         val assembly = entry.value
-        if (assembly == null) {
-            logger.error("Encountered null assembly while trying to remove principals $principals from organization " +
-                    "$organizationId.")
-        } else {
-            if (acm == null) {
-                throw IllegalStateException(AssemblerConnectionManagerDependent.NOT_INITIALIZED)
-            }
-            val dbName = PostgresDatabases.buildOrganizationDatabaseName(organizationId)
-            acm!!.connect(dbName).use { dataSource ->
-                acm!!.removeMembersFromOrganization(dbName, dataSource, principals)
-            }
+        check(assembly != null) {
+            "Encountered null assembly while trying to remove principals $principals from organization $organizationId."
         }
+
+        check(::acm.isInitialized) { AssemblerConnectionManagerDependent.NOT_INITIALIZED }
+        val dbName = PostgresDatabases.buildOrganizationDatabaseName(organizationId)
+        acm.connect(dbName).let { dataSource -> acm.removeMembersFromOrganization(dbName, dataSource, principals) }
 
         return null
     }
