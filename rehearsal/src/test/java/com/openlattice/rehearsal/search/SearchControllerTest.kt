@@ -474,6 +474,7 @@ class SearchControllerTest : MultipleAuthenticatedUsersBase() {
         val numberOfEntities = 100
         val testData = TestDataFactory.randomStringEntityData(numberOfEntities, et.properties).values.toList()
         val entities = dataApi.createEntities(es.id, testData).toSet().zip(testData).toMap()
+        Thread.sleep(1000)
 
         // should be indexed automatically
         val idsList = entities.keys.toList()
@@ -487,11 +488,13 @@ class SearchControllerTest : MultipleAuthenticatedUsersBase() {
         }
 
         // Delete multiple entities
-        val numberOfDeletes = 50
-        val deletedIds = (0 until numberOfDeletes).map {
+        val deletedIds = (0 until 50).map {
             idsList[Random.nextInt(numberOfEntities)]
-        }
+        }.toSet()
+        val numberOfDeletes = deletedIds.size // could pick same id
+
         dataApi.deleteEntities(es.id, deletedIds.toSet(), DeleteType.values()[Random.nextInt(2)])
+        Thread.sleep(1000)
 
         // should be deleted automatically
         searchedEntities = searchApi.executeEntitySetDataQuery(es.id, searchAll)
