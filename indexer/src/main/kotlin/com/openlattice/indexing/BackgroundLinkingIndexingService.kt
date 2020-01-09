@@ -116,16 +116,10 @@ class BackgroundLinkingIndexingService(
     private val limiter = Semaphore(indexerConfiguration.parallelism)
 
     @Suppress("UNUSED")
-    @Scheduled(fixedRate = LINKING_INDEX_RATE)
-    private fun linkingIndexing() {
-        submitIndexingTask(indexCandidates, true)
-    }
+    private val linkingIndexingJob = submitIndexingTask(indexCandidates, true)
 
     @Suppress("UNUSED")
-    @Scheduled(fixedRate = LINKING_INDEX_RATE)
-    private fun linkingUnIndexing() {
-        submitIndexingTask(unIndexCandidates, false)
-    }
+    private val linkingUnIndexingJob = submitIndexingTask(unIndexCandidates, false)
 
     private fun submitIndexingTask(
             candidates: IQueue<Triple<List<Array<UUID>>, UUID, OffsetDateTime>>,
@@ -137,33 +131,37 @@ class BackgroundLinkingIndexingService(
 
         val taskName = if (createMode) "index" else "un-index"
         executor.submit {
-            try {
-                logger.info("Starting background linking $taskName task.")
-                val esw = Stopwatch.createStarted()
+            while(true) {
+                try {
+                    logger.info("Starting background linking $taskName task.")
+                    val esw = Stopwatch.createStarted()
 
-                generateSequence(candidates::poll)
-                        .chunked(LINKING_INDEX_SIZE)
-                        .forEach { candidateBatch ->
+                    generateSequence(candidates::take)
+                            .chunked(LINKING_INDEX_SIZE)
+                            .forEach { candidateBatch ->
 
-                            limiter.acquire()
-                            val (linkingEntityKeyIdsWithLastWrite, linkingIds) = mapCandidates(candidateBatch)
+                                limiter.acquire()
+                                val (linkingEntityKeyIdsWithLastWrite, linkingIds) = mapCandidates(candidateBatch)
 
-                            try {
-                                if (createMode) {
-                                    index(linkingEntityKeyIdsWithLastWrite, linkingIds)
-                                } else {
-                                    unIndex(linkingEntityKeyIdsWithLastWrite, linkingIds)
+                                try {
+                                    if (createMode) {
+                                        index(linkingEntityKeyIdsWithLastWrite, linkingIds)
+                                    } else {
+                                        unIndex(linkingEntityKeyIdsWithLastWrite, linkingIds)
+                                    }
+                                } catch (ex: Exception) {
+                                    logger.error("Unable to $taskName from batch of linking ids $linkingIds.", ex)
+                                } finally {
+                                    unLock(linkingIds)
+                                    limiter.release()
                                 }
-                            } catch (ex: Exception) {
-                                logger.error("Unable to $taskName from batch of linking ids $linkingIds.", ex)
-                            } finally {
-                                unLock(linkingIds)
-                                limiter.release()
                             }
-                        }
-                logger.info("Finished background linking $taskName task in ${esw.elapsed(TimeUnit.MILLISECONDS)} ms.")
-            } catch (ex: DistributedObjectDestroyedException) {
-                logger.error("Linking $taskName queue destroyed.", ex)
+                    logger.info("Finished background linking $taskName task in ${esw.elapsed(TimeUnit.MILLISECONDS)} ms.")
+                } catch (ex: DistributedObjectDestroyedException) {
+                    logger.error("Linking $taskName queue destroyed.", ex)
+                } catch (ex: Throwable) {
+                    logger.error("Something went wrong..", ex)
+                }
             }
         }
     }
@@ -184,19 +182,21 @@ class BackgroundLinkingIndexingService(
         }
         val taskName = if (createMode) "indexing" else "un-indexing"
         executor.submit {
-            try {
-                logger.info("Registering linking ids needing $taskName.")
+            while (true) {
+                try {
+                    logger.info("Registering linking ids needing $taskName.")
 
-                if (createMode) {
-                    getDirtyLinkingIds()
-                } else {
-                    getDeletedLinkingIds()
+                    if (createMode) {
+                        getDirtyLinkingIds()
+                    } else {
+                        getDeletedLinkingIds()
+                    }
+                            .filter { lockOrRefresh(it.second) }
+                            .forEach(candidates::put)
+
+                } catch (ex: Exception) {
+                    logger.info("Encountered error while updating candidates for linking $taskName.", ex)
                 }
-                        .filter { lockOrRefresh(it.second) }
-                        .forEach(candidates::put)
-
-            } catch (ex: Exception) {
-                logger.info("Encountered error while updating candidates for linking $taskName.", ex)
             }
         }
     }
