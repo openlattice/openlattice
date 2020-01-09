@@ -18,6 +18,7 @@
 
 package com.openlattice.directory;
 
+import com.auth0.json.mgmt.users.User;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.SecurablePrincipal;
@@ -44,7 +45,6 @@ public interface PrincipalApi {
      * Path variables
      */
     String USER_ID      = "userId";
-    String ROLE         = "role";
     String SEARCH_QUERY = "searchQuery";
 
     /*
@@ -58,15 +58,12 @@ public interface PrincipalApi {
     String SYNC     = "/sync";
     String UPDATE   = "/update";
     String USERS    = "/users";
-
     String SEARCH_EMAIL = SEARCH + EMAIL;
 
     /*
      * Variable paths
      */
-
     String USER_ID_PATH            = "/{" + USER_ID + "}";
-    String ROLE_PATH               = "/{" + ROLE + "}";
     String SEARCH_QUERY_PATH       = "/{" + SEARCH_QUERY + "}";
     String EMAIL_SEARCH_QUERY_PATH = "/{" + SEARCH_QUERY + ":.+" + "}";
 
@@ -74,7 +71,7 @@ public interface PrincipalApi {
     SecurablePrincipal getSecurablePrincipal( @Body Principal principal );
 
     @GET( BASE + USERS )
-    Map<String, Auth0UserBasic> getAllUsers();
+    Map<String, User> getAllUsers();
 
     @GET( BASE + ROLES + CURRENT )
     Set<SecurablePrincipal> getCurrentRoles();
@@ -83,7 +80,7 @@ public interface PrincipalApi {
     Map<AclKey, Role> getAvailableRoles();
 
     @GET( BASE + USERS + USER_ID_PATH )
-    Auth0UserBasic getUser( @Path( USER_ID ) String userId );
+    User getUser( @Path( USER_ID ) String userId );
 
     @GET( BASE + DB )
     MaterializedViewAccount getMaterializedViewAccount();
