@@ -424,7 +424,7 @@ class SearchControllerTest : MultipleAuthenticatedUsersBase() {
         val et = createEntityType()
         val es = createEntitySet(et)
 
-        val numberOfEntities = 20
+        val numberOfEntities = 10
         val testData = TestDataFactory.randomStringEntityData(numberOfEntities, et.properties).values.toList()
         dataApi.createEntities(es.id, testData).toSet().zip(testData).toMap()
         Thread.sleep(1000)
@@ -490,10 +490,13 @@ class SearchControllerTest : MultipleAuthenticatedUsersBase() {
         // Delete multiple entities
         val deletedIds = (0 until 50).map {
             idsList[Random.nextInt(numberOfEntities)]
-        }.toSet()
-        val numberOfDeletes = deletedIds.size // could pick same id
+        }
 
-        dataApi.deleteEntities(es.id, deletedIds.toSet(), DeleteType.values()[Random.nextInt(2)])
+        // make both soft and hard deletes
+        val (softDeleteIds, hardDeleteIds) = deletedIds.chunked(25).map { it.toSet() }
+        val numberOfDeletes = softDeleteIds.size + hardDeleteIds.size
+        dataApi.deleteEntities(es.id, softDeleteIds, DeleteType.Soft)
+        dataApi.deleteEntities(es.id, hardDeleteIds, DeleteType.Hard)
         Thread.sleep(1000)
 
         // should be deleted automatically
