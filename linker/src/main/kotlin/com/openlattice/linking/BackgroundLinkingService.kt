@@ -75,16 +75,13 @@ class BackgroundLinkingService
         try {
             while (true) {
                 //TODO: Switch to unlimited entity sets
-
-                val ess = entitySets.values
-                logger.info("Starting to queue linking candidates from entity sets {}", ess.map { it.id })
-                ess
+                entitySets.values
                         .asSequence()
                         .filter { linkableTypes.contains(it.entityTypeId) && !it.flags.contains(EntitySetFlag.LINKING) }
                         .flatMap { es ->
+                            logger.info("Starting to queue linking candidates from entity set {}", es.id)
                             val forLinking = lqs.getEntitiesNeedingLinking(es.id, 2 * configuration.loadSize)
                                     .filter {
-                                        //                                        !linkingSet.contains(it)
                                         val expiration = lockOrGetExpiration(it)
                                         logger.debug(
                                                 "Considering candidate {} with expiration {} at {}",
