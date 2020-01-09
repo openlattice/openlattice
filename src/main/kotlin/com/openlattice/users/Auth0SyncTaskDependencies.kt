@@ -22,21 +22,8 @@
 package com.openlattice.users
 
 import com.auth0.client.mgmt.ManagementAPI
-import com.hazelcast.core.HazelcastInstance
-import com.openlattice.auth0.Auth0TokenProvider
-import com.openlattice.authentication.Auth0Configuration
-import com.openlattice.authorization.DbCredentialService
-import com.openlattice.organizations.HazelcastOrganizationService
-import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.tasks.HazelcastTaskDependencies
 
 data class Auth0SyncTaskDependencies(
-        val hazelcastInstance: HazelcastInstance,
-        val spm: SecurePrincipalsManager,
-        val users : Auth0SyncService,
-        val managementApi: ManagementAPI,
-        val organizationService: HazelcastOrganizationService,
-        val dbCredentialService: DbCredentialService,
-        val auth0TokenProvider: Auth0TokenProvider,
-        val auth0Configuration: Auth0Configuration
-        ) : HazelcastTaskDependencies
+        val users : Auth0SyncService, val managementApi: ManagementAPI
+) : HazelcastTaskDependencies
