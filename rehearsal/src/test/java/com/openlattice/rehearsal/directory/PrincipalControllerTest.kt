@@ -21,6 +21,7 @@
 package com.openlattice.rehearsal.directory
 
 
+import com.openlattice.directory.PrincipalApi
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
 import org.junit.Assert
 import org.junit.Test
@@ -29,7 +30,7 @@ class PrincipalControllerTest : MultipleAuthenticatedUsersBase() {
 
     @Test
     fun testLoadUser() {
-        val adminUser = principalApi.getUser(admin.id)
+        val adminUser = getApiAdmin(PrincipalApi::class.java).getUser(admin.id)
         Assert.assertTrue((adminUser.appMetadata.getValue("roles") as Collection<String>).contains("admin"))
     }
 }
