@@ -65,7 +65,7 @@ data class PersistentSearchMessengerTaskDependencies(
             searchService,
             mailServiceClient,
             mapboxToken,
-            hazelcastInstance.getMap(HazelcastMap.ENTITY_SETS.name),
-            hazelcastInstance.getMap(HazelcastMap.ENTITY_TYPES.name),
-            hazelcastInstance.getMap(HazelcastMap.PROPERTY_TYPES.name))
+            HazelcastMap.ENTITY_SETS.getMap( hazelcastInstance ),
+            HazelcastMap.ENTITY_TYPES.getMap( hazelcastInstance ),
+            HazelcastMap.PROPERTY_TYPES.getMap( hazelcastInstance ))
 }

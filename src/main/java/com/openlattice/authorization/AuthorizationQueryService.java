@@ -66,7 +66,7 @@ public class AuthorizationQueryService {
 
     public AuthorizationQueryService( HikariDataSource hds, HazelcastInstance hazelcastInstance ) {
         this.hds = hds;
-        aces = hazelcastInstance.getMap( HazelcastMap.PERMISSIONS.name() );
+        aces = HazelcastMap.PERMISSIONS.getMap( hazelcastInstance );
 
         // Tables
         String PERMISSIONS_TABLE = PostgresTable.PERMISSIONS.getName();

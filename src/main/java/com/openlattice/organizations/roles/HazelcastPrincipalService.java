@@ -81,7 +81,7 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
     private final IMap<AclKey, SecurablePrincipal>      principals;
     private final IMap<AclKey, AclKeySet>               principalTrees; // RoleName -> Member RoleNames
     private final IMap<String, User>                    users;
-    private final IMap<List<UUID>, SecurableObjectType> securableObjectTypes;
+    private final IMap<AclKey, SecurableObjectType>     securableObjectTypes;
     private final EventBus                              eventBus;
 
     public HazelcastPrincipalService(
@@ -92,10 +92,10 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
 
         this.authorizations = authorizations;
         this.reservations = reservations;
-        this.principals = hazelcastInstance.getMap( HazelcastMap.PRINCIPALS.name() );
-        this.principalTrees = hazelcastInstance.getMap( HazelcastMap.PRINCIPAL_TREES.name() );
-        this.users = hazelcastInstance.getMap( HazelcastMap.USERS.name() );
-        this.securableObjectTypes = hazelcastInstance.getMap( HazelcastMap.SECURABLE_OBJECT_TYPES.name() );
+        this.principals = HazelcastMap.PRINCIPALS.getMap( hazelcastInstance );
+        this.principalTrees = HazelcastMap.PRINCIPAL_TREES.getMap( hazelcastInstance );
+        this.users = HazelcastMap.USERS.getMap( hazelcastInstance );
+        this.securableObjectTypes = HazelcastMap.SECURABLE_OBJECT_TYPES.getMap( hazelcastInstance );
         this.eventBus = checkNotNull( eventBus );
     }
 

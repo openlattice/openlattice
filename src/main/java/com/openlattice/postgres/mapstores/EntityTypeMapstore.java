@@ -31,7 +31,7 @@ public class EntityTypeMapstore extends AbstractBasePostgresMapstore<UUID, Entit
     }
 
     public EntityTypeMapstore( HikariDataSource hds, ObjectMapper mapper ) {
-        super( HazelcastMap.ENTITY_TYPES.name(), ENTITY_TYPES, hds );
+        super( HazelcastMap.ENTITY_TYPES, ENTITY_TYPES, hds );
         this.mapper = mapper;
     }
 

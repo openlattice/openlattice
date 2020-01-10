@@ -24,7 +24,7 @@ public class EntitySetMapstore extends AbstractBasePostgresMapstore<UUID, Entity
     public static final String FLAGS_INDEX             = "flags[any]";
 
     public EntitySetMapstore( HikariDataSource hds ) {
-        super( HazelcastMap.ENTITY_SETS.name(), ENTITY_SETS, hds );
+        super( HazelcastMap.ENTITY_SETS, ENTITY_SETS, hds );
     }
 
     @Override protected void bind( PreparedStatement ps, UUID key, EntitySet value ) throws SQLException {
