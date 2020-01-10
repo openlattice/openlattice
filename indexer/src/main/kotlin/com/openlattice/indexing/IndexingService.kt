@@ -70,18 +70,14 @@ class IndexingService(
         executor: ListeningExecutorService,
         hazelcastInstance: HazelcastInstance
 ) {
-    private val propertyTypes = hazelcastInstance.getMap<UUID, PropertyType>(HazelcastMap.PROPERTY_TYPES.name)
-    private val entityTypes = hazelcastInstance.getMap<UUID, EntityType>(HazelcastMap.ENTITY_TYPES.name)
-    private val entitySets: IMap<UUID, EntitySet> = hazelcastInstance.getMap(HazelcastMap.ENTITY_SETS.name)
+    private val propertyTypes = HazelcastMap.PROPERTY_TYPES.getMap( hazelcastInstance )
+    private val entityTypes = HazelcastMap.ENTITY_TYPES.getMap( hazelcastInstance )
+    private val entitySets = HazelcastMap.ENTITY_SETS.getMap( hazelcastInstance )
 
-    private val indexingJobs = hazelcastInstance.getMap<UUID, DelegatedUUIDSet>(HazelcastMap.INDEXING_JOBS.name)
-    private val indexingProgress = hazelcastInstance.getMap<UUID, UUID>(HazelcastMap.INDEXING_PROGRESS.name)
-    private val indexingPartitionProgress = hazelcastInstance.getMap<UUID, Int>(
-            HazelcastMap.INDEXING_PARTITION_PROGRESS.name
-    )
-    private val indexingPartitionList = hazelcastInstance.getMap<UUID, DelegatedIntList>(
-            HazelcastMap.INDEXING_PARTITION_LIST.name
-    )
+    private val indexingJobs = HazelcastMap.INDEXING_JOBS.getMap( hazelcastInstance )
+    private val indexingProgress = HazelcastMap.INDEXING_PROGRESS.getMap( hazelcastInstance )
+    private val indexingPartitionProgress = HazelcastMap.INDEXING_PARTITION_PROGRESS.getMap( hazelcastInstance )
+    private val indexingPartitionList = HazelcastMap.INDEXING_PARTITION_LIST.getMap( hazelcastInstance )
     private val indexingQueue = hazelcastInstance.getQueue<UUID>(HazelcastQueue.INDEXING.name)
     private val indexingLock = ReentrantLock()
 
