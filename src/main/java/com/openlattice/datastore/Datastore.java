@@ -24,15 +24,14 @@ import com.dataloom.mappers.ObjectMappers;
 import com.kryptnostic.rhizome.configuration.websockets.BaseRhizomeServer;
 import com.kryptnostic.rhizome.core.RhizomeApplicationServer;
 import com.kryptnostic.rhizome.hazelcast.serializers.RhizomeUtils.Pods;
-import com.kryptnostic.rhizome.pods.hazelcast.RegistryBasedHazelcastInstanceConfigurationPod;
 import com.openlattice.auditing.pods.AuditingConfigurationPod;
-import com.openlattice.auth0.Auth0Pod;
 import com.openlattice.aws.AwsS3Pod;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.openlattice.datastore.pods.ByteBlobServicePod;
 import com.openlattice.datastore.pods.DatastoreSecurityPod;
 import com.openlattice.datastore.pods.DatastoreServicesPod;
 import com.openlattice.datastore.pods.DatastoreServletsPod;
+import com.openlattice.hazelcast.pods.HazelcastQueuePod;
 import com.openlattice.hazelcast.pods.MapstoresPod;
 import com.openlattice.hazelcast.pods.NearCachesPod;
 import com.openlattice.hazelcast.pods.SharedStreamSerializersPod;
@@ -48,15 +47,12 @@ public class Datastore extends BaseRhizomeServer {
             DatastoreServicesPod.class,
             JdbcPod.class,
             MapstoresPod.class,
+            HazelcastQueuePod.class,
             PostgresPod.class,
             SharedStreamSerializersPod.class,
             TaskSchedulerPod.class,
             NearCachesPod.class,
     };
-
-    private static final Class<?>[] rhizomePods   = new Class<?>[] {
-            RegistryBasedHazelcastInstanceConfigurationPod.class,
-            Auth0Pod.class };
 
     private static final Class<?>[] webPods       = new Class<?>[] {
             DatastoreServletsPod.class,
@@ -70,7 +66,6 @@ public class Datastore extends BaseRhizomeServer {
         super( Pods.concatenate(
                 pods,
                 webPods,
-                rhizomePods,
                 RhizomeApplicationServer.DEFAULT_PODS,
                 datastorePods ) );
     }
