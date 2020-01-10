@@ -222,6 +222,10 @@ public final class PostgresTable {
                             INTEGRATION )
                     .primaryKey( NAME );
 
+    public static final PostgresTableDefinition INTEGRATION_JOBS =
+            new PostgresTableDefinition( "integration_jobs" )
+                    .addColumns( ID, NAME, STATUS );
+
     public static final PostgresTableDefinition        GRAPH_QUERIES    =
             new PostgresTableDefinition( "graph_queries" )
                     .addColumns( QUERY_ID, QUERY, STATE, START_TIME )
