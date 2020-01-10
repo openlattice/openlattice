@@ -21,6 +21,7 @@
 package com.openlattice.indexing
 
 import com.google.common.base.Stopwatch
+import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.hazelcast.core.*
 import com.hazelcast.map.listener.EntryEvictedListener
@@ -46,7 +47,6 @@ import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.StatementHolderSupplier
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
-import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -55,8 +55,6 @@ import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 
 internal const val LINKING_INDEXING_TIMEOUT_MILLIS = 120_000L // 2 min
-internal const val LINKING_INDEX_RATE = 120_000L // 2 min
-
 internal const val LINKING_INDEX_QUERY_LIMIT = 3000
 
 @Component
@@ -113,6 +111,45 @@ class BackgroundLinkingIndexingService(
     private val unIndexCandidates = hazelcastInstance
             .getQueue<Triple<List<Array<UUID>>, UUID, OffsetDateTime>>(HazelcastQueue.LINKING_UNINDEXING.name)
 
+
+    @Suppress("UNUSED")
+    private val linkingIndexingEnqueueJob = submitEnqueueTask(indexCandidates, true)
+
+    @Suppress("UNUSED")
+    private val linkingUnIndexingEnqueueJob = submitEnqueueTask(unIndexCandidates, false)
+
+
+    private fun submitEnqueueTask(
+            candidates: IQueue<Triple<List<Array<UUID>>, UUID, OffsetDateTime>>,
+            createMode: Boolean
+    ): ListenableFuture<*>? {
+        if (!isLinkingIndexingEnabled()) {
+            return null
+        }
+        val taskName = if (createMode) "indexing" else "un-indexing"
+        return executor.submit {
+            while (true) {
+                try {
+                    if (createMode) {
+                        getDirtyLinkingIds()
+                    } else {
+                        getDeletedLinkingIds()
+                    }
+                            .filter { lockOrRefresh(it.second) }
+                            .forEach {
+                                logger.info("Registering linking id ${it.second} needing $taskName.")
+                                candidates.put(it)
+                            }
+
+
+                } catch (ex: Exception) {
+                    logger.info("Encountered error while updating candidates for linking $taskName.", ex)
+                }
+            }
+        }
+    }
+
+
     private val limiter = Semaphore(indexerConfiguration.parallelism)
 
     @Suppress("UNUSED")
@@ -124,21 +161,20 @@ class BackgroundLinkingIndexingService(
     private fun submitIndexingTask(
             candidates: IQueue<Triple<List<Array<UUID>>, UUID, OffsetDateTime>>,
             createMode: Boolean
-    ) {
+    ): ListenableFuture<*>? {
         if (!isLinkingIndexingEnabled()) {
-            return
+            return null
         }
 
         val taskName = if (createMode) "index" else "un-index"
-        executor.submit {
-            while(true) {
+        return executor.submit {
+            while (true) {
                 try {
-                    logger.info("Starting background linking $taskName task.")
-                    val esw = Stopwatch.createStarted()
-
                     generateSequence(candidates::take)
                             .chunked(LINKING_INDEX_SIZE)
                             .forEach { candidateBatch ->
+                                logger.info("Starting background linking $taskName task for linking ids " +
+                                        "${candidateBatch.map { it.second }}.")
 
                                 limiter.acquire()
                                 val (linkingEntityKeyIdsWithLastWrite, linkingIds) = mapCandidates(candidateBatch)
@@ -156,46 +192,12 @@ class BackgroundLinkingIndexingService(
                                     limiter.release()
                                 }
                             }
-                    logger.info("Finished background linking $taskName task in ${esw.elapsed(TimeUnit.MILLISECONDS)} ms.")
+
+
                 } catch (ex: DistributedObjectDestroyedException) {
                     logger.error("Linking $taskName queue destroyed.", ex)
                 } catch (ex: Throwable) {
-                    logger.error("Something went wrong..", ex)
-                }
-            }
-        }
-    }
-
-    @Suppress("UNUSED")
-    @Scheduled(fixedRate = LINKING_INDEX_RATE)
-    private fun updateCandidates() {
-        submitEnqueueTask(indexCandidates, true)
-        submitEnqueueTask(unIndexCandidates, false)
-    }
-
-    private fun submitEnqueueTask(
-            candidates: IQueue<Triple<List<Array<UUID>>, UUID, OffsetDateTime>>,
-            createMode: Boolean
-    ) {
-        if (!isLinkingIndexingEnabled()) {
-            return
-        }
-        val taskName = if (createMode) "indexing" else "un-indexing"
-        executor.submit {
-            while (true) {
-                try {
-                    logger.info("Registering linking ids needing $taskName.")
-
-                    if (createMode) {
-                        getDirtyLinkingIds()
-                    } else {
-                        getDeletedLinkingIds()
-                    }
-                            .filter { lockOrRefresh(it.second) }
-                            .forEach(candidates::put)
-
-                } catch (ex: Exception) {
-                    logger.info("Encountered error while updating candidates for linking $taskName.", ex)
+                    logger.error("Encountered error when linking ${taskName}ing.", ex)
                 }
             }
         }
