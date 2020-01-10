@@ -29,10 +29,15 @@ import org.springframework.context.annotation.Configuration
 @Configuration
 class HazelcastQueuePod {
 
+    companion object {
+        @JvmField
+        val maxQueueSize = 10000
+    }
+
     @Bean
     fun defaultQueueConfigurer(): QueueConfigurer {
         return QueueConfigurer(BaseHazelcastInstanceConfigurationPod.defaultQueueName) { config ->
-            config.setMaxSize(10000).emptyQueueTtl = 60
+            config.maxSize = maxQueueSize
         }
     }
 
