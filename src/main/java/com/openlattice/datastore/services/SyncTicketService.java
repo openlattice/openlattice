@@ -43,8 +43,8 @@ public class SyncTicketService {
     private final IMap<TicketKey, DelegatedUUIDSet> authorizedProperties;
 
     public SyncTicketService( HazelcastInstance hazelcast ) {
-        authorizedEntitySets = hazelcast.getMap( HazelcastMap.ENTITY_SET_TICKETS.name() );
-        authorizedProperties = hazelcast.getMap( HazelcastMap.ENTITY_SET_PROPERTIES_TICKETS.name() );
+        authorizedEntitySets = HazelcastMap.ENTITY_SET_TICKETS.getMap( hazelcast );
+        authorizedProperties = HazelcastMap.ENTITY_SET_PROPERTIES_TICKETS.getMap( hazelcast );
     }
 
     public UUID acquireTicket( Principal principal, UUID entitySetId, Set<UUID> propertyIds ) {
