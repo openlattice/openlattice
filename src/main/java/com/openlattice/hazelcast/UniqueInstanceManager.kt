@@ -2,6 +2,7 @@ package com.openlattice.hazelcast
 
 import com.google.common.collect.Maps
 import org.slf4j.LoggerFactory
+import java.lang.IllegalStateException
 import java.lang.RuntimeException
 
 class UniqueInstanceManager(val clazz: Class<*>) {
@@ -19,7 +20,7 @@ class UniqueInstanceManager(val clazz: Class<*>) {
 
     class FailedCheck(private val previous: Exception): InstanceChecker {
         override fun check() {
-            throw RuntimeException("This is a duplicate of a previous id, constructed here", previous)
+            throw IllegalStateException("This is a duplicate of a previous id, constructed here", previous)
         }
     }
 
