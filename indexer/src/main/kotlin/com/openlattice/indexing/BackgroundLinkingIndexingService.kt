@@ -170,7 +170,7 @@ class BackgroundLinkingIndexingService(
         return executor.submit {
             while (true) {
                 try {
-                    generateSequence(candidates::take)
+                    generateSequence { candidates.poll(10000, TimeUnit.MILLISECONDS) } // wait 10 seconds
                             .chunked(LINKING_INDEX_SIZE)
                             .forEach { candidateBatch ->
                                 logger.info("Starting background linking $taskName task for linking ids " +
