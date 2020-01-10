@@ -56,7 +56,7 @@ public class UserMapstore extends AbstractBasePostgresMapstore<String, User> {
     private final        ObjectMapper mapper = ObjectMappers.newJsonMapper();
 
     public UserMapstore( final HikariDataSource hds ) {
-        super( HazelcastMap.USERS.name(), USERS, hds );
+        super( HazelcastMap.USERS, USERS, hds );
     }
 
     @Override protected int bind( PreparedStatement ps, String key, int offset ) throws SQLException {

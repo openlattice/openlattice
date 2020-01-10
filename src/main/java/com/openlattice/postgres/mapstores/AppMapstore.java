@@ -18,7 +18,7 @@ import java.util.UUID;
 
 public class AppMapstore extends AbstractBasePostgresMapstore<UUID, App> {
     public AppMapstore( HikariDataSource hds ) {
-        super( HazelcastMap.APPS.name(), PostgresTable.APPS, hds );
+        super( HazelcastMap.APPS, PostgresTable.APPS, hds );
     }
 
     @Override protected void bind( PreparedStatement ps, UUID key, App value ) throws SQLException {

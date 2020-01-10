@@ -38,7 +38,7 @@ public class OrganizationMembersMapstore extends AbstractBasePostgresMapstore<UU
     public static final String ANY_PRINCIPAL_SET = "principals[any]";
 
     public OrganizationMembersMapstore( HikariDataSource hds ) {
-        super( HazelcastMap.ORGANIZATIONS_MEMBERS.name(), ORGANIZATIONS, hds );
+        super( HazelcastMap.ORGANIZATIONS_MEMBERS, ORGANIZATIONS, hds );
     }
 
     @Override

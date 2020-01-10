@@ -34,8 +34,8 @@ class PartitionManager @JvmOverloads constructor(
         partitions: Int = 257
 ) {
     private val partitionList = mutableListOf<Int>()
-    private val entitySets = hazelcastInstance.getMap<UUID, EntitySet>(HazelcastMap.ENTITY_SETS.name)
-    private val organizations = hazelcastInstance.getMap<UUID, Organization>(HazelcastMap.ORGANIZATIONS.name)
+    private val entitySets = HazelcastMap.ENTITY_SETS.getMap( hazelcastInstance )
+    private val organizations = HazelcastMap.ORGANIZATIONS.getMap( hazelcastInstance )
 
     init {
         createMaterializedViewIfNotExists()

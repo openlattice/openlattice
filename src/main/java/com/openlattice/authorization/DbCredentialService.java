@@ -49,7 +49,7 @@ public class DbCredentialService {
     private final IMap<String, String> dbcreds;
 
     public DbCredentialService( HazelcastInstance hazelcastInstance, PostgresUserApi pgUserApi ) {
-        this.dbcreds = hazelcastInstance.getMap( HazelcastMap.DB_CREDS.name() );
+        this.dbcreds = HazelcastMap.DB_CREDS.getMap( hazelcastInstance );
     }
 
     public String getDbCredential( String userId ) {

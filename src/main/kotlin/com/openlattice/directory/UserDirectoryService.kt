@@ -39,7 +39,7 @@ open class UserDirectoryService(auth0TokenProvider: Auth0TokenProvider, hazelcas
         const val DEFAULT_PAGE_SIZE = 100
     }
 
-    private val users: IMap<String, User> = hazelcastInstance.getMap(HazelcastMap.USERS.name)
+    private val users = HazelcastMap.USERS.getMap( hazelcastInstance )
 
     private var auth0ManagementApi = RetrofitFactory
             .newClient(auth0TokenProvider.managementApiUrl) { auth0TokenProvider.token }

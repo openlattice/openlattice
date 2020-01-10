@@ -14,7 +14,7 @@ import org.apache.commons.lang.RandomStringUtils;
 public class AclKeysMapstore extends AbstractBasePostgresMapstore<String, UUID> {
 
     public AclKeysMapstore( HikariDataSource hds ) {
-        super( HazelcastMap.ACL_KEYS.name(), ACL_KEYS, hds );
+        super( HazelcastMap.ACL_KEYS, ACL_KEYS, hds );
     }
 
     @Override protected void bind( PreparedStatement ps, String key, UUID value ) throws SQLException {

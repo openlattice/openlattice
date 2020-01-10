@@ -70,7 +70,7 @@ public class PermissionMapstore extends AbstractBasePostgresMapstore<AceKey, Ace
     public static final String SECURABLE_OBJECT_TYPE_INDEX = "securableObjectType";
 
     public PermissionMapstore( HikariDataSource hds ) {
-        super( HazelcastMap.PERMISSIONS.name(), PostgresTable.PERMISSIONS, hds );
+        super( HazelcastMap.PERMISSIONS, PostgresTable.PERMISSIONS, hds );
     }
 
     @Override protected void bind(

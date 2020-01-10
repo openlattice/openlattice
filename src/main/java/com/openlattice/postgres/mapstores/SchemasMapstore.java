@@ -19,7 +19,7 @@ import java.sql.SQLException;
 public class SchemasMapstore extends AbstractBasePostgresMapstore<String, DelegatedStringSet> {
 
     public SchemasMapstore( HikariDataSource hds ) {
-        super( HazelcastMap.SCHEMAS.name(), SCHEMA, hds );
+        super( HazelcastMap.SCHEMAS, SCHEMA, hds );
     }
 
     @Override protected void bind(
