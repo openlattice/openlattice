@@ -101,10 +101,10 @@ public class AppService {
             HazelcastAclKeyReservationService reservations,
             EntitySetManager entitySetService
     ) {
-        this.apps = hazelcast.getMap( HazelcastMap.APPS.name() );
-        this.appTypes = hazelcast.getMap( HazelcastMap.APP_TYPES.name() );
-        this.appConfigs = hazelcast.getMap( HazelcastMap.APP_CONFIGS.name() );
-        this.aclKeys = hazelcast.getMap( HazelcastMap.ACL_KEYS.name() );
+        this.apps = HazelcastMap.APPS.getMap( hazelcast );
+        this.appTypes = HazelcastMap.APP_TYPES.getMap( hazelcast );
+        this.appConfigs = HazelcastMap.APP_CONFIGS.getMap( hazelcast );
+        this.aclKeys = HazelcastMap.ACL_KEYS.getMap( hazelcast );
         this.edmService = edmService;
         this.organizationService = organizationService;
         this.authorizations = authorizations;
