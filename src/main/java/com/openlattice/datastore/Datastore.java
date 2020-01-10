@@ -25,6 +25,7 @@ import com.kryptnostic.rhizome.configuration.websockets.BaseRhizomeServer;
 import com.kryptnostic.rhizome.core.RhizomeApplicationServer;
 import com.kryptnostic.rhizome.hazelcast.serializers.RhizomeUtils.Pods;
 import com.openlattice.auditing.pods.AuditingConfigurationPod;
+import com.openlattice.auth0.Auth0Pod;
 import com.openlattice.aws.AwsS3Pod;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.openlattice.datastore.pods.ByteBlobServicePod;
@@ -42,6 +43,7 @@ import com.openlattice.tasks.pods.TaskSchedulerPod;
 public class Datastore extends BaseRhizomeServer {
     private static final Class<?>[] datastorePods = new Class<?>[] {
             AuditingConfigurationPod.class,
+            Auth0Pod.class,
             AwsS3Pod.class,
             ByteBlobServicePod.class,
             DatastoreServicesPod.class,
