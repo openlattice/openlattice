@@ -44,9 +44,9 @@ class EdmCachingDataLoader(
         private val dataQueryService: PostgresEntityDataQueryService,
         hazelcast: HazelcastInstance
 ) : DataLoader {
-    private val entityTypes: IMap<UUID, EntityType> = hazelcast.getMap(HazelcastMap.ENTITY_TYPES.name)
+    private val entityTypes = HazelcastMap.ENTITY_TYPES.getMap( hazelcast )
 
-    private val propertyTypes: IMap<UUID, PropertyType> = hazelcast.getMap(HazelcastMap.PROPERTY_TYPES.name)
+    private val propertyTypes = HazelcastMap.PROPERTY_TYPES.getMap( hazelcast )
     private val personEntityType = entityTypes.values(
             Predicates.equal(EntityTypeMapstore.FULLQUALIFIED_NAME_PREDICATE, PersonProperties.PERSON_TYPE_FQN.fullQualifiedNameAsString)
     ).first()

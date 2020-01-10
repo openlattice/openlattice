@@ -56,8 +56,8 @@ class ElasticsearchBlocker(
         hazelcast: HazelcastInstance
 ) : Blocker {
 
-    private val entitySets: IMap<UUID, EntitySet> = hazelcast.getMap(HazelcastMap.ENTITY_SETS.name)
-    private val entityTypes: IMap<UUID, EntityType> = hazelcast.getMap(HazelcastMap.ENTITY_TYPES.name)
+    private val entitySets = HazelcastMap.ENTITY_SETS.getMap( hazelcast )
+    private val entityTypes = HazelcastMap.ENTITY_TYPES.getMap( hazelcast )
 
     private val personEntityType = entityTypes.values(
             Predicates.equal(EntityTypeMapstore.FULLQUALIFIED_NAME_PREDICATE, PersonProperties.PERSON_TYPE_FQN.fullQualifiedNameAsString)
