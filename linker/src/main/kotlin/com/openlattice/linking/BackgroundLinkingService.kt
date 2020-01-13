@@ -123,8 +123,7 @@ class BackgroundLinkingService
         while (true) {
             try {
                 generateSequence(candidates::take)
-                        .map { candidateChunk ->
-                            val candidate = candidateChunk.first()
+                        .map { candidate ->
                             limiter.acquire()
                             executor.submit {
                                 try {
