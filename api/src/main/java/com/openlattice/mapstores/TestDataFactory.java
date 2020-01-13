@@ -28,6 +28,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
+import com.openlattice.IdConstants;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.AbstractSecurableType;
@@ -284,7 +285,8 @@ public final class TestDataFactory {
                 randomAlphanumeric( 5 ),
                 randomAlphanumeric( 5 ),
                 Optional.of( randomAlphanumeric( 5 ) ),
-                ImmutableSet.of( email(), email() ) );
+                ImmutableSet.of( email(), email() ),
+                IdConstants.GLOBAL_ORGANIZATION_ID.getId() );
     }
 
     public static PropertyType datePropertyType() {
