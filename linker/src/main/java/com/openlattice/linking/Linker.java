@@ -28,14 +28,11 @@ import com.openlattice.auditing.pods.AuditingConfigurationPod;
 import com.openlattice.auth0.Auth0Pod;
 import com.openlattice.aws.AwsS3Pod;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
+import com.openlattice.hazelcast.pods.HazelcastQueuePod;
 import com.openlattice.hazelcast.pods.MapstoresPod;
 import com.openlattice.hazelcast.pods.SharedStreamSerializersPod;
 import com.openlattice.jdbc.JdbcPod;
-import com.openlattice.linking.pods.LinkerPostConfigurationServicesPod;
-import com.openlattice.linking.pods.LinkerSecurityPod;
-import com.openlattice.linking.pods.LinkerServicesPod;
-import com.openlattice.linking.pods.LinkerServletsPod;
-import com.openlattice.linking.pods.PlasmaCoupling;
+import com.openlattice.linking.pods.*;
 import com.openlattice.mail.pods.MailServicePod;
 import com.openlattice.mail.services.MailService;
 import com.openlattice.postgres.PostgresPod;
@@ -56,6 +53,7 @@ public class Linker extends BaseRhizomeServer {
             LinkerServicesPod.class,
             MailServicePod.class,
             MapstoresPod.class,
+            HazelcastQueuePod.class,
             PlasmaCoupling.class,
             PostgresPod.class,
             PostgresTablesPod.class,

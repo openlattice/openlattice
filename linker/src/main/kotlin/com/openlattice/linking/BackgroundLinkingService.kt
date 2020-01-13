@@ -27,7 +27,6 @@ import com.google.common.util.concurrent.ListeningExecutorService
 import com.hazelcast.core.HazelcastInstance
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.EntityKeyIdService
-import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.HazelcastQueue
@@ -66,9 +65,9 @@ class BackgroundLinkingService
     }
 
 
-    private val entitySets = HazelcastMap.ENTITY_SETS.getMap( hazelcastInstance )
+    private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
 
-    private val linkingLocks = HazelcastMap.LINKING_LOCKS.getMap( hazelcastInstance )
+    private val linkingLocks = HazelcastMap.LINKING_LOCKS.getMap(hazelcastInstance)
 
     @Suppress("UNUSED")
     private val enqueuer = executor.submit {
@@ -79,7 +78,7 @@ class BackgroundLinkingService
                         .asSequence()
                         .filter { linkableTypes.contains(it.entityTypeId) && !it.flags.contains(EntitySetFlag.LINKING) }
                         .flatMap { es ->
-                            logger.info("Starting to queue linking candidates from entity set {}", es.id)
+                            logger.debug("Starting to queue linking candidates from entity set {}", es.id)
                             val forLinking = lqs.getEntitiesNeedingLinking(es.id, 2 * configuration.loadSize)
                                     .filter {
                                         val expiration = lockOrGetExpiration(it)
@@ -120,22 +119,28 @@ class BackgroundLinkingService
 
     @Suppress("UNUSED")
     private val linkingWorker = if (isLinkingEnabled()) executor.submit {
-        generateSequence { candidates.take() }
-                .map { candidate ->
-                    limiter.acquire()
-                    executor.submit {
-                        try {
-                            logger.info("Linking {}", candidate)
-                            link(candidate)
-                        } catch (ex: Exception) {
-                            logger.error("Unable to link $candidate. ", ex)
-                        } finally {
-//                            linkingSet.remove(candidate)
-                            unlock(candidate)
-                            limiter.release()
-                        }
-                    }
-                }.forEach { it.get() }
+        while (true) {
+            try {
+                generateSequence(candidates::take)
+                        .map { candidate ->
+                            limiter.acquire()
+                            executor.submit {
+                                try {
+                                    logger.info("Linking {}", candidate)
+                                    link(candidate)
+                                } catch (ex: Exception) {
+                                    logger.error("Unable to link $candidate. ", ex)
+                                } finally {
+                                    unlock(candidate)
+                                    limiter.release()
+                                }
+                            }
+                        }.forEach { it.get() }
+            } catch (ex: Exception) {
+                logger.info("Encountered error while linking candidates.", ex)
+            }
+        }
+
     } else null
 
 
