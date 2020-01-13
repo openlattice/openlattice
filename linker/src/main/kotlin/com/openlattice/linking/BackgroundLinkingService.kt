@@ -120,25 +120,27 @@ class BackgroundLinkingService
 
     @Suppress("UNUSED")
     private val linkingWorker = if (isLinkingEnabled()) executor.submit {
-        try {
-            ChunkedQueueSequence(candidates, 1)
-                    .map { candidateChunk ->
-                        val candidate = candidateChunk.first()
-                        limiter.acquire()
-                        executor.submit {
-                            try {
-                                logger.info("Linking {}", candidate)
-                                link(candidate)
-                            } catch (ex: Exception) {
-                                logger.error("Unable to link $candidate. ", ex)
-                            } finally {
-                                unlock(candidate)
-                                limiter.release()
+        while (true) {
+            try {
+                generateSequence(candidates::take)
+                        .map { candidateChunk ->
+                            val candidate = candidateChunk.first()
+                            limiter.acquire()
+                            executor.submit {
+                                try {
+                                    logger.info("Linking {}", candidate)
+                                    link(candidate)
+                                } catch (ex: Exception) {
+                                    logger.error("Unable to link $candidate. ", ex)
+                                } finally {
+                                    unlock(candidate)
+                                    limiter.release()
+                                }
                             }
-                        }
-                    }.forEach { it.get() }
-        } catch (ex: Exception) {
-            logger.info("Encountered error while linking candidates.", ex)
+                        }.forEach { it.get() }
+            } catch (ex: Exception) {
+                logger.info("Encountered error while linking candidates.", ex)
+            }
         }
 
     } else null
