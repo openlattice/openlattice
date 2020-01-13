@@ -30,6 +30,7 @@ import com.openlattice.data.EntityKeyIdService
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.HazelcastQueue
+import com.openlattice.rhizome.hazelcast.ChunkedQueueSequence
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.sql.Connection
@@ -65,9 +66,9 @@ class BackgroundLinkingService
     }
 
 
-    private val entitySets = HazelcastMap.ENTITY_SETS.getMap( hazelcastInstance )
+    private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
 
-    private val linkingLocks = HazelcastMap.LINKING_LOCKS.getMap( hazelcastInstance )
+    private val linkingLocks = HazelcastMap.LINKING_LOCKS.getMap(hazelcastInstance)
 
     @Suppress("UNUSED")
     private val enqueuer = executor.submit {
@@ -119,28 +120,27 @@ class BackgroundLinkingService
 
     @Suppress("UNUSED")
     private val linkingWorker = if (isLinkingEnabled()) executor.submit {
-        while(true) {
-            try {
-                generateSequence { candidates.take() }
-                        .map { candidate ->
-                            limiter.acquire()
-                            executor.submit {
-                                try {
-                                    logger.info("Linking {}", candidate)
-                                    link(candidate)
-                                } catch (ex: Exception) {
-                                    logger.error("Unable to link $candidate. ", ex)
-                                } finally {
-//                            linkingSet.remove(candidate)
-                                    unlock(candidate)
-                                    limiter.release()
-                                }
+        try {
+            ChunkedQueueSequence(candidates, 1)
+                    .map { candidateChunk ->
+                        val candidate = candidateChunk.first()
+                        limiter.acquire()
+                        executor.submit {
+                            try {
+                                logger.info("Linking {}", candidate)
+                                link(candidate)
+                            } catch (ex: Exception) {
+                                logger.error("Unable to link $candidate. ", ex)
+                            } finally {
+                                unlock(candidate)
+                                limiter.release()
                             }
-                        }.forEach { it.get() }
-            } catch(ex: Exception) {
-                logger.info("Encountered error while linking candidates.", ex)
-            }
+                        }
+                    }.forEach { it.get() }
+        } catch (ex: Exception) {
+            logger.info("Encountered error while linking candidates.", ex)
         }
+
     } else null
 
 

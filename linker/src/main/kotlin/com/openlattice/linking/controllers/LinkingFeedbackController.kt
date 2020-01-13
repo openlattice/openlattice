@@ -62,17 +62,13 @@ constructor(
 
     @PutMapping(path = [], produces = [MediaType.APPLICATION_JSON_VALUE])
     override fun addLinkingFeedback(@RequestBody feedback: LinkingFeedback): Int {
-        if (feedback.link.isEmpty() || feedback.link.size + feedback.unlink.size < 2) {
-            throw IllegalArgumentException(
-                    "Cannot submit feedback for less than 2 entities or if no positively linking entity is provided"
-            )
+        require(feedback.link.isNotEmpty() && (feedback.link.size + feedback.unlink.size) >= 2) {
+            "Cannot submit feedback for less than 2 entities or if no positively linking entity is provided."
         }
 
         val interSection = Sets.intersection(feedback.link, feedback.unlink)
-        if (!interSection.isEmpty()) {
-            throw IllegalArgumentException(
-                    "Cannot submit feedback with entities $interSection being both linking and non-linking"
-            )
+        require(interSection.isEmpty()) {
+            "Cannot submit feedback with entities $interSection being both linking and non-linking."
         }
 
         // ensure read access on linking entity set
@@ -119,13 +115,11 @@ constructor(
         ).first().second
 
         entityDataKeys.forEach { entityDataKey ->
-            if (!linkingEntitySet.linkedEntitySets.contains(entityDataKey.entitySetId)) {
-                throw IllegalArgumentException(
-                        "Feedback can only be submitted for entities contained by linking entity set")
+            require(linkingEntitySet.linkedEntitySets.contains(entityDataKey.entitySetId)) {
+                "Feedback can only be submitted for entities contained by linking entity set"
             }
-            if (!entityKeyIdsOfLinkingId.contains(entityDataKey.entityKeyId)) {
-                throw IllegalArgumentException(
-                        "Feedback can only be submitted for entities with same linking id")
+            require(entityKeyIdsOfLinkingId.contains(entityDataKey.entityKeyId)) {
+                "Feedback can only be submitted for entities with same linking id"
             }
 
             ensureReadAccess(AclKey(entityDataKey.entitySetId))
