@@ -114,11 +114,11 @@ class AdminController : AdminApi, AuthorizingComponent {
     override fun reloadCache() {
         ensureAdminAccess()
         HazelcastMap.values().forEach {
-            logger.info("Reloading map ${it.name}")
+            logger.info("Reloading map $it")
             try {
-                hazelcast.getMap<Any, Any>(it.name).loadAll(true)
+                it.getMap( hazelcast ).loadAll(true)
             } catch (e: IllegalArgumentException) {
-                logger.error("Unable to reload map ${it.name}", e)
+                logger.error("Unable to reload map $it", e)
             }
         }
     }
@@ -127,7 +127,7 @@ class AdminController : AdminApi, AuthorizingComponent {
     @GetMapping(value = [RELOAD_CACHE + NAME_PATH])
     override fun reloadCache(@PathVariable(NAME) name: String) {
         ensureAdminAccess()
-        hazelcast.getMap<Any, Any>(HazelcastMap.valueOf(name).name).loadAll(true)
+        HazelcastMap.valueOf(name).getMap( hazelcast ).loadAll(true)
     }
 
     @Timed
