@@ -25,13 +25,9 @@ import com.geekbeast.rhizome.hazelcast.DelegatedIntList
 import com.geekbeast.util.StopWatch
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.hazelcast.core.HazelcastInstance
-import com.hazelcast.core.IMap
 import com.openlattice.admin.indexing.IndexingState
 import com.openlattice.data.storage.getPartition
 import com.openlattice.data.storage.partitions.PartitionManager
-import com.openlattice.edm.EntitySet
-import com.openlattice.edm.type.EntityType
-import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.HazelcastQueue
 import com.openlattice.hazelcast.processors.UUIDKeyToUUIDSetMerger
@@ -92,6 +88,7 @@ class IndexingService(
         }
     }
 
+    @Suppress("UNUSED")
     private val indexingWorker = executor.submit {
         Stream.generate { indexingQueue.take() }
                 .parallel().forEach { entitySetId ->

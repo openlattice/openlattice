@@ -45,6 +45,7 @@ import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.mapstores.EntityTypeMapstore
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.StatementHolderSupplier
+import com.openlattice.rhizome.hazelcast.ChunkedQueueSequence
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -168,8 +169,7 @@ class BackgroundLinkingIndexingService(
         return executor.submit {
             while (true) {
                 try {
-                    generateSequence { candidates.poll(10000, TimeUnit.MILLISECONDS) } // wait 10 seconds
-                            .chunked(LINKING_INDEX_SIZE)
+                    ChunkedQueueSequence(candidates, LINKING_INDEX_SIZE)
                             .forEach { candidateBatch ->
                                 logger.info("Starting background linking $taskName task for linking ids " +
                                         "${candidateBatch.map { it.second }}.")

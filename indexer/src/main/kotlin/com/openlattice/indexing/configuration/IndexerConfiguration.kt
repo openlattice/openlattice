@@ -27,7 +27,6 @@ import com.kryptnostic.rhizome.configuration.Configuration
 import com.kryptnostic.rhizome.configuration.ConfigurationKey
 import com.kryptnostic.rhizome.configuration.SimpleConfigurationKey
 import com.kryptnostic.rhizome.configuration.annotation.ReloadableConfiguration
-import com.openlattice.BackgroundExternalDatabaseSyncingService
 import com.openlattice.conductor.rpc.SearchConfiguration
 
 
