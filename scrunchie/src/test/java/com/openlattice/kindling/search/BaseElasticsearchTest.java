@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.Sets;
 import com.kryptnostic.rhizome.configuration.service.ConfigurationService.StaticLoader;
+import com.openlattice.IdConstants;
 import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.PrincipalType;
 import com.openlattice.authorization.securable.SecurableObjectType;
@@ -179,7 +180,7 @@ public class BaseElasticsearchTest {
                 Optional.of( "employees that are in chicago" ),
                 ImmutableSet.of( "foo@bar.com", "foobar@foo.net" ),
                 Optional.empty(),
-                Optional.empty(),
+                IdConstants.GLOBAL_ORGANIZATION_ID.getId(),
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty());
@@ -191,7 +192,7 @@ public class BaseElasticsearchTest {
                 Optional.of( "this is the second entity set" ),
                 ImmutableSet.of( "foo@bar.com", "foobar@foo.net" ),
                 Optional.empty(),
-                Optional.empty(),
+                IdConstants.GLOBAL_ORGANIZATION_ID.getId(),
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty());
