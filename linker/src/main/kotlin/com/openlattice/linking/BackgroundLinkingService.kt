@@ -30,7 +30,6 @@ import com.openlattice.data.EntityKeyIdService
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.HazelcastQueue
-import com.openlattice.rhizome.hazelcast.ChunkedQueueSequence
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.sql.Connection
