@@ -72,8 +72,8 @@ class BackgroundLinkingIndexingService(
         const val LINKING_INDEX_SIZE = 100
     }
 
-    private val propertyTypes = HazelcastMap.PROPERTY_TYPES.getMap( hazelcastInstance )
-    private val entityTypes = HazelcastMap.ENTITY_TYPES.getMap( hazelcastInstance )
+    private val propertyTypes = HazelcastMap.PROPERTY_TYPES.getMap(hazelcastInstance)
+    private val entityTypes = HazelcastMap.ENTITY_TYPES.getMap(hazelcastInstance)
 
     // TODO if at any point there are more linkable entity types, this must change
     private val personEntityType = entityTypes.values(
@@ -86,7 +86,7 @@ class BackgroundLinkingIndexingService(
     // TODO if at any point there are more linkable entity types, this must change
     private val personPropertyTypes = propertyTypes.getAll(personEntityType.properties)
 
-    private val linkingIndexingLocks = HazelcastMap.LINKING_INDEXING_LOCKS.getMap( hazelcastInstance )
+    private val linkingIndexingLocks = HazelcastMap.LINKING_INDEXING_LOCKS.getMap(hazelcastInstance)
 
     init {
         linkingIndexingLocks.addEntryListener(EntryEvictedListener<UUID, Long> {
@@ -165,36 +165,31 @@ class BackgroundLinkingIndexingService(
 
         val taskName = if (createMode) "index" else "un-index"
         return executor.submit {
-            while (true) {
-                try {
-                    ChunkedQueueSequence(candidates, LINKING_INDEX_SIZE)
-                            .forEach { candidateBatch ->
-                                logger.info("Starting background linking $taskName task for linking ids " +
-                                        "${candidateBatch.map { it.second }}.")
+            try {
+                ChunkedQueueSequence(candidates, LINKING_INDEX_SIZE)
+                        .forEach { candidateBatch ->
+                            limiter.acquire()
+                            val (linkingEntityKeyIdsWithLastWrite, linkingIds) = mapCandidates(candidateBatch)
 
-                                limiter.acquire()
-                                val (linkingEntityKeyIdsWithLastWrite, linkingIds) = mapCandidates(candidateBatch)
-
-                                try {
-                                    if (createMode) {
-                                        index(linkingEntityKeyIdsWithLastWrite, linkingIds)
-                                    } else {
-                                        unIndex(linkingEntityKeyIdsWithLastWrite, linkingIds)
-                                    }
-                                } catch (ex: Exception) {
-                                    logger.error("Unable to $taskName from batch of linking ids $linkingIds.", ex)
-                                } finally {
-                                    unLock(linkingIds)
-                                    limiter.release()
+                            try {
+                                if (createMode) {
+                                    index(linkingEntityKeyIdsWithLastWrite, linkingIds)
+                                } else {
+                                    unIndex(linkingEntityKeyIdsWithLastWrite, linkingIds)
                                 }
+                            } catch (ex: Exception) {
+                                logger.error("Unable to $taskName from batch of linking ids $linkingIds.", ex)
+                            } finally {
+                                unLock(linkingIds)
+                                limiter.release()
                             }
+                        }
 
 
-                } catch (ex: DistributedObjectDestroyedException) {
-                    logger.error("Linking $taskName queue destroyed.", ex)
-                } catch (ex: Throwable) {
-                    logger.error("Encountered error when linking ${taskName}ing.", ex)
-                }
+            } catch (ex: DistributedObjectDestroyedException) {
+                logger.error("Linking $taskName queue destroyed.", ex)
+            } catch (ex: Throwable) {
+                logger.error("Encountered error when linking ${taskName}ing.", ex)
             }
         }
     }
