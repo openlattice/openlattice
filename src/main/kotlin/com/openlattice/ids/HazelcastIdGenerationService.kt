@@ -28,7 +28,7 @@ class HazelcastIdGenerationService(clients: HazelcastClientProvider, private val
      */
     private val hazelcastInstance = clients.getClient(HazelcastClient.IDS.name)
     private val scrolls = HazelcastMap.ID_GENERATION.getMap( hazelcastInstance )
-    private val idsQueue = hazelcastInstance.getQueue<UUID>(HazelcastQueue.ID_GENERATION.name)
+    private val idsQueue = HazelcastQueue.ID_GENERATION.getQueue( hazelcastInstance )
 
     init {
         if (scrolls.isEmpty) {
