@@ -25,13 +25,9 @@ import com.geekbeast.rhizome.hazelcast.DelegatedIntList
 import com.geekbeast.util.StopWatch
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.hazelcast.core.HazelcastInstance
-import com.hazelcast.core.IMap
 import com.openlattice.admin.indexing.IndexingState
 import com.openlattice.data.storage.getPartition
 import com.openlattice.data.storage.partitions.PartitionManager
-import com.openlattice.edm.EntitySet
-import com.openlattice.edm.type.EntityType
-import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.HazelcastQueue
 import com.openlattice.hazelcast.processors.UUIDKeyToUUIDSetMerger
@@ -78,7 +74,7 @@ class IndexingService(
     private val indexingProgress = HazelcastMap.INDEXING_PROGRESS.getMap( hazelcastInstance )
     private val indexingPartitionProgress = HazelcastMap.INDEXING_PARTITION_PROGRESS.getMap( hazelcastInstance )
     private val indexingPartitionList = HazelcastMap.INDEXING_PARTITION_LIST.getMap( hazelcastInstance )
-    private val indexingQueue = hazelcastInstance.getQueue<UUID>(HazelcastQueue.INDEXING.name)
+    private val indexingQueue = HazelcastQueue.INDEXING.getQueue( hazelcastInstance )
     private val indexingLock = ReentrantLock()
 
     init {
