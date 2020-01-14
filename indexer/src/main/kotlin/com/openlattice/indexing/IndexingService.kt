@@ -88,6 +88,7 @@ class IndexingService(
         }
     }
 
+    @Suppress("UNUSED")
     private val indexingWorker = executor.submit {
         Stream.generate { indexingQueue.take() }
                 .parallel().forEach { entitySetId ->

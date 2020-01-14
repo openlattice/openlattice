@@ -2,7 +2,6 @@ package com.openlattice
 
 import com.google.common.base.Stopwatch
 import com.hazelcast.core.HazelcastInstance
-import com.hazelcast.core.IMap
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.hazelcast.query.QueryConstants
@@ -13,7 +12,6 @@ import com.openlattice.indexing.configuration.IndexerConfiguration
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import com.openlattice.organization.OrganizationExternalDatabaseTable
 import com.openlattice.organizations.ExternalDatabaseManagementService
-import com.openlattice.organizations.Organization
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
@@ -27,7 +25,7 @@ import java.util.concurrent.locks.ReentrantLock
 const val SCAN_RATE = 30_000L
 
 class BackgroundExternalDatabaseSyncingService(
-        private val hazelcastInstance: HazelcastInstance,
+        hazelcastInstance: HazelcastInstance,
         private val edms: ExternalDatabaseManagementService,
         private val indexerConfiguration: IndexerConfiguration
 ) {

@@ -20,11 +20,14 @@
  */
 package com.openlattice.indexing
 
-import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Stopwatch
+import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.ListeningExecutorService
+import com.hazelcast.core.*
+import com.hazelcast.map.listener.EntryEvictedListener
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicates
+import com.hazelcast.spi.exception.DistributedObjectDestroyedException
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi
 import com.openlattice.data.storage.EntityDatastore
 import com.openlattice.data.storage.IndexingMetadataManager
@@ -41,18 +44,18 @@ import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.mapstores.EntityTypeMapstore
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.StatementHolderSupplier
+import com.openlattice.rhizome.hazelcast.ChunkedQueueSequence
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
-import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.util.*
+import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
-import kotlin.streams.asStream
 
 internal const val LINKING_INDEXING_TIMEOUT_MILLIS = 120_000L // 2 min
-internal const val LINKING_INDEX_RATE = 120_000L // 2 min
+internal const val LINKING_INDEX_QUERY_LIMIT = 3000
 
 @Component
 class BackgroundLinkingIndexingService(
@@ -70,8 +73,8 @@ class BackgroundLinkingIndexingService(
         const val LINKING_INDEX_SIZE = 100
     }
 
-    private val propertyTypes = HazelcastMap.PROPERTY_TYPES.getMap( hazelcastInstance )
-    private val entityTypes = HazelcastMap.ENTITY_TYPES.getMap( hazelcastInstance )
+    private val propertyTypes = HazelcastMap.PROPERTY_TYPES.getMap(hazelcastInstance)
+    private val entityTypes = HazelcastMap.ENTITY_TYPES.getMap(hazelcastInstance)
 
     // TODO if at any point there are more linkable entity types, this must change
     private val personEntityType = entityTypes.values(
@@ -84,7 +87,15 @@ class BackgroundLinkingIndexingService(
     // TODO if at any point there are more linkable entity types, this must change
     private val personPropertyTypes = propertyTypes.getAll(personEntityType.properties)
 
-    private val linkingIndexingLocks = HazelcastMap.LINKING_INDEXING_LOCKS.getMap( hazelcastInstance )
+    private val linkingIndexingLocks = HazelcastMap.LINKING_INDEXING_LOCKS.getMap(hazelcastInstance)
+
+    init {
+        linkingIndexingLocks.addEntryListener(EntryEvictedListener<UUID, Long> {
+            logger.info(
+                    "Linking id ${it.key} with expiration ${it.oldValue} got evicted at ${Instant.now().toEpochMilli()}"
+            )
+        }, true)
+    }
 
     /**
      * Queue containing linking ids, which need to be re-indexed in elasticsearch.
@@ -98,54 +109,90 @@ class BackgroundLinkingIndexingService(
     private val unIndexCandidates =
             HazelcastQueue.LINKING_UNINDEXING.getQueue( hazelcastInstance )
 
+
     @Suppress("UNUSED")
-    private val linkingIndexingWorker = executor.submit {
-        generateSequence(indexCandidates::take)
-                .chunked(LINKING_INDEX_SIZE)
-                .asStream()
-                .parallel()
-                .forEach { candidateBatch ->
-                    if (!indexerConfiguration.backgroundLinkingIndexingEnabled) {
-                        return@forEach
-                    }
+    private val linkingIndexingEnqueueJob = submitEnqueueTask(indexCandidates, true)
 
-                    val (linkingEntityKeyIdsWithLastWrite, linkingIds) = mapCandidates(candidateBatch)
+    @Suppress("UNUSED")
+    private val linkingUnIndexingEnqueueJob = submitEnqueueTask(unIndexCandidates, false)
 
-                    try {
-                        lock(linkingIds)
-                        index(linkingEntityKeyIdsWithLastWrite, linkingIds)
-                    } catch (ex: Exception) {
-                        logger.error("Unable to index linking entity with from batch of linking ids $linkingIds.", ex)
-                    } finally {
-                        unLock(linkingIds)
+
+    private fun submitEnqueueTask(
+            candidates: IQueue<Triple<List<Array<UUID>>, UUID, OffsetDateTime>>,
+            createMode: Boolean
+    ): ListenableFuture<*>? {
+        if (!isLinkingIndexingEnabled()) {
+            return null
+        }
+        val taskName = if (createMode) "indexing" else "un-indexing"
+        return executor.submit {
+            while (true) {
+                try {
+                    if (createMode) {
+                        getDirtyLinkingIds()
+                    } else {
+                        getDeletedLinkingIds()
                     }
+                            .filter { lockOrRefresh(it.second) }
+                            .forEach {
+                                logger.info("Registering linking id ${it.second} needing $taskName.")
+                                candidates.put(it)
+                            }
+
+
+                } catch (ex: Exception) {
+                    logger.info("Encountered error while updating candidates for linking $taskName.", ex)
                 }
+            }
+        }
     }
 
+
+    private val limiter = Semaphore(indexerConfiguration.parallelism)
+
     @Suppress("UNUSED")
-    private val linkingUnIndexingWorker = executor.submit {
-        generateSequence(unIndexCandidates::take)
-                .chunked(LINKING_INDEX_SIZE)
-                .asStream()
-                .parallel()
-                .forEach { candidateBatch ->
-                    if (!indexerConfiguration.backgroundLinkingIndexingEnabled) {
-                        return@forEach
-                    }
+    private val linkingIndexingJob = submitIndexingTask(indexCandidates, true)
 
-                    val (linkingEntityKeyIdsWithLastWrite, linkingIds) = mapCandidates(candidateBatch)
+    @Suppress("UNUSED")
+    private val linkingUnIndexingJob = submitIndexingTask(unIndexCandidates, false)
 
-                    try {
-                        lock(linkingIds)
-                        unIndex(linkingEntityKeyIdsWithLastWrite, linkingIds)
-                    } catch (ex: Exception) {
-                        logger.error(
-                                "Unable to un-index linking entity with from batch of linking ids $linkingIds.", ex
-                        )
-                    } finally {
-                        unLock(linkingIds)
-                    }
-                }
+    private fun submitIndexingTask(
+            candidates: IQueue<Triple<List<Array<UUID>>, UUID, OffsetDateTime>>,
+            createMode: Boolean
+    ): ListenableFuture<*>? {
+        if (!isLinkingIndexingEnabled()) {
+            return null
+        }
+
+        val taskName = if (createMode) "index" else "un-index"
+        return executor.submit {
+            try {
+                ChunkedQueueSequence(candidates, LINKING_INDEX_SIZE)
+                        .forEach { candidateBatch ->
+                            limiter.acquire()
+                            val (linkingEntityKeyIdsWithLastWrite, linkingIds) = mapCandidates(candidateBatch)
+
+                            try {
+                                if (createMode) {
+                                    index(linkingEntityKeyIdsWithLastWrite, linkingIds)
+                                } else {
+                                    unIndex(linkingEntityKeyIdsWithLastWrite, linkingIds)
+                                }
+                            } catch (ex: Exception) {
+                                logger.error("Unable to $taskName from batch of linking ids $linkingIds.", ex)
+                            } finally {
+                                unLock(linkingIds)
+                                limiter.release()
+                            }
+                        }
+
+
+            } catch (ex: DistributedObjectDestroyedException) {
+                logger.error("Linking $taskName queue destroyed.", ex)
+            } catch (ex: Throwable) {
+                logger.error("Encountered error when linking ${taskName}ing.", ex)
+            }
+        }
     }
 
     private fun mapCandidates(
@@ -171,26 +218,6 @@ class BackgroundLinkingIndexingService(
         }
 
         return linkingEntityKeyIdsWithLastWrite to linkingIds
-    }
-
-    @Timed
-    @Suppress("UNUSED")
-    @Scheduled(fixedRate = LINKING_INDEX_RATE)
-    fun updateCandidateList() {
-        if (!indexerConfiguration.backgroundLinkingIndexingEnabled) {
-            return
-        }
-        try {
-            executor.submit {
-                logger.info("Registering linking ids needing indexing.")
-                getDirtyLinkingIds().forEach(indexCandidates::put)
-
-                logger.info("Registering linking ids needing un-indexing.")
-                getDeletedLinkingIds().forEach(unIndexCandidates::put)
-            }
-        } catch (ex: Exception) {
-            logger.info("Encountered error while updating candidates for linking indexing.", ex)
-        }
     }
 
     /**
@@ -279,21 +306,59 @@ class BackgroundLinkingIndexingService(
         return dataManager.markLinkingEntitiesAsIndexed(linkingIdsWithLastWrite)
     }
 
-    private fun lock(linkingIds: Collection<UUID>) {
-        linkingIds.forEach { linkingId ->
-            val existingExpiration = linkingIndexingLocks.putIfAbsent(
-                    linkingId,
-                    Instant.now().plusMillis(LINKING_INDEXING_TIMEOUT_MILLIS).toEpochMilli()
-            )
-            check(existingExpiration == null) {
-                "Unable to lock $linkingId. Existing lock expires at $existingExpiration."
+
+    /**
+     * Checks if linking id is already "locked" in [linkingIndexingLocks] map and refreshes its expiration.
+     * Returns true, if the linking entity is not yet locked to be processed and false otherwise.
+     */
+    private fun lockOrRefresh(linkingId: UUID): Boolean {
+        try {
+            linkingIndexingLocks.lock(linkingId)
+
+            val expiration = lockOrGet(linkingId)
+            // expiration should be >= now, otherwise entry should be evicted
+            if (expiration != null && Instant.now().toEpochMilli() <= expiration) {
+                // if it is about to expire (but not yet processed), we refresh the expiration/time to live
+                logger.info("Refreshing expiration for linking id {}", linkingId)
+                refreshExpiration(linkingId)
             }
+
+            return expiration == null
+        } finally {
+            linkingIndexingLocks.unlock(linkingId)
         }
     }
 
+    /**
+     * @return Null if locked, expiration in millis otherwise.
+     */
+    private fun lockOrGet(linkingId: UUID): Long? {
+        return linkingIndexingLocks.putIfAbsent(
+                linkingId,
+                Instant.now().plusMillis(LINKING_INDEXING_TIMEOUT_MILLIS).toEpochMilli(),
+                LINKING_INDEXING_TIMEOUT_MILLIS,
+                TimeUnit.MILLISECONDS
+        )
+    }
+
+    /**
+     * Refreshes expiration and time to live for the specified linking id.
+     */
+    private fun refreshExpiration(linkingId: UUID) {
+        linkingIndexingLocks.set(
+                linkingId,
+                Instant.now().plusMillis(LINKING_INDEXING_TIMEOUT_MILLIS).toEpochMilli(),
+                LINKING_INDEXING_TIMEOUT_MILLIS,
+                TimeUnit.MILLISECONDS
+        )
+    }
 
     private fun unLock(linkingIds: Collection<UUID>) {
         linkingIds.forEach(linkingIndexingLocks::delete)
+    }
+
+    private fun isLinkingIndexingEnabled(): Boolean {
+        return indexerConfiguration.backgroundLinkingIndexingEnabled
     }
 
     /**
@@ -335,15 +400,28 @@ class BackgroundLinkingIndexingService(
 
 internal const val ENTITY_DATA_KEY = "entity_data_key"
 
+internal val needsLinkingIndexing =
+        // @formatter:off
+        "${LAST_INDEX.name} >= ${LAST_WRITE.name} AND "+
+        "${LAST_LINK.name} >= ${LAST_WRITE.name} AND " +
+        "${LAST_LINK_INDEX.name} < ${LAST_WRITE.name} "
+        // @formatter:on
+
+internal val needsLinkingUnIndexing =
+        // @formatter:off
+        "${LAST_INDEX.name} >= ${LAST_WRITE.name} AND "+
+        "${LAST_LINK_INDEX.name} < ${LAST_WRITE.name} "
+        // @formatter:on
+
 /**
  * Select linking ids, where ALL normal entities are cleared or deleted.
  */
 internal val selectDeletedLinkingIds =
         // @formatter:off
         "SELECT " +
-                "${LINKING_ID.name}, " +
-                "array_agg(ARRAY[${ENTITY_SET_ID.name}, ${ID.name}]) AS $ENTITY_DATA_KEY, " +
-                "max(${LAST_WRITE.name}) AS ${LAST_WRITE.name} " +
+            "${LINKING_ID.name}, " +
+            "array_agg(ARRAY[${ENTITY_SET_ID.name}, ${ID.name}]) AS $ENTITY_DATA_KEY, " +
+            "max(${LAST_WRITE.name}) AS ${LAST_WRITE.name} " +
         "FROM ${IDS.name} " +
         "WHERE " +
             "${LINKING_ID.name} NOT IN ( " +
@@ -353,8 +431,10 @@ internal val selectDeletedLinkingIds =
                     "${LINKING_ID.name} IS NOT NULL AND " +
                     "${VERSION.name} > 0 " +
                 ") AND " +
-            "${LINKING_ID.name} IS NOT NULL " +
-        "GROUP BY ${LINKING_ID.name}"
+            "${LINKING_ID.name} IS NOT NULL AND " +
+            needsLinkingUnIndexing +
+        "GROUP BY ${LINKING_ID.name} " +
+        "LIMIT $LINKING_INDEX_QUERY_LIMIT"
         // @formatter:on
 
 
@@ -367,7 +447,8 @@ internal const val withAlias = "valid_linking_entities"
 internal val selectDirtyLinkingIds =
         // @formatter:off
         "WITH $withAlias AS " +
-            "(SELECT ${LINKING_ID.name}, " +
+        "(" +
+            "SELECT ${LINKING_ID.name}, " +
                     "${ID.name}, " +
                     "${ENTITY_SET_ID.name}, " +
                     "${LAST_WRITE.name}, " +
@@ -375,35 +456,39 @@ internal val selectDirtyLinkingIds =
                     "${LAST_LINK.name}, " +
                     "${LAST_LINK_INDEX.name} " +
             "FROM ${IDS.name} " +
-            "WHERE ${LINKING_ID.name} IS NOT NULL " +
-                "AND ${VERSION.name} > 0 ) " +
-         "SELECT " +
-                "${LINKING_ID.name}, " +
-                "array_agg(ARRAY[${ENTITY_SET_ID.name}, ${ID.name}]) AS $ENTITY_DATA_KEY, " +
-                "max(${LAST_WRITE.name}) AS ${LAST_WRITE.name} " +
-        "FROM $withAlias " +
-        "WHERE ${LAST_INDEX.name} >= ${LAST_WRITE.name} AND " +
-              "${LAST_LINK.name} >= ${LAST_WRITE.name} AND " +
-              "${LAST_LINK_INDEX.name} < ${LAST_WRITE.name} " +
-        "GROUP BY ${LINKING_ID.name} " +
-        "UNION ALL " +
+            "WHERE " +
+                "${LINKING_ID.name} IS NOT NULL AND " +
+                "${VERSION.name} > 0 " +
+        ") " +
         "SELECT " +
-                "${LINKING_ID.name}, " +
-                "array_agg(ARRAY[${ENTITY_SET_ID.name}, ${ID.name}]) AS $ENTITY_DATA_KEY, " +
-                "max(${LAST_WRITE.name}) AS ${LAST_WRITE.name} " +
+            "${LINKING_ID.name}, " +
+            "array_agg(ARRAY[${ENTITY_SET_ID.name}, ${ID.name}]) AS $ENTITY_DATA_KEY, " +
+            "max(${LAST_WRITE.name}) AS ${LAST_WRITE.name} " +
+        "FROM $withAlias " +
+        "WHERE $needsLinkingIndexing " +
+        "GROUP BY ${LINKING_ID.name} " +
+
+        "UNION ALL " +
+
+        "SELECT " +
+            "${LINKING_ID.name}, " +
+            "array_agg(ARRAY[${ENTITY_SET_ID.name}, ${ID.name}]) AS $ENTITY_DATA_KEY, " +
+            "max(${LAST_WRITE.name}) AS ${LAST_WRITE.name} " +
         "FROM ${IDS.name} " +
-        "WHERE ${LINKING_ID.name} IN " +
-            "( SELECT ${LINKING_ID.name} " +
-                "FROM ${IDS.name} " +
-                "WHERE " +
-                    "${LINKING_ID.name} IS NOT NULL AND " +
-                    "${VERSION.name} <= 0 ) " +
-            "AND ${LINKING_ID.name} IN " +
-                "( SELECT ${LINKING_ID.name} " +
-                  "FROM $withAlias ) " +
-            "AND ${ENTITY_SET_ID.name} IN " +
-                "( SELECT ${ENTITY_SET_ID.name} " +
-                  "FROM $withAlias ) " +
-            "AND ${LINKING_ID.name} IS NOT NULL " +
-        "GROUP BY ${LINKING_ID.name}"
+        "WHERE " +
+            "${LINKING_ID.name} IS NOT NULL AND " +
+            "${VERSION.name} <= 0 AND " +
+            "$needsLinkingUnIndexing AND " +
+            "${LINKING_ID.name} IN " +
+                "( " +
+                    "SELECT ${LINKING_ID.name} " +
+                    "FROM $withAlias " +
+                ") AND " +
+            "${ENTITY_SET_ID.name} IN " +
+                "( " +
+                    "SELECT ${ENTITY_SET_ID.name} " +
+                    "FROM $withAlias " +
+                ") " +
+        "GROUP BY ${LINKING_ID.name} " +
+        "LIMIT $LINKING_INDEX_QUERY_LIMIT"
         // @formatter:on
