@@ -26,7 +26,9 @@ import com.auth0.client.auth.AuthAPI;
 import com.auth0.client.mgmt.ManagementAPI;
 import com.auth0.client.mgmt.filter.UserFilter;
 import com.auth0.exception.Auth0Exception;
+import com.auth0.json.mgmt.users.User;
 import com.codahale.metrics.annotation.Timed;
+import com.google.common.eventbus.EventBus;
 import com.openlattice.assembler.PostgresRoles;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.AuthorizationManager;
@@ -80,9 +82,10 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
     private AuthAPI                 authApi;
     @Inject
     private ManagementAPI           managementApi;
-
     @Inject
-    private Auth0SyncService syncService;
+    private Auth0SyncService        syncService;
+    @Inject
+    private EventBus                eventBus;
 
     @Timed
     @Override
@@ -105,7 +108,7 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
             path = USERS,
             method = RequestMethod.GET,
             produces = MediaType.APPLICATION_JSON_VALUE )
-    public Map<String, Auth0UserBasic> getAllUsers() {
+    public Map<String, User> getAllUsers() {
         return userDirectoryService.getAllUsers();
     }
 
@@ -147,7 +150,7 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
             path = USERS + USER_ID_PATH,
             method = RequestMethod.GET,
             produces = MediaType.APPLICATION_JSON_VALUE )
-    public Auth0UserBasic getUser( @PathVariable( USER_ID ) String userId ) {
+    public User getUser( @PathVariable( USER_ID ) String userId ) {
         ensureAdminAccess();
         return userDirectoryService.getUser( userId );
     }
@@ -155,9 +158,16 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
     @Timed
     @Override
     @RequestMapping(
-            path = ACTIVATE,
+            path = SYNC,
             method = RequestMethod.GET )
-    public Void activateUser() {
+    public Void syncCallingUser() {
+        /*
+         * Important note: getCurrentUser() reads the principal id directly from auth token.
+         *
+         * This is safe since token has been validated and has an auth0 assigned unique id.
+         *
+         * It is very important that this is the *first* call for a new user. W
+         */
         Principal principal = checkNotNull( Principals.getCurrentUser() );
 
         try {
@@ -167,6 +177,7 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
                     .withPage( 0, 100 ) ).execute();
 
             syncService.syncUser( user );
+
         } catch ( IllegalArgumentException | Auth0Exception e ) {
             throw new BadCredentialsException( "Unable to retrieve user profile information from auth0", e );
         }

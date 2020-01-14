@@ -345,14 +345,14 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
     }
 
     @RequestMapping(
-            path = { ENTITY_SET_ID_PATH + ENTITY_ID_PATH },
+            path = { ENTITY_SET_ID_PATH + ENTITY_KEY_ID_PATH },
             method = RequestMethod.GET,
             produces = { MediaType.APPLICATION_JSON_VALUE } )
     @Override
     @Timed
     public List<NeighborEntityDetails> executeEntityNeighborSearch(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
-            @PathVariable( ENTITY_ID ) UUID entityKeyId ) {
+            @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId ) {
         List<NeighborEntityDetails> neighbors = Lists.newArrayList();
 
         Set<Principal> principals = Principals.getCurrentPrincipals();

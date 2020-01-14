@@ -37,6 +37,7 @@ import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.EntitySetManager;
 import com.openlattice.datastore.services.SyncTicketService;
 import com.openlattice.edm.EntitySet;
+import com.openlattice.edm.set.EntitySetFlag;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.search.requests.EntityNeighborsFilter;
@@ -73,7 +74,7 @@ import static com.openlattice.authorization.EdmAuthorizationHelper.*;
 
 @SuppressFBWarnings(
         value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE",
-        justification = "NPEs are prevented by Preconditions.checkState but SpotBugs doesn't understand this")
+        justification = "NPEs are prevented by Preconditions.checkState but SpotBugs doesn't understand this" )
 @RestController
 @RequestMapping( DataApi.CONTROLLER )
 public class DataController implements DataApi, AuthorizingComponent, AuditingComponent {
@@ -165,11 +166,11 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             HttpServletResponse response ) {
         setContentDisposition( response, entitySetId.toString(), fileType );
         setDownloadContentType( response, fileType );
-        return loadEntitySetData( entitySetId, selection, fileType );
+        return loadSelectedEntitySetData( entitySetId, selection, fileType );
     }
 
     @Override
-    public EntitySetData<FullQualifiedName> loadEntitySetData(
+    public EntitySetData<FullQualifiedName> loadSelectedEntitySetData(
             UUID entitySetId,
             EntitySetSelection selection,
             FileType fileType ) {
@@ -260,6 +261,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             @RequestParam( value = TYPE, defaultValue = "Merge" ) UpdateType updateType ) {
         Preconditions.checkNotNull( updateType, "An invalid update type value was specified." );
         ensureReadAccess( new AclKey( entitySetId ) );
+        ensureEntitySetCanBeWritten( entitySetId );
         var allAuthorizedPropertyTypes = authzHelper
                 .getAuthorizedPropertyTypes( entitySetId, EnumSet.of( Permission.WRITE ) );
         var requiredPropertyTypes = requiredEntitySetPropertyTypes( entities );
@@ -312,6 +314,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @RequestBody Map<UUID, Map<UUID, Set<Map<ByteBuffer, Object>>>> entities ) {
         ensureReadAccess( new AclKey( entitySetId ) );
+        ensureEntitySetCanBeWritten( entitySetId );
 
         final Set<UUID> requiredPropertyTypes = requiredReplacementPropertyTypes( entities );
         accessCheck( aclKeysForAccessCheck( ImmutableSetMultimap.<UUID, UUID>builder()
@@ -341,18 +344,10 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     @Override
     @Timed
     @PutMapping( value = "/" + ASSOCIATION, consumes = MediaType.APPLICATION_JSON_VALUE )
-    public Integer createAssociations( @RequestBody Set<DataEdgeKey> associations ) {
-        final var entitySetIdChecks = new HashMap<AclKey, EnumSet<Permission>>();
-        associations.forEach(
-                association -> {
-                    entitySetIdChecks.put( new AclKey( association.getEdge().getEntitySetId() ), WRITE_PERMISSION );
-                    entitySetIdChecks.put( new AclKey( association.getSrc().getEntitySetId() ), WRITE_PERMISSION );
-                    entitySetIdChecks.put( new AclKey( association.getDst().getEntitySetId() ), WRITE_PERMISSION );
-                }
-        );
+    public Integer createEdges( @RequestBody Set<DataEdgeKey> associations ) {
 
-        //Ensure that we have write access to entity sets.
-        accessCheck( entitySetIdChecks );
+        Set<UUID> entitySetIds = getEntitySetIdsFromCollection( associations, this::streamEntitySetIds );
+        checkPermissionsOnEntitySetIds( entitySetIds, EnumSet.of( Permission.READ, Permission.WRITE ) );
 
         //Allowed entity types check
         dataGraphServiceHelper.checkEdgeEntityTypes( associations );
@@ -404,9 +399,14 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             @RequestBody List<Map<UUID, Set<Object>>> entities ) {
         //Ensure that we have read access to entity set metadata.
         ensureReadAccess( new AclKey( entitySetId ) );
+        ensureEntitySetCanBeWritten( entitySetId );
+        final var requiredPropertyTypes = entities.stream()
+                .flatMap(  entity ->  entity.keySet().stream() )
+                .collect( Collectors.toSet() );
         //Load authorized property types
         final Map<UUID, PropertyType> authorizedPropertyTypes = authzHelper
                 .getAuthorizedPropertyTypes( entitySetId, WRITE_PERMISSION );
+        accessCheck( authorizedPropertyTypes, requiredPropertyTypes );
         Pair<List<UUID>, WriteEvent> entityKeyIdsToWriteEvent = dgm
                 .createEntities( entitySetId, entities, authorizedPropertyTypes );
         List<UUID> entityKeyIds = entityKeyIdsToWriteEvent.getKey();
@@ -451,7 +451,8 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             consumes = MediaType.APPLICATION_JSON_VALUE )
     public ListMultimap<UUID, UUID> createAssociations( @RequestBody ListMultimap<UUID, DataEdge> associations ) {
         //Ensure that we have read access to entity set metadata.
-        associations.keySet().forEach( entitySetId -> ensureReadAccess( new AclKey( entitySetId ) ) );
+        Set<UUID> entitySetIds = getEntitySetIdsFromCollection( associations.values(), this::streamEntitySetIds );
+        checkPermissionsOnEntitySetIds( entitySetIds, READ_PERMISSION );
 
         //Ensure that we can write properties.
         final SetMultimap<UUID, UUID> requiredPropertyTypes = requiredAssociationPropertyTypes( associations );
@@ -553,6 +554,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
 
         //Ensure that we can write properties.
         final SetMultimap<UUID, UUID> requiredPropertyTypes = requiredAssociationPropertyTypes( associations );
+        ensureEntitySetsCanBeWritten( requiredPropertyTypes.keySet() );
         accessCheck( aclKeysForAccessCheck( requiredPropertyTypes, WRITE_PERMISSION ) );
 
         final Map<UUID, PropertyType> authorizedPropertyTypes = edmService
@@ -578,6 +580,10 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     public DataGraphIds createEntityAndAssociationData( @RequestBody DataGraph data ) {
         final ListMultimap<UUID, UUID> entityKeyIds = ArrayListMultimap.create();
         final ListMultimap<UUID, UUID> associationEntityKeyIds;
+
+        Set<UUID> entitySetIds = getEntitySetIdsFromCollection( data.getAssociations().values(),
+                this::streamEntitySetIds );
+        checkPermissionsOnEntitySetIds( entitySetIds, READ_PERMISSION );
 
         //First create the entities so we have entity key ids to work with
         Multimaps.asMap( data.getEntities() )
@@ -624,6 +630,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     public Integer deleteAllEntitiesFromEntitySet(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @RequestParam( value = TYPE ) DeleteType deleteType ) {
+        ensureEntitySetCanBeWritten( entitySetId );
 
         WriteEvent writeEvent = deletionManager
                 .clearOrDeleteEntitySetIfAuthorized( entitySetId, deleteType, Principals.getCurrentPrincipals() );
@@ -661,6 +668,8 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             @RequestBody Set<UUID> entityKeyIds,
             @RequestParam( value = TYPE ) DeleteType deleteType ) {
 
+        ensureEntitySetCanBeWritten( entitySetId );
+
         WriteEvent writeEvent = deletionManager
                 .clearOrDeleteEntitiesIfAuthorized( entitySetId,
                         entityKeyIds,
@@ -691,6 +700,8 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             @RequestBody Set<UUID> propertyTypeIds,
             @RequestParam( value = TYPE ) DeleteType deleteType ) {
 
+        ensureEntitySetCanBeWritten( entitySetId );
+
         WriteEvent writeEvent = deletionManager.clearOrDeleteEntityProperties( entitySetId,
                 ImmutableSet.of( entityKeyId ),
                 deleteType,
@@ -712,7 +723,6 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         return writeEvent.getNumUpdates();
     }
 
-
     @Timed
     @RequestMapping(
             path = { "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + NEIGHBORS },
@@ -724,6 +734,8 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         // Note: this function is only useful for deleting src/dst entities and their neighboring entities
         // (along with associations connected to all of them), not associations.
         // If called with an association entity set, it will simplify down to a basic delete call.
+
+        ensureEntitySetCanBeWritten( entitySetId );
 
         WriteEvent writeEvent = deletionManager.clearOrDeleteEntitiesAndNeighborsIfAuthorized(
                 entitySetId,
@@ -760,6 +772,8 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId,
             @RequestBody Map<UUID, Set<Object>> entity ) {
         ensureReadAccess( new AclKey( entitySetId ) );
+        ensureEntitySetCanBeWritten( entitySetId );
+
         Map<UUID, PropertyType> authorizedPropertyTypes = authzHelper.getAuthorizedPropertyTypes( entitySetId,
                 WRITE_PERMISSION,
                 edmService.getPropertyTypesAsMap( entity.keySet() ),
@@ -846,7 +860,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     @GetMapping(
             path = "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH + "/" + PROPERTY_TYPE_ID_PATH,
             produces = MediaType.APPLICATION_JSON_VALUE )
-    public Set<Object> getEntity(
+    public Set<Object> getEntityPropertyValues(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId,
             @PathVariable( PROPERTY_TYPE_ID ) UUID propertyTypeId ) {
@@ -895,8 +909,9 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
 
     @Timed
     @Override
-    @GetMapping(
+    @PostMapping(
             path = "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + DETAILED,
+            consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE
     )
     public Map<UUID, Map<UUID, Map<UUID, Map<FullQualifiedName, Set<Object>>>>> loadLinkedEntitySetBreakdown(
@@ -968,6 +983,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         return propertyTypesByEntitySet;
     }
 
+
     private static Set<UUID> requiredEntitySetPropertyTypes( Map<UUID, Map<UUID, Set<Object>>> entities ) {
         return entities.values().stream().map( Map::keySet ).flatMap( Set::stream )
                 .collect( Collectors.toSet() );
@@ -979,6 +995,46 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
 
     private static OffsetDateTime getDateTimeFromLong( long epochTime ) {
         return OffsetDateTime.ofInstant( Instant.ofEpochMilli( epochTime ), ZoneId.systemDefault() );
+    }
+
+    private Stream<UUID> streamEntitySetIds( DataAssociation association ) {
+        return Stream.of( association.getSrcEntitySetId(), association.getDstEntitySetId() );
+    }
+
+    private Stream<UUID> streamEntitySetIds( DataEdge dataEdge ) {
+        return Stream.of( dataEdge.getSrc().getEntitySetId(), dataEdge.getDst().getEntitySetId() );
+    }
+
+    private Stream<UUID> streamEntitySetIds( DataEdgeKey dataEdgeKey ) {
+        return Stream.of( dataEdgeKey.getEdge().getEntitySetId(),
+                dataEdgeKey.getSrc().getEntitySetId(),
+                dataEdgeKey.getDst().getEntitySetId() );
+    }
+
+    private <T> Set<UUID> getEntitySetIdsFromCollection(
+            Collection<T> items,
+            Function<T, Stream<UUID>> transformation ) {
+        return items.stream().flatMap( transformation ).collect( Collectors.toSet() );
+    }
+
+    private void checkPermissionsOnEntitySetIds( Set<UUID> entitySetIds, EnumSet<Permission> permissions ) {
+        //Ensure that we have write access to entity sets.
+        ensureEntitySetsCanBeWritten( entitySetIds );
+        accessCheck( entitySetIds.stream().collect( Collectors.toMap( AclKey::new, id -> permissions ) ) );
+    }
+
+    private void ensureEntitySetCanBeWritten( UUID entitySetId ) {
+        ensureEntitySetsCanBeWritten( ImmutableSet.of( entitySetId ) );
+    }
+
+    private void ensureEntitySetsCanBeWritten( Set<UUID> entitySetIds ) {
+        if ( entitySetService.entitySetsContainFlag( entitySetIds, EntitySetFlag.AUDIT ) ) {
+            Set<UUID> auditEntitySetIds = entitySetService.getEntitySetsAsMap( entitySetIds ).values().stream()
+                    .filter( it -> it.getFlags().contains( EntitySetFlag.AUDIT ) ).map( EntitySet::getId ).collect(
+                            Collectors.toSet() );
+            throw new ForbiddenException( "You cannot modify data of entity sets " + auditEntitySetIds.toString()
+                    + " because they are audit entity sets." );
+        }
     }
 
 }

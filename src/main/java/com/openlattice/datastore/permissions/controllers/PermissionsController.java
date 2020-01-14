@@ -49,7 +49,6 @@ import com.openlattice.authorization.Principals;
 import com.openlattice.authorization.SecurablePrincipal;
 import com.openlattice.controllers.exceptions.BadRequestException;
 import com.openlattice.controllers.exceptions.ForbiddenException;
-import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.organizations.ExternalDatabaseManagementService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 
