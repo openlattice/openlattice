@@ -25,6 +25,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.hazelcast.core.*
 import com.hazelcast.map.listener.EntryEvictedListener
+import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicates
 import com.hazelcast.spi.exception.DistributedObjectDestroyedException
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi
@@ -99,14 +100,14 @@ class BackgroundLinkingIndexingService(
     /**
      * Queue containing linking ids, which need to be re-indexed in elasticsearch.
      */
-    private val indexCandidates = hazelcastInstance
-            .getQueue<Triple<List<Array<UUID>>, UUID, OffsetDateTime>>(HazelcastQueue.LINKING_INDEXING.name)
+    private val indexCandidates =
+            HazelcastQueue.LINKING_INDEXING.getQueue( hazelcastInstance )
 
     /**
      * Queue containing linking ids, which need to be un-indexed (deleted) from elasticsearch.
      */
-    private val unIndexCandidates = hazelcastInstance
-            .getQueue<Triple<List<Array<UUID>>, UUID, OffsetDateTime>>(HazelcastQueue.LINKING_UNINDEXING.name)
+    private val unIndexCandidates =
+            HazelcastQueue.LINKING_UNINDEXING.getQueue( hazelcastInstance )
 
 
     @Suppress("UNUSED")

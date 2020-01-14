@@ -74,7 +74,7 @@ class IndexingService(
     private val indexingProgress = HazelcastMap.INDEXING_PROGRESS.getMap( hazelcastInstance )
     private val indexingPartitionProgress = HazelcastMap.INDEXING_PARTITION_PROGRESS.getMap( hazelcastInstance )
     private val indexingPartitionList = HazelcastMap.INDEXING_PARTITION_LIST.getMap( hazelcastInstance )
-    private val indexingQueue = hazelcastInstance.getQueue<UUID>(HazelcastQueue.INDEXING.name)
+    private val indexingQueue = HazelcastQueue.INDEXING.getQueue( hazelcastInstance )
     private val indexingLock = ReentrantLock()
 
     init {
