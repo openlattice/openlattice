@@ -24,14 +24,11 @@ import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Stopwatch
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.hazelcast.core.HazelcastInstance
-import com.hazelcast.core.IMap
 import com.hazelcast.query.Predicates
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi
 import com.openlattice.data.storage.EntityDatastore
 import com.openlattice.data.storage.IndexingMetadataManager
 import com.openlattice.data.storage.MetadataOption
-import com.openlattice.edm.type.EntityType
-import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.HazelcastQueue
 import com.openlattice.indexing.configuration.IndexerConfiguration
@@ -92,14 +89,14 @@ class BackgroundLinkingIndexingService(
     /**
      * Queue containing linking ids, which need to be re-indexed in elasticsearch.
      */
-    private val indexCandidates = hazelcastInstance
-            .getQueue<Triple<List<Array<UUID>>, UUID, OffsetDateTime>>(HazelcastQueue.LINKING_INDEXING.name)
+    private val indexCandidates =
+            HazelcastQueue.LINKING_INDEXING.getQueue( hazelcastInstance )
 
     /**
      * Queue containing linking ids, which need to be un-indexed (deleted) from elasticsearch.
      */
-    private val unIndexCandidates = hazelcastInstance
-            .getQueue<Triple<List<Array<UUID>>, UUID, OffsetDateTime>>(HazelcastQueue.LINKING_UNINDEXING.name)
+    private val unIndexCandidates =
+            HazelcastQueue.LINKING_UNINDEXING.getQueue( hazelcastInstance )
 
     @Suppress("UNUSED")
     private val linkingIndexingWorker = executor.submit {
