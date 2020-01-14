@@ -48,7 +48,6 @@ class HazelcastQueue<T> internal constructor(val name: String) : TypedQueueIdent
     }
 
     companion object {
-//        private val valuesCache: MutableList<HazelcastQueue<*>> = ArrayList()
         private val instanceChecker = UniqueInstanceManager(HazelcastQueue::class.java)
 
         // When adding new entries to this list, please make sure to keep it sorted and keep the name in sync
@@ -61,20 +60,5 @@ class HazelcastQueue<T> internal constructor(val name: String) : TypedQueueIdent
         @JvmField val LINKING_INDEXING = HazelcastQueue<Triple<List<Array<UUID>>, UUID, OffsetDateTime>>("LINKING_INDEXING")
         @JvmField val LINKING_UNINDEXING = HazelcastQueue<Triple<List<Array<UUID>>, UUID, OffsetDateTime>>("LINKING_UNINDEXING")
         @JvmField val TWILIO = HazelcastQueue<MessageRequest>("TWILIO")
-
-//        @JvmStatic
-//        fun values(): Array<HazelcastQueue<*>> {
-//            return valuesCache.toTypedArray()
-//        }
-//
-//        @JvmStatic
-//        fun valueOf(name: String): HazelcastQueue<*> {
-//            for (e in valuesCache) {
-//                if (e.name === name) {
-//                    return e
-//                }
-//            }
-//            throw IllegalArgumentException(name)
-//        }
     }
 }
