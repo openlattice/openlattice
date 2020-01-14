@@ -114,7 +114,7 @@ class BackgroundLinkingService
             logger.info("Encountered error while updating candidates for linking.", ex)
         }
     }
-    private val candidates = hazelcastInstance.getQueue<EntityDataKey>(HazelcastQueue.LINKING_CANDIDATES.name)
+    private val candidates = HazelcastQueue.LINKING_CANDIDATES.getQueue( hazelcastInstance )
     private val limiter = Semaphore(configuration.parallelism)
 
     @Suppress("UNUSED")
