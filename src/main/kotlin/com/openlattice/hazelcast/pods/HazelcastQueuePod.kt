@@ -31,7 +31,7 @@ class HazelcastQueuePod {
 
     companion object {
         @JvmField
-        val maxQueueSize = 10000
+        val maxQueueSize = 10_000
     }
 
     @Bean
@@ -50,32 +50,36 @@ class HazelcastQueuePod {
 
     @Bean
     fun twilioQueueConfigurer(): QueueConfigurer {
-        return QueueConfigurer(HazelcastQueue.TWILIO.name) { config -> config.setMaxSize(100000).backupCount = 1 }
+        return QueueConfigurer(HazelcastQueue.TWILIO.name) { config ->
+            config.setMaxSize(10_0000).backupCount = 1
+        }
     }
 
     @Bean
     fun indexingQueueConfigurer(): QueueConfigurer {
-        return QueueConfigurer(HazelcastQueue.INDEXING.name) { config -> config.setMaxSize(100000).backupCount = 1 }
+        return QueueConfigurer(HazelcastQueue.INDEXING.name) { config ->
+            config.setMaxSize(10_0000).backupCount = 1
+        }
     }
 
     @Bean
     fun linkingQueueConfigurer(): QueueConfigurer {
         return QueueConfigurer(HazelcastQueue.LINKING_CANDIDATES.name) { config ->
-            config.setMaxSize(1000).backupCount = 1
+            config.setMaxSize(1_000).backupCount = 1
         }
     }
 
     @Bean
     fun linkingIndexingQueueConfigurer(): QueueConfigurer {
         return QueueConfigurer(HazelcastQueue.LINKING_INDEXING.name) { config ->
-            config.setMaxSize(10000).backupCount = 1
+            config.setMaxSize(10_000).backupCount = 1
         }
     }
 
     @Bean
     fun linkingUnIndexingQueueConfigurer(): QueueConfigurer {
         return QueueConfigurer(HazelcastQueue.LINKING_UNINDEXING.name) { config ->
-            config.setMaxSize(10000).backupCount = 1
+            config.setMaxSize(10_000).backupCount = 1
         }
     }
 
