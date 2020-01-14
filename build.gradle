@@ -164,7 +164,7 @@ dependencies {
         compile "com.openlattice:rhizome:${rhizome_version}"
         compile "com.openlattice:scribe:${scribe_version}"
 
-        testCompile "com.openlattice:api:0.0.10-SNAPSHOT:tests"
+        testCompile "com.openlattice:api:${api_version}:tests"
         testCompile "com.openlattice:rhizome:${rhizome_version}:tests"
         testCompile "com.openlattice:rhizome-client:${rhizome_client_version}:tests"
         testCompile "com.openlattice:scribe:${scribe_version}:tests"
@@ -190,4 +190,3 @@ eclipse {
     ext.downloadJavadoc = true
     ext.sourceCompatibility=JavaVersion.VERSION_11
 }
-

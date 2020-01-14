@@ -24,7 +24,7 @@ import java.util.*
 class SmsInformationMapstore(
         hds: HikariDataSource
 ) : AbstractBasePostgresMapstore<SmsInformationKey, SmsEntitySetInformation>(
-        HazelcastMap.SMS_INFORMATION.name,
+        HazelcastMap.SMS_INFORMATION,
         SMS_INFORMATION,
         hds
 ) {

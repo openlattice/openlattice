@@ -26,7 +26,7 @@ public class AppConfigMapstore extends AbstractBasePostgresMapstore<AppConfigKey
     private static final ObjectMapper mapper = ObjectMappers.getJsonMapper();
 
     public AppConfigMapstore( HikariDataSource hds ) {
-        super( HazelcastMap.APP_CONFIGS.name(), PostgresTable.APP_CONFIGS, hds );
+        super( HazelcastMap.APP_CONFIGS, PostgresTable.APP_CONFIGS, hds );
     }
 
     @Override protected void bind( PreparedStatement ps, AppConfigKey key, AppTypeSetting value ) throws SQLException {

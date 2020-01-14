@@ -13,9 +13,7 @@ import java.util.*
  */
 @Service
 class PhoneNumberService(hazelcastInstance: HazelcastInstance) {
-    private val phoneNumbers = hazelcastInstance.getMap<SmsInformationKey, SmsEntitySetInformation>(
-            HazelcastMap.SMS_INFORMATION.name
-    )
+    private val phoneNumbers = HazelcastMap.SMS_INFORMATION.getMap( hazelcastInstance )
 
     @Timed
     fun lookup(phoneNumber: String): Collection<SmsEntitySetInformation> {

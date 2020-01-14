@@ -36,7 +36,7 @@ public class HazelcastSecurableObjectResolveTypeService implements SecurableObje
     private final IMap<AclKey, SecurableObjectType> securableObjectTypes;
 
     public HazelcastSecurableObjectResolveTypeService( HazelcastInstance hazelcastInstance ) {
-        securableObjectTypes = hazelcastInstance.getMap( HazelcastMap.SECURABLE_OBJECT_TYPES.name() );
+        securableObjectTypes = HazelcastMap.SECURABLE_OBJECT_TYPES.getMap( hazelcastInstance );
     }
 
     @Override

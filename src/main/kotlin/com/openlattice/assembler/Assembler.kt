@@ -46,7 +46,7 @@ import com.openlattice.edm.EntitySet
 import com.openlattice.edm.events.*
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
-import com.openlattice.hazelcast.HazelcastMap.*
+import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organization.OrganizationEntitySetFlag
 import com.openlattice.organization.OrganizationIntegrationAccount
 import com.openlattice.organizations.Organization
@@ -87,14 +87,13 @@ class Assembler(
 
 ) : HazelcastTaskDependencies, AssemblerConnectionManagerDependent<Void?> {
 
-    private val entitySets = hazelcast.getMap<UUID, EntitySet>(ENTITY_SETS.name)
-    private val entityTypes = hazelcast.getMap<UUID, EntityType>(ENTITY_TYPES.name)
-    private val propertyTypes = hazelcast.getMap<UUID, PropertyType>(PROPERTY_TYPES.name)
-    private val assemblies = hazelcast.getMap<UUID, OrganizationAssembly>(ASSEMBLIES.name)
-    private val materializedEntitySets = hazelcast
-            .getMap<EntitySetAssemblyKey, MaterializedEntitySet>(MATERIALIZED_ENTITY_SETS.name)
-    private val securableObjectTypes = hazelcast.getMap<AclKey, SecurableObjectType>(SECURABLE_OBJECT_TYPES.name)
-    private val principals = hazelcast.getMap<AclKey, SecurablePrincipal>(PRINCIPALS.name)
+    private val entitySets = HazelcastMap.ENTITY_SETS.getMap( hazelcast )
+    private val entityTypes = HazelcastMap.ENTITY_TYPES.getMap( hazelcast )
+    private val propertyTypes = HazelcastMap.PROPERTY_TYPES.getMap( hazelcast )
+    private val assemblies = HazelcastMap.ASSEMBLIES.getMap( hazelcast )
+    private val materializedEntitySets = HazelcastMap.MATERIALIZED_ENTITY_SETS.getMap( hazelcast )
+    private val securableObjectTypes = HazelcastMap.SECURABLE_OBJECT_TYPES.getMap( hazelcast )
+    private val principals = HazelcastMap.PRINCIPALS.getMap( hazelcast )
 
     private val createOrganizationTimer = metricRegistry.timer(name(Assembler::class.java, "createOrganization"))
     private val deleteOrganizationTimer = metricRegistry.timer(name(Assembler::class.java, "deleteOrganization"))

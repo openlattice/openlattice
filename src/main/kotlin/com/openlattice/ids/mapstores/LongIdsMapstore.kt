@@ -13,7 +13,7 @@ import java.sql.ResultSet
 
 
 class LongIdsMapstore(hds: HikariDataSource) : AbstractBasePostgresMapstore<String, Long>(
-        HazelcastMap.LONG_IDS.name,
+        HazelcastMap.LONG_IDS,
         BASE_LONG_IDS,
         hds
 ) {

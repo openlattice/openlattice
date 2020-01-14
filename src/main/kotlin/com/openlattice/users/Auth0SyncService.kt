@@ -3,17 +3,14 @@ package com.openlattice.users
 import com.auth0.json.mgmt.users.User
 import com.dataloom.mappers.ObjectMappers
 import com.fasterxml.jackson.module.kotlin.readValue
-import com.google.common.collect.ImmutableList
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.openlattice.IdConstants
 import com.openlattice.authorization.*
-import com.openlattice.authorization.mapstores.AccumulatingReadAggregator
 import com.openlattice.authorization.mapstores.PrincipalMapstore
 import com.openlattice.authorization.mapstores.ReadSecurablePrincipalAggregator
-import com.openlattice.authorization.mapstores.SecurablePrincipalAccumulator
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.organizations.SortedPrincipalSet
@@ -43,11 +40,11 @@ class Auth0SyncService(
     companion object {
         private val logger = LoggerFactory.getLogger(Auth0SyncService::class.java)
     }
-    private val users: IMap<String, User> = hazelcastInstance.getMap(HazelcastMap.USERS.name)
-    private val principals = hazelcastInstance.getMap<AclKey,SecurablePrincipal>(HazelcastMap.PRINCIPALS.name)
-    private val authnPrincipalCache = hazelcastInstance.getMap<String,SecurablePrincipal>(HazelcastMap.SECURABLE_PRINCIPALS.name)
-    private val authnRolesCache = hazelcastInstance.getMap<String, SortedPrincipalSet>(HazelcastMap.RESOLVED_PRINCIPAL_TREES.name)
-    private val principalTrees = hazelcastInstance.getMap<AclKey,AclKeySet>(HazelcastMap.PRINCIPAL_TREES.name)
+    private val users = HazelcastMap.USERS.getMap( hazelcastInstance )
+    private val principals = HazelcastMap.PRINCIPALS.getMap( hazelcastInstance )
+    private val authnPrincipalCache = HazelcastMap.SECURABLE_PRINCIPALS.getMap( hazelcastInstance )
+    private val authnRolesCache = HazelcastMap.RESOLVED_PRINCIPAL_TREES.getMap( hazelcastInstance )
+    private val principalTrees = HazelcastMap.PRINCIPAL_TREES.getMap( hazelcastInstance )
     private val mapper = ObjectMappers.newJsonMapper()
 
     fun syncUser(user: User) {
@@ -57,13 +54,11 @@ class Auth0SyncService(
         logger.info("Synchronizg user ${user.id}")
         ensureSecurablePrincipalExists(user)
         val principal = getPrincipal(user)
-        val roles = getRoles(user)
-        val sp = spm.getPrincipal(principal.id)
 
         //Update the user in the users table before attempting processing.
         users.putIfAbsent( principal.id, user)
-        processGlobalEnrollments(sp, principal, user)
-        processOrganizationEnrollments(user, sp, principal, user.email ?: "")
+        processGlobalEnrollments( principal, user )
+        processOrganizationEnrollments(user, principal, user.email ?: "")
         logger.info("Syncing authentication cache for ${principal.id}")
         syncAuthenticationCache(principal.id)
         markUser(user)
@@ -133,20 +128,17 @@ class Auth0SyncService(
         )
 
     }
-    private fun processGlobalEnrollments(sp: SecurablePrincipal, principal: Principal, user: User) {
-        if (getRoles(user).contains(SystemRole.ADMIN.getName())) {
-            orgService.addMembers(
-                    IdConstants.GLOBAL_ORGANIZATION_ID.id,
-                    setOf(principal),
-                    mapOf(principal to getAppMetadata(user))
-            )
-        }
 
+    private fun processGlobalEnrollments(principal: Principal, user: User) {
+        orgService.addMembers(
+                IdConstants.GLOBAL_ORGANIZATION_ID.id,
+                setOf(principal),
+                mapOf(principal to getAppMetadata(user))
+        )
     }
 
     private fun processOrganizationEnrollments(
             user: User,
-            sp: SecurablePrincipal,
             principal: Principal,
             emailDomain: String
     ) {

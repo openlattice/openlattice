@@ -25,7 +25,7 @@ public class RequestsMapstore extends AbstractBasePostgresMapstore<AceKey, Statu
     private static final Principal TEST_USER_PRINCIPAL = TestDataFactory.userPrincipal();
 
     public RequestsMapstore( HikariDataSource hds ) {
-        super( HazelcastMap.REQUESTS.name(), REQUESTS, hds );
+        super( HazelcastMap.REQUESTS, REQUESTS, hds );
     }
 
     @Override protected void bind( PreparedStatement ps, AceKey key, Status value ) throws SQLException {

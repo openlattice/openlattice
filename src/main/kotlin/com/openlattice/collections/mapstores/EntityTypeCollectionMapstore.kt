@@ -16,7 +16,7 @@ import java.util.*
 open class EntityTypeCollectionMapstore(
         hds: HikariDataSource
 ) : AbstractBasePostgresMapstore<UUID, EntityTypeCollection>
-(HazelcastMap.ENTITY_TYPE_COLLECTIONS.name, PostgresTable.ENTITY_TYPE_COLLECTIONS, hds) {
+(HazelcastMap.ENTITY_TYPE_COLLECTIONS, PostgresTable.ENTITY_TYPE_COLLECTIONS, hds) {
 
     override fun bind(ps: PreparedStatement, key: UUID, value: EntityTypeCollection) {
         var index = bind(ps, key, 1)

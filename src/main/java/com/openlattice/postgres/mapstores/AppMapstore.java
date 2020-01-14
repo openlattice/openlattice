@@ -21,7 +21,7 @@ public class AppMapstore extends AbstractBasePostgresMapstore<UUID, App> {
     private static final ObjectMapper mapper = ObjectMappers.getJsonMapper();
 
     public AppMapstore( HikariDataSource hds ) {
-        super( HazelcastMap.APPS.name(), PostgresTable.APPS, hds );
+        super( HazelcastMap.APPS, PostgresTable.APPS, hds );
     }
 
     @Override protected void bind( PreparedStatement ps, UUID key, App value ) throws SQLException {
