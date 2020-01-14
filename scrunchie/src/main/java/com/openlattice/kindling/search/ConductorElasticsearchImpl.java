@@ -673,9 +673,9 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         String type = getTypeName( entityTypeId );
 
         BulkRequestBuilder request = client.prepareBulk();
-        final var requestBuilder =
-                new DeleteRequestBuilder( client, DeleteAction.INSTANCE, index ).setType( type );
-        entityKeyIds.forEach( entityKeyId -> request.add( requestBuilder.setId( entityKeyId.toString() ).request() ) );
+        entityKeyIds.forEach( entityKeyId ->
+                request.add( client.prepareDelete( index, type, entityKeyId.toString() ) )
+        );
 
         request.execute().actionGet();
 
@@ -942,7 +942,8 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
                 if ( linkingEntitySets.containsKey( entitySetId ) ) {
                     query.mustNot( QueryBuilders
-                            .existsQuery( ENTITY_SET_ID_FIELD ) ); // this field will not exist for linked entity documents
+                            .existsQuery( ENTITY_SET_ID_FIELD ) ); // this field will not exist for linked entity
+                    // documents
                 } else {
                     query.must( QueryBuilders
                             .termQuery( ENTITY_SET_ID_FIELD, entitySetId.toString() ) ); // match entity set id
@@ -1201,7 +1202,8 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         return new SearchResult( response.getHits().getTotalHits().value, hits );
     }
 
-    @Override public SearchResult executeEntitySetCollectionSearch(
+    @Override
+    public SearchResult executeEntitySetCollectionSearch(
             String searchTerm, Set<AclKey> authorizedEntitySetCollectionIds, int start, int maxHits ) {
         return null;
     }
@@ -1286,7 +1288,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         SearchResponse response = client.prepareSearch( ENTITY_SET_DATA_MODEL )
                 .setTypes( ENTITY_SET_TYPE )
                 .setQuery( query )
-                .setFetchSource( new String[] { ENTITY_SET, PROPERTY_TYPES }, null )
+                .setFetchSource( new String[]{ ENTITY_SET, PROPERTY_TYPES }, null )
                 .setFrom( start )
                 .setSize( maxHits )
                 .execute()
@@ -1303,11 +1305,11 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
         switch ( securableObjectType ) {
             case AssociationType:
-                return at -> ( (AssociationType) at ).getAssociationEntityType().getId().toString();
+                return at -> ( ( AssociationType ) at ).getAssociationEntityType().getId().toString();
             case Organization:
-                return o -> ( (Organization) o ).getId().toString();
+                return o -> ( ( Organization ) o ).getId().toString();
             default:
-                return aso -> ( (AbstractSecurableObject) aso ).getId().toString();
+                return aso -> ( ( AbstractSecurableObject ) aso ).getId().toString();
         }
     }
 
@@ -1315,7 +1317,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     public boolean triggerEntitySetIndex(
             Map<EntitySet, Set<UUID>> entitySets,
             Map<UUID, PropertyType> propertyTypes ) {
-        Function<Object, String> idFn = map -> ( (Map<String, EntitySet>) map ).get( ENTITY_SET ).getId().toString();
+        Function<Object, String> idFn = map -> ( ( Map<String, EntitySet> ) map ).get( ENTITY_SET ).getId().toString();
 
         List<Map<String, Object>> entitySetMaps = entitySets.entrySet().stream().map( entry -> {
             Map<String, Object> entitySetMap = Maps.newHashMap();
@@ -1330,7 +1332,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
     @Override
     public boolean triggerOrganizationIndex( List<Organization> organizations ) {
-        Function<Object, String> idFn = org -> ( (Map<String, Object>) org )
+        Function<Object, String> idFn = org -> ( ( Map<String, Object> ) org )
                 .get( SerializationConstants.ID_FIELD ).toString();
         List<Map<String, Object>> organizationObjects = organizations.stream()
                 .map( ConductorElasticsearchImpl::getOrganizationObject )
@@ -1401,7 +1403,8 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         return QueryBuilders.matchQuery( field, value ).operator( Operator.AND );
     }
 
-    @SuppressFBWarnings( value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE", justification = "propertyTypeId cannot be null" )
+    @SuppressFBWarnings( value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE", justification = "propertyTypeId cannot be " +
+            "null" )
     private SortBuilder buildSort( SortDefinition sortDefinition ) {
 
         SortBuilder sort;
