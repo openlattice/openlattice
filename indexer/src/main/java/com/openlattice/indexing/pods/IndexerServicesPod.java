@@ -261,7 +261,7 @@ public class IndexerServicesPod {
 
     @Bean
     public MailServiceRequirements mailServiceRequirements() {
-        return () -> hazelcastInstance.getQueue( HazelcastQueue.EMAIL_SPOOL.name() );
+        return () -> HazelcastQueue.EMAIL_SPOOL.getQueue( hazelcastInstance );
     }
 
     @Bean
