@@ -375,7 +375,7 @@ class CollectionsManager(
                 Optional.of(description),
                 setOf(),
                 Optional.empty(),
-                Optional.of(entitySetCollection.organizationId),
+                entitySetCollection.organizationId,
                 Optional.of(flags),
                 Optional.empty(),
                 Optional.empty())

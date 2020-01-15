@@ -354,7 +354,7 @@ class AuditRecordEntitySetsManager(
                 Optional.of("This is an automatically generated auditing entity set."),
                 contacts,
                 Optional.empty(),
-                Optional.of(organizationId),
+                organizationId,
                 Optional.of(EnumSet.of(EntitySetFlag.AUDIT)),
                 Optional.of(partitions as LinkedHashSet<Int>)
         )
@@ -383,7 +383,7 @@ class AuditRecordEntitySetsManager(
                 Optional.of("This is an automatically generated auditing entity set."),
                 contacts,
                 Optional.empty(),
-                Optional.of(organizationId),
+                organizationId,
                 Optional.of(EnumSet.of(EntitySetFlag.AUDIT)),
                 Optional.of(partitions as LinkedHashSet<Int>)
         )
