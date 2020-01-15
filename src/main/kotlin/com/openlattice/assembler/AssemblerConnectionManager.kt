@@ -167,7 +167,7 @@ class AssemblerConnectionManager(
         val dbName = buildOrganizationDatabaseName(organizationId)
         createOrganizationDatabase(organizationId, dbName)
 
-        connect(dbName).use { dataSource ->
+        connect(dbName).let { dataSource ->
             configureRolesInDatabase(dataSource)
             createOpenlatticeSchema(dataSource)
             configureOrganizationUser(organizationId, dataSource)
@@ -613,7 +613,7 @@ class AssemblerConnectionManager(
      */
     fun dematerializeEntitySets(organizationId: UUID, entitySetIds: Set<UUID>) {
         val dbName = buildOrganizationDatabaseName(organizationId)
-        connect(dbName).use { dataSource ->
+        connect(dbName).let { dataSource ->
             entitySetIds.forEach { dropMaterializedEntitySet(dataSource, it) }
         }
         logger.info("Removed materialized entity sets $entitySetIds from organization $organizationId")
