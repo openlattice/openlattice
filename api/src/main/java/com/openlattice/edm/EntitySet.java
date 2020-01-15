@@ -77,7 +77,7 @@ public class EntitySet extends AbstractSecurableObject {
             @JsonProperty( SerializationConstants.DESCRIPTION_FIELD ) Optional<String> description,
             @JsonProperty( SerializationConstants.CONTACTS ) Set<String> contacts,
             @JsonProperty( SerializationConstants.LINKED_ENTITY_SETS ) Optional<Set<UUID>> linkedEntitySets,
-            @JsonProperty( SerializationConstants.ORGANIZATION_ID ) Optional<UUID> organizationId,
+            @JsonProperty( SerializationConstants.ORGANIZATION_ID ) UUID organizationId,
             @JsonProperty( SerializationConstants.FLAGS_FIELD ) Optional<EnumSet<EntitySetFlag>> flags,
             @JsonProperty( SerializationConstants.PARTITIONS ) Optional<LinkedHashSet<Integer>> partitions,
             @JsonProperty( SerializationConstants.EXPIRATION ) Optional<DataExpiration> expiration ) {
@@ -97,7 +97,7 @@ public class EntitySet extends AbstractSecurableObject {
         } else {
             this.contacts = Sets.newHashSet( contacts );
         }
-        this.organizationId = organizationId.orElse( IdConstants.GLOBAL_ORGANIZATION_ID.getId() );
+        this.organizationId = checkNotNull( organizationId );
         partitions.ifPresent( this.partitions::addAll );
         this.expiration = expiration.orElse( null );
     }
@@ -143,7 +143,8 @@ public class EntitySet extends AbstractSecurableObject {
             String name,
             String title,
             Optional<String> description,
-            Set<String> contacts ) {
+            Set<String> contacts,
+            UUID organizationId ) {
         this( Optional.of( id ),
                 entityTypeId,
                 name,
@@ -151,26 +152,7 @@ public class EntitySet extends AbstractSecurableObject {
                 description,
                 contacts,
                 Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty() );
-    }
-
-    public EntitySet(
-            UUID entityTypeId,
-            String name,
-            String title,
-            Optional<String> description,
-            Set<String> contacts ) {
-        this( Optional.empty(),
-                entityTypeId,
-                name,
-                title,
-                description,
-                contacts,
-                Optional.empty(),
-                Optional.empty(),
+                organizationId,
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty() );
@@ -183,7 +165,7 @@ public class EntitySet extends AbstractSecurableObject {
             Optional<String> description,
             Set<String> contacts,
             Optional<Set<UUID>> linkedEntitySets,
-            Optional<UUID> organizationId,
+            UUID organizationId,
             Optional<EnumSet<EntitySetFlag>> flags,
             Optional<LinkedHashSet<Integer>> partitions ) {
         this( Optional.empty(),
