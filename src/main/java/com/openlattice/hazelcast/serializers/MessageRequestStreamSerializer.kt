@@ -18,17 +18,17 @@ class MessageRequestStreamSerializer : SelfRegisteringStreamSerializer<MessageRe
         return MessageRequest::class.java
     }
 
-    override fun write(out: ObjectDataOutput?, `object`: MessageRequest) {
+    override fun write(out: ObjectDataOutput, `object`: MessageRequest) {
         UUIDStreamSerializer.serialize(out, `object`.organizationId)
         UUIDStreamSerializer.serialize(out, `object`.messageEntitySetId)
-        out?.writeUTF(`object`.messageContents)
-        out?.writeUTF(`object`.phoneNumber)
+        out.writeUTF(`object`.messageContents)
+        out.writeUTF(`object`.phoneNumber)
     }
 
-    override fun read(`in`: ObjectDataInput?): MessageRequest {
+    override fun read(`in`: ObjectDataInput): MessageRequest {
         val organizationId = UUIDStreamSerializer.deserialize(`in`)
         val messageEntitySetId = UUIDStreamSerializer.deserialize(`in`)
-        val messageContents = `in`!!.readUTF()
+        val messageContents = `in`.readUTF()
         val phoneNumber = `in`.readUTF()
         return MessageRequest(organizationId, messageEntitySetId, messageContents, phoneNumber)
     }
