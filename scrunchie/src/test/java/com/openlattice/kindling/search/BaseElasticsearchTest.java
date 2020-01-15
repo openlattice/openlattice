@@ -41,7 +41,10 @@ import org.junit.BeforeClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @SuppressFBWarnings( "MS_PKGPROTECT" )
@@ -58,18 +61,18 @@ public class BaseElasticsearchTest {
     protected static final String                     NAMESPACE                   = "testcsv";
     protected static final String                     SALARY                      = "salary";
     protected static final String                     EMPLOYEE_NAME               = "employee_name";
-    protected static final String            EMPLOYEE_TITLE        = "employee_title";
-    protected static final String            EMPLOYEE_DEPT         = "employee_dept";
-    protected static final String            EMPLOYEE_ID           = "employee_id";
-    protected static final String            WEIGHT                = "weight";
-    protected static final String            ENTITY_SET_NAME       = "Employees";
-    protected static final FullQualifiedName ENTITY_TYPE_FQN       = new FullQualifiedName(
+    protected static final String                     EMPLOYEE_TITLE              = "employee_title";
+    protected static final String                     EMPLOYEE_DEPT               = "employee_dept";
+    protected static final String                     EMPLOYEE_ID                 = "employee_id";
+    protected static final String                     WEIGHT                      = "weight";
+    protected static final String                     ENTITY_SET_NAME             = "Employees";
+    protected static final FullQualifiedName          ENTITY_TYPE_FQN             = new FullQualifiedName(
             NAMESPACE,
             "employee" );
-    protected static final int               ELASTICSEARCH_PORT    = 9300;
-    protected static final String            ELASTICSEARCH_CLUSTER = "loom_development";
-    protected static final String            ELASTICSEARCH_URL     = "localhost";
-    protected static final Logger            logger                = LoggerFactory
+    protected static final int                        ELASTICSEARCH_PORT          = 9300;
+    protected static final String                     ELASTICSEARCH_CLUSTER       = "loom_development";
+    protected static final String                     ELASTICSEARCH_URL           = "localhost";
+    protected static final Logger                     logger                      = LoggerFactory
             .getLogger( BaseElasticsearchTest.class );
     protected static final UUID                       namePropertyId              = UUID
             .fromString( "12926a46-7b2d-4b9c-98db-d6a8aff047f0" );
@@ -154,11 +157,12 @@ public class BaseElasticsearchTest {
         allPropertyTypesList.add( salary );
         allPropertyTypesList.add( id );
 
-        LinkedHashSet<UUID> propertyTypeIds = allPropertyTypesList.stream().map( PropertyType::getId ).collect( Collectors
-                .toCollection(LinkedHashSet::new) );
+        LinkedHashSet<UUID> propertyTypeIds = allPropertyTypesList.stream().map( PropertyType::getId )
+                .collect( Collectors
+                        .toCollection( LinkedHashSet::new ) );
 
         entityType = new EntityType(
-                 ENTITY_TYPE_ID ,
+                ENTITY_TYPE_ID,
                 ENTITY_TYPE_FQN,
                 "Employee",
                 Optional.of( "an employee" ),
@@ -179,10 +183,10 @@ public class BaseElasticsearchTest {
                 Optional.of( "employees that are in chicago" ),
                 ImmutableSet.of( "foo@bar.com", "foobar@foo.net" ),
                 Optional.empty(),
+                UUID.randomUUID(),
                 Optional.empty(),
                 Optional.empty(),
-                Optional.empty(),
-                Optional.empty());
+                Optional.empty() );
         entitySet2 = new EntitySet(
                 Optional.of( entitySet2Id ),
                 ENTITY_TYPE_ID,
@@ -191,10 +195,10 @@ public class BaseElasticsearchTest {
                 Optional.of( "this is the second entity set" ),
                 ImmutableSet.of( "foo@bar.com", "foobar@foo.net" ),
                 Optional.empty(),
+                UUID.randomUUID(),
                 Optional.empty(),
                 Optional.empty(),
-                Optional.empty(),
-                Optional.empty());
+                Optional.empty() );
 
         owner = new Principal( PrincipalType.USER, "support@openlattice.com" );
         openlatticeUser = new Principal( PrincipalType.ROLE, "openlatticeUser" );
