@@ -24,7 +24,6 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Streams;
 import com.openlattice.analysis.AnalysisApi;
 import com.openlattice.authorization.AccessCheck;
@@ -59,7 +58,6 @@ import com.openlattice.search.SearchApi;
 
 import java.io.IOException;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -193,7 +191,7 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
      * Helper methods for AuthorizationsApi
      */
 
-    public static void checkPermissionsMap(
+    private static void checkPermissionsMap(
             Map<Permission, Boolean> permissionMap,
             EnumSet<Permission> expectedPermissions ) {
         EnumSet.allOf( Permission.class ).forEach( permission ->
@@ -310,21 +308,17 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
     }
 
     public static EntitySet createEntitySet( EntityType entityType, UUID organizationId ) {
-        return createEntitySet( UUID.randomUUID(), entityType, Optional.of( organizationId ), false, new HashSet<>() );
-    }
-
-    public static EntitySet createEntitySet( UUID entitySetId, EntityType entityType ) {
-        return createEntitySet( entitySetId, entityType, Optional.empty(), false, new HashSet<>() );
+        return createEntitySet( UUID.randomUUID(), entityType, organizationId, false, new HashSet<>() );
     }
 
     public static EntitySet createEntitySet( EntityType entityType, boolean linking, Set<UUID> linkedEntitySetIds ) {
-        return createEntitySet( UUID.randomUUID(), entityType, Optional.empty(), linking, linkedEntitySetIds );
+        return createEntitySet( UUID.randomUUID(), entityType, UUID.randomUUID(), linking, linkedEntitySetIds );
     }
 
     public static EntitySet createEntitySet(
             UUID entitySetId,
             EntityType entityType,
-            Optional<UUID> organizationId,
+            UUID organizationId,
             boolean linking,
             Set<UUID> linkedEntitySetIds ) {
         EnumSet<EntitySetFlag> flags = EnumSet.of( EntitySetFlag.EXTERNAL );
