@@ -48,7 +48,7 @@ constructor(
 ) : CodexApi, AuthorizingComponent {
 
     private val textingExecutor = Executors.newSingleThreadExecutor()
-    private val twilioQueue = hazelcastInstance.getQueue<MessageRequest>(HazelcastQueue.TWILIO.name)
+    private val twilioQueue = HazelcastQueue.TWILIO.getQueue( hazelcastInstance )
     val pendingTexts = Maps.newConcurrentMap<String, Message>()
 
     companion object {
