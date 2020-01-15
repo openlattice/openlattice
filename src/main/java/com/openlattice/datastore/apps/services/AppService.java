@@ -176,7 +176,7 @@ public class AppService {
                 Optional.of( description ),
                 ImmutableSet.of(),
                 Optional.empty(),
-                Optional.of( organizationId ),
+                organizationId,
                 Optional.of( flags ),
                 Optional.of( new LinkedHashSet<>( organizationService.getDefaultPartitions( organizationId ) ) ),
                 Optional.empty() );
