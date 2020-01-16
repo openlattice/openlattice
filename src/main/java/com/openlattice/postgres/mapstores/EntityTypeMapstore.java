@@ -8,7 +8,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MapIndexConfig;
 import com.openlattice.edm.type.EntityType;
-import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.postgres.PostgresArrays;
 import com.openlattice.postgres.ResultSetAdapters;
@@ -31,7 +30,7 @@ public class EntityTypeMapstore extends AbstractBasePostgresMapstore<UUID, Entit
     }
 
     public EntityTypeMapstore( HikariDataSource hds, ObjectMapper mapper ) {
-        super( HazelcastMap.ENTITY_TYPES.name(), ENTITY_TYPES, hds );
+        super( HazelcastMap.ENTITY_TYPES, ENTITY_TYPES, hds );
         this.mapper = mapper;
     }
 

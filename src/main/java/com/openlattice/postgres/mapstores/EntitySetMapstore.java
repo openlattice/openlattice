@@ -7,7 +7,6 @@ import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MapIndexConfig;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.set.EntitySetFlag;
-import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.postgres.PostgresArrays;
 import com.openlattice.postgres.ResultSetAdapters;
@@ -24,7 +23,7 @@ public class EntitySetMapstore extends AbstractBasePostgresMapstore<UUID, Entity
     public static final String FLAGS_INDEX             = "flags[any]";
 
     public EntitySetMapstore( HikariDataSource hds ) {
-        super( HazelcastMap.ENTITY_SETS.name(), ENTITY_SETS, hds );
+        super( HazelcastMap.ENTITY_SETS, ENTITY_SETS, hds );
     }
 
     @Override protected void bind( PreparedStatement ps, UUID key, EntitySet value ) throws SQLException {

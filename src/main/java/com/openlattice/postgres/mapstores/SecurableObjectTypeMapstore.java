@@ -4,9 +4,7 @@ import static com.openlattice.postgres.PostgresTable.SECURABLE_OBJECTS;
 
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MapIndexConfig;
-import com.hazelcast.query.QueryConstants;
 import com.openlattice.authorization.securable.SecurableObjectType;
-import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.postgres.PostgresArrays;
 import com.openlattice.postgres.ResultSetAdapters;
@@ -21,7 +19,7 @@ public class SecurableObjectTypeMapstore extends AbstractBasePostgresMapstore<Ac
     public static final String SECURABLE_OBJECT_TYPE_INDEX = "this";
 
     public SecurableObjectTypeMapstore( HikariDataSource hds ) {
-        super( HazelcastMap.SECURABLE_OBJECT_TYPES.name(), SECURABLE_OBJECTS, hds );
+        super( HazelcastMap.SECURABLE_OBJECT_TYPES, SECURABLE_OBJECTS, hds );
     }
 
     @Override protected void bind(

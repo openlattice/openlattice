@@ -27,7 +27,6 @@ import com.hazelcast.config.InMemoryFormat;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MapIndexConfig;
 import com.openlattice.assembler.OrganizationAssembly;
-import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.organization.OrganizationEntitySetFlag;
 import com.openlattice.postgres.ResultSetAdapters;
 import com.zaxxer.hikari.HikariDataSource;
@@ -46,7 +45,7 @@ public class OrganizationAssemblyMapstore extends AbstractBasePostgresMapstore<U
     private final MaterializedEntitySetMapStore materializedEntitySetsMapStore;
 
     public OrganizationAssemblyMapstore( HikariDataSource hds ) {
-        super( HazelcastMap.ASSEMBLIES.name(), ORGANIZATION_ASSEMBLIES, hds );
+        super( HazelcastMap.ASSEMBLIES, ORGANIZATION_ASSEMBLIES, hds );
         materializedEntitySetsMapStore = new MaterializedEntitySetMapStore( hds );
     }
 

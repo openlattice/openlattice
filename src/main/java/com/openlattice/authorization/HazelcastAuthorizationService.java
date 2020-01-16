@@ -52,7 +52,6 @@ import com.openlattice.authorization.processors.PermissionMerger;
 import com.openlattice.authorization.processors.PermissionRemover;
 import com.openlattice.authorization.processors.SecurableObjectTypeUpdater;
 import com.openlattice.authorization.securable.SecurableObjectType;
-import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.organizations.PrincipalSet;
 import java.time.OffsetDateTime;
 import java.util.Collection;
@@ -85,8 +84,8 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
             HazelcastInstance hazelcastInstance,
             AuthorizationQueryService aqs,
             EventBus eventBus ) {
-        this.aces = hazelcastInstance.getMap( HazelcastMap.PERMISSIONS.name() );
-        this.securableObjectTypes = hazelcastInstance.getMap( HazelcastMap.SECURABLE_OBJECT_TYPES.name() );
+        this.aces = HazelcastMap.PERMISSIONS.getMap( hazelcastInstance );
+        this.securableObjectTypes = HazelcastMap.SECURABLE_OBJECT_TYPES.getMap( hazelcastInstance );
         this.aqs = checkNotNull( aqs );
         this.eventBus = checkNotNull( eventBus );
     }

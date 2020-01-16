@@ -4,7 +4,6 @@ import static com.openlattice.postgres.PostgresColumn.DESCRIPTION;
 import static com.openlattice.postgres.PostgresColumn.ID;
 import static com.openlattice.postgres.PostgresTable.ORGANIZATIONS;
 
-import com.openlattice.hazelcast.HazelcastMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import com.openlattice.mapstores.TestDataFactory;
@@ -22,7 +21,7 @@ import java.util.UUID;
 public class OrganizationDescriptionsMapstore extends AbstractBasePostgresMapstore<UUID, String> {
 
     public OrganizationDescriptionsMapstore( HikariDataSource hds ) {
-        super( HazelcastMap.ORGANIZATIONS_DESCRIPTIONS.name(), ORGANIZATIONS, hds );
+        super( HazelcastMap.ORGANIZATIONS_DESCRIPTIONS, ORGANIZATIONS, hds );
     }
 
     @Override public List<PostgresColumnDefinition> initValueColumns() {

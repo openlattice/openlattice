@@ -1,7 +1,6 @@
 package com.openlattice.postgres.mapstores;
 
 import com.openlattice.apps.App;
-import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.postgres.PostgresArrays;
 import com.openlattice.postgres.PostgresTable;
@@ -18,7 +17,7 @@ import java.util.UUID;
 
 public class AppMapstore extends AbstractBasePostgresMapstore<UUID, App> {
     public AppMapstore( HikariDataSource hds ) {
-        super( HazelcastMap.APPS.name(), PostgresTable.APPS, hds );
+        super( HazelcastMap.APPS, PostgresTable.APPS, hds );
     }
 
     @Override protected void bind( PreparedStatement ps, UUID key, App value ) throws SQLException {

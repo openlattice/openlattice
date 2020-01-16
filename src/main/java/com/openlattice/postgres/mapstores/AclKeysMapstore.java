@@ -2,7 +2,6 @@ package com.openlattice.postgres.mapstores;
 
 import static com.openlattice.postgres.PostgresTable.ACL_KEYS;
 
-import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.postgres.ResultSetAdapters;
 import com.zaxxer.hikari.HikariDataSource;
 import java.sql.PreparedStatement;
@@ -14,7 +13,7 @@ import org.apache.commons.lang.RandomStringUtils;
 public class AclKeysMapstore extends AbstractBasePostgresMapstore<String, UUID> {
 
     public AclKeysMapstore( HikariDataSource hds ) {
-        super( HazelcastMap.ACL_KEYS.name(), ACL_KEYS, hds );
+        super( HazelcastMap.ACL_KEYS, ACL_KEYS, hds );
     }
 
     @Override protected void bind( PreparedStatement ps, String key, UUID value ) throws SQLException {

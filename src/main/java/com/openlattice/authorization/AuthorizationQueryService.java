@@ -31,7 +31,6 @@ import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.openlattice.authorization.paging.AuthorizedObjectsSearchResult;
 import com.openlattice.authorization.securable.SecurableObjectType;
-import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.postgres.PostgresArrays;
 import com.openlattice.postgres.PostgresColumn;
 import com.openlattice.postgres.PostgresQuery;
@@ -66,7 +65,7 @@ public class AuthorizationQueryService {
 
     public AuthorizationQueryService( HikariDataSource hds, HazelcastInstance hazelcastInstance ) {
         this.hds = hds;
-        aces = hazelcastInstance.getMap( HazelcastMap.PERMISSIONS.name() );
+        aces = HazelcastMap.PERMISSIONS.getMap( hazelcastInstance );
 
         // Tables
         String PERMISSIONS_TABLE = PostgresTable.PERMISSIONS.getName();

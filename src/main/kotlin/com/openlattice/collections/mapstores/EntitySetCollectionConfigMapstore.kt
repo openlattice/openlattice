@@ -19,7 +19,7 @@ const val ENTITY_SET_ID_INDEX = "this"
 open class EntitySetCollectionConfigMapstore(
         val hds: HikariDataSource
 ) : AbstractBasePostgresMapstore<CollectionTemplateKey, UUID>(
-        HazelcastMap.ENTITY_SET_COLLECTION_CONFIG.name, PostgresTable.ENTITY_SET_COLLECTION_CONFIG, hds) {
+        HazelcastMap.ENTITY_SET_COLLECTION_CONFIG, PostgresTable.ENTITY_SET_COLLECTION_CONFIG, hds) {
 
     override fun bind(ps: PreparedStatement, key: CollectionTemplateKey, value: UUID) {
         var index = bind(ps, key, 1)

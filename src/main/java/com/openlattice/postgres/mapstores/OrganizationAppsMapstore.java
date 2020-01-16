@@ -1,6 +1,5 @@
 package com.openlattice.postgres.mapstores;
 
-import com.openlattice.hazelcast.HazelcastMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
@@ -27,7 +26,7 @@ import static com.openlattice.postgres.PostgresColumn.ID;
 public class OrganizationAppsMapstore extends AbstractBasePostgresMapstore<UUID, DelegatedUUIDSet> {
 
     public OrganizationAppsMapstore( HikariDataSource hds ) {
-        super( HazelcastMap.ORGANIZATION_APPS.name(), PostgresTable.ORGANIZATIONS, hds );
+        super( HazelcastMap.ORGANIZATION_APPS, PostgresTable.ORGANIZATIONS, hds );
     }
 
     @Override protected List<PostgresColumnDefinition> initValueColumns() {

@@ -24,9 +24,9 @@ package com.openlattice.authorization;
 
 import com.hazelcast.query.Predicates;
 import com.openlattice.authorization.securable.SecurableObjectType;
-import com.openlattice.hazelcast.HazelcastMap;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
+import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.postgres.mapstores.SecurableObjectTypeMapstore;
 
 import java.util.*;
@@ -36,7 +36,7 @@ public class HazelcastSecurableObjectResolveTypeService implements SecurableObje
     private final IMap<AclKey, SecurableObjectType> securableObjectTypes;
 
     public HazelcastSecurableObjectResolveTypeService( HazelcastInstance hazelcastInstance ) {
-        securableObjectTypes = hazelcastInstance.getMap( HazelcastMap.SECURABLE_OBJECT_TYPES.name() );
+        securableObjectTypes = HazelcastMap.SECURABLE_OBJECT_TYPES.getMap( hazelcastInstance );
     }
 
     @Override

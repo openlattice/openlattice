@@ -27,10 +27,8 @@ import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MapIndexConfig;
 import com.hazelcast.config.MapStoreConfig;
 import com.hazelcast.config.MapStoreConfig.InitialLoadMode;
-import com.hazelcast.config.NearCacheConfig;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.SecurablePrincipal;
-import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.postgres.PostgresArrays;
@@ -50,7 +48,7 @@ public class PrincipalMapstore extends AbstractBasePostgresMapstore<AclKey, Secu
     private static      Role   TEST_ROLE          = TestDataFactory.role();
 
     public PrincipalMapstore( HikariDataSource hds ) {
-        super( HazelcastMap.PRINCIPALS.name(), PRINCIPALS, hds );
+        super( HazelcastMap.PRINCIPALS, PRINCIPALS, hds );
     }
 
     @Override public AclKey generateTestKey() {

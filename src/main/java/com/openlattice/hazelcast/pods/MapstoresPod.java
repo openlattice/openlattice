@@ -26,7 +26,6 @@ import com.auth0.json.mgmt.users.User;
 import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
 import com.kryptnostic.rhizome.mapstores.SelfRegisteringMapStore;
-import com.kryptnostic.rhizome.pods.hazelcast.QueueConfigurer;
 import com.openlattice.apps.App;
 import com.openlattice.apps.AppConfigKey;
 import com.openlattice.apps.AppType;
@@ -63,8 +62,6 @@ import com.openlattice.edm.set.EntitySetPropertyMetadata;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
-import com.openlattice.hazelcast.HazelcastQueue;
-import com.openlattice.ids.HazelcastIdGenerationService;
 import com.openlattice.ids.IdGenerationMapstore;
 import com.openlattice.ids.Range;
 import com.openlattice.linking.mapstores.LinkingFeedbackMapstore;
@@ -100,7 +97,7 @@ import java.util.UUID;
 public class MapstoresPod {
     private static final Logger           logger = LoggerFactory.getLogger( MapstoresPod.class );
     @Inject
-    private              HikariDataSource hikariDataSource;
+    private HikariDataSource hikariDataSource;
 
     @Inject
     private PostgresTableManager ptMgr;
@@ -216,60 +213,6 @@ public class MapstoresPod {
     @Bean
     public SelfRegisteringMapStore<EntitySetPropertyKey, EntitySetPropertyMetadata> entitySetPropertyMetadataMapstore() {
         return new EntitySetPropertyMetadataMapstore( hikariDataSource );
-    }
-
-    @Bean
-    public QueueConfigurer defaultQueueConfigurer() {
-        return config -> config.setMaxSize( 10_000 ).setEmptyQueueTtl( 60 );
-    }
-
-    @Bean
-    public QueueConfigurer idGenerationQueueConfigurer() {
-        return config -> config.setName( HazelcastQueue.ID_GENERATION.name() )
-                .setMaxSize( (int) ( HazelcastIdGenerationService.NUM_PARTITIONS * 3 ) )
-                .setBackupCount( 1 );
-    }
-
-    @Bean
-    public QueueConfigurer twilioQueueConfigurer() {
-        return config -> config.setName( HazelcastQueue.TWILIO.name() ).setMaxSize( 100_000 ).setBackupCount( 1 );
-    }
-
-    @Bean
-    public QueueConfigurer indexingQueueConfigurer() {
-        return config -> config.setName( HazelcastQueue.INDEXING.name() ).setMaxSize( 100_000 ).setBackupCount( 1 );
-    }
-
-    @Bean
-    public QueueConfigurer linkingQueueConfigurer() {
-        return config -> config
-                .setName( HazelcastQueue.LINKING_CANDIDATES.name() )
-                .setMaxSize( 1_000 )
-                .setBackupCount( 1 );
-    }
-
-    @Bean
-    public QueueConfigurer linkingIndexingQueueConfigurer() {
-        return config -> config
-                .setName( HazelcastQueue.LINKING_INDEXING.name() )
-                .setMaxSize( 10_000 )
-                .setBackupCount( 1 );
-    }
-
-    @Bean
-    public QueueConfigurer linkingUnIndexingQueueConfigurer() {
-        return config -> config
-                .setName( HazelcastQueue.LINKING_UNINDEXING.name() )
-                .setMaxSize( 10_000 )
-                .setBackupCount( 1 );
-    }
-
-    @Bean
-    public QueueConfigurer integrationJobQueueConfigurer() {
-        return config -> config
-                .setName(HazelcastQueue.INTEGRATION_JOBS.name() )
-                .setMaxSize( 100 )
-                .setBackupCount( 1 );
     }
 
     @Bean

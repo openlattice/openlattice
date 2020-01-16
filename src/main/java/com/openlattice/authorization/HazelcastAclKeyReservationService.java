@@ -36,7 +36,6 @@ import com.openlattice.controllers.exceptions.UniqueIdConflictException;
 import com.openlattice.controllers.exceptions.TypeExistsException;
 import com.openlattice.datastore.util.Util;
 import com.openlattice.edm.EntitySet;
-import com.openlattice.hazelcast.HazelcastMap;
 
 import java.util.*;
 import java.util.function.Supplier;
@@ -72,8 +71,8 @@ public class HazelcastAclKeyReservationService {
     private final IMap<UUID, String> names;
 
     public HazelcastAclKeyReservationService( HazelcastInstance hazelcast ) {
-        this.aclKeys = hazelcast.getMap( HazelcastMap.ACL_KEYS.name() );
-        this.names = hazelcast.getMap( HazelcastMap.NAMES.name() );
+        this.aclKeys = HazelcastMap.ACL_KEYS.getMap( hazelcast );
+        this.names = HazelcastMap.NAMES.getMap( hazelcast );
     }
 
     public UUID getId( String name ) {

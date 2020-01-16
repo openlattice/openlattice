@@ -60,16 +60,10 @@ class AuditRecordEntitySetsManager(
         private val hazelcastInstance: HazelcastInstance
 
 ) {
-    private val securableObjectTypes = hazelcastInstance.getMap<AclKey, SecurableObjectType>(
-            HazelcastMap.SECURABLE_OBJECT_TYPES.name
-    )
-    private val auditRecordEntitySetConfigurations = hazelcastInstance.getMap<AclKey, AuditRecordEntitySetConfiguration>(
-            HazelcastMap.AUDIT_RECORD_ENTITY_SETS.name
-    )
+    private val securableObjectTypes = HazelcastMap.SECURABLE_OBJECT_TYPES.getMap( hazelcastInstance )
+    private val auditRecordEntitySetConfigurations = HazelcastMap.AUDIT_RECORD_ENTITY_SETS.getMap( hazelcastInstance )
 
-    private val organizations = hazelcastInstance.getMap<UUID, Organization>(
-            HazelcastMap.ORGANIZATIONS.name
-    )
+    private val organizations = HazelcastMap.ORGANIZATIONS.getMap( hazelcastInstance )
 
     private val edmAuditTypes = setOf(
             AuditEventType.CREATE_PROPERTY_TYPE,
@@ -360,7 +354,7 @@ class AuditRecordEntitySetsManager(
                 Optional.of("This is an automatically generated auditing entity set."),
                 contacts,
                 Optional.empty(),
-                Optional.of(organizationId),
+                organizationId,
                 Optional.of(EnumSet.of(EntitySetFlag.AUDIT)),
                 Optional.of(partitions as LinkedHashSet<Int>)
         )
@@ -389,7 +383,7 @@ class AuditRecordEntitySetsManager(
                 Optional.of("This is an automatically generated auditing entity set."),
                 contacts,
                 Optional.empty(),
-                Optional.of(organizationId),
+                organizationId,
                 Optional.of(EnumSet.of(EntitySetFlag.AUDIT)),
                 Optional.of(partitions as LinkedHashSet<Int>)
         )

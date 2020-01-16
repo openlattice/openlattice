@@ -17,7 +17,7 @@ import java.util.*
 open class OrganizationExternalDatabaseTableMapstore(
         hds: HikariDataSource
 ) : AbstractBasePostgresMapstore<UUID, OrganizationExternalDatabaseTable>
-(HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_TABLE.name, PostgresTable.ORGANIZATION_EXTERNAL_DATABASE_TABLE, hds) {
+(HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_TABLE, PostgresTable.ORGANIZATION_EXTERNAL_DATABASE_TABLE, hds) {
 
     override fun bind(ps: PreparedStatement, key: UUID, value: OrganizationExternalDatabaseTable) {
         var index = bind(ps, key, 1)

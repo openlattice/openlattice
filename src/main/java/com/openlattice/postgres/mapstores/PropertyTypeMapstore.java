@@ -21,7 +21,6 @@
 package com.openlattice.postgres.mapstores;
 
 import com.openlattice.edm.type.PropertyType;
-import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.postgres.PostgresArrays;
 import com.openlattice.postgres.PostgresTable;
@@ -36,7 +35,7 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName;
 public class PropertyTypeMapstore extends AbstractBasePostgresMapstore<UUID, PropertyType> {
 
     public PropertyTypeMapstore( HikariDataSource hds ) {
-        super( HazelcastMap.PROPERTY_TYPES.name(), PostgresTable.PROPERTY_TYPES, hds );
+        super( HazelcastMap.PROPERTY_TYPES, PostgresTable.PROPERTY_TYPES, hds );
     }
 
     @Override protected void bind( PreparedStatement ps, UUID key, PropertyType value ) throws SQLException {

@@ -29,13 +29,10 @@ import com.openlattice.authorization.AceKey;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.HzAuthzTest;
 import com.openlattice.authorization.securable.SecurableObjectType;
-import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.requests.util.RequestUtil;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 import org.junit.Assert;
 import org.junit.Test;
@@ -73,8 +70,7 @@ public class RequestsTests extends HzAuthzTest {
     private static final   Logger                   logger    = LoggerFactory.getLogger( RequestsTests.class );
 
     static {
-        IMap<AclKey, SecurableObjectType> objectTypes = hazelcastInstance
-                .getMap( HazelcastMap.SECURABLE_OBJECT_TYPES.name() );
+        IMap<AclKey, SecurableObjectType> objectTypes = HazelcastMap.SECURABLE_OBJECT_TYPES.getMap( hazelcastInstance );
         for ( Status s : ss ) {
             boolean successful = false;
             while ( !successful ) {

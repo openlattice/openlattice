@@ -290,22 +290,23 @@ class PostgresEntityDataQueryService(
         var updatedEntityCount = 0
         var updatedPropertyCounts = 0
 
+
         entities.entries
                 .groupBy { getPartition(it.key, partitions) }
                 .forEach { (partition, batch) ->
-                    val entityBatch = batch.map { (entityKeyId, rawValue) ->
-                        return@map if (awsPassthrough) {
-                            entityKeyId to rawValue
-                        } else {
-                            entityKeyId to Multimaps.asMap(JsonDeserializer
-                                    .validateFormatAndNormalize(
-                                            rawValue, authorizedPropertyTypes
-                                    )
-                                    { "Entity set $entitySetId with entity key id $entityKeyId" })
-                        }
-                    }.toMap()
+                    var entityBatch = batch.associate { it.key to it.value }
 
+                    /* tombstoneFn must execute on the non-JsonDeserializer-formatted version of the entities,
+                       otherwise any values replaced by an empty set will not be tombstoned. */
                     tombstoneFn(version, entityBatch)
+
+                    if (!awsPassthrough) {
+                        entityBatch = entityBatch.mapValues {
+                            Multimaps.asMap(JsonDeserializer.validateFormatAndNormalize(it.value, authorizedPropertyTypes)
+                                { "Entity set $entitySetId with entity key id ${it.key}" })
+                        }
+                    }
+
                     val upc = upsertEntities(
                             entitySetId,
                             entityBatch,
@@ -314,6 +315,7 @@ class PostgresEntityDataQueryService(
                             partition,
                             awsPassthrough
                     )
+
                     //For now we can't track how many entities were updated in a call transactionally.
                     //If we want to check how many entities were written at a specific version that is possible but
                     //expensive.

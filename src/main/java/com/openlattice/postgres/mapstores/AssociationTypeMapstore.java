@@ -1,7 +1,6 @@
 package com.openlattice.postgres.mapstores;
 
 import com.openlattice.edm.type.AssociationType;
-import com.openlattice.hazelcast.HazelcastMap;
 import com.google.common.collect.Sets;
 import com.openlattice.postgres.PostgresArrays;
 import com.openlattice.postgres.ResultSetAdapters;
@@ -20,7 +19,7 @@ import static com.openlattice.postgres.PostgresTable.ASSOCIATION_TYPES;
 public class AssociationTypeMapstore extends AbstractBasePostgresMapstore<UUID, AssociationType> {
 
     public AssociationTypeMapstore( HikariDataSource hds ) {
-        super( HazelcastMap.ASSOCIATION_TYPES.name(), ASSOCIATION_TYPES, hds );
+        super( HazelcastMap.ASSOCIATION_TYPES, ASSOCIATION_TYPES, hds );
     }
 
     @Override protected void bind( PreparedStatement ps, UUID key, AssociationType value ) throws SQLException {

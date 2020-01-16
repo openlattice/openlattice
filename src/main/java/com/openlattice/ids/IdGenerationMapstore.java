@@ -26,7 +26,6 @@ import com.hazelcast.config.InMemoryFormat;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MapStoreConfig;
 import com.hazelcast.config.MapStoreConfig.InitialLoadMode;
-import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.postgres.PostgresTable;
 import com.openlattice.postgres.ResultSetAdapters;
 import com.openlattice.postgres.mapstores.AbstractBasePostgresMapstore;
@@ -40,7 +39,7 @@ import java.sql.SQLException;
  */
 public class IdGenerationMapstore extends AbstractBasePostgresMapstore<Long, Range> {
     public IdGenerationMapstore( HikariDataSource hds ) {
-        super( HazelcastMap.ID_GENERATION.name(), PostgresTable.ID_GENERATION, hds );
+        super( HazelcastMap.ID_GENERATION, PostgresTable.ID_GENERATION, hds );
     }
 
     @Override public Long generateTestKey() {

@@ -62,8 +62,8 @@ class HazelcastOrganizationService(
         private val partitionManager: PartitionManager,
         private val assembler: Assembler
 ) {
-    private val organizations: IMap<UUID, Organization> = hazelcastInstance.getMap(HazelcastMap.ORGANIZATIONS.name)
-    private val users: IMap<String, User> = hazelcastInstance.getMap(HazelcastMap.USERS.name)
+    private val organizations = HazelcastMap.ORGANIZATIONS.getMap( hazelcastInstance )
+    private val users = HazelcastMap.USERS.getMap( hazelcastInstance )
 
     @Inject
     private lateinit var eventBus: EventBus

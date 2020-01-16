@@ -26,7 +26,7 @@ const val FEEDBACK_INDEX = "this"
 open class LinkingFeedbackMapstore(
         hds: HikariDataSource
 ) : AbstractBasePostgresMapstore<EntityKeyPair, Boolean>
-(HazelcastMap.LINKING_FEEDBACK.name, PostgresTable.LINKING_FEEDBACK, hds) {
+(HazelcastMap.LINKING_FEEDBACK, PostgresTable.LINKING_FEEDBACK, hds) {
 
     override fun bind(ps: PreparedStatement, key: EntityKeyPair, value: Boolean) {
         val offset = bind(ps, key, 1)

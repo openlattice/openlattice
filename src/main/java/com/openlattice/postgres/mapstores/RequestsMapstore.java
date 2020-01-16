@@ -7,7 +7,6 @@ import static com.openlattice.postgres.PostgresTable.REQUESTS;
 import com.openlattice.authorization.AceKey;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principal;
-import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.requests.Request;
 import com.openlattice.requests.Status;
@@ -25,7 +24,7 @@ public class RequestsMapstore extends AbstractBasePostgresMapstore<AceKey, Statu
     private static final Principal TEST_USER_PRINCIPAL = TestDataFactory.userPrincipal();
 
     public RequestsMapstore( HikariDataSource hds ) {
-        super( HazelcastMap.REQUESTS.name(), REQUESTS, hds );
+        super( HazelcastMap.REQUESTS, REQUESTS, hds );
     }
 
     @Override protected void bind( PreparedStatement ps, AceKey key, Status value ) throws SQLException {

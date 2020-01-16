@@ -8,7 +8,6 @@ import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MapIndexConfig;
 import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.PrincipalType;
-import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.organizations.PrincipalSet;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -38,7 +37,7 @@ public class OrganizationMembersMapstore extends AbstractBasePostgresMapstore<UU
     public static final String ANY_PRINCIPAL_SET = "principals[any]";
 
     public OrganizationMembersMapstore( HikariDataSource hds ) {
-        super( HazelcastMap.ORGANIZATIONS_MEMBERS.name(), ORGANIZATIONS, hds );
+        super( HazelcastMap.ORGANIZATIONS_MEMBERS, ORGANIZATIONS, hds );
     }
 
     @Override

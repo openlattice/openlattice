@@ -24,7 +24,7 @@ class AuditingIntegrationService(
         private val s3AuditingService: S3AuditingService,
         private val mapper: ObjectMapper
 ) {
-    val auditingQueue = hazelcastInstance.getQueue<AuditableEvent>(HazelcastQueue.AUDITING.name)
+    val auditingQueue = HazelcastQueue.AUDITING.getQueue(hazelcastInstance)
     val integrationExecutor = MoreExecutors.listeningDecorator(Executors.newSingleThreadExecutor())
     val loadingExecutor = MoreExecutors.listeningDecorator(Executors.newSingleThreadExecutor())
 

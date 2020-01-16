@@ -25,7 +25,6 @@ import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.hazelcast.query.Predicates;
 import com.openlattice.data.PropertyUsageSummary;
-import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.postgres.*;
 import com.openlattice.postgres.mapstores.EntitySetMapstore;
 import com.openlattice.postgres.streams.PostgresIterable;
@@ -56,7 +55,7 @@ public class PostgresEdmManager {
 
     public PostgresEdmManager( HikariDataSource hds, HazelcastInstance hazelcastInstance ) {
         this.hds = hds;
-        this.entitySets = hazelcastInstance.getMap( HazelcastMap.ENTITY_SETS.name() );
+        this.entitySets = HazelcastMap.ENTITY_SETS.getMap( hazelcastInstance );
     }
 
     public PostgresIterable<EntitySet> getAllEntitySets() {

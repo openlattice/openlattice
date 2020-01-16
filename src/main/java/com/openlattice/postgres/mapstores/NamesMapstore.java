@@ -1,6 +1,5 @@
 package com.openlattice.postgres.mapstores;
 
-import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.postgres.ResultSetAdapters;
 import com.zaxxer.hikari.HikariDataSource;
 
@@ -14,7 +13,7 @@ import static com.openlattice.postgres.PostgresTable.NAMES;
 public class NamesMapstore extends AbstractBasePostgresMapstore<UUID, String> {
 
     public NamesMapstore( HikariDataSource hds ) {
-        super( HazelcastMap.NAMES.name(), NAMES, hds );
+        super( HazelcastMap.NAMES, NAMES, hds );
     }
 
 

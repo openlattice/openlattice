@@ -23,7 +23,6 @@ package com.openlattice.authorization.mapstores;
 import com.hazelcast.config.MapStoreConfig;
 import com.hazelcast.config.MapStoreConfig.InitialLoadMode;
 import com.openlattice.authorization.PostgresUserApi;
-import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.postgres.PostgresColumn;
 import com.openlattice.postgres.PostgresTable;
 import com.openlattice.postgres.mapstores.AbstractBasePostgresMapstore;
@@ -45,7 +44,7 @@ public class PostgresCredentialMapstore extends AbstractBasePostgresMapstore<Str
     private final PostgresUserApi dcqs;
 
     public PostgresCredentialMapstore( HikariDataSource hds, PostgresUserApi pgUserApi ) {
-        super( HazelcastMap.DB_CREDS.name(), PostgresTable.DB_CREDS, hds );
+        super( HazelcastMap.DB_CREDS, PostgresTable.DB_CREDS, hds );
         this.dcqs = pgUserApi;
     }
 

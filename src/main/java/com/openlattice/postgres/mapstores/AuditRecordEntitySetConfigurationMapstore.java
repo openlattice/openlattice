@@ -5,7 +5,6 @@ import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MapIndexConfig;
 import com.openlattice.auditing.AuditRecordEntitySetConfiguration;
 import com.openlattice.authorization.AclKey;
-import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.postgres.PostgresArrays;
 import com.openlattice.postgres.PostgresTable;
@@ -27,7 +26,7 @@ public class AuditRecordEntitySetConfigurationMapstore
 
     public AuditRecordEntitySetConfigurationMapstore(
             HikariDataSource hds ) {
-        super( HazelcastMap.AUDIT_RECORD_ENTITY_SETS.name(), PostgresTable.AUDIT_RECORD_ENTITY_SET_IDS, hds );
+        super( HazelcastMap.AUDIT_RECORD_ENTITY_SETS, PostgresTable.AUDIT_RECORD_ENTITY_SET_IDS, hds );
     }
 
     @Override protected void bind(

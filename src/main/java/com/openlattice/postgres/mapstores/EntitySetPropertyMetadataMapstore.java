@@ -4,7 +4,6 @@ import static com.openlattice.postgres.PostgresTable.ENTITY_SET_PROPERTY_METADAT
 
 import com.openlattice.edm.set.EntitySetPropertyKey;
 import com.openlattice.edm.set.EntitySetPropertyMetadata;
-import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.postgres.PostgresArrays;
 import com.openlattice.postgres.ResultSetAdapters;
@@ -20,7 +19,7 @@ public class EntitySetPropertyMetadataMapstore
         extends AbstractBasePostgresMapstore<EntitySetPropertyKey, EntitySetPropertyMetadata> {
 
     public EntitySetPropertyMetadataMapstore( HikariDataSource hds ) {
-        super( HazelcastMap.ENTITY_SET_PROPERTY_METADATA.name(), ENTITY_SET_PROPERTY_METADATA, hds );
+        super( HazelcastMap.ENTITY_SET_PROPERTY_METADATA, ENTITY_SET_PROPERTY_METADATA, hds );
     }
 
     @Override protected void bind(

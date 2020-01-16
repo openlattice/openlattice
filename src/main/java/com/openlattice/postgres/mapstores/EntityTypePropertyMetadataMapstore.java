@@ -3,11 +3,8 @@ package com.openlattice.postgres.mapstores;
 import com.hazelcast.config.InMemoryFormat;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MapIndexConfig;
-import com.openlattice.edm.set.EntitySetPropertyKey;
-import com.openlattice.edm.set.EntitySetPropertyMetadata;
 import com.openlattice.edm.type.EntityTypePropertyKey;
 import com.openlattice.edm.type.EntityTypePropertyMetadata;
-import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.postgres.PostgresArrays;
 import com.openlattice.postgres.ResultSetAdapters;
@@ -28,7 +25,7 @@ public class EntityTypePropertyMetadataMapstore
     public static final String ENTITY_TYPE_INDEX = "__key#entityTypeId";
 
     public EntityTypePropertyMetadataMapstore( HikariDataSource hds ) {
-        super( HazelcastMap.ENTITY_TYPE_PROPERTY_METADATA.name(), ENTITY_TYPE_PROPERTY_METADATA, hds );
+        super( HazelcastMap.ENTITY_TYPE_PROPERTY_METADATA, ENTITY_TYPE_PROPERTY_METADATA, hds );
     }
 
     @Override protected void bind(
