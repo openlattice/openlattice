@@ -6,6 +6,7 @@ import com.openlattice.authorization.Permission;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MapIndexConfig;
 import com.hazelcast.config.MapStoreConfig;
+import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.postgres.PostgresArrays;
 import com.openlattice.postgres.PostgresTable;
 import com.openlattice.postgres.ResultSetAdapters;

@@ -23,6 +23,7 @@ package com.openlattice.authorization.mapstores;
 import com.hazelcast.config.MapStoreConfig;
 import com.hazelcast.config.MapStoreConfig.InitialLoadMode;
 import com.openlattice.authorization.PostgresUserApi;
+import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.postgres.PostgresColumn;
 import com.openlattice.postgres.PostgresTable;
 import com.openlattice.postgres.mapstores.AbstractBasePostgresMapstore;

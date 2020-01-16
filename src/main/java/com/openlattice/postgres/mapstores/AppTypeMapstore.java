@@ -1,6 +1,7 @@
 package com.openlattice.postgres.mapstores;
 
 import com.openlattice.apps.AppType;
+import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.postgres.PostgresTable;
 import com.openlattice.postgres.ResultSetAdapters;

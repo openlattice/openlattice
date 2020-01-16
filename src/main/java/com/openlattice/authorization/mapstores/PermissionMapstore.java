@@ -37,6 +37,7 @@ import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.PrincipalType;
 import com.openlattice.authorization.securable.SecurableObjectType;
+import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.postgres.PostgresColumn;
 import com.openlattice.postgres.PostgresColumnDefinition;

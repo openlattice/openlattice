@@ -40,6 +40,7 @@ import com.openlattice.edm.schemas.processors.SchemaMerger;
 import com.openlattice.edm.schemas.processors.SchemaRemover;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
+import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import java.util.Arrays;
 import java.util.Collection;

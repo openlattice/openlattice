@@ -48,6 +48,7 @@ import com.openlattice.authorization.projections.PrincipalProjection;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.controllers.exceptions.TypeExistsException;
 import com.openlattice.datastore.util.Util;
+import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.processors.NestedPrincipalMerger;
 import com.openlattice.organizations.processors.NestedPrincipalRemover;

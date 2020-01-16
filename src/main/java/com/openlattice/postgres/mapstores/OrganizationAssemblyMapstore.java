@@ -27,6 +27,7 @@ import com.hazelcast.config.InMemoryFormat;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MapIndexConfig;
 import com.openlattice.assembler.OrganizationAssembly;
+import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.organization.OrganizationEntitySetFlag;
 import com.openlattice.postgres.ResultSetAdapters;
 import com.zaxxer.hikari.HikariDataSource;

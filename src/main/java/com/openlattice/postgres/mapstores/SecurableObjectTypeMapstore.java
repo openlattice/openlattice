@@ -6,6 +6,7 @@ import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MapIndexConfig;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.authorization.AclKey;
+import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.postgres.PostgresArrays;
 import com.openlattice.postgres.ResultSetAdapters;
 import com.zaxxer.hikari.HikariDataSource;

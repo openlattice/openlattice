@@ -8,6 +8,7 @@ import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MapIndexConfig;
 import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.PrincipalType;
+import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.organizations.PrincipalSet;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;

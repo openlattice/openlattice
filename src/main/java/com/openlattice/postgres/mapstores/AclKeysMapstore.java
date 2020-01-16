@@ -2,6 +2,7 @@ package com.openlattice.postgres.mapstores;
 
 import static com.openlattice.postgres.PostgresTable.ACL_KEYS;
 
+import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.postgres.ResultSetAdapters;
 import com.zaxxer.hikari.HikariDataSource;
 import java.sql.PreparedStatement;

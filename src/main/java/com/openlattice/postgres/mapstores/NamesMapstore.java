@@ -1,5 +1,6 @@
 package com.openlattice.postgres.mapstores;
 
+import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.postgres.ResultSetAdapters;
 import com.zaxxer.hikari.HikariDataSource;
 

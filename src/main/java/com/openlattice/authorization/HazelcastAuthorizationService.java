@@ -52,6 +52,7 @@ import com.openlattice.authorization.processors.PermissionMerger;
 import com.openlattice.authorization.processors.PermissionRemover;
 import com.openlattice.authorization.processors.SecurableObjectTypeUpdater;
 import com.openlattice.authorization.securable.SecurableObjectType;
+import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.organizations.PrincipalSet;
 import java.time.OffsetDateTime;
 import java.util.Collection;

@@ -25,6 +25,7 @@ import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.hazelcast.query.Predicates;
 import com.openlattice.data.PropertyUsageSummary;
+import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.postgres.*;
 import com.openlattice.postgres.mapstores.EntitySetMapstore;
 import com.openlattice.postgres.streams.PostgresIterable;

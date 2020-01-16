@@ -7,6 +7,7 @@ import static com.openlattice.postgres.PostgresTable.REQUESTS;
 import com.openlattice.authorization.AceKey;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principal;
+import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.requests.Request;
 import com.openlattice.requests.Status;

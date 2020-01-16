@@ -5,6 +5,7 @@ import static com.openlattice.postgres.PostgresTable.SCHEMA;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
+import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.postgres.PostgresArrays;
 import com.openlattice.postgres.ResultSetAdapters;

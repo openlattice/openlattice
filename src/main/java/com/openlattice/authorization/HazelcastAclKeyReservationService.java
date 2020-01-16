@@ -39,6 +39,8 @@ import com.openlattice.edm.EntitySet;
 
 import java.util.*;
 import java.util.function.Supplier;
+
+import com.openlattice.hazelcast.HazelcastMap;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 public class HazelcastAclKeyReservationService {
