@@ -13,18 +13,18 @@ class GrantTypeStreamSerializer : AbstractEnumSerializer<GrantType>() {
         @JvmStatic
         fun serialize(out: ObjectDataOutput, `object`: GrantType) =  AbstractEnumSerializer.serialize(out, `object`)
         @JvmStatic
-        fun deserialize(`in`: ObjectDataInput ): GrantType = deserialize(GrantType::class.java, `in`) as GrantType
+        fun deserialize(`in`: ObjectDataInput ): GrantType = deserialize(GrantType::class.java, `in`)
     }
 
     override fun getTypeId(): Int {
         return StreamSerializerTypeIds.GRANT_TYPE.ordinal
     }
 
-    override fun getClazz(): Class<out Enum<GrantType>> {
+    override fun getClazz(): Class<out GrantType> {
         return GrantType::class.java
     }
 
-    override fun generateTestValue(): Enum<GrantType> {
+    override fun generateTestValue(): GrantType {
         return GrantType.Manual
     }
 }

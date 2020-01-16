@@ -20,11 +20,11 @@ class EntitySetFlagStreamSerializer : AbstractEnumSerializer<EntitySetFlag>() {
         return StreamSerializerTypeIds.ENTITY_SET_FLAG.ordinal
     }
 
-    override fun getClazz(): Class<out Enum<EntitySetFlag>> {
+    override fun getClazz(): Class<EntitySetFlag> {
         return EntitySetFlag::class.java
     }
 
-    override fun generateTestValue(): Enum<EntitySetFlag> {
+    override fun generateTestValue(): EntitySetFlag {
         return EntitySetFlag.AUDIT
     }
 }

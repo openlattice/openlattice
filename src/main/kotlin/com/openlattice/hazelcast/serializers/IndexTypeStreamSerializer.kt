@@ -10,11 +10,11 @@ class IndexTypeStreamSerializer : AbstractEnumSerializer<IndexType>() {
         return StreamSerializerTypeIds.INDEX_TYPE.ordinal
     }
 
-    override fun getClazz(): Class<out Enum<IndexType>> {
+    override fun getClazz(): Class<out IndexType> {
         return IndexType::class.java
     }
 
-    override fun generateTestValue(): Enum<IndexType> {
+    override fun generateTestValue(): IndexType {
         return IndexType.HASH
     }
 }

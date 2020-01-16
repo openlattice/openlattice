@@ -10,11 +10,11 @@ class EdmPrimitiveTypeKindStreamSerializer : AbstractEnumSerializer<EdmPrimitive
         return StreamSerializerTypeIds.EDM_PRIMITIVE_TYPE_KIND.ordinal
     }
 
-    override fun getClazz(): Class<out Enum<EdmPrimitiveTypeKind>> {
+    override fun getClazz(): Class<out EdmPrimitiveTypeKind> {
         return EdmPrimitiveTypeKind::class.java
     }
 
-    override fun generateTestValue(): Enum<EdmPrimitiveTypeKind> {
+    override fun generateTestValue(): EdmPrimitiveTypeKind {
         return EdmPrimitiveTypeKind.GeometryCollection
     }
 }
