@@ -1,6 +1,6 @@
 package com.openlattice.codex
 
-import java.util.*
+import java.util.UUID
 
 data class MessageRequest (
         val organizationId: UUID,

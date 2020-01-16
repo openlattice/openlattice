@@ -327,6 +327,7 @@ public final class TestDataFactory {
                 Optional.of( randomAlphanumeric( 5 ) ),
                 ImmutableSet.of(),
                 EdmPrimitiveTypeKind.String,
+                Optional.of( Sets.newHashSet( RandomStringUtils.random( 5 ), RandomStringUtils.random( 5 ) ) ),
                 Optional.of( r.nextBoolean() ),
                 Optional.of( analyzer() ),
                 Optional.of( postgresIndexType ) );
@@ -618,7 +619,7 @@ public final class TestDataFactory {
     }
 
     public static SearchConstraints simpleSearchConstraints() {
-        return SearchConstraints.simpleSearchConstraints( new UUID[]{ UUID.randomUUID() },
+        return SearchConstraints.simpleSearchConstraints( new UUID[] { UUID.randomUUID() },
                 r.nextInt( 1000 ),
                 r.nextInt( 1000 ),
                 randomAlphanumeric( 10 ) );
