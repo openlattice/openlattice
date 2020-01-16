@@ -22,38 +22,50 @@
 package com.openlattice.conductor;
 
 import com.geekbeast.rhizome.NetworkUtils;
+import com.kryptnostic.rhizome.configuration.ConfigurationConstants;
+import com.openlattice.auditing.AuditingProfiles;
+import com.openlattice.datastore.constants.DatastoreProfiles;
 import com.openlattice.indexing.Indexer;
-import kotlin.jvm.Throws;
+import com.openlattice.postgres.PostgresPod;
+import org.apache.http.util.Args;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Arrays;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class ConductorBootstrap {
+
     protected static final Indexer INDEXER;
 
+    private static String[] localArgs = {
+            ConfigurationConstants.Profiles.LOCAL_CONFIGURATION_PROFILE,
+            PostgresPod.PROFILE,
+            DatastoreProfiles.MEDIA_LOCAL_PROFILE,
+            AuditingProfiles.LOCAL_AUDITING_PROFILE
+    };
+    private static String[] bambooArgs = {
+            ConfigurationConstants.Profiles.AWS_TESTING_PROFILE,
+            PostgresPod.PROFILE
+    };
+
     static {
-        INDEXER = new Indexer();
         final var logger = LoggerFactory.getLogger( ConductorBootstrap.class );
+        INDEXER = new Indexer();
+        String[] profiles;
         if ( NetworkUtils.isRunningOnHost( "bamboo.openlattice.com" ) ) {
-            LoggerFactory.getLogger( ConductorBootstrap.class ).info( "Running on bamboo!" );
-            try {
-                INDEXER.start( "awstest", "postgres", "keras" );
-            } catch ( Exception e ) {
-                logger.error( "Unable to bootstrap condcutor with profiles: {}",
-                        INDEXER.getContext().getEnvironment().getActiveProfiles() );
-                throw new IllegalStateException( "Unable to to boostrap conductor");
-            }
+            logger.info( "Running on bamboo!" );
+            profiles = bambooArgs;
         } else {
-            LoggerFactory.getLogger( ConductorBootstrap.class ).info( "Not running on bamboo!" );
-            try {
-                INDEXER.start( "local", "postgres", "keras" );
-            } catch ( Exception e ) {
-                logger.error( "Unable to bootstrap condcutor with profiles: {}",
-                        INDEXER.getContext().getEnvironment().getActiveProfiles() );
-                throw new IllegalStateException( "Unable to to boostrap conductor");
-            }
+            logger.info( "Not running on bamboo!" );
+            profiles = localArgs;
+        }
+        try {
+            INDEXER.start( profiles );
+        } catch ( Exception e ) {
+            logger.error( "Unable to bootstrap conductor with profiles: " + Arrays.toString( profiles ) );
         }
     }
 

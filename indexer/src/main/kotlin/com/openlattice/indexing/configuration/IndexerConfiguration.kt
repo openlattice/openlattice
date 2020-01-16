@@ -27,7 +27,6 @@ import com.kryptnostic.rhizome.configuration.Configuration
 import com.kryptnostic.rhizome.configuration.ConfigurationKey
 import com.kryptnostic.rhizome.configuration.SimpleConfigurationKey
 import com.kryptnostic.rhizome.configuration.annotation.ReloadableConfiguration
-import com.openlattice.BackgroundExternalDatabaseSyncingService
 import com.openlattice.conductor.rpc.SearchConfiguration
 
 
@@ -52,7 +51,8 @@ data class IndexerConfiguration(
         @JsonProperty(BACKGROUND_LINKING_INDEXING_ENABLED) val backgroundLinkingIndexingEnabled: Boolean = true,
         @JsonProperty(BACKGROUND_EXPIRED_DATA_DELETION_ENABLED) val backgroundExpiredDataDeletionEnabled: Boolean = true,
         @JsonProperty(BACKGROUND_EXTERNAL_DATABASE_SYNCING_ENABLED) val backgroundExternalDatabaseSyncingEnabled: Boolean = true,
-        @JsonProperty(BACKGROUND_DELETION_ENABLED) val backgroundDeletionEnabled: Boolean = true
+        @JsonProperty(BACKGROUND_DELETION_ENABLED) val backgroundDeletionEnabled: Boolean = true,
+        @JsonProperty("parallelism") val parallelism : Int = Runtime.getRuntime().availableProcessors()
 ) : Configuration {
     companion object {
         @JvmStatic

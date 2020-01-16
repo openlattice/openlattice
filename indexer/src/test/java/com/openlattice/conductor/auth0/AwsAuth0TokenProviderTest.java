@@ -31,7 +31,7 @@ import org.junit.Test;
 /**
  * In order to pass this you must have an auth0.yaml file with correct information for client credentials grants.
  */
-public class Auth0TokenProviderTest extends ConductorBootstrap {
+public class AwsAuth0TokenProviderTest extends ConductorBootstrap {
     @Test
     public void testAuth0TokenProvider() {
         Auth0Configuration configuration = INDEXER.getContext().getBean( Auth0Configuration.class );

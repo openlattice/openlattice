@@ -23,16 +23,11 @@ package com.openlattice.indexing
 
 import com.google.common.base.Stopwatch
 import com.hazelcast.core.HazelcastInstance
-import com.hazelcast.core.IMap
-import com.hazelcast.query.Predicate
-import com.hazelcast.query.Predicates
-import com.hazelcast.query.QueryConstants
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi
 import com.openlattice.data.storage.IndexingMetadataManager
 import com.openlattice.data.storage.MetadataOption
 import com.openlattice.data.storage.PostgresEntityDataQueryService
 import com.openlattice.edm.EntitySet
-import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.indexing.configuration.IndexerConfiguration
@@ -48,10 +43,13 @@ import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
+import java.time.Instant
 import java.time.OffsetDateTime
 import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
+import java.util.stream.StreamSupport
+import kotlin.streams.asSequence
 
 const val EXPIRATION_MILLIS = 60_000L
 const val INDEX_RATE = 300_000L
@@ -72,28 +70,13 @@ class BackgroundIndexingService(
         private val logger = LoggerFactory.getLogger(BackgroundIndexingService::class.java)!!
     }
 
-    private val propertyTypes: IMap<UUID, PropertyType> = hazelcastInstance.getMap(HazelcastMap.PROPERTY_TYPES.name)
-    private val entityTypes: IMap<UUID, EntityType> = hazelcastInstance.getMap(HazelcastMap.ENTITY_TYPES.name)
-    private val entitySets: IMap<UUID, EntitySet> = hazelcastInstance.getMap(HazelcastMap.ENTITY_SETS.name)
+    private val propertyTypes = HazelcastMap.PROPERTY_TYPES.getMap( hazelcastInstance )
+    private val entityTypes = HazelcastMap.ENTITY_TYPES.getMap( hazelcastInstance )
+    private val entitySets = HazelcastMap.ENTITY_SETS.getMap( hazelcastInstance )
 
-    private val indexingLocks: IMap<UUID, Long> = hazelcastInstance.getMap(HazelcastMap.INDEXING_LOCKS.name)
-
-    init {
-        indexingLocks.addIndex(QueryConstants.THIS_ATTRIBUTE_NAME.value(), true)
-    }
+    private val indexingLocks = HazelcastMap.INDEXING_LOCKS.getMap( hazelcastInstance )
 
     private val taskLock = ReentrantLock()
-
-    @Suppress("UNCHECKED_CAST", "UNUSED")
-    @Scheduled(fixedRate = EXPIRATION_MILLIS)
-    fun scavengeIndexingLocks() {
-        indexingLocks.removeAll(
-                Predicates.lessThan(
-                        QueryConstants.THIS_ATTRIBUTE_NAME.value(),
-                        System.currentTimeMillis()
-                ) as Predicate<UUID, Long>
-        )
-    }
 
     @Suppress("UNUSED")
     @Scheduled(fixedRate = INDEX_RATE)
@@ -114,7 +97,7 @@ class BackgroundIndexingService(
             //We shuffle entity sets to make sure we have a chance to work share and index everything
             val lockedEntitySets = entitySets.values
                     .shuffled()
-                    .filter { tryLockEntitySet(it) }
+                    .filter { tryLockEntitySet(it.id) == null }
                     .filter { it.name != "OpenLattice Audit Entity Set" } //TODO: Clean out audit entity set from prod
 
             val totalIndexed = lockedEntitySets
@@ -230,25 +213,21 @@ class BackgroundIndexingService(
         )
 
         val esw = Stopwatch.createStarted()
-        val entityKeyIdsWithLastWrite = getEntityDataKeys(entitySet, reindexAll, indexTombstoned)
-
         val propertyTypes = getPropertyTypeForEntityType(entitySet.entityTypeId)
 
-        var indexCount = 0
-        var entityKeyIdsIterator = entityKeyIdsWithLastWrite.iterator()
+        val entityKeyIdsWithLastWrite = getEntityDataKeys(entitySet, reindexAll, indexTombstoned)
 
-        while (entityKeyIdsIterator.hasNext()) {
-            updateExpiration(entitySet)
-            while (entityKeyIdsIterator.hasNext()) {
-                val batch = getBatch(entityKeyIdsIterator)
-                indexCount += if (indexTombstoned) {
-                    unindexEntities(entitySet, batch, !reindexAll)
-                } else {
-                    indexEntities(entitySet, batch, propertyTypes, !reindexAll)
+        val indexCount = StreamSupport.stream( entityKeyIdsWithLastWrite.spliterator(), false )
+                .asSequence()
+                .chunked(INDEX_SIZE)
+                .sumBy {
+                    refreshExpiration( entitySet.id )
+                    if ( indexTombstoned ) {
+                        unindexEntities(entitySet, it.toMap(), !reindexAll)
+                    } else {
+                        indexEntities(entitySet, it.toMap(), propertyTypes, !reindexAll)
+                    }
                 }
-            }
-            entityKeyIdsIterator = entityKeyIdsWithLastWrite.iterator()
-        }
 
         logger.info(
                 "Finished indexing {} elements from entity set {} in {} ms",
@@ -344,28 +323,31 @@ class BackgroundIndexingService(
         return indexCount
     }
 
-    private fun tryLockEntitySet(entitySet: EntitySet): Boolean {
-        return indexingLocks.putIfAbsent(entitySet.id, System.currentTimeMillis() + EXPIRATION_MILLIS) == null
+    private fun refreshExpiration(esId: UUID) {
+        try {
+            indexingLocks.lock(esId)
+
+            tryLockEntitySet(esId)
+        } finally {
+            indexingLocks.unlock(esId)
+        }
+    }
+
+    private fun tryLockEntitySet(esId: UUID): Long? {
+        return indexingLocks.putIfAbsent(
+                esId,
+                Instant.now().plusMillis(EXPIRATION_MILLIS).toEpochMilli(),
+                EXPIRATION_MILLIS,
+                TimeUnit.MILLISECONDS
+        )
     }
 
     private fun deleteIndexingLock(entitySet: EntitySet) {
-        indexingLocks.delete(entitySet.id)
-    }
-
-    private fun updateExpiration(entitySet: EntitySet) {
-        indexingLocks.set(entitySet.id, System.currentTimeMillis() + EXPIRATION_MILLIS)
-    }
-
-    private fun getBatch(entityKeyIdStream: Iterator<Pair<UUID, OffsetDateTime>>): Map<UUID, OffsetDateTime> {
-        val entityKeyIds = HashMap<UUID, OffsetDateTime>(INDEX_SIZE)
-
-        var i = 0
-        while (entityKeyIdStream.hasNext() && i < INDEX_SIZE) {
-            val entityWithLastWrite = entityKeyIdStream.next()
-            entityKeyIds[entityWithLastWrite.first] = entityWithLastWrite.second
-            ++i
+        try {
+            indexingLocks.lock(entitySet.id)
+            indexingLocks.delete(entitySet.id)
+        } finally {
+            indexingLocks.unlock(entitySet.id)
         }
-
-        return entityKeyIds
     }
 }

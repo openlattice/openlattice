@@ -4,8 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openlattice.data.DataApi;
 import com.openlattice.indexing.controllers.IndexingController;
 import com.ryantenney.metrics.spring.config.annotation.EnableMetrics;
-import java.util.List;
-import javax.inject.Inject;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
@@ -18,6 +17,9 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.web.servlet.config.annotation.ContentNegotiationConfigurer;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurationSupport;
+
+import javax.inject.Inject;
+import java.util.List;
 
 @Configuration
 @ComponentScan(
@@ -36,6 +38,12 @@ public class IndexerMvcPod extends WebMvcConfigurationSupport {
     @Inject
     private IndexerSecurityPod indexerSecurityPod;
 
+    // TODO(LATTICE-2346): We need to lock this down. Since all endpoints are stateless + authenticated this is more a
+    // defense-in-depth measure.
+    @SuppressFBWarnings(
+            value = {"PERMISSIVE_CORS"},
+            justification = "LATTICE-2346"
+    )
     @Override
     protected void addCorsMappings( CorsRegistry registry ) {
         registry

@@ -25,13 +25,9 @@ import com.geekbeast.rhizome.hazelcast.DelegatedIntList
 import com.geekbeast.util.StopWatch
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.hazelcast.core.HazelcastInstance
-import com.hazelcast.core.IMap
 import com.openlattice.admin.indexing.IndexingState
 import com.openlattice.data.storage.getPartition
 import com.openlattice.data.storage.partitions.PartitionManager
-import com.openlattice.edm.EntitySet
-import com.openlattice.edm.type.EntityType
-import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.HazelcastQueue
 import com.openlattice.hazelcast.processors.UUIDKeyToUUIDSetMerger
@@ -70,19 +66,15 @@ class IndexingService(
         executor: ListeningExecutorService,
         hazelcastInstance: HazelcastInstance
 ) {
-    private val propertyTypes = hazelcastInstance.getMap<UUID, PropertyType>(HazelcastMap.PROPERTY_TYPES.name)
-    private val entityTypes = hazelcastInstance.getMap<UUID, EntityType>(HazelcastMap.ENTITY_TYPES.name)
-    private val entitySets: IMap<UUID, EntitySet> = hazelcastInstance.getMap(HazelcastMap.ENTITY_SETS.name)
+    private val propertyTypes = HazelcastMap.PROPERTY_TYPES.getMap( hazelcastInstance )
+    private val entityTypes = HazelcastMap.ENTITY_TYPES.getMap( hazelcastInstance )
+    private val entitySets = HazelcastMap.ENTITY_SETS.getMap( hazelcastInstance )
 
-    private val indexingJobs = hazelcastInstance.getMap<UUID, DelegatedUUIDSet>(HazelcastMap.INDEXING_JOBS.name)
-    private val indexingProgress = hazelcastInstance.getMap<UUID, UUID>(HazelcastMap.INDEXING_PROGRESS.name)
-    private val indexingPartitionProgress = hazelcastInstance.getMap<UUID, Int>(
-            HazelcastMap.INDEXING_PARTITION_PROGRESS.name
-    )
-    private val indexingPartitionList = hazelcastInstance.getMap<UUID, DelegatedIntList>(
-            HazelcastMap.INDEXING_PARTITION_LIST.name
-    )
-    private val indexingQueue = hazelcastInstance.getQueue<UUID>(HazelcastQueue.INDEXING.name)
+    private val indexingJobs = HazelcastMap.INDEXING_JOBS.getMap( hazelcastInstance )
+    private val indexingProgress = HazelcastMap.INDEXING_PROGRESS.getMap( hazelcastInstance )
+    private val indexingPartitionProgress = HazelcastMap.INDEXING_PARTITION_PROGRESS.getMap( hazelcastInstance )
+    private val indexingPartitionList = HazelcastMap.INDEXING_PARTITION_LIST.getMap( hazelcastInstance )
+    private val indexingQueue = HazelcastQueue.INDEXING.getQueue( hazelcastInstance )
     private val indexingLock = ReentrantLock()
 
     init {
@@ -96,6 +88,7 @@ class IndexingService(
         }
     }
 
+    @Suppress("UNUSED")
     private val indexingWorker = executor.submit {
         Stream.generate { indexingQueue.take() }
                 .parallel().forEach { entitySetId ->
@@ -197,7 +190,7 @@ class IndexingService(
         }
 
         entitiesForIndexing.forEach { (entitySetId, entityKeyIds) ->
-            logger.info("Creating job to index entity set {} for the following entities {}", entitySetId, entityKeyIds)
+            logger.info("Creating job to index entity set $entitySetId for the following entities $entityKeyIds")
             indexingJobs.putIfAbsent(entitySetId, DelegatedUUIDSet.wrap(HashSet()))
             indexingJobs.executeOnKey(entitySetId, UUIDKeyToUUIDSetMerger(entityKeyIds))
             indexingQueue.put(entitySetId)

@@ -22,7 +22,6 @@ package com.openlattice.indexing
 
 import com.google.common.base.Stopwatch
 import com.hazelcast.core.HazelcastInstance
-import com.hazelcast.core.IMap
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.hazelcast.query.QueryConstants
@@ -65,9 +64,9 @@ class BackgroundIndexedEntitiesDeletionService(
         private val logger = LoggerFactory.getLogger(BackgroundIndexedEntitiesDeletionService::class.java)
     }
 
-    private val entitySets: IMap<UUID, EntitySet> = hazelcastInstance.getMap(HazelcastMap.ENTITY_SETS.name)
+    private val entitySets = HazelcastMap.ENTITY_SETS.getMap( hazelcastInstance )
 
-    private val deletionLocks: IMap<UUID, Long> = hazelcastInstance.getMap(HazelcastMap.DELETION_LOCKS.name)
+    private val deletionLocks = HazelcastMap.DELETION_LOCKS.getMap( hazelcastInstance )
 
     init {
         deletionLocks.addIndex(QueryConstants.THIS_ATTRIBUTE_NAME.value(), true)

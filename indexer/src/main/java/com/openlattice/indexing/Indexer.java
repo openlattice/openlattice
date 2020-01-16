@@ -23,13 +23,13 @@ package com.openlattice.indexing;
 import com.kryptnostic.rhizome.configuration.websockets.BaseRhizomeServer;
 import com.kryptnostic.rhizome.core.RhizomeApplicationServer;
 import com.kryptnostic.rhizome.hazelcast.serializers.RhizomeUtils.Pods;
-import com.kryptnostic.rhizome.pods.hazelcast.RegistryBasedHazelcastInstanceConfigurationPod;
 import com.openlattice.auditing.pods.AuditingConfigurationPod;
-import com.openlattice.indexing.pods.*;
 import com.openlattice.auth0.Auth0Pod;
 import com.openlattice.aws.AwsS3Pod;
+import com.openlattice.hazelcast.pods.HazelcastQueuePod;
 import com.openlattice.hazelcast.pods.MapstoresPod;
 import com.openlattice.hazelcast.pods.SharedStreamSerializersPod;
+import com.openlattice.indexing.pods.*;
 import com.openlattice.jdbc.JdbcPod;
 import com.openlattice.mail.pods.MailServicePod;
 import com.openlattice.mail.services.MailService;
@@ -41,7 +41,7 @@ import com.openlattice.postgres.PostgresTablesPod;
  */
 public class Indexer extends BaseRhizomeServer {
 
-    public static final Class<?>[] conductorPods = new Class<?>[]{
+    private static final Class<?>[] conductorPods = new Class<?>[]{
             AuditingConfigurationPod.class,
             Auth0Pod.class,
             AwsS3Pod.class,
@@ -51,21 +51,22 @@ public class Indexer extends BaseRhizomeServer {
             JdbcPod.class,
             MailServicePod.class,
             MapstoresPod.class,
+            HazelcastQueuePod.class,
             PlasmaCoupling.class,
             PostgresPod.class,
             PostgresTablesPod.class,
             SharedStreamSerializersPod.class
     };
 
-    public static final Class<?>[] webPods = new Class<?>[]{ IndexerServletsPod.class, IndexerSecurityPod.class };
+    private static final Class<?>[] webPods = new Class<?>[]{ IndexerServletsPod.class, IndexerSecurityPod.class };
 
     public Indexer() {
         super( Pods.concatenate( RhizomeApplicationServer.DEFAULT_PODS, webPods, conductorPods ) );
     }
 
     @Override
-    public void start( String... activeProfiles ) throws Exception {
-        super.start( activeProfiles );
+    public void start( String... profiles ) throws Exception {
+        super.start( profiles );
         getContext().getBean( MailService.class ).processEmailRequestsQueue();
     }
 

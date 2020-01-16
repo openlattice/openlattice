@@ -28,6 +28,7 @@ import com.openlattice.admin.indexing.REINDEX
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
 import com.openlattice.indexing.IndexingService
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.*
 import java.util.*
@@ -56,6 +57,10 @@ class IndexingController : IndexAdminApi, AuthorizingComponent {
         return indexingService.getIndexingState()
     }
 
+    @SuppressFBWarnings(
+            value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"],
+            justification = "lateinit prevents NPE here"
+    )
     @PostMapping(
             value = [REINDEX], consumes = [MediaType.APPLICATION_JSON_VALUE],
             produces = [MediaType.APPLICATION_JSON_VALUE]
@@ -66,6 +71,10 @@ class IndexingController : IndexAdminApi, AuthorizingComponent {
         return indexingService.getIndexingState()
     }
 
+    @SuppressFBWarnings(
+            value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"],
+            justification = "lateinit prevents NPE here"
+    )
     @PutMapping(
             value = [REINDEX], consumes = [MediaType.APPLICATION_JSON_VALUE],
             produces = [MediaType.APPLICATION_JSON_VALUE]

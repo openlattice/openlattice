@@ -2,7 +2,6 @@ package com.openlattice
 
 import com.google.common.base.Stopwatch
 import com.hazelcast.core.HazelcastInstance
-import com.hazelcast.core.IMap
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.hazelcast.query.QueryConstants
@@ -13,7 +12,6 @@ import com.openlattice.indexing.configuration.IndexerConfiguration
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import com.openlattice.organization.OrganizationExternalDatabaseTable
 import com.openlattice.organizations.ExternalDatabaseManagementService
-import com.openlattice.organizations.Organization
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
@@ -27,7 +25,7 @@ import java.util.concurrent.locks.ReentrantLock
 const val SCAN_RATE = 30_000L
 
 class BackgroundExternalDatabaseSyncingService(
-        private val hazelcastInstance: HazelcastInstance,
+        hazelcastInstance: HazelcastInstance,
         private val edms: ExternalDatabaseManagementService,
         private val indexerConfiguration: IndexerConfiguration
 ) {
@@ -35,11 +33,11 @@ class BackgroundExternalDatabaseSyncingService(
         private val logger = LoggerFactory.getLogger(BackgroundExternalDatabaseSyncingService::class.java)
     }
 
-    private val organizationExternalDatabaseColumns: IMap<UUID, OrganizationExternalDatabaseColumn> = hazelcastInstance.getMap(HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_COLUMN.name)
-    private val organizationExternalDatabaseTables: IMap<UUID, OrganizationExternalDatabaseTable> = hazelcastInstance.getMap(HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_TABLE.name)
-    private val aclKeys: IMap<String, UUID> = hazelcastInstance.getMap(HazelcastMap.ACL_KEYS.name)
-    private val organizations: IMap<UUID, Organization> = hazelcastInstance.getMap(HazelcastMap.ORGANIZATIONS.name)
-    private val expirationLocks: IMap<UUID, Long> = hazelcastInstance.getMap(HazelcastMap.EXPIRATION_LOCKS.name)
+    private val organizationExternalDatabaseColumns = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_COLUMN.getMap( hazelcastInstance )
+    private val organizationExternalDatabaseTables = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_TABLE.getMap( hazelcastInstance )
+    private val aclKeys = HazelcastMap.ACL_KEYS.getMap( hazelcastInstance )
+    private val organizations = HazelcastMap.ORGANIZATIONS.getMap( hazelcastInstance )
+    private val expirationLocks = HazelcastMap.EXPIRATION_LOCKS.getMap( hazelcastInstance )
 
 
     init {
