@@ -316,7 +316,7 @@ class AssemblerConnectionManager(
     fun materializeEdges(organizationId: UUID, entitySetIds: Set<UUID>, authorizedPrincipals: Set<Principal>) {
         logger.info("Materializing edges in organization $organizationId database")
 
-        connect(buildOrganizationDatabaseName(organizationId)).use { datasource ->
+        connect(buildOrganizationDatabaseName(organizationId)).let { datasource ->
             // re-import foreign view edges before creating materialized view
             updatePublicTables(datasource, setOf(E.name))
             materializeEdges(datasource, entitySetIds, authorizedPrincipals)
@@ -365,7 +365,7 @@ class AssemblerConnectionManager(
                 "organization $organizationId database.")
 
         materializeAllTimer.time().use {
-            connect(buildOrganizationDatabaseName(organizationId)).use { datasource ->
+            connect(buildOrganizationDatabaseName(organizationId)).let { datasource ->
                 materializeEntitySets(
                         datasource,
                         authorizedPropertyTypesByEntitySet,
@@ -565,7 +565,7 @@ class AssemblerConnectionManager(
     ) {
         val tableName = entitySetNameTableName(entitySet.name)
 
-        connect(buildOrganizationDatabaseName(organizationId)).use { dataSource ->
+        connect(buildOrganizationDatabaseName(organizationId)).let { dataSource ->
             dataSource.connection.use { connection ->
                 dropAndCreateMaterializedView(connection, tableName, entitySet.id, materializablePropertyTypes)
             }
@@ -580,7 +580,7 @@ class AssemblerConnectionManager(
         logger.info("Refreshing entity set ${entitySet.id} in organization $organizationId database")
         val tableName = entitySetNameTableName(entitySet.name)
 
-        connect(buildOrganizationDatabaseName(organizationId)).use { dataSource ->
+        connect(buildOrganizationDatabaseName(organizationId)).let { dataSource ->
             dataSource.connection.use { connection ->
                 connection.createStatement().use {
                     it.execute("REFRESH MATERIALIZED VIEW $tableName")
@@ -596,7 +596,7 @@ class AssemblerConnectionManager(
      * @param oldName The old name of the entity set.
      */
     fun renameMaterializedEntitySet(organizationId: UUID, newName: String, oldName: String) {
-        connect(buildOrganizationDatabaseName(organizationId)).use { dataSource ->
+        connect(buildOrganizationDatabaseName(organizationId)).let { dataSource ->
             dataSource.connection.createStatement().use { stmt ->
                 val newTableName = quote(newName)
                 val oldTableName = entitySetNameTableName(oldName)
