@@ -25,5 +25,7 @@ import com.auth0.client.mgmt.ManagementAPI
 import com.openlattice.tasks.HazelcastTaskDependencies
 
 data class Auth0SyncTaskDependencies(
-        val users : Auth0SyncService, val managementApi: ManagementAPI
+        val users : Auth0SyncService,
+        val managementApi: ManagementAPI
 ) : HazelcastTaskDependencies
+
