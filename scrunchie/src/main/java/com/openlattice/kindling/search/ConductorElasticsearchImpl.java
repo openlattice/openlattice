@@ -253,8 +253,8 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         }
 
         // entity_set type mapping
-        Map<String, Object> properties = Maps.newLinkedHashMapWithExpectedSize(5);
-        properties.put( PROPERTY_TYPES, ImmutableMap.of( TYPE, NESTED ) );
+        ImmutableMap.Builder<String, Object> properties = ImmutableMap.builder();
+        properties.put(PROPERTY_TYPES, ImmutableMap.of( TYPE, NESTED ));
         properties.put( ENTITY_SET, ImmutableMap.of(TYPE, OBJECT) );
 
         Map<String, String> typeTextAnalyzerMetaphoneAnalyzer = ImmutableMap.of( TYPE, TEXT, ANALYZER, METAPHONE_ANALYZER );
@@ -263,7 +263,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         properties.put( ENTITY_SET + "." + SerializationConstants.TITLE_FIELD, typeTextAnalyzerMetaphoneAnalyzer );
         properties.put( ENTITY_SET + "." + SerializationConstants.DESCRIPTION_FIELD, typeTextAnalyzerMetaphoneAnalyzer );
 
-        Map<String, Object> mapping = ImmutableMap.of( ENTITY_SET_TYPE, ImmutableMap.of( MAPPING_PROPERTIES, properties ));
+        Map<String, Object> mapping = ImmutableMap.of( ENTITY_SET_TYPE, ImmutableMap.of( MAPPING_PROPERTIES, properties.build() ));
 
         try {
             client.admin().indices().prepareCreate( ENTITY_SET_DATA_MODEL )
@@ -377,11 +377,11 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     private String getIndexName( UUID entityTypeId ) {
-        return DATA_INDEX_PREFIX + entityTypeId.toString();
+        return DATA_INDEX_PREFIX + entityTypeId;
     }
 
     private String getTypeName( UUID entityTypeId ) {
-        return DATA_TYPE_PREFIX + entityTypeId.toString();
+        return DATA_TYPE_PREFIX + entityTypeId;
     }
 
     /*** ENTITY DATA INDEX CREATE / DELETE / UPDATE ***/
@@ -438,7 +438,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             List<PropertyType> propertyTypes ) {
         Map<String, Object> keywordMapping = ImmutableMap.of( TYPE, KEYWORD );
         // securable_object_row type mapping
-        Map<String, Object> entityPropertiesMapping = Maps.newLinkedHashMapWithExpectedSize(propertyTypes.size() + 2);
+        ImmutableMap.Builder<String, Object> entityPropertiesMapping = ImmutableMap.builder();
 
         entityPropertiesMapping.put( ENTITY_SET_ID_KEY_ID.getId().toString(), keywordMapping );
         entityPropertiesMapping.put( LAST_WRITE_ID.getId().toString(), ImmutableMap.of( TYPE, DATE ));
@@ -450,7 +450,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         }
 
         Map<String, Object> entityMapping = ImmutableMap.of(
-                MAPPING_PROPERTIES, entityPropertiesMapping,
+                MAPPING_PROPERTIES, entityPropertiesMapping.build(),
                 TYPE, NESTED );
 
         Map<String, Object> properties = ImmutableMap.of(
@@ -730,7 +730,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     private static String getFieldName( UUID propertyTypeId ) {
-        return ENTITY + "." + propertyTypeId.toString();
+        return ENTITY + "." + propertyTypeId;
     }
 
     private BoolQueryBuilder getAdvancedSearchQuery(
