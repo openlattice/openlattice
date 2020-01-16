@@ -62,6 +62,7 @@ public final class SerializationConstants {
     public static final String BLOCK_ID                         = "blockId";
     public static final String CALCULATIONS                     = "calculations";
     public static final String CALCULATION_TYPE                 = "calculationType";
+    public static final String CALLBACK                         = "callback";
     public static final String CATEGORY                         = "category";
     public static final String CHILD_CLAUSES                    = "childClauses";
     public static final String CHILD_QUERIES                    = "childQueries";
