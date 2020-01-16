@@ -6,12 +6,14 @@ import com.google.common.cache.LoadingCache
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 
-abstract class AbstractEnumSerializer<T : Enum<T>> : TestableSelfRegisteringStreamSerializer<Enum<T>> {
+abstract class AbstractEnumSerializer<T: Enum<T>> : TestableSelfRegisteringStreamSerializer<T> {
 
     companion object {
-        private val enumCache: LoadingCache<Class<*>, Array<*>> = CacheBuilder.newBuilder().build( CacheLoader.from { key ->
-            key!!.enumConstants
-        })
+        private val enumCache: LoadingCache<Class<out Enum<*>>, Array<out Enum<*>>> = CacheBuilder.newBuilder().build(
+                CacheLoader.from { key ->
+                    key!!.enumConstants
+                }
+        )
 
         @JvmStatic
         fun serialize(out: ObjectDataOutput, `object`: Enum<*>) {
@@ -19,17 +21,17 @@ abstract class AbstractEnumSerializer<T : Enum<T>> : TestableSelfRegisteringStre
         }
 
         @JvmStatic
-        fun deserialize(targetClass: Class<*>, `in`: ObjectDataInput): Enum<*> {
+        fun <K: Enum<K>> deserialize(targetClass: Class<out K>, `in`: ObjectDataInput): K {
             val ord = `in`.readInt()
-            return enumCache.get(targetClass)[ord] as Enum<*>
+            return enumCache.get(targetClass)[ord] as K
         }
     }
 
-    override fun write(out: ObjectDataOutput, `object`: Enum<T>) {
-        return serialize(out, `object` )
+    override fun write(out: ObjectDataOutput, `object`: T) {
+        return serialize(out, `object`)
     }
 
-    override fun read(`in`: ObjectDataInput): Enum<T> {
-        return deserialize( this.clazz, `in` ) as Enum<T>
+    override fun read(`in`: ObjectDataInput): T {
+        return deserialize(clazz, `in`)
     }
 }
