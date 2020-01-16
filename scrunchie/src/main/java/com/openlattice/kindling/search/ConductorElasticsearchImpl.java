@@ -242,12 +242,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     // @formatter:on
 
     private boolean indexExists( String indexName ) {
-        return client.admin()
-                .indices()
-                .prepareExists( indexName )
-                .execute()
-                .actionGet()
-                .isExists();
+        return client.admin().indices().prepareExists( indexName ).execute().actionGet().isExists();
     }
 
     private boolean initializeEntitySetDataModelIndex() {
