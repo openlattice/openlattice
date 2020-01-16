@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Streams;
+import com.openlattice.IdConstants;
 import com.openlattice.analysis.AnalysisApi;
 import com.openlattice.authorization.AccessCheck;
 import com.openlattice.authorization.AclKey;
@@ -312,7 +313,13 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
     }
 
     public static EntitySet createEntitySet( EntityType entityType, boolean linking, Set<UUID> linkedEntitySetIds ) {
-        return createEntitySet( UUID.randomUUID(), entityType, UUID.randomUUID(), linking, linkedEntitySetIds );
+        return createEntitySet(
+                UUID.randomUUID(),
+                entityType,
+                IdConstants.GLOBAL_ORGANIZATION_ID.getId(),
+                linking,
+                linkedEntitySetIds
+        );
     }
 
     public static EntitySet createEntitySet(
