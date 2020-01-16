@@ -25,7 +25,11 @@ import com.dataloom.streams.StreamUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.google.common.collect.*;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.SecurableObjectType;
@@ -42,7 +46,12 @@ import com.openlattice.organizations.Organization;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
 import com.openlattice.search.SortDefinition;
-import com.openlattice.search.requests.*;
+import com.openlattice.search.requests.Constraint;
+import com.openlattice.search.requests.ConstraintGroup;
+import com.openlattice.search.requests.EntityDataKeySearchResult;
+import com.openlattice.search.requests.SearchConstraints;
+import com.openlattice.search.requests.SearchDetails;
+import com.openlattice.search.requests.SearchResult;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.lucene.search.join.ScoreMode;
@@ -51,8 +60,6 @@ import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.elasticsearch.action.admin.indices.mapping.put.PutMappingRequest;
 import org.elasticsearch.action.bulk.BulkRequestBuilder;
 import org.elasticsearch.action.bulk.BulkResponse;
-import org.elasticsearch.action.delete.DeleteAction;
-import org.elasticsearch.action.delete.DeleteRequestBuilder;
 import org.elasticsearch.action.search.MultiSearchRequest;
 import org.elasticsearch.action.search.MultiSearchResponse;
 import org.elasticsearch.action.search.SearchRequestBuilder;
@@ -66,23 +73,40 @@ import org.elasticsearch.common.unit.Fuzziness;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentType;
-import org.elasticsearch.index.query.*;
-import org.elasticsearch.index.reindex.*;
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.MatchQueryBuilder;
+import org.elasticsearch.index.query.Operator;
+import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.query.QueryStringQueryBuilder;
+import org.elasticsearch.index.query.RangeQueryBuilder;
+import org.elasticsearch.index.reindex.BulkByScrollResponse;
+import org.elasticsearch.index.reindex.DeleteByQueryAction;
+import org.elasticsearch.index.reindex.DeleteByQueryRequestBuilder;
 import org.elasticsearch.search.SearchHit;
-import org.elasticsearch.search.sort.*;
+import org.elasticsearch.search.sort.FieldSortBuilder;
+import org.elasticsearch.search.sort.GeoDistanceSortBuilder;
+import org.elasticsearch.search.sort.NestedSortBuilder;
+import org.elasticsearch.search.sort.ScoreSortBuilder;
+import org.elasticsearch.search.sort.SortBuilder;
+import org.elasticsearch.search.sort.SortOrder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 
 import java.io.IOException;
 import java.net.UnknownHostException;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.openlattice.IdConstants.*;
-import static com.openlattice.IdConstants.ENTITY_SET_ID_KEY_ID;
 import static java.util.stream.Collectors.toSet;
 
 public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
@@ -217,37 +241,34 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
     // @formatter:on
 
+    private boolean indexExists( String indexName ) {
+        return client.admin()
+                .indices()
+                .prepareExists( indexName )
+                .execute()
+                .actionGet()
+                .isExists();
+    }
+
     private boolean initializeEntitySetDataModelIndex() {
         if ( !verifyElasticsearchConnection() ) { return false; }
 
-        boolean exists = client.admin().indices()
-                .prepareExists( ENTITY_SET_DATA_MODEL ).execute().actionGet().isExists();
-        if ( exists ) {
+        if ( indexExists( ENTITY_SET_DATA_MODEL ) ) {
             return true;
         }
 
-        // constant Map<String, String> type fields
-        Map<String, String> objectField = Maps.newHashMap();
-        Map<String, String> nestedField = Maps.newHashMap();
-        //Map<String, String> keywordField = Maps.newHashMap();
-        objectField.put( TYPE, OBJECT );
-        nestedField.put( TYPE, NESTED );
-        //keywordField.put( TYPE, KEYWORD );
-
         // entity_set type mapping
-        Map<String, Object> properties = Maps.newHashMap();
-        Map<String, Object> entitySetData = Maps.newHashMap();
-        Map<String, Object> mapping = Maps.newHashMap();
-        properties.put( PROPERTY_TYPES, nestedField );
-        properties.put( ENTITY_SET, objectField );
-        properties.put( ENTITY_SET + "." + SerializationConstants.NAME_FIELD,
-                ImmutableMap.of( TYPE, TEXT, ANALYZER, METAPHONE_ANALYZER ) );
-        properties.put( ENTITY_SET + "." + SerializationConstants.TITLE_FIELD,
-                ImmutableMap.of( TYPE, TEXT, ANALYZER, METAPHONE_ANALYZER ) );
-        properties.put( ENTITY_SET + "." + SerializationConstants.DESCRIPTION_FIELD,
-                ImmutableMap.of( TYPE, TEXT, ANALYZER, METAPHONE_ANALYZER ) );
-        entitySetData.put( MAPPING_PROPERTIES, properties );
-        mapping.put( ENTITY_SET_TYPE, entitySetData );
+        Map<String, Object> properties = Maps.newLinkedHashMapWithExpectedSize(5);
+        properties.put( PROPERTY_TYPES, ImmutableMap.of( TYPE, NESTED ) );
+        properties.put( ENTITY_SET, ImmutableMap.of(TYPE, OBJECT) );
+
+        Map<String, String> typeTextAnalyzerMetaphoneAnalyzer = ImmutableMap.of( TYPE, TEXT, ANALYZER, METAPHONE_ANALYZER );
+
+        properties.put( ENTITY_SET + "." + SerializationConstants.NAME_FIELD, typeTextAnalyzerMetaphoneAnalyzer );
+        properties.put( ENTITY_SET + "." + SerializationConstants.TITLE_FIELD, typeTextAnalyzerMetaphoneAnalyzer );
+        properties.put( ENTITY_SET + "." + SerializationConstants.DESCRIPTION_FIELD, typeTextAnalyzerMetaphoneAnalyzer );
+
+        Map<String, Object> mapping = ImmutableMap.of( ENTITY_SET_TYPE, ImmutableMap.of( MAPPING_PROPERTIES, properties ));
 
         try {
             client.admin().indices().prepareCreate( ENTITY_SET_DATA_MODEL )
@@ -264,31 +285,19 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     private boolean initializeOrganizationIndex() {
         if ( !verifyElasticsearchConnection() ) { return false; }
 
-        boolean exists = client.admin().indices()
-                .prepareExists( ORGANIZATIONS ).execute().actionGet().isExists();
-        if ( exists ) {
+        if ( indexExists( ORGANIZATIONS ) ) {
             return true;
         }
 
-        // constant Map<String, String> type fields
-        Map<String, String> objectField = Maps.newHashMap();
-        Map<String, String> keywordField = Maps.newHashMap();
-        objectField.put( TYPE, OBJECT );
-        keywordField.put( TYPE, KEYWORD );
-
         // entity_set type mapping
-        Map<String, Object> properties = Maps.newHashMap();
-        Map<String, Object> organizationData = Maps.newHashMap();
-        Map<String, Object> organizationMapping = Maps.newHashMap();
-        properties.put( ORGANIZATION, objectField );
-        organizationData.put( MAPPING_PROPERTIES, properties );
-        organizationMapping.put( ORGANIZATION_TYPE, organizationData );
+        Map<String, Object> properties = ImmutableMap.of( ORGANIZATION, ImmutableMap.of( TYPE, OBJECT ) );
+        Map<String, Object> organizationData = ImmutableMap.of( MAPPING_PROPERTIES, properties );
 
         client.admin().indices().prepareCreate( ORGANIZATIONS )
                 .setSettings( Settings.builder()
                         .put( NUM_SHARDS, 5 )
                         .put( NUM_REPLICAS, 2 ) )
-                .addMapping( ORGANIZATION_TYPE, organizationMapping )
+                .addMapping( ORGANIZATION_TYPE, ImmutableMap.of( ORGANIZATION_TYPE, organizationData ) )
                 .execute().actionGet();
         return true;
     }
@@ -296,14 +305,11 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     private boolean initializeDefaultIndex( String indexName, String typeName ) {
         if ( !verifyElasticsearchConnection() ) { return false; }
 
-        boolean exists = client.admin().indices()
-                .prepareExists( indexName ).execute().actionGet().isExists();
-        if ( exists ) {
+        if ( indexExists( indexName ) ) {
             return true;
         }
 
-        Map<String, Object> mapping = Maps.newHashMap();
-        mapping.put( typeName, Maps.newHashMap() );
+        Map<String, Object> mapping = ImmutableMap.of( typeName, ImmutableMap.of() );
         client.admin().indices().prepareCreate( indexName )
                 .setSettings( Settings.builder()
                         .put( NUM_SHARDS, 5 )
@@ -436,33 +442,29 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             String typeName,
             List<PropertyType> propertyTypes ) {
         Map<String, Object> keywordMapping = ImmutableMap.of( TYPE, KEYWORD );
-        Map<String, Object> dateTimeMapping = ImmutableMap.of( TYPE, DATE );
         // securable_object_row type mapping
-        Map<String, Object> entityTypeDataMapping = Maps.newHashMap();
-        Map<String, Object> fieldMappings = Maps.newHashMap();
-        Map<String, Object> properties = Maps.newHashMap();
-        Map<String, Object> entityMapping = Maps.newHashMap();
-        Map<String, Object> entityPropertiesMapping = Maps.newHashMap();
+        Map<String, Object> entityPropertiesMapping = Maps.newLinkedHashMapWithExpectedSize(propertyTypes.size() + 2);
 
         entityPropertiesMapping.put( ENTITY_SET_ID_KEY_ID.getId().toString(), keywordMapping );
-        entityPropertiesMapping.put( LAST_WRITE_ID.getId().toString(), dateTimeMapping );
+        entityPropertiesMapping.put( LAST_WRITE_ID.getId().toString(), ImmutableMap.of( TYPE, DATE ));
 
         for ( PropertyType propertyType : propertyTypes ) {
-
             if ( !propertyType.getDatatype().equals( EdmPrimitiveTypeKind.Binary ) ) {
                 entityPropertiesMapping.put( propertyType.getId().toString(), getFieldMapping( propertyType ) );
             }
         }
 
-        entityMapping.put( MAPPING_PROPERTIES, entityPropertiesMapping );
-        entityMapping.put( TYPE, NESTED );
+        Map<String, Object> entityMapping = ImmutableMap.of(
+                MAPPING_PROPERTIES, entityPropertiesMapping,
+                TYPE, NESTED );
 
-        properties.put( ENTITY, entityMapping );
-        properties.put( ENTITY_SET_ID_FIELD, keywordMapping );
+        Map<String, Object> properties = ImmutableMap.of(
+                ENTITY, entityMapping,
+                ENTITY_SET_ID_FIELD, keywordMapping );
 
-        fieldMappings.put( MAPPING_PROPERTIES, properties );
-
-        entityTypeDataMapping.put( typeName, fieldMappings );
+        Map<String, Object> entityTypeDataMapping = ImmutableMap.of(
+                typeName, ImmutableMap.of(
+                        MAPPING_PROPERTIES, properties ));
 
         return entityTypeDataMapping;
     }
@@ -473,9 +475,9 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             EntitySet entitySet,
             List<PropertyType> propertyTypes ) {
         if ( !verifyElasticsearchConnection() ) { return false; }
-        Map<String, Object> entitySetDataModel = Maps.newHashMap();
-        entitySetDataModel.put( ENTITY_SET, entitySet );
-        entitySetDataModel.put( PROPERTY_TYPES, propertyTypes );
+        Map<String, Object> entitySetDataModel = ImmutableMap.of(
+                ENTITY_SET, entitySet,
+                PROPERTY_TYPES, propertyTypes );
 
         try {
             String s = ObjectMappers.getJsonMapper().writeValueAsString( entitySetDataModel );

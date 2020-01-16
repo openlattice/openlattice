@@ -21,11 +21,6 @@
 package com.openlattice.kindling.search;
 
 import com.google.common.util.concurrent.RateLimiter;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.util.List;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 import org.elasticsearch.action.admin.cluster.state.ClusterStateRequest;
 import org.elasticsearch.action.admin.cluster.state.ClusterStateResponse;
 import org.elasticsearch.client.Client;
@@ -37,6 +32,12 @@ import org.elasticsearch.common.transport.TransportAddress;
 import org.elasticsearch.transport.client.PreBuiltTransportClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
 public class ElasticsearchTransportClientFactory {
     public static final  Logger      logger = LoggerFactory.getLogger( ElasticsearchTransportClientFactory.class );
@@ -55,7 +56,7 @@ public class ElasticsearchTransportClientFactory {
     }
 
     public Client getClient() {
-        if ( this.clientTransportHost == null ) {
+        if ( clientTransportHost == null ) {
             logger.info( "no server passed in, logging to database" );
             return null;
         }
@@ -67,8 +68,8 @@ public class ElasticsearchTransportClientFactory {
         TransportClient client = new PreBuiltTransportClient( settings );
         try {
             client.addTransportAddress( new TransportAddress(
-                    InetAddress.getByName( this.clientTransportHost ),
-                    this.clientTransportPort )
+                    InetAddress.getByName( clientTransportHost ),
+                    clientTransportPort )
             );
         } catch ( UnknownHostException e ) {
             throw new IllegalStateException( "Unable to resolve elasticsearch host: " + this.clientTransportHost, e );
@@ -82,37 +83,38 @@ public class ElasticsearchTransportClientFactory {
     }
 
     public static boolean isConnected( Client someClient ) {
-        if ( r.tryAcquire() ) {
-            if ( someClient == null ) {
-                logger.info( "not connected to elasticsearch" );
+        if ( !r.tryAcquire() ) {
+            return true;
+        }
+        if ( someClient == null ) {
+            logger.info( "not connected to elasticsearch" );
+            return false;
+        }
+        if ( someClient instanceof TransportClient ) {
+            TransportClient client = (TransportClient) someClient;
+            List<DiscoveryNode> nodes = client.connectedNodes();
+            if ( nodes.isEmpty() ) {
+                logger.error( "no elasticsearch nodes found" );
+                client.close();
                 return false;
-            } else if ( someClient instanceof TransportClient ) {
-                TransportClient client = (TransportClient) someClient;
-                List<DiscoveryNode> nodes = client.connectedNodes();
-                if ( nodes.isEmpty() ) {
-                    logger.info( "no elasticsearch nodes found" );
-                    client.close();
-                    return false;
-                } else {
-                    logger.info( "connected to elasticsearch nodes: " + nodes.toString() );
-                    return true;
-                }
             } else {
-                NodeClient client = (NodeClient) someClient;
-                ClusterStateRequest request = new ClusterStateRequest();
-                Future<ClusterStateResponse> response = client.admin().cluster().state( request );
-                try {
-                    response.get();
-                    logger.info( "connected to elasticsearch" );
-                    return true;
-                } catch ( InterruptedException | ExecutionException e ) {
-                    logger.info( "not connected to elasticsearch" );
-                    client.close();
-                    return false;
-                }
+                logger.info( "connected to elasticsearch nodes: " + nodes.toString() );
+                return true;
+            }
+        } else {
+            NodeClient client = (NodeClient) someClient;
+            ClusterStateRequest request = new ClusterStateRequest();
+            Future<ClusterStateResponse> response = client.admin().cluster().state( request );
+            try {
+                response.get();
+                logger.info( "connected to elasticsearch" );
+                return true;
+            } catch ( InterruptedException | ExecutionException e ) {
+                logger.error( "not connected to elasticsearch" );
+                client.close();
+                return false;
             }
         }
-        return true;
     }
 
 }
