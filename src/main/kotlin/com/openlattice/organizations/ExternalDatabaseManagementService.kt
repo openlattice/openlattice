@@ -225,7 +225,7 @@ class ExternalDatabaseManagementService(
 
         //drop db from schema
         val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
-        assemblerConnectionManager.connect(dbName).use {
+        assemblerConnectionManager.connect(dbName).let {
             it.connection.createStatement().use { stmt ->
                 stmt.execute("DROP DATABASE $dbName")
             }
@@ -280,7 +280,7 @@ class ExternalDatabaseManagementService(
         val aclsByOrg = acls.groupBy { it.aclKey[0] }
         aclsByOrg.forEach { (orgId, orgAcls) ->
             val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
-            assemblerConnectionManager.connect(dbName).use { dataSource ->
+            assemblerConnectionManager.connect(dbName).let { dataSource ->
                 val conn = dataSource.connection
                 conn.autoCommit = false
                 conn.createStatement().use { stmt ->
@@ -336,7 +336,7 @@ class ExternalDatabaseManagementService(
     fun revokeAllPrivilegesFromMember(orgId: UUID, userId: String) {
         val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
         val userName = getDBUser(userId)
-        assemblerConnectionManager.connect(dbName).use {
+        assemblerConnectionManager.connect(dbName).let {
             it.connection.createStatement().use { stmt ->
                 stmt.execute("REVOKE ALL ON DATABASE $dbName FROM $userName")
             }
@@ -494,7 +494,7 @@ class ExternalDatabaseManagementService(
             out.close()
 
             //reload config
-            assemblerConnectionManager.connect(dbName).use {
+            assemblerConnectionManager.connect(dbName).let {
                 it.connection.createStatement().use { stmt ->
                     stmt.executeQuery(getReloadConfigSql())
                 }
