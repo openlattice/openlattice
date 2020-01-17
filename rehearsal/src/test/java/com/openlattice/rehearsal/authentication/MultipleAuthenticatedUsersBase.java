@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Streams;
+import com.openlattice.IdConstants;
 import com.openlattice.analysis.AnalysisApi;
 import com.openlattice.authorization.AccessCheck;
 import com.openlattice.authorization.AclKey;
@@ -310,21 +311,21 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
     }
 
     public static EntitySet createEntitySet( EntityType entityType, UUID organizationId ) {
-        return createEntitySet( UUID.randomUUID(), entityType, Optional.of( organizationId ), false, new HashSet<>() );
+        return createEntitySet( UUID.randomUUID(), entityType, organizationId, false, new HashSet<>() );
     }
 
     public static EntitySet createEntitySet( UUID entitySetId, EntityType entityType ) {
-        return createEntitySet( entitySetId, entityType, Optional.empty(), false, new HashSet<>() );
+        return createEntitySet( entitySetId, entityType, IdConstants.GLOBAL_ORGANIZATION_ID.getId(), false, new HashSet<>() );
     }
 
     public static EntitySet createEntitySet( EntityType entityType, boolean linking, Set<UUID> linkedEntitySetIds ) {
-        return createEntitySet( UUID.randomUUID(), entityType, Optional.empty(), linking, linkedEntitySetIds );
+        return createEntitySet( UUID.randomUUID(), entityType, IdConstants.GLOBAL_ORGANIZATION_ID.getId(), linking, linkedEntitySetIds );
     }
 
     public static EntitySet createEntitySet(
             UUID entitySetId,
             EntityType entityType,
-            Optional<UUID> organizationId,
+            UUID organizationId,
             boolean linking,
             Set<UUID> linkedEntitySetIds ) {
         EnumSet<EntitySetFlag> flags = EnumSet.of( EntitySetFlag.EXTERNAL );
