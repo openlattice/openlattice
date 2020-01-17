@@ -131,6 +131,7 @@ dependencies {
     compile "javax.inject:javax.inject:${javax_inject_version}"
 
     compile "com.fasterxml.jackson.dataformat:jackson-dataformat-csv:${jackson_version}"
+    compile "com.fasterxml.jackson.dataformat:jackson-dataformat-xml:${jackson_version}"
     compile "com.esotericsoftware:kryo-shaded:${kryo_shaded_version}"
     compile "com.esotericsoftware:minlog:${minlog_version}"
     compile "com.esotericsoftware:reflectasm:${reflectasm_version}"
