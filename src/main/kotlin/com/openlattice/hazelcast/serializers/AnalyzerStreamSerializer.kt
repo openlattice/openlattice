@@ -13,8 +13,4 @@ class AnalyzerStreamSerializer : AbstractEnumSerializer<Analyzer>() {
     override fun getClazz(): Class<out Analyzer> {
         return Analyzer::class.java
     }
-
-    override fun generateTestValue(): Analyzer {
-        return Analyzer.METAPHONE
-    }
 }

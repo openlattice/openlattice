@@ -23,8 +23,4 @@ class EntitySetFlagStreamSerializer : AbstractEnumSerializer<EntitySetFlag>() {
     override fun getClazz(): Class<EntitySetFlag> {
         return EntitySetFlag::class.java
     }
-
-    override fun generateTestValue(): EntitySetFlag {
-        return EntitySetFlag.AUDIT
-    }
 }
