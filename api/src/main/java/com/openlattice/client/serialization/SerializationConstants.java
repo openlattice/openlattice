@@ -67,9 +67,11 @@ public final class SerializationConstants {
     public static final String CHILD_CLAUSES                    = "childClauses";
     public static final String CHILD_QUERIES                    = "childQueries";
     public static final String CLAUSES                          = "clauses";
+    public static final String COLUMN                           = "column";
     public static final String COLUMNS                          = "columns";
     public static final String COLUMN_IDS_BY_TABLE_ID           = "columnIdsByTableId";
     public static final String COMPARISON                       = "comparison";
+    public static final String CONDITIONS                       = "conditions";
     public static final String CONFIG                           = "config";
     public static final String CONFLICTS                        = "conflicts";
     public static final String CONNECTIONS                      = "connections";
@@ -143,11 +145,13 @@ public final class SerializationConstants {
     public static final String FLIGHT_PLAN_PARAMETERS           = "flightPlanParameters";
     public static final String FQN                              = "fqn";
     public static final String FUZZY                            = "fuzzy";
+    public static final String GENERATOR                        = "generator";
     public static final String GRANTS                           = "grants";
     public static final String GRANT_TYPE                       = "grantType";
     public static final String GROUPINGS                        = "groupings";
     public static final String GTE                              = "gte";
     public static final String HASH                             = "hash";
+    public static final String HASH_FUNCTION                    = "hashFunction";
     public static final String HITS                             = "hits";
     public static final String IDS                              = "ids";
     public static final String ID_FIELD                         = "id";
@@ -230,6 +234,7 @@ public final class SerializationConstants {
     public static final String REQUESTING_USER                  = "requestingUser";
     public static final String REQUEST_ID                       = "requestId";
     public static final String REQUEST_STATUS                   = "status";
+    public static final String READER                           = "reader";
     public static final String RESULT                           = "result";
     public static final String RESULT_SUMMARY                   = "resultSummary";
     public static final String ROLES                            = "roles";
@@ -254,6 +259,7 @@ public final class SerializationConstants {
     public static final String START                            = "start";
     public static final String STATE                            = "state";
     public static final String STATUS                           = "status";
+    public static final String STORAGE_DESTINATION              = "storageDest";
     public static final String SYNC_ID                          = "syncId";
     public static final String SYNC_IDS                         = "syncIds";
     public static final String SYNC_TICKETS                     = "syncTickets";
@@ -265,10 +271,12 @@ public final class SerializationConstants {
     public static final String TIMESTAMP                        = "timestamp";
     public static final String TIME_ID                          = "timeId";
     public static final String TITLE_FIELD                      = "title";                   // for EntitySet
+    public static final String TRANSFORMS                       = "transforms";
     public static final String TRUSTED_ORGANIZATIONS_FIELD      = "trustedOrganizations";
     public static final String TYPE_FIELD                       = "type";
     public static final String UNIT                             = "unit";
     public static final String UNLINK                           = "unlink";
+    public static final String UPDATE_TYPE                      = "updateType";
     public static final String UPPERBOUND                       = "upperbound";
     public static final String URL                              = "url";
     public static final String USER_ID                          = "userId";
