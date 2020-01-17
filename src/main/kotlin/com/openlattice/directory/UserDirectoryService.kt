@@ -39,17 +39,20 @@ import org.springframework.stereotype.Service
 interface UserDirectoryService {
     @Timed
     fun getAllUsers(): Map<String, User>
+
     @Timed
     fun getUser(userId: String): User
+
     //TODO: Switch over to a Hazelcast map to relieve pressure from Auth0
     @Timed
     fun searchAllUsers(searchQuery: String): Map<String, Auth0UserBasic>
 }
+
 private val logger = LoggerFactory.getLogger(UserDirectoryService::class.java)
 private const val DEFAULT_PAGE_SIZE = 100
 
 @Service
-class LocalUserDirectoryService( auth0Configuration: Auth0Configuration ): UserDirectoryService {
+class LocalUserDirectoryService(auth0Configuration: Auth0Configuration) : UserDirectoryService {
     val users = auth0Configuration.users.associateBy { it.id }
     override fun getAllUsers(): Map<String, User> {
         return users
@@ -60,14 +63,21 @@ class LocalUserDirectoryService( auth0Configuration: Auth0Configuration ): UserD
     }
 
     override fun searchAllUsers(searchQuery: String): Map<String, Auth0UserBasic> {
-        
+        return users.values.filter { user ->
+            (listOf(user.email, user.name, user.nickname, user.givenName, user.familyName, user.username) +
+                    user.identities.map { it.userId } + user.identities.map { it.connection })
+                    .any { it.contains(searchQuery) }
+        }.map { it.id to Auth0UserBasic(it.id, it.email, it.nickname, it.appMetadata) }.toMap()
+
     }
 
 }
 
 @Service
-class Auth0UserDirectoryService(auth0TokenProvider: Auth0TokenProvider, hazelcastInstance: HazelcastInstance) : UserDirectoryService {
-    private val users = HazelcastMap.USERS.getMap( hazelcastInstance )
+class Auth0UserDirectoryService(
+        auth0TokenProvider: Auth0TokenProvider, hazelcastInstance: HazelcastInstance
+) : UserDirectoryService {
+    private val users = HazelcastMap.USERS.getMap(hazelcastInstance)
 
     private var auth0ManagementApi = RetrofitFactory
             .newClient(auth0TokenProvider.managementApiUrl) { auth0TokenProvider.token }
