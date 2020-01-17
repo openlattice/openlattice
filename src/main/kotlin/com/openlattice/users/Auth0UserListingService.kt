@@ -1,0 +1,90 @@
+/*
+ * Copyright (C) 2020. OpenLattice, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * You can contact the owner of the copyright at support@openlattice.com
+ *
+ *
+ */
+
+package com.openlattice.users
+
+import com.auth0.client.mgmt.ManagementAPI
+import com.auth0.client.mgmt.filter.UserFilter
+import com.auth0.json.mgmt.users.User
+import com.auth0.json.mgmt.users.UsersPage
+import org.slf4j.LoggerFactory
+
+const val MAX_PAGE_SIZE = 100
+private const val DEFAULT_PAGE_SIZE = 100
+
+/**
+ *
+ * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
+ */
+class Auth0UserListingService(private val managementApi: ManagementAPI) : UserListingService {
+    override fun getUsers(): Sequence<User> {
+        return Auth0UserListingResult(managementApi).asSequence()
+    }
+}
+
+class Auth0UserListingResult(private val managementApi: ManagementAPI) : Iterable<User> {
+    override fun iterator(): Iterator<User> {
+        return Auth0UserListingIterator(managementApi)
+    }
+}
+
+class Auth0UserListingIterator(private val managementApi: ManagementAPI) : Iterator<User> {
+    companion object {
+        private val logger = LoggerFactory.getLogger(Auth0UserListingIterator::class.java)
+    }
+
+    var page = 0
+    private var pageOfUsers = getNextPage()
+    private var pageIterator = pageOfUsers.iterator()
+
+    override fun hasNext(): Boolean {
+        if (!pageIterator.hasNext() && page > 0) {
+            pageOfUsers = getNextPage()
+            pageIterator = pageOfUsers.iterator()
+        }
+        return pageIterator.hasNext()
+    }
+
+    override fun next(): User {
+        return pageIterator.next()
+    }
+
+    private fun getNextPage(): List<User> {
+        return try {
+            logger.info("Loading page {} of {} auth0 users", page, pageOfUsers.size)
+            getUsersPage(managementApi, page++, DEFAULT_PAGE_SIZE).items ?: listOf()
+        } catch (ex: Exception) {
+            logger.error("Retrofit called failed during auth0 sync task.", ex)
+            listOf()
+        }
+    }
+
+    //TODO: Move this to a utils class
+    private fun getUsersPage(managementApi: ManagementAPI, page: Int, pageSize: Int): UsersPage {
+        require(pageSize < MAX_PAGE_SIZE) { "Requested page size of $pageSize exceeds max page size of $MAX_PAGE_SIZE " }
+        return managementApi.users().list(
+                UserFilter()
+                        .withSearchEngine("v3")
+                        .withFields("user_id,email,nickname,app_metadata,identities", true)
+                        .withPage(page, pageSize)
+        ).execute()
+    }
+}

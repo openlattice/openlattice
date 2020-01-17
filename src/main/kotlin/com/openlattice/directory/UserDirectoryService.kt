@@ -22,23 +22,51 @@
 package com.openlattice.directory
 
 import com.auth0.json.mgmt.users.User
+import com.codahale.metrics.annotation.Timed
 import com.google.common.collect.ImmutableMap
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
 import com.openlattice.auth0.Auth0TokenProvider
+import com.openlattice.authentication.Auth0Configuration
 import com.openlattice.client.RetrofitFactory
 import com.openlattice.datastore.services.Auth0ManagementApi
 import com.openlattice.directory.pojo.Auth0UserBasic
 import com.openlattice.hazelcast.HazelcastMap
 import org.slf4j.LoggerFactory
+import org.springframework.stereotype.Service
 
 
-open class UserDirectoryService(auth0TokenProvider: Auth0TokenProvider, hazelcastInstance: HazelcastInstance) {
-    companion object {
-        private val logger = LoggerFactory.getLogger(UserDirectoryService::class.java)
-        const val DEFAULT_PAGE_SIZE = 100
+interface UserDirectoryService {
+    @Timed
+    fun getAllUsers(): Map<String, User>
+    @Timed
+    fun getUser(userId: String): User
+    //TODO: Switch over to a Hazelcast map to relieve pressure from Auth0
+    @Timed
+    fun searchAllUsers(searchQuery: String): Map<String, Auth0UserBasic>
+}
+private val logger = LoggerFactory.getLogger(UserDirectoryService::class.java)
+private const val DEFAULT_PAGE_SIZE = 100
+
+@Service
+class LocalUserDirectoryService( auth0Configuration: Auth0Configuration ): UserDirectoryService {
+    val users = auth0Configuration.users.associateBy { it.id }
+    override fun getAllUsers(): Map<String, User> {
+        return users
     }
 
+    override fun getUser(userId: String): User {
+        return users.getValue(userId)
+    }
+
+    override fun searchAllUsers(searchQuery: String): Map<String, Auth0UserBasic> {
+        
+    }
+
+}
+
+@Service
+class Auth0UserDirectoryService(auth0TokenProvider: Auth0TokenProvider, hazelcastInstance: HazelcastInstance) : UserDirectoryService {
     private val users = HazelcastMap.USERS.getMap( hazelcastInstance )
 
     private var auth0ManagementApi = RetrofitFactory
@@ -46,16 +74,16 @@ open class UserDirectoryService(auth0TokenProvider: Auth0TokenProvider, hazelcas
             .create(Auth0ManagementApi::class.java)
 
 
-    open fun getAllUsers(): Map<String, User> {
+    override fun getAllUsers(): Map<String, User> {
         return ImmutableMap.copyOf(users)
     }
 
-    fun getUser(userId: String): User {
+    override fun getUser(userId: String): User {
         return users.getValue(userId)
     }
 
     //TODO: Switch over to a Hazelcast map to relieve pressure from Auth0
-    fun searchAllUsers(searchQuery: String): Map<String, Auth0UserBasic> {
+    override fun searchAllUsers(searchQuery: String): Map<String, Auth0UserBasic> {
         logger.info("Searching auth0 users with query: $searchQuery")
 
         var page = 0
