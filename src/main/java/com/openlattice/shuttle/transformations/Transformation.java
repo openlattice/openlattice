@@ -27,7 +27,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.As;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.openlattice.shuttle.util.Constants;
+import com.openlattice.client.serialization.SerializationConstants;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,7 +53,7 @@ public abstract class Transformation<I extends Object> implements Function<I, Ob
         this.column = Optional.empty();
     }
 
-    @JsonProperty( Constants.COLUMN )
+    @JsonProperty( SerializationConstants.COLUMN )
     public String getColumn() {
         return column.orElse( null );
     }

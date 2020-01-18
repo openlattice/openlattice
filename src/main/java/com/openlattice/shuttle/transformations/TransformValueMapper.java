@@ -24,7 +24,7 @@ package com.openlattice.shuttle.transformations;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.openlattice.client.serialization.SerializableFunction;
-import com.openlattice.shuttle.util.Constants;
+import com.openlattice.client.serialization.SerializationConstants;
 
 import java.util.List;
 import java.util.Map;
@@ -37,7 +37,7 @@ public class TransformValueMapper implements SerializableFunction<Map<String, Ob
 
     @JsonCreator
     public TransformValueMapper(
-            @JsonProperty(Constants.TRANSFORMS) List<Transformation> transforms
+            @JsonProperty( SerializationConstants.TRANSFORMS ) List<Transformation> transforms
     ) {
         this.transforms = transforms;
     }
