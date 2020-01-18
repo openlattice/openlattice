@@ -13,7 +13,7 @@ private val logger = LoggerFactory.getLogger(CsvPayload::class.java)
  */
 open class CsvPayload(val path: String) : Payload {
     override fun getPayload(): Iterable<Map<String, Any?>> {
-        return try {
+        try {
             return object : Iterable<Map<String, Any?>> {
                 override fun iterator(): Iterator<Map<String, Any?>> {
                     return CsvUtil.newDefaultMapper()
