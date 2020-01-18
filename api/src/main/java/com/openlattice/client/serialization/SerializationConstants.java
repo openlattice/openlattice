@@ -272,6 +272,8 @@ public final class SerializationConstants {
     public static final String TIME_ID                          = "timeId";
     public static final String TITLE_FIELD                      = "title";                   // for EntitySet
     public static final String TRANSFORMS                       = "transforms";
+    public static final String TRANSFORMS_IF_FALSE              = "transformsIfFalse";
+    public static final String TRANSFORMS_IF_TRUE               = "transformsIfTrue";
     public static final String TRUSTED_ORGANIZATIONS_FIELD      = "trustedOrganizations";
     public static final String TYPE_FIELD                       = "type";
     public static final String UNIT                             = "unit";
