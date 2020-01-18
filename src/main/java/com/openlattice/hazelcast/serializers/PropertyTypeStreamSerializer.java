@@ -69,7 +69,6 @@ public class PropertyTypeStreamSerializer implements SelfRegisteringStreamSerial
         out.writeBoolean( object.isPii() );
         AnalyzerStreamSerializer.serialize( out, object.getAnalyzer() );
         IndexTypeStreamSerializer.serialize( out, object.getPostgresIndexType() );
-        out.writeInt( object.getPostgresIndexType().ordinal() );
         SetStreamSerializers.fastStringSetSerialize( out, object.getEnumValues() );
     }
 
