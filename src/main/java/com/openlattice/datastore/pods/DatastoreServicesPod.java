@@ -576,7 +576,6 @@ public class DatastoreServicesPod {
                 dataModelService(),
                 entitySetManager(),
                 dataGraphService(),
-                edmAuthorizationHelper(),
                 authorizationManager(),
                 auditRecordEntitySetsManager(),
                 entityDatastore(),
