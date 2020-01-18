@@ -41,7 +41,13 @@ data class FlightPlanParameters(
             val sql = TestDataFactory.randomAlphanumeric(5)
             val source = mapOf<String, String>()
             val sourcePrimaryKeyColumns = listOf(TestDataFactory.randomAlphanumeric(5))
-            val flight = Flight(emptyMap(), Optional.empty(), Optional.of(emptyMap()), Optional.of(TestDataFactory.random(5)), Optional.empty())
+            val flight = Flight(
+                    emptyMap(),
+                    Optional.empty(),
+                    Optional.of(emptyMap()),
+                    Optional.of(TestDataFactory.random(5)),
+                    Optional.empty(),
+                    Optional.of(UUID.randomUUID()))
             return FlightPlanParameters(
                     sql,
                     source,
