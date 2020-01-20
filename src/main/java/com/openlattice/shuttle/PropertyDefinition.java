@@ -197,7 +197,7 @@ public class PropertyDefinition implements Serializable {
             return this;
         }
 
-        public Builder<T> storageDestionation( StorageDestination storageDestination ) {
+        public Builder<T> storageDestination( StorageDestination storageDestination ) {
             this.storageDestination = Optional.of( storageDestination );
             return this;
         }
