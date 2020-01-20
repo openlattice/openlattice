@@ -44,7 +44,6 @@ class DataDeletionService(
         private val edmService: EdmManager,
         private val entitySetManager: EntitySetManager,
         private val dgm: DataGraphManager,
-        private val authzHelper: EdmAuthorizationHelper,
         private val authorizationManager: AuthorizationManager,
         private val aresManager: AuditRecordEntitySetsManager,
         private val eds: EntityDatastore,
@@ -153,13 +152,14 @@ class DataDeletionService(
 
         /* Delete entity */
 
-        var numUpdates: Int = 0
+        var numUpdates = 0
 
         val entityWriteEvent = clearOrDeleteEntities(entitySetId, entityKeyIds, deleteType, principals)
         numUpdates += entityWriteEvent.numUpdates
 
         /* 3 - Delete neighbors */
 
+        // TODO what is/was this for?
         val neighborDeleteEvents = Lists.newArrayList<AuditableEvent>()
 
         numUpdates += entitySetIdToEntityDataKeysMap.entries.stream().mapToInt { entry ->
@@ -250,7 +250,7 @@ class DataDeletionService(
 
     /** Association deletion and auth **/
 
-
+    // TODO do we need this??
     private fun authorizeAndDeleteAssociationsForNeighborhood(
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
@@ -281,11 +281,13 @@ class DataDeletionService(
             skipAuthChecks: Boolean = false
     ): Int {
 
-        if (!entitySetManager.isAssociationEntitySet(entitySetId)) {
+        // if this is an association entity set, we only delete the edges
+        if (entitySetManager.isAssociationEntitySet(entitySetId)) {
             deleteEdgesForAssociationEntitySet(entitySetId, entityKeyIds, deleteType)
             return 0
         }
 
+        // if it's not an association entity set, we delete edges + connected association entities
         val authorizedPropertyTypes = getAuthorizedPropertyTypesOfAssociations(
                 entitySetId,
                 entityKeyIds,
@@ -293,24 +295,22 @@ class DataDeletionService(
                 principals,
                 skipAuthChecks)
 
-        val auditEntitySetIds = aresManager.getAuditEdgeEntitySets(AclKey(entitySetId))
-
-        val associationsEdgeKeys = collectAssociations(entitySetId,
+        val associationsEdgeKeys = collectAssociations(
+                entitySetId,
                 entityKeyIds,
-                includeClearedEdges = deleteType == DeleteType.Hard)
+                includeClearedEdges = (deleteType == DeleteType.Hard)
+        )
 
-        val writeEvents = mutableListOf<WriteEvent>()
-
-        writeEvents += if (deleteType === DeleteType.Hard) {
+        val writeEvents = if (deleteType === DeleteType.Hard) {
             // associations need to be deleted first, because edges are deleted in DataGraphManager.deleteEntitySet call
             dgm.deleteAssociationsBatch(entitySetId, associationsEdgeKeys, authorizedPropertyTypes)
         } else {
+            val auditEntitySetIds = aresManager.getAuditEdgeEntitySets(AclKey(entitySetId))
             val nonAuditEdgeKeys = associationsEdgeKeys.filter { !auditEntitySetIds.contains(it.edge.entitySetId) }
             dgm.clearAssociationsBatch(entitySetId, nonAuditEdgeKeys, authorizedPropertyTypes)
         }
 
         return writeEvents.sumBy { it.numUpdates }
-
     }
 
     private fun deleteEdgesForAssociationEntitySet(
@@ -318,9 +318,11 @@ class DataDeletionService(
             entityKeyIds: Optional<Set<UUID>>,
             deleteType: DeleteType
     ) {
-        val edgeKeys = collectAssociations(entitySetId,
+        val edgeKeys = collectAssociations(
+                entitySetId,
                 entityKeyIds,
-                includeClearedEdges = deleteType == DeleteType.Hard)
+                includeClearedEdges = deleteType == DeleteType.Hard
+        )
 
         if (deleteType == DeleteType.Hard) {
             graphService.deleteEdges(edgeKeys)
@@ -343,12 +345,6 @@ class DataDeletionService(
 
 
     /** Authorization checks **/
-
-    private fun checkPermissions(aclKey: AclKey, requiredPermissions: EnumSet<Permission>, principals: Set<Principal>) {
-        if (!authorizationManager.checkIfHasPermissions(aclKey, principals, requiredPermissions)) {
-            throw ForbiddenException("Object $aclKey is not accessible: required permissions are $requiredPermissions")
-        }
-    }
 
     private fun getAuthorizedPropertyTypesOfAssociations(
             entitySetId: UUID,

@@ -2,6 +2,7 @@ package com.openlattice.auditing
 
 import com.google.common.collect.ImmutableSet
 import com.hazelcast.core.HazelcastInstance
+import com.openlattice.IdConstants
 import com.openlattice.assembler.tasks.UsersAndRolesInitializationTask
 import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.Permission
@@ -9,9 +10,7 @@ import com.openlattice.authorization.SystemRole
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.edm.tasks.EdmSyncInitializerTask
-import com.openlattice.edm.type.EntityType
 import com.openlattice.hazelcast.HazelcastMap
-import com.openlattice.organizations.Organization
 import com.openlattice.organizations.tasks.OrganizationsInitializationTask
 import com.openlattice.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies.PostConstructInitializerTask
@@ -88,7 +87,7 @@ class AuditInitializationTask(
                                 Optional.of("Audit entity set for the entity data model"),
                                 ImmutableSet.of(),
                                 Optional.empty(),
-                                Optional.empty(),
+                                IdConstants.GLOBAL_ORGANIZATION_ID.id,
                                 Optional.of(EnumSet.of(EntitySetFlag.AUDIT)),
                                 Optional.empty()),
                         dependencies.partitionManager.getPartitionCount()
