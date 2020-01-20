@@ -675,8 +675,6 @@ class AssemblerConnectionManager(
                     logger.info("Revoking $PUBLIC_SCHEMA schema right from roles: {}", roleIds)
                     //Don't allow users to access public schema which will contain foreign data wrapper tables.
                     statement.execute("REVOKE USAGE ON SCHEMA $PUBLIC_SCHEMA FROM $roleIdsSql")
-
-                    return@use
                 }
             }
         }
@@ -758,8 +756,6 @@ class AssemblerConnectionManager(
                     statement.addBatch("ALTER USER $userId SET search_path TO $MATERIALIZED_VIEWS_SCHEMA")
                 }
                 statement.executeBatch()
-
-                return@use
             }
         }
     }
