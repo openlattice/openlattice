@@ -395,8 +395,8 @@ class PostgresEntityDatastore(
         val keyCount = entitySetIdsToEntityKeyIds.keySet().size
         val avgValuesPerKey = if (entitySetIdsToEntityKeyIds.size() == 0) 0 else entitySetIdsToEntityKeyIds.size() / keyCount
         val entities =
-                ArrayListMultimap
-                        .create<UUID, MutableMap<FullQualifiedName, MutableSet<Any>>>(keyCount, avgValuesPerKey)
+                Multimaps.synchronizedListMultimap( ArrayListMultimap
+                        .create<UUID, MutableMap<FullQualifiedName, MutableSet<Any>>>(keyCount, avgValuesPerKey) )
 
         Multimaps
                 .asMap(entitySetIdsToEntityKeyIds)
