@@ -22,30 +22,25 @@
 
 package com.openlattice.hazelcast.serializers;
 
-import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.edm.type.Analyzer;
 import com.openlattice.edm.type.PropertyType;
+import com.openlattice.hazelcast.StreamSerializerTypeIds;
+import com.openlattice.postgres.IndexType;
+import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-import com.openlattice.postgres.IndexType;
-import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
-import org.springframework.stereotype.Component;
-
 @Component
 public class PropertyTypeStreamSerializer implements SelfRegisteringStreamSerializer<PropertyType> {
-
-    private static final EdmPrimitiveTypeKind[] edmTypes    = EdmPrimitiveTypeKind.values();
-    private static final Analyzer[]             analyzers   = Analyzer.values();
-    private static final IndexType[]            INDEX_TYPES = IndexType.values();
 
     @Override
     public void write( ObjectDataOutput out, PropertyType object ) throws IOException {
@@ -70,10 +65,10 @@ public class PropertyTypeStreamSerializer implements SelfRegisteringStreamSerial
         SetStreamSerializers.serialize( out,
                 object.getSchemas(),
                 ( FullQualifiedName schema ) -> FullQualifiedNameStreamSerializer.serialize( out, schema ) );
-        out.writeInt( object.getDatatype().ordinal() );
+        EdmPrimitiveTypeKindStreamSerializer.serialize( out, object.getDatatype() );
         out.writeBoolean( object.isPii() );
-        out.writeInt( object.getAnalyzer().ordinal() );
-        out.writeInt( object.getPostgresIndexType().ordinal() );
+        AnalyzerStreamSerializer.serialize( out, object.getAnalyzer() );
+        IndexTypeStreamSerializer.serialize( out, object.getPostgresIndexType() );
         SetStreamSerializers.fastStringSetSerialize( out, object.getEnumValues() );
     }
 
@@ -82,12 +77,11 @@ public class PropertyTypeStreamSerializer implements SelfRegisteringStreamSerial
         FullQualifiedName type = FullQualifiedNameStreamSerializer.deserialize( in );
         String title = in.readUTF();
         Optional<String> description = Optional.of( in.readUTF() );
-        Set<FullQualifiedName> schemas = SetStreamSerializers.deserialize( in,
-                FullQualifiedNameStreamSerializer::deserialize );
-        EdmPrimitiveTypeKind datatype = edmTypes[ in.readInt() ];
+        Set<FullQualifiedName> schemas = SetStreamSerializers.deserialize( in, FullQualifiedNameStreamSerializer::deserialize );
+        EdmPrimitiveTypeKind datatype = EdmPrimitiveTypeKindStreamSerializer.deserialize( in );
         Optional<Boolean> piiField = Optional.of( in.readBoolean() );
-        Optional<Analyzer> analyzer = Optional.of( analyzers[ in.readInt() ] );
-        Optional<IndexType> indexMethod = Optional.of( INDEX_TYPES[ in.readInt() ] );
+        Optional<Analyzer> analyzer = Optional.of( AnalyzerStreamSerializer.deserialize( in ) );
+        Optional<IndexType> indexMethod = Optional.of( IndexTypeStreamSerializer.deserialize( in ) );
         Optional<Set<String>> enumValues = Optional.of( SetStreamSerializers.orderedFastStringSetDeserialize( in ));
         return new PropertyType( id, type, title, description, schemas, datatype, enumValues, piiField, analyzer, indexMethod );
     }
