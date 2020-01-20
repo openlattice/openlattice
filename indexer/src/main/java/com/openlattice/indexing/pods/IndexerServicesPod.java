@@ -374,7 +374,6 @@ public class IndexerServicesPod {
                 dataModelService(),
                 entitySetManager(),
                 dataGraphService(),
-                edmAuthorizationHelper(),
                 authorizationManager(),
                 auditRecordEntitySetsManager(),
                 entityDatastore(),

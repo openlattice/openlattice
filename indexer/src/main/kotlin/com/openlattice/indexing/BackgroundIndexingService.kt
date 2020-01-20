@@ -39,11 +39,11 @@ import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
+import com.openlattice.rhizome.service.QueueState
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
-import java.time.Instant
 import java.time.OffsetDateTime
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -97,7 +97,7 @@ class BackgroundIndexingService(
             //We shuffle entity sets to make sure we have a chance to work share and index everything
             val lockedEntitySets = entitySets.values
                     .shuffled()
-                    .filter { tryLockEntitySet(it.id) == null }
+                    .filter { tryLockEntitySet(it.id) != QueueState.QUEUED }
                     .filter { it.name != "OpenLattice Audit Entity Set" } //TODO: Clean out audit entity set from prod
 
             val totalIndexed = lockedEntitySets
@@ -333,10 +333,10 @@ class BackgroundIndexingService(
         }
     }
 
-    private fun tryLockEntitySet(esId: UUID): Long? {
+    private fun tryLockEntitySet(esId: UUID): QueueState {
         return indexingLocks.putIfAbsent(
                 esId,
-                Instant.now().plusMillis(EXPIRATION_MILLIS).toEpochMilli(),
+                QueueState.QUEUED,
                 EXPIRATION_MILLIS,
                 TimeUnit.MILLISECONDS
         )
