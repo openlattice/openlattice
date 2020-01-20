@@ -13,18 +13,14 @@ class EntitySetFlagStreamSerializer : AbstractEnumSerializer<EntitySetFlag>() {
         @JvmStatic
         fun serialize(out: ObjectDataOutput, `object`: EntitySetFlag) =  AbstractEnumSerializer.serialize(out, `object`)
         @JvmStatic
-        fun deserialize(`in`: ObjectDataInput): EntitySetFlag = deserialize(EntitySetFlag::class.java, `in`) as EntitySetFlag
+        fun deserialize(`in`: ObjectDataInput): EntitySetFlag = deserialize(EntitySetFlag::class.java, `in`)
     }
 
     override fun getTypeId(): Int {
         return StreamSerializerTypeIds.ENTITY_SET_FLAG.ordinal
     }
 
-    override fun getClazz(): Class<out Enum<EntitySetFlag>> {
+    override fun getClazz(): Class<EntitySetFlag> {
         return EntitySetFlag::class.java
-    }
-
-    override fun generateTestValue(): Enum<EntitySetFlag> {
-        return EntitySetFlag.AUDIT
     }
 }
