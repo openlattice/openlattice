@@ -27,8 +27,8 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.openlattice.client.serialization.SerializableFunction;
 import com.openlattice.client.serialization.SerializationConstants;
+import com.openlattice.shuttle.conditions.Condition;
 import com.openlattice.shuttle.conditions.ConditionValueMapper;
-import com.openlattice.shuttle.conditions.Conditions;
 
 import java.io.Serializable;
 import java.util.*;
@@ -43,14 +43,14 @@ public class Flight implements Serializable {
     private final String                                       name;
     private final Set<String>                                  tags;
     public final  SerializableFunction<Map<String, Object>, ?> valueMapper;
-    public final  Optional<Conditions>                         condition;
+    public final  Optional<List<Condition>>                    condition;
     private final Optional<UUID>                               organizationId;
 
     @JsonCreator
     public Flight(
             @JsonProperty( SerializationConstants.ENTITY_DEFINITIONS_FIELD )
                     Map<String, EntityDefinition> entityDefinitions,
-            @JsonProperty( SerializationConstants.CONDITIONS ) Optional<Conditions> condition,
+            @JsonProperty( SerializationConstants.CONDITIONS ) Optional<List<Condition>> condition,
             @JsonProperty( SerializationConstants.ASSOCIATION_DEFINITIONS_FIELD )
                     Optional<Map<String, AssociationDefinition>> associationDefinitions,
             @JsonProperty( SerializationConstants.NAME ) Optional<String> name,
@@ -112,7 +112,7 @@ public class Flight implements Serializable {
     }
 
     @JsonProperty( SerializationConstants.CONDITIONS )
-    public Optional<Conditions> getCondition() {
+    public Optional<List<Condition>> getCondition() {
         return condition;
     }
 

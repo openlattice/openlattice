@@ -30,7 +30,7 @@ import com.google.common.collect.Maps;
 import com.openlattice.client.serialization.SerializableFunction;
 import com.openlattice.client.serialization.SerializationConstants;
 import com.openlattice.data.UpdateType;
-import com.openlattice.shuttle.conditions.Conditions;
+import com.openlattice.shuttle.conditions.Condition;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Collection;
@@ -64,7 +64,7 @@ public class AssociationDefinition extends EntityDefinition implements Serializa
             @JsonProperty( SerializationConstants.DST ) String dstAlias,
             @JsonProperty( SerializationConstants.PROPERTY_DEFINITIONS )
                     Map<FullQualifiedName, PropertyDefinition> propertyDefinitions,
-            @JsonProperty( SerializationConstants.CONDITIONS ) Optional<Conditions> condition,
+            @JsonProperty( SerializationConstants.CONDITIONS ) Optional<List<Condition>> condition,
             @JsonProperty( SerializationConstants.NAME ) String alias,
             @JsonProperty( SerializationConstants.GENERATOR ) Optional<SerializableFunction<Map<String, Object>, String>> generator,
             @JsonProperty( SerializationConstants.UPDATE_TYPE ) Optional<UpdateType> updateType ) {
@@ -140,7 +140,7 @@ public class AssociationDefinition extends EntityDefinition implements Serializa
     }
 
     @JsonProperty( SerializationConstants.CONDITIONS )
-    public Optional<Conditions> getCondition() {
+    public Optional<List<Condition>> getCondition() {
         return condition;
     }
 

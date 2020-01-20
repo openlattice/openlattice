@@ -2,15 +2,12 @@ package com.openlattice.shuttle.conditions;
 
 import com.openlattice.client.serialization.SerializableFunction;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 public class ConditionValueMapper implements SerializableFunction<Map<String, Object>, Object> {
     private final List<Condition> conditions;
-
-    public ConditionValueMapper( Conditions conditions ) {
-        this.conditions = conditions;
-    }
 
     public ConditionValueMapper( List<Condition> conditions ) {
         this.conditions = conditions;

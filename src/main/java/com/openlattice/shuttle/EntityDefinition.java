@@ -31,7 +31,6 @@ import com.openlattice.client.serialization.SerializationConstants;
 import com.openlattice.data.UpdateType;
 import com.openlattice.shuttle.conditions.Condition;
 import com.openlattice.shuttle.conditions.ConditionValueMapper;
-import com.openlattice.shuttle.conditions.Conditions;
 import com.openlattice.shuttle.transformations.Transformation;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
@@ -52,7 +51,7 @@ public class EntityDefinition implements Serializable {
 
     private static final Logger logger = LoggerFactory.getLogger( EntityDefinition.class );
 
-    protected final Optional<Conditions>                                        condition;
+    protected final Optional<List<Condition>>                                        condition;
     protected final SerializableFunction<Map<String, Object>, ?>                valueMapper;
     protected final Optional<UUID>                                              id;
     protected final FullQualifiedName                                           entityTypeFqn;
@@ -72,7 +71,7 @@ public class EntityDefinition implements Serializable {
             @JsonProperty( SerializationConstants.PROPERTY_DEFINITIONS )
                     Map<FullQualifiedName, PropertyDefinition> propertyDefinitions,
             @JsonProperty( SerializationConstants.NAME ) String alias,
-            @JsonProperty( SerializationConstants.CONDITIONS ) Optional<Conditions> condition,
+            @JsonProperty( SerializationConstants.CONDITIONS ) Optional<List<Condition>> condition,
             @JsonProperty( SerializationConstants.GENERATOR ) Optional<SerializableFunction<Map<String, Object>, String>> generator,
             @JsonProperty( SerializationConstants.UPDATE_TYPE ) Optional<UpdateType> updateType ) {
 
@@ -171,7 +170,7 @@ public class EntityDefinition implements Serializable {
     }
 
     @JsonProperty( SerializationConstants.CONDITIONS )
-    public Optional<Conditions> getCondition() {
+    public Optional<List<Condition>> getCondition() {
         return condition;
     }
 
