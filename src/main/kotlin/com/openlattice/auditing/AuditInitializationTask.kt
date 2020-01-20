@@ -2,6 +2,7 @@ package com.openlattice.auditing
 
 import com.google.common.collect.ImmutableSet
 import com.hazelcast.core.HazelcastInstance
+import com.openlattice.IdConstants
 import com.openlattice.assembler.tasks.UsersAndRolesInitializationTask
 import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.Permission
@@ -9,9 +10,7 @@ import com.openlattice.authorization.SystemRole
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.edm.tasks.EdmSyncInitializerTask
-import com.openlattice.edm.type.EntityType
 import com.openlattice.hazelcast.HazelcastMap
-import com.openlattice.organizations.Organization
 import com.openlattice.organizations.tasks.OrganizationsInitializationTask
 import com.openlattice.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies.PostConstructInitializerTask
@@ -26,12 +25,10 @@ class AuditInitializationTask(
         val hazelcastInstance: HazelcastInstance
 ) : HazelcastInitializationTask<AuditTaskDependencies> {
 
-    private val entityTypes = hazelcastInstance.getMap<UUID, EntityType>(HazelcastMap.ENTITY_TYPES.name)
-    private val entitySets = hazelcastInstance.getMap<UUID, EntitySet>(HazelcastMap.ENTITY_SETS.name)
-    private val organizations = hazelcastInstance.getMap<UUID, Organization>(HazelcastMap.ORGANIZATIONS.name)
-    private val auditRecordEntitySetConfigurations = hazelcastInstance.getMap<AclKey, AuditRecordEntitySetConfiguration>(
-            HazelcastMap.AUDIT_RECORD_ENTITY_SETS.name
-    )
+    private val entityTypes = HazelcastMap.ENTITY_TYPES.getMap( hazelcastInstance )
+    private val entitySets = HazelcastMap.ENTITY_SETS.getMap( hazelcastInstance )
+    private val organizations = HazelcastMap.ORGANIZATIONS.getMap( hazelcastInstance )
+    private val auditRecordEntitySetConfigurations = HazelcastMap.AUDIT_RECORD_ENTITY_SETS.getMap( hazelcastInstance )
 
     override fun getInitialDelay(): Long {
         return 0
@@ -90,7 +87,7 @@ class AuditInitializationTask(
                                 Optional.of("Audit entity set for the entity data model"),
                                 ImmutableSet.of(),
                                 Optional.empty(),
-                                Optional.empty(),
+                                IdConstants.GLOBAL_ORGANIZATION_ID.id,
                                 Optional.of(EnumSet.of(EntitySetFlag.AUDIT)),
                                 Optional.empty()),
                         dependencies.partitionManager.getPartitionCount()

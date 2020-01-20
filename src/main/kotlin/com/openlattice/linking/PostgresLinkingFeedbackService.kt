@@ -21,7 +21,7 @@ const val FETCH_SIZE = 100_000
 
 class PostgresLinkingFeedbackService(private val hds: HikariDataSource, hazelcastInstance: HazelcastInstance) {
 
-    private val linkingFeedback = hazelcastInstance.getMap<EntityKeyPair, Boolean>(HazelcastMap.LINKING_FEEDBACK.name)
+    private val linkingFeedback = HazelcastMap.LINKING_FEEDBACK.getMap( hazelcastInstance )
 
     fun addLinkingFeedback(entityLinkingFeedback: EntityLinkingFeedback) {
         linkingFeedback.set(entityLinkingFeedback.entityPair, entityLinkingFeedback.linked)

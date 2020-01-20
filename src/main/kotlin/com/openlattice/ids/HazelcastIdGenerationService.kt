@@ -27,8 +27,8 @@ class HazelcastIdGenerationService(clients: HazelcastClientProvider, private val
      * Each range owns a portion of the keyspace.
      */
     private val hazelcastInstance = clients.getClient(HazelcastClient.IDS.name)
-    private val scrolls = hazelcastInstance.getMap<Long, Range>(HazelcastMap.ID_GENERATION.name)
-    private val idsQueue = hazelcastInstance.getQueue<UUID>(HazelcastQueue.ID_GENERATION.name)
+    private val scrolls = HazelcastMap.ID_GENERATION.getMap( hazelcastInstance )
+    private val idsQueue = HazelcastQueue.ID_GENERATION.getQueue( hazelcastInstance )
 
     init {
         if (scrolls.isEmpty) {

@@ -46,7 +46,7 @@ public class OrganizationAssemblyMapstore extends AbstractBasePostgresMapstore<U
     private final MaterializedEntitySetMapStore materializedEntitySetsMapStore;
 
     public OrganizationAssemblyMapstore( HikariDataSource hds ) {
-        super( HazelcastMap.ASSEMBLIES.name(), ORGANIZATION_ASSEMBLIES, hds );
+        super( HazelcastMap.ASSEMBLIES, ORGANIZATION_ASSEMBLIES, hds );
         materializedEntitySetsMapStore = new MaterializedEntitySetMapStore( hds );
     }
 

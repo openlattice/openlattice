@@ -47,9 +47,9 @@ class CollectionsManager(
 
 ) {
 
-    private val entityTypeCollections: IMap<UUID, EntityTypeCollection> = hazelcast.getMap(HazelcastMap.ENTITY_TYPE_COLLECTIONS.name)
-    private val entitySetCollections: IMap<UUID, EntitySetCollection> = hazelcast.getMap(HazelcastMap.ENTITY_SET_COLLECTIONS.name)
-    private val entitySetCollectionConfig: IMap<CollectionTemplateKey, UUID> = hazelcast.getMap(HazelcastMap.ENTITY_SET_COLLECTION_CONFIG.name)
+    private val entityTypeCollections = HazelcastMap.ENTITY_TYPE_COLLECTIONS.getMap( hazelcast )
+    private val entitySetCollections = HazelcastMap.ENTITY_SET_COLLECTIONS.getMap( hazelcast )
+    private val entitySetCollectionConfig = HazelcastMap.ENTITY_SET_COLLECTION_CONFIG.getMap( hazelcast )
 
 
     /** READ **/
@@ -375,7 +375,7 @@ class CollectionsManager(
                 Optional.of(description),
                 setOf(),
                 Optional.empty(),
-                Optional.of(entitySetCollection.organizationId),
+                entitySetCollection.organizationId,
                 Optional.of(flags),
                 Optional.empty(),
                 Optional.empty())

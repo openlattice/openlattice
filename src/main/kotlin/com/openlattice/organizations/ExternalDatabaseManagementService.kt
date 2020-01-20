@@ -54,12 +54,12 @@ class ExternalDatabaseManagementService(
         private val hds: HikariDataSource
 ) {
 
-    private val organizationExternalDatabaseColumns: IMap<UUID, OrganizationExternalDatabaseColumn> = hazelcastInstance.getMap(HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_COLUMN.name)
-    private val organizationExternalDatabaseTables: IMap<UUID, OrganizationExternalDatabaseTable> = hazelcastInstance.getMap(HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_TABLE.name)
-    private val hbaAuthenticationRecordsMapstore: IMap<String, PostgresAuthenticationRecord> = hazelcastInstance.getMap(HazelcastMap.HBA_AUTHENTICATION_RECORDS.name)
-    private val securableObjectTypes: IMap<AclKey, SecurableObjectType> = hazelcastInstance.getMap(HazelcastMap.SECURABLE_OBJECT_TYPES.name)
-    private val organizations: IMap<UUID, Organization> = hazelcastInstance.getMap(HazelcastMap.ORGANIZATIONS.name)
-    private val aces: IMap<AceKey, AceValue> = hazelcastInstance.getMap(HazelcastMap.PERMISSIONS.name)
+    private val organizationExternalDatabaseColumns = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_COLUMN.getMap( hazelcastInstance )
+    private val organizationExternalDatabaseTables = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_TABLE.getMap( hazelcastInstance )
+    private val hbaAuthenticationRecordsMapstore = HazelcastMap.HBA_AUTHENTICATION_RECORDS.getMap( hazelcastInstance )
+    private val securableObjectTypes = HazelcastMap.SECURABLE_OBJECT_TYPES.getMap( hazelcastInstance )
+    private val organizations = HazelcastMap.ORGANIZATIONS.getMap( hazelcastInstance )
+    private val aces = HazelcastMap.PERMISSIONS.getMap( hazelcastInstance )
     private val logger = LoggerFactory.getLogger(ExternalDatabaseManagementService::class.java)
     private val primaryKeyConstraint = "PRIMARY KEY"
     private val FETCH_SIZE = 100_000
@@ -225,7 +225,7 @@ class ExternalDatabaseManagementService(
 
         //drop db from schema
         val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
-        assemblerConnectionManager.connect(dbName).use {
+        assemblerConnectionManager.connect(dbName).let {
             it.connection.createStatement().use { stmt ->
                 stmt.execute("DROP DATABASE $dbName")
             }
@@ -280,7 +280,7 @@ class ExternalDatabaseManagementService(
         val aclsByOrg = acls.groupBy { it.aclKey[0] }
         aclsByOrg.forEach { (orgId, orgAcls) ->
             val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
-            assemblerConnectionManager.connect(dbName).use { dataSource ->
+            assemblerConnectionManager.connect(dbName).let { dataSource ->
                 val conn = dataSource.connection
                 conn.autoCommit = false
                 conn.createStatement().use { stmt ->
@@ -336,7 +336,7 @@ class ExternalDatabaseManagementService(
     fun revokeAllPrivilegesFromMember(orgId: UUID, userId: String) {
         val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
         val userName = getDBUser(userId)
-        assemblerConnectionManager.connect(dbName).use {
+        assemblerConnectionManager.connect(dbName).let {
             it.connection.createStatement().use { stmt ->
                 stmt.execute("REVOKE ALL ON DATABASE $dbName FROM $userName")
             }
@@ -494,7 +494,7 @@ class ExternalDatabaseManagementService(
             out.close()
 
             //reload config
-            assemblerConnectionManager.connect(dbName).use {
+            assemblerConnectionManager.connect(dbName).let {
                 it.connection.createStatement().use { stmt ->
                     stmt.executeQuery(getReloadConfigSql())
                 }

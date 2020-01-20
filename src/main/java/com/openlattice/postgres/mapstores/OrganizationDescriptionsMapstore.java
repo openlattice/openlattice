@@ -22,7 +22,7 @@ import java.util.UUID;
 public class OrganizationDescriptionsMapstore extends AbstractBasePostgresMapstore<UUID, String> {
 
     public OrganizationDescriptionsMapstore( HikariDataSource hds ) {
-        super( HazelcastMap.ORGANIZATIONS_DESCRIPTIONS.name(), ORGANIZATIONS, hds );
+        super( HazelcastMap.ORGANIZATIONS_DESCRIPTIONS, ORGANIZATIONS, hds );
     }
 
     @Override public List<PostgresColumnDefinition> initValueColumns() {

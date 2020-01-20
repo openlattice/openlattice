@@ -28,7 +28,7 @@ public class EntityTypePropertyMetadataMapstore
     public static final String ENTITY_TYPE_INDEX = "__key#entityTypeId";
 
     public EntityTypePropertyMetadataMapstore( HikariDataSource hds ) {
-        super( HazelcastMap.ENTITY_TYPE_PROPERTY_METADATA.name(), ENTITY_TYPE_PROPERTY_METADATA, hds );
+        super( HazelcastMap.ENTITY_TYPE_PROPERTY_METADATA, ENTITY_TYPE_PROPERTY_METADATA, hds );
     }
 
     @Override protected void bind(

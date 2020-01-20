@@ -85,8 +85,8 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
             HazelcastInstance hazelcastInstance,
             AuthorizationQueryService aqs,
             EventBus eventBus ) {
-        this.aces = hazelcastInstance.getMap( HazelcastMap.PERMISSIONS.name() );
-        this.securableObjectTypes = hazelcastInstance.getMap( HazelcastMap.SECURABLE_OBJECT_TYPES.name() );
+        this.aces = HazelcastMap.PERMISSIONS.getMap( hazelcastInstance );
+        this.securableObjectTypes = HazelcastMap.SECURABLE_OBJECT_TYPES.getMap( hazelcastInstance );
         this.aqs = checkNotNull( aqs );
         this.eventBus = checkNotNull( eventBus );
     }

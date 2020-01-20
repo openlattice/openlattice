@@ -21,7 +21,7 @@ public class SecurableObjectTypeMapstore extends AbstractBasePostgresMapstore<Ac
     public static final String SECURABLE_OBJECT_TYPE_INDEX = "this";
 
     public SecurableObjectTypeMapstore( HikariDataSource hds ) {
-        super( HazelcastMap.SECURABLE_OBJECT_TYPES.name(), SECURABLE_OBJECTS, hds );
+        super( HazelcastMap.SECURABLE_OBJECT_TYPES, SECURABLE_OBJECTS, hds );
     }
 
     @Override protected void bind(

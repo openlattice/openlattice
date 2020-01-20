@@ -45,7 +45,7 @@ public class PostgresCredentialMapstore extends AbstractBasePostgresMapstore<Str
     private final PostgresUserApi dcqs;
 
     public PostgresCredentialMapstore( HikariDataSource hds, PostgresUserApi pgUserApi ) {
-        super( HazelcastMap.DB_CREDS.name(), PostgresTable.DB_CREDS, hds );
+        super( HazelcastMap.DB_CREDS, PostgresTable.DB_CREDS, hds );
         this.dcqs = pgUserApi;
     }
 
