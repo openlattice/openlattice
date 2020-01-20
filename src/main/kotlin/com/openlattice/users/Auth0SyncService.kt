@@ -50,7 +50,7 @@ class Auth0SyncService(
     fun syncUser(user: User) {
         //Figure out which users need to be added to which organizations.
         //Since we don't want to do O( # organizations ) for each user, we need to lookup organizations on a per user
-        //basis and see if the uscd .er needs to be added.
+        //basis and see if the user needs to be added.
         logger.info("Synchronizing user ${user.id}")
         ensureSecurablePrincipalExists(user)
         val principal = getPrincipal(user)
