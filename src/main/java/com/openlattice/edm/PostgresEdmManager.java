@@ -56,7 +56,7 @@ public class PostgresEdmManager {
 
     public PostgresEdmManager( HikariDataSource hds, HazelcastInstance hazelcastInstance ) {
         this.hds = hds;
-        this.entitySets = hazelcastInstance.getMap( HazelcastMap.ENTITY_SETS.name() );
+        this.entitySets = HazelcastMap.ENTITY_SETS.getMap( hazelcastInstance );
     }
 
     public PostgresIterable<EntitySet> getAllEntitySets() {

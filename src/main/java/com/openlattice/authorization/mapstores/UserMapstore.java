@@ -43,8 +43,6 @@ import java.sql.SQLException;
 
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.lang3.RandomUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Implementation of persistence layer for users from auth0.
@@ -55,11 +53,10 @@ import org.slf4j.LoggerFactory;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class UserMapstore extends AbstractBasePostgresMapstore<String, User> {
-    private static final Logger       logger = LoggerFactory.getLogger( UserMapstore.class );
     private final        ObjectMapper mapper = ObjectMappers.newJsonMapper();
 
     public UserMapstore( final HikariDataSource hds ) {
-        super( HazelcastMap.USERS.name(), USERS, hds );
+        super( HazelcastMap.USERS, USERS, hds );
     }
 
     @Override protected int bind( PreparedStatement ps, String key, int offset ) throws SQLException {

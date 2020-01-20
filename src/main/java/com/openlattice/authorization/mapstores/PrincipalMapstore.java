@@ -50,7 +50,7 @@ public class PrincipalMapstore extends AbstractBasePostgresMapstore<AclKey, Secu
     private static      Role   TEST_ROLE          = TestDataFactory.role();
 
     public PrincipalMapstore( HikariDataSource hds ) {
-        super( HazelcastMap.PRINCIPALS.name(), PRINCIPALS, hds );
+        super( HazelcastMap.PRINCIPALS, PRINCIPALS, hds );
     }
 
     @Override public AclKey generateTestKey() {

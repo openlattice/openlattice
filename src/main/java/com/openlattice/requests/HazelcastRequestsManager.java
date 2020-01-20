@@ -56,9 +56,9 @@ public class HazelcastRequestsManager {
 
     public HazelcastRequestsManager( HazelcastInstance hazelcastInstance, RequestQueryService rqs ) {
 
-        this.requests = hazelcastInstance.getMap( HazelcastMap.REQUESTS.name() );
-        this.aces = hazelcastInstance.getMap( HazelcastMap.PERMISSIONS.name() );
-        this.objectTypes = hazelcastInstance.getMap( HazelcastMap.SECURABLE_OBJECT_TYPES.name() );
+        this.requests = HazelcastMap.REQUESTS.getMap( hazelcastInstance );
+        this.aces = HazelcastMap.PERMISSIONS.getMap( hazelcastInstance );
+        this.objectTypes = HazelcastMap.SECURABLE_OBJECT_TYPES.getMap( hazelcastInstance );
         this.rqs = checkNotNull( rqs );
 
     }

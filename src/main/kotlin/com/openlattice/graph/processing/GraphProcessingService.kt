@@ -37,11 +37,9 @@ class GraphProcessingService(
         hazelcastInstance: HazelcastInstance,
         processorsToRegister: Set<GraphProcessor>
 ) {
-    private val propertyTypes: IMap<UUID, PropertyType> = hazelcastInstance.getMap(HazelcastMap.PROPERTY_TYPES.name)
+    private val propertyTypes = HazelcastMap.PROPERTY_TYPES.getMap( hazelcastInstance )
     private val processors = mutableSetOf<GraphProcessor>()
-    private val processingLocks: IMap<UUID, Long> = hazelcastInstance.getMap(
-            HazelcastMap.INDEXING_GRAPH_PROCESSING.name
-    )
+    private val processingLocks = HazelcastMap.INDEXING_GRAPH_PROCESSING.getMap( hazelcastInstance )
 
     private val propagationGraphProcessor = PropagationGraphProcessor(edm)
 

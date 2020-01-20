@@ -40,11 +40,11 @@ class Auth0SyncService(
     companion object {
         private val logger = LoggerFactory.getLogger(Auth0SyncService::class.java)
     }
-    private val users: IMap<String, User> = hazelcastInstance.getMap(HazelcastMap.USERS.name)
-    private val principals = hazelcastInstance.getMap<AclKey,SecurablePrincipal>(HazelcastMap.PRINCIPALS.name)
-    private val authnPrincipalCache = hazelcastInstance.getMap<String,SecurablePrincipal>(HazelcastMap.SECURABLE_PRINCIPALS.name)
-    private val authnRolesCache = hazelcastInstance.getMap<String, SortedPrincipalSet>(HazelcastMap.RESOLVED_PRINCIPAL_TREES.name)
-    private val principalTrees = hazelcastInstance.getMap<AclKey,AclKeySet>(HazelcastMap.PRINCIPAL_TREES.name)
+    private val users = HazelcastMap.USERS.getMap( hazelcastInstance )
+    private val principals = HazelcastMap.PRINCIPALS.getMap( hazelcastInstance )
+    private val authnPrincipalCache = HazelcastMap.SECURABLE_PRINCIPALS.getMap( hazelcastInstance )
+    private val authnRolesCache = HazelcastMap.RESOLVED_PRINCIPAL_TREES.getMap( hazelcastInstance )
+    private val principalTrees = HazelcastMap.PRINCIPAL_TREES.getMap( hazelcastInstance )
     private val mapper = ObjectMappers.newJsonMapper()
 
     fun syncUser(user: User) {

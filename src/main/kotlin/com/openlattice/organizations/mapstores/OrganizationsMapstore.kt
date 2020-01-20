@@ -30,7 +30,7 @@ const val DOMAINS_INDEX = "emailDomains[any]"
  */
 @Component
 class OrganizationsMapstore(val hds: HikariDataSource) : AbstractBasePostgresMapstore<UUID, Organization>(
-        HazelcastMap.ORGANIZATIONS.name, ORGANIZATIONS, hds
+        HazelcastMap.ORGANIZATIONS, ORGANIZATIONS, hds
 ) {
     private val mapper = ObjectMappers.newJsonMapper()
     override fun initValueColumns(): List<PostgresColumnDefinition> {

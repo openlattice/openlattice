@@ -72,8 +72,8 @@ public class HazelcastAclKeyReservationService {
     private final IMap<UUID, String> names;
 
     public HazelcastAclKeyReservationService( HazelcastInstance hazelcast ) {
-        this.aclKeys = hazelcast.getMap( HazelcastMap.ACL_KEYS.name() );
-        this.names = hazelcast.getMap( HazelcastMap.NAMES.name() );
+        this.aclKeys = HazelcastMap.ACL_KEYS.getMap( hazelcast );
+        this.names = HazelcastMap.NAMES.getMap( hazelcast );
     }
 
     public UUID getId( String name ) {

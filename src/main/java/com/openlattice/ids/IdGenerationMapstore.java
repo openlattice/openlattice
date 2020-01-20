@@ -40,7 +40,7 @@ import java.sql.SQLException;
  */
 public class IdGenerationMapstore extends AbstractBasePostgresMapstore<Long, Range> {
     public IdGenerationMapstore( HikariDataSource hds ) {
-        super( HazelcastMap.ID_GENERATION.name(), PostgresTable.ID_GENERATION, hds );
+        super( HazelcastMap.ID_GENERATION, PostgresTable.ID_GENERATION, hds );
     }
 
     @Override public Long generateTestKey() {

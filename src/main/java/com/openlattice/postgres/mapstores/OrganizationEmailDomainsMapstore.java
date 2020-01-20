@@ -28,7 +28,7 @@ import static com.openlattice.postgres.PostgresTable.ORGANIZATIONS;
 public class OrganizationEmailDomainsMapstore extends AbstractBasePostgresMapstore<UUID, DelegatedStringSet> {
 
     public OrganizationEmailDomainsMapstore( HikariDataSource hds ) {
-        super( HazelcastMap.ALLOWED_EMAIL_DOMAINS.name(), ORGANIZATIONS, hds );
+        super( HazelcastMap.ALLOWED_EMAIL_DOMAINS, ORGANIZATIONS, hds );
     }
 
     @Override protected List<PostgresColumnDefinition> initValueColumns() {

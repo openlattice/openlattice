@@ -27,7 +27,7 @@ public class AuditRecordEntitySetConfigurationMapstore
 
     public AuditRecordEntitySetConfigurationMapstore(
             HikariDataSource hds ) {
-        super( HazelcastMap.AUDIT_RECORD_ENTITY_SETS.name(), PostgresTable.AUDIT_RECORD_ENTITY_SET_IDS, hds );
+        super( HazelcastMap.AUDIT_RECORD_ENTITY_SETS, PostgresTable.AUDIT_RECORD_ENTITY_SET_IDS, hds );
     }
 
     @Override protected void bind(

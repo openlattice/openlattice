@@ -44,7 +44,7 @@ import kotlin.random.Random
 open class MaterializedEntitySetMapStore(
         hds: HikariDataSource
 ) : AbstractBasePostgresMapstore<EntitySetAssemblyKey, MaterializedEntitySet>(
-        HazelcastMap.MATERIALIZED_ENTITY_SETS.name,
+        HazelcastMap.MATERIALIZED_ENTITY_SETS,
         PostgresTable.MATERIALIZED_ENTITY_SETS,
         hds
 ) {
