@@ -20,7 +20,7 @@ class GrantTypeStreamSerializer : AbstractEnumSerializer<GrantType>() {
         return StreamSerializerTypeIds.GRANT_TYPE.ordinal
     }
 
-    override fun getClazz(): Class<out GrantType> {
+    override fun getClazz(): Class<GrantType> {
         return GrantType::class.java
     }
 }

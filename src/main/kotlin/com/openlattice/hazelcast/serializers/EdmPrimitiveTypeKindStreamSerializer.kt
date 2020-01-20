@@ -20,7 +20,7 @@ class EdmPrimitiveTypeKindStreamSerializer : AbstractEnumSerializer<EdmPrimitive
         return StreamSerializerTypeIds.EDM_PRIMITIVE_TYPE_KIND.ordinal
     }
 
-    override fun getClazz(): Class<out EdmPrimitiveTypeKind> {
+    override fun getClazz(): Class<EdmPrimitiveTypeKind> {
         return EdmPrimitiveTypeKind::class.java
     }
 }

@@ -20,7 +20,7 @@ class AnalyzerStreamSerializer : AbstractEnumSerializer<Analyzer>() {
         return StreamSerializerTypeIds.ANALYZER.ordinal
     }
 
-    override fun getClazz(): Class<out Analyzer> {
+    override fun getClazz(): Class<Analyzer> {
         return Analyzer::class.java
     }
 }

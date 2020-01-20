@@ -20,7 +20,7 @@ class IndexTypeStreamSerializer : AbstractEnumSerializer<IndexType>() {
         return StreamSerializerTypeIds.INDEX_TYPE.ordinal
     }
 
-    override fun getClazz(): Class<out IndexType> {
+    override fun getClazz(): Class<IndexType> {
         return IndexType::class.java
     }
 }
