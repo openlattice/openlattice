@@ -49,7 +49,6 @@ public interface SearchApi {
     String ASSOCIATION_TYPES = "/association_types";
     String PROPERTY_TYPES    = "/property_types";
     String APP               = "/app";
-    String APP_TYPES         = "/app_types";
     String ADVANCED          = "/advanced";
     String HOME              = "/home";
     String FQN               = "/fqn";
