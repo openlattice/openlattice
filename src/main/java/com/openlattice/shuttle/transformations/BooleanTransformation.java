@@ -7,14 +7,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openlattice.client.serialization.SerializableFunction;
 import com.openlattice.client.serialization.SerializationConstants;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 public class BooleanTransformation<I> extends Transformation<I> {
     private final SerializableFunction<Map<String, Object>, Object>              trueValueMapper;
     private final SerializableFunction<Map<String, Object>, Object>              falseValueMapper;
-    private final Optional<Transformations>                                      transformsIfTrue;
-    private final Optional<Transformations>                                      transformsIfFalse;
+    private final Optional<List<Transformation>>                                      transformsIfTrue;
+    private final Optional<List<Transformation>>                                      transformsIfFalse;
 
     /**
      * Represents a selection of transformations based on empty cells.  If either transformsiftrue or transformsiffalse are empty,
@@ -25,8 +26,8 @@ public class BooleanTransformation<I> extends Transformation<I> {
      */
     @JsonCreator
     public BooleanTransformation(
-            @JsonProperty( SerializationConstants.TRANSFORMS_IF_TRUE ) Optional<Transformations> transformsIfTrue,
-            @JsonProperty( SerializationConstants.TRANSFORMS_IF_FALSE ) Optional<Transformations> transformsIfFalse ) {
+            @JsonProperty( SerializationConstants.TRANSFORMS_IF_TRUE ) Optional<List<Transformation>> transformsIfTrue,
+            @JsonProperty( SerializationConstants.TRANSFORMS_IF_FALSE ) Optional<List<Transformation>> transformsIfFalse ) {
         this.transformsIfTrue = transformsIfTrue;
         this.transformsIfFalse = transformsIfFalse;
 
@@ -52,12 +53,12 @@ public class BooleanTransformation<I> extends Transformation<I> {
     }
 
     @JsonProperty( SerializationConstants.TRANSFORMS_IF_TRUE )
-    public Optional<Transformations> getTransformsIfTrue() {
+    public Optional<List<Transformation>> getTransformsIfTrue() {
         return transformsIfTrue;
     }
 
     @JsonProperty( SerializationConstants.TRANSFORMS_IF_FALSE )
-    public Optional<Transformations> getTransformsIfFalse() {
+    public Optional<List<Transformation>> getTransformsIfFalse() {
         return transformsIfFalse;
     }
 

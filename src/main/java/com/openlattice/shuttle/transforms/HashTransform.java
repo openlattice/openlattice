@@ -48,8 +48,6 @@ public class HashTransform extends Transformation<Map<String, String>> {
 
     public enum HashType {murmur128, sha256}
 
-    ;
-
     private final HashFunction hf;
 
     @JsonCreator

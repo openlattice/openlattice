@@ -32,7 +32,7 @@ import com.openlattice.data.UpdateType;
 import com.openlattice.shuttle.conditions.Condition;
 import com.openlattice.shuttle.conditions.ConditionValueMapper;
 import com.openlattice.shuttle.conditions.Conditions;
-import com.openlattice.shuttle.transformations.Transformations;
+import com.openlattice.shuttle.transformations.Transformation;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
@@ -328,7 +328,7 @@ public class EntityDefinition implements Serializable {
         public Builder addProperty(
                 String propertyString,
                 String columnName,
-                Transformations transformation ) {
+                List<Transformation> transformation ) {
             FullQualifiedName propertyFqn = new FullQualifiedName( propertyString );
             PropertyDefinition propertyDefinition = new PropertyDefinition(
                     propertyString, columnName, Optional.empty(), Optional.empty(), Optional.of( transformation ) );

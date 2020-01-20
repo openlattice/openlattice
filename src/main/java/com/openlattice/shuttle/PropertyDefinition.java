@@ -31,7 +31,6 @@ import com.openlattice.client.serialization.SerializationConstants;
 import com.openlattice.shuttle.destinations.StorageDestination;
 import com.openlattice.shuttle.transformations.TransformValueMapper;
 import com.openlattice.shuttle.transformations.Transformation;
-import com.openlattice.shuttle.transformations.Transformations;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import com.openlattice.shuttle.transforms.ColumnTransform;
 import com.openlattice.shuttle.transforms.HashTransform;
@@ -47,7 +46,7 @@ public class PropertyDefinition implements Serializable {
     private final FullQualifiedName                            propertyTypeFqn;
     private final SerializableFunction<Map<String, Object>, ?> valueMapper;
     private final String                                       column;
-    private final Optional<Transformations>                    transforms;
+    private final Optional<List<Transformation>>                    transforms;
     private final Optional<StorageDestination>                 storageDestination;
 
     @JsonCreator
@@ -56,7 +55,7 @@ public class PropertyDefinition implements Serializable {
             @JsonProperty( SerializationConstants.COLUMN ) String column,
             @JsonProperty( SerializationConstants.STORAGE_DESTINATION ) Optional<StorageDestination> storageDestination,
             @JsonProperty( SerializationConstants.READER ) Optional<Transformation> reader,
-            @JsonProperty( SerializationConstants.TRANSFORMS ) Optional<Transformations> transforms ) {
+            @JsonProperty( SerializationConstants.TRANSFORMS ) Optional<List<Transformation>> transforms ) {
         this.propertyTypeFqn = propertyTypeFqn == null ? null : new FullQualifiedName( propertyTypeFqn );
         this.column = column == null ? "" : column;
         this.transforms = transforms;
@@ -110,7 +109,7 @@ public class PropertyDefinition implements Serializable {
     }
 
     @JsonProperty( SerializationConstants.TRANSFORMS )
-    public Optional<Transformations> getTransforms() {
+    public Optional<List<Transformation>> getTransforms() {
         return transforms;
     }
 
@@ -160,7 +159,7 @@ public class PropertyDefinition implements Serializable {
 
         private FullQualifiedName                            propertyTypeFqn;
         private SerializableFunction<Map<String, Object>, ?> valueMapper;
-        private Transformations                              transforms;
+        private List<Transformation>                         transforms;
         private String                                       column             = "";
         private Optional<StorageDestination>                 storageDestination = Optional.empty();
 
@@ -173,7 +172,7 @@ public class PropertyDefinition implements Serializable {
         }
 
         public Builder<T> value( List<Transformation> transforms ) {
-            this.transforms = new Transformations( transforms );
+            this.transforms = transforms;
             this.valueMapper = new TransformValueMapper( transforms );
             return this;
         }

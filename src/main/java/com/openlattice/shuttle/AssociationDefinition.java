@@ -31,7 +31,6 @@ import com.openlattice.client.serialization.SerializableFunction;
 import com.openlattice.client.serialization.SerializationConstants;
 import com.openlattice.data.UpdateType;
 import com.openlattice.shuttle.conditions.Conditions;
-import com.openlattice.shuttle.transformations.Transformations;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Collection;
@@ -40,6 +39,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
+
+import com.openlattice.shuttle.transformations.Transformation;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -328,7 +329,7 @@ public class AssociationDefinition extends EntityDefinition implements Serializa
         public Builder addProperty(
                 String propertyString,
                 String columnName,
-                Transformations transformation,
+                List<Transformation> transformation,
                 List<String> arguments ) {
             FullQualifiedName propertyFqn = new FullQualifiedName( propertyString );
             PropertyDefinition propertyDefinition =
