@@ -25,12 +25,16 @@ import com.kryptnostic.rhizome.core.RhizomeApplicationServer;
 import com.kryptnostic.rhizome.hazelcast.serializers.RhizomeUtils.Pods;
 import com.openlattice.auditing.pods.AuditingConfigurationPod;
 import com.openlattice.auth0.Auth0Pod;
-import com.openlattice.auth0.AwsAuth0Pod;
 import com.openlattice.aws.AwsS3Pod;
 import com.openlattice.hazelcast.pods.HazelcastQueuePod;
 import com.openlattice.hazelcast.pods.MapstoresPod;
 import com.openlattice.hazelcast.pods.SharedStreamSerializersPod;
-import com.openlattice.indexing.pods.*;
+import com.openlattice.indexing.pods.GraphProcessorPod;
+import com.openlattice.indexing.pods.IndexerPostConfigurationServicesPod;
+import com.openlattice.indexing.pods.IndexerSecurityPod;
+import com.openlattice.indexing.pods.IndexerServicesPod;
+import com.openlattice.indexing.pods.IndexerServletsPod;
+import com.openlattice.indexing.pods.PlasmaCoupling;
 import com.openlattice.jdbc.JdbcPod;
 import com.openlattice.mail.pods.MailServicePod;
 import com.openlattice.mail.services.MailService;
@@ -45,7 +49,6 @@ public class Indexer extends BaseRhizomeServer {
     private static final Class<?>[] conductorPods = new Class<?>[]{
             AuditingConfigurationPod.class,
             Auth0Pod.class,
-            AwsAuth0Pod.class,
             AwsS3Pod.class,
             GraphProcessorPod.class,
             IndexerServicesPod.class,
