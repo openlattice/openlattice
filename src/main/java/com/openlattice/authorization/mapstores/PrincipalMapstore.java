@@ -27,6 +27,7 @@ import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MapIndexConfig;
 import com.hazelcast.config.MapStoreConfig;
 import com.hazelcast.config.MapStoreConfig.InitialLoadMode;
+import com.hazelcast.config.NearCacheConfig;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.SecurablePrincipal;
 import com.openlattice.hazelcast.HazelcastMap;
