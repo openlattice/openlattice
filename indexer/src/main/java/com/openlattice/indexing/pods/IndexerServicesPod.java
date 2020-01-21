@@ -62,7 +62,7 @@ import com.openlattice.hazelcast.HazelcastQueue;
 import com.openlattice.ids.HazelcastIdGenerationService;
 import com.openlattice.ids.HazelcastLongIdService;
 import com.openlattice.indexing.configuration.IndexerConfiguration;
-import com.openlattice.kindling.search.ConductorElasticsearchImpl;
+import com.openlattice.scrunchie.search.ConductorElasticsearchImpl;
 import com.openlattice.mail.config.MailServiceRequirements;
 import com.openlattice.notifications.sms.PhoneNumberService;
 import com.openlattice.organizations.ExternalDatabaseManagementService;
