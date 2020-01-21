@@ -86,7 +86,6 @@ public final class SerializationConstants {
     public static final String DATATYPE_FIELD                   = "datatype";
     public static final String DATA_ID                          = "dataId";
     public static final String DEFAULT_SHOW                     = "defaultShow";
-    public static final String DEFAULT_STORAGE                  = "defaultStorage";
     public static final String DEIDENTIFIED                     = "deidentified";
     public static final String DELETE_TYPE                      = "deleteType";
     public static final String DESCENDING                       = "descending";
@@ -205,7 +204,6 @@ public final class SerializationConstants {
     public static final String PARENT_TYPE_FIELD                = "parentType";
     public static final String PARTITIONS                       = "partitions";
     public static final String PATH                             = "path";
-    public static final String PERIOD                           = "period";
     public static final String PERMISSIONS                      = "permissions";
     public static final String PERMISSIONS_MAP                  = "permissionsMap";
     public static final String PHONE_NUMBER                     = "phoneNumber";
@@ -229,7 +227,6 @@ public final class SerializationConstants {
     public static final String QUEUE_SIZE                       = "queueSize";
     public static final String RADIUS                           = "radius";
     public static final String REASON                           = "reason";
-    public static final String RECURRING                        = "recurring";
     public static final String REQUEST                          = "request";
     public static final String REQUESTING_USER                  = "requestingUser";
     public static final String REQUEST_ID                       = "requestId";
