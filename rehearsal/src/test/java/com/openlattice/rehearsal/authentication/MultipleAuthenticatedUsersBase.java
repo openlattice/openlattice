@@ -24,7 +24,6 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Streams;
 import com.openlattice.IdConstants;
 import com.openlattice.analysis.AnalysisApi;
@@ -60,7 +59,6 @@ import com.openlattice.search.SearchApi;
 
 import java.io.IOException;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -194,7 +192,7 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
      * Helper methods for AuthorizationsApi
      */
 
-    public static void checkPermissionsMap(
+    private static void checkPermissionsMap(
             Map<Permission, Boolean> permissionMap,
             EnumSet<Permission> expectedPermissions ) {
         EnumSet.allOf( Permission.class ).forEach( permission ->
@@ -314,12 +312,14 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
         return createEntitySet( UUID.randomUUID(), entityType, organizationId, false, new HashSet<>() );
     }
 
-    public static EntitySet createEntitySet( UUID entitySetId, EntityType entityType ) {
-        return createEntitySet( entitySetId, entityType, IdConstants.GLOBAL_ORGANIZATION_ID.getId(), false, new HashSet<>() );
-    }
-
     public static EntitySet createEntitySet( EntityType entityType, boolean linking, Set<UUID> linkedEntitySetIds ) {
-        return createEntitySet( UUID.randomUUID(), entityType, IdConstants.GLOBAL_ORGANIZATION_ID.getId(), linking, linkedEntitySetIds );
+        return createEntitySet(
+                UUID.randomUUID(),
+                entityType,
+                IdConstants.GLOBAL_ORGANIZATION_ID.getId(),
+                linking,
+                linkedEntitySetIds
+        );
     }
 
     public static EntitySet createEntitySet(
