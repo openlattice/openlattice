@@ -1,13 +1,11 @@
 package com.openlattice.data.storage
 
-import com.google.common.collect.ListMultimap
 import com.google.common.collect.SetMultimap
 import com.openlattice.data.DeleteType
 import com.openlattice.data.EntitySetData
 import com.openlattice.data.WriteEvent
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.streams.BasePostgresIterable
-import com.openlattice.postgres.streams.PostgresIterable
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import java.nio.ByteBuffer
 import java.util.*
@@ -64,7 +62,7 @@ interface EntityDatastore {
     fun getEntitiesAcrossEntitySets(
             entitySetIdsToEntityKeyIds: SetMultimap<UUID, UUID>,
             authorizedPropertyTypesByEntitySet: Map<UUID, Map<UUID, PropertyType>>
-    ): ListMultimap<UUID, MutableMap<FullQualifiedName, MutableSet<Any>>>
+    ): Map<UUID, Collection<MutableMap<FullQualifiedName, MutableSet<Any>>>>
 
     fun getEntityKeyIdsOfLinkingIds(
             linkingIds: Set<UUID>,
