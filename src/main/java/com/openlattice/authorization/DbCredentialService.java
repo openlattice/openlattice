@@ -24,10 +24,8 @@ import com.google.common.base.MoreObjects;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.openlattice.datastore.util.Util;
-
-import java.security.SecureRandom;
-
 import com.openlattice.hazelcast.HazelcastMap;
+import java.security.SecureRandom;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
