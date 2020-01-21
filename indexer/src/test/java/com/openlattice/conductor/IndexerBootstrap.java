@@ -27,7 +27,6 @@ import com.openlattice.auditing.AuditingProfiles;
 import com.openlattice.datastore.constants.DatastoreProfiles;
 import com.openlattice.indexing.Indexer;
 import com.openlattice.postgres.PostgresPod;
-import org.apache.http.util.Args;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,7 +35,7 @@ import java.util.Arrays;
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class ConductorBootstrap {
+public class IndexerBootstrap {
 
     protected static final Indexer INDEXER;
 
@@ -52,7 +51,7 @@ public class ConductorBootstrap {
     };
 
     static {
-        final var logger = LoggerFactory.getLogger( ConductorBootstrap.class );
+        final var logger = LoggerFactory.getLogger( IndexerBootstrap.class );
         INDEXER = new Indexer();
         String[] profiles;
         if ( NetworkUtils.isRunningOnHost( "bamboo.openlattice.com" ) ) {

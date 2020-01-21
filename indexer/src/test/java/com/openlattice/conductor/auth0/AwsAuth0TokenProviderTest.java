@@ -23,7 +23,7 @@ package com.openlattice.conductor.auth0;
 
 import com.openlattice.auth0.Auth0TokenProvider;
 import com.openlattice.authentication.Auth0Configuration;
-import com.openlattice.conductor.ConductorBootstrap;
+import com.openlattice.conductor.IndexerBootstrap;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -31,7 +31,7 @@ import org.junit.Test;
 /**
  * In order to pass this you must have an auth0.yaml file with correct information for client credentials grants.
  */
-public class AwsAuth0TokenProviderTest extends ConductorBootstrap {
+public class AwsAuth0TokenProviderTest extends IndexerBootstrap {
     @Test
     public void testAuth0TokenProvider() {
         Auth0Configuration configuration = INDEXER.getContext().getBean( Auth0Configuration.class );
