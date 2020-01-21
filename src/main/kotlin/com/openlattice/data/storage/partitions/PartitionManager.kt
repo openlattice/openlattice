@@ -83,8 +83,7 @@ class PartitionManager @JvmOverloads constructor(
     }
 
     fun getPartitionsByEntitySetId(entitySetIds: Set<UUID>): Map<UUID, Set<Int>> {
-        val entitySets = entitySets.getAll(entitySetIds).values
-        return entitySets.map { it.id to it.partitions }.toMap()
+        return entitySets.executeOnKeys(entitySetIds, GetPartitionsFromEntitySetEntryProcessor()) as Map<UUID, Set<Int>>
     }
 
     /**
