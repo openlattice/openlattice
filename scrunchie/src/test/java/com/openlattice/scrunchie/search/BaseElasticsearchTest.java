@@ -18,7 +18,7 @@
  *
  */
 
-package com.openlattice.kindling.search;
+package com.openlattice.scrunchie.search;
 
 import com.clearspring.analytics.util.Lists;
 import com.google.common.collect.ImmutableSet;

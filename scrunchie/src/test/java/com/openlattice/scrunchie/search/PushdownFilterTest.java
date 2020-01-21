@@ -18,11 +18,11 @@
  *
  */
 
-package com.openlattice.kindling.search;
+package com.openlattice.scrunchie.search;
 
 import org.junit.Test;
 
-public class PushdownFilterTest extends BaseKindlingSparkTest {
+public class PushdownFilterTest {
     // TEST: testing pushdown for spark join
     @Test
     public void testPushDown(){

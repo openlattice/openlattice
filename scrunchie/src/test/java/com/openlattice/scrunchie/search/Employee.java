@@ -18,7 +18,7 @@
  *
  */
 
-package com.openlattice.kindling.search;
+package com.openlattice.scrunchie.search;
 
 import java.io.IOException;
 import java.io.Serializable;
