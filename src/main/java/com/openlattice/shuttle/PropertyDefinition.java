@@ -46,7 +46,7 @@ public class PropertyDefinition implements Serializable {
     private final FullQualifiedName                            propertyTypeFqn;
     private final SerializableFunction<Map<String, Object>, ?> valueMapper;
     private final String                                       column;
-    private final Optional<List<Transformation>>                    transforms;
+    private final Optional<List<Transformation>>               transforms;
     private final Optional<StorageDestination>                 storageDestination;
 
     @JsonCreator
