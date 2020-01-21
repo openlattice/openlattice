@@ -3,6 +3,8 @@ package com.openlattice.postgres.mapstores;
 import com.hazelcast.config.InMemoryFormat;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MapIndexConfig;
+import com.openlattice.edm.set.EntitySetPropertyKey;
+import com.openlattice.edm.set.EntitySetPropertyMetadata;
 import com.openlattice.edm.type.EntityTypePropertyKey;
 import com.openlattice.edm.type.EntityTypePropertyMetadata;
 import com.openlattice.hazelcast.HazelcastMap;

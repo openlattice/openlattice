@@ -1,8 +1,8 @@
 package com.openlattice.postgres.mapstores;
 
 import com.openlattice.edm.type.AssociationType;
-import com.google.common.collect.Sets;
 import com.openlattice.hazelcast.HazelcastMap;
+import com.google.common.collect.Sets;
 import com.openlattice.postgres.PostgresArrays;
 import com.openlattice.postgres.ResultSetAdapters;
 import com.zaxxer.hikari.HikariDataSource;
