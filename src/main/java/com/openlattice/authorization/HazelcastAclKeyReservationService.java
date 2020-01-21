@@ -36,11 +36,10 @@ import com.openlattice.controllers.exceptions.UniqueIdConflictException;
 import com.openlattice.controllers.exceptions.TypeExistsException;
 import com.openlattice.datastore.util.Util;
 import com.openlattice.edm.EntitySet;
+import com.openlattice.hazelcast.HazelcastMap;
 
 import java.util.*;
 import java.util.function.Supplier;
-
-import com.openlattice.hazelcast.HazelcastMap;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 public class HazelcastAclKeyReservationService {
