@@ -14,11 +14,11 @@ class IntegrationStatusStreamSerializer : AbstractEnumSerializer<IntegrationStat
         fun deserialize(input: ObjectDataInput): IntegrationStatus = deserialize(IntegrationStatus::class.java, input) as IntegrationStatus
     }
 
-    override fun generateTestValue(): Enum<IntegrationStatus> {
+    override fun generateTestValue(): IntegrationStatus {
         return IntegrationStatus.IN_PROGRESS
     }
 
-    override fun getClazz(): Class<out Enum<IntegrationStatus>> {
+    override fun getClazz(): Class<out IntegrationStatus> {
         return IntegrationStatus::class.java
     }
 

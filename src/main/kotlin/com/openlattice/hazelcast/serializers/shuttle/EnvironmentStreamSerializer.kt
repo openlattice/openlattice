@@ -20,11 +20,11 @@ class EnvironmentStreamSerializer : AbstractEnumSerializer<RetrofitFactory.Envir
         return StreamSerializerTypeIds.ENVIRONMENT.ordinal
     }
 
-    override fun getClazz(): Class<out Enum<RetrofitFactory.Environment>> {
+    override fun getClazz(): Class<out RetrofitFactory.Environment> {
         return RetrofitFactory.Environment::class.java
     }
 
-    override fun generateTestValue(): Enum<RetrofitFactory.Environment> {
+    override fun generateTestValue(): RetrofitFactory.Environment {
         return RetrofitFactory.Environment.LOCAL
     }
 }
