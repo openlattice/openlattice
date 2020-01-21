@@ -59,7 +59,6 @@ import com.openlattice.rhizome.hazelcast.DelegatedStringSet
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet
 import com.openlattice.shuttle.Integration
 import com.openlattice.shuttle.IntegrationJob
-import org.slf4j.LoggerFactory
 import com.openlattice.rhizome.service.QueueState
 import org.slf4j.LoggerFactory
 import java.util.*
