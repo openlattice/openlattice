@@ -96,13 +96,13 @@ class BackgroundIndexingService(
             val w = Stopwatch.createStarted()
             //We shuffle entity sets to make sure we have a chance to work share and index everything
             val lockedEntitySets = entitySets.values
-                    .shuffled()
                     .filter { tryLockEntitySet(it.id) == null }
+                    .filter { !it.isLinking }
                     .filter { it.name != "OpenLattice Audit Entity Set" } //TODO: Clean out audit entity set from prod
+                    .shuffled()
 
             val totalIndexed = lockedEntitySets
                     .parallelStream()
-                    .filter { !it.isLinking }
                     .mapToInt { indexEntitySet(it) }
                     .sum()
 
