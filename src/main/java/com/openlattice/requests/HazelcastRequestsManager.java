@@ -33,13 +33,11 @@ import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.processors.PermissionMerger;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.datastore.util.Util;
-
+import com.openlattice.hazelcast.HazelcastMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Stream;
-
-import com.openlattice.hazelcast.HazelcastMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -59,7 +59,7 @@ class Auth0SyncService(
         users.putIfAbsent( principal.id, user)
         processGlobalEnrollments( principal, user )
         processOrganizationEnrollments(user, principal, user.email ?: "")
-        //logger.info("Syncing authentication cache for ${principal.id}")
+        logger.info("Syncing authentication cache for ${principal.id}")
         syncAuthenticationCache(principal.id)
         markUser(user)
     }

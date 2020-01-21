@@ -206,7 +206,7 @@ class AssemblerConnectionManager(
     }
 
     fun addMembersToOrganization(dbName: String, dataSource: HikariDataSource, members: Set<Principal>) {
-        //logger.info("Configuring members for organization database {}", dbName)
+        logger.info("Configuring members for organization database {}", dbName)
         val validUserPrincipals = members
                 .filter {
                     it.id != SystemRole.OPENLATTICE.principal.id && it.id != SystemRole.ADMIN.principal.id
