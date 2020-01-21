@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 import com.openlattice.client.serialization.SerializableFunction;
 import com.openlattice.client.serialization.SerializationConstants;
 import com.openlattice.shuttle.destinations.StorageDestination;
@@ -33,7 +32,6 @@ import com.openlattice.shuttle.transformations.TransformValueMapper;
 import com.openlattice.shuttle.transformations.Transformation;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import com.openlattice.shuttle.transforms.ColumnTransform;
-import com.openlattice.shuttle.transforms.HashTransform;
 
 import java.io.Serializable;
 import java.util.*;
@@ -175,10 +173,6 @@ public class PropertyDefinition implements Serializable {
             this.transforms = transforms;
             this.valueMapper = new TransformValueMapper( transforms );
             return this;
-        }
-
-        public Builder<T> value( List<String> columns, HashTransform.HashType hashFunction ) {
-            return value( ImmutableList.of( new HashTransform( columns, hashFunction ) ) );
         }
 
         public Builder<T> extractor( SerializableFunction<Map<String, Object>, Object> mapper ) {
