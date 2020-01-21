@@ -257,4 +257,5 @@ public enum StreamSerializerTypeIds {
     READ_SECURABLE_PRINCIPAL_AGGREGATOR,
     ANALYZER,
     INDEX_TYPE,
+    GET_PARTITIONS_FROM_ES_EP,
 }

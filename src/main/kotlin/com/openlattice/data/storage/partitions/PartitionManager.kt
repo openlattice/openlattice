@@ -3,11 +3,10 @@ package com.openlattice.data.storage.partitions
 import com.google.common.base.Preconditions.checkArgument
 import com.hazelcast.core.HazelcastInstance
 import com.openlattice.edm.EntitySet
+import com.openlattice.edm.processors.GetPartitionsFromEntitySetEntryProcessor
 import com.openlattice.edm.requests.MetadataUpdate
-import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.edm.types.processors.UpdateEntitySetMetadataProcessor
 import com.openlattice.hazelcast.HazelcastMap
-import com.openlattice.organizations.Organization
 import com.openlattice.organizations.processors.OrganizationEntryProcessor
 import com.openlattice.organizations.processors.OrganizationReadEntryProcessor
 import com.openlattice.postgres.PostgresArrays
@@ -80,9 +79,7 @@ class PartitionManager @JvmOverloads constructor(
     }
 
     fun getEntitySetPartitions(entitySetId: UUID): Set<Int> {
-        //TODO: Consider doing this using an entry processor
-        val entitySet = entitySets.getValue(entitySetId)
-        return entitySet.partitions
+        return entitySets.executeOnKey(entitySetId, GetPartitionsFromEntitySetEntryProcessor()) as Set<Int>
     }
 
     fun getPartitionsByEntitySetId(entitySetIds: Set<UUID>): Map<UUID, Set<Int>> {
