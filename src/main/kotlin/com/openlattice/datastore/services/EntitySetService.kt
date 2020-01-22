@@ -340,12 +340,12 @@ open class EntitySetService(
     override fun getAllEntitySetPropertyMetadataForIds(
             entitySetIds: Set<UUID>
     ): Map<UUID, Map<UUID, EntitySetPropertyMetadata>> {
-        val entitySetTypesById = entitySets.executeOnKeys(entitySetIds, GetEntityTypeFromEntitySetEntryProcessor()) as Map<UUID, UUID>
-        val entityTypesById = entityTypes.getAll(entitySetTypesById.values.toSet())
+        val entityTypesByEntitySetId = entitySets.executeOnKeys(entitySetIds, GetEntityTypeFromEntitySetEntryProcessor()) as Map<UUID, UUID>
+        val entityTypesById = entityTypes.getAll(entityTypesByEntitySetId.values.toSet())
 
         val keys = entitySetIds
                 .flatMap { entitySetId ->
-                    entityTypesById.getValue(entitySetTypesById.getValue(entitySetId)).properties
+                    entityTypesById.getValue(entityTypesByEntitySetId.getValue(entitySetId)).properties
                             .map { propertyTypeId ->
                                 EntitySetPropertyKey(entitySetId, propertyTypeId)
                             }
@@ -361,7 +361,7 @@ open class EntitySetService(
 
         missingKeys.forEach { newKey ->
             val propertyType = missingPropertyTypesById.getValue(newKey.propertyTypeId)
-            val propertyTags = entityTypesById.getValue(entitySetTypesById.getValue(newKey.entitySetId))
+            val propertyTags = entityTypesById.getValue(entityTypesByEntitySetId.getValue(newKey.entitySetId))
                     .propertyTags.get(newKey.propertyTypeId)
 
             val defaultMetadata = EntitySetPropertyMetadata(
