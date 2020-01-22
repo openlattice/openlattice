@@ -18,7 +18,7 @@
  *
  */
 
-package com.openlattice.kindling.search;
+package com.openlattice.scrunchie.search;
 
 import com.google.common.util.concurrent.RateLimiter;
 import org.elasticsearch.action.admin.cluster.state.ClusterStateRequest;

@@ -18,8 +18,8 @@
  *
  */
 
-package com.openlattice.kindling.search;
+package com.openlattice.scrunchie.search;
 
-public class KindlingReadTests extends BaseKindlingSparkTest {
+public class ScrunchieReadTests {
 
 }

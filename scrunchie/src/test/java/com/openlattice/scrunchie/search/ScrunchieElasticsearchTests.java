@@ -18,25 +18,23 @@
  *
  */
 
-package com.openlattice.kindling.search;
+package com.openlattice.scrunchie.search;
 
 import com.google.common.collect.*;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.Principal;
 import com.openlattice.data.EntityDataKey;
-import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
 import com.openlattice.search.requests.SearchConstraints;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-public class KindlingElasticsearchTests extends BaseElasticsearchTest {
+public class ScrunchieElasticsearchTests extends BaseElasticsearchTest {
 
     @Test
     public void testEntitySetKeywordSearch() {
