@@ -56,7 +56,7 @@ import com.openlattice.edm.schemas.SchemaQueryService;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
 import com.openlattice.edm.schemas.postgres.PostgresSchemaQueryService;
 import com.openlattice.hazelcast.HazelcastQueue;
-import com.openlattice.kindling.search.ConductorElasticsearchImpl;
+import com.openlattice.scrunchie.search.ConductorElasticsearchImpl;
 import com.openlattice.linking.LinkingConfiguration;
 import com.openlattice.linking.LinkingLogService;
 import com.openlattice.linking.Matcher;
