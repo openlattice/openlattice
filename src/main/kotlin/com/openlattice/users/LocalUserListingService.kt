@@ -55,10 +55,10 @@ class LocalUserListingService(auth0Configuration: Auth0Configuration) : UserList
                         .withIssuer(aac.issuer)
                         .withAudience(aac.audience)
                         //TODO: Hardcoded for now, but should actually parse algorithm string
-                        .sign(Algorithm.HMAC256(aac.secret))
+                        .sign(parseAlgorithm(aac))
 
 
-                logger.info("user.id -> $jwt")
+                logger.info("${user.id} -> $jwt")
             }
 
         }
@@ -71,3 +71,4 @@ class LocalUserListingService(auth0Configuration: Auth0Configuration) : UserList
     }
 
 }
+

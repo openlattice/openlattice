@@ -25,6 +25,7 @@ import com.auth0.client.mgmt.ManagementAPI
 import com.auth0.client.mgmt.filter.UserFilter
 import com.auth0.json.mgmt.users.User
 import com.auth0.json.mgmt.users.UsersPage
+import com.geekbeast.auth0.*
 import org.slf4j.LoggerFactory
 
 const val MAX_PAGE_SIZE = 100
@@ -77,14 +78,4 @@ class Auth0UserListingIterator(private val managementApi: ManagementAPI) : Itera
         }
     }
 
-    //TODO: Move this to a utils class
-    private fun getUsersPage(managementApi: ManagementAPI, page: Int, pageSize: Int): UsersPage {
-        require(pageSize < MAX_PAGE_SIZE) { "Requested page size of $pageSize exceeds max page size of $MAX_PAGE_SIZE " }
-        return managementApi.users().list(
-                UserFilter()
-                        .withSearchEngine("v3")
-                        .withFields("user_id,email,nickname,app_metadata,identities", true)
-                        .withPage(page, pageSize)
-        ).execute()
-    }
 }
