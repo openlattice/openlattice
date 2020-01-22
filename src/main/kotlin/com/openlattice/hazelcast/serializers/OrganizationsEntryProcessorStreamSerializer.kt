@@ -41,7 +41,7 @@ class OrganizationsEntryProcessorStreamSerializer : SelfRegisteringStreamSeriali
         out.writeByteArray(baos.toByteArray())
     }
 
-    override fun read(input: ObjectDataInput): OrganizationEntryProcessor? {
+    override fun read(input: ObjectDataInput): OrganizationEntryProcessor {
         val bais = ByteArrayInputStream(input.readByteArray())
         val ois = ObjectInputStream(bais)
         return try {
