@@ -2,6 +2,7 @@ package com.openlattice.data.storage.partitions
 
 import com.google.common.base.Preconditions.checkArgument
 import com.hazelcast.core.HazelcastInstance
+import com.openlattice.datastore.util.Util
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.processors.GetPartitionsFromEntitySetEntryProcessor
 import com.openlattice.edm.requests.MetadataUpdate
@@ -113,7 +114,7 @@ class PartitionManager @JvmOverloads constructor(
      * @param partitionCount The number of partitions to attempt to assign to the entity set.
      */
     fun reallocatePartitions(entitySetId: UUID, partitionCount: Int) {
-        val entitySet = entitySets.getValue(entitySetId)
+        val entitySet = Util.getSafely(entitySets, entitySetId)
         isValidAllocation(partitionCount)
         val allocatedPartitions = computePartitions(entitySet, partitionCount)
         setEntitySetPartitions(entitySetId, allocatedPartitions)
