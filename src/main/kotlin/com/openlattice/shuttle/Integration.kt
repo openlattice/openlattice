@@ -16,6 +16,7 @@ import java.util.*
  * @param environment the retrofit environment (e.g. production, local)
  * @param s3bucket the url of the s3bucket to be used
  * @param contacts the set of email addresses of those responsible for the integration
+ * @param logEntitySetId the id of the entity set that stores the logs for this integration
  * @param maxConnections maximum number of connections to postgres allowed for this integration
  * @param callbackUrls urls to receive a POST when integration has completed
  * @param flightPlanParameters a map from [Flight] name to [FlightPlanParameters]
