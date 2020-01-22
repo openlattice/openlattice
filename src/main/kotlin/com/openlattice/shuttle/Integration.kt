@@ -12,7 +12,7 @@ import java.util.*
  *
  * Represents a data integration, including all fields required to run the integration
  *
- * @param key a unique ID used for authenticating a call to run an integration
+ * @param key a unique ID used for authorizing a call to run an integration
  * @param environment the retrofit environment (e.g. production, local)
  * @param s3bucket the url of the s3bucket to be used
  * @param contacts the set of email addresses of those responsible for the integration
