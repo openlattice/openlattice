@@ -13,9 +13,7 @@ import java.util.*
  * @param sql the sql query to be used to pull cleaned data from postgres
  * @param source postgres data source for pulling clean data
  * @param sourcePrimaryKeyColumns the columns that are primary keys in the cleaned data
- * @param flightFilePath the path to the flight yaml. If you would like the flight to
- * be reloadable from this path, please store flight yaml on github and provide the path
- * to it (i.e. https://raw.githubusercontent.com/pathToFlight.yaml)
+ * @param flightFilePath the path to the flight yaml (i.e. https://raw.githubusercontent.com/pathToFlight.yaml)
  * @param flight Flight object
  */
 
@@ -27,8 +25,7 @@ data class FlightPlanParameters(
         @JsonProperty(SerializationConstants.FLIGHT) var flight: Flight?
 ) {
     init {
-        if (flightFilePath == null) check(flight != null) {"Either flight or flightFilePath must not be null"}
-        if (flight == null) check(flightFilePath != null) {"Either flight or flightFilePath must not be null"}
+        check(flight != null || flightFilePath != null) {"Either flight or flightFilePath must not be null"}
         if (flightFilePath != null && flight == null) {
             this.flight = ObjectMappers.getYamlMapper().readValue(URL(flightFilePath!!), Flight::class.java)
         }
