@@ -30,6 +30,7 @@ import com.openlattice.tasks.HazelcastTaskDependencies
 import com.openlattice.tasks.Task
 import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
+import kotlin.streams.asStream
 
 const val REFRESH_INTERVAL_MILLIS = 120_000L
 private const val DEFAULT_PAGE_SIZE = 100
@@ -64,36 +65,22 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies>, Hazelca
 
     override fun runTask() {
         val ds = getDependency()
-
-        logger.info("Refreshing user list from Auth0.")
+        logger.info("Synchronizing users.")
         try {
-            var page = 0
-            var pageOfUsers = getUsersPage(ds.managementApi, page++).items
-            require(pageOfUsers.isNotEmpty()) { "No users found." }
-            while (pageOfUsers.isNotEmpty()) {
-                logger.info("Loading page {} of {} auth0 users", page-1, pageOfUsers.size)
-                pageOfUsers
-                        .parallelStream()
-                        .forEach(ds.users::syncUser)
+            ds.userListingService
+                    .getUsers()
+                    .asStream()
+                    .parallel()
+                    .forEach(ds.users::syncUser)
 
 
-                pageOfUsers = getUsersPage(ds.managementApi, page++).items
-            }
         } catch (ex: Exception) {
-            logger.error("Retrofit called failed during auth0 sync task.", ex)
+            logger.error("Unable to synchronize users", ex)
             return
         }
 
     }
 
-    private fun getUsersPage(managementApi: ManagementAPI, page: Int, pageSize: Int = DEFAULT_PAGE_SIZE): UsersPage {
-        return managementApi.users().list(
-                UserFilter()
-                        .withSearchEngine("v3")
-                        .withFields("user_id,email,nickname,app_metadata,identities",true)
-                        .withPage(page, pageSize)
-        ).execute()
-    }
 
 }
 

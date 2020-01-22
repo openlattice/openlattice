@@ -36,6 +36,7 @@ import com.openlattice.assembler.OrganizationAssembly;
 import com.openlattice.auditing.AuditRecordEntitySetConfiguration;
 import com.openlattice.auth0.Auth0Pod;
 import com.openlattice.auth0.Auth0TokenProvider;
+import com.openlattice.auth0.AwsAuth0TokenProvider;
 import com.openlattice.authentication.Auth0Configuration;
 import com.openlattice.authorization.AceKey;
 import com.openlattice.authorization.AceValue;
@@ -262,7 +263,7 @@ public class MapstoresPod {
 
     @Bean
     public Auth0TokenProvider auth0TokenProvider() {
-        return new Auth0TokenProvider( auth0Configuration );
+        return new AwsAuth0TokenProvider( auth0Configuration );
     }
 
     @Bean

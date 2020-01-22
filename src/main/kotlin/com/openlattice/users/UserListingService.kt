@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019. OpenLattice, Inc.
+ * Copyright (C) 2020. OpenLattice, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,11 +21,12 @@
 
 package com.openlattice.users
 
-import com.auth0.client.mgmt.ManagementAPI
-import com.openlattice.tasks.HazelcastTaskDependencies
+import com.auth0.json.mgmt.users.User
 
-data class Auth0SyncTaskDependencies(
-        val users: Auth0SyncService,
-        val userListingService: UserListingService
-) : HazelcastTaskDependencies
-
+/**
+ *
+ * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
+ */
+interface UserListingService {
+    fun getUsers() : Sequence<User>
+}
