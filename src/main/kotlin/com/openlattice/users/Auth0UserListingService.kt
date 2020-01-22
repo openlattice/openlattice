@@ -57,10 +57,15 @@ class Auth0UserListingIterator(private val managementApi: ManagementAPI) : Itera
     private var pageIterator = pageOfUsers.iterator()
 
     override fun hasNext(): Boolean {
-        if (!pageIterator.hasNext() && page > 0) {
-            pageOfUsers = getNextPage()
-            pageIterator = pageOfUsers.iterator()
+        if (!pageIterator.hasNext()) {
+            if (pageOfUsers.size == DEFAULT_PAGE_SIZE) {
+                pageOfUsers = getNextPage()
+                pageIterator = pageOfUsers.iterator()
+            } else {
+                return false
+            }
         }
+
         return pageIterator.hasNext()
     }
 
@@ -70,8 +75,9 @@ class Auth0UserListingIterator(private val managementApi: ManagementAPI) : Itera
 
     private fun getNextPage(): List<User> {
         return try {
-            logger.info("Loading page {} of {} auth0 users", page, pageOfUsers.size)
-            getUsersPage(managementApi, page++, DEFAULT_PAGE_SIZE).items ?: listOf()
+            val nextPage = getUsersPage(managementApi, page++, DEFAULT_PAGE_SIZE).items ?: listOf()
+            logger.info("Loaded page {} of {} auth0 users", page - 1, nextPage.size)
+            nextPage
         } catch (ex: Exception) {
             logger.error("Retrofit called failed during auth0 sync task.", ex)
             listOf()
