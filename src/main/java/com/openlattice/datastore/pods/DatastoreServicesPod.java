@@ -48,7 +48,7 @@ import com.openlattice.auditing.AuditingProfiles;
 import com.openlattice.auditing.LocalAuditingService;
 import com.openlattice.auditing.S3AuditingService;
 import com.openlattice.auth0.Auth0Pod;
-import com.openlattice.auth0.Auth0TokenProvider;
+import com.openlattice.auth0.AwsAuth0TokenProvider;
 import com.openlattice.authentication.Auth0Configuration;
 import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.authorization.AuthorizationQueryService;
@@ -90,6 +90,8 @@ import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.EntitySetManager;
 import com.openlattice.datastore.services.EntitySetService;
 import com.openlattice.datastore.services.SyncTicketService;
+import com.openlattice.directory.Auth0UserDirectoryService;
+import com.openlattice.directory.LocalUserDirectoryService;
 import com.openlattice.directory.UserDirectoryService;
 import com.openlattice.edm.PostgresEdmManager;
 import com.openlattice.edm.properties.PostgresTypeManager;
@@ -371,7 +373,10 @@ public class DatastoreServicesPod {
 
     @Bean
     public UserDirectoryService userDirectoryService() {
-        return new UserDirectoryService( auth0TokenProvider(), hazelcastInstance );
+        if ( auth0Configuration.getManagementApiUrl().contains( Auth0Configuration.NO_SYNC_URL ) ) {
+            return new LocalUserDirectoryService( auth0Configuration );
+        }
+        return new Auth0UserDirectoryService( auth0TokenProvider(), hazelcastInstance );
     }
 
     @Bean
@@ -447,8 +452,8 @@ public class DatastoreServicesPod {
     }
 
     @Bean
-    public Auth0TokenProvider auth0TokenProvider() {
-        return new Auth0TokenProvider( auth0Configuration );
+    public AwsAuth0TokenProvider auth0TokenProvider() {
+        return new AwsAuth0TokenProvider( auth0Configuration );
     }
 
     @Bean
