@@ -17,13 +17,14 @@ class PersistentSearchEmailRenderer {
         fun renderEmail(
                 persistentSearch: PersistentSearch,
                 entity: Map<FullQualifiedName, Set<Any>>,
-                userEmail: String, neighbors: List<NeighborEntityDetails>,
+                userEmail: String,
+                neighbors: List<NeighborEntityDetails>,
                 dependencies: PersistentSearchMessengerTaskDependencies
         ): RenderableEmailRequest? {
             var email: RenderableEmailRequest? = null
 
             when (persistentSearch.type) {
-                PersistentSearchNotificationType.ALPR_ALERT -> email = AlprAlertEmailRenderer.renderEmail(persistentSearch, entity, userEmail, dependencies.mapboxToken)
+                PersistentSearchNotificationType.ALPR_ALERT -> email = AlprAlertEmailRenderer.renderEmail(persistentSearch, entity, userEmail, neighbors, dependencies.mapboxToken)
                 PersistentSearchNotificationType.BHR_ALERT -> email = BHRAlertEmailRenderer.renderEmail(persistentSearch, entity, userEmail, neighbors)
 
                 else -> {
