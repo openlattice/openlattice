@@ -24,6 +24,9 @@ package com.openlattice.users
 import com.auth0.json.mgmt.users.User
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
+import com.geekbeast.auth0.EMAIL
+import com.geekbeast.auth0.EMAIL_VERIFIED
+import com.geekbeast.auth0.USER_ID
 import com.openlattice.authentication.Auth0Configuration
 import org.slf4j.LoggerFactory
 
@@ -46,9 +49,9 @@ class LocalUserListingService(auth0Configuration: Auth0Configuration) : UserList
             auth0Configuration.users.forEach { user ->
                 val jwt = JWT.create()
                         .withSubject(user.id)
-                        .withClaim("user_id", user.id)
-                        .withClaim("email", user.email)
-                        .withClaim("email_verified", user.isEmailVerified)
+                        .withClaim(USER_ID, user.id)
+                        .withClaim(EMAIL, user.email)
+                        .withClaim(EMAIL_VERIFIED, user.isEmailVerified)
                         .withIssuer(aac.issuer)
                         .withAudience(aac.audience)
                         //TODO: Hardcoded for now, but should actually parse algorithm string
