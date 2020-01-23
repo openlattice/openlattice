@@ -21,8 +21,8 @@
 package com.openlattice.datastore.services
 
 import com.codahale.metrics.annotation.Timed
-import com.google.common.base.Preconditions.checkState
 import com.google.common.base.Preconditions.checkArgument
+import com.google.common.base.Preconditions.checkState
 import com.google.common.collect.Sets
 import com.google.common.eventbus.EventBus
 import com.hazelcast.core.HazelcastInstance
@@ -99,7 +99,7 @@ open class EntitySetService(
 
 
     override fun createEntitySet(principal: Principal, entitySet: EntitySet) {
-        val entityType = entityTypes.getValue(entitySet.entityTypeId)
+        val entityType = Util.getSafely(entityTypes, entitySet.entityTypeId)
         ensureValidEntitySet(entitySet)
 
         if (entitySet.partitions.isEmpty()) {
@@ -277,10 +277,7 @@ open class EntitySetService(
     }
 
     override fun getEntityTypeIdsByEntitySetIds(entitySetIds: Set<UUID>): Map<UUID, UUID> {
-        return entitySets.getAll(entitySetIds).entries.associateBy(
-                { e -> e.key },
-                { e -> e.value.entityTypeId }
-        )
+        return entitySets.executeOnKeys(entitySetIds, GetEntityTypeFromEntitySetEntryProcessor()) as Map<UUID, UUID>
     }
 
     override fun getAssociationTypeByEntitySetId(entitySetId: UUID): AssociationType {
@@ -343,12 +340,12 @@ open class EntitySetService(
     override fun getAllEntitySetPropertyMetadataForIds(
             entitySetIds: Set<UUID>
     ): Map<UUID, Map<UUID, EntitySetPropertyMetadata>> {
-        val entitySetsById = entitySets.getAll(entitySetIds)
-        val entityTypesById = entityTypes.getAll(entitySetsById.values.map(EntitySet::getEntityTypeId).toSet())
+        val entityTypesByEntitySetId = entitySets.executeOnKeys(entitySetIds, GetEntityTypeFromEntitySetEntryProcessor()) as Map<UUID, UUID>
+        val entityTypesById = entityTypes.getAll(entityTypesByEntitySetId.values.toSet())
 
         val keys = entitySetIds
                 .flatMap { entitySetId ->
-                    entityTypesById.getValue(entitySetsById.getValue(entitySetId).entityTypeId).properties
+                    entityTypesById.getValue(entityTypesByEntitySetId.getValue(entitySetId)).properties
                             .map { propertyTypeId ->
                                 EntitySetPropertyKey(entitySetId, propertyTypeId)
                             }
@@ -364,7 +361,7 @@ open class EntitySetService(
 
         missingKeys.forEach { newKey ->
             val propertyType = missingPropertyTypesById.getValue(newKey.propertyTypeId)
-            val propertyTags = entityTypesById.getValue(entitySetsById.getValue(newKey.entitySetId).entityTypeId)
+            val propertyTags = entityTypesById.getValue(entityTypesByEntitySetId.getValue(newKey.entitySetId))
                     .propertyTags.get(newKey.propertyTypeId)
 
             val defaultMetadata = EntitySetPropertyMetadata(
