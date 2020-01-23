@@ -17,13 +17,9 @@ class FlightPlanParametersUpdateStreamSerializer : TestableSelfRegisteringStream
         @JvmStatic
         fun serialize(output: ObjectDataOutput, obj: FlightPlanParametersUpdate) {
             OptionalStreamSerializers.serialize(output, obj.sql, ObjectDataOutput::writeUTF)
-            if (obj.source.isPresent) {
-                output.writeBoolean(true)
-                val source = obj.source.get()
-                output.writeUTFArray(source.keys.map { it }.toTypedArray())
-                output.writeUTFArray(source.values.map { it }.toTypedArray())
-            } else {
-                output.writeBoolean(false)
+            OptionalStreamSerializers.serialize(output, obj.source) { out: ObjectDataOutput, source: Map<String, String> ->
+                out.writeUTFArray(source.keys.map { it }.toTypedArray())
+                out.writeUTFArray(source.values.map { it }.toTypedArray())
             }
             OptionalStreamSerializers.serializeList(output, obj.sourcePrimaryKeyColumns, ObjectDataOutput::writeUTF)
             OptionalStreamSerializers.serialize(output, obj.flightFilePath, ObjectDataOutput::writeUTF)
@@ -32,12 +28,10 @@ class FlightPlanParametersUpdateStreamSerializer : TestableSelfRegisteringStream
         @JvmStatic
         fun deserialize(input: ObjectDataInput): FlightPlanParametersUpdate {
             val sql = OptionalStreamSerializers.deserialize(input, ObjectDataInput::readUTF)
-            val source = if (input.readBoolean()) {
+            val source = OptionalStreamSerializers.deserialize(input) {
                 val sourceKeys = input.readUTFArray().toList()
                 val sourceValues = input.readUTFArray().toList()
-                Optional.of(sourceKeys.zip(sourceValues) { key, value -> key to value }.toMap())
-            } else {
-                Optional.empty()
+                sourceKeys.zip(sourceValues) { key, value -> key to value }.toMap()
             }
             val sourcePKeyCols = OptionalStreamSerializers.deserializeList(input, ObjectDataInput::readUTF)
             val flightFilePath = OptionalStreamSerializers.deserialize(input, ObjectDataInput::readUTF)
