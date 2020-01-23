@@ -2,6 +2,7 @@ package com.openlattice.hazelcast.serializers.shuttle
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
+import com.openlattice.client.RetrofitFactory
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.hazelcast.serializers.OptionalStreamSerializers
 import com.openlattice.hazelcast.serializers.TestableSelfRegisteringStreamSerializer
@@ -15,11 +16,8 @@ class IntegrationUpdateStreamSerializer : TestableSelfRegisteringStreamSerialize
 
     companion object {
         fun serialize(output: ObjectDataOutput, obj: IntegrationUpdate) {
-            if (obj.environment.isPresent) {
-                output.writeBoolean(true)
-                EnvironmentStreamSerializer.serialize(output, obj.environment.get())
-            } else {
-                output.writeBoolean(false)
+            OptionalStreamSerializers.serialize(output, obj.environment) { out: ObjectDataOutput, env: RetrofitFactory.Environment ->
+                EnvironmentStreamSerializer.serialize(out, env)
             }
             OptionalStreamSerializers.serialize(output, obj.s3bucket, ObjectDataOutput::writeUTF)
             OptionalStreamSerializers.serializeSet(output, obj.contacts, ObjectDataOutput::writeUTF)
@@ -39,10 +37,8 @@ class IntegrationUpdateStreamSerializer : TestableSelfRegisteringStreamSerialize
         }
 
         fun deserialize(input: ObjectDataInput): IntegrationUpdate {
-            val env = if (input.readBoolean()) {
-                Optional.of(EnvironmentStreamSerializer.deserialize(input))
-            } else {
-                Optional.empty()
+            val env = OptionalStreamSerializers.deserialize(input) {
+                EnvironmentStreamSerializer.deserialize(input)
             }
             val s3bucket = OptionalStreamSerializers.deserialize(input, ObjectDataInput::readUTF)
             val contacts = OptionalStreamSerializers.deserializeSet(input, ObjectDataInput::readUTF)
