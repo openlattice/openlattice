@@ -3,6 +3,7 @@ package com.openlattice.search.renderers
 import java.util.Optional
 import com.google.common.collect.Lists
 import com.google.common.collect.Maps
+import com.openlattice.data.requests.NeighborEntityDetails
 import com.openlattice.mail.RenderableEmailRequest
 import com.openlattice.search.requests.PersistentSearch
 import jodd.mail.EmailAttachment
@@ -47,6 +48,13 @@ private val COLOR_FQN = FullQualifiedName("vehicle.color")
 private val AGENCY_NAME_FQN = FullQualifiedName("publicsafety.agencyname")
 private val CAMERA_ID_FQN = FullQualifiedName("ol.resourceid")
 private val HIT_TYPE_FQN = FullQualifiedName("ol.description")
+private val DESCRIPTION_FQN = FullQualifiedName("ol.description")
+private val NAME_FQN = FullQualifiedName("ol.name")
+private val ID_FQN = FullQualifiedName("ol.id")
+
+// neighbors
+private val DEVICE_ENTITY_TYPE_ID = UUID.fromString("6b513215-2566-491c-9d08-02a282f4123e")
+private val DEPT_ENTITY_TYPE_ID = UUID.fromString("e33ad963-60fd-489d-8cdb-9faca522e18a")
 
 class AlprAlertEmailRenderer {
 
@@ -62,6 +70,13 @@ class AlprAlertEmailRenderer {
                 null
             } else values.iterator().next().toString()
 
+        }
+
+        private fun getFirstValue(entity: Map<FullQualifiedName, Set<Any>>, fqns: List<FullQualifiedName>): String? {
+            fqns.forEach {
+                getFirstValue(entity, it)?.let { v -> return v }
+            }
+            return null
         }
 
         private fun getImage(imageUrlPath: String?, fileType: String): ByteArrayOutputStream? {
@@ -114,7 +129,18 @@ class AlprAlertEmailRenderer {
             return getImage(url, PNG)
         }
 
-        private fun extractVehicleInfo(vehicleRead: Map<FullQualifiedName, Set<Any>>): Map<String, Any> {
+        private fun getGoogleMapsUrl(coordinates: String?): String? {
+            return coordinates?.let {
+                val splitStr = coordinates.split(",")
+                val lat = splitStr[0]
+                val lon = splitStr[1]
+                val url = "https://www.google.com/maps/place/$lat,$lon"
+                "<a href=\"$url\">$url</a>"
+            }
+
+        }
+
+        private fun extractVehicleInfo(vehicleRead: Map<FullQualifiedName, Set<Any>>, neighbors: List<NeighborEntityDetails>): Map<String, Any> {
 
             val values = Maps.newHashMap<String, Any>()
 
@@ -124,14 +150,21 @@ class AlprAlertEmailRenderer {
                     readDateTimeList.first().toString()
             ).format(dateTimeFormatter)
             values["hitType"] = getFirstValue(vehicleRead, HIT_TYPE_FQN)
-            values["cameraId"] = getFirstValue(vehicleRead, CAMERA_ID_FQN)
-            values["agencyId"] = getFirstValue(vehicleRead, AGENCY_NAME_FQN)
             values["make"] = getFirstValue(vehicleRead, MAKE_FQN)
             values["model"] = getFirstValue(vehicleRead, MODEL_FQN)
             values["year"] = getFirstValue(vehicleRead, YEAR_FQN)
             values["color"] = getFirstValue(vehicleRead, COLOR_FQN)
-            values["coordinates"] = getFirstValue(vehicleRead, LOCATION_COORDS_FQN)
+            values["coordinates"] = getGoogleMapsUrl(getFirstValue(vehicleRead, LOCATION_COORDS_FQN))
 
+            neighbors.forEach {
+                it.neighborEntitySet.ifPresent {es ->
+                    if (es.entityTypeId == DEVICE_ENTITY_TYPE_ID) {
+                        values["cameraId"] = getFirstValue(it.neighborDetails.get(), listOf(DESCRIPTION_FQN, NAME_FQN, ID_FQN))
+                    } else if (es.entityTypeId == DEPT_ENTITY_TYPE_ID) {
+                        values["agencyId"] = getFirstValue(it.neighborDetails.get(), listOf(DESCRIPTION_FQN, NAME_FQN, ID_FQN))
+                    }
+                }
+            }
 
             return values.filterValues { it != null }
         }
@@ -183,6 +216,7 @@ class AlprAlertEmailRenderer {
                 persistentSearch: PersistentSearch,
                 vehicle: Map<FullQualifiedName, Set<Any>>,
                 userEmail: String,
+                neighbors: List<NeighborEntityDetails>,
                 mapboxToken: String
         ): RenderableEmailRequest {
 
@@ -193,7 +227,7 @@ class AlprAlertEmailRenderer {
 
             val templateObjects: MutableMap<String, Any> = mutableMapOf()
             templateObjects.putAll(persistentSearch.alertMetadata)
-            templateObjects.putAll(extractVehicleInfo(vehicle))
+            templateObjects.putAll(extractVehicleInfo(vehicle, neighbors))
             templateObjects["expiration"] = persistentSearch.expiration.format(dateTimeFormatter)
 
             val attachments = extractVehicleImages(vehicle, mapboxToken).toTypedArray()
