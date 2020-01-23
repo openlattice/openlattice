@@ -10,6 +10,7 @@ import com.openlattice.postgres.PostgresColumn.INTEGRATION
 import com.openlattice.postgres.PostgresColumn.NAME
 import com.openlattice.postgres.PostgresColumnDefinition
 import com.openlattice.postgres.PostgresTable.INTEGRATIONS
+import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.mapstores.AbstractBasePostgresMapstore
 import com.openlattice.shuttle.Integration
 import com.zaxxer.hikari.HikariDataSource
@@ -54,7 +55,7 @@ class IntegrationsMapstore(hds: HikariDataSource) : AbstractBasePostgresMapstore
     }
 
     override fun mapToKey(rs: ResultSet): String {
-        return rs.getString(NAME.name)
+        return ResultSetAdapters.name(rs)
     }
 
     override fun mapToValue(rs: ResultSet): Integration {

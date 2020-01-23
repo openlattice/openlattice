@@ -7,6 +7,7 @@ import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.postgres.PostgresColumn.NAME
 import com.openlattice.postgres.PostgresColumn.STATUS
 import com.openlattice.postgres.PostgresTable.INTEGRATION_JOBS
+import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.ResultSetAdapters.id
 import com.openlattice.postgres.mapstores.AbstractBasePostgresMapstore
 import com.openlattice.shuttle.IntegrationJob
@@ -55,9 +56,7 @@ class IntegrationJobsMapstore(hds: HikariDataSource) : AbstractBasePostgresMapst
     }
 
     override fun mapToValue(rs: ResultSet): IntegrationJob {
-        val integrationName = rs.getString(NAME.name)
-        val integrationStatus = IntegrationStatus.valueOf(rs.getString(STATUS.name).toUpperCase())
-        return IntegrationJob(integrationName, integrationStatus)
+        return ResultSetAdapters.integrationJob(rs)
     }
 
     override fun getMapConfig(): MapConfig {
