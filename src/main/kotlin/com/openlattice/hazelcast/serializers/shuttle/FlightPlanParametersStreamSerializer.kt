@@ -4,6 +4,7 @@ import com.dataloom.mappers.ObjectMappers
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.openlattice.hazelcast.StreamSerializerTypeIds
+import com.openlattice.hazelcast.serializers.StreamSerializers
 import com.openlattice.hazelcast.serializers.TestableSelfRegisteringStreamSerializer
 import com.openlattice.shuttle.Flight
 import com.openlattice.shuttle.FlightPlanParameters
@@ -20,13 +21,9 @@ class FlightPlanParametersStreamSerializer : TestableSelfRegisteringStreamSerial
             output.writeUTFArray(obj.source.keys.map { it }.toTypedArray())
             output.writeUTFArray(obj.source.values.map { it }.toTypedArray())
             output.writeUTFArray(obj.sourcePrimaryKeyColumns.toTypedArray())
-            if (obj.flightFilePath != null) {
-                output.writeBoolean(true)
+            StreamSerializers.serializeMaybeValue(output, obj.flightFilePath) {
                 output.writeUTF(obj.flightFilePath!!)
-            } else {
-                output.writeBoolean(false)
             }
-
             val flightJson = mapper.writeValueAsString(obj.flight)
             output.writeUTF(flightJson)
         }
@@ -37,9 +34,9 @@ class FlightPlanParametersStreamSerializer : TestableSelfRegisteringStreamSerial
             val sourceValues = input.readUTFArray().toList()
             val source = sourceKeys.zip(sourceValues) { key, value -> key to value }.toMap()
             val srcPkeyCols = input.readUTFArray().toList()
-            var flightFilePath: String? = null
-            val hasFlightFilePath = input.readBoolean()
-            if (hasFlightFilePath) flightFilePath = input.readUTF()
+            val flightFilePath = StreamSerializers.deserializeMaybeValue(input) {
+                input.readUTF()
+            }
             val flightJson = input.readUTF()
             val flight = mapper.readValue(flightJson, Flight::class.java)
             return FlightPlanParameters(
