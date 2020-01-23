@@ -31,13 +31,12 @@ class UpdateIntegrationEntryProcessor(val update: IntegrationUpdate) :
             it.forEach { entry ->
                 val currentFlightPlanParameter = flightPlanParameters.getValue(entry.key)
                 val update = entry.value
-                if (update.sql.isPresent) { currentFlightPlanParameter.sql = update.sql.get() }
-                if (update.source.isPresent) { currentFlightPlanParameter.source = update.source.get() }
-                if (update.sourcePrimaryKeyColumns.isPresent) { currentFlightPlanParameter.sourcePrimaryKeyColumns = update.sourcePrimaryKeyColumns.get() }
-                if (update.flightFilePath.isPresent) {
-                    val updatedFlightFilePath = update.flightFilePath.get()
-                    currentFlightPlanParameter.flightFilePath = updatedFlightFilePath
-                    currentFlightPlanParameter.flight = mapper.readValue(URL(updatedFlightFilePath), Flight::class.java)
+                update.sql.ifPresent { sql -> currentFlightPlanParameter.sql = sql }
+                update.source.ifPresent { source -> currentFlightPlanParameter.source = source }
+                update.sourcePrimaryKeyColumns.ifPresent { pkey -> currentFlightPlanParameter.sourcePrimaryKeyColumns = pkey }
+                update.flightFilePath.ifPresent { path ->
+                    currentFlightPlanParameter.flightFilePath = path
+                    currentFlightPlanParameter.flight = mapper.readValue(URL(path), Flight::class.java)
                 }
             }
 
