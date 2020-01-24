@@ -29,11 +29,13 @@ import com.openlattice.tasks.HazelcastFixedRateTask
 import com.openlattice.tasks.HazelcastTaskDependencies
 import com.openlattice.tasks.Task
 import org.slf4j.LoggerFactory
+import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 import kotlin.streams.asStream
 
 const val REFRESH_INTERVAL_MILLIS = 120_000L
 private const val DEFAULT_PAGE_SIZE = 100
+private const val MAX_JOBS = 8
 private val logger = LoggerFactory.getLogger(Auth0SyncTask::class.java)
 
 
@@ -43,6 +45,7 @@ private val logger = LoggerFactory.getLogger(Auth0SyncTask::class.java)
  *
  */
 class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies>, HazelcastTaskDependencies {
+    private val syncSemaphore = Semaphore(MAX_JOBS)
     override fun getDependenciesClass(): Class<Auth0SyncTaskDependencies> {
         return Auth0SyncTaskDependencies::class.java
     }
@@ -69,10 +72,14 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies>, Hazelca
         try {
             ds.userListingService
                     .getUsers()
-                    .asStream()
-                    .parallel()
-                    .forEach(ds.users::syncUser)
-
+                    .map {
+                        syncSemaphore.acquire()
+                        ds.executor.submit { ds.users.syncUser(it) }
+                    }
+                    .forEach {
+                        it.get()
+                        syncSemaphore.release()
+                    }
 
         } catch (ex: Exception) {
             logger.error("Unable to synchronize users", ex)
