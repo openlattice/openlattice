@@ -30,7 +30,7 @@ fun getUser(managementApi: ManagementAPI, principalId: String): User {
     return managementApi.users().get(
             principalId, UserFilter()
             .withSearchEngine("v3")
-            .withFields("user_id,email,nickname,app_metadata,identities", true)
+            .withFields("$USER_ID,$EMAIL,$NICKNAME,$APP_METADATA,$IDENTITIES", true)
             .withPage(0, 100)
     ).execute()
 }

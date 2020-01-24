@@ -22,10 +22,12 @@
 package com.openlattice.users
 
 import com.auth0.client.mgmt.ManagementAPI
+import com.google.common.util.concurrent.ListeningExecutorService
 import com.openlattice.tasks.HazelcastTaskDependencies
 
 data class Auth0SyncTaskDependencies(
         val users: Auth0SyncService,
-        val userListingService: UserListingService
+        val userListingService: UserListingService,
+        val executor: ListeningExecutorService
 ) : HazelcastTaskDependencies
 

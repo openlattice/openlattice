@@ -48,7 +48,7 @@ class ResolvedPrincipalTreesMapLoader : TestableSelfRegisteringMapStore<String, 
 
     override fun getMapConfig(): MapConfig {
         return MapConfig(mapName)
-                .setMaxIdleSeconds(300)
+                .setMaxIdleSeconds(60*30)
                 .setMapStoreConfig(mapStoreConfig)
     }
 
