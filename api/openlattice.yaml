@@ -1055,7 +1055,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/entitySet"
+                  $ref: "#/components/schemas/EntitySet"
     post:
       summary: Creates new EntitySet definitions if they don't exist.
       operationId: createEntitySets
@@ -1066,7 +1066,7 @@ paths:
             schema:
               type: array
               items:
-                $ref: "#/components/schemas/entitySet"
+                $ref: "#/components/schemas/EntitySet"
       tags: [entitySets, edm]
       security:
         - openlattice_auth: []
@@ -1142,7 +1142,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/entitySet"
+                $ref: "#/components/schemas/EntitySet"
     delete:
       summary: Deletes the EntitySet definition for the given EntitySet UUID.
       operationId: deleteEntitySet
@@ -1689,7 +1689,7 @@ paths:
             schema:
               type: array
               items:
-                $ref: "#/components/schemas/entitySetSelection"
+                $ref: "#/components/schemas/EntitySetSelection"
       tags:
         - data
       security:
@@ -1962,7 +1962,7 @@ paths:
             schema:
               type: array
               items:
-                $ref: "#/components/schemas/entitySetSelection"
+                $ref: "#/components/schemas/EntitySetSelection"
       tags:
         - data
       security:
@@ -2376,19 +2376,11 @@ paths:
         - http_auth: []
       responses:
         "200":
-          description: "A list of objects containing information about the neighbor and association."
+          description: "A search result object, containing the total number of hits for the given query, and the hits themselves."
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties:
-                  type: object
-                  additionalProperties:
-                    type: object
-                    additionalProperties:
-                      type: array
-                      items:
-                        $ref: "#/components/schemas/neighborEntityIds"  
+                $ref: "#/components/schemas/SearchResult"  
     patch:
       summary: Executes a search over the data of a given entity set to find rows that match the search term
       operationId: searchEntitySetData
@@ -2489,42 +2481,205 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DataSearchResult"
-  # /datastore/search/organizations:
-  #   post:
-  #     summary: Executes a search over all organizations to find ones that match the given search term
-  #     operationId: executeOrganizationSearch
-  # /datastore/search/entity_types:
-  #   post:
-  #     summary: Executes a search over all entity types to find ones that match the given search term
-  #     operationId: executeEntityTypeSearch
-  # /datastore/search/association_types:
-  #   post:
-  #     summary: Executes a search over all association types to find ones that match the given search term
-  #     operationId: executeAssociationTypeSearch
-  # /datastore/search/property_types:
-  #   post:
-  #     summary: Executes a search over all property types to find ones that match the given search term
-  #     operationId: executePropertyTypeSearch
-  # /datastore/search/app:
-  #   post:
-  #     summary: Executes a search over all apps to find ones that match the given search term
-  #     operationId: executeAppSearch
-  # /datastore/search/app_types:
-  #   post:
-  #     summary: Executes a search over all app types to find ones that match the given search term
-  #     operationId: executeAppTypeSearch
-  # /datastore/search/entity_types/collections:
-  #   post:
-  #     summary: Executes a search over all EntityTypeCollections to find ones that match the given search term
-  #     operationId: executeEntityTypeCollectionSearch
-  # /datastore/search/entity_sets/collections:
-  #   post:
-  #     summary: Executes a search over all EntitySetCollections to find ones that match the given search term
-  #     operationId: executeEntitySetCollectionSearch
-  # /datastore/search/property_types/fqn:
-  #   post:
-  #     summary: Executes a search over all property types to find ones that match the given name and namespace, including partial matches
-  #     operationId: executeFQNPropertyTypeSearch
+  /datastore/search/organizations:
+    post:
+      summary: Executes a search over all organizations to find ones that match the given search term
+      operationId: executeOrganizationSearch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SearchTerm"
+      tags:
+        - search
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: "A search result object, containing the total number of hits for the given query, and the hits themselves."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchResult"  
+  /datastore/search/entity_types:
+    post:
+      summary: Executes a search over all entity types to find ones that match the given search term
+      operationId: executeEntityTypeSearch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SearchTerm"
+      tags:
+        - search
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: "A search result object, containing the total number of hits for the given query, and the hits themselves."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchResult"  
+  /datastore/search/association_types:
+    post:
+      summary: Executes a search over all association types to find ones that match the given search term
+      operationId: executeAssociationTypeSearch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SearchTerm"
+      tags:
+        - search
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: "A search result object, containing the total number of hits for the given query, and the hits themselves."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchResult"  
+  /datastore/search/property_types:
+    post:
+      summary: Executes a search over all property types to find ones that match the given search term
+      operationId: executePropertyTypeSearch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SearchTerm"
+      tags:
+        - search
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: "A search result object, containing the total number of hits for the given query, and the hits themselves."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchResult"  
+  /datastore/search/app:
+    post:
+      summary: Executes a search over all apps to find ones that match the given search term
+      operationId: executeAppSearch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SearchTerm"
+      tags:
+        - search
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: "A search result object, containing the total number of hits for the given query, and the hits themselves."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchResult"  
+  /datastore/search/app_types:
+    post:
+      summary: Executes a search over all app types to find ones that match the given search term
+      operationId: executeAppTypeSearch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SearchTerm"
+      tags:
+        - search
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: "A search result object, containing the total number of hits for the given query, and the hits themselves."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchResult"  
+  /datastore/search/entity_types/collections:
+    post:
+      summary: Executes a search over all EntityTypeCollections to find ones that match the given search term
+      operationId: executeEntityTypeCollectionSearch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SearchTerm"
+      tags:
+        - search
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: "A search result object, containing the total number of hits for the given query, and the hits themselves."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchResult"  
+      
+  /datastore/search/entity_sets/collections:
+    post:
+      summary: Executes a search over all EntitySetCollections to find ones that match the given search term
+      operationId: executeEntitySetCollectionSearch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SearchTerm"
+      tags:
+        - search
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: "A search result object, containing the total number of hits for the given query, and the hits themselves."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchResult"  
+  /datastore/search/property_types/fqn:
+    post:
+      summary: Executes a search over all property types to find ones that match the given name and namespace, including partial matches
+      operationId: executeFQNPropertyTypeSearch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SearchTerm"
+      tags:
+        - search
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: "A search result object, containing the total number of hits for the given query, and the hits themselves."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchResult"  
   # /datastore/search/edm/index:
   #   get:
   #     summary: Trigger indexing of the EDM
@@ -3713,6 +3868,324 @@ paths:
               schema:
                 type: integer
 
+  ######################
+  ## COLLECTIONS APIs ##
+  ######################
+  
+  /datastore/collections/entity/type:
+    get:
+      summary: Returns all EntityTypeCollection objects
+      operationId: getAllEntityTypeCollections
+      tags:
+        - collections
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EntityTypeCollection"
+    post:
+      summary: Creates a new EntityTypeCollection
+      operationId: createEntityTypeCollection
+      tags:
+        - collections
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EntityTypeCollection"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: string
+                format: uuid
+  /datastore/collections/entity/set:
+    get:
+      summary: Returns all EntitySetCollection objects
+      operationId: getAllEntitySetCollections
+      tags:
+        - collections
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EntitySetCollection"
+    post:
+      summary: Creates a new EntitySetCollection
+      operationId: createEntitySetCollection
+      tags:
+        - collections
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EntitySetCollection"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: string
+                format: uuid
+    
+  /datastore/collections/entity/type/{entityTypeCollectionId}:
+    get:
+      summary: Returns the EntityTypeCollection object for a given id
+      operationId: getEntityTypeCollection
+      parameters:
+        - name: entityTypeCollectionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      tags:
+        - collections
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntityTypeCollection"
+    patch:
+      summary: Updates metadata of the specified EntityTypeCollection
+      operationId: updateEntityTypeCollectionMetadata
+      parameters:
+        - name: entityTypeCollectionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      tags:
+        - collections
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/metadataUpdate"
+      responses:
+        "200":
+          description: Success
+    delete:
+      summary: Deletes the specified EntityTypeCollection
+      operationId: deleteEntityTypeCollection
+      parameters:
+        - name: entityTypeCollectionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      tags:
+        - collections
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success      
+  /datastore/collections/entity/type/{entityTypeCollectionId}/template:
+    patch:
+      summary: Appends type to template of the specified EntityTypeCollection
+      operationId: addTypeToEntityTypeCollectionTemplate
+      parameters:
+        - name: entityTypeCollectionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EntityTypeCollection"
+      tags:
+        - collections
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+  /datastore/collections/entity/type/{entityTypeCollectionId}/template/{typeId}:
+    delete:
+      summary: Removes a key from an EntityTypeCollection template
+      operationId: removeTypeFromEntityTypeCollectionTemplate
+      parameters:
+        - name: entityTypeCollectionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: typeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      tags:
+        - collections
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+  /datastore/collections/entity/set/{entitySetCollectionId}:
+    get:
+      summary: Returns the EntitySetCollection object for a given id
+      operationId: getEntitySetCollection
+      parameters:
+        - name: entitySetCollectionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      tags:
+        - collections
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntitySetCollection"
+    patch:
+      summary: Updates metadata of the specified EntitySetCollection
+      operationId: updateEntitySetCollectionMetadata
+      parameters:
+        - name: entitySetCollectionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      tags:
+        - collections
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/metadataUpdate"
+      responses:
+        "200":
+          description: Success
+    delete:
+      summary: Deletes the specified EntitySetCollection
+      operationId: deleteEntitySetCollection
+      parameters:
+        - name: entitySetCollectionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      tags:
+        - collections
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success      
+  /datastore/collections/entity/set/{entitySetCollectionId}/template:
+    patch:
+      summary: Updates template of the specified EntitySetCollection
+      operationId: updateEntitySetCollectionTemplate
+      parameters:
+        - name: entitySetCollectionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      tags:
+        - collections
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties:
+                type: string
+                format: uuid
+      responses:
+        "200":
+          description: Success
+  /datastore/collections/entity/type/entity/set/{entitySetCollectionId}:
+    get:
+      summary: Returns all authorized EntitySetCollections for a given EntityTypeCollection id
+      operationId: getEntitySetCollectionsOfType
+      parameters:
+        - name: entitySetCollectionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      tags:
+        - collections
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EntitySetCollection"
 components:
   securitySchemes:
     http_auth:
@@ -4014,7 +4487,7 @@ components:
           type: array
           items:
             type: string
-    entitySet:
+    EntitySet:
       title: An entity set
       type: object
       properties:
@@ -4084,11 +4557,11 @@ components:
       type: object
       properties:
         associationEntitySet:
-          $ref: "#/components/schemas/entitySet"
+          $ref: "#/components/schemas/EntitySet"
         associationDetails:
           $ref: "#/components/schemas/neighborDetails"
         neighborEntitySet:
-          $ref: "#/components/schemas/entitySet"
+          $ref: "#/components/schemas/EntitySet"
         neighborId:
           type: string
         neighborDetails:
@@ -4439,7 +4912,7 @@ components:
           type: array
           items:
             type: string          
-    entitySetSelection:
+    EntitySetSelection:
       type: object
       properties:
         ids:
@@ -4653,9 +5126,11 @@ components:
         numHits: 
           type: integer
         hits:
-          type: object
-          additionalProperties:
-            type: string
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: string
           
            
     DataSearchResult:
@@ -4816,6 +5291,91 @@ components:
           type: integer
         count:
           type: integer
+    CollectionTemplateType:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: An optional UUID for the collection template type.
+        name:
+          type: string
+          description: The unique name of the collection template type.
+        title:
+          type: string
+          description: The friendly name for the collection template type.
+        description:
+          type: string
+          description: A description of the collection template type.
+        entityTypeId:
+          type: string
+          format: uuid
+          description: The id of the entity type that this collection template type wraps.
+    EntityTypeCollection:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: An optional UUID for the entity type collection.
+        type:
+          $ref: "#/components/schemas/fullQualifiedName"
+          description: The FQN of the entity type collection.
+        title:
+          type: string
+          description: The friendly name for the entity type collection.
+        description:
+          type: string
+          description: A description of the entity type collection.
+        schemas:
+          type: array
+          items:
+            $ref: "#/components/schemas/fullQualifiedName"
+          description: A list of schemas the entity type collection should belong to.
+        template:
+          type: array
+          items:
+            $ref: "#/components/schemas/CollectionTemplateType"
+          description: A set of CollectionTemplateType objects, which describe the entity types involved in the entity type collection and the purposes they serve
+    EntitySetCollection:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: An optional UUID for the entity set collection.
+        name:
+          type: string
+          description: he unique name of the entity set collection.
+        title:
+          type: string
+          description: The friendly name for the entity set collection.
+        description:
+          type: string
+          description: A description of the entity set collection.
+        entityTypeCollectionId:
+          type: string
+          format: uuid
+          description: The id of the entity type collection that this entity set collection maps to.
+        template:
+          type: object
+          additionalProperties:
+            type: string
+            format: uuid
+          description: A mapping from collection template type ids to entity set ids.
+        contacts:
+          type: array
+          items:
+            type: string
+          description: A set of contact methods for the owners of this entity set collection.
+        organizationId:
+          type: string
+          format: uuid
+          description: The id of the organization that this entity set collection belongs to.
+        
+      
+  
+          
     
 tags:
   - name: edm
