@@ -5,6 +5,7 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import com.hazelcast.config.InMemoryFormat
 import com.hazelcast.config.MapConfig
 import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.hazelcast.TestDataFactory2
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.postgres.PostgresColumn.INTEGRATION
 import com.openlattice.postgres.PostgresColumn.NAME
@@ -46,7 +47,7 @@ class IntegrationsMapstore(hds: HikariDataSource) : AbstractBasePostgresMapstore
     }
 
     override fun generateTestValue(): Integration {
-        return Integration.testData()
+        return TestDataFactory2.integration()
     }
 
     override fun getMapConfig(): MapConfig {

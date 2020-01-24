@@ -3,6 +3,7 @@ package com.openlattice.hazelcast.serializers.shuttle
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.openlattice.hazelcast.StreamSerializerTypeIds
+import com.openlattice.hazelcast.TestDataFactory2
 import com.openlattice.hazelcast.serializers.TestableSelfRegisteringStreamSerializer
 import com.openlattice.shuttle.IntegrationJob
 import org.springframework.stereotype.Component
@@ -40,7 +41,7 @@ class IntegrationJobStreamSerializer : TestableSelfRegisteringStreamSerializer<I
     }
 
     override fun generateTestValue(): IntegrationJob {
-        return IntegrationJob.testData()
+        return TestDataFactory2.integrationJob()
     }
 
 }

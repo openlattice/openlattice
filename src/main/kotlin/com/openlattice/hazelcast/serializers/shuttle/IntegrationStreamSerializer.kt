@@ -3,6 +3,7 @@ package com.openlattice.hazelcast.serializers.shuttle
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.openlattice.hazelcast.StreamSerializerTypeIds
+import com.openlattice.hazelcast.TestDataFactory2
 import com.openlattice.hazelcast.serializers.OptionalStreamSerializers
 import com.openlattice.hazelcast.serializers.TestableSelfRegisteringStreamSerializer
 import com.openlattice.hazelcast.serializers.UUIDStreamSerializer
@@ -71,7 +72,7 @@ class IntegrationStreamSerializer : TestableSelfRegisteringStreamSerializer<Inte
     }
 
     override fun generateTestValue(): Integration {
-        return Integration.testData()
+        return TestDataFactory2.integration()
     }
 
 }

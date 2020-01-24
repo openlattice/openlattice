@@ -30,28 +30,4 @@ data class FlightPlanParameters(
             this.flight = ObjectMappers.getYamlMapper().readValue(URL(flightFilePath!!), Flight::class.java)
         }
     }
-
-    companion object {
-
-        @JvmStatic
-        fun testData(): FlightPlanParameters {
-            val sql = TestDataFactory.randomAlphanumeric(5)
-            val source = mapOf<String, String>()
-            val sourcePrimaryKeyColumns = listOf(TestDataFactory.randomAlphanumeric(5))
-            val flight = Flight(
-                    emptyMap(),
-                    Optional.empty(),
-                    Optional.of(emptyMap()),
-                    Optional.of(TestDataFactory.random(5)),
-                    Optional.empty(),
-                    Optional.of(UUID.randomUUID()))
-            return FlightPlanParameters(
-                    sql,
-                    source,
-                    sourcePrimaryKeyColumns,
-                    null,
-                    flight
-            )
-        }
-    }
 }

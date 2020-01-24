@@ -37,29 +37,4 @@ data class Integration(
     init {
         if (key == null) key = UUID.randomUUID()
     }
-
-    companion object {
-
-        @JvmStatic
-        fun testData(): Integration {
-            val key = UUID.randomUUID()
-            val environment = RetrofitFactory.Environment.LOCAL
-            val s3bucket = TestDataFactory.random(10)
-            val contacts = setOf<String>(TestDataFactory.random(5))
-            val organizationId = UUID.randomUUID()
-            return Integration(
-                    key,
-                    environment,
-                    s3bucket,
-                    contacts,
-                    organizationId,
-                    Optional.empty(),
-                    Optional.of(5),
-                    Optional.empty(),
-                    mutableMapOf(TestDataFactory.randomAlphanumeric(5) to FlightPlanParameters.testData())
-            )
-        }
-
-    }
-
 }

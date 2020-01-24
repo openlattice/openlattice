@@ -4,6 +4,7 @@ import com.hazelcast.config.InMemoryFormat
 import com.hazelcast.config.MapConfig
 import com.hazelcast.config.MapIndexConfig
 import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.hazelcast.TestDataFactory2
 import com.openlattice.postgres.PostgresColumn.NAME
 import com.openlattice.postgres.PostgresColumn.STATUS
 import com.openlattice.postgres.PostgresTable.INTEGRATION_JOBS
@@ -48,7 +49,7 @@ class IntegrationJobsMapstore(hds: HikariDataSource) : AbstractBasePostgresMapst
     }
 
     override fun generateTestValue(): IntegrationJob {
-        return IntegrationJob.testData()
+        return TestDataFactory2.integrationJob()
     }
 
     override fun mapToKey(rs: ResultSet): UUID {
