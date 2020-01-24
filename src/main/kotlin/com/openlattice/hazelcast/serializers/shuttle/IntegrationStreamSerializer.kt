@@ -18,6 +18,7 @@ class IntegrationStreamSerializer : TestableSelfRegisteringStreamSerializer<Inte
             EnvironmentStreamSerializer.serialize(output, obj.environment)
             output.writeUTF(obj.s3bucket)
             output.writeUTFArray(obj.contacts.toTypedArray())
+            UUIDStreamSerializer.serialize(output, obj.organizationId)
             OptionalStreamSerializers.serialize(output, obj.logEntitySetId, UUIDStreamSerializer::serialize)
             OptionalStreamSerializers.serialize(output, obj.maxConnections, ObjectDataOutput::writeInt)
             OptionalStreamSerializers.serializeList(output, obj.callbackUrls, ObjectDataOutput::writeUTF)
@@ -30,6 +31,7 @@ class IntegrationStreamSerializer : TestableSelfRegisteringStreamSerializer<Inte
             val environment = EnvironmentStreamSerializer.deserialize(input)
             val s3bucket = input.readUTF()
             val contacts = input.readUTFArray().toSet()
+            val orgId = UUIDStreamSerializer.deserialize(input)
             val logEntitySetId = OptionalStreamSerializers.deserialize(input, UUIDStreamSerializer::deserialize)
             val maxConnections = OptionalStreamSerializers.deserialize(input, ObjectDataInput::readInt)
             val callbackUrls = OptionalStreamSerializers.deserializeList(input, ObjectDataInput::readUTF)
@@ -43,6 +45,7 @@ class IntegrationStreamSerializer : TestableSelfRegisteringStreamSerializer<Inte
                     environment,
                     s3bucket,
                     contacts,
+                    orgId,
                     logEntitySetId,
                     maxConnections,
                     callbackUrls,

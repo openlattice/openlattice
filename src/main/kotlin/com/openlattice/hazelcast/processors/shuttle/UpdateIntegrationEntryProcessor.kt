@@ -22,6 +22,8 @@ class UpdateIntegrationEntryProcessor(val update: IntegrationUpdate) :
 
         update.contacts.ifPresent { integration.contacts = it }
 
+        update.organizationId.ifPresent { integration.organizationId = it }
+
         if (update.maxConnections.isPresent) { integration.maxConnections = update.maxConnections }
 
         if (update.callbackUrls.isPresent) { integration.callbackUrls = update.callbackUrls }

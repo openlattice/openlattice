@@ -6,6 +6,7 @@ import com.openlattice.client.RetrofitFactory
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.hazelcast.serializers.OptionalStreamSerializers
 import com.openlattice.hazelcast.serializers.TestableSelfRegisteringStreamSerializer
+import com.openlattice.hazelcast.serializers.UUIDStreamSerializer
 import com.openlattice.shuttle.FlightPlanParametersUpdate
 import com.openlattice.shuttle.IntegrationUpdate
 import org.springframework.stereotype.Component
@@ -21,6 +22,9 @@ class IntegrationUpdateStreamSerializer : TestableSelfRegisteringStreamSerialize
             }
             OptionalStreamSerializers.serialize(output, obj.s3bucket, ObjectDataOutput::writeUTF)
             OptionalStreamSerializers.serializeSet(output, obj.contacts, ObjectDataOutput::writeUTF)
+            OptionalStreamSerializers.serialize(output, obj.organizationId) { out: ObjectDataOutput, orgId: UUID ->
+                UUIDStreamSerializer.serialize(out, orgId)
+            }
             OptionalStreamSerializers.serialize(output, obj.maxConnections, ObjectDataOutput::writeInt)
             OptionalStreamSerializers.serializeList(output, obj.callbackUrls, ObjectDataOutput::writeUTF)
             if (obj.flightPlanParameters.isPresent) {
@@ -38,10 +42,13 @@ class IntegrationUpdateStreamSerializer : TestableSelfRegisteringStreamSerialize
 
         fun deserialize(input: ObjectDataInput): IntegrationUpdate {
             val env = OptionalStreamSerializers.deserialize(input) {
-                EnvironmentStreamSerializer.deserialize(input)
+                EnvironmentStreamSerializer.deserialize(it)
             }
             val s3bucket = OptionalStreamSerializers.deserialize(input, ObjectDataInput::readUTF)
             val contacts = OptionalStreamSerializers.deserializeSet(input, ObjectDataInput::readUTF)
+            val orgId = OptionalStreamSerializers.deserialize(input) {
+                UUIDStreamSerializer.deserialize(it)
+            }
             val maxConnections = OptionalStreamSerializers.deserialize(input, ObjectDataInput::readInt)
             val callbackUrls = OptionalStreamSerializers.deserializeList(input, ObjectDataInput::readUTF)
             val flightPlanParameters = if (input.readBoolean()) {
@@ -59,6 +66,7 @@ class IntegrationUpdateStreamSerializer : TestableSelfRegisteringStreamSerialize
                     env,
                     s3bucket,
                     contacts,
+                    orgId,
                     maxConnections,
                     callbackUrls,
                     flightPlanParameters
@@ -83,7 +91,7 @@ class IntegrationUpdateStreamSerializer : TestableSelfRegisteringStreamSerialize
     }
 
     override fun generateTestValue(): IntegrationUpdate {
-        return IntegrationUpdate(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty())
+        return IntegrationUpdate(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty())
     }
 
 }
