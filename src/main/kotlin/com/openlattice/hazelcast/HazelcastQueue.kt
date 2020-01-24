@@ -56,7 +56,7 @@ class HazelcastQueue<T> internal constructor(val name: String) : TypedQueueIdent
         @JvmField val EMAIL_SPOOL  = HazelcastQueue<RenderableEmailRequest>("EMAIL_SPOOL")
         @JvmField val ID_GENERATION  = HazelcastQueue<UUID>("ID_GENERATION")
         @JvmField val INDEXING = HazelcastQueue<UUID>("INDEXING")
-        @JvmField val INTEGRATION_JOBS = HazelcastQueue<UUID>("INTEGRATION_JOBS")
+        @JvmField val QUEUED_INTEGRATION_JOBS = HazelcastQueue<UUID>("QUEUED_INTEGRATION_JOBS")
         @JvmField val LINKING_CANDIDATES = HazelcastQueue<EntityDataKey>("LINKING_CANDIDATES")
         @JvmField val LINKING_INDEXING = HazelcastQueue<Triple<List<Array<UUID>>, UUID, OffsetDateTime>>("LINKING_INDEXING")
         @JvmField val LINKING_UNINDEXING = HazelcastQueue<Triple<List<Array<UUID>>, UUID, OffsetDateTime>>("LINKING_UNINDEXING")
