@@ -97,7 +97,7 @@ open class EntitySetService(
 
     private val aclKeys = HazelcastMap.ACL_KEYS.getMap( hazelcastInstance )
 
-    
+
     override fun createEntitySet(principal: Principal, entitySet: EntitySet): UUID {
         val entityType = Util.getSafely(entityTypes, entitySet.entityTypeId)
         ensureValidEntitySet(entitySet)
