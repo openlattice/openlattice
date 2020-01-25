@@ -4,5 +4,6 @@ enum class IntegrationStatus {
     IN_PROGRESS,
     SUCCEEDED,
     FAILED,
-    QUEUED
+    QUEUED,
+    FAILED_TO_START
 }
