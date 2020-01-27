@@ -4,15 +4,12 @@ import com.hazelcast.config.InMemoryFormat
 import com.hazelcast.config.MapConfig
 import com.hazelcast.config.MapIndexConfig
 import com.openlattice.hazelcast.HazelcastMap
-import com.openlattice.hazelcast.TestDataFactory2
-import com.openlattice.postgres.PostgresColumn.NAME
-import com.openlattice.postgres.PostgresColumn.STATUS
+import com.openlattice.hazelcast.InternalTestDataFactory
 import com.openlattice.postgres.PostgresTable.INTEGRATION_JOBS
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.ResultSetAdapters.id
 import com.openlattice.postgres.mapstores.AbstractBasePostgresMapstore
 import com.openlattice.shuttle.IntegrationJob
-import com.openlattice.shuttle.IntegrationStatus
 import com.zaxxer.hikari.HikariDataSource
 import org.springframework.stereotype.Component
 import java.sql.PreparedStatement
@@ -49,7 +46,7 @@ class IntegrationJobsMapstore(hds: HikariDataSource) : AbstractBasePostgresMapst
     }
 
     override fun generateTestValue(): IntegrationJob {
-        return TestDataFactory2.integrationJob()
+        return InternalTestDataFactory.integrationJob()
     }
 
     override fun mapToKey(rs: ResultSet): UUID {

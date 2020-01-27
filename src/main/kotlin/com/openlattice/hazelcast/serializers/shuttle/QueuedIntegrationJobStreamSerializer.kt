@@ -3,7 +3,7 @@ package com.openlattice.hazelcast.serializers.shuttle
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.openlattice.hazelcast.StreamSerializerTypeIds
-import com.openlattice.hazelcast.TestDataFactory2
+import com.openlattice.hazelcast.InternalTestDataFactory
 import com.openlattice.hazelcast.serializers.TestableSelfRegisteringStreamSerializer
 import com.openlattice.hazelcast.serializers.UUIDStreamSerializer
 import com.openlattice.shuttle.QueuedIntegrationJob
@@ -42,7 +42,7 @@ class QueuedIntegrationJobStreamSerializer : TestableSelfRegisteringStreamSerial
     }
 
     override fun generateTestValue(): QueuedIntegrationJob {
-        return QueuedIntegrationJob(UUID.randomUUID(), TestDataFactory2.integrationJob())
+        return QueuedIntegrationJob(UUID.randomUUID(), InternalTestDataFactory.integrationJob())
     }
 
 }

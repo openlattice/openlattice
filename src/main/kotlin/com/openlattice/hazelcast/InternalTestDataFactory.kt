@@ -7,7 +7,7 @@ import org.apache.commons.text.CharacterPredicates
 import org.apache.commons.text.RandomStringGenerator
 import java.util.*
 
-class TestDataFactory2 {
+class InternalTestDataFactory {
     companion object {
         private val allowedLetters = arrayOf(charArrayOf('a', 'z'), charArrayOf('A', 'Z'))
         private val allowedDigitsAndLetters = arrayOf(charArrayOf('a', 'z'), charArrayOf('A', 'Z'), charArrayOf('0', '9'))

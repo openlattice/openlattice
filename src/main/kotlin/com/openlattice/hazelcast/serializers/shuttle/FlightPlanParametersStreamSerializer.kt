@@ -4,7 +4,7 @@ import com.dataloom.mappers.ObjectMappers
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.openlattice.hazelcast.StreamSerializerTypeIds
-import com.openlattice.hazelcast.TestDataFactory2
+import com.openlattice.hazelcast.InternalTestDataFactory
 import com.openlattice.hazelcast.serializers.StreamSerializers
 import com.openlattice.hazelcast.serializers.TestableSelfRegisteringStreamSerializer
 import com.openlattice.shuttle.Flight
@@ -68,6 +68,6 @@ class FlightPlanParametersStreamSerializer : TestableSelfRegisteringStreamSerial
     }
 
     override fun generateTestValue(): FlightPlanParameters {
-        return TestDataFactory2.flightPlanParameters()
+        return InternalTestDataFactory.flightPlanParameters()
     }
 }
