@@ -676,31 +676,18 @@ class PostgresEntityDataQueryService(
             val propertyTypesArr = PostgresArrays.createUuidArray(connection, authorizedPropertyTypes.keys)
             val idsArr = PostgresArrays.createUuidArray(connection, entities)
 
-            // Delete entity properties from data table
-            val deletedPropertiesCount = connection
-                    .prepareStatement(deletePropertiesOfEntitiesInEntitySet())
+            // Delete entity and linked entity properties from data table
+            connection
+                    .prepareStatement(deletePropertiesOfEntitiesInEntitySet)
                     .use { ps ->
                         ps.setObject(1, entitySetId)
                         ps.setArray(2, idsArr)
-                        ps.setInt(3, partition)
-                        ps.setArray(4, propertyTypesArr)
+                        ps.setArray(3, idsArr)
+                        ps.setInt(4, partition)
+                        ps.setArray(5, propertyTypesArr)
 
                         ps.executeUpdate()
                     }
-
-            // Delete linked entity properties from data table
-            val deletedLinkedPropertiesCount = connection
-                    .prepareStatement(deletePropertiesOfEntitiesInEntitySet(linking = true))
-                    .use { ps ->
-                        ps.setObject(1, entitySetId)
-                        ps.setArray(2, idsArr)
-                        ps.setInt(3, partition)
-                        ps.setArray(4, propertyTypesArr)
-
-                        ps.executeUpdate()
-                    }
-
-            deletedPropertiesCount + deletedLinkedPropertiesCount
         }
     }
 
@@ -741,27 +728,16 @@ class PostgresEntityDataQueryService(
 
             val idsArr = PostgresArrays.createUuidArray(connection, entities)
 
-            // Delete entity properties from data table
-            val deletedCount = connection.prepareStatement(deleteEntitiesInEntitySet())
+            // Delete entity and linking entity properties from data table
+            connection.prepareStatement(deleteEntitiesInEntitySet)
                     .use { deleteEntities ->
                         deleteEntities.setObject(1, entitySetId)
                         deleteEntities.setArray(2, idsArr)
-                        deleteEntities.setInt(3, partition)
+                        deleteEntities.setArray(3, idsArr)
+                        deleteEntities.setInt(4, partition)
 
                         deleteEntities.executeUpdate()
                     }
-
-            // Delete linked entity properties from data table
-            val deletedLinkedCount = connection.prepareStatement(deleteEntitiesInEntitySet(linking = true))
-                    .use { deleteLinkedEntities ->
-                        deleteLinkedEntities.setObject(1, entitySetId)
-                        deleteLinkedEntities.setArray(2, idsArr)
-                        deleteLinkedEntities.setInt(3, partition)
-
-                        deleteLinkedEntities.executeUpdate()
-                    }
-
-            deletedCount + deletedLinkedCount
         }
     }
 

@@ -571,54 +571,43 @@ internal val deletePropertyInEntitySet = "DELETE FROM ${DATA.name} WHERE ${ENTIT
 internal val deleteEntitySetEntityKeys = "DELETE FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = ? "
 
 /**
- * Preparable SQL deletes all property values of entities in a given entity set in [DATA]
+ * Preparable SQL that deletes selected property values of entities and their linking entities in a given entity set
+ * in [DATA] table.
  *
  * The following bind order is expected:
  *
  * 1. entity set id
- * 2. entity key ids
- *    IF LINKING    checks against ORIGIN_ID
- *    ELSE          checks against ID column
- * 3. partition
- * 4. property type ids
+ * 2. entity key ids (non-linking entities, ID column)
+ * 3. entity key ids (linking entities, ORIGIN_ID column)
+ * 4. partition
+ * 5. property type ids
  */
-internal fun deletePropertiesOfEntitiesInEntitySet(linking: Boolean = false): String {
-    val idsColumn = if (linking) {
-        ORIGIN_ID.name
-    } else {
-        ID_VALUE.name
-    }
-
-    // @formatter:off
-    return "DELETE FROM ${DATA.name} " +
-            "WHERE   ${ENTITY_SET_ID.name} = ? AND " +
-                    "$idsColumn = ANY( ? ) AND " +
-                    "${PARTITION.name} = ? AND " +
-                    "${PROPERTY_TYPE_ID.name} = ANY( ? ) "
+// @formatter:off
+internal val deletePropertiesOfEntitiesInEntitySet =
+        "DELETE FROM ${DATA.name} " +
+        "WHERE ${ENTITY_SET_ID.name} = ? AND " +
+              "( ${ID_VALUE.name} = ANY( ? ) OR ${ORIGIN_ID.name} = ANY( ? ) ) AND " +
+              "${PARTITION.name} = ? AND " +
+              "${PROPERTY_TYPE_ID.name} = ANY( ? ) "
     // @formatter:on
-}
 
 /**
- * Preparable SQL deletes all property values of entities and entity key id in a given entity set in [DATA]
+ * Preparable SQL that deletes all property values and entity key id of entities and their linking entities in a given
+ * entity set in [DATA] table.
  *
  * The following bind order is expected:
  *
  * 1. entity set id
- * 2. entity key ids
- *    IF LINKING    checks against ORIGIN_ID
- *    ELSE          checks against ID column
- * 3. partition
+ * 2. entity key ids (non-linking entities, ID column)
+ * 3. entity key ids (linking entities, ORIGIN_ID column)
+ * 4. partition
  */
-internal fun deleteEntitiesInEntitySet(linking: Boolean = false): String {
-    val idsColumn = if (linking) {
-        ORIGIN_ID.name
-    } else {
-        ID_VALUE.name
-    }
+internal val deleteEntitiesInEntitySet =
+        "DELETE FROM ${DATA.name} " +
+        "WHERE ${ENTITY_SET_ID.name} = ? AND " +
+              "( ${ID_VALUE.name} = ANY( ? ) OR ${ORIGIN_ID.name} = ANY( ? ) ) AND " +
+              "${PARTITION.name} = ? "
 
-    return "DELETE FROM ${DATA.name} " +
-            "WHERE ${ENTITY_SET_ID.name} = ? AND $idsColumn = ANY( ? ) AND ${PARTITION.name} = ? "
-}
 
 /**
  * Preparable SQL deletes all entities in a given entity set in [IDS]
