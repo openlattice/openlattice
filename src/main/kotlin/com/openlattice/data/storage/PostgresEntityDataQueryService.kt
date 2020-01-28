@@ -303,7 +303,7 @@ class PostgresEntityDataQueryService(
                     if (!awsPassthrough) {
                         entityBatch = entityBatch.mapValues {
                             Multimaps.asMap(JsonDeserializer.validateFormatAndNormalize(it.value, authorizedPropertyTypes)
-                                { "Entity set $entitySetId with entity key id ${it.key}" })
+                            { "Entity set $entitySetId with entity key id ${it.key}" })
                         }
                     }
 
@@ -671,24 +671,23 @@ class PostgresEntityDataQueryService(
             authorizedPropertyTypes: Map<UUID, PropertyType>,
             partition: Int
     ): Int {
-        // TODO delete also linking entity entries
         return hds.connection.use { connection ->
 
-
             val propertyTypesArr = PostgresArrays.createUuidArray(connection, authorizedPropertyTypes.keys)
-
             val idsArr = PostgresArrays.createUuidArray(connection, entities)
 
-            // Delete entity properties from data table
-            val ps = connection.prepareStatement(deletePropertiesOfEntitiesInEntitySet)
-            ps.setObject(1, entitySetId)
-            ps.setArray(2, idsArr)
-            ps.setInt(3, partition)
-            ps.setArray(4, propertyTypesArr)
+            // Delete entity and linked entity properties from data table
+            connection
+                    .prepareStatement(deletePropertiesOfEntitiesInEntitySet)
+                    .use { ps ->
+                        ps.setObject(1, entitySetId)
+                        ps.setArray(2, idsArr)
+                        ps.setArray(3, idsArr)
+                        ps.setInt(4, partition)
+                        ps.setArray(5, propertyTypesArr)
 
-            val count = ps.executeUpdate()
-
-            count
+                        ps.executeUpdate()
+                    }
         }
     }
 
@@ -725,20 +724,20 @@ class PostgresEntityDataQueryService(
             entities: Collection<UUID>,
             partition: Int
     ): Int {
-        // TODO also delete linking entities
         return hds.connection.use { connection ->
-
 
             val idsArr = PostgresArrays.createUuidArray(connection, entities)
 
-            // Delete entity properties from data table
-            val ps = connection.prepareStatement(deleteEntitiesInEntitySet)
-            ps.setObject(1, entitySetId)
-            ps.setArray(2, idsArr)
-            ps.setInt(3, partition)
+            // Delete entity and linking entity properties from data table
+            connection.prepareStatement(deleteEntitiesInEntitySet)
+                    .use { deleteEntities ->
+                        deleteEntities.setObject(1, entitySetId)
+                        deleteEntities.setArray(2, idsArr)
+                        deleteEntities.setArray(3, idsArr)
+                        deleteEntities.setInt(4, partition)
 
-            val count = ps.executeUpdate()
-            count
+                        deleteEntities.executeUpdate()
+                    }
         }
     }
 
