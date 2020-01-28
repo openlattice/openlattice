@@ -369,14 +369,6 @@ val upsertEntitiesSql = "UPDATE ${IDS.name} " +
         "RETURNING ${ENTITY_SET_ID.name},${ID.name},${PARTITION.name},${LINKING_ID.name} "
 // @formatter:on
 
-/**
- * Preparable sql to lock entities with the following bind order:
- * 1. entity key ids
- * 2. partition
- */
-internal val lockEntitiesSql = "SELECT 1 FROM ${IDS.name} " +
-        "WHERE ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ? " +
-        "FOR UPDATE"
 
 /**
  * Preparable SQL that upserts a version and sets last write to current datetime for all entities in a given entity set
@@ -585,11 +577,26 @@ internal val deleteEntitySetEntityKeys = "DELETE FROM ${IDS.name} WHERE ${ENTITY
  *
  * 1. entity set id
  * 2. entity key ids
+ *    IF LINKING    checks against ORIGIN_ID
+ *    ELSE          checks against ID column
  * 3. partition
  * 4. property type ids
  */
-internal val deletePropertiesOfEntitiesInEntitySet = "DELETE FROM ${DATA.name} " +
-        "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ? AND ${PROPERTY_TYPE_ID.name} = ANY(?) "
+internal fun deletePropertiesOfEntitiesInEntitySet(linking: Boolean = false): String {
+    val idsColumn = if (linking) {
+        ORIGIN_ID.name
+    } else {
+        ID_VALUE.name
+    }
+
+    // @formatter:off
+    return "DELETE FROM ${DATA.name} " +
+            "WHERE   ${ENTITY_SET_ID.name} = ? AND " +
+                    "$idsColumn = ANY( ? ) AND " +
+                    "${PARTITION.name} = ? AND " +
+                    "${PROPERTY_TYPE_ID.name} = ANY( ? ) "
+    // @formatter:on
+}
 
 /**
  * Preparable SQL deletes all property values of entities and entity key id in a given entity set in [DATA]
@@ -598,10 +605,20 @@ internal val deletePropertiesOfEntitiesInEntitySet = "DELETE FROM ${DATA.name} "
  *
  * 1. entity set id
  * 2. entity key ids
+ *    IF LINKING    checks against ORIGIN_ID
+ *    ELSE          checks against ID column
  * 3. partition
  */
-internal val deleteEntitiesInEntitySet = "DELETE FROM ${DATA.name} " +
-        "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ? "
+internal fun deleteEntitiesInEntitySet(linking: Boolean = false): String {
+    val idsColumn = if (linking) {
+        ORIGIN_ID.name
+    } else {
+        ID_VALUE.name
+    }
+
+    return "DELETE FROM ${DATA.name} " +
+            "WHERE ${ENTITY_SET_ID.name} = ? AND $idsColumn = ANY( ? ) AND ${PARTITION.name} = ? "
+}
 
 /**
  * Preparable SQL deletes all entities in a given entity set in [IDS]
@@ -719,45 +736,6 @@ fun upsertPropertyValueSql(propertyType: PropertyType): String {
             "END"
 }
 
-/**
- * This function generates preparable sql with the following bind order:
- *
- * 1.  ENTITY_SET_ID
- * 2.  ID_VALUE         --> expects linking ID
- * 3.  PARTITION
- * 4.  PROPERTY_TYPE_ID
- * 5.  HASH
- *     LAST_WRITE = now()
- * 6.  VERSION,
- * 7.  VERSIONS
- * 8.  Value Column
- * 9. ORIGIN ID        --> expects entity key id
- */
-fun upsertPropertyValueLinkingRowSql(propertyType: PropertyType): String {
-    val insertColumn = getColumnDefinition(propertyType.postgresIndexType, propertyType.datatype)
-    val metadataColumnsSql = listOf(
-            ENTITY_SET_ID,
-            ID_VALUE,
-            PARTITION,
-            PROPERTY_TYPE_ID,
-            HASH,
-            LAST_WRITE,
-            VERSION,
-            VERSIONS
-    ).joinToString(",") { it.name }
-// @formatter:off
-    return "INSERT INTO ${DATA.name} ($metadataColumnsSql,${insertColumn.name},${ORIGIN_ID.name}) " +
-            "VALUES (?,?,?,?,?,now(),?,?,?,?) " +
-            "ON CONFLICT ($primaryKeyColumnNamesAsString) " +
-            "DO UPDATE SET " +
-            "${VERSIONS.name} = ${DATA.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
-            "${LAST_WRITE.name} = GREATEST(${DATA.name}.${LAST_WRITE.name},EXCLUDED.${LAST_WRITE.name}), " +
-            "${VERSION.name} = CASE WHEN abs(${DATA.name}.${VERSION.name}) <= EXCLUDED.${VERSION.name} " +
-                "THEN EXCLUDED.${VERSION.name} " +
-                "ELSE ${DATA.name}.${VERSION.name} " +
-            "END"
-    // @formatter:on
-}
 
 /**
  * Used to C(~RUD~) a link from linker
@@ -844,7 +822,7 @@ private fun selectPropertyColumn(propertyType: PropertyType): String {
 
 private fun selectPropertyArray(propertyType: PropertyType): String {
     val propertyColumnName = propertyColumnName(propertyType)
-    return if( propertyType.isMultiValued ) {
+    return if (propertyType.isMultiValued) {
         "array_agg($propertyColumnName) FILTER (WHERE $propertyColumnName IS NOT NULL) as $propertyColumnName"
     } else {
         "(array_agg($propertyColumnName))[1] FILTER (WHERE $propertyColumnName IS NOT NULL) as $propertyColumnName"

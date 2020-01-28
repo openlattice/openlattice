@@ -303,7 +303,7 @@ class PostgresEntityDataQueryService(
                     if (!awsPassthrough) {
                         entityBatch = entityBatch.mapValues {
                             Multimaps.asMap(JsonDeserializer.validateFormatAndNormalize(it.value, authorizedPropertyTypes)
-                                { "Entity set $entitySetId with entity key id ${it.key}" })
+                            { "Entity set $entitySetId with entity key id ${it.key}" })
                         }
                     }
 
@@ -671,24 +671,36 @@ class PostgresEntityDataQueryService(
             authorizedPropertyTypes: Map<UUID, PropertyType>,
             partition: Int
     ): Int {
-        // TODO delete also linking entity entries
         return hds.connection.use { connection ->
 
-
             val propertyTypesArr = PostgresArrays.createUuidArray(connection, authorizedPropertyTypes.keys)
-
             val idsArr = PostgresArrays.createUuidArray(connection, entities)
 
             // Delete entity properties from data table
-            val ps = connection.prepareStatement(deletePropertiesOfEntitiesInEntitySet)
-            ps.setObject(1, entitySetId)
-            ps.setArray(2, idsArr)
-            ps.setInt(3, partition)
-            ps.setArray(4, propertyTypesArr)
+            val deletedPropertiesCount = connection
+                    .prepareStatement(deletePropertiesOfEntitiesInEntitySet())
+                    .use { ps ->
+                        ps.setObject(1, entitySetId)
+                        ps.setArray(2, idsArr)
+                        ps.setInt(3, partition)
+                        ps.setArray(4, propertyTypesArr)
 
-            val count = ps.executeUpdate()
+                        ps.executeUpdate()
+                    }
 
-            count
+            // Delete linked entity properties from data table
+            val deletedLinkedPropertiesCount = connection
+                    .prepareStatement(deletePropertiesOfEntitiesInEntitySet(linking = true))
+                    .use { ps ->
+                        ps.setObject(1, entitySetId)
+                        ps.setArray(2, idsArr)
+                        ps.setInt(3, partition)
+                        ps.setArray(4, propertyTypesArr)
+
+                        ps.executeUpdate()
+                    }
+
+            deletedPropertiesCount + deletedLinkedPropertiesCount
         }
     }
 
@@ -725,20 +737,31 @@ class PostgresEntityDataQueryService(
             entities: Collection<UUID>,
             partition: Int
     ): Int {
-        // TODO also delete linking entities
         return hds.connection.use { connection ->
-
 
             val idsArr = PostgresArrays.createUuidArray(connection, entities)
 
             // Delete entity properties from data table
-            val ps = connection.prepareStatement(deleteEntitiesInEntitySet)
-            ps.setObject(1, entitySetId)
-            ps.setArray(2, idsArr)
-            ps.setInt(3, partition)
+            val deletedCount = connection.prepareStatement(deleteEntitiesInEntitySet())
+                    .use { deleteEntities ->
+                        deleteEntities.setObject(1, entitySetId)
+                        deleteEntities.setArray(2, idsArr)
+                        deleteEntities.setInt(3, partition)
 
-            val count = ps.executeUpdate()
-            count
+                        deleteEntities.executeUpdate()
+                    }
+
+            // Delete linked entity properties from data table
+            val deletedLinkedCount = connection.prepareStatement(deleteEntitiesInEntitySet(linking = true))
+                    .use { deleteLinkedEntities ->
+                        deleteLinkedEntities.setObject(1, entitySetId)
+                        deleteLinkedEntities.setArray(2, idsArr)
+                        deleteLinkedEntities.setInt(3, partition)
+
+                        deleteLinkedEntities.executeUpdate()
+                    }
+
+            deletedCount + deletedLinkedCount
         }
     }
 
