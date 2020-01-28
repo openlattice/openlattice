@@ -96,17 +96,13 @@ class AssemblerConnectionManager(
     }
 
     companion object {
+        const val INTEGRATIONS_SCHEMA = "integrations"
+        const val PUBLIC_ROLE = "public"
+
         @JvmStatic
         val MATERIALIZED_VIEWS_SCHEMA = "openlattice"
         @JvmStatic
-        val PRODUCTION_FOREIGN_SCHEMA = "prod"
-        @JvmStatic
-        val PRODUCTION_VIEWS_SCHEMA = "olviews"  //This is the scheme that is created on production server to hold entity set views
-        @JvmStatic
         val PUBLIC_SCHEMA = "public"
-
-        @JvmStatic
-        val PRODUCTION_SERVER = "olprod"
 
         @JvmStatic
         fun entitySetNameTableName(entitySetName: String): String {
@@ -128,7 +124,7 @@ class AssemblerConnectionManager(
         }
     }
 
-    fun cacheLoader(): CacheLoader<String,HikariDataSource> {
+    fun cacheLoader(): CacheLoader<String, HikariDataSource> {
         return CacheLoader.from { dbName ->
             createDataSource(dbName!!, assemblerConfiguration.server.clone() as Properties, assemblerConfiguration.ssl)
         }
@@ -138,7 +134,10 @@ class AssemblerConnectionManager(
         return perDbCache.get(dbName)
     }
 
-    @Deprecated(message = "doesn't use the connection pool cache", replaceWith = ReplaceWith(expression = "#connect(String)"))
+    @Deprecated(
+            message = "doesn't use the connection pool cache",
+            replaceWith = ReplaceWith(expression = "#connect(String)")
+    )
     fun connect(dbName: String, account: MaterializedViewAccount): HikariDataSource {
         val config = assemblerConfiguration.server.clone() as Properties
         config["username"] = account.username
@@ -171,6 +170,7 @@ class AssemblerConnectionManager(
         connect(dbName).let { dataSource ->
             configureRolesInDatabase(dataSource)
             createOpenlatticeSchema(dataSource)
+            createIntegrationsSchema(dataSource)
             configureOrganizationUser(organizationId, dataSource)
             addMembersToOrganization(dbName, dataSource, organization.members)
 
@@ -187,11 +187,19 @@ class AssemblerConnectionManager(
         }
     }
 
+    private fun createIntegrationsSchema(dataSource: HikariDataSource) {
+        dataSource.connection.use { connection ->
+            connection.createStatement().use { statement ->
+                statement.execute("CREATE SCHEMA IF NOT EXISTS $INTEGRATIONS_SCHEMA")
+            }
+        }
+    }
+
     private fun configureServerUser(dataSource: HikariDataSource) {
         dataSource.connection.use { connection ->
             connection.createStatement().use { statement ->
                 statement.execute(
-                        "ALTER ROLE ${assemblerConfiguration.server["username"]} SET search_path to $PRODUCTION_FOREIGN_SCHEMA,$MATERIALIZED_VIEWS_SCHEMA,$PUBLIC_SCHEMA"
+                        "ALTER ROLE ${assemblerConfiguration.server["username"]} SET search_path to $INTEGRATIONS_SCHEMA,$MATERIALIZED_VIEWS_SCHEMA,$PUBLIC_SCHEMA"
                 )
             }
         }
@@ -266,7 +274,7 @@ class AssemblerConnectionManager(
 
         val grantRole = "GRANT ${quote(dbRole)} TO $dbOrgUser"
         val createDb = "CREATE DATABASE $db"
-        val revokeAll = "REVOKE ALL ON DATABASE $db FROM $PUBLIC_SCHEMA"
+        val revokeAll = "REVOKE ALL ON DATABASE $db FROM $PUBLIC_ROLE"
 
         //We connect to default db in order to do initial db setup
 
@@ -277,8 +285,10 @@ class AssemblerConnectionManager(
                 statement.execute(grantRole)
                 if (!exists(dbName)) {
                     statement.execute(createDb)
-                    statement.execute("GRANT ${MEMBER_ORG_DATABASE_PERMISSIONS.joinToString(", ")} " +
-                            "ON DATABASE $db TO $dbOrgUser")
+                    statement.execute(
+                            "GRANT ${MEMBER_ORG_DATABASE_PERMISSIONS.joinToString(", ")} " +
+                                    "ON DATABASE $db TO $dbOrgUser"
+                    )
                 }
                 statement.execute(revokeAll)
                 return@use
@@ -349,8 +359,10 @@ class AssemblerConnectionManager(
                     // TODO: when roles are ready grant select to member role of org
                     val selectGrantedResults = grantSelectForEdges(stmt, tableName, entitySetIds, authorizedPrincipals)
 
-                    logger.info("Granted select for ${selectGrantedResults.filter { it >= 0 }.size} users/roles " +
-                            "on materialized view $tableName")
+                    logger.info(
+                            "Granted select for ${selectGrantedResults.filter { it >= 0 }.size} users/roles " +
+                                    "on materialized view $tableName"
+                    )
                     return@use
                 }
             }
@@ -362,8 +374,10 @@ class AssemblerConnectionManager(
             authorizedPropertyTypesByEntitySet: Map<EntitySet, Map<UUID, PropertyType>>,
             authorizedPropertyTypesOfPrincipalsByEntitySetId: Map<UUID, Map<Principal, Set<PropertyType>>>
     ): Map<UUID, Set<OrganizationEntitySetFlag>> {
-        logger.info("Materializing entity sets ${authorizedPropertyTypesByEntitySet.keys.map { it.id }} in " +
-                "organization $organizationId database.")
+        logger.info(
+                "Materializing entity sets ${authorizedPropertyTypesByEntitySet.keys.map { it.id }} in " +
+                        "organization $organizationId database."
+        )
 
         materializeAllTimer.time().use {
             connect(buildOrganizationDatabaseName(organizationId)).let { datasource ->
@@ -424,8 +438,10 @@ class AssemblerConnectionManager(
                         entitySet.id,
                         authorizedPropertyTypesOfPrincipals
                 )
-                logger.info("Granted select for ${selectGrantedResults.filter { it >= 0 }.size} users/roles " +
-                        "on materialized view $tableName")
+                logger.info(
+                        "Granted select for ${selectGrantedResults.filter { it >= 0 }.size} users/roles " +
+                                "on materialized view $tableName"
+                )
             }
         }
     }
@@ -434,7 +450,8 @@ class AssemblerConnectionManager(
             connection: Connection,
             tableName: String,
             entitySetId: UUID,
-            materializablePropertyTypes: Map<UUID, PropertyType>) {
+            materializablePropertyTypes: Map<UUID, PropertyType>
+    ) {
         val selectColumns = getSelectColumnsForMaterializedView(materializablePropertyTypes.values)
                 .joinToString(",")
 
@@ -534,8 +551,10 @@ class AssemblerConnectionManager(
         val postgresUserName = when (principal.type) {
             PrincipalType.USER -> buildPostgresUsername(securePrincipalsManager.getPrincipal(principal.id))
             PrincipalType.ROLE -> buildPostgresRoleName(securePrincipalsManager.lookupRole(principal))
-            else -> throw IllegalArgumentException("Only ${PrincipalType.USER} and ${PrincipalType.ROLE} principal " +
-                    "types can be granted select.")
+            else -> throw IllegalArgumentException(
+                    "Only ${PrincipalType.USER} and ${PrincipalType.ROLE} principal " +
+                            "types can be granted select."
+            )
         }
 
         return grantSelectSql(entitySetTableName, quote(postgresUserName), columns)
@@ -605,8 +624,10 @@ class AssemblerConnectionManager(
                 stmt.executeUpdate("ALTER MATERIALIZED VIEW IF EXISTS $oldTableName RENAME TO $newTableName")
             }
         }
-        logger.info("Renamed materialized view of entity set with old name $oldName to new name $newName in " +
-                "organization $organizationId")
+        logger.info(
+                "Renamed materialized view of entity set with old name $oldName to new name $newName in " +
+                        "organization $organizationId"
+        )
     }
 
     /**
@@ -742,14 +763,18 @@ class AssemblerConnectionManager(
         //First we will grant all privilege which for database is connect, temporary, and create schema
         target.connection.use { connection ->
             connection.createStatement().use { statement ->
-                statement.execute("GRANT ${MEMBER_ORG_DATABASE_PERMISSIONS.joinToString(", ")} " +
-                        "ON DATABASE ${quote(dbName)} TO $userIdsSql")
+                statement.execute(
+                        "GRANT ${MEMBER_ORG_DATABASE_PERMISSIONS.joinToString(", ")} " +
+                                "ON DATABASE ${quote(dbName)} TO $userIdsSql"
+                )
             }
         }
 
         dataSource.connection.use { connection ->
             connection.createStatement().use { statement ->
-                logger.info("Granting usage on $MATERIALIZED_VIEWS_SCHEMA schema and revoking from $PUBLIC_SCHEMA schema for users: $userIds")
+                logger.info(
+                        "Granting usage on $MATERIALIZED_VIEWS_SCHEMA schema and revoking from $PUBLIC_SCHEMA schema for users: $userIds"
+                )
                 statement.execute("GRANT USAGE ON SCHEMA $MATERIALIZED_VIEWS_SCHEMA TO $userIdsSql")
                 //Set the search path for the user
                 logger.info("Setting search_path to $MATERIALIZED_VIEWS_SCHEMA for users $userIds")
@@ -764,14 +789,20 @@ class AssemblerConnectionManager(
     private fun revokeConnectAndSchemaUsage(dataSource: HikariDataSource, dbName: String, userIds: List<String>) {
         val userIdsSql = userIds.joinToString(", ")
 
-        logger.info("Removing users $userIds from database $dbName, schema usage and all privileges on all tables in schema $MATERIALIZED_VIEWS_SCHEMA")
+        logger.info(
+                "Removing users $userIds from database $dbName, schema usage and all privileges on all tables in schema $MATERIALIZED_VIEWS_SCHEMA"
+        )
 
         dataSource.connection.use { conn ->
             conn.createStatement().use { stmt ->
-                stmt.execute("REVOKE ${MEMBER_ORG_DATABASE_PERMISSIONS.joinToString(", ")} " +
-                        "ON DATABASE ${quote(dbName)} FROM $userIdsSql")
+                stmt.execute(
+                        "REVOKE ${MEMBER_ORG_DATABASE_PERMISSIONS.joinToString(", ")} " +
+                                "ON DATABASE ${quote(dbName)} FROM $userIdsSql"
+                )
                 stmt.execute("REVOKE ALL PRIVILEGES ON SCHEMA $MATERIALIZED_VIEWS_SCHEMA FROM $userIdsSql")
-                stmt.execute("REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA $MATERIALIZED_VIEWS_SCHEMA FROM $userIdsSql")
+                stmt.execute(
+                        "REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA $MATERIALIZED_VIEWS_SCHEMA FROM $userIdsSql"
+                )
             }
         }
     }
