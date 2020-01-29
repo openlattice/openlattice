@@ -74,7 +74,7 @@ if (INDEXER_XMX == 'null' || INDEXER_XMX == null || INDEXER_XMX == "") {
 }
 
 if (INDEXER_ARGS == 'null' || INDEXER_ARGS == null || INDEXER_ARGS == "") {
-    INDEXER_ARGS = 'local postgres medialocal auditlocal dl4j'
+    INDEXER_ARGS = 'local postgres medialocal auditlocal'
 }
 
 if (PARALLEL == 'null' || PARALLEL == null || PARALLEL == "") {
@@ -145,7 +145,6 @@ dependencies {
     testCompileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugs_annotations_version}"
 
     compile "org.ow2.asm:asm:${asm_version}"
-    compile "org.nd4j:nd4j-cuda-9.2-platform:${deeplearning4j}"
 
     if (project.hasProperty('developmentMode') && project.developmentMode) {
         logger.quiet(project.name + " using project dependencies.")
