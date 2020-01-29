@@ -185,7 +185,7 @@ class Assembler(
 
     @Subscribe
     fun handleEntitySetCreated(entitySetCreatedEvent: EntitySetCreatedEvent) {
-        createOrUpdateProductionViewOfEntitySet(entitySetCreatedEvent.entitySet.id)
+
     }
 
     @Subscribe
@@ -202,7 +202,6 @@ class Assembler(
             deleteEntitySetAssemblies(entitySetAssembliesToDelete)
         }
 
-        dropProductionViewOfEntitySet(entitySetDeletedEvent.entitySetId)
     }
 
     @Subscribe
@@ -254,7 +253,7 @@ class Assembler(
         // when property type is added to entity set, we need to update (re-create) the production view (olviews) of the
         // entity set in openlattice db
         if (isEntitySetMaterialized(propertyTypesAddedToEntitySetEvent.entitySet.id)) {
-            createOrUpdateProductionViewOfEntitySet(propertyTypesAddedToEntitySetEvent.entitySet.id)
+
         }
     }
 
@@ -264,7 +263,7 @@ class Assembler(
         // in openlattice db
         if (propertyTypesInEntitySetUpdatedEvent.fqnUpdated
                 && isEntitySetMaterialized(propertyTypesInEntitySetUpdatedEvent.entitySetId)) {
-            createOrUpdateProductionViewOfEntitySet(propertyTypesInEntitySetUpdatedEvent.entitySetId)
+
         }
     }
 
@@ -273,7 +272,7 @@ class Assembler(
         // when normal entity set is added to linking entity set, we need to update (re-create) the production view
         // (olviews) of the entity set in openlattice db
         if (isEntitySetMaterialized(linkedEntitySetAddedEvent.linkingEntitySetId)) {
-            createOrUpdateProductionViewOfEntitySet(linkedEntitySetAddedEvent.linkingEntitySetId)
+
         }
     }
 
@@ -281,8 +280,10 @@ class Assembler(
     fun handleLinkedEntitySetRemoved(linkedEntitySetRemovedEvent: LinkedEntitySetRemovedEvent) {
         // when normal entity set is removed from linking entity set, we need to update (re-create) the production view
         // (olviews) of the entity set in openlattice db
+        // TODO: This is a tricky case to handle for transporter, without having to completely recreate the
+        // linked dataset.
         if (isEntitySetMaterialized(linkedEntitySetRemovedEvent.linkingEntitySetId)) {
-            createOrUpdateProductionViewOfEntitySet(linkedEntitySetRemovedEvent.linkingEntitySetId)
+
         }
     }
 
@@ -564,47 +565,6 @@ class Assembler(
 
             materializeEdges(organizationId)
         }
-    }
-
-    private fun createOrUpdateProductionViewOfEntitySet(entitySetId: UUID) {
-        val entitySet = entitySets.getValue(entitySetId)
-        val entitySetPartitions = partitionManager.getEntitySetPartitions(entitySetId)
-        val authorizedPropertyTypes = propertyTypes
-                .getAll(entityTypes.getValue(entitySets.getValue(entitySetId).entityTypeId).properties)
-                .filter { it.key != IdConstants.ID_ID.id } //filter out @id
-
-        val selectPropertiesSql = selectPropertyTypesOfEntitySetColumnar(authorizedPropertyTypes, entitySet.isLinking)
-        // Since the sql is a preparable statement, but create statements don't allow them, we need to replace ?
-        val entitySetIdClause = if (entitySet.isLinking) " '{${entitySet.linkedEntitySets.joinToString()}}' " else " '{$entitySetId}' "
-        val partitionsClause = " '{${entitySetPartitions.joinToString()}}' "
-        val preparedSelectPropertiesSql = selectPropertiesSql
-                .replaceFirst("?", entitySetIdClause)
-                .replaceFirst("?", partitionsClause)
-
-        val entitySetViewName = entitySetViewName(entitySetId)
-
-        //Drop and recreate the view with the latest schema
-        hds.connection.use { conn ->
-            conn.createStatement().use { stmt ->
-                stmt.execute("DROP VIEW IF EXISTS $entitySetViewName")
-                stmt.execute("CREATE OR REPLACE VIEW $entitySetViewName AS $preparedSelectPropertiesSql")
-            }
-        }
-
-        logger.info("Created or updated view of $entitySetId in ${AssemblerConnectionManager.PRODUCTION_VIEWS_SCHEMA}")
-    }
-
-    private fun dropProductionViewOfEntitySet(entitySetId: UUID) {
-        hds.connection.use { conn ->
-            conn.createStatement().use { stmt ->
-                stmt.execute("DROP VIEW IF EXISTS ${entitySetViewName(entitySetId)}")
-            }
-        }
-        logger.info("Dropped view of entity set  $entitySetId in ${AssemblerConnectionManager.PRODUCTION_VIEWS_SCHEMA}")
-    }
-
-    private fun entitySetViewName(entitySetId: UUID): String {
-        return "${AssemblerConnectionManager.PRODUCTION_VIEWS_SCHEMA}.${DataTables.quote(entitySetId.toString())}"
     }
 
     fun getOrganizationIntegrationAccount(organizationId: UUID): OrganizationIntegrationAccount {
