@@ -48,8 +48,8 @@ data class UpdateMaterializedEntitySetProcessor(
         materializedEntitySet ?: throw IllegalStateException("Encountered null materialized entity set while trying " +
                 "to update materialized view for entity set ${entitySet.id} in organization $organizationId.")
 
-        acm?.updateMaterializedEntitySet(organizationId, entitySet, materializablePropertyTypes)
-                ?: throw IllegalStateException(AssemblerConnectionManagerDependent.NOT_INITIALIZED)
+
+//                ?: throw IllegalStateException(AssemblerConnectionManagerDependent.NOT_INITIALIZED)
 
         // Clear data and permission unsync flag
         materializedEntitySet.flags.removeAll(

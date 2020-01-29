@@ -47,8 +47,8 @@ data class MaterializeEdgesProcessor(val authorizedPrincipals: Set<Principal>)
             throw IllegalStateException("Encountered null assembly while trying to materialize edges for " +
                     "organization $organizationId.")
         } else {
-            acm?.materializeEdges(organizationId, assembly.materializedEntitySets.keys, authorizedPrincipals)
-                    ?: throw IllegalStateException(AssemblerConnectionManagerDependent.NOT_INITIALIZED)
+
+            //        ?: throw IllegalStateException(AssemblerConnectionManagerDependent.NOT_INITIALIZED)
         }
 
         return null
