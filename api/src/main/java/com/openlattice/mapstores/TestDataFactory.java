@@ -19,6 +19,7 @@
 package com.openlattice.mapstores;
 
 import com.google.common.collect.*;
+import com.openlattice.IdConstants;
 import com.openlattice.apps.App;
 import com.openlattice.apps.AppConfigKey;
 import com.openlattice.apps.AppRole;
@@ -265,7 +266,8 @@ public final class TestDataFactory {
                 randomAlphanumeric( 5 ),
                 randomAlphanumeric( 5 ),
                 Optional.of( randomAlphanumeric( 5 ) ),
-                ImmutableSet.of( email(), email() ) );
+                ImmutableSet.of( email(), email() ),
+                IdConstants.GLOBAL_ORGANIZATION_ID.getId() );
     }
 
     public static PropertyType datePropertyType() {
@@ -294,11 +296,18 @@ public final class TestDataFactory {
                 Optional.of( indexType() ) );
     }
 
-    public static PropertyType propertyType() {
-        return propertyType( indexType() );
+    public static PropertyType enumType() {
+        return propertyType( indexType(), true );
     }
 
-    public static PropertyType propertyType( IndexType postgresIndexType ) {
+    public static PropertyType propertyType() {
+        return propertyType( indexType(), false );
+    }
+
+    public static PropertyType propertyType( IndexType postgresIndexType, boolean isEnumType ) {
+        Optional<Set<String>> enumValues = isEnumType ?
+                Optional.of( Sets.newHashSet( RandomStringUtils.random( 5 ), RandomStringUtils.random( 5 ) ) ) :
+                Optional.empty();
         return new PropertyType(
                 UUID.randomUUID(),
                 fqn(),
@@ -306,6 +315,7 @@ public final class TestDataFactory {
                 Optional.of( randomAlphanumeric( 5 ) ),
                 ImmutableSet.of(),
                 EdmPrimitiveTypeKind.String,
+                enumValues,
                 Optional.of( r.nextBoolean() ),
                 Optional.of( analyzer() ),
                 Optional.of( postgresIndexType ) );

@@ -32,7 +32,7 @@ constructor(
         @JsonProperty(SerializationConstants.ENTITY_TYPE_COLLECTION_ID) val entityTypeCollectionId: UUID,
         @JsonProperty(SerializationConstants.TEMPLATE) var template: MutableMap<UUID, UUID>,
         @JsonProperty(SerializationConstants.CONTACTS) var contacts: Set<String>,
-        @JsonProperty(SerializationConstants.ORGANIZATION_ID) var organizationId: UUID = IdConstants.GLOBAL_ORGANIZATION_ID.id
+        @JsonProperty(SerializationConstants.ORGANIZATION_ID) var organizationId: UUID
 ) : AbstractSecurableObject(id, title, description) {
 
 
@@ -44,7 +44,7 @@ constructor(
             entityTypeCollectionId: UUID,
             template: MutableMap<UUID, UUID>,
             contacts: Set<String>,
-            organizationId: UUID = IdConstants.GLOBAL_ORGANIZATION_ID.id
+            organizationId: UUID
     ) : this(Optional.of<UUID>(id), name, title, description, entityTypeCollectionId, template, contacts, organizationId)
 
     @JsonIgnore

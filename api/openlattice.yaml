@@ -3985,6 +3985,10 @@ components:
           type: array
           items:
             type: integer
+        enumValues:
+          type: array
+          items:
+            type: string
     propertyUsageSummary:
       type: object
       properties:

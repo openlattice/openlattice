@@ -19,18 +19,16 @@
 package com.openlattice.search;
 
 import com.google.common.collect.SetMultimap;
+import com.openlattice.data.requests.NeighborEntityDetails;
 import com.openlattice.data.requests.NeighborEntityIds;
+import com.openlattice.edm.EntitySet;
 import com.openlattice.search.requests.*;
+import retrofit2.http.*;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-
-import com.openlattice.data.requests.NeighborEntityDetails;
-import com.openlattice.edm.EntitySet;
-
-import retrofit2.http.*;
 
 public interface SearchApi {
     /*
