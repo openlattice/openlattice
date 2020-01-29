@@ -29,10 +29,13 @@ import com.openlattice.tasks.HazelcastFixedRateTask
 import com.openlattice.tasks.HazelcastTaskDependencies
 import com.openlattice.tasks.Task
 import org.slf4j.LoggerFactory
+import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
+import kotlin.streams.asStream
 
 const val REFRESH_INTERVAL_MILLIS = 120_000L
 private const val DEFAULT_PAGE_SIZE = 100
+private const val MAX_JOBS = 8
 private val logger = LoggerFactory.getLogger(Auth0SyncTask::class.java)
 
 
@@ -42,6 +45,7 @@ private val logger = LoggerFactory.getLogger(Auth0SyncTask::class.java)
  *
  */
 class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies>, HazelcastTaskDependencies {
+    private val syncSemaphore = Semaphore(MAX_JOBS)
     override fun getDependenciesClass(): Class<Auth0SyncTaskDependencies> {
         return Auth0SyncTaskDependencies::class.java
     }
@@ -64,36 +68,26 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies>, Hazelca
 
     override fun runTask() {
         val ds = getDependency()
-
-        logger.info("Refreshing user list from Auth0.")
+        logger.info("Synchronizing users.")
         try {
-            var page = 0
-            var pageOfUsers = getUsersPage(ds.managementApi, page++).items
-            require(pageOfUsers.isNotEmpty()) { "No users found." }
-            while (pageOfUsers.isNotEmpty()) {
-                logger.info("Loading page {} of {} auth0 users", page-1, pageOfUsers.size)
-                pageOfUsers
-                        .parallelStream()
-                        .forEach(ds.users::syncUser)
+            ds.userListingService
+                    .getUsers()
+                    .map {
+                        syncSemaphore.acquire()
+                        ds.executor.submit { ds.users.syncUser(it) }
+                    }
+                    .forEach {
+                        it.get()
+                        syncSemaphore.release()
+                    }
 
-
-                pageOfUsers = getUsersPage(ds.managementApi, page++).items
-            }
         } catch (ex: Exception) {
-            logger.error("Retrofit called failed during auth0 sync task.", ex)
+            logger.error("Unable to synchronize users", ex)
             return
         }
 
     }
 
-    private fun getUsersPage(managementApi: ManagementAPI, page: Int, pageSize: Int = DEFAULT_PAGE_SIZE): UsersPage {
-        return managementApi.users().list(
-                UserFilter()
-                        .withSearchEngine("v3")
-                        .withFields("user_id,email,nickname,app_metadata,identities",true)
-                        .withPage(page, pageSize)
-        ).execute()
-    }
 
 }
 

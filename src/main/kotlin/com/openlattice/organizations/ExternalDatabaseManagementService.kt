@@ -25,7 +25,6 @@ import com.openlattice.organizations.mapstores.ORGANIZATION_ID_INDEX
 import com.openlattice.organizations.mapstores.TABLE_ID_INDEX
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.postgres.*
-
 import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.ResultSetAdapters.*
 import com.openlattice.postgres.streams.BasePostgresIterable
@@ -56,7 +55,6 @@ class ExternalDatabaseManagementService(
 
     private val organizationExternalDatabaseColumns = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_COLUMN.getMap( hazelcastInstance )
     private val organizationExternalDatabaseTables = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_TABLE.getMap( hazelcastInstance )
-    private val hbaAuthenticationRecordsMapstore = HazelcastMap.HBA_AUTHENTICATION_RECORDS.getMap( hazelcastInstance )
     private val securableObjectTypes = HazelcastMap.SECURABLE_OBJECT_TYPES.getMap( hazelcastInstance )
     private val organizations = HazelcastMap.ORGANIZATIONS.getMap( hazelcastInstance )
     private val aces = HazelcastMap.PERMISSIONS.getMap( hazelcastInstance )

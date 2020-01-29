@@ -620,14 +620,16 @@ public class SearchService {
         logger.info( "Edge and neighbor entity key ids collected in {} ms", sw1.elapsed( TimeUnit.MILLISECONDS ) );
         sw1.reset().start();
 
-        ListMultimap<UUID, Map<FullQualifiedName, Set<Object>>> entitiesByEntitySetId = dataManager
+        final var entitiesByEntitySetId = dataManager
                 .getEntitiesAcrossEntitySets( entitySetIdToEntityKeyId, entitySetsIdsToAuthorizedProps );
         logger.info( "Get entities across entity sets query finished in {} ms", sw1.elapsed( TimeUnit.MILLISECONDS ) );
         sw1.reset().start();
 
         Map<UUID, Map<FullQualifiedName, Set<Object>>> entities = Maps.newHashMap();
-        entitiesByEntitySetId.entries().forEach( entry -> entities
-                .put( getEntityKeyId( entry.getValue() ), entry.getValue() ) );
+        entitiesByEntitySetId.values().forEach( entries ->
+                entries.forEach( entry ->
+                        entities.put( getEntityKeyId( entry ), entry ) )
+                );
 
         Map<UUID, List<NeighborEntityDetails>> entityNeighbors = Maps.newConcurrentMap();
 
