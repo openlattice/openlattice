@@ -1,5 +1,6 @@
 package com.openlattice.apps;
 
+import com.openlattice.apps.historical.HistoricalAppConfig;
 import com.openlattice.authorization.Permission;
 import com.openlattice.edm.requests.MetadataUpdate;
 import retrofit2.http.*;
@@ -86,7 +87,11 @@ public interface AppApi {
     void uninstallApp( @Path( ID ) UUID appId, @Path( ORGANIZATION_ID ) UUID organizationId );
 
     @GET( BASE + CONFIG_PATH + ID_PATH )
-    List<UserAppConfig> getAvailableAppConfigs( @Path( ID ) UUID appId );
+    @Deprecated
+    List<HistoricalAppConfig> getAvailableAppConfigsOld( @Path( ID ) UUID appId );
+
+    @GET( BASE + CONFIG_PATH )
+    List<UserAppConfig> getAvailableAppConfigs( @Query( ID ) UUID appId );
 
     @POST( BASE + CONFIG_PATH + UPDATE_PATH + ID_PATH + ORGANIZATION_ID_PATH )
     void updateAppConfigSettings(
