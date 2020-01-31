@@ -38,7 +38,7 @@ import com.openlattice.assembler.pods.AssemblerConfigurationPod;
 import com.openlattice.assembler.tasks.UserCredentialSyncTask;
 import com.openlattice.auditing.*;
 import com.openlattice.auth0.Auth0Pod;
-import com.openlattice.auth0.Auth0TokenProvider;
+import com.openlattice.auth0.AwsAuth0TokenProvider;
 import com.openlattice.authentication.Auth0Configuration;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.mapstores.ResolvedPrincipalTreesMapLoader;
@@ -56,6 +56,8 @@ import com.openlattice.data.storage.*;
 import com.openlattice.data.storage.aws.AwsDataSinkService;
 import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.datastore.services.*;
+import com.openlattice.directory.Auth0UserDirectoryService;
+import com.openlattice.directory.LocalUserDirectoryService;
 import com.openlattice.directory.UserDirectoryService;
 import com.openlattice.edm.PostgresEdmManager;
 import com.openlattice.edm.properties.PostgresTypeManager;
@@ -340,7 +342,10 @@ public class DatastoreServicesPod {
 
     @Bean
     public UserDirectoryService userDirectoryService() {
-        return new UserDirectoryService( auth0TokenProvider(), hazelcastInstance );
+        if ( auth0Configuration.getManagementApiUrl().contains( Auth0Configuration.NO_SYNC_URL ) ) {
+            return new LocalUserDirectoryService( auth0Configuration );
+        }
+        return new Auth0UserDirectoryService( auth0TokenProvider(), hazelcastInstance );
     }
 
     @Bean
@@ -413,8 +418,8 @@ public class DatastoreServicesPod {
     }
 
     @Bean
-    public Auth0TokenProvider auth0TokenProvider() {
-        return new Auth0TokenProvider( auth0Configuration );
+    public AwsAuth0TokenProvider auth0TokenProvider() {
+        return new AwsAuth0TokenProvider( auth0Configuration );
     }
 
     @Bean
@@ -542,7 +547,6 @@ public class DatastoreServicesPod {
                 dataModelService(),
                 entitySetManager(),
                 dataGraphService(),
-                edmAuthorizationHelper(),
                 authorizationManager(),
                 auditRecordEntitySetsManager(),
                 entityDatastore(),

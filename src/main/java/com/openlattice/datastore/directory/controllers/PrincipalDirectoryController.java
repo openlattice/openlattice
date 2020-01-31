@@ -21,6 +21,7 @@
 package com.openlattice.datastore.directory.controllers;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.openlattice.users.Auth0UtilsKt.getUsersPage;
 
 import com.auth0.client.auth.AuthAPI;
 import com.auth0.client.mgmt.ManagementAPI;
@@ -48,6 +49,7 @@ import com.openlattice.directory.pojo.DirectedAclKeys;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.users.Auth0SyncService;
+import com.openlattice.users.Auth0UtilsKt;
 import java.util.EnumSet;
 import java.util.Map;
 import java.util.Objects;
@@ -171,13 +173,8 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
         Principal principal = checkNotNull( Principals.getCurrentUser() );
 
         try {
-            final var user = managementApi.users().get( principal.getId(), new UserFilter()
-                    .withSearchEngine( "v3" )
-                    .withFields( "user_id,email,nickname,app_metadata,identities", true )
-                    .withPage( 0, 100 ) ).execute();
-
+            final var user = Auth0UtilsKt.getUser( managementApi, principal.getId() );
             syncService.syncUser( user );
-
         } catch ( IllegalArgumentException | Auth0Exception e ) {
             throw new BadCredentialsException( "Unable to retrieve user profile information from auth0", e );
         }

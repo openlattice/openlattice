@@ -22,6 +22,7 @@ package com.openlattice.datastore.apps.controllers;
 
 import com.codahale.metrics.annotation.Timed;
 import com.openlattice.apps.*;
+import com.openlattice.apps.historical.HistoricalAppConfig;
 import com.openlattice.apps.services.AppService;
 import com.openlattice.authorization.*;
 import com.openlattice.edm.requests.MetadataUpdate;
@@ -159,7 +160,17 @@ public class AppController implements AppApi, AuthorizingComponent {
             path = CONFIG_PATH + ID_PATH,
             method = RequestMethod.GET,
             produces = MediaType.APPLICATION_JSON_VALUE )
-    public List<UserAppConfig> getAvailableAppConfigs( @PathVariable( ID ) UUID appId ) {
+    public List<HistoricalAppConfig> getAvailableAppConfigsOld( @PathVariable( ID ) UUID appId ) {
+        return appService.getAvailableConfigsOld( appId, Principals.getCurrentPrincipals() );
+    }
+
+    @Timed
+    @Override
+    @RequestMapping(
+            path = CONFIG_PATH,
+            method = RequestMethod.GET,
+            produces = MediaType.APPLICATION_JSON_VALUE )
+    public List<UserAppConfig> getAvailableAppConfigs( @RequestParam( ID ) UUID appId ) {
         return appService.getAvailableConfigs( appId, Principals.getCurrentPrincipals() );
     }
 
