@@ -29,6 +29,8 @@ import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
 import com.hazelcast.query.Predicates
 import com.openlattice.apps.*
+import com.openlattice.apps.historical.HistoricalAppConfig
+import com.openlattice.apps.historical.HistoricalAppTypeSetting
 import com.openlattice.apps.processors.*
 import com.openlattice.authorization.*
 import com.openlattice.collections.CollectionsManager
@@ -45,6 +47,7 @@ import com.openlattice.organization.roles.Role
 import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.postgres.mapstores.AppConfigMapstore
+import com.openlattice.users.getRoles
 import java.util.*
 import javax.inject.Inject
 
@@ -283,6 +286,36 @@ class AppService(
         principalsService.deletePrincipal(principalsService.lookup(getAppPrincipal(appConfigKey)))
     }
 
+
+    @Deprecated("This should be phased out once apps have been updated to use getAvailableConfigs")
+    fun getAvailableConfigsOld(appId: UUID, principals: Set<Principal>): List<HistoricalAppConfig> {
+        val userAppConfigs = getAvailableConfigs(appId, principals)
+
+        val app = getApp(appId)
+        val entitySetCollectionsById = collectionsManager.getEntitySetCollections(userAppConfigs.map { it.entitySetCollectionId }.toSet())
+        val entityTypeCollectionsById = collectionsManager.getEntityTypeCollections(entitySetCollectionsById.values.map { it.entityTypeCollectionId }.toSet())
+        val organizationsById = organizationService.getOrganizations(userAppConfigs.stream().map { it.organizationId }).associateBy { it.id }
+
+
+        val entitySetCollectionTemplates: Map<UUID, Map<String, UUID>> = entitySetCollectionsById.values.associate {
+            it.id to entityTypeCollectionsById.getValue(it.entityTypeCollectionId).template.associate { type -> type.name to it.template.getValue(type.id) }
+        }
+
+        return userAppConfigs.map {
+            HistoricalAppConfig(
+                    Optional.of(appId),
+                    getAppPrincipal(AppConfigKey(appId, it.organizationId)),
+                    app.title,
+                    Optional.of(app.description),
+                    appId,
+                    organizationsById.getValue(it.organizationId),
+                    // note: the permissions field here is not actually used by frontend apps, so we don't need to worry about loading real values here
+                    // since this method only exists as a stopgap for the apps transition.
+                    entitySetCollectionTemplates.getValue(it.entitySetCollectionId).mapValues { setting -> HistoricalAppTypeSetting(setting.value, EnumSet.noneOf(Permission::class.java)) }
+            )
+        }
+    }
+
     fun getAvailableConfigs(appId: UUID, principals: Set<Principal>): List<UserAppConfig> {
 
         val principalAclKeys = principalsService.lookup(principals)
@@ -301,7 +334,7 @@ class AppService(
 
             val availableRoles = setting.roles.entries.filter { roleEntry ->
                 (aclKeysByPrincipalType[PrincipalType.ROLE] ?: listOf<UUID>()).contains(roleEntry.value)
-            }.map { it.key }.toSet()
+            }.map { roleEntry -> roleEntry.key }.toSet()
 
             UserAppConfig(organizationId,
                     entitySetCollectionId,
