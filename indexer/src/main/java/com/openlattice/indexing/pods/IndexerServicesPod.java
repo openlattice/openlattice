@@ -177,7 +177,6 @@ public class IndexerServicesPod {
                 authorizationManager(),
                 edmAuthorizationHelper(),
                 principalService(),
-                partitionManager(),
                 metricRegistry,
                 hazelcastInstance,
                 eventBus
