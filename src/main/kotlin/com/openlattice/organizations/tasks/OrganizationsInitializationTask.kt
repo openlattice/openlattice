@@ -23,7 +23,6 @@ package com.openlattice.organizations.tasks
 
 import com.google.common.base.Stopwatch
 import com.openlattice.IdConstants.GLOBAL_ORGANIZATION_ID
-import com.openlattice.assembler.tasks.ProductionViewSchemaInitializationTask
 import com.openlattice.assembler.tasks.UsersAndRolesInitializationTask
 import com.openlattice.authorization.SystemRole
 import com.openlattice.authorization.initializers.AuthorizationInitializationTask
@@ -116,8 +115,7 @@ class OrganizationsInitializationTask : HazelcastInitializationTask<Organization
         return setOf(
                 AuthorizationInitializationTask::class.java,
                 UsersAndRolesInitializationTask::class.java,
-                PostConstructInitializerTask::class.java,
-                ProductionViewSchemaInitializationTask::class.java
+                PostConstructInitializerTask::class.java
         )
     }
 
