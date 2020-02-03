@@ -282,7 +282,7 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
                         securePrincipalsManager.getCurrentUserId(),
                         new AclKey( acl.getAclKey() ),
                         eventType,
-                        "Permission updated through PermissionApi.updateAcl",
+                        "Permissions updated through PermissionApi.updateAcl",
                         Optional.empty(),
                         ImmutableMap.of( "aces", acl.getAces() ),
                         OffsetDateTime.now(),
