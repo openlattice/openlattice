@@ -117,4 +117,6 @@ public interface SecurePrincipalsManager {
     Set<Principal> getAuthorizedPrincipalsOnSecurableObject( AclKey key, EnumSet<Permission> permissions );
 
     SecurablePrincipal getSecurablePrincipalById( UUID id );
+
+    UUID getCurrentUserId();
 }
