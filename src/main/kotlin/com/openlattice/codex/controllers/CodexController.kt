@@ -81,7 +81,7 @@ constructor(
                     throw BadRequestException("No source phone number set for organization!")
                 }
                 val message = Message.creator(PhoneNumber(toPhoneNumber), PhoneNumber(phone), messageContents)
-                        .setStatusCallback(URI.create("https://api.openlattice.com/datastore/kodex/status")).create()
+                        .setStatusCallback(URI.create("https://api.openlattice.com/datastore/codex/status")).create()
                 pendingTexts[message.sid] = message
                 processQueueEntry(message, organizationId)
             }
