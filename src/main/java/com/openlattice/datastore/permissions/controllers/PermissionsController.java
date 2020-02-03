@@ -279,7 +279,7 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
     private List<AuditableEvent> createAuditableEvents( List<Acl> acls, AuditEventType eventType ) {
         return acls.stream().map( acl ->
                 new AuditableEvent(
-                        getCurrentUserId(),
+                        securePrincipalsManager.getCurrentUserId(),
                         new AclKey( acl.getAclKey() ),
                         eventType,
                         "Permission update via PermissionApi.updateAcl",
@@ -291,7 +291,4 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
         ).collect( Collectors.toList() );
     }
 
-    private UUID getCurrentUserId() {
-        return securePrincipalsManager.getPrincipal( Principals.getCurrentUser().getId() ).getId();
-    }
 }
