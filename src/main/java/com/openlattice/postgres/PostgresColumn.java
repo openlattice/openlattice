@@ -429,7 +429,7 @@ public final class PostgresColumn {
             new PostgresColumnDefinition( ROLE_ID_FIELD, UUID ).notNull();
     public static final String                   ROLES_FIELD                       = "roles";
     public static final PostgresColumnDefinition ROLES                             =
-            new PostgresColumnDefinition( ROLES_FIELD, JSONB ).notNull();
+            new PostgresColumnDefinition( ROLES_FIELD, JSONB ).notNull().withDefault( "'{}'" );
     public static final String                   SCHEMAS_FIELD                     = "schemas";
     public static final PostgresColumnDefinition SCHEMAS                           =
             new PostgresColumnDefinition( SCHEMAS_FIELD, TEXT_ARRAY ).notNull();
@@ -453,7 +453,7 @@ public final class PostgresColumn {
     public static final String                   SETTINGS_FIELD                    = "settings";
     public static final PostgresColumnDefinition SETTINGS                          = new PostgresColumnDefinition(
             SETTINGS_FIELD,
-            JSONB ).notNull();
+            JSONB ).notNull().withDefault( "'{}'" );
     public static final String                   SHARDS_FIELD                      = "shards";
     public static final PostgresColumnDefinition SHARDS                            = new PostgresColumnDefinition(
             SHARDS_FIELD,
