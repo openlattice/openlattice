@@ -284,7 +284,7 @@ class ExternalDatabaseManagementService(
     fun executePrivilegesUpdate(action: Action, acls: List<Acl>) {
         //split acls between table and column objects
         val aclsByType = acls.partition { it.aclKey.size == 1 }
-        
+
         val tableAclsByOrg = aclsByType.first.groupBy {
             organizationExternalDatabaseTables.getValue(it.aclKey[0]).organizationId
         }
