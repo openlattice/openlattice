@@ -15,8 +15,8 @@ class TwilioConfigurationPod {
     @Inject
     private lateinit var configurationLoader: ConfigurationLoader
 
-    @Bean(name = ["twilioConfiguration"])
-    fun configurationLoader(): TwilioConfiguration {
+    @Bean
+    fun twilioConfiguration(): TwilioConfiguration {
         return configurationLoader.logAndLoad( "twilio", TwilioConfiguration::class.java )
     }
 }
