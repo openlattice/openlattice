@@ -37,6 +37,9 @@ class TestAssemblerConnectionManager {
     companion object {
         private var assemblerConfiguration: AssemblerConfiguration
 
+        // TODO change tests for this after transporter is ready
+        const val PRODUCTION_FOREIGN_SCHEMA = "prod"
+
         init {
             val testsServer = TestServer(AssemblerConfigurationPod::class.java)
             testsServer.sprout("local")
