@@ -1,11 +1,18 @@
 package com.openlattice
 
 import com.google.common.base.Stopwatch
+import com.google.common.collect.ImmutableMap
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.hazelcast.query.QueryConstants
 import com.openlattice.assembler.PostgresDatabases
+import com.openlattice.auditing.AuditEventType
+import com.openlattice.auditing.AuditRecordEntitySetsManager
+import com.openlattice.auditing.AuditableEvent
+import com.openlattice.auditing.AuditingManager
+import com.openlattice.authorization.Acl
+import com.openlattice.authorization.AclKey
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.indexing.MAX_DURATION_MILLIS
 import com.openlattice.indexing.configuration.IndexerConfiguration
@@ -15,6 +22,7 @@ import com.openlattice.organizations.ExternalDatabaseManagementService
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
+import java.time.OffsetDateTime
 import java.util.*
 import java.util.concurrent.locks.ReentrantLock
 
@@ -27,6 +35,8 @@ const val SCAN_RATE = 30_000L
 class BackgroundExternalDatabaseSyncingService(
         hazelcastInstance: HazelcastInstance,
         private val edms: ExternalDatabaseManagementService,
+        private val auditingManager: AuditingManager,
+        private val ares: AuditRecordEntitySetsManager,
         private val indexerConfiguration: IndexerConfiguration
 ) {
     companion object {
@@ -112,8 +122,13 @@ class BackgroundExternalDatabaseSyncingService(
                 val newTableId = edms.createOrganizationExternalDatabaseTable(orgId, newTable)
                 currentTableIds.add(newTableId)
 
+                //create audit entity set
+                ares.createAuditEntitySetForExternalDBTable(newTable)
+
                 //add table-level permissions
-                edms.addPermissions(dbName, orgId, newTableId, newTable.name, Optional.empty(), Optional.empty())
+                val acls = edms.addPermissions(dbName, orgId, newTableId, newTable.name, Optional.empty(), Optional.empty())
+                val events = createAuditableEvents(acls, AuditEventType.ADD_PERMISSION)
+                auditingManager.recordEvents(events)
                 totalSynced++
 
                 //create new securable objects for columns in this table
@@ -173,6 +188,21 @@ class BackgroundExternalDatabaseSyncingService(
         val newColumnId = edms.createOrganizationExternalDatabaseColumn(orgId, column)
         currentColumnIds.add(newColumnId)
         edms.addPermissions(dbName, orgId, column.tableId, tableName, Optional.of(newColumnId), Optional.of(column.name))
+    }
+
+    private fun createAuditableEvents(acls: List<Acl>, eventType: AuditEventType): List<AuditableEvent> {
+        return acls.map {
+            AuditableEvent(
+                    IdConstants.SYSTEM_ID.id,
+                    AclKey(it.aclKey),
+                    eventType,
+                    "Permissions updated through BackgroundExternalDatabaseSyncingService",
+                    Optional.empty(),
+                    ImmutableMap.of("aces", it.aces),
+                    OffsetDateTime.now(),
+                    Optional.empty()
+            )
+        }.toList()
     }
 
     private fun deleteIndexingLock(orgId: UUID) {

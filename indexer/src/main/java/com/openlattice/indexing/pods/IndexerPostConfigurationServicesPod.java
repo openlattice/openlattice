@@ -23,6 +23,7 @@ package com.openlattice.indexing.pods;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
 import com.openlattice.BackgroundExternalDatabaseSyncingService;
+import com.openlattice.auditing.AuditRecordEntitySetsManager;
 import com.openlattice.auditing.AuditingManager;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.DataDeletionManager;
@@ -78,6 +79,9 @@ public class IndexerPostConfigurationServicesPod {
 
     @Inject
     private DataDeletionManager dataDeletionManager;
+
+    @Inject
+    private AuditRecordEntitySetsManager ares;
 
     @Bean
     public PartitionManager partitionManager() {
@@ -147,6 +151,8 @@ public class IndexerPostConfigurationServicesPod {
         return new BackgroundExternalDatabaseSyncingService(
                 hazelcastInstance,
                 edms,
+                auditingManager,
+                ares,
                 indexerConfiguration);
     }
 
