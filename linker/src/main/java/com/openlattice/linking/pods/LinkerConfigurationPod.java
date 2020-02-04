@@ -21,18 +21,13 @@
 
 package com.openlattice.linking.pods;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.kryptnostic.rhizome.configuration.ConfigurationConstants.Profiles;
-import com.kryptnostic.rhizome.configuration.amazon.AmazonLaunchConfiguration;
 import com.kryptnostic.rhizome.configuration.service.ConfigurationService;
-import com.openlattice.ResourceConfigurationLoader;
+import com.kryptnostic.rhizome.pods.ConfigurationLoader;
 import com.openlattice.linking.LinkingConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Profile;
 
 import javax.inject.Inject;
 import java.io.IOException;
@@ -42,34 +37,16 @@ import java.io.IOException;
  */
 @Configuration
 public class LinkerConfigurationPod {
-    private static final Logger               logger = LoggerFactory.getLogger( LinkerConfigurationPod.class );
-
+    private static final Logger  logger = LoggerFactory.getLogger( LinkerConfigurationPod.class );
     @Inject
-    private              ConfigurationService configurationService;
+    private ConfigurationService configurationService;
+    @Inject
+    private ConfigurationLoader  configurationLoader;
 
-    @Autowired( required = false )
-    private              AmazonS3             s3;
-
-    @Autowired( required = false )
-    private AmazonLaunchConfiguration awsLaunchConfig;
-
-    @Bean( name = "linkingConfiguration" )
-    @Profile( Profiles.LOCAL_CONFIGURATION_PROFILE )
-    public LinkingConfiguration getLocalLinkingConfiguration() throws IOException {
+    @Bean
+    public LinkingConfiguration linkingConfiguration() throws IOException {
         LinkingConfiguration config = configurationService.getConfiguration( LinkingConfiguration.class );
-        logger.info( "Using local linking configuration: {}", config );
-        return config;
-    }
-
-    @Bean( name = "linkingConfiguration" )
-    @Profile( { Profiles.AWS_CONFIGURATION_PROFILE, Profiles.AWS_TESTING_PROFILE } )
-    public LinkingConfiguration getAwsLinkingConfiguration() throws IOException {
-        LinkingConfiguration config = ResourceConfigurationLoader.loadConfigurationFromS3( s3,
-                awsLaunchConfig.getBucket(),
-                awsLaunchConfig.getFolder(),
-                LinkingConfiguration.class );
-
-        logger.info( "Using aws linking configuration: {}", config );
+        logger.info( "Using {} linking configuration: {}", configurationLoader.type(), config );
         return config;
     }
 }
