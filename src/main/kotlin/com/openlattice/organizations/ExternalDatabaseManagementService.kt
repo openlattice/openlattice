@@ -55,7 +55,6 @@ class ExternalDatabaseManagementService(
         private val securePrincipalsManager: SecurePrincipalsManager,
         private val aclKeyReservations: HazelcastAclKeyReservationService,
         private val authorizationManager: AuthorizationManager,
-        private val auditingManager: AuditingManager,
         private val organizationExternalDatabaseConfiguration: OrganizationExternalDatabaseConfiguration,
         private val hds: HikariDataSource
 ) {
@@ -360,7 +359,14 @@ class ExternalDatabaseManagementService(
         }
     }
 
-    fun addPermissions(dbName: String, orgId: UUID, tableId: UUID, tableName: String, maybeColumnId: Optional<UUID>, maybeColumnName: Optional<String>) {
+    fun addPermissions(
+            dbName: String,
+            orgId: UUID,
+            tableId: UUID,
+            tableName: String,
+            maybeColumnId: Optional<UUID>,
+            maybeColumnName: Optional<String>
+    ): List<Acl> {
         val privilegesByUser = HashMap<UUID, MutableSet<PostgresPrivileges>>()
         val aclKeyUUIDs = mutableListOf(tableId)
         maybeColumnId.ifPresent { aclKeyUUIDs.add(it) }
@@ -380,7 +386,7 @@ class ExternalDatabaseManagementService(
                     privilegesByUser.getOrPut(securablePrincipalId) { mutableSetOf() }.add(it.second)
                 }
 
-        val acls = privilegesByUser.map { (securablePrincipalId, privileges) ->
+        return privilegesByUser.map { (securablePrincipalId, privileges) ->
             val principal = securePrincipalsManager.getSecurablePrincipalById(securablePrincipalId).principal
             val aceKey = AceKey(aclKey, principal)
             val permissions = EnumSet.noneOf(Permission::class.java)
@@ -397,9 +403,6 @@ class ExternalDatabaseManagementService(
             aces.executeOnKey(aceKey, PermissionMerger(permissions, objectType, OffsetDateTime.MAX))
             return@map Acl(aclKeyUUIDs, setOf(Ace(principal, permissions, Optional.empty())))
         }
-
-        val events = createAuditableEvents(acls, AuditEventType.ADD_PERMISSION)
-        auditingManager.recordEvents(events)
     }
 
     /*PRIVATE FUNCTIONS*/
@@ -478,21 +481,6 @@ class ExternalDatabaseManagementService(
             }
         }
         return privileges
-    }
-
-    private fun createAuditableEvents(acls: List<Acl>, eventType: AuditEventType): List<AuditableEvent> {
-        return acls.map {
-            AuditableEvent(
-                    IdConstants.SYSTEM_ID.id,
-                    AclKey(it.aclKey),
-                    eventType,
-                    "Permissions updated through ExternalDatabaseSyncingService",
-                    Optional.empty(),
-                    ImmutableMap.of("aces", it.aces),
-                    OffsetDateTime.now(),
-                    Optional.empty()
-            )
-        }.toList()
     }
 
     private fun getPrivilegesFields(tableName: String, maybeColumnName: Optional<String>): Pair<String, SecurableObjectType> {
