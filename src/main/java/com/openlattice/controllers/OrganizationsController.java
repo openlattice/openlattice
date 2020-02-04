@@ -54,6 +54,7 @@ import com.openlattice.organizations.Grant;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.Organization;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
+import org.apache.commons.lang3.NotImplementedException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -273,26 +274,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     public Map<UUID, Set<OrganizationEntitySetFlag>> assembleEntitySets(
             @PathVariable( ID ) UUID organizationId,
             @RequestBody Map<UUID, Integer> refreshRatesOfEntitySets ) {
-        final var authorizedPropertyTypesByEntitySet =
-                getAuthorizedPropertiesForMaterialization( organizationId, refreshRatesOfEntitySets.keySet() );
-
-        // convert mins to millisecs
-        final Map<UUID, Long> refreshRatesInMilliSecsOfEntitySets = new HashMap<>( refreshRatesOfEntitySets.size() );
-        refreshRatesOfEntitySets.forEach(
-                ( entitySetId, refreshRateInMins ) -> {
-                    Long value = null;
-                    if ( refreshRateInMins != null ) {
-                        value = getRefreshRateMillisFromMins( refreshRateInMins );
-                    }
-
-                    refreshRatesInMilliSecsOfEntitySets.put( entitySetId, value );
-                }
-        );
-
-        return assembler.materializeEntitySets(
-                organizationId,
-                authorizedPropertyTypesByEntitySet,
-                refreshRatesInMilliSecsOfEntitySets );
+        throw new NotImplementedException("DBT will fill this in.");
     }
 
     @Timed
@@ -301,15 +283,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     public Void synchronizeEdmChanges(
             @PathVariable( ID ) UUID organizationId,
             @PathVariable( SET_ID ) UUID entitySetId ) {
-        // we basically re-materialize in this case
-        final var authorizedPropertyTypesByEntitySet =
-                getAuthorizedPropertiesForMaterialization( organizationId, Set.of( entitySetId ) );
-
-        assembler.synchronizeMaterializedEntitySet(
-                organizationId,
-                entitySetId,
-                authorizedPropertyTypesByEntitySet.get( entitySetId ) );
-        return null;
+        throw new NotImplementedException("DBT will fill this in.");
     }
 
     @Timed
@@ -321,8 +295,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         // the person requesting refresh should be the owner of the organization
         ensureOwner( organizationId );
 
-        assembler.refreshMaterializedEntitySet( organizationId, entitySetId );
-        return null;
+        throw new NotImplementedException("DBT will fill this in.");
     }
 
     @Override
