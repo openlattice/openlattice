@@ -1,17 +1,22 @@
 package com.openlattice.organizations
 
 import com.google.common.base.Preconditions.checkState
+import com.google.common.collect.ImmutableMap
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.hazelcast.query.QueryConstants
+import com.openlattice.IdConstants
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.AssemblerConnectionManager.Companion.PUBLIC_SCHEMA
 import com.openlattice.assembler.PostgresDatabases
 import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresUsername
 import com.openlattice.assembler.PostgresRoles.Companion.getSecurablePrincipalIdFromUserName
 import com.openlattice.assembler.PostgresRoles.Companion.isPostgresUserName
+import com.openlattice.auditing.AuditEventType
+import com.openlattice.auditing.AuditableEvent
+import com.openlattice.auditing.AuditingManager
 import com.openlattice.authorization.*
 import com.openlattice.authorization.processors.PermissionMerger
 import com.openlattice.authorization.securable.SecurableObjectType
@@ -41,6 +46,7 @@ import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 import java.time.OffsetDateTime
 import java.util.*
+import java.util.stream.Collectors
 
 @Service
 class ExternalDatabaseManagementService(
@@ -49,6 +55,7 @@ class ExternalDatabaseManagementService(
         private val securePrincipalsManager: SecurePrincipalsManager,
         private val aclKeyReservations: HazelcastAclKeyReservationService,
         private val authorizationManager: AuthorizationManager,
+        private val auditingManager: AuditingManager,
         private val organizationExternalDatabaseConfiguration: OrganizationExternalDatabaseConfiguration,
         private val hds: HikariDataSource
 ) {
@@ -361,7 +368,7 @@ class ExternalDatabaseManagementService(
                     privilegesByUser.getOrPut(securablePrincipalId) { mutableSetOf() }.add(it.second)
                 }
 
-        privilegesByUser.forEach { (securablePrincipalId, privileges) ->
+        val acls = privilegesByUser.map { (securablePrincipalId, privileges) ->
             val principal = securePrincipalsManager.getSecurablePrincipalById(securablePrincipalId).principal
             val aceKey = AceKey(aclKey, principal)
             val permissions = EnumSet.noneOf(Permission::class.java)
@@ -376,7 +383,11 @@ class ExternalDatabaseManagementService(
             if (privileges.contains(PostgresPrivileges.INSERT) || privileges.contains(PostgresPrivileges.UPDATE))
                 permissions.add(Permission.WRITE)
             aces.executeOnKey(aceKey, PermissionMerger(permissions, objectType, OffsetDateTime.MAX))
+            return@map Acl(aclKeyUUIDs, setOf(Ace(principal, permissions, Optional.empty())))
         }
+
+        val events = createAuditableEvents(acls, AuditEventType.ADD_PERMISSION)
+        auditingManager.recordEvents(events)
     }
 
     /*PRIVATE FUNCTIONS*/
@@ -455,6 +466,21 @@ class ExternalDatabaseManagementService(
             }
         }
         return privileges
+    }
+
+    private fun createAuditableEvents(acls: List<Acl>, eventType: AuditEventType): List<AuditableEvent> {
+        return acls.map {
+            AuditableEvent(
+                    IdConstants.SYSTEM_ID.id,
+                    AclKey(it.aclKey),
+                    eventType,
+                    "Permissions updated through ExternalDatabaseSyncingService",
+                    Optional.empty(),
+                    ImmutableMap.of("aces", it.aces),
+                    OffsetDateTime.now(),
+                    Optional.empty()
+            )
+        }.toList()
     }
 
     private fun getPrivilegesFields(tableName: String, maybeColumnName: Optional<String>): Pair<String, SecurableObjectType> {
