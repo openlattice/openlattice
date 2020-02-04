@@ -177,7 +177,6 @@ public class LinkerServicesPod {
                 authorizationManager(),
                 edmAuthorizationHelper(),
                 principalService(),
-                partitionManager(),
                 metricRegistry,
                 hazelcastInstance,
                 eventBus
