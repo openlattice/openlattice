@@ -25,8 +25,6 @@ import java.time.ZoneOffset.UTC
 import java.util.*
 import javax.servlet.http.HttpServletRequest
 
-const val CODEX_APP_NAME = "codex"
-
 class CodexService(
         val hazelcast: HazelcastInstance,
         val appService: AppService,

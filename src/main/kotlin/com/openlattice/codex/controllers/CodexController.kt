@@ -75,7 +75,7 @@ constructor(
                     throw BadRequestException("No source phone number set for organization!")
                 }
                 val message = Message.creator(PhoneNumber(toPhoneNumber), PhoneNumber(phone), messageContents)
-                        .setStatusCallback(URI.create("http://38e36779.ngrok.io$BASE$INCOMING/$organizationId$STATUS")).create()
+                        .setStatusCallback(URI.create("https://api.openlattice.com$BASE$INCOMING/$organizationId$STATUS")).create()
                 pendingTexts[message.sid] = message
                 codexService.processOutgoingMessage(message, organizationId)
             }
