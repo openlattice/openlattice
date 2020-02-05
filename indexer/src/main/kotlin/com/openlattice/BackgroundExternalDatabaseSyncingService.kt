@@ -109,6 +109,7 @@ class BackgroundExternalDatabaseSyncingService(
     private fun syncOrganizationDatabases(orgId: UUID): Int {
         var totalSynced = 0
         val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
+        val orgOwnerIds = edms.getOrganizationOwners(orgId).map{ it.id }
         val currentTableIds = mutableSetOf<UUID>()
         val currentColumnIds = mutableSetOf<UUID>()
         val currentColumnNamesByTableName = edms.getColumnNamesByTable(orgId, dbName)
@@ -122,11 +123,11 @@ class BackgroundExternalDatabaseSyncingService(
                 val newTableId = edms.createOrganizationExternalDatabaseTable(orgId, newTable)
                 currentTableIds.add(newTableId)
 
-                //create audit entity set
-                ares.createAuditEntitySetForExternalDBTable(newTable)
-
                 //add table-level permissions
-                val acls = edms.addPermissions(dbName, orgId, newTableId, newTable.name, Optional.empty(), Optional.empty())
+                val acls = edms.addPermissions(dbName, orgOwnerIds, orgId, newTableId, newTable.name, Optional.empty(), Optional.empty())
+
+                //create audit entity set and audit permissions
+                ares.createAuditEntitySetForExternalDBTable(newTable)
                 val events = createAuditableEvents(acls, AuditEventType.ADD_PERMISSION)
                 auditingManager.recordEvents(events)
                 totalSynced++
@@ -134,7 +135,7 @@ class BackgroundExternalDatabaseSyncingService(
                 //create new securable objects for columns in this table
                 edms.createNewColumnObjects(dbName, newTable.name, newTableId, orgId, Optional.empty())
                         .forEach { column ->
-                            createNewExternalDbColumn(dbName, orgId, newTable.name, currentColumnIds, column)
+                            createNewExternalDbColumn(dbName, orgOwnerIds, orgId, newTable.name, currentColumnIds, column)
                             totalSynced++
                         }
             } else {
@@ -147,7 +148,7 @@ class BackgroundExternalDatabaseSyncingService(
                         //create new securable object for this column
                         edms.createNewColumnObjects(dbName, tableName, tableId, orgId, Optional.of(it))
                                 .forEach { column ->
-                                    createNewExternalDbColumn(dbName, orgId, tableName, currentColumnIds, column)
+                                    createNewExternalDbColumn(dbName, orgOwnerIds, orgId, tableName, currentColumnIds, column)
                                     totalSynced++
                                 }
                     } else {
@@ -184,10 +185,10 @@ class BackgroundExternalDatabaseSyncingService(
         return expirationLocks.putIfAbsent(orgId, System.currentTimeMillis() + MAX_DURATION_MILLIS) == null
     }
 
-    private fun createNewExternalDbColumn(dbName: String, orgId: UUID, tableName: String, currentColumnIds: MutableSet<UUID>, column: OrganizationExternalDatabaseColumn) {
+    private fun createNewExternalDbColumn(dbName: String, orgOwnerIds: List<UUID>, orgId: UUID, tableName: String, currentColumnIds: MutableSet<UUID>, column: OrganizationExternalDatabaseColumn) {
         val newColumnId = edms.createOrganizationExternalDatabaseColumn(orgId, column)
         currentColumnIds.add(newColumnId)
-        edms.addPermissions(dbName, orgId, column.tableId, tableName, Optional.of(newColumnId), Optional.of(column.name))
+        edms.addPermissions(dbName, orgOwnerIds, orgId, column.tableId, tableName, Optional.of(newColumnId), Optional.of(column.name))
     }
 
     private fun createAuditableEvents(acls: List<Acl>, eventType: AuditEventType): List<AuditableEvent> {
