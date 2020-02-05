@@ -8,7 +8,7 @@ class CodexConstants() {
         const val APP_NAME = "codex"
     }
 
-    enum class Types(val fqn: FullQualifiedName) {
+    enum class AppType(val fqn: FullQualifiedName) {
         PEOPLE(FullQualifiedName("app.people")),
         MESSAGES(FullQualifiedName("app.messages")),
         CONTACT_INFO(FullQualifiedName("app.contactinformation")),
@@ -18,7 +18,7 @@ class CodexConstants() {
         SUBJECT_OF(FullQualifiedName("app.subjectof")),
     }
 
-    enum class Properties(val fqn: FullQualifiedName) {
+    enum class PropertyType(val fqn: FullQualifiedName) {
         ID(FullQualifiedName("ol.id")),
         PHONE_NUMBER(FullQualifiedName("contact.phonenumber")),
         TEXT(FullQualifiedName("ol.text")),
