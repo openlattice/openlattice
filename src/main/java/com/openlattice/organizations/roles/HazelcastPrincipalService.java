@@ -34,15 +34,7 @@ import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.hazelcast.query.Predicate;
 import com.hazelcast.query.Predicates;
-import com.openlattice.authorization.AclKey;
-import com.openlattice.authorization.AclKeySet;
-import com.openlattice.authorization.AuthorizationManager;
-import com.openlattice.authorization.AuthorizingComponent;
-import com.openlattice.authorization.HazelcastAclKeyReservationService;
-import com.openlattice.authorization.Permission;
-import com.openlattice.authorization.Principal;
-import com.openlattice.authorization.PrincipalType;
-import com.openlattice.authorization.SecurablePrincipal;
+import com.openlattice.authorization.*;
 import com.openlattice.authorization.mapstores.PrincipalMapstore;
 import com.openlattice.authorization.projections.PrincipalProjection;
 import com.openlattice.authorization.securable.SecurableObjectType;
@@ -391,6 +383,11 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
     public SecurablePrincipal getSecurablePrincipalById( UUID id ) {
         return principals.values( Predicates.equal( PRINCIPAL_ID_INDEX, id ) )
                 .stream().findFirst().get();
+    }
+
+    @Override
+    public UUID getCurrentUserId() {
+        return getPrincipal( Principals.getCurrentUser().getId() ).getId();
     }
 
 }
