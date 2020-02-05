@@ -25,7 +25,10 @@ class CodexConstants() {
         TYPE(FullQualifiedName("ol.type")),
         DATE_TIME(FullQualifiedName("general.datetime")),
         WAS_DELIVERED(FullQualifiedName("ol.delivered")),
-        CHANNEL(FullQualifiedName("ol.channel"))
+        CHANNEL(FullQualifiedName("ol.channel")),
+
+        PERSON_ID(FullQualifiedName("nc.SubjectIdentification")),
+        NICKNAME(FullQualifiedName("im.PersonNickName"))
     }
 
     enum class Request(val parameter: String) {

@@ -1,5 +1,6 @@
 package com.openlattice.codex
 
+import com.auth0.json.mgmt.users.User
 import com.google.common.collect.ArrayListMultimap
 import com.google.common.collect.ListMultimap
 import com.hazelcast.core.HazelcastInstance
@@ -16,6 +17,7 @@ import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.notifications.sms.PhoneNumberService
+import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.twilio.rest.api.v2010.account.Message
 import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
@@ -31,7 +33,7 @@ class CodexService(
         val edmManager: EdmManager,
         val dataGraphManager: DataGraphManager,
         val entityKeyIdService: EntityKeyIdService,
-        val phoneNumberService: PhoneNumberService
+        val principalsManager: SecurePrincipalsManager
 ) {
 
     companion object {
@@ -44,25 +46,48 @@ class CodexService(
     val propertyTypesByAppType = typesByFqn.values.associate { it.id to edmManager.getPropertyTypesOfEntityType(it.entityTypeId) }
     val propertyTypesByFqn = propertyTypesByAppType.values.flatMap { it.values }.associate { it.type to it.id } // TODO check if collisions break this
 
-    fun processOutgoingMessage(message: Message, organizationId: UUID) {
+    fun processOutgoingMessage(message: Message, organizationId: UUID, senderId: String) {
         val dateTime = formatDateTime(message.dateCreated)
         val phoneNumber = message.to
         val messageId = message.sid
         val text = message.body
 
-        processMessage(organizationId, dateTime, phoneNumber, messageId, text, isOutgoing = true)
+        val sender = principalsManager.getUser(senderId)
+
+        /* create entities */
+
+        val contactEDK = getContactEntityDataKey(organizationId, phoneNumber)
+        val messageEDK = getMessageEntityDataKey(organizationId, dateTime, messageId, text)
+
+        /* create associations */
+
+        val associations: ListMultimap<UUID, DataEdge> = ArrayListMultimap.create()
+
+        val sentToEntitySetId = getEntitySetId(organizationId, CodexConstants.AppType.SENT_TO)
+        val sentFromEntitySetId = getEntitySetId(organizationId, CodexConstants.AppType.SENT_FROM)
+        val senderEDK = getSenderEntityDataKey(organizationId, sender)
+
+        val associationEntity = mapOf(getPropertyTypeId(CodexConstants.PropertyType.DATE_TIME) to setOf(dateTime))
+
+        associations.put(sentToEntitySetId, DataEdge(messageEDK, contactEDK, associationEntity))
+        associations.put(sentFromEntitySetId, DataEdge(messageEDK, senderEDK, associationEntity))
+
+        dataGraphManager.createAssociations(associations, mapOf(
+                sentToEntitySetId to getPropertyTypes(CodexConstants.AppType.SENT_TO),
+                sentFromEntitySetId to getPropertyTypes(CodexConstants.AppType.SENT_FROM))
+        )
     }
 
     fun getIncomingMessageField(request: HttpServletRequest, field: CodexConstants.Request): String {
         return request.getParameter(field.parameter)
     }
 
-    fun processMessage(
+    fun processIncomingMessage(
             organizationId: UUID,
             dateTime: OffsetDateTime,
             phoneNumber: String,
             messageId: String,
-            text: String, isOutgoing: Boolean
+            text: String
     ) {
         /* create entities */
 
@@ -73,12 +98,11 @@ class CodexService(
 
         val associations: ListMultimap<UUID, DataEdge> = ArrayListMultimap.create()
 
-        val edgeType = if (isOutgoing) CodexConstants.AppType.SENT_TO else CodexConstants.AppType.SENT_FROM
-        val edgeEntitySetId = getEntitySetId(organizationId, edgeType)
+        val edgeEntitySetId = getEntitySetId(organizationId, CodexConstants.AppType.SENT_FROM)
 
         associations.put(edgeEntitySetId, DataEdge(messageEDK, contactEDK, mapOf(getPropertyTypeId(CodexConstants.PropertyType.DATE_TIME) to setOf(dateTime))))
 
-        dataGraphManager.createAssociations(associations, mapOf(edgeEntitySetId to getPropertyTypes(edgeType)))
+        dataGraphManager.createAssociations(associations, mapOf(edgeEntitySetId to getPropertyTypes(CodexConstants.AppType.SENT_FROM)))
     }
 
     fun updateMessageStatus(organizationId: UUID, messageId: String, status: Message.Status) {
@@ -100,35 +124,44 @@ class CodexService(
         )
     }
 
-
-    fun getIncomingMessageOrganizationId(message: Message): UUID {
-        return phoneNumberService.lookup(message.to).first().organizationId
-    }
-
     private fun getContactEntityDataKey(organizationId: UUID, phoneNumber: String): EntityDataKey {
-        val contactEntitySetId = getEntitySetId(organizationId, CodexConstants.AppType.CONTACT_INFO)
-        val contactEntityKeyId = entityKeyIdService.getEntityKeyId(contactEntitySetId, phoneNumber)
+        val entitySetId = getEntitySetId(organizationId, CodexConstants.AppType.CONTACT_INFO)
+        val entityKeyId = entityKeyIdService.getEntityKeyId(entitySetId, phoneNumber)
 
-        return EntityDataKey(contactEntitySetId, contactEntityKeyId)
+        return EntityDataKey(entitySetId, entityKeyId)
     }
 
     private fun getMessageEntityDataKey(organizationId: UUID, dateTime: OffsetDateTime, messageId: String, text: String): EntityDataKey {
 
-        val messageEntity = mapOf(
+        val entity = mapOf(
                 getPropertyTypeId(CodexConstants.PropertyType.ID) to setOf(messageId),
                 getPropertyTypeId(CodexConstants.PropertyType.DATE_TIME) to setOf(dateTime),
                 getPropertyTypeId(CodexConstants.PropertyType.TEXT) to setOf(text)
         )
-        val messageEntitySetId = getEntitySetId(organizationId, CodexConstants.AppType.MESSAGES)
-        val messageEntityKeyId = entityKeyIdService.getEntityKeyId(messageEntitySetId, messageId)
+        val entitySetId = getEntitySetId(organizationId, CodexConstants.AppType.MESSAGES)
+        val entityKeyId = entityKeyIdService.getEntityKeyId(entitySetId, messageId)
 
         dataGraphManager.mergeEntities(
-                messageEntitySetId,
-                mapOf(messageEntityKeyId to messageEntity),
+                entitySetId,
+                mapOf(entityKeyId to entity),
                 getPropertyTypes(CodexConstants.AppType.MESSAGES)
         )
 
-        return EntityDataKey(messageEntitySetId, messageEntityKeyId)
+        return EntityDataKey(entitySetId, entityKeyId)
+    }
+
+    private fun getSenderEntityDataKey(organizationId: UUID, user: User): EntityDataKey {
+
+        val entity = mapOf(
+                getPropertyTypeId(CodexConstants.PropertyType.PERSON_ID) to setOf(user.id),
+                getPropertyTypeId(CodexConstants.PropertyType.NICKNAME) to setOf(user.email)
+        )
+        val entitySetId = getEntitySetId(organizationId, CodexConstants.AppType.PEOPLE)
+        val entityKeyId = entityKeyIdService.getEntityKeyId(entitySetId, user.id)
+
+        dataGraphManager.mergeEntities(entitySetId, mapOf(entityKeyId to entity), getPropertyTypes(CodexConstants.AppType.PEOPLE))
+
+        return EntityDataKey(entitySetId, entityKeyId)
     }
 
     private fun getEntitySetId(organizationId: UUID, type: CodexConstants.AppType): UUID {

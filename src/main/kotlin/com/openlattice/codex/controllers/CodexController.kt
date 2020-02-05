@@ -5,6 +5,7 @@ import com.google.common.collect.Maps
 import com.hazelcast.core.HazelcastInstance
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
+import com.openlattice.authorization.Principals
 import com.openlattice.codex.CodexApi
 import com.openlattice.codex.CodexApi.Companion.BASE
 import com.openlattice.codex.CodexApi.Companion.INCOMING
@@ -35,7 +36,6 @@ import java.util.concurrent.Executors
 import java.util.stream.Stream
 import javax.inject.Inject
 import javax.servlet.http.HttpServletRequest
-import javax.servlet.http.HttpServletResponse
 
 @SuppressFBWarnings(
         value = ["BC_BAD_CAST_TO_ABSTRACT_COLLECTION"],
@@ -64,7 +64,7 @@ constructor(
         Twilio.init(configuration.sid, configuration.token)
 
         textingExecutor.execute {
-            Stream.generate { twilioQueue.take() }.forEach { (organizationId, messageEntitySetId, messageContents, toPhoneNumber) ->
+            Stream.generate { twilioQueue.take() }.forEach { (organizationId, messageEntitySetId, messageContents, toPhoneNumber, senderId) ->
                 //Not very efficient.
                 val phone = organizations.getOrganization(organizationId)!!.smsEntitySetInfo
                         .flatMap { (phoneNumber, _, entitySetIds, _) -> entitySetIds.map { it to phoneNumber } }
@@ -77,7 +77,7 @@ constructor(
                 val message = Message.creator(PhoneNumber(toPhoneNumber), PhoneNumber(phone), messageContents)
                         .setStatusCallback(URI.create("https://api.openlattice.com$BASE$INCOMING/$organizationId$STATUS")).create()
                 pendingTexts[message.sid] = message
-                codexService.processOutgoingMessage(message, organizationId)
+                codexService.processOutgoingMessage(message, organizationId, senderId!!)
             }
         }
     }
@@ -85,6 +85,7 @@ constructor(
     @Timed
     @RequestMapping(path = ["", "/"], method = [RequestMethod.POST])
     override fun sendOutgoingText(@RequestBody contents: MessageRequest) {
+        contents.senderId = Principals.getCurrentUser().id
         twilioQueue.put(contents)
     }
 
@@ -97,7 +98,7 @@ constructor(
         val text = codexService.getIncomingMessageField(request, CodexConstants.Request.BODY)
         val dateTime = OffsetDateTime.now()
 
-        codexService.processMessage(organizationId, dateTime, phoneNumber, messageId, text, isOutgoing = false)
+        codexService.processIncomingMessage(organizationId, dateTime, phoneNumber, messageId, text)
     }
 
     @Timed

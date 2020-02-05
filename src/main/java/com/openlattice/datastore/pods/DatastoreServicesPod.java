@@ -609,7 +609,7 @@ public class DatastoreServicesPod {
                 dataModelService(),
                 dataGraphService(),
                 idService(),
-                phoneNumberService()
+                principalService()
         );
     }
 
