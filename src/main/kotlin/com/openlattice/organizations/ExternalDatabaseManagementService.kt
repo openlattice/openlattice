@@ -59,11 +59,11 @@ class ExternalDatabaseManagementService(
         private val hds: HikariDataSource
 ) {
 
-    private val organizationExternalDatabaseColumns = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_COLUMN.getMap( hazelcastInstance )
-    private val organizationExternalDatabaseTables = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_TABLE.getMap( hazelcastInstance )
-    private val securableObjectTypes = HazelcastMap.SECURABLE_OBJECT_TYPES.getMap( hazelcastInstance )
-    private val organizations = HazelcastMap.ORGANIZATIONS.getMap( hazelcastInstance )
-    private val aces = HazelcastMap.PERMISSIONS.getMap( hazelcastInstance )
+    private val organizationExternalDatabaseColumns = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_COLUMN.getMap(hazelcastInstance)
+    private val organizationExternalDatabaseTables = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_TABLE.getMap(hazelcastInstance)
+    private val securableObjectTypes = HazelcastMap.SECURABLE_OBJECT_TYPES.getMap(hazelcastInstance)
+    private val organizations = HazelcastMap.ORGANIZATIONS.getMap(hazelcastInstance)
+    private val aces = HazelcastMap.PERMISSIONS.getMap(hazelcastInstance)
     private val logger = LoggerFactory.getLogger(ExternalDatabaseManagementService::class.java)
     private val primaryKeyConstraint = "PRIMARY KEY"
     private val FETCH_SIZE = 100_000
@@ -246,7 +246,7 @@ class ExternalDatabaseManagementService(
                 username,
                 ipAddress,
                 organizationExternalDatabaseConfiguration.authMethod)
-        hds.connection.use {connection ->
+        hds.connection.use { connection ->
             connection.createStatement().use { stmt ->
                 val hbaTable = PostgresTable.HBA_AUTHENTICATION_RECORDS
                 val columns = hbaTable.columns.joinToString(", ", "(", ")") { it.name }
@@ -275,6 +275,11 @@ class ExternalDatabaseManagementService(
             }
         }
         updateHBARecords(dbName)
+    }
+
+    fun getOrganizationOwners(orgId: UUID): Set<SecurablePrincipal> {
+        val principals = securePrincipalsManager.getAuthorizedPrincipalsOnSecurableObject(AclKey(orgId), EnumSet.of(Permission.OWNER))
+        return securePrincipalsManager.getSecurablePrincipals(principals).toSet()
     }
 
     /**
@@ -361,6 +366,7 @@ class ExternalDatabaseManagementService(
 
     fun addPermissions(
             dbName: String,
+            orgOwnerIds: List<UUID>,
             orgId: UUID,
             tableId: UUID,
             tableName: String,
@@ -374,6 +380,8 @@ class ExternalDatabaseManagementService(
         val privilegesFields = getPrivilegesFields(tableName, maybeColumnName)
         val sql = privilegesFields.first
         val objectType = privilegesFields.second
+        val ownerPrivileges = PostgresPrivileges.values().toMutableSet()
+        ownerPrivileges.remove(PostgresPrivileges.ALL)
 
         BasePostgresIterable(
                 StatementHolderSupplier(assemblerConnectionManager.connect(dbName), sql)
@@ -386,12 +394,16 @@ class ExternalDatabaseManagementService(
                     privilegesByUser.getOrPut(securablePrincipalId) { mutableSetOf() }.add(it.second)
                 }
 
+        //give organization owners all privileges
+        orgOwnerIds.forEach {
+            privilegesByUser.getOrPut(it) { mutableSetOf() }.addAll(ownerPrivileges)
+        }
+
         return privilegesByUser.map { (securablePrincipalId, privileges) ->
             val principal = securePrincipalsManager.getSecurablePrincipalById(securablePrincipalId).principal
             val aceKey = AceKey(aclKey, principal)
             val permissions = EnumSet.noneOf(Permission::class.java)
-            val ownerPrivileges = PostgresPrivileges.values().toMutableSet()
-            ownerPrivileges.remove(PostgresPrivileges.ALL)
+
             if (privileges == ownerPrivileges) {
                 permissions.add(Permission.OWNER)
             }
