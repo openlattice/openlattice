@@ -21,16 +21,12 @@
 
 package com.openlattice.assembler.pods
 
-import com.amazonaws.services.s3.AmazonS3
-import com.kryptnostic.rhizome.configuration.ConfigurationConstants
-import com.kryptnostic.rhizome.configuration.amazon.AmazonLaunchConfiguration
-import com.openlattice.ResourceConfigurationLoader
+import com.kryptnostic.rhizome.pods.ConfigurationLoader
 import com.openlattice.assembler.AssemblerConfiguration
 import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import org.springframework.context.annotation.Profile
+import javax.inject.Inject
 
 private val logger = LoggerFactory.getLogger(AssemblerConfigurationPod::class.java)
 
@@ -41,33 +37,11 @@ private val logger = LoggerFactory.getLogger(AssemblerConfigurationPod::class.ja
  */
 @Configuration
 class AssemblerConfigurationPod {
-    @Autowired(required = false)
-    private lateinit var awsS3: AmazonS3
+    @Inject
+    private lateinit var configurationLoader: ConfigurationLoader
 
-    @Autowired(required = false)
-    private lateinit var awsLaunchConfig: AmazonLaunchConfiguration
-
-    @Bean(name = ["assemblerConfiguration"])
-    @Profile(ConfigurationConstants.Profiles.LOCAL_CONFIGURATION_PROFILE)
-    fun localAssemblerConfiguration(): AssemblerConfiguration {
-        val config = ResourceConfigurationLoader.loadConfiguration(AssemblerConfiguration::class.java)
-        logger.info("Using local aws datastore configuration: {}", config)
-        return config
-    }
-
-    @Bean(name = ["assemblerConfiguration"])
-    @Profile(
-            ConfigurationConstants.Profiles.AWS_CONFIGURATION_PROFILE,
-            ConfigurationConstants.Profiles.AWS_TESTING_PROFILE
-    )
-    fun awsAssemblerConfiguration() : AssemblerConfiguration {
-        val config = ResourceConfigurationLoader.loadConfigurationFromS3(
-                awsS3,
-                awsLaunchConfig.bucket,
-                awsLaunchConfig.folder,
-                AssemblerConfiguration::class.java
-        )
-        logger.info("Using aws datastore configuration: {}", config)
-        return config
+    @Bean
+    fun assemblerConfiguration(): AssemblerConfiguration {
+        return configurationLoader.logAndLoad( "assembler", AssemblerConfiguration::class.java)
     }
 }

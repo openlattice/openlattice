@@ -21,18 +21,13 @@
 
 package com.openlattice.auditing.pods
 
-import com.amazonaws.services.s3.AmazonS3
-import com.hazelcast.core.HazelcastInstance
-import com.kryptnostic.rhizome.configuration.ConfigurationConstants
-import com.kryptnostic.rhizome.configuration.amazon.AmazonLaunchConfiguration
+import com.kryptnostic.rhizome.pods.ConfigurationLoader
 import com.openlattice.ResourceConfigurationLoader
 import com.openlattice.auditing.AuditingConfiguration
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer
 import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import org.springframework.context.annotation.Profile
 import javax.inject.Inject
 
 private val logger = LoggerFactory.getLogger(AuditingConfigurationPod::class.java)
@@ -49,35 +44,10 @@ class AuditingConfigurationPod {
     }
 
     @Inject
-    private val hazelcastInstance: HazelcastInstance? = null
+    private lateinit var configurationLoader: ConfigurationLoader
 
-    @Autowired(required = false)
-    private val awsS3: AmazonS3? = null
-
-    @Autowired(required = false)
-    private val awsLaunchConfig: AmazonLaunchConfiguration? = null
-
-    @Bean(name = ["auditingConfiguration"])
-    @Profile(ConfigurationConstants.Profiles.LOCAL_CONFIGURATION_PROFILE)
-    fun getLocalAuditingConfiguration(): AuditingConfiguration {
-        val config = ResourceConfigurationLoader.loadConfiguration(AuditingConfiguration::class.java)
-        logger.info("Using local aws auditing configuration: {}", config)
-        return config
-    }
-
-    @Bean(name = ["auditingConfiguration"])
-    @Profile(
-            ConfigurationConstants.Profiles.AWS_CONFIGURATION_PROFILE,
-            ConfigurationConstants.Profiles.AWS_TESTING_PROFILE
-    )
-    fun getAwsAuditingConfiguration(): AuditingConfiguration {
-        val config = ResourceConfigurationLoader.loadConfigurationFromS3(
-                awsS3!!,
-                awsLaunchConfig!!.bucket,
-                awsLaunchConfig.folder,
-                AuditingConfiguration::class.java
-        )
-        logger.info("Using aws auditing configuration: {}", config)
-        return config
+    @Bean
+    fun auditingConfiguration(): AuditingConfiguration {
+        return configurationLoader.logAndLoad( "auditing", AuditingConfiguration::class.java )
     }
 }
