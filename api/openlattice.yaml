@@ -3356,7 +3356,7 @@ paths:
       requestBody:
         required: true
         content:
-          application/json:
+          text/plain:
             schema:
               type: string
       responses:
@@ -3387,7 +3387,7 @@ paths:
       requestBody:
         required: true
         content:
-          application/json:
+          text/plain:
             schema:
               type: string
       responses:
