@@ -6,12 +6,6 @@
 enable-persistence:  false
 session-clustering-enabled: false
 
-cassandra:
-    ssl-enabled: false
-    replication-factor: 1
-    seed-nodes:
-        - "127.0.0.1"
-
 hazelcast:
     server: true
     group: "local"
