@@ -24,8 +24,6 @@ package com.openlattice.datastore.util;
 
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -34,8 +32,6 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datastax.driver.core.Row;
-import com.google.common.util.concurrent.ListenableFuture;
 import com.hazelcast.core.IMap;
 
 public final class Util {
@@ -43,31 +39,6 @@ public final class Util {
 
     private Util() {}
 
-    public static <T> T getFutureSafely( ListenableFuture<T> futurePropertyType ) {
-        try {
-            return futurePropertyType.get();
-        } catch ( InterruptedException | ExecutionException e1 ) {
-            logger.error( "Failed to load {} type",
-                    futurePropertyType.getClass().getTypeParameters()[ 0 ].getTypeName() );
-            return null;
-        }
-    }
-
-    public static String toUnhyphenatedString( UUID uuid ) {
-        return Long.toString( uuid.getLeastSignificantBits() ) + "_" + Long.toString( uuid.getMostSignificantBits() );
-    }
-
-    public static <T> Function<Row, T> transformSafelyFactory( Function<Row, T> f ) {
-        return ( Row row ) -> transformSafely( row, f );
-
-    }
-
-    public static <T> T transformSafely( Row row, Function<Row, T> f ) {
-        if ( row == null ) {
-            return null;
-        }
-        return f.apply( row );
-    }
 
     public static <K, V> V getSafely( IMap<K, V> m, K key ) {
         return m.get( key );
@@ -93,9 +64,7 @@ public final class Util {
         return m::delete;
     }
 
-    public static <K, V> V removeSafely(
-            IMap<K, V> fqns,
-            K organizationId ) {
+    public static <K, V> V removeSafely( IMap<K, V> fqns, K organizationId ) {
         return fqns.remove( organizationId );
     }
     
