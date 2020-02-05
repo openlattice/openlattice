@@ -3,16 +3,21 @@ package com.openlattice.codex.controllers
 import com.codahale.metrics.annotation.Timed
 import com.google.common.collect.Maps
 import com.hazelcast.core.HazelcastInstance
-import com.openlattice.apps.AppConfigKey
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
 import com.openlattice.codex.CodexApi
+import com.openlattice.codex.CodexApi.Companion.BASE
+import com.openlattice.codex.CodexApi.Companion.INCOMING
+import com.openlattice.codex.CodexApi.Companion.ORG_ID
+import com.openlattice.codex.CodexApi.Companion.ORG_ID_PATH
+import com.openlattice.codex.CodexApi.Companion.STATUS
+import com.openlattice.codex.CodexService
 import com.openlattice.codex.MessageRequest
 import com.openlattice.controllers.exceptions.BadRequestException
 import com.openlattice.data.DataApi
-import com.openlattice.data.DataEdgeKey
 import com.openlattice.datastore.apps.services.AppService
 import com.openlattice.hazelcast.HazelcastQueue
+import com.openlattice.notifications.sms.PhoneNumberService
 import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.postgres.mapstores.AppConfigMapstore
 import com.openlattice.twilio.TwilioConfiguration
@@ -20,15 +25,17 @@ import com.twilio.Twilio
 import com.twilio.rest.api.v2010.account.Message
 import com.twilio.type.PhoneNumber
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
-import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RequestMethod
-import org.springframework.web.bind.annotation.RestController
+import org.apache.commons.lang.NotImplementedException
+import org.springframework.http.MediaType
+import org.springframework.web.bind.annotation.*
 import java.net.URI
+import java.time.OffsetDateTime
 import java.util.*
 import java.util.concurrent.Executors
 import java.util.stream.Stream
 import javax.inject.Inject
+import javax.servlet.http.HttpServletRequest
+import javax.servlet.http.HttpServletResponse
 
 @SuppressFBWarnings(
         value = ["BC_BAD_CAST_TO_ABSTRACT_COLLECTION"],
@@ -44,27 +51,14 @@ constructor(
         private val appService: AppService,
         private val appConfigMS: AppConfigMapstore,
         private val hazelcastInstance: HazelcastInstance,
-        private val configuration: TwilioConfiguration
+        private val configuration: TwilioConfiguration,
+        private val codexService: CodexService,
+        private val phoneNumberService: PhoneNumberService
 ) : CodexApi, AuthorizingComponent {
 
     private val textingExecutor = Executors.newSingleThreadExecutor()
-    private val twilioQueue = HazelcastQueue.TWILIO.getQueue( hazelcastInstance )
+    private val twilioQueue = HazelcastQueue.TWILIO.getQueue(hazelcastInstance)
     val pendingTexts = Maps.newConcurrentMap<String, Message>()
-
-    companion object {
-        // People
-        private val peopleUUID = UUID.fromString("6e8e22d6-4b3d-43a1-b154-f4c1bcdfe55f")
-        // Settings
-        private val settingsUUID = UUID.fromString("4a88ceb3-917c-4454-a818-c626f177958f")
-        // ContactInfo
-        private val contactUUID = UUID.fromString("35e6a833-9c25-43ad-b116-e9dd11d08cfa")
-        // Messages
-        private val messagesUUID = UUID.fromString("55122a60-4858-4ba0-bb6f-93bd9f75749b")
-        // TO
-        private val toUUID = UUID.fromString("3ddfe8d0-0b73-4097-b737-e969b64b4f64")
-        // From
-        private val fromUUID = UUID.fromString("2d2509ea-51f7-4663-a3a8-42d8036e2e04")
-    }
 
     init {
         Twilio.init(configuration.sid, configuration.token)
@@ -81,9 +75,9 @@ constructor(
                     throw BadRequestException("No source phone number set for organization!")
                 }
                 val message = Message.creator(PhoneNumber(toPhoneNumber), PhoneNumber(phone), messageContents)
-                        .setStatusCallback(URI.create("https://api.openlattice.com/datastore/codex/status")).create()
+                        .setStatusCallback(URI.create("http://38e36779.ngrok.io$BASE$INCOMING/$organizationId$STATUS")).create()
                 pendingTexts[message.sid] = message
-                processQueueEntry(message, organizationId)
+                codexService.processOutgoingMessage(message, organizationId)
             }
         }
     }
@@ -94,42 +88,39 @@ constructor(
         twilioQueue.put(contents)
     }
 
-    override fun receiveIncomingText(@RequestBody message: Message) {
+    @Timed
+    @RequestMapping(path = [INCOMING + ORG_ID_PATH], method = [RequestMethod.POST], consumes = [MediaType.APPLICATION_FORM_URLENCODED_VALUE])
+    fun receiveIncomingText(@PathVariable(ORG_ID) organizationId: UUID, request: HttpServletRequest) {
 
+        val messageId = codexService.getIncomingMessageField(request, CodexConstants.Request.SID)
+        val phoneNumber = codexService.getIncomingMessageField(request, CodexConstants.Request.FROM)
+        val text = codexService.getIncomingMessageField(request, CodexConstants.Request.BODY)
+        val dateTime = OffsetDateTime.now()
+
+        codexService.processMessage(organizationId, dateTime, phoneNumber, messageId, text, isOutgoing = false)
     }
 
     @Timed
-    @RequestMapping(path = [CodexApi.STATUS], method = [RequestMethod.POST])
-    override fun listenForTextStatus(@RequestBody message: Message) {
-        if (message.status == Message.Status.FAILED || message.status == Message.Status.UNDELIVERED) {
+    @RequestMapping(path = [INCOMING + ORG_ID_PATH + STATUS], method = [RequestMethod.POST])
+    fun listenForTextStatus(@PathVariable(ORG_ID) organizationId: UUID, request: HttpServletRequest) {
+
+        val messageId = codexService.getIncomingMessageField(request, CodexConstants.Request.SID)
+        val status = Message.Status.forValue(codexService.getIncomingMessageField(request, CodexConstants.Request.STATUS))
+
+        codexService.updateMessageStatus(organizationId, messageId, status)
+        if (status == Message.Status.FAILED || status == Message.Status.UNDELIVERED) {
             println("Message not received or even failed to send!!! ")
         } else {
-            pendingTexts.remove(message.sid)
+            pendingTexts.remove(messageId)
         }
     }
 
-    fun processQueueEntry(message: Message, organizationId: UUID) {
-        createEntitiesFromMessage(message, organizationId, peopleUUID)
-        createEntitiesFromMessage(message, organizationId, contactUUID)
-        createEntitiesFromMessage(message, organizationId, messagesUUID)
-        createEntitiesFromMessage(message, organizationId, toUUID)
-        createEntitiesFromMessage(message, organizationId, fromUUID)
-
-        createAssociationsFromMessage()
+    override fun receiveIncomingText(organizationId: UUID) {
+        throw NotImplementedException("This should not be called without a HttpServletRequest")
     }
 
-    fun createEntitiesFromMessage(msg: Message, organizationId: UUID, appTypeId: UUID) {
-        val entities = mutableListOf<Map<UUID, Set<Any>>>()
-        val app = appService.getApp("codex")
-        val ack = AppConfigKey(app.id, organizationId, appTypeId)
-        val esid = appConfigMS.load(ack).entitySetId
-
-        val createEntities = dataApi.createEntities(esid, entities)
-    }
-
-    fun createAssociationsFromMessage() {
-        val deks = setOf<DataEdgeKey>()
-        val createAssociations = dataApi.createEdges(deks)
+    override fun listenForTextStatus() {
+        throw NotImplementedException("This should not be called without a HttpServletRequest")
     }
 
     override fun getAuthorizationManager(): AuthorizationManager {
