@@ -33,6 +33,7 @@ import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.AbstractSecurableType;
 import com.openlattice.authorization.securable.SecurableObjectType;
+import com.openlattice.codex.MessageRequest;
 import com.openlattice.collections.CollectionTemplateType;
 import com.openlattice.collections.EntitySetCollection;
 import com.openlattice.collections.EntityTypeCollection;
@@ -729,6 +730,16 @@ public final class TestDataFactory {
                 UUID.randomUUID(),
                 ImmutableSet.of( UUID.randomUUID() ),
                 ImmutableSet.of( randomAlphanumeric( 5 ), randomAlphanumeric( 5 ) )
+        );
+    }
+
+    public static MessageRequest messageRequest() {
+        return new MessageRequest(
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                randomAlphabetic( 20 ),
+                randomAlphanumeric( 10 ),
+                randomAlphanumeric( 15 )
         );
     }
 
