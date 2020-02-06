@@ -3,6 +3,7 @@ package com.openlattice.codex.controllers
 import com.codahale.metrics.annotation.Timed
 import com.google.common.collect.Maps
 import com.hazelcast.core.HazelcastInstance
+import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
 import com.openlattice.authorization.Principals
@@ -85,6 +86,7 @@ constructor(
     @Timed
     @RequestMapping(path = ["", "/"], method = [RequestMethod.POST])
     override fun sendOutgoingText(@RequestBody contents: MessageRequest) {
+        ensureWriteAccess(AclKey(contents.messageEntitySetId))
         contents.senderId = Principals.getCurrentUser().id
         twilioQueue.put(contents)
     }
