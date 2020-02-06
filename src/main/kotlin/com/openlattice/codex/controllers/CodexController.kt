@@ -16,12 +16,8 @@ import com.openlattice.codex.CodexApi.Companion.STATUS
 import com.openlattice.codex.CodexService
 import com.openlattice.codex.MessageRequest
 import com.openlattice.controllers.exceptions.BadRequestException
-import com.openlattice.data.DataApi
-import com.openlattice.datastore.apps.services.AppService
 import com.openlattice.hazelcast.HazelcastQueue
-import com.openlattice.notifications.sms.PhoneNumberService
 import com.openlattice.organizations.HazelcastOrganizationService
-import com.openlattice.postgres.mapstores.AppConfigMapstore
 import com.openlattice.twilio.TwilioConfiguration
 import com.twilio.Twilio
 import com.twilio.rest.api.v2010.account.Message
@@ -46,15 +42,11 @@ import javax.servlet.http.HttpServletRequest
 class CodexController
 @Inject
 constructor(
+        hazelcastInstance: HazelcastInstance,
+        configuration: TwilioConfiguration,
         private val authorizationManager: AuthorizationManager,
         private val organizations: HazelcastOrganizationService,
-        private val dataApi: DataApi,
-        private val appService: AppService,
-        private val appConfigMS: AppConfigMapstore,
-        private val hazelcastInstance: HazelcastInstance,
-        private val configuration: TwilioConfiguration,
-        private val codexService: CodexService,
-        private val phoneNumberService: PhoneNumberService
+        private val codexService: CodexService
 ) : CodexApi, AuthorizingComponent {
 
     private val textingExecutor = Executors.newSingleThreadExecutor()
