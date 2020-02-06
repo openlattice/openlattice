@@ -28,6 +28,7 @@ import com.openlattice.data.EntityDataKey
 import com.openlattice.edm.EntitySet
 import com.openlattice.mail.RenderableEmailRequest
 import com.openlattice.notifications.sms.SubscriptionNotification
+import com.openlattice.shuttle.QueuedIntegrationJob
 import java.time.OffsetDateTime
 import java.util.*
 
@@ -52,15 +53,27 @@ class HazelcastQueue<T> internal constructor(val name: String) : TypedQueueIdent
         private val instanceChecker = UniqueInstanceManager(HazelcastQueue::class.java)
 
         // When adding new entries to this list, please make sure to keep it sorted and keep the name in sync
-        @JvmField val AUDITING = HazelcastQueue<AuditableEvent>("AUDITING")
-        @JvmField val BACKGROUND_INDEXING  = HazelcastQueue<EntitySet>("BACKGROUND_INDEXING")
-        @JvmField val EMAIL_SPOOL  = HazelcastQueue<RenderableEmailRequest>("EMAIL_SPOOL")
-        @JvmField val ID_GENERATION  = HazelcastQueue<UUID>("ID_GENERATION")
-        @JvmField val INDEXING = HazelcastQueue<UUID>("INDEXING")
-        @JvmField val LINKING_CANDIDATES = HazelcastQueue<EntityDataKey>("LINKING_CANDIDATES")
-        @JvmField val LINKING_INDEXING = HazelcastQueue<Triple<List<Array<UUID>>, UUID, OffsetDateTime>>("LINKING_INDEXING")
-        @JvmField val LINKING_UNINDEXING = HazelcastQueue<Triple<List<Array<UUID>>, UUID, OffsetDateTime>>("LINKING_UNINDEXING")
-        @JvmField val TWILIO = HazelcastQueue<MessageRequest>("TWILIO")
-        @JvmField val TWILIO_FEED = HazelcastQueue<SubscriptionNotification>("TWILIO_FEED")
+        @JvmField
+        val AUDITING = HazelcastQueue<AuditableEvent>("AUDITING")
+        @JvmField
+        val BACKGROUND_INDEXING = HazelcastQueue<EntitySet>("BACKGROUND_INDEXING")
+        @JvmField
+        val EMAIL_SPOOL = HazelcastQueue<RenderableEmailRequest>("EMAIL_SPOOL")
+        @JvmField
+        val ID_GENERATION = HazelcastQueue<UUID>("ID_GENERATION")
+        @JvmField
+        val INDEXING = HazelcastQueue<UUID>("INDEXING")
+        @JvmField
+        val QUEUED_INTEGRATION_JOBS = HazelcastQueue<QueuedIntegrationJob>("QUEUED_INTEGRATION_JOBS")
+        @JvmField
+        val LINKING_CANDIDATES = HazelcastQueue<EntityDataKey>("LINKING_CANDIDATES")
+        @JvmField
+        val LINKING_INDEXING = HazelcastQueue<Triple<List<Array<UUID>>, UUID, OffsetDateTime>>("LINKING_INDEXING")
+        @JvmField
+        val LINKING_UNINDEXING = HazelcastQueue<Triple<List<Array<UUID>>, UUID, OffsetDateTime>>("LINKING_UNINDEXING")
+        @JvmField
+        val TWILIO = HazelcastQueue<MessageRequest>("TWILIO")
+        @JvmField
+        val TWILIO_FEED = HazelcastQueue<SubscriptionNotification>("TWILIO_FEED")
     }
 }

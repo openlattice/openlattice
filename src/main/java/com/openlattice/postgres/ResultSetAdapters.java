@@ -67,6 +67,8 @@ import com.openlattice.requests.Status;
 import com.openlattice.search.PersistentSearchNotificationType;
 import com.openlattice.search.requests.PersistentSearch;
 import com.openlattice.search.requests.SearchConstraints;
+import com.openlattice.shuttle.IntegrationJob;
+import com.openlattice.shuttle.IntegrationStatus;
 import com.openlattice.subscriptions.Subscription;
 import com.openlattice.subscriptions.SubscriptionContactType;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
@@ -1018,6 +1020,12 @@ public final class ResultSetAdapters {
     public static PostgresConnectionType connectionType(ResultSet rs) throws SQLException {
         String connectionType = rs.getString( CONNECTION_TYPE.getName() );
         return PostgresConnectionType.valueOf(connectionType);
+    }
+
+    public static IntegrationJob integrationJob(ResultSet rs) throws SQLException {
+        String name = name( rs );
+        IntegrationStatus status = IntegrationStatus.valueOf( rs.getString( STATUS.getName() ).toUpperCase() );
+        return new IntegrationJob( name, status );
     }
 
 }
