@@ -2,9 +2,9 @@ package com.openlattice.subscriptions
 
 import com.openlattice.authorization.Permission
 import com.openlattice.authorization.Principals
-import com.openlattice.codex.MessageRequest
 import com.openlattice.graph.NeighborhoodQuery
 import com.openlattice.mail.RenderableEmailRequest
+import com.openlattice.notifications.sms.SubscriptionNotification
 import com.openlattice.tasks.HazelcastFixedRateTask
 import com.openlattice.tasks.HazelcastTaskDependencies
 import java.util.*
@@ -16,6 +16,11 @@ import java.util.concurrent.TimeUnit
  */
 
 class SubscriptionNotificationTask : HazelcastFixedRateTask<SubscriptionNotificationDependencies>, HazelcastTaskDependencies {
+
+    companion object {
+        const val DEFAULT_MESSAGE = "One of your subscriptions was involved in an event."
+    }
+
     override fun getInitialDelay(): Long {
         return 30000
     }
@@ -53,11 +58,9 @@ class SubscriptionNotificationTask : HazelcastFixedRateTask<SubscriptionNotifica
                 subscriptionContact.contact.forEach { (contactType, contact) ->
                     when (contactType) {
                         SubscriptionContactType.PHONE -> {
-                            dependencies.twilioQueue.put(
-                                    MessageRequest(
-                                            subscriptionContact.organizationId,
-                                            subscriptionContact.organizationId, 
-                                            "One of your users has been involved in the following event type: ",
+                            dependencies.twilioFeedQueue.put(
+                                    SubscriptionNotification(
+                                            DEFAULT_MESSAGE, // TODO more specific message once this feature is ready
                                             contact
                                     )
                             )
@@ -72,9 +75,7 @@ class SubscriptionNotificationTask : HazelcastFixedRateTask<SubscriptionNotifica
                                             Optional.empty(),
                                             Optional.empty(),
                                             "mail/templates/shared/CodexAlertTemplate.mustache",
-                                            Optional.of(
-                                                    "One of your subscriptions was involved in an event."
-                                            ),
+                                            Optional.of(DEFAULT_MESSAGE),
                                             Optional.of(data),
                                             Optional.empty(),
                                             Optional.empty()

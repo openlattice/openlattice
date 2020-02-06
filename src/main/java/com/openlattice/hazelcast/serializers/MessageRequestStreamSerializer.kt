@@ -23,10 +23,7 @@ class MessageRequestStreamSerializer : TestableSelfRegisteringStreamSerializer<M
         UUIDStreamSerializer.serialize(out, `object`.messageEntitySetId)
         out.writeUTF(`object`.messageContents)
         out.writeUTF(`object`.phoneNumber)
-        `object`.senderId?.let {
-            out.writeBoolean(true)
-            out.writeUTF(it)
-        } ?: out.writeBoolean(false)
+        out.writeUTF(`object`.senderId)
     }
 
     override fun read(`in`: ObjectDataInput): MessageRequest {
@@ -34,7 +31,7 @@ class MessageRequestStreamSerializer : TestableSelfRegisteringStreamSerializer<M
         val messageEntitySetId = UUIDStreamSerializer.deserialize(`in`)
         val messageContents = `in`.readUTF()
         val phoneNumber = `in`.readUTF()
-        val senderId: String? = if (`in`.readBoolean()) `in`.readUTF() else null
+        val senderId = `in`.readUTF()
 
         return MessageRequest(organizationId, messageEntitySetId, messageContents, phoneNumber, senderId)
     }

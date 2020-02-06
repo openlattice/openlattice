@@ -27,6 +27,7 @@ import com.openlattice.codex.MessageRequest
 import com.openlattice.data.EntityDataKey
 import com.openlattice.edm.EntitySet
 import com.openlattice.mail.RenderableEmailRequest
+import com.openlattice.notifications.sms.SubscriptionNotification
 import java.time.OffsetDateTime
 import java.util.*
 
@@ -60,5 +61,6 @@ class HazelcastQueue<T> internal constructor(val name: String) : TypedQueueIdent
         @JvmField val LINKING_INDEXING = HazelcastQueue<Triple<List<Array<UUID>>, UUID, OffsetDateTime>>("LINKING_INDEXING")
         @JvmField val LINKING_UNINDEXING = HazelcastQueue<Triple<List<Array<UUID>>, UUID, OffsetDateTime>>("LINKING_UNINDEXING")
         @JvmField val TWILIO = HazelcastQueue<MessageRequest>("TWILIO")
+        @JvmField val TWILIO_FEED = HazelcastQueue<SubscriptionNotification>("TWILIO_FEED")
     }
 }
