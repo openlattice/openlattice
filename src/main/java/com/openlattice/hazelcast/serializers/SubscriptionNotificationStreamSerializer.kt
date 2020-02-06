@@ -2,6 +2,7 @@ package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
+import com.openlattice.hazelcast.InternalTestDataFactory
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.notifications.sms.SubscriptionNotification
@@ -31,6 +32,6 @@ class SubscriptionNotificationStreamSerializer() : TestableSelfRegisteringStream
     }
 
     override fun generateTestValue(): SubscriptionNotification {
-        return SubscriptionNotification(TestDataFactory.randomAlphanumeric(20), TestDataFactory.randomAlphanumeric(10))
+        return InternalTestDataFactory.subscriptionNotification()
     }
 }
