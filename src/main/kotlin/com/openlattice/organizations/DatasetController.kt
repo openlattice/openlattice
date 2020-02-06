@@ -13,8 +13,16 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.*
-import java.util.*
 import javax.inject.Inject
+import java.util.UUID
+import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
+import com.openlattice.edm.requests.MetadataUpdate
+import org.springframework.web.bind.annotation.PatchMapping
+
+
+
+
 
 
 @SuppressFBWarnings(
@@ -67,6 +75,48 @@ class DatasetController : DatasetApi, AuthorizingComponent {
         val userPrincipal = Principal(PrincipalType.USER, userId)
         edms.removeHBARecord(organizationId, userPrincipal, connectionType, ipAddress)
     }
+
+    @Timed
+    @PostMapping(path = [ID_PATH + EXTERNAL_DATABASE_TABLE])
+    override fun createExternalDatabaseTable(
+            @PathVariable(ID) organizationId: UUID,
+            @RequestBody organizationExternalDatabaseTable: OrganizationExternalDatabaseTable): UUID {
+        ensureOwnerAccess(AclKey(organizationId))
+        return edms.createOrganizationExternalDatabaseTable(organizationId, organizationExternalDatabaseTable)
+    }
+
+    @Timed
+    @PostMapping(path = [ID_PATH + EXTERNAL_DATABASE_COLUMN])
+    override fun createExternalDatabaseColumn(
+            @PathVariable(ID) organizationId: UUID,
+            @RequestBody organizationExternalDatabaseColumn: OrganizationExternalDatabaseColumn): UUID {
+        ensureOwnerAccess(AclKey(organizationId))
+        return edms.createOrganizationExternalDatabaseColumn(organizationId, organizationExternalDatabaseColumn)
+    }
+
+    @Timed
+    @PostMapping(path = [ID_PATH + TABLE_NAME_PATH + EXTERNAL_DATABASE_TABLE])
+    fun createNewExternalDatabaseTable(
+            @PathVariable(ID) organizationId: UUID,
+            @PathVariable(TABLE_NAME) tableName: String,
+            @RequestBody columnNameToMetadata: Map<String, OrganizationExternalDatabaseColumnMetadata>) {
+        ensureOwnerAccess(AclKey(organizationId))
+        edms.createNewOrganizationExternalDatabaseTable(organizationId, tableName, columnNameToMetadata)
+    }
+
+
+    @Timed
+    @PostMapping(path = [ID_PATH + TABLE_NAME_PATH + COLUMN_NAME_PATH + SQL_TYPE_PATH + EXTERNAL_DATABASE_COLUMN])
+    fun createNewExternalDatabaseColumn(
+            @PathVariable(ID) organizationId: UUID,
+            @PathVariable(TABLE_NAME) tableName: String,
+            @PathVariable(COLUMN_NAME) columnName: String,
+            @PathVariable(SQL_TYPE) sqlType: String) {
+        ensureOwnerAccess(organizationId)
+        val tableId = getExternalDatabaseObjectId(organizationId, tableName)
+        edms.createNewOrganizationExternalDatabaseColumn(organizationId, tableId, tableName, columnName, sqlType)
+    }
+
 
     @Timed
     @GetMapping(path = [ID_PATH + EXTERNAL_DATABASE_TABLE])
@@ -123,6 +173,31 @@ class DatasetController : DatasetApi, AuthorizingComponent {
         val columnId = getExternalDatabaseObjectId(tableId, columnName)
         ensureReadAccess(AclKey(organizationId, tableId, columnId))
         return edms.getOrganizationExternalDatabaseColumn(columnId)
+    }
+
+    //TODO Metadata update probably won't work
+    @Timed
+    @PatchMapping(path = [ID_PATH + TABLE_NAME_PATH + EXTERNAL_DATABASE_TABLE])
+    override fun updateExternalDatabaseTable(
+            @PathVariable(ID) organizationId: UUID,
+            @PathVariable(TABLE_NAME) tableName: String,
+            @RequestBody metadataUpdate: MetadataUpdate) {
+        val tableId = getExternalDatabaseObjectId(organizationId, tableName)
+        ensureAdminAccess()
+        edms.updateOrganizationExternalDatabaseTable(organizationId, tableId, tableName, metadataUpdate)
+    }
+
+    @Timed
+    @PatchMapping(path = [ID_PATH + TABLE_NAME_PATH + COLUMN_NAME_PATH + EXTERNAL_DATABASE_TABLE])
+    override fun updateExternalDatabaseColumn(
+            @PathVariable(ID) organizationId: UUID,
+            @PathVariable(TABLE_NAME) tableName: String,
+            @PathVariable(COLUMN_NAME) columnName: String,
+            @RequestBody metadataUpdate: MetadataUpdate) {
+        val tableId = getExternalDatabaseObjectId(organizationId, tableName)
+        val columnId = getExternalDatabaseObjectId(tableId, columnName)
+        ensureAdminAccess()
+        edms.updateOrganizationExternalDatabaseColumn(organizationId, tableId, tableName, columnId, columnName, metadataUpdate)
     }
 
     @Timed
