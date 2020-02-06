@@ -7,5 +7,5 @@ data class MessageRequest (
         val messageEntitySetId : UUID,
         val messageContents: String,
         val phoneNumber: String,
-        var senderId: String? = null
+        var senderId: String = ""
 )
