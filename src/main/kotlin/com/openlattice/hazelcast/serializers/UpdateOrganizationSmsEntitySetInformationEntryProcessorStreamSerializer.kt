@@ -2,13 +2,13 @@ package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
-import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.hazelcast.StreamSerializerTypeIds
+import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.organizations.processors.UpdateOrganizationSmsEntitySetInformationEntryProcessor
 import org.springframework.stereotype.Component
 
 @Component
-class UpdateOrganizationSmsEntitySetInformationEntryProcessorStreamSerializer : SelfRegisteringStreamSerializer<UpdateOrganizationSmsEntitySetInformationEntryProcessor> {
+class UpdateOrganizationSmsEntitySetInformationEntryProcessorStreamSerializer : TestableSelfRegisteringStreamSerializer<UpdateOrganizationSmsEntitySetInformationEntryProcessor> {
 
     override fun getTypeId(): Int {
         return StreamSerializerTypeIds.UPDATE_ORGANIZATION_SMS_ENTITY_SET_INFORMATION_ENTRY_PROCESSOR.ordinal
@@ -28,5 +28,9 @@ class UpdateOrganizationSmsEntitySetInformationEntryProcessorStreamSerializer : 
         return UpdateOrganizationSmsEntitySetInformationEntryProcessor(
                 (0 until size).map { SmsEntitySetInformationStreamSerializer.deserialize(`in`) }
         )
+    }
+
+    override fun generateTestValue(): UpdateOrganizationSmsEntitySetInformationEntryProcessor {
+        return UpdateOrganizationSmsEntitySetInformationEntryProcessor(listOf(TestDataFactory.smsEntitySetInformation(), TestDataFactory.smsEntitySetInformation()))
     }
 }
