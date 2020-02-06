@@ -189,6 +189,7 @@ public final class SerializationConstants {
     public static final String NEIGHBOR_TYPE_ID                 = "neighborTypeId";
     public static final String NUM_HITS                         = "numHits";
     public static final String OPERATION_ID                     = "operationId";
+    public static final String ORDINAL_POSITION                 = "ordinalPosition";
     public static final String ORGANIZATION                     = "organization";
     public static final String ORGANIZATION_ID                  = "organizationId";
     public static final String ORIENTATION                      = "orientation";
@@ -199,7 +200,7 @@ public final class SerializationConstants {
     public static final String PERMISSIONS_MAP                  = "permissionsMap";
     public static final String PHONE_NUMBER                     = "phoneNumber";
     public static final String PII_FIELD                        = "pii";
-    public static final String ORDINAL_POSITION                 = "ordinalPosition";
+    public static final String POSTGRES_OBJECT_ID               = "postgresObjectId";
     public static final String PRESENT                          = "present";
     public static final String PRIMARY_KEY                      = "primaryKey";
     public static final String PRINCIPAL                        = "principal";
