@@ -80,7 +80,7 @@ class CodexService(
                 throw BadRequestException("No source phone number set for organization!")
             }
             val message = Message.creator(PhoneNumber(toPhoneNumber), PhoneNumber(phone), messageContents)
-                    .setStatusCallback(URI.create("http://6be5e254.ngrok.io${CodexApi.BASE}${CodexApi.INCOMING}/$organizationId${CodexApi.STATUS}")).create()
+                    .setStatusCallback(URI.create("https://api.openlattice.com${CodexApi.BASE}${CodexApi.INCOMING}/$organizationId${CodexApi.STATUS}")).create()
             processOutgoingMessage(message, organizationId, senderId!!)
         }
     }
