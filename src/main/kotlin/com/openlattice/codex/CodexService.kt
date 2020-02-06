@@ -8,6 +8,7 @@ import com.hazelcast.core.IMap
 import com.openlattice.apps.AppConfigKey
 import com.openlattice.apps.AppTypeSetting
 import com.openlattice.codex.controllers.CodexConstants
+import com.openlattice.controllers.exceptions.BadRequestException
 import com.openlattice.data.DataEdge
 import com.openlattice.data.DataGraphManager
 import com.openlattice.data.EntityDataKey
@@ -16,36 +17,80 @@ import com.openlattice.datastore.apps.services.AppService
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.hazelcast.HazelcastQueue
+import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.organizations.roles.SecurePrincipalsManager
+import com.openlattice.twilio.TwilioConfiguration
+import com.twilio.Twilio
 import com.twilio.rest.api.v2010.account.Message
+import com.twilio.type.PhoneNumber
 import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
+import java.net.URI
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset.UTC
 import java.util.*
+import java.util.concurrent.Executors
+import java.util.stream.Stream
 import javax.servlet.http.HttpServletRequest
 
 @Service
 class CodexService(
+        twilioConfiguration: TwilioConfiguration,
         val hazelcast: HazelcastInstance,
         val appService: AppService,
         val edmManager: EdmManager,
         val dataGraphManager: DataGraphManager,
         val entityKeyIdService: EntityKeyIdService,
-        val principalsManager: SecurePrincipalsManager
+        val principalsManager: SecurePrincipalsManager,
+        val organizations: HazelcastOrganizationService
 ) {
 
     companion object {
         private val logger = LoggerFactory.getLogger(CodexService::class.java)
     }
 
+    init {
+        Twilio.init(twilioConfiguration.sid, twilioConfiguration.token)
+    }
+
     val appId = appService.getApp(CodexConstants.APP_NAME).id
     val typesByFqn = CodexConstants.AppType.values().associate { it to appService.getAppType(it.fqn) }
     val appConfigs: IMap<AppConfigKey, AppTypeSetting> = HazelcastMap.APP_CONFIGS.getMap(hazelcast)
     val propertyTypesByAppType = typesByFqn.values.associate { it.id to edmManager.getPropertyTypesOfEntityType(it.entityTypeId) }
-    val propertyTypesByFqn = propertyTypesByAppType.values.flatMap { it.values }.associate { it.type to it.id } // TODO check if collisions break this
+    val propertyTypesByFqn = propertyTypesByAppType.values.flatMap { it.values }.associate { it.type to it.id }
+
+    val textingExecutor = Executors.newSingleThreadExecutor()
+    val feedsExecutor = Executors.newSingleThreadExecutor()
+
+    val twilioQueue = HazelcastQueue.TWILIO.getQueue(hazelcast)
+    val feedsQueue = HazelcastQueue.TWILIO_FEED.getQueue(hazelcast)
+
+    val textingExecutorWorker = textingExecutor.execute {
+        Stream.generate { twilioQueue.take() }.forEach { (organizationId, messageEntitySetId, messageContents, toPhoneNumber, senderId) ->
+            //Not very efficient.
+            val phone = organizations.getOrganization(organizationId)!!.smsEntitySetInfo
+                    .flatMap { (phoneNumber, _, entitySetIds, _) -> entitySetIds.map { it to phoneNumber } }
+                    .toMap()
+                    .getValue(messageEntitySetId)
+
+            if (phone == "") {
+                throw BadRequestException("No source phone number set for organization!")
+            }
+            val message = Message.creator(PhoneNumber(toPhoneNumber), PhoneNumber(phone), messageContents)
+                    .setStatusCallback(URI.create("http://6be5e254.ngrok.io${CodexApi.BASE}${CodexApi.INCOMING}/$organizationId${CodexApi.STATUS}")).create()
+            processOutgoingMessage(message, organizationId, senderId!!)
+        }
+    }
+
+    val fromPhone = PhoneNumber(twilioConfiguration.shortCode)
+    val feedsExecutorWorker = feedsExecutor.execute {
+        Stream.generate { feedsQueue.take() }.forEach { (messageContents, toPhoneNumber) ->
+            Message.creator(PhoneNumber(toPhoneNumber), fromPhone, messageContents).create()
+        }
+    }
 
     fun processOutgoingMessage(message: Message, organizationId: UUID, senderId: String) {
         val dateTime = formatDateTime(message.dateCreated)

@@ -603,12 +603,14 @@ public class DatastoreServicesPod {
     @Bean
     public CodexService codexService() {
         return new CodexService(
+                twilioConfiguration,
                 hazelcastInstance,
                 appService(),
                 dataModelService(),
                 dataGraphService(),
                 idService(),
-                principalService()
+                principalService(),
+                organizationsManager()
         );
     }
 
