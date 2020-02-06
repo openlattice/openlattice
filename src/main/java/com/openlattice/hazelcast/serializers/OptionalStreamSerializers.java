@@ -24,17 +24,12 @@ import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.kryptnostic.rhizome.hazelcast.serializers.IoPerformingBiConsumer;
-import com.kryptnostic.rhizome.hazelcast.serializers.IoPerformingConsumer;
-import com.kryptnostic.rhizome.hazelcast.serializers.IoPerformingFunction;
-import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers;
+import com.kryptnostic.rhizome.hazelcast.serializers.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.LinkedHashSet;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Factory method for stream serializing Guava Optionals in hazelcast.
@@ -144,6 +139,27 @@ public final class OptionalStreamSerializers {
             throws IOException {
         if ( in.readBoolean() ) {
             Set<T> elements = SetStreamSerializers.deserialize( in, f );
+            return Optional.of( elements );
+        } else {
+            return Optional.empty();
+        }
+    }
+
+    public static <T> void serializeList(
+            ObjectDataOutput out,
+            Optional<List<T>> elements,
+            IoPerformingBiConsumer<ObjectDataOutput, T> c) throws IOException {
+        final boolean present = elements.isPresent();
+        out.writeBoolean( present );
+        if ( present ) {
+            ListStreamSerializers.serialize( out, elements.get(), c );
+        }
+    }
+
+    public static <T> Optional<List<T>> deserializeList( ObjectDataInput in, IoPerformingFunction<ObjectDataInput, T> f)
+        throws IOException {
+        if (in.readBoolean()) {
+            List<T> elements = ListStreamSerializers.deserialize( in, f );
             return Optional.of( elements );
         } else {
             return Optional.empty();

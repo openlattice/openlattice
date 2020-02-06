@@ -83,4 +83,11 @@ class HazelcastQueuePod {
         }
     }
 
+    @Bean
+    fun integrationJobQueueConfigurer(): QueueConfigurer {
+        return QueueConfigurer(HazelcastQueue.QUEUED_INTEGRATION_JOBS.name) { config ->
+            config.setMaxSize(1_000).backupCount = 1
+        }
+    }
+
 }
