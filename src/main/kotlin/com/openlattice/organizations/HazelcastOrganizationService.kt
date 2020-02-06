@@ -491,9 +491,9 @@ class HazelcastOrganizationService(
     fun setSmsEntitySetInformation(entitySetInformationList: Collection<SmsEntitySetInformation>) {
         phoneNumbers.setPhoneNumber(entitySetInformationList)
 
-        entitySetInformationList.groupBy { it.organizationId }.forEach { (organizationId, entitySetInfoList) ->
-            organizations.executeOnKey(organizationId, UpdateOrganizationSmsEntitySetInformationEntryProcessor(entitySetInfoList))
-        }
+        entitySetInformationList.groupBy { it.organizationId }.map { (organizationId, entitySetInfoList) ->
+            organizations.submitToKey(organizationId, UpdateOrganizationSmsEntitySetInformationEntryProcessor(entitySetInfoList))
+        }.forEach { it.get() }
     }
 
     fun getDefaultPartitions(organizationId: UUID): List<Int> {
