@@ -21,6 +21,7 @@ class OrganizationExternalDatabaseTable
 
 constructor(
         @JsonProperty(SerializationConstants.ID_FIELD) id: Optional<UUID>,
+        @JsonProperty(SerializationConstants)
         @JsonProperty(SerializationConstants.NAME_FIELD) var name: String,
         @JsonProperty(SerializationConstants.TITLE_FIELD) title: String,
         @JsonProperty(SerializationConstants.DESCRIPTION_FIELD) description: Optional<String>,
