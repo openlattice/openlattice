@@ -2,13 +2,13 @@ package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
-import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.codex.MessageRequest
 import com.openlattice.hazelcast.StreamSerializerTypeIds
+import com.openlattice.mapstores.TestDataFactory
 import org.springframework.stereotype.Component
 
 @Component
-class MessageRequestStreamSerializer : SelfRegisteringStreamSerializer<MessageRequest> {
+class MessageRequestStreamSerializer : TestableSelfRegisteringStreamSerializer<MessageRequest> {
 
     override fun getTypeId(): Int {
         return StreamSerializerTypeIds.MESSAGE_REQUEST.ordinal
@@ -39,4 +39,7 @@ class MessageRequestStreamSerializer : SelfRegisteringStreamSerializer<MessageRe
         return MessageRequest(organizationId, messageEntitySetId, messageContents, phoneNumber, senderId)
     }
 
+    override fun generateTestValue(): MessageRequest {
+        return TestDataFactory.messageRequest()
+    }
 }
