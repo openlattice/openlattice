@@ -21,12 +21,14 @@ import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.twilio.rest.api.v2010.account.Message
 import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
+import org.springframework.stereotype.Service
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset.UTC
 import java.util.*
 import javax.servlet.http.HttpServletRequest
 
+@Service
 class CodexService(
         val hazelcast: HazelcastInstance,
         val appService: AppService,
