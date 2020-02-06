@@ -320,7 +320,6 @@ public class DatastoreServicesPod {
                 authorizationManager(),
                 edmAuthorizationHelper(),
                 principalService(),
-                partitionManager(),
                 metricRegistry,
                 hazelcastInstance,
                 eventBus
