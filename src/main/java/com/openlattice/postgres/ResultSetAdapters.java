@@ -76,6 +76,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
+import javax.xml.transform.Result;
 import java.io.IOException;
 import java.sql.*;
 import java.time.OffsetDateTime;
@@ -980,6 +981,10 @@ public final class ResultSetAdapters {
 
     public static Integer ordinalPosition( ResultSet rs ) throws SQLException {
         return rs.getInt( ORDINAL_POSITION.getName() );
+    }
+
+    public static Integer postgresObjectId( ResultSet rs ) throws SQLException {
+        return rs.getInt( OBJECT_IDENTIFIER.getName() );
     }
 
     public static String constraintType( ResultSet rs ) throws SQLException {

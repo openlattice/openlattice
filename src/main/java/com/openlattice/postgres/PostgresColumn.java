@@ -349,6 +349,9 @@ public final class PostgresColumn {
     public static final String                   NULLABLE_TITLE_FIELD              = "title";
     public static final PostgresColumnDefinition NULLABLE_TITLE                    =
             new PostgresColumnDefinition( NULLABLE_TITLE_FIELD, TEXT );
+    public static final String                   OBJECT_IDENTIFIER_FIELD           = "object_identifier";
+    public static final PostgresColumnDefinition OBJECT_IDENTIFIER                 =
+            new PostgresColumnDefinition( OBJECT_IDENTIFIER_FIELD, INTEGER );
     public static final String                   ORDINAL_POSITION_FIELD            = "ordinal_position";
     public static final PostgresColumnDefinition ORDINAL_POSITION                  =
             new PostgresColumnDefinition( ORDINAL_POSITION_FIELD, INTEGER ).notNull();

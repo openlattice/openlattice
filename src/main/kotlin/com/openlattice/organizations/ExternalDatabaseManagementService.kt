@@ -1,22 +1,16 @@
 package com.openlattice.organizations
 
 import com.google.common.base.Preconditions.checkState
-import com.google.common.collect.ImmutableMap
 import com.hazelcast.core.HazelcastInstance
-import com.hazelcast.core.IMap
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.hazelcast.query.QueryConstants
-import com.openlattice.IdConstants
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.AssemblerConnectionManager.Companion.PUBLIC_SCHEMA
 import com.openlattice.assembler.PostgresDatabases
 import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresUsername
 import com.openlattice.assembler.PostgresRoles.Companion.getSecurablePrincipalIdFromUserName
 import com.openlattice.assembler.PostgresRoles.Companion.isPostgresUserName
-import com.openlattice.auditing.AuditEventType
-import com.openlattice.auditing.AuditableEvent
-import com.openlattice.auditing.AuditingManager
 import com.openlattice.authorization.*
 import com.openlattice.authorization.processors.PermissionMerger
 import com.openlattice.authorization.securable.SecurableObjectType
@@ -24,6 +18,7 @@ import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.processors.DeleteOrganizationExternalDatabaseColumnsEntryProcessor
 import com.openlattice.hazelcast.processors.DeleteOrganizationExternalDatabaseTableEntryProcessor
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
+import com.openlattice.organization.OrganizationExternalDatabaseColumnMetadata
 import com.openlattice.organization.OrganizationExternalDatabaseTable
 import com.openlattice.organization.OrganizationExternalDatabaseTableColumnsPair
 import com.openlattice.organizations.mapstores.ORGANIZATION_ID_INDEX
@@ -46,7 +41,7 @@ import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 import java.time.OffsetDateTime
 import java.util.*
-import java.util.stream.Collectors
+import kotlin.collections.HashMap
 
 @Service
 class ExternalDatabaseManagementService(
@@ -96,12 +91,27 @@ class ExternalDatabaseManagementService(
         return column.id
     }
 
-    fun createNewOrganizationExternalDatabaseTable(orgId: UUID, tableName: String, columnNameToSqlType: LinkedHashMap<String, String>) {
+    fun createNewOrganizationExternalDatabaseTable(
+            orgId: UUID,
+            tableName: String,
+            columnNameToMetadata: Map<String, OrganizationExternalDatabaseColumnMetadata>
+    ) {
         //TODO figure out title stuff
         val table = OrganizationExternalDatabaseTable(Optional.empty(), tableName, "title", Optional.empty(), orgId)
         val tableId = createOrganizationExternalDatabaseTable(orgId, table)
-        columnNameToSqlType.keys.forEach {
-            val column = OrganizationExternalDatabaseColumn(Optional.empty(), it, "title", Optional.empty(), tableId, orgId)
+        //TODO order by ordinal position
+        val orderedColumnNameToMetadata = columnNameToMetadata.toList().sortedBy { ( _, metadata) -> metadata.ordinalPosition }.toMap()
+        orderedColumnNameToMetadata.forEach {
+            val column = OrganizationExternalDatabaseColumn(
+                    Optional.empty(),
+                    it.key,
+                    "title",
+                    Optional.empty(),
+                    tableId,
+                    orgId,
+                    it.value.dataType,
+                    it.value.primaryKey,
+                    it.value.ordinalPosition)
             createOrganizationExternalDatabaseColumn(orgId, column)
         }
 
@@ -109,8 +119,7 @@ class ExternalDatabaseManagementService(
         val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
         assemblerConnectionManager.connect(dbName).use {
             it.connection.createStatement().use { stmt ->
-                stmt.execute("CREATE TABLE $PUBLIC_SCHEMA.$tableName(${columnNameToSqlType
-                        .map { entry -> entry.key + " " + entry.value }.joinToString(", ")})")
+                stmt.execute("CREATE TABLE $PUBLIC_SCHEMA.$tableName(${createAddColumnSql(columnNameToMetadata)})")
             }
 
         }
@@ -208,7 +217,7 @@ class ExternalDatabaseManagementService(
         return organizationExternalDatabaseColumns.getValue(columnId)
     }
 
-    fun getColumnNamesByTable(orgId: UUID, dbName: String): Map<String, Set<String>> {
+    fun getColumnNamesByTable(dbName: String): Map<String, Set<String>> {
         val columnNamesByTableName = HashMap<String, MutableSet<String>>()
         val sql = getCurrentTableAndColumnNamesSql()
         BasePostgresIterable(
@@ -218,6 +227,19 @@ class ExternalDatabaseManagementService(
                     columnNamesByTableName.getOrPut(it.first) { mutableSetOf() }.add(it.second)
                 }
         return columnNamesByTableName
+    }
+
+    fun getTableIdsByTable(dbName: String, tableNames: Set<String>): Map<String, Int> {
+        val tableIdByTableName = HashMap<String, Int>()
+        val sql = getCurrentTableIdsSql(tableNames)
+        BasePostgresIterable(
+                StatementHolderSupplier(assemblerConnectionManager.connect(dbName), sql, FETCH_SIZE)
+        ) {rs -> name(rs) to postgresObjectId(rs) }
+                .forEach {
+                    tableIdByTableName[it.first] = it.second
+                }
+
+        return tableIdByTableName
     }
 
     /*DELETE*/
@@ -453,6 +475,14 @@ class ExternalDatabaseManagementService(
     }
 
     /*PRIVATE FUNCTIONS*/
+    private fun createAddColumnSql(columnNameToMetadata: Map<String, OrganizationExternalDatabaseColumnMetadata>): String {
+        val pkeyConstraint = columnNameToMetadata.filter { it.value.primaryKey }.keys.joinToString(", ", "PRIMARY KEY (", ")")
+        return columnNameToMetadata
+                .map { entry ->
+                    return@map entry.key + " " + entry.value.dataType
+                }.joinToString(", ", postfix = pkeyConstraint)
+    }
+
     private fun createPrivilegesUpdateSql(action: Action, privileges: List<String>, tableName: String, columnName: Optional<String>, dbUser: String): String {
         val privilegesAsString = privileges.joinToString(separator = ", ")
         checkState(action == Action.REMOVE || action == Action.ADD || action == Action.SET,
@@ -596,6 +626,10 @@ class ExternalDatabaseManagementService(
         return selectExpression + fromExpression + leftJoinColumnsExpression +
                 "WHERE information_schema.tables.table_schema='$PUBLIC_SCHEMA' " +
                 "AND table_type='BASE TABLE'"
+    }
+
+    private fun getCurrentTableIdsSql(tableNames: Set<String>): String {
+        return "SELECT relname AS name, oid AS object_identifier FROM pg_class WHERE relname = ANY(ARRAY[${tableNames.joinToString("', '", "'", "'")}])"
     }
 
     private fun getColumnMetadataSql(tableName: String, columnCondition: String): String {
