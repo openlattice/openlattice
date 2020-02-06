@@ -16,7 +16,6 @@ import com.openlattice.datastore.apps.services.AppService
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
-import com.openlattice.notifications.sms.PhoneNumberService
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.twilio.rest.api.v2010.account.Message
 import org.joda.time.DateTime
@@ -80,17 +79,13 @@ class CodexService(
         )
     }
 
-    fun getIncomingMessageField(request: HttpServletRequest, field: CodexConstants.Request): String {
-        return request.getParameter(field.parameter)
-    }
+    fun processIncomingMessage(organizationId: UUID, request: HttpServletRequest) {
 
-    fun processIncomingMessage(
-            organizationId: UUID,
-            dateTime: OffsetDateTime,
-            phoneNumber: String,
-            messageId: String,
-            text: String
-    ) {
+        val messageId = request.getParameter(CodexConstants.Request.SID.parameter)
+        val phoneNumber = request.getParameter(CodexConstants.Request.FROM.parameter)
+        val text = request.getParameter(CodexConstants.Request.BODY.parameter)
+        val dateTime = OffsetDateTime.now()
+
         /* create entities */
 
         val contactEDK = getContactEntityDataKey(organizationId, phoneNumber)

@@ -68,7 +68,7 @@ constructor(
                     throw BadRequestException("No source phone number set for organization!")
                 }
                 val message = Message.creator(PhoneNumber(toPhoneNumber), PhoneNumber(phone), messageContents)
-                        .setStatusCallback(URI.create("https://api.openlattice.com$BASE$INCOMING/$organizationId$STATUS")).create()
+                        .setStatusCallback(URI.create("http://678efaa3.ngrok.io$BASE$INCOMING/$organizationId$STATUS")).create()
                 pendingTexts[message.sid] = message
                 codexService.processOutgoingMessage(message, organizationId, senderId!!)
             }
@@ -86,21 +86,15 @@ constructor(
     @Timed
     @RequestMapping(path = [INCOMING + ORG_ID_PATH], method = [RequestMethod.POST], consumes = [MediaType.APPLICATION_FORM_URLENCODED_VALUE])
     fun receiveIncomingText(@PathVariable(ORG_ID) organizationId: UUID, request: HttpServletRequest) {
-
-        val messageId = codexService.getIncomingMessageField(request, CodexConstants.Request.SID)
-        val phoneNumber = codexService.getIncomingMessageField(request, CodexConstants.Request.FROM)
-        val text = codexService.getIncomingMessageField(request, CodexConstants.Request.BODY)
-        val dateTime = OffsetDateTime.now()
-
-        codexService.processIncomingMessage(organizationId, dateTime, phoneNumber, messageId, text)
+        codexService.processIncomingMessage(organizationId, request)
     }
 
     @Timed
     @RequestMapping(path = [INCOMING + ORG_ID_PATH + STATUS], method = [RequestMethod.POST])
     fun listenForTextStatus(@PathVariable(ORG_ID) organizationId: UUID, request: HttpServletRequest) {
 
-        val messageId = codexService.getIncomingMessageField(request, CodexConstants.Request.SID)
-        val status = Message.Status.forValue(codexService.getIncomingMessageField(request, CodexConstants.Request.STATUS))
+        val messageId = request.getParameter(CodexConstants.Request.SID.parameter)
+        val status = Message.Status.forValue(request.getParameter(CodexConstants.Request.STATUS.parameter))
 
         codexService.updateMessageStatus(organizationId, messageId, status)
         if (status == Message.Status.FAILED || status == Message.Status.UNDELIVERED) {
