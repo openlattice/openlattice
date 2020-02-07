@@ -21,40 +21,25 @@
 
 package com.openlattice.mail.pods;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.kryptnostic.rhizome.configuration.ConfigurationConstants.Profiles;
-import com.kryptnostic.rhizome.configuration.amazon.AmazonLaunchConfiguration;
-import com.openlattice.ResourceConfigurationLoader;
+import com.kryptnostic.rhizome.pods.ConfigurationLoader;
 import com.openlattice.mail.config.MailServiceConfig;
-import java.io.IOException;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Profile;
+
+import javax.inject.Inject;
+import java.io.IOException;
 
 /**
  * Configuration class for loading configuration information for mail service pod.
  */
 @Configuration
 public class MailServiceConfigurationPod {
-    @Autowired( required = false )
-    private AmazonS3 awsS3;
+    @Inject
+    private ConfigurationLoader configurationLoader;
 
-    @Autowired( required = false )
-    private AmazonLaunchConfiguration awsLaunchConfig;
 
     @Bean
-    @Profile( Profiles.LOCAL_CONFIGURATION_PROFILE )
     public MailServiceConfig mailServiceConfig() throws IOException {
-        return ResourceConfigurationLoader.loadConfiguration( MailServiceConfig.class );
-    }
-
-    @Bean
-    @Profile( Profiles.AWS_CONFIGURATION_PROFILE )
-    public MailServiceConfig awsMailServiceConfig() {
-        return ResourceConfigurationLoader.loadConfigurationFromS3( awsS3,
-                awsLaunchConfig.getBucket(),
-                awsLaunchConfig.getFolder(),
-                MailServiceConfig.class );
+        return configurationLoader.load( MailServiceConfig.class );
     }
 }
