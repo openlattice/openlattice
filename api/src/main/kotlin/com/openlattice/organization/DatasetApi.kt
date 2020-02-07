@@ -3,6 +3,11 @@ package com.openlattice.organization
 import com.openlattice.postgres.PostgresConnectionType
 import retrofit2.http.*
 import java.util.*
+import com.openlattice.edm.requests.MetadataUpdate
+import java.util.UUID
+import retrofit2.http.PATCH
+
+
 
 const val SERVICE = "/datastore"
 const val CONTROLLER = "/organization-database"
@@ -122,6 +127,19 @@ interface DatasetApi {
     fun getExternalDatabaseColumn(
             @Path(ID) organizationId: UUID, @Path(TABLE_NAME) tableName: String, @Path(COLUMN_NAME) columnName: String): OrganizationExternalDatabaseColumn
 
+    //update
+    @PATCH(BASE + ID_PATH + TABLE_NAME_PATH + EXTERNAL_DATABASE_TABLE)
+    fun updateExternalDatabaseTable(
+            @Path(ID) organizationId: UUID,
+            @Path(TABLE_NAME) tableName: String,
+            @Body metadataUpdate: MetadataUpdate)
+
+    @PATCH(BASE + ID_PATH + TABLE_NAME_PATH + COLUMN_NAME_PATH + EXTERNAL_DATABASE_TABLE)
+    fun updateExternalDatabaseColumn(
+            @Path(ID) organizationId: UUID,
+            @Path(TABLE_NAME) tableName: String,
+            @Path(COLUMN_NAME) columnName: String,
+            @Body metadataUpdate: MetadataUpdate)
 
     //delete
     /**

@@ -21,7 +21,6 @@ class OrganizationExternalDatabaseTable
 
 constructor(
         @JsonProperty(SerializationConstants.ID_FIELD) id: Optional<UUID>,
-        @JsonProperty(SerializationConstants.POSTGRES_OBJECT_ID) postgresObjectId: Int,
         @JsonProperty(SerializationConstants.NAME_FIELD) var name: String,
         @JsonProperty(SerializationConstants.TITLE_FIELD) title: String,
         @JsonProperty(SerializationConstants.DESCRIPTION_FIELD) description: Optional<String>,
@@ -30,12 +29,11 @@ constructor(
 
     constructor(
             id: UUID,
-            postgresObjectId: Int,
             name: String,
             title: String,
             description: Optional<String>,
             organizationId: UUID
-    ) : this(Optional.of(id), postgresObjectId, name, title, description, organizationId)
+    ) : this(Optional.of(id), name, title, description, organizationId)
 
     @JsonIgnore
     override fun getCategory(): SecurableObjectType {
