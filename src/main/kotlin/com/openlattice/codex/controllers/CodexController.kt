@@ -13,8 +13,11 @@ import com.openlattice.codex.CodexApi.Companion.ORG_ID_PATH
 import com.openlattice.codex.CodexApi.Companion.STATUS
 import com.openlattice.codex.CodexService
 import com.openlattice.codex.MessageRequest
+import com.openlattice.controllers.exceptions.ForbiddenException
 import com.openlattice.hazelcast.HazelcastQueue
+import com.openlattice.twilio.TwilioConfiguration
 import com.twilio.rest.api.v2010.account.Message
+import com.twilio.security.RequestValidator
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.apache.commons.lang.NotImplementedException
 import org.slf4j.LoggerFactory
@@ -32,6 +35,7 @@ import javax.servlet.http.HttpServletRequest
 class CodexController
 @Inject
 constructor(
+        twilioConfiguration: TwilioConfiguration,
         hazelcastInstance: HazelcastInstance,
         private val authorizationManager: AuthorizationManager,
         private val codexService: CodexService
@@ -42,6 +46,7 @@ constructor(
     }
 
     private val twilioQueue = HazelcastQueue.TWILIO.getQueue(hazelcastInstance)
+    private val validator = RequestValidator(twilioConfiguration.token)
 
     @Timed
     @RequestMapping(path = ["", "/"], method = [RequestMethod.POST])
@@ -54,12 +59,15 @@ constructor(
     @Timed
     @RequestMapping(path = [INCOMING + ORG_ID_PATH], method = [RequestMethod.POST], consumes = [MediaType.APPLICATION_FORM_URLENCODED_VALUE])
     fun receiveIncomingText(@PathVariable(ORG_ID) organizationId: UUID, request: HttpServletRequest) {
+        ensureTwilio(request)
         codexService.processIncomingMessage(organizationId, request)
     }
 
     @Timed
     @RequestMapping(path = [INCOMING + ORG_ID_PATH + STATUS], method = [RequestMethod.POST])
     fun listenForTextStatus(@PathVariable(ORG_ID) organizationId: UUID, request: HttpServletRequest) {
+
+        ensureTwilio(request)
 
         val messageId = request.getParameter(CodexConstants.Request.SID.parameter)
         val status = Message.Status.forValue(request.getParameter(CodexConstants.Request.STATUS.parameter))
@@ -69,6 +77,18 @@ constructor(
         if (status == Message.Status.FAILED || status == Message.Status.UNDELIVERED) {
             logger.error("Message $messageId not received or even failed to send!!! ")
         }
+    }
+
+    fun ensureTwilio(request: HttpServletRequest) {
+
+        val url = request.requestURL.toString()
+        val params = request.parameterMap.mapValues { it.toString() }
+        val signature = request.getHeader("X-Twilio-Signature")
+
+        if (!validator.validate(url, params, signature)) {
+            throw ForbiddenException("Could not verify that incoming request to $url was sent by Twilio")
+        }
+
     }
 
     override fun receiveIncomingText(organizationId: UUID) {
