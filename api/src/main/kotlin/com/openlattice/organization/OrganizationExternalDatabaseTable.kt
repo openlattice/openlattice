@@ -21,7 +21,7 @@ class OrganizationExternalDatabaseTable
 
 constructor(
         @JsonProperty(SerializationConstants.ID_FIELD) id: Optional<UUID>,
-        @JsonProperty(SerializationConstants.POSTGRES_ID) postgresObjectId: Int,
+        @JsonProperty(SerializationConstants.POSTGRES_OBJECT_ID) postgresObjectId: Int,
         @JsonProperty(SerializationConstants.NAME_FIELD) var name: String,
         @JsonProperty(SerializationConstants.TITLE_FIELD) title: String,
         @JsonProperty(SerializationConstants.DESCRIPTION_FIELD) description: Optional<String>,
