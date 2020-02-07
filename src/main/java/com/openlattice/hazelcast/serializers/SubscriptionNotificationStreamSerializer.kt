@@ -4,7 +4,6 @@ import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.openlattice.hazelcast.InternalTestDataFactory
 import com.openlattice.hazelcast.StreamSerializerTypeIds
-import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.notifications.sms.SubscriptionNotification
 import org.springframework.stereotype.Component
 
