@@ -229,7 +229,7 @@ class ExternalDatabaseManagementService(
         return columnNamesByTableName
     }
 
-    fun getTableIdsByTable(dbName: String, tableNames: Set<String>): Map<String, Int> {
+    fun getPostgresObjectIdsByTable(dbName: String, tableNames: Set<String>): Map<String, Int> {
         val tableIdByTableName = HashMap<String, Int>()
         val sql = getCurrentTableIdsSql(tableNames)
         BasePostgresIterable(
