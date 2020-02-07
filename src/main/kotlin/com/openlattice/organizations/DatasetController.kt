@@ -77,48 +77,6 @@ class DatasetController : DatasetApi, AuthorizingComponent {
     }
 
     @Timed
-    @PostMapping(path = [ID_PATH + EXTERNAL_DATABASE_TABLE])
-    override fun createExternalDatabaseTable(
-            @PathVariable(ID) organizationId: UUID,
-            @RequestBody organizationExternalDatabaseTable: OrganizationExternalDatabaseTable): UUID {
-        ensureOwnerAccess(AclKey(organizationId))
-        return edms.createOrganizationExternalDatabaseTable(organizationId, organizationExternalDatabaseTable)
-    }
-
-    @Timed
-    @PostMapping(path = [ID_PATH + EXTERNAL_DATABASE_COLUMN])
-    override fun createExternalDatabaseColumn(
-            @PathVariable(ID) organizationId: UUID,
-            @RequestBody organizationExternalDatabaseColumn: OrganizationExternalDatabaseColumn): UUID {
-        ensureOwnerAccess(AclKey(organizationId))
-        return edms.createOrganizationExternalDatabaseColumn(organizationId, organizationExternalDatabaseColumn)
-    }
-
-    @Timed
-    @PostMapping(path = [ID_PATH + TABLE_NAME_PATH + EXTERNAL_DATABASE_TABLE])
-    fun createNewExternalDatabaseTable(
-            @PathVariable(ID) organizationId: UUID,
-            @PathVariable(TABLE_NAME) tableName: String,
-            @RequestBody columnNameToMetadata: Map<String, OrganizationExternalDatabaseColumnMetadata>) {
-        ensureOwnerAccess(AclKey(organizationId))
-        edms.createNewOrganizationExternalDatabaseTable(organizationId, tableName, columnNameToMetadata)
-    }
-
-
-    @Timed
-    @PostMapping(path = [ID_PATH + TABLE_NAME_PATH + COLUMN_NAME_PATH + SQL_TYPE_PATH + EXTERNAL_DATABASE_COLUMN])
-    fun createNewExternalDatabaseColumn(
-            @PathVariable(ID) organizationId: UUID,
-            @PathVariable(TABLE_NAME) tableName: String,
-            @PathVariable(COLUMN_NAME) columnName: String,
-            @PathVariable(SQL_TYPE) sqlType: String) {
-        ensureOwnerAccess(organizationId)
-        val tableId = getExternalDatabaseObjectId(organizationId, tableName)
-        edms.createNewOrganizationExternalDatabaseColumn(organizationId, tableId, tableName, columnName, sqlType)
-    }
-
-
-    @Timed
     @GetMapping(path = [ID_PATH + EXTERNAL_DATABASE_TABLE])
     override fun getExternalDatabaseTables(
             @PathVariable(ID) organizationId: UUID): Set<OrganizationExternalDatabaseTable> {
