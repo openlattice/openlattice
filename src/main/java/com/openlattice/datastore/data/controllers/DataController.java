@@ -291,7 +291,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         }
 
         recordEvent( new AuditableEvent(
-                getCurrentUserId(),
+                spm.getCurrentUserId(),
                 new AclKey( entitySetId ),
                 auditEventType,
                 "Entities updated using update type " + updateType.toString()
@@ -328,7 +328,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         );
 
         recordEvent( new AuditableEvent(
-                getCurrentUserId(),
+                spm.getCurrentUserId(),
                 new AclKey( entitySetId ),
                 AuditEventType.REPLACE_PROPERTIES_OF_ENTITIES,
                 "Entity properties replaced through DataApi.replaceEntityProperties",
@@ -375,7 +375,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                 ) );
 
         recordEvents( neighborMappingsCreated.map( pair -> new AuditableEvent(
-                getCurrentUserId(),
+                spm.getCurrentUserId(),
                 new AclKey( pair.getKey().getEntitySetId() ),
                 AuditEventType.ASSOCIATE_ENTITIES,
                 "Create associations between entities using DataApi.createAssociations",
@@ -412,7 +412,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         List<UUID> entityKeyIds = entityKeyIdsToWriteEvent.getKey();
 
         recordEvent( new AuditableEvent(
-                getCurrentUserId(),
+                spm.getCurrentUserId(),
                 new AclKey( entitySetId ),
                 AuditEventType.CREATE_ENTITIES,
                 "Entities created through DataApi.createEntities",
@@ -467,7 +467,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
 
         ListMultimap<UUID, UUID> associationIds = ArrayListMultimap.create();
 
-        UUID currentUserId = getCurrentUserId();
+        UUID currentUserId = spm.getCurrentUserId();
 
         Stream<AuditableEvent> associationEntitiesCreated = associationsCreated.entrySet().stream().map( entry -> {
             UUID associationEntitySetId = entry.getKey();
@@ -636,7 +636,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                 .clearOrDeleteEntitySetIfAuthorized( entitySetId, deleteType, Principals.getCurrentPrincipals() );
 
         recordEvent( new AuditableEvent(
-                getCurrentUserId(),
+                spm.getCurrentUserId(),
                 new AclKey( entitySetId ),
                 AuditEventType.DELETE_ENTITIES,
                 "All entities deleted from entity set using delete type " + deleteType.toString()
@@ -677,7 +677,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                         Principals.getCurrentPrincipals() );
 
         recordEvent( new AuditableEvent(
-                getCurrentUserId(),
+                spm.getCurrentUserId(),
                 new AclKey( entitySetId ),
                 AuditEventType.DELETE_ENTITIES,
                 "Entities deleted using delete type " + deleteType.toString() + " through DataApi.deleteEntities",
@@ -709,7 +709,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                 Principals.getCurrentPrincipals() );
 
         recordEvent( new AuditableEvent(
-                getCurrentUserId(),
+                spm.getCurrentUserId(),
                 new AclKey( entitySetId ),
                 AuditEventType.DELETE_PROPERTIES_OF_ENTITIES,
                 "Entity properties deleted using delete type " + deleteType.toString()
@@ -747,7 +747,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         );
 
         recordEvent( new AuditableEvent(
-                getCurrentUserId(),
+                spm.getCurrentUserId(),
                 new AclKey( entitySetId ),
                 AuditEventType.DELETE_ENTITY_AND_NEIGHBORHOOD,
                 "Entities and all neighbors deleted using delete type " + deleteType.toString() +
@@ -783,7 +783,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                 .replaceEntities( entitySetId, ImmutableMap.of( entityKeyId, entity ), authorizedPropertyTypes );
 
         recordEvent( new AuditableEvent(
-                getCurrentUserId(),
+                spm.getCurrentUserId(),
                 new AclKey( entitySetId ),
                 AuditEventType.REPLACE_ENTITIES,
                 "Entity replaced through DataApi.replaceEntityInEntitySet",
@@ -935,10 +935,6 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                 .collect( Collectors.toMap( esId -> esId, esId -> entityKeyIds ) );
 
         return dgm.getLinkedEntitySetBreakDown( entityKeyIdsOfEntitySets, authorizedPropertyTypesOfEntitySets );
-    }
-
-    private UUID getCurrentUserId() {
-        return spm.getPrincipal( Principals.getCurrentUser().getId() ).getId();
     }
 
     @NotNull
