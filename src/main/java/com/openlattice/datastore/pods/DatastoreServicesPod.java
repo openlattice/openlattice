@@ -131,10 +131,7 @@ import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 import org.jdbi.v3.core.Jdbi;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.Profile;
+import org.springframework.context.annotation.*;
 
 @Configuration
 @Import( {
@@ -162,10 +159,6 @@ public class DatastoreServicesPod {
     private ListeningExecutorService  executor;
     @Inject
     private EventBus                  eventBus;
-    @Autowired( required = false )
-    private AmazonS3                  awsS3;
-    @Autowired( required = false )
-    private AmazonLaunchConfiguration awsLaunchConfig;
 
     @Inject
     private ByteBlobDataManager byteBlobDataManager;
