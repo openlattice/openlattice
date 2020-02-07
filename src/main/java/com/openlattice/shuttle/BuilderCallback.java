@@ -1,7 +1,5 @@
-
-
 /*
- * Copyright (C) 2018. OpenLattice, Inc.
+ * Copyright (C) 2020. OpenLattice, Inc
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,15 +15,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * You can contact the owner of the copyright at support@openlattice.com
- *
  */
 
-package com.openlattice.datastore.cassandra;
+package com.openlattice.shuttle;
 
-import java.util.Set;
+@FunctionalInterface
+public interface BuilderCallback<T> {
 
-import com.google.common.collect.Sets;
-
-class CommonColumnsHelper {
-    static final Set<String> usedBindMarkers = Sets.newHashSet();
+    void onBuild( T object );
 }

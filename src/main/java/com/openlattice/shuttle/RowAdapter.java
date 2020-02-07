@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017. OpenLattice, Inc
+ * Copyright (C) 2020. OpenLattice, Inc
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,10 +18,28 @@
  *
  */
 
-package com.openlattice.cassandra;
+package com.openlattice.shuttle;
+
+import com.openlattice.client.serialization.SerializableFunction;
+
+import java.util.Map;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public enum PreparedQuery {
+class RowAdapter implements SerializableFunction<Map<String, Object>, Object> {
+    private final SerializableFunction<Row, Object> extractor;
+
+    RowAdapter( SerializableFunction<Row, Object> extractor ) {
+        this.extractor = extractor;
+    }
+
+    @Override public Object apply( final Map<String, Object> row ) {
+        return extractor.apply( new Row() {
+            @Override public <T> T getAs( String column ) {
+                return (T) row.get( column );
+            }
+        } );
+    }
+
 }
