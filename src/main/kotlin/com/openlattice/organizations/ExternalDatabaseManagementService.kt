@@ -94,54 +94,54 @@ class ExternalDatabaseManagementService(
         return column.id
     }
 
-    fun createNewOrganizationExternalDatabaseTable(
-            orgId: UUID,
-            tableName: String,
-            columnNameToMetadata: Map<String, OrganizationExternalDatabaseColumnMetadata>
-    ) {
-        //TODO figure out title stuff
-        val table = OrganizationExternalDatabaseTable(Optional.empty(), tableName, "title", Optional.empty(), orgId)
-        val tableId = createOrganizationExternalDatabaseTable(orgId, table)
-        //TODO order by ordinal position
-        val orderedColumnNameToMetadata = columnNameToMetadata.toList().sortedBy { ( _, metadata) -> metadata.ordinalPosition }.toMap()
-        orderedColumnNameToMetadata.forEach {
-            val column = OrganizationExternalDatabaseColumn(
-                    Optional.empty(),
-                    it.key,
-                    "title",
-                    Optional.empty(),
-                    tableId,
-                    orgId,
-                    it.value.dataType,
-                    it.value.primaryKey,
-                    it.value.ordinalPosition)
-            createOrganizationExternalDatabaseColumn(orgId, column)
-        }
-
-        //create table in db
-        val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
-        assemblerConnectionManager.connect(dbName).use {
-            it.connection.createStatement().use { stmt ->
-                stmt.execute("CREATE TABLE $PUBLIC_SCHEMA.$tableName(${createAddColumnSql(columnNameToMetadata)})")
-            }
-
-        }
-    }
-
-    fun createNewOrganizationExternalDatabaseColumn(orgId: UUID, tableId: UUID, tableName: String, columnName: String, sqlType: String) {
-        //TODO figure out title stuff
-        val column = OrganizationExternalDatabaseColumn(Optional.empty(), columnName, "title", Optional.empty(), tableId, orgId)
-        createOrganizationExternalDatabaseColumn(orgId, column)
-
-        //add column to table in db
-        val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
-        assemblerConnectionManager.connect(dbName).use {
-            it.connection.createStatement().use { stmt ->
-                stmt.execute("ALTER TABLE $PUBLIC_SCHEMA.$tableName ADD COLUMN $columnName $sqlType")
-            }
-
-        }
-    }
+//    fun createNewOrganizationExternalDatabaseTable(
+//            orgId: UUID,
+//            tableName: String,
+//            columnNameToMetadata: Map<String, OrganizationExternalDatabaseColumnMetadata>
+//    ) {
+//        //TODO figure out title stuff
+//        val table = OrganizationExternalDatabaseTable(Optional.empty(), tableName, "title", Optional.empty(), orgId)
+//        val tableId = createOrganizationExternalDatabaseTable(orgId, table)
+//        //TODO order by ordinal position
+//        val orderedColumnNameToMetadata = columnNameToMetadata.toList().sortedBy { ( _, metadata) -> metadata.ordinalPosition }.toMap()
+//        orderedColumnNameToMetadata.forEach {
+//            val column = OrganizationExternalDatabaseColumn(
+//                    Optional.empty(),
+//                    it.key,
+//                    "title",
+//                    Optional.empty(),
+//                    tableId,
+//                    orgId,
+//                    it.value.dataType,
+//                    it.value.primaryKey,
+//                    it.value.ordinalPosition)
+//            createOrganizationExternalDatabaseColumn(orgId, column)
+//        }
+//
+//        //create table in db
+//        val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
+//        assemblerConnectionManager.connect(dbName).use {
+//            it.connection.createStatement().use { stmt ->
+//                stmt.execute("CREATE TABLE $PUBLIC_SCHEMA.$tableName(${createAddColumnSql(columnNameToMetadata)})")
+//            }
+//
+//        }
+//    }
+//
+//    fun createNewOrganizationExternalDatabaseColumn(orgId: UUID, tableId: UUID, tableName: String, columnName: String, sqlType: String) {
+//        //TODO figure out title stuff
+//        val column = OrganizationExternalDatabaseColumn(Optional.empty(), columnName, "title", Optional.empty(), tableId, orgId)
+//        createOrganizationExternalDatabaseColumn(orgId, column)
+//
+//        //add column to table in db
+//        val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
+//        assemblerConnectionManager.connect(dbName).use {
+//            it.connection.createStatement().use { stmt ->
+//                stmt.execute("ALTER TABLE $PUBLIC_SCHEMA.$tableName ADD COLUMN $columnName $sqlType")
+//            }
+//
+//        }
+//    }
 
     fun createNewColumnObjects(dbName: String, tableName: String, tableId: UUID, orgId: UUID, columnName: Optional<String>): BasePostgresIterable<OrganizationExternalDatabaseColumn> {
         var columnCondition = ""
