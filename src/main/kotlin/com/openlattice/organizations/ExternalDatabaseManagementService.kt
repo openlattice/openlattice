@@ -247,8 +247,15 @@ class ExternalDatabaseManagementService(
 
     /*UPDATE*/
     fun updateOrganizationExternalDatabaseTable( orgId: UUID, tableId: UUID, tableName: String, update: MetadataUpdate) {
-        if (update.name.isPresent) {
-            val newTableFqn = FullQualifiedName(orgId.toString(), update.name.get())
+        update.name.ifPresent {
+            val newTableFqn = FullQualifiedName(orgId.toString(), it)
+            val oldTableName = organizationExternalDatabaseTables.getValue(tableId).name
+            val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
+            assemblerConnectionManager.connect(dbName).let { dataSource ->
+                dataSource.connection.createStatement().use { stmt ->
+                    stmt.execute("ALTER TABLE $oldTableName RENAME TO $it")
+                }
+            }
             aclKeyReservations.renameReservation(tableId, newTableFqn.fullQualifiedNameAsString)
         }
 
@@ -256,12 +263,18 @@ class ExternalDatabaseManagementService(
     }
 
     fun updateOrganizationExternalDatabaseColumn( orgId: UUID, tableId: UUID, tableName: String, columnId: UUID, columnName: String, update: MetadataUpdate) {
-        if (update.name.isPresent) {
-            val newColumnFqn = FullQualifiedName(tableName, update.name.get())
+        update.name.ifPresent {
+            val newColumnFqn = FullQualifiedName(tableName, it)
+            val oldColumnName = organizationExternalDatabaseColumns.getValue(columnId)
+            val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
+            assemblerConnectionManager.connect(dbName).let { dataSource ->
+                dataSource.connection.createStatement().use { stmt ->
+                    stmt.execute("ALTER TABLE $tableName RENAME COLUMN $columnName to $it")
+                }
+            }
             aclKeyReservations.renameReservation(columnId, newColumnFqn.fullQualifiedNameAsString)
         }
-        //TODO handle case where column is moved to a new table??? i somehow thought that was a good idea?
-        organizationExternalDatabaseColumns.submitToKey(columnId, UpdateOrganizationExternalDatabaseColumnEntryProcessor(update, Optional.empty()))
+        organizationExternalDatabaseColumns.submitToKey(columnId, UpdateOrganizationExternalDatabaseColumnEntryProcessor(update))
     }
 
     /*DELETE*/
