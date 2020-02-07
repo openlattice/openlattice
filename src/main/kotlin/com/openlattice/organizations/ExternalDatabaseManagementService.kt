@@ -14,9 +14,12 @@ import com.openlattice.assembler.PostgresRoles.Companion.isPostgresUserName
 import com.openlattice.authorization.*
 import com.openlattice.authorization.processors.PermissionMerger
 import com.openlattice.authorization.securable.SecurableObjectType
+import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.processors.DeleteOrganizationExternalDatabaseColumnsEntryProcessor
 import com.openlattice.hazelcast.processors.DeleteOrganizationExternalDatabaseTableEntryProcessor
+import com.openlattice.hazelcast.processors.organizations.UpdateOrganizationExternalDatabaseColumnEntryProcessor
+import com.openlattice.hazelcast.processors.organizations.UpdateOrganizationExternalDatabaseTableEntryProcessor
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import com.openlattice.organization.OrganizationExternalDatabaseColumnMetadata
 import com.openlattice.organization.OrganizationExternalDatabaseTable
@@ -229,17 +232,36 @@ class ExternalDatabaseManagementService(
         return columnNamesByTableName
     }
 
-    fun getPostgresObjectIdsByTable(dbName: String, tableNames: Set<String>): Map<String, Int> {
-        val tableIdByTableName = HashMap<String, Int>()
-        val sql = getCurrentTableIdsSql(tableNames)
-        BasePostgresIterable(
-                StatementHolderSupplier(assemblerConnectionManager.connect(dbName), sql, FETCH_SIZE)
-        ) {rs -> name(rs) to postgresObjectId(rs) }
-                .forEach {
-                    tableIdByTableName[it.first] = it.second
-                }
+//    fun getPostgresObjectIdsByTable(dbName: String, tableNames: Set<String>): Map<String, Int> {
+//        val tableIdByTableName = HashMap<String, Int>()
+//        val sql = getCurrentTableIdsSql(tableNames)
+//        BasePostgresIterable(
+//                StatementHolderSupplier(assemblerConnectionManager.connect(dbName), sql, FETCH_SIZE)
+//        ) {rs -> name(rs) to postgresObjectId(rs) }
+//                .forEach {
+//                    tableIdByTableName[it.first] = it.second
+//                }
+//
+//        return tableIdByTableName
+//    }
 
-        return tableIdByTableName
+    /*UPDATE*/
+    fun updateOrganizationExternalDatabaseTable( orgId: UUID, tableId: UUID, tableName: String, update: MetadataUpdate) {
+        if (update.name.isPresent) {
+            val newTableFqn = FullQualifiedName(orgId.toString(), update.name.get())
+            aclKeyReservations.renameReservation(tableId, newTableFqn.fullQualifiedNameAsString)
+        }
+
+        organizationExternalDatabaseTables.submitToKey(tableId, UpdateOrganizationExternalDatabaseTableEntryProcessor(update))
+    }
+
+    fun updateOrganizationExternalDatabaseColumn( orgId: UUID, tableId: UUID, tableName: String, columnId: UUID, columnName: String, update: MetadataUpdate) {
+        if (update.name.isPresent) {
+            val newColumnFqn = FullQualifiedName(tableName, update.name.get())
+            aclKeyReservations.renameReservation(columnId, newColumnFqn.fullQualifiedNameAsString)
+        }
+        //TODO handle case where column is moved to a new table??? i somehow thought that was a good idea?
+        organizationExternalDatabaseColumns.submitToKey(columnId, UpdateOrganizationExternalDatabaseColumnEntryProcessor(update, Optional.empty()))
     }
 
     /*DELETE*/
@@ -627,10 +649,10 @@ class ExternalDatabaseManagementService(
                 "WHERE information_schema.tables.table_schema='$PUBLIC_SCHEMA' " +
                 "AND table_type='BASE TABLE'"
     }
-
-    private fun getCurrentTableIdsSql(tableNames: Set<String>): String {
-        return "SELECT relname AS name, oid AS object_identifier FROM pg_class WHERE relname = ANY(ARRAY[${tableNames.joinToString("', '", "'", "'")}])"
-    }
+//
+//    private fun getCurrentTableIdsSql(tableNames: Set<String>): String {
+//        return "SELECT relname AS name, oid AS object_identifier FROM pg_class WHERE relname = ANY(ARRAY[${tableNames.joinToString("', '", "'", "'")}])"
+//    }
 
     private fun getColumnMetadataSql(tableName: String, columnCondition: String): String {
         return selectExpression + ", information_schema.columns.data_type AS datatype, " +
