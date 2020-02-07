@@ -43,11 +43,11 @@ class BackgroundExternalDatabaseSyncingService(
         private val logger = LoggerFactory.getLogger(BackgroundExternalDatabaseSyncingService::class.java)
     }
 
-    private val organizationExternalDatabaseColumns = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_COLUMN.getMap( hazelcastInstance )
-    private val organizationExternalDatabaseTables = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_TABLE.getMap( hazelcastInstance )
-    private val aclKeys = HazelcastMap.ACL_KEYS.getMap( hazelcastInstance )
-    private val organizations = HazelcastMap.ORGANIZATIONS.getMap( hazelcastInstance )
-    private val expirationLocks = HazelcastMap.EXPIRATION_LOCKS.getMap( hazelcastInstance )
+    private val organizationExternalDatabaseColumns = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_COLUMN.getMap(hazelcastInstance)
+    private val organizationExternalDatabaseTables = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_TABLE.getMap(hazelcastInstance)
+    private val aclKeys = HazelcastMap.ACL_KEYS.getMap(hazelcastInstance)
+    private val organizations = HazelcastMap.ORGANIZATIONS.getMap(hazelcastInstance)
+    private val expirationLocks = HazelcastMap.EXPIRATION_LOCKS.getMap(hazelcastInstance)
 
 
     init {
@@ -71,7 +71,7 @@ class BackgroundExternalDatabaseSyncingService(
     @Scheduled(fixedRate = SCAN_RATE)
     fun scanOrganizationDatabases() {
         logger.info("Starting background external database sync task.")
-        
+
         if (!indexerConfiguration.backgroundExternalDatabaseSyncingEnabled) {
             logger.info("Skipping external database syncing as it is not enabled.")
             return
@@ -109,12 +109,13 @@ class BackgroundExternalDatabaseSyncingService(
     private fun syncOrganizationDatabases(orgId: UUID): Int {
         var totalSynced = 0
         val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
-        val orgOwnerIds = edms.getOrganizationOwners(orgId).map{ it.id }
+        val orgOwnerIds = edms.getOrganizationOwners(orgId).map { it.id }
         val currentTableIds = mutableSetOf<UUID>()
         val currentColumnIds = mutableSetOf<UUID>()
-        val currentColumnNamesByTableName = edms.getColumnNamesByTable(orgId, dbName)
+        val currentColumnNamesByTableName = edms.getColumnNamesByTable(dbName)
+//        val currentPostgresObjectIdsByTableName = edms.getPostgresObjectIdsByTable(dbName, currentColumnNamesByTableName.keys)
         currentColumnNamesByTableName.forEach { (tableName, columnNames) ->
-            //check if table existed previously
+            //check if we had a record of this table name previously
             val tableFQN = FullQualifiedName(orgId.toString(), tableName)
             val tableId = aclKeys[tableFQN.fullQualifiedNameAsString]
             if (tableId == null) {
@@ -139,75 +140,77 @@ class BackgroundExternalDatabaseSyncingService(
                             totalSynced++
                         }
             } else {
-                currentTableIds.add(tableId)
-                //check if columns existed previously
-                columnNames.forEach {
-                    val columnFQN = FullQualifiedName(tableId.toString(), it)
-                    val columnId = aclKeys[columnFQN.fullQualifiedNameAsString]
-                    if (columnId == null) {
-                        //create new securable object for this column
-                        edms.createNewColumnObjects(dbName, tableName, tableId, orgId, Optional.of(it))
-                                .forEach { column ->
-                                    createNewExternalDbColumn(dbName, orgOwnerIds, orgId, tableName, currentColumnIds, column)
-                                    totalSynced++
-                                }
-                    } else {
-                        currentColumnIds.add(columnId)
-                    }
+            currentTableIds.add(tableId)
+            //check if columns existed previously
+            columnNames.forEach {
+                val columnFQN = FullQualifiedName(tableId.toString(), it)
+                val columnId = aclKeys[columnFQN.fullQualifiedNameAsString]
+                if (columnId == null) {
+                    //create new securable object for this column
+                    edms.createNewColumnObjects(dbName, tableName, tableId, orgId, Optional.of(it))
+                            .forEach { column ->
+                                createNewExternalDbColumn(dbName, orgOwnerIds, orgId, tableName, currentColumnIds, column)
+                                totalSynced++
+                            }
+                } else {
+                    currentColumnIds.add(columnId)
                 }
-
             }
 
         }
 
-        //check if tables have been deleted in the database
-        val missingTableIds = organizationExternalDatabaseTables.keys - currentTableIds
-        if (missingTableIds.isNotEmpty()) {
-            edms.deleteOrganizationExternalDatabaseTables(orgId, missingTableIds)
-            totalSynced += missingTableIds.size
+    }
+
+    //check if tables have been deleted in the database
+    val missingTableIds = organizationExternalDatabaseTables.keys - currentTableIds
+    if (missingTableIds.isNotEmpty())
+    {
+        edms.deleteOrganizationExternalDatabaseTables(orgId, missingTableIds)
+        totalSynced += missingTableIds.size
+    }
+
+    //check if columns have been deleted in the database
+    val missingColumnIds = organizationExternalDatabaseColumns.keys - currentColumnIds
+    val missingColumnsByTable = mutableMapOf<UUID, MutableSet<UUID>>()
+    if (missingColumnIds.isNotEmpty())
+    {
+        missingColumnIds.forEach {
+            val tableId = organizationExternalDatabaseColumns.getValue(it).tableId
+            missingColumnsByTable.getOrPut(tableId) { mutableSetOf() }.add(it)
         }
-
-        //check if columns have been deleted in the database
-        val missingColumnIds = organizationExternalDatabaseColumns.keys - currentColumnIds
-        val missingColumnsByTable = mutableMapOf<UUID, MutableSet<UUID>>()
-        if (missingColumnIds.isNotEmpty()) {
-            missingColumnIds.forEach {
-                val tableId = organizationExternalDatabaseColumns.getValue(it).tableId
-                missingColumnsByTable.getOrPut(tableId) { mutableSetOf() }.add(it)
-            }
-            edms.deleteOrganizationExternalDatabaseColumns(orgId, missingColumnsByTable)
-            totalSynced += missingColumnIds.size
-        }
-        return totalSynced
+        edms.deleteOrganizationExternalDatabaseColumns(orgId, missingColumnsByTable)
+        totalSynced += missingColumnIds.size
     }
+    return totalSynced
+}
 
-    private fun tryLockOrganization(orgId: UUID): Boolean {
-        return expirationLocks.putIfAbsent(orgId, System.currentTimeMillis() + MAX_DURATION_MILLIS) == null
-    }
+private fun tryLockOrganization(orgId: UUID): Boolean {
+    return expirationLocks.putIfAbsent(orgId, System.currentTimeMillis() + MAX_DURATION_MILLIS) == null
+}
 
-    private fun createNewExternalDbColumn(dbName: String, orgOwnerIds: List<UUID>, orgId: UUID, tableName: String, currentColumnIds: MutableSet<UUID>, column: OrganizationExternalDatabaseColumn) {
-        val newColumnId = edms.createOrganizationExternalDatabaseColumn(orgId, column)
-        currentColumnIds.add(newColumnId)
-        edms.addPermissions(dbName, orgOwnerIds, orgId, column.tableId, tableName, Optional.of(newColumnId), Optional.of(column.name))
-    }
+private fun createNewExternalDbColumn(dbName: String, orgOwnerIds: List<UUID>, orgId: UUID, tableName: String, currentColumnIds: MutableSet<UUID>, column: OrganizationExternalDatabaseColumn) {
+    val newColumnId = edms.createOrganizationExternalDatabaseColumn(orgId, column)
+    currentColumnIds.add(newColumnId)
+    edms.addPermissions(dbName, orgOwnerIds, orgId, column.tableId, tableName, Optional.of(newColumnId), Optional.of(column.name))
+}
 
-    private fun createAuditableEvents(acls: List<Acl>, eventType: AuditEventType): List<AuditableEvent> {
-        return acls.map {
-            AuditableEvent(
-                    IdConstants.SYSTEM_ID.id,
-                    AclKey(it.aclKey),
-                    eventType,
-                    "Permissions updated through BackgroundExternalDatabaseSyncingService",
-                    Optional.empty(),
-                    ImmutableMap.of("aces", it.aces),
-                    OffsetDateTime.now(),
-                    Optional.empty()
-            )
-        }.toList()
-    }
+private fun createAuditableEvents(acls: List<Acl>, eventType: AuditEventType): List<AuditableEvent> {
+    return acls.map {
+        AuditableEvent(
+                IdConstants.SYSTEM_ID.id,
+                AclKey(it.aclKey),
+                eventType,
+                "Permissions updated through BackgroundExternalDatabaseSyncingService",
+                Optional.empty(),
+                ImmutableMap.of("aces", it.aces),
+                OffsetDateTime.now(),
+                Optional.empty()
+        )
+    }.toList()
+}
 
-    private fun deleteIndexingLock(orgId: UUID) {
-        expirationLocks.delete(orgId)
-    }
+private fun deleteIndexingLock(orgId: UUID) {
+    expirationLocks.delete(orgId)
+}
 
 }
