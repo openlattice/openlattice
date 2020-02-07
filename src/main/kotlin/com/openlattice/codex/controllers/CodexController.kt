@@ -17,6 +17,7 @@ import com.openlattice.hazelcast.HazelcastQueue
 import com.twilio.rest.api.v2010.account.Message
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.apache.commons.lang.NotImplementedException
+import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.*
 import java.util.*
@@ -35,6 +36,10 @@ constructor(
         private val authorizationManager: AuthorizationManager,
         private val codexService: CodexService
 ) : CodexApi, AuthorizingComponent {
+
+    companion object {
+        private val logger = LoggerFactory.getLogger(CodexController::class.java)!!
+    }
 
     private val twilioQueue = HazelcastQueue.TWILIO.getQueue(hazelcastInstance)
 
@@ -62,7 +67,7 @@ constructor(
         codexService.updateMessageStatus(organizationId, messageId, status)
 
         if (status == Message.Status.FAILED || status == Message.Status.UNDELIVERED) {
-            println("Message $messageId not received or even failed to send!!! ")
+            logger.error("Message $messageId not received or even failed to send!!! ")
         }
     }
 
