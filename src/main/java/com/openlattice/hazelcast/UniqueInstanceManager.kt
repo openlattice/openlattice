@@ -39,7 +39,7 @@ class UniqueInstanceManager(private val clazz: Class<*>) {
     }
 
     fun checkInstance(key: String): InstanceChecker {
-        val myInit = Exception("originally constructed here");
+        val myInit = Exception("originally constructed here")
         val prev = previousInstances.putIfAbsent(key, myInit)
         return if (prev == null) {
             SAFE
