@@ -5346,7 +5346,7 @@ components:
           description: An optional UUID for the entity set collection.
         name:
           type: string
-          description: he unique name of the entity set collection.
+          description: The unique name of the entity set collection.
         title:
           type: string
           description: The friendly name for the entity set collection.
