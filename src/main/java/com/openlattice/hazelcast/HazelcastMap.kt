@@ -59,12 +59,16 @@ import com.openlattice.rhizome.hazelcast.DelegatedStringSet
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet
 import com.openlattice.shuttle.Integration
 import com.openlattice.shuttle.IntegrationJob
-import com.openlattice.rhizome.service.QueueState
-import org.slf4j.LoggerFactory
 import java.util.*
 
 class HazelcastMap<K, V> internal constructor(val name: String) : TypedMapIdentifier<K, V> {
     private val checker = instanceChecker.checkInstance(name)
+
+    init {
+        if (checker.ok()) {
+            valuesCache.add(this)
+        }
+    }
 
     override fun name(): String {
         this.checker.check()
@@ -153,7 +157,7 @@ class HazelcastMap<K, V> internal constructor(val name: String) : TypedMapIdenti
                     return e
                 }
             }
-            throw IllegalArgumentException(name)
+            throw IllegalArgumentException("Map with name \"$name\" not found")
         }
     }
 }
