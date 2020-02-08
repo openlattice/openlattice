@@ -390,8 +390,9 @@ class ExternalDatabaseManagementService(
         val orgIds = tableAclsByOrg.keys.union(columnAclsByOrg.keys)
 
         orgIds.forEach { orgId ->
-            val orgAcls = tableAclsByOrg.getValue(orgId).toMutableList()
-            orgAcls.addAll(columnAclsByOrg.getValue(orgId))
+            val orgAcls = mutableListOf<Acl>()
+            if (tableAclsByOrg.isNotEmpty()) tableAclsByOrg.getValue(orgId).toMutableList()
+            if (columnAclsByOrg.isNotEmpty()) orgAcls.addAll(columnAclsByOrg.getValue(orgId))
             val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
             assemblerConnectionManager.connect(dbName).let { dataSource ->
                 val conn = dataSource.connection
@@ -456,7 +457,7 @@ class ExternalDatabaseManagementService(
         }
     }
 
-    fun addPermissions(
+    fun syncPermissions(
             dbName: String,
             orgOwnerIds: List<UUID>,
             orgId: UUID,
