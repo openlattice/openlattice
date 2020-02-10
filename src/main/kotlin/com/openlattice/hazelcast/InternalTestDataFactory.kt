@@ -2,6 +2,7 @@ package com.openlattice.hazelcast
 
 import com.openlattice.client.RetrofitFactory
 import com.openlattice.mapstores.TestDataFactory
+import com.openlattice.notifications.sms.SubscriptionNotification
 import com.openlattice.shuttle.*
 import org.apache.commons.text.CharacterPredicates
 import org.apache.commons.text.RandomStringGenerator
@@ -66,6 +67,11 @@ class InternalTestDataFactory {
         @JvmStatic
         fun integrationJob(): IntegrationJob {
             return IntegrationJob(randomAlphaNumeric.generate(5), IntegrationStatus.IN_PROGRESS)
+        }
+
+        @JvmStatic
+        fun subscriptionNotification(): SubscriptionNotification {
+            return SubscriptionNotification(TestDataFactory.randomAlphanumeric(20), TestDataFactory.randomAlphanumeric(10))
         }
     }
 
