@@ -148,7 +148,7 @@ class AdminController : AdminApi, AuthorizingComponent {
     }
 
     @Timed
-    @PostMapping(value = [ID_PATH + PHONE], consumes = [MediaType.TEXT_PLAIN_VALUE])
+    @PostMapping(value = [ID_PATH + PHONE], consumes = [MediaType.APPLICATION_JSON_VALUE])
     override// Hopefully spring is in the frameworks that accepts plain quoted string as a valid value.
     fun setOrganizationEntitySetInformation(
             @PathVariable(ID) organizationId: UUID,
