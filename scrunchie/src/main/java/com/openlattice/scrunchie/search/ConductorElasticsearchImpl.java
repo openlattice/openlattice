@@ -1191,10 +1191,10 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         if ( !verifyElasticsearchConnection() ) { return new SearchResult( 0, Lists.newArrayList() ); }
 
         BoolQueryBuilder query = new BoolQueryBuilder()
-                .should( mustMatchQuery( SerializationConstants.TITLE_FIELD, searchTerm )
-                        .fuzziness( Fuzziness.AUTO ) )
-                .should( mustMatchQuery( SerializationConstants.DESCRIPTION_FIELD, searchTerm )
-                        .fuzziness( Fuzziness.AUTO ) )
+                .should( QueryBuilders.queryStringQuery( searchTerm ).field( SerializationConstants.TITLE_FIELD )
+                        .lenient( true ).fuzziness( Fuzziness.AUTO ) )
+                .should( QueryBuilders.queryStringQuery( searchTerm ).field( SerializationConstants.DESCRIPTION_FIELD )
+                        .lenient( true ).fuzziness( Fuzziness.AUTO ) )
                 .minimumShouldMatch( 1 );
 
         query.filter( QueryBuilders.idsQuery()
