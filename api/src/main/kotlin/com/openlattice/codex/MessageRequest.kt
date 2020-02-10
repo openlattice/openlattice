@@ -6,5 +6,6 @@ data class MessageRequest (
         val organizationId: UUID,
         val messageEntitySetId : UUID,
         val messageContents: String,
-        val phoneNumber: String
+        val phoneNumber: String,
+        var senderId: String = ""
 )
