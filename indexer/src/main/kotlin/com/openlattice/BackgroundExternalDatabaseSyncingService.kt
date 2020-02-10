@@ -125,7 +125,7 @@ class BackgroundExternalDatabaseSyncingService(
                 currentTableIds.add(newTableId)
 
                 //add table-level permissions
-                val acls = edms.addPermissions(dbName, orgOwnerIds, orgId, newTableId, newTable.name, Optional.empty(), Optional.empty())
+                val acls = edms.syncPermissions(dbName, orgOwnerIds, orgId, newTableId, newTable.name, Optional.empty(), Optional.empty())
 
                 //create audit entity set and audit permissions
                 ares.createAuditEntitySetForExternalDBTable(newTable)
@@ -191,7 +191,7 @@ private fun tryLockOrganization(orgId: UUID): Boolean {
 private fun createNewExternalDbColumn(dbName: String, orgOwnerIds: List<UUID>, orgId: UUID, tableName: String, currentColumnIds: MutableSet<UUID>, column: OrganizationExternalDatabaseColumn) {
     val newColumnId = edms.createOrganizationExternalDatabaseColumn(orgId, column)
     currentColumnIds.add(newColumnId)
-    edms.addPermissions(dbName, orgOwnerIds, orgId, column.tableId, tableName, Optional.of(newColumnId), Optional.of(column.name))
+    edms.syncPermissions(dbName, orgOwnerIds, orgId, column.tableId, tableName, Optional.of(newColumnId), Optional.of(column.name))
 }
 
 private fun createAuditableEvents(acls: List<Acl>, eventType: AuditEventType): List<AuditableEvent> {
