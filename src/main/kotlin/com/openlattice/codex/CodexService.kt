@@ -170,6 +170,16 @@ class CodexService(
         val entitySetId = getEntitySetId(organizationId, CodexConstants.AppType.CONTACT_INFO)
         val entityKeyId = entityKeyIdService.getEntityKeyId(entitySetId, phoneNumber)
 
+        val entity = mapOf(
+                getPropertyTypeId(CodexConstants.PropertyType.PHONE_NUMBER) to setOf(phoneNumber)
+        )
+
+        dataGraphManager.mergeEntities(
+                entitySetId,
+                mapOf(entityKeyId to entity),
+                getPropertyTypes(CodexConstants.AppType.CONTACT_INFO)
+        )
+
         return EntityDataKey(entitySetId, entityKeyId)
     }
 
