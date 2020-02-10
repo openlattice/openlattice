@@ -3,9 +3,9 @@ package com.openlattice.subscriptions
 import com.hazelcast.core.IQueue
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.EdmAuthorizationHelper
-import com.openlattice.codex.MessageRequest
 import com.openlattice.graph.GraphQueryService
 import com.openlattice.mail.MailServiceClient
+import com.openlattice.notifications.sms.SubscriptionNotification
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.tasks.HazelcastTaskDependencies
 import com.zaxxer.hikari.HikariDataSource
@@ -22,7 +22,7 @@ class SubscriptionNotificationDependencies(
         val mailServiceClient: MailServiceClient,
         val subscriptionService: SubscriptionService,
         val graphQueryService: GraphQueryService,
-        val twilioQueue: IQueue<MessageRequest>
+        val twilioFeedQueue: IQueue<SubscriptionNotification>
 
 ) : HazelcastTaskDependencies {
     constructor(
@@ -33,7 +33,7 @@ class SubscriptionNotificationDependencies(
             graphQueryService: GraphQueryService,
             authorizationHelper: EdmAuthorizationHelper,
             mailServiceClient: MailServiceClient,
-            twilioQueue: IQueue<MessageRequest>
+            twilioFeedQueue: IQueue<SubscriptionNotification>
     ) : this(
             hds,
             principalsManager,
@@ -42,5 +42,5 @@ class SubscriptionNotificationDependencies(
             mailServiceClient,
             subscriptionService,
             graphQueryService,
-            twilioQueue)
+            twilioFeedQueue)
 }
