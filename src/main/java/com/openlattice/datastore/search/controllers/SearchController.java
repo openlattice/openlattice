@@ -176,7 +176,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
         List<AuditableEvent> searchEvents = Lists.newArrayList();
         for ( int i = 0; i < searchConstraints.getEntitySetIds().length; i++ ) {
             searchEvents.add( new AuditableEvent(
-                    getCurrentUserId(),
+                    spm.getCurrentUserId(),
                     new AclKey( searchConstraints.getEntitySetIds()[ i ] ),
                     AuditEventType.SEARCH_ENTITY_SET_DATA,
                     "Entity set data searched through SearchApi.searchEntitySetData",
@@ -381,7 +381,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             }
         }
 
-        UUID userId = getCurrentUserId();
+        UUID userId = spm.getCurrentUserId();
 
         SetMultimap<UUID, UUID> neighborsByEntitySet = HashMultimap.create();
         neighbors.forEach( neighborEntityDetails -> {
@@ -487,7 +487,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
         );
 
         List<AuditableEvent> events = new ArrayList<>( neighborsByEntitySet.keySet().size() + 1 );
-        UUID userId = getCurrentUserId();
+        UUID userId = spm.getCurrentUserId();
 
         int segments = filter.getEntityKeyIds().size() / AuditingComponent.MAX_ENTITY_KEY_IDS_PER_EVENT;
         if ( filter.getEntityKeyIds().size() % AuditingComponent.MAX_ENTITY_KEY_IDS_PER_EVENT != 0 ) {
@@ -612,7 +612,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
         );
 
         List<AuditableEvent> events = new ArrayList<>( neighborsByEntitySet.keySet().size() + 1 );
-        UUID userId = getCurrentUserId();
+        UUID userId = spm.getCurrentUserId();
 
         events.add( new AuditableEvent(
                 userId,
@@ -707,10 +707,6 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
         ensureAdminAccess();
         searchService.triggerOrganizationIndex( organizationService.getOrganization( organizationId ) );
         return null;
-    }
-
-    private UUID getCurrentUserId() {
-        return spm.getPrincipal( Principals.getCurrentUser().getId() ).getId();
     }
 
     @NotNull @Override public AuditingManager getAuditingManager() {

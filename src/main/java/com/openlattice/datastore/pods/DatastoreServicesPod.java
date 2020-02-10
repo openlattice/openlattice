@@ -43,6 +43,7 @@ import com.openlattice.authentication.Auth0Configuration;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.mapstores.ResolvedPrincipalTreesMapLoader;
 import com.openlattice.authorization.mapstores.SecurablePrincipalsMapLoader;
+import com.openlattice.codex.CodexService;
 import com.openlattice.collections.CollectionsManager;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.DataDeletionManager;
@@ -95,10 +96,7 @@ import com.openlattice.users.Auth0SyncService;
 import com.zaxxer.hikari.HikariDataSource;
 import org.jdbi.v3.core.Jdbi;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.Profile;
+import org.springframework.context.annotation.*;
 
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
@@ -131,10 +129,6 @@ public class DatastoreServicesPod {
     private ListeningExecutorService  executor;
     @Inject
     private EventBus                  eventBus;
-    @Autowired( required = false )
-    private AmazonS3                  awsS3;
-    @Autowired( required = false )
-    private AmazonLaunchConfiguration awsLaunchConfig;
 
     @Inject
     private ByteBlobDataManager byteBlobDataManager;
@@ -288,7 +282,6 @@ public class DatastoreServicesPod {
                 authorizationManager(),
                 edmAuthorizationHelper(),
                 principalService(),
-                partitionManager(),
                 metricRegistry,
                 hazelcastInstance,
                 eventBus
@@ -564,6 +557,20 @@ public class DatastoreServicesPod {
                 authorizationManager(),
                 organizationExternalDatabaseConfiguration,
                 hikariDataSource );
+    }
+
+    @Bean
+    public CodexService codexService() {
+        return new CodexService(
+                twilioConfiguration,
+                hazelcastInstance,
+                appService(),
+                dataModelService(),
+                dataGraphService(),
+                idService(),
+                principalService(),
+                organizationsManager()
+        );
     }
 
     @PostConstruct

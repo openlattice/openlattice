@@ -155,7 +155,7 @@ constructor(
 
                 auditableEvents.add(
                         AuditableEvent(
-                                getCurrentUserId(),
+                                spm.getCurrentUserId(),
                                 AclKey(entitySet.id),
                                 AuditEventType.CREATE_ENTITY_SET,
                                 "Created entity set through EntitySetApi.createEntitySets",
@@ -208,7 +208,7 @@ constructor(
 
         val now = OffsetDateTime.now()
         val events = entitySets.map { AuditableEvent(
-                getCurrentUserId(),
+                spm.getCurrentUserId(),
                 AclKey(it.key),
                 AuditEventType.READ_ENTITY_SET,
                 "EntitySet read through EntitySetsApi.getEntitySetsById",
@@ -237,7 +237,7 @@ constructor(
 
         val now = OffsetDateTime.now()
         val events = entitySets.map { AuditableEvent(
-                getCurrentUserId(),
+                spm.getCurrentUserId(),
                 AclKey(it.key),
                 AuditEventType.READ_ENTITY_SET,
                 "EntitySet read through EntitySetsApi.getEntitySetsByName",
@@ -258,7 +258,7 @@ constructor(
 
         recordEvent(
                 AuditableEvent(
-                        getCurrentUserId(),
+                        spm.getCurrentUserId(),
                         AclKey(entitySetId),
                         AuditEventType.READ_ENTITY_SET,
                         "Entity set read through EntitySetApi.getEntitySet",
@@ -302,7 +302,7 @@ constructor(
 
         recordEvent(
                 AuditableEvent(
-                        getCurrentUserId(),
+                        spm.getCurrentUserId(),
                         AclKey(entitySetId),
                         AuditEventType.DELETE_ENTITY_SET,
                         "Entity set deleted through EntitySetApi.deleteEntitySet",
@@ -356,7 +356,7 @@ constructor(
 
         recordEvent(
                 AuditableEvent(
-                        getCurrentUserId(),
+                        spm.getCurrentUserId(),
                         AclKey(entitySetId),
                         AuditEventType.UPDATE_ENTITY_SET,
                         "Entity set metadata updated through EntitySetApi.updateEntitySetMetadata",
@@ -450,7 +450,7 @@ constructor(
 
         recordEvent(
                 AuditableEvent(
-                        getCurrentUserId(),
+                        spm.getCurrentUserId(),
                         AclKey(entitySetId, propertyTypeId),
                         AuditEventType.UPDATE_ENTITY_SET_PROPERTY_METADATA,
                         "Entity set property metadata updated through EntitySetApi.updateEntitySetPropertyMetadata",
@@ -479,7 +479,7 @@ constructor(
 
         recordEvent(
                 AuditableEvent(
-                        getCurrentUserId(),
+                        spm.getCurrentUserId(),
                         AclKey(entitySetId),
                         AuditEventType.UPDATE_ENTITY_SET,
                         "Entity set data expiration policy removed through EntitySetApi.removeDataExpirationPolicy",
@@ -586,10 +586,6 @@ constructor(
         }
 
         aresManager.removeAuditRecordEntitySetConfiguration(aclKey)
-    }
-
-    private fun getCurrentUserId(): UUID {
-        return spm.getPrincipal(Principals.getCurrentUser().id).id
     }
 
     override fun getAuthorizationManager(): AuthorizationManager {
