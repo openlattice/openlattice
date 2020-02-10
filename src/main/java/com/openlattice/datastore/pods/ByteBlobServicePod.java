@@ -21,25 +21,21 @@
 
 package com.openlattice.datastore.pods;
 
-import static com.openlattice.authorization.AuthorizingComponent.logger;
-
-import com.amazonaws.services.s3.AmazonS3;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.kryptnostic.rhizome.configuration.ConfigurationConstants.Profiles;
-import com.kryptnostic.rhizome.configuration.amazon.AmazonLaunchConfiguration;
-import com.openlattice.ResourceConfigurationLoader;
-import com.openlattice.data.storage.aws.AwsBlobDataService;
+import com.kryptnostic.rhizome.pods.ConfigurationLoader;
 import com.openlattice.data.storage.ByteBlobDataManager;
 import com.openlattice.data.storage.LocalBlobDataService;
+import com.openlattice.data.storage.aws.AwsBlobDataService;
 import com.openlattice.datastore.configuration.DatastoreConfiguration;
 import com.openlattice.datastore.constants.DatastoreProfiles;
 import com.zaxxer.hikari.HikariDataSource;
-import javax.inject.Inject;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
 import org.springframework.context.annotation.Profile;
+
+import javax.inject.Inject;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -52,29 +48,12 @@ public class ByteBlobServicePod {
     @Inject
     private ListeningExecutorService executorService;
 
-    @Autowired( required = false )
-    private AmazonS3 awsS3;
+    @Inject
+    private ConfigurationLoader configurationLoader;
 
-    @Autowired( required = false )
-    private AmazonLaunchConfiguration awsLaunchConfig;
-
-    @Bean( name = "datastoreConfiguration" )
-    @Profile( { Profiles.LOCAL_CONFIGURATION_PROFILE } )
-    public DatastoreConfiguration getLocalAwsDatastoreConfiguration() {
-        DatastoreConfiguration config = ResourceConfigurationLoader.loadConfiguration( DatastoreConfiguration.class );
-        logger.info( "Using local aws datastore configuration: {}", config );
-        return config;
-    }
-
-    @Bean( name = "datastoreConfiguration" )
-    @Profile( { Profiles.AWS_CONFIGURATION_PROFILE, Profiles.AWS_TESTING_PROFILE } )
-    public DatastoreConfiguration getAwsDatastoreConfiguration() {
-        DatastoreConfiguration config = ResourceConfigurationLoader.loadConfigurationFromS3( awsS3,
-                awsLaunchConfig.getBucket(),
-                awsLaunchConfig.getFolder(),
-                DatastoreConfiguration.class );
-        logger.info( "Using aws datastore configuration: {}", config );
-        return config;
+    @Bean
+    public DatastoreConfiguration datastoreConfiguration() {
+        return configurationLoader.logAndLoad( "datastore", DatastoreConfiguration.class );
     }
 
     @Bean( name = "byteBlobDataManager" )
@@ -86,16 +65,8 @@ public class ByteBlobServicePod {
 
     @Bean( name = "byteBlobDataManager" )
     @DependsOn( "datastoreConfiguration" )
-    @Profile( { DatastoreProfiles.MEDIA_LOCAL_AWS_PROFILE } )
-    public ByteBlobDataManager localAwsBlobDataManager() {
-        return new AwsBlobDataService( getLocalAwsDatastoreConfiguration(), executorService );
+    @Profile( { DatastoreProfiles.MEDIA_LOCAL_AWS_PROFILE, Profiles.AWS_CONFIGURATION_PROFILE, Profiles.AWS_TESTING_PROFILE } )
+    public ByteBlobDataManager awsByteBlobDataManager() {
+        return new AwsBlobDataService( datastoreConfiguration(), executorService );
     }
-
-    @Bean( name = "byteBlobDataManager" )
-    @DependsOn( "datastoreConfiguration" )
-    @Profile( { Profiles.AWS_CONFIGURATION_PROFILE, Profiles.AWS_TESTING_PROFILE } )
-    public ByteBlobDataManager awsBlobDataManager() {
-        return new AwsBlobDataService( getAwsDatastoreConfiguration(), executorService );
-    }
-
 }

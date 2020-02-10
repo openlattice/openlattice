@@ -253,6 +253,9 @@ public final class PostgresColumn {
     public static final String                   INITIALIZED_FIELD                 = "initialized";
     public static final PostgresColumnDefinition INITIALIZED                       =
             new PostgresColumnDefinition( INITIALIZED_FIELD, BOOLEAN );
+    public static final String                   INTEGRATION_FIELD                 = "integration";
+    public static final PostgresColumnDefinition INTEGRATION                       =
+            new PostgresColumnDefinition( INTEGRATION_FIELD, JSONB ).notNull();
     public static final String                   IP_ADDRESS_FIELD                  = "ip_address";
     public static final PostgresColumnDefinition IP_ADDRESS                        =
             new PostgresColumnDefinition( IP_ADDRESS_FIELD, TEXT );

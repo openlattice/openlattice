@@ -389,4 +389,9 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
                 .stream().findFirst().get();
     }
 
+    @Override
+    public UUID getCurrentUserId() {
+        return getPrincipal( Principals.getCurrentUser().getId() ).getId();
+    }
+
 }

@@ -6,11 +6,14 @@ import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.notifications.sms.SmsEntitySetInformation
+import org.springframework.stereotype.Component
 
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
+
+@Component
 class SmsEntitySetInformationStreamSerializer : SelfRegisteringStreamSerializer<SmsEntitySetInformation> {
     override fun getTypeId(): Int {
         return StreamSerializerTypeIds.SMS_ENTITY_SET_INFORMATION.ordinal
