@@ -385,7 +385,7 @@ class ExternalDatabaseManagementService(
             organizationExternalDatabaseTables.getValue(it.aclKey[0]).organizationId
         }
         val columnAclsByOrg = aclsByType.second.groupBy {
-            organizationExternalDatabaseTables.getValue(it.aclKey[1]).organizationId
+            organizationExternalDatabaseColumns.getValue(it.aclKey[1]).organizationId
         }
         val orgIds = tableAclsByOrg.keys.union(columnAclsByOrg.keys)
 
