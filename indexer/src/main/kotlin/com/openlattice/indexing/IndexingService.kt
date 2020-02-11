@@ -44,7 +44,6 @@ import org.slf4j.LoggerFactory
 import java.time.OffsetDateTime
 import java.util.*
 import java.util.concurrent.locks.ReentrantLock
-import java.util.stream.Stream
 
 private val logger = LoggerFactory.getLogger(IndexingService::class.java)
 
@@ -90,9 +89,9 @@ class IndexingService(
 
     @Suppress("UNUSED")
     private val indexingWorker = executor.submit {
-        Stream.generate { indexingQueue.take() }
-                .parallel().forEach { entitySetId ->
-                    try {
+        while ( true ) {
+            try {
+                val entitySetId = indexingQueue.take()
                         val entitySet = entitySets.getValue(entitySetId)
                         var cursor = indexingProgress.getOrPut(entitySetId) { LB_UUID }
                         val currentPartitions = partitionManager.getEntitySetPartitions(entitySetId)
@@ -166,11 +165,10 @@ class IndexingService(
                         } finally {
                             indexingLock.unlock()
                         }
-                    } catch (ex: Exception) {
-                        logger.error("Error while marking entity set as needing indexing.", ex)
-                    }
-                }
-
+            } catch (ex: Exception) {
+                logger.error("Error while marking entity set as needing indexing.", ex)
+            }
+        }
     }
 
     fun getIndexingState(): IndexingState {
