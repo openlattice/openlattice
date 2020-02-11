@@ -75,10 +75,7 @@ class OrganizationsInitializationTask : HazelcastInitializationTask<Organization
             val org = createGlobalOrg(defaultPartitions)
             mergeGrants(org)
             dependencies.configuration.connection.ifPresent { org.connections.addAll(it) }
-            organizationService.createOrganization(
-                    GLOBAL_ADMIN_ROLE.principal,
-                    createGlobalOrg(defaultPartitions)
-            )
+            organizationService.createOrganization(GLOBAL_ADMIN_ROLE.principal, org)
         }
 
         logger.info("Bootstrapping for organizations took {} ms", sw.elapsed(TimeUnit.MILLISECONDS))
