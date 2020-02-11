@@ -33,19 +33,23 @@ public class TwilioConfiguration implements Configuration {
     protected static ConfigurationKey key = new SimpleConfigurationKey(
             "twilio.yaml" );
 
-    private static final String SID_PROPERTY   = "sid";
-    private static final String TOKEN_PROPERTY = "token";
+    private static final String SID_PROPERTY        = "sid";
+    private static final String TOKEN_PROPERTY      = "token";
+    private static final String SHORT_CODE_PROPERTY = "shortCode";
 
     private final String sid;
     private final String token;
+    private final String shortCode;
 
     @JsonCreator
     public TwilioConfiguration(
             @JsonProperty( SID_PROPERTY ) String sid,
-            @JsonProperty( TOKEN_PROPERTY ) String token ) {
+            @JsonProperty( TOKEN_PROPERTY ) String token,
+            @JsonProperty( SHORT_CODE_PROPERTY ) String shortCode ) {
 
         this.sid = sid;
         this.token = token;
+        this.shortCode = shortCode;
     }
 
     @JsonProperty( SID_PROPERTY )
@@ -56,6 +60,11 @@ public class TwilioConfiguration implements Configuration {
     @JsonProperty( TOKEN_PROPERTY )
     public String getToken() {
         return token;
+    }
+
+    @JsonProperty( SHORT_CODE_PROPERTY )
+    public String getShortCode() {
+        return shortCode;
     }
 
     @Override
