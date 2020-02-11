@@ -92,79 +92,81 @@ class IndexingService(
         while ( true ) {
             try {
                 val entitySetId = indexingQueue.take()
-                        val entitySet = entitySets.getValue(entitySetId)
-                        var cursor = indexingProgress.getOrPut(entitySetId) { LB_UUID }
-                        val currentPartitions = partitionManager.getEntitySetPartitions(entitySetId)
+                executor.submit {
+                    val entitySet = entitySets.getValue(entitySetId)
+                    var cursor = indexingProgress.getOrPut(entitySetId) { LB_UUID }
+                    val currentPartitions = partitionManager.getEntitySetPartitions(entitySetId)
 
-                        val partitions = indexingPartitionList.getOrPut(entitySetId) {
-                            DelegatedIntList(
-                                    currentPartitions.toList()
-                            )
-                        }
-                        val partitionCursor = indexingPartitionProgress.getOrPut(entitySetId) { 0 }
-
-                        val propertyTypeMap = propertyTypes.getAll(
-                                entityTypes.getValue(entitySet.entityTypeId).properties
+                    val partitions = indexingPartitionList.getOrPut(entitySetId) {
+                        DelegatedIntList(
+                                currentPartitions.toList()
                         )
+                    }
+                    val partitionCursor = indexingPartitionProgress.getOrPut(entitySetId) { 0 }
 
-                        val entityKeyIds: Set<UUID> = indexingJobs.getValue(entitySetId)
+                    val propertyTypeMap = propertyTypes.getAll(
+                            entityTypes.getValue(entitySet.entityTypeId).properties
+                    )
 
-                        for (i in partitionCursor until partitions.size) {
-                            var entityKeyIdsWithLastWrite: Map<UUID, OffsetDateTime> =
-                                    StopWatch(
-                                            "Loading index batch for entity ${entitySet.name} (${entitySet.id})} "
-                                    ).use {
+                    val entityKeyIds: Set<UUID> = indexingJobs.getValue(entitySetId)
 
-                                        //An empty set of ids means all keys
-                                        if (entityKeyIds.isEmpty()) {
-                                            getNextBatch(entitySetId, partitions[i], cursor).toMap()
-                                        } else {
-                                            getEntitiesWithLastWrite(entitySet.id, partitions, entityKeyIds).toMap()
-                                        }
+                    for (i in partitionCursor until partitions.size) {
+                        var entityKeyIdsWithLastWrite: Map<UUID, OffsetDateTime> =
+                                StopWatch(
+                                        "Loading index batch for entity ${entitySet.name} (${entitySet.id})} "
+                                ).use {
 
+                                    //An empty set of ids means all keys
+                                    if (entityKeyIds.isEmpty()) {
+                                        getNextBatch(entitySetId, partitions[i], cursor).toMap()
+                                    } else {
+                                        getEntitiesWithLastWrite(entitySet.id, partitions, entityKeyIds).toMap()
                                     }
-                            while (entityKeyIdsWithLastWrite.isNotEmpty()) {
-                                logger.info(
-                                        "Indexing entity set ${entitySet.name} (${entitySet.id}) starting at $cursor."
+
+                                }
+                        while (entityKeyIdsWithLastWrite.isNotEmpty()) {
+                            logger.info(
+                                    "Indexing entity set ${entitySet.name} (${entitySet.id}) starting at $cursor."
+                            )
+                            StopWatch(
+                                    "Indexing batch for entity ${entitySet.name} (${entitySet.id})} took "
+                            ).use {
+                                backgroundIndexingService.indexEntities(
+                                        entitySet,
+                                        entityKeyIdsWithLastWrite,
+                                        propertyTypeMap,
+                                        false
                                 )
-                                StopWatch(
-                                        "Indexing batch for entity ${entitySet.name} (${entitySet.id})} took "
-                                ).use {
-                                    backgroundIndexingService.indexEntities(
-                                            entitySet,
-                                            entityKeyIdsWithLastWrite,
-                                            propertyTypeMap,
-                                            false
-                                    )
-                                }
-                                cursor = entityKeyIdsWithLastWrite.keys.max()!!
-                                indexingPartitionProgress.set(entitySetId, i)
-                                indexingProgress.set(entitySetId, cursor)
+                            }
+                            cursor = entityKeyIdsWithLastWrite.keys.max()!!
+                            indexingPartitionProgress.set(entitySetId, i)
+                            indexingProgress.set(entitySetId, cursor)
 
-                                StopWatch(
-                                        "Loading index batch for entity ${entitySet.name} (${entitySet.id})} took "
-                                ).use {
+                            StopWatch(
+                                    "Loading index batch for entity ${entitySet.name} (${entitySet.id})} took "
+                            ).use {
 
-                                    entityKeyIdsWithLastWrite = getNextBatch(
-                                            entitySetId,
-                                            partitions[i],
-                                            cursor
-                                    ).toMap()
-                                }
+                                entityKeyIdsWithLastWrite = getNextBatch(
+                                        entitySetId,
+                                        partitions[i],
+                                        cursor
+                                ).toMap()
                             }
                         }
+                    }
 
-                        logger.info("Finished indexing entity set $entitySetId")
-                        //We're done re-indexing this set.
-                        try {
-                            indexingLock.lock()
-                            indexingJobs.delete(entitySetId)
-                            indexingProgress.delete(entitySetId)
-                            indexingPartitionList.delete(entitySetId)
-                            indexingPartitionProgress.delete(entitySetId)
-                        } finally {
-                            indexingLock.unlock()
-                        }
+                    logger.info("Finished indexing entity set $entitySetId")
+                    //We're done re-indexing this set.
+                    try {
+                        indexingLock.lock()
+                        indexingJobs.delete(entitySetId)
+                        indexingProgress.delete(entitySetId)
+                        indexingPartitionList.delete(entitySetId)
+                        indexingPartitionProgress.delete(entitySetId)
+                    } finally {
+                        indexingLock.unlock()
+                    }
+                }
             } catch (ex: Exception) {
                 logger.error("Error while marking entity set as needing indexing.", ex)
             }
