@@ -100,20 +100,10 @@ public final class RetrofitFactory {
         return decorateWithLoomFactories( createBaseRhizomeRetrofitBuilder( baseUrl, httpBuilder.build() ) ).build();
     }
 
-    public static final Retrofit newClient( Retrofit.Builder retrofitBuilder ) {
-        return decorateWithLoomFactories( retrofitBuilder ).build();
-    }
-
     public static final Retrofit.Builder createBaseRhizomeRetrofitBuilder(
             Environment environment,
             OkHttpClient.Builder httpBuilder ) {
         return createBaseRhizomeRetrofitBuilder( environment.getBaseUrl(), httpBuilder.build() );
-    }
-
-    public static final Retrofit.Builder createBaseRhizomeRetrofitBuilder(
-            Environment environment,
-            OkHttpClient httpClient ) {
-        return createBaseRhizomeRetrofitBuilder( environment.getBaseUrl(), httpClient );
     }
 
     public static final Retrofit.Builder createBaseRhizomeRetrofitBuilder( String baseUrl, OkHttpClient httpClient ) {
@@ -121,9 +111,7 @@ public final class RetrofitFactory {
     }
 
     public static final Retrofit.Builder decorateWithLoomFactories( Retrofit.Builder builder ) {
-        return builder.addConverterFactory( new RhizomeByteConverterFactory() )
-                .addConverterFactory( new RhizomeJacksonConverterFactory( jsonMapper ) )
-                .addCallAdapterFactory( new RhizomeCallAdapterFactory() );
+        return decorateWithFactories( builder, new RhizomeCallAdapterFactory() );
     }
 
     public static final Retrofit.Builder decorateWithFactories(
@@ -134,14 +122,21 @@ public final class RetrofitFactory {
                 .addCallAdapterFactory( callFactory );
     }
 
-    public static final OkHttpClient.Builder okhttpClientWithLoomAuth( Supplier<String> jwtToken ) {
+    public static OkHttpClient.Builder okHttpClient() {
         return new OkHttpClient.Builder()
-                .addInterceptor( chain -> chain
-                        .proceed( chain.request().newBuilder().addHeader( "Authorization", "Bearer " + jwtToken.get() )
-                                .build() ) )
                 .readTimeout( 0, TimeUnit.MILLISECONDS )
                 .writeTimeout( 0, TimeUnit.MILLISECONDS )
                 .connectTimeout( 0, TimeUnit.MILLISECONDS );
+    }
+
+    public static final OkHttpClient.Builder okhttpClientWithLoomAuth( Supplier<String> jwtToken ) {
+        return okHttpClient()
+                .addInterceptor( chain -> chain.proceed(
+                        chain.request().newBuilder()
+                                .addHeader( "Authorization", "Bearer " + jwtToken.get() )
+                                .build()
+                        )
+                );
     }
 
     public static void configureObjectMapper( Consumer<ObjectMapper> c ) {
