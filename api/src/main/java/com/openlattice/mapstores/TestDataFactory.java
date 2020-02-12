@@ -33,6 +33,7 @@ import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.AbstractSecurableType;
 import com.openlattice.authorization.securable.SecurableObjectType;
+import com.openlattice.codex.MessageRequest;
 import com.openlattice.collections.CollectionTemplateType;
 import com.openlattice.collections.EntitySetCollection;
 import com.openlattice.collections.EntityTypeCollection;
@@ -47,6 +48,7 @@ import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.EntityTypePropertyMetadata;
 import com.openlattice.edm.type.PropertyType;
+import com.openlattice.notifications.sms.SmsEntitySetInformation;
 import com.openlattice.organization.OrganizationExternalDatabaseColumn;
 import com.openlattice.organization.OrganizationExternalDatabaseTable;
 import com.openlattice.organization.roles.Role;
@@ -316,7 +318,7 @@ public final class TestDataFactory {
     }
 
     public static PropertyType enumType() {
-        return propertyType( indexType(), true);
+        return propertyType( indexType(), true );
     }
 
     public static PropertyType propertyType() {
@@ -720,6 +722,25 @@ public final class TestDataFactory {
 
     public static EntitySetFlag entitySetFlag() {
         return entitySetFlags[ r.nextInt( entitySetFlags.length ) ];
+    }
+
+    public static SmsEntitySetInformation smsEntitySetInformation() {
+        return new SmsEntitySetInformation(
+                randomAlphanumeric( 12 ),
+                UUID.randomUUID(),
+                ImmutableSet.of( UUID.randomUUID() ),
+                ImmutableSet.of( randomAlphanumeric( 5 ), randomAlphanumeric( 5 ) )
+        );
+    }
+
+    public static MessageRequest messageRequest() {
+        return new MessageRequest(
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                randomAlphabetic( 20 ),
+                randomAlphanumeric( 10 ),
+                randomAlphanumeric( 15 )
+        );
     }
 
 }
