@@ -25,6 +25,7 @@ import com.openlattice.organizations.mapstores.DOMAINS_INDEX
 import com.openlattice.organizations.mapstores.MEMBERS_INDEX
 import com.openlattice.organizations.processors.OrganizationEntryProcessor
 import com.openlattice.organizations.processors.OrganizationReadEntryProcessor
+import com.openlattice.organizations.processors.UpdateOrganizationSmsEntitySetInformationEntryProcessor
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.users.getAppMetadata
 import org.slf4j.LoggerFactory
@@ -489,6 +490,10 @@ class HazelcastOrganizationService(
 
     fun setSmsEntitySetInformation(entitySetInformationList: Collection<SmsEntitySetInformation>) {
         phoneNumbers.setPhoneNumber(entitySetInformationList)
+
+        entitySetInformationList.groupBy { it.organizationId }.map { (organizationId, entitySetInfoList) ->
+            organizations.submitToKey(organizationId, UpdateOrganizationSmsEntitySetInformationEntryProcessor(entitySetInfoList))
+        }.forEach { it.get() }
     }
 
     fun getDefaultPartitions(organizationId: UUID): List<Int> {
