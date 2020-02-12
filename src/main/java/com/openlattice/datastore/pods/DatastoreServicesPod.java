@@ -62,6 +62,7 @@ import com.openlattice.authorization.Principals;
 import com.openlattice.authorization.SecurableObjectResolveTypeService;
 import com.openlattice.authorization.mapstores.ResolvedPrincipalTreesMapLoader;
 import com.openlattice.authorization.mapstores.SecurablePrincipalsMapLoader;
+import com.openlattice.codex.CodexService;
 import com.openlattice.collections.CollectionsManager;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.DataDeletionManager;
@@ -590,6 +591,20 @@ public class DatastoreServicesPod {
                 authorizationManager(),
                 organizationExternalDatabaseConfiguration,
                 hikariDataSource );
+    }
+
+    @Bean
+    public CodexService codexService() {
+        return new CodexService(
+                twilioConfiguration,
+                hazelcastInstance,
+                appService(),
+                dataModelService(),
+                dataGraphService(),
+                idService(),
+                principalService(),
+                organizationsManager()
+        );
     }
 
     @PostConstruct
