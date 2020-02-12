@@ -43,4 +43,13 @@ class HazelcastMapTest {
         val second = HazelcastMap<Any, Any>(uniqueId)
         second.getMap(instance)
     }
+
+    @Test
+    fun testValues() {
+        val uniqueId = "abaf6918-04b1-4cef-b1e5-16a5f660d63b"
+
+        val mapHandle = HazelcastMap<Any, Any>(uniqueId)
+        Assert.assertEquals(1, HazelcastMap.values().filter { it.name == uniqueId }.size)
+        Assert.assertEquals(mapHandle, HazelcastMap.valueOf(uniqueId))
+    }
 }
