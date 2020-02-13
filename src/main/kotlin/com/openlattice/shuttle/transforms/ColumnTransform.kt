@@ -11,6 +11,8 @@ class ColumnTransform
  * Represents a transformation to select a column in the original data (i.e. no transform)
  *
  * @param column: column name to collect
+ * NOTE: This class is duplicated at transforms.ColumnTransform
+ * in shuttle and should be kept in sync
  */
 @JsonCreator
 constructor(@JsonProperty(SerializationConstants.COLUMN) column: String) : Transformation<Map<String, String>>(Optional.of(column))
