@@ -117,7 +117,7 @@ class DatasetController : DatasetApi, AuthorizingComponent {
             @PathVariable(ID) organizationId: UUID,
             @PathVariable(TABLE_NAME) tableName: String): OrganizationExternalDatabaseTable {
         val tableId = getExternalDatabaseObjectId(organizationId, tableName)
-        ensureReadAccess(AclKey(organizationId, tableId))
+        ensureReadAccess(AclKey(tableId))
         return edms.getOrganizationExternalDatabaseTable(tableId)
     }
 
@@ -129,7 +129,7 @@ class DatasetController : DatasetApi, AuthorizingComponent {
             @PathVariable(COLUMN_NAME) columnName: String): OrganizationExternalDatabaseColumn {
         val tableId = getExternalDatabaseObjectId(organizationId, tableName)
         val columnId = getExternalDatabaseObjectId(tableId, columnName)
-        ensureReadAccess(AclKey(organizationId, tableId, columnId))
+        ensureReadAccess(AclKey(tableId, columnId))
         return edms.getOrganizationExternalDatabaseColumn(columnId)
     }
 
