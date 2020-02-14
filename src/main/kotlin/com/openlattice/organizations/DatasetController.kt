@@ -20,11 +20,6 @@ import org.springframework.web.bind.annotation.PostMapping
 import com.openlattice.edm.requests.MetadataUpdate
 import org.springframework.web.bind.annotation.PatchMapping
 
-
-
-
-
-
 @SuppressFBWarnings(
         value = ["BC_BAD_CAST_TO_ABSTRACT_COLLECTION"],
         justification = "Allowing kotlin collection mapping cast to List")
