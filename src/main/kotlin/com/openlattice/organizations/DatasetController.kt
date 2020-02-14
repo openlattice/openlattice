@@ -97,7 +97,7 @@ class DatasetController : DatasetApi, AuthorizingComponent {
     override fun getExternalDatabaseTableWithColumns(
             @PathVariable(ID) organizationId: UUID,
             @PathVariable(TABLE_ID) tableId: UUID): OrganizationExternalDatabaseTableColumnsPair {
-        ensureReadAccess(AclKey(organizationId, tableId))
+        ensureReadAccess(AclKey(tableId))
         return edms.getExternalDatabaseTableWithColumns(tableId)
     }
 
@@ -107,7 +107,7 @@ class DatasetController : DatasetApi, AuthorizingComponent {
             @PathVariable(ID) organizationId: UUID,
             @PathVariable(TABLE_ID) tableId: UUID,
             @PathVariable(ROW_COUNT) rowCount: Int): Map<UUID, List<Any?>> {
-        ensureReadAccess(AclKey(organizationId, tableId))
+        ensureReadAccess(AclKey(tableId))
         return edms.getExternalDatabaseTableData(organizationId, tableId, rowCount)
     }
 
@@ -164,7 +164,7 @@ class DatasetController : DatasetApi, AuthorizingComponent {
             @PathVariable(ID) organizationId: UUID,
             @PathVariable(TABLE_NAME) tableName: String) {
         val tableId = getExternalDatabaseObjectId(organizationId, tableName)
-        val aclKey = AclKey(organizationId, tableId)
+        val aclKey = AclKey(tableId)
         ensureOwnerAccess(aclKey)
         ensureObjectCanBeDeleted(tableId)
         edms.deleteOrganizationExternalDatabaseTable(organizationId, tableId)
@@ -177,7 +177,7 @@ class DatasetController : DatasetApi, AuthorizingComponent {
             @RequestBody tableNames: Set<String>) {
         val tableIds = getExternalDatabaseObjectIds(organizationId, tableNames)
         tableIds.forEach { ensureObjectCanBeDeleted(it) }
-        val aclKeys = tableIds.map { AclKey(organizationId, it) }.toSet()
+        val aclKeys = tableIds.map { AclKey(it) }.toSet()
         aclKeys.forEach { aclKey ->
             ensureOwnerAccess(aclKey)
         }
@@ -193,7 +193,7 @@ class DatasetController : DatasetApi, AuthorizingComponent {
     ) {
         val tableId = getExternalDatabaseObjectId(organizationId, tableName)
         val columnId = getExternalDatabaseObjectId(tableId, columnName)
-        val aclKey = AclKey(organizationId, tableId, columnId)
+        val aclKey = AclKey(tableId, columnId)
         ensureOwnerAccess(aclKey)
         ensureObjectCanBeDeleted(columnId)
         edms.deleteOrganizationExternalDatabaseColumn(organizationId, tableId, columnId)
@@ -209,7 +209,7 @@ class DatasetController : DatasetApi, AuthorizingComponent {
         val tableId = getExternalDatabaseObjectId(organizationId, tableName)
         val columnIds = getExternalDatabaseObjectIds(tableId, columnNames)
         columnIds.forEach { ensureObjectCanBeDeleted(it) }
-        val aclKeys = columnIds.map { AclKey(organizationId, tableId, it) }.toSet()
+        val aclKeys = columnIds.map { AclKey(tableId, it) }.toSet()
         aclKeys.forEach { aclKey ->
             ensureOwnerAccess(aclKey)
         }
