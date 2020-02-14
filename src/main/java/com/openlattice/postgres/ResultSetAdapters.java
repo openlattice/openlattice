@@ -985,10 +985,6 @@ public final class ResultSetAdapters {
         return rs.getInt( ORDINAL_POSITION.getName() );
     }
 
-    public static Integer postgresObjectId( ResultSet rs ) throws SQLException {
-        return rs.getInt( OBJECT_IDENTIFIER.getName() );
-    }
-
     public static String constraintType( ResultSet rs ) throws SQLException {
         return rs.getString( CONSTRAINT_TYPE.getName() );
     }
