@@ -231,12 +231,24 @@ class ExternalDatabaseManagementService(
     fun deleteOrganizationExternalDatabaseTables(orgId: UUID, tableIds: Set<UUID>) {
         organizationExternalDatabaseTables.executeOnEntries(DeleteOrganizationExternalDatabaseTableEntryProcessor(), idsPredicate(tableIds))
         tableIds.forEach {
+            //delete columns from tables
+            val columnIdsByTableId = mapOf(it to organizationExternalDatabaseColumns.keySet(belongsToTable(it)))
+            deleteOrganizationExternalDatabaseColumns(orgId, columnIdsByTableId)
+
+            //delete tables from postgres
+            val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
+            val tableName = organizationExternalDatabaseTables.getValue(it)
+            assemblerConnectionManager.connect(dbName).let { dataSource ->
+                dataSource.connection.createStatement().use { stmt ->
+                    stmt.execute("DROP TABLE $tableName")
+                }
+            }
+
+            //delete securable objects
             val aclKey = AclKey(it)
             authorizationManager.deletePermissions(aclKey)
             securableObjectTypes.remove(aclKey)
             aclKeyReservations.release(it)
-            val columnIdsByTableId = mapOf(it to organizationExternalDatabaseColumns.keySet(belongsToTable(it)))
-            deleteOrganizationExternalDatabaseColumns(orgId, columnIdsByTableId)
         }
     }
 
@@ -246,6 +258,21 @@ class ExternalDatabaseManagementService(
 
     fun deleteOrganizationExternalDatabaseColumns(orgId: UUID, columnIdsByTableId: Map<UUID, Set<UUID>>) {
         columnIdsByTableId.forEach { (tableId, columnIds) ->
+            //delete columns from postgres
+            val tableName = organizationExternalDatabaseTables.getValue(tableId)
+            val columnNames = organizationExternalDatabaseColumns
+                    .values(belongsToTable(tableId))
+                    .map { it.name }
+                    .toSet()
+            val dropColumnsSql = createDropColumnSql(columnNames)
+            val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
+            assemblerConnectionManager.connect(dbName).let {
+                it.connection.createStatement().use { stmt ->
+                    stmt.execute("ALTER TABLE $tableName $dropColumnsSql")
+                }
+            }
+
+            //delete securable objects
             organizationExternalDatabaseColumns.executeOnEntries(DeleteOrganizationExternalDatabaseColumnsEntryProcessor(), idsPredicate(columnIds))
             columnIds.forEach {
                 val aclKey = AclKey(tableId, it)
@@ -467,6 +494,10 @@ class ExternalDatabaseManagementService(
                 .map { entry ->
                     return@map entry.key + " " + entry.value.dataType
                 }.joinToString(", ", postfix = pkeyConstraint)
+    }
+
+    private fun createDropColumnSql(columnNames: Set<String>): String {
+        return columnNames.joinToString(", ") { "DROP COLUMN $it" }
     }
 
     private fun createPrivilegesUpdateSql(action: Action, privileges: List<String>, tableName: String, columnName: Optional<String>, dbUser: String): String {
