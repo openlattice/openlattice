@@ -113,7 +113,6 @@ class BackgroundExternalDatabaseSyncingService(
         val currentTableIds = mutableSetOf<UUID>()
         val currentColumnIds = mutableSetOf<UUID>()
         val currentColumnNamesByTableName = edms.getColumnNamesByTable(dbName)
-//        val currentPostgresObjectIdsByTableName = edms.getPostgresObjectIdsByTable(dbName, currentColumnNamesByTableName.keys)
         currentColumnNamesByTableName.forEach { (tableName, columnNames) ->
             //check if we had a record of this table name previously
             val tableFQN = FullQualifiedName(orgId.toString(), tableName)
@@ -147,7 +146,7 @@ class BackgroundExternalDatabaseSyncingService(
         //check if tables have been deleted in the database
         val missingTableIds = organizationExternalDatabaseTables.keys - currentTableIds
         if (missingTableIds.isNotEmpty()) {
-            edms.deleteOrganizationExternalDatabaseTables(orgId, missingTableIds)
+            edms.deleteOrganizationExternalDatabaseTableObjects(missingTableIds)
             totalSynced += missingTableIds.size
         }
 
@@ -159,7 +158,7 @@ class BackgroundExternalDatabaseSyncingService(
                 val tableId = organizationExternalDatabaseColumns.getValue(it).tableId
                 missingColumnsByTable.getOrPut(tableId) { mutableSetOf() }.add(it)
             }
-            edms.deleteOrganizationExternalDatabaseColumns(orgId, missingColumnsByTable)
+            edms.deleteOrganizationExternalDatabaseColumnObjects(missingColumnsByTable)
             totalSynced += missingColumnIds.size
         }
         return totalSynced
