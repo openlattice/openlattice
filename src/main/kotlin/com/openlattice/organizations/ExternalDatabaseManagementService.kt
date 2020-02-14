@@ -229,7 +229,6 @@ class ExternalDatabaseManagementService(
 
     /*DELETE*/
     fun deleteOrganizationExternalDatabaseTables(orgId: UUID, tableIds: Set<UUID>) {
-        organizationExternalDatabaseTables.executeOnEntries(DeleteOrganizationExternalDatabaseTableEntryProcessor(), idsPredicate(tableIds))
         tableIds.forEach {
             //delete columns from tables
             val columnIdsByTableId = mapOf(it to organizationExternalDatabaseColumns.keySet(belongsToTable(it)))
@@ -237,7 +236,7 @@ class ExternalDatabaseManagementService(
 
             //delete tables from postgres
             val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
-            val tableName = organizationExternalDatabaseTables.getValue(it)
+            val tableName = organizationExternalDatabaseTables.getValue(it).name
             assemblerConnectionManager.connect(dbName).let { dataSource ->
                 dataSource.connection.createStatement().use { stmt ->
                     stmt.execute("DROP TABLE $tableName")
@@ -250,6 +249,7 @@ class ExternalDatabaseManagementService(
             securableObjectTypes.remove(aclKey)
             aclKeyReservations.release(it)
         }
+        organizationExternalDatabaseTables.executeOnEntries(DeleteOrganizationExternalDatabaseTableEntryProcessor(), idsPredicate(tableIds))
     }
 
     fun deleteOrganizationExternalDatabaseTable(orgId: UUID, tableId: UUID) {
@@ -258,8 +258,9 @@ class ExternalDatabaseManagementService(
 
     fun deleteOrganizationExternalDatabaseColumns(orgId: UUID, columnIdsByTableId: Map<UUID, Set<UUID>>) {
         columnIdsByTableId.forEach { (tableId, columnIds) ->
+            if (columnIds.isEmpty()) return@forEach
             //delete columns from postgres
-            val tableName = organizationExternalDatabaseTables.getValue(tableId)
+            val tableName = organizationExternalDatabaseTables.getValue(tableId).name
             val columnNames = organizationExternalDatabaseColumns
                     .values(belongsToTable(tableId))
                     .map { it.name }
@@ -273,13 +274,13 @@ class ExternalDatabaseManagementService(
             }
 
             //delete securable objects
-            organizationExternalDatabaseColumns.executeOnEntries(DeleteOrganizationExternalDatabaseColumnsEntryProcessor(), idsPredicate(columnIds))
             columnIds.forEach {
                 val aclKey = AclKey(tableId, it)
                 authorizationManager.deletePermissions(aclKey)
                 securableObjectTypes.remove(aclKey)
                 aclKeyReservations.release(it)
             }
+            organizationExternalDatabaseColumns.executeOnEntries(DeleteOrganizationExternalDatabaseColumnsEntryProcessor(), idsPredicate(columnIds))
         }
     }
 
