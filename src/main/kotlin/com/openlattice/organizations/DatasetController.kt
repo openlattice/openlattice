@@ -141,7 +141,7 @@ class DatasetController : DatasetApi, AuthorizingComponent {
     }
 
     @Timed
-    @PatchMapping(path = [ID_PATH + TABLE_NAME_PATH + COLUMN_NAME_PATH + EXTERNAL_DATABASE_TABLE])
+    @PatchMapping(path = [ID_PATH + TABLE_NAME_PATH + COLUMN_NAME_PATH + EXTERNAL_DATABASE_COLUMN])
     override fun updateExternalDatabaseColumn(
             @PathVariable(ID) organizationId: UUID,
             @PathVariable(TABLE_NAME) tableName: String,
