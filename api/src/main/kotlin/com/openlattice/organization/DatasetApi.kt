@@ -146,7 +146,7 @@ interface DatasetApi {
             @Path(TABLE_NAME) tableName: String,
             @Body metadataUpdate: MetadataUpdate)
 
-    @PATCH(BASE + ID_PATH + TABLE_NAME_PATH + COLUMN_NAME_PATH + EXTERNAL_DATABASE_TABLE)
+    @PATCH(BASE + ID_PATH + TABLE_NAME_PATH + COLUMN_NAME_PATH + EXTERNAL_DATABASE_COLUMN)
     fun updateExternalDatabaseColumn(
             @Path(ID) organizationId: UUID,
             @Path(TABLE_NAME) tableName: String,
