@@ -21,7 +21,6 @@ import com.openlattice.hazelcast.processors.DeleteOrganizationExternalDatabaseTa
 import com.openlattice.hazelcast.processors.organizations.UpdateOrganizationExternalDatabaseColumnEntryProcessor
 import com.openlattice.hazelcast.processors.organizations.UpdateOrganizationExternalDatabaseTableEntryProcessor
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
-import com.openlattice.organization.OrganizationExternalDatabaseColumnMetadata
 import com.openlattice.organization.OrganizationExternalDatabaseTable
 import com.openlattice.organization.OrganizationExternalDatabaseTableColumnsPair
 import com.openlattice.organizations.mapstores.ORGANIZATION_ID_INDEX
@@ -183,19 +182,6 @@ class ExternalDatabaseManagementService(
         return columnNamesByTableName
     }
 
-//    fun getPostgresObjectIdsByTable(dbName: String, tableNames: Set<String>): Map<String, Int> {
-//        val tableIdByTableName = HashMap<String, Int>()
-//        val sql = getCurrentTableIdsSql(tableNames)
-//        BasePostgresIterable(
-//                StatementHolderSupplier(assemblerConnectionManager.connect(dbName), sql, FETCH_SIZE)
-//        ) {rs -> name(rs) to postgresObjectId(rs) }
-//                .forEach {
-//                    tableIdByTableName[it.first] = it.second
-//                }
-//
-//        return tableIdByTableName
-//    }
-
     /*UPDATE*/
     fun updateOrganizationExternalDatabaseTable(orgId: UUID, tableFqnToId: Pair<String, UUID>, update: MetadataUpdate) {
         update.name.ifPresent {
@@ -250,21 +236,25 @@ class ExternalDatabaseManagementService(
                     stmt.execute("DROP TABLE $tableName")
                 }
             }
-
-            //delete from hazelcast maps
-            val aclKey = AclKey(tableId)
-            authorizationManager.deletePermissions(aclKey)
-            securableObjectTypes.remove(aclKey)
-            aclKeyReservations.release(tableId)
         }
 
         //delete securable object
         val tableIds = tableIdByFqn.values.toSet()
-        organizationExternalDatabaseTables.executeOnEntries(DeleteOrganizationExternalDatabaseTableEntryProcessor(), idsPredicate(tableIds))
+        deleteOrganizationExternalDatabaseTableObjects(tableIds)
     }
 
     fun deleteOrganizationExternalDatabaseTable(orgId: UUID, tableFqnToId: Pair<String, UUID>) {
         deleteOrganizationExternalDatabaseTables(orgId, mapOf(tableFqnToId))
+    }
+
+    fun deleteOrganizationExternalDatabaseTableObjects(tableIds: Set<UUID>) {
+        tableIds.forEach {
+            val aclKey = AclKey(it)
+            authorizationManager.deletePermissions(aclKey)
+            securableObjectTypes.remove(aclKey)
+            aclKeyReservations.release(it)
+        }
+        organizationExternalDatabaseTables.executeOnEntries(DeleteOrganizationExternalDatabaseTableEntryProcessor(), idsPredicate(tableIds))
     }
 
     fun deleteOrganizationExternalDatabaseColumns(orgId: UUID, columnsByTable: Map<Pair<String, UUID>, Map<String, UUID>>) {
@@ -285,6 +275,8 @@ class ExternalDatabaseManagementService(
                 }
             }
 
+
+
             //delete securable objects
             columnIds.forEach {
                 val aclKey = AclKey(tableId, it)
@@ -294,10 +286,23 @@ class ExternalDatabaseManagementService(
             }
             organizationExternalDatabaseColumns.executeOnEntries(DeleteOrganizationExternalDatabaseColumnsEntryProcessor(), idsPredicate(columnIds))
         }
+        val columnIdsByTableId = columnsByTable.map { it.key.second to it.value.map { it.value }.toSet() }.toMap()
     }
 
     fun deleteOrganizationExternalDatabaseColumn(orgId: UUID, tableFqnToId: Pair<String, UUID>, columnFqnToId: Pair<String, UUID>) {
         deleteOrganizationExternalDatabaseColumns(orgId, mapOf(tableFqnToId to mapOf(columnFqnToId)))
+    }
+
+    fun deleteOrganizationExternalDatabaseColumnObjects(columnIdsByTableId: Map<UUID, Set<UUID>>) {
+        columnIdsByTableId.forEach { (tableId, columnIds) ->
+            columnIds.forEach {
+                val aclKey = AclKey(tableId, it)
+                authorizationManager.deletePermissions(aclKey)
+                securableObjectTypes.remove(aclKey)
+                aclKeyReservations.release(it)
+            }
+            organizationExternalDatabaseColumns.executeOnEntries(DeleteOrganizationExternalDatabaseTableEntryProcessor(), idsPredicate(columnIds))
+        }
     }
 
     /**
@@ -509,14 +514,6 @@ class ExternalDatabaseManagementService(
         return fqnString.split(".")[1]
     }
 
-    private fun createAddColumnSql(columnNameToMetadata: Map<String, OrganizationExternalDatabaseColumnMetadata>): String {
-        val pkeyConstraint = columnNameToMetadata.filter { it.value.primaryKey }.keys.joinToString(", ", "PRIMARY KEY (", ")")
-        return columnNameToMetadata
-                .map { entry ->
-                    return@map entry.key + " " + entry.value.dataType
-                }.joinToString(", ", postfix = pkeyConstraint)
-    }
-
     private fun createDropColumnSql(columnNames: Set<String>): String {
         return columnNames.joinToString(", ") { "DROP COLUMN $it" }
     }
@@ -665,10 +662,6 @@ class ExternalDatabaseManagementService(
                 "WHERE information_schema.tables.table_schema='$PUBLIC_SCHEMA' " +
                 "AND table_type='BASE TABLE'"
     }
-//
-//    private fun getCurrentTableIdsSql(tableNames: Set<String>): String {
-//        return "SELECT relname AS name, oid AS object_identifier FROM pg_class WHERE relname = ANY(ARRAY[${tableNames.joinToString("', '", "'", "'")}])"
-//    }
 
     private fun getColumnMetadataSql(tableName: String, columnCondition: String): String {
         return selectExpression + ", information_schema.columns.data_type AS datatype, " +
