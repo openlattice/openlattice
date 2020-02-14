@@ -11,16 +11,20 @@ data class UpdateOrganizationExternalDatabaseTableEntryProcessor(val update: Met
     override fun process(entry: MutableMap.MutableEntry<UUID, OrganizationExternalDatabaseTable>): OrganizationExternalDatabaseTable? {
         val table = entry.value
 
-        if (update.title.isPresent) {
-            table.title = update.title.get()
+        update.title.ifPresent {
+            table.title = it
         }
 
-        if (update.description.isPresent) {
-            table.description = update.description.get()
+        update.name.ifPresent {
+            table.name = it
         }
 
-        if (update.organizationId.isPresent) {
-            table.organizationId = update.organizationId.get()
+        update.description.ifPresent {
+            table.description = it
+        }
+
+        update.organizationId.ifPresent {
+            table.organizationId = it
         }
 
         entry.setValue(table)

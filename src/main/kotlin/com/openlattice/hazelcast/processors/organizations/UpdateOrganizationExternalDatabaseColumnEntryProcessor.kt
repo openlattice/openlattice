@@ -11,16 +11,20 @@ data class UpdateOrganizationExternalDatabaseColumnEntryProcessor(val update: Me
     override fun process(entry: MutableMap.MutableEntry<UUID, OrganizationExternalDatabaseColumn>): OrganizationExternalDatabaseColumn? {
         val column = entry.value
 
-        if (update.title.isPresent) {
-            column.title = update.title.get()
+        update.title.ifPresent {
+            column.title = it
         }
 
-        if (update.description.isPresent) {
-            column.description = update.description.get()
+        update.name.ifPresent {
+            column.name = it
         }
 
-        if (update.organizationId.isPresent) {
-            column.organizationId = update.organizationId.get()
+        update.description.ifPresent {
+            column.description = it
+        }
+
+        update.organizationId.ifPresent {
+            column.organizationId = it
         }
 
         entry.setValue(column)
