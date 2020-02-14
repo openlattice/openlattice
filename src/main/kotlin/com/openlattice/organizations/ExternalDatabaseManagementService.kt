@@ -197,34 +197,36 @@ class ExternalDatabaseManagementService(
 //    }
 
     /*UPDATE*/
-    fun updateOrganizationExternalDatabaseTable(orgId: UUID, tableId: UUID, tableName: String, update: MetadataUpdate) {
+    fun updateOrganizationExternalDatabaseTable(orgId: UUID, tableFqnToId: Pair<String, UUID>, update: MetadataUpdate) {
         update.name.ifPresent {
             val newTableFqn = FullQualifiedName(orgId.toString(), it)
-            val oldTableName = organizationExternalDatabaseTables.getValue(tableId).name
+            val oldTableName = getNameFromFqnString(tableFqnToId.first)
             val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
             assemblerConnectionManager.connect(dbName).let { dataSource ->
                 dataSource.connection.createStatement().use { stmt ->
                     stmt.execute("ALTER TABLE $oldTableName RENAME TO $it")
                 }
             }
-            aclKeyReservations.renameReservation(tableId, newTableFqn.fullQualifiedNameAsString)
+            aclKeyReservations.renameReservation(tableFqnToId.second, newTableFqn.fullQualifiedNameAsString)
         }
 
-        organizationExternalDatabaseTables.submitToKey(tableId, UpdateOrganizationExternalDatabaseTableEntryProcessor(update))
+        organizationExternalDatabaseTables.submitToKey(tableFqnToId.second, UpdateOrganizationExternalDatabaseTableEntryProcessor(update))
     }
 
-    fun updateOrganizationExternalDatabaseColumn(orgId: UUID, tableId: UUID, tableName: String, columnId: UUID, columnName: String, update: MetadataUpdate) {
+    fun updateOrganizationExternalDatabaseColumn(orgId: UUID, tableFqnToId: Pair<String, UUID>, columnFqnToId: Pair<String, UUID>, update: MetadataUpdate) {
         update.name.ifPresent {
+            val tableName = getNameFromFqnString(tableFqnToId.first)
             val newColumnFqn = FullQualifiedName(tableName, it)
+            val oldColumnName = getNameFromFqnString(columnFqnToId.first)
             val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
             assemblerConnectionManager.connect(dbName).let { dataSource ->
                 dataSource.connection.createStatement().use { stmt ->
-                    stmt.execute("ALTER TABLE $tableName RENAME COLUMN $columnName to $it")
+                    stmt.execute("ALTER TABLE $tableName RENAME COLUMN $oldColumnName to $it")
                 }
             }
-            aclKeyReservations.renameReservation(columnId, newColumnFqn.fullQualifiedNameAsString)
+            aclKeyReservations.renameReservation(columnFqnToId.second, newColumnFqn.fullQualifiedNameAsString)
         }
-        organizationExternalDatabaseColumns.submitToKey(columnId, UpdateOrganizationExternalDatabaseColumnEntryProcessor(update))
+        organizationExternalDatabaseColumns.submitToKey(columnFqnToId.second, UpdateOrganizationExternalDatabaseColumnEntryProcessor(update))
     }
 
     /*DELETE*/
