@@ -153,7 +153,7 @@ class HazelcastMap<K, V> internal constructor(val name: String) : TypedMapIdenti
         @JvmStatic
         fun valueOf(name: String): HazelcastMap<*, *> {
             for (e in valuesCache) {
-                if (e.name === name) {
+                if (e.name == name) {
                     return e
                 }
             }
