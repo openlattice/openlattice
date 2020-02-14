@@ -125,7 +125,10 @@ interface DatasetApi {
      */
     @GET(BASE + ID_PATH + TABLE_NAME_PATH + COLUMN_NAME_PATH + EXTERNAL_DATABASE_COLUMN)
     fun getExternalDatabaseColumn(
-            @Path(ID) organizationId: UUID, @Path(TABLE_NAME) tableName: String, @Path(COLUMN_NAME) columnName: String): OrganizationExternalDatabaseColumn
+            @Path(ID) organizationId: UUID,
+            @Path(TABLE_NAME) tableName: String,
+            @Path(COLUMN_NAME) columnName: String
+    ): OrganizationExternalDatabaseColumn
 
     //update
     @PATCH(BASE + ID_PATH + TABLE_NAME_PATH + EXTERNAL_DATABASE_TABLE)
