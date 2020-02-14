@@ -92,7 +92,10 @@ interface DatasetApi {
      * @param tableId The id of the organization's table
      */
     @GET(BASE + ID_PATH + TABLE_ID_PATH + EXTERNAL_DATABASE_TABLE + EXTERNAL_DATABASE_COLUMN)
-    fun getExternalDatabaseTableWithColumns(@Path(ID) organizationId: UUID, @Path(TABLE_ID) tableId: UUID): OrganizationExternalDatabaseTableColumnsPair
+    fun getExternalDatabaseTableWithColumns(
+            @Path(ID) organizationId: UUID,
+            @Path(TABLE_ID) tableId: UUID
+    ): OrganizationExternalDatabaseTableColumnsPair
 
     /**
      * Gets an OrganizationExternalDatabaseTable object with
@@ -104,7 +107,11 @@ interface DatasetApi {
      * Empty values in postgres are nulls in the list.
      */
     @GET(BASE + ID_PATH + TABLE_ID_PATH + ROW_COUNT_PATH + DATA)
-    fun getExternalDatabaseTableData(@Path(ID) organizationId: UUID, @Path(TABLE_ID) tableId: UUID, @Path(ROW_COUNT) rowCount: Int): Map<UUID, List<Any?>>
+    fun getExternalDatabaseTableData(
+            @Path(ID) organizationId: UUID,
+            @Path(TABLE_ID) tableId: UUID,
+            @Path(ROW_COUNT) rowCount: Int
+    ): Map<UUID, List<Any?>>
 
     /**
      * Gets an OrganizationExternalDatabaseTable object, which represents an
@@ -114,7 +121,9 @@ interface DatasetApi {
      */
     @GET(BASE + ID_PATH + TABLE_NAME_PATH + EXTERNAL_DATABASE_TABLE)
     fun getExternalDatabaseTable(
-            @Path(ID) organizationId: UUID, @Path(TABLE_NAME) tableName: String): OrganizationExternalDatabaseTable
+            @Path(ID) organizationId: UUID,
+            @Path(TABLE_NAME) tableName: String
+    ): OrganizationExternalDatabaseTable
 
     /**
      * Gets an OrganizationExternalDatabaseColumn object, which represents a column
