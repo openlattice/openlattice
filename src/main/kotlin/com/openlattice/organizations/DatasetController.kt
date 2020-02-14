@@ -116,9 +116,9 @@ class DatasetController : DatasetApi, AuthorizingComponent {
     override fun getExternalDatabaseTable(
             @PathVariable(ID) organizationId: UUID,
             @PathVariable(TABLE_NAME) tableName: String): OrganizationExternalDatabaseTable {
-        val tableId = getExternalDatabaseObjectId(organizationId, tableName)
-        ensureReadAccess(AclKey(tableId))
-        return edms.getOrganizationExternalDatabaseTable(tableId)
+        val tableFqnToId = getExternalDatabaseObjectFqnToIdPair(organizationId, tableName)
+        ensureReadAccess(AclKey(tableFqnToId.second))
+        return edms.getOrganizationExternalDatabaseTable(tableFqnToId.second)
     }
 
     @Timed
@@ -127,10 +127,10 @@ class DatasetController : DatasetApi, AuthorizingComponent {
             @PathVariable(ID) organizationId: UUID,
             @PathVariable(TABLE_NAME) tableName: String,
             @PathVariable(COLUMN_NAME) columnName: String): OrganizationExternalDatabaseColumn {
-        val tableId = getExternalDatabaseObjectId(organizationId, tableName)
-        val columnId = getExternalDatabaseObjectId(tableId, columnName)
-        ensureReadAccess(AclKey(tableId, columnId))
-        return edms.getOrganizationExternalDatabaseColumn(columnId)
+        val tableFqnToId = getExternalDatabaseObjectFqnToIdPair(organizationId, tableName)
+        val columnFqnToId = getExternalDatabaseObjectFqnToIdPair(tableFqnToId.second, columnName)
+        ensureReadAccess(AclKey(tableFqnToId.second, columnFqnToId.second))
+        return edms.getOrganizationExternalDatabaseColumn(columnFqnToId.second)
     }
 
     //TODO Metadata update probably won't work
@@ -140,9 +140,9 @@ class DatasetController : DatasetApi, AuthorizingComponent {
             @PathVariable(ID) organizationId: UUID,
             @PathVariable(TABLE_NAME) tableName: String,
             @RequestBody metadataUpdate: MetadataUpdate) {
-        val tableId = getExternalDatabaseObjectId(organizationId, tableName)
+        val tableFqnToId = getExternalDatabaseObjectFqnToIdPair(organizationId, tableName)
         ensureAdminAccess()
-        edms.updateOrganizationExternalDatabaseTable(organizationId, tableId, tableName, metadataUpdate)
+        edms.updateOrganizationExternalDatabaseTable(organizationId, tableFqnToId, metadataUpdate)
     }
 
     @Timed
@@ -152,10 +152,10 @@ class DatasetController : DatasetApi, AuthorizingComponent {
             @PathVariable(TABLE_NAME) tableName: String,
             @PathVariable(COLUMN_NAME) columnName: String,
             @RequestBody metadataUpdate: MetadataUpdate) {
-        val tableId = getExternalDatabaseObjectId(organizationId, tableName)
-        val columnId = getExternalDatabaseObjectId(tableId, columnName)
+        val tableFqnToId = getExternalDatabaseObjectFqnToIdPair(organizationId, tableName)
+        val columnFqnToId = getExternalDatabaseObjectFqnToIdPair(tableFqnToId.second, columnName)
         ensureAdminAccess()
-        edms.updateOrganizationExternalDatabaseColumn(organizationId, tableId, tableName, columnId, columnName, metadataUpdate)
+        edms.updateOrganizationExternalDatabaseColumn(organizationId, tableFqnToId, columnFqnToId, metadataUpdate)
     }
 
     @Timed
@@ -163,7 +163,7 @@ class DatasetController : DatasetApi, AuthorizingComponent {
     override fun deleteExternalDatabaseTable(
             @PathVariable(ID) organizationId: UUID,
             @PathVariable(TABLE_NAME) tableName: String) {
-        val tableFqnToId = getExternalDatabaseObjectId(organizationId, tableName)
+        val tableFqnToId = getExternalDatabaseObjectFqnToIdPair(organizationId, tableName)
         val aclKey = AclKey(tableFqnToId.second)
         ensureOwnerAccess(aclKey)
         ensureObjectCanBeDeleted(tableFqnToId.second)
@@ -175,7 +175,7 @@ class DatasetController : DatasetApi, AuthorizingComponent {
     override fun deleteExternalDatabaseTables(
             @PathVariable(ID) organizationId: UUID,
             @RequestBody tableNames: Set<String>) {
-        val tableIdByFqn = getExternalDatabaseObjectIds(organizationId, tableNames)
+        val tableIdByFqn = getExternalDatabaseObjectIdByFqnMap(organizationId, tableNames)
         tableIdByFqn.forEach { ensureObjectCanBeDeleted(it.value) }
         val aclKeys = tableIdByFqn.map { AclKey(it.value) }
         aclKeys.forEach { aclKey ->
@@ -191,8 +191,8 @@ class DatasetController : DatasetApi, AuthorizingComponent {
             @PathVariable(TABLE_NAME) tableName: String,
             @PathVariable(COLUMN_NAME) columnName: String
     ) {
-        val tableFqnToId = getExternalDatabaseObjectId(organizationId, tableName)
-        val columnFqnToId = getExternalDatabaseObjectId(tableFqnToId.second, columnName)
+        val tableFqnToId = getExternalDatabaseObjectFqnToIdPair(organizationId, tableName)
+        val columnFqnToId = getExternalDatabaseObjectFqnToIdPair(tableFqnToId.second, columnName)
         val aclKey = AclKey(tableFqnToId.second, columnFqnToId.second)
         ensureOwnerAccess(aclKey)
         ensureObjectCanBeDeleted(columnFqnToId.second)
@@ -206,8 +206,8 @@ class DatasetController : DatasetApi, AuthorizingComponent {
             @PathVariable(TABLE_NAME) tableName: String,
             @RequestBody columnNames: Set<String>
     ) {
-        val tableFqnToId = getExternalDatabaseObjectId(organizationId, tableName)
-        val columnIdByFqn = getExternalDatabaseObjectIds(tableFqnToId.second, columnNames)
+        val tableFqnToId = getExternalDatabaseObjectFqnToIdPair(organizationId, tableName)
+        val columnIdByFqn = getExternalDatabaseObjectIdByFqnMap(tableFqnToId.second, columnNames)
         columnIdByFqn.forEach { ensureObjectCanBeDeleted(it.value) }
         val aclKeys = columnIdByFqn.map { AclKey(tableFqnToId.second, it.value) }.toSet()
         aclKeys.forEach { aclKey ->
@@ -216,14 +216,14 @@ class DatasetController : DatasetApi, AuthorizingComponent {
         edms.deleteOrganizationExternalDatabaseColumns(organizationId, mapOf(tableFqnToId to columnIdByFqn))
     }
 
-    private fun getExternalDatabaseObjectId(containingObjectId: UUID, name: String): Pair<String, UUID> {
+    private fun getExternalDatabaseObjectFqnToIdPair(containingObjectId: UUID, name: String): Pair<String, UUID> {
         val fqn = FullQualifiedName(containingObjectId.toString(), name).toString()
         val id = aclKeyReservations.getId(fqn)
         checkState(id != null, "External database object with name $name does not exist")
         return Pair(fqn, id!!)
     }
 
-    private fun getExternalDatabaseObjectIds( containingObjectId: UUID, names: Set<String>): Map<String, UUID> {
+    private fun getExternalDatabaseObjectIdByFqnMap(containingObjectId: UUID, names: Set<String>): Map<String, UUID> {
         val fqns = names.map{FullQualifiedName(containingObjectId.toString(), it).toString()}.toSet()
         return aclKeyReservations.getIdsByFqn(fqns)
     }
