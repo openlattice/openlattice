@@ -197,7 +197,7 @@ class ExternalDatabaseManagementService(
 //    }
 
     /*UPDATE*/
-    fun updateOrganizationExternalDatabaseTable( orgId: UUID, tableId: UUID, tableName: String, update: MetadataUpdate) {
+    fun updateOrganizationExternalDatabaseTable(orgId: UUID, tableId: UUID, tableName: String, update: MetadataUpdate) {
         update.name.ifPresent {
             val newTableFqn = FullQualifiedName(orgId.toString(), it)
             val oldTableName = organizationExternalDatabaseTables.getValue(tableId).name
@@ -213,7 +213,7 @@ class ExternalDatabaseManagementService(
         organizationExternalDatabaseTables.submitToKey(tableId, UpdateOrganizationExternalDatabaseTableEntryProcessor(update))
     }
 
-    fun updateOrganizationExternalDatabaseColumn( orgId: UUID, tableId: UUID, tableName: String, columnId: UUID, columnName: String, update: MetadataUpdate) {
+    fun updateOrganizationExternalDatabaseColumn(orgId: UUID, tableId: UUID, tableName: String, columnId: UUID, columnName: String, update: MetadataUpdate) {
         update.name.ifPresent {
             val newColumnFqn = FullQualifiedName(tableName, it)
             val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
@@ -259,12 +259,10 @@ class ExternalDatabaseManagementService(
     fun deleteOrganizationExternalDatabaseColumns(orgId: UUID, columnIdsByTableId: Map<UUID, Set<UUID>>) {
         columnIdsByTableId.forEach { (tableId, columnIds) ->
             if (columnIds.isEmpty()) return@forEach
+
             //delete columns from postgres
             val tableName = organizationExternalDatabaseTables.getValue(tableId).name
-            val columnNames = organizationExternalDatabaseColumns
-                    .values(belongsToTable(tableId))
-                    .map { it.name }
-                    .toSet()
+            val columnNames = columnIds.map { organizationExternalDatabaseColumns.getValue(it).name }.toSet()
             val dropColumnsSql = createDropColumnSql(columnNames)
             val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
             assemblerConnectionManager.connect(dbName).let {
