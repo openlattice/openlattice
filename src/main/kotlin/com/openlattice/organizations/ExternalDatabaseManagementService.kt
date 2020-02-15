@@ -202,7 +202,7 @@ class ExternalDatabaseManagementService(
     fun updateOrganizationExternalDatabaseColumn(orgId: UUID, tableFqnToId: Pair<String, UUID>, columnFqnToId: Pair<String, UUID>, update: MetadataUpdate) {
         update.name.ifPresent {
             val tableName = getNameFromFqnString(tableFqnToId.first)
-            val newColumnFqn = FullQualifiedName(tableName, it)
+            val newColumnFqn = FullQualifiedName(tableFqnToId.second.toString(), it)
             val oldColumnName = getNameFromFqnString(columnFqnToId.first)
             val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
             assemblerConnectionManager.connect(dbName).let { dataSource ->
