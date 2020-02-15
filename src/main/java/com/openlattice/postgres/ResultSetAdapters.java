@@ -601,6 +601,10 @@ public final class ResultSetAdapters {
         return PostgresArrays.getIntArray( rs, PARTITIONS_FIELD );
     }
 
+    public static Integer partition( ResultSet rs ) throws SQLException {
+        return rs.getInt( PARTITION.getName() );
+    }
+
     public static DataExpiration dataExpiration( ResultSet rs ) throws SQLException {
         final var expirationBase = expirationBase( rs );
         if ( expirationBase == null ) {
