@@ -140,12 +140,29 @@ interface DatasetApi {
     ): OrganizationExternalDatabaseColumn
 
     //update
+
+    /**
+     * Updates an OrganizationExternalDatabaseTable object's fields that are included
+     * within a [MetadataUpdate]
+     * @param organizationId The organization's UUID
+     * @param tableName The exact name of the table in the database
+     * @param metadataUpdate The object used to specify update values
+     */
     @PATCH(BASE + ID_PATH + TABLE_NAME_PATH + EXTERNAL_DATABASE_TABLE)
     fun updateExternalDatabaseTable(
             @Path(ID) organizationId: UUID,
             @Path(TABLE_NAME) tableName: String,
             @Body metadataUpdate: MetadataUpdate)
 
+
+    /**
+     * Updates an OrganizationExternalDatabaseTable object's fields that are included
+     * within a [MetadataUpdate]
+     * @param organizationId The organization's UUID
+     * @param tableName The exact name of the table in the database
+     * @param columnName The exact name of the column in the database
+     * @param metadataUpdate The object used to specify update values
+     */
     @PATCH(BASE + ID_PATH + TABLE_NAME_PATH + COLUMN_NAME_PATH + EXTERNAL_DATABASE_COLUMN)
     fun updateExternalDatabaseColumn(
             @Path(ID) organizationId: UUID,
