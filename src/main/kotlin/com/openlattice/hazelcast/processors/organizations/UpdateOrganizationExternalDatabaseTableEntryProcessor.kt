@@ -6,9 +6,9 @@ import com.openlattice.organization.OrganizationExternalDatabaseTable
 import java.util.*
 
 data class UpdateOrganizationExternalDatabaseTableEntryProcessor(val update: MetadataUpdate):
-        AbstractRhizomeEntryProcessor<UUID, OrganizationExternalDatabaseTable, OrganizationExternalDatabaseTable?>() {
+        AbstractRhizomeEntryProcessor<UUID, OrganizationExternalDatabaseTable, OrganizationExternalDatabaseTable>() {
 
-    override fun process(entry: MutableMap.MutableEntry<UUID, OrganizationExternalDatabaseTable>): OrganizationExternalDatabaseTable? {
+    override fun process(entry: MutableMap.MutableEntry<UUID, OrganizationExternalDatabaseTable>): OrganizationExternalDatabaseTable {
         val table = entry.value
 
         update.title.ifPresent {

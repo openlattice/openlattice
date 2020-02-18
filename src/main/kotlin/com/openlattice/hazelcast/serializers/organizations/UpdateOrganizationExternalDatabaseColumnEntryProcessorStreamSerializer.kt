@@ -21,11 +21,11 @@ class UpdateOrganizationExternalDatabaseColumnEntryProcessorStreamSerializer
         return UpdateOrganizationExternalDatabaseColumnEntryProcessor::class.java
     }
 
-    override fun read(`in`: ObjectDataInput?): UpdateOrganizationExternalDatabaseColumnEntryProcessor {
+    override fun read(`in`: ObjectDataInput): UpdateOrganizationExternalDatabaseColumnEntryProcessor {
         return UpdateOrganizationExternalDatabaseColumnEntryProcessor(MetadataUpdateStreamSerializer.deserialize(`in`))
     }
 
-    override fun write(out: ObjectDataOutput?, `object`: UpdateOrganizationExternalDatabaseColumnEntryProcessor) {
+    override fun write(out: ObjectDataOutput, `object`: UpdateOrganizationExternalDatabaseColumnEntryProcessor) {
         MetadataUpdateStreamSerializer.serialize(out, `object`.update)
     }
 
