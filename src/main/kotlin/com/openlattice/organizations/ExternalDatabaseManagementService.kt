@@ -1,6 +1,7 @@
 package com.openlattice.organizations
 
 import com.google.common.base.Preconditions.checkState
+import com.google.common.collect.Maps
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
@@ -171,7 +172,7 @@ class ExternalDatabaseManagementService(
     }
 
     fun getColumnNamesByTable(dbName: String): Map<String, Set<String>> {
-        val columnNamesByTableName = HashMap<String, MutableSet<String>>()
+        val columnNamesByTableName = Maps.newHashMapWithExpectedSize<String, MutableSet<String>>(organizationExternalDatabaseTables.size)
         val sql = getCurrentTableAndColumnNamesSql()
         BasePostgresIterable(
                 StatementHolderSupplier(assemblerConnectionManager.connect(dbName), sql, FETCH_SIZE)
@@ -271,16 +272,7 @@ class ExternalDatabaseManagementService(
                 }
             }
 
-
-
-            //delete securable objects
-            columnIds.forEach {
-                val aclKey = AclKey(tableId, it)
-                authorizationManager.deletePermissions(aclKey)
-                securableObjectTypes.remove(aclKey)
-                aclKeyReservations.release(it)
-            }
-            organizationExternalDatabaseColumns.executeOnEntries(DeleteOrganizationExternalDatabaseColumnsEntryProcessor(), idsPredicate(columnIds))
+            deleteOrganizationExternalDatabaseColumnObjects(mapOf(tableId to columnIds))
         }
     }
 
@@ -380,9 +372,8 @@ class ExternalDatabaseManagementService(
         val orgIds = tableAclsByOrg.keys.union(columnAclsByOrg.keys)
 
         orgIds.forEach { orgId ->
-            val orgAcls = mutableListOf<Acl>()
-            if (tableAclsByOrg.isNotEmpty()) tableAclsByOrg.getValue(orgId).toMutableList()
-            if (columnAclsByOrg.isNotEmpty()) orgAcls.addAll(columnAclsByOrg.getValue(orgId))
+            val orgAcls = tableAclsByOrg[orgId]?.toMutableList() ?: mutableListOf()
+            columnAclsByOrg[orgId]?.let { orgAcls.addAll(it) }
             val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
             assemblerConnectionManager.connect(dbName).let { dataSource ->
                 val conn = dataSource.connection
@@ -502,7 +493,7 @@ class ExternalDatabaseManagementService(
 
     /*PRIVATE FUNCTIONS*/
     private fun getNameFromFqnString(fqnString: String): String {
-        return fqnString.split(".")[1]
+        return FullQualifiedName(fqnString).name
     }
 
     private fun createDropColumnSql(columnNames: Set<String>): String {
