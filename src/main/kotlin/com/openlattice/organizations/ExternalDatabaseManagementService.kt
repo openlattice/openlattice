@@ -243,10 +243,6 @@ class ExternalDatabaseManagementService(
         deleteOrganizationExternalDatabaseTableObjects(tableIds)
     }
 
-    fun deleteOrganizationExternalDatabaseTable(orgId: UUID, tableFqnToId: Pair<String, UUID>) {
-        deleteOrganizationExternalDatabaseTables(orgId, mapOf(tableFqnToId))
-    }
-
     fun deleteOrganizationExternalDatabaseTableObjects(tableIds: Set<UUID>) {
         tableIds.forEach {
             val aclKey = AclKey(it)
@@ -286,11 +282,6 @@ class ExternalDatabaseManagementService(
             }
             organizationExternalDatabaseColumns.executeOnEntries(DeleteOrganizationExternalDatabaseColumnsEntryProcessor(), idsPredicate(columnIds))
         }
-        val columnIdsByTableId = columnsByTable.map { it.key.second to it.value.map { it.value }.toSet() }.toMap()
-    }
-
-    fun deleteOrganizationExternalDatabaseColumn(orgId: UUID, tableFqnToId: Pair<String, UUID>, columnFqnToId: Pair<String, UUID>) {
-        deleteOrganizationExternalDatabaseColumns(orgId, mapOf(tableFqnToId to mapOf(columnFqnToId)))
     }
 
     fun deleteOrganizationExternalDatabaseColumnObjects(columnIdsByTableId: Map<UUID, Set<UUID>>) {
