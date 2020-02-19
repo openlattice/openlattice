@@ -284,7 +284,7 @@ class ExternalDatabaseManagementService(
                 securableObjectTypes.remove(aclKey)
                 aclKeyReservations.release(it)
             }
-            organizationExternalDatabaseColumns.executeOnEntries(DeleteOrganizationExternalDatabaseTableEntryProcessor(), idsPredicate(columnIds))
+            organizationExternalDatabaseColumns.executeOnEntries(DeleteOrganizationExternalDatabaseColumnsEntryProcessor(), idsPredicate(columnIds))
         }
     }
 
@@ -369,7 +369,7 @@ class ExternalDatabaseManagementService(
         val columnAclsByOrg = aclsByType.second.groupBy {
             organizationExternalDatabaseColumns.getValue(it.aclKey[1]).organizationId
         }
-        val orgIds = tableAclsByOrg.keys.union(columnAclsByOrg.keys)
+        val orgIds = tableAclsByOrg.keys + columnAclsByOrg.keys
 
         orgIds.forEach { orgId ->
             val orgAcls = tableAclsByOrg[orgId]?.toMutableList() ?: mutableListOf()
