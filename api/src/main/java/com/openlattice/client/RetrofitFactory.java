@@ -72,51 +72,51 @@ public final class RetrofitFactory {
     /**
      * Create a new client with no authentication
      */
-    public static final Retrofit newClient( Environment environment ) {
-        return decorateWithLoomFactories( createBaseRhizomeRetrofitBuilder( environment, new OkHttpClient.Builder() ) )
-                .build();
+    public static Retrofit newClient( Environment environment ) {
+        return decorateWithOpenLatticeFactories(
+                createBaseRhizomeRetrofitBuilder( environment, new OkHttpClient.Builder() )
+        ).build();
     }
 
-    public static final Retrofit newClient( SerializableSupplier<String> jwtToken ) {
+    public static Retrofit newClient( SerializableSupplier<String> jwtToken ) {
         return newClient( Environment.PRODUCTION, jwtToken );
     }
 
-    public static final Retrofit newClient(
+    public static Retrofit newClient(
             Environment environment,
             Supplier<String> jwtToken,
             CallAdapter.Factory callFactory ) {
-        OkHttpClient.Builder httpBuilder = okhttpClientWithLoomAuth( jwtToken );
+        OkHttpClient.Builder httpBuilder = okHttpClientWithOpenLatticeAuth( jwtToken );
         return decorateWithFactories( createBaseRhizomeRetrofitBuilder( environment, httpBuilder ), callFactory )
                 .build();
     }
 
-    public static final Retrofit newClient( Environment environment, Supplier<String> jwtToken ) {
-        OkHttpClient.Builder httpBuilder = okhttpClientWithLoomAuth( jwtToken );
-        return decorateWithLoomFactories( createBaseRhizomeRetrofitBuilder( environment, httpBuilder ) ).build();
+    public static Retrofit newClient( Environment environment, Supplier<String> jwtToken ) {
+        OkHttpClient.Builder httpBuilder = okHttpClientWithOpenLatticeAuth( jwtToken );
+        return decorateWithOpenLatticeFactories( createBaseRhizomeRetrofitBuilder( environment, httpBuilder ) ).build();
     }
 
-    public static final Retrofit newClient( String baseUrl, Supplier<String> jwtToken ) {
-        OkHttpClient.Builder httpBuilder = okhttpClientWithLoomAuth( jwtToken );
-        return decorateWithLoomFactories( createBaseRhizomeRetrofitBuilder( baseUrl, httpBuilder.build() ) ).build();
+    public static Retrofit newClient( String baseUrl, Supplier<String> jwtToken ) {
+        OkHttpClient.Builder httpBuilder = okHttpClientWithOpenLatticeAuth( jwtToken );
+        return decorateWithOpenLatticeFactories( createBaseRhizomeRetrofitBuilder( baseUrl, httpBuilder.build() ) )
+                .build();
     }
 
-    public static final Retrofit.Builder createBaseRhizomeRetrofitBuilder(
+    public static Retrofit.Builder createBaseRhizomeRetrofitBuilder(
             Environment environment,
             OkHttpClient.Builder httpBuilder ) {
         return createBaseRhizomeRetrofitBuilder( environment.getBaseUrl(), httpBuilder.build() );
     }
 
-    public static final Retrofit.Builder createBaseRhizomeRetrofitBuilder( String baseUrl, OkHttpClient httpClient ) {
+    public static Retrofit.Builder createBaseRhizomeRetrofitBuilder( String baseUrl, OkHttpClient httpClient ) {
         return new Retrofit.Builder().baseUrl( baseUrl ).client( httpClient );
     }
 
-    public static final Retrofit.Builder decorateWithLoomFactories( Retrofit.Builder builder ) {
+    public static Retrofit.Builder decorateWithOpenLatticeFactories( Retrofit.Builder builder ) {
         return decorateWithFactories( builder, new RhizomeCallAdapterFactory() );
     }
 
-    public static final Retrofit.Builder decorateWithFactories(
-            Retrofit.Builder builder,
-            CallAdapter.Factory callFactory ) {
+    public static Retrofit.Builder decorateWithFactories( Retrofit.Builder builder, CallAdapter.Factory callFactory ) {
         return builder.addConverterFactory( new RhizomeByteConverterFactory() )
                 .addConverterFactory( new RhizomeJacksonConverterFactory( jsonMapper ) )
                 .addCallAdapterFactory( callFactory );
@@ -129,7 +129,7 @@ public final class RetrofitFactory {
                 .connectTimeout( 0, TimeUnit.MILLISECONDS );
     }
 
-    public static final OkHttpClient.Builder okhttpClientWithLoomAuth( Supplier<String> jwtToken ) {
+    public static OkHttpClient.Builder okHttpClientWithOpenLatticeAuth( Supplier<String> jwtToken ) {
         return okHttpClient()
                 .addInterceptor( chain -> chain.proceed(
                         chain.request().newBuilder()
