@@ -63,7 +63,6 @@ class CodexService(
     val appConfigs: IMap<AppConfigKey, AppTypeSetting> = HazelcastMap.APP_CONFIGS.getMap(hazelcast)
 
     val entityTypeCollectionId = reservationService.getId(CodexConstants.COLLECTION_FQN.fullQualifiedNameAsString)
-    val codexTemplate = collectionsManager.getEntityTypeCollection(entityTypeCollectionId).template
     val typesByFqn = collectionsManager.getEntityTypeCollection(entityTypeCollectionId).template.associateBy {
         CodexConstants.CollectionTemplateType.values().first { ctt -> it.name == ctt.typeName }
     }

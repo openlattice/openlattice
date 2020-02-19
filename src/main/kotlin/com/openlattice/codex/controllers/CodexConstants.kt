@@ -16,6 +16,7 @@ class CodexConstants() {
         SENT_FROM("app.sentfrom"),
         SENT_TO("app.sentto"),
         SUBJECT_OF("app.subjectof"),
+        CONTACT_INFO_GIVEN("app.contactinfogiven")
     }
 
     enum class PropertyType(val fqn: FullQualifiedName) {
