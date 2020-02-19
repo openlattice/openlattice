@@ -22,22 +22,17 @@
 package com.openlattice.users
 
 
-import com.auth0.client.mgmt.ManagementAPI
-import com.auth0.client.mgmt.filter.UserFilter
-import com.auth0.json.mgmt.users.UsersPage
 import com.openlattice.tasks.HazelcastFixedRateTask
 import com.openlattice.tasks.HazelcastTaskDependencies
 import com.openlattice.tasks.Task
 import org.slf4j.LoggerFactory
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
-import kotlin.streams.asStream
 
 const val REFRESH_INTERVAL_MILLIS = 120_000L
 private const val DEFAULT_PAGE_SIZE = 100
 private const val MAX_JOBS = 8
 private val logger = LoggerFactory.getLogger(Auth0SyncTask::class.java)
-
 
 /**
  * This is the auth0 synchronization task that runs every REFRESH_INTERVAL_MILLIS in Hazelcast. It requires that
@@ -69,25 +64,25 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies>, Hazelca
     override fun runTask() {
         val ds = getDependency()
         logger.info("Synchronizing users.")
-        try {
-            ds.userListingService
-                    .getUsers()
-                    .map {
-                        syncSemaphore.acquire()
-                        ds.executor.submit { ds.users.syncUser(it) }
+        ds.userListingService
+                .getUsers()
+                .map {
+                    syncSemaphore.acquire()
+                    ds.executor.submit {
+                        try {
+                            ds.users.syncUser(it)
+                        } catch (ex: Exception) {
+                            logger.error("Unable to synchronize user", ex)
+                        } finally {
+                            syncSemaphore.release()
+                        }
                     }
-                    .forEach {
-                        it.get()
-                        syncSemaphore.release()
-                    }
-
-        } catch (ex: Exception) {
-            logger.error("Unable to synchronize users", ex)
-            return
-        }
-
+                }
+                // we want to materialize the list of futures so the work happens in the background.
+                .toList()
+                .forEach {
+                    it.get()
+                }
     }
-
-
 }
 
