@@ -139,8 +139,8 @@ class DataDeletionService(
         val entitySetIdToEntityDataKeys: Map<UUID, Set<UUID>> = dgm
                 .getEdgesConnectedToEntities(entitySetId, entityKeyIds, includeClearedEdges)
                 .filter { edge ->
-                    edge.dst.entitySetId == entitySetId && filteringNeighborEntitySetIds.contains(edge.src.entitySetId)
-                            || edge.src.entitySetId == entitySetId && filteringNeighborEntitySetIds.contains(edge.dst.entitySetId)
+                    (edge.dst.entitySetId == entitySetId && filteringNeighborEntitySetIds.contains(edge.src.entitySetId))
+                            || (edge.src.entitySetId == entitySetId && filteringNeighborEntitySetIds.contains(edge.dst.entitySetId))
                 }
                 .flatMap { edge -> setOf(edge.src, edge.dst) }
                 .groupBy { it.entitySetId }
