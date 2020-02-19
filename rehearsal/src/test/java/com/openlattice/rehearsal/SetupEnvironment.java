@@ -109,9 +109,9 @@ public class SetupEnvironment {
         retrofit3 = RetrofitFactory.newClient( RetrofitFactory.Environment.TESTING, () -> tokenUser3 );
         retrofitProd = RetrofitFactory.newClient( RetrofitFactory.Environment.PRODUCTION );
 
-        httpClient = RetrofitFactory.okhttpClientWithLoomAuth( () -> tokenAdmin ).build();
-        httpClient1 = RetrofitFactory.okhttpClientWithLoomAuth( () -> tokenUser1 ).build();
-        httpClient2 = RetrofitFactory.okhttpClientWithLoomAuth( () -> tokenUser2 ).build();
+        httpClient = RetrofitFactory.okHttpClientWithOpenLatticeAuth( () -> tokenAdmin ).build();
+        httpClient1 = RetrofitFactory.okHttpClientWithOpenLatticeAuth( () -> tokenUser1 ).build();
+        httpClient2 = RetrofitFactory.okHttpClientWithOpenLatticeAuth( () -> tokenUser2 ).build();
 
         String idAdmin = ( String ) jwtAdmin.getPrincipal();
         String idUser1 = ( String ) jwtUser1.getPrincipal();
