@@ -36,7 +36,7 @@ open class SetupTestData : MultipleAuthenticatedUsersBase() {
     companion object {
         private const val DATA_FOLDER = "data"
         private const val FLIGHT_FOLDER = "flights"
-        private const val FLIGHT_SQL = "select * from public.socrates;"
+        private const val FLIGHT_SQL = "select * from public.socrates limit 10;"
 
         init {
             MissionControl.continueAfterSuccess()
