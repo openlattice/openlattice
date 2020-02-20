@@ -3713,6 +3713,41 @@ paths:
               schema:
                 type: integer
 
+  ##################
+  ## SHUTTLE APIs ##
+  ##################
+  
+  /shuttle/integration/definition/{integrationName}:
+    post:
+      summary: Creates a new integration definition for running recurring integrations
+      operationId: createIntegrationDefinition
+      parameters:
+        - name: integrationName
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Integration"
+      tags:
+        - shuttle
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: string
+                format: uuid
+      
+
 components:
   securitySchemes:
     http_auth:
@@ -4816,6 +4851,40 @@ components:
           type: integer
         count:
           type: integer
+    Integration:
+      type: object
+      properties:
+        key:
+          type: string
+          format: uuid
+        environment:
+          $ref: "#/components/schemas/Environment"
+        s3Bucket:
+          type: string
+        contacts:
+          type: array
+          items:
+            type: string
+        organizationId:
+          type: string
+          format: uuid
+        entitySetId:
+          type: string
+          format: uuid
+        maxConnections:
+          type: integer
+        callbackUrls:
+          type: array
+          items:
+            type: string
+        flightPlanParameters:
+          $ref: "#/components/schemas/FlightPlanParameters"
+    # Environment:
+    #   xxx
+    # 
+    # FlightPlanParameters:
+    #   xx
+        
     
 tags:
   - name: edm
