@@ -42,7 +42,7 @@ open class SetupTestData : MultipleAuthenticatedUsersBase() {
             MissionControl.continueAfterSuccess()
         }
 
-       /**
+        /**
          * Import datasets via Shuttle
          * @param
          */
@@ -58,7 +58,6 @@ open class SetupTestData : MultipleAuthenticatedUsersBase() {
 
             main(arrayOf(
                     "-${ShuttleCliOptions.FLIGHT}=$flightFile",
-                    "-${ShuttleCliOptions.SQL}=${FLIGHT_SQL}",
                     "-${ShuttleCliOptions.CSV}=$dataFile",
                     "-${ShuttleCliOptions.ENVIRONMENT}=LOCAL",
                     "-${ShuttleCliOptions.TOKEN}=$tokenAdmin",
@@ -81,6 +80,7 @@ open class SetupTestData : MultipleAuthenticatedUsersBase() {
 
             main(arrayOf(
                     "-${ShuttleCliOptions.FLIGHT}=$flightFile",
+                    "-${ShuttleCliOptions.SQL}=${FLIGHT_SQL}",
                     "-${ShuttleCliOptions.CONFIGURATION}=$configurationFile",
                     "-${ShuttleCliOptions.DATASOURCE}=$flightConfigurationSource",
                     "-${ShuttleCliOptions.ENVIRONMENT}=LOCAL",
@@ -105,12 +105,11 @@ open class SetupTestData : MultipleAuthenticatedUsersBase() {
         importDataSet("socratesA.yaml", "testdata1.csv")
         importDataSet("socratesB.yaml", "testdata2.csv")
         importAtlasDataSet(
-                "$DATA_FOLDER/socratesA.yaml",
-                "$FLIGHT_FOLDER/flightConfiguration.yaml",
+                "socratesAtlas.yaml",
+                "socratesAtlasConfiguration.yaml",
                 "example_data"
         )
     }
-
 
 
 }

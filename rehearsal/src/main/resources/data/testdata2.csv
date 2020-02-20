@@ -1,4 +1,4 @@
-,trainingid,firstname,lastname,ssn,sex,dob,race,ethnicity
+index,trainingid,firstname,lastname,ssn,sex,dob,race,ethnicity
 500,cdd652b0-8ad9-11e8-a1c7-0242ac110003,Alfred,,666-41-8271,M,1964-05-18,pacisland,donotdisclose
 501,cebcc5d8-8ad9-11e8-a1c7-0242ac110003,Bessie,Dunn,,M,1966-08-21,black,
 502,ced1652e-8ad9-11e8-a1c7-0242ac110003,,Mcrae,412-01-2637,M,,,

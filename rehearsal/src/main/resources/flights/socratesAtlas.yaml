@@ -1,0 +1,33 @@
+organizationId: '00000000-0000-0001-0000-000000000000'
+entityDefinitions:
+  SocratesTestA:
+      id: "91551726-afa2-4aee-8579-46cdfc610b97"
+      entitySetName: "SocratesTestA"
+      fqn: "general.person"
+      propertyDefinitions:
+        nc.SubjectIdentification:
+          type: "nc.SubjectIdentification"
+          column: "recordid"
+        nc.PersonGivenName:
+          type: "nc.PersonGivenName"
+          column: "firstname"
+        nc.PersonSurName:
+          type: "nc.PersonSurName"
+          column: "lastname"
+        nc.SSN:
+          type: "nc.SSN"
+          column: "ssn"
+        nc.PersonBirthDate:
+          type: "nc.PersonBirthDate"
+          column: "dob"
+          transforms:
+          - !<transforms.DateTransform>
+            pattern: ["yyyy-MM-dd"]
+        nc.PersonRace:
+          type: "nc.PersonRace"
+          column: "race"
+        nc.PersonEthnicity:
+          type: "nc.PersonEthnicity"
+          column: "ethnicity"
+associationDefinitions: {}
+name: "Socrates"

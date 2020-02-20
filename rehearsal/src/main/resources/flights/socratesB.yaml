@@ -5,6 +5,9 @@ entityDefinitions:
     entitySetName: "SocratesTestB"
     fqn: "general.person"
     propertyDefinitions:
+      nc.SubjectIdentification:
+        type: "nc.SubjectIdentification"
+        column: "index"
       nc.PersonGivenName:
         type: "nc.PersonGivenName"
         column: "firstname"
