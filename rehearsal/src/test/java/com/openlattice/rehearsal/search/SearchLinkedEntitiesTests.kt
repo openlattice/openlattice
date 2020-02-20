@@ -37,7 +37,7 @@ class SearchLinkedEntitiesTests : SetupTestData() {
         @BeforeClass
         fun init() {
             importedEntitySets.forEach {
-                importDataSet(it.value.first, it.value.second)
+                importDataSet(it.value.first, it.value.second, true)
             }
 
             Thread.sleep(10000L)
@@ -196,7 +196,7 @@ class SearchLinkedEntitiesTests : SetupTestData() {
         Assert.assertFalse(resultsA.hits.map { it[EdmTestConstants.personSurnameFqn] }.contains(setOf("Qwe")))
 
         //redo import
-        importDataSet(importedEntitySets.values.last().first, importedEntitySets.values.last().second)
+        importDataSet(importedEntitySets.values.last().first, importedEntitySets.values.last().second, true)
         Thread.sleep(10000L)
         while (!checkLinkingFinished(importedEntitySets.keys)) {
             Thread.sleep(5000L)
@@ -381,7 +381,7 @@ class SearchLinkedEntitiesTests : SetupTestData() {
         Thread.sleep(5000L)
 
         importedEntitySets.forEach {
-            importDataSet(it.value.first, it.value.second)
+            importDataSet(it.value.first, it.value.second, true)
         }
 
         Thread.sleep(10000L)

@@ -37,6 +37,7 @@ open class SetupTestData : MultipleAuthenticatedUsersBase() {
         private const val DATA_FOLDER = "data"
         private const val FLIGHT_FOLDER = "flights"
         private const val FLIGHT_SQL = "select * from public.socrates limit 10;"
+        private const val CONFIGURATION_KEY = "example_data"
 
         init {
             MissionControl.continueAfterSuccess()
@@ -46,49 +47,38 @@ open class SetupTestData : MultipleAuthenticatedUsersBase() {
          * Import datasets from csv via Shuttle
          * @param
          */
-        fun importDataSet(flightFileName: String, dataFileName: String) {
+        fun importDataSet(flightFileName: String, dataSource: String, loadFromFile: Boolean) {
             loginAs("admin")
             val tokenAdmin = AuthenticationTest.getAuthentication(authOptions).credentials
 
             val flightFile = File(Thread.currentThread().contextClassLoader.getResource(FLIGHT_FOLDER).file,
                     flightFileName).absolutePath
-            val dataFile = File(Thread.currentThread().contextClassLoader.getResource(DATA_FOLDER).file, dataFileName)
+            val dataFile = File(Thread.currentThread().contextClassLoader.getResource(DATA_FOLDER).file, dataSource)
                     .absolutePath
             val email = getUserInfo(SetupEnvironment.admin).email
 
-            main(arrayOf(
-                    "-${ShuttleCliOptions.FLIGHT}=$flightFile",
-                    "-${ShuttleCliOptions.CSV}=$dataFile",
-                    "-${ShuttleCliOptions.ENVIRONMENT}=LOCAL",
-                    "-${ShuttleCliOptions.TOKEN}=$tokenAdmin",
-                    "-${ShuttleCliOptions.CREATE}=$email"))
+            if (loadFromFile) {
+                main(arrayOf(
+                        "-${ShuttleCliOptions.FLIGHT}=$flightFile",
+                        "-${ShuttleCliOptions.CSV}=$dataFile",
+                        "-${ShuttleCliOptions.ENVIRONMENT}=LOCAL",
+                        "-${ShuttleCliOptions.TOKEN}=$tokenAdmin",
+                        "-${ShuttleCliOptions.CREATE}=$email"))
+            } else {
+                main(arrayOf(
+                        "-${ShuttleCliOptions.FLIGHT}=$flightFile",
+                        "-${ShuttleCliOptions.SQL}=${FLIGHT_SQL}",
+                        "-${ShuttleCliOptions.CONFIGURATION}=$dataFile",
+                        "-${ShuttleCliOptions.DATASOURCE}=$CONFIGURATION_KEY",
+                        "-${ShuttleCliOptions.ENVIRONMENT}=LOCAL",
+                        "-${ShuttleCliOptions.FETCHSIZE}=1000",
+                        "-${ShuttleCliOptions.UPLOAD_SIZE}=1000",
+                        "-${ShuttleCliOptions.TOKEN}=$tokenAdmin",
+                        "-${ShuttleCliOptions.CREATE}=$email"))
+            }
+
         }
 
-        /**
-         * Import dataset from atlas via Shuttle
-         * @param
-         */
-        fun importAtlasDataSet(flightFileName: String, flightConfigurationName: String, flightConfigurationSource: String) {
-            loginAs("admin")
-            val tokenAdmin = AuthenticationTest.getAuthentication(authOptions).credentials
-
-            val flightFile = File(Thread.currentThread().contextClassLoader.getResource(FLIGHT_FOLDER).file,
-                    flightFileName).absolutePath
-            val configurationFile = File(Thread.currentThread().contextClassLoader.getResource(FLIGHT_FOLDER).file,
-                    flightConfigurationName).absolutePath
-            val email = getUserInfo(SetupEnvironment.admin).email
-
-            main(arrayOf(
-                    "-${ShuttleCliOptions.FLIGHT}=$flightFile",
-                    "-${ShuttleCliOptions.SQL}=${FLIGHT_SQL}",
-                    "-${ShuttleCliOptions.CONFIGURATION}=$configurationFile",
-                    "-${ShuttleCliOptions.DATASOURCE}=$flightConfigurationSource",
-                    "-${ShuttleCliOptions.ENVIRONMENT}=LOCAL",
-                    "-${ShuttleCliOptions.FETCHSIZE}=1000",
-                    "-${ShuttleCliOptions.UPLOAD_SIZE}=1000",
-                    "-${ShuttleCliOptions.TOKEN}=$tokenAdmin",
-                    "-${ShuttleCliOptions.CREATE}=$email"))
-        }
 
         /**
          * Indicates whether the [com.openlattice.linking.RealtimeLinkingService] is finished for entitysets
@@ -104,13 +94,11 @@ open class SetupTestData : MultipleAuthenticatedUsersBase() {
 
     @Test
     fun doImport() {
-        importDataSet("socratesA.yaml", "testdata1.csv")
-        importDataSet("socratesB.yaml", "testdata2.csv")
-        importAtlasDataSet(
+        importDataSet("socratesA.yaml", "testdata1.csv", true)
+        importDataSet("socratesB.yaml", "testdata2.csv", true)
+        importDataSet(
                 "socratesAtlas.yaml",
-                "socratesAtlasConfiguration.yaml",
-                "example_data"
-        )
+                "socratesAtlasConfiguration.yaml", false)
     }
 
 
