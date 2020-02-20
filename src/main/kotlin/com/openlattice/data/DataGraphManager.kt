@@ -78,7 +78,7 @@ interface DataGraphManager {
     ): Map<UUID, Map<UUID, Map<UUID, Map<FullQualifiedName, Set<Any>>>>>
 
     /**
-     * Deletes property data, id, edges of association entities in batches.
+     * Clears property data, id, edges of association entities in batches.
      */
     fun clearAssociationsBatch(
             entitySetId: UUID,
@@ -184,15 +184,14 @@ interface DataGraphManager {
     fun getEdgesAndNeighborsForVertex(entitySetId: UUID, entityKeyId: UUID): Stream<Edge>
 
     /**
-     * Returns all {@link DataEdgeKey}s where either src, dst and/or edge entity set id(s) equal the requested
-     * entitySetId.
+     * Returns all [DataEdgeKey]s where either src, dst and/or edge entity set ids are equal the requested entitySetId.
      * If includeClearedEdges is set to true, it will also return cleared (version < 0) entities.
      */
     fun getEdgeKeysOfEntitySet(entitySetId: UUID, includeClearedEdges: Boolean): PostgresIterable<DataEdgeKey>
 
     /**
      * Returns all [DataEdgeKey]s that include requested entityKeyIds either as src, dst and/or edge.
-     * If [includeClearedEdges] is set to true, it will also return cleared (version < 0) entities.
+     * If includeClearedEdges is set to true, it will also return cleared (version < 0) entities.
      */
     fun getEdgesConnectedToEntities(
             entitySetId: UUID, entityKeyIds: Set<UUID>, includeClearedEdges: Boolean

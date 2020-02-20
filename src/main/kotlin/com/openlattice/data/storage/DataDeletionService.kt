@@ -97,7 +97,6 @@ class DataDeletionService(
 
     }
 
-    /** Delete specific entities from an entity set **/
 
     override fun clearOrDeleteEntities(entitySetId: UUID, entityKeyIds: Set<UUID>, deleteType: DeleteType): WriteEvent {
         return clearOrDeleteEntities(entitySetId, entityKeyIds, deleteType, setOf(), skipAuthChecks = true)
@@ -229,6 +228,10 @@ class DataDeletionService(
         return WriteEvent(entityWriteEvent.version, numUpdates)
     }
 
+    /**
+     * Deletes specific entities from an entity set. If skipAuthChecks is set to true, it will not check if entity set
+     * is an audit entity set or not nor whether the requesting principals are authorized to delete from entity set.
+     */
     private fun clearOrDeleteEntities(
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
@@ -279,8 +282,9 @@ class DataDeletionService(
         return WriteEvent(maxVersion, numUpdates)
     }
 
-    /** Delete property values from specific entities. No entities are actually deleted here. **/
-
+    /**
+     * Delete property values from specific entities. No entities are actually deleted here.
+     */
     override fun clearOrDeleteEntityProperties(
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
@@ -310,7 +314,7 @@ class DataDeletionService(
 
     }
 
-    /** Association deletion and auth **/
+    /* Association deletion and auth */
 
     /**
      * Checks authorizations on connected association entities and clears/deletes them along with edges connected to
