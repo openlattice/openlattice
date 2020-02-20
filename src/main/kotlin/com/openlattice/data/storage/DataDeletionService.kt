@@ -384,7 +384,7 @@ class DataDeletionService(
         }
     }
 
-    /** Helpers **/
+    /* Helpers */
 
     private fun collectAssociations(
             entitySetId: UUID,
@@ -393,11 +393,11 @@ class DataDeletionService(
         return if (entityKeyIds.isPresent)
             dgm.getEdgesConnectedToEntities(entitySetId, entityKeyIds.get(), includeClearedEdges)
         else
-            dgm.getEdgeKeysOfEntitySet(entitySetId)
+            dgm.getEdgeKeysOfEntitySet(entitySetId, includeClearedEdges)
     }
 
 
-    /** Authorization checks **/
+    /* Authorization checks */
 
     private fun getAuthorizedPropertyTypesOfAssociations(
             entityKeyIdsBySetId: Map<UUID, Set<UUID>>,

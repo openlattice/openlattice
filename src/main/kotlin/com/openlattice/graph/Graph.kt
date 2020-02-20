@@ -163,8 +163,9 @@ class Graph(
 
     /* Select */
 
-    override fun getEdgeKeysContainingEntities(entitySetId: UUID, entityKeyIds: Set<UUID>, includeClearedEdges: Boolean)
-            : PostgresIterable<DataEdgeKey> {
+    override fun getEdgeKeysContainingEntities(
+            entitySetId: UUID, entityKeyIds: Set<UUID>, includeClearedEdges: Boolean
+    ): PostgresIterable<DataEdgeKey> {
         val sql = if (includeClearedEdges) BULK_NEIGHBORHOOD_SQL else BULK_NON_TOMBSTONED_NEIGHBORHOOD_SQL
         return PostgresIterable(
                 Supplier {
@@ -186,12 +187,15 @@ class Graph(
         )
     }
 
-    override fun getEdgeKeysOfEntitySet(entitySetId: UUID): PostgresIterable<DataEdgeKey> {
+    override fun getEdgeKeysOfEntitySet(
+            entitySetId: UUID, includeClearedEdges: Boolean
+    ): PostgresIterable<DataEdgeKey> {
+        val sql = if (includeClearedEdges) NEIGHBORHOOD_OF_ENTITY_SET_SQL else NON_TOMBSTONED_NEIGHBORHOOD_OF_ENTITY_SET_SQL
         return PostgresIterable(
                 Supplier {
                     val connection = hds.connection
                     connection.autoCommit = false
-                    val stmt = connection.prepareStatement(NEIGHBORHOOD_OF_ENTITY_SET_SQL)
+                    val stmt = connection.prepareStatement(sql)
                     stmt.setObject(1, entitySetId)
                     stmt.setObject(2, entitySetId)
                     stmt.setObject(3, entitySetId)
@@ -673,7 +677,8 @@ private val DELETE_BY_VERTEX_SQL = "$DELETE_SQL $VERTEX_FILTER_SQL"
 private val LOCK_BY_VERTEX_SQL = "$LOCK_SQL1 $VERTEX_FILTER_SQL $LOCK_SQL2"
 
 private val NEIGHBORHOOD_OF_ENTITY_SET_SQL = "SELECT * FROM ${E.name} WHERE " +
-        "(${SRC_ENTITY_SET_ID.name} = ?) OR (${EDGE_ENTITY_SET_ID.name} = ?) OR (${DST_ENTITY_SET_ID.name} = ?)"
+        "( (${SRC_ENTITY_SET_ID.name} = ?) OR (${EDGE_ENTITY_SET_ID.name} = ?) OR (${DST_ENTITY_SET_ID.name} = ?) )"
+private val NON_TOMBSTONED_NEIGHBORHOOD_OF_ENTITY_SET_SQL = "$NEIGHBORHOOD_OF_ENTITY_SET_SQL AND ${VERSION.name} > 0"
 
 private val SRC_ID_SQL = "${SRC_ENTITY_KEY_ID.name} = ? AND ${SRC_ENTITY_SET_ID.name} = ?"
 private val DST_ID_SQL = "${DST_ENTITY_KEY_ID.name} = ? AND ${DST_ENTITY_SET_ID.name} = ?"
