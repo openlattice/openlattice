@@ -208,7 +208,7 @@ class DataDeletionService(
 
         /* Delete neighbors */
 
-        numUpdates += entitySetIdToEntityDataKeys.entries.stream().mapToInt { entry ->
+        numUpdates += entitySetIdToEntityDataKeys.entries.stream().parallel().mapToInt { entry ->
             val neighborEntitySetId = entry.key
             val neighborEntityKeyIds = entry.value
 
