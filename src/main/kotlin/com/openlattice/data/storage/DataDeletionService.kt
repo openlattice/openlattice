@@ -83,6 +83,7 @@ class DataDeletionService(
                 skipAuthChecks
         )
 
+        // associations need to be deleted first, because edges are deleted when deleting entities in entity set
         clearOrDeleteAssociations(entitySetId, Optional.empty(), deleteType, principals, skipAuthChecks)
 
         val writeEvent = if (deleteType == DeleteType.Hard) {
@@ -182,14 +183,7 @@ class DataDeletionService(
 
         var numUpdates = 0
 
-        val entityWriteEvent = clearOrDeleteAuthorizedEntities(
-                entitySetId,
-                entityKeyIds,
-                deleteType,
-                authorizedPropertiesByEntitySets.getValue(entitySetId)
-        )
-        numUpdates += entityWriteEvent.numUpdates
-
+        // associations need to be deleted first, because edges are deleted when deleting requested entities
         if (isAssociation) {
             // if entity set is association, we only delete its edges
             deleteEdgesForAssociationEntitySet(entitySetId, Optional.of(entityKeyIds), deleteType)
@@ -203,6 +197,14 @@ class DataDeletionService(
             numUpdates += associationNumUpdates
         }
 
+        val entityWriteEvent = clearOrDeleteAuthorizedEntities(
+                entitySetId,
+                entityKeyIds,
+                deleteType,
+                authorizedPropertiesByEntitySets.getValue(entitySetId)
+        )
+        numUpdates += entityWriteEvent.numUpdates
+
 
         /* Delete neighbors */
 
@@ -210,17 +212,18 @@ class DataDeletionService(
             val neighborEntitySetId = entry.key
             val neighborEntityKeyIds = entry.value
 
-            val neighborWriteEvent = clearOrDeleteAuthorizedEntities(
-                    neighborEntitySetId,
-                    neighborEntityKeyIds,
-                    deleteType,
-                    authorizedPropertiesByEntitySets.getValue(neighborEntitySetId))
-
+            // associations need to be deleted first, because edges are deleted when deleting requested entities
             val associationNumUpdates = clearOrDeleteAuthorizedAssociations(
                     neighborEntitySetId,
                     Optional.of(neighborEntityKeyIds),
                     deleteType,
                     authorizedAssociationPropertiesByEntitySets.getValue(neighborEntitySetId))
+
+            val neighborWriteEvent = clearOrDeleteAuthorizedEntities(
+                    neighborEntitySetId,
+                    neighborEntityKeyIds,
+                    deleteType,
+                    authorizedPropertiesByEntitySets.getValue(neighborEntitySetId))
 
             neighborWriteEvent.numUpdates + associationNumUpdates
         }.sum()
@@ -248,6 +251,7 @@ class DataDeletionService(
                 principals,
                 skipAuthChecks)
 
+        // associations need to be deleted first, because edges are deleted when deleting requested entities in entity set
         clearOrDeleteAssociations(entitySetId, Optional.of(entityKeyIds), deleteType, principals, skipAuthChecks)
 
         return clearOrDeleteAuthorizedEntities(entitySetId, entityKeyIds, deleteType, authorizedPropertyTypes)
@@ -346,6 +350,9 @@ class DataDeletionService(
         return clearOrDeleteAuthorizedAssociations(entitySetId, entityKeyIds, deleteType, authorizedPropertyTypes)
     }
 
+    /**
+     * Deletes or clears connected association entities of entities in entity set filtered optionally by [entityKeyIds].
+     */
     private fun clearOrDeleteAuthorizedAssociations(
             entitySetId: UUID,
             entityKeyIds: Optional<Set<UUID>>,
@@ -359,7 +366,6 @@ class DataDeletionService(
         )
 
         val writeEvents = if (deleteType === DeleteType.Hard) {
-            // associations need to be deleted first, because edges are deleted in DataGraphManager.deleteEntitySet call
             dgm.deleteAssociationsBatch(entitySetId, associationsEdgeKeys, authorizedPropertyTypes)
         } else {
             val auditEntitySetIds = aresManager.getAuditEdgeEntitySets(AclKey(entitySetId))
@@ -390,6 +396,11 @@ class DataDeletionService(
 
     /* Helpers */
 
+    /**
+     * Returns all DataEdgeKeys where either src, dst and/or edge entity set ids are equal the requested entitySetId
+     * and if entityKeyIds are provided, it matches them also against one or more of src,dst and edge entity key id.
+     * If includeClearedEdges is set to true, it will also return cleared (version < 0) entities.
+     */
     private fun collectAssociations(
             entitySetId: UUID,
             entityKeyIds: Optional<Set<UUID>>,
