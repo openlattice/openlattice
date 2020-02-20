@@ -84,6 +84,8 @@ open class SetupTestData : MultipleAuthenticatedUsersBase() {
                     "-${ShuttleCliOptions.CONFIGURATION}=$configurationFile",
                     "-${ShuttleCliOptions.DATASOURCE}=$flightConfigurationSource",
                     "-${ShuttleCliOptions.ENVIRONMENT}=LOCAL",
+                    "-${ShuttleCliOptions.FETCHSIZE}=1000",
+                    "-${ShuttleCliOptions.UPLOAD_SIZE}=1000",
                     "-${ShuttleCliOptions.TOKEN}=$tokenAdmin",
                     "-${ShuttleCliOptions.CREATE}=$email"))
         }
