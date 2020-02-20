@@ -131,7 +131,7 @@ class DataDeletionService(
         }
 
         /*
-         * 1 - collect all neighbor entities, organized by EntitySet
+         * 1 - Collect all neighbor entities, organized by EntitySet
          */
 
         val includeClearedEdges = deleteType == DeleteType.Hard
@@ -147,7 +147,7 @@ class DataDeletionService(
                 .mapValues { it.value.map { it.entityKeyId }.toSet() }
 
         /*
-        * 2 - check authorization on all entities
+        * 2 - Check authorization on all entities
         */
 
         /* Check entity set permissions */
@@ -176,7 +176,7 @@ class DataDeletionService(
 
 
         /*
-         * 3 - delete all entities
+         * 3 - Delete all entities
          */
 
         /* Delete entity */
@@ -205,7 +205,7 @@ class DataDeletionService(
         }
 
 
-        /* 3 - Delete neighbors */
+        /* Delete neighbors */
 
         numUpdates += entitySetIdToEntityDataKeys.entries.stream().mapToInt { entry ->
             val neighborEntitySetId = entry.key
