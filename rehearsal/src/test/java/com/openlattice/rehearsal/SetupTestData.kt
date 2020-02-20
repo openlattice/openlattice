@@ -36,12 +36,13 @@ open class SetupTestData : MultipleAuthenticatedUsersBase() {
     companion object {
         private const val DATA_FOLDER = "data"
         private const val FLIGHT_FOLDER = "flights"
+        private const val FLIGHT_SQL = "select * from public.socrates;"
 
         init {
             MissionControl.continueAfterSuccess()
         }
 
-        /**
+       /**
          * Import datasets via Shuttle
          * @param
          */
@@ -57,7 +58,31 @@ open class SetupTestData : MultipleAuthenticatedUsersBase() {
 
             main(arrayOf(
                     "-${ShuttleCliOptions.FLIGHT}=$flightFile",
+                    "-${ShuttleCliOptions.SQL}=${FLIGHT_SQL}",
                     "-${ShuttleCliOptions.CSV}=$dataFile",
+                    "-${ShuttleCliOptions.ENVIRONMENT}=LOCAL",
+                    "-${ShuttleCliOptions.TOKEN}=$tokenAdmin",
+                    "-${ShuttleCliOptions.CREATE}=$email"))
+        }
+
+        /**
+         * Import datasets via Shuttle
+         * @param
+         */
+        fun importAtlasDataSet(flightFileName: String, flightConfigurationName: String, flightConfigurationSource: String) {
+            loginAs("admin")
+            val tokenAdmin = AuthenticationTest.getAuthentication(authOptions).credentials
+
+            val flightFile = File(Thread.currentThread().contextClassLoader.getResource(FLIGHT_FOLDER).file,
+                    flightFileName).absolutePath
+            val configurationFile = File(Thread.currentThread().contextClassLoader.getResource(FLIGHT_FOLDER).file,
+                    flightConfigurationName).absolutePath
+            val email = getUserInfo(SetupEnvironment.admin).email
+
+            main(arrayOf(
+                    "-${ShuttleCliOptions.FLIGHT}=$flightFile",
+                    "-${ShuttleCliOptions.CONFIGURATION}=$configurationFile",
+                    "-${ShuttleCliOptions.DATASOURCE}=$flightConfigurationSource",
                     "-${ShuttleCliOptions.ENVIRONMENT}=LOCAL",
                     "-${ShuttleCliOptions.TOKEN}=$tokenAdmin",
                     "-${ShuttleCliOptions.CREATE}=$email"))
@@ -79,6 +104,11 @@ open class SetupTestData : MultipleAuthenticatedUsersBase() {
     fun doImport() {
         importDataSet("socratesA.yaml", "testdata1.csv")
         importDataSet("socratesB.yaml", "testdata2.csv")
+        importAtlasDataSet(
+                "$DATA_FOLDER/socratesA.yaml",
+                "$FLIGHT_FOLDER/flightConfiguration.yaml",
+                "example_data"
+        )
     }
 
 
