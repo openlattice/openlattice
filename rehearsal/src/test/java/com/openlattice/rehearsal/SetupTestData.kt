@@ -41,11 +41,6 @@ open class SetupTestData : MultipleAuthenticatedUsersBase() {
             MissionControl.continueAfterSuccess()
         }
 
-        @Test
-        fun doImport() {
-            importDataSet("$DATA_FOLDER/socratesA.yaml","$FLIGHT_FOLDER/testdata1.csv")
-            importDataSet("$DATA_FOLDER/socratesB.yaml","$FLIGHT_FOLDER/testdata2.csv")
-        }
         /**
          * Import datasets via Shuttle
          * @param
@@ -71,7 +66,7 @@ open class SetupTestData : MultipleAuthenticatedUsersBase() {
         /**
          * Indicates whether the [com.openlattice.linking.RealtimeLinkingService] is finished for entitysets
          */
-        fun checkLinkingFinished( importedGeneralPersonFqns: Set<String>): Boolean {
+        fun checkLinkingFinished(importedGeneralPersonFqns: Set<String>): Boolean {
             val finishedEntitySets = realtimeLinkingApi.linkingFinishedEntitySets
             val finished = importedGeneralPersonFqns.all { finishedEntitySets.contains(entitySetsApi.getEntitySetId(it)) }
 
@@ -79,5 +74,13 @@ open class SetupTestData : MultipleAuthenticatedUsersBase() {
             return finished
         }
     }
+
+    @Test
+    fun doImport() {
+        importDataSet("socratesA.yaml", "testdata1.csv")
+        importDataSet("socratesB.yaml", "testdata2.csv")
+    }
+
+
 
 }
