@@ -641,7 +641,7 @@ internal fun getTopUtilizersSql(
 internal fun getTopUtilizersFromSrc(entitySetId: UUID, filters: SetMultimap<UUID, UUID>): String {
     val countColumn = "src_count"
     return "SELECT ${SRC_ENTITY_SET_ID.name} as ${PostgresColumn.ENTITY_SET_ID.name}, ${SRC_ENTITY_KEY_ID.name} as ${ID_VALUE.name}, count(*) as $countColumn " +
-            "FROM ${EDGES.name} WHERE ${srcClauses(entitySetId, filters)} " +
+            "FROM ${E.name} WHERE ${srcClauses(entitySetId, filters)} " +
             "GROUP BY (${PostgresColumn.ENTITY_SET_ID.name}, ${ID_VALUE.name}) "
 }
 
@@ -649,17 +649,19 @@ internal fun getTopUtilizersFromSrc(entitySetId: UUID, filters: SetMultimap<UUID
 internal fun getTopUtilizersFromDst(entitySetId: UUID, filters: SetMultimap<UUID, UUID>): String {
     val countColumn = "dst_count"
     return "SELECT ${DST_ENTITY_SET_ID.name} as ${PostgresColumn.ENTITY_SET_ID.name}, ${DST_ENTITY_KEY_ID.name} as ${ID_VALUE.name}, count(*) as $countColumn " +
-            "FROM ${EDGES.name} WHERE ${dstClauses(entitySetId, filters)} " +
+            "FROM ${E.name} WHERE ${dstClauses(entitySetId, filters)} " +
             "GROUP BY (${PostgresColumn.ENTITY_SET_ID.name}, ${ID_VALUE.name}) "
 }
 
 
-val EDGES_UPSERT_SQL = "INSERT INTO ${E.name} (${INSERT_COLUMNS.joinToString(",")}) VALUES (${(0 until INSERT_COLUMNS.size).joinToString(",") { "?" }}) " +
+val EDGES_UPSERT_SQL = "INSERT INTO ${E.name} (${INSERT_COLUMNS.joinToString(",")}) " +
+        "VALUES (${(INSERT_COLUMNS.indices).joinToString(",") { "?" }}) " +
         "ON CONFLICT (${KEY_COLUMNS.joinToString(",")}) " +
-        "DO UPDATE SET version = EXCLUDED.version, versions = ${E.name}.versions || EXCLUDED.version"
+        "DO UPDATE SET ${VERSION.name} = EXCLUDED.${VERSION.name}, " +
+        "${VERSIONS.name} = ${E.name}.${VERSIONS.name} || EXCLUDED.${VERSION.name}"
 
 
-private val CLEAR_SQL = "UPDATE ${E.name} SET version = ?, versions = versions || ? WHERE "
+private val CLEAR_SQL = "UPDATE ${E.name} SET ${VERSION.name} = ?, ${VERSIONS.name} = ${VERSIONS.name} || ? WHERE "
 private val DELETE_SQL = "DELETE FROM ${E.name} WHERE "
 private val LOCK_SQL1 = "SELECT 1 FROM ${E.name} WHERE "
 private const val LOCK_SQL2 = " FOR UPDATE"
