@@ -36,6 +36,7 @@ open class SetupTestData : MultipleAuthenticatedUsersBase() {
     companion object {
         private const val DATA_FOLDER = "data"
         private const val FLIGHT_FOLDER = "flights"
+        private const val CONFIG_FOLDER = "config"
         private const val FLIGHT_SQL = "select * from public.socrates limit 10;"
         private const val CONFIGURATION_KEY = "example_data"
 
@@ -53,11 +54,11 @@ open class SetupTestData : MultipleAuthenticatedUsersBase() {
 
             val flightFile = File(Thread.currentThread().contextClassLoader.getResource(FLIGHT_FOLDER).file,
                     flightFileName).absolutePath
-            val dataFile = File(Thread.currentThread().contextClassLoader.getResource(DATA_FOLDER).file, dataSource)
-                    .absolutePath
             val email = getUserInfo(SetupEnvironment.admin).email
 
             if (loadFromFile) {
+                val dataFile = File(Thread.currentThread().contextClassLoader.getResource(DATA_FOLDER).file, dataSource)
+                        .absolutePath
                 main(arrayOf(
                         "-${ShuttleCliOptions.FLIGHT}=$flightFile",
                         "-${ShuttleCliOptions.CSV}=$dataFile",
@@ -65,10 +66,12 @@ open class SetupTestData : MultipleAuthenticatedUsersBase() {
                         "-${ShuttleCliOptions.TOKEN}=$tokenAdmin",
                         "-${ShuttleCliOptions.CREATE}=$email"))
             } else {
+                val configFile = File(Thread.currentThread().contextClassLoader.getResource(CONFIG_FOLDER).file, dataSource)
+                        .absolutePath
                 main(arrayOf(
                         "-${ShuttleCliOptions.FLIGHT}=$flightFile",
                         "-${ShuttleCliOptions.SQL}=${FLIGHT_SQL}",
-                        "-${ShuttleCliOptions.CONFIGURATION}=$dataFile",
+                        "-${ShuttleCliOptions.CONFIGURATION}=$configFile",
                         "-${ShuttleCliOptions.DATASOURCE}=$CONFIGURATION_KEY",
                         "-${ShuttleCliOptions.ENVIRONMENT}=LOCAL",
                         "-${ShuttleCliOptions.FETCHSIZE}=1000",
