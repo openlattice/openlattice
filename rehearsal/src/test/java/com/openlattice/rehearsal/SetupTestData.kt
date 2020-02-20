@@ -43,7 +43,7 @@ open class SetupTestData : MultipleAuthenticatedUsersBase() {
         }
 
         /**
-         * Import datasets via Shuttle
+         * Import datasets from csv via Shuttle
          * @param
          */
         fun importDataSet(flightFileName: String, dataFileName: String) {
@@ -65,7 +65,7 @@ open class SetupTestData : MultipleAuthenticatedUsersBase() {
         }
 
         /**
-         * Import datasets via Shuttle
+         * Import dataset from atlas via Shuttle
          * @param
          */
         fun importAtlasDataSet(flightFileName: String, flightConfigurationName: String, flightConfigurationSource: String) {
