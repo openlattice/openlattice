@@ -38,48 +38,64 @@ open class SetupTestData : MultipleAuthenticatedUsersBase() {
         private const val FLIGHT_FOLDER = "flights"
         private const val CONFIG_FOLDER = "config"
         private const val FLIGHT_SQL = "select * from public.socrates limit 10;"
-        private const val CONFIGURATION_KEY = "example_data"
 
         init {
             MissionControl.continueAfterSuccess()
         }
 
-        /**
-         * Import datasets from csv via Shuttle
-         * @param
-         */
-        fun importDataSet(flightFileName: String, dataSource: String, loadFromFile: Boolean) {
-            loginAs("admin")
+        fun getDefaultShuttleArgs(): Array<String> {
+            loginAs("admin");
             val tokenAdmin = AuthenticationTest.getAuthentication(authOptions).credentials
-
-            val flightFile = File(Thread.currentThread().contextClassLoader.getResource(FLIGHT_FOLDER).file,
-                    flightFileName).absolutePath
             val email = getUserInfo(SetupEnvironment.admin).email
 
-            if (loadFromFile) {
-                val dataFile = File(Thread.currentThread().contextClassLoader.getResource(DATA_FOLDER).file, dataSource)
-                        .absolutePath
-                main(arrayOf(
-                        "-${ShuttleCliOptions.FLIGHT}=$flightFile",
-                        "-${ShuttleCliOptions.CSV}=$dataFile",
-                        "-${ShuttleCliOptions.ENVIRONMENT}=LOCAL",
-                        "-${ShuttleCliOptions.TOKEN}=$tokenAdmin",
-                        "-${ShuttleCliOptions.CREATE}=$email"))
-            } else {
-                val configFile = File(Thread.currentThread().contextClassLoader.getResource(CONFIG_FOLDER).file, dataSource)
-                        .absolutePath
-                main(arrayOf(
-                        "-${ShuttleCliOptions.FLIGHT}=$flightFile",
-                        "-${ShuttleCliOptions.SQL}=${FLIGHT_SQL}",
-                        "-${ShuttleCliOptions.CONFIGURATION}=$configFile",
-                        "-${ShuttleCliOptions.DATASOURCE}=$CONFIGURATION_KEY",
-                        "-${ShuttleCliOptions.ENVIRONMENT}=LOCAL",
-                        "-${ShuttleCliOptions.FETCHSIZE}=1000",
-                        "-${ShuttleCliOptions.UPLOAD_SIZE}=1000",
-                        "-${ShuttleCliOptions.TOKEN}=$tokenAdmin",
-                        "-${ShuttleCliOptions.CREATE}=$email"))
-            }
+            return arrayOf(
+                    "-${ShuttleCliOptions.ENVIRONMENT}=LOCAL",
+                    "-${ShuttleCliOptions.FETCHSIZE}=1000",
+                    "-${ShuttleCliOptions.UPLOAD_SIZE}=1000",
+                    "-${ShuttleCliOptions.TOKEN}=$tokenAdmin",
+                    "-${ShuttleCliOptions.CREATE}=$email")
+        }
 
+        /**
+         * Import datasets from CSV via Shuttle
+         * @param flightFileName
+         * @param dataFileName
+         */
+        fun importDataSetFromCSV(flightFileName: String, dataFileName: String) {
+            val flightFile = File(Thread.currentThread().contextClassLoader.getResource(FLIGHT_FOLDER).file,
+                    flightFileName).absolutePath
+            val dataFile = File(Thread.currentThread().contextClassLoader.getResource(DATA_FOLDER).file, dataFileName)
+                    .absolutePath
+            val shuttleArgs : Array<String> = getDefaultShuttleArgs()
+
+            main(shuttleArgs.plus(
+                    arrayOf(
+                            "-${ShuttleCliOptions.FLIGHT}=$flightFile",
+                            "-${ShuttleCliOptions.CSV}=$dataFile"
+                    )
+            ))
+        }
+
+        /**
+         * Import datasets from CSV via Shuttle
+         * @param flightFileName
+         * @param dataConfiguration
+         * @param dataConfigurationKey
+         */
+        fun importDataSetFromAtlas(flightFileName: String, dataConfiguration: String, dataConfigurationKey: String) {
+            val flightFile = File(Thread.currentThread().contextClassLoader.getResource(FLIGHT_FOLDER).file,
+                    flightFileName).absolutePath
+            val configFile = File(Thread.currentThread().contextClassLoader.getResource(CONFIG_FOLDER).file, dataConfiguration)
+                        .absolutePath
+            val shuttleArgs : Array<String> = getDefaultShuttleArgs()
+            main(shuttleArgs.plus(
+                    arrayOf(
+                            "-${ShuttleCliOptions.FLIGHT}=$flightFile",
+                            "-${ShuttleCliOptions.SQL}=${FLIGHT_SQL}",
+                            "-${ShuttleCliOptions.CONFIGURATION}=$configFile",
+                            "-${ShuttleCliOptions.DATASOURCE}=$dataConfigurationKey"
+                    )
+            ))
         }
 
 
@@ -97,11 +113,11 @@ open class SetupTestData : MultipleAuthenticatedUsersBase() {
 
     @Test
     fun doImport() {
-        importDataSet("socratesA.yaml", "testdata1.csv", true)
-        importDataSet("socratesB.yaml", "testdata2.csv", true)
-        importDataSet(
+        importDataSetFromCSV("socratesA.yaml", "testdata1.csv")
+        importDataSetFromCSV("socratesB.yaml", "testdata2.csv")
+        importDataSetFromAtlas(
                 "socratesAtlas.yaml",
-                "socratesAtlasConfiguration.yaml", false)
+                "socratesAtlasConfiguration.yaml", "example_data")
     }
 
 
