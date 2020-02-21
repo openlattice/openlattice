@@ -1,4 +1,4 @@
-
+organizationId: '00000000-0000-0001-0000-000000000000'
 entityDefinitions:
 
   person:
@@ -23,12 +23,6 @@ entityDefinitions:
       nc.PersonEthnicity:
         type: "nc.PersonEthnicity"
         column: "Ethnicity"
-      nc.PersonBirthDate:
-        type: "nc.PersonBirthDate"
-        column: "Birthdate"
-        transforms:
-        - !<transforms.DateTransform>
-          pattern: ["M/d/yy","M/dd/yy","MM/d/yy","MM/dd/yy"]
       ol.datasource:
         type: "ol.datasource"
         column: "FacilityName"
@@ -195,6 +189,7 @@ entityDefinitions:
         transforms:
         - !<transforms.DateTimeTransform>
           pattern: ["MM/dd/yy HH:mm:ss", "M/dd/yy", "MM/dd/yy H:mm:ss"]
+          timezone: America/Los_Angeles
     name: "encounter"
 
 
@@ -316,6 +311,7 @@ entityDefinitions:
         transforms:
         - !<transforms.DateTimeTransform>
           pattern: ["MM/dd/yy HH:mm:ss", "M/dd/yy", "MM/dd/yy H:mm:ss"]
+          timezone: America/Los_Angeles
     name: "vitalsigns"
 
 
@@ -412,12 +408,14 @@ entityDefinitions:
         transforms:
         - !<transforms.DateTimeTransform>
           pattern: ["MM/dd/yy HH:mm:ss", "M/dd/yy", "MM/dd/yy H:mm:ss"]
+          timezone: America/Los_Angeles
       ol.datetimeend:
         type: "ol.datetimeend"
         column: "TimeOut"
         transforms:
         - !<transforms.DateTimeTransform>
           pattern: ["MM/dd/yy HH:mm:ss", "M/dd/yy", "MM/dd/yy H:mm:ss"]
+          timezone: America/Los_Angeles
     name: "episode"
 
   facility:
@@ -521,12 +519,14 @@ associationDefinitions:
         transforms:
         - !<transforms.DateTimeTransform>
           pattern: ["MM/dd/yy HH:mm:ss", "M/dd/yy", "MM/dd/yy H:mm:ss"]
+          timezone: America/Los_Angeles
       date.completeddatetime:
         type: "date.completeddatetime"
         column: "EntryDateTime"
         transforms:
         - !<transforms.DateTimeTransform>
           pattern: ["MM/dd/yy HH:mm:ss", "M/dd/yy", "MM/dd/yy H:mm:ss"]
+          timezone: America/Los_Angeles
     name: "reported"
 
   presentsfor1:
@@ -550,6 +550,7 @@ associationDefinitions:
         transforms:
         - !<transforms.DateTimeTransform>
           pattern: ["MM/dd/yy HH:mm:ss", "M/dd/yy", "MM/dd/yy H:mm:ss"]
+          timezone: America/Los_Angeles
     name: "presentsfor1"
 
   presentsfor2:
@@ -573,6 +574,7 @@ associationDefinitions:
         transforms:
         - !<transforms.DateTimeTransform>
           pattern: ["MM/dd/yy HH:mm:ss", "M/dd/yy", "MM/dd/yy H:mm:ss"]
+          timezone: America/Los_Angeles
     name: "presentsfor2"
 
   addresses:
@@ -667,6 +669,7 @@ associationDefinitions:
         transforms:
         - !<transforms.DateTimeTransform>
           pattern: ["MM/dd/yy HH:mm:ss", "M/dd/yy", "MM/dd/yy H:mm:ss"]
+          timezone: America/Los_Angeles
     name: "observedin1"
 
   observedin2:
@@ -693,6 +696,7 @@ associationDefinitions:
         transforms:
         - !<transforms.DateTimeTransform>
           pattern: ["MM/dd/yy HH:mm:ss", "M/dd/yy", "MM/dd/yy H:mm:ss"]
+          timezone: America/Los_Angeles
     name: "observedin2"
 
   observedin3:
@@ -719,6 +723,7 @@ associationDefinitions:
         transforms:
         - !<transforms.DateTimeTransform>
           pattern: ["MM/dd/yy HH:mm:ss", "M/dd/yy", "MM/dd/yy H:mm:ss"]
+          timezone: America/Los_Angeles
     name: "observedin3"
 
   observedin4:
@@ -745,6 +750,7 @@ associationDefinitions:
         transforms:
         - !<transforms.DateTimeTransform>
           pattern: ["MM/dd/yy HH:mm:ss", "M/dd/yy", "MM/dd/yy H:mm:ss"]
+          timezone: America/Los_Angeles
     name: "observedin4"
 
   observedin5:
@@ -765,6 +771,7 @@ associationDefinitions:
         transforms:
         - !<transforms.DateTimeTransform>
           pattern: ["MM/dd/yy HH:mm:ss", "M/dd/yy", "MM/dd/yy H:mm:ss"]
+          timezone: America/Los_Angeles
     name: "observedin5"
 
   observedin6:
@@ -788,6 +795,7 @@ associationDefinitions:
         transforms:
         - !<transforms.DateTimeTransform>
           pattern: ["MM/dd/yy HH:mm:ss", "M/dd/yy", "MM/dd/yy H:mm:ss"]
+          timezone: America/Los_Angeles
     name: "observedin6"
 
   using:
@@ -808,6 +816,7 @@ associationDefinitions:
         transforms:
         - !<transforms.DateTimeTransform>
           pattern: ["MM/dd/yy HH:mm:ss", "M/dd/yy", "MM/dd/yy H:mm:ss"]
+          timezone: America/Los_Angeles
     name: "using"
 
   partof:
