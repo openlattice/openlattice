@@ -71,7 +71,7 @@ class AssemblerLinkingTest : AssemblerTestBase() {
         @BeforeClass
         fun init() {
             importedEntitySets.forEach {
-                importDataSetFromCSV(it.value.first, it.value.second, true)
+                importDataSetFromCSV(it.value.first, it.value.second)
             }
 
             while (!checkLinkingFinished(importedEntitySets.keys)) {

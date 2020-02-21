@@ -65,7 +65,7 @@ class LinkingFeedbackTest : SetupTestData() {
         @BeforeClass
         fun init() {
             importedEntitySets.forEach {
-                importDataSetFromCSV(it.value.first, it.value.second, true)
+                importDataSetFromCSV(it.value.first, it.value.second)
             }
 
             loginAs("admin")
