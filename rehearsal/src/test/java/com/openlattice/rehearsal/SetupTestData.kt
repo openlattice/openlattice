@@ -37,7 +37,6 @@ open class SetupTestData : MultipleAuthenticatedUsersBase() {
         private const val DATA_FOLDER = "data"
         private const val FLIGHT_FOLDER = "flights"
         private const val CONFIG_FOLDER = "config"
-        private const val FLIGHT_SQL = "select * from public.socrates limit 10;"
 
         init {
             MissionControl.continueAfterSuccess()
@@ -82,7 +81,7 @@ open class SetupTestData : MultipleAuthenticatedUsersBase() {
          * @param dataConfiguration
          * @param dataConfigurationKey
          */
-        fun importDataSetFromAtlas(flightFileName: String, dataConfiguration: String, dataConfigurationKey: String) {
+        fun importDataSetFromAtlas(flightFileName: String, flightSql: String, dataConfiguration: String, dataConfigurationKey: String) {
             val flightFile = File(Thread.currentThread().contextClassLoader.getResource(FLIGHT_FOLDER).file,
                     flightFileName).absolutePath
             val configFile = File(Thread.currentThread().contextClassLoader.getResource(CONFIG_FOLDER).file, dataConfiguration)
@@ -91,7 +90,7 @@ open class SetupTestData : MultipleAuthenticatedUsersBase() {
             main(shuttleArgs.plus(
                     arrayOf(
                             "-${ShuttleCliOptions.FLIGHT}=$flightFile",
-                            "-${ShuttleCliOptions.SQL}=${FLIGHT_SQL}",
+                            "-${ShuttleCliOptions.SQL}=$flightSql",
                             "-${ShuttleCliOptions.CONFIGURATION}=$configFile",
                             "-${ShuttleCliOptions.DATASOURCE}=$dataConfigurationKey"
                     )
@@ -117,7 +116,7 @@ open class SetupTestData : MultipleAuthenticatedUsersBase() {
         importDataSetFromCSV("socratesB.yaml", "testdata2.csv")
         importDataSetFromAtlas(
                 "socratesAtlas.yaml",
-                "socratesAtlasConfiguration.yaml", "example_data")
+                "socratesAtlasConfiguration.yaml", "example_data", "select * from public.socrates;")
     }
 
 
