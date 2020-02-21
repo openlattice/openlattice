@@ -142,6 +142,8 @@ class PostgresDataTables {
                     .name(prefix+"_read_data_idx")
                     .ifNotExists()
 
+            val needsPropagateIndex = PostgresExpressionIndexDefinition(tableDefinition, "(${LAST_WRITE.name} > ${LAST_PROPAGATE.name})")
+
 
             tableDefinition.addIndexes(
                     idIndex,
@@ -152,7 +154,8 @@ class PostgresDataTables {
                     propertyTypeIdIndex,
                     currentPropertiesForEntitySetIndex,
                     currentPropertiesForEntityIndex,
-                    readDataIndex
+                    readDataIndex,
+                    needsPropagateIndex
             )
 
             return tableDefinition
