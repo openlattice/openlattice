@@ -78,6 +78,7 @@ open class SetupTestData : MultipleAuthenticatedUsersBase() {
         /**
          * Import datasets from CSV via Shuttle
          * @param flightFileName
+         * @param flightSql
          * @param dataConfiguration
          * @param dataConfigurationKey
          */
