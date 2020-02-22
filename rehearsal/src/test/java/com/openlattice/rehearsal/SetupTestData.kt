@@ -115,9 +115,6 @@ open class SetupTestData : MultipleAuthenticatedUsersBase() {
     fun doImport() {
         importDataSetFromCSV("socratesA.yaml", "testdata1.csv")
         importDataSetFromCSV("socratesB.yaml", "testdata2.csv")
-        importDataSetFromAtlas(
-                "socratesAtlas.yaml",
-                "socratesAtlasConfiguration.yaml", "example_data", "select * from public.socrates;")
     }
 
 
