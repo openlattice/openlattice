@@ -22,7 +22,7 @@ package com.openlattice.scrunchie.search;
 
 import com.clearspring.analytics.util.Lists;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.LinkedHashMultimap;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.kryptnostic.rhizome.configuration.service.ConfigurationService.StaticLoader;
 import com.openlattice.authorization.Principal;
@@ -169,7 +169,7 @@ public class BaseElasticsearchTest {
                 ImmutableSet.of(),
                 propertyTypeIds,
                 propertyTypeIds,
-                LinkedHashMultimap.create(),
+                Maps.newLinkedHashMap(),
                 Optional.empty(),
                 Optional.of( SecurableObjectType.EntityType ),
                 Optional.empty()
