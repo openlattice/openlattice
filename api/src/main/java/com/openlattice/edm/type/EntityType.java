@@ -100,31 +100,6 @@ public class EntityType extends AbstractSchemaAssociatedSecurableType {
                 shards );
     }
 
-    public EntityType(
-            FullQualifiedName type,
-            String title,
-            String description,
-            Set<FullQualifiedName> schemas,
-            LinkedHashSet<UUID> key,
-            LinkedHashSet<UUID> properties,
-            LinkedHashMap<UUID, LinkedHashSet<String>> propertyTags,
-            Optional<UUID> baseType,
-            Optional<SecurableObjectType> category,
-            Optional<Integer> shards ) {
-        this(
-                Optional.empty(),
-                type,
-                title,
-                Optional.of( description ),
-                schemas,
-                key,
-                properties,
-                Optional.of( propertyTags ),
-                baseType,
-                category,
-                shards );
-    }
-
     @Override
     public String toString() {
         return "EntityType{" +
