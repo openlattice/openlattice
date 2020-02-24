@@ -65,7 +65,15 @@ public class EntityType extends AbstractSchemaAssociatedSecurableType {
         this.properties = checkNotNull( properties, "Entity type properties cannot be null" );
         this.baseType = baseType;
         this.category = category.orElse( SecurableObjectType.EntityType );
-        this.propertyTags = propertyTags.orElse( Maps.newLinkedHashMap() );
+        propertyTags.ifPresentOrElse(
+                tags -> {
+                    tags.values().forEach( tagValues ->
+                            checkArgument( !tagValues.isEmpty(), "Property tag values cannot be empty." )
+                    );
+                    this.propertyTags = tags;
+                },
+                () -> this.propertyTags = Maps.newLinkedHashMap()
+        );
         this.key = key;
         this.shards = shards.orElse( DEFAULT_SHARDS );
         Preconditions

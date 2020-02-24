@@ -24,11 +24,12 @@ import com.google.common.base.Preconditions;
 import com.openlattice.client.serialization.SerializationConstants;
 import com.openlattice.data.DataExpiration;
 import com.openlattice.postgres.IndexType;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 import java.util.*;
 
-import org.apache.commons.lang3.StringUtils;
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import static com.google.common.base.Preconditions.checkArgument;
 
 /**
  * Used for updating metadata of property type, entity type, or entity set. Non-existent fields for the specific object
@@ -90,6 +91,11 @@ public class MetadataUpdate {
         this.pii = pii;
         this.defaultShow = defaultShow;
         this.url = url;
+        propertyTags.ifPresent( tags ->
+                tags.values().forEach( tagValues ->
+                        checkArgument( !tagValues.isEmpty(), "Property tag values cannot be empty." )
+                )
+        );
         this.propertyTags = propertyTags;
         this.indexType = indexType;
         this.organizationId = organizationId;
