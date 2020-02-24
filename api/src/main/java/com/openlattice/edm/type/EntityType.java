@@ -21,7 +21,7 @@ package com.openlattice.edm.type;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.LinkedHashMultimap;
+import com.google.common.collect.Maps;
 import com.openlattice.authorization.securable.AbstractSchemaAssociatedSecurableType;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.client.serialization.SerializationConstants;
@@ -39,13 +39,13 @@ public class EntityType extends AbstractSchemaAssociatedSecurableType {
     private static final int DEFAULT_SHARDS = 5;
     private static final int MAX_SHARDS     = 20;
 
-    private final     LinkedHashSet<UUID>              key;
-    private final     Optional<UUID>                   baseType;
-    private transient int                              h = 0;
-    private final     int                              shards;
-    private final     SecurableObjectType              category;
-    protected         LinkedHashMultimap<UUID, String> propertyTags;
-    protected         LinkedHashSet<UUID>              properties;
+    private final     LinkedHashSet<UUID>                        key;
+    private final     Optional<UUID>                             baseType;
+    private transient int                                        h = 0;
+    private final     int                                        shards;
+    private final     SecurableObjectType                        category;
+    protected         LinkedHashMap<UUID, LinkedHashSet<String>> propertyTags;
+    protected         LinkedHashSet<UUID>                        properties;
 
     @JsonCreator
     public EntityType(
@@ -57,15 +57,15 @@ public class EntityType extends AbstractSchemaAssociatedSecurableType {
             @JsonProperty( SerializationConstants.KEY_FIELD ) LinkedHashSet<UUID> key,
             @JsonProperty( SerializationConstants.PROPERTIES_FIELD ) LinkedHashSet<UUID> properties,
             @JsonProperty( SerializationConstants.PROPERTY_TAGS )
-                    Optional<LinkedHashMultimap<UUID, String>> propertyTags,
-             @JsonProperty( SerializationConstants.BASE_TYPE_FIELD ) Optional<UUID> baseType,
+                    Optional<LinkedHashMap<UUID, LinkedHashSet<String>>> propertyTags,
+            @JsonProperty( SerializationConstants.BASE_TYPE_FIELD ) Optional<UUID> baseType,
             @JsonProperty( SerializationConstants.CATEGORY ) Optional<SecurableObjectType> category,
             @JsonProperty( SerializationConstants.SHARDS ) Optional<Integer> shards ) {
         super( id, type, title, description, schemas );
         this.properties = checkNotNull( properties, "Entity type properties cannot be null" );
         this.baseType = baseType;
         this.category = category.orElse( SecurableObjectType.EntityType );
-        this.propertyTags = propertyTags.orElse( LinkedHashMultimap.create() );
+        this.propertyTags = propertyTags.orElse( Maps.newLinkedHashMap() );
         this.key = key;
         this.shards = shards.orElse( DEFAULT_SHARDS );
         Preconditions
@@ -83,7 +83,7 @@ public class EntityType extends AbstractSchemaAssociatedSecurableType {
             Set<FullQualifiedName> schemas,
             LinkedHashSet<UUID> key,
             LinkedHashSet<UUID> properties,
-            LinkedHashMultimap<UUID, String> propertyTags,
+            LinkedHashMap<UUID, LinkedHashSet<String>> propertyTags,
             Optional<UUID> baseType,
             Optional<SecurableObjectType> category,
             Optional<Integer> shards ) {
@@ -107,7 +107,7 @@ public class EntityType extends AbstractSchemaAssociatedSecurableType {
             Set<FullQualifiedName> schemas,
             LinkedHashSet<UUID> key,
             LinkedHashSet<UUID> properties,
-            LinkedHashMultimap<UUID, String> propertyTags,
+            LinkedHashMap<UUID, LinkedHashSet<String>> propertyTags,
             Optional<UUID> baseType,
             Optional<SecurableObjectType> category,
             Optional<Integer> shards ) {
@@ -125,7 +125,8 @@ public class EntityType extends AbstractSchemaAssociatedSecurableType {
                 shards );
     }
 
-    @Override public String toString() {
+    @Override
+    public String toString() {
         return "EntityType{" +
                 "key=" + key +
                 ", baseType=" + baseType +
@@ -163,7 +164,7 @@ public class EntityType extends AbstractSchemaAssociatedSecurableType {
     }
 
     @JsonProperty( SerializationConstants.PROPERTY_TAGS )
-    public LinkedHashMultimap<UUID, String> getPropertyTags() {
+    public LinkedHashMap<UUID, LinkedHashSet<String>> getPropertyTags() {
         return propertyTags;
     }
 
@@ -172,7 +173,6 @@ public class EntityType extends AbstractSchemaAssociatedSecurableType {
     public SecurableObjectType getCategory() {
         return category;
     }
-
 
 
     public void addPrimaryKeys( Set<UUID> propertyTypeIds ) {
@@ -197,18 +197,19 @@ public class EntityType extends AbstractSchemaAssociatedSecurableType {
         properties = propertyTypeIds;
     }
 
-    public void setPropertyTypeTags( LinkedHashMultimap<UUID, String> propertyTags ) {
+    public void setPropertyTypeTags( LinkedHashMap<UUID, LinkedHashSet<String>> propertyTags ) {
         this.propertyTags = propertyTags;
     }
 
-    @Override public boolean equals( Object o ) {
+    @Override
+    public boolean equals( Object o ) {
         if ( this == o )
             return true;
         if ( o == null || getClass() != o.getClass() )
             return false;
         if ( !super.equals( o ) )
             return false;
-        EntityType that = (EntityType) o;
+        EntityType that = ( EntityType ) o;
         return h == that.h &&
                 shards == that.shards &&
                 Objects.equals( key, that.key ) &&
@@ -218,7 +219,8 @@ public class EntityType extends AbstractSchemaAssociatedSecurableType {
                 Objects.equals( properties, that.properties );
     }
 
-    @Override public int hashCode() {
+    @Override
+    public int hashCode() {
         return Objects.hash( super.hashCode(), key, baseType, h, shards, category, propertyTags, properties );
     }
 }

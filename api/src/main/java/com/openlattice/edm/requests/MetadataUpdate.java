@@ -21,16 +21,11 @@ package com.openlattice.edm.requests;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.LinkedHashMultimap;
 import com.openlattice.client.serialization.SerializationConstants;
 import com.openlattice.data.DataExpiration;
 import com.openlattice.postgres.IndexType;
 
-import java.util.LinkedHashSet;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
@@ -42,23 +37,23 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName;
 public class MetadataUpdate {
 
     // Common across property type, entity type, entity set
-    private Optional<String>                           title;
-    private Optional<String>                           description;
-    private Optional<IndexType>                        indexType;
+    private Optional<String>                                     title;
+    private Optional<String>                                     description;
+    private Optional<IndexType>                                  indexType;
     // Specific to entity set
-    private Optional<String>                           name;
-    private Optional<Set<String>>                      contacts;
-    private Optional<DataExpiration>                   dataExpiration;
+    private Optional<String>                                     name;
+    private Optional<Set<String>>                                contacts;
+    private Optional<DataExpiration>                             dataExpiration;
     // Specific to property type/entity type
-    private Optional<FullQualifiedName>                type;
+    private Optional<FullQualifiedName>                          type;
     // Specific to property type
-    private Optional<Boolean>                          pii;
+    private Optional<Boolean>                                    pii;
     // Specific to entity set property type metadata
-    private Optional<Boolean>                          defaultShow;
-    private Optional<String>                           url;
-    private Optional<LinkedHashMultimap<UUID, String>> propertyTags;
-    private Optional<UUID>                             organizationId;
-    private Optional<LinkedHashSet<Integer>>           partitions;
+    private Optional<Boolean>                                    defaultShow;
+    private Optional<String>                                     url;
+    private Optional<LinkedHashMap<UUID, LinkedHashSet<String>>> propertyTags;
+    private Optional<UUID>                                       organizationId;
+    private Optional<LinkedHashSet<Integer>>                     partitions;
 
     @JsonCreator
     public MetadataUpdate(
@@ -71,7 +66,7 @@ public class MetadataUpdate {
             @JsonProperty( SerializationConstants.DEFAULT_SHOW ) Optional<Boolean> defaultShow,
             @JsonProperty( SerializationConstants.URL ) Optional<String> url,
             @JsonProperty( SerializationConstants.PROPERTY_TAGS )
-                    Optional<LinkedHashMultimap<UUID, String>> propertyTags,
+                    Optional<LinkedHashMap<UUID, LinkedHashSet<String>>> propertyTags,
             @JsonProperty( SerializationConstants.INDEX_TYPE ) Optional<IndexType> indexType,
             @JsonProperty( SerializationConstants.ORGANIZATION_ID ) Optional<UUID> organizationId,
             @JsonProperty( SerializationConstants.PARTITIONS ) Optional<LinkedHashSet<Integer>> partitions,
@@ -111,7 +106,7 @@ public class MetadataUpdate {
             Optional<Boolean> pii,
             Optional<Boolean> defaultShow,
             Optional<String> url,
-            Optional<LinkedHashMultimap<UUID, String>> propertyTags,
+            Optional<LinkedHashMap<UUID, LinkedHashSet<String>>> propertyTags,
             Optional<UUID> organizationId,
             Optional<LinkedHashSet<Integer>> partitions,
             Optional<DataExpiration> dataExpiration ) {
@@ -171,7 +166,7 @@ public class MetadataUpdate {
     }
 
     @JsonProperty( SerializationConstants.PROPERTY_TAGS )
-    public Optional<LinkedHashMultimap<UUID, String>> getPropertyTags() {
+    public Optional<LinkedHashMap<UUID, LinkedHashSet<String>>> getPropertyTags() {
         return propertyTags;
     }
 
@@ -195,7 +190,8 @@ public class MetadataUpdate {
         return dataExpiration;
     }
 
-    @Override public String toString() {
+    @Override
+    public String toString() {
         return "MetadataUpdate{" +
                 "title=" + title +
                 ", description=" + description +
@@ -213,10 +209,11 @@ public class MetadataUpdate {
                 '}';
     }
 
-    @Override public boolean equals( Object o ) {
+    @Override
+    public boolean equals( Object o ) {
         if ( this == o ) { return true; }
         if ( !( o instanceof MetadataUpdate ) ) { return false; }
-        MetadataUpdate that = (MetadataUpdate) o;
+        MetadataUpdate that = ( MetadataUpdate ) o;
         return title.equals( that.title ) &&
                 description.equals( that.description ) &&
                 indexType.equals( that.indexType ) &&
@@ -232,7 +229,8 @@ public class MetadataUpdate {
                 dataExpiration.equals( that.dataExpiration );
     }
 
-    @Override public int hashCode() {
+    @Override
+    public int hashCode() {
         return Objects.hash( title,
                 description,
                 indexType,
@@ -246,136 +244,5 @@ public class MetadataUpdate {
                 organizationId,
                 partitions,
                 dataExpiration );
-    }
-
-    //TODO: Delete the code below as it doesn't seem to be used.
-    // Trimming happens before initializing update processors so that irrelevant fields won't get ser/deserialized when
-    // processors are serialized.
-    public static MetadataUpdate trimToPropertyTypeUpdate( MetadataUpdate update ) {
-        return new MetadataUpdate(
-                update.getTitle(),
-                update.getDescription(),
-                Optional.empty(),
-                Optional.empty(),
-                update.getType(),
-                update.getPii(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty() );
-    }
-
-    public static MetadataUpdate trimToEntityTypeUpdate( MetadataUpdate update ) {
-        return new MetadataUpdate(
-                update.getTitle(),
-                update.getDescription(),
-                Optional.empty(),
-                Optional.empty(),
-                update.getType(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty() );
-    }
-
-    public static MetadataUpdate trimToEntitySetUpdate( MetadataUpdate update ) {
-        return new MetadataUpdate(
-                update.getTitle(),
-                update.getDescription(),
-                update.getName(),
-                update.getContacts(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty() );
-    }
-
-    public static MetadataUpdate trimToEntitySetPropertyMetadataUpdate( MetadataUpdate update ) {
-        return new MetadataUpdate(
-                update.getTitle(),
-                update.getDescription(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                update.getDefaultShow(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty() );
-    }
-
-    public static MetadataUpdate trimToAppUpdate( MetadataUpdate update ) {
-        return new MetadataUpdate(
-                update.getTitle(),
-                update.getDescription(),
-                update.getName(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                update.getUrl(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty() );
-    }
-
-    public static MetadataUpdate trimToAppTypeUpdate( MetadataUpdate update ) {
-        return new MetadataUpdate(
-                update.getTitle(),
-                update.getDescription(),
-                Optional.empty(),
-                Optional.empty(),
-                update.getType(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty() );
-    }
-
-    public static MetadataUpdate trimToEntityTypeCollectionUpdate( MetadataUpdate update ) {
-        return new MetadataUpdate(
-                update.getTitle(),
-                update.getDescription(),
-                Optional.empty(),
-                Optional.empty(),
-                update.getType(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty() );
-    }
-
-    public static MetadataUpdate trimToEntitySetCollectionUpdate( MetadataUpdate update ) {
-        return new MetadataUpdate(
-                update.getTitle(),
-                update.getDescription(),
-                update.getName(),
-                update.getContacts(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                update.getOrganizationId(),
-                Optional.empty(),
-                Optional.empty() );
     }
 }
