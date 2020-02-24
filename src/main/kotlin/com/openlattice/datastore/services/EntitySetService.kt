@@ -62,6 +62,7 @@ import com.openlattice.postgres.mapstores.EntitySetMapstore
 import edu.umd.cs.findbugs.classfile.ResourceNotFoundException
 import org.slf4j.LoggerFactory
 import java.util.*
+import kotlin.collections.LinkedHashSet
 
 open class EntitySetService(
         hazelcastInstance: HazelcastInstance,
@@ -174,7 +175,7 @@ open class EntitySetService(
             val metadata = EntitySetPropertyMetadata(
                     property.title,
                     property.description,
-                    LinkedHashSet(propertyTags.get(propertyTypeId)),
+                    propertyTags.getOrDefault(propertyTypeId, LinkedHashSet()),
                     true)
             entitySetPropertyMetadata[key] = metadata
         }
@@ -364,7 +365,7 @@ open class EntitySetService(
         missingKeys.forEach { newKey ->
             val propertyType = missingPropertyTypesById.getValue(newKey.propertyTypeId)
             val propertyTags = entityTypesById.getValue(entityTypesByEntitySetId.getValue(newKey.entitySetId))
-                    .propertyTags.get(newKey.propertyTypeId)
+                    .propertyTags.getOrDefault(newKey.propertyTypeId, LinkedHashSet())
 
             val defaultMetadata = EntitySetPropertyMetadata(
                     propertyType.title,

@@ -1,6 +1,7 @@
 package com.openlattice.graph.processing
 
 import com.google.common.collect.LinkedHashMultimap
+import com.google.common.collect.Maps
 import com.openlattice.analysis.requests.ValueFilter
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.datastore.services.EdmManager
@@ -59,9 +60,19 @@ class PropagationGraphProcessorTest {
                 override fun answer(invocation: InvocationOnMock): EntityType {
                     val fqn = invocation.arguments[0] as FullQualifiedName
                     val uuid = getUUIDFor(fqn.fullQualifiedNameAsString)
-                    return EntityType(uuid, fqn, "asd", Optional.of("asd"),
-                            setOf<FullQualifiedName>(), LinkedHashSet<UUID>(), LinkedHashSet<UUID>(),
-                            LinkedHashMultimap.create(), Optional.of(uuid), Optional.of(SecurableObjectType.EntityType), Optional.empty())
+                    return EntityType(
+                            uuid,
+                            fqn,
+                            "asd",
+                            Optional.of("asd"),
+                            setOf<FullQualifiedName>(),
+                            LinkedHashSet<UUID>(),
+                            LinkedHashSet<UUID>(),
+                            Maps.newLinkedHashMap<UUID, LinkedHashSet<String>>(),
+                            Optional.of(uuid),
+                            Optional.of(SecurableObjectType.EntityType),
+                            Optional.empty()
+                    )
                 }
             }
 
