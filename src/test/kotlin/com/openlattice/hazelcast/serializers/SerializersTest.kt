@@ -5,26 +5,38 @@ import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuil
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.openlattice.TestServer.Companion.testServer
+import com.openlattice.assembler.AssemblerConnectionManager
+import com.openlattice.assembler.AssemblerConnectionManagerDependent
 import org.junit.Assert
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
+import org.mockito.Mockito
 import org.slf4j.LoggerFactory
+import org.springframework.util.ClassUtils
 
 @RunWith(Parameterized::class)
-class SerializersTest(val serializer: TestableSelfRegisteringStreamSerializer<Any>) {
+class SerializersTest(val serializer: TestableSelfRegisteringStreamSerializer<Any>, val _name: String) {
 
     companion object {
         private val logger = LoggerFactory.getLogger(SerializersTest::class.java)
 
         private val excluded: Set<Class<Any>> = ImmutableSet.of()
 
-        private var serializers: MutableCollection<TestableSelfRegisteringStreamSerializer<*>> = testServer.context.getBeansOfType(TestableSelfRegisteringStreamSerializer::class.java).values
-
         @JvmStatic
-        @Parameterized.Parameters
-        fun getSerializers(): Array<Array<TestableSelfRegisteringStreamSerializer<*>>> {
-            return serializers.map { it -> arrayOf(it) }.toTypedArray()
+        @Parameterized.Parameters(name = "{1}")
+        fun getSerializers(): Array<Array<Any>> {
+            val serializers: MutableCollection<TestableSelfRegisteringStreamSerializer<*>> = testServer.context.getBeansOfType(TestableSelfRegisteringStreamSerializer::class.java).values
+            val acm = Mockito.mock(AssemblerConnectionManager::class.java)
+            return serializers
+                    .map { ss ->
+                        if (ss is AssemblerConnectionManagerDependent<*>) {
+                            ss.init(acm)
+                        }
+                        ss
+                    }
+                    .map { ss -> arrayOf(ss, ClassUtils.getUserClass(ss).simpleName) }
+                    .toTypedArray()
         }
     }
 
