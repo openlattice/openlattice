@@ -22,10 +22,15 @@
 package com.openlattice.data.util;
 
 import com.google.common.base.Charsets;
+import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
+
+import java.nio.ByteBuffer;
+import java.time.OffsetDateTime;
 import java.util.UUID;
+
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 
 /**
@@ -38,6 +43,10 @@ public final class PostgresDataHasher {
     }
 
     public static byte[] hashObject( Object value, EdmPrimitiveTypeKind dataType ) {
+        return getHashCode( value, dataType ).asBytes();
+    }
+
+    private static HashCode getHashCode( Object value, EdmPrimitiveTypeKind dataType ) {
         final Hasher h = hf.newHasher();
         switch ( dataType ) {
             case Boolean:
@@ -47,11 +56,13 @@ public final class PostgresDataHasher {
                 h.putBytes( (byte[]) value );
                 break;
             case Date:
-            case DateTimeOffset:
             case Duration:
             case TimeOfDay:
                 h.putString( value.toString(), Charsets.UTF_8 );
                 break;
+            case DateTimeOffset:
+                return HashCode.fromBytes( ByteBuffer.allocate( Long.BYTES )
+                        .putLong( ( (OffsetDateTime) value ).toInstant().toEpochMilli() ).array() );
             case Guid:
                 final UUID id = (UUID) value;
                 h.putLong( id.getLeastSignificantBits() );
@@ -84,57 +95,11 @@ public final class PostgresDataHasher {
             default:
                 throw new UnsupportedOperationException( "Unable to hash datatype: " + dataType.toString() );
         }
-        return h.hash().asBytes();
+        return h.hash();
     }
 
     public static String hashObjectToHex( Object value, EdmPrimitiveTypeKind dataType ) {
-        final Hasher h = hf.newHasher();
-        switch ( dataType ) {
-            case Boolean:
-                h.putBoolean( (Boolean) value );
-                break;
-            case Binary:
-                h.putBytes( (byte[]) value );
-                break;
-            case Date:
-            case DateTimeOffset:
-            case Duration:
-            case TimeOfDay:
-                h.putString( value.toString(), Charsets.UTF_8 );
-                break;
-            case Guid:
-                final UUID id = (UUID) value;
-                h.putLong( id.getLeastSignificantBits() );
-                h.putLong( id.getMostSignificantBits() );
-                break;
-
-            case Decimal:
-            case Double:
-            case Single:
-                h.putDouble( (Double) value );
-                break;
-
-            case Byte:
-            case SByte:
-                h.putByte( (Byte) value );
-                break;
-            case Int16:
-                h.putShort( (Short) value );
-                break;
-            case Int32:
-                h.putInt( (Integer) value );
-                break;
-            case Int64:
-                h.putLong( (Long) value );
-                break;
-            case String:
-            case GeographyPoint:
-                h.putString( (String) value, Charsets.UTF_8 );
-                break;
-            default:
-                throw new UnsupportedOperationException( "Unable to hash datatype: " + dataType.toString() );
-        }
-        return h.hash().toString();
+        return getHashCode( value, dataType ).toString();
     }
 }
 
