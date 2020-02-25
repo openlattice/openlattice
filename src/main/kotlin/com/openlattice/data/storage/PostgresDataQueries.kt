@@ -119,7 +119,6 @@ private fun mapOuterMetaDataToColumnSql(metadataOption: MetadataOption): String 
         // TODO should be just last_write with comma prefix after empty rows are eliminated https://jira.openlattice.com/browse/LATTICE-2254
         MetadataOption.LAST_WRITE -> ",max(${LAST_WRITE.name}) AS ${mapMetaDataToColumnName(metadataOption)}"
         MetadataOption.ENTITY_KEY_IDS -> ",array_agg(${ORIGIN_ID.name}) as ${ENTITY_KEY_IDS_COL.name}"
-        MetadataOption.VERSION -> ",max(${VERSION.name}) As ${mapMetaDataToColumnName(metadataOption)}"
         else -> throw UnsupportedOperationException("No implementation yet for metadata option $metadataOption")
     }
 }
@@ -131,7 +130,6 @@ private fun mapMetaDataToColumnName(metadataOption: MetadataOption): String {
     return when (metadataOption) {
         MetadataOption.LAST_WRITE -> LAST_WRITE.name
         MetadataOption.ENTITY_KEY_IDS -> ENTITY_KEY_IDS_COL.name
-        MetadataOption.VERSION -> VERSION.name
         else -> throw UnsupportedOperationException("No implementation yet for metadata option $metadataOption")
     }
 }
@@ -143,7 +141,6 @@ private fun mapMetaDataToSelector(metadataOption: MetadataOption): String {
     return when (metadataOption) {
         MetadataOption.LAST_WRITE -> ",max(${LAST_WRITE.name}) AS ${mapMetaDataToColumnName(metadataOption)}"
         MetadataOption.ENTITY_KEY_IDS -> ",${ORIGIN_ID.name}"
-        MetadataOption.VERSION -> ",max(${VERSION.name}) AS ${mapMetaDataToColumnName(metadataOption)}"
         else -> throw UnsupportedOperationException("No implementation yet for metadata option $metadataOption")
     }
 }
