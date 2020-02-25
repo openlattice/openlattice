@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -34,7 +35,7 @@ public class JsonDeserializer {
     private static final Logger         logger              = LoggerFactory.getLogger( JsonDeserializer.class );
     private static final Base64.Decoder decoder             = Base64.getDecoder();
     private static final Pattern        geographyPointRegex = Pattern
-            .compile( "(\\-)?[0-9]+(\\.){1}[0-9]+(\\,){1}(\\-)?[0-9]+(\\.){1}[0-9]+" );
+            .compile( "(-?[0-9]+\\.[0-9]+), *(-?[0-9]+\\.[0-9]+)" );
 
     public static SetMultimap<UUID, Object> validateFormatAndNormalize(
             Map<UUID, Set<Object>> propertyValues,
@@ -231,8 +232,11 @@ public class JsonDeserializer {
                     if ( point.getGeoType() == Type.POINT && point.getDimension() == Dimension.GEOGRAPHY ) {
                         return point.getY() + "," + point.getX();
                     }
-                } else if ( value instanceof String && geographyPointRegex.matcher( (String) value ).matches() ) {
-                    return value;
+                } else if ( value instanceof String ) {
+                    Matcher m = geographyPointRegex.matcher( (String) value );
+                    if ( m.matches() ) {
+                        return m.group( 1 ) + "," + m.group( 2 );
+                    }
                 }
                 break;
             default:
