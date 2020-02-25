@@ -30,7 +30,6 @@ import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.hazelcast.query.QueryConstants
-import com.openlattice.IdConstants
 import com.openlattice.assembler.PostgresRoles.Companion.buildOrganizationUserId
 import com.openlattice.assembler.events.MaterializePermissionChangeEvent
 import com.openlattice.assembler.events.MaterializedEntitySetDataChangeEvent
@@ -39,12 +38,11 @@ import com.openlattice.assembler.processors.*
 import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.controllers.exceptions.ResourceNotFoundException
-import com.openlattice.data.storage.partitions.PartitionManager
-import com.openlattice.data.storage.selectPropertyTypesOfEntitySetColumnar
 import com.openlattice.datastore.util.Util
 import com.openlattice.edm.EntitySet
-import com.openlattice.edm.events.*
-import com.openlattice.edm.type.EntityType
+import com.openlattice.edm.events.EntitySetDeletedEvent
+import com.openlattice.edm.events.EntitySetNameUpdatedEvent
+import com.openlattice.edm.events.EntitySetOrganizationUpdatedEvent
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organization.OrganizationEntitySetFlag
@@ -54,7 +52,6 @@ import com.openlattice.organizations.events.MembersAddedToOrganizationEvent
 import com.openlattice.organizations.events.MembersRemovedFromOrganizationEvent
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.organizations.tasks.OrganizationsInitializationTask
-import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.mapstores.MaterializedEntitySetMapStore
 import com.openlattice.postgres.mapstores.OrganizationAssemblyMapstore
 import com.openlattice.postgres.mapstores.OrganizationAssemblyMapstore.INITIALIZED_INDEX
@@ -442,6 +439,7 @@ class Assembler(
         }
 
         override fun initialize(dependencies: Assembler) {
+            // noop, this is now done in transporter
 //            dependencies.entitySets.keys.forEach(dependencies::createOrUpdateProductionViewOfEntitySet)
         }
 

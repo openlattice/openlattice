@@ -2,81 +2,120 @@ package com.openlattice.transporter.services
 
 import com.google.common.eventbus.EventBus
 import com.google.common.eventbus.Subscribe
-import com.openlattice.assembler.AssemblerConfiguration
+import com.google.common.util.concurrent.ListeningExecutorService
+import com.hazelcast.core.HazelcastInstance
 import com.openlattice.assembler.AssemblerConnectionManager
+import com.openlattice.assembler.AssemblerConnectionManagerDependent
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
+import com.openlattice.edm.EntitySet
 import com.openlattice.edm.events.ClearAllDataEvent
 import com.openlattice.edm.events.EntityTypeCreatedEvent
 import com.openlattice.edm.events.EntityTypeDeletedEvent
 import com.openlattice.edm.events.PropertyTypesAddedToEntityTypeEvent
 import com.openlattice.edm.set.EntitySetFlag
+import com.openlattice.edm.type.EntityType
+import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.transporter.processors.TransporterPropagateDataEntryProcessor
+import com.openlattice.transporter.processors.TransporterSynchronizeTableDefinitionEntryProcessor
+import com.openlattice.transporter.types.TransporterColumnSet
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.util.*
-import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Future
 
 @Service
 final class DataTransporterService(
         private val eventBus: EventBus,
-        private val enterprise: HikariDataSource,
         private val dataModelService: EdmManager,
         private val partitionManager: PartitionManager,
         private val entitySetService: EntitySetManager,
-        private val assemblerConfiguration: AssemblerConfiguration
-)
+        private val executor: ListeningExecutorService,
+        hazelcastInstance: HazelcastInstance
+): AssemblerConnectionManagerDependent<Void?>
 {
     companion object {
         val logger = LoggerFactory.getLogger(DataTransporterService::class.java)
     }
 
-    private val transporter = AssemblerConnectionManager.createDataSource( "transporter", assemblerConfiguration.server, assemblerConfiguration.ssl )
-    private val entityTypeManagers: MutableMap<UUID, DataTransporterEntityTypeManager> = ConcurrentHashMap()
+    private lateinit var acm: AssemblerConnectionManager
+    private lateinit var transporter: HikariDataSource
 
-    init {
-        dataModelService.entityTypes.map { et -> et.id to DataTransporterEntityTypeManager(et, dataModelService, partitionManager, entitySetService) }.toMap(entityTypeManagers)
-        logger.info("Creating {} entity set tables", entityTypeManagers.size)
-        entityTypeManagers.values.forEach {
-            it.createTable(transporter, enterprise)
+    private val transporterState = HazelcastMap.TRANSPORTER_DB_COLUMNS.getMap( hazelcastInstance )
+
+    private fun syncTable(et: EntityType): Optional<Future<*>> {
+        logger.info("syncTable({})", et.type)
+        val prev = transporterState.putIfAbsent(et.id, TransporterColumnSet(emptyMap()))
+        logger.info("entity type {} previously had value {}", et.type, prev)
+        return if (prev == null) {
+            logger.info("Synchronizing props for entity type {}", et.type)
+            val props = dataModelService.getPropertyTypes(et.properties)
+            Optional.of(
+                    transporterState.submitToKey(et.id, TransporterSynchronizeTableDefinitionEntryProcessor(props))
+            )
+        } else {
+            logger.info("not synchronzing props on entity type {} because previous value was {}", et.type, prev)
+            Optional.empty()
         }
-        logger.info("Entity set tables created")
-        eventBus.register(this)
     }
 
-    public fun pollOnce() {
-        val start = System.currentTimeMillis()
-        val releventEntityTypeIds =
-        entitySetService
-                .getEntitySets()
-                .filter {
-                    !it.isLinking && !it.flags.contains(EntitySetFlag.AUDIT)
-                }
-                .map { it.entityTypeId }
-                .toSet()
+    override fun init(acm: AssemblerConnectionManager): Void? {
+        this.acm = acm
+        this.transporter = acm.connect("transporter")
+        executor.submit {
+            val entityTypes = dataModelService.entityTypes.toList()
+            logger.info("initializing DataTransporterService with {} types", entityTypes.size)
+            val tablesCreated = entityTypes.map { et -> this.syncTable(et) }
+                    .filter { it.isPresent }
+                    .map { it.get().get() }
+                    .count()
+            if (tablesCreated > 0) {
+                logger.info("{} entity type tables synchronized", tablesCreated)
+            }
+        }
 
-            releventEntityTypeIds
-                .forEach {entityTypeId ->
-                    entityTypeManagers[entityTypeId]?.updateAllEntitySets(enterprise, transporter)
-                }
+        eventBus.register(this)
+        return null
+    }
+
+    private fun partitions(entitySetIds: Set<UUID>): Collection<Int> {
+        return partitionManager.getPartitionsByEntitySetId(entitySetIds).values.flatten().toSet()
+    }
+
+    fun pollOnce() {
+        val start = System.currentTimeMillis()
+        val futures = this.transporterState.keys.map { entityTypeId ->
+            val relevantEntitySets = validEntitySets(entityTypeId)
+            val entitySetIds = relevantEntitySets.map { it.id }.toSet()
+            val partitions = partitions(entitySetIds)
+            val ft = transporterState.submitToKey(entityTypeId, TransporterPropagateDataEntryProcessor(relevantEntitySets, partitions))
+            entitySetIds.count() to ft
+        }
+        futures.forEach { it.second.get() }
+        val setsPolled = futures.map { it.first }.sum()
         val duration = System.currentTimeMillis() - start
-        logger.info("Total poll duration time: {} ms", duration)
+        logger.info("Total poll duration time for {} entity sets in {} entity types: {} ms", setsPolled, futures.size, duration)
+    }
+
+    private fun validEntitySets(entityTypeId: UUID): Set<EntitySet> {
+        return entitySetService.getEntitySetsOfType(entityTypeId)
+                .filter { !it.isLinking && !it.flags.contains(EntitySetFlag.AUDIT) }.toSet()
     }
 
     @Subscribe
     fun handleEntityTypeCreated(e: EntityTypeCreatedEvent) {
-        val et = e.entityType
-        val tableManager = DataTransporterEntityTypeManager(et, dataModelService, partitionManager, entitySetService)
-        // this is idempotent and we don't want to call update methods on it from the task unless the table is there.
-        tableManager.createTable(transporter, enterprise)
-        entityTypeManagers.putIfAbsent(et.id, tableManager)
+        if (this.transporterState.putIfAbsent(e.entityType.id, TransporterColumnSet(emptyMap())) == null) {
+            val props = dataModelService.getPropertyTypes(e.entityType.properties)
+            this.transporterState.submitToKey(e.entityType.id, TransporterSynchronizeTableDefinitionEntryProcessor(props))
+        }
     }
 
     @Subscribe
     fun handleEntityTypeDeleted(e: EntityTypeDeletedEvent) {
-        val manager = entityTypeManagers.remove(e.entityTypeId)
-        manager?.removeTable(transporter, enterprise)
+        this.transporterState.delete(e.entityTypeId)
+//        TODO("And drop the table")
     }
 
 //    @Subscribe
@@ -86,8 +125,7 @@ final class DataTransporterService(
 
     @Subscribe
     fun handlePropertyTypesAddedToEntityTypeEvent(e: PropertyTypesAddedToEntityTypeEvent) {
-        val entityTypeManager = entityTypeManagers[e.entityType.id]
-        entityTypeManager?.addPropertyTypes(transporter, e.newPropertyTypes)
+        this.transporterState.executeOnKey(e.entityType.id, TransporterSynchronizeTableDefinitionEntryProcessor(e.newPropertyTypes))
     }
 }
 

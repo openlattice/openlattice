@@ -59,6 +59,7 @@ import com.openlattice.rhizome.hazelcast.DelegatedStringSet
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet
 import com.openlattice.shuttle.Integration
 import com.openlattice.shuttle.IntegrationJob
+import com.openlattice.transporter.types.TransporterColumnSet
 import java.util.*
 
 class HazelcastMap<K, V> internal constructor(val name: String) : TypedMapIdentifier<K, V> {
@@ -139,6 +140,7 @@ class HazelcastMap<K, V> internal constructor(val name: String) : TypedMapIdenti
         @JvmField val PRINCIPALS = HazelcastMap<AclKey, SecurablePrincipal>("PRINCIPALS")
         @JvmField val REQUESTS = HazelcastMap<AceKey, Status>("REQUESTS")
         @JvmField val SECURABLE_OBJECT_TYPES = HazelcastMap<AclKey, SecurableObjectType>("SECURABLE_OBJECT_TYPES")
+        @JvmField val TRANSPORTER_DB_COLUMNS = HazelcastMap<UUID, TransporterColumnSet>("TRANSPORTER_DB_COLUMNS")
         @JvmField val USERS = HazelcastMap<String, User>("USERS")
         @JvmField val ORGANIZATION_EXTERNAL_DATABASE_COLUMN = HazelcastMap<UUID, OrganizationExternalDatabaseColumn>("ORGANIZATION_EXTERNAL_DATABASE_COLUMN")
         @JvmField val ORGANIZATION_EXTERNAL_DATABASE_TABLE = HazelcastMap<UUID, OrganizationExternalDatabaseTable>("ORGANIZATION_EXTERNAL_DATABASE_TABLE")

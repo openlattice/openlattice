@@ -4,6 +4,7 @@ import com.google.common.cache.CacheBuilder
 import com.google.common.cache.CacheLoader
 import com.openlattice.IdConstants
 import com.openlattice.edm.PostgresEdmTypeConverter
+import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresColumn.*
@@ -204,6 +205,14 @@ class PostgresDataTables {
                 IndexType.NONE -> "n_${datatype.name}"
                 else -> throw IllegalStateException("Unsupported index type: $indexType")
             }
+        }
+
+        @JvmStatic
+        fun getSourceDataColumnName(propertyType: PropertyType): String {
+            return getSourceDataColumnName(
+                    PostgresEdmTypeConverter.map(propertyType.datatype),
+                    propertyType.postgresIndexType
+            )
         }
     }
 }

@@ -11,7 +11,7 @@ class TransporterRunSyncTaskDependencies(
 ) : HazelcastTaskDependencies
 
 class TransporterRunSyncTask : HazelcastFixedRateTask<TransporterRunSyncTaskDependencies> {
-    val delay = TimeUnit.SECONDS.toMillis(1)
+    val delay = 1L
     override fun getInitialDelay(): Long {
         return delay
     }
@@ -21,7 +21,7 @@ class TransporterRunSyncTask : HazelcastFixedRateTask<TransporterRunSyncTaskDepe
     }
 
     override fun getTimeUnit(): TimeUnit {
-        return TimeUnit.MILLISECONDS
+        return TimeUnit.SECONDS
     }
 
     override fun runTask() {
