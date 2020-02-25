@@ -10,23 +10,33 @@ import com.openlattice.transporter.hasModifiedData
 import com.openlattice.transporter.tableName
 import com.openlattice.transporter.types.TransporterColumnSet
 import com.openlattice.transporter.updateOneBatchForProperty
+import io.prometheus.client.Counter
 import org.slf4j.LoggerFactory
-import org.springframework.stereotype.Component
 import java.util.*
 
 class TransporterPropagateDataEntryProcessor(val entitySets: Set<EntitySet>, val partitions: Collection<Int>):
-        AbstractReadOnlyRhizomeEntryProcessor<UUID, TransporterColumnSet, Unit>(),
+        AbstractReadOnlyRhizomeEntryProcessor<UUID, TransporterColumnSet, Void?>(),
         Offloadable,
         AssemblerConnectionManagerDependent<TransporterPropagateDataEntryProcessor>
 {
     companion object {
         private val logger = LoggerFactory.getLogger(TransporterPropagateDataEntryProcessor::class.java)
+        val counter: Counter = Counter.build()
+                .namespace("transporter")
+                .name("rows_updated")
+                .help("Rows updated in the transporter database")
+                .register()
     }
 
     @Transient
     private lateinit var acm: AssemblerConnectionManager
 
-    override fun process(entry: MutableMap.MutableEntry<UUID, TransporterColumnSet>): Unit {
+    override fun process(entry: Map.Entry<UUID, TransporterColumnSet>): Void? {
+        transport(entry)
+        return null
+    }
+
+    private fun transport(entry: Map.Entry<UUID, TransporterColumnSet>) {
         if (entitySets.isEmpty() || partitions.isEmpty()) {
             return
         }
@@ -58,6 +68,7 @@ class TransporterPropagateDataEntryProcessor(val entitySets: Set<EntitySet>, val
                         generateSequence { ps.executeUpdate() }.takeWhile { it > 0 }.sum()
                     }
                 }.sum()
+                counter.inc(updates.toDouble())
                 logger.debug("Updated {} values in entity type table {}", updates, tableName)
                 conn.commit()
             } catch (ex: Exception) {

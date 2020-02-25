@@ -21,6 +21,8 @@ import com.openlattice.transporter.processors.TransporterPropagateDataEntryProce
 import com.openlattice.transporter.processors.TransporterSynchronizeTableDefinitionEntryProcessor
 import com.openlattice.transporter.types.TransporterColumnSet
 import com.zaxxer.hikari.HikariDataSource
+import io.prometheus.client.Histogram
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.util.*
@@ -37,7 +39,12 @@ final class DataTransporterService(
 ): AssemblerConnectionManagerDependent<Void?>
 {
     companion object {
-        val logger = LoggerFactory.getLogger(DataTransporterService::class.java)
+        val logger: Logger = LoggerFactory.getLogger(DataTransporterService::class.java)
+        val pollTimer: Histogram = Histogram.build()
+                .namespace("transporter")
+                .name("poll_duration_seconds")
+                .help("time to do one database sync poll")
+                .register()
     }
 
     private lateinit var acm: AssemblerConnectionManager
@@ -46,17 +53,13 @@ final class DataTransporterService(
     private val transporterState = HazelcastMap.TRANSPORTER_DB_COLUMNS.getMap( hazelcastInstance )
 
     private fun syncTable(et: EntityType): Optional<Future<*>> {
-        logger.info("syncTable({})", et.type)
         val prev = transporterState.putIfAbsent(et.id, TransporterColumnSet(emptyMap()))
-        logger.info("entity type {} previously had value {}", et.type, prev)
         return if (prev == null) {
-            logger.info("Synchronizing props for entity type {}", et.type)
             val props = dataModelService.getPropertyTypes(et.properties)
             Optional.of(
-                    transporterState.submitToKey(et.id, TransporterSynchronizeTableDefinitionEntryProcessor(props))
+                    transporterState.submitToKey(et.id, TransporterSynchronizeTableDefinitionEntryProcessor(props).init(acm))
             )
         } else {
-            logger.info("not synchronzing props on entity type {} because previous value was {}", et.type, prev)
             Optional.empty()
         }
     }
@@ -71,9 +74,7 @@ final class DataTransporterService(
                     .filter { it.isPresent }
                     .map { it.get().get() }
                     .count()
-            if (tablesCreated > 0) {
-                logger.info("{} entity type tables synchronized", tablesCreated)
-            }
+            logger.info("synchronization finished with {} entity type tables updated", tablesCreated)
         }
 
         eventBus.register(this)
@@ -85,18 +86,18 @@ final class DataTransporterService(
     }
 
     fun pollOnce() {
-        val start = System.currentTimeMillis()
+        val timer = pollTimer.startTimer()
         val futures = this.transporterState.keys.map { entityTypeId ->
             val relevantEntitySets = validEntitySets(entityTypeId)
             val entitySetIds = relevantEntitySets.map { it.id }.toSet()
             val partitions = partitions(entitySetIds)
-            val ft = transporterState.submitToKey(entityTypeId, TransporterPropagateDataEntryProcessor(relevantEntitySets, partitions))
+            val ft = transporterState.submitToKey(entityTypeId, TransporterPropagateDataEntryProcessor(relevantEntitySets, partitions).init(acm))
             entitySetIds.count() to ft
         }
         futures.forEach { it.second.get() }
         val setsPolled = futures.map { it.first }.sum()
-        val duration = System.currentTimeMillis() - start
-        logger.info("Total poll duration time for {} entity sets in {} entity types: {} ms", setsPolled, futures.size, duration)
+        val duration = timer.observeDuration()
+        logger.debug("Total poll duration time for {} entity sets in {} entity types: {} sec", setsPolled, futures.size, duration)
     }
 
     private fun validEntitySets(entityTypeId: UUID): Set<EntitySet> {
@@ -106,10 +107,7 @@ final class DataTransporterService(
 
     @Subscribe
     fun handleEntityTypeCreated(e: EntityTypeCreatedEvent) {
-        if (this.transporterState.putIfAbsent(e.entityType.id, TransporterColumnSet(emptyMap())) == null) {
-            val props = dataModelService.getPropertyTypes(e.entityType.properties)
-            this.transporterState.submitToKey(e.entityType.id, TransporterSynchronizeTableDefinitionEntryProcessor(props))
-        }
+        this.syncTable(e.entityType).get()
     }
 
     @Subscribe
@@ -125,7 +123,7 @@ final class DataTransporterService(
 
     @Subscribe
     fun handlePropertyTypesAddedToEntityTypeEvent(e: PropertyTypesAddedToEntityTypeEvent) {
-        this.transporterState.executeOnKey(e.entityType.id, TransporterSynchronizeTableDefinitionEntryProcessor(e.newPropertyTypes))
+        this.transporterState.executeOnKey(e.entityType.id, TransporterSynchronizeTableDefinitionEntryProcessor(e.newPropertyTypes).init(acm))
     }
 }
 

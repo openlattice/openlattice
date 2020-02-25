@@ -8,11 +8,10 @@ import com.openlattice.edm.type.PropertyType
 import com.openlattice.transporter.tableDefinition
 import com.openlattice.transporter.types.TransporterColumnSet
 import org.slf4j.LoggerFactory
-import org.springframework.stereotype.Component
 import java.util.*
 
 data class TransporterSynchronizeTableDefinitionEntryProcessor(val newProperties: Collection<PropertyType>):
-        AbstractRhizomeEntryProcessor<UUID, TransporterColumnSet, Unit>(),
+        AbstractRhizomeEntryProcessor<UUID, TransporterColumnSet, Void?>(),
         Offloadable,
         AssemblerConnectionManagerDependent<TransporterSynchronizeTableDefinitionEntryProcessor> {
     companion object {
@@ -21,14 +20,19 @@ data class TransporterSynchronizeTableDefinitionEntryProcessor(val newProperties
 
     private lateinit var acm: AssemblerConnectionManager
 
-    override fun process(entry: MutableMap.MutableEntry<UUID, TransporterColumnSet>) {
+    override fun process(entry: MutableMap.MutableEntry<UUID, TransporterColumnSet>): Void? {
+        transport(entry)
+        return null
+    }
+
+    private fun transport(entry: MutableMap.MutableEntry<UUID, TransporterColumnSet>) {
         val transporter = acm.connect("transporter")
-        val newProps = newProperties.filter { entry.value.containsKey(it.id) }
+        val newProps = newProperties.filter { !entry.value.containsKey(it.id) }
         if (newProps.isEmpty()) {
             return
         }
-        val newEntry = entry.value.withProperties(newProps)
-        val table = tableDefinition(entry.key, newEntry.columns.values.map { it.destCol() })
+        val newColumns = entry.value.withProperties(newProps)
+        val table = tableDefinition(entry.key, newColumns.columns.values.map { it.destCol() })
         transporter.connection.use { conn ->
             var lastSql = ""
             try {
@@ -42,8 +46,8 @@ data class TransporterSynchronizeTableDefinitionEntryProcessor(val newProperties
                                 .map {i -> rsmd.getColumnName(i) }
                                 .toSet()
                     }
-                    val newCols = newEntry.columns
-                            .filterKeys { currentPropertyIds.contains(it.toString()) }
+                    val newCols = newColumns.columns
+                            .filterKeys { !currentPropertyIds.contains(it.toString()) }
                             .values
                             .map { it.destCol() }
                     if (newCols.isNotEmpty()) {
@@ -54,13 +58,14 @@ data class TransporterSynchronizeTableDefinitionEntryProcessor(val newProperties
                         st.execute(lastSql)
                     }
                 }
-                entry.setValue(newEntry)
+                entry.setValue(newColumns)
             } catch (e: Exception) {
                 logger.error("Unable to execute query: {}", lastSql, e)
                 conn.rollback()
                 throw e
             }
         }
+        return
     }
 
     override fun getExecutorName(): String = Offloadable.OFFLOADABLE_EXECUTOR
