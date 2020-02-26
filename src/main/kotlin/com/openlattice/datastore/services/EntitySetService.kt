@@ -140,9 +140,7 @@ open class EntitySetService(
                         authorizations.addPermission(aclKey, principal, EnumSet.allOf(Permission::class.java))
                     }
 
-            if (!entitySet.flags.contains(EntitySetFlag.AUDIT)) {
-                aresManager.createAuditEntitySetForEntitySet(entitySet)
-            }
+            aresManager.createAuditEntitySetForEntitySet(entitySet)
 
             val ownablePropertyTypes = propertyTypes.getAll(entityType.properties).values.toList()
             eventBus.post(EntitySetCreatedEvent(entitySet, ownablePropertyTypes))
