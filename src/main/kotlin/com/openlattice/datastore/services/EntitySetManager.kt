@@ -36,10 +36,6 @@ interface EntitySetManager {
 
     fun createEntitySet(principal: Principal, entitySet: EntitySet): UUID
 
-    // Warning: This method is used only in creating linked entity set, where entity set owner may not own all the
-    // property types.
-    fun createEntitySet(principal: Principal, entitySet: EntitySet, ownablePropertyTypeIds: Set<UUID>): UUID
-
     fun deleteEntitySet(entitySetId: UUID)
 
     fun getEntitySet(entitySetId: UUID): EntitySet?
@@ -96,5 +92,6 @@ interface EntitySetManager {
     fun getAuditRecordEntitySetsManager(): AuditRecordEntitySetsManager
 
     fun containsFlag(entitySetId: UUID, flag: EntitySetFlag): Boolean
+
     fun entitySetsContainFlag(entitySetIds: Set<UUID>, flag: EntitySetFlag): Boolean
 }
