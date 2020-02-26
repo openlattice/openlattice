@@ -13,6 +13,20 @@ import org.springframework.stereotype.Component
 
 @Component
 class TransporterColumnSetStreamSerializer : TestableSelfRegisteringStreamSerializer<TransporterColumnSet> {
+
+    companion object {
+        fun serializeColumn(out: ObjectDataOutput, col: TransporterColumn) {
+            out.writeUTF(col.srcCol)
+            out.writeUTF(col.destColName)
+            AbstractEnumSerializer.serialize(out, col.dataType)
+        }
+        fun deserializeColumn(`in`: ObjectDataInput): TransporterColumn {
+            val srcCol = `in`.readUTF()
+            val destColName = `in`.readUTF()
+            val dataType = AbstractEnumSerializer.deserialize(PostgresDatatype::class.java, `in`)
+            return TransporterColumn(srcCol, destColName, dataType)
+        }
+    }
     override fun getTypeId(): Int {
         return StreamSerializerTypeIds.TRANSPORTER_COLUMN_SET.ordinal
     }
@@ -25,9 +39,7 @@ class TransporterColumnSetStreamSerializer : TestableSelfRegisteringStreamSerial
         out.writeInt(`object`.size)
         `object`.entries.forEach { (id, col) ->
             AbstractUUIDStreamSerializer.serialize(out, id)
-            out.writeUTF(col.srcCol)
-            out.writeUTF(col.destColName)
-            AbstractEnumSerializer.serialize(out, col.dataType)
+            serializeColumn(out, col)
         }
     }
 
@@ -35,10 +47,7 @@ class TransporterColumnSetStreamSerializer : TestableSelfRegisteringStreamSerial
         val size = `in`.readInt()
         val columns = (1..size).map { _ ->
             val uuid = AbstractUUIDStreamSerializer.deserialize(`in`)
-            val srcCol = `in`.readUTF()
-            val destColName = `in`.readUTF()
-            val dataType = AbstractEnumSerializer.deserialize(PostgresDatatype::class.java, `in`)
-            uuid to TransporterColumn(srcCol, destColName, dataType)
+            uuid to deserializeColumn(`in`)
         }.toMap()
         return TransporterColumnSet(columns)
     }

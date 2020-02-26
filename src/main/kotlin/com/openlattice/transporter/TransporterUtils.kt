@@ -17,30 +17,41 @@ fun tableDefinition(entityTypeId: UUID, columns: Collection<PostgresColumnDefini
     return definition
 }
 
+/**
+ * column bindings are
+ * 1 - partitions array
+ * 2 - entity set ids array
+ */
 private val checkQuery = "SELECT 1 " +
         "WHERE EXISTS (" +
-        " SELECT 1 FROM ${PostgresTable.DATA.name} " +
-        " WHERE ${PostgresColumn.ENTITY_SET_ID.name} = ANY(?) " +
-        "  AND ${PostgresColumn.PARTITION.name} = ANY(?) " +
-        "  AND ${PostgresColumn.PROPERTY_TYPE_ID.name} = ANY(?) " +
+        " SELECT 1 FROM ${PostgresTable.IDS.name} " +
+        " WHERE ${PostgresColumn.PARTITION.name} = ANY(?) " +
+        "  AND ${PostgresColumn.ENTITY_SET_ID.name} = ANY(?) " +
         "  AND ${DataTables.LAST_WRITE.name} > ${PostgresColumn.LAST_PROPAGATE.name}" +
         ")"
 
-fun hasModifiedData(enterprise: HikariDataSource, entitySetIds: Set<UUID>, properties: Collection<UUID>, partitions: Collection<Int>): Boolean {
+fun hasModifiedData(enterprise: HikariDataSource, partitions: Collection<Int>, entitySetIds: Set<UUID>): Boolean {
     return enterprise.connection.use { conn ->
         conn.prepareStatement(checkQuery).use { st ->
-            val entitySetArray = PostgresArrays.createUuidArray(conn, entitySetIds)
             val partitionsArray = PostgresArrays.createIntArray(conn, partitions)
-            val propsArray = PostgresArrays.createUuidArray(conn, properties)
-            st.setArray(1, entitySetArray)
-            st.setArray(2, partitionsArray)
-            st.setArray(3, propsArray)
+            val entitySetArray = PostgresArrays.createUuidArray(conn, entitySetIds)
+            st.setArray(1, partitionsArray)
+            st.setArray(2, entitySetArray)
             val rs = st.executeQuery()
             rs.next()
         }
     }
 }
 
+val pkCols = listOf(PostgresColumn.ENTITY_SET_ID, PostgresColumn.ID)
+val pk = pkCols.joinToString(", ") { it.name }
+
+/**
+ * column bindings are
+ * 1 - partitions array
+ * 2 - entity set ids array
+ *
+ */
 fun updateOneBatchForProperty(destTable: String, propCol: Map.Entry<UUID, TransporterColumn>): String {
     val srcCol = propCol.value.srcCol
     val destCol = propCol.value.destColName
@@ -56,16 +67,44 @@ fun updateOneBatchForProperty(destTable: String, propCol: Map.Entry<UUID, Transp
             "RETURNING ${PostgresColumn.ENTITY_SET_ID.name}, ${PostgresColumn.ID.name}, ${PostgresColumn.VERSION.name}, " +
             " CASE WHEN ${PostgresColumn.VERSION.name} > 0 then $srcCol else null end as $destCol"
 
-    val pk = listOf(PostgresColumn.ENTITY_SET_ID, PostgresColumn.ID).joinToString(", ") { it.name }
-    val cols = "$pk,$destCol"
-
-    val modifyDestination = "INSERT INTO $destTable " +
-            "($cols) " +
-            "SELECT $cols " +
+    // this is almost certainly not necessary but if ids is already synced in the same transaction
+    val createMissingRows = "INSERT INTO $destTable " +
+            "($pk) " +
+            "SELECT $pk " +
             "FROM src " +
-            "WHERE ${PostgresColumn.VERSION.name} != 0 " +
-            "ON CONFLICT ($pk) DO UPDATE " +
-            "SET $destCol = excluded.$destCol"
+            "WHERE ${PostgresColumn.VERSION.name} > 0 " +
+            "ON CONFLICT ($pk) DO NOTHING"
+    val modifyDestination = "UPDATE $destTable t " +
+            "SET $destCol = src.$destCol " +
+            "FROM src " +
+            "WHERE " + pkCols.joinToString(" AND ") { "t." + it.name + " = src." + it.name}
 
-    return "WITH src as (${updateLastPropagate}) $modifyDestination"
+    return "WITH src as (${updateLastPropagate}), inserted as ($createMissingRows) $modifyDestination"
+}
+
+/**
+ * column bindings are
+ * 1 - partitions array
+ * 2 - entity set ids array
+ *
+ */
+fun updateIdsForEntitySets(destTable: String): String {
+    val updateLastPropagate = "UPDATE ${PostgresTable.IDS.name} " +
+            "SET ${PostgresColumn.LAST_PROPAGATE.name} = ${DataTables.LAST_WRITE.name} " +
+            "WHERE ${PostgresColumn.PARTITION.name} = ANY(?) " +
+            " AND ${PostgresColumn.ENTITY_SET_ID.name} = ANY(?) " +
+            " AND ${DataTables.LAST_WRITE.name} > ${PostgresColumn.LAST_PROPAGATE.name} " +
+            "RETURNING ${PostgresColumn.ENTITY_SET_ID.name}, ${PostgresColumn.ID.name}, ${PostgresColumn.VERSION.name}"
+    val createMissingRows = "INSERT INTO $destTable ($pk) " +
+            "SELECT $pk " +
+            "FROM src " +
+            "WHERE ${PostgresColumn.VERSION.name} > 0 " +
+            "ON CONFLICT ($pk) DO NOTHING"
+    val deleteRows = "DELETE FROM $destTable t " +
+            "USING src " +
+            "WHERE src.${PostgresColumn.VERSION.name} <= 0 AND " +
+            " " + pkCols.joinToString(" AND " ) { "t." + it.name + " = src." + it.name }
+    return "WITH src as ($updateLastPropagate), " +
+            "inserts as ($createMissingRows) " +
+            deleteRows
 }

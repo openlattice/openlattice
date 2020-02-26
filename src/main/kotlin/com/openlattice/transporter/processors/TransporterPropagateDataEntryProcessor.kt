@@ -9,6 +9,7 @@ import com.openlattice.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizome
 import com.openlattice.transporter.hasModifiedData
 import com.openlattice.transporter.tableName
 import com.openlattice.transporter.types.TransporterColumnSet
+import com.openlattice.transporter.updateIdsForEntitySets
 import com.openlattice.transporter.updateOneBatchForProperty
 import io.prometheus.client.Counter
 import org.slf4j.LoggerFactory
@@ -50,7 +51,7 @@ class TransporterPropagateDataEntryProcessor(val entitySets: Set<EntitySet>, val
             }
             !it.isLinking
         }
-        if (!hasModifiedData(transporter, entitySetIds, propertyIds, partitions)) {
+        if (!hasModifiedData(transporter, partitions, entitySetIds)) {
             return
         }
         transporter.connection.use { conn ->
@@ -59,7 +60,13 @@ class TransporterPropagateDataEntryProcessor(val entitySets: Set<EntitySet>, val
             try {
                 val entitySetArray = PostgresArrays.createUuidArray(conn, entitySetIds)
                 val partitions = PostgresArrays.createIntArray(conn, partitions)
-                val updates = entry.value.map { propCol ->
+                lastSql = updateIdsForEntitySets(tableName)
+                val idUpdates = conn.prepareStatement(lastSql).use {ps ->
+                    ps.setArray(1, partitions)
+                    ps.setArray(2, entitySetArray)
+                    ps.executeUpdate()
+                }
+                val colUpdates = entry.value.map { propCol ->
                     val query = updateOneBatchForProperty(tableName, propCol)
                     lastSql = query
                     conn.prepareStatement(query).use { ps ->
@@ -68,8 +75,8 @@ class TransporterPropagateDataEntryProcessor(val entitySets: Set<EntitySet>, val
                         generateSequence { ps.executeUpdate() }.takeWhile { it > 0 }.sum()
                     }
                 }.sum()
-                counter.inc(updates.toDouble())
-                logger.debug("Updated {} values in entity type table {}", updates, tableName)
+                counter.inc((idUpdates + colUpdates).toDouble())
+                logger.debug("Updated {} values in entity type table {}", colUpdates, tableName)
                 conn.commit()
             } catch (ex: Exception) {
                 logger.error("Unable to update transporter: SQL: {}", lastSql, ex)
