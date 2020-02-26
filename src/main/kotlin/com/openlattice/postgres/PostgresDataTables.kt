@@ -144,7 +144,8 @@ class PostgresDataTables {
                     .ifNotExists()
 
             val needsPropagateIndex = PostgresExpressionIndexDefinition(tableDefinition, "(${LAST_WRITE.name} > ${LAST_PROPAGATE.name})")
-
+                    .name(prefix + "_last_propagate_idx")
+                    .ifNotExists()
 
             tableDefinition.addIndexes(
                     idIndex,
