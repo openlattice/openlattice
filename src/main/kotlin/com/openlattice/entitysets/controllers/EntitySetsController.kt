@@ -26,6 +26,7 @@ import com.google.common.collect.Lists
 import com.google.common.collect.Maps
 import com.openlattice.auditing.*
 import com.openlattice.authorization.*
+import com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.authorization.util.AuthorizationUtils
 import com.openlattice.controllers.exceptions.ForbiddenException
@@ -65,6 +66,7 @@ import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.*
 import java.time.OffsetDateTime
 import java.util.*
+import java.util.stream.Collectors
 import javax.inject.Inject
 import kotlin.streams.asSequence
 
@@ -83,7 +85,6 @@ constructor(
         private val dgm: DataGraphManager,
         private val spm: SecurePrincipalsManager,
         private val authzHelper: EdmAuthorizationHelper,
-        private val securableObjectTypes: SecurableObjectResolveTypeService,
         private val deletionManager: DataDeletionManager,
         private val entitySetManager: EntitySetManager
 ) : EntitySetsApi, AuthorizingComponent, AuditingComponent {
@@ -141,21 +142,22 @@ constructor(
             consumes = [MediaType.APPLICATION_JSON_VALUE], produces = [MediaType.APPLICATION_JSON_VALUE]
     )
     override fun createEntitySets(@RequestBody entitySets: Set<EntitySet>): Map<String, UUID> {
+        checkPermissionsForCreate(entitySets)
+
         val dto = ErrorsDTO()
 
         val createdEntitySets = Maps.newHashMapWithExpectedSize<String, UUID>(entitySets.size)
-        val auditableEvents = Lists.newArrayList<AuditableEvent>()
+        val auditableEvents = Lists.newArrayListWithExpectedSize<AuditableEvent>(entitySets.size)
 
-        // TODO: Add access check to make sure user can create entity sets.
         for (entitySet in entitySets) {
             try {
-                ensureValidEntitySet(entitySet)
-                entitySetManager.createEntitySet(Principals.getCurrentUser(), entitySet)
-                createdEntitySets[entitySet.name] = entitySet.id
+                // validity insurance is handled in this call
+                createdEntitySets[entitySet.name] = entitySetManager
+                        .createEntitySet(Principals.getCurrentUser(), entitySet)
 
                 auditableEvents.add(
                         AuditableEvent(
-                                spm.getCurrentUserId(),
+                                spm.currentUserId,
                                 AclKey(entitySet.id),
                                 AuditEventType.CREATE_ENTITY_SET,
                                 "Created entity set through EntitySetApi.createEntitySets",
@@ -208,7 +210,7 @@ constructor(
 
         val now = OffsetDateTime.now()
         val events = entitySets.map { AuditableEvent(
-                spm.getCurrentUserId(),
+                spm.currentUserId,
                 AclKey(it.key),
                 AuditEventType.READ_ENTITY_SET,
                 "EntitySet read through EntitySetsApi.getEntitySetsById",
@@ -237,7 +239,7 @@ constructor(
 
         val now = OffsetDateTime.now()
         val events = entitySets.map { AuditableEvent(
-                spm.getCurrentUserId(),
+                spm.currentUserId,
                 AclKey(it.key),
                 AuditEventType.READ_ENTITY_SET,
                 "EntitySet read through EntitySetsApi.getEntitySetsByName",
@@ -258,7 +260,7 @@ constructor(
 
         recordEvent(
                 AuditableEvent(
-                        spm.getCurrentUserId(),
+                        spm.currentUserId,
                         AclKey(entitySetId),
                         AuditEventType.READ_ENTITY_SET,
                         "Entity set read through EntitySetApi.getEntitySet",
@@ -275,17 +277,8 @@ constructor(
     @Timed
     @RequestMapping(path = [ALL + ID_PATH], method = [RequestMethod.DELETE])
     override fun deleteEntitySet(@PathVariable(ID) entitySetId: UUID): Int {
-        ensureOwnerAccess(AclKey(entitySetId))
-        val entitySet = entitySetManager.getEntitySet(entitySetId)!!
-
+        val entitySet = checkPermissionsForDelete(entitySetId)
         ensureEntitySetCanBeDeleted(entitySet)
-
-        val entityType = edmManager.getEntityType(entitySet.entityTypeId)
-        val authorizedPropertyTypes = authzHelper
-                .getAuthorizedPropertyTypes(entitySetId, EnumSet.of(Permission.OWNER))
-        if (!authorizedPropertyTypes.keys.containsAll(entityType.properties)) {
-            throw ForbiddenException("You shall not pass!")
-        }
 
         // linking entitysets have no entities or associations
         val deleted = if (!entitySet.isLinking) {
@@ -293,16 +286,17 @@ constructor(
             deletionManager.clearOrDeleteEntitySetIfAuthorized(
                     entitySetId, DeleteType.Hard, Principals.getCurrentPrincipals()
             )
-        } else WriteEvent(System.currentTimeMillis(), 1)
-
-        entitySetManager.deleteEntitySet(entitySetId)
-        securableObjectTypes.deleteSecurableObjectType(AclKey(entitySetId))
+        } else {
+            WriteEvent(System.currentTimeMillis(), 1)
+        }
 
         deleteAuditEntitySetsForId(entitySetId)
 
+        entitySetManager.deleteEntitySet(entitySetId)
+
         recordEvent(
                 AuditableEvent(
-                        spm.getCurrentUserId(),
+                        spm.currentUserId,
                         AclKey(entitySetId),
                         AuditEventType.DELETE_ENTITY_SET,
                         "Entity set deleted through EntitySetApi.deleteEntitySet",
@@ -356,7 +350,7 @@ constructor(
 
         recordEvent(
                 AuditableEvent(
-                        spm.getCurrentUserId(),
+                        spm.currentUserId,
                         AclKey(entitySetId),
                         AuditEventType.UPDATE_ENTITY_SET,
                         "Entity set metadata updated through EntitySetApi.updateEntitySetMetadata",
@@ -450,7 +444,7 @@ constructor(
 
         recordEvent(
                 AuditableEvent(
-                        spm.getCurrentUserId(),
+                        spm.currentUserId,
                         AclKey(entitySetId, propertyTypeId),
                         AuditEventType.UPDATE_ENTITY_SET_PROPERTY_METADATA,
                         "Entity set property metadata updated through EntitySetApi.updateEntitySetPropertyMetadata",
@@ -479,7 +473,7 @@ constructor(
 
         recordEvent(
                 AuditableEvent(
-                        spm.getCurrentUserId(),
+                        spm.currentUserId,
                         AclKey(entitySetId),
                         AuditEventType.UPDATE_ENTITY_SET,
                         "Entity set data expiration policy removed through EntitySetApi.removeDataExpirationPolicy",
@@ -548,48 +542,20 @@ constructor(
         )
     }
 
-    private fun ensureValidEntitySet(entitySet: EntitySet) {
-        Preconditions.checkArgument(
-                edmManager.checkEntityTypeExists(entitySet.entityTypeId),
-                "Entity Set Type does not exists."
-        )
-
-        if (entitySet.isLinking) {
-            entitySet.linkedEntitySets.forEach { linkedEntitySetId ->
-                Preconditions.checkArgument(
-                        entitySetManager.getEntityTypeByEntitySetId(linkedEntitySetId).id == entitySet.entityTypeId,
-                        "Entity type of linked entity sets must be the same as of the linking entity set"
-                )
-                Preconditions.checkArgument(
-                        !entitySetManager.getEntitySet(linkedEntitySetId)!!.isLinking,
-                        "Cannot add linking entity set as linked entity set."
-                )
-            }
-        }
-    }
-
     private fun deleteAuditEntitySetsForId(entitySetId: UUID) {
         val aclKey = AclKey(entitySetId)
-
-        val propertyTypes = aresManager.auditingTypes.propertyTypes
 
         aresManager.getAuditEdgeEntitySets(aclKey).forEach {
             deletionManager.clearOrDeleteEntitySet(it, DeleteType.Hard)
             entitySetManager.deleteEntitySet(it)
-            securableObjectTypes.deleteSecurableObjectType(AclKey(it))
         }
 
         aresManager.getAuditRecordEntitySets(aclKey).forEach {
             deletionManager.clearOrDeleteEntitySet(it, DeleteType.Hard)
             entitySetManager.deleteEntitySet(it)
-            securableObjectTypes.deleteSecurableObjectType(AclKey(it))
         }
 
         aresManager.removeAuditRecordEntitySetConfiguration(aclKey)
-    }
-
-    override fun getAuthorizationManager(): AuthorizationManager {
-        return authorizations
     }
 
     private fun ensureEntitySetCanBeDeleted(entitySet: EntitySet) {
@@ -601,5 +567,64 @@ constructor(
             throw ForbiddenException("You cannot delete entity set $entitySetId because it is an audit entity set.")
         }
 
+    }
+
+    private fun checkPermissionsForCreate(entitySets: Set<EntitySet>) {
+
+        // check read on organization
+        val organizationIds = entitySets.map { it.organizationId }.toSet()
+
+        val authorizedOrganizationIds = authorizations
+                .accessChecksForPrincipals(
+                        organizationIds.map { AccessCheck(AclKey(it), READ_PERMISSION) }.toSet(),
+                        Principals.getCurrentPrincipals()
+                )
+                .filter { it.permissions.contains(Permission.READ) }
+                .map { it.aclKey[0] }
+                .collect(Collectors.toSet())
+
+        if (authorizedOrganizationIds.size < organizationIds.size) {
+            throw ForbiddenException(
+                    "Can't create entity sets, missing read permissions on organizations with ids " +
+                            "${organizationIds.subtract(authorizedOrganizationIds)}"
+            )
+        }
+
+        // if it's a linking entity set, check link on linked entity sets
+        val linkedEntitySetIds = entitySets.filter { it.isLinking }.flatMap { it.linkedEntitySets }.toSet()
+
+        val authorizedLinkedEntitySetIds = authorizations
+                .accessChecksForPrincipals(
+                        linkedEntitySetIds.map { AccessCheck(AclKey(it), EnumSet.of(Permission.LINK)) }.toSet(),
+                        Principals.getCurrentPrincipals()
+                )
+                .filter { it.permissions.contains(Permission.LINK) }
+                .map { it.aclKey[0] }
+                .collect(Collectors.toSet())
+
+        if (authorizedLinkedEntitySetIds.size < linkedEntitySetIds.size) {
+            throw ForbiddenException(
+                    "Can't create linking entity entity sets, missing link permissions on linked entity sets with " +
+                            "ids ${linkedEntitySetIds.subtract(authorizedLinkedEntitySetIds)}"
+            )
+        }
+    }
+
+    private fun checkPermissionsForDelete(entitySetId: UUID): EntitySet {
+        ensureOwnerAccess(AclKey(entitySetId))
+
+        val entitySet = entitySetManager.getEntitySet(entitySetId)!!
+        val entityType = edmManager.getEntityType(entitySet.entityTypeId)
+
+        val authorizedPropertyTypes = authzHelper.getAuthorizedPropertyTypes(entitySetId, EnumSet.of(Permission.OWNER))
+        if (!authorizedPropertyTypes.keys.containsAll(entityType.properties)) {
+            throw ForbiddenException("You shall not pass!")
+        }
+
+        return entitySet
+    }
+
+    override fun getAuthorizationManager(): AuthorizationManager {
+        return authorizations
     }
 }
