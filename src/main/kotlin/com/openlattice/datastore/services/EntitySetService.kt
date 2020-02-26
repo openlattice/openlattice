@@ -106,7 +106,7 @@ open class EntitySetService(
             partitionManager.allocatePartitions(entitySet)
         }
 
-        val entityType = Util.getSafely(entityTypes, entitySet.entityTypeId)
+        val entityType = entityTypes.getValue(entitySet.entityTypeId)
 
         if (entityType.category == SecurableObjectType.AssociationType) {
             entitySet.addFlag(EntitySetFlag.ASSOCIATION)
