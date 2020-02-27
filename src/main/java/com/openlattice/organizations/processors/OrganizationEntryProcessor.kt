@@ -13,15 +13,16 @@ private val logger = LoggerFactory.getLogger(OrganizationEntryProcessor::class.j
  */
 
 class OrganizationEntryProcessor(
-        val update: (Organization) -> Unit
-) : AbstractRhizomeEntryProcessor<UUID, Organization, Void?>() {
+        val update: (Organization) -> Any?
+) : AbstractRhizomeEntryProcessor<UUID, Organization, Any?>() {
 
-    override fun process(entry: MutableMap.MutableEntry<UUID, Organization?>): Void? {
+    override fun process(entry: MutableMap.MutableEntry<UUID, Organization?>): Any? {
         val organization = entry.value
         if (organization != null) {
 //            (update as (organization: Organization) -> Unit) (organization)
-            update(organization)
+            val value = update(organization)
             entry.setValue(organization)
+            return value
         } else {
             logger.warn("Organization not found when trying to update value.")
         }
