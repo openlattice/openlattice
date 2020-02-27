@@ -1,0 +1,36 @@
+fqnMap:
+  "nc.PersonEthnicity": "1407ac70-ea63-4879-aca4-6722034f0cda"
+  "nc.PersonRace": "f950d05a-f4f2-451b-8c6d-56e78bba8b42"
+  "nc.PersonBirthDate": "1e6ff0f0-0545-4368-b878-677823459e57"
+  "nc.PersonSurName": "7b038634-a0b4-4ce1-a04f-85d1775937aa"
+  "nc.PersonMiddleName": "d0935a7e-efd3-4903-b673-0869ef527dea"
+  "nc.PersonSex": "6ec154f8-a4a1-4df2-8c57-d98cbac1478e"
+  "nc.PersonGivenName": "e9a0b4dc-5298-47c1-8837-20af172379a5"
+  "nc.SSN": "481f59e4-e146-4963-a837-4f4e514df8b7"
+
+people:
+  personA:
+    "e9a0b4dc-5298-47c1-8837-20af172379a5": ["Fulano"]
+    "7b038634-a0b4-4ce1-a04f-85d1775937aa": ["de Tal"]
+    "d0935a7e-efd3-4903-b673-0869ef527dea": ["Hector"]
+    "1e6ff0f0-0545-4368-b878-677823459e57": ["1986-08-28"]
+    "481f59e4-e146-4963-a837-4f4e514df8b7": ["5563373627"]
+    "6ec154f8-a4a1-4df2-8c57-d98cbac1478e": ["M"]
+    "f950d05a-f4f2-451b-8c6d-56e78bba8b42": ["White"]
+    "1407ac70-ea63-4879-aca4-6722034f0cda": ["hispanic"]
+  personB:
+    "e9a0b4dc-5298-47c1-8837-20af172379a5": ["John"]
+    "7b038634-a0b4-4ce1-a04f-85d1775937aa": ["Doe"]
+    "d0935a7e-efd3-4903-b673-0869ef527dea": ["P"]
+    "1e6ff0f0-0545-4368-b878-677823459e57": ["2015-03-13"]
+    "481f59e4-e146-4963-a837-4f4e514df8b7": ["1234567890"]
+    "6ec154f8-a4a1-4df2-8c57-d98cbac1478e": ["M"]
+    "f950d05a-f4f2-451b-8c6d-56e78bba8b42": ["White"]
+    "1407ac70-ea63-4879-aca4-6722034f0cda": ["nonhispanic"]
+comparisons:
+- lhs: "personA"
+  rhs: "personA"
+  features: [1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+  score: 0.9831507802009583
+
+
