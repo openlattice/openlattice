@@ -3,6 +3,7 @@ package com.openlattice.organizations
 import com.auth0.json.mgmt.users.User
 import com.google.common.collect.ImmutableSet
 import com.google.common.collect.Iterables
+import com.google.common.collect.Sets
 import com.google.common.eventbus.EventBus
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
@@ -196,6 +197,7 @@ class HazelcastOrganizationService(
         securePrincipalsManager.updateTitle(aclKey, title)
         organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
             it.securablePrincipal.title = title
+            null
         })
         eventBus.post(OrganizationUpdatedEvent(organizationId, Optional.of(title), Optional.empty()))
     }
@@ -205,6 +207,7 @@ class HazelcastOrganizationService(
         securePrincipalsManager.updateDescription(aclKey, description)
         organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
             it.securablePrincipal.description = description
+            null
         })
         eventBus.post(OrganizationUpdatedEvent(organizationId, Optional.empty(), Optional.of(description)))
     }
@@ -246,18 +249,21 @@ class HazelcastOrganizationService(
             profiles: Map<Principal, Map<String, Set<String>>> = members
                     .associateWith { getAppMetadata(users.getValue(it.id)) }
     ) {
-        addMembers(AclKey(organizationId), members, profiles)
-        val securablePrincipals = securePrincipalsManager.getSecurablePrincipals(members)
-        eventBus.post(
-                MembersAddedToOrganizationEvent(organizationId, SecurablePrincipalList(securablePrincipals.toMutableList()))
-        )
+        val newMembers = addMembers(AclKey(organizationId), members, profiles)
+
+        if (newMembers.isNotEmpty()) {
+            val securablePrincipals = securePrincipalsManager.getSecurablePrincipals(newMembers)
+            eventBus.post(
+                    MembersAddedToOrganizationEvent(organizationId, SecurablePrincipalList(securablePrincipals.toMutableList()))
+            )
+        }
     }
 
     private fun addMembers(
             orgAclKey: AclKey,
             members: Set<Principal>,
             profiles: Map<Principal, Map<String, Set<String>>>
-    ) {
+    ): Set<Principal> {
         require(orgAclKey.size == 1) { "Organization acl key should only be of length 1" }
 
         val nonUserPrincipals = members.filter { it.type != PrincipalType.USER }
@@ -265,10 +271,17 @@ class HazelcastOrganizationService(
         val organizationId = orgAclKey[0]
 
 
-        organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
-            it.members.addAll(members)
-        })
-        grantOrganizationPrincipals(organizationId, members, orgAclKey, profiles)
+        val newMembers: Set<Principal> = organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
+            val newMembers = members.filter { member -> !it.members.contains(member) }.toSet()
+            it.members.addAll(newMembers)
+            return@OrganizationEntryProcessor newMembers
+        }) as Set<Principal>
+
+        if (newMembers.isNotEmpty()) {
+            grantOrganizationPrincipals(organizationId, newMembers, orgAclKey, profiles)
+        }
+
+        return newMembers
     }
 
     private fun grantOrganizationPrincipals(
@@ -512,18 +525,21 @@ class HazelcastOrganizationService(
     fun updateRoleGrant(organizationId: UUID, roleId: UUID, grant: Grant) {
         organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
             it.grants.getOrPut(roleId) { mutableMapOf() }[grant.grantType] = grant
+            null
         })
     }
 
     fun addConnections(organizationId: UUID, connections: Set<String>) {
         organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
             it.connections += connections
+            null
         })
     }
 
     fun removeConnections(organizationId: UUID, connections: Set<String>) {
         organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
             it.connections -= connections
+            null
         })
     }
 
