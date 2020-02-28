@@ -3718,6 +3718,27 @@ paths:
   ##################
   
   /shuttle/integration/definition/{integrationName}:
+    get:
+      summary: Gets an existing integration definition
+      operationId: readIntegrationDefinition
+      parameters:
+        - name: integrationName
+          in: path
+          required: true
+          schema:
+            type: string
+      tags:
+        - shuttle
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Integration"
     post:
       summary: Creates a new integration definition for running recurring integrations
       operationId: createIntegrationDefinition
@@ -3746,6 +3767,140 @@ paths:
               schema:
                 type: string
                 format: uuid
+    patch:
+      summary: Replaces any number of fields within an existing integration definition
+      operationId: updateIntegrationDefinition
+      parameters:
+      - name: integrationName
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IntegrationUpdate"
+      tags:
+        - shuttle
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+    delete:
+      summary: Replaces any number of fields within an existing integration definition
+      operationId: deleteIntegrationDefinition
+      parameters:
+        - name: integrationName
+          in: path
+          required: true
+          schema:
+            type: string
+      tags:
+        - shuttle
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+  /shuttle/integration/definition/{integrationName}/{integrationKey}:
+    get:
+      summary: Enqueues an integration on Shuttle Server for a given integration
+      operationId: enqueueIntegration
+      parameters:
+        - name: integrationName
+          description: the name of the integration to be run
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: integrationKey
+          description: the unique id used to authenticate an integration run
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      tags:
+        - shuttle
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: string
+                format: uuid
+  /shuttle/integration/status/{jobId}:
+    delete:
+      summary: Deletes an integration job status from the integrationJobs map
+      operationId: deleteIntegrationJobStatus
+      parameters:
+      - name: jobId
+        description: the unique id of the integration job
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      tags:
+        - shuttle
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success        
+    get:
+      summary: Polls the status of an integration
+      operationId: pollIntegration
+      parameters:
+        - name: jobId
+          description: the unique id of the integration job
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      tags:
+        - shuttle
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntegrationStatus"
+  /shuttle/integration/status:
+    get:
+      summary: Polls the statuses of all running integrations
+      operationId: pollAllIntegrations
+      tags:
+        - shuttle
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  $ref: "#/components/schemas/IntegrationJob"
+  
+      
       
 
 components:
@@ -4852,38 +5007,112 @@ components:
         count:
           type: integer
     Integration:
+      description: Represents a data integration, including all fields required to run the integration.
       type: object
       properties:
         key:
+          description: a unique ID used for authorizing a call to run an integration
           type: string
           format: uuid
         environment:
-          $ref: "#/components/schemas/Environment"
+          description: the retrofit environment (e.g. production, local)
+          type: string
+          enum: [ PROD_INTEGRATION, STAGING_INTEGRATION, LOCAL ]
         s3Bucket:
+          description: the url of the s3bucket to be used
           type: string
         contacts:
+          description: the set of email addresses of those responsible for the integration
           type: array
           items:
             type: string
         organizationId:
+          description: the id of the organization that owns the integration
           type: string
           format: uuid
         entitySetId:
+          description: the id of the entity set that stores the logs for this integration
           type: string
           format: uuid
         maxConnections:
+          description: maximum number of connections to postgres allowed for this integration
           type: integer
         callbackUrls:
+          description: urls to receive a POST when integration has completed
           type: array
           items:
             type: string
         flightPlanParameters:
-          $ref: "#/components/schemas/FlightPlanParameters"
-    # Environment:
-    #   xxx
-    # 
-    # FlightPlanParameters:
-    #   xx
+          description: a map from [Flight] name to [FlightPlanParameters]
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/FlightPlanParameters"
+    FlightPlanParameters:
+      description: Represents the parameters required to create a flight plan (i.e. a Map<Flight, Payload>)
+      type: object
+      properties:
+        sql:
+          description: the sql query to be used to pull cleaned data from postgres
+          type: string
+        src:
+          description: postgres data source for pulling clean data
+          type: object
+          additionalProperties:
+            type: string
+        srcPrimaryKeyColumns:
+          description: the columns that are primary keys in the cleaned data
+          type: array
+          items:
+            type: string
+        path:
+          description: the path to the flight yaml (i.e. https://raw.githubusercontent.com/pathToFlight.yaml)
+          type: string
+    IntegrationStatus:
+      type: string
+      enum: [IN_PROGRESS, SUCCEEDED, FAILED, QUEUED, FAILED_TO_START]
+    IntegrationJob:
+      type: object
+      properties:
+        name: 
+          type: string
+        status:
+          $ref: "#/components/schemas/IntegrationStatus"
+    IntegrationUpdate:
+      type: object
+      properties:
+        environment:
+          description: the retrofit environment (e.g. production, local)
+          type: string
+          enum: [ PROD_INTEGRATION, STAGING_INTEGRATION, LOCAL ]
+        s3Bucket:
+          description: the url of the s3bucket to be used
+          type: string
+        contacts:
+          description: the set of email addresses of those responsible for the integration
+          type: array
+          items:
+            type: string
+        organizationId:
+          description: the id of the organization that owns the integration
+          type: string
+          format: uuid
+        maxConnections:
+          description: maximum number of connections to postgres allowed for this integration
+          type: integer
+        callbackUrls:
+          description: urls to receive a POST when integration has completed
+          type: array
+          items:
+            type: string
+        flightPlanParameters:
+          description: a map from [Flight] name to [FlightPlanParameters]
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/FlightPlanParameters"
+      
+          
+          
+        
         
     
 tags:
