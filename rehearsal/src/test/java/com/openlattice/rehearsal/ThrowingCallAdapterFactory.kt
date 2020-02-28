@@ -67,15 +67,21 @@ class ThrowingCallAdapterFactory : CallAdapter.Factory() {
 class GeneralException(message: String) : java.lang.Exception(message)
 
 inline fun assertException(fqn: () -> Any, expectedMsg: String) {
+    assertException(fqn, listOf(expectedMsg))
+}
+
+inline fun assertException(fqn: () -> Any, expectedMsgs: List<String>) {
     try {
         fqn()
         Assert.fail("Should have thrown Exception but did not!")
     } catch (e: Exception) {
-        val actualMsg = if(e is UndeclaredThrowableException) {
+        val actualMsg = if (e is UndeclaredThrowableException) {
             e.undeclaredThrowable.message!!
         } else {
             e.message!!
         }
-        Assert.assertTrue(actualMsg.contains(expectedMsg, true))
+        expectedMsgs.forEach {
+            Assert.assertTrue(actualMsg.contains(it, true))
+        }
     }
 }

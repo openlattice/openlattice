@@ -24,11 +24,11 @@ import com.kryptnostic.rhizome.configuration.ConfigurationConstants
 import org.apache.commons.lang3.StringUtils
 import org.springframework.context.annotation.AnnotationConfigApplicationContext
 
-class TestServer(pods: Class<*>) {
+class TestServer(vararg pods: Class<*>) {
     internal val context = AnnotationConfigApplicationContext()
 
     init {
-        this.context.register(pods)
+        this.context.register(*pods)
     }
 
     fun sprout(vararg activeProfiles: String) {
