@@ -23,6 +23,7 @@ package com.openlattice.datastore.services
 import com.codahale.metrics.annotation.Timed
 import com.openlattice.auditing.AuditRecordEntitySetsManager
 import com.openlattice.authorization.Principal
+import com.openlattice.data.WriteEvent
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.edm.set.EntitySetFlag
@@ -36,7 +37,7 @@ interface EntitySetManager {
 
     fun createEntitySet(principal: Principal, entitySet: EntitySet): UUID
 
-    fun deleteEntitySet(entitySetId: UUID)
+    fun deleteEntitySet(entitySet: EntitySet): WriteEvent
 
     fun getEntitySet(entitySetId: UUID): EntitySet?
 
