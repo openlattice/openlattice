@@ -36,7 +36,6 @@ import com.openlattice.controllers.util.ApiExceptions
 import com.openlattice.data.DataDeletionManager
 import com.openlattice.data.DataGraphManager
 import com.openlattice.data.DeleteType
-import com.openlattice.data.WriteEvent
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.EntitySet
@@ -280,19 +279,7 @@ constructor(
         val entitySet = checkPermissionsForDelete(entitySetId)
         ensureEntitySetCanBeDeleted(entitySet)
 
-        // linking entitysets have no entities or associations
-        val deleted = if (!entitySet.isLinking) {
-            // associations need to be deleted first, because edges are deleted in DataGraphManager.deleteEntitySet call
-            deletionManager.clearOrDeleteEntitySetIfAuthorized(
-                    entitySetId, DeleteType.Hard, Principals.getCurrentPrincipals()
-            )
-        } else {
-            WriteEvent(System.currentTimeMillis(), 1)
-        }
-
-        deleteAuditEntitySetsForId(entitySetId)
-
-        entitySetManager.deleteEntitySet(entitySetId)
+        val deleted = entitySetManager.deleteEntitySet(entitySet)
 
         recordEvent(
                 AuditableEvent(
@@ -540,22 +527,6 @@ constructor(
                 entitySetIds.all { !entitySetManager.getEntitySet(it)!!.isLinking },
                 "Cannot add linking entity set as linked entity set."
         )
-    }
-
-    private fun deleteAuditEntitySetsForId(entitySetId: UUID) {
-        val aclKey = AclKey(entitySetId)
-
-        aresManager.getAuditEdgeEntitySets(aclKey).forEach {
-            deletionManager.clearOrDeleteEntitySet(it, DeleteType.Hard)
-            entitySetManager.deleteEntitySet(it)
-        }
-
-        aresManager.getAuditRecordEntitySets(aclKey).forEach {
-            deletionManager.clearOrDeleteEntitySet(it, DeleteType.Hard)
-            entitySetManager.deleteEntitySet(it)
-        }
-
-        aresManager.removeAuditRecordEntitySetConfiguration(aclKey)
     }
 
     private fun ensureEntitySetCanBeDeleted(entitySet: EntitySet) {
