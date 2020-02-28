@@ -23,12 +23,10 @@ package com.openlattice.assembler.pods
 
 import com.kryptnostic.rhizome.pods.ConfigurationLoader
 import com.openlattice.assembler.AssemblerConfiguration
-import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import javax.inject.Inject
 
-private val logger = LoggerFactory.getLogger(AssemblerConfigurationPod::class.java)
 
 /**
  *
@@ -42,6 +40,6 @@ class AssemblerConfigurationPod {
 
     @Bean
     fun assemblerConfiguration(): AssemblerConfiguration {
-        return configurationLoader.logAndLoad( "assembler", AssemblerConfiguration::class.java)
+        return configurationLoader.logAndLoad("assembler", AssemblerConfiguration::class.java)
     }
 }

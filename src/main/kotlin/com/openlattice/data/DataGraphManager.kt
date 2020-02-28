@@ -78,7 +78,8 @@ interface DataGraphManager {
     ): Map<UUID, Map<UUID, Map<UUID, Map<FullQualifiedName, Set<Any>>>>>
 
     /**
-     * Deletes property data, id, edges of association entities in batches.
+     * Clears property data, id, edges of association entities of the provided DataEdgeKeys in batches.
+     * Note: it only clears edge, not src or dst entities.
      */
     fun clearAssociationsBatch(
             entitySetId: UUID,
@@ -87,7 +88,8 @@ interface DataGraphManager {
     ): List<WriteEvent>
 
     /**
-     * Deletes property data, id, edges of association entities in batches.
+     * Deletes property data, id, edges of association entities of the provided DataEdgeKeys in batches.
+     * Note: it only deletes edge, not src or dst entities.
      */
     fun deleteAssociationsBatch(
             entitySetId: UUID,
@@ -182,8 +184,21 @@ interface DataGraphManager {
     fun getNeighborEntitySetIds(entitySetIds: Set<UUID>): Set<UUID>
 
     fun getEdgesAndNeighborsForVertex(entitySetId: UUID, entityKeyId: UUID): Stream<Edge>
-    fun getEdgeKeysOfEntitySet(entitySetId: UUID): PostgresIterable<DataEdgeKey>
-    fun getEdgesConnectedToEntities(entitySetId: UUID, entityKeyIds: Set<UUID>, includeClearedEdges: Boolean): PostgresIterable<DataEdgeKey>
+
+    /**
+     * Returns all [DataEdgeKey]s where either src, dst and/or edge entity set ids are equal the requested entitySetId.
+     * If includeClearedEdges is set to true, it will also return cleared (version < 0) entities.
+     */
+    fun getEdgeKeysOfEntitySet(entitySetId: UUID, includeClearedEdges: Boolean): PostgresIterable<DataEdgeKey>
+
+    /**
+     * Returns all [DataEdgeKey]s that include requested entityKeyIds either as src, dst and/or edge with the requested
+     * entity set id.
+     * If includeClearedEdges is set to true, it will also return cleared (version < 0) entities.
+     */
+    fun getEdgesConnectedToEntities(
+            entitySetId: UUID, entityKeyIds: Set<UUID>, includeClearedEdges: Boolean
+    ): PostgresIterable<DataEdgeKey>
     fun getExpiringEntitiesFromEntitySet(entitySetId: UUID,
                                          expirationPolicy: DataExpiration,
                                          dateTime: OffsetDateTime,
