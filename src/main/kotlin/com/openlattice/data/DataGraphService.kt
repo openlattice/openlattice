@@ -136,8 +136,8 @@ open class DataGraphService(
         return graphService.getEdgesAndNeighborsForVertex(entitySetId, entityKeyId)
     }
 
-    override fun getEdgeKeysOfEntitySet(entitySetId: UUID): PostgresIterable<DataEdgeKey> {
-        return graphService.getEdgeKeysOfEntitySet(entitySetId)
+    override fun getEdgeKeysOfEntitySet(entitySetId: UUID, includeClearedEdges: Boolean): PostgresIterable<DataEdgeKey> {
+        return graphService.getEdgeKeysOfEntitySet(entitySetId, includeClearedEdges)
     }
 
     override fun getEdgesConnectedToEntities(entitySetId: UUID, entityKeyIds: Set<UUID>, includeClearedEdges: Boolean)
