@@ -37,9 +37,6 @@ import com.openlattice.auditing.AuditingConfiguration
 import com.openlattice.auditing.AuditingTypes
 import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.SecurableObjectType
-import com.openlattice.data.DataDeletionManager
-import com.openlattice.data.DeleteType
-import com.openlattice.data.WriteEvent
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.datastore.util.Util
 import com.openlattice.edm.EntitySet
@@ -74,7 +71,6 @@ open class EntitySetService(
         private val authorizations: AuthorizationManager,
         private val partitionManager: PartitionManager,
         private val edm: EdmManager,
-        private val deletionManager: DataDeletionManager,
         auditingConfiguration: AuditingConfiguration
 ) : EntitySetManager {
 
@@ -200,19 +196,7 @@ open class EntitySetService(
         }
     }
 
-    override fun deleteEntitySet(entitySet: EntitySet): WriteEvent {
-        /* Delete first entity set data */
-        val deleted = if (!entitySet.isLinking) {
-            // associations need to be deleted first, because edges are deleted in DataGraphManager.deleteEntitySet call
-            deletionManager.clearOrDeleteEntitySetIfAuthorized(
-                    entitySet.id, DeleteType.Hard, Principals.getCurrentPrincipals()
-            )
-        } else {
-            // linking entitysets have no entities or associations
-            WriteEvent(System.currentTimeMillis(), 1)
-        }
-
-
+    override fun deleteEntitySet(entitySet: EntitySet) {
         // If this entity set is linked to a linking entity set, we need to collect all the linking ids of the entity
         // set first in order to be able to reindex those, before entity data is unavailable
         if (!entitySet.isLinking) {
@@ -224,8 +208,6 @@ open class EntitySetService(
 
         eventBus.post(EntitySetDeletedEvent(entitySet.id, entityType.id))
         logger.info("Entity set ${entitySet.name} (${entitySet.id}) deleted successfully.")
-
-        return deleted
     }
 
     private fun deleteEntitySet(entitySet: EntitySet, entityType: EntityType) {
@@ -240,28 +222,8 @@ open class EntitySetService(
                     entitySetPropertyMetadata.delete(EntitySetPropertyKey(aclKey[0], aclKey[1]))
                 }
 
-        deleteAuditEntitySetsForId(entitySet.id)
-
         aclKeyReservations.release(entitySet.id)
         Util.deleteSafely(entitySets, entitySet.id)
-    }
-
-    private fun deleteAuditEntitySetsForId(entitySetId: UUID) {
-        val aclKey = AclKey(entitySetId)
-
-        aresManager.getAuditEdgeEntitySets(aclKey).forEach {
-            val auditEdgeEntitySet = Util.getSafely(entitySets, it)
-            deletionManager.clearOrDeleteEntitySet(it, DeleteType.Hard)
-            deleteEntitySet(auditEdgeEntitySet)
-        }
-
-        aresManager.getAuditRecordEntitySets(aclKey).forEach {
-            val auditEntitySet = Util.getSafely(entitySets, it)
-            deletionManager.clearOrDeleteEntitySet(it, DeleteType.Hard)
-            deleteEntitySet(auditEntitySet)
-        }
-
-        aresManager.removeAuditRecordEntitySetConfiguration(aclKey)
     }
 
     /**

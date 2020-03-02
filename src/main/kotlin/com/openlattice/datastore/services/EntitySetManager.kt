@@ -37,7 +37,7 @@ interface EntitySetManager {
 
     fun createEntitySet(principal: Principal, entitySet: EntitySet): UUID
 
-    fun deleteEntitySet(entitySet: EntitySet): WriteEvent
+    fun deleteEntitySet(entitySet: EntitySet)
 
     fun getEntitySet(entitySetId: UUID): EntitySet?
 
