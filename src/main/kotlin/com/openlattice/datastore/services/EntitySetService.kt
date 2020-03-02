@@ -312,6 +312,7 @@ open class EntitySetService(
         return entitySets.keySet(Predicates.equal(EntitySetMapstore.ENTITY_TYPE_ID_INDEX, entityTypeId))
     }
 
+    @Suppress("UNCHECKED_CAST")
     override fun getEntitySetIdsWithFlags(entitySetIds: Set<UUID>, filteringFlags: Set<EntitySetFlag>): Set<UUID> {
         return entitySets.aggregate(
                 EntitySetsFlagFilteringAggregator(filteringFlags),
@@ -328,6 +329,7 @@ open class EntitySetService(
         return edm.getEntityType(entityTypeId)
     }
 
+    @Suppress("UNCHECKED_CAST")
     override fun getEntityTypeIdsByEntitySetIds(entitySetIds: Set<UUID>): Map<UUID, UUID> {
         return entitySets.executeOnKeys(entitySetIds, GetEntityTypeFromEntitySetEntryProcessor()) as Map<UUID, UUID>
     }
@@ -362,6 +364,7 @@ open class EntitySetService(
     }
 
     @Timed
+    @Suppress("UNCHECKED_CAST")
     override fun getPropertyTypesForEntitySet(entitySetId: UUID): Map<UUID, PropertyType> {
         val maybeEtId = entitySets.executeOnKey(entitySetId, GetEntityTypeFromEntitySetEntryProcessor())
                 as? UUID
@@ -389,6 +392,7 @@ open class EntitySetService(
         }
     }
 
+    @Suppress("UNCHECKED_CAST")
     override fun getAllEntitySetPropertyMetadataForIds(
             entitySetIds: Set<UUID>
     ): Map<UUID, Map<UUID, EntitySetPropertyMetadata>> {
