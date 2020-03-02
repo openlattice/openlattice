@@ -5012,7 +5012,7 @@ components:
         maxConnections:
           description: maximum number of connections to postgres allowed for this integration
           type: integer
-        callbackUrls:
+        callback:
           description: urls to receive a POST when integration has completed
           type: array
           items:
