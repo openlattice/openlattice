@@ -3,10 +3,10 @@ package transforms;
 import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.openlattice.client.RetrofitFactory;
 import com.openlattice.retrofit.RhizomeByteConverterFactory;
 import com.openlattice.retrofit.RhizomeCallAdapterFactory;
 import com.openlattice.retrofit.RhizomeJacksonConverterFactory;
-import com.openlattice.rhizome.proxy.RetrofitBuilders;
 import com.openlattice.shuttle.transformations.Transformation;
 import com.openlattice.shuttle.util.Constants;
 import retrofit2.Retrofit;
@@ -46,7 +46,7 @@ public class GeocoderTransform extends Transformation<Object> {
                 .addConverterFactory( new RhizomeByteConverterFactory() )
                 .addConverterFactory( new RhizomeJacksonConverterFactory( ObjectMappers.getJsonMapper() ) )
                 .addCallAdapterFactory( new RhizomeCallAdapterFactory() )
-                .client( RetrofitBuilders.okHttpClient().build() )
+                .client( RetrofitFactory.okHttpClient().build() )
                 .build().create( GeocodingApi.class );
     }
 
