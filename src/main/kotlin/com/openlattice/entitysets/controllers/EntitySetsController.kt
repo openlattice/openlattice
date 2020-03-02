@@ -36,6 +36,7 @@ import com.openlattice.controllers.util.ApiExceptions
 import com.openlattice.data.DataDeletionManager
 import com.openlattice.data.DataGraphManager
 import com.openlattice.data.DeleteType
+import com.openlattice.data.WriteEvent
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.EntitySet
@@ -167,6 +168,7 @@ constructor(
                         )
                 )
             } catch (e: Exception) {
+                deleteAuditEntitySetsForId(entitySet.id)
                 dto.addError(ApiExceptions.OTHER_EXCEPTION, entitySet.name + ": " + e.message)
             }
 
@@ -279,7 +281,19 @@ constructor(
         val entitySet = checkPermissionsForDelete(entitySetId)
         ensureEntitySetCanBeDeleted(entitySet)
 
-        val deleted = entitySetManager.deleteEntitySet(entitySet)
+        /* Delete first entity set data */
+        val deleted = if (!entitySet.isLinking) {
+            // associations need to be deleted first, because edges are deleted in DataGraphManager.deleteEntitySet call
+            deletionManager.clearOrDeleteEntitySetIfAuthorized(
+                    entitySet.id, DeleteType.Hard, Principals.getCurrentPrincipals()
+            )
+        } else {
+            // linking entitysets have no entities or associations
+            WriteEvent(System.currentTimeMillis(), 1)
+        }
+
+        deleteAuditEntitySetsForId(entitySetId)
+        entitySetManager.deleteEntitySet(entitySet)
 
         recordEvent(
                 AuditableEvent(
@@ -295,6 +309,24 @@ constructor(
         )
 
         return deleted.numUpdates
+    }
+
+    private fun deleteAuditEntitySetsForId(entitySetId: UUID) {
+        val aclKey = AclKey(entitySetId)
+
+        aresManager.getAuditEdgeEntitySets(aclKey).forEach {
+            val auditEdgeEntitySet = entitySetManager.getEntitySet(it)!!
+            deletionManager.clearOrDeleteEntitySet(it, DeleteType.Hard)
+            entitySetManager.deleteEntitySet(auditEdgeEntitySet)
+        }
+
+        aresManager.getAuditRecordEntitySets(aclKey).forEach {
+            val auditEntitySet = entitySetManager.getEntitySet(it)!!
+            deletionManager.clearOrDeleteEntitySet(it, DeleteType.Hard)
+            entitySetManager.deleteEntitySet(auditEntitySet)
+        }
+
+        aresManager.removeAuditRecordEntitySetConfiguration(aclKey)
     }
 
     @Timed
