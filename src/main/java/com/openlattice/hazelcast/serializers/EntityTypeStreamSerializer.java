@@ -118,7 +118,7 @@ public class EntityTypeStreamSerializer implements TestableSelfRegisteringStream
         final LinkedHashMap<UUID, LinkedHashSet<String>> propertyTags =
                 Maps.newLinkedHashMapWithExpectedSize( propertyTagKeys.size() );
         for ( UUID propertyTagKey : propertyTagKeys ) {
-            propertyTags.put( propertyTagKey, SetStreamSerializers.fastOrderedStringSetDeserializeAsArray( in ) );
+            propertyTags.put( propertyTagKey, SetStreamSerializers.fastOrderedStringSetDeserializeFromArray( in ) );
         }
 
         final Optional<UUID> baseType;

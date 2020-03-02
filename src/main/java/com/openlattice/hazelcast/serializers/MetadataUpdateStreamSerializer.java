@@ -96,7 +96,7 @@ public class MetadataUpdateStreamSerializer implements TestableSelfRegisteringSt
                     for ( UUID propertyTagKey : propertyTagKeys ) {
                         tags.put(
                                 propertyTagKey,
-                                SetStreamSerializers.fastOrderedStringSetDeserializeAsArray( input )
+                                SetStreamSerializers.fastOrderedStringSetDeserializeFromArray( input )
                         );
                     }
 
