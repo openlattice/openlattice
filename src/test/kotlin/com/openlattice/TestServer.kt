@@ -24,6 +24,7 @@ import com.google.common.eventbus.EventBus
 import com.hazelcast.core.HazelcastInstance
 import com.kryptnostic.rhizome.configuration.ConfigurationConstants
 import com.kryptnostic.rhizome.core.RhizomeApplicationServer
+import com.openlattice.assembler.pods.AssemblerConfigurationPod
 import com.openlattice.auditing.pods.AuditingConfigurationPod
 import com.openlattice.auth0.Auth0Pod
 import com.openlattice.datastore.constants.DatastoreProfiles
@@ -48,7 +49,8 @@ open class TestServer {
                 SharedStreamSerializersPod::class.java,
                 PostgresTablesPod::class.java,
                 AuditingConfigurationPod::class.java,
-                TestPod::class.java
+                TestPod::class.java,
+                AssemblerConfigurationPod::class.java
         )
 
         @JvmField
@@ -57,16 +59,16 @@ open class TestServer {
         @JvmField
         val hds: HikariDataSource
 
-
         init {
             testServer.sprout(ConfigurationConstants.Profiles.LOCAL_CONFIGURATION_PROFILE, PostgresPod.PROFILE,
                     DatastoreProfiles.MEDIA_LOCAL_PROFILE)
 
             hazelcastInstance = testServer.context.getBean(HazelcastInstance::class.java)
             hds = testServer.context.getBean(HikariDataSource::class.java)
+            val edm = PostgresEdmManager(hds, hazelcastInstance)
 
             testServer.context.getBean(EventBus::class.java)
-                    .register(PostgresEdmManager(hds, hazelcastInstance))
+                    .register(edm)
         }
     }
 }

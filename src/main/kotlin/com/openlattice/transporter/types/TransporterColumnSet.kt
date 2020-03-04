@@ -18,7 +18,9 @@ data class TransporterColumn(val srcCol: String, val destColName: String, val da
     fun destCol() = PostgresColumnDefinition(this.destColName, this.dataType)
 }
 
-data class TransporterColumnSet(val columns: Map<UUID, TransporterColumn>): Map<UUID, TransporterColumn> by columns {
+data class TransporterColumnSet(
+        val columns: Map<UUID, TransporterColumn>
+): Map<UUID, TransporterColumn> by columns {
     fun withProperties(properties: Collection<PropertyType>): TransporterColumnSet {
         val copy = columns.toMutableMap()
         properties.forEach {propertyType ->

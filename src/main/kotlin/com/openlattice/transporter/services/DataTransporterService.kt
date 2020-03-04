@@ -10,10 +10,7 @@ import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.EntitySet
-import com.openlattice.edm.events.ClearAllDataEvent
-import com.openlattice.edm.events.EntityTypeCreatedEvent
-import com.openlattice.edm.events.EntityTypeDeletedEvent
-import com.openlattice.edm.events.PropertyTypesAddedToEntityTypeEvent
+import com.openlattice.edm.events.*
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.edm.type.EntityType
 import com.openlattice.hazelcast.HazelcastMap
@@ -94,10 +91,13 @@ final class DataTransporterService(
             val ft = transporterState.submitToKey(entityTypeId, TransporterPropagateDataEntryProcessor(relevantEntitySets, partitions).init(acm))
             entitySetIds.count() to ft
         }
-        futures.forEach { it.second.get() }
         val setsPolled = futures.map { it.first }.sum()
-        val duration = timer.observeDuration()
-        logger.debug("Total poll duration time for {} entity sets in {} entity types: {} sec", setsPolled, futures.size, duration)
+        try {
+            futures.forEach { it.second.get() }
+        } finally {
+            val duration = timer.observeDuration()
+            logger.debug("Total poll duration time for {} entity sets in {} entity types: {} sec", setsPolled, futures.size, duration)
+        }
     }
 
     private fun validEntitySets(entityTypeId: UUID): Set<EntitySet> {
@@ -107,7 +107,15 @@ final class DataTransporterService(
 
     @Subscribe
     fun handleEntityTypeCreated(e: EntityTypeCreatedEvent) {
-        this.syncTable(e.entityType).get()
+        this.syncTable(e.entityType)
+    }
+
+    @Subscribe
+    fun handleAssociationTypeCreated(e: AssociationTypeCreatedEvent) {
+        val entityType = e.associationType.associationEntityType
+        if (entityType != null) {
+            this.syncTable(entityType)
+        }
     }
 
     @Subscribe

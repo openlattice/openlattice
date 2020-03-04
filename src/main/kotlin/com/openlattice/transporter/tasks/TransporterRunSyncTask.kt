@@ -11,13 +11,13 @@ class TransporterRunSyncTaskDependencies(
 ) : HazelcastTaskDependencies
 
 class TransporterRunSyncTask : HazelcastFixedRateTask<TransporterRunSyncTaskDependencies> {
-    val delay = 1L
+    val interval = 30L
     override fun getInitialDelay(): Long {
-        return delay
+        return 0L
     }
 
     override fun getPeriod(): Long {
-        return delay
+        return interval
     }
 
     override fun getTimeUnit(): TimeUnit {
@@ -30,7 +30,7 @@ class TransporterRunSyncTask : HazelcastFixedRateTask<TransporterRunSyncTaskDepe
     }
 
     override fun getName(): String {
-        return Task.TABLE_COPIER.name
+        return Task.TRANSPORTER_MATERIALIZE_DATA_REFRESH_TASK.name
     }
 
     override fun getDependenciesClass(): Class<out TransporterRunSyncTaskDependencies> {

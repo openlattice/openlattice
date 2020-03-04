@@ -22,11 +22,22 @@ class TransporterPropagateDataEntryProcessor(val entitySets: Set<EntitySet>, val
 {
     companion object {
         private val logger = LoggerFactory.getLogger(TransporterPropagateDataEntryProcessor::class.java)
-        val counter: Counter = Counter.build()
-                .namespace("transporter")
-                .name("rows_updated")
+        val id_counter: Counter = Counter.build()
+                .namespace("transporter_data")
+                .name("inserted_ids")
+                .help("Rows updated from the ids table in the transporter database")
+                .register()
+        val value_counter: Counter = Counter.build()
+                .namespace("transporter_data")
+                .name("updated_values")
                 .help("Rows updated in the transporter database")
                 .register()
+        val error_counter: Counter = Counter.build()
+                .namespace("transporter_data")
+                .name("errors")
+                .help("Errors occurred during copies to the transporter database")
+                .register()
+
     }
 
     @Transient
@@ -42,7 +53,6 @@ class TransporterPropagateDataEntryProcessor(val entitySets: Set<EntitySet>, val
             return
         }
         val tableName = tableName(entry.key)
-        val propertyIds = entry.value.columns.keys
         val entitySetIds = entitySets.map { it.id }.toSet()
         val transporter = acm.connect("transporter")
         entitySets.filter {
@@ -66,8 +76,8 @@ class TransporterPropagateDataEntryProcessor(val entitySets: Set<EntitySet>, val
                     ps.setArray(2, entitySetArray)
                     ps.executeUpdate()
                 }
-                val colUpdates = entry.value.map { propCol ->
-                    val query = updateOneBatchForProperty(tableName, propCol)
+                val colUpdates = entry.value.map { (id, col) ->
+                    val query = updateOneBatchForProperty(tableName, id, col)
                     lastSql = query
                     conn.prepareStatement(query).use { ps ->
                         ps.setArray(1, partitions)
@@ -75,10 +85,12 @@ class TransporterPropagateDataEntryProcessor(val entitySets: Set<EntitySet>, val
                         generateSequence { ps.executeUpdate() }.takeWhile { it > 0 }.sum()
                     }
                 }.sum()
-                counter.inc((idUpdates + colUpdates).toDouble())
                 logger.debug("Updated {} values in entity type table {}", colUpdates, tableName)
                 conn.commit()
+                id_counter.inc(idUpdates.toDouble())
+                value_counter.inc((colUpdates).toDouble())
             } catch (ex: Exception) {
+                error_counter.inc()
                 logger.error("Unable to update transporter: SQL: {}", lastSql, ex)
                 conn.rollback()
                 throw ex
