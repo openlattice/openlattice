@@ -42,6 +42,7 @@ import org.springframework.stereotype.Component;
 public class EdmAuthorizationHelper implements AuthorizingComponent {
     public static final EnumSet<Permission>  READ_PERMISSION  = EnumSet.of( Permission.READ );
     public static final EnumSet<Permission>  WRITE_PERMISSION = EnumSet.of( Permission.WRITE );
+    public static final EnumSet<Permission>  OWNER_PERMISSION = EnumSet.of( Permission.OWNER );
     private final       EdmManager           edm;
     private final       AuthorizationManager authz;
     private final       EntitySetManager     entitySetManager;

@@ -143,7 +143,7 @@ interface EntityDatastore {
      * @param authorizedPropertyTypes The property types the user is requested and is allowed to clear.
      * @return The number of properties cleared.
      */
-    fun clearEntityData(
+    fun clearEntityProperties(
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
