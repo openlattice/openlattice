@@ -26,6 +26,8 @@ import com.google.common.cache.CacheLoader
 import com.google.common.cache.LoadingCache
 import com.google.common.collect.*
 import com.openlattice.authorization.*
+import com.openlattice.authorization.EdmAuthorizationHelper.OWNER_PERMISSION
+import com.openlattice.authorization.EdmAuthorizationHelper.WRITE_PERMISSION
 import com.openlattice.data.*
 import com.openlattice.data.requests.EntitySetSelection
 import com.openlattice.data.requests.FileType
@@ -43,7 +45,6 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.junit.Assert
 import org.junit.BeforeClass
 import org.junit.Test
-import java.lang.reflect.UndeclaredThrowableException
 import java.time.*
 import java.util.*
 import kotlin.math.abs
@@ -1409,6 +1410,242 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         val essEdgeDst2 = EntitySetSelection(Optional.of(edgeDst2.properties))
         val loadedEdgeDstEntities2 = dataApi.loadSelectedEntitySetData(esEdgeDst2.id, essEdgeDst2, FileType.json).toList()
         Assert.assertEquals(0, loadedEdgeDstEntities2.size)
+    }
+
+    @Test
+    fun testDeleteEntitiesAndNeighborsAuthorizations() {
+        testDeleteEntitiesAndNeighborsAuthorizations(DeleteType.Soft)
+        testDeleteEntitiesAndNeighborsAuthorizations(DeleteType.Hard)
+    }
+
+    private fun testDeleteEntitiesAndNeighborsAuthorizations(deleteType: DeleteType) {
+        // create entity sets and data for es entity set being both src and dst
+        val et = createEntityType()
+        val src = createEntityType()
+        val edgeSrc = createEdgeEntityType()
+        val dst = createEntityType()
+        val edgeDst = createEdgeEntityType()
+
+        val es = createEntitySet(et)
+        val esDst = createEntitySet(dst)
+        val esEdgeDst = createEntitySet(edgeDst)
+        val esSrc = createEntitySet(src)
+        val esEdgeSrc = createEntitySet(edgeSrc)
+
+        // create association type with defining src and dst entity types
+        createAssociationType(edgeSrc, setOf(src), setOf(et))
+        createAssociationType(edgeDst, setOf(et), setOf(dst))
+
+        val testData = TestDataFactory.randomStringEntityData(numberOfEntries, et.properties).values.toList()
+        val testDataDst = TestDataFactory.randomStringEntityData(numberOfEntries, dst.properties).values.toList()
+        val testDataEdgeDst = TestDataFactory.randomStringEntityData(numberOfEntries, edgeDst.properties).values.toList()
+        val testDataSrc = TestDataFactory.randomStringEntityData(numberOfEntries, src.properties).values.toList()
+        val testDataEdgeSrc = TestDataFactory.randomStringEntityData(numberOfEntries, edgeSrc.properties).values.toList()
+
+        val ids = dataApi.createEntities(es.id, testData)
+        val idsDst = dataApi.createEntities(esDst.id, testDataDst)
+        val idsEdgeDst = dataApi.createEntities(esEdgeDst.id, testDataEdgeDst)
+        val idsSrc = dataApi.createEntities(esSrc.id, testDataSrc)
+        val idsEdgeSrc = dataApi.createEntities(esEdgeSrc.id, testDataEdgeSrc)
+
+        val edgesDst = ids.mapIndexed { index, _ ->
+            DataEdgeKey(
+                    EntityDataKey(es.id, ids[index]),
+                    EntityDataKey(esDst.id, idsDst[index]),
+                    EntityDataKey(esEdgeDst.id, idsEdgeDst[index])
+            )
+        }.toSet()
+        dataApi.createEdges(edgesDst)
+        val edgesSrc1 = ids.mapIndexed { index, _ ->
+            DataEdgeKey(
+                    EntityDataKey(esSrc.id, idsSrc[index]),
+                    EntityDataKey(es.id, ids[index]),
+                    EntityDataKey(esEdgeSrc.id, idsEdgeSrc[index])
+            )
+        }.toSet()
+        dataApi.createEdges(edgesSrc1)
+
+        val requiredPermission = if (deleteType == DeleteType.Soft) {
+            WRITE_PERMISSION
+        } else {
+            OWNER_PERMISSION
+        }
+
+
+        /* Soft delete */
+
+        // try to delete all without any permissions
+        loginAs("user1")
+
+        assertException(
+                {
+                    dataApi.deleteEntitiesAndNeighbors(
+                            es.id,
+                            EntityNeighborsFilter(
+                                    ids.toSet(),
+                                    Optional.of(setOf(esSrc.id)), Optional.of(setOf(esDst.id)), Optional.empty()),
+                            deleteType)
+                },
+                listOf(
+                        "Unable to delete from entity sets [${es.id}, ${esDst.id}, ${esSrc.id}]: missing required " +
+                                "permissions $requiredPermission for AclKeys",
+                        "[${es.id}]",
+                        "[${esDst.id}]",
+                        "[${esSrc.id}]")
+        )
+
+        // try to delete with write permissions on entity sets, but not properties
+        loginAs("admin")
+        val esAcl = Acl(AclKey(es.id), setOf(Ace(user1, requiredPermission, OffsetDateTime.MAX)))
+        permissionsApi.updateAcl(AclData(esAcl, Action.ADD))
+        val srcAcl = Acl(AclKey(esSrc.id), setOf(Ace(user1, requiredPermission, OffsetDateTime.MAX)))
+        permissionsApi.updateAcl(AclData(srcAcl, Action.ADD))
+        val dstAcl = Acl(AclKey(esDst.id), setOf(Ace(user1, requiredPermission, OffsetDateTime.MAX)))
+        permissionsApi.updateAcl(AclData(dstAcl, Action.ADD))
+
+        loginAs("user1")
+        assertException(
+                {
+                    dataApi.deleteEntitiesAndNeighbors(
+                            es.id,
+                            EntityNeighborsFilter(
+                                    ids.toSet(),
+                                    Optional.of(setOf(esSrc.id)), Optional.of(setOf(esDst.id)), Optional.empty()),
+                            deleteType)
+                },
+                listOf(
+                        "Unable to delete from entity sets [${es.id}, ${esDst.id}, ${esSrc.id}]: missing required " +
+                                "permissions $requiredPermission for AclKeys",
+                        "[${es.id}, ${et.properties.random()}]",
+                        "[${esSrc.id}, ${src.properties.random()}]",
+                        "[${esDst.id}, ${dst.properties.random()}]")
+        )
+
+
+        // try to delete with write permissions on entity sets, but not all properties
+        loginAs("admin")
+        val pt = et.properties.random()
+        et.properties.forEach {
+            if (it != pt) {
+                val acl = Acl(AclKey(es.id, it), setOf(Ace(user1, requiredPermission, OffsetDateTime.MAX)))
+                permissionsApi.updateAcl(AclData(acl, Action.ADD))
+            }
+        }
+        val srcPt = src.properties.random()
+        src.properties.forEach {
+            if (it != srcPt) {
+                val acl = Acl(AclKey(esSrc.id, it), setOf(Ace(user1, requiredPermission, OffsetDateTime.MAX)))
+                permissionsApi.updateAcl(AclData(acl, Action.ADD))
+            }
+        }
+        val dstPt = dst.properties.random()
+        dst.properties.forEach {
+            if (it != dstPt) {
+                val acl = Acl(AclKey(esDst.id, it), setOf(Ace(user1, requiredPermission, OffsetDateTime.MAX)))
+                permissionsApi.updateAcl(AclData(acl, Action.ADD))
+            }
+        }
+
+
+
+        loginAs("user1")
+        assertException(
+                {
+                    dataApi.deleteEntitiesAndNeighbors(
+                            es.id,
+                            EntityNeighborsFilter(
+                                    ids.toSet(),
+                                    Optional.of(setOf(esSrc.id)), Optional.of(setOf(esDst.id)), Optional.empty()),
+                            deleteType)
+                },
+                listOf("Unable to delete from entity sets [${es.id}, ${esDst.id}, ${esSrc.id}]: missing required " +
+                        "permissions $requiredPermission for AclKeys",
+                        "[${es.id}, $pt]",
+                        "[${esDst.id}, $dstPt]",
+                        "[${esSrc.id}, $srcPt]"
+                )
+
+        )
+
+
+        // try to delete with write permissions on entity sets and all properties, but no permission on associations
+        loginAs("admin")
+        val ptAcl = Acl(AclKey(es.id, pt), setOf(Ace(user1, requiredPermission, OffsetDateTime.MAX)))
+        permissionsApi.updateAcl(AclData(ptAcl, Action.ADD))
+        val srcPtAcl = Acl(AclKey(esSrc.id, srcPt), setOf(Ace(user1, requiredPermission, OffsetDateTime.MAX)))
+        permissionsApi.updateAcl(AclData(srcPtAcl, Action.ADD))
+        val dstPtAcl = Acl(AclKey(esDst.id, dstPt), setOf(Ace(user1, requiredPermission, OffsetDateTime.MAX)))
+        permissionsApi.updateAcl(AclData(dstPtAcl, Action.ADD))
+
+
+        loginAs("user1")
+        assertException(
+                {
+                    dataApi.deleteEntitiesAndNeighbors(
+                            es.id,
+                            EntityNeighborsFilter(
+                                    ids.toSet(),
+                                    Optional.of(setOf(esSrc.id)), Optional.of(setOf(esDst.id)), Optional.empty()),
+                            deleteType)
+                },
+                listOf(
+                        "Unable to delete from entity set ${es.id}: missing required permissions " +
+                                "$requiredPermission on associations for AclKeys",
+                        "[${esEdgeSrc.id}]",
+                        "[${esEdgeSrc.id}, ${edgeSrc.properties.random()}]",
+                        "[${esEdgeDst.id}]",
+                        "[${esEdgeDst.id}, ${edgeDst.properties.random()}]"
+                )
+
+        )
+
+        // try to delete with write permissions on entity sets, all their properties and on all associations and their
+        // properties
+        loginAs("admin")
+        val esEdgeSrcAcl = Acl(AclKey(esEdgeSrc.id), setOf(Ace(user1, requiredPermission, OffsetDateTime.MAX)))
+        permissionsApi.updateAcl(AclData(esEdgeSrcAcl, Action.ADD))
+        edgeSrc.properties.forEach {
+            val acl = Acl(AclKey(esEdgeSrc.id, it), setOf(Ace(user1, requiredPermission, OffsetDateTime.MAX)))
+            permissionsApi.updateAcl(AclData(acl, Action.ADD))
+
+        }
+        val esEdgeDstAcl = Acl(AclKey(esEdgeDst.id), setOf(Ace(user1, requiredPermission, OffsetDateTime.MAX)))
+        permissionsApi.updateAcl(AclData(esEdgeDstAcl, Action.ADD))
+        edgeDst.properties.forEach {
+            val acl = Acl(AclKey(esEdgeDst.id, it), setOf(Ace(user1, requiredPermission, OffsetDateTime.MAX)))
+            permissionsApi.updateAcl(AclData(acl, Action.ADD))
+
+        }
+
+        loginAs("user1")
+        dataApi.deleteEntitiesAndNeighbors(
+                es.id,
+                EntityNeighborsFilter(
+                        ids.toSet(),
+                        Optional.of(setOf(esSrc.id)), Optional.of(setOf(esDst.id)), Optional.empty()),
+                deleteType)
+
+        loginAs("admin")
+        val esEmptyResult = dataApi.loadSelectedEntitySetData(
+                es.id,
+                EntitySetSelection(Optional.of(et.properties)),
+                FileType.json
+        )
+        val esSrcEmptyResult = dataApi.loadSelectedEntitySetData(
+                esSrc.id,
+                EntitySetSelection(Optional.of(src.properties)),
+                FileType.json
+        )
+        val esDstEmptyResult = dataApi.loadSelectedEntitySetData(
+                esDst.id,
+                EntitySetSelection(Optional.of(dst.properties)),
+                FileType.json
+        )
+        logger.info(pt.toString())
+        Assert.assertFalse(esEmptyResult.iterator().hasNext())
+        Assert.assertFalse(esSrcEmptyResult.iterator().hasNext())
+        Assert.assertFalse(esDstEmptyResult.iterator().hasNext())
+
     }
 
     @Test

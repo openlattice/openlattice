@@ -33,7 +33,6 @@ import com.openlattice.authorization.SystemRole;
 import com.openlattice.client.RetrofitFactory;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.openlattice.directory.PrincipalApi;
-import com.openlattice.rhizome.proxy.RetrofitBuilders;
 import kotlin.Unit;
 import okhttp3.OkHttpClient;
 import org.junit.BeforeClass;
@@ -110,9 +109,9 @@ public class SetupEnvironment {
         retrofit3 = RetrofitFactory.newClient( RetrofitFactory.Environment.TESTING, () -> tokenUser3 );
         retrofitProd = RetrofitFactory.newClient( RetrofitFactory.Environment.PRODUCTION );
 
-        httpClient = RetrofitFactory.okhttpClientWithLoomAuth( () -> tokenAdmin ).build();
-        httpClient1 = RetrofitFactory.okhttpClientWithLoomAuth( () -> tokenUser1 ).build();
-        httpClient2 = RetrofitFactory.okhttpClientWithLoomAuth( () -> tokenUser2 ).build();
+        httpClient = RetrofitFactory.okHttpClientWithOpenLatticeAuth( () -> tokenAdmin ).build();
+        httpClient1 = RetrofitFactory.okHttpClientWithOpenLatticeAuth( () -> tokenUser1 ).build();
+        httpClient2 = RetrofitFactory.okHttpClientWithOpenLatticeAuth( () -> tokenUser2 ).build();
 
         String idAdmin = ( String ) jwtAdmin.getPrincipal();
         String idUser1 = ( String ) jwtUser1.getPrincipal();
@@ -154,13 +153,6 @@ public class SetupEnvironment {
             String principalId ) {
         checkState( principals.stream().anyMatch( sp -> sp.getPrincipal().getId().equals( principalId ) ) );
     }
-
-    public static Retrofit createRetrofitCallAdapter( RetrofitFactory.Environment environment, OkHttpClient httpClient ) {
-        return RetrofitBuilders.decorateWithRhizomeFactories( RetrofitBuilders
-                .createBaseRhizomeRetrofitBuilder( environment.getBaseUrl(), httpClient ) )
-                .build();
-    }
-
 
     protected static <T> T getApiAdmin( Class<T> clazz ) {
         return retrofit.create( clazz );

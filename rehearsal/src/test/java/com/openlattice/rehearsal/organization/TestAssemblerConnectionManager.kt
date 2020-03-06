@@ -20,6 +20,7 @@
  */
 package com.openlattice.rehearsal.organization
 
+import com.kryptnostic.rhizome.pods.ConfigurationLoaderPod
 import com.openlattice.assembler.AssemblerConfiguration
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.PostgresDatabases
@@ -41,7 +42,7 @@ class TestAssemblerConnectionManager {
         const val PRODUCTION_FOREIGN_SCHEMA = "prod"
 
         init {
-            val testsServer = TestServer(AssemblerConfigurationPod::class.java)
+            val testsServer = TestServer(ConfigurationLoaderPod::class.java, AssemblerConfigurationPod::class.java)
             testsServer.sprout("local")
             assemblerConfiguration = testsServer.context.getBean(AssemblerConfiguration::class.java)
         }
