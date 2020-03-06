@@ -2,9 +2,8 @@ package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
+import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.hazelcast.StreamSerializerTypeIds
-import com.openlattice.mapstores.TestDataFactory
-import com.openlattice.postgres.IndexType
 import com.openlattice.transporter.processors.TransporterSynchronizeTableDefinitionEntryProcessor
 import com.openlattice.transporter.types.TransporterDatastore
 import com.openlattice.transporter.types.TransporterDependent
@@ -12,7 +11,7 @@ import org.springframework.stereotype.Component
 
 @Component
 class TransporterSynchronizeTableDefinitionEntryProcessorStreamSerializer:
-        TestableSelfRegisteringStreamSerializer<TransporterSynchronizeTableDefinitionEntryProcessor>,
+        SelfRegisteringStreamSerializer<TransporterSynchronizeTableDefinitionEntryProcessor>,
         TransporterDependent
 {
     private lateinit var data: TransporterDatastore
@@ -39,13 +38,6 @@ class TransporterSynchronizeTableDefinitionEntryProcessorStreamSerializer:
             PropertyTypeStreamSerializer.deserialize(`in`)
         }
         return TransporterSynchronizeTableDefinitionEntryProcessor(newProperties).init(data)
-    }
-
-    override fun generateTestValue(): TransporterSynchronizeTableDefinitionEntryProcessor {
-        return TransporterSynchronizeTableDefinitionEntryProcessor(listOf(
-                TestDataFactory.propertyType(IndexType.BTREE, false),
-                TestDataFactory.propertyType(IndexType.NONE, true)
-        ))
     }
 
     override fun init(data: TransporterDatastore) {
