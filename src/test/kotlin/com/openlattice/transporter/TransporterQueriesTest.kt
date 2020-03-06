@@ -1,30 +1,22 @@
 package com.openlattice.transporter
 
 import com.google.common.base.Strings
+import com.kryptnostic.rhizome.pods.ConfigurationLoader
 import com.openlattice.TestServer
-import com.openlattice.assembler.AssemblerConfiguration
-import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.postgres.IndexType
 import com.openlattice.postgres.PostgresArrays
-import com.openlattice.postgres.mapstores.PropertyTypeMapstore
 import com.openlattice.transporter.processors.TransporterSynchronizeTableDefinitionEntryProcessor
-import com.openlattice.transporter.types.TransporterColumn
-import com.openlattice.transporter.types.TransporterColumnSet
+import com.openlattice.transporter.types.*
 import com.zaxxer.hikari.HikariDataSource
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.fail
+import org.junit.BeforeClass
 import org.junit.Test
-import org.mockito.Mockito
 import org.postgresql.util.PSQLException
 import java.util.*
-
-fun transporter(): HikariDataSource {
-    val assemblerConfiguration = TestServer.testServer.context.getBean(AssemblerConfiguration::class.java)
-    val props = assemblerConfiguration.server.clone() as Properties
-    return AssemblerConnectionManager.createDataSource("transporter", props, assemblerConfiguration.ssl)
-}
 
 fun pretty(query: String, e: PSQLException): String {
     val buffer = Strings.repeat(" ", e.serverErrorMessage.position-1) + "^"
@@ -33,18 +25,48 @@ fun pretty(query: String, e: PSQLException): String {
 
 class TransporterQueriesTest {
     companion object {
-        val transporter = transporter()
+        lateinit var data: TransporterDatastore
+        lateinit var transporter: HikariDataSource
+        @BeforeClass
+        @JvmStatic
+        fun init() {
+            val context = TestServer.testServer.context
+            val configurationLoader = context.getBean(ConfigurationLoader::class.java)
+            val config = configurationLoader.load(TransporterConfiguration::class.java)
+
+            data = TransporterDatastore(config)
+            transporter = data.datastore()
+            context.getBeansOfType(TransporterDependent::class.java).forEach { (_, ss) ->
+
+                print("initializing data for $ss")
+                ss.init(data)
+            }
+        }
     }
+
+
+    private val testTables = mutableSetOf<String>()
 
     private fun sync(type: UUID, props: Collection<PropertyType>) {
-
-        val acm = Mockito.mock(AssemblerConnectionManager::class.java)
-        Mockito.`when`(acm.connect("transporter")).thenReturn(transporter)
         val mockMap = mutableMapOf(type to TransporterColumnSet(emptyMap()))
-        val ep = TransporterSynchronizeTableDefinitionEntryProcessor(props)
-        ep.init(acm)
+        val ep = TransporterSynchronizeTableDefinitionEntryProcessor(props).init(data)
         ep.process(mockMap.entries.first())
+        testTables.add(tableName(type))
     }
+
+    @After
+    fun cleanup() {
+        transporter.connection.use { conn ->
+            conn.createStatement().use {st ->
+                val it = testTables.iterator()
+                while (it.hasNext()) {
+                    st.executeUpdate("DROP TABLE ${it.next()}")
+                    it.remove()
+                }
+            }
+        }
+    }
+
     @Test
     fun testSynchronizeTableDefinition() {
         val type = UUID.randomUUID()
@@ -63,18 +85,17 @@ class TransporterQueriesTest {
     }
 
     @Test
-    fun updateIds() {
-        val props = PropertyTypeMapstore(TestServer.hds)
-        val entityTypeId = UUID.fromString("31cf5595-3fe9-4d3e-a9cf-39355a4b8cab")
-        val entitySetId = UUID.fromString("4c38fd26-c616-4f8b-bfb6-b8581859effb")
-        val propertyTypeId = UUID.fromString("1e6ff0f0-0545-4368-b878-677823459e57")
-        val prop = props.load(propertyTypeId)
-        val table = tableName(entityTypeId)
-        sync(entityTypeId, listOf(prop))
+    fun testUpdateIdsForEntitySets() {
+        val prop = TestDataFactory.propertyType(IndexType.NONE, false)
+        val entityType = TestDataFactory.entityType(prop)
+        val es = TestDataFactory.entitySetWithType(entityType.id)
+        val entitySetId = es.id
+        val table = tableName(entityType.id)
+        sync(entityType.id, listOf(prop))
         val query = updateIdsForEntitySets(table)
         transporter.connection.use {conn ->
             conn.prepareStatement(query).use {ps ->
-                ps.setArray(1, PostgresArrays.createIntArray(conn, (1..257).toList()))
+                ps.setArray(1, PostgresArrays.createIntArray(conn, listOf(1)))
                 ps.setArray(2, PostgresArrays.createUuidArray(conn, listOf(entitySetId)))
                 try {
                     ps.executeUpdate()
@@ -87,28 +108,17 @@ class TransporterQueriesTest {
 
     @Test
     fun testUpdateQuery() {
-        val props = PropertyTypeMapstore(TestServer.hds)
-        val entityTypeId = UUID.fromString("31cf5595-3fe9-4d3e-a9cf-39355a4b8cab")
-        val propertyTypeId = UUID.fromString("1e6ff0f0-0545-4368-b878-677823459e57")
-        val entitySetId = UUID.fromString("4c38fd26-c616-4f8b-bfb6-b8581859effb")
-        val prop = props.load(propertyTypeId)
-        val table = tableName(entityTypeId)
-        sync(entityTypeId, listOf(prop))
+        val prop = TestDataFactory.propertyType(IndexType.NONE, false)
+        val entityType = TestDataFactory.entityType(prop)
+        val es = TestDataFactory.entitySetWithType(entityType.id)
+        val entitySetId = es.id
+        val table = tableName(entityType.id)
+        sync(entityType.id, listOf(prop))
         val propCol = TransporterColumn(prop)
-        val expected = TestServer.hds.connection.use { conn ->
-            conn.createStatement().use { st ->
-                st.executeQuery("select count(*) from data " +
-                        "where entity_set_id = '${entitySetId}' " +
-                        " and property_type_id = '${propertyTypeId}'").use {rs ->
-                    rs.next()
-                    rs.getInt(1)
-                }
-            }
-        }
-        val query = updateOneBatchForProperty(table, propertyTypeId, propCol)
-        val updateCount = transporter.connection.use {conn->
+        val query = updateOneBatchForProperty(table, prop.id, propCol)
+        transporter.connection.use {conn->
             conn.prepareStatement(query).use {ps ->
-                ps.setArray(1, PostgresArrays.createIntArray(conn, (0..257).toList()))
+                ps.setArray(1, PostgresArrays.createIntArray(conn, listOf(1)))
                 ps.setArray(2, PostgresArrays.createUuidArray(conn, entitySetId))
                 try {
                     ps.executeUpdate()
@@ -119,8 +129,5 @@ class TransporterQueriesTest {
                 }
             }
         }
-        assertEquals("Expected update count", expected, updateCount)
-
-        println("Success!")
     }
 }

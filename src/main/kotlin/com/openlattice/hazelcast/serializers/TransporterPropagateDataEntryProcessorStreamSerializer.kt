@@ -4,18 +4,18 @@ import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
-import com.openlattice.assembler.AssemblerConnectionManager
-import com.openlattice.assembler.AssemblerConnectionManagerDependent
-import com.openlattice.edm.EntitySet
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.transporter.processors.TransporterPropagateDataEntryProcessor
+import com.openlattice.transporter.types.TransporterDatastore
+import com.openlattice.transporter.types.TransporterDependent
 import org.springframework.stereotype.Component
 
 @Component
-class TransporterPropagateDataEntryProcessorStreamSerializer : SelfRegisteringStreamSerializer<TransporterPropagateDataEntryProcessor>,
-        AssemblerConnectionManagerDependent<Void?> {
-    @Transient
-    private lateinit var acm: AssemblerConnectionManager
+class TransporterPropagateDataEntryProcessorStreamSerializer :
+        SelfRegisteringStreamSerializer<TransporterPropagateDataEntryProcessor>,
+        TransporterDependent
+{
+    private lateinit var data: TransporterDatastore
 
     override fun getTypeId(): Int {
         return StreamSerializerTypeIds.TRANSPORTER_PROPAGATE_DATA_ENTRY_PROCESSOR.ordinal
@@ -26,19 +26,23 @@ class TransporterPropagateDataEntryProcessorStreamSerializer : SelfRegisteringSt
     }
 
     override fun write(out: ObjectDataOutput, `object`: TransporterPropagateDataEntryProcessor) {
-        SetStreamSerializers.serialize(out, `object`.entitySets) { es -> out.writeObject(es) }
+        SetStreamSerializers.serialize(out, `object`.entitySets) { es ->
+            EntitySetStreamSerializer.serialize(out, es)
+        }
         val partitions = `object`.partitions.toIntArray()
         out.writeIntArray(partitions)
     }
 
     override fun read(`in`: ObjectDataInput): TransporterPropagateDataEntryProcessor {
-        val entitySets = SetStreamSerializers.deserialize(`in`) { `in`.readObject<EntitySet>() }
+        val entitySets = SetStreamSerializers.deserialize(`in`) {
+            EntitySetStreamSerializer.deserialize(`in`)
+        }
         val partitions = `in`.readIntArray().toList()
-        return TransporterPropagateDataEntryProcessor(entitySets, partitions).init(acm)
+        check(::data.isInitialized) { TransporterDependent.NOT_INITIALIZED }
+        return TransporterPropagateDataEntryProcessor(entitySets, partitions).init(data)
     }
 
-    override fun init(acm: AssemblerConnectionManager): Void? {
-        this.acm = acm
-        return null
+    override fun init(data: TransporterDatastore) {
+        this.data = data
     }
 }

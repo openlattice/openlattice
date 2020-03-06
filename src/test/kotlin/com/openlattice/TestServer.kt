@@ -24,7 +24,6 @@ import com.google.common.eventbus.EventBus
 import com.hazelcast.core.HazelcastInstance
 import com.kryptnostic.rhizome.configuration.ConfigurationConstants
 import com.kryptnostic.rhizome.core.RhizomeApplicationServer
-import com.openlattice.assembler.pods.AssemblerConfigurationPod
 import com.openlattice.auditing.pods.AuditingConfigurationPod
 import com.openlattice.auth0.Auth0Pod
 import com.openlattice.datastore.constants.DatastoreProfiles
@@ -49,8 +48,7 @@ open class TestServer {
                 SharedStreamSerializersPod::class.java,
                 PostgresTablesPod::class.java,
                 AuditingConfigurationPod::class.java,
-                TestPod::class.java,
-                AssemblerConfigurationPod::class.java
+                TestPod::class.java
         )
 
         @JvmField

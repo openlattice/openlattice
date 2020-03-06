@@ -76,10 +76,11 @@ val ids = "$pk,${ORIGIN_ID.name}"
  * 2 - entity set ids array
  *
  */
-fun updateOneBatchForProperty(destTable: String, propId: UUID, propCol: TransporterColumn): String {
-    val srcCol = propCol.srcCol
-    val destCol = propCol.destColName
-    val dataCol = "CASE WHEN VERSION > 0 THEN $srcCol else null END as $destCol"
+fun updateOneBatchForProperty(destTable: String, propId: UUID, column: TransporterColumn): String {
+    val dataColumn = column.dataTableColumnName
+    val destinationColumn = column.transporterTableColumnName
+    // if data is deleted (version <= 0, use null, otherwise use the value from source
+    val dataView = "CASE WHEN VERSION > 0 THEN $dataColumn else null END as $destinationColumn"
 
     val updateLastPropagate = "UPDATE ${PostgresTable.DATA.name} " +
             "SET ${transportTimestampColumn.name} = ${DataTables.LAST_WRITE.name} " +
@@ -87,7 +88,7 @@ fun updateOneBatchForProperty(destTable: String, propId: UUID, propCol: Transpor
             " AND ${ENTITY_SET_ID.name} = ANY(?) " +
             " AND ${PROPERTY_TYPE_ID.name} = '${propId}' " +
             " AND ${DataTables.LAST_WRITE.name} > ${transportTimestampColumn.name} " +
-            "RETURNING $ids,${VERSION.name},$dataCol"
+            "RETURNING $ids,${VERSION.name},$dataView"
 
     // this seems unnecessary but it's good to be sure
     val createMissingRows = "INSERT INTO $destTable " +
@@ -97,7 +98,7 @@ fun updateOneBatchForProperty(destTable: String, propId: UUID, propCol: Transpor
             "WHERE ${VERSION.name} > 0 " +
             "ON CONFLICT ($pk) DO NOTHING"
     val modifyDestination = "UPDATE $destTable t " +
-            "SET $destCol = src.$destCol " +
+            "SET $destinationColumn = src.$destinationColumn " +
             "FROM src " +
             "WHERE " + pkCols.joinToString(" AND ") { "t." + it.name + " = src." + it.name}
 

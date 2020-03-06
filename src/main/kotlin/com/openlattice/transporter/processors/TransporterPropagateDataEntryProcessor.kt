@@ -1,14 +1,15 @@
 package com.openlattice.transporter.processors
 
 import com.hazelcast.core.Offloadable
-import com.openlattice.assembler.AssemblerConnectionManager
-import com.openlattice.assembler.AssemblerConnectionManagerDependent
 import com.openlattice.edm.EntitySet
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor
 import com.openlattice.transporter.hasModifiedData
 import com.openlattice.transporter.tableName
 import com.openlattice.transporter.types.TransporterColumnSet
+import com.openlattice.transporter.types.TransporterDatastore
+import com.openlattice.transporter.types.TransporterDependent
+import com.openlattice.transporter.types.transporterNamespace
 import com.openlattice.transporter.updateIdsForEntitySets
 import com.openlattice.transporter.updateOneBatchForProperty
 import io.prometheus.client.Counter
@@ -17,33 +18,32 @@ import java.util.*
 
 class TransporterPropagateDataEntryProcessor(val entitySets: Set<EntitySet>, val partitions: Collection<Int>):
         AbstractReadOnlyRhizomeEntryProcessor<UUID, TransporterColumnSet, Void?>(),
-        Offloadable,
-        AssemblerConnectionManagerDependent<TransporterPropagateDataEntryProcessor>
+        Offloadable
 {
     companion object {
         private val logger = LoggerFactory.getLogger(TransporterPropagateDataEntryProcessor::class.java)
-        val id_counter: Counter = Counter.build()
-                .namespace("transporter_data")
+        val idCounter: Counter = Counter.build()
+                .namespace(transporterNamespace)
                 .name("inserted_ids")
                 .help("Rows updated from the ids table in the transporter database")
                 .register()
-        val value_counter: Counter = Counter.build()
-                .namespace("transporter_data")
+        val valueCounter: Counter = Counter.build()
+                .namespace(transporterNamespace)
                 .name("updated_values")
                 .help("Rows updated in the transporter database")
                 .register()
-        val error_counter: Counter = Counter.build()
-                .namespace("transporter_data")
+        val errorCounter: Counter = Counter.build()
+                .namespace(transporterNamespace)
                 .name("errors")
                 .help("Errors occurred during copies to the transporter database")
                 .register()
-
     }
 
     @Transient
-    private lateinit var acm: AssemblerConnectionManager
+    private lateinit var data: TransporterDatastore
 
     override fun process(entry: Map.Entry<UUID, TransporterColumnSet>): Void? {
+        check(::data.isInitialized) { TransporterDependent.NOT_INITIALIZED }
         transport(entry)
         return null
     }
@@ -53,14 +53,15 @@ class TransporterPropagateDataEntryProcessor(val entitySets: Set<EntitySet>, val
             return
         }
         val tableName = tableName(entry.key)
-        val entitySetIds = entitySets.map { it.id }.toSet()
-        val transporter = acm.connect("transporter")
-        entitySets.filter {
-            if (it.isLinking) {
-                logger.error("Skipping linking entity set {} ({})", it.name, it.id)
-            }
-            !it.isLinking
+        entitySets.filter { it.isLinking }.forEach {
+            // should be a noop because it's always filtered out but just in case...
+            logger.error("Skipping linking entity set {} ({})", it.name, it.id)
         }
+        val entitySetIds = entitySets
+                .filterNot { it.isLinking }
+                .map { it.id }
+                .toSet()
+        val transporter = data.datastore()
         if (!hasModifiedData(transporter, partitions, entitySetIds)) {
             return
         }
@@ -87,10 +88,10 @@ class TransporterPropagateDataEntryProcessor(val entitySets: Set<EntitySet>, val
                 }.sum()
                 logger.debug("Updated {} values in entity type table {}", colUpdates, tableName)
                 conn.commit()
-                id_counter.inc(idUpdates.toDouble())
-                value_counter.inc((colUpdates).toDouble())
+                idCounter.inc(idUpdates.toDouble())
+                valueCounter.inc((colUpdates).toDouble())
             } catch (ex: Exception) {
-                error_counter.inc()
+                errorCounter.inc()
                 logger.error("Unable to update transporter: SQL: {}", lastSql, ex)
                 conn.rollback()
                 throw ex
@@ -102,8 +103,8 @@ class TransporterPropagateDataEntryProcessor(val entitySets: Set<EntitySet>, val
         return Offloadable.OFFLOADABLE_EXECUTOR
     }
 
-    override fun init(acm: AssemblerConnectionManager): TransporterPropagateDataEntryProcessor {
-        this.acm = acm
+    fun init(data: TransporterDatastore): TransporterPropagateDataEntryProcessor {
+        this.data = data
         return this
     }
 }

@@ -8,14 +8,18 @@ import com.openlattice.postgres.PostgresDataTables
 import com.openlattice.postgres.PostgresDatatype
 import java.util.*
 
-data class TransporterColumn(val srcCol: String, val destColName: String, val dataType: PostgresDatatype) {
+data class TransporterColumn(
+        val dataTableColumnName: String,
+        val transporterTableColumnName: String,
+        val dataType: PostgresDatatype
+) {
     constructor(propertyType: PropertyType) :
         this(
                 PostgresDataTables.getSourceDataColumnName(propertyType),
                 ApiUtil.dbQuote(propertyType.id.toString()),
                 PostgresEdmTypeConverter.map(propertyType.datatype)
         )
-    fun destCol() = PostgresColumnDefinition(this.destColName, this.dataType)
+    fun transporterColumn() = PostgresColumnDefinition(this.transporterTableColumnName, this.dataType)
 }
 
 data class TransporterColumnSet(

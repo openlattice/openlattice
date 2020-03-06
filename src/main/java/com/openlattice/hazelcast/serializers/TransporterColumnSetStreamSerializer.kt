@@ -16,8 +16,8 @@ class TransporterColumnSetStreamSerializer : TestableSelfRegisteringStreamSerial
 
     companion object {
         fun serializeColumn(out: ObjectDataOutput, col: TransporterColumn) {
-            out.writeUTF(col.srcCol)
-            out.writeUTF(col.destColName)
+            out.writeUTF(col.dataTableColumnName)
+            out.writeUTF(col.transporterTableColumnName)
             AbstractEnumSerializer.serialize(out, col.dataType)
         }
         fun deserializeColumn(`in`: ObjectDataInput): TransporterColumn {

@@ -1,0 +1,6 @@
+server:
+  jdbcUrl: "jdbc:postgresql://localhost:5432/transporter"
+  username: "oltest"
+  password: "test"
+  maximumPoolSize: 5
+  connectionTimeout: 60000

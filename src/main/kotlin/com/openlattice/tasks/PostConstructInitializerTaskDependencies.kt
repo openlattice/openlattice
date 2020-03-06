@@ -23,6 +23,8 @@ package com.openlattice.tasks
 
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.AssemblerConnectionManagerDependent
+import com.openlattice.transporter.types.TransporterDatastore
+import com.openlattice.transporter.types.TransporterDependent
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import javax.inject.Inject
@@ -41,6 +43,11 @@ class PostConstructInitializerTaskDependencies : HazelcastTaskDependencies {
     @Inject
     private lateinit var acmDependentStreamSerializers: Set<AssemblerConnectionManagerDependent<out Any>>
 
+    @Inject
+    private lateinit var transporterDatastore: TransporterDatastore
+
+    @Inject
+    private lateinit var transporterDependent: Set<TransporterDependent>
 
     @Component
     class PostConstructInitializerTask : HazelcastInitializationTask<PostConstructInitializerTaskDependencies> {
@@ -52,6 +59,10 @@ class PostConstructInitializerTaskDependencies : HazelcastTaskDependencies {
             dependencies.acmDependentStreamSerializers.forEach {
                 it.init(dependencies.accessConnectionManager)
                 logger.info("Initialized ${it.javaClass} with ACM")
+            }
+            dependencies.transporterDependent.forEach {
+                it.init(dependencies.transporterDatastore)
+                logger.info("Initialized ${it.javaClass} with TransporterDatastore")
             }
         }
 

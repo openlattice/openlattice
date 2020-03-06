@@ -2,21 +2,20 @@ package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
-import com.openlattice.assembler.AssemblerConnectionManager
-import com.openlattice.assembler.AssemblerConnectionManagerDependent
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.postgres.IndexType
 import com.openlattice.transporter.processors.TransporterSynchronizeTableDefinitionEntryProcessor
+import com.openlattice.transporter.types.TransporterDatastore
+import com.openlattice.transporter.types.TransporterDependent
 import org.springframework.stereotype.Component
 
 @Component
 class TransporterSynchronizeTableDefinitionEntryProcessorStreamSerializer:
         TestableSelfRegisteringStreamSerializer<TransporterSynchronizeTableDefinitionEntryProcessor>,
-        AssemblerConnectionManagerDependent<Void?>
+        TransporterDependent
 {
-    @Transient
-    private lateinit var acm: AssemblerConnectionManager
+    private lateinit var data: TransporterDatastore
 
     override fun getTypeId(): Int {
         return StreamSerializerTypeIds.TRANSPORTER_SYNCHRONIZE_TABLE_DEFINITION_ENTRY_PROCESSOR.ordinal
@@ -39,7 +38,7 @@ class TransporterSynchronizeTableDefinitionEntryProcessorStreamSerializer:
         val newProperties = (1..size).map { _ ->
             PropertyTypeStreamSerializer.deserialize(`in`)
         }
-        return TransporterSynchronizeTableDefinitionEntryProcessor(newProperties).init(acm)
+        return TransporterSynchronizeTableDefinitionEntryProcessor(newProperties).init(data)
     }
 
     override fun generateTestValue(): TransporterSynchronizeTableDefinitionEntryProcessor {
@@ -49,8 +48,7 @@ class TransporterSynchronizeTableDefinitionEntryProcessorStreamSerializer:
         ))
     }
 
-    override fun init(acm: AssemblerConnectionManager): Void? {
-        this.acm = acm
-        return null
+    override fun init(data: TransporterDatastore) {
+        this.data = data
     }
 }
