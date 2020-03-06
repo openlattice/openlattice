@@ -6,7 +6,7 @@ server:
   connectionTimeout: 60000
 foreignHost: "localhost"
 foreignDbName: "openlattice"
-foreignPort: 5433
+foreignPort: 5432
 foreignUsername: "oltest"
 foreignPassword: "test"
 ssl: false
