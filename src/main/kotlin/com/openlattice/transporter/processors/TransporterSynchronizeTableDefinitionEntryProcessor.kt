@@ -30,11 +30,11 @@ data class TransporterSynchronizeTableDefinitionEntryProcessor(val newProperties
     }
 
     private fun transport(entry: MutableMap.MutableEntry<UUID, TransporterColumnSet>) {
-        val transporter = data.datastore()
         val newProps = newProperties.filter { !entry.value.containsKey(it.id) }
         if (newProps.isEmpty()) {
             return
         }
+        val transporter = data.datastore()
         val newColumns = entry.value.withProperties(newProps)
         val table = tableDefinition(entry.key, newColumns.columns.values.map { it.transporterColumn() })
         transporter.connection.use { conn ->

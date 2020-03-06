@@ -78,9 +78,8 @@ class TransporterPropagateDataEntryProcessor(val entitySets: Set<EntitySet>, val
                     ps.executeUpdate()
                 }
                 val colUpdates = entry.value.map { (id, col) ->
-                    val query = updateOneBatchForProperty(tableName, id, col)
-                    lastSql = query
-                    conn.prepareStatement(query).use { ps ->
+                    lastSql = updateOneBatchForProperty(tableName, id, col)
+                    conn.prepareStatement(lastSql).use { ps ->
                         ps.setArray(1, partitions)
                         ps.setArray(2, entitySetArray)
                         generateSequence { ps.executeUpdate() }.takeWhile { it > 0 }.sum()
