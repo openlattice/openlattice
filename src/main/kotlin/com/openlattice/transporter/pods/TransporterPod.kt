@@ -3,6 +3,7 @@ package com.openlattice.transporter.pods
 import com.google.common.eventbus.EventBus
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.hazelcast.core.HazelcastInstance
+import com.kryptnostic.rhizome.configuration.RhizomeConfiguration
 import com.kryptnostic.rhizome.pods.ConfigurationLoader
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.datastore.services.EdmManager
@@ -19,6 +20,8 @@ import javax.inject.Inject
 
 @Configuration
 class TransporterPod {
+    @Inject
+    private lateinit var rhizome: RhizomeConfiguration
     @Inject
     private lateinit var configurationLoader: ConfigurationLoader
     @Inject
@@ -41,7 +44,7 @@ class TransporterPod {
 
     @Bean
     fun transporterDatastore(transporterConfiguration: TransporterConfiguration): TransporterDatastore {
-        return TransporterDatastore(transporterConfiguration)
+        return TransporterDatastore(transporterConfiguration, rhizome)
     }
 
     @Bean

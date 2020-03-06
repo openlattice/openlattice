@@ -1,6 +1,7 @@
 package com.openlattice.transporter
 
 import com.google.common.base.Strings
+import com.kryptnostic.rhizome.configuration.RhizomeConfiguration
 import com.kryptnostic.rhizome.pods.ConfigurationLoader
 import com.openlattice.TestServer
 import com.openlattice.edm.type.PropertyType
@@ -33,12 +34,12 @@ class TransporterQueriesTest {
             val context = TestServer.testServer.context
             val configurationLoader = context.getBean(ConfigurationLoader::class.java)
             val config = configurationLoader.load(TransporterConfiguration::class.java)
+            val rhizome = context.getBean(RhizomeConfiguration::class.java)
 
-            data = TransporterDatastore(config)
+            data = TransporterDatastore(config, rhizome)
             transporter = data.datastore()
             context.getBeansOfType(TransporterDependent::class.java).forEach { (_, ss) ->
-
-                print("initializing data for $ss")
+                println("initializing data for ${ss::class.java}")
                 ss.init(data)
             }
         }
