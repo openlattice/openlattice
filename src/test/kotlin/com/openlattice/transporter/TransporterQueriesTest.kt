@@ -8,6 +8,7 @@ import com.openlattice.edm.type.PropertyType
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.postgres.IndexType
 import com.openlattice.postgres.PostgresArrays
+import com.openlattice.postgres.PostgresTableManager
 import com.openlattice.transporter.processors.TransporterSynchronizeTableDefinitionEntryProcessor
 import com.openlattice.transporter.types.*
 import com.zaxxer.hikari.HikariDataSource
@@ -35,9 +36,18 @@ class TransporterQueriesTest {
             val configurationLoader = context.getBean(ConfigurationLoader::class.java)
             val config = configurationLoader.load(TransporterConfiguration::class.java)
             val rhizome = context.getBean(RhizomeConfiguration::class.java)
+            context.getBean(PostgresTableManager::class.java)
 
             data = TransporterDatastore(config, rhizome)
             transporter = data.datastore()
+            val fdwTables = transporter.connection.use { conn ->
+                conn.createStatement()
+                        .executeQuery("select count(*) from information_schema.foreign_tables where foreign_table_schema = 'ol'").use {rs ->
+                            rs.next()
+                            rs.getInt(1)
+                        }
+            }
+            println("$fdwTables foreign tables")
             context.getBeansOfType(TransporterDependent::class.java).forEach { (_, ss) ->
                 println("initializing data for ${ss::class.java}")
                 ss.init(data)
