@@ -68,35 +68,78 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies>, Hazelca
     }
 
     override fun runTask() {
-        if (initialized) {
-            val ds = getDependency()
-            logger.info("Synchronizing users.")
-            currentSync = Instant.now()
-
-            ds.userListingService
-                    .getUpdatedUsers(lastSync, currentSync)
-                    .map {
-                        syncSemaphore.acquire()
-                        ds.executor.submit {
-                            try {
-                                ds.users.syncUser(it)
-                            } catch (ex: Exception) {
-                                logger.error("Unable to synchronize user", ex)
-                            } finally {
-                                syncSemaphore.release()
-                            }
-                        }
-                    }
-                    // we want to materialize the list of futures so the work happens in the background.
-                    .toList()
-                    .forEach {
-                        it.get()
-                    }
-
-            lastSync = currentSync
+        if (!initialized) {
+            logger.warn("Users not yet initialized.")
+            return
         }
+
+        updateUsersCache()
+        syncUsers()
     }
 
+    /**
+     * Retrieves updated users from auth0 and adds them to hazelcast.
+     */
+    private fun updateUsersCache() {
+        val ds = getDependency()
+        logger.info("Synchronizing users.")
+        currentSync = Instant.now()
+
+        ds.userListingService
+                .getUpdatedUsers(lastSync, currentSync)
+                .map {
+                    syncSemaphore.acquire()
+                    ds.executor.submit {
+                        try {
+                            ds.users.updateUser(it)
+                        } catch (ex: Exception) {
+                            logger.error("Unable to synchronize user", ex)
+                        } finally {
+                            syncSemaphore.release()
+                        }
+                    }
+                }
+                // we want to materialize the list of futures so the work happens in the background.
+                .toList()
+                .forEach {
+                    it.get()
+                }
+
+        lastSync = currentSync
+    }
+
+    /**
+     * Synchronizes all cached users.
+     */
+    private fun syncUsers() {
+        val ds = getDependency()
+        logger.info("Synchronizing users.")
+        currentSync = Instant.now()
+
+        ds.users.getCachedUsers()
+                .map {
+                    syncSemaphore.acquire()
+                    ds.executor.submit {
+                        try {
+                            ds.users.syncUserEnrollmentsAndAuthentication(it)
+                        } catch (ex: Exception) {
+                            logger.error("Unable to synchronize user", ex)
+                        } finally {
+                            syncSemaphore.release()
+                        }
+                    }
+                }
+                // we want to materialize the list of futures so the work happens in the background.
+                .toList()
+                .forEach {
+                    it.get()
+                }
+
+    }
+
+    /**
+     * Loads and synchronizes all users from auth0.
+     */
     fun initializeUsers() {
         val ds = getDependency()
         logger.info("Initial synchronization of users started.")

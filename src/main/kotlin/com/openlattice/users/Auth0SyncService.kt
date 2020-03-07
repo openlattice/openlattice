@@ -47,35 +47,36 @@ class Auth0SyncService(
     private val principalTrees = HazelcastMap.PRINCIPAL_TREES.getMap(hazelcastInstance)
     private val mapper = ObjectMappers.newJsonMapper()
 
+    fun getCachedUsers(): Sequence<User> {
+        return users.values.asSequence()
+    }
+
     fun syncUser(user: User) {
+        updateUser(user)
+        syncUserEnrollmentsAndAuthentication(user)
+    }
+
+    fun updateUser(user: User) {
+        logger.info("Synchronizing user ${user.id}")
+        ensureSecurablePrincipalExists(user)
+
+        //Update the user in the users table
+        users.set(user.id, user)
+    }
+
+    fun syncUserEnrollmentsAndAuthentication(user: User) {
         //Figure out which users need to be added to which organizations.
         //Since we don't want to do O( # organizations ) for each user, we need to lookup organizations on a per user
         //basis and see if the user needs to be added.
-        logger.info("Synchronizing user ${user.id}")
-        ensureSecurablePrincipalExists(user)
+        logger.info("Synchronizing enrollments for user ${user.id}")
         val principal = getPrincipal(user)
 
-        //Update the user in the users table before attempting processing.
-        users.putIfAbsent(principal.id, user)
         processGlobalEnrollments(principal, user)
         processOrganizationEnrollments(principal, user)
+
         logger.info("Syncing authentication cache for ${principal.id}")
         syncAuthenticationCache(principal.id)
-        markUser(user)
-    }
-
-    /**
-     * @param user The user for which to read the identities.
-     * @return A map of providers to connections for the specified user.
-     */
-    private fun getConnections(user: User): Map<String, String> {
-        return user.identities.associateBy({ it.provider }, { it.connection })
-    }
-
-    private fun markUser(user: User) {
-        val userId = user.id
-        markUser(userId)
-        users.set(userId, user)
+        markUser(user.id)
     }
 
     private fun markUser(userId: String) {
@@ -161,7 +162,7 @@ class Auth0SyncService(
 
     }
 
-
+    // TODO handle user expiration
     fun getExpiredUsers(): BasePostgresIterable<User> {
         val expirationThreshold = System.currentTimeMillis() - 6 * REFRESH_INTERVAL_MILLIS
         return BasePostgresIterable<User>(
@@ -186,11 +187,6 @@ class Auth0SyncService(
         }
         return principal
     }
-
-    fun remove(userId: String) {
-        users.delete(userId)
-    }
-
 
 }
 
