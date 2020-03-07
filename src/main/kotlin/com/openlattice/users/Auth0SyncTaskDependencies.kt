@@ -21,7 +21,6 @@
 
 package com.openlattice.users
 
-import com.auth0.client.mgmt.ManagementAPI
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.openlattice.tasks.HazelcastTaskDependencies
 

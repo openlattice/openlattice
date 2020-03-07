@@ -4,7 +4,6 @@ import com.auth0.json.mgmt.users.User
 import com.dataloom.mappers.ObjectMappers
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.hazelcast.core.HazelcastInstance
-import com.hazelcast.core.IMap
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.openlattice.IdConstants
@@ -40,11 +39,12 @@ class Auth0SyncService(
     companion object {
         private val logger = LoggerFactory.getLogger(Auth0SyncService::class.java)
     }
-    private val users = HazelcastMap.USERS.getMap( hazelcastInstance )
-    private val principals = HazelcastMap.PRINCIPALS.getMap( hazelcastInstance )
-    private val authnPrincipalCache = HazelcastMap.SECURABLE_PRINCIPALS.getMap( hazelcastInstance )
-    private val authnRolesCache = HazelcastMap.RESOLVED_PRINCIPAL_TREES.getMap( hazelcastInstance )
-    private val principalTrees = HazelcastMap.PRINCIPAL_TREES.getMap( hazelcastInstance )
+
+    private val users = HazelcastMap.USERS.getMap(hazelcastInstance)
+    private val principals = HazelcastMap.PRINCIPALS.getMap(hazelcastInstance)
+    private val authnPrincipalCache = HazelcastMap.SECURABLE_PRINCIPALS.getMap(hazelcastInstance)
+    private val authnRolesCache = HazelcastMap.RESOLVED_PRINCIPAL_TREES.getMap(hazelcastInstance)
+    private val principalTrees = HazelcastMap.PRINCIPAL_TREES.getMap(hazelcastInstance)
     private val mapper = ObjectMappers.newJsonMapper()
 
     fun syncUser(user: User) {
@@ -56,9 +56,9 @@ class Auth0SyncService(
         val principal = getPrincipal(user)
 
         //Update the user in the users table before attempting processing.
-        users.putIfAbsent( principal.id, user)
-        processGlobalEnrollments( principal, user )
-        processOrganizationEnrollments(user, principal, user.email ?: "")
+        users.putIfAbsent(principal.id, user)
+        processGlobalEnrollments(principal, user)
+        processOrganizationEnrollments(principal, user)
         logger.info("Syncing authentication cache for ${principal.id}")
         syncAuthenticationCache(principal.id)
         markUser(user)
@@ -88,9 +88,9 @@ class Auth0SyncService(
         }
     }
 
-    private fun syncAuthenticationCache( principalId: String ) {
+    private fun syncAuthenticationCache(principalId: String) {
         val sp = getPrincipal(principalId) ?: return
-        authnPrincipalCache.set( principalId, sp )
+        authnPrincipalCache.set(principalId, sp)
         val securablePrincipals = getAllPrincipals(sp) ?: return
 
         val currentPrincipals: NavigableSet<Principal> = TreeSet()
@@ -99,11 +99,11 @@ class Auth0SyncService(
                 .map(SecurablePrincipal::getPrincipal)
                 .forEach { currentPrincipals.add(it) }
 
-        authnRolesCache.set( principalId, SortedPrincipalSet(currentPrincipals))
+        authnRolesCache.set(principalId, SortedPrincipalSet(currentPrincipals))
     }
 
     private fun getLayer(aclKeys: Set<AclKey>): AclKeySet {
-        return AclKeySet( principalTrees.getAll(aclKeys).values.flatMap { it.value } )
+        return AclKeySet(principalTrees.getAll(aclKeys).values.flatMap { it.value })
     }
 
     private fun getAllPrincipals(sp: SecurablePrincipal): Collection<SecurablePrincipal>? {
@@ -118,7 +118,7 @@ class Auth0SyncService(
         return principals.getAll(roles).values
     }
 
-
+    @Suppress("UNCHECKED_CAST")
     private fun getPrincipal(principalId: String): SecurablePrincipal? {
         return principals.aggregate(
                 ReadSecurablePrincipalAggregator(),
@@ -138,9 +138,9 @@ class Auth0SyncService(
     }
 
     private fun processOrganizationEnrollments(
-            user: User,
             principal: Principal,
-            emailDomain: String
+            user: User,
+            emailDomain: String = user.email ?: ""
     ) {
         val connections = getConnections(user).values
 
@@ -173,11 +173,11 @@ class Auth0SyncService(
     private fun ensureSecurablePrincipalExists(user: User): Principal {
         val principal = getPrincipal(user)
         if (!spm.principalExists(principal)) {
-            val principal = Principal(PrincipalType.USER, user.id)
-            val title = if (user.nickname != null && user.nickname.isNotEmpty())
+            val title = if (!user.nickname.isNullOrEmpty()) {
                 user.nickname
-            else
+            } else {
                 user.email
+            }
 
             spm.createSecurablePrincipalIfNotExists(
                     principal,

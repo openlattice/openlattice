@@ -22,25 +22,31 @@
 package com.openlattice.users
 
 
+import com.google.common.base.Stopwatch
 import com.openlattice.tasks.HazelcastFixedRateTask
 import com.openlattice.tasks.HazelcastTaskDependencies
 import com.openlattice.tasks.Task
 import org.slf4j.LoggerFactory
+import java.time.Instant
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 
-const val REFRESH_INTERVAL_MILLIS = 120_000L
-private const val DEFAULT_PAGE_SIZE = 100
+const val REFRESH_INTERVAL_MILLIS = 120_000L // 2 min
 private const val MAX_JOBS = 8
 private val logger = LoggerFactory.getLogger(Auth0SyncTask::class.java)
 
 /**
  * This is the auth0 synchronization task that runs every REFRESH_INTERVAL_MILLIS in Hazelcast. It requires that
  * syncDependencies be initialized within the same JVM in order to function properly.
- *
  */
 class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies>, HazelcastTaskDependencies {
     private val syncSemaphore = Semaphore(MAX_JOBS)
+
+    private var initialized = false
+
+    private var lastSync = Instant.MAX
+    private var currentSync = Instant.MAX
+
     override fun getDependenciesClass(): Class<Auth0SyncTaskDependencies> {
         return Auth0SyncTaskDependencies::class.java
     }
@@ -62,10 +68,42 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies>, Hazelca
     }
 
     override fun runTask() {
+        if (initialized) {
+            val ds = getDependency()
+            logger.info("Synchronizing users.")
+            currentSync = Instant.now()
+
+            ds.userListingService
+                    .getUpdatedUsers(lastSync, currentSync)
+                    .map {
+                        syncSemaphore.acquire()
+                        ds.executor.submit {
+                            try {
+                                ds.users.syncUser(it)
+                            } catch (ex: Exception) {
+                                logger.error("Unable to synchronize user", ex)
+                            } finally {
+                                syncSemaphore.release()
+                            }
+                        }
+                    }
+                    // we want to materialize the list of futures so the work happens in the background.
+                    .toList()
+                    .forEach {
+                        it.get()
+                    }
+
+            lastSync = currentSync
+        }
+    }
+
+    fun initializeUsers() {
         val ds = getDependency()
-        logger.info("Synchronizing users.")
+        logger.info("Initial synchronization of users started.")
+        val sw = Stopwatch.createStarted()
+
         ds.userListingService
-                .getUsers()
+                .getAllUsers()
                 .map {
                     syncSemaphore.acquire()
                     ds.executor.submit {
@@ -83,6 +121,11 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies>, Hazelca
                 .forEach {
                     it.get()
                 }
+
+        initialized = true
+        lastSync = Instant.now()
+
+        logger.info("Finished initializing all users in ${sw.elapsed(TimeUnit.MILLISECONDS)} ms.")
     }
 }
 
