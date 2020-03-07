@@ -3805,7 +3805,7 @@ paths:
       responses:
         "200":
           description: Success
-  /shuttle/integration/definition/{integrationName}/{integrationKey}:
+  /shuttle/integration/{integrationName}/{integrationKey}:
     get:
       summary: Enqueues an integration on Shuttle Server for a given integration
       operationId: enqueueIntegration
