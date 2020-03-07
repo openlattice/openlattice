@@ -27,8 +27,6 @@ import com.google.common.collect.Multimaps
 import com.google.common.collect.SetMultimap
 import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking
 import com.openlattice.analysis.requests.FilteredNeighborsRankingAggregation
-import com.openlattice.data.integration.Association
-import com.openlattice.data.integration.Entity
 import com.openlattice.data.storage.EntityDatastore
 import com.openlattice.data.storage.PostgresEntitySetSizesTask
 import com.openlattice.edm.set.ExpirationBase
@@ -52,8 +50,6 @@ import java.time.ZoneId
 import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.stream.Stream
-import kotlin.collections.HashMap
-import kotlin.collections.HashSet
 
 /**
  *
@@ -249,28 +245,6 @@ open class DataGraphService(
 
     /* Create */
 
-    override fun integrateEntities(
-            entitySetId: UUID,
-            entities: Map<String, Map<UUID, Set<Any>>>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): Map<String, UUID> {
-        //We need to fix this to avoid remapping. Skipping for expediency.
-        return doIntegrateEntities(entitySetId, entities, authorizedPropertyTypes)
-                .map { it.key.entityId to it.value }.toMap()
-    }
-
-    private fun doIntegrateEntities(
-            entitySetId: UUID,
-            entities: Map<String, Map<UUID, Set<Any>>>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): Map<EntityKey, UUID> {
-        val ids = idService.getEntityKeyIds(entities.keys.map { EntityKey(entitySetId, it) }.toSet())
-        val identifiedEntities = ids.map { it.value to entities.getValue(it.key.entityId) }.toMap()
-        eds.integrateEntities(entitySetId, identifiedEntities, authorizedPropertyTypes)
-
-        return ids
-    }
-
     override fun createEntities(
             entitySetId: UUID,
             entities: List<Map<UUID, Set<Any>>>,
@@ -347,87 +321,6 @@ open class DataGraphService(
                 }
 
         return associationCreateEvents
-    }
-
-    override fun integrateAssociations(
-            associations: Set<Association>,
-            authorizedPropertiesByEntitySet: Map<UUID, Map<UUID, PropertyType>>
-    ): Map<UUID, Map<String, UUID>> {
-        val associationsByEntitySet = associations.groupBy { it.key.entitySetId }
-        val entityKeys = HashSet<EntityKey>(3 * associations.size)
-        val entityKeyIds = HashMap<EntityKey, UUID>(3 * associations.size)
-
-        //Create the entities for the association and build list of required entity keys
-        val integrationResults = associationsByEntitySet
-                .asSequence()
-                .map { (entitySetId, entitySetAssociations) ->
-                    val entities = entitySetAssociations.asSequence()
-                            .map { association ->
-                                entityKeys.add(association.src)
-                                entityKeys.add(association.dst)
-                                association.key.entityId to association.details
-                            }.toMap()
-                    val ids = doIntegrateEntities(
-                            entitySetId, entities, authorizedPropertiesByEntitySet.getValue(entitySetId)
-                    )
-                    entityKeyIds.putAll(ids)
-                    entitySetId to ids.asSequence().map { it.key.entityId to it.value }.toMap()
-                }.toMap()
-
-        // Retrieve the src/dst keys (it adds all entitykeyids to mutable entityKeyIds)
-        idService.getEntityKeyIds(entityKeys, entityKeyIds)
-
-        val edges = associations
-                .asSequence()
-                .map { association ->
-                    val srcId = entityKeyIds[association.src]
-                    val dstId = entityKeyIds[association.dst]
-                    val edgeId = entityKeyIds[association.key]
-
-                    val srcEsId = association.src.entitySetId
-                    val dstEsId = association.dst.entitySetId
-                    val edgeEsId = association.key.entitySetId
-
-                    val src = EntityDataKey(srcEsId, srcId)
-                    val dst = EntityDataKey(dstEsId, dstId)
-                    val edge = EntityDataKey(edgeEsId, edgeId)
-
-                    DataEdgeKey(src, dst, edge)
-                }
-                .toSet()
-        graphService.createEdges(edges)
-
-        return integrationResults
-    }
-
-    override fun integrateEntitiesAndAssociations(
-            entities: Set<Entity>,
-            associations: Set<Association>,
-            authorizedPropertiesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>
-    ): IntegrationResults? {
-        val entitiesByEntitySet = HashMap<UUID, MutableMap<String, MutableMap<UUID, MutableSet<Any>>>>()
-
-        for (entity in entities) {
-            val entitiesToCreate = entitiesByEntitySet.getOrPut(entity.entitySetId) { mutableMapOf() }
-            val entityDetails = entitiesToCreate.getOrPut(entity.entityId) { entity.details }
-            if (entityDetails !== entity.details) {
-                entity.details.forEach { (propertyTypeId, values) ->
-                    entityDetails.getOrPut(propertyTypeId) { mutableSetOf() }.addAll(values)
-                }
-            }
-        }
-
-        entitiesByEntitySet
-                .forEach { (entitySetId, entitySet) ->
-                    integrateEntities(
-                            entitySetId,
-                            entitySet,
-                            authorizedPropertiesByEntitySetId.getValue(entitySetId)
-                    )
-                }
-
-        integrateAssociations(associations, authorizedPropertiesByEntitySetId)
-        return null
     }
 
     /* Top utilizers */
