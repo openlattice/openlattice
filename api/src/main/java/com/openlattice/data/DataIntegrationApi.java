@@ -18,11 +18,14 @@
 
 package com.openlattice.data;
 
-import com.openlattice.data.integration.*;
+import com.openlattice.data.integration.S3EntityData;
+import retrofit2.http.Body;
+import retrofit2.http.POST;
 
-import java.util.*;
-
-import retrofit2.http.*;
+import java.util.Collection;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 
 public interface DataIntegrationApi {
 
@@ -36,54 +39,17 @@ public interface DataIntegrationApi {
     String BASE                  = SERVICE + CONTROLLER;
     // @formatter:on
 
-    String ASSOCIATION = "association";
-
-    String COUNT                 = "count";
-    String DETAILED_RESULTS      = "detailedResults";
-    String EDGES                 = "edges";
-    String ENTITY_KEY_ID         = "entityKeyId";
-    String ENTITY_KEY_IDS        = "entityKeyIds";
-    String ENTITY_KEY_ID_PATH    = "{" + ENTITY_KEY_ID + "}";
+    String ENTITY_KEY_IDS = "entityKeyIds";
     /**
      * To discuss paths later; perhaps batch this with EdmApi paths
      */
 
-    String ENTITY_SET            = "set";
-    String ENTITY_SET_ID         = "setId";
-    String SET_ID_PATH = "{" + ENTITY_SET_ID + "}";
-    String UPDATE      = "update";
-
-    String S3               = "s3";
-
-    @POST( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH )
-    IntegrationResults integrateEntities(
-            @Path( ENTITY_SET_ID ) UUID entitySetId,
-            @Query( DETAILED_RESULTS ) boolean detailedResults,
-            @Body Map<String, Map<UUID, Set<Object>>> entities );
-
-    /**
-     * Creates a new set of associations.
-     *
-     * @param associations Set of associations to create. An association is the usual (String entityId, SetMultimap &lt;
-     * UUID, Object &gt; details of entity) pairing enriched with source/destination EntityKeys
-     */
-    @POST( BASE + "/" + ASSOCIATION + "/" + SET_ID_PATH )
-    IntegrationResults integrateAssociations(
-            @Body Set<Association> associations,
-            @Query( DETAILED_RESULTS ) boolean detailedResults );
-
-    @POST( BASE )
-    IntegrationResults integrateEntityAndAssociationData(
-            @Body BulkDataCreation data,
-            @Query( DETAILED_RESULTS ) boolean detailedResults );
+    String S3 = "s3";
 
     @POST( BASE + "/" + S3 )
     List<String> generatePresignedUrls( @Body Collection<S3EntityData> data );
 
     @POST( BASE + "/" + ENTITY_KEY_IDS )
     List<UUID> getEntityKeyIds( @Body Set<EntityKey> entityKeys );
-
-    @PUT( BASE + "/" + EDGES )
-    int createEdges( @Body Set<DataEdgeKey> edges );
 
 }
