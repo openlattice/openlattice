@@ -39,14 +39,10 @@ public interface DataIntegrationApi {
     String BASE                  = SERVICE + CONTROLLER;
     // @formatter:on
 
-    String COUNT          = "count";
     String ENTITY_KEY_IDS = "entityKeyIds";
     /**
      * To discuss paths later; perhaps batch this with EdmApi paths
      */
-
-    String ENTITY_SET_ID  = "setId";
-    String UPDATE         = "update";
 
     String S3 = "s3";
 
