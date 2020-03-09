@@ -26,6 +26,7 @@ class CodexConstants() {
         DATE_TIME(FullQualifiedName("general.datetime")),
         WAS_DELIVERED(FullQualifiedName("ol.delivered")),
         CHANNEL(FullQualifiedName("ol.channel")),
+        IS_OUTGOING(FullQualifiedName("ol.isoutgoing")),
 
         PERSON_ID(FullQualifiedName("nc.SubjectIdentification")),
         NICKNAME(FullQualifiedName("im.PersonNickName"))

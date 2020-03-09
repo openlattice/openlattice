@@ -103,7 +103,7 @@ class CodexService(
         /* create entities */
 
         val contactEDK = getContactEntityDataKey(organizationId, phoneNumber)
-        val messageEDK = getMessageEntityDataKey(organizationId, dateTime, messageId, text)
+        val messageEDK = getMessageEntityDataKey(organizationId, dateTime, messageId, text, isOutgoing = true)
 
         /* create associations */
 
@@ -134,7 +134,7 @@ class CodexService(
         /* create entities */
 
         val contactEDK = getContactEntityDataKey(organizationId, phoneNumber)
-        val messageEDK = getMessageEntityDataKey(organizationId, dateTime, messageId, text)
+        val messageEDK = getMessageEntityDataKey(organizationId, dateTime, messageId, text, isOutgoing = false)
 
         /* create associations */
 
@@ -183,12 +183,13 @@ class CodexService(
         return EntityDataKey(entitySetId, entityKeyId)
     }
 
-    private fun getMessageEntityDataKey(organizationId: UUID, dateTime: OffsetDateTime, messageId: String, text: String): EntityDataKey {
+    private fun getMessageEntityDataKey(organizationId: UUID, dateTime: OffsetDateTime, messageId: String, text: String, isOutgoing: Boolean): EntityDataKey {
 
         val entity = mapOf(
                 getPropertyTypeId(CodexConstants.PropertyType.ID) to setOf(messageId),
                 getPropertyTypeId(CodexConstants.PropertyType.DATE_TIME) to setOf(dateTime),
-                getPropertyTypeId(CodexConstants.PropertyType.TEXT) to setOf(text)
+                getPropertyTypeId(CodexConstants.PropertyType.TEXT) to setOf(text),
+                getPropertyTypeId(CodexConstants.PropertyType.IS_OUTGOING) to setOf(isOutgoing)
         )
         val entitySetId = getEntitySetId(organizationId, CodexConstants.AppType.MESSAGES)
         val entityKeyId = entityKeyIdService.getEntityKeyId(entitySetId, messageId)
