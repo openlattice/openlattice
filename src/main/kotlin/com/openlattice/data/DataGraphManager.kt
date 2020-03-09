@@ -25,8 +25,6 @@ import com.google.common.collect.ListMultimap
 import com.google.common.collect.SetMultimap
 import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking
 import com.openlattice.analysis.requests.FilteredNeighborsRankingAggregation
-import com.openlattice.data.integration.Association
-import com.openlattice.data.integration.Entity
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.core.NeighborSets
 import com.openlattice.graph.edge.Edge
@@ -103,12 +101,6 @@ interface DataGraphManager {
 
     fun getEntityKeyIds(entityKeys: Set<EntityKey>): Set<UUID>
 
-    fun integrateEntities(
-            entitySetId: UUID,
-            entities: Map<String, Map<UUID, Set<Any>>>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): Map<String, UUID>
-
     fun createEntities(
             entitySetId: UUID,
             entities: List<Map<UUID, Set<Any>>>,
@@ -139,23 +131,6 @@ interface DataGraphManager {
             associations: ListMultimap<UUID, DataEdge>,
             authorizedPropertiesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>
     ): Map<UUID, CreateAssociationEvent>
-
-    /**
-     * Integrates association data into the system.
-     * @param associations The assosciations to integrate
-     * @param authorizedPropertiesByEntitySet The authorized properties by entity set id.
-     * @return A map of entity sets to mappings of entity ids to entity key ids.
-     */
-    fun integrateAssociations(
-            associations: Set<Association>,
-            authorizedPropertiesByEntitySet: Map<UUID, Map<UUID, PropertyType>>
-    ): Map<UUID, Map<String, UUID>>
-
-    fun integrateEntitiesAndAssociations(
-            entities: Set<Entity>,
-            associations: Set<Association>,
-            authorizedPropertiesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>
-    ): IntegrationResults?
 
     fun getTopUtilizers(
             entitySetId: UUID,
