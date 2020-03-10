@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020. OpenLattice, Inc.
+ * Copyright (C) 2019. OpenLattice, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,25 +18,22 @@
  *
  *
  */
+package com.openlattice.users.export
 
-package com.openlattice.users
+import com.auth0.net.TelemetryInterceptor
+import okhttp3.HttpUrl
+import okhttp3.OkHttpClient
 
-import com.auth0.json.mgmt.users.User
-import java.time.Instant
+class Auth0ApiExtension(val domain: String, private val apiToken: String) {
 
-/**
- *
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
- */
-interface UserListingService {
-    /**
-     * Retrieves all users as a sequence.
-     */
-    fun getAllUsers() : Sequence<User>
+    private val baseUrl = HttpUrl.parse("https://$domain")
+            ?: throw IllegalArgumentException("Domain '$domain' couldn't be parsed as an URL.")
+    private val client = OkHttpClient.Builder()
+            .addInterceptor(TelemetryInterceptor())
+            .build()
 
-    /**
-     * Retrieves updated users where update was happening after [from] (exclusive) and at or before [to] (inclusive)
-     * as a sequence.
-     */
-    fun getUpdatedUsers(from: Instant, to: Instant) : Sequence<User>
+
+    fun userExport(): UserExportEntity {
+        return UserExportEntity(client, baseUrl, apiToken)
+    }
 }

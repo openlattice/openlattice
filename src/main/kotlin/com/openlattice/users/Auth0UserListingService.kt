@@ -23,6 +23,10 @@ package com.openlattice.users
 
 import com.auth0.client.mgmt.ManagementAPI
 import com.auth0.json.mgmt.users.User
+import com.geekbeast.auth0.*
+import com.openlattice.users.export.Auth0ApiExtension
+import com.openlattice.users.export.JobStatus
+import com.openlattice.users.export.UserExportJobRequest
 import org.slf4j.LoggerFactory
 import java.time.Instant
 
@@ -34,23 +38,48 @@ private const val DEFAULT_PAGE_SIZE = 100
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-class Auth0UserListingService(private val managementApi: ManagementAPI) : UserListingService {
+class Auth0UserListingService(
+        private val managementApi: ManagementAPI, private val auth0ApiExtension: Auth0ApiExtension
+) : UserListingService {
+
+    /**
+     * Calls an export job to download all users from auth0 to a json and parses it to a sequence of users.
+     *
+     * Note: This export is used, because the user API has a 1000 user limitation.
+     * @see <a href="https://auth0.com/docs/users/search/v3/get-users-endpoint#limitations"> Auth0 user endpoint
+     * limitations </a>
+     */
     override fun getAllUsers(): Sequence<User> {
+        val exportEntity = auth0ApiExtension.userExport()
+        val job = exportEntity.submitExportJob(
+                UserExportJobRequest(listOf(USER_ID, EMAIL, NICKNAME, APP_METADATA, IDENTITIES))
+        )
 
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        var exportJob = exportEntity.getJob(job.id)
+        while (exportJob.status == JobStatus.pending.name) {
+            exportJob = exportEntity.getJob(job.id)
+        }
 
+        check(exportJob.status == JobStatus.expired.name) { "Export job ${job.id} expired while trying to retrieve users." }
+
+        val downloadLink = exportJob.location.get()
+        TODO("implement download")
     }
 
+    /**
+     * Retrieves users from auth0 where the updated_at property is larger than [from] (exclusive) and smaller than
+     * [to] (inclusive) as a sequence.
+     */
     override fun getUpdatedUsers(from: Instant, to: Instant): Sequence<User> {
         return Auth0UserListingResult(managementApi, from, to).asSequence()
     }
 }
 
 class Auth0UserListingResult(
-        private val managementApi: ManagementAPI, private val lastSync: Instant, private val currentSync: Instant
+        private val managementApi: ManagementAPI, private val from: Instant, private val to: Instant
 ) : Iterable<User> {
     override fun iterator(): Iterator<User> {
-        return Auth0UserListingIterator(managementApi, lastSync, currentSync)
+        return Auth0UserListingIterator(managementApi, from, to)
     }
 }
 

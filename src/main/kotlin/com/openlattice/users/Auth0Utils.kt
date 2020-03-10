@@ -16,7 +16,7 @@ import java.time.Instant
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 @Throws(Auth0Exception::class)
-fun getUsersPage(managementApi: ManagementAPI, page: Int, pageSize: Int): UsersPage {
+fun getUsers(managementApi: ManagementAPI, page: Int, pageSize: Int): List<User> {
     require(pageSize <= MAX_PAGE_SIZE) { "Requested page size of $pageSize exceeds max page size of $MAX_PAGE_SIZE " }
 
     TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
