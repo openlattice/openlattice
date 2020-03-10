@@ -72,16 +72,20 @@ class DatasetController : DatasetApi, AuthorizingComponent {
     @GetMapping(path = [ID_PATH + EXTERNAL_DATABASE_TABLE])
     override fun getExternalDatabaseTables(
             @PathVariable(ID) organizationId: UUID): Set<OrganizationExternalDatabaseTable> {
-        ensureOwnerAccess(AclKey(organizationId))
-        return edms.getExternalDatabaseTables(organizationId)
+        return edms.getExternalDatabaseTables(organizationId).filter { isAuthorized(Permission.READ).test(AclKey(it.id)) }.toSet()
     }
 
     @Timed
     @GetMapping(path = [ID_PATH + EXTERNAL_DATABASE_TABLE + EXTERNAL_DATABASE_COLUMN])
     override fun getExternalDatabaseTablesWithColumns(
             @PathVariable(ID) organizationId: UUID): Map<OrganizationExternalDatabaseTable, Set<OrganizationExternalDatabaseColumn>> {
-        ensureOwnerAccess(AclKey(organizationId))
-        return edms.getExternalDatabaseTablesWithColumns(organizationId)
+        val authorizedColsByTable = mutableMapOf<OrganizationExternalDatabaseTable, Set<OrganizationExternalDatabaseColumn>>()
+        edms.getExternalDatabaseTablesWithColumns(organizationId).forEach { (key, value) ->
+            if (isAuthorized(Permission.READ).test(AclKey(key.id))) {
+                authorizedColsByTable[key] = value.filter { isAuthorized(Permission.READ).test(AclKey(it.id)) }.toSet()
+            }
+        }
+        return authorizedColsByTable
     }
 
     @Timed
@@ -190,8 +194,8 @@ class DatasetController : DatasetApi, AuthorizingComponent {
         return id!!
     }
 
-    private fun getExternalDatabaseObjectIds( containingObjectId: UUID, names: Set<String>): Set<UUID> {
-        val fqns = names.map{FullQualifiedName(containingObjectId.toString(), it).toString()}.toSet()
+    private fun getExternalDatabaseObjectIds(containingObjectId: UUID, names: Set<String>): Set<UUID> {
+        val fqns = names.map { FullQualifiedName(containingObjectId.toString(), it).toString() }.toSet()
         return aclKeyReservations.getIds(fqns).toSet()
     }
 
