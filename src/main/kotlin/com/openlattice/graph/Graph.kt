@@ -163,8 +163,9 @@ class Graph(
 
     /* Select */
 
-    override fun getEdgeKeysContainingEntities(entitySetId: UUID, entityKeyIds: Set<UUID>, includeClearedEdges: Boolean)
-            : PostgresIterable<DataEdgeKey> {
+    override fun getEdgeKeysContainingEntities(
+            entitySetId: UUID, entityKeyIds: Set<UUID>, includeClearedEdges: Boolean
+    ): PostgresIterable<DataEdgeKey> {
         val sql = if (includeClearedEdges) BULK_NEIGHBORHOOD_SQL else BULK_NON_TOMBSTONED_NEIGHBORHOOD_SQL
         return PostgresIterable(
                 Supplier {
@@ -186,12 +187,15 @@ class Graph(
         )
     }
 
-    override fun getEdgeKeysOfEntitySet(entitySetId: UUID): PostgresIterable<DataEdgeKey> {
+    override fun getEdgeKeysOfEntitySet(
+            entitySetId: UUID, includeClearedEdges: Boolean
+    ): PostgresIterable<DataEdgeKey> {
+        val sql = if (includeClearedEdges) NEIGHBORHOOD_OF_ENTITY_SET_SQL else NON_TOMBSTONED_NEIGHBORHOOD_OF_ENTITY_SET_SQL
         return PostgresIterable(
                 Supplier {
                     val connection = hds.connection
                     connection.autoCommit = false
-                    val stmt = connection.prepareStatement(NEIGHBORHOOD_OF_ENTITY_SET_SQL)
+                    val stmt = connection.prepareStatement(sql)
                     stmt.setObject(1, entitySetId)
                     stmt.setObject(2, entitySetId)
                     stmt.setObject(3, entitySetId)
@@ -641,7 +645,7 @@ internal fun getTopUtilizersSql(
 internal fun getTopUtilizersFromSrc(entitySetId: UUID, filters: SetMultimap<UUID, UUID>): String {
     val countColumn = "src_count"
     return "SELECT ${SRC_ENTITY_SET_ID.name} as ${PostgresColumn.ENTITY_SET_ID.name}, ${SRC_ENTITY_KEY_ID.name} as ${ID_VALUE.name}, count(*) as $countColumn " +
-            "FROM ${EDGES.name} WHERE ${srcClauses(entitySetId, filters)} " +
+            "FROM ${E.name} WHERE ${srcClauses(entitySetId, filters)} " +
             "GROUP BY (${PostgresColumn.ENTITY_SET_ID.name}, ${ID_VALUE.name}) "
 }
 
@@ -649,17 +653,19 @@ internal fun getTopUtilizersFromSrc(entitySetId: UUID, filters: SetMultimap<UUID
 internal fun getTopUtilizersFromDst(entitySetId: UUID, filters: SetMultimap<UUID, UUID>): String {
     val countColumn = "dst_count"
     return "SELECT ${DST_ENTITY_SET_ID.name} as ${PostgresColumn.ENTITY_SET_ID.name}, ${DST_ENTITY_KEY_ID.name} as ${ID_VALUE.name}, count(*) as $countColumn " +
-            "FROM ${EDGES.name} WHERE ${dstClauses(entitySetId, filters)} " +
+            "FROM ${E.name} WHERE ${dstClauses(entitySetId, filters)} " +
             "GROUP BY (${PostgresColumn.ENTITY_SET_ID.name}, ${ID_VALUE.name}) "
 }
 
 
-val EDGES_UPSERT_SQL = "INSERT INTO ${E.name} (${INSERT_COLUMNS.joinToString(",")}) VALUES (${(0 until INSERT_COLUMNS.size).joinToString(",") { "?" }}) " +
+val EDGES_UPSERT_SQL = "INSERT INTO ${E.name} (${INSERT_COLUMNS.joinToString(",")}) " +
+        "VALUES (${(INSERT_COLUMNS.indices).joinToString(",") { "?" }}) " +
         "ON CONFLICT (${KEY_COLUMNS.joinToString(",")}) " +
-        "DO UPDATE SET version = EXCLUDED.version, versions = ${E.name}.versions || EXCLUDED.version"
+        "DO UPDATE SET ${VERSION.name} = EXCLUDED.${VERSION.name}, " +
+        "${VERSIONS.name} = ${E.name}.${VERSIONS.name} || EXCLUDED.${VERSION.name}"
 
 
-private val CLEAR_SQL = "UPDATE ${E.name} SET version = ?, versions = versions || ? WHERE "
+private val CLEAR_SQL = "UPDATE ${E.name} SET ${VERSION.name} = ?, ${VERSIONS.name} = ${VERSIONS.name} || ? WHERE "
 private val DELETE_SQL = "DELETE FROM ${E.name} WHERE "
 private val LOCK_SQL1 = "SELECT 1 FROM ${E.name} WHERE "
 private const val LOCK_SQL2 = " FOR UPDATE"
@@ -671,7 +677,8 @@ private val DELETE_BY_VERTEX_SQL = "$DELETE_SQL $VERTEX_FILTER_SQL"
 private val LOCK_BY_VERTEX_SQL = "$LOCK_SQL1 $VERTEX_FILTER_SQL $LOCK_SQL2"
 
 private val NEIGHBORHOOD_OF_ENTITY_SET_SQL = "SELECT * FROM ${E.name} WHERE " +
-        "(${SRC_ENTITY_SET_ID.name} = ?) OR (${EDGE_ENTITY_SET_ID.name} = ?) OR (${DST_ENTITY_SET_ID.name} = ?)"
+        "( (${SRC_ENTITY_SET_ID.name} = ?) OR (${EDGE_ENTITY_SET_ID.name} = ?) OR (${DST_ENTITY_SET_ID.name} = ?) )"
+private val NON_TOMBSTONED_NEIGHBORHOOD_OF_ENTITY_SET_SQL = "$NEIGHBORHOOD_OF_ENTITY_SET_SQL AND ${VERSION.name} > 0"
 
 private val SRC_ID_SQL = "${SRC_ENTITY_KEY_ID.name} = ? AND ${SRC_ENTITY_SET_ID.name} = ?"
 private val DST_ID_SQL = "${DST_ENTITY_KEY_ID.name} = ? AND ${DST_ENTITY_SET_ID.name} = ?"
