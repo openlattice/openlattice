@@ -49,7 +49,7 @@ import kotlin.collections.HashMap
 @Service
 class ExternalDatabaseManagementService(
         private val hazelcastInstance: HazelcastInstance,
-        private val assemblerConnectionManager: AssemblerConnectionManager, //for now using this, may need to move connection logic to its own file
+        private val acm: AssemblerConnectionManager,
         private val securePrincipalsManager: SecurePrincipalsManager,
         private val aclKeyReservations: HazelcastAclKeyReservationService,
         private val authorizationManager: AuthorizationManager,
@@ -100,7 +100,7 @@ class ExternalDatabaseManagementService(
 
         val sql = getColumnMetadataSql(tableName, columnCondition)
         return BasePostgresIterable(
-                StatementHolderSupplier(assemblerConnectionManager.connect(dbName), sql)
+                StatementHolderSupplier(acm.connect(dbName), sql)
         ) { rs ->
             val columnName = columnName(rs)
             val dataType = sqlDataType(rs)
@@ -148,7 +148,7 @@ class ExternalDatabaseManagementService(
         val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
         val sql = "SELECT * FROM $tableName LIMIT $rowCount"
         BasePostgresIterable(
-                StatementHolderSupplier(assemblerConnectionManager.connect(dbName), sql)
+                StatementHolderSupplier(acm.connect(dbName), sql)
         ) { rs ->
             val pairsList = mutableListOf<Pair<UUID, Any?>>()
             columns.forEach {
@@ -175,7 +175,7 @@ class ExternalDatabaseManagementService(
         val columnNamesByTableName = Maps.newHashMapWithExpectedSize<String, MutableSet<String>>(organizationExternalDatabaseTables.size)
         val sql = getCurrentTableAndColumnNamesSql()
         BasePostgresIterable(
-                StatementHolderSupplier(assemblerConnectionManager.connect(dbName), sql, FETCH_SIZE)
+                StatementHolderSupplier(acm.connect(dbName), sql, FETCH_SIZE)
         ) { rs -> name(rs) to columnName(rs) }
                 .forEach {
                     columnNamesByTableName.getOrPut(it.first) { mutableSetOf() }.add(it.second)
@@ -189,10 +189,9 @@ class ExternalDatabaseManagementService(
             val newTableFqn = FullQualifiedName(orgId.toString(), it)
             val oldTableName = getNameFromFqnString(tableFqnToId.first)
             val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
-            assemblerConnectionManager.connect(dbName).let { dataSource ->
-                dataSource.connection.createStatement().use { stmt ->
-                    stmt.execute("ALTER TABLE $oldTableName RENAME TO $it")
-                }
+            acm.connect(dbName).connection.use { conn ->
+                val stmt = conn.createStatement()
+                stmt.execute("ALTER TABLE $oldTableName RENAME TO $it")
             }
             aclKeyReservations.renameReservation(tableFqnToId.second, newTableFqn.fullQualifiedNameAsString)
         }
@@ -206,10 +205,9 @@ class ExternalDatabaseManagementService(
             val newColumnFqn = FullQualifiedName(tableFqnToId.second.toString(), it)
             val oldColumnName = getNameFromFqnString(columnFqnToId.first)
             val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
-            assemblerConnectionManager.connect(dbName).let { dataSource ->
-                dataSource.connection.createStatement().use { stmt ->
-                    stmt.execute("ALTER TABLE $tableName RENAME COLUMN $oldColumnName to $it")
-                }
+            acm.connect(dbName).connection.use { conn ->
+                val stmt = conn.createStatement()
+                stmt.execute("ALTER TABLE $tableName RENAME COLUMN $oldColumnName to $it")
             }
             aclKeyReservations.renameReservation(columnFqnToId.second, newColumnFqn.fullQualifiedNameAsString)
         }
@@ -232,10 +230,9 @@ class ExternalDatabaseManagementService(
 
             //delete tables from postgres
             val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
-            assemblerConnectionManager.connect(dbName).let { dataSource ->
-                dataSource.connection.createStatement().use { stmt ->
-                    stmt.execute("DROP TABLE $tableName")
-                }
+            acm.connect(dbName).connection.use { conn ->
+                val stmt = conn.createStatement()
+                stmt.execute("DROP TABLE $tableName")
             }
         }
 
@@ -266,10 +263,9 @@ class ExternalDatabaseManagementService(
             //delete columns from postgres
             val dropColumnsSql = createDropColumnSql(columnNames)
             val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
-            assemblerConnectionManager.connect(dbName).let {
-                it.connection.createStatement().use { stmt ->
-                    stmt.execute("ALTER TABLE $tableName $dropColumnsSql")
-                }
+            acm.connect(dbName).connection.use { conn ->
+                val stmt = conn.createStatement()
+                stmt.execute("ALTER TABLE $tableName $dropColumnsSql")
             }
 
             deleteOrganizationExternalDatabaseColumnObjects(mapOf(tableId to columnIds))
@@ -303,10 +299,9 @@ class ExternalDatabaseManagementService(
 
         //drop db from schema
         val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
-        assemblerConnectionManager.connect(dbName).let {
-            it.connection.createStatement().use { stmt ->
-                stmt.execute("DROP DATABASE $dbName")
-            }
+        acm.connect(dbName).connection.use { conn ->
+            val stmt = conn.createStatement()
+            stmt.execute("DROP DATABASE $dbName")
         }
     }
 
@@ -342,11 +337,10 @@ class ExternalDatabaseManagementService(
                 ipAddress,
                 organizationExternalDatabaseConfiguration.authMethod)
         hds.connection.use {
-            it.createStatement().use { stmt ->
-                val hbaTable = PostgresTable.HBA_AUTHENTICATION_RECORDS
-                val deleteRecordSql = getDeleteRecordSql(hbaTable, record)
-                stmt.executeUpdate(deleteRecordSql)
-            }
+            val stmt = it.createStatement()
+            val hbaTable = PostgresTable.HBA_AUTHENTICATION_RECORDS
+            val deleteRecordSql = getDeleteRecordSql(hbaTable, record)
+            stmt.executeUpdate(deleteRecordSql)
         }
         updateHBARecords(dbName)
     }
@@ -375,44 +369,41 @@ class ExternalDatabaseManagementService(
             val orgAcls = tableAclsByOrg[orgId]?.toMutableList() ?: mutableListOf()
             columnAclsByOrg[orgId]?.let { orgAcls.addAll(it) }
             val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
-            assemblerConnectionManager.connect(dbName).let { dataSource ->
-                val conn = dataSource.connection
+            acm.connect(dbName).connection.use { conn ->
                 conn.autoCommit = false
-                conn.createStatement().use { stmt ->
-                    dataSource.connection.autoCommit = false
-                    orgAcls.forEach {
-                        val aclKey = AclKey(it.aclKey)
-                        val tableAndColumnNames = getTableAndColumnNames(AclKey(it.aclKey))
-                        val tableName = tableAndColumnNames.first
-                        val columnName = tableAndColumnNames.second
-                        it.aces.forEach { ace ->
-                            if (!areValidPermissions(ace.permissions)) {
-                                throw IllegalStateException("Permissions ${ace.permissions} are not valid")
-                            }
-                            val dbUser = getDBUser(ace.principal.id)
+                val stmt = conn.createStatement()
+                orgAcls.forEach {
+                    val aclKey = AclKey(it.aclKey)
+                    val tableAndColumnNames = getTableAndColumnNames(AclKey(it.aclKey))
+                    val tableName = tableAndColumnNames.first
+                    val columnName = tableAndColumnNames.second
+                    it.aces.forEach { ace ->
+                        if (!areValidPermissions(ace.permissions)) {
+                            throw IllegalStateException("Permissions ${ace.permissions} are not valid")
+                        }
+                        val dbUser = getDBUser(ace.principal.id)
 
-                            //revoke any previous privileges before setting specified ones
-                            if (action == Action.SET) {
-                                val revokeSql = createPrivilegesUpdateSql(Action.REMOVE, listOf("ALL"), tableName, columnName, dbUser)
-                                stmt.addBatch(revokeSql)
+                        //revoke any previous privileges before setting specified ones
+                        if (action == Action.SET) {
+                            val revokeSql = createPrivilegesUpdateSql(Action.REMOVE, listOf("ALL"), tableName, columnName, dbUser)
+                            stmt.addBatch(revokeSql)
 
-                                //maintain column-level privileges if object is a table
-                                if (columnName.isEmpty) {
-                                    getMaintainColumnPrivilegesSql(aclKey, ace.principal, tableName, dbUser).forEach { maintenanceStmt ->
-                                        stmt.addBatch(maintenanceStmt)
-                                    }
+                            //maintain column-level privileges if object is a table
+                            if (columnName.isEmpty) {
+                                getMaintainColumnPrivilegesSql(aclKey, ace.principal, tableName, dbUser).forEach { maintenanceStmt ->
+                                    stmt.addBatch(maintenanceStmt)
                                 }
                             }
-                            val privileges = getPrivilegesFromPermissions(ace.permissions)
-                            val grantSql = createPrivilegesUpdateSql(action, privileges, tableName, columnName, dbUser)
-                            stmt.addBatch(grantSql)
+                        }
+                        val privileges = getPrivilegesFromPermissions(ace.permissions)
+                        val grantSql = createPrivilegesUpdateSql(action, privileges, tableName, columnName, dbUser)
+                        stmt.addBatch(grantSql)
 
-                            //if we've removed privileges on a table, maintain column-level privileges
-                            if (action == Action.REMOVE) {
-                                if (columnName.isEmpty) {
-                                    getMaintainColumnPrivilegesSql(aclKey, ace.principal, tableName, dbUser).forEach { maintenanceStmt ->
-                                        stmt.addBatch(maintenanceStmt)
-                                    }
+                        //if we've removed privileges on a table, maintain column-level privileges
+                        if (action == Action.REMOVE) {
+                            if (columnName.isEmpty) {
+                                getMaintainColumnPrivilegesSql(aclKey, ace.principal, tableName, dbUser).forEach { maintenanceStmt ->
+                                    stmt.addBatch(maintenanceStmt)
                                 }
                             }
                         }
@@ -431,10 +422,9 @@ class ExternalDatabaseManagementService(
     fun revokeAllPrivilegesFromMember(orgId: UUID, userId: String) {
         val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
         val userName = getDBUser(userId)
-        assemblerConnectionManager.connect(dbName).let {
-            it.connection.createStatement().use { stmt ->
-                stmt.execute("REVOKE ALL ON DATABASE $dbName FROM $userName")
-            }
+        acm.connect(dbName).connection.use { conn ->
+            val stmt = conn.createStatement()
+            stmt.execute("REVOKE ALL ON DATABASE $dbName FROM $userName")
         }
     }
 
@@ -458,7 +448,7 @@ class ExternalDatabaseManagementService(
         ownerPrivileges.remove(PostgresPrivileges.ALL)
 
         BasePostgresIterable(
-                StatementHolderSupplier(assemblerConnectionManager.connect(dbName), sql)
+                StatementHolderSupplier(acm.connect(dbName), sql)
         ) { rs ->
             user(rs) to PostgresPrivileges.valueOf(privilegeType(rs).toUpperCase())
         }
@@ -612,10 +602,9 @@ class ExternalDatabaseManagementService(
             out.close()
 
             //reload config
-            assemblerConnectionManager.connect(dbName).let {
-                it.connection.createStatement().use { stmt ->
-                    stmt.executeQuery(getReloadConfigSql())
-                }
+            acm.connect(dbName).connection.use { conn ->
+                val stmt = conn.createStatement()
+                stmt.executeQuery(getReloadConfigSql())
             }
         } catch (ex: IOException) {
             logger.info("IO exception while creating new hba config")
