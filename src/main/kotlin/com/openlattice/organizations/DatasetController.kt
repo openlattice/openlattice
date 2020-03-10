@@ -158,11 +158,7 @@ class DatasetController : DatasetApi, AuthorizingComponent {
     override fun deleteExternalDatabaseTable(
             @PathVariable(ID) organizationId: UUID,
             @PathVariable(TABLE_NAME) tableName: String) {
-        val tableFqnToId = getExternalDatabaseObjectFqnToIdPair(organizationId, tableName)
-        val aclKey = AclKey(tableFqnToId.second)
-        ensureOwnerAccess(aclKey)
-        ensureObjectCanBeDeleted(tableFqnToId.second)
-        edms.deleteOrganizationExternalDatabaseTables(organizationId, mapOf(tableFqnToId))
+        deleteExternalDatabaseTables(organizationId, setOf(tableName))
     }
 
     @Timed
@@ -186,12 +182,7 @@ class DatasetController : DatasetApi, AuthorizingComponent {
             @PathVariable(TABLE_NAME) tableName: String,
             @PathVariable(COLUMN_NAME) columnName: String
     ) {
-        val tableFqnToId = getExternalDatabaseObjectFqnToIdPair(organizationId, tableName)
-        val columnFqnToId = getExternalDatabaseObjectFqnToIdPair(tableFqnToId.second, columnName)
-        val aclKey = AclKey(tableFqnToId.second, columnFqnToId.second)
-        ensureOwnerAccess(aclKey)
-        ensureObjectCanBeDeleted(columnFqnToId.second)
-        edms.deleteOrganizationExternalDatabaseColumns(organizationId, mapOf(tableFqnToId to mapOf(columnFqnToId)))
+        deleteExternalDatabaseColumns(organizationId, tableName, setOf(columnName))
     }
 
     @Timed
