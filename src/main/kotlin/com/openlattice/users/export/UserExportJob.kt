@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.geekbeast.auth0.*
 import com.openlattice.data.requests.FileType
+import okhttp3.HttpUrl
 import java.net.URL
 import java.util.*
 
@@ -53,11 +54,20 @@ data class Field(@JsonProperty(NAME) val name: String)
 data class UserExportJobResult(
         @JsonProperty(STATUS) val status: String,
         @JsonProperty(FORMAT) val format: FileType,
-        @JsonProperty(LOCATION) val location: Optional<URL>) {
+        @JsonProperty(LOCATION) val location: Optional<String>) {
     init {
         if (status == JobStatus.completed.name) {
             require(location.isPresent) { "Location should be provided if job is completed." }
         }
+    }
+
+    @JsonProperty(LOCATION)
+    fun getDownloadUrl(): URL {
+        check(location.isPresent) { "Download location is not set." }
+        val httpUrl = HttpUrl.parse(location.get())
+                ?: throw IllegalArgumentException("The download location URL cannot be parsed.")
+
+        return httpUrl.url()
     }
 }
 
