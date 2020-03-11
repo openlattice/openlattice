@@ -11,7 +11,6 @@ import com.openlattice.organization.OrganizationExternalDatabaseTableColumnsPair
 import com.openlattice.postgres.PostgresConnectionType
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.apache.olingo.commons.api.edm.FullQualifiedName
-import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.*
 import java.util.*
 import javax.inject.Inject
@@ -23,10 +22,6 @@ import javax.inject.Inject
 @RestController
 @RequestMapping(CONTROLLER)
 class DatasetController : DatasetApi, AuthorizingComponent {
-
-    companion object {
-        private val logger = LoggerFactory.getLogger(DatasetController::class.java)
-    }
 
     @Inject
     private lateinit var edms: ExternalDatabaseManagementService
