@@ -75,9 +75,9 @@ class DatasetController : DatasetApi, AuthorizingComponent {
     override fun getExternalDatabaseTablesWithColumns(
             @PathVariable(ID) organizationId: UUID): Map<OrganizationExternalDatabaseTable, Set<OrganizationExternalDatabaseColumn>> {
         val authorizedColsByTable = mutableMapOf<OrganizationExternalDatabaseTable, Set<OrganizationExternalDatabaseColumn>>()
-        edms.getExternalDatabaseTablesWithColumns(organizationId).forEach { (key, value) ->
-            if (isAuthorized(Permission.READ).test(AclKey(key.id))) {
-                authorizedColsByTable[key] = value.filter { isAuthorized(Permission.READ).test(AclKey(it.id)) }.toSet()
+        edms.getExternalDatabaseTablesWithColumns(organizationId).forEach { (table, columns) ->
+            if (isAuthorized(Permission.READ).test(AclKey(table.id))) {
+                authorizedColsByTable[table] = columns.filter { isAuthorized(Permission.READ).test(AclKey(it.id)) }.toSet()
             }
         }
         return authorizedColsByTable
