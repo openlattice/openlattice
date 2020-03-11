@@ -13,11 +13,12 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.springframework.web.bind.annotation.*
 import javax.inject.Inject
-import java.util.UUID
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import com.openlattice.edm.requests.MetadataUpdate
 import org.springframework.web.bind.annotation.PatchMapping
+import java.util.*
+import java.util.stream.Collectors
 
 @SuppressFBWarnings(
         value = ["BC_BAD_CAST_TO_ABSTRACT_COLLECTION"],
@@ -70,20 +71,34 @@ class DatasetController : DatasetApi, AuthorizingComponent {
     @GetMapping(path = [ID_PATH + EXTERNAL_DATABASE_TABLE])
     override fun getExternalDatabaseTables(
             @PathVariable(ID) organizationId: UUID): Set<OrganizationExternalDatabaseTable> {
-        return edms.getExternalDatabaseTables(organizationId).filter { isAuthorized(Permission.READ).test(AclKey(it.id)) }.toSet()
+        val tables = edms.getExternalDatabaseTables(organizationId)
+        val authorizedTableIds = authorizations.accessChecksForPrincipals(
+                tables.keys.map { AccessCheck(AclKey(it), EnumSet.of<Permission>(Permission.READ)) }.toSet(),
+                Principals.getCurrentPrincipals()
+        )
+                .filter { it.permissions.contains(Permission.READ) }
+                .map { it.aclKey[0] }.collect(Collectors.toSet())
+        return tables.filter { it.key in authorizedTableIds }.values.toSet()
     }
 
     @Timed
     @GetMapping(path = [ID_PATH + EXTERNAL_DATABASE_TABLE + EXTERNAL_DATABASE_COLUMN])
     override fun getExternalDatabaseTablesWithColumns(
             @PathVariable(ID) organizationId: UUID): Map<OrganizationExternalDatabaseTable, Set<OrganizationExternalDatabaseColumn>> {
-        val authorizedColsByTable = mutableMapOf<OrganizationExternalDatabaseTable, Set<OrganizationExternalDatabaseColumn>>()
-        edms.getExternalDatabaseTablesWithColumns(organizationId).forEach { (table, columns) ->
-            if (isAuthorized(Permission.READ).test(AclKey(table.id))) {
-                authorizedColsByTable[table] = columns.filter { isAuthorized(Permission.READ).test(AclKey(it.id)) }.toSet()
-            }
-        }
-        return authorizedColsByTable
+        val columnsByTable = edms.getExternalDatabaseTablesWithColumns(organizationId)
+        val authorizedTables = getExternalDatabaseTables(organizationId)
+        val columnsByAuthorizedTable = columnsByTable.filter { it.key in authorizedTables }
+        return columnsByAuthorizedTable.map {
+            it.key to it.value.filter { (columnId, _) ->
+                val authorizedColumnIds = authorizations.accessChecksForPrincipals(
+                        it.value.keys.map { columnId -> AccessCheck(AclKey(columnId), EnumSet.of(Permission.READ)) }.toSet(),
+                        Principals.getCurrentPrincipals()
+                )
+                        .filter { authz -> authz.permissions.contains(Permission.READ) }
+                        .map { authz -> authz.aclKey[0] }.collect(Collectors.toSet())
+                columnId in authorizedColumnIds
+            }.values.toSet()
+        }.toMap()
     }
 
     @Timed
@@ -173,7 +188,7 @@ class DatasetController : DatasetApi, AuthorizingComponent {
         }
         tableIds.forEach { tableId ->
             ensureObjectCanBeDeleted(tableId)
-            val columnIds = edms.getExternalDatabaseTableWithColumns(tableId).columns.map{ it.id }.toSet()
+            val columnIds = edms.getExternalDatabaseTableWithColumns(tableId).columns.map { it.id }.toSet()
             columnIds.forEach { ensureObjectCanBeDeleted(it) }
             val aclKeys = columnIds.map { AclKey(tableId, it) }.toSet()
             aclKeys.forEach { aclKey ->
@@ -218,7 +233,7 @@ class DatasetController : DatasetApi, AuthorizingComponent {
     }
 
     private fun getExternalDatabaseObjectIdByFqnMap(containingObjectId: UUID, names: Set<String>): Map<String, UUID> {
-        val fqns = names.map{FullQualifiedName(containingObjectId.toString(), it).toString()}.toSet()
+        val fqns = names.map { FullQualifiedName(containingObjectId.toString(), it).toString() }.toSet()
         return aclKeyReservations.getIdsByFqn(fqns)
     }
 
