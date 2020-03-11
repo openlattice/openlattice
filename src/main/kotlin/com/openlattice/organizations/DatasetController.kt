@@ -90,12 +90,16 @@ class DatasetController : DatasetApi, AuthorizingComponent {
         val columnsByAuthorizedTable = columnsByTable.filter { it.key in authorizedTables }
         return columnsByAuthorizedTable.map {
             it.key to it.value.filter { (columnId, _) ->
+
+                //creates set of columnIds that the user is authorized to read
                 val authorizedColumnIds = authorizations.accessChecksForPrincipals(
                         it.value.keys.map { columnId -> AccessCheck(AclKey(columnId), EnumSet.of(Permission.READ)) }.toSet(),
                         Principals.getCurrentPrincipals()
                 )
                         .filter { authz -> authz.permissions.contains(Permission.READ) }
                         .map { authz -> authz.aclKey[0] }.collect(Collectors.toSet())
+
+                //performs the filter for authorized columnIds
                 columnId in authorizedColumnIds
             }.values.toSet()
         }.toMap()
