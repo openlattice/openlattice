@@ -185,7 +185,7 @@ constructor(
     @Timed
     @RequestMapping(path = ["", "/"], method = [RequestMethod.GET], produces = [MediaType.APPLICATION_JSON_VALUE])
     override fun getEntitySets(): Set<EntitySet> {
-        val entitySetIds =  authorizations.getAuthorizedObjectsOfType(
+        val entitySetIds = authorizations.getAuthorizedObjectsOfType(
                 Principals.getCurrentPrincipals(),
                 SecurableObjectType.EntitySet,
                 EnumSet.of(Permission.READ)
@@ -210,16 +210,18 @@ constructor(
         val entitySets = entitySetManager.getEntitySetsAsMap(entitySetIds)
 
         val now = OffsetDateTime.now()
-        val events = entitySets.map { AuditableEvent(
-                spm.currentUserId,
-                AclKey(it.key),
-                AuditEventType.READ_ENTITY_SET,
-                "EntitySet read through EntitySetsApi.getEntitySetsById",
-                Optional.empty(),
-                ImmutableMap.of(),
-                now,
-                Optional.empty()
-        ) }.toList()
+        val events = entitySets.map {
+            AuditableEvent(
+                    spm.currentUserId,
+                    AclKey(it.key),
+                    AuditEventType.READ_ENTITY_SET,
+                    "EntitySet read through EntitySetsApi.getEntitySetsById",
+                    Optional.empty(),
+                    ImmutableMap.of(),
+                    now,
+                    Optional.empty()
+            )
+        }.toList()
         recordEvents(events)
 
         return entitySets
@@ -239,16 +241,18 @@ constructor(
         val entitySets = entitySetManager.getEntitySetsAsMap(entitySetIds)
 
         val now = OffsetDateTime.now()
-        val events = entitySets.map { AuditableEvent(
-                spm.currentUserId,
-                AclKey(it.key),
-                AuditEventType.READ_ENTITY_SET,
-                "EntitySet read through EntitySetsApi.getEntitySetsByName",
-                Optional.empty(),
-                ImmutableMap.of(),
-                now,
-                Optional.empty()
-        ) }.toList()
+        val events = entitySets.map {
+            AuditableEvent(
+                    spm.currentUserId,
+                    AclKey(it.key),
+                    AuditEventType.READ_ENTITY_SET,
+                    "EntitySet read through EntitySetsApi.getEntitySetsByName",
+                    Optional.empty(),
+                    ImmutableMap.of(),
+                    now,
+                    Optional.empty()
+            )
+        }.toList()
         recordEvents(events)
 
         return entitySets.mapKeys { entry -> entry.value.name }
@@ -619,9 +623,12 @@ constructor(
         val entitySet = entitySetManager.getEntitySet(entitySetId)!!
         val entityType = edmManager.getEntityType(entitySet.entityTypeId)
 
-        val authorizedPropertyTypes = authzHelper.getAuthorizedPropertyTypes(entitySetId, EnumSet.of(Permission.OWNER))
-        if (!authorizedPropertyTypes.keys.containsAll(entityType.properties)) {
-            throw ForbiddenException("You shall not pass!")
+        val authorizedPropertyTypes = authzHelper
+                .getAuthorizedPropertyTypes(entitySetId, EdmAuthorizationHelper.OWNER_PERMISSION)
+        val missingPropertyTypes = entityType.properties.subtract(authorizedPropertyTypes.keys)
+        if (missingPropertyTypes.isNotEmpty()) {
+            throw ForbiddenException("Cannot delete entity set. Missing ${Permission.OWNER} permission for property " +
+                    "types $missingPropertyTypes.")
         }
 
         return entitySet
