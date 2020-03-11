@@ -519,11 +519,25 @@ constructor(
             @RequestBody dateTime: String
     ): Set<UUID> {
         ensureReadAccess(AclKey(entitySetId))
-        val es = getEntitySet(entitySetId)
+        val es = entitySetManager.getEntitySet(entitySetId)!!
         check(es.hasExpirationPolicy()) { "Entity set ${es.name} does not have an expiration policy" }
 
         val expirationPolicy = es.expiration
         val expirationPT = expirationPolicy.startDateProperty.map { edmManager.getPropertyType(it) }
+
+        recordEvent(
+                AuditableEvent(
+                        spm.currentUserId,
+                        AclKey(entitySetId),
+                        AuditEventType.READ_ENTITY_SET,
+                        "EntitySetApi.getExpiringEntitiesFromEntitySet() resulted in an EntitySet READ",
+                        Optional.empty(),
+                        ImmutableMap.of("entitySetId", entitySetId),
+                        OffsetDateTime.now(),
+                        Optional.empty()
+                )
+        )
+
         return dgm.getExpiringEntitiesFromEntitySet(
                 entitySetId,
                 expirationPolicy,
