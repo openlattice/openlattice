@@ -23,10 +23,12 @@ package com.openlattice.users
 
 import com.auth0.client.mgmt.ManagementAPI
 import com.auth0.json.mgmt.users.User
+import com.dataloom.mappers.ObjectMappers
 import com.geekbeast.auth0.*
 import com.openlattice.users.export.Auth0ApiExtension
 import com.openlattice.users.export.JobStatus
 import com.openlattice.users.export.UserExportJobRequest
+import com.openlattice.users.export.UsersList
 import org.slf4j.LoggerFactory
 import java.time.Instant
 
@@ -59,11 +61,11 @@ class Auth0UserListingService(
         while (exportJob.status == JobStatus.pending.name) {
             exportJob = exportEntity.getJob(job.id)
         }
-
         check(exportJob.status == JobStatus.expired.name) { "Export job ${job.id} expired while trying to retrieve users." }
 
-        val downloadLink = exportJob.location.get()
-        TODO("implement download")
+        val users = exportJob.readUsersList()
+
+        return users.asSequence()
     }
 
     /**
