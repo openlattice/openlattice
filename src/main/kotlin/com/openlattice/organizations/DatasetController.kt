@@ -160,7 +160,6 @@ class DatasetController : DatasetApi, AuthorizingComponent {
         deleteExternalDatabaseTables(organizationId, setOf(tableName))
     }
 
-    //TODO change aclkeys to not have orgId
     @Timed
     @DeleteMapping(path = [ID_PATH + EXTERNAL_DATABASE_TABLE])
     override fun deleteExternalDatabaseTables(
@@ -168,7 +167,7 @@ class DatasetController : DatasetApi, AuthorizingComponent {
             @RequestBody tableNames: Set<String>) {
         val tableIdByFqn = getExternalDatabaseObjectIdByFqnMap(organizationId, tableNames)
         val tableIds = tableIdByFqn.values
-        val aclKeys = tableIds.map { AclKey(organizationId, it) }.toSet()
+        val aclKeys = tableIds.map { AclKey(it) }.toSet()
         aclKeys.forEach { aclKey ->
             ensureOwnerAccess(aclKey)
         }
@@ -176,7 +175,7 @@ class DatasetController : DatasetApi, AuthorizingComponent {
             ensureObjectCanBeDeleted(tableId)
             val columnIds = edms.getExternalDatabaseTableWithColumns(tableId).columns.map{ it.id }.toSet()
             columnIds.forEach { ensureObjectCanBeDeleted(it) }
-            val aclKeys = columnIds.map { AclKey(organizationId, tableId, it) }.toSet()
+            val aclKeys = columnIds.map { AclKey(tableId, it) }.toSet()
             aclKeys.forEach { aclKey ->
                 ensureOwnerAccess(aclKey)
             }
