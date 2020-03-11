@@ -34,15 +34,14 @@ import java.util.*
  * Represents a user export job request POJO used to request a user export job from auth0.
  */
 data class UserExportJobRequest(
-        private val properties: List<String>,
+        @JsonProperty(FIELDS) val fields: List<Field>,
         @JsonProperty(FORMAT) val format: FileType = FileType.json,
         @JsonProperty(LIMIT) val limit: Int = 10000
 ) {
-    @JsonProperty(FIELDS)
-    val fields = properties.map { Field(it) }
+    constructor(properties: List<String>): this(properties.map { Field(it) })
 
     init {
-        require(properties.isNotEmpty()) { "At least one user property must be provided for user export." }
+        require(fields.isNotEmpty()) { "At least one user property must be provided for user export." }
     }
 }
 
