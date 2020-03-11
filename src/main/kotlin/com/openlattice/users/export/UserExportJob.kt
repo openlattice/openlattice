@@ -21,16 +21,12 @@
 package com.openlattice.users.export
 
 
-import com.dataloom.mappers.ObjectMappers
+import com.auth0.json.mgmt.users.User
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.fasterxml.jackson.core.JsonParseException
-import com.fasterxml.jackson.databind.JsonMappingException
 import com.geekbeast.auth0.*
 import com.openlattice.data.requests.FileType
 import okhttp3.HttpUrl
-import org.slf4j.LoggerFactory
-import java.io.IOException
 import java.net.URL
 import java.util.*
 
@@ -66,32 +62,16 @@ data class UserExportJobResult(
         }
     }
 
-    companion object {
-        private val logger = LoggerFactory.getLogger(UserExportJobResult::class.java)
-    }
-
-    fun readUsersList(): UsersList {
-        val downloadUrl = getDownloadUrl()
-
-        try {
-            return ObjectMappers
-                    .getMapper(ObjectMappers.Mapper.valueOf(format.name))
-                    .readValue(downloadUrl.openConnection().getInputStream(), UsersList::class.java)
-        } catch (e: Exception) {
-            logger.error("Couldn't read list of users from download url $downloadUrl.")
-            throw e
-        }
-
-    }
-
-    private fun getDownloadUrl(): URL {
-        check(location.isPresent) { "Download location is not set." }
+    fun getDownloadUrl(): URL {
+        check(location.isPresent) { "Download location is not present." }
         val httpUrl = HttpUrl.parse(location.get())
                 ?: throw IllegalArgumentException("The download location URL cannot be parsed.")
 
         return httpUrl.url()
     }
 }
+
+data class UsersList(val list: List<User>) : List<User> by list
 
 enum class JobStatus {
     completed,
