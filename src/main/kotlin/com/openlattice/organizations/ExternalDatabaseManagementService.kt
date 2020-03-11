@@ -124,14 +124,17 @@ class ExternalDatabaseManagementService(
         return organizations.keys
     }
 
-    fun getExternalDatabaseTables(orgId: UUID): Set<OrganizationExternalDatabaseTable> {
-        return organizationExternalDatabaseTables.values(belongsToOrganization(orgId)).toSet()
+    fun getExternalDatabaseTables(orgId: UUID): Map<UUID, OrganizationExternalDatabaseTable> {
+        return organizationExternalDatabaseTables.entrySet(belongsToOrganization(orgId))
+                .map {
+                    it.key to it.value
+                }.toMap()
     }
 
     fun getExternalDatabaseTablesWithColumns(orgId: UUID): Map<OrganizationExternalDatabaseTable, Set<OrganizationExternalDatabaseColumn>> {
         val tables = getExternalDatabaseTables(orgId)
         return tables.map {
-            it to (organizationExternalDatabaseColumns.values(belongsToTable(it.id)).toSet())
+            it.value to (organizationExternalDatabaseColumns.values(belongsToTable(it.key)).toSet())
         }.toMap()
     }
 
