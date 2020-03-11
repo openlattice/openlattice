@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019. OpenLattice, Inc.
+ * Copyright (C) 2020. OpenLattice, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -50,7 +50,7 @@ class UserExportEntity(private val client: OkHttpClient, private val baseUrl: Ht
         try {
             return request.execute()
         } catch (ex: Exception) {
-            logger.info("Encountered exception $ex when submitting export job $exportJob to url $url.")
+            logger.info("Encountered exception $ex when submitting export job $exportJob.")
             throw ex
         }
     }
@@ -71,7 +71,7 @@ class UserExportEntity(private val client: OkHttpClient, private val baseUrl: Ht
         try {
             return request.execute()
         } catch (ex: Exception) {
-            logger.info("Encountered exception $ex when trying to get export job from url $url.")
+            logger.info("Encountered exception $ex when trying to get export job $jobId.")
             throw ex
         }
     }
