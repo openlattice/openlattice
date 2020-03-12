@@ -38,6 +38,8 @@ fun getUsers(auth0ApiExtension: Auth0ApiExtension): List<User> {
             UserExportJobRequest(listOf(USER_ID, EMAIL, NICKNAME, APP_METADATA, IDENTITIES))
     )
 
+    // will fail if export job hangs too long with too many requests error (429 status code)
+    // https://auth0.com/docs/policies/rate-limits
     var exportJobResult = exportEntity.getJob(job.id)
     while (exportJobResult.status == JobStatus.pending) {
         exportJobResult = exportEntity.getJob(job.id)
@@ -57,6 +59,9 @@ private fun readUsersFromLocation(exportJobResult: UserExportJobResult): List<Us
 
         val input = GZIPInputStream(connection.getInputStream())
         val buffered = BufferedReader(InputStreamReader(input, "UTF-8"))
+
+        // export json format has a line by line user object format
+        // if at any point we have too many users, we might have to download the file
         return buffered.lines().map { line -> mapper.readValue(line, User::class.java) }.collect(Collectors.toList())
     } catch (e: Exception) {
         logger.error("Couldn't read list of users from download url $downloadUrl.")
