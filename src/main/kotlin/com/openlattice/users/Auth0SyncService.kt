@@ -57,7 +57,7 @@ class Auth0SyncService(
     }
 
     fun updateUser(user: User) {
-        logger.info("Synchronizing user ${user.id}")
+        logger.info("Updating user ${user.id}")
         ensureSecurablePrincipalExists(user)
 
         //Update the user in the users table
@@ -68,13 +68,12 @@ class Auth0SyncService(
         //Figure out which users need to be added to which organizations.
         //Since we don't want to do O( # organizations ) for each user, we need to lookup organizations on a per user
         //basis and see if the user needs to be added.
-        logger.info("Synchronizing enrollments for user ${user.id}")
+        logger.info("Synchronizing enrollments and authentication cache for user ${user.id}")
         val principal = getPrincipal(user)
 
         processGlobalEnrollments(principal, user)
         processOrganizationEnrollments(principal, user)
 
-        logger.info("Syncing authentication cache for ${principal.id}")
         syncAuthenticationCache(principal.id)
         markUser(user.id)
     }
