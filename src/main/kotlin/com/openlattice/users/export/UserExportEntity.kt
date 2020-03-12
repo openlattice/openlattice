@@ -58,7 +58,7 @@ class UserExportEntity(private val client: OkHttpClient, private val baseUrl: Ht
             val response = client.newCall(request).execute()
             return mapper.readValue(response.body()?.bytes(), Job::class.java)
         } catch (ex: Exception) {
-            logger.info("Encountered exception $ex when submitting export job $exportJob to url $url.")
+            logger.info("Encountered exception $ex when submitting export job $exportJob.")
             throw ex
         }
     }
@@ -84,7 +84,7 @@ class UserExportEntity(private val client: OkHttpClient, private val baseUrl: Ht
             val response = client.newCall(request).execute()
             return mapper.readValue(response.body()?.bytes(), UserExportJobResult::class.java)
         } catch (ex: Exception) {
-            logger.info("Encountered exception $ex when trying to get export job from url $url.")
+            logger.info("Encountered exception $ex when trying to get export job $jobId.")
             throw ex
         }
     }
