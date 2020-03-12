@@ -25,6 +25,14 @@ fun getEmailDomain(user: User): String {
     return getEmailDomain(user.email)
 }
 
+/**
+ * @param user The user for which to read the identities.
+ * @return A map of providers to connections for the specified user.
+ */
+fun getConnections(user: User): Map<String, String> {
+    return user.identities.associateBy({ it.provider }, { it.connection })
+}
+
 fun getAppMetadata(user: User): Map<String, Set<String>> {
     return user.appMetadata.mapValues { (_, v) ->
         when (v) {
