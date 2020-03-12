@@ -41,7 +41,7 @@ fun getUsers(auth0ApiExtension: Auth0ApiExtension): List<User> {
     // will fail if export job hangs too long with too many requests error (429 status code)
     // https://auth0.com/docs/policies/rate-limits
     var exportJobResult = exportEntity.getJob(job.id)
-    while (exportJobResult.status == JobStatus.pending) {
+    while (exportJobResult.status == JobStatus.PENDING) {
         exportJobResult = exportEntity.getJob(job.id)
     }
 

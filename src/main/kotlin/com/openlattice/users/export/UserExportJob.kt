@@ -53,14 +53,17 @@ data class UserExportJobResult(
         @JsonProperty(FORMAT) val format: FileType,
         @JsonProperty(LOCATION) val location: Optional<URL>) {
     init {
-        if (status == JobStatus.completed) {
+        if (status == JobStatus.COMPLETED) {
             require(location.isPresent) { "Location should be provided if job is completed." }
         }
     }
 }
 
 enum class JobStatus {
-    completed,
-    pending,
-    expired
+    @JsonProperty("completed")
+    COMPLETED,
+    @JsonProperty("pending")
+    PENDING,
+    @JsonProperty("expired")
+    EXPIRED
 }
