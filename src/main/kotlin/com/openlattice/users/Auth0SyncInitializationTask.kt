@@ -29,7 +29,7 @@ import com.openlattice.tasks.Task.AUTH0_SYNC_INITIALIZATION_TASK
 
 
 /**
- * This is the auth0 synchronization initialization task that runs loads all users on startup from auth0.
+ * This is the auth0 synchronization initialization task that loads all users on startup from auth0.
  */
 class Auth0SyncInitializationTask : HazelcastInitializationTask<Auth0SyncTask> {
     override fun getInitialDelay(): Long {
