@@ -25,11 +25,11 @@ import com.dataloom.mappers.ObjectMappers
 import okhttp3.*
 import org.slf4j.LoggerFactory
 
+const val JOBS_PATH = "api/v2/jobs"
+const val CONTENT_TYPE_APPLICATION_JSON = "application/json"
 
 class UserExportEntity(private val client: OkHttpClient, private val baseUrl: HttpUrl, private val apiToken: String) {
-
     private val mapper = ObjectMappers.getJsonMapper()
-    private val CONTENT_TYPE_APPLICATION_JSON = "application/json"
 
     companion object {
         private val logger = LoggerFactory.getLogger(UserExportJobRequest::class.java)
@@ -41,11 +41,13 @@ class UserExportEntity(private val client: OkHttpClient, private val baseUrl: Ht
     fun submitExportJob(exportJob: UserExportJobRequest): Job {
         val url = baseUrl
                 .newBuilder()
-                .addPathSegments("api/v2/jobs/users-exports")
+                .addPathSegments("$JOBS_PATH/users-exports")
                 .build()
                 .toString()
 
-        val body = RequestBody.create(MediaType.parse("application/json"), mapper.writeValueAsBytes(exportJob))
+        val body = RequestBody.create(
+                MediaType.parse(CONTENT_TYPE_APPLICATION_JSON), mapper.writeValueAsBytes(exportJob)
+        )
 
         val request = Request.Builder()
                 .url(url)
@@ -69,7 +71,7 @@ class UserExportEntity(private val client: OkHttpClient, private val baseUrl: Ht
     fun getJob(jobId: String): UserExportJobResult {
         val url = baseUrl
                 .newBuilder()
-                .addPathSegments("api/v2/jobs/$jobId")
+                .addPathSegments("$JOBS_PATH/$jobId")
                 .build()
                 .toString()
 
