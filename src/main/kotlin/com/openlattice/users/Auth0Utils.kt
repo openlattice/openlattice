@@ -11,8 +11,12 @@ import com.geekbeast.auth0.*
 import com.openlattice.authentication.Auth0AuthenticationConfiguration
 import com.openlattice.users.export.*
 import org.slf4j.LoggerFactory
+import java.io.BufferedReader
+import java.io.InputStreamReader
 import java.security.InvalidAlgorithmParameterException
 import java.time.Instant
+import java.util.stream.Collectors
+import java.util.zip.GZIPInputStream
 
 /**
  *
@@ -42,13 +46,18 @@ fun getUsers(auth0ApiExtension: Auth0ApiExtension): List<User> {
     return readUsersFromLocation(exportJobResult)
 }
 
-private fun readUsersFromLocation(exportJobResult: UserExportJobResult): UsersList {
+private fun readUsersFromLocation(exportJobResult: UserExportJobResult): List<User> {
     val downloadUrl = exportJobResult.location.get()
 
     try {
-        return ObjectMappers
-                .getMapper(ObjectMappers.Mapper.valueOf(exportJobResult.format.name))
-                .readValue(downloadUrl.openConnection().getInputStream(), UsersList::class.java)
+        val mapper = ObjectMappers.getMapper(ObjectMappers.Mapper.valueOf(exportJobResult.format.name.toUpperCase()))
+
+        val connection = downloadUrl.openConnection()
+        connection.setRequestProperty("Accept-Encoding", "gzip")
+
+        val input = GZIPInputStream(connection.getInputStream())
+        val buffered = BufferedReader(InputStreamReader(input, "UTF-8"))
+        return buffered.lines().map { line -> mapper.readValue(line, User::class.java) }.collect(Collectors.toList())
     } catch (e: Exception) {
         logger.error("Couldn't read list of users from download url $downloadUrl.")
         throw e
@@ -61,7 +70,8 @@ private fun readUsersFromLocation(exportJobResult: UserExportJobResult): UsersLi
 fun getUpdatedUsersPage(
         managementApi: ManagementAPI, lastSync: Instant, currentSync: Instant, page: Int, pageSize: Int
 ): UsersPage {
-    require(pageSize <= MAX_PAGE_SIZE) { "Requested page size of $pageSize exceeds max page size of $MAX_PAGE_SIZE " }
+    require(pageSize <= MAX_PAGE_SIZE)
+    { "Requested page size of $pageSize exceeds max page size of $MAX_PAGE_SIZE." }
     return managementApi.users().list(
             UserFilter()
                     .withSearchEngine(SEARCH_ENGINE_VERSION)

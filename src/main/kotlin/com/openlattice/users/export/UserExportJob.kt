@@ -20,8 +20,6 @@
  */
 package com.openlattice.users.export
 
-
-import com.auth0.json.mgmt.users.User
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.geekbeast.auth0.*
@@ -60,8 +58,6 @@ data class UserExportJobResult(
         }
     }
 }
-
-data class UsersList(val list: List<User>) : List<User> by list
 
 enum class JobStatus {
     completed,
