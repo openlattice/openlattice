@@ -21,13 +21,15 @@
 package com.openlattice.users.export
 
 import com.auth0.json.mgmt.jobs.Job
-import com.auth0.net.CustomRequest
-import com.fasterxml.jackson.core.type.TypeReference
+import com.dataloom.mappers.ObjectMappers
 import okhttp3.*
 import org.slf4j.LoggerFactory
 
 
 class UserExportEntity(private val client: OkHttpClient, private val baseUrl: HttpUrl, private val apiToken: String) {
+
+    private val mapper = ObjectMappers.getJsonMapper()
+    private val CONTENT_TYPE_APPLICATION_JSON = "application/json"
 
     companion object {
         private val logger = LoggerFactory.getLogger(UserExportJobRequest::class.java)
@@ -43,14 +45,20 @@ class UserExportEntity(private val client: OkHttpClient, private val baseUrl: Ht
                 .build()
                 .toString()
 
-        val request = CustomRequest(client, url, "POST", object : TypeReference<Job>() {})
-                .setBody(exportJob)
+        val body = RequestBody.create(MediaType.parse("application/json"), mapper.writeValueAsBytes(exportJob))
+
+        val request = Request.Builder()
+                .url(url)
                 .addHeader("Authorization", "Bearer $apiToken")
+                .addHeader("Content-Type", CONTENT_TYPE_APPLICATION_JSON)
+                .post(body)
+                .build()
 
         try {
-            return request.execute()
+            val response = client.newCall(request).execute()
+            return mapper.readValue(response.body()?.bytes(), Job::class.java)
         } catch (ex: Exception) {
-            logger.info("Encountered exception $ex when submitting export job $exportJob.")
+            logger.info("Encountered exception $ex when submitting export job $exportJob to url $url.")
             throw ex
         }
     }
@@ -65,13 +73,18 @@ class UserExportEntity(private val client: OkHttpClient, private val baseUrl: Ht
                 .build()
                 .toString()
 
-        val request = CustomRequest(client, url, "GET", object : TypeReference<UserExportJobResult>() {})
+        val request = Request.Builder()
+                .url(url)
                 .addHeader("Authorization", "Bearer $apiToken")
+                .addHeader("Content-Type", CONTENT_TYPE_APPLICATION_JSON)
+                .get()
+                .build()
 
         try {
-            return request.execute()
+            val response = client.newCall(request).execute()
+            return mapper.readValue(response.body()?.bytes(), UserExportJobResult::class.java)
         } catch (ex: Exception) {
-            logger.info("Encountered exception $ex when trying to get export job $jobId.")
+            logger.info("Encountered exception $ex when trying to get export job from url $url.")
             throw ex
         }
     }
