@@ -82,7 +82,7 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies>, Hazelca
      */
     private fun updateUsersCache() {
         val ds = getDependency()
-        logger.info("Synchronizing users.")
+        logger.info("Updating users.")
         currentSync = Instant.now()
 
         ds.userListingService
@@ -93,7 +93,7 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies>, Hazelca
                         try {
                             ds.users.updateUser(it)
                         } catch (ex: Exception) {
-                            logger.error("Unable to synchronize user", ex)
+                            logger.error("Unable to update user ${it.id}", ex)
                         } finally {
                             syncSemaphore.release()
                         }
@@ -114,7 +114,6 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies>, Hazelca
     private fun syncUsers() {
         val ds = getDependency()
         logger.info("Synchronizing users.")
-        currentSync = Instant.now()
 
         ds.users.getCachedUsers()
                 .map {
@@ -123,7 +122,7 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies>, Hazelca
                         try {
                             ds.users.syncUserEnrollmentsAndAuthentication(it)
                         } catch (ex: Exception) {
-                            logger.error("Unable to synchronize user", ex)
+                            logger.error("Unable to synchronize enrollments and permissions for user ${it.id}", ex)
                         } finally {
                             syncSemaphore.release()
                         }
@@ -144,6 +143,7 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies>, Hazelca
         val ds = getDependency()
         logger.info("Initial synchronization of users started.")
         val sw = Stopwatch.createStarted()
+        lastSync = Instant.now()
 
         ds.userListingService
                 .getAllUsers()
@@ -153,7 +153,7 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies>, Hazelca
                         try {
                             ds.users.syncUser(it)
                         } catch (ex: Exception) {
-                            logger.error("Unable to synchronize user", ex)
+                            logger.error("Unable to initially synchronize user ${it.id}", ex)
                         } finally {
                             syncSemaphore.release()
                         }
@@ -166,7 +166,6 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies>, Hazelca
                 }
 
         initialized = true
-        lastSync = Instant.now()
 
         logger.info("Finished initializing all users in ${sw.elapsed(TimeUnit.MILLISECONDS)} ms.")
     }
