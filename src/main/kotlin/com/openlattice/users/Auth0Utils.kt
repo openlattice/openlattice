@@ -35,7 +35,7 @@ fun getUsers(auth0ApiExtension: Auth0ApiExtension): List<User> {
     )
 
     var exportJobResult = exportEntity.getJob(job.id)
-    while (exportJobResult.status == JobStatus.pending.name) {
+    while (exportJobResult.status == JobStatus.pending) {
         exportJobResult = exportEntity.getJob(job.id)
     }
 
@@ -43,7 +43,7 @@ fun getUsers(auth0ApiExtension: Auth0ApiExtension): List<User> {
 }
 
 private fun readUsersFromLocation(exportJobResult: UserExportJobResult): UsersList {
-    val downloadUrl = exportJobResult.getDownloadUrl()
+    val downloadUrl = exportJobResult.location.get()
 
     try {
         return ObjectMappers
