@@ -29,7 +29,7 @@ import java.util.Optional
 class UserExportJobResultSerializationTest : AbstractJacksonSerializationTest<UserExportJobResult>() {
     override fun getSampleData(): UserExportJobResult {
         return UserExportJobResult(
-                JobStatus.completed,
+                JobStatus.COMPLETED,
                 FileType.json,
                 Optional.of(
                         URL("https://user-exports.auth0.com/job_xi2asXGYWQi1MqOY/openlattice.json.gz?Expires=15" +
