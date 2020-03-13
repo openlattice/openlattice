@@ -42,10 +42,9 @@ private val logger = LoggerFactory.getLogger(Auth0SyncTask::class.java)
 class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies>, HazelcastTaskDependencies {
     private val syncSemaphore = Semaphore(MAX_JOBS)
 
-    private var initialized = false
+    private var initialized = getDependency().users.usersInitialized()
 
     private var lastSync = Instant.MAX
-    private var currentSync = Instant.MAX
 
     override fun getDependenciesClass(): Class<Auth0SyncTaskDependencies> {
         return Auth0SyncTaskDependencies::class.java
@@ -83,7 +82,7 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies>, Hazelca
     private fun updateUsersCache() {
         val ds = getDependency()
         logger.info("Updating users.")
-        currentSync = Instant.now()
+        val currentSync = Instant.now()
 
         ds.userListingService
                 .getUpdatedUsers(lastSync, currentSync)
@@ -140,6 +139,10 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies>, Hazelca
      * Loads and synchronizes all users from auth0.
      */
     fun initializeUsers() {
+        if (initialized) {
+            return
+        }
+
         val ds = getDependency()
         logger.info("Initial synchronization of users started.")
         val sw = Stopwatch.createStarted()

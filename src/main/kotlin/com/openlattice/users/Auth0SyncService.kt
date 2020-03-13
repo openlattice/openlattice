@@ -47,6 +47,14 @@ class Auth0SyncService(
     private val principalTrees = HazelcastMap.PRINCIPAL_TREES.getMap(hazelcastInstance)
     private val mapper = ObjectMappers.newJsonMapper()
 
+    /**
+     * Returns true, if the user initialization task has ran at and
+     * [com.openlattice.authorization.mapstores.SecurablePrincipalsMapLoader] is populated.
+     */
+    fun usersInitialized(): Boolean {
+        return authnPrincipalCache.isNotEmpty()
+    }
+
     fun getCachedUsers(): Sequence<User> {
         return users.values.asSequence()
     }
