@@ -498,21 +498,6 @@ class ExternalDatabaseManagementService(
         return true
     }
 
-    private fun getMaintainColumnPrivilegesSql(aclKey: AclKey, principal: Principal, tableName: String, dbUser: String): List<String> {
-        val maintenanceStmts = mutableListOf<String>()
-        organizationExternalDatabaseColumns.values(belongsToTable(aclKey.last())).forEach {
-            val columnAclKey = AclKey(listOf(aclKey[0], it.id))
-            val columnAceKey = AceKey(columnAclKey, principal)
-            val columnAceValue = aces[columnAceKey]
-            if (columnAceValue != null) {
-                val columnPrivileges = getPrivilegesFromPermissions(columnAceValue.permissions)
-                val grantSql = createPrivilegesUpdateSql(Action.ADD, columnPrivileges, tableName, Optional.of(it.name), dbUser)
-                maintenanceStmts.add(grantSql)
-            }
-        }
-        return maintenanceStmts
-    }
-
     private fun getPrivilegesFromPermissions(permissions: EnumSet<Permission>): List<String> {
         val privileges = mutableListOf<String>()
         if (permissions.contains(Permission.OWNER)) {
