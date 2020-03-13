@@ -25,8 +25,8 @@ import com.dataloom.mappers.ObjectMappers
 import okhttp3.*
 import org.slf4j.LoggerFactory
 
-const val JOBS_PATH = "api/v2/jobs"
-const val CONTENT_TYPE_APPLICATION_JSON = "application/json"
+private const val JOBS_PATH = "api/v2/jobs"
+private const val CONTENT_TYPE_APPLICATION_JSON = "application/json"
 
 class UserExportEntity(private val client: OkHttpClient, private val baseUrl: HttpUrl, private val apiToken: String) {
     private val mapper = ObjectMappers.getJsonMapper()
