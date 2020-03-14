@@ -173,14 +173,7 @@ class BackgroundExternalDatabaseSyncingService(
     ): UUID {
         val newTableId = edms.createOrganizationExternalDatabaseTable(orgId, table)
         currentTableIds.add(newTableId)
-
-        //add table-level permissions
-        val acls = edms.syncPermissions(dbName, orgOwnerIds, orgId, newTableId, table.name, Optional.empty(), Optional.empty())
-
-        //create audit entity set and audit permissions
         ares.createAuditEntitySetForExternalDBTable(table)
-        val events = createAuditableEvents(acls, AuditEventType.ADD_PERMISSION)
-        auditingManager.recordEvents(events)
         return newTableId
     }
 
