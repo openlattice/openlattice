@@ -4,6 +4,7 @@ import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Preconditions.checkState
 import com.google.common.net.InetAddresses
 import com.openlattice.authorization.*
+import com.openlattice.controllers.exceptions.ForbiddenException
 import com.openlattice.organization.*
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import com.openlattice.organization.OrganizationExternalDatabaseTable
@@ -72,7 +73,7 @@ class DatasetController : DatasetApi, AuthorizingComponent {
     override fun getExternalDatabaseTables(
             @PathVariable(ID) organizationId: UUID): Set<OrganizationExternalDatabaseTable> {
         val tables = edms.getExternalDatabaseTables(organizationId)
-        val authorizedTableIds = getAuthorizedTableIds(tables)
+        val authorizedTableIds = getAuthorizedTableIds(tables.keys)
         return tables.filter { it.key in authorizedTableIds }.values.toSet()
     }
 
@@ -81,11 +82,11 @@ class DatasetController : DatasetApi, AuthorizingComponent {
     override fun getExternalDatabaseTablesWithColumns(
             @PathVariable(ID) organizationId: UUID): Map<OrganizationExternalDatabaseTable, Set<OrganizationExternalDatabaseColumn>> {
         val columnsByTable = edms.getExternalDatabaseTablesWithColumns(organizationId)
-        val authorizedTableIds = getAuthorizedTableIds(columnsByTable.keys.map { it }.toMap())
+        val authorizedTableIds = getAuthorizedTableIds(columnsByTable.keys.map { it.first }.toSet())
         val columnsByAuthorizedTable = columnsByTable.filter { it.key.first in authorizedTableIds }
         return columnsByAuthorizedTable.map {
             it.key.second to it.value.filter { (columnId, _) ->
-                val authorizedColumnIds = getAuthorizedColumnIds(it.key.first, it.value.keys)
+                val authorizedColumnIds = getAuthorizedColumnIds(it.key.first, it.value.keys, Permission.READ)
                 columnId in authorizedColumnIds
             }.values.toSet()
         }.toMap()
@@ -171,19 +172,20 @@ class DatasetController : DatasetApi, AuthorizingComponent {
             @PathVariable(ID) organizationId: UUID,
             @RequestBody tableNames: Set<String>) {
         val tableIdByFqn = getExternalDatabaseObjectIdByFqnMap(organizationId, tableNames)
-        val tableIds = tableIdByFqn.values
-        val aclKeys = tableIds.map { AclKey(it) }.toSet()
-        aclKeys.forEach { aclKey ->
-            ensureOwnerAccess(aclKey)
+        val tableIds = tableIdByFqn.values.toSet()
+        val authorizedTableIds = getAuthorizedTableIds(tableIds)
+        if (tableIds.size != authorizedTableIds.size) {
+            throw ForbiddenException("Insufficient permissions on tables to perform this action")
         }
+
         tableIds.forEach { tableId ->
             ensureObjectCanBeDeleted(tableId)
             val columnIds = edms.getExternalDatabaseTableWithColumns(tableId).columns.map { it.id }.toSet()
-            columnIds.forEach { ensureObjectCanBeDeleted(it) }
-            val aclKeys = columnIds.map { AclKey(tableId, it) }.toSet()
-            aclKeys.forEach { aclKey ->
-                ensureOwnerAccess(aclKey)
+            val authorizedColumnIds = getAuthorizedColumnIds(tableId, columnIds, Permission.OWNER)
+            if (columnIds.size != authorizedColumnIds.size) {
+                throw ForbiddenException("Insufficient permissions on column objects to perform this action")
             }
+            columnIds.forEach { ensureObjectCanBeDeleted(it) }
         }
         edms.deleteOrganizationExternalDatabaseTables(organizationId, tableIdByFqn)
     }
@@ -227,21 +229,21 @@ class DatasetController : DatasetApi, AuthorizingComponent {
         return aclKeyReservations.getIdsByFqn(fqns)
     }
 
-    private fun getAuthorizedTableIds(tables: Map<UUID, OrganizationExternalDatabaseTable>): Set<UUID> {
+    private fun getAuthorizedTableIds(tableIds: Set<UUID>): Set<UUID> {
         return authorizations.accessChecksForPrincipals(
-                tables.keys.map { AccessCheck(AclKey(it), EnumSet.of<Permission>(Permission.READ)) }.toSet(),
+                tableIds.map { AccessCheck(AclKey(it), EnumSet.of<Permission>(Permission.READ)) }.toSet(),
                 Principals.getCurrentPrincipals()
         )
                 .filter { it.permissions.contains(Permission.READ) }
                 .map { it.aclKey[0] }.collect(Collectors.toSet())
     }
 
-    private fun getAuthorizedColumnIds(tableId: UUID, columnIds: Set<UUID>): Set<UUID> {
+    private fun getAuthorizedColumnIds(tableId: UUID, columnIds: Set<UUID>, permission: Permission): Set<UUID> {
         return authorizations.accessChecksForPrincipals(
-                columnIds.map { columnId -> AccessCheck(AclKey(tableId, columnId), EnumSet.of(Permission.READ)) }.toSet(),
+                columnIds.map { columnId -> AccessCheck(AclKey(tableId, columnId), EnumSet.of(permission)) }.toSet(),
                 Principals.getCurrentPrincipals()
         )
-                .filter { authz -> authz.permissions.contains(Permission.READ) }
+                .filter { authz -> authz.permissions.contains(permission) }
                 .map { authz -> authz.aclKey[1] }.collect(Collectors.toSet())
     }
 
