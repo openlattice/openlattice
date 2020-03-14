@@ -73,7 +73,7 @@ class DatasetController : DatasetApi, AuthorizingComponent {
     override fun getExternalDatabaseTables(
             @PathVariable(ID) organizationId: UUID): Set<OrganizationExternalDatabaseTable> {
         val tables = edms.getExternalDatabaseTables(organizationId)
-        val authorizedTableIds = getAuthorizedTableIds(tables.keys)
+        val authorizedTableIds = getAuthorizedTableIds(tables.keys, Permission.READ)
         return tables.filter { it.key in authorizedTableIds }.values.toSet()
     }
 
@@ -82,7 +82,7 @@ class DatasetController : DatasetApi, AuthorizingComponent {
     override fun getExternalDatabaseTablesWithColumns(
             @PathVariable(ID) organizationId: UUID): Map<OrganizationExternalDatabaseTable, Set<OrganizationExternalDatabaseColumn>> {
         val columnsByTable = edms.getExternalDatabaseTablesWithColumns(organizationId)
-        val authorizedTableIds = getAuthorizedTableIds(columnsByTable.keys.map { it.first }.toSet())
+        val authorizedTableIds = getAuthorizedTableIds(columnsByTable.keys.map { it.first }.toSet(), Permission.READ)
         val columnsByAuthorizedTable = columnsByTable.filter { it.key.first in authorizedTableIds }
         return columnsByAuthorizedTable.map {
             it.key.second to it.value.filter { (columnId, _) ->
@@ -173,7 +173,7 @@ class DatasetController : DatasetApi, AuthorizingComponent {
             @RequestBody tableNames: Set<String>) {
         val tableIdByFqn = getExternalDatabaseObjectIdByFqnMap(organizationId, tableNames)
         val tableIds = tableIdByFqn.values.toSet()
-        val authorizedTableIds = getAuthorizedTableIds(tableIds)
+        val authorizedTableIds = getAuthorizedTableIds(tableIds, Permission.OWNER)
         if (tableIds.size != authorizedTableIds.size) {
             throw ForbiddenException("Insufficient permissions on tables to perform this action")
         }
@@ -229,12 +229,12 @@ class DatasetController : DatasetApi, AuthorizingComponent {
         return aclKeyReservations.getIdsByFqn(fqns)
     }
 
-    private fun getAuthorizedTableIds(tableIds: Set<UUID>): Set<UUID> {
+    private fun getAuthorizedTableIds(tableIds: Set<UUID>, permission: Permission): Set<UUID> {
         return authorizations.accessChecksForPrincipals(
-                tableIds.map { AccessCheck(AclKey(it), EnumSet.of<Permission>(Permission.READ)) }.toSet(),
+                tableIds.map { AccessCheck(AclKey(it), EnumSet.of<Permission>(permission)) }.toSet(),
                 Principals.getCurrentPrincipals()
         )
-                .filter { it.permissions.contains(Permission.READ) }
+                .filter { it.permissions.contains(permission) }
                 .map { it.aclKey[0] }.collect(Collectors.toSet())
     }
 
