@@ -5040,6 +5040,25 @@ components:
         path:
           description: the path to the flight yaml (i.e. https://raw.githubusercontent.com/pathToFlight.yaml)
           type: string
+    FlightPlanParametersUpdate:
+      type: object
+      properties:
+        sql:
+          description: the sql query to be used to pull cleaned data from postgres
+          type: string
+        src:
+          description: postgres data source for pulling clean data
+          type: object
+          additionalProperties:
+            type: string
+        srcPrimaryKeyColumns:
+          description: the columns that are primary keys in the cleaned data
+          type: array
+          items:
+            type: string
+        path:
+          description: the path to the flight yaml (i.e. https://raw.githubusercontent.com/pathToFlight.yaml)
+          type: string
     IntegrationStatus:
       type: string
       enum: [IN_PROGRESS, SUCCEEDED, FAILED, QUEUED, FAILED_TO_START]
@@ -5078,10 +5097,10 @@ components:
           items:
             type: string
         flightPlanParameters:
-          description: a map from [Flight] name to [FlightPlanParameters]
+          description: a map from [Flight] name to [FlightPlanParametersUpdate]
           type: object
           additionalProperties:
-            $ref: "#/components/schemas/FlightPlanParameters"
+            $ref: "#/components/schemas/FlightPlanParametersUpdate"
       
           
           
