@@ -23,12 +23,12 @@ package com.openlattice.users
 
 import com.auth0.json.mgmt.users.User
 import com.auth0.jwt.JWT
-import com.auth0.jwt.algorithms.Algorithm
 import com.geekbeast.auth0.EMAIL
 import com.geekbeast.auth0.EMAIL_VERIFIED
 import com.geekbeast.auth0.USER_ID
 import com.openlattice.authentication.Auth0Configuration
 import org.slf4j.LoggerFactory
+import java.time.Instant
 
 
 /**
@@ -66,8 +66,12 @@ class LocalUserListingService(auth0Configuration: Auth0Configuration) : UserList
 
     }
 
-    override fun getUsers(): Sequence<User> {
+    override fun getAllUsers(): Sequence<User> {
         return users.values.asSequence()
+    }
+
+    override fun getUpdatedUsers(from: Instant, to: Instant): Sequence<User> {
+        return emptySequence()
     }
 
 }

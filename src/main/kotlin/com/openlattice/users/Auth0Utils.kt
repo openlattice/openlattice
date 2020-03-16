@@ -9,17 +9,24 @@ import com.auth0.jwt.algorithms.Algorithm
 import com.geekbeast.auth0.*
 import com.openlattice.authentication.Auth0AuthenticationConfiguration
 import java.security.InvalidAlgorithmParameterException
+import java.time.Instant
 
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
+
+
 @Throws(Auth0Exception::class)
-fun getUsersPage(managementApi: ManagementAPI, page: Int, pageSize: Int): UsersPage {
-    require(pageSize <= MAX_PAGE_SIZE) { "Requested page size of $pageSize exceeds max page size of $MAX_PAGE_SIZE " }
+fun getUpdatedUsersPage(
+        managementApi: ManagementAPI, lastSync: Instant, currentSync: Instant, page: Int, pageSize: Int
+): UsersPage {
+    require(pageSize <= MAX_PAGE_SIZE)
+    { "Requested page size of $pageSize exceeds max page size of $MAX_PAGE_SIZE." }
     return managementApi.users().list(
             UserFilter()
-                    .withSearchEngine("v3")
+                    .withSearchEngine(SEARCH_ENGINE_VERSION)
+                    .withQuery("$UPDATED_AT={$lastSync TO $currentSync]")
                     .withFields("$USER_ID,$EMAIL,$NICKNAME,$APP_METADATA,$IDENTITIES", true)
                     .withPage(page, pageSize)
     ).execute()
@@ -28,10 +35,11 @@ fun getUsersPage(managementApi: ManagementAPI, page: Int, pageSize: Int): UsersP
 @Throws(Auth0Exception::class)
 fun getUser(managementApi: ManagementAPI, principalId: String): User {
     return managementApi.users().get(
-            principalId, UserFilter()
-            .withSearchEngine("v3")
-            .withFields("$USER_ID,$EMAIL,$NICKNAME,$APP_METADATA,$IDENTITIES", true)
-            .withPage(0, 100)
+            principalId,
+            UserFilter()
+                    .withSearchEngine(SEARCH_ENGINE_VERSION)
+                    .withFields("$USER_ID,$EMAIL,$NICKNAME,$APP_METADATA,$IDENTITIES", true)
+                    .withPage(0, MAX_PAGE_SIZE)
     ).execute()
 }
 

@@ -47,7 +47,7 @@ public class HazelcastSecurableObjectResolveTypeService implements SecurableObje
 
     @Override
     public void deleteSecurableObjectType( AclKey aclKey ) {
-        securableObjectTypes.remove( new AclKey( aclKey ) );
+        securableObjectTypes.delete( new AclKey( aclKey ) );
     }
 
     @Override
