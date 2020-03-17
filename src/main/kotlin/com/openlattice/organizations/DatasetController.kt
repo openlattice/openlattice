@@ -4,6 +4,7 @@ import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Preconditions.checkState
 import com.google.common.net.InetAddresses
 import com.openlattice.authorization.*
+import com.openlattice.controllers.exceptions.ForbiddenException
 import com.openlattice.organization.*
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import com.openlattice.organization.OrganizationExternalDatabaseTable
@@ -11,14 +12,14 @@ import com.openlattice.organization.OrganizationExternalDatabaseTableColumnsPair
 import com.openlattice.postgres.PostgresConnectionType
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.apache.olingo.commons.api.edm.FullQualifiedName
-import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.*
 import javax.inject.Inject
-import java.util.UUID
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import com.openlattice.edm.requests.MetadataUpdate
 import org.springframework.web.bind.annotation.PatchMapping
+import java.util.*
+import java.util.stream.Collectors
 
 @SuppressFBWarnings(
         value = ["BC_BAD_CAST_TO_ABSTRACT_COLLECTION"],
@@ -26,10 +27,6 @@ import org.springframework.web.bind.annotation.PatchMapping
 @RestController
 @RequestMapping(CONTROLLER)
 class DatasetController : DatasetApi, AuthorizingComponent {
-
-    companion object {
-        private val logger = LoggerFactory.getLogger(DatasetController::class.java)
-    }
 
     @Inject
     private lateinit var edms: ExternalDatabaseManagementService
@@ -75,16 +72,24 @@ class DatasetController : DatasetApi, AuthorizingComponent {
     @GetMapping(path = [ID_PATH + EXTERNAL_DATABASE_TABLE])
     override fun getExternalDatabaseTables(
             @PathVariable(ID) organizationId: UUID): Set<OrganizationExternalDatabaseTable> {
-        ensureOwnerAccess(AclKey(organizationId))
-        return edms.getExternalDatabaseTables(organizationId)
+        val tables = edms.getExternalDatabaseTables(organizationId)
+        val authorizedTableIds = getAuthorizedTableIds(tables.map { it.key }.toSet(), Permission.READ)
+        return tables.filter { it.key in authorizedTableIds }.map { it.value }.toSet()
     }
 
     @Timed
     @GetMapping(path = [ID_PATH + EXTERNAL_DATABASE_TABLE + EXTERNAL_DATABASE_COLUMN])
     override fun getExternalDatabaseTablesWithColumns(
             @PathVariable(ID) organizationId: UUID): Set<OrganizationExternalDatabaseTableColumnsPair> {
-        //ensureOwnerAccess(AclKey(organizationId))
-        return edms.getExternalDatabaseTablesWithColumns(organizationId)
+        val columnsByTable = edms.getExternalDatabaseTablesWithColumns(organizationId)
+        val authorizedTableIds = getAuthorizedTableIds(columnsByTable.keys.map { it.first }.toSet(), Permission.READ)
+        val columnsByAuthorizedTable = columnsByTable.filter { it.key.first in authorizedTableIds }
+        return columnsByAuthorizedTable.map {
+            it.key.second to it.value.filter { (columnId, _) ->
+                val authorizedColumnIds = getAuthorizedColumnIds(it.key.first, it.value.map { entry -> entry.key }.toSet(), Permission.READ)
+                columnId in authorizedColumnIds
+            }.map { entry -> entry.value }.toSet()
+        }.toMap()
     }
 
     @Timed
@@ -167,10 +172,20 @@ class DatasetController : DatasetApi, AuthorizingComponent {
             @PathVariable(ID) organizationId: UUID,
             @RequestBody tableNames: Set<String>) {
         val tableIdByFqn = getExternalDatabaseObjectIdByFqnMap(organizationId, tableNames)
-        tableIdByFqn.forEach { ensureObjectCanBeDeleted(it.value) }
-        val aclKeys = tableIdByFqn.map { AclKey(it.value) }
-        aclKeys.forEach { aclKey ->
-            ensureOwnerAccess(aclKey)
+        val tableIds = tableIdByFqn.values.toSet()
+        val authorizedTableIds = getAuthorizedTableIds(tableIds, Permission.OWNER)
+        if (tableIds.size != authorizedTableIds.size) {
+            throw ForbiddenException("Insufficient permissions on tables to perform this action")
+        }
+
+        tableIds.forEach { tableId ->
+            ensureObjectCanBeDeleted(tableId)
+            val columnIds = edms.getExternalDatabaseTableWithColumns(tableId).columns.map { it.id }.toSet()
+            val authorizedColumnIds = getAuthorizedColumnIds(tableId, columnIds, Permission.OWNER)
+            if (columnIds.size != authorizedColumnIds.size) {
+                throw ForbiddenException("Insufficient permissions on column objects to perform this action")
+            }
+            columnIds.forEach { ensureObjectCanBeDeleted(it) }
         }
         edms.deleteOrganizationExternalDatabaseTables(organizationId, tableIdByFqn)
     }
@@ -210,8 +225,26 @@ class DatasetController : DatasetApi, AuthorizingComponent {
     }
 
     private fun getExternalDatabaseObjectIdByFqnMap(containingObjectId: UUID, names: Set<String>): Map<String, UUID> {
-        val fqns = names.map{FullQualifiedName(containingObjectId.toString(), it).toString()}.toSet()
+        val fqns = names.map { FullQualifiedName(containingObjectId.toString(), it).toString() }.toSet()
         return aclKeyReservations.getIdsByFqn(fqns)
+    }
+
+    private fun getAuthorizedTableIds(tableIds: Set<UUID>, permission: Permission): Set<UUID> {
+        return authorizations.accessChecksForPrincipals(
+                tableIds.map { AccessCheck(AclKey(it), EnumSet.of<Permission>(permission)) }.toSet(),
+                Principals.getCurrentPrincipals()
+        )
+                .filter { it.permissions.contains(permission) }
+                .map { it.aclKey[0] }.collect(Collectors.toSet())
+    }
+
+    private fun getAuthorizedColumnIds(tableId: UUID, columnIds: Set<UUID>, permission: Permission): Set<UUID> {
+        return authorizations.accessChecksForPrincipals(
+                columnIds.map { columnId -> AccessCheck(AclKey(tableId, columnId), EnumSet.of(permission)) }.toSet(),
+                Principals.getCurrentPrincipals()
+        )
+                .filter { authz -> authz.permissions.contains(permission) }
+                .map { authz -> authz.aclKey[1] }.collect(Collectors.toSet())
     }
 
     private fun validateHBAParameters(connectionType: PostgresConnectionType, ipAddress: String) {
