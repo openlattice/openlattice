@@ -79,7 +79,7 @@ class DatasetController : DatasetApi, AuthorizingComponent {
 
     @Timed
     @GetMapping(path = [ID_PATH + EXTERNAL_DATABASE_TABLE + EXTERNAL_DATABASE_COLUMN])
-    override fun getExternalDatabaseTablesWithColumns(
+    override fun getExternalDatabaseTablesWithColumnMetadata(
             @PathVariable(ID) organizationId: UUID): Set<OrganizationExternalDatabaseTableColumnsPair> {
         val columnsByTable = edms.getExternalDatabaseTablesWithColumns(organizationId)
         val authorizedTableIds = getAuthorizedTableIds(columnsByTable.keys.map { it.first }.toSet(), Permission.READ)
@@ -91,9 +91,11 @@ class DatasetController : DatasetApi, AuthorizingComponent {
         }.toSet()
     }
 
-    fun getExternalDbTablesWithColumnsByPermission(
-            organizationId: UUID,
-            permission: Permission
+    @Timed
+    @GetMapping(path = [ID_PATH + PERMISSION_PATH + EXTERNAL_DATABASE_TABLE + EXTERNAL_DATABASE_COLUMN + AUTHORIZED])
+    override fun getAuthorizedExternalDbTablesWithColumnMetadata(
+            @PathVariable(ID) organizationId: UUID,
+            @PathVariable(PERMISSION) permission: Permission
     ): Set<OrganizationExternalDatabaseTableColumnsPair> {
         val columnsByTable = edms.getExternalDatabaseTablesWithColumns(organizationId)
         val authorizedTableIds = getAuthorizedTableIds(columnsByTable.keys.map { it.first }.toSet(), permission)
@@ -111,7 +113,7 @@ class DatasetController : DatasetApi, AuthorizingComponent {
 
     @Timed
     @GetMapping(path = [ID_PATH + TABLE_ID_PATH + EXTERNAL_DATABASE_TABLE + EXTERNAL_DATABASE_COLUMN])
-    override fun getExternalDatabaseTableWithColumns(
+    override fun getExternalDatabaseTableWithColumnMetadata(
             @PathVariable(ID) organizationId: UUID,
             @PathVariable(TABLE_ID) tableId: UUID): OrganizationExternalDatabaseTableColumnsPair {
         ensureReadAccess(AclKey(tableId))
@@ -125,7 +127,10 @@ class DatasetController : DatasetApi, AuthorizingComponent {
             @PathVariable(TABLE_ID) tableId: UUID,
             @PathVariable(ROW_COUNT) rowCount: Int): Map<UUID, List<Any?>> {
         ensureReadAccess(AclKey(tableId))
-        return edms.getExternalDatabaseTableData(organizationId, tableId, rowCount)
+        val columns = edms.getExternalDatabaseTableWithColumns(tableId).columns
+        val authorizedColumnIds = getAuthorizedColumnIds(tableId, columns.map { it.id }.toSet(), Permission.READ)
+        val authorizedColumns = columns.filter { it.id in authorizedColumnIds }.toSet()
+        return edms.getExternalDatabaseTableData(organizationId, tableId, authorizedColumns, rowCount)
     }
 
     @Timed
