@@ -140,18 +140,22 @@ class ExternalDatabaseManagementService(
         return OrganizationExternalDatabaseTableColumnsPair(table, organizationExternalDatabaseColumns.values(belongsToTable(tableId)).toSet())
     }
 
-    fun getExternalDatabaseTableData(orgId: UUID, tableId: UUID, rowCount: Int): Map<UUID, List<Any?>> {
+    fun getExternalDatabaseTableData(
+            orgId: UUID,
+            tableId: UUID,
+            authorizedColumns: Set<OrganizationExternalDatabaseColumn>,
+            rowCount: Int): Map<UUID, List<Any?>> {
         val tableName = organizationExternalDatabaseTables.getValue(tableId).name
-        val columns = organizationExternalDatabaseColumns.values(belongsToTable(tableId))
+        val columnNamesSql = authorizedColumns.map { it.name }.joinToString(", ")
         val dataByColumnId = mutableMapOf<UUID, MutableList<Any?>>()
 
         val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
-        val sql = "SELECT * FROM $tableName LIMIT $rowCount"
+        val sql = "SELECT $columnNamesSql FROM $tableName LIMIT $rowCount"
         BasePostgresIterable(
                 StatementHolderSupplier(acm.connect(dbName), sql)
         ) { rs ->
             val pairsList = mutableListOf<Pair<UUID, Any?>>()
-            columns.forEach {
+            authorizedColumns.forEach {
                 pairsList.add(it.id to rs.getObject(it.name))
             }
             return@BasePostgresIterable pairsList
