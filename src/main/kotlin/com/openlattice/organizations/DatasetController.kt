@@ -85,11 +85,28 @@ class DatasetController : DatasetApi, AuthorizingComponent {
         val authorizedTableIds = getAuthorizedTableIds(columnsByTable.keys.map { it.first }.toSet(), Permission.READ)
         val columnsByAuthorizedTable = columnsByTable.filter { it.key.first in authorizedTableIds }
         return columnsByAuthorizedTable.map {
-            it.key.second to it.value.filter { (columnId, _) ->
-                val authorizedColumnIds = getAuthorizedColumnIds(it.key.first, it.value.map { entry -> entry.key }.toSet(), Permission.READ)
+            val table = it.key.second
+            val columns = it.value.map { entry -> entry.value }.toSet()
+            return@map OrganizationExternalDatabaseTableColumnsPair(table, columns)
+        }.toSet()
+    }
+
+    fun getExternalDbTablesWithColumnsByPermission(
+            organizationId: UUID,
+            permission: Permission
+    ): Set<OrganizationExternalDatabaseTableColumnsPair> {
+        val columnsByTable = edms.getExternalDatabaseTablesWithColumns(organizationId)
+        val authorizedTableIds = getAuthorizedTableIds(columnsByTable.keys.map { it.first }.toSet(), permission)
+        val columnsByAuthorizedTable = columnsByTable.filter { it.key.first in authorizedTableIds }
+        return columnsByAuthorizedTable.map {
+            val table = it.key.second
+            val columns = it.value.filter { (columnId, _) ->
+                val authorizedColumnIds = getAuthorizedColumnIds(it.key.first, it.value.map { entry -> entry.key }.toSet(), permission)
                 columnId in authorizedColumnIds
             }.map { entry -> entry.value }.toSet()
-        }.toMap()
+            return@map OrganizationExternalDatabaseTableColumnsPair(table, columns)
+        }.toSet()
+
     }
 
     @Timed
