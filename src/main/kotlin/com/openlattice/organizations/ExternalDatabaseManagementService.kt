@@ -413,28 +413,35 @@ class ExternalDatabaseManagementService(
     ): List<Acl> {
         val privilegesByUser = HashMap<UUID, MutableSet<PostgresPrivileges>>()
         val aclKeyUUIDs = mutableListOf(tableId)
-        maybeColumnId.ifPresent { aclKeyUUIDs.add(it) }
-        val aclKey = AclKey(aclKeyUUIDs)
-        val privilegesFields = getPrivilegesFields(tableName, maybeColumnName)
-        val sql = privilegesFields.first
-        val objectType = privilegesFields.second
+        var objectType = SecurableObjectType.OrganizationExternalDatabaseTable
+        var aclKey = AclKey(aclKeyUUIDs)
         val ownerPrivileges = PostgresPrivileges.values().toMutableSet()
         ownerPrivileges.remove(PostgresPrivileges.ALL)
 
-        BasePostgresIterable(
-                StatementHolderSupplier(acm.connect(dbName), sql)
-        ) { rs ->
-            user(rs) to PostgresPrivileges.valueOf(privilegeType(rs).toUpperCase())
+        //if column objects, sync postgres privileges
+        maybeColumnId.ifPresent { columnId ->
+            aclKeyUUIDs.add(columnId)
+            aclKey = AclKey(aclKeyUUIDs)
+            val privilegesFields = getPrivilegesFields(tableName, maybeColumnName)
+            val sql = privilegesFields.first
+            objectType = privilegesFields.second
+
+
+            BasePostgresIterable(
+                    StatementHolderSupplier(acm.connect(dbName), sql)
+            ) { rs ->
+                user(rs) to PostgresPrivileges.valueOf(privilegeType(rs).toUpperCase())
+            }
+                    .filter { isPostgresUserName(it.first) }
+                    .forEach {
+                        val securablePrincipalId = getSecurablePrincipalIdFromUserName(it.first)
+                        privilegesByUser.getOrPut(securablePrincipalId) { mutableSetOf() }.add(it.second)
+                    }
         }
-                .filter { isPostgresUserName(it.first) }
-                .forEach {
-                    val securablePrincipalId = getSecurablePrincipalIdFromUserName(it.first)
-                    privilegesByUser.getOrPut(securablePrincipalId) { mutableSetOf() }.add(it.second)
-                }
 
         //give organization owners all privileges
-        orgOwnerIds.forEach {
-            privilegesByUser.getOrPut(it) { mutableSetOf() }.addAll(ownerPrivileges)
+        orgOwnerIds.forEach { orgOwnerId ->
+            privilegesByUser.getOrPut(orgOwnerId) { mutableSetOf() }.addAll(ownerPrivileges)
         }
 
         return privilegesByUser.map { (securablePrincipalId, privileges) ->
@@ -453,6 +460,7 @@ class ExternalDatabaseManagementService(
             aces.executeOnKey(aceKey, PermissionMerger(permissions, objectType, OffsetDateTime.MAX))
             return@map Acl(aclKeyUUIDs, setOf(Ace(principal, permissions, Optional.empty())))
         }
+
     }
 
     /*PRIVATE FUNCTIONS*/
