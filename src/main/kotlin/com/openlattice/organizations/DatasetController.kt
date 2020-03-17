@@ -82,8 +82,8 @@ class DatasetController : DatasetApi, AuthorizingComponent {
     @Timed
     @GetMapping(path = [ID_PATH + EXTERNAL_DATABASE_TABLE + EXTERNAL_DATABASE_COLUMN])
     override fun getExternalDatabaseTablesWithColumns(
-            @PathVariable(ID) organizationId: UUID): Map<OrganizationExternalDatabaseTable, Set<OrganizationExternalDatabaseColumn>> {
-        ensureOwnerAccess(AclKey(organizationId))
+            @PathVariable(ID) organizationId: UUID): Set<OrganizationExternalDatabaseTableColumnsPair> {
+        //ensureOwnerAccess(AclKey(organizationId))
         return edms.getExternalDatabaseTablesWithColumns(organizationId)
     }
 
