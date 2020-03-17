@@ -73,8 +73,8 @@ class DatasetController : DatasetApi, AuthorizingComponent {
     override fun getExternalDatabaseTables(
             @PathVariable(ID) organizationId: UUID): Set<OrganizationExternalDatabaseTable> {
         val tables = edms.getExternalDatabaseTables(organizationId)
-        val authorizedTableIds = getAuthorizedTableIds(tables.keys, Permission.READ)
-        return tables.filter { it.key in authorizedTableIds }.values.toSet()
+        val authorizedTableIds = getAuthorizedTableIds(tables.map { it.key }.toSet(), Permission.READ)
+        return tables.filter { it.key in authorizedTableIds }.map { it.value }.toSet()
     }
 
     @Timed
@@ -86,9 +86,9 @@ class DatasetController : DatasetApi, AuthorizingComponent {
         val columnsByAuthorizedTable = columnsByTable.filter { it.key.first in authorizedTableIds }
         return columnsByAuthorizedTable.map {
             it.key.second to it.value.filter { (columnId, _) ->
-                val authorizedColumnIds = getAuthorizedColumnIds(it.key.first, it.value.keys, Permission.READ)
+                val authorizedColumnIds = getAuthorizedColumnIds(it.key.first, it.value.map { entry -> entry.key }.toSet(), Permission.READ)
                 columnId in authorizedColumnIds
-            }.values.toSet()
+            }.map { entry -> entry.value }.toSet()
         }.toMap()
     }
 
