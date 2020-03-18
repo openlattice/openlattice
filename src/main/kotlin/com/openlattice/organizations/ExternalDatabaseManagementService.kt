@@ -146,7 +146,7 @@ class ExternalDatabaseManagementService(
             authorizedColumns: Set<OrganizationExternalDatabaseColumn>,
             rowCount: Int): Map<UUID, List<Any?>> {
         val tableName = organizationExternalDatabaseTables.getValue(tableId).name
-        val columnNamesSql = authorizedColumns.map { it.name }.joinToString(", ")
+        val columnNamesSql = authorizedColumns.joinToString(", ") { it.name }
         val dataByColumnId = mutableMapOf<UUID, MutableList<Any?>>()
 
         val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
