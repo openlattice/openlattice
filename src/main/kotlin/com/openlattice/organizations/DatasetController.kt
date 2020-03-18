@@ -259,7 +259,7 @@ class DatasetController : DatasetApi, AuthorizingComponent {
                 tableIds.map { AccessCheck(AclKey(it), EnumSet.of<Permission>(permission)) }.toSet(),
                 Principals.getCurrentPrincipals()
         )
-                .filter { it.permissions.contains(permission) }
+                .filter { it.permissions[permission]!! }
                 .map { it.aclKey[0] }.collect(Collectors.toSet())
     }
 
@@ -268,7 +268,7 @@ class DatasetController : DatasetApi, AuthorizingComponent {
                 columnIds.map { columnId -> AccessCheck(AclKey(tableId, columnId), EnumSet.of(permission)) }.toSet(),
                 Principals.getCurrentPrincipals()
         )
-                .filter { authz -> authz.permissions.contains(permission) }
+                .filter { authz -> authz.permissions[permission]!! }
                 .map { authz -> authz.aclKey[1] }.collect(Collectors.toSet())
     }
 
