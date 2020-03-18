@@ -130,7 +130,7 @@ class DatasetController : DatasetApi, AuthorizingComponent {
         val columns = edms.getExternalDatabaseTableWithColumns(tableId).columns
         val authorizedColumnIds = getAuthorizedColumnIds(tableId, columns.map { it.id }.toSet(), Permission.READ)
         if (authorizedColumnIds.isEmpty()) {
-            throw ForbiddenException("Missing required permissions to read table data.")
+            throw ForbiddenException("Unable to read data from table $tableId. Missing ${Permission.READ} permission on all columns.")
         }
         val authorizedColumns = columns.filter { it.id in authorizedColumnIds }.toSet()
         return edms.getExternalDatabaseTableData(organizationId, tableId, authorizedColumns, rowCount)
