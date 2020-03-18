@@ -473,13 +473,14 @@ class ExternalDatabaseManagementService(
             val permissions = EnumSet.noneOf(Permission::class.java)
 
             if (privileges == ownerPrivileges) {
-                permissions.add(Permission.OWNER)
+                permissions.addAll(setOf(Permission.OWNER, Permission.READ, Permission.WRITE))
+            } else {
+                if (privileges.contains(PostgresPrivileges.SELECT)) {
+                    permissions.add(Permission.READ)
+                }
+                if (privileges.contains(PostgresPrivileges.INSERT) || privileges.contains(PostgresPrivileges.UPDATE))
+                    permissions.add(Permission.WRITE)
             }
-            if (privileges.contains(PostgresPrivileges.SELECT)) {
-                permissions.add(Permission.READ)
-            }
-            if (privileges.contains(PostgresPrivileges.INSERT) || privileges.contains(PostgresPrivileges.UPDATE))
-                permissions.add(Permission.WRITE)
             aces.executeOnKey(aceKey, PermissionMerger(permissions, objectType, OffsetDateTime.MAX))
             return@map Acl(aclKeyUUIDs, setOf(Ace(principal, permissions, Optional.empty())))
         }
