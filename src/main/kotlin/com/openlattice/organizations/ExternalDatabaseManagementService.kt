@@ -94,7 +94,8 @@ class ExternalDatabaseManagementService(
         return column.id
     }
 
-    fun getColumnMetadata(dbName: String, tableName: String, tableId: UUID, orgId: UUID, columnName: Optional<String>): BasePostgresIterable<OrganizationExternalDatabaseColumn> {
+    fun getColumnMetadata(dbName: String, tableName: String, tableId: UUID, orgId: UUID, columnName: Optional<String>): BasePostgresIterable<
+            OrganizationExternalDatabaseColumn> {
         var columnCondition = ""
         columnName.ifPresent { columnCondition = "AND information_schema.columns.column_name = '$it'" }
 
@@ -354,8 +355,10 @@ class ExternalDatabaseManagementService(
      * Sets privileges for a user on an organization's column
      */
     fun executePrivilegesUpdate(action: Action, columnAcls: List<Acl>) {
+        val columnIds = columnAcls.map { it.aclKey[1] }.toSet()
+        val columnsById = organizationExternalDatabaseColumns.getAll(columnIds)
         val columnAclsByOrg = columnAcls.groupBy {
-            organizationExternalDatabaseColumns.getValue(it.aclKey[1]).organizationId
+            columnsById.getValue(it.aclKey[1]).organizationId
         }
 
         columnAclsByOrg.forEach { (orgId, columnAcls) ->
