@@ -140,18 +140,22 @@ class ExternalDatabaseManagementService(
         return OrganizationExternalDatabaseTableColumnsPair(table, organizationExternalDatabaseColumns.values(belongsToTable(tableId)).toSet())
     }
 
-    fun getExternalDatabaseTableData(orgId: UUID, tableId: UUID, rowCount: Int): Map<UUID, List<Any?>> {
+    fun getExternalDatabaseTableData(
+            orgId: UUID,
+            tableId: UUID,
+            authorizedColumns: Set<OrganizationExternalDatabaseColumn>,
+            rowCount: Int): Map<UUID, List<Any?>> {
         val tableName = organizationExternalDatabaseTables.getValue(tableId).name
-        val columns = organizationExternalDatabaseColumns.values(belongsToTable(tableId))
+        val columnNamesSql = authorizedColumns.joinToString(", ") { it.name }
         val dataByColumnId = mutableMapOf<UUID, MutableList<Any?>>()
 
         val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
-        val sql = "SELECT * FROM $tableName LIMIT $rowCount"
+        val sql = "SELECT $columnNamesSql FROM $tableName LIMIT $rowCount"
         BasePostgresIterable(
                 StatementHolderSupplier(acm.connect(dbName), sql)
         ) { rs ->
             val pairsList = mutableListOf<Pair<UUID, Any?>>()
-            columns.forEach {
+            authorizedColumns.forEach {
                 pairsList.add(it.id to rs.getObject(it.name))
             }
             return@BasePostgresIterable pairsList
@@ -469,13 +473,14 @@ class ExternalDatabaseManagementService(
             val permissions = EnumSet.noneOf(Permission::class.java)
 
             if (privileges == ownerPrivileges) {
-                permissions.add(Permission.OWNER)
+                permissions.addAll(setOf(Permission.OWNER, Permission.READ, Permission.WRITE))
+            } else {
+                if (privileges.contains(PostgresPrivileges.SELECT)) {
+                    permissions.add(Permission.READ)
+                }
+                if (privileges.contains(PostgresPrivileges.INSERT) || privileges.contains(PostgresPrivileges.UPDATE))
+                    permissions.add(Permission.WRITE)
             }
-            if (privileges.contains(PostgresPrivileges.SELECT)) {
-                permissions.add(Permission.READ)
-            }
-            if (privileges.contains(PostgresPrivileges.INSERT) || privileges.contains(PostgresPrivileges.UPDATE))
-                permissions.add(Permission.WRITE)
             aces.executeOnKey(aceKey, PermissionMerger(permissions, objectType, OffsetDateTime.MAX))
             return@map Acl(aclKeyUUIDs, setOf(Ace(principal, permissions, Optional.empty())))
         }
