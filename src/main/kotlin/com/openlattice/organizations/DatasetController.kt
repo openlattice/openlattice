@@ -22,8 +22,9 @@ import java.util.*
 import java.util.stream.Collectors
 
 @SuppressFBWarnings(
-        value = ["BC_BAD_CAST_TO_ABSTRACT_COLLECTION"],
-        justification = "Allowing kotlin collection mapping cast to List")
+        value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE", "BC_BAD_CAST_TO_ABSTRACT_COLLECTION"],
+        justification = "Allowing redundant kotlin null check on lateinit variables, " +
+                "Allowing kotlin collection mapping cast to List")
 @RestController
 @RequestMapping(CONTROLLER)
 class DatasetController : DatasetApi, AuthorizingComponent {
