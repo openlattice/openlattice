@@ -5,25 +5,20 @@ import com.google.common.base.Preconditions.checkState
 import com.google.common.net.InetAddresses
 import com.openlattice.authorization.*
 import com.openlattice.controllers.exceptions.ForbiddenException
+import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.organization.*
-import com.openlattice.organization.OrganizationExternalDatabaseColumn
-import com.openlattice.organization.OrganizationExternalDatabaseTable
-import com.openlattice.organization.OrganizationExternalDatabaseTableColumnsPair
 import com.openlattice.postgres.PostgresConnectionType
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.springframework.web.bind.annotation.*
-import javax.inject.Inject
-import org.springframework.web.bind.annotation.PathVariable
-import org.springframework.web.bind.annotation.PostMapping
-import com.openlattice.edm.requests.MetadataUpdate
-import org.springframework.web.bind.annotation.PatchMapping
 import java.util.*
 import java.util.stream.Collectors
+import javax.inject.Inject
 
 @SuppressFBWarnings(
-        value = ["BC_BAD_CAST_TO_ABSTRACT_COLLECTION"],
-        justification = "Allowing kotlin collection mapping cast to List")
+        value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE", "BC_BAD_CAST_TO_ABSTRACT_COLLECTION"],
+        justification = "Allowing redundant kotlin null check on lateinit variables, " +
+                "Allowing kotlin collection mapping cast to List")
 @RestController
 @RequestMapping(CONTROLLER)
 class DatasetController : DatasetApi, AuthorizingComponent {
@@ -170,6 +165,10 @@ class DatasetController : DatasetApi, AuthorizingComponent {
         edms.updateOrganizationExternalDatabaseTable(organizationId, tableFqnToId, metadataUpdate)
     }
 
+    @SuppressFBWarnings(
+            value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"],
+            justification = "lateinit prevents NPE here"
+    )
     @Timed
     @PatchMapping(path = [ID_PATH + TABLE_NAME_PATH + COLUMN_NAME_PATH + EXTERNAL_DATABASE_COLUMN])
     override fun updateExternalDatabaseColumn(
