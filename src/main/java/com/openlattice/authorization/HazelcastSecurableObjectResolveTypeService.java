@@ -62,15 +62,11 @@ public class HazelcastSecurableObjectResolveTypeService implements SecurableObje
     }
 
     @Override
-    public Set<AclKey> getOrganizationExternalDatabaseAclKeys( Set<AclKey> aclKeys ) {
+    public Set<AclKey> getOrganizationExternalDbColumnAclKeys( Set<AclKey> aclKeys ) {
         return securableObjectTypes.keySet(
                 Predicates.and( Predicates.in(SecurableObjectTypeMapstore.ACL_KEY_INDEX, aclKeys.stream().map( AclKey::getIndex ).toArray( String[]::new ) ),
-                        Predicates.or(
                                 Predicates.equal( SecurableObjectTypeMapstore.SECURABLE_OBJECT_TYPE_INDEX,
-                                        SecurableObjectType.OrganizationExternalDatabaseColumn ),
-                                Predicates.equal( SecurableObjectTypeMapstore.SECURABLE_OBJECT_TYPE_INDEX,
-                                        SecurableObjectType.OrganizationExternalDatabaseTable )
-                        )
+                                        SecurableObjectType.OrganizationExternalDatabaseColumn )
                 )
         );
     }

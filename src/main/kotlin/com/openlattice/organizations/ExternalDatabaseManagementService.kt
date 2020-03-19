@@ -94,7 +94,8 @@ class ExternalDatabaseManagementService(
         return column.id
     }
 
-    fun getColumnMetadata(dbName: String, tableName: String, tableId: UUID, orgId: UUID, columnName: Optional<String>): BasePostgresIterable<OrganizationExternalDatabaseColumn> {
+    fun getColumnMetadata(dbName: String, tableName: String, tableId: UUID, orgId: UUID, columnName: Optional<String>): BasePostgresIterable<
+            OrganizationExternalDatabaseColumn> {
         var columnCondition = ""
         columnName.ifPresent { columnCondition = "AND information_schema.columns.column_name = '$it'" }
 
@@ -355,29 +356,21 @@ class ExternalDatabaseManagementService(
     }
 
     /**
-     * Sets privileges for a user on an organization's table or column
+     * Sets privileges for a user on an organization's column
      */
-    fun executePrivilegesUpdate(action: Action, acls: List<Acl>) {
-        //split acls between table and column objects
-        val aclsByType = acls.partition { it.aclKey.size == 1 }
-
-        val tableAclsByOrg = aclsByType.first.groupBy {
-            organizationExternalDatabaseTables.getValue(it.aclKey[0]).organizationId
+    fun executePrivilegesUpdate(action: Action, columnAcls: List<Acl>) {
+        val columnIds = columnAcls.map { it.aclKey[1] }.toSet()
+        val columnsById = organizationExternalDatabaseColumns.getAll(columnIds)
+        val columnAclsByOrg = columnAcls.groupBy {
+            columnsById.getValue(it.aclKey[1]).organizationId
         }
-        val columnAclsByOrg = aclsByType.second.groupBy {
-            organizationExternalDatabaseColumns.getValue(it.aclKey[1]).organizationId
-        }
-        val orgIds = tableAclsByOrg.keys + columnAclsByOrg.keys
 
-        orgIds.forEach { orgId ->
-            val orgAcls = tableAclsByOrg[orgId]?.toMutableList() ?: mutableListOf()
-            columnAclsByOrg[orgId]?.let { orgAcls.addAll(it) }
+        columnAclsByOrg.forEach { (orgId, columnAcls) ->
             val dbName = PostgresDatabases.buildOrganizationDatabaseName(orgId)
             acm.connect(dbName).connection.use { conn ->
                 conn.autoCommit = false
                 val stmt = conn.createStatement()
-                orgAcls.forEach {
-                    val aclKey = AclKey(it.aclKey)
+                columnAcls.forEach {
                     val tableAndColumnNames = getTableAndColumnNames(AclKey(it.aclKey))
                     val tableName = tableAndColumnNames.first
                     val columnName = tableAndColumnNames.second
@@ -391,26 +384,10 @@ class ExternalDatabaseManagementService(
                         if (action == Action.SET) {
                             val revokeSql = createPrivilegesUpdateSql(Action.REMOVE, listOf("ALL"), tableName, columnName, dbUser)
                             stmt.addBatch(revokeSql)
-
-                            //maintain column-level privileges if object is a table
-                            if (columnName.isEmpty) {
-                                getMaintainColumnPrivilegesSql(aclKey, ace.principal, tableName, dbUser).forEach { maintenanceStmt ->
-                                    stmt.addBatch(maintenanceStmt)
-                                }
-                            }
                         }
                         val privileges = getPrivilegesFromPermissions(ace.permissions)
                         val grantSql = createPrivilegesUpdateSql(action, privileges, tableName, columnName, dbUser)
                         stmt.addBatch(grantSql)
-
-                        //if we've removed privileges on a table, maintain column-level privileges
-                        if (action == Action.REMOVE) {
-                            if (columnName.isEmpty) {
-                                getMaintainColumnPrivilegesSql(aclKey, ace.principal, tableName, dbUser).forEach { maintenanceStmt ->
-                                    stmt.addBatch(maintenanceStmt)
-                                }
-                            }
-                        }
                     }
                     stmt.executeBatch()
                     conn.commit()
@@ -443,28 +420,35 @@ class ExternalDatabaseManagementService(
     ): List<Acl> {
         val privilegesByUser = HashMap<UUID, MutableSet<PostgresPrivileges>>()
         val aclKeyUUIDs = mutableListOf(tableId)
-        maybeColumnId.ifPresent { aclKeyUUIDs.add(it) }
-        val aclKey = AclKey(aclKeyUUIDs)
-        val privilegesFields = getPrivilegesFields(tableName, maybeColumnName)
-        val sql = privilegesFields.first
-        val objectType = privilegesFields.second
+        var objectType = SecurableObjectType.OrganizationExternalDatabaseTable
+        var aclKey = AclKey(aclKeyUUIDs)
         val ownerPrivileges = PostgresPrivileges.values().toMutableSet()
         ownerPrivileges.remove(PostgresPrivileges.ALL)
 
-        BasePostgresIterable(
-                StatementHolderSupplier(acm.connect(dbName), sql)
-        ) { rs ->
-            user(rs) to PostgresPrivileges.valueOf(privilegeType(rs).toUpperCase())
+        //if column objects, sync postgres privileges
+        maybeColumnId.ifPresent { columnId ->
+            aclKeyUUIDs.add(columnId)
+            aclKey = AclKey(aclKeyUUIDs)
+            val privilegesFields = getPrivilegesFields(tableName, maybeColumnName)
+            val sql = privilegesFields.first
+            objectType = privilegesFields.second
+
+
+            BasePostgresIterable(
+                    StatementHolderSupplier(acm.connect(dbName), sql)
+            ) { rs ->
+                user(rs) to PostgresPrivileges.valueOf(privilegeType(rs).toUpperCase())
+            }
+                    .filter { isPostgresUserName(it.first) }
+                    .forEach {
+                        val securablePrincipalId = getSecurablePrincipalIdFromUserName(it.first)
+                        privilegesByUser.getOrPut(securablePrincipalId) { mutableSetOf() }.add(it.second)
+                    }
         }
-                .filter { isPostgresUserName(it.first) }
-                .forEach {
-                    val securablePrincipalId = getSecurablePrincipalIdFromUserName(it.first)
-                    privilegesByUser.getOrPut(securablePrincipalId) { mutableSetOf() }.add(it.second)
-                }
 
         //give organization owners all privileges
-        orgOwnerIds.forEach {
-            privilegesByUser.getOrPut(it) { mutableSetOf() }.addAll(ownerPrivileges)
+        orgOwnerIds.forEach { orgOwnerId ->
+            privilegesByUser.getOrPut(orgOwnerId) { mutableSetOf() }.addAll(ownerPrivileges)
         }
 
         return privilegesByUser.map { (securablePrincipalId, privileges) ->
@@ -484,6 +468,7 @@ class ExternalDatabaseManagementService(
             aces.executeOnKey(aceKey, PermissionMerger(permissions, objectType, OffsetDateTime.MAX))
             return@map Acl(aclKeyUUIDs, setOf(Ace(principal, permissions, Optional.empty())))
         }
+
     }
 
     /*PRIVATE FUNCTIONS*/
@@ -495,33 +480,22 @@ class ExternalDatabaseManagementService(
         return columnNames.joinToString(", ") { "DROP COLUMN $it" }
     }
 
-    private fun createPrivilegesUpdateSql(action: Action, privileges: List<String>, tableName: String, columnName: Optional<String>, dbUser: String): String {
+    private fun createPrivilegesUpdateSql(action: Action, privileges: List<String>, tableName: String, columnName: String, dbUser: String): String {
         val privilegesAsString = privileges.joinToString(separator = ", ")
         checkState(action == Action.REMOVE || action == Action.ADD || action == Action.SET,
                 "Invalid action $action specified")
-        var columnField = ""
-        columnName.ifPresent { columnField = "($it)" }
         return if (action == Action.REMOVE) {
-            "REVOKE $privilegesAsString $columnField ON $tableName FROM $dbUser"
+            "REVOKE $privilegesAsString ($columnName) ON $tableName FROM $dbUser"
         } else {
-            "GRANT $privilegesAsString $columnField ON $tableName TO $dbUser"
+            "GRANT $privilegesAsString ($columnName) ON $tableName TO $dbUser"
         }
     }
 
-    private fun getTableAndColumnNames(aclKey: AclKey): Pair<String, Optional<String>> {
-        val securableObjectType = securableObjectTypes[aclKey]!!
-        val tableName: String
-        val columnName: Optional<String>
-        val securableObjectId = aclKey.last()
-        if (securableObjectType == SecurableObjectType.OrganizationExternalDatabaseColumn) {
-            val organizationAtlasColumn = organizationExternalDatabaseColumns.getValue(securableObjectId)
-            tableName = organizationExternalDatabaseTables.getValue(organizationAtlasColumn.tableId).name
-            columnName = Optional.of(organizationAtlasColumn.name)
-        } else {
-            val organizationAtlasTable = organizationExternalDatabaseTables.getValue(securableObjectId)
-            tableName = organizationAtlasTable.name
-            columnName = Optional.empty()
-        }
+    private fun getTableAndColumnNames(aclKey: AclKey): Pair<String, String> {
+        val securableObjectId = aclKey[1]
+        val organizationAtlasColumn = organizationExternalDatabaseColumns.getValue(securableObjectId)
+        val tableName = organizationExternalDatabaseTables.getValue(organizationAtlasColumn.tableId).name
+        val columnName = organizationAtlasColumn.name
         return Pair(tableName, columnName)
     }
 
@@ -538,21 +512,6 @@ class ExternalDatabaseManagementService(
             return false
         }
         return true
-    }
-
-    private fun getMaintainColumnPrivilegesSql(aclKey: AclKey, principal: Principal, tableName: String, dbUser: String): List<String> {
-        val maintenanceStmts = mutableListOf<String>()
-        organizationExternalDatabaseColumns.values(belongsToTable(aclKey.last())).forEach {
-            val columnAclKey = AclKey(listOf(aclKey[0], it.id))
-            val columnAceKey = AceKey(columnAclKey, principal)
-            val columnAceValue = aces[columnAceKey]
-            if (columnAceValue != null) {
-                val columnPrivileges = getPrivilegesFromPermissions(columnAceValue.permissions)
-                val grantSql = createPrivilegesUpdateSql(Action.ADD, columnPrivileges, tableName, Optional.of(it.name), dbUser)
-                maintenanceStmts.add(grantSql)
-            }
-        }
-        return maintenanceStmts
     }
 
     private fun getPrivilegesFromPermissions(permissions: EnumSet<Permission>): List<String> {
