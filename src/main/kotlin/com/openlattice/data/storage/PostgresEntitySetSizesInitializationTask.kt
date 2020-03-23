@@ -39,7 +39,7 @@ class PostgresEntitySetSizesInitializationTask : HazelcastInitializationTask<Pos
         const val ENTITY_SET_SIZES_VIEW = "entity_set_counts"
 
         val CREATE_ENTITY_SET_COUNTS_VIEW = "CREATE MATERIALIZED VIEW IF NOT EXISTS $ENTITY_SET_SIZES_VIEW " +
-                "AS $NORMAL_ENTITY_SET_COUNTS UNION $LINKED_ENTITY_SET_COUNTS"
+                "AS $NORMAL_ENTITY_SET_COUNTS " // TODO bring back linking counts
 
         const val REFRESH_ENTITY_SET_COUNTS_VIEW = "REFRESH MATERIALIZED VIEW $ENTITY_SET_SIZES_VIEW "
     }

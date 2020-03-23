@@ -9,6 +9,7 @@ import com.openlattice.analysis.SqlBindInfo
 import com.openlattice.analysis.requests.Filter
 import com.openlattice.data.DeleteType
 import com.openlattice.data.WriteEvent
+import com.openlattice.data.storage.PostgresEntitySetSizesInitializationTask.Companion.ENTITY_SET_SIZES_VIEW
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.data.util.PostgresDataHasher
 import com.openlattice.edm.type.PropertyType
@@ -18,6 +19,7 @@ import com.openlattice.postgres.PostgresTable.DATA
 import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
+import com.openlattice.postgres.streams.StatementHolderSupplier
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.apache.olingo.commons.api.edm.FullQualifiedName
@@ -46,6 +48,12 @@ class PostgresEntityDataQueryService(
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(PostgresEntityDataQueryService::class.java)
+    }
+
+    fun getEntitySetCounts(): Map<UUID, Long> {
+        return BasePostgresIterable(StatementHolderSupplier(hds, "SELECT * FROM $ENTITY_SET_SIZES_VIEW")) {
+            ResultSetAdapters.entitySetId(it) to ResultSetAdapters.count(it)
+        }.toMap()
     }
 
     @JvmOverloads
