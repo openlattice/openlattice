@@ -112,9 +112,10 @@ class AuditInitializationTask(
     }
 
     private fun ensureAllEntitySetsHaveAuditEntitySets(dependencies: AuditTaskDependencies) {
+        val aresKeys = auditRecordEntitySetConfigurations.keys
         entitySets.entries
                 .filter {
-                    !auditRecordEntitySetConfigurations.keys.contains(AclKey(it.key)) && !it.value.flags.contains(
+                    !aresKeys.contains(AclKey(it.key)) && !it.value.flags.contains(
                             EntitySetFlag.AUDIT
                     )
                 }
@@ -137,8 +138,9 @@ class AuditInitializationTask(
     }
 
     private fun ensureAllOrganizationsHaveAuditEntitySets(dependencies: AuditTaskDependencies) {
+        val aresKeys = auditRecordEntitySetConfigurations.keys
         organizations.keys
-                .filter { !auditRecordEntitySetConfigurations.keys.contains(AclKey(it)) }
+                .filter { !aresKeys.contains(AclKey(it)) }
                 .forEach {
                     dependencies.entitySetManager.getAuditRecordEntitySetsManager()
                             .createAuditEntitySetForOrganization(it)
