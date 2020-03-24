@@ -8,6 +8,7 @@ import com.openlattice.authorization.AuthorizingComponent
 import com.openlattice.authorization.Principal
 import com.openlattice.authorization.Principals
 import com.openlattice.data.storage.MetadataOption
+import com.openlattice.data.storage.PostgresEntityDataQueryService
 import com.openlattice.data.storage.selectEntitySetWithCurrentVersionOfPropertyTypes
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
@@ -15,6 +16,7 @@ import com.openlattice.edm.PostgresEdmManager
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.notifications.sms.SmsEntitySetInformation
 import com.openlattice.organizations.HazelcastOrganizationService
+import com.openlattice.organizations.Organization
 import com.openlattice.postgres.DataTables.quote
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
@@ -54,6 +56,9 @@ class AdminController : AdminApi, AuthorizingComponent {
 
     @Inject
     private lateinit var organizations: HazelcastOrganizationService
+
+    @Inject
+    private lateinit var pedqs: PostgresEntityDataQueryService
 
     @GetMapping(value = [SQL + ID_PATH], produces = [MediaType.APPLICATION_JSON_VALUE])
     override fun getEntitySetSql(
@@ -156,6 +161,32 @@ class AdminController : AdminApi, AuthorizingComponent {
         ensureAdminAccess()
         organizations.setSmsEntitySetInformation(entitySetInformationList)
         return entitySetInformationList.size
+    }
+
+    @Timed
+    @GetMapping(value = [ORGANIZATION + USAGE], produces = [MediaType.APPLICATION_JSON_VALUE])
+    override fun getEntityCountByOrganization(): Map<UUID, Long> {
+        ensureAdminAccess()
+
+        val unassignedId = UUID(0, 0)
+
+        val entitySetCounts = pedqs.getEntitySetCounts()
+        val entitySets = entitySetManager.getEntitySetsAsMap(entitySetCounts.keys)
+
+        val orgCounts = mutableMapOf<UUID, Long>()
+        entitySetCounts.forEach { (entitySetId, count) ->
+            val orgId = entitySets[entitySetId]?.organizationId ?: unassignedId
+            orgCounts[orgId] = orgCounts.getOrDefault(orgId, 0) + count
+        }
+
+        return orgCounts
+    }
+
+    @Timed
+    @GetMapping(value = [ORGANIZATION], produces = [MediaType.APPLICATION_JSON_VALUE])
+    override fun getAllOrganizations(): Iterable<Organization> {
+        ensureAdminAccess()
+        return organizations.getAllOrganizations()
     }
 
     override fun getAuthorizationManager(): AuthorizationManager {
