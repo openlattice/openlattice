@@ -41,10 +41,11 @@ class AuditInitializationTask(
         }
         dependencies.entitySetManager.getAuditRecordEntitySetsManager().auditingTypes.intialize()
         logger.info("Creating any missing audit entity sets")
+        val auditedAclKeys = auditRecordEntitySetConfigurations.keys.toSet()
         ensureEdmEntitySetExists(dependencies)
-        ensureAllEntitySetsHaveAuditEntitySets(dependencies)
+        ensureAllEntitySetsHaveAuditEntitySets(dependencies, auditedAclKeys)
         ensureAllEntitySetsHaveAuditEdgeEntitySets(dependencies)
-        ensureAllOrganizationsHaveAuditEntitySets(dependencies)
+        ensureAllOrganizationsHaveAuditEntitySets(dependencies, auditedAclKeys)
     }
 
     override fun after(): Set<Class<out HazelcastInitializationTask<*>>> {
@@ -111,11 +112,10 @@ class AuditInitializationTask(
         }
     }
 
-    private fun ensureAllEntitySetsHaveAuditEntitySets(dependencies: AuditTaskDependencies) {
-        val aresKeys = auditRecordEntitySetConfigurations.keys.toSet()
+    private fun ensureAllEntitySetsHaveAuditEntitySets(dependencies: AuditTaskDependencies, auditedAclKeys: Set<AclKey>) {
         entitySets.entries
                 .filter {
-                    !aresKeys.contains(AclKey(it.key)) && !it.value.flags.contains(
+                    !auditedAclKeys.contains(AclKey(it.key)) && !it.value.flags.contains(
                             EntitySetFlag.AUDIT
                     )
                 }
@@ -137,10 +137,9 @@ class AuditInitializationTask(
 
     }
 
-    private fun ensureAllOrganizationsHaveAuditEntitySets(dependencies: AuditTaskDependencies) {
-        val aresKeys = auditRecordEntitySetConfigurations.keys.toSet()
+    private fun ensureAllOrganizationsHaveAuditEntitySets(dependencies: AuditTaskDependencies, auditedAclKeys: Set<AclKey>) {
         organizations.keys
-                .filter { !aresKeys.contains(AclKey(it)) }
+                .filter { !auditedAclKeys.contains(AclKey(it)) }
                 .forEach {
                     dependencies.entitySetManager.getAuditRecordEntitySetsManager()
                             .createAuditEntitySetForOrganization(it)
