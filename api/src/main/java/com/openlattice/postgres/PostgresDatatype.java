@@ -66,6 +66,7 @@ public enum PostgresDatatype {
     DATE, DATE_ARRAY,
     TIME, TIME_ARRAY,
     TIMETZ, TIMETZ_ARRAY,
+    TIMESTAMP,
     TIMESTAMPTZ, TIMESTAMPTZ_ARRAY,
     UUID, UUID_ARRAY, UUID_ARRAY_ARRAY,
     TEXT, TEXT_ARRAY,
@@ -99,6 +100,25 @@ public enum PostgresDatatype {
                 return "DOUBLE PRECISION[]";
             default:
                 return ARRAY_TYPES.contains( this ) ? name().replace( "_ARRAY", "[]" ) : name();
+        }
+    }
+
+    public static PostgresDatatype getEnum(String dataTypeInput ) {
+        switch ( dataTypeInput ) {
+            case "TIME WITHOUT TIME ZONE":
+                return TIME;
+            case "TIME WITH TIME ZONE":
+                return TIMETZ;
+            case "DOUBLE PRECISION":
+                return DOUBLE;
+            case "DOUBLE PRECISION[]":
+                return DOUBLE_ARRAY;
+            case "TIMESTAMP WITH TIME ZONE":
+                return TIMESTAMPTZ;
+            case "TIMESTAMP WITHOUT TIME ZONE":
+                return TIMESTAMP;
+            default:
+                return PostgresDatatype.valueOf(dataTypeInput.replace("[]", "_ARRAY") );
         }
     }
 }

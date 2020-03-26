@@ -76,9 +76,10 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
                 schemas );
         this.datatype = Preconditions.checkNotNull( datatype, "PropertyType datatype cannot be null" );
         if ( enumValues.isPresent() ) {
-            checkArgument( ALLOWED_UNDERLYING_TYPES.contains( datatype ), "Only certain types are allowed" );
-            checkArgument( enumValues.get().size() > 0, "At least one enum value must be specified." );
-            this.enumValues.addAll( enumValues.get() );
+            if (enumValues.get().size() > 0) {
+                checkArgument( ALLOWED_UNDERLYING_TYPES.contains( datatype ), "Only certain types are allowed" );
+                this.enumValues.addAll( enumValues.get() );
+            }
         }
         this.piiField = piiField.orElse( false );
         this.multiValued = multiValued.orElse( true );
@@ -90,6 +91,30 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
         } else {
             this.postgresIndexType = postgresIndexType.orElse( IndexType.BTREE );
         }
+    }
+
+    public PropertyType(
+            UUID id,
+            FullQualifiedName fqn,
+            String title,
+            Optional<String> description,
+            Set<FullQualifiedName> schemas,
+            EdmPrimitiveTypeKind datatype,
+            Optional<Set<String>> enumValues,
+            Optional<Boolean> piiField,
+            Optional<Analyzer> analyzer,
+            Optional<IndexType> postgresIndexType ) {
+        this( Optional.of( id ),
+                fqn,
+                title,
+                description,
+                schemas,
+                datatype,
+                enumValues,
+                piiField,
+                Optional.empty(),
+                analyzer,
+                postgresIndexType );
     }
 
     public PropertyType(

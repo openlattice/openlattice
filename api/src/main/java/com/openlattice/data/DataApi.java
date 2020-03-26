@@ -83,7 +83,7 @@ public interface DataApi {
      * @return An iterable containing the entity data, using property type FQNs as keys
      */
     @POST( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH )
-    Iterable<SetMultimap<FullQualifiedName, Object>> loadEntitySetData(
+    Iterable<SetMultimap<FullQualifiedName, Object>> loadSelectedEntitySetData(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Body EntitySetSelection req,
             @Query( FILE_TYPE ) FileType fileType );
@@ -152,7 +152,7 @@ public interface DataApi {
      *                     entitiy data keys.
      */
     @PUT( BASE + "/" + ASSOCIATION )
-    Integer createAssociations( @Body Set<DataEdgeKey> associations );
+    Integer createEdges( @Body Set<DataEdgeKey> associations );
 
     /**
      * Creates a new set of associations.
@@ -278,7 +278,7 @@ public interface DataApi {
             @Path( ENTITY_KEY_ID ) UUID entityKeyId );
 
     @GET( BASE + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH + "/" + PROPERTY_TYPE_ID_PATH )
-    Set<Object> getEntity(
+    Set<Object> getEntityPropertyValues(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Path( ENTITY_KEY_ID ) UUID entityKeyId,
             @Path( PROPERTY_TYPE_ID ) UUID propertyTypeId );
