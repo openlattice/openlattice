@@ -57,7 +57,10 @@ constructor(
     }
 
     @Timed
-    @RequestMapping(path = [INCOMING + ORG_ID_PATH], method = [RequestMethod.POST], consumes = [MediaType.APPLICATION_FORM_URLENCODED_VALUE])
+    @RequestMapping(path = [INCOMING + ORG_ID_PATH],
+            method = [RequestMethod.POST],
+            consumes = [MediaType.APPLICATION_FORM_URLENCODED_VALUE],
+            produces = [MediaType.TEXT_PLAIN_VALUE])
     fun receiveIncomingText(@PathVariable(ORG_ID) organizationId: UUID, request: HttpServletRequest) {
         ensureTwilio(request)
         codexService.processIncomingMessage(organizationId, request)
