@@ -1473,7 +1473,7 @@ paths:
   /datastore/organization-database/{organizationId}/external-database-table/external-database-column:
     get:
       summary: Gets a map of all OrganizationExternalDatabaseTable objects to OrganizationExternalDatabase columns that are contained within each table.
-      operationId: getExternalDatabaseTablesWithColumns
+      operationId: getExternalDatabaseTablesWithColumnMetadata
       tags: [dataset]
       security:
         - openlattice_auth: []
@@ -1491,11 +1491,39 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties:
                   type: array
                   items:
-                    $ref: "#/components/schemas/OrganizationExternalDatabaseColumn"
+                    $ref: "#/components/schemas/OrganizationExternalDatabaseTableColumnsPair"
+  /datastore/organization-database/{organizationId}/{permission}/external-database-table/external-database-column/authorized:
+    get:
+      summary: Gets a map of all OrganizationExternalDatabaseTable objects to OrganizationExternalDatabase columns that are contained within each table.
+      operationId: getAuthorizedExternalDbTablesWithColumnMetadata
+      tags: [dataset]
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: permission
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [DISCOVER, MATERIALIZE, LINK, READ, WRITE, OWNER]
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/OrganizationExternalDatabaseTableColumnsPair"
   /datastore/organization-database/{organizationId}/{tableId}/external-database-table/external-database-column:
     get:
       summary: Gets an object containing an OrganizationExternalDatabaseTable object and its OrganizationExternalDatabase columns for an organization
@@ -1523,10 +1551,131 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties:
-                  $ref: "#/components/schemas/OrganizationExternalDatabaseTableColumnsPair"
-
+                $ref: "#/components/schemas/OrganizationExternalDatabaseTableColumnsPair"
+  /datastore/organization-database/{organizationId}/{tableName}/{columnName}/external-database-column:
+    get:
+      summary: Gets an OrganizationExternalDatabaseColumn object, which represents a column within an organization's table in an external database. 
+      operationId: getExternalDatabaseColumn
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: tableName
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: columnName
+          in: path
+          required: true
+          schema:
+            type: string
+      tags:
+        - dataset
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationExternalDatabaseColumn"      
+    patch:
+      summary: Updates an OrganizationExternalDatabaseTableColumn object's fields that are included within the given metadata.
+      operationId: updateExternalDatabaseColumn
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: tableName
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: columnName
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MetadataUpdate"
+      tags:
+        - dataset
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+  /datastore/organization-database/{organizationId}/{tableName}/external-database-table:
+    get:
+      summary: Gets an OrganizationExternalDatabaseTable object, which represents an organization's table in an external database. 
+      operationId: getExternalDatabaseTable
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: tableName
+          in: path
+          required: true
+          schema:
+            type: string
+      tags:
+        - dataset
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationExternalDatabaseTable"      
+    patch:
+      summary: Updates an OrganizationExternalDatabaseTable object's fields that are included within the given metadata.
+      operationId: updateExternalDatabaseTable
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: tableName
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MetadataUpdate"
+      tags:
+        - dataset
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
 
 
   ###############
@@ -2538,11 +2687,11 @@ paths:
   # /datastore/search/organizations/index:
   #   get:
   #     summary: Trigger indexing all organizations.
-  #     operationId: triggerAllOrganzationsIndex
+  #     operationId: triggerAllOrganizationsIndex
   # /datastore/search/organizations/index/{organizationId}:
   #   get:
   #     summary: Trigger indexing an organization.
-  #     operationId: triggerOrganzationIndex
+  #     operationId: triggerOrganizationIndex
   
   ####################
   ## DIRECTORY APIs ##
