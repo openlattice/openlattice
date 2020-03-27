@@ -57,10 +57,7 @@ constructor(
     }
 
     @Timed
-    @RequestMapping(path = [INCOMING + ORG_ID_PATH],
-            method = [RequestMethod.POST],
-            consumes = [MediaType.APPLICATION_FORM_URLENCODED_VALUE],
-            produces = [MediaType.TEXT_PLAIN_VALUE])
+    @RequestMapping(path = [INCOMING + ORG_ID_PATH], method = [RequestMethod.POST], consumes = [MediaType.APPLICATION_FORM_URLENCODED_VALUE])
     fun receiveIncomingText(@PathVariable(ORG_ID) organizationId: UUID, request: HttpServletRequest) {
         ensureTwilio(request)
         codexService.processIncomingMessage(organizationId, request)
@@ -85,8 +82,8 @@ constructor(
     fun ensureTwilio(request: HttpServletRequest) {
 
         val url = request.requestURL.toString()
-        val params = request.parameterMap.mapValues { it.toString() }
         val signature = request.getHeader("X-Twilio-Signature")
+        val params = request.parameterMap.mapValues { request.getParameter(it.key) }
 
         if (!validator.validate(url, params, signature)) {
             throw ForbiddenException("Could not verify that incoming request to $url was sent by Twilio")
