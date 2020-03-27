@@ -78,13 +78,6 @@ interface EntityDatastore {
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): WriteEvent
 
-    @Deprecated("")
-    fun integrateEntities(
-            entitySetId: UUID,
-            entities: Map<UUID, Map<UUID, Set<Any>>>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): WriteEvent
-
     /**
      * Replaces the contents of an entity in its entirety. Equivalent to a delete of the existing entity and write
      * of new values
@@ -143,7 +136,7 @@ interface EntityDatastore {
      * @param authorizedPropertyTypes The property types the user is requested and is allowed to clear.
      * @return The number of properties cleared.
      */
-    fun clearEntityData(
+    fun clearEntityProperties(
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
             authorizedPropertyTypes: Map<UUID, PropertyType>

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017. OpenLattice, Inc
+ * Copyright (C) 2020. OpenLattice, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,31 +16,24 @@
  *
  * You can contact the owner of the copyright at support@openlattice.com
  *
+ *
  */
+package com.openlattice.users.export
 
-package com.openlattice.data.hazelcast;
+import com.auth0.net.TelemetryInterceptor
+import okhttp3.HttpUrl
+import okhttp3.OkHttpClient
 
-import com.google.common.collect.SetMultimap;
-import java.nio.ByteBuffer;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+class Auth0ApiExtension(val domain: String, private val apiToken: String) {
 
-/**
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
- */
-public class Entities extends HashMap<UUID, SetMultimap<UUID, ByteBuffer>> {
+    private val baseUrl = HttpUrl.parse("https://$domain")
+            ?: throw IllegalArgumentException("Domain '$domain' couldn't be parsed as an URL.")
+    private val client = OkHttpClient.Builder()
+            .addInterceptor(TelemetryInterceptor())
+            .build()
 
-    public Entities( int initialCapacity ) {
-        super( initialCapacity );
+
+    fun userExport(): UserExportEntity {
+        return UserExportEntity(client, baseUrl, apiToken)
     }
-
-    public Entities() {
-        super();
-    }
-
-    public Entities( Map<? extends UUID, ? extends SetMultimap<UUID, ByteBuffer>> m ) {
-        super( m );
-    }
-
 }

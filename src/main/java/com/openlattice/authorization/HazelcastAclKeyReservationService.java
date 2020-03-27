@@ -84,6 +84,10 @@ public class HazelcastAclKeyReservationService {
         return Util.getSafely( aclKeys, names ).values();
     }
 
+    public Map<String, UUID> getIdsByFqn(Set<String> names) {
+        return Util.getSafely( aclKeys, names);
+    }
+
     public boolean isReserved( String name ) {
         return this.aclKeys.containsKey( name );
     }

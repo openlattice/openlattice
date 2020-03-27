@@ -42,8 +42,17 @@ public interface GraphService {
 
     WriteEvent deleteEdges( Iterable<DataEdgeKey> keys );
 
-    PostgresIterable<DataEdgeKey> getEdgeKeysOfEntitySet( UUID entitySetId );
+    /**
+     * Returns all {@link DataEdgeKey}s where either src, dst and/or edge entity set id(s) equal the requested
+     * entitySetId.
+     * If includeClearedEdges is set to true, it will also return cleared (version < 0) entities.
+     */
+    PostgresIterable<DataEdgeKey> getEdgeKeysOfEntitySet( UUID entitySetId, boolean includeClearedEdges );
 
+    /**
+     * Returns all {@link DataEdgeKey}s that include requested entityKeyIds either as src, dst and/or edge.
+     * If includeClearedEdges is set to true, it will also return cleared (version < 0) entities.
+     */
     PostgresIterable<DataEdgeKey> getEdgeKeysContainingEntities(
             UUID entitySetId,
             Set<UUID> entityKeyIds,
