@@ -97,7 +97,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/entityType"
+                $ref: "#/components/schemas/EntityType"
     delete:
       summary: Deletes the EntityType definition for the given EntityType UUID.
       operationId: deleteEntityType
@@ -128,7 +128,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/metadataUpdate"
+              $ref: "#/components/schemas/MetadataUpdate"
       tags:
         - edm
       security:
@@ -307,7 +307,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/entityType"
+                  $ref: "#/components/schemas/EntityType"
     post:
       summary: Creates a new EntityType definition, if it doesn't exist.
       operationId: createEntityType
@@ -318,7 +318,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/entityType"
+              $ref: "#/components/schemas/EntityType"
       responses:
         "200":
           description: Success
@@ -339,7 +339,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/associationType"
+                  $ref: "#/components/schemas/AssociationType"
     post:
       summary: Creates a new AssociationType definition, if it doesn't exist.
       operationId: createAssociationType
@@ -352,7 +352,7 @@ paths:
             schema:
               type: array
               items:
-                $ref: "#/components/schemas/associationType"
+                $ref: "#/components/schemas/AssociationType"
       responses:
         "200":
           description: Success
@@ -380,7 +380,7 @@ paths:
               schema:
                 type: object
                 additionalProperties:
-                  $ref: "#/components/schemas/entityTypePropertyMetadata"
+                  $ref: "#/components/schemas/EntityTypePropertyMetadata"
     patch:
       summary: Updates the EntityType definition for the given EntityType UUID by reordering its properties as specified by the provided list.
       operationId: reorderPropertyTypesInEntityType
@@ -454,7 +454,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/entityTypePropertyMetadata"
+                $ref: "#/components/schemas/EntityTypePropertyMetadata"
     post:
       summary: Update EntityType Property metadata
       operationId: updateEntityTypePropertyMetadata
@@ -505,7 +505,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/propertyType"
+                $ref: "#/components/schemas/PropertyType"
     delete:
       summary: Deletes the PropertyType definition for the given PropertyType UUID.
       operationId: deletePropertyType
@@ -544,7 +544,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/metadataUpdate"
+              $ref: "#/components/schemas/MetadataUpdate"
       responses:
         "200":
           description: Success
@@ -612,7 +612,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/propertyType"
+                  $ref: "#/components/schemas/PropertyType"
     post:
       summary: Creates a new PropertyType definition, if it doesn"t exist.
       operationId: createPropertyType
@@ -626,7 +626,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/propertyType"
+              $ref: "#/components/schemas/PropertyType"
       responses:
         "200":
           description: Success
@@ -653,7 +653,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/propertyType"
+                  $ref: "#/components/schemas/PropertyType"
 
   # association types
 
@@ -679,7 +679,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/associationType"
+                $ref: "#/components/schemas/AssociationType"
     delete:
       summary: Deletes the AssociationType definition for the given AssociationType UUID.
       operationId: deleteAssociationType
@@ -717,7 +717,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/associationType"
+                $ref: "#/components/schemas/AssociationType"
   /datastore/edm/association/type/{associationTypeId}/available:
     get:
       summary: Get all available associations for the given AssociationType UUID.
@@ -742,7 +742,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/associationType"
+                  $ref: "#/components/schemas/AssociationType"
   /datastore/edm/association/type/{associationTypeId}/dst/{entityTypeId}:
     put:
       summary: Update the AssociationType dst entity types for the given AssociationType UUID by adding the given EntityType UUID.
@@ -861,7 +861,7 @@ paths:
               schema:
                 type: object
                 additionalProperties:
-                  $ref: "#/components/schemas/propertyUsageSummary"
+                  $ref: "#/components/schemas/PropertyUsageSummary"
   /datastore/edm/summary/{propertyTypeId}:
     get:
       summary: Get Property Usage Summary for property with given ID.
@@ -886,7 +886,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/propertyUsageSummary"
+                  $ref: "#/components/schemas/PropertyUsageSummary"
 
   # schema
 
@@ -922,7 +922,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/schema"
+                $ref: "#/components/schemas/Schema"
     put:
       summary: Creates an empty schema, if it doesn't exist. If schema exists then no action is taken.
       operationId: createEmptySchema
@@ -990,7 +990,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/schema"
+                  $ref: "#/components/schemas/Schema"
     post:
       summary: Creates an empty schema, if it doesn't exist. If schema exists then no action is taken.
       operationId: createSchemaIfNotExists
@@ -1001,7 +1001,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/schema"
+              $ref: "#/components/schemas/Schema"
       security:
         - openlattice_auth: []
         - http_auth: []
@@ -1031,7 +1031,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/schema"
+                  $ref: "#/components/schemas/Schema"
 
   #####################
   ## ENTITY SET APIs ##
@@ -1055,7 +1055,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/entitySet"
+                  $ref: "#/components/schemas/EntitySet"
     post:
       summary: Creates new EntitySet definitions if they don't exist.
       operationId: createEntitySets
@@ -1066,7 +1066,7 @@ paths:
             schema:
               type: array
               items:
-                $ref: "#/components/schemas/entitySet"
+                $ref: "#/components/schemas/EntitySet"
       tags: [entitySets, edm]
       security:
         - openlattice_auth: []
@@ -1142,7 +1142,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/entitySet"
+                $ref: "#/components/schemas/EntitySet"
     delete:
       summary: Deletes the EntitySet definition for the given EntitySet UUID.
       operationId: deleteEntitySet
@@ -1233,7 +1233,7 @@ paths:
               schema:
                 type: object
                 additionalProperties:
-                  $ref: "#/components/schemas/propertyType"
+                  $ref: "#/components/schemas/PropertyType"
   /datastore/entity-sets/all/{entitySetId}/properties/{propertyTypeId}/:
     get:
       summary: Get specified property type metadata for an entity set.
@@ -1287,7 +1287,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/metadataUpdate"
+              $ref: "#/components/schemas/MetadataUpdate"
       responses:
         200:
           description: Success
@@ -1307,7 +1307,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/metadataUpdate"
+              $ref: "#/components/schemas/MetadataUpdate"
       tags: [entitySets, edm]
       security:
         - openlattice_auth: []
@@ -1570,7 +1570,7 @@ paths:
                 additionalProperties:
                   type: array
                   items:
-                    $ref: "#/components/schemas/dataEdge"
+                    $ref: "#/components/schemas/DataEdge"
       tags:
         - data
       security:
@@ -1599,7 +1599,7 @@ paths:
               description: Set of associations to create. An association is the triple of source, destination, and edge entitiy data keys.
               type: array
               items:
-                $ref: "#/components/schemas/dataEdgeKey"
+                $ref: "#/components/schemas/DataEdgeKey"
       tags:
         - data
       security:
@@ -1630,7 +1630,7 @@ paths:
               additionalProperties:
                 type: object
                 additionalProperties:
-                  $ref: "#/components/schemas/dataEdge"
+                  $ref: "#/components/schemas/DataEdge"
       tags:
         - data
       security:
@@ -1687,9 +1687,7 @@ paths:
         content:
           application/json:
             schema:
-              type: array
-              items:
-                $ref: "#/components/schemas/entitySetSelection"
+              $ref: "#/components/schemas/EntitySetSelection"
       tags:
         - data
       security:
@@ -1962,7 +1960,7 @@ paths:
             schema:
               type: array
               items:
-                $ref: "#/components/schemas/entitySetSelection"
+                $ref: "#/components/schemas/EntitySetSelection"
       tags:
         - data
       security:
@@ -2145,7 +2143,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/bulkDataCreation"
+              $ref: "#/components/schemas/BulkDataCreation"
       tags:
         - data-integrations
       security:
@@ -2157,7 +2155,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/integrationResults"
+                $ref: "#/components/schemas/IntegrationResults"
   /datastore/integration/entityKeyIds:
     post:
       summary: Get entity key IDs
@@ -2169,7 +2167,7 @@ paths:
             schema:
               type: array
               items:
-                $ref: "#/components/schemas/entityKey"
+                $ref: "#/components/schemas/EntityKey"
       tags:
         - data-integrations
       security:
@@ -2206,7 +2204,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/advancedSearch"
+              $ref: "#/components/schemas/AdvancedSearch"
       tags:
         - search
       security:
@@ -2218,7 +2216,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/dataSearchResult"
+                $ref: "#/components/schemas/DataSearchResult"
 
   /datastore/search/{entitySetId}/{entityKeyId}:
     get:
@@ -2250,7 +2248,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/neighborEntityDetails"
+                  $ref: "#/components/schemas/NeighborEntityDetails"
   /datastore/search/{entitySetId}/neighbors:
     post:
       summary: Executes a search for all neighbors of multiple entities of the same entity set that are connected by an association
@@ -2287,7 +2285,7 @@ paths:
                 additionalProperties:
                   type: array
                   items:
-                    $ref: "#/components/schemas/neighborEntityDetails"
+                    $ref: "#/components/schemas/NeighborEntityDetails"
   /datastore/search/{entitySetId}/neighbors/advanced:
     post:
       summary: Executes a search for all neighbors of multiple entities of the same entity set that are connected by an association
@@ -2304,7 +2302,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/neighborSearchFilter"
+              $ref: "#/components/schemas/NeighborSearchFilter"
       tags:
         - search
       security:
@@ -2320,7 +2318,7 @@ paths:
                 additionalProperties:
                   type: array
                   items:
-                    $ref: "#/components/schemas/neighborEntityDetails"
+                    $ref: "#/components/schemas/NeighborEntityDetails"
 
   /datastore/search/{entitySetId}/neighbors/advanced/ids:
     post:
@@ -2338,7 +2336,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/neighborSearchFilter"
+              $ref: "#/components/schemas/NeighborSearchFilter"
       tags:
         - search
       security:
@@ -2358,7 +2356,7 @@ paths:
                     additionalProperties:
                       type: array
                       items:
-                        $ref: "#/components/schemas/neighborEntityIds"
+                        $ref: "#/components/schemas/NeighborEntityIds"
   /datastore/search:
     post:
       summary: The query, entityType, and propertyTypes params are all optional, but at least one must be specified otherwise an error will be thrown. All specified params are required to be present in each entity set returned. If entityType and propertyTypes are both specified, the propertyTypes param will be ignored.
@@ -2388,7 +2386,7 @@ paths:
                     additionalProperties:
                       type: array
                       items:
-                        $ref: "#/components/schemas/neighborEntityIds"  
+                        $ref: "#/components/schemas/NeighborEntityIds"  
     patch:
       summary: Executes a search over the data of a given entity set to find rows that match the search term
       operationId: searchEntitySetData
@@ -2397,7 +2395,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/searchConstraints"
+              $ref: "#/components/schemas/SearchConstraints"
       tags:
         - search
       security:
@@ -2573,7 +2571,7 @@ paths:
               schema:
                 type: object
                 additionalProperties:
-                  $ref: "#/components/schemas/auth0userBasic"
+                  $ref: "#/components/schemas/Auth0userBasic"
   /datastore/principals/users/{userId}:
     get:
       summary: Get the user for the given id.
@@ -2595,7 +2593,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/auth0userBasic"
+                $ref: "#/components/schemas/Auth0userBasic"
   /datastore/principals/db:
     get:
       summary: Get the db access credentials.
@@ -2629,7 +2627,7 @@ paths:
               schema:
                 type: object
                 additionalProperties:
-                  $ref: "#/components/schemas/auth0userBasic"
+                  $ref: "#/components/schemas/Auth0userBasic"
   /datastore/principals/roles/current/:
     get:
       summary: Get current roles.
@@ -2647,7 +2645,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/securablePrincipal"
+                  $ref: "#/components/schemas/SecurablePrincipal"
 
   ########################
   ## AUTHORIZATION APIs ##
@@ -2676,7 +2674,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/acl"
+                $ref: "#/components/schemas/Acl"
     patch: #lattice-js l.29
       summary: Updates the ACL for a particular ACL Key, only if the user is the owner of the ACL Key.
       operationId: updateAcl
@@ -2690,7 +2688,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/aclData"
+              $ref: "#/components/schemas/AclData"
       responses:
         "200":
           description: Success
@@ -2783,7 +2781,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/organization"
+                  $ref: "#/components/schemas/Organization"
     post:
       summary: Creates an organization if it doesn't exist.
       operationId: createOrganizationIfNotExists
@@ -2797,7 +2795,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/organization"
+              $ref: "#/components/schemas/Organization"
       responses:
         "200":
           description: Success
@@ -2828,7 +2826,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/organization"
+                $ref: "#/components/schemas/Organization"
     delete:
       summary: Remove an organization from the organizationId
       operationId: destroyOrganization
@@ -3180,7 +3178,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/organizationMember"
+                  $ref: "#/components/schemas/OrganizationMember"
   /datastore/organizations/{organizationId}/principals/members/{userId}:
     put:
       summary: Add member to an organization
@@ -3244,7 +3242,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/role"
+              $ref: "#/components/schemas/Role"
       responses:
         "200":
           description: Success
@@ -3277,7 +3275,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/role"
+                  $ref: "#/components/schemas/Role"
   /datastore/organizations/{organizationId}/principals/roles/{roleId}:
     get:
       summary: Get role for an organization from a roleId
@@ -3306,7 +3304,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/role"
+                $ref: "#/components/schemas/Role"
     delete:
       summary: Remove role for an organization
       operationId: deleteRole
@@ -3423,7 +3421,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/auth0userBasic"
+                  $ref: "#/components/schemas/Auth0userBasic"
   /datastore/organizations/{organizationId}/principals/roles/{roleId}/members/{userId}: 
     put:
       summary: Add a role to a user
@@ -3504,7 +3502,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/linkingFeedback"
+              $ref: "#/components/schemas/LinkingFeedback"
       responses:
         "200":
           description: Success
@@ -3525,7 +3523,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/entityKeyPair"
+              $ref: "#/components/schemas/EntityKeyPair"
       responses:
         "200":
           description: Success
@@ -3554,7 +3552,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/entityDataKey"
+              $ref: "#/components/schemas/EntityDataKey"
       responses:
         "200":
           description: Success
@@ -3563,7 +3561,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/entityLinkingFeedback"
+                  $ref: "#/components/schemas/EntityLinkingFeedback"
   /linker/linkingfeedback/features:
     post:
       summary: Returns the feedback on the given entity pair along with their features
@@ -3578,14 +3576,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/entityKeyPair"
+              $ref: "#/components/schemas/EntityKeyPair"
       responses:
         "200":
           description: Success
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/entityLinkingFeatures"
+                $ref: "#/components/schemas/EntityLinkingFeatures"
   /linker/linkingfeedback/all:
     get:
       summary: Returns all feedback submitted
@@ -3603,7 +3601,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/entityLinkingFeedback"
+                  $ref: "#/components/schemas/EntityLinkingFeedback"
   /linker/linkingfeedback/features/all:
     get:
       summary: Returns all feedback submitted walong with the features of pairwise entities
@@ -3621,7 +3619,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/entityLinkingFeatures"
+                  $ref: "#/components/schemas/EntityLinkingFeatures"
 
   ################
   ## ADMIN APIs ##
@@ -3642,7 +3640,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/indexingState"
+                $ref: "#/components/schemas/IndexingState"
     post:
       summary: Merge job descriptions for performing a partial or full reindex of provided entity sets.
       operationId: reindex
@@ -3669,7 +3667,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/indexingState"
+                $ref: "#/components/schemas/IndexingState"
     put:
       summary: Replaces job descriptions for performing a partial or full reindex of provided entity sets.
       operationId: updateReindex
@@ -3696,7 +3694,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/indexingState"
+                $ref: "#/components/schemas/IndexingState"
     delete:
       summary: Clears all the data currently being indexed in the queue.
       operationId: clearIndexingQueue
@@ -3725,14 +3723,14 @@ components:
       name: Authorization
 
   schemas:
-    fullQualifiedName:
+    FullQualifiedName:
       type: object
       properties:
         name:
           type: string
         namespace:
           type: string
-    propertyType:
+    PropertyType:
       type: object
       properties:
         title:
@@ -3741,13 +3739,13 @@ components:
           type: string
           format: uuid
         type:
-          $ref: "#/components/schemas/fullQualifiedName"
+          $ref: "#/components/schemas/FullQualifiedName"
         description:
           type: string
         schemas:
           type: array
           items:
-            $ref: "#/components/schemas/fullQualifiedName"
+            $ref: "#/components/schemas/FullQualifiedName"
         datatype:
           type: string
           enum: [
@@ -3801,7 +3799,7 @@ components:
           enum: [BTREE, HASH, GIN, NONE]
       
           
-    entityType:
+    EntityType:
       title: An entity type
       type: object
       properties:
@@ -3812,11 +3810,11 @@ components:
         id:
           type: string
         type:
-          $ref: "#/components/schemas/fullQualifiedName"
+          $ref: "#/components/schemas/FullQualifiedName"
         schemas:
           type: array
           items:
-            $ref: "#/components/schemas/fullQualifiedName"
+            $ref: "#/components/schemas/FullQualifiedName"
         key:
           type: array
           items:
@@ -3856,7 +3854,7 @@ components:
             fae6af98-2675-45bd-9a5b-1619a87235a8,
           ]
         category: EntityType
-    entityTypePropertyMetadata:
+    EntityTypePropertyMetadata:
       title: An entity type property metadata
       type: object
       properties:
@@ -3864,11 +3862,11 @@ components:
           type: string
         description:
           type: string
-    associationType:
+    AssociationType:
       type: object
       properties:
         entityType:
-          $ref: "#/components/schemas/entityType"
+          $ref: "#/components/schemas/EntityType"
         src:
           type: array
           items:
@@ -3904,19 +3902,19 @@ components:
         description: AssociationType Description
         bidirectional: true
         category: AssociationType
-    schema:
+    Schema:
       type: object
       properties:
         entityTypes:
           type: array
           items:
-            $ref: "#/components/schemas/entityType"
+            $ref: "#/components/schemas/EntityType"
         propertyTypes:
           type: array
           items:
-            $ref: "#/components/schemas/propertyType"
+            $ref: "#/components/schemas/PropertyType"
         fqn:
-          $ref: "#/components/schemas/fullQualifiedName"
+          $ref: "#/components/schemas/FullQualifiedName"
     EDM:
       type: object
       properties:
@@ -3927,19 +3925,19 @@ components:
         schemas:
           type: array
           items:
-            $ref: "#/components/schemas/schema"
+            $ref: "#/components/schemas/Schema"
         propertyTypes:
           type: array
           items:
-            $ref: "#/components/schemas/propertyType"
+            $ref: "#/components/schemas/PropertyType"
         entityTypes:
           type: array
           items:
-            $ref: "#/components/schemas/entityType"
+            $ref: "#/components/schemas/EntityType"
         associationTypes:
           type: array
           items:
-            $ref: "#/components/schemas/associationType"
+            $ref: "#/components/schemas/AssociationType"
     EDMdiff:
       type: object
       properties:
@@ -3947,7 +3945,7 @@ components:
           $ref: "#/components/schemas/EDM"
         diff:
           $ref: "#/components/schemas/EDM"
-    metadataUpdate:
+    MetadataUpdate:
       title: An update for an entity sets
       type: object
       properties:
@@ -3962,7 +3960,7 @@ components:
           items:
             type: string
         type:
-          $ref: "#/components/schemas/fullQualifiedName"
+          $ref: "#/components/schemas/FullQualifiedName"
         pii:
           type: boolean
         defaultShow:
@@ -3989,7 +3987,7 @@ components:
           type: array
           items:
             type: string
-    propertyUsageSummary:
+    PropertyUsageSummary:
       type: object
       properties:
         entityTypeId:
@@ -4014,7 +4012,7 @@ components:
           type: array
           items:
             type: string
-    entitySet:
+    EntitySet:
       title: An entity set
       type: object
       properties:
@@ -4074,26 +4072,26 @@ components:
         defaultShow:
           type: boolean
 
-    neighborDetails:
+    NeighborDetails:
       type: object
       additionalProperties:
         type: array
         items:
           type: string
-    neighborEntityDetails:
+    NeighborEntityDetails:
       type: object
       properties:
         associationEntitySet:
-          $ref: "#/components/schemas/entitySet"
+          $ref: "#/components/schemas/EntitySet"
         associationDetails:
-          $ref: "#/components/schemas/neighborDetails"
+          $ref: "#/components/schemas/NeighborDetails"
         neighborEntitySet:
-          $ref: "#/components/schemas/entitySet"
+          $ref: "#/components/schemas/EntitySet"
         neighborId:
           type: string
         neighborDetails:
-          $ref: "#/components/schemas/neighborDetails"
-    neighborEntityIds:
+          $ref: "#/components/schemas/NeighborDetails"
+    NeighborEntityIds:
       type: object
       properties:
         associationId:
@@ -4104,7 +4102,7 @@ components:
           format: uuid
         src:
           type: boolean
-    neighborSearchFilter:
+    NeighborSearchFilter:
       type: object
       properties:
         entityKeyIds:
@@ -4127,7 +4125,7 @@ components:
           items:
             type: string
             format: uuid
-    dataSearchResult:
+    DataSearchResult:
       type: object
       properties:
         numHits:
@@ -4140,61 +4138,51 @@ components:
               type: array
               items:
                 type: string
-    advancedSearch:
+    AdvancedSearch:
       type: object
       properties:
         searchFields:
           type: array
           items:
-            $ref: "#/components/schemas/searchDetails"
+            $ref: "#/components/schemas/SearchDetails"
         start:
           type: integer
         maxHits:
           type: integer
-    searchDetails:
-      type: object
-      properties:
-        searchTerm:
-          type: string
-        property:
-          type: string
-          format: uuid
-        exact:
-          type: boolean
-    bulkDataCreation:
+    BulkDataCreation:
       type: object
       properties:
         entities:
           type: array
           items:
-            $ref: "#/components/schemas/entity"
+            $ref: "#/components/schemas/Entity"
         associations:
           type: array
           items:
-            $ref: "#/components/schemas/association"
-    entity:
+            $ref: "#/components/schemas/Association"
+    Entity:
       type: object
       properties:
         key:
-          $ref: "#/components/schemas/entityKey"
+          $ref: "#/components/schemas/EntityKey"
         details:
           type: object
           additionalProperties:
             type: string
-    association:
+    Association:
       type: object
       properties:
         key:
-          $ref: "#/components/schemas/entityKey"
+          $ref: "#/components/schemas/EntityKey"
         src:
-          $ref: "#/components/schemas/entityKey"
+          $ref: "#/components/schemas/EntityKey"
         dst:
-          $ref: "#/components/schemas/entityKey"
+          $ref: "#/components/schemas/EntityKey"
         details:
           type: object
           additionalProperties:
             type: string
-    entityKey:
+    EntityKey:
       type: object
       properties:
         entitySetId:
@@ -4203,7 +4191,7 @@ components:
         entityId:
           type: string
           format: uuid
-    integrationResults:
+    IntegrationResults:
       type: object
       properties:
         entityCount:
@@ -4222,7 +4210,7 @@ components:
             type: object
             additionalProperties:
               type: string
-    auth0userBasic:
+    Auth0userBasic:
       type: object
       properties:
         user_id:
@@ -4242,16 +4230,16 @@ components:
           items:
             type: string
             format: uuid
-    ace:
+    Ace:
       type: object
       properties:
         principal:
-          $ref: "#/components/schemas/principal"
+          $ref: "#/components/schemas/Principal"
         permissions:
           type: array
           items:
             type: string
-    acl:
+    Acl:
       type: object
       properties:
         aclKey:
@@ -4262,15 +4250,15 @@ components:
         aces:
           type: array
           items:
-            $ref: "#/components/schemas/ace"
-    aclData:
+            $ref: "#/components/schemas/Ace"
+    AclData:
       type: object
       properties:
         action:
           type: string # this could be ADD, REMOVE, SET or REQUEST
         acl:
-          $ref: "#/components/schemas/acl"
-    principal:
+          $ref: "#/components/schemas/Acl"
+    Principal:
       type: object
       properties:
         type:
@@ -4278,25 +4266,25 @@ components:
         id:
           type: string
           format: uuid
-    securablePrincipal:
+    SecurablePrincipal:
       type: object
       properties:
         id:
           type: string
           format: uuid
         principal:
-          $ref: "#/components/schemas/principal"
+          $ref: "#/components/schemas/Principal"
         title:
           type: string
         description:
           type: string
-    dataEdge:
+    DataEdge:
       type: object
       properties:
         src:
-          $ref: "#/components/schemas/entityDataKey"
+          $ref: "#/components/schemas/EntityDataKey"
         dst:
-          $ref: "#/components/schemas/entityDataKey"
+          $ref: "#/components/schemas/EntityDataKey"
         data:
           type: object
           properties:
@@ -4304,16 +4292,16 @@ components:
               type: array
               items:
                 type: string
-    dataEdgeKey:
+    DataEdgeKey:
       type: object
       description: Set of associations to create. An association is the triple of source, destination, and edge entity data keys.
       properties:
         src:
-          $ref: entityDataKey
+          $ref: "#/components/schemas/EntityDataKey"
         dst:
-          $ref: entityDataKey
+          $ref: "#/components/schemas/EntityDataKey"
         edge:
-          $ref: entityDataKey
+          $ref: "#/components/schemas/EntityDataKey"
     DataGraph:
       type: object
       properties:
@@ -4367,7 +4355,7 @@ components:
               type: string
               format: uuid
 
-    role:
+    Role:
       type: object
       properties:
         id:
@@ -4377,7 +4365,7 @@ components:
           type: string
           format: uuid
         principal:
-          $ref: "#/components/schemas/principal"
+          $ref: "#/components/schemas/Principal"
         title:
           type: string
         description:
@@ -4385,14 +4373,14 @@ components:
         "@class":
           type: string
           enum: ["com.openlattice.organization.roles.Role"]
-    organization:
+    Organization:
       type: object
       properties:
         id:
           type: string
           format: uuid
         principal:
-          $ref: "#/components/schemas/principal"
+          $ref: "#/components/schemas/Principal"
         title:
           type: string
         description:
@@ -4404,11 +4392,11 @@ components:
         members:
           type: array
           items:
-            $ref: "#/components/schemas/principal"
+            $ref: "#/components/schemas/Principal"
         roles:
           type: array
           items:
-            $ref: "#/components/schemas/role"
+            $ref: "#/components/schemas/Role"
         apps:
           type: array
           items:
@@ -4416,13 +4404,13 @@ components:
         smsEntitySetInfo:
           type: array
           items:
-            $ref: "#/components/schemas/smsEntitySetInformation"
+            $ref: "#/components/schemas/SmsEntitySetInformation"
         partitions:
           type: array
           items:
             type: integer
                           
-    smsEntitySetInformation:
+    SmsEntitySetInformation:
       type: object
       properties:
         phoneNumber:
@@ -4439,7 +4427,7 @@ components:
           type: array
           items:
             type: string          
-    entitySetSelection:
+    EntitySetSelection:
       type: object
       properties:
         ids:
@@ -4452,17 +4440,17 @@ components:
           items:
             type: string
             format: uuid
-    organizationMember:
+    OrganizationMember:
       type: object
       properties:
         principal:
-          $ref: "#/components/schemas/securablePrincipal"
+          $ref: "#/components/schemas/SecurablePrincipal"
         profile:
-          $ref: "#/components/schemas/auth0userBasic"
+          $ref: "#/components/schemas/Auth0userBasic"
         roles:
           type: array
           items:
-            $ref: "#/components/schemas/securablePrincipal"
+            $ref: "#/components/schemas/SecurablePrincipal"
     AccessCheck:
       type: object
       properties:
@@ -4506,7 +4494,7 @@ components:
             type: string
           credential:
             type: string
-    searchConstraints:
+    SearchConstraints:
       type: object
       properties:
         entitySetIds:
@@ -4656,21 +4644,6 @@ components:
           type: object
           additionalProperties:
             type: string
-          
-           
-    DataSearchResult:
-      type: object
-      properties:
-        numHits:
-          type: integer
-        hits:
-          type: array
-          items:
-            type: object
-            additionalProperties:
-              type: array
-              items:
-                type: string
     OrganizationExternalDatabaseTable:
       type: object
       properties:
@@ -4747,7 +4720,7 @@ components:
             format: uuid
           
                   
-    entityDataKey:
+    EntityDataKey:
       type: object
       properties:
         entitySetId: 
@@ -4756,20 +4729,20 @@ components:
         entityKeyId:
           type: string
           format: uuid
-    linkingFeedback:
+    LinkingFeedback:
       type: object
       properties:
         linkingEntity:
-          $ref: "#/components/schemas/entityDataKey"
+          $ref: "#/components/schemas/EntityDataKey"
         link:
           type: array
           items:
-            $ref: "#/components/schemas/entityDataKey"
+            $ref: "#/components/schemas/EntityDataKey"
         unlink:
           type: array
           items:
-            $ref: "#/components/schemas/entityDataKey"
-    entityKeyPair:
+            $ref: "#/components/schemas/EntityDataKey"
+    EntityKeyPair:
       type: object
       properties:
         first:
@@ -4778,23 +4751,23 @@ components:
         second:
           type: string
           format: uuid  
-    entityLinkingFeedback:
+    EntityLinkingFeedback:
       type: object
       properties:
         entityKeyPair:
-          $ref: "#/components/schemas/entityKeyPair"
+          $ref: "#/components/schemas/EntityKeyPair"
         linked:
           type: boolean
-    entityLinkingFeatures:
+    EntityLinkingFeatures:
       type: object
       properties:
         entityLinkingFeedback:
-          $ref: "#/components/schemas/entityLinkingFeedback"
+          $ref: "#/components/schemas/EntityLinkingFeedback"
         features:
           type: object
           additionalProperties:
             type: number
-    indexingState:
+    IndexingState:
       type: object
       properties:
         indexing:
