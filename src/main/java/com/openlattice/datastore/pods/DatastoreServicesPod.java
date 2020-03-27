@@ -20,7 +20,6 @@
 
 package com.openlattice.datastore.pods;
 
-import com.amazonaws.services.s3.AmazonS3;
 import com.auth0.client.mgmt.ManagementAPI;
 import com.codahale.metrics.MetricRegistry;
 import com.dataloom.mappers.ObjectMappers;
@@ -30,7 +29,6 @@ import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
 import com.kryptnostic.rhizome.configuration.ConfigurationConstants;
-import com.kryptnostic.rhizome.configuration.amazon.AmazonLaunchConfiguration;
 import com.openlattice.analysis.AnalysisService;
 import com.openlattice.apps.services.AppService;
 import com.openlattice.assembler.*;
@@ -95,8 +93,10 @@ import com.openlattice.twilio.pods.TwilioConfigurationPod;
 import com.openlattice.users.Auth0SyncService;
 import com.zaxxer.hikari.HikariDataSource;
 import org.jdbi.v3.core.Jdbi;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.*;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Profile;
 
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
@@ -453,11 +453,6 @@ public class DatastoreServicesPod {
     @Bean
     public PersistentSearchService persistentSearchService() {
         return new PersistentSearchService( hikariDataSource, principalService() );
-    }
-
-    @Bean
-    PostgresDataSinkService postgresDataSinkService() {
-        return new PostgresDataSinkService();
     }
 
     @Bean AwsDataSinkService awsDataSinkService() {

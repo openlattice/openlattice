@@ -27,15 +27,11 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.eventbus.EventBus;
 
-import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.IMap;
-import com.openlattice.assembler.PostgresDatabases;
 import com.openlattice.auditing.AuditEventType;
 import com.openlattice.auditing.AuditableEvent;
 import com.openlattice.auditing.AuditingComponent;
 import com.openlattice.auditing.AuditingManager;
 import com.openlattice.authorization.*;
-import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.authorization.AccessCheck;
 import com.openlattice.authorization.Ace;
 import com.openlattice.authorization.Acl;
@@ -61,7 +57,6 @@ import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import javax.annotation.PostConstruct;
 
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -81,8 +76,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @RestController
 @RequestMapping( PermissionsApi.CONTROLLER )
@@ -151,19 +144,19 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
             switch ( action ) {
                 case ADD:
                     authorizations.addPermissions( acls );
-                    edms.executePrivilegesUpdate( action, getOrganizationExternalDatabaseAcls( acls ) );
+                    edms.executePrivilegesUpdate( action, getOrganizationExternalDbColumnAcls( acls ) );
                     recordEvents( createAuditableEvents( acls, AuditEventType.ADD_PERMISSION ) );
                     break;
 
                 case REMOVE:
                     authorizations.removePermissions( acls );
-                    edms.executePrivilegesUpdate( action, getOrganizationExternalDatabaseAcls( acls ) );
+                    edms.executePrivilegesUpdate( action, getOrganizationExternalDbColumnAcls( acls ) );
                     recordEvents( createAuditableEvents( acls, AuditEventType.REMOVE_PERMISSION ) );
                     break;
 
                 case SET:
                     authorizations.setPermissions( acls );
-                    edms.executePrivilegesUpdate( action, getOrganizationExternalDatabaseAcls( acls ) );
+                    edms.executePrivilegesUpdate( action, getOrganizationExternalDbColumnAcls( acls ) );
                     recordEvents( createAuditableEvents( acls, AuditEventType.SET_PERMISSION ) );
                     break;
 
@@ -268,10 +261,10 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
         return auditingManager;
     }
 
-    private List<Acl> getOrganizationExternalDatabaseAcls( List<Acl> acls ) {
+    private List<Acl> getOrganizationExternalDbColumnAcls( List<Acl> acls ) {
         Set<AclKey> aclKeys = acls.stream().map( acl -> new AclKey( acl.getAclKey() ) ).collect( Collectors.toSet() );
         Set<AclKey> allOrgExternalDBAclKeys = securableObjectResolveTypeService
-                .getOrganizationExternalDatabaseAclKeys( aclKeys );
+                .getOrganizationExternalDbColumnAclKeys( aclKeys );
         return acls.stream().filter( acl -> allOrgExternalDBAclKeys.contains( acl.getAclKey() ) )
                 .collect( Collectors.toList() );
     }
