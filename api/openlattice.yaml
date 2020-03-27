@@ -1470,6 +1470,32 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/OrganizationExternalDatabaseTable"
+    delete:
+      summary: Deletes multiple OrganizationExternalDatabaseTable objects and the tables they represent in the database. It is a hard delete.
+      operationId: deleteExternalDatabaseTables
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items: 
+                type: string
+      tags:
+        - dataset
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
   /datastore/organization-database/{organizationId}/external-database-table/external-database-column:
     get:
       summary: Gets a map of all OrganizationExternalDatabaseTable objects to OrganizationExternalDatabase columns that are contained within each table.
@@ -1527,7 +1553,7 @@ paths:
   /datastore/organization-database/{organizationId}/{tableId}/external-database-table/external-database-column:
     get:
       summary: Gets an object containing an OrganizationExternalDatabaseTable object and its OrganizationExternalDatabase columns for an organization
-      operationId: getExternalDatabaseTableWithColumns
+      operationId: getExternalDatabaseTableWithColumnMetadata
       tags: [dataset]
       security:
         - openlattice_auth: []
@@ -1619,6 +1645,35 @@ paths:
       responses:
         "200":
           description: Success
+    delete:
+      summary: Deletes an OrganizationExternalDatabaseColumn object, which represents an organization's column in an external database. This deletes both the object and the column in the database. It is a hard delete.
+      operationId: deleteExternalDatabaseColumn
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: tableName
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: columnName
+          in: path
+          required: true
+          schema:
+            type: string
+      tags:
+        - dataset
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+
   /datastore/organization-database/{organizationId}/{tableName}/external-database-table:
     get:
       summary: Gets an OrganizationExternalDatabaseTable object, which represents an organization's table in an external database. 
@@ -1676,6 +1731,55 @@ paths:
       responses:
         "200":
           description: Success
+    delete:
+      summary: Deletes an OrganizationExternalDatabaseTable object, which represents an organization's table in an external database. This deletes both the object and the table in the database. It is a hard delete.
+      operationId: deleteExternalDatabaseTable
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: tableName
+          in: path
+          required: true
+          schema:
+            type: string
+      tags:
+        - dataset
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+  /datastore/organization-database/{organizationId}/{tableName}/external-database-column:
+    delete:
+      summary: Deletes multiple OrganizationExternalDatabaseColumn objects and the columns they represent within an organization's table in an external database. It is a hard delete
+      operationId: deleteExternalDatabaseColumns
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: tableName
+          in: path
+          required: true
+          schema:
+            type: string
+      tags:
+        - dataset
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+
+
 
 
   ###############
