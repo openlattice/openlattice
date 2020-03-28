@@ -33,20 +33,19 @@ data class EntitySet
 @JvmOverloads constructor(
         @JsonProperty(SerializationConstants.ID_FIELD) private val _id: UUID = UUID.randomUUID(),
         @JsonProperty(SerializationConstants.ENTITY_TYPE_ID) val entityTypeId: UUID,
-        @JsonProperty(SerializationConstants.NAME_FIELD) val name: String,
+        @JsonProperty(SerializationConstants.NAME_FIELD) var name: String,
         @JsonProperty(SerializationConstants.TITLE_FIELD) val _title: String,
         @JsonProperty(SerializationConstants.DESCRIPTION_FIELD) val _description: String = "",
-        @JsonProperty(SerializationConstants.CONTACTS) val contacts: MutableSet<String>,
+        @JsonProperty(SerializationConstants.CONTACTS) var contacts: MutableSet<String>,
         @JsonProperty(
                 SerializationConstants.LINKED_ENTITY_SETS
         ) val linkedEntitySets: MutableSet<UUID> = mutableSetOf(),
-        @JsonProperty(SerializationConstants.ORGANIZATION_ID) val organizationId: UUID,
+        @JsonProperty(SerializationConstants.ORGANIZATION_ID) var organizationId: UUID,
         @JsonProperty(SerializationConstants.FLAGS_FIELD) val flags: EnumSet<EntitySetFlag> =
                 EnumSet.of(EntitySetFlag.EXTERNAL, EntitySetFlag.VERSIONED),
         @JsonProperty(SerializationConstants.PARTITIONS) val partitions: LinkedHashSet<Int> = linkedSetOf(),
         @JsonProperty(SerializationConstants.EXPIRATION) var expiration: DataExpiration? = null,
-        @JsonProperty(SerializationConstants.STORAGE_TYPE) val storageType: StorageType = StorageType.OBJECT,
-        @JsonProperty(SerializationConstants.VERSIONED) val versioned: Boolean = true
+        @JsonProperty(SerializationConstants.STORAGE_TYPE) val storageType: StorageType = StorageType.OBJECT
 ) : AbstractSecurableObject(_id, _title, _description) {
 
     init {
