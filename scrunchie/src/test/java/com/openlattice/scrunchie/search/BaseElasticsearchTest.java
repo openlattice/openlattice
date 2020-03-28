@@ -176,29 +176,23 @@ public class BaseElasticsearchTest {
         );
 
         chicagoEmployees = new EntitySet(
-                Optional.of( chicagoEmployeesEntitySetId ),
+                chicagoEmployeesEntitySetId,
                 ENTITY_TYPE_ID,
                 "chicago_employees",
                 "Chicago Employees",
-                Optional.of( "employees that are in chicago" ),
-                ImmutableSet.of( "foo@bar.com", "foobar@foo.net" ),
-                Optional.empty(),
-                UUID.randomUUID(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty() );
+                "employees that are in chicago",
+                Sets.newHashSet( "foo@bar.com", "foobar@foo.net" ),
+                UUID.randomUUID() );
+
         entitySet2 = new EntitySet(
-                Optional.of( entitySet2Id ),
+                entitySet2Id,
                 ENTITY_TYPE_ID,
                 "entity_set2",
                 "EntitySet2",
-                Optional.of( "this is the second entity set" ),
-                ImmutableSet.of( "foo@bar.com", "foobar@foo.net" ),
-                Optional.empty(),
-                UUID.randomUUID(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty() );
+                "this is the second entity set",
+                Sets.newHashSet( "foo@bar.com", "foobar@foo.net" ),
+                UUID.randomUUID()
+        );
 
         owner = new Principal( PrincipalType.USER, "support@openlattice.com" );
         openlatticeUser = new Principal( PrincipalType.ROLE, "openlatticeUser" );
