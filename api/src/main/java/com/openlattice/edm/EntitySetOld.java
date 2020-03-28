@@ -59,7 +59,6 @@ public class EntitySetOld extends AbstractSecurableObject {
     private       int                    partitionsVersion = 0;
     private       DataExpiration         expiration;
     private       StorageType            storageType;
-    private       boolean                versioned;
 
     /**
      * Creates an entity set with provided parameters and will automatically generate a UUID if not provided.
@@ -82,8 +81,7 @@ public class EntitySetOld extends AbstractSecurableObject {
             @JsonProperty( SerializationConstants.FLAGS_FIELD ) Optional<EnumSet<EntitySetFlag>> flags,
             @JsonProperty( SerializationConstants.PARTITIONS ) Optional<LinkedHashSet<Integer>> partitions,
             @JsonProperty( SerializationConstants.EXPIRATION ) Optional<DataExpiration> expiration,
-            @JsonProperty( SerializationConstants.STORAGE_TYPE ) Optional<StorageType> storageType,
-            @JsonProperty( SerializationConstants.VERSIONED ) Optional<Boolean> versioned ) {
+            @JsonProperty( SerializationConstants.STORAGE_TYPE ) Optional<StorageType> storageType) {
         super( id, title, description );
         this.linkedEntitySetOlds = linkedEntitySetOlds.orElse( new HashSet<>() );
         this.flags = flags.orElse( EnumSet.of( EntitySetFlag.EXTERNAL ) );
@@ -104,7 +102,6 @@ public class EntitySetOld extends AbstractSecurableObject {
         partitions.ifPresent( this.partitions::addAll );
         this.expiration = expiration.orElse( null );
         this.storageType = storageType.orElse( StorageType.STANDARD );
-        this.versioned = versioned.orElse( true );
     }
 
     //Constructor for serialization
@@ -161,7 +158,6 @@ public class EntitySetOld extends AbstractSecurableObject {
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
-                Optional.empty(),
                 Optional.empty());
     }
 
@@ -185,7 +181,6 @@ public class EntitySetOld extends AbstractSecurableObject {
                 organizationId,
                 flags,
                 partitions,
-                Optional.empty(),
                 Optional.empty(),
                 Optional.empty());
     }

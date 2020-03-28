@@ -286,7 +286,6 @@ public final class SerializationConstants {
     public static final String VALUE_FIELD                      = "value";
     public static final String VALUE_MAPPER                     = "valueMapper";
     public static final String VERSION                          = "version";
-    public static final String VERSIONED                        = "versioned";
     public static final String VERSIONS                         = "versions";
     public static final String WEIGHT                           = "weight";
     public static final String ZONES                            = "zones";
