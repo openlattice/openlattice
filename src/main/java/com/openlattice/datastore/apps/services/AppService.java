@@ -175,6 +175,7 @@ public class AppService {
                 title,
                 new HashSet<>(),
                 organizationId );
+        entitySet.removeFlag( EntitySetFlag.EXTERNAL );
         entitySet.setPartitions( organizationService.getDefaultPartitions( organizationId ) );
         entitySet.setDescription( description );
         entitySetService.createEntitySet( principal, entitySet );
