@@ -106,9 +106,9 @@ class EntitySetsTest : MultipleAuthenticatedUsersBase() {
         val update = createExpirationUpdate(Optional.of(expirationPolicy))
         entitySetsApi.updateEntitySetMetadata(es.id, update)
         val es2 = entitySetsApi.getEntitySet(es.id)
-        Assert.assertEquals(tTL, es2.expiration.timeToExpiration)
-        Assert.assertEquals(ExpirationBase.FIRST_WRITE, es2.expiration.expirationBase)
-        Assert.assertTrue(es2.expiration.startDateProperty.isEmpty)
+        Assert.assertEquals(tTL, es2.expiration!!.timeToExpiration)
+        Assert.assertEquals(ExpirationBase.FIRST_WRITE, es2.expiration!!.expirationBase)
+        Assert.assertTrue(es2.expiration!!.startDateProperty.isEmpty)
     }
 
     @Test
