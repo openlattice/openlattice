@@ -24,6 +24,7 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
 import com.openlattice.IdConstants;
 import com.openlattice.analysis.AnalysisApi;
@@ -333,17 +334,15 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
             flags.add( EntitySetFlag.LINKING );
         }
         EntitySet newES = new EntitySet(
-                Optional.of( entitySetId ),
+                entitySetId,
                 entityType.getId(),
                 TestDataFactory.randomAlphanumeric( 10 ),
                 "foobar",
-                Optional.of( "barred" ),
-                ImmutableSet.of( "foo@bar.com", "foobar@foo.net" ),
-                Optional.of( linkedEntitySetIds ),
+                "barred",
+                Sets.newHashSet( "foo@bar.com", "foobar@foo.net" ),
+                linkedEntitySetIds,
                 organizationId,
-                Optional.of( flags ),
-                Optional.empty(),
-                Optional.empty());
+                flags);
 
         Map<String, UUID> entitySetIds = entitySetsApi.createEntitySets( Set.of( newES ) );
 
