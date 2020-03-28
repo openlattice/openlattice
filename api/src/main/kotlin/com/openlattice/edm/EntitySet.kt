@@ -63,6 +63,8 @@ data class EntitySet
         @JsonIgnore
         get() = flags.contains(EntitySetFlag.LINKING)
 
+    var partitionsVersion: Int = 0
+
     @JsonIgnore
     fun setPartitions(partitions: Collection<Int>) {
         this.partitions.clear()
