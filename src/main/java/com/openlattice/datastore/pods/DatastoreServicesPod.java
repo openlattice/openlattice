@@ -22,7 +22,6 @@ package com.openlattice.datastore.pods;
 
 import static com.openlattice.datastore.util.Util.returnAndLog;
 
-import com.amazonaws.services.s3.AmazonS3;
 import com.auth0.client.mgmt.ManagementAPI;
 import com.codahale.metrics.MetricRegistry;
 import com.dataloom.mappers.ObjectMappers;
@@ -32,7 +31,6 @@ import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
 import com.kryptnostic.rhizome.configuration.ConfigurationConstants;
-import com.kryptnostic.rhizome.configuration.amazon.AmazonLaunchConfiguration;
 import com.openlattice.analysis.AnalysisService;
 import com.openlattice.assembler.Assembler;
 import com.openlattice.assembler.AssemblerConfiguration;

@@ -21,11 +21,9 @@
 package com.openlattice.datastore.directory.controllers;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static com.openlattice.users.Auth0UtilsKt.getUsersPage;
 
 import com.auth0.client.auth.AuthAPI;
 import com.auth0.client.mgmt.ManagementAPI;
-import com.auth0.client.mgmt.filter.UserFilter;
 import com.auth0.exception.Auth0Exception;
 import com.auth0.json.mgmt.users.User;
 import com.codahale.metrics.annotation.Timed;

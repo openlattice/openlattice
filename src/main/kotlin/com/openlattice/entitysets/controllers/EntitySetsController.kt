@@ -522,7 +522,7 @@ constructor(
         val es = entitySetManager.getEntitySet(entitySetId)!!
         check(es.hasExpirationPolicy()) { "Entity set ${es.name} does not have an expiration policy" }
 
-        val expirationPolicy = es.expiration
+        val expirationPolicy = es.expiration!!
         val expirationPT = expirationPolicy.startDateProperty.map { edmManager.getPropertyType(it) }
 
         recordEvent(
@@ -542,7 +542,7 @@ constructor(
                 entitySetId,
                 expirationPolicy,
                 OffsetDateTime.parse(dateTime),
-                es.expiration.deleteType,
+                expirationPolicy.deleteType,
                 expirationPT
         ).toSet()
     }
