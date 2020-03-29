@@ -53,6 +53,9 @@ data class EntitySet
         require(this.linkedEntitySets.isEmpty() || isLinking) {
             "You cannot specify linked entity sets unless this is a linking entity set."
         }
+        require( (storageType==StorageType.STANDARD) || !isLinking ) {
+            "Linking entity sets only support the standard storage type."
+        }
     }
 
     val isExternal: Boolean
