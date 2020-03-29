@@ -123,9 +123,9 @@ class BackgroundExpiredDataDeletionService(
 
         var totalDeletedEntitiesCount = 0
 
-        val expirationPT = entitySet.expiration.startDateProperty.map { propertyTypes[it]!! }
+        val expirationPT = entitySet.expiration!!.startDateProperty.map { propertyTypes[it]!! }
         val entityKeyIds = dataGraphService.getExpiringEntitiesFromEntitySet(
-                entitySet.id, entitySet.expiration, OffsetDateTime.now(), entitySet.expiration.deleteType, expirationPT
+                entitySet.id, entitySet.expiration!!, OffsetDateTime.now(), entitySet.expiration!!.deleteType, expirationPT
         )
         while (entityKeyIds.iterator().hasNext()) {
             val deletedEntityKeyIds: MutableSet<UUID> = mutableSetOf()
@@ -135,7 +135,7 @@ class BackgroundExpiredDataDeletionService(
             for (idsChunk in chunkedEntityKeyIds) {
                 val ids = idsChunk.toSet()
 
-                val writeEvent = deletionManager.clearOrDeleteEntities(entitySet.id, ids, entitySet.expiration.deleteType)
+                val writeEvent = deletionManager.clearOrDeleteEntities(entitySet.id, ids, entitySet.expiration!!.deleteType)
 
                 logger.info(
                         "Completed deleting {} expired elements from entity set {}.",
