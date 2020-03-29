@@ -82,8 +82,8 @@ constructor(
     fun ensureTwilio(request: HttpServletRequest) {
 
         val url = request.requestURL.toString()
-        val params = request.parameterMap.mapValues { it.toString() }
         val signature = request.getHeader("X-Twilio-Signature")
+        val params = request.parameterMap.mapValues { request.getParameter(it.key) }
 
         if (!validator.validate(url, params, signature)) {
             throw ForbiddenException("Could not verify that incoming request to $url was sent by Twilio")
