@@ -368,17 +368,14 @@ class CollectionsManager(
         val description = "${collectionTemplateType.description}\n\nAuto-generated for EntitySetCollection ${entitySetCollection.name}"
         val flags = EnumSet.noneOf(EntitySetFlag::class.java)
 
-        val entitySet = EntitySet(Optional.empty(),
-                collectionTemplateType.entityTypeId,
-                name,
-                title,
-                Optional.of(description),
-                setOf(),
-                Optional.empty(),
-                entitySetCollection.organizationId,
-                Optional.of(flags),
-                Optional.empty(),
-                Optional.empty())
+        val entitySet = EntitySet(entityTypeId = collectionTemplateType.entityTypeId,
+                name = name,
+                _title = title,
+                _description = description,
+                contacts = mutableSetOf(),
+                organizationId = entitySetCollection.organizationId,
+                flags = flags)
+
         entitySetManager.createEntitySet(principal, entitySet)
         return entitySet.id
     }

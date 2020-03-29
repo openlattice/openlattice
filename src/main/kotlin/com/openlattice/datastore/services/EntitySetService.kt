@@ -485,7 +485,7 @@ open class EntitySetService(
     }
 
     override fun getLinkedEntitySets(entitySetId: UUID): Set<EntitySet> {
-        val linkedEntitySetIds = getEntitySet(entitySetId)!!.linkedEntitySets ?: setOf()
+        val linkedEntitySetIds = getEntitySet(entitySetId)!!.linkedEntitySets
         return entitySets.getAll(linkedEntitySetIds).values.toSet()
     }
 
