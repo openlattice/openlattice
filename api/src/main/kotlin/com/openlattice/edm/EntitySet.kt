@@ -42,7 +42,7 @@ data class EntitySet
         ) val linkedEntitySets: MutableSet<UUID> = mutableSetOf(),
         @JsonProperty(SerializationConstants.ORGANIZATION_ID) var organizationId: UUID,
         @JsonProperty(SerializationConstants.FLAGS_FIELD) val flags: EnumSet<EntitySetFlag> =
-                EnumSet.of(EntitySetFlag.EXTERNAL, EntitySetFlag.VERSIONED),
+                EnumSet.of(EntitySetFlag.EXTERNAL),
         @JsonProperty(SerializationConstants.PARTITIONS) val partitions: LinkedHashSet<Int> = linkedSetOf(),
         @JsonProperty(SerializationConstants.EXPIRATION) var expiration: DataExpiration? = null,
         @JsonProperty(SerializationConstants.STORAGE_TYPE) val storageType: StorageType = StorageType.OBJECT
