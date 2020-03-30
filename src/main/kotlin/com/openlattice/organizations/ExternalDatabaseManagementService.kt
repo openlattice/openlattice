@@ -477,7 +477,7 @@ class ExternalDatabaseManagementService(
     }
 
     private fun createDropColumnSql(columnNames: Set<String>): String {
-        return columnNames.joinToString(", ") { "DROP COLUMN $it" }
+        return columnNames.joinToString(", ") { "DROP COLUMN \"$it\"" }
     }
 
     private fun createPrivilegesUpdateSql(action: Action, privileges: List<String>, tableName: String, columnName: String, dbUser: String): String {
@@ -485,9 +485,9 @@ class ExternalDatabaseManagementService(
         checkState(action == Action.REMOVE || action == Action.ADD || action == Action.SET,
                 "Invalid action $action specified")
         return if (action == Action.REMOVE) {
-            "REVOKE $privilegesAsString ($columnName) ON $tableName FROM $dbUser"
+            "REVOKE $privilegesAsString (\"$columnName\") ON $tableName FROM $dbUser"
         } else {
-            "GRANT $privilegesAsString ($columnName) ON $tableName TO $dbUser"
+            "GRANT $privilegesAsString (\"$columnName\") ON $tableName TO $dbUser"
         }
     }
 
