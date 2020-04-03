@@ -46,6 +46,7 @@ import com.openlattice.edm.set.EntitySetPropertyKey;
 import com.openlattice.edm.set.EntitySetPropertyMetadata;
 import com.openlattice.edm.set.ExpirationBase;
 import com.openlattice.edm.type.*;
+import com.openlattice.entitysets.StorageType;
 import com.openlattice.graph.NeighborhoodQuery;
 import com.openlattice.graph.NeighborhoodSelection;
 import com.openlattice.graph.edge.Edge;
@@ -585,6 +586,7 @@ public final class ResultSetAdapters {
         final var flags = entitySetFlags( rs );
         final var partitions = partitions( rs );
         final var expirationData = dataExpiration( rs );
+        final var storageType = storageType( rs );
         return new EntitySet( id,
                 entityTypeId,
                 name,
@@ -595,7 +597,12 @@ public final class ResultSetAdapters {
                 organization,
                 flags,
                 new LinkedHashSet<>( Arrays.asList( partitions ) ),
-                expirationData );
+                expirationData,
+                storageType );
+    }
+
+    public static StorageType storageType( ResultSet rs ) throws SQLException {
+        return StorageType.valueOf( rs.getString( STORAGE_TYPE_FIELD ) );
     }
 
     public static Integer[] partitions( ResultSet rs ) throws SQLException {
@@ -981,7 +988,7 @@ public final class ResultSetAdapters {
     }
 
     public static PostgresDatatype sqlDataType( ResultSet rs ) throws SQLException {
-        String dataType =  rs.getString( DATATYPE.getName() ).toUpperCase();
+        String dataType = rs.getString( DATATYPE.getName() ).toUpperCase();
         return PostgresDatatype.getEnum( dataType );
 
     }
@@ -1019,16 +1026,16 @@ public final class ResultSetAdapters {
                 authorizationMethod );
     }
 
-    public static String username(ResultSet rs) throws SQLException {
+    public static String username( ResultSet rs ) throws SQLException {
         return rs.getString( USERNAME.getName() );
     }
 
-    public static PostgresConnectionType connectionType(ResultSet rs) throws SQLException {
+    public static PostgresConnectionType connectionType( ResultSet rs ) throws SQLException {
         String connectionType = rs.getString( CONNECTION_TYPE.getName() );
-        return PostgresConnectionType.valueOf(connectionType);
+        return PostgresConnectionType.valueOf( connectionType );
     }
 
-    public static IntegrationJob integrationJob(ResultSet rs) throws SQLException {
+    public static IntegrationJob integrationJob( ResultSet rs ) throws SQLException {
         String name = name( rs );
         IntegrationStatus status = IntegrationStatus.valueOf( rs.getString( STATUS.getName() ).toUpperCase() );
         return new IntegrationJob( name, status );

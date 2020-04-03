@@ -145,6 +145,7 @@ public final class PostgresTable {
                             ORGANIZATION_ID,
                             ENTITY_SET_FLAGS,
                             PARTITIONS,
+                            STORAGE_TYPE,
                             TIME_TO_EXPIRATION,
                             EXPIRATION_BASE_FLAG,
                             EXPIRATION_DELETE_FLAG,
