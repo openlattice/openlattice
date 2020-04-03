@@ -4,5 +4,6 @@ public enum EntitySetFlag {
     ASSOCIATION,
     AUDIT,
     EXTERNAL,
-    LINKING
+    LINKING,
+    UNVERSIONED
 }

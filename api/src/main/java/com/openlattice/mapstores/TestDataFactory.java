@@ -286,7 +286,7 @@ public final class TestDataFactory {
                 entityTypeId,
                 randomAlphanumeric( 5 ),
                 randomAlphanumeric( 5 ),
-                Optional.of( randomAlphanumeric( 5 ) ),
+                randomAlphanumeric( 5 ),
                 ImmutableSet.of( email(), email() ),
                 IdConstants.GLOBAL_ORGANIZATION_ID.getId() );
     }
