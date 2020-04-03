@@ -45,7 +45,7 @@ data class EntitySet
                 EnumSet.of(EntitySetFlag.EXTERNAL),
         @JsonProperty(SerializationConstants.PARTITIONS) val partitions: LinkedHashSet<Int> = linkedSetOf(),
         @JsonProperty(SerializationConstants.EXPIRATION) var expiration: DataExpiration? = null,
-        @JsonProperty(SerializationConstants.STORAGE_TYPE) val storageType: StorageType = StorageType.OBJECT
+        @JsonProperty(SerializationConstants.STORAGE_TYPE) val storageType: StorageType = StorageType.STANDARD
 ) : AbstractSecurableObject(_id, _title, _description) {
 
     init {
