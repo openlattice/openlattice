@@ -1,0 +1,854 @@
+organizationId: '00000000-0000-0001-0000-000000000000'
+entityDefinitions:
+
+  person:
+    fqn: "general.person"
+    entitySetName: "DemoPatients"
+    propertyDefinitions:
+      nc.SubjectIdentification:
+        type:  "nc.SubjectIdentification" 
+        column: "ID"
+      nc.PersonGivenName:
+        type: "nc.PersonGivenName"
+        column: "GivenName"
+      nc.PersonSurName:
+        type: "nc.PersonSurName"
+        column: "Surname"
+      nc.PersonSex:
+        type: "nc.PersonSex"
+        column: "Sex"
+      nc.PersonRace:
+        type: "nc.PersonRace"
+        column: "Race"
+      nc.PersonEthnicity:
+        type: "nc.PersonEthnicity"
+        column: "Ethnicity"
+      ol.datasource:
+        type: "ol.datasource"
+        column: "FacilityName"
+    name: "person"
+
+  persondetails:
+    fqn: "ol.persondetails"
+    entitySetName: "DemoPersonDetails"
+    propertyDefinitions:
+      general.id:
+        type: "general.id"
+        transforms:
+        - !<transforms.ConcatTransform>
+          columns: ["ID", "TimeIn"]
+      ol.eyecolor:
+        type: "ol.eyecolor"
+        column: "EyeColor"
+        transforms:
+        - !<transforms.ReplaceTransform>
+          target: ['Brown']
+          goal: ['brown']
+      person.maritalstatus:
+        type: "person.maritalstatus"
+        column: "MaritalStatus"
+      person.veteranstatus:
+        type: "person.veteranstatus"
+        column: "MilitaryStatus"
+    name: "persondetails"
+
+  persondetailshealth:
+    fqn: "ol.persondetailshealth"
+    entitySetName: "DemoPersonDetailsHealth"
+    propertyDefinitions:
+      ol.id:
+        type: "ol.id"
+        transforms:
+        - !<transforms.ConcatTransform>
+          columns: ["ID", "TimeIn"]
+          separator: "_"
+      ol.pregnancyindicator:
+        type: "ol.pregnancyindicator"
+        column: "Pregnant"
+        transforms:
+        - !<transforms.ReplaceTransform>
+          target: ['No', 'Yes', '0.0', '1.0']
+          goal: ['N', 'Y', 'N', 'Y']
+        - !<transforms.ParseBoolTransform> {}
+    conditions:
+    - !<conditions.BooleanIsNullCondition>
+      column: "Pregnant"
+      reverse: true
+    name: "persondetailshealth"
+
+
+
+  symptom1:
+    fqn: "ol.symptom"
+    entitySetName: "Symptoms"
+    propertyDefinitions:
+      ol.id:
+        type: "ol.id"
+        column: "Symptoms"
+        transforms:
+        - !<transforms.SplitTransform>
+          separator: ', '
+          index: 0
+          valueElse: ''
+      ol.description:
+        type: "ol.description"
+        column: "Symptoms"
+        transforms:
+        - !<transforms.SplitTransform>
+          separator: ', '
+          index: 0
+          valueElse: ''
+    name: "symptom1"
+
+  symptom2:
+    fqn: "ol.symptom"
+    entitySetName: "Symptoms"
+    propertyDefinitions:
+      ol.id:
+        type: "ol.id"
+        column: "Symptoms"
+        transforms:
+        - !<transforms.SplitTransform>
+          separator: ', '
+          index: 1
+          valueElse: ''
+      ol.description:
+        type: "ol.description"
+        column: "Symptoms"
+        transforms:
+        - !<transforms.SplitTransform>
+          separator: ', '
+          index: 1
+          valueElse: ''
+    name: "symptom2"
+
+  symptom3:
+    fqn: "ol.symptom"
+    entitySetName: "Symptoms"
+    propertyDefinitions:
+      ol.id:
+        type: "ol.id"
+        column: "Symptoms"
+        transforms:
+        - !<transforms.SplitTransform>
+          separator: ', '
+          index: 2
+          valueElse: ''
+      ol.description:
+        type: "ol.description"
+        column: "Symptoms"
+        transforms:
+        - !<transforms.SplitTransform>
+          separator: ', '
+          index: 2
+          valueElse: ''
+    name: "symptom3"
+
+  symptom4:
+    fqn: "ol.symptom"
+    entitySetName: "Symptoms"
+    propertyDefinitions:
+      ol.id:
+        type: "ol.id"
+        column: "Symptoms"
+        transforms:
+        - !<transforms.SplitTransform>
+          separator: ', '
+          index: 3
+          valueElse: ''
+      ol.description:
+        type: "ol.description"
+        column: "Symptoms"
+        transforms:
+        - !<transforms.SplitTransform>
+          separator: ', '
+          index: 3
+          valueElse: ''
+    name: "symptom4"
+
+
+  encounter:
+    fqn: "ol.encounter"
+    entitySetName: "DemoEncounters"
+    propertyDefinitions:
+      ol.id:
+        type: "ol.id"
+        transforms:
+        - !<transforms.ConcatTransform>
+          columns: ["ID", "TimeIn"]
+          separator: "_"
+      ol.type:
+        type: "ol.type"
+        column: "ApptTypes"
+      ol.reason:
+        type: "ol.reason"
+        column: "PrimaryReasonForVisit"
+      ol.datetimestart:
+        type: "ol.datetimestart"
+        column: "TimeIn"
+        transforms:
+        - !<transforms.DateTimeTransform>
+          pattern: ["MM/dd/yy HH:mm:ss", "M/dd/yy", "MM/dd/yy H:mm:ss"]
+          timezone: America/Los_Angeles
+    name: "encounter"
+
+
+  provider:
+    fqn: "ol.provider"
+    entitySetName: "DemoProviders"
+    propertyDefinitions:
+      ol.id:
+        type: "ol.id"
+        column: "NCI"
+      general.fullname:
+        type: "general.fullname"
+        transforms:
+        - !<transforms.ConcatTransform>
+            columns: ["providerFNames", "providerLNames"]
+            separator: " "
+      ol.credentials:
+        type: "ol.credentials"
+        column: "providerType"
+        transforms:
+        - !<transforms.ReplaceTransform>
+          target: ['DR']
+          goal: ['MD']
+    name: "provider"
+
+
+
+  healthcondition:
+    fqn: "ol.healthcondition"
+    entitySetName: "DemoHealthConditions"
+    propertyDefinitions:
+      ol.id:
+        type: "ol.id"
+        column: "Diagnosis"
+      ol.description:
+        type: "ol.description"
+        column: "Diagnosis"
+    name: "healthcondition"
+
+
+  insurance1:
+    fqn: "ol.insurance"
+    entitySetName: "DemoInsurance"
+    propertyDefinitions:
+      general.id:
+        type: "general.id"
+        column: "Insurance"
+        transforms:
+        - !<transforms.SplitTransform>
+          separator: ', '
+          index: 0
+          valueElse: ''
+        - !<transforms.ReplaceTransform>
+          target: ['MEDICAID', 'MEDICARE', 'NONE', 'PRIVATE INSURANCE', 'BLUE CROSS/BLUE SHIELD', 'INVALID']
+          goal: ['Medicaid', 'Medicare', '', 'Private', 'Blue Cross/Blue Shield', '']
+      ol.name:
+        type: "ol.name"
+        column: "Insurance"
+        transforms:
+        - !<transforms.SplitTransform>
+          separator: ', '
+          index: 0
+          valueElse: ''
+        - !<transforms.ReplaceTransform>
+          target: ['MEDICAID', 'MEDICARE', 'NONE', 'PRIVATE INSURANCE', 'BLUE CROSS/BLUE SHIELD', 'INVALID']
+          goal: ['Medicaid', 'Medicare', '', 'Private', 'Blue Cross/Blue Shield', '']
+    name: "insurance1"
+
+  insurance2:
+    fqn: "ol.insurance"
+    entitySetName: "DemoInsurance"
+    propertyDefinitions:
+      general.id:
+        type: "general.id"
+        column: "Insurance"
+        transforms:
+        - !<transforms.SplitTransform>
+          separator: ', '
+          index: 1
+          valueElse: ''
+        - !<transforms.ReplaceTransform>
+          target: ['MEDICAID', 'MEDICARE', 'NONE', 'PRIVATE INSURANCE', 'BLUE CROSS/BLUE SHIELD', 'INVALID']
+          goal: ['Medicaid', 'Medicare', '', 'Private', 'Blue Cross/Blue Shield', '']
+      ol.name:
+        type: "ol.name"
+        column: "Insurance"
+        transforms:
+        - !<transforms.SplitTransform>
+          separator: ', '
+          index: 1
+          valueElse: ''
+        - !<transforms.ReplaceTransform>
+          target: ['MEDICAID', 'MEDICARE', 'NONE', 'PRIVATE INSURANCE', 'BLUE CROSS/BLUE SHIELD', 'INVALID']
+          goal: ['Medicaid', 'Medicare', '', 'Private', 'Blue Cross/Blue Shield', '']
+    name: "insurance2"
+
+
+  vitalsigns:
+    fqn: "ol.vitalsigns"
+    entitySetName: "DemoVitalSigns"
+    propertyDefinitions:
+      general.id:
+        type: "general.id"
+        transforms:
+        - !<transforms.ConcatTransform>
+          columns: ["ID", "TimeIn"]
+          separator: "_"
+      ol.bloodpressure:
+        type: "ol.bloodpressure"
+        column: "BloodPressure"
+      ol.temperature:
+        type: "ol.temperature"
+        column: "Temperature"
+        transforms:
+        - !<transforms.ParseDoubleTransform> {}
+      ol.datetimeadministered:
+        type: "ol.datetimeadministered"
+        column: "TimeIn"
+        transforms:
+        - !<transforms.DateTimeTransform>
+          pattern: ["MM/dd/yy HH:mm:ss", "M/dd/yy", "MM/dd/yy H:mm:ss"]
+          timezone: America/Los_Angeles
+    name: "vitalsigns"
+
+
+
+  housing:
+    fqn: "ol.housing"
+    entitySetName: "DemoHousings"
+    propertyDefinitions:
+      ol.type:
+        type: "ol.type"
+        column: "LivingArrangement"
+      ol.id:
+        type: "ol.id"
+        column: "LivingArrangement"
+    name: "housing"
+
+  
+  substance:
+    fqn: "ol.substance"
+    entitySetName: "DemoSubstances"
+    propertyDefinitions:
+      general.id:
+        type: "general.id"
+        column: "SubID"
+      substance.frequency:
+        type: "substance.frequency"
+        column: "SubstanceFrequency"
+      ol.type:
+        type: "ol.type"
+        column: "PrimarySubstanceType"
+        transforms:
+        - !<transforms.ReplaceTransform>
+            target: ['Opioids', 'Benzodiazepines', 'Alcohol', 'Sedatives', 'Other stimulants', 'Stimulants', 'Cocaine', 'Barbiturates', 'Cannabis', 'Inhalants']
+            goal: ['opioids', 'benzos', 'alcohol', 'sedatives, hypnotics, or anxiolytics', 'other stimulants', 'other stimulants', 'cocaine', 'sedatives, hypnotics, or anxiolytics', 'cannabis', 'inhalants']
+    conditions:
+    - !<conditions.BooleanIsNullCondition>
+      column: "SubID"
+      reverse: true
+    name: "substance"
+
+  
+  income:
+    fqn: "ol.income"
+    entitySetName: "DemoIncomes"
+    propertyDefinitions:
+      ol.id:
+        type: "ol.id"
+        transforms:
+        - !<transforms.ConcatTransform>
+          columns: ["ID", "TimeIn"]
+          separator: "_"
+      ol.type:
+        type: "ol.type"
+        column: "SourceofIncome"
+        transforms:
+        - !<transforms.ReplaceTransform>
+            target: ['NONE']
+            goal: ['']
+    name: "income"
+
+  episodedetails:
+    fqn: "ol.episodedetails"
+    entitySetName: "DemoEpisodeDetails"
+    propertyDefinitions:
+      ol.id:
+        type: "ol.id"
+        transforms:
+        - !<transforms.ConcatTransform>
+          columns: ["ID", "TimeIn"]
+          separator: "_"
+      ol.reason:
+        type: "ol.reason"
+        column: "PrimaryReasonForVisit"
+      ol.lengthofstay:
+        type: "ol.lengthofstay"
+        column: "LengthOfStayDays"
+        transforms:
+        - !<transforms.ParseDoubleTransform> {}
+    name: "episodedetails"
+
+  episode:
+    fqn: "ol.episode"
+    entitySetName: "DemoEpisodes"
+    propertyDefinitions:
+      ol.id:
+        type: "ol.id"
+        transforms:
+        - !<transforms.ConcatTransform>
+          columns: ["ID", "TimeIn"]
+          separator: "_"
+      ol.effectivedate:
+        type: "ol.effectivedate"
+        column: "TimeIn"
+        transforms:
+        - !<transforms.DateTimeTransform>
+          pattern: ["MM/dd/yy HH:mm:ss", "M/dd/yy", "MM/dd/yy H:mm:ss"]
+          timezone: America/Los_Angeles
+      ol.datetimeend:
+        type: "ol.datetimeend"
+        column: "TimeOut"
+        transforms:
+        - !<transforms.DateTimeTransform>
+          pattern: ["MM/dd/yy HH:mm:ss", "M/dd/yy", "MM/dd/yy H:mm:ss"]
+          timezone: America/Los_Angeles
+    name: "episode"
+
+  facility:
+    fqn: "o.facility"
+    entitySetName: "DemoFacilities"
+    propertyDefinitions:
+      general.id:
+        type: "general.id"
+        column: "FacilityName"
+      ol.name:
+        type: "ol.name"
+        column: "FacilityName"
+      ol.servicesetting:
+        type: "ol.servicesetting"
+        column: "ServiceSetting"
+    name: "facility"
+
+  
+associationDefinitions:
+
+  has1:
+    fqn: "ol.has"
+    entitySetName: "DemoHas"
+    src: "person"
+    dst: "persondetails"
+    propertyDefinitions:
+      ol.id:
+        type: "ol.id"
+        transforms:
+        - !<transforms.ConcatCombineTransform>
+          transforms:
+          - !<transforms.ConcatTransform>
+            columns: ["ID", "TimeIn"]
+          - !<transforms.ValueTransform>
+            value: "1"
+    name: "has1"
+
+  has2:
+    fqn: "ol.has"
+    entitySetName: "DemoHas"
+    src: "person"
+    dst: "persondetailshealth"
+    propertyDefinitions:
+      ol.id:
+        type: "ol.id"
+        transforms:
+        - !<transforms.ConcatCombineTransform>
+          transforms:
+          - !<transforms.ConcatTransform>
+            columns: ["ID", "TimeIn"]
+          - !<transforms.ValueTransform>
+            value: "2"
+    name: "has2"
+
+  has4:
+    fqn: "ol.has"
+    entitySetName: "DemoHas"
+    src: "episode"
+    dst: "episodedetails"
+    propertyDefinitions:
+      ol.id:
+        type: "ol.id"
+        transforms:
+        - !<transforms.ConcatCombineTransform>
+          transforms:
+          - !<transforms.ConcatTransform>
+            columns: ["ID", "TimeIn"]
+          - !<transforms.ValueTransform>
+            value: "4"
+    name: "has4"
+
+  livesat:
+    fqn: "ol.livesat"
+    entitySetName: "DemoLivesAt"
+    src: "person"
+    dst: "housing"
+    propertyDefinitions:
+      general.id:
+        type: "general.id"
+        transforms:
+        - !<transforms.ConcatTransform>
+          columns: ["ID", "LivingArrangement"]
+          separator: "_"
+    name: "livesat"
+
+  reported:
+    fqn: "ol.reported"
+    entitySetName: "DemoReported"
+    src: "person"
+    dst: "income"
+    propertyDefinitions:
+      general.id:
+        type: "general.id"
+        transforms:
+        - !<transforms.ConcatTransform>
+          columns: ["ID", "SourceofIncome"]
+          separator: "_"
+      general.datetime:
+        type: "general.datetime"
+        column: "TimeIn"
+        transforms:
+        - !<transforms.DateTimeTransform>
+          pattern: ["MM/dd/yy HH:mm:ss", "M/dd/yy", "MM/dd/yy H:mm:ss"]
+          timezone: America/Los_Angeles
+      date.completeddatetime:
+        type: "date.completeddatetime"
+        column: "EntryDateTime"
+        transforms:
+        - !<transforms.DateTimeTransform>
+          pattern: ["MM/dd/yy HH:mm:ss", "M/dd/yy", "MM/dd/yy H:mm:ss"]
+          timezone: America/Los_Angeles
+    name: "reported"
+
+  presentsfor1:
+    fqn: "ol.presentsfor"
+    entitySetName: "DemoPresentsFor"
+    src: "person"
+    dst: "encounter"
+    propertyDefinitions:
+      ol.id:
+        type: "ol.id"
+        transforms:
+        - !<transforms.ConcatCombineTransform>
+          transforms:
+          - !<transforms.ConcatTransform>
+            columns: ["ID", "TimeIn"]
+          - !<transforms.ValueTransform>
+            value: "1"
+      ol.datetimeadministered:
+        type: "ol.datetimeadministered"
+        column: "TimeIn"
+        transforms:
+        - !<transforms.DateTimeTransform>
+          pattern: ["MM/dd/yy HH:mm:ss", "M/dd/yy", "MM/dd/yy H:mm:ss"]
+          timezone: America/Los_Angeles
+    name: "presentsfor1"
+
+  presentsfor2:
+    fqn: "ol.presentsfor"
+    entitySetName: "DemoPresentsFor"
+    src: "person"
+    dst: "episode"
+    propertyDefinitions:
+      ol.id:
+        type: "ol.id"
+        transforms:
+        - !<transforms.ConcatCombineTransform>
+          transforms:
+          - !<transforms.ConcatTransform>
+            columns: ["ID", "TimeIn"]
+          - !<transforms.ValueTransform>
+            value: "2"
+      ol.datetimeadministered:
+        type: "ol.datetimeadministered"
+        column: "TimeIn"
+        transforms:
+        - !<transforms.DateTimeTransform>
+          pattern: ["MM/dd/yy HH:mm:ss", "M/dd/yy", "MM/dd/yy H:mm:ss"]
+          timezone: America/Los_Angeles
+    name: "presentsfor2"
+
+  addresses:
+    fqn: "ol.addresses"
+    entitySetName: "DemoAddresses"
+    src: "encounter"
+    dst: "healthcondition"
+    propertyDefinitions:
+      ol.id:
+        type: "ol.id"
+        transforms:
+        - !<transforms.ConcatTransform>
+          columns: ["ID","Diagnosis"]
+          separator: "_"
+    name: "addresses"
+
+  #person -> eligiblefor -> insurance
+
+  eligiblefor1:
+    fqn: "ol.eligiblefor"
+    entitySetName: "DemoEligibleFor"
+    src: "person"
+    dst: "insurance1"
+    propertyDefinitions:
+      ol.id:
+        type: "ol.id"
+        column: "Insurance"
+        transforms:
+        - !<transforms.SplitTransform>
+          separator: ', '
+          index: 0
+          valueElse: ''
+        - !<transforms.ReplaceTransform>
+          target: ['MEDICAID', 'MEDICARE', 'NONE', 'PRIVATE INSURANCE', 'BLUE CROSS/BLUE SHIELD', 'INVALID']
+          goal: ['Medicaid', 'Medicare', '', 'Private', 'Blue Cross/Blue Shield', '']
+    name: "eligiblefor1"
+
+  eligiblefor2:
+    fqn: "ol.eligiblefor"
+    entitySetName: "DemoEligibleFor"
+    src: "person"
+    dst: "insurance2"
+    propertyDefinitions:
+      ol.id:
+        type: "ol.id"
+        column: "Insurance"
+        transforms:
+        - !<transforms.SplitTransform>
+          separator: ', '
+          index: 1
+          valueElse: ''
+        - !<transforms.ReplaceTransform>
+          target: ['MEDICAID', 'MEDICARE', 'NONE', 'PRIVATE INSURANCE', 'BLUE CROSS/BLUE SHIELD', 'INVALID']
+          goal: ['Medicaid', 'Medicare', '', 'Private', 'Blue Cross/Blue Shield', '']
+    name: "eligiblefor2"
+
+  assessedby:
+    fqn: "ol.assessedby"
+    entitySetName: "DemoAssessedBy"
+    src: "person"
+    dst: "provider"
+    propertyDefinitions:
+      general.id:
+        type: "general.id"
+        transforms:
+        - !<transforms.ConcatTransform>
+          columns: ["ID","providerFNames", "providerLNames"]
+          separator: "_"
+    name: "assessedby"
+
+  observedin1:
+    fqn: "ol.observedin"
+    entitySetName: "DemoObservedIn"
+    src: "symptom1"
+    dst: "person"
+    propertyDefinitions:
+      ol.id:
+        type: "ol.id"
+        transforms:
+        - !<transforms.ConcatCombineTransform>
+          transforms:
+          - !<transforms.SplitTransform>
+            separator: ', '
+            index: 0
+            valueElse: ''
+            column: 'Symptoms'
+          - !<transforms.ColumnTransform>
+            column: "ID"
+      date.completeddatetime:
+        type: "date.completeddatetime"
+        column: "EntryDateTime"
+        transforms:
+        - !<transforms.DateTimeTransform>
+          pattern: ["MM/dd/yy HH:mm:ss", "M/dd/yy", "MM/dd/yy H:mm:ss"]
+          timezone: America/Los_Angeles
+    name: "observedin1"
+
+  observedin2:
+    fqn: "ol.observedin"
+    entitySetName: "DemoObservedIn"
+    src: "symptom2"
+    dst: "person"
+    propertyDefinitions:
+      ol.id:
+        type: "ol.id"
+        transforms:
+        - !<transforms.ConcatCombineTransform>
+          transforms:
+          - !<transforms.SplitTransform>
+            separator: ', '
+            index: 1
+            valueElse: ''
+            column: 'Symptoms'
+          - !<transforms.ColumnTransform>
+            column: "ID"
+      date.completeddatetime:
+        type: "date.completeddatetime"
+        column: "EntryDateTime"
+        transforms:
+        - !<transforms.DateTimeTransform>
+          pattern: ["MM/dd/yy HH:mm:ss", "M/dd/yy", "MM/dd/yy H:mm:ss"]
+          timezone: America/Los_Angeles
+    name: "observedin2"
+
+  observedin3:
+    fqn: "ol.observedin"
+    entitySetName: "DemoObservedIn"
+    src: "symptom3"
+    dst: "person"
+    propertyDefinitions:
+      ol.id:
+        type: "ol.id"
+        transforms:
+        - !<transforms.ConcatCombineTransform>
+          transforms:
+          - !<transforms.SplitTransform>
+            separator: ', '
+            index: 2
+            valueElse: ''
+            column: 'Symptoms'
+          - !<transforms.ColumnTransform>
+            column: "ID"
+      date.completeddatetime:
+        type: "date.completeddatetime"
+        column: "EntryDateTime"
+        transforms:
+        - !<transforms.DateTimeTransform>
+          pattern: ["MM/dd/yy HH:mm:ss", "M/dd/yy", "MM/dd/yy H:mm:ss"]
+          timezone: America/Los_Angeles
+    name: "observedin3"
+
+  observedin4:
+    fqn: "ol.observedin"
+    entitySetName: "DemoObservedIn"
+    src: "symptom4"
+    dst: "person"
+    propertyDefinitions:
+      ol.id:
+        type: "ol.id"
+        transforms:
+        - !<transforms.ConcatCombineTransform>
+          transforms:
+          - !<transforms.SplitTransform>
+            separator: ', '
+            index: 3
+            valueElse: ''
+            column: 'Symptoms'
+          - !<transforms.ColumnTransform>
+            column: "ID"
+      date.completeddatetime:
+        type: "date.completeddatetime"
+        column: "EntryDateTime"
+        transforms:
+        - !<transforms.DateTimeTransform>
+          pattern: ["MM/dd/yy HH:mm:ss", "M/dd/yy", "MM/dd/yy H:mm:ss"]
+          timezone: America/Los_Angeles
+    name: "observedin4"
+
+  observedin5:
+    fqn: "ol.observedin"
+    entitySetName: "DemoObservedIn"
+    src: "healthcondition"
+    dst: "person"
+    propertyDefinitions:
+      ol.id:
+        type: "ol.id"
+        transforms:
+        - !<transforms.ConcatTransform>
+          columns: ["Diagnosis", "ID"]
+          separator: "_"
+      date.completeddatetime:
+        type: "date.completeddatetime"
+        column: "EntryDateTime"
+        transforms:
+        - !<transforms.DateTimeTransform>
+          pattern: ["MM/dd/yy HH:mm:ss", "M/dd/yy", "MM/dd/yy H:mm:ss"]
+          timezone: America/Los_Angeles
+    name: "observedin5"
+
+  observedin6:
+    fqn: "ol.observedin"
+    entitySetName: "DemoObservedIn"
+    src: "vitalsigns"
+    dst: "person"
+    propertyDefinitions:
+      ol.id:
+        type: "ol.id"
+        transforms:
+        - !<transforms.ConcatCombineTransform>
+          transforms:
+          - !<transforms.ConcatTransform>
+            columns: ["ID", "TimeIn"]
+          - !<transforms.ValueTransform>
+            value: "6"
+      date.completeddatetime:
+        type: "date.completeddatetime"
+        column: "EntryDateTime"
+        transforms:
+        - !<transforms.DateTimeTransform>
+          pattern: ["MM/dd/yy HH:mm:ss", "M/dd/yy", "MM/dd/yy H:mm:ss"]
+          timezone: America/Los_Angeles
+    name: "observedin6"
+
+  using:
+    fqn: "ol.using"
+    entitySetName: "DemoUsing"
+    src: "person"
+    dst: "substance"
+    propertyDefinitions:
+      general.id:
+        type: "general.id"
+        transforms:
+        - !<transforms.ConcatTransform>
+          columns: ["ID", "SubID"]
+          separator: "_"
+      date.completeddatetime:
+        type: "date.completeddatetime"
+        column: "EntryDateTime"
+        transforms:
+        - !<transforms.DateTimeTransform>
+          pattern: ["MM/dd/yy HH:mm:ss", "M/dd/yy", "MM/dd/yy H:mm:ss"]
+          timezone: America/Los_Angeles
+    name: "using"
+
+  partof:
+    fqn: "ol.partof"
+    entitySetName: "DemoPartOf"
+    src: "encounter"
+    dst: "episode"
+    propertyDefinitions:
+      ol.id:
+        type: "ol.id"
+        transforms:
+        - !<transforms.ConcatTransform>
+          columns: ["ID", "TimeIn"]
+          separator: "_"
+    name: "partof"
+
+  occurredat:
+    fqn: "general.occurredat"
+    entitySetName: "DemoOccurredAt"
+    src: "encounter"
+    dst: "facility"
+    propertyDefinitions:
+      general.stringid:
+        type: 'general.stringid'
+        transforms:
+        - !<transforms.ConcatTransform>
+          columns: ["ID", "TimeIn", "FacilityName"]
+          separator: "_"
+      location.address:
+        type: "location.address"
+        column: "Location"
+    name: "occurredat"
+
+
+
