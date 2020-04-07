@@ -55,3 +55,6 @@
 [submodule "linker"]
 	path = linker
 	url = git@github.com:openlattice/linker.git
+[submodule "bridge"]
+	path = bridge
+	url = git@github.com:openlattice/bridge.git
