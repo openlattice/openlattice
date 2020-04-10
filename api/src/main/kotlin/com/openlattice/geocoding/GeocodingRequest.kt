@@ -20,7 +20,7 @@ data class GeocodingRequest(
         val locationType: Optional<Array<LocationType>>
 ) {
     init {
-        require(!(address.isPresent && location.isPresent)) {
+        require(!(address.isPresent && location.isPresent && placeId.isPresent )) {
             "Must not have both address (forward geocoding) and location (reverse geocoding)."
         }
 
