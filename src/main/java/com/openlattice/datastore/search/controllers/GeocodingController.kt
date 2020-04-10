@@ -7,7 +7,14 @@ import com.google.maps.model.AutocompletePrediction
 import com.google.maps.model.GeocodingResult
 import com.openlattice.geocoding.AutocompleteRequest
 import com.openlattice.geocoding.GeocodingApi
+import com.openlattice.geocoding.GeocodingApi.Companion.AUTOCOMPLETE
+import com.openlattice.geocoding.GeocodingApi.Companion.CONTROLLER
+import com.openlattice.geocoding.GeocodingApi.Companion.GEOCODE
 import com.openlattice.geocoding.GeocodingRequest
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RestController
 import java.util.*
 import javax.inject.Inject
 
@@ -16,11 +23,14 @@ import javax.inject.Inject
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
+@RestController
+@RequestMapping(CONTROLLER)
 class GeocodingController : GeocodingApi {
     @Inject
     private lateinit var geoApiContext: GeoApiContext
 
-    override fun autocomplete(request: AutocompleteRequest): Array<out AutocompletePrediction> {
+    @PostMapping(value = [AUTOCOMPLETE])
+    override fun autocomplete(@RequestBody request: AutocompleteRequest): Array<out AutocompletePrediction> {
         val st = request.sessionToken.orElseGet(UUID::randomUUID)
         val autocompleteRequest = PlacesApi.placeAutocomplete(
                 geoApiContext,
@@ -28,8 +38,8 @@ class GeocodingController : GeocodingApi {
                 PlaceAutocompleteRequest.SessionToken(st)
         )
 
-        request.offset.ifPresent( autocompleteRequest::offset )
-        request.location.ifPresent(autocompleteRequest::location )
+        request.offset.ifPresent(autocompleteRequest::offset)
+        request.location.ifPresent(autocompleteRequest::location)
         request.radius.ifPresent(autocompleteRequest::radius)
         request.types.ifPresent(autocompleteRequest::types)
         request.components.ifPresent(autocompleteRequest::components)
@@ -38,11 +48,12 @@ class GeocodingController : GeocodingApi {
         return autocompleteRequest.await()
     }
 
-    override fun geocode(request: GeocodingRequest): Array<out GeocodingResult> {
-        val req = if( request.address.isPresent ) {
-             com.google.maps.GeocodingApi.geocode(geoApiContext, request.address.get())
+    @PostMapping(value = [GEOCODE])
+    override fun geocode(@RequestBody request: GeocodingRequest): Array<out GeocodingResult> {
+        val req = if (request.address.isPresent) {
+            com.google.maps.GeocodingApi.geocode(geoApiContext, request.address.get())
         } else {
-            com.google.maps.GeocodingApi.reverseGeocode(geoApiContext, request.location.get() )
+            com.google.maps.GeocodingApi.reverseGeocode(geoApiContext, request.location.get())
         }
 
         request.placeId.ifPresent(req::place)
