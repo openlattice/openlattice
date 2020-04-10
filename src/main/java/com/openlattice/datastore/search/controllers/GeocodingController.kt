@@ -38,11 +38,11 @@ class GeocodingController : GeocodingApi {
                 PlaceAutocompleteRequest.SessionToken(st)
         )
 
-        request.offset.ifPresent(autocompleteRequest::offset)
-        request.location.ifPresent(autocompleteRequest::location)
-        request.radius.ifPresent(autocompleteRequest::radius)
-        request.types.ifPresent(autocompleteRequest::types)
-        request.components.ifPresent(autocompleteRequest::components)
+        request.offset.ifPresent { autocompleteRequest.offset(it) }
+        request.location.ifPresent { autocompleteRequest.location(it) }
+        request.radius.ifPresent { autocompleteRequest.radius(it) }
+        request.types.ifPresent { autocompleteRequest.types(it) }
+        request.components.ifPresent { autocompleteRequest.components(*it) }
 
 
         return autocompleteRequest.await()
@@ -56,10 +56,10 @@ class GeocodingController : GeocodingApi {
             com.google.maps.GeocodingApi.reverseGeocode(geoApiContext, request.location.get())
         }
 
-        request.placeId.ifPresent(req::place)
-        request.resultType.ifPresent(req::resultType)
-        request.locationType.ifPresent(req::locationType)
-        request.components.ifPresent(req::components)
+        request.placeId.ifPresent { req.place(it) }
+        request.resultType.ifPresent { req.resultType(*it) }
+        request.locationType.ifPresent { req.locationType(*it) }
+        request.components.ifPresent { req.components(*it) }
 
         return req.await()
     }
