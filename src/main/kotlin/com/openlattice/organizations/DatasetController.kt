@@ -160,8 +160,8 @@ class DatasetController : DatasetApi, AuthorizingComponent {
             @PathVariable(ID) organizationId: UUID,
             @PathVariable(TABLE_NAME) tableName: String,
             @RequestBody metadataUpdate: MetadataUpdate) {
-        ensureAdminAccess()
         val tableFqnToId = getExternalDatabaseObjectFqnToIdPair(organizationId, tableName)
+        ensureOwnerAccess(AclKey(tableFqnToId.second))
         edms.updateOrganizationExternalDatabaseTable(organizationId, tableFqnToId, metadataUpdate)
     }
 
