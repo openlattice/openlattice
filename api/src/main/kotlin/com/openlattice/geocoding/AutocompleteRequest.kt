@@ -16,5 +16,9 @@ data class AutocompleteRequest(
         val location: Optional<LatLng>,
         val radius: Optional<Int>,
         val types: Optional<PlaceAutocompleteType>,
-        val components: Optional<Array<ComponentFilter>>
-)
+        private val componentFilters: Optional<Array<ComponentFilterWrapper>>
+) {
+    val components: Optional<Array<ComponentFilter>> = componentFilters.map { cfws ->
+        cfws.map { cfw -> ComponentFilter(cfw.component, cfw.value) }.toTypedArray()
+    }
+}
