@@ -1392,7 +1392,8 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             case geoDistance:
                 sort = new GeoDistanceSortBuilder( getFieldName( sortDefinition.getPropertyTypeId() ),
                         sortDefinition.getLatitude().get(),
-                        sortDefinition.getLongitude().get() );
+                        sortDefinition.getLongitude().get() )
+                        .setNestedSort( new NestedSortBuilder( ENTITY ) );
                 break;
 
             case score:
