@@ -67,7 +67,7 @@ constructor(
         ensureTwilio(request)
         codexService.processIncomingMessage(organizationId, request)
         response.contentType = MediaType.APPLICATION_XML_VALUE
-        response.writer.print("")
+        response.status = HttpServletResponse.SC_OK
     }
 
     @Timed
@@ -86,8 +86,8 @@ constructor(
         if (status == Message.Status.FAILED || status == Message.Status.UNDELIVERED) {
             logger.error("Message $messageId not received or even failed to send!!! ")
         }
+        response.status = HttpServletResponse.SC_NO_CONTENT
         response.contentType = MediaType.APPLICATION_XML_VALUE
-        response.writer.print("")
     }
 
     fun ensureTwilio(request: HttpServletRequest) {
