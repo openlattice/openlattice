@@ -304,16 +304,16 @@ class PostgresEntityDataQueryService(
                 .forEach { (partition, batch) ->
                     var entityBatch = batch.associate { it.key to it.value }
 
-                    /* tombstoneFn must execute on the non-JsonDeserializer-formatted version of the entities,
-                       otherwise any values replaced by an empty set will not be tombstoned. */
-                    tombstoneFn(version, entityBatch)
-
                     if (!awsPassthrough) {
                         entityBatch = entityBatch.mapValues {
-                            Multimaps.asMap(JsonDeserializer.validateFormatAndNormalize(it.value, authorizedPropertyTypes)
-                            { "Entity set $entitySetId with entity key id ${it.key}" })
+                            JsonDeserializer.validateFormatAndNormalize(
+                                    it.value,
+                                    authorizedPropertyTypes
+                            ) { "Entity set $entitySetId with entity key id ${it.key}" }
                         }
                     }
+
+                    tombstoneFn(version, entityBatch)
 
                     val upc = upsertEntities(
                             entitySetId,
@@ -1089,7 +1089,9 @@ class PostgresEntityDataQueryService(
             sqlFormat: Int,
             deleteType: DeleteType
     ): BasePostgresIterable<UUID> {
-        val partitions = PostgresArrays.createIntArray(hds.connection, partitionManager.getEntitySetPartitions(entitySetId))
+        val partitions = PostgresArrays.createIntArray(
+                hds.connection, partitionManager.getEntitySetPartitions(entitySetId)
+        )
         return BasePostgresIterable(
                 PreparedStatementHolderSupplier(
                         hds,
