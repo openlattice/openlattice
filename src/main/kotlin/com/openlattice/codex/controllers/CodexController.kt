@@ -57,14 +57,19 @@ constructor(
     }
 
     @Timed
-    @RequestMapping(path = [INCOMING + ORG_ID_PATH], method = [RequestMethod.POST], consumes = [MediaType.APPLICATION_FORM_URLENCODED_VALUE])
+    @RequestMapping(path = [INCOMING + ORG_ID_PATH],
+            method = [RequestMethod.POST],
+            consumes = [MediaType.APPLICATION_FORM_URLENCODED_VALUE],
+            produces = [MediaType.APPLICATION_JSON_VALUE])
     fun receiveIncomingText(@PathVariable(ORG_ID) organizationId: UUID, request: HttpServletRequest) {
         ensureTwilio(request)
         codexService.processIncomingMessage(organizationId, request)
     }
 
     @Timed
-    @RequestMapping(path = [INCOMING + ORG_ID_PATH + STATUS], method = [RequestMethod.POST])
+    @RequestMapping(path = [INCOMING + ORG_ID_PATH + STATUS],
+            method = [RequestMethod.POST],
+            produces = [MediaType.APPLICATION_JSON_VALUE])
     fun listenForTextStatus(@PathVariable(ORG_ID) organizationId: UUID, request: HttpServletRequest) {
 
         ensureTwilio(request)
