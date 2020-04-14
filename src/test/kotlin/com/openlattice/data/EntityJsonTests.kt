@@ -111,7 +111,7 @@ class EntityJsonTests {
         entity.details.put( p1 , null )
 
         val details = JsonDeserializer.validateFormatAndNormalize(entity.details, builder.build())
-        Assert.assertTrue(details.getValue(p1).size == 1 )
+        Assert.assertTrue(details.getValue(p1).isEmpty())
         Assert.assertTrue(details.getValue(p2).isNotEmpty())
     }
 }

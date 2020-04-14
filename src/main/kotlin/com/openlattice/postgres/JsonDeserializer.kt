@@ -42,7 +42,7 @@ class JsonDeserializer {
 
         @JvmStatic
         fun validateFormatAndNormalize(
-                propertyValues: Map<UUID, Set<Any?>>,
+                propertyValues: Map<UUID, Set<Any>>,
                 authorizedPropertiesWithDataType: Map<UUID, PropertyType>,
                 lazyMessage: () -> String
         ): Map<UUID, Set<Any>> {
@@ -68,9 +68,13 @@ class JsonDeserializer {
                             throw IllegalStateException(errMsg)
                         }
                     }
-                    if (valueSet.isEmpty()) {
+
+
+                    if (valueSet == null || valueSet.isEmpty()) {
                         normalizedPropertyValues.getOrPut(propertyTypeId) { mutableSetOf() }
+                        continue
                     }
+
                     for (value in valueSet) {
                         val normalizedValue = validateFormatAndNormalize(dataType, propertyTypeId, value)
                         if (normalizedValue != null) {
@@ -98,7 +102,7 @@ class JsonDeserializer {
 
         @SuppressFBWarnings(value = ["SF_SWITCH_FALLTHROUGH"], justification = "by design")
         private fun validateFormatAndNormalize(
-                dataType: EdmPrimitiveTypeKind?,
+                dataType: EdmPrimitiveTypeKind,
                 propertyTypeId: UUID,
                 value: Any?
         ): Any? {
