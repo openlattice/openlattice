@@ -42,7 +42,7 @@ class JsonDeserializer {
 
         @JvmStatic
         fun validateFormatAndNormalize(
-                propertyValues: Map<UUID, Set<Any>>,
+                propertyValues: Map<UUID, Set<Any?>>,
                 authorizedPropertiesWithDataType: Map<UUID, PropertyType>,
                 lazyMessage: () -> String
         ): Map<UUID, Set<Any>> {
