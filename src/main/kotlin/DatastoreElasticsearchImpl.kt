@@ -107,7 +107,7 @@ class DatastoreKotlinElasticsearchImpl(
         }
     }
 
-    private var client: Client
+    private var client: Client?
     private var factory: ElasticsearchTransportClientFactory
     private var connected = true
     private var server: String
@@ -775,7 +775,7 @@ class DatastoreKotlinElasticsearchImpl(
                     query.must(QueryBuilders
                             .termQuery(ConductorElasticsearchApi.ENTITY_SET_ID_FIELD, entitySetId.toString())) // match entity set id
                 }
-                val request = client
+                val request = client!!
                         .prepareSearch(getIndexName(entityTypesByEntitySetId[entitySetId]))
                         .setQuery(query)
                         .setTrackTotalHits(true)
@@ -1031,7 +1031,7 @@ class DatastoreKotlinElasticsearchImpl(
                         }.toTypedArray())
         )
 
-        val response = client.prepareSearch(ConductorElasticsearchApi.ORGANIZATIONS)
+        val response = client!!.prepareSearch(ConductorElasticsearchApi.ORGANIZATIONS)
                 .setTypes(ConductorElasticsearchApi.ORGANIZATION_TYPE)
                 .setQuery(query)
                 .setFrom(start)
@@ -1086,7 +1086,7 @@ class DatastoreKotlinElasticsearchImpl(
                 }.toTypedArray())
         )
 
-        val response = client.prepareSearch(ConductorElasticsearchApi.ENTITY_SET_DATA_MODEL)
+        val response = client!!.prepareSearch(ConductorElasticsearchApi.ENTITY_SET_DATA_MODEL)
                 .setTypes(ConductorElasticsearchApi.ENTITY_SET_TYPE)
                 .setQuery(query)
                 .setFetchSource(arrayOf(ConductorElasticsearchApi.ENTITY_SET, ConductorElasticsearchApi.PROPERTY_TYPES), null)
@@ -1262,9 +1262,9 @@ class DatastoreKotlinElasticsearchImpl(
             return false
         }
 
-        val bulkRequest = client.prepareBulk()
+        val bulkRequest = client!!.prepareBulk()
 
-        client.admin().indices().delete(DeleteIndexRequest(index)).actionGet()
+        client!!.admin().indices().delete(DeleteIndexRequest(index)).actionGet()
 
         createIndex(index)
         objects.forEach {
@@ -1272,7 +1272,7 @@ class DatastoreKotlinElasticsearchImpl(
                 val id = idFn.apply(it!!)
                 val s = ObjectMappers.getJsonMapper().writeValueAsString(it)
                 bulkRequest
-                        .add(client.prepareIndex(index, type, id)
+                        .add(client!!.prepareIndex(index, type, id)
                                 .setSource(s, XContentType.JSON))
             } catch (e: JsonProcessingException) {
                 logger.error("Error re-indexing securable object type to index {}", index)
@@ -1301,7 +1301,7 @@ class DatastoreKotlinElasticsearchImpl(
                 connected = false
             }
         } else {
-            client = factory!!.client
+            client = factory.client
             if (client != null) {
                 connected = true
             }
