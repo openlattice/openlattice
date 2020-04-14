@@ -62,7 +62,6 @@ import com.openlattice.authorization.mapstores.SecurablePrincipalsMapLoader;
 import com.openlattice.codex.CodexService;
 import com.openlattice.collections.CollectionsManager;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
-import com.openlattice.conductor.rpc.SearchConfiguration;
 import com.openlattice.data.DataDeletionManager;
 import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.DataGraphService;
@@ -163,9 +162,6 @@ public class DatastoreServicesPod {
     private ListeningExecutorService executor;
     @Inject
     private EventBus            eventBus;
-
-    @Inject
-    private SearchConfiguration     elasticSearchConfiguration;
 
     @Inject
     private DatastoreConfiguration datastoreConfiguration;
@@ -460,7 +456,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public ConductorElasticsearchApi conductorElasticsearchApi() {
-        return new DatastoreElasticsearchImpl( elasticSearchConfiguration );
+        return new DatastoreElasticsearchImpl( datastoreConfiguration.getSearchConfiguration() );
     }
 
     @Bean
