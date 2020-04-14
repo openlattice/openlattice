@@ -101,7 +101,7 @@ class DatastoreKotlinElasticsearchImpl(
         )
 
         private val mapper = ObjectMappers.newJsonMapper()
-        private val logger = LoggerFactory.getLogger(DatastoreNewElasticsearchImpl::class.java)
+        private val logger = LoggerFactory.getLogger(DatastoreKotlinElasticsearchImpl::class.java)
         init {
             mapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false)
         }
