@@ -43,6 +43,7 @@ const val S3_DELETE_BATCH_SIZE = 10_000
 @Service
 class PostgresEntityDataQueryService(
         private val hds: HikariDataSource,
+        private val reader: HikariDataSource,
         private val byteBlobDataManager: ByteBlobDataManager,
         protected val partitionManager: PartitionManager
 ) {
