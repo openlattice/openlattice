@@ -3,6 +3,9 @@ package com.openlattice.codex
 import com.auth0.json.mgmt.users.User
 import com.google.common.collect.ArrayListMultimap
 import com.google.common.collect.ListMultimap
+import com.google.common.collect.Maps
+import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.ListeningExecutorService
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
 import com.openlattice.apps.AppConfigKey
@@ -28,6 +31,7 @@ import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.net.URI
+import java.net.URL
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset.UTC
@@ -45,7 +49,8 @@ class CodexService(
         val dataGraphManager: DataGraphManager,
         val entityKeyIdService: EntityKeyIdService,
         val principalsManager: SecurePrincipalsManager,
-        val organizations: HazelcastOrganizationService
+        val organizations: HazelcastOrganizationService,
+        val executor: ListeningExecutorService
 ) {
 
     companion object {
@@ -130,6 +135,29 @@ class CodexService(
         val phoneNumber = request.getParameter(CodexConstants.Request.FROM.parameter)
         val text = request.getParameter(CodexConstants.Request.BODY.parameter)
         val dateTime = OffsetDateTime.now()
+        val numMedia = request.getParameter(CodexConstants.Request.NUM_MEDIA.parameter).toInt()
+
+        /* create media if present */
+        if ( numMedia == 1 ) {
+            val mediaType = request.getParameter("${CodexConstants.Request.MEDIA_TYPE_PREFIX}")
+            val mediaUrl = request.getParameter("${CodexConstants.Request.MEDIA_URL_PREFIX}")
+            val media = retrieveMedia( mediaUrl ).get()
+            storeMedia( media, mediaType )
+        } else if ( numMedia > 1 ){
+            val maybeImages = Maps.newHashMapWithExpectedSize<String, ListenableFuture<ByteArray>>(numMedia)
+            for (i in 0..numMedia) {
+                val mediaUrl = request.getParameter("${CodexConstants.Request.MEDIA_URL_PREFIX}$i")
+                maybeImages.put( mediaUrl, retrieveMedia( mediaUrl ) )
+            }
+            for (i in 0..numMedia) {
+                val mediaType = request.getParameter("${CodexConstants.Request.MEDIA_TYPE_PREFIX}$i")
+                val mediaUrl = request.getParameter("${CodexConstants.Request.MEDIA_URL_PREFIX}$i")
+                val media = maybeImages.getOrDefault( mediaUrl, null ).get()
+                if ( media != null ){
+                    storeMedia( media, mediaType )
+                }
+            }
+        }
 
         /* create entities */
 
@@ -145,6 +173,16 @@ class CodexService(
         associations.put(edgeEntitySetId, DataEdge(messageEDK, contactEDK, mapOf(getPropertyTypeId(CodexConstants.PropertyType.DATE_TIME) to setOf(dateTime))))
 
         dataGraphManager.createAssociations(associations, mapOf(edgeEntitySetId to getPropertyTypes(CodexConstants.AppType.SENT_FROM)))
+    }
+
+    fun retrieveMedia(mediaUrl: String): ListenableFuture<ByteArray> {
+        return executor.submit {
+            URL(mediaUrl).readBytes()
+        } as ListenableFuture<ByteArray>
+    }
+
+    fun storeMedia(media: ByteArray, mediaType: String) {
+        // TODO yay
     }
 
     fun updateMessageStatus(organizationId: UUID, messageId: String, status: Message.Status) {

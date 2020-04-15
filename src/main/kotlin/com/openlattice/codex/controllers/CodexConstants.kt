@@ -37,6 +37,9 @@ class CodexConstants() {
         FROM("From"),
         TO("To"),
         BODY("Body"),
-        STATUS("MessageStatus")
+        STATUS("MessageStatus"),
+        NUM_MEDIA("NumMedia"),
+        MEDIA_TYPE_PREFIX("MediaContentType"),
+        MEDIA_URL_PREFIX("MediaUrl")
     }
 }
