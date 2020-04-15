@@ -20,8 +20,11 @@
 
 package com.openlattice.datastore.pods;
 
+import static com.openlattice.datastore.util.Util.returnAndLog;
+
 import com.auth0.client.mgmt.ManagementAPI;
 import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.health.HealthCheckRegistry;
 import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.geekbeast.hazelcast.HazelcastClientProvider;
@@ -124,17 +127,17 @@ import com.openlattice.tasks.PostConstructInitializerTaskDependencies.PostConstr
 import com.openlattice.twilio.TwilioConfiguration;
 import com.openlattice.twilio.pods.TwilioConfigurationPod;
 import com.openlattice.users.Auth0SyncService;
+import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import javax.annotation.PostConstruct;
+import javax.inject.Inject;
 import org.jdbi.v3.core.Jdbi;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Profile;
-
-import javax.annotation.PostConstruct;
-import javax.inject.Inject;
-
-import static com.openlattice.datastore.util.Util.returnAndLog;
 
 @Configuration
 @Import( {
@@ -145,6 +148,7 @@ import static com.openlattice.datastore.util.Util.returnAndLog;
         OrganizationExternalDatabaseConfigurationPod.class
 } )
 public class DatastoreServicesPod {
+    private static final Logger logger = LoggerFactory.getLogger( DatastoreServicesPod.class );
 
     @Inject
     private Jdbi                     jdbi;
@@ -161,7 +165,7 @@ public class DatastoreServicesPod {
     @Inject
     private ListeningExecutorService executor;
     @Inject
-    private EventBus            eventBus;
+    private EventBus                 eventBus;
 
     @Inject
     private DatastoreConfiguration datastoreConfiguration;
@@ -177,6 +181,9 @@ public class DatastoreServicesPod {
 
     @Inject
     private MetricRegistry metricRegistry;
+
+    @Inject
+    private HealthCheckRegistry healthCheckRegistry;
 
     @Inject
     private HazelcastClientProvider hazelcastClientProvider;
@@ -466,8 +473,22 @@ public class DatastoreServicesPod {
 
     @Bean
     public PostgresEntityDataQueryService dataQueryService() {
+        final var pgConfig = datastoreConfiguration.getReadOnlyReplica();
+        final HikariDataSource reader;
+
+        if ( pgConfig.isEmpty() ) {
+            reader = hikariDataSource;
+        } else {
+            HikariConfig hc = new HikariConfig( pgConfig );
+            logger.info( "Read only replica JDBC URL = {}", hc.getJdbcUrl() );
+            reader = new HikariDataSource( hc );
+            reader.setHealthCheckRegistry( healthCheckRegistry );
+            reader.setMetricRegistry( metricRegistry );
+        }
+
         return new PostgresEntityDataQueryService(
                 hikariDataSource,
+                reader,
                 byteBlobDataManager,
                 partitionManager()
         );
