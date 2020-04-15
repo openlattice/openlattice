@@ -20,12 +20,14 @@ import com.twilio.rest.api.v2010.account.Message
 import com.twilio.security.RequestValidator
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.apache.commons.lang.NotImplementedException
+import org.apache.http.entity.ContentType
 import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.*
 import java.util.*
 import javax.inject.Inject
 import javax.servlet.http.HttpServletRequest
+import javax.servlet.http.HttpServletResponse
 
 @SuppressFBWarnings(
         value = ["BC_BAD_CAST_TO_ABSTRACT_COLLECTION"],
@@ -57,15 +59,22 @@ constructor(
     }
 
     @Timed
-    @RequestMapping(path = [INCOMING + ORG_ID_PATH], method = [RequestMethod.POST], consumes = [MediaType.APPLICATION_FORM_URLENCODED_VALUE])
-    fun receiveIncomingText(@PathVariable(ORG_ID) organizationId: UUID, request: HttpServletRequest) {
+    @RequestMapping(path = [INCOMING + ORG_ID_PATH],
+            method = [RequestMethod.POST],
+            consumes = [MediaType.APPLICATION_FORM_URLENCODED_VALUE],
+            produces = [MediaType.APPLICATION_XML_VALUE])
+    fun receiveIncomingText(@PathVariable(ORG_ID) organizationId: UUID, request: HttpServletRequest, response: HttpServletResponse ) {
         ensureTwilio(request)
         codexService.processIncomingMessage(organizationId, request)
+        response.contentType = MediaType.APPLICATION_XML_VALUE
+        response.status = HttpServletResponse.SC_OK
     }
 
     @Timed
-    @RequestMapping(path = [INCOMING + ORG_ID_PATH + STATUS], method = [RequestMethod.POST])
-    fun listenForTextStatus(@PathVariable(ORG_ID) organizationId: UUID, request: HttpServletRequest) {
+    @RequestMapping(path = [INCOMING + ORG_ID_PATH + STATUS],
+            method = [RequestMethod.POST],
+            produces = [MediaType.APPLICATION_XML_VALUE])
+    fun listenForTextStatus(@PathVariable(ORG_ID) organizationId: UUID, request: HttpServletRequest, response: HttpServletResponse ) {
 
         ensureTwilio(request)
 
@@ -77,6 +86,8 @@ constructor(
         if (status == Message.Status.FAILED || status == Message.Status.UNDELIVERED) {
             logger.error("Message $messageId not received or even failed to send!!! ")
         }
+        response.status = HttpServletResponse.SC_NO_CONTENT
+        response.contentType = MediaType.APPLICATION_XML_VALUE
     }
 
     fun ensureTwilio(request: HttpServletRequest) {
