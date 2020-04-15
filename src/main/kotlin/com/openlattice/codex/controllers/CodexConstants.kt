@@ -21,6 +21,7 @@ class CodexConstants() {
     enum class PropertyType(val fqn: FullQualifiedName) {
         ID(FullQualifiedName("ol.id")),
         PHONE_NUMBER(FullQualifiedName("contact.phonenumber")),
+        IMAGE_DATA(FullQualifiedName("ol.imagedata")),
         TEXT(FullQualifiedName("ol.text")),
         TYPE(FullQualifiedName("ol.type")),
         DATE_TIME(FullQualifiedName("general.datetime")),

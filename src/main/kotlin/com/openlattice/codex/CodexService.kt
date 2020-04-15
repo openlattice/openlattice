@@ -3,7 +3,8 @@ package com.openlattice.codex
 import com.auth0.json.mgmt.users.User
 import com.google.common.collect.ArrayListMultimap
 import com.google.common.collect.ListMultimap
-import com.google.common.collect.Maps
+import com.google.common.collect.Lists
+import com.google.common.collect.Sets
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.hazelcast.core.HazelcastInstance
@@ -50,11 +51,11 @@ class CodexService(
         val entityKeyIdService: EntityKeyIdService,
         val principalsManager: SecurePrincipalsManager,
         val organizations: HazelcastOrganizationService,
-        val executor: ListeningExecutorService
-) {
+        val executor: ListeningExecutorService ) {
 
     companion object {
         private val logger = LoggerFactory.getLogger(CodexService::class.java)
+        private val encoder: Base64.Encoder = Base64.getEncoder()
     }
 
     init {
@@ -108,7 +109,7 @@ class CodexService(
         /* create entities */
 
         val contactEDK = getContactEntityDataKey(organizationId, phoneNumber)
-        val messageEDK = getMessageEntityDataKey(organizationId, dateTime, messageId, text, isOutgoing = true)
+        val messageEDK = getMessageEntityDataKey(organizationId, dateTime, messageId, text, isOutgoing = true, media = emptySet())
 
         /* create associations */
 
@@ -137,32 +138,29 @@ class CodexService(
         val dateTime = OffsetDateTime.now()
         val numMedia = request.getParameter(CodexConstants.Request.NUM_MEDIA.parameter).toInt()
 
+        val finalMedia = Sets.newLinkedHashSetWithExpectedSize<Map<String, String>>(numMedia)
         /* create media if present */
         if ( numMedia == 1 ) {
             val mediaType = request.getParameter("${CodexConstants.Request.MEDIA_TYPE_PREFIX}")
             val mediaUrl = request.getParameter("${CodexConstants.Request.MEDIA_URL_PREFIX}")
-            val media = retrieveMedia( mediaUrl ).get()
-            storeMedia( media, mediaType )
+            val media = retrieveMediaAsBaseSixtyFour(mediaUrl).get()
+            finalMedia.add(mapOf("content-type" to mediaType, "data" to media))
         } else if ( numMedia > 1 ){
-            val maybeImages = Maps.newHashMapWithExpectedSize<String, ListenableFuture<ByteArray>>(numMedia)
+            val maybeImages = Lists.newArrayListWithExpectedSize<Pair<String, ListenableFuture<String>>>(numMedia)
             for (i in 0..numMedia) {
                 val mediaUrl = request.getParameter("${CodexConstants.Request.MEDIA_URL_PREFIX}$i")
-                maybeImages.put( mediaUrl, retrieveMedia( mediaUrl ) )
-            }
-            for (i in 0..numMedia) {
                 val mediaType = request.getParameter("${CodexConstants.Request.MEDIA_TYPE_PREFIX}$i")
-                val mediaUrl = request.getParameter("${CodexConstants.Request.MEDIA_URL_PREFIX}$i")
-                val media = maybeImages.getOrDefault( mediaUrl, null ).get()
-                if ( media != null ){
-                    storeMedia( media, mediaType )
-                }
+                maybeImages.add( mediaType to retrieveMediaAsBaseSixtyFour( mediaUrl ) )
+            }
+            maybeImages.forEach {
+                finalMedia.add(mapOf("content-type" to it.first, "data" to it.second.get()))
             }
         }
 
         /* create entities */
 
         val contactEDK = getContactEntityDataKey(organizationId, phoneNumber)
-        val messageEDK = getMessageEntityDataKey(organizationId, dateTime, messageId, text, isOutgoing = false)
+        val messageEDK = getMessageEntityDataKey(organizationId, dateTime, messageId, text, isOutgoing = false, media = finalMedia )
 
         /* create associations */
 
@@ -175,14 +173,10 @@ class CodexService(
         dataGraphManager.createAssociations(associations, mapOf(edgeEntitySetId to getPropertyTypes(CodexConstants.AppType.SENT_FROM)))
     }
 
-    fun retrieveMedia(mediaUrl: String): ListenableFuture<ByteArray> {
+    fun retrieveMediaAsBaseSixtyFour(mediaUrl: String): ListenableFuture<String> {
         return executor.submit {
-            URL(mediaUrl).readBytes()
-        } as ListenableFuture<ByteArray>
-    }
-
-    fun storeMedia(media: ByteArray, mediaType: String) {
-        // TODO yay
+            encoder.encodeToString(URL(mediaUrl).readBytes())
+        } as ListenableFuture<String>
     }
 
     fun updateMessageStatus(organizationId: UUID, messageId: String, status: Message.Status) {
@@ -221,13 +215,20 @@ class CodexService(
         return EntityDataKey(entitySetId, entityKeyId)
     }
 
-    private fun getMessageEntityDataKey(organizationId: UUID, dateTime: OffsetDateTime, messageId: String, text: String, isOutgoing: Boolean): EntityDataKey {
+    private fun getMessageEntityDataKey(organizationId: UUID,
+                                        dateTime: OffsetDateTime,
+                                        messageId: String,
+                                        text: String,
+                                        isOutgoing: Boolean,
+                                        media: Set<Map<String, String>>
+    ): EntityDataKey {
 
         val entity = mapOf(
                 getPropertyTypeId(CodexConstants.PropertyType.ID) to setOf(messageId),
                 getPropertyTypeId(CodexConstants.PropertyType.DATE_TIME) to setOf(dateTime),
                 getPropertyTypeId(CodexConstants.PropertyType.TEXT) to setOf(text),
-                getPropertyTypeId(CodexConstants.PropertyType.IS_OUTGOING) to setOf(isOutgoing)
+                getPropertyTypeId(CodexConstants.PropertyType.IS_OUTGOING) to setOf(isOutgoing),
+                getPropertyTypeId(CodexConstants.PropertyType.IMAGE_DATA) to media
         )
         val entitySetId = getEntitySetId(organizationId, CodexConstants.AppType.MESSAGES)
         val entityKeyId = entityKeyIdService.getEntityKeyId(entitySetId, messageId)
@@ -273,6 +274,5 @@ class CodexService(
     private fun getPropertyTypeId(property: CodexConstants.PropertyType): UUID {
         return propertyTypesByFqn.getValue(property.fqn)
     }
-
 
 }
