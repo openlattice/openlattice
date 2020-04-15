@@ -133,6 +133,8 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     private       String                              server;
     private       String                              cluster;
     private       int                                 port;
+    private       int                                 defaultNumReplicas;
+    private       int                                 defaultNumShards;
     // @formatter:on
 
     public ConductorElasticsearchImpl( SearchConfiguration config ) {
@@ -152,6 +154,8 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         cluster = config.getElasticsearchCluster();
         port = config.getElasticsearchPort();
         factory = new ElasticsearchTransportClientFactory( server, port, cluster );
+        defaultNumReplicas = config.getNumReplicas();
+        defaultNumShards = config.getNumShards();
     }
 
     /* INDEX CREATION */
@@ -207,7 +211,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 	    .endObject()
         	        .endObject()
         	        .field( NUM_SHARDS, numShards )
-        	        .field( NUM_REPLICAS, 2 )
+        	        .field( NUM_REPLICAS, defaultNumReplicas )
     	        .endObject();
     	return settings;
     }
@@ -242,7 +246,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
         try {
             client.admin().indices().prepareCreate( ENTITY_SET_DATA_MODEL )
-                    .setSettings( getMetaphoneSettings( 5 ) )
+                    .setSettings( getMetaphoneSettings( defaultNumShards ) )
                     .addMapping( ENTITY_SET_TYPE, mapping )
                     .execute().actionGet();
             return true;
@@ -265,8 +269,8 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
         client.admin().indices().prepareCreate( ORGANIZATIONS )
                 .setSettings( Settings.builder()
-                        .put( NUM_SHARDS, 5 )
-                        .put( NUM_REPLICAS, 2 ) )
+                        .put( NUM_SHARDS, defaultNumShards )
+                        .put( NUM_REPLICAS, defaultNumReplicas ) )
                 .addMapping( ORGANIZATION_TYPE, ImmutableMap.of( ORGANIZATION_TYPE, organizationData ) )
                 .execute().actionGet();
         return true;
@@ -282,8 +286,8 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         Map<String, Object> mapping = ImmutableMap.of( typeName, ImmutableMap.of() );
         client.admin().indices().prepareCreate( indexName )
                 .setSettings( Settings.builder()
-                        .put( NUM_SHARDS, 5 )
-                        .put( NUM_REPLICAS, 2 ) )
+                        .put( NUM_SHARDS, defaultNumShards )
+                        .put( NUM_REPLICAS, defaultNumReplicas ) )
                 .addMapping( typeName, mapping )
                 .execute().actionGet();
         return true;
