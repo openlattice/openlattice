@@ -45,9 +45,13 @@ class LinkingConfigurationTest : AbstractJacksonYamlSerializationTest<LinkingCon
 
     override fun getSampleData(): LinkingConfiguration {
         return LinkingConfiguration(
-                SearchConfiguration(TestDataFactory.randomAlphabetic(5),
+                SearchConfiguration(
                         TestDataFactory.randomAlphabetic(5),
-                        RandomUtils.nextInt()),
+                        TestDataFactory.randomAlphabetic(5),
+                        RandomUtils.nextInt(),
+                        Optional.empty(),
+                        Optional.empty()
+                ),
                 RandomUtils.nextInt(),
                 Optional.of(setOf(UUID.randomUUID())),
                 setOf(UUID.randomUUID()),
@@ -60,7 +64,7 @@ class LinkingConfigurationTest : AbstractJacksonYamlSerializationTest<LinkingCon
         )
     }
 
-    override fun compareElements( a: LinkingConfiguration, b: LinkingConfiguration ): Boolean {
+    override fun compareElements(a: LinkingConfiguration, b: LinkingConfiguration): Boolean {
         return a.backgroundLinkingEnabled == b.backgroundLinkingEnabled
                 && a.batchSize == b.batchSize
                 && a.blockSize == b.blockSize
@@ -70,10 +74,18 @@ class LinkingConfigurationTest : AbstractJacksonYamlSerializationTest<LinkingCon
                 && a.entityTypes.all { b.entityTypes.contains(it) }
                 && b.entityTypes.all { a.entityTypes.contains(it) }
                 && a.whitelist.isEmpty == b.whitelist.isEmpty
-                && if (a.whitelist.isPresent ) { a.whitelist.get().all { b.whitelist.get().contains(it) } } else { true }
-                && if (a.whitelist.isPresent ) { b.whitelist.get().all { a.whitelist.get().contains(it) } } else { true }
+                && if (a.whitelist.isPresent) {
+            a.whitelist.get().all { b.whitelist.get().contains(it) }
+        } else {
+            true
+        }
+                && if (a.whitelist.isPresent) {
+            b.whitelist.get().all { a.whitelist.get().contains(it) }
+        } else {
+            true
+        }
                 && a.blacklist.size == b.blacklist.size
-                && a.blacklist.all{ b.blacklist.contains(it) }
+                && a.blacklist.all { b.blacklist.contains(it) }
                 && a.searchConfiguration.elasticsearchUrl == b.searchConfiguration.elasticsearchUrl
                 && a.searchConfiguration.elasticsearchCluster == b.searchConfiguration.elasticsearchCluster
                 && a.searchConfiguration.elasticsearchPort == b.searchConfiguration.elasticsearchPort
