@@ -85,6 +85,7 @@ import com.openlattice.data.storage.aws.AwsDataSinkService;
 import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.datastore.apps.services.AppService;
 import com.openlattice.datastore.configuration.DatastoreConfiguration;
+import com.openlattice.datastore.configuration.ReadonlyDatasourceSupplier;
 import com.openlattice.datastore.services.DatastoreElasticsearchImpl;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.EdmService;
