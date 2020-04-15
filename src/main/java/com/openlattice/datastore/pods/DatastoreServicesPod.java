@@ -472,7 +472,7 @@ public class DatastoreServicesPod {
     }
 
     @Bean
-    public PostgresEntityDataQueryService dataQueryService() {
+    public ReadonlyDatasourceSupplier rds() {
         final var pgConfig = datastoreConfiguration.getReadOnlyReplica();
         final HikariDataSource reader;
 
@@ -486,9 +486,15 @@ public class DatastoreServicesPod {
             reader.setMetricRegistry( metricRegistry );
         }
 
+        return new ReadonlyDatasourceSupplier( reader );
+    }
+
+    @Bean
+    public PostgresEntityDataQueryService dataQueryService() {
+
         return new PostgresEntityDataQueryService(
                 hikariDataSource,
-                reader,
+                rds().getReadOnlyReplica(),
                 byteBlobDataManager,
                 partitionManager()
         );
@@ -519,7 +525,8 @@ public class DatastoreServicesPod {
         return new AwsDataSinkService(
                 partitionManager(),
                 byteBlobDataManager,
-                hikariDataSource
+                hikariDataSource,
+                rds().getReadOnlyReplica()
         );
     }
 
