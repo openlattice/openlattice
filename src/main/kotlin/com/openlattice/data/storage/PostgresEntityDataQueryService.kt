@@ -52,7 +52,7 @@ class PostgresEntityDataQueryService(
     }
 
     fun getEntitySetCounts(): Map<UUID, Long> {
-        return BasePostgresIterable(StatementHolderSupplier(hds, "SELECT * FROM $ENTITY_SET_SIZES_VIEW")) {
+        return BasePostgresIterable(StatementHolderSupplier(reader, "SELECT * FROM $ENTITY_SET_SIZES_VIEW")) {
             ResultSetAdapters.entitySetId(it) to ResultSetAdapters.count(it)
         }.toMap()
     }
@@ -211,7 +211,7 @@ class PostgresEntityDataQueryService(
                 detailed
         )
 
-        return BasePostgresIterable(PreparedStatementHolderSupplier(hds, sql, FETCH_SIZE) { ps ->
+        return BasePostgresIterable(PreparedStatementHolderSupplier(reader, sql, FETCH_SIZE) { ps ->
             val metaBinders = linkedSetOf<SqlBinder>()
             var bindIndex = 1
             metaBinders.add(
