@@ -21,6 +21,7 @@
 package com.openlattice.linking.pods;
 
 import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.health.HealthCheckRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.geekbeast.hazelcast.HazelcastClientProvider;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -35,6 +36,7 @@ import com.openlattice.data.storage.IndexingMetadataManager;
 import com.openlattice.data.storage.PostgresEntityDataQueryService;
 import com.openlattice.data.storage.PostgresEntityDatastore;
 import com.openlattice.data.storage.partitions.PartitionManager;
+import com.openlattice.datastore.configuration.ReadonlyDatasourceSupplier;
 import com.openlattice.datastore.pods.ByteBlobServicePod;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.EntitySetManager;
@@ -54,7 +56,10 @@ import com.openlattice.linking.PostgresLinkingLogService;
 import com.openlattice.linking.blocking.ElasticsearchBlocker;
 import com.openlattice.linking.controllers.RealtimeLinkingController;
 import com.openlattice.linking.graph.PostgresLinkingQueryService;
+import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -65,9 +70,10 @@ import java.io.IOException;
 @Configuration
 @Import( { ByteBlobServicePod.class } )
 public class LinkerPostConfigurationServicesPod {
+    private static final Logger            logger = LoggerFactory.getLogger( LinkerPostConfigurationServicesPod.class );
 
     @Inject
-    private HazelcastInstance hazelcastInstance;
+    private              HazelcastInstance hazelcastInstance;
 
     @Inject
     private LinkingConfiguration linkingConfiguration;
@@ -114,9 +120,12 @@ public class LinkerPostConfigurationServicesPod {
     @Inject
     private MetricRegistry metricRegistry;
 
+    @Inject
+    private HealthCheckRegistry healthCheckRegistry;
+
     @Bean
     public HazelcastIdGenerationService idGeneration() {
-        return new HazelcastIdGenerationService( hazelcastClientProvider,executor );
+        return new HazelcastIdGenerationService( hazelcastClientProvider, executor );
     }
 
     @Bean
@@ -127,11 +136,32 @@ public class LinkerPostConfigurationServicesPod {
                 idGeneration(),
                 partitionManager );
     }
+//
+//    @Bean
+//    public ReadonlyDatasourceSupplier rds() {
+//        final var pgConfig = datastoreConfiguration.getReadOnlyReplica();
+//        final HikariDataSource reader;
+//
+//        if ( pgConfig.isEmpty() ) {
+//            reader = hikariDataSource;
+//        } else {
+//            HikariConfig hc = new HikariConfig( pgConfig );
+//            logger.info( "Read only replica JDBC URL = {}", hc.getJdbcUrl() );
+//            reader = new HikariDataSource( hc );
+//            reader.setHealthCheckRegistry( healthCheckRegistry );
+//            reader.setMetricRegistry( metricRegistry );
+//        }
+//
+//        return new ReadonlyDatasourceSupplier( reader );
+//    }
 
     @Bean
     public PostgresEntityDataQueryService dataQueryService() {
+        //TODO: fix it to use read replica
         return new PostgresEntityDataQueryService(
                 hikariDataSource,
+                hikariDataSource,
+//                rds().getReadOnlyReplica(),
                 byteBlobDataManager,
                 partitionManager
         );
