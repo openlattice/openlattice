@@ -298,6 +298,7 @@ public class IndexerServicesPod {
     public PostgresEntityDataQueryService dataQueryService() {
         return new PostgresEntityDataQueryService(
                 hikariDataSource,
+                hikariDataSource,
                 byteBlobDataManager,
                 partitionManager()
         );
