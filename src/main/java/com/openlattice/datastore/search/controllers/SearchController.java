@@ -61,7 +61,7 @@ import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSI
 
 @SuppressFBWarnings(
         value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE",
-        justification = "NPEs are prevented by Preconditions.checkState but SpotBugs doesn't understand this")
+        justification = "NPEs are prevented by Preconditions.checkState but SpotBugs doesn't understand this" )
 @RestController
 @RequestMapping( SearchApi.CONTROLLER )
 public class SearchController implements SearchApi, AuthorizingComponent, AuditingComponent {
@@ -159,8 +159,8 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
         validateSearch( searchConstraints );
 
         // check read on entity sets
-        final var authorizedEntitySetIds = authorizationsHelper
-                .getAuthorizedEntitySets( Set.of( searchConstraints.getEntitySetIds() ), READ_PERMISSION );
+        final var authorizedEntitySetIds = entitySetManager
+                .filterToAuthorizedNormalEntitySets( Set.of( searchConstraints.getEntitySetIds() ), READ_PERMISSION );
 
         DataSearchResult results = new DataSearchResult( 0, Lists.newArrayList() );
 
@@ -601,8 +601,8 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
         SetMultimap<UUID, UUID> neighborsByEntitySet = HashMultimap.create();
 
         result.values().forEach( associationMap ->
-                associationMap.forEach( (associationEsId, association) -> {
-                    association.forEach( (neighborEsId, neighbor) -> {
+                associationMap.forEach( ( associationEsId, association ) -> {
+                    association.forEach( ( neighborEsId, neighbor ) -> {
                         neighborsByEntitySet
                                 .put( associationEsId, neighbor.getAssociationEntityKeyId() );
                         neighborsByEntitySet
