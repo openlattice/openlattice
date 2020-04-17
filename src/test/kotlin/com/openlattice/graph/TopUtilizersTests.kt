@@ -104,31 +104,42 @@ class TopUtilizersTests {
         val hds = HikariDataSource()
         val esService = Mockito.mock(EntitySetManager::class.java)
         val partitionManager = Mockito.mock(PartitionManager::class.java)
-        val graph = Graph(hds, esService, partitionManager)
+        val graph = Graph(hds, hds, esService, partitionManager)
 
         val limit = 200
         val entitySetIds = setOf(
                 "0a48710c-3899-4743-b1f7-28c6f99aa202",
                 "d4e29d9c-df8c-4c30-a405-2e6941601fbc",
-                "d724d8f2-da4c-46e0-b5d8-5db8c3367b50")
+                "d724d8f2-da4c-46e0-b5d8-5db8c3367b50"
+        )
                 .map(UUID::fromString).toSet()
         val filteredRanking = FilteredNeighborsRankingAggregation(
                 UUID.fromString("0a48710c-3899-4743-b1f7-28c6f99aa202"),
                 UUID.fromString("c5da7a05-24a4-480e-9573-f5a118daec1a"),
-                Optional.of(mapOf(UUID.fromString("0a48710c-3899-4743-b1f7-28c6f99aa202") to setOf(
-                        DateRangeFilter(
-                                Optional.of(LocalDate.MIN),
-                                Optional.of(true),
-                                Optional.of(LocalDate.now()),
-                                Optional.of(true))
-                ))),
-                Optional.of(mapOf(UUID.fromString("c5da7a05-24a4-480e-9573-f5a118daec1a") to setOf(
-                        DateRangeFilter(
-                                Optional.of(LocalDate.MIN),
-                                Optional.of(true),
-                                Optional.of(LocalDate.now()),
-                                Optional.of(true))
-                ))),
+                Optional.of(
+                        mapOf(
+                                UUID.fromString("0a48710c-3899-4743-b1f7-28c6f99aa202") to setOf(
+                                        DateRangeFilter(
+                                                Optional.of(LocalDate.MIN),
+                                                Optional.of(true),
+                                                Optional.of(LocalDate.now()),
+                                                Optional.of(true)
+                                        )
+                                )
+                        )
+                ),
+                Optional.of(
+                        mapOf(
+                                UUID.fromString("c5da7a05-24a4-480e-9573-f5a118daec1a") to setOf(
+                                        DateRangeFilter(
+                                                Optional.of(LocalDate.MIN),
+                                                Optional.of(true),
+                                                Optional.of(LocalDate.now()),
+                                                Optional.of(true)
+                                        )
+                                )
+                        )
+                ),
                 mapOf(
                         UUID.fromString("0a48710c-3899-4743-b1f7-28c6f99aa202") to //
                                 WeightedRankingAggregation(AggregationType.MAX, 3.1)
@@ -142,22 +153,31 @@ class TopUtilizersTests {
         )
 
         val associationSets: Map<UUID, Set<UUID>> =
-                mapOf(UUID.fromString("c3a43642-b995-456f-879f-8b38ea2a2fc3") to
-                        listOf(
-                                "0a48710c-3899-4743-b1f7-28c6f99aa202",
-                                "d4e29d9c-df8c-4c30-a405-2e6941601fbc",
-                                "d724d8f2-da4c-46e0-b5d8-5db8c3367b50").map(UUID::fromString).toSet())
-        val associationPropertyTypes: Map<UUID, PropertyType> = mapOf(UUID.fromString("0a48710c-3899-4743-b1f7-28c6f99aa202") to
-                TestDataFactory.propertyType())
+                mapOf(
+                        UUID.fromString("c3a43642-b995-456f-879f-8b38ea2a2fc3") to
+                                listOf(
+                                        "0a48710c-3899-4743-b1f7-28c6f99aa202",
+                                        "d4e29d9c-df8c-4c30-a405-2e6941601fbc",
+                                        "d724d8f2-da4c-46e0-b5d8-5db8c3367b50"
+                                ).map(UUID::fromString).toSet()
+                )
+        val associationPropertyTypes: Map<UUID, PropertyType> = mapOf(
+                UUID.fromString("0a48710c-3899-4743-b1f7-28c6f99aa202") to
+                        TestDataFactory.propertyType()
+        )
 
         val entitySets: Map<UUID, Set<UUID>> =
-                mapOf( UUID.fromString("e9e38764-1f16-4b98-a173-2f0dd6ae9b8c") to
-                        listOf(
-                                "c5da7a05-24a4-480e-9573-f5a118daec1a",
-                                "c80aae3a-7d21-4a6e-9672-5adf34f65e1e").map(UUID::fromString).toSet() )
-        val entitySetPropertyTypes: Map<UUID, PropertyType> = mapOf(UUID.fromString("c5da7a05-24a4-480e-9573-f5a118daec1a") to
-                TestDataFactory.propertyType())
-
+                mapOf(
+                        UUID.fromString("e9e38764-1f16-4b98-a173-2f0dd6ae9b8c") to
+                                listOf(
+                                        "c5da7a05-24a4-480e-9573-f5a118daec1a",
+                                        "c80aae3a-7d21-4a6e-9672-5adf34f65e1e"
+                                ).map(UUID::fromString).toSet()
+                )
+        val entitySetPropertyTypes: Map<UUID, PropertyType> = mapOf(
+                UUID.fromString("c5da7a05-24a4-480e-9573-f5a118daec1a") to
+                        TestDataFactory.propertyType()
+        )
 
 
         val filteredRankings = listOf(
@@ -166,9 +186,12 @@ class TopUtilizersTests {
                         associationSets,
                         associationPropertyTypes,
                         entitySets,
-                        entitySetPropertyTypes)
+                        entitySetPropertyTypes
+                )
         )
 
-        return graph.buildTopEntitiesQuery(limit, entitySetIds, filteredRankings, linking, Optional.of( UUID.randomUUID()) )
+        return graph.buildTopEntitiesQuery(
+                limit, entitySetIds, filteredRankings, linking, Optional.of(UUID.randomUUID())
+        )
     }
 }
