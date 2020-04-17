@@ -336,23 +336,24 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
         Map<UUID, Map<UUID, PropertyType>> entitySetIdsToPropertyTypes = entitySetManager
                 .getPropertyTypesOfEntitySets( entitySetIds );
 
-        Set<AccessCheck> accessChecks = Sets.newHashSetWithExpectedSize( entitySetIdsToPropertyTypes.size() );
+        Map<AclKey, EnumSet<Permission>> accessChecks = Maps.newLinkedHashMapWithExpectedSize( entitySetIdsToPropertyTypes.size() );
 
         entitySetIdsToPropertyTypes.entrySet().forEach( entry -> {
             UUID entitySetId = entry.getKey();
 
             entry.getValue().keySet().forEach( propertyTypeId -> {
-                accessChecks.add( new AccessCheck( new AclKey( entitySetId, propertyTypeId ), requiredPermissions ) );
+                accessChecks.put( new AclKey( entitySetId, propertyTypeId ), requiredPermissions );
             } );
         } );
 
         Map<UUID, Map<UUID, PropertyType>> authorizedEntitySetsToPropertyTypes = Maps
                 .newLinkedHashMapWithExpectedSize( entitySetIdsToPropertyTypes.size() );
-        authz.accessChecksForPrincipals( accessChecks, principals ).forEach( authorization -> {
+
+        authz.authorize( accessChecks, principals ).forEach( (aclKey, permissionsMap) -> {
 
             boolean isAuthorized = true;
 
-            for ( boolean p : authorization.getPermissions().values() ) {
+            for ( boolean p : permissionsMap.values() ) {
                 if ( !p ) {
                     isAuthorized = false;
                     break;
@@ -360,8 +361,8 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
             }
 
             if ( isAuthorized ) {
-                UUID entitySetId = authorization.getAclKey().get( 0 );
-                UUID propertyTypeId = authorization.getAclKey().get( 1 );
+                UUID entitySetId = aclKey.get( 0 );
+                UUID propertyTypeId = aclKey.get( 1 );
 
                 Map<UUID, PropertyType> entitySetMapWithoutAuth = entitySetIdsToPropertyTypes.get( entitySetId );
 
