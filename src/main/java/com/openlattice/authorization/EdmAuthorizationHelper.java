@@ -347,7 +347,7 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
         } );
 
         Map<UUID, Map<UUID, PropertyType>> authorizedEntitySetsToPropertyTypes = Maps
-                .newHashMapWithExpectedSize( entitySetIdsToPropertyTypes.size() );
+                .newLinkedHashMapWithExpectedSize( entitySetIdsToPropertyTypes.size() );
         authz.accessChecksForPrincipals( accessChecks, principals ).forEach( authorization -> {
 
             boolean isAuthorized = true;
@@ -366,7 +366,7 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
                 Map<UUID, PropertyType> entitySetMapWithoutAuth = entitySetIdsToPropertyTypes.get( entitySetId );
 
                 Map<UUID, PropertyType> entitySetMapWithAuth = authorizedEntitySetsToPropertyTypes.getOrDefault( entitySetId,
-                        Maps.newHashMapWithExpectedSize( entitySetMapWithoutAuth.size() ) );
+                        Maps.newLinkedHashMapWithExpectedSize( entitySetMapWithoutAuth.size() ) );
 
                 entitySetMapWithAuth.put( propertyTypeId, entitySetMapWithoutAuth.get( propertyTypeId ) );
 
