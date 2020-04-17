@@ -64,7 +64,6 @@ import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet
 import edu.umd.cs.findbugs.classfile.ResourceNotFoundException
 import org.slf4j.LoggerFactory
 import java.util.*
-import java.util.stream.Collectors
 
 open class EntitySetService(
         hazelcastInstance: HazelcastInstance,
@@ -336,12 +335,12 @@ open class EntitySetService(
                 .map { it as DelegatedUUIDSet }
                 .flatten()
 
-        val accessChecks = normalEntitySetIds.map { AccessCheck(AclKey(it), permissions) }.toSet()
+        val accessChecks = normalEntitySetIds.associate { AclKey(it) to permissions }
 
-        return authorizations.accessChecksForPrincipals(accessChecks, Principals.getCurrentPrincipals())
-                .filter { it.permissions.values.all { bool -> bool } }
-                .map { it.aclKey[0] }
-                .collect(Collectors.toSet())
+        return authorizations.authorize(accessChecks, Principals.getCurrentPrincipals())
+                .filter { it.value.values.all { bool -> bool } }
+                .map { it.key[0] }
+                .toSet()
     }
 
     @Timed
