@@ -316,7 +316,7 @@ public class IndexerServicesPod {
 
     @Bean
     public GraphService graphApi() {
-        return new Graph( hikariDataSource, entitySetManager(), partitionManager() );
+        return new Graph( hikariDataSource, hikariDataSource, entitySetManager(), partitionManager() );
     }
 
     @Bean
