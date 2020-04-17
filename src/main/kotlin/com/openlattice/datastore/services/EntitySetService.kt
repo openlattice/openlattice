@@ -44,6 +44,7 @@ import com.openlattice.edm.PostgresEdmManager
 import com.openlattice.edm.events.*
 import com.openlattice.edm.processors.EntitySetsFlagFilteringAggregator
 import com.openlattice.edm.processors.GetEntityTypeFromEntitySetEntryProcessor
+import com.openlattice.edm.processors.GetNormalEntitySetIdsEntryProcessor
 import com.openlattice.edm.processors.GetPropertiesFromEntityTypeEntryProcessor
 import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.edm.set.EntitySetFlag
@@ -59,6 +60,7 @@ import com.openlattice.hazelcast.processors.AddEntitySetsToLinkingEntitySetProce
 import com.openlattice.hazelcast.processors.RemoveDataExpirationPolicyProcessor
 import com.openlattice.hazelcast.processors.RemoveEntitySetsFromLinkingEntitySetProcessor
 import com.openlattice.postgres.mapstores.EntitySetMapstore
+import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet
 import edu.umd.cs.findbugs.classfile.ResourceNotFoundException
 import org.slf4j.LoggerFactory
 import java.util.*
@@ -323,6 +325,35 @@ open class EntitySetService(
 
     override fun entitySetsContainFlag(entitySetIds: Set<UUID>, flag: EntitySetFlag): Boolean {
         return entitySets.executeOnKeys(entitySetIds, EntitySetContainsFlagEntryProcessor(flag)).values.any { it as Boolean }
+    }
+
+    @Timed
+    @Suppress("UNCHECKED_CAST")
+    override fun filterToAuthorizedNormalEntitySets(entitySetIds: Set<UUID>, permissions: EnumSet<Permission>): Set<UUID> {
+        val normalEntitySetIds = entitySets.executeOnKeys(entitySetIds, GetNormalEntitySetIdsEntryProcessor())
+                .values
+                .map { it as DelegatedUUIDSet }
+                .flatten()
+
+        val accessChecks = normalEntitySetIds.associate { AclKey(it) to permissions }
+
+        return authorizations.authorize(accessChecks, Principals.getCurrentPrincipals())
+                .filter { it.value.values.all { bool -> bool } }
+                .map { it.key[0] }
+                .toSet()
+    }
+
+    @Timed
+    override fun getPropertyTypesOfEntitySets(entitySetIds: Set<UUID>): Map<UUID, Map<UUID, PropertyType>> {
+        val entityTypesOfEntitySets = getEntityTypeIdsByEntitySetIds(entitySetIds)
+        val entityTypesAsMap = edm.getEntityTypesAsMap(entityTypesOfEntitySets.values.toSet())
+        val propertyTypesAsMap = edm.getPropertyTypesAsMap(entityTypesAsMap.values.map { it.properties }.flatten().toSet())
+
+        return entitySetIds.associateWith {
+            entityTypesAsMap.getValue(entityTypesOfEntitySets.getValue(it))
+                    .properties
+                    .associateWith { ptId -> propertyTypesAsMap.getValue(ptId) }
+        }
     }
 
     @Timed
