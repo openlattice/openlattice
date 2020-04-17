@@ -60,6 +60,7 @@ import com.openlattice.hazelcast.processors.AddEntitySetsToLinkingEntitySetProce
 import com.openlattice.hazelcast.processors.RemoveDataExpirationPolicyProcessor
 import com.openlattice.hazelcast.processors.RemoveEntitySetsFromLinkingEntitySetProcessor
 import com.openlattice.postgres.mapstores.EntitySetMapstore
+import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet
 import edu.umd.cs.findbugs.classfile.ResourceNotFoundException
 import org.slf4j.LoggerFactory
 import java.util.*
@@ -332,7 +333,7 @@ open class EntitySetService(
     override fun filterToAuthorizedNormalEntitySets(entitySetIds: Set<UUID>, permissions: EnumSet<Permission>): Set<UUID> {
         val normalEntitySetIds = entitySets.executeOnKeys(entitySetIds, GetNormalEntitySetIdsEntryProcessor())
                 .values
-                .map { it as Set<UUID> }
+                .map { it as DelegatedUUIDSet }
                 .flatten()
 
         val accessChecks = normalEntitySetIds.map { AccessCheck(AclKey(it), permissions) }.toSet()
