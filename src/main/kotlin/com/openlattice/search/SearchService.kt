@@ -826,7 +826,7 @@ class SearchService(eventBus: EventBus, metricRegistry: MetricRegistry) {
     }
 
     @Timed
-    fun executeEntityNeighborIdsSearch(
+    fun  executeEntityNeighborIdsSearch(
             entitySetIds: Set<UUID>,
             filter: EntityNeighborsFilter,
             principals: Set<Principal>

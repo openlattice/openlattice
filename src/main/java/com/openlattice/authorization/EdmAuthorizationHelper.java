@@ -412,8 +412,8 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
     public Set<UUID> getAuthorizedEntitySets( Set<UUID> entitySetIds, EnumSet<Permission> requiredPermissions ) {
         return getAuthorizedEntitySetsForPrincipals( entitySetIds,
                 requiredPermissions,
-                Principals.getCurrentPrincipals() );
-    }
+                    Principals.getCurrentPrincipals() );
+        }
 
     /**
      * Get all property types of an entity set
