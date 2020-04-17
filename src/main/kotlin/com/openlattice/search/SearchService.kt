@@ -201,7 +201,7 @@ class SearchService(eventBus: EventBus, metricRegistry: MetricRegistry) {
 
         val entityKeyIdsByEntitySetId = HashMultimap.create<UUID, UUID>()
         result.entityDataKeys
-                .forEach { edk -> entityKeyIdsByEntitySetId.put(edk.getEntitySetId(), edk.getEntityKeyId()) }
+                .forEach { edk -> entityKeyIdsByEntitySetId.put(edk.entitySetId, edk.entityKeyId) }
 
         //TODO: Properly parallelize this at some point
         val entitiesById = entityKeyIdsByEntitySetId.keySet()
