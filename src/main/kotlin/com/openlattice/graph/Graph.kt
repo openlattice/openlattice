@@ -71,6 +71,7 @@ private val logger = LoggerFactory.getLogger(Graph::class.java)
 
 class Graph(
         private val hds: HikariDataSource,
+        private val reader: HikariDataSource,
         private val entitySetManager: EntitySetManager,
         private val partitionManager: PartitionManager
 ) : GraphService {
@@ -229,7 +230,7 @@ class Graph(
     override fun getEdgesAndNeighborsForVertices(entitySetId: UUID, filter: EntityNeighborsFilter): Stream<Edge> {
         return PostgresIterable(
                 Supplier {
-                    val connection = hds.connection
+                    val connection = reader.connection
                     val ids = PostgresArrays.createUuidArray(connection, filter.entityKeyIds)
                     val stmt = connection.prepareStatement(getFilteredNeighborhoodSql(filter, false))
                     stmt.setArray(1, ids)
@@ -253,7 +254,7 @@ class Graph(
         }
         return PostgresIterable(
                 Supplier {
-                    val connection = hds.connection
+                    val connection = reader.connection
                     val ids = PostgresArrays.createUuidArray(connection, filter.entityKeyIds.stream())
                     val entitySetIdsArr = PostgresArrays.createUuidArray(connection, entitySetIds.stream())
                     val stmt = connection.prepareStatement(getFilteredNeighborhoodSql(filter, true))
@@ -430,7 +431,7 @@ class Graph(
         val query = getTopUtilizersSql(entitySetId, srcFilters, dstFilters, limit)
         return PostgresIterable(
                 Supplier {
-                    val connection = hds.connection
+                    val connection = reader.connection
                     val stmt = connection.createStatement()
                     logger.info("Executing top utilizer query: {}", query)
                     val rs = stmt.executeQuery(query)
@@ -448,7 +449,7 @@ class Graph(
         val query = "SELECT DISTINCT ${SRC_ENTITY_SET_ID.name},${EDGE_ENTITY_SET_ID.name}, ${DST_ENTITY_SET_ID.name} " +
                 "FROM ${E.name} " +
                 "WHERE ${SRC_ENTITY_SET_ID.name} = ANY(?) OR ${DST_ENTITY_SET_ID.name} = ANY(?)"
-        val connection = hds.connection
+        val connection = reader.connection
         connection.use {
             val ps = connection.prepareStatement(query)
             ps.use {
@@ -476,7 +477,7 @@ class Graph(
 
         return PostgresIterable(
                 Supplier {
-                    val connection = hds.connection
+                    val connection = reader.connection
                     val entityKeyIdArr = PostgresArrays.createUuidArray(connection, entityKeyIds)
 
                     val ps = connection.prepareStatement(query)
@@ -499,7 +500,7 @@ class Graph(
 
         return BasePostgresIterable(
                 Supplier {
-                    val connection = hds.connection
+                    val connection = reader.connection
 
                     val ps = connection.prepareStatement(query)
                     ps.setObject(1, entitySetId)
