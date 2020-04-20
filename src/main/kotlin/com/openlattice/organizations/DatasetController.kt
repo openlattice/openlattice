@@ -161,7 +161,7 @@ class DatasetController : DatasetApi, AuthorizingComponent {
             @PathVariable(TABLE_NAME) tableName: String,
             @RequestBody metadataUpdate: MetadataUpdate) {
         val tableFqnToId = getExternalDatabaseObjectFqnToIdPair(organizationId, tableName)
-        ensureOwnerAccess(AclKey(tableFqnToId.second))
+        ensureWriteAccess(AclKey(tableFqnToId.second))
         edms.updateOrganizationExternalDatabaseTable(organizationId, tableFqnToId, metadataUpdate)
     }
 
@@ -176,8 +176,8 @@ class DatasetController : DatasetApi, AuthorizingComponent {
             @PathVariable(TABLE_NAME) tableName: String,
             @PathVariable(COLUMN_NAME) columnName: String,
             @RequestBody metadataUpdate: MetadataUpdate) {
-        ensureAdminAccess()
         val tableFqnToId = getExternalDatabaseObjectFqnToIdPair(organizationId, tableName)
+        ensureWriteAccess(AclKey(tableFqnToId.second))
         val columnFqnToId = getExternalDatabaseObjectFqnToIdPair(tableFqnToId.second, columnName)
         edms.updateOrganizationExternalDatabaseColumn(organizationId, tableFqnToId, columnFqnToId, metadataUpdate)
     }
