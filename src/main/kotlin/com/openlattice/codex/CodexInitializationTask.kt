@@ -20,6 +20,7 @@ val APP_TYPES = listOf(
         AppType(FullQualifiedName("app.settings"), "Settings", Optional.empty(), UUID.fromString("bc0f0785-6af4-4a16-ab01-ef125d8fa183")),
         AppType(FullQualifiedName("app.subjectof"), "Subject Of", Optional.empty(), UUID.fromString("34aeaca4-d424-43cd-a3b4-f2032d583280")),
         AppType(FullQualifiedName("app.people"), "People", Optional.empty(), UUID.fromString("31cf5595-3fe9-4d3e-a9cf-39355a4b8cab")),
+        AppType(FullQualifiedName("app.clients"), "Clients", Optional.empty(), UUID.fromString("31cf5595-3fe9-4d3e-a9cf-39355a4b8cab")),
         AppType(FullQualifiedName("app.messages"), "Messages", Optional.empty(), UUID.fromString("8d0e38de-4302-4ec2-a1a7-f9159086e60e"))
 )
 
