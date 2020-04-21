@@ -14,7 +14,7 @@ import kotlin.collections.LinkedHashSet
 // NOTE: once the apps-v2 changes go in, this will all go away
 val APP_TYPES = listOf(
         AppType(FullQualifiedName("app.contactinfogiven"), "Contact Info Given", Optional.empty(), UUID.fromString("cf9b4d36-6f1a-4e6f-94f0-6458054fc567")),
-        AppType(FullQualifiedName("app.sentfrom"), "Sent From", Optional.empty(), UUID.fromString("cf9b4d36-6f1a-4e6f-94f0-6458054fc567")),
+        AppType(FullQualifiedName("app.sentfrom"), "Sent From", Optional.empty(), UUID.fromString("bf9c2740-fbd9-4111-b7b9-dda026597b67")),
         AppType(FullQualifiedName("app.sentto"), "Sent To", Optional.empty(), UUID.fromString("766e8284-fb5d-4d38-9595-99b6bca99a3b")),
         AppType(FullQualifiedName("app.contactinformation"), "Contact Information", Optional.empty(), UUID.fromString("2e20c21e-6448-4a2d-bc57-9a5f2c45b589")),
         AppType(FullQualifiedName("app.settings"), "Settings", Optional.empty(), UUID.fromString("bc0f0785-6af4-4a16-ab01-ef125d8fa183")),
