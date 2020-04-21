@@ -20,7 +20,6 @@ import com.twilio.rest.api.v2010.account.Message
 import com.twilio.security.RequestValidator
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.apache.commons.lang.NotImplementedException
-import org.apache.http.entity.ContentType
 import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.*
