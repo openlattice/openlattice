@@ -1508,12 +1508,13 @@ public class DatastoreElasticsearchImpl implements ConductorElasticsearchApi {
             UUID entitySetId,
             Map<UUID, DelegatedUUIDSet> authorizedPropertyTypesByEntitySet ) {
         Map<UUID, Map<String, Float>> fieldsMap = Maps.newHashMap();
-        authorizedPropertyTypesByEntitySet.get( entitySetId ).forEach( propertyTypeId -> {
-            String fieldName = getFieldName( propertyTypeId );
+        authorizedPropertyTypesByEntitySet.getOrDefault( entitySetId, DelegatedUUIDSet.wrap( ImmutableSet.of() ) )
+                .forEach( propertyTypeId -> {
+                    String fieldName = getFieldName( propertyTypeId );
 
-            // authorized property types are the same within 1 linking entity set (no need for extra check)
-            fieldsMap.put( propertyTypeId, Map.of( fieldName, 1F ) );
-        } );
+                    // authorized property types are the same within 1 linking entity set (no need for extra check)
+                    fieldsMap.put( propertyTypeId, Map.of( fieldName, 1F ) );
+                } );
         return fieldsMap;
     }
 
