@@ -93,17 +93,6 @@ dependencies {
     }
 
     /*
-     * DEEPLEARNING4J
-     */
-    compile("org.deeplearning4j:deeplearning4j-core:${deeplearning4j}") {
-        exclude module: 'guava'
-    }
-
-    compile("org.nd4j:nd4j-native-platform:${deeplearning4j}") {
-        exclude module: 'guava'
-    }
-
-    /*
      * TESTING
      */
     testCompile "junit:junit:${junit_version}"
