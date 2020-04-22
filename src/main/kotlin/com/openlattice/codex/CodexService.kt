@@ -37,6 +37,7 @@ import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset.UTC
 import java.util.*
+import java.util.concurrent.Callable
 import java.util.concurrent.Executors
 import java.util.stream.Stream
 import javax.servlet.http.HttpServletRequest
@@ -76,25 +77,34 @@ class CodexService(
 
     val textingExecutorWorker = textingExecutor.execute {
         Stream.generate { twilioQueue.take() }.forEach { (organizationId, messageEntitySetId, messageContents, toPhoneNumber, senderId) ->
-            //Not very efficient.
-            val phone = organizations.getOrganization(organizationId)!!.smsEntitySetInfo
-                    .flatMap { (phoneNumber, _, entitySetIds, _) -> entitySetIds.map { it to phoneNumber } }
-                    .toMap()
-                    .getValue(messageEntitySetId)
 
-            if (phone == "") {
-                throw BadRequestException("No source phone number set for organization!")
+            try {
+                //Not very efficient.
+                val phone = organizations.getOrganization(organizationId)!!.smsEntitySetInfo
+                        .flatMap { (phoneNumber, _, entitySetIds, _) -> entitySetIds.map { it to phoneNumber } }
+                        .toMap()
+                        .getValue(messageEntitySetId)
+
+                if (phone == "") {
+                    throw BadRequestException("No source phone number set for organization!")
+                }
+                val message = Message.creator(PhoneNumber(toPhoneNumber), PhoneNumber(phone), messageContents)
+                        .setStatusCallback(URI.create("http://872b905d.ngrok.io${CodexApi.BASE}${CodexApi.INCOMING}/$organizationId${CodexApi.STATUS}")).create()
+                processOutgoingMessage(message, organizationId, senderId)
+            } catch (e: Exception) {
+                logger.error("Unable to send outgoing message to phone number $toPhoneNumber in entity set $messageEntitySetId for organization $organizationId", e)
             }
-            val message = Message.creator(PhoneNumber(toPhoneNumber), PhoneNumber(phone), messageContents)
-                    .setStatusCallback(URI.create("https://api.openlattice.com${CodexApi.BASE}${CodexApi.INCOMING}/$organizationId${CodexApi.STATUS}")).create()
-            processOutgoingMessage(message, organizationId, senderId!!)
         }
     }
 
     val fromPhone = PhoneNumber(twilioConfiguration.shortCode)
     val feedsExecutorWorker = feedsExecutor.execute {
         Stream.generate { feedsQueue.take() }.forEach { (messageContents, toPhoneNumber) ->
-            Message.creator(PhoneNumber(toPhoneNumber), fromPhone, messageContents).create()
+            try {
+                Message.creator(PhoneNumber(toPhoneNumber), fromPhone, messageContents).create()
+            } catch (e: Exception) {
+                logger.error("Unable to send outgoing feed update message to phone number $toPhoneNumber", e)
+            }
         }
     }
 
@@ -139,18 +149,13 @@ class CodexService(
         val numMedia = request.getParameter(CodexConstants.Request.NUM_MEDIA.parameter).toInt()
 
         val finalMedia = Sets.newLinkedHashSetWithExpectedSize<Map<String, String>>(numMedia)
-        /* create media if present */
-        if ( numMedia == 1 ) {
-            val mediaType = request.getParameter("${CodexConstants.Request.MEDIA_TYPE_PREFIX}")
-            val mediaUrl = request.getParameter("${CodexConstants.Request.MEDIA_URL_PREFIX}")
-            val media = retrieveMediaAsBaseSixtyFour(mediaUrl).get()
-            finalMedia.add(mapOf("content-type" to mediaType, "data" to media))
-        } else if ( numMedia > 1 ){
+
+        if (numMedia > 0) {
             val maybeImages = Lists.newArrayListWithExpectedSize<Pair<String, ListenableFuture<String>>>(numMedia)
-            for (i in 0..numMedia) {
-                val mediaUrl = request.getParameter("${CodexConstants.Request.MEDIA_URL_PREFIX}$i")
-                val mediaType = request.getParameter("${CodexConstants.Request.MEDIA_TYPE_PREFIX}$i")
-                maybeImages.add( mediaType to retrieveMediaAsBaseSixtyFour( mediaUrl ) )
+            for (i in 0 until numMedia) {
+                val mediaUrl = request.getParameter("${CodexConstants.Request.MEDIA_URL_PREFIX.parameter}$i")
+                val mediaType = request.getParameter("${CodexConstants.Request.MEDIA_TYPE_PREFIX.parameter}$i")
+                maybeImages.add(mediaType to retrieveMediaAsBaseSixtyFour(mediaUrl))
             }
             maybeImages.forEach {
                 finalMedia.add(mapOf("content-type" to it.first, "data" to it.second.get()))
@@ -174,9 +179,9 @@ class CodexService(
     }
 
     fun retrieveMediaAsBaseSixtyFour(mediaUrl: String): ListenableFuture<String> {
-        return executor.submit {
+        return executor.submit(Callable {
             encoder.encodeToString(URL(mediaUrl).readBytes())
-        } as ListenableFuture<String>
+        })
     }
 
     fun updateMessageStatus(organizationId: UUID, messageId: String, status: Message.Status) {
