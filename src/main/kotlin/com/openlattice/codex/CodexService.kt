@@ -90,7 +90,7 @@ class CodexService(
                 }
                 val message = Message.creator(PhoneNumber(toPhoneNumber), PhoneNumber(phone), messageContents)
                         .setStatusCallback(URI.create("http://872b905d.ngrok.io${CodexApi.BASE}${CodexApi.INCOMING}/$organizationId${CodexApi.STATUS}")).create()
-                processOutgoingMessage(message, organizationId, senderId!!)
+                processOutgoingMessage(message, organizationId, senderId)
             } catch (e: Exception) {
                 logger.error("Unable to send outgoing message to phone number $toPhoneNumber in entity set $messageEntitySetId for organization $organizationId", e)
             }
