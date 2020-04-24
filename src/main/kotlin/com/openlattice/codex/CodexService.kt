@@ -66,6 +66,7 @@ class CodexService(
     val appId = appService.getApp(CodexConstants.APP_NAME).id
     val typesByFqn = CodexConstants.AppType.values().associate { it to appService.getAppType(it.fqn) }
     val appConfigs: IMap<AppConfigKey, AppTypeSetting> = HazelcastMap.APP_CONFIGS.getMap(hazelcast)
+    val codexMedia: IMap<UUID, Base64Media> = HazelcastMap.CODEX_MEDIA.getMap(hazelcast)
     val propertyTypesByAppType = typesByFqn.values.associate { it.id to edmManager.getPropertyTypesOfEntityType(it.entityTypeId) }
     val propertyTypesByFqn = propertyTypesByAppType.values.flatMap { it.values }.associate { it.type to it.id }
 
@@ -75,8 +76,10 @@ class CodexService(
     val twilioQueue = HazelcastQueue.TWILIO.getQueue(hazelcast)
     val feedsQueue = HazelcastQueue.TWILIO_FEED.getQueue(hazelcast)
 
+    val BASE_PATH = "https://api.openlattice.com"
+
     val textingExecutorWorker = textingExecutor.execute {
-        Stream.generate { twilioQueue.take() }.forEach { (organizationId, messageEntitySetId, messageContents, toPhoneNumber, senderId) ->
+        Stream.generate { twilioQueue.take() }.forEach { (organizationId, messageEntitySetId, messageContents, toPhoneNumber, senderId, attachment) ->
 
             try {
                 //Not very efficient.
@@ -88,9 +91,15 @@ class CodexService(
                 if (phone == "") {
                     throw BadRequestException("No source phone number set for organization!")
                 }
-                val message = Message.creator(PhoneNumber(toPhoneNumber), PhoneNumber(phone), messageContents)
-                        .setStatusCallback(URI.create("http://872b905d.ngrok.io${CodexApi.BASE}${CodexApi.INCOMING}/$organizationId${CodexApi.STATUS}")).create()
-                processOutgoingMessage(message, organizationId, senderId)
+                val messageCreator = Message.creator(PhoneNumber(toPhoneNumber), PhoneNumber(phone), messageContents)
+                        .setStatusCallback(URI.create("$BASE_PATH${CodexApi.BASE}${CodexApi.INCOMING}/$organizationId${CodexApi.STATUS}"))
+
+                if (attachment != null) {
+                    messageCreator.setMediaUrl(writeMediaAndGetPath(attachment))
+                }
+
+                val message = messageCreator.create()
+                processOutgoingMessage(message, organizationId, senderId, attachment)
             } catch (e: Exception) {
                 logger.error("Unable to send outgoing message to phone number $toPhoneNumber in entity set $messageEntitySetId for organization $organizationId", e)
             }
@@ -108,18 +117,39 @@ class CodexService(
         }
     }
 
-    fun processOutgoingMessage(message: Message, organizationId: UUID, senderId: String) {
+    fun writeMediaAndGetPath(base64Media: Base64Media): String {
+        var id = UUID.randomUUID()
+        while (codexMedia.putIfAbsent(id, base64Media) != null) {
+            id = UUID.randomUUID()
+        }
+
+        return "$BASE_PATH/datastore/codex/media/$id"
+    }
+
+    fun getAndDeleteMedia(id: UUID): Base64Media {
+        val media = codexMedia.getValue(id)
+        codexMedia.delete(id)
+        return media
+    }
+
+    fun processOutgoingMessage(message: Message, organizationId: UUID, senderId: String, attatchment: Base64Media?) {
         val dateTime = formatDateTime(message.dateCreated)
         val phoneNumber = message.to
         val messageId = message.sid
         val text = message.body
 
         val sender = principalsManager.getUser(senderId)
+        val attachments = attatchment?.let {
+            setOf(mapOf(
+                    "content-type" to it.contentType,
+                    "data" to it.data
+            ))
+        } ?: emptySet()
 
         /* create entities */
 
         val contactEDK = getContactEntityDataKey(organizationId, phoneNumber)
-        val messageEDK = getMessageEntityDataKey(organizationId, dateTime, messageId, text, isOutgoing = true, media = emptySet())
+        val messageEDK = getMessageEntityDataKey(organizationId, dateTime, messageId, text, isOutgoing = true, media = attachments)
 
         /* create associations */
 

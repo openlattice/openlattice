@@ -7,13 +7,15 @@ import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
 import com.openlattice.authorization.Principals
 import com.openlattice.codex.CodexApi
+import com.openlattice.codex.CodexApi.Companion.ID
+import com.openlattice.codex.CodexApi.Companion.ID_PATH
 import com.openlattice.codex.CodexApi.Companion.INCOMING
+import com.openlattice.codex.CodexApi.Companion.MEDIA
 import com.openlattice.codex.CodexApi.Companion.ORG_ID
 import com.openlattice.codex.CodexApi.Companion.ORG_ID_PATH
 import com.openlattice.codex.CodexApi.Companion.STATUS
 import com.openlattice.codex.CodexService
 import com.openlattice.codex.MessageRequest
-import com.openlattice.controllers.exceptions.ForbiddenException
 import com.openlattice.hazelcast.HazelcastQueue
 import com.openlattice.twilio.TwilioConfiguration
 import com.twilio.rest.api.v2010.account.Message
@@ -80,6 +82,14 @@ constructor(
         }
     }
 
+    @Timed
+    @RequestMapping(path = [MEDIA + ID_PATH], method = [RequestMethod.GET])
+    fun readAndDeleteMedia(@PathVariable(ID) mediaId: UUID, response: HttpServletResponse): ByteArray {
+        val base64Media = codexService.getAndDeleteMedia(mediaId)
+        response.contentType = base64Media.contentType
+        return Base64.getDecoder().decode(base64Media.data)
+    }
+
     fun ensureTwilio(request: HttpServletRequest) {
 
         val url = request.requestURL.toString()
@@ -87,7 +97,7 @@ constructor(
         val params = request.parameterMap.mapValues { request.getParameter(it.key) }
 
         if (!validator.validate(url, params, signature)) {
-        //    throw ForbiddenException("Could not verify that incoming request to $url was sent by Twilio") TODO
+            //    throw ForbiddenException("Could not verify that incoming request to $url was sent by Twilio") TODO
         }
 
     }
@@ -97,6 +107,10 @@ constructor(
     }
 
     override fun listenForTextStatus() {
+        throw NotImplementedException("This should not be called without a HttpServletRequest")
+    }
+
+    override fun readAndDeleteMedia(mediaId: UUID) {
         throw NotImplementedException("This should not be called without a HttpServletRequest")
     }
 
