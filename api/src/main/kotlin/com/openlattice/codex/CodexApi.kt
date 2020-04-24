@@ -2,6 +2,7 @@ package com.openlattice.codex
 
 import com.twilio.rest.api.v2010.account.Message
 import retrofit2.http.Body
+import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Path
 import java.util.*
@@ -12,9 +13,12 @@ interface CodexApi {
         const val CONTROLLER = "/codex"
         const val BASE = SERVICE + CONTROLLER
 
+        const val ID = "id"
+        const val ID_PATH = "/{$ID}"
         const val ORG_ID = "orgId"
         const val ORG_ID_PATH = "/{$ORG_ID}"
         const val INCOMING = "/incoming"
+        const val MEDIA = "/media"
         const val STATUS = "/status"
     }
 
@@ -26,5 +30,8 @@ interface CodexApi {
 
     @POST(BASE + INCOMING + ORG_ID_PATH + STATUS)
     fun listenForTextStatus()
+
+    @GET( BASE + MEDIA + ID_PATH)
+    fun readAndDeleteMedia(@Path(ID) mediaId: UUID)
 
 }
