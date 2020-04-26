@@ -96,7 +96,8 @@ class BackgroundLinkingService
                                         } else expiration == null
                                     }
                             if (forLinking.isNotEmpty()) {
-                                logger.info("Entities needing linking: {}", forLinking)
+                                logger.info("Entities needing linking: {}", forLinking.size)
+                                logger.debug("Entities needing linking: {}", forLinking)
                             }
                             forLinking.asSequence()
                         }
