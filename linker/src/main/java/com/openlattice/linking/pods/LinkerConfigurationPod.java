@@ -21,7 +21,6 @@
 
 package com.openlattice.linking.pods;
 
-import com.kryptnostic.rhizome.configuration.service.ConfigurationService;
 import com.kryptnostic.rhizome.pods.ConfigurationLoader;
 import com.openlattice.linking.LinkingConfiguration;
 import org.slf4j.Logger;
@@ -39,13 +38,11 @@ import java.io.IOException;
 public class LinkerConfigurationPod {
     private static final Logger  logger = LoggerFactory.getLogger( LinkerConfigurationPod.class );
     @Inject
-    private ConfigurationService configurationService;
-    @Inject
     private ConfigurationLoader  configurationLoader;
 
     @Bean
     public LinkingConfiguration linkingConfiguration() throws IOException {
-        LinkingConfiguration config = configurationService.getConfiguration( LinkingConfiguration.class );
+        LinkingConfiguration config = configurationLoader.load( LinkingConfiguration.class );
         logger.info( "Using {} linking configuration: {}", configurationLoader.type(), config );
         return config;
     }
