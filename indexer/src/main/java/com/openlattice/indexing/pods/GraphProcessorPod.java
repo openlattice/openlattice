@@ -23,22 +23,10 @@ public class GraphProcessorPod {
     @Inject
     private Set<GraphProcessor> graphProcessors;
 
-//    @Inject
-//    private EdmManager edmManager;
-
     @Inject
     private HazelcastInstance hazelcastInstance;
 
     @Inject
     private HikariDataSource hikariDataSource;
 
-//    @Bean
-//    public GraphProcessingService graphProcessingService() {
-//        return new GraphProcessingService(edmManager, hikariDataSource, hazelcastInstance, graphProcessors);
-//    }
-//
-//    @Bean
-//    public BackgroundGraphProcessingService backgroundGraphProcessingService() {
-//        return new BackgroundGraphProcessingService(graphProcessingService());
-//    }
 }
