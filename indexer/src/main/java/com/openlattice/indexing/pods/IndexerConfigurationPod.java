@@ -21,7 +21,6 @@
 
 package com.openlattice.indexing.pods;
 
-import com.kryptnostic.rhizome.configuration.service.ConfigurationService;
 import com.kryptnostic.rhizome.pods.ConfigurationLoader;
 import com.openlattice.indexing.configuration.IndexerConfiguration;
 import org.slf4j.Logger;
@@ -40,14 +39,11 @@ public class IndexerConfigurationPod {
     private static final Logger logger = LoggerFactory.getLogger( IndexerConfigurationPod.class );
 
     @Inject
-    private ConfigurationService configurationService;
-
-    @Inject
     private ConfigurationLoader configurationLoader;
 
     @Bean( name = "indexerConfiguration" )
     public IndexerConfiguration indexerConfiguration() throws IOException {
-        IndexerConfiguration config = configurationService.getConfiguration( IndexerConfiguration.class );
+        IndexerConfiguration config = configurationLoader.load( IndexerConfiguration.class );
         logger.info( "Using {} indexer configuration: {}", configurationLoader.type(), config );
         return config;
     }
