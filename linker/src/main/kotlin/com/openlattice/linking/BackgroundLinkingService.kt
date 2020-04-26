@@ -309,18 +309,6 @@ class BackgroundLinkingService
      * @return Null if locked, expiration in millis otherwise.
      */
     private fun lockOrGetExpiration(candidate: EntityDataKey): Long? {
-//        try {
-//            linkingLocks.lock(candidate)
-//
-//            val expiration = linkingLocks[candidate]
-//            if (expiration == null || Instant.now().toEpochMilli() > expiration) {
-//                logger.info("Lock or get is refreshing expiration for {}", candidate)
-//                refreshExpiration(candidate)
-//            }
-//            return expiration
-//        } finally {
-//            linkingLocks.unlock(candidate)
-//        }
         return linkingLocks.putIfAbsent(
                 candidate,
                 Instant.now().plusMillis(LINKING_BATCH_TIMEOUT_MILLIS).toEpochMilli(),
@@ -373,5 +361,4 @@ data class ScoredCluster(
 
 private fun completeLinkCluster(matchedCluster: Map<EntityDataKey, Map<EntityDataKey, Double>>): Double {
     return matchedCluster.values.flatMap { it.values }.min() ?: 0.0
-//    return matchedCluster.values.max { it.values.max() }.java
 }
