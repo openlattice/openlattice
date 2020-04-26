@@ -158,6 +158,17 @@ dependencies {
     testCompileOnly "net.jcip:jcip-annotations:${jcip_version}"
     testCompileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugs_annotations_version}"
 
+    /*
+     * DEEPLEARNING4J
+    */
+    compile("org.deeplearning4j:deeplearning4j-core:${deeplearning4j}") {
+        exclude module: 'guava'
+    }
+
+    compile("org.nd4j:nd4j-native-platform:${deeplearning4j}") {
+        exclude module: 'guava'
+    }
+    
     compile "org.ow2.asm:asm:${asm_version}"
     compile "org.nd4j:nd4j-cuda-9.2-platform:${deeplearning4j}"
 
