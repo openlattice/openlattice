@@ -2,6 +2,7 @@ package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
+import com.openlattice.codex.Base64Media
 import com.openlattice.codex.MessageRequest
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.mapstores.TestDataFactory
@@ -24,6 +25,9 @@ class MessageRequestStreamSerializer : TestableSelfRegisteringStreamSerializer<M
         out.writeUTF(`object`.messageContents)
         out.writeUTF(`object`.phoneNumber)
         out.writeUTF(`object`.senderId)
+
+        out.writeBoolean(`object`.attachment != null)
+        `object`.attachment?.let { Base64MediaStreamSerializer.serialize(out, it) }
     }
 
     override fun read(`in`: ObjectDataInput): MessageRequest {
@@ -32,8 +36,9 @@ class MessageRequestStreamSerializer : TestableSelfRegisteringStreamSerializer<M
         val messageContents = `in`.readUTF()
         val phoneNumber = `in`.readUTF()
         val senderId = `in`.readUTF()
+        val attachment: Base64Media? = if (`in`.readBoolean()) Base64MediaStreamSerializer.deserialize(`in`) else null
 
-        return MessageRequest(organizationId, messageEntitySetId, messageContents, phoneNumber, senderId)
+        return MessageRequest(organizationId, messageEntitySetId, messageContents, phoneNumber, senderId, attachment)
     }
 
     override fun generateTestValue(): MessageRequest {
