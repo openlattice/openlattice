@@ -7,7 +7,10 @@ import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
 import com.openlattice.authorization.Principals
 import com.openlattice.codex.CodexApi
+import com.openlattice.codex.CodexApi.Companion.ID
+import com.openlattice.codex.CodexApi.Companion.ID_PATH
 import com.openlattice.codex.CodexApi.Companion.INCOMING
+import com.openlattice.codex.CodexApi.Companion.MEDIA
 import com.openlattice.codex.CodexApi.Companion.ORG_ID
 import com.openlattice.codex.CodexApi.Companion.ORG_ID_PATH
 import com.openlattice.codex.CodexApi.Companion.STATUS
@@ -21,6 +24,7 @@ import com.twilio.security.RequestValidator
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.apache.commons.lang.NotImplementedException
 import org.slf4j.LoggerFactory
+import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.*
 import java.util.*
@@ -36,7 +40,7 @@ import javax.servlet.http.HttpServletResponse
 class CodexController
 @Inject
 constructor(
-        twilioConfiguration: TwilioConfiguration,
+        private val twilioConfiguration: TwilioConfiguration,
         hazelcastInstance: HazelcastInstance,
         private val authorizationManager: AuthorizationManager,
         private val codexService: CodexService
@@ -59,6 +63,7 @@ constructor(
 
     @Timed
     @RequestMapping(path = [INCOMING + ORG_ID_PATH], method = [RequestMethod.POST], consumes = [MediaType.APPLICATION_FORM_URLENCODED_VALUE])
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     fun receiveIncomingText(@PathVariable(ORG_ID) organizationId: UUID, request: HttpServletRequest) {
         ensureTwilio(request)
         codexService.processIncomingMessage(organizationId, request)
@@ -66,6 +71,7 @@ constructor(
 
     @Timed
     @RequestMapping(path = [INCOMING + ORG_ID_PATH + STATUS], method = [RequestMethod.POST])
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     fun listenForTextStatus(@PathVariable(ORG_ID) organizationId: UUID, request: HttpServletRequest) {
 
         ensureTwilio(request)
@@ -80,14 +86,22 @@ constructor(
         }
     }
 
+    @Timed
+    @RequestMapping(path = [MEDIA + ID_PATH], method = [RequestMethod.GET])
+    fun readAndDeleteMedia(@PathVariable(ID) mediaId: UUID, response: HttpServletResponse): ByteArray {
+        val base64Media = codexService.getAndDeleteMedia(mediaId)
+        response.contentType = base64Media.contentType
+        return Base64.getDecoder().decode(base64Media.data)
+    }
+
     fun ensureTwilio(request: HttpServletRequest) {
 
-        val url = request.requestURL.toString()
+        val url = "${twilioConfiguration.callbackBaseUrl}${request.requestURI}"
         val signature = request.getHeader("X-Twilio-Signature")
         val params = request.parameterMap.mapValues { request.getParameter(it.key) }
 
         if (!validator.validate(url, params, signature)) {
-        //    throw ForbiddenException("Could not verify that incoming request to $url was sent by Twilio") TODO
+            throw ForbiddenException("Could not verify that incoming request to $url was sent by Twilio")
         }
 
     }
@@ -97,6 +111,10 @@ constructor(
     }
 
     override fun listenForTextStatus() {
+        throw NotImplementedException("This should not be called without a HttpServletRequest")
+    }
+
+    override fun readAndDeleteMedia(mediaId: UUID) {
         throw NotImplementedException("This should not be called without a HttpServletRequest")
     }
 
