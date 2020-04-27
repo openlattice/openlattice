@@ -1,4 +1,4 @@
 sid: "nope"
 token: "slope"
 shortCode: ""
-callbackBaseUrl: "https://api.openlattice.com"
+callbackBaseUrl: ""
