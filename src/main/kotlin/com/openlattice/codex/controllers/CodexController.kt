@@ -24,6 +24,7 @@ import com.twilio.security.RequestValidator
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.apache.commons.lang.NotImplementedException
 import org.slf4j.LoggerFactory
+import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.*
 import java.util.*
@@ -62,6 +63,7 @@ constructor(
 
     @Timed
     @RequestMapping(path = [INCOMING + ORG_ID_PATH], method = [RequestMethod.POST], consumes = [MediaType.APPLICATION_FORM_URLENCODED_VALUE])
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     fun receiveIncomingText(@PathVariable(ORG_ID) organizationId: UUID, request: HttpServletRequest) {
         ensureTwilio(request)
         codexService.processIncomingMessage(organizationId, request)
@@ -69,6 +71,7 @@ constructor(
 
     @Timed
     @RequestMapping(path = [INCOMING + ORG_ID_PATH + STATUS], method = [RequestMethod.POST])
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     fun listenForTextStatus(@PathVariable(ORG_ID) organizationId: UUID, request: HttpServletRequest) {
 
         ensureTwilio(request)
