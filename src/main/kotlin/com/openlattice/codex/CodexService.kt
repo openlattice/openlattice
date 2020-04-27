@@ -44,7 +44,7 @@ import javax.servlet.http.HttpServletRequest
 
 @Service
 class CodexService(
-        twilioConfiguration: TwilioConfiguration,
+        val twilioConfiguration: TwilioConfiguration,
         val hazelcast: HazelcastInstance,
         val appService: AppService,
         val edmManager: EdmManager,
@@ -76,8 +76,6 @@ class CodexService(
     val twilioQueue = HazelcastQueue.TWILIO.getQueue(hazelcast)
     val feedsQueue = HazelcastQueue.TWILIO_FEED.getQueue(hazelcast)
 
-    val BASE_PATH = "https://api.openlattice.com"
-
     val textingExecutorWorker = textingExecutor.execute {
         Stream.generate { twilioQueue.take() }.forEach { (organizationId, messageEntitySetId, messageContents, toPhoneNumber, senderId, attachment) ->
 
@@ -92,7 +90,7 @@ class CodexService(
                     throw BadRequestException("No source phone number set for organization!")
                 }
                 val messageCreator = Message.creator(PhoneNumber(toPhoneNumber), PhoneNumber(phone), messageContents)
-                        .setStatusCallback(URI.create("$BASE_PATH${CodexApi.BASE}${CodexApi.INCOMING}/$organizationId${CodexApi.STATUS}"))
+                        .setStatusCallback(URI.create("${twilioConfiguration.callbackBaseUrl}${CodexApi.BASE}${CodexApi.INCOMING}/$organizationId${CodexApi.STATUS}"))
 
                 if (attachment != null) {
                     messageCreator.setMediaUrl(writeMediaAndGetPath(attachment))
@@ -123,7 +121,7 @@ class CodexService(
             id = UUID.randomUUID()
         }
 
-        return "$BASE_PATH/datastore/codex/media/$id"
+        return "${twilioConfiguration.callbackBaseUrl}/datastore/codex/media/$id"
     }
 
     fun getAndDeleteMedia(id: UUID): Base64Media {

@@ -16,6 +16,7 @@ import com.openlattice.codex.CodexApi.Companion.ORG_ID_PATH
 import com.openlattice.codex.CodexApi.Companion.STATUS
 import com.openlattice.codex.CodexService
 import com.openlattice.codex.MessageRequest
+import com.openlattice.controllers.exceptions.ForbiddenException
 import com.openlattice.hazelcast.HazelcastQueue
 import com.openlattice.twilio.TwilioConfiguration
 import com.twilio.rest.api.v2010.account.Message
@@ -38,7 +39,7 @@ import javax.servlet.http.HttpServletResponse
 class CodexController
 @Inject
 constructor(
-        twilioConfiguration: TwilioConfiguration,
+        private val twilioConfiguration: TwilioConfiguration,
         hazelcastInstance: HazelcastInstance,
         private val authorizationManager: AuthorizationManager,
         private val codexService: CodexService
@@ -92,12 +93,12 @@ constructor(
 
     fun ensureTwilio(request: HttpServletRequest) {
 
-        val url = request.requestURL.toString()
+        val url = "${twilioConfiguration.callbackBaseUrl}${request.requestURI}"
         val signature = request.getHeader("X-Twilio-Signature")
         val params = request.parameterMap.mapValues { request.getParameter(it.key) }
 
         if (!validator.validate(url, params, signature)) {
-            //    throw ForbiddenException("Could not verify that incoming request to $url was sent by Twilio") TODO
+            throw ForbiddenException("Could not verify that incoming request to $url was sent by Twilio")
         }
 
     }
