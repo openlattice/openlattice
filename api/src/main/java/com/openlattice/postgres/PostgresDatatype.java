@@ -105,6 +105,8 @@ public enum PostgresDatatype {
 
     public static PostgresDatatype getEnum(String dataTypeInput ) {
         switch ( dataTypeInput ) {
+            case "CHARACTER VARYING":
+                return TEXT;
             case "TIME WITHOUT TIME ZONE":
                 return TIME;
             case "TIME WITH TIME ZONE":
