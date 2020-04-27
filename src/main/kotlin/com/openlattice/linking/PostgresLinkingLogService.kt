@@ -76,9 +76,10 @@ class PostgresLinkingLogService(
                 ps.setObject(1, linkingId)
                 ps.setLong(2, version)
                 ps.executeQuery().use { rs->
-                    rs.next()
-                    val searchConstraintsJson = rs.getString( ID_MAP_FIELD )
-                    return mapper.readValue( searchConstraintsJson )
+                    if (rs.next()) {
+                        return mapper.readValue( rs.getString( ID_MAP_FIELD ) )
+                    }
+                    return mapOf()
                 }
             }
         }
@@ -89,8 +90,10 @@ class PostgresLinkingLogService(
             conn.prepareStatement(READ_LATEST_LINKED_SQL).use { ps ->
                 ps.setObject(1, linkingId)
                 ps.executeQuery().use { rs->
-                    rs.next()
-                    return mapper.readValue( rs.getString( ID_MAP_FIELD ))
+                    if (rs.next()) {
+                        return mapper.readValue( rs.getString( ID_MAP_FIELD ) )
+                    }
+                    return mapOf()
                 }
             }
         }
