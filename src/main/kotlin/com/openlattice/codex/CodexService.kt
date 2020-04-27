@@ -89,8 +89,12 @@ class CodexService(
                 if (phone == "") {
                     throw BadRequestException("No source phone number set for organization!")
                 }
-                val messageCreator = Message.creator(PhoneNumber(toPhoneNumber), PhoneNumber(phone), messageContents)
-                        .setStatusCallback(URI.create("${twilioConfiguration.callbackBaseUrl}${CodexApi.BASE}${CodexApi.INCOMING}/$organizationId${CodexApi.STATUS}"))
+
+                val callbackPath = "${twilioConfiguration.callbackBaseUrl}${CodexApi.BASE}${CodexApi.INCOMING}/$organizationId${CodexApi.STATUS}"
+
+                val messageCreator = Message
+                        .creator(PhoneNumber(toPhoneNumber), PhoneNumber(phone), messageContents)
+                        .setStatusCallback(URI.create(callbackPath))
 
                 if (attachment != null) {
                     messageCreator.setMediaUrl(writeMediaAndGetPath(attachment))
