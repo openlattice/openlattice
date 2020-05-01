@@ -5040,6 +5040,9 @@ components:
         path:
           description: the path to the flight yaml (i.e. https://raw.githubusercontent.com/pathToFlight.yaml)
           type: string
+        flight:
+          $ref: "#/components/schemas/Flight"
+        
     FlightPlanParametersUpdate:
       type: object
       properties:
@@ -5059,6 +5062,71 @@ components:
         path:
           description: the path to the flight yaml (i.e. https://raw.githubusercontent.com/pathToFlight.yaml)
           type: string
+    Flight:
+      type: object
+      properties:
+        name:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        organizationId:
+          type: string
+          format: uuid
+        entityDefinitions:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/EntityDefinition"
+        associationDefinitions:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/AssociationDefinition"
+    PropertyDefinition:
+      type: object
+      properties:
+        type:
+          $ref: "#/components/schemas/FullQualifiedName"
+        column:
+          type: string
+                  
+    EntityDefinition:
+      type: object
+      properties:
+        fqn:
+          $ref: "#/components/schemas/FullQualifiedName"
+        entitySetName:
+          type: string
+        propertyDefinitions:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/PropertyDefinition"
+        updateType:
+          type: string
+          enum: [Replace, PartialReplace, Merge]
+    AssociationDefinition:
+      type: object
+      properties:
+        fqn:
+          $ref: "#/components/schemas/FullQualifiedName"
+        entitySetName:
+          type: string
+        propertyDefinitions:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/PropertyDefinition"
+        updateType:
+          type: string
+          enum: [Replace, PartialReplace, Merge]
+        src:
+          type: string
+        dst:
+          type: string
+
+
+          
+        
+      
     IntegrationStatus:
       type: string
       enum: [IN_PROGRESS, SUCCEEDED, FAILED, QUEUED, FAILED_TO_START]
