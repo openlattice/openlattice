@@ -43,11 +43,11 @@ import java.util.*
  * none is provided.
  */
 data class AuditableEvent(
-        @JsonProperty(SerializationConstants.PRINCIPAL)val principal: UUID,
-        @JsonProperty(SerializationConstants.ACL_KEY)val aclKey: AclKey,
-        @JsonProperty(SerializationConstants.EVENT_TYPE)val eventType: AuditEventType,
+        @JsonProperty(SerializationConstants.PRINCIPAL) val principal: UUID,
+        @JsonProperty(SerializationConstants.ACL_KEY) val aclKey: AclKey,
+        @JsonProperty(SerializationConstants.EVENT_TYPE) val eventType: AuditEventType,
         @JsonProperty(SerializationConstants.DESCRIPTION_FIELD) val description: String,
-        @JsonProperty(SerializationConstants.ENTITIES)                       val entities: Optional<Set<UUID>>,
+        @JsonProperty(SerializationConstants.ENTITIES) val entities: Optional<MutableSet<UUID>>,
         @JsonProperty(SerializationConstants.DATA) val data: Map<String, Any>,
         @JsonProperty(SerializationConstants.TIMESTAMP) val timestamp: OffsetDateTime = OffsetDateTime.now(),
         @JsonProperty(SerializationConstants.OPERATION_ID) val operationId: Optional<Int> = Optional.empty()
