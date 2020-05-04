@@ -58,7 +58,4 @@ If a new subproject needs to be added:
 * edit **settings.gradle** to add it as a gradle subproject
 * create a new branch using `git checkout -b feature/add-<subproject>`
 * run `git submodule add ssh://git@github.com/openlattice/<subproject>`
-* commit, push, and submit a pull request. `git commit -a -m "Added subproject" && git push --set-upstream origin feature/test` 
-
-
-git ftw
+* commit, push, and submit a pull request. `git commit -a -m "Added subproject" && git push --set-upstream origin feature/test`
