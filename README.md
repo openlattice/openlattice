@@ -13,6 +13,7 @@ Getting started
 
         git clone ssh://git@github.com/openlattice/openlattice.git --recurse-submodules
 
+* Install gradle (`brew install gradle`)
 * Install and start Postgresql (`brew install postgres` and `brew services start postgres`)
 * Install and start ElasticSearch 5.x (`brew install elasticsearch` and `elasticsearch -E cluster.name=openlattice` on OS X)
 
