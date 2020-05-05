@@ -1,3 +1,4 @@
+
 package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
@@ -11,6 +12,35 @@ import org.springframework.stereotype.Component
 @Component
 class MessageRequestStreamSerializer : TestableSelfRegisteringStreamSerializer<MessageRequest> {
 
+    companion object {
+
+        fun serialize(out: ObjectDataOutput, `object`: MessageRequest) {
+            UUIDStreamSerializer.serialize(out, `object`.organizationId)
+            UUIDStreamSerializer.serialize(out, `object`.messageEntitySetId)
+            out.writeUTF(`object`.messageContents)
+            out.writeUTF(`object`.phoneNumber)
+            out.writeUTF(`object`.senderId)
+
+            out.writeBoolean(`object`.attachment != null)
+            `object`.attachment?.let { Base64MediaStreamSerializer.serialize(out, it) }
+
+            OffsetDateTimeStreamSerializer.serialize(out, `object`.scheduledDateTime)
+        }
+
+        fun deserialize(`in`: ObjectDataInput): MessageRequest {
+            val organizationId = UUIDStreamSerializer.deserialize(`in`)
+            val messageEntitySetId = UUIDStreamSerializer.deserialize(`in`)
+            val messageContents = `in`.readUTF()
+            val phoneNumber = `in`.readUTF()
+            val senderId = `in`.readUTF()
+            val attachment: Base64Media? = if (`in`.readBoolean()) Base64MediaStreamSerializer.deserialize(`in`) else null
+            val scheduledDateTime = OffsetDateTimeStreamSerializer.deserialize(`in`)
+
+            return MessageRequest(organizationId, messageEntitySetId, messageContents, phoneNumber, senderId, attachment, scheduledDateTime)
+        }
+
+    }
+
     override fun getTypeId(): Int {
         return StreamSerializerTypeIds.MESSAGE_REQUEST.ordinal
     }
@@ -20,25 +50,11 @@ class MessageRequestStreamSerializer : TestableSelfRegisteringStreamSerializer<M
     }
 
     override fun write(out: ObjectDataOutput, `object`: MessageRequest) {
-        UUIDStreamSerializer.serialize(out, `object`.organizationId)
-        UUIDStreamSerializer.serialize(out, `object`.messageEntitySetId)
-        out.writeUTF(`object`.messageContents)
-        out.writeUTF(`object`.phoneNumber)
-        out.writeUTF(`object`.senderId)
-
-        out.writeBoolean(`object`.attachment != null)
-        `object`.attachment?.let { Base64MediaStreamSerializer.serialize(out, it) }
+        serialize(out, `object`)
     }
 
     override fun read(`in`: ObjectDataInput): MessageRequest {
-        val organizationId = UUIDStreamSerializer.deserialize(`in`)
-        val messageEntitySetId = UUIDStreamSerializer.deserialize(`in`)
-        val messageContents = `in`.readUTF()
-        val phoneNumber = `in`.readUTF()
-        val senderId = `in`.readUTF()
-        val attachment: Base64Media? = if (`in`.readBoolean()) Base64MediaStreamSerializer.deserialize(`in`) else null
-
-        return MessageRequest(organizationId, messageEntitySetId, messageContents, phoneNumber, senderId, attachment)
+        return deserialize(`in`)
     }
 
     override fun generateTestValue(): MessageRequest {
