@@ -198,6 +198,7 @@ public final class SerializationConstants {
     public static final String NEIGHBOR_TYPE_ID                 = "neighborTypeId";
     public static final String NUM_HITS                         = "numHits";
     public static final String OPERATION_ID                     = "operationId";
+    public static final String ORDINAL_POSITION                 = "ordinalPosition";
     public static final String ORGANIZATION                     = "organization";
     public static final String ORGANIZATION_ID                  = "organizationId";
     public static final String ORIENTATION                      = "orientation";
@@ -209,7 +210,6 @@ public final class SerializationConstants {
     public static final String PERMISSIONS_MAP                  = "permissionsMap";
     public static final String PHONE_NUMBER                     = "phoneNumber";
     public static final String PII_FIELD                        = "pii";
-    public static final String ORDINAL_POSITION                 = "ordinalPosition";
     public static final String PRESENT                          = "present";
     public static final String PRIMARY_KEY                      = "primaryKey";
     public static final String PRINCIPAL                        = "principal";
@@ -227,12 +227,12 @@ public final class SerializationConstants {
     public static final String QUEUE                            = "queue";
     public static final String QUEUE_SIZE                       = "queueSize";
     public static final String RADIUS                           = "radius";
+    public static final String READER                           = "reader";
     public static final String REASON                           = "reason";
     public static final String REQUEST                          = "request";
     public static final String REQUESTING_USER                  = "requestingUser";
     public static final String REQUEST_ID                       = "requestId";
     public static final String REQUEST_STATUS                   = "status";
-    public static final String READER                           = "reader";
     public static final String RESULT                           = "result";
     public static final String RESULT_SUMMARY                   = "resultSummary";
     public static final String ROLES                            = "roles";
@@ -258,12 +258,13 @@ public final class SerializationConstants {
     public static final String STATE                            = "state";
     public static final String STATUS                           = "status";
     public static final String STORAGE_DESTINATION              = "storageDest";
+    public static final String STORAGE_TYPE                     = "storageType";
     public static final String SYNC_ID                          = "syncId";
     public static final String SYNC_IDS                         = "syncIds";
     public static final String SYNC_TICKETS                     = "syncTickets";
-    public static final String TAGS                             = "tags";
     public static final String TABLE                            = "table";
     public static final String TABLE_ID                         = "tableId";
+    public static final String TAGS                             = "tags";
     public static final String TARGET                           = "target";
     public static final String TEMPLATE                         = "template";
     public static final String TIMESTAMP                        = "timestamp";
@@ -279,8 +280,8 @@ public final class SerializationConstants {
     public static final String UPDATE_TYPE                      = "updateType";
     public static final String UPPERBOUND                       = "upperbound";
     public static final String URL                              = "url";
-    public static final String USER_ID                          = "userId";
     public static final String USERNAME                         = "username";
+    public static final String USER_ID                          = "userId";
     public static final String VALUES                           = "values";
     public static final String VALUE_FIELD                      = "value";
     public static final String VALUE_MAPPER                     = "valueMapper";
