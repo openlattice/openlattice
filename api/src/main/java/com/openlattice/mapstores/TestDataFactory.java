@@ -793,7 +793,8 @@ public final class TestDataFactory {
                 randomAlphabetic( 20 ),
                 randomAlphanumeric( 10 ),
                 randomAlphanumeric( 15 ),
-                base64Media()
+                base64Media(),
+                OffsetDateTime.now()
         );
     }
 
