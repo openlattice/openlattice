@@ -14,16 +14,16 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 
 private val logger = LoggerFactory.getLogger(ScheduledTaskService::class.java)
-private const val RETRY_INTERVAL = 1000L * 60 * 60 // 1 hour
+private const val RETRY_INTERVAL = 1_000L * 60 * 60 // 1 hour
 
 class ScheduledTaskService : HazelcastFixedRateTask<ScheduledTaskServiceDependencies> {
 
     override fun getInitialDelay(): Long {
-        return 1000
+        return 1_000
     }
 
     override fun getPeriod(): Long {
-        return 1000
+        return 1_000
     }
 
     override fun getTimeUnit(): TimeUnit {
