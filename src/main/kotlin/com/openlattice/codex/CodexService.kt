@@ -132,7 +132,7 @@ class CodexService(
 
     fun scheduleOutgoingMessage(messageRequest: MessageRequest) {
         var id = UUID.randomUUID()
-        val task = ScheduledMessageTask(messageRequest)
+        val task = SendCodexMessageTask(messageRequest)
         while (scheduledTasks.putIfAbsent(id, ScheduledTask(id, messageRequest.scheduledDateTime, task)) != null) {
             id = UUID.randomUUID()
         }
@@ -275,7 +275,7 @@ class CodexService(
         return BasePostgresIterable(PreparedStatementHolderSupplier(hds, GET_SCHEDULED_MESSAGES_FOR_ORG_SQL) {
             it.setString(1, organizationId.toString())
         }) {
-            val task = ResultSetAdapters.schedulableTask(it).task as ScheduledMessageTask
+            val task = ResultSetAdapters.schedulableTask(it).task as SendCodexMessageTask
             ResultSetAdapters.id(it) to task.message
         }.toMap()
     }
@@ -285,13 +285,13 @@ class CodexService(
             it.setString(1, organizationId.toString())
             it.setString(2, phoneNumber)
         }) {
-            val task = ResultSetAdapters.schedulableTask(it).task as ScheduledMessageTask
+            val task = ResultSetAdapters.schedulableTask(it).task as SendCodexMessageTask
             ResultSetAdapters.id(it) to task.message
         }.toMap()
     }
 
     fun getMessageRequest(scheduledTaskId: UUID): MessageRequest {
-        return (scheduledTasks.getValue(scheduledTaskId).task as ScheduledMessageTask).message
+        return (scheduledTasks.getValue(scheduledTaskId).task as SendCodexMessageTask).message
     }
 
     fun deleteScheduledTask(scheduledTaskId: UUID) {
@@ -361,7 +361,7 @@ class CodexService(
     private val GET_SCHEDULED_MESSAGES_FOR_ORG_SQL = "" +
             "SELECT * " +
             "FROM ${SCHEDULED_TASKS.name} " +
-            "  WHERE ${CLASS_NAME.name} = '${ScheduledMessageTask::class.java.name}' " +
+            "  WHERE ${CLASS_NAME.name} = '${SendCodexMessageTask::class.java.name}' " +
             "  AND ${CLASS_PROPERTIES.name}->'${SerializationConstants.MESSAGE}'->>'${SerializationConstants.ORGANIZATION_ID}' = ? "
 
     private val GET_SCHEDULED_MESSAGES_FOR_ORG_AND_PHONE_SQL = "$GET_SCHEDULED_MESSAGES_FOR_ORG_SQL " +
