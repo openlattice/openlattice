@@ -1,11 +1,7 @@
 package com.openlattice.codex.controllers
 
 import com.codahale.metrics.annotation.Timed
-import com.hazelcast.core.HazelcastInstance
-import com.openlattice.authorization.AclKey
-import com.openlattice.authorization.AuthorizationManager
-import com.openlattice.authorization.AuthorizingComponent
-import com.openlattice.authorization.Principals
+import com.openlattice.authorization.*
 import com.openlattice.codex.CodexApi
 import com.openlattice.codex.CodexApi.Companion.ID
 import com.openlattice.codex.CodexApi.Companion.ID_PATH
@@ -13,6 +9,9 @@ import com.openlattice.codex.CodexApi.Companion.INCOMING
 import com.openlattice.codex.CodexApi.Companion.MEDIA
 import com.openlattice.codex.CodexApi.Companion.ORG_ID
 import com.openlattice.codex.CodexApi.Companion.ORG_ID_PATH
+import com.openlattice.codex.CodexApi.Companion.PHONE
+import com.openlattice.codex.CodexApi.Companion.PHONE_PATH
+import com.openlattice.codex.CodexApi.Companion.SCHEDULED
 import com.openlattice.codex.CodexApi.Companion.STATUS
 import com.openlattice.codex.CodexService
 import com.openlattice.codex.MessageRequest
@@ -40,7 +39,6 @@ class CodexController
 @Inject
 constructor(
         private val twilioConfiguration: TwilioConfiguration,
-        hazelcastInstance: HazelcastInstance,
         private val authorizationManager: AuthorizationManager,
         private val codexService: CodexService
 ) : CodexApi, AuthorizingComponent {
@@ -92,6 +90,33 @@ constructor(
         return Base64.getDecoder().decode(base64Media.data)
     }
 
+    @Timed
+    @RequestMapping(path = [SCHEDULED + ORG_ID_PATH], method = [RequestMethod.GET])
+    override fun getUpcomingScheduledMessages(@PathVariable(ORG_ID) organizationId: UUID): Map<UUID, MessageRequest> {
+        return getMessagesFilteredByPermissions(
+                codexService.getScheduledMessagesForOrganization(organizationId)
+        )
+    }
+
+    @Timed
+    @RequestMapping(path = [SCHEDULED + ORG_ID_PATH + PHONE_PATH], method = [RequestMethod.GET])
+    override fun getUpcomingScheduledMessagesToPhoneNumber(
+            @PathVariable(ORG_ID) organizationId: UUID,
+            @PathVariable(PHONE) phone: String
+    ): Map<UUID, MessageRequest> {
+        return getMessagesFilteredByPermissions(
+                codexService.getScheduledMessagesForOrganizationAndPhoneNumber(organizationId, phone)
+        )
+    }
+
+    @Timed
+    @RequestMapping(path = [SCHEDULED + ID_PATH], method = [RequestMethod.DELETE])
+    override fun cancelScheduledMessage(@PathVariable(ID) messageId: UUID) {
+        val message = codexService.getMessageRequest(messageId)
+        ensureWriteAccess(AclKey(message.messageEntitySetId))
+        codexService.deleteScheduledTask(messageId)
+    }
+
     fun ensureTwilio(request: HttpServletRequest) {
 
         val url = "${twilioConfiguration.callbackBaseUrl}${request.requestURI}"
@@ -102,6 +127,17 @@ constructor(
             throw ForbiddenException("Could not verify that incoming request to $url was sent by Twilio")
         }
 
+    }
+
+    private fun getMessagesFilteredByPermissions(messages: Map<UUID, MessageRequest>): Map<UUID, MessageRequest> {
+        val entitySetIds = messages.values.map { it.messageEntitySetId }.toSet()
+        val requests = entitySetIds.associate { AclKey(it) to EnumSet.of(Permission.WRITE) }
+
+        val authorizedEntitySetIds = authorizationManager.authorize(requests, Principals.getCurrentPrincipals()).filter {
+            it.value.getValue(Permission.WRITE)
+        }.map { it.key[0] }.toSet()
+
+        return messages.filterValues { authorizedEntitySetIds.contains(it.messageEntitySetId) }
     }
 
     override fun receiveIncomingText(organizationId: UUID) {

@@ -11,6 +11,7 @@ import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
 import com.openlattice.apps.AppConfigKey
 import com.openlattice.apps.AppTypeSetting
+import com.openlattice.client.serialization.SerializationConstants
 import com.openlattice.codex.controllers.CodexConstants
 import com.openlattice.controllers.exceptions.BadRequestException
 import com.openlattice.data.DataEdge
@@ -24,11 +25,18 @@ import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.HazelcastQueue
 import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.organizations.roles.SecurePrincipalsManager
+import com.openlattice.postgres.PostgresColumn.CLASS_NAME
+import com.openlattice.postgres.PostgresColumn.CLASS_PROPERTIES
+import com.openlattice.postgres.PostgresTable.SCHEDULED_TASKS
+import com.openlattice.postgres.ResultSetAdapters
+import com.openlattice.postgres.streams.BasePostgresIterable
+import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.openlattice.scheduling.ScheduledTask
 import com.openlattice.twilio.TwilioConfiguration
 import com.twilio.Twilio
 import com.twilio.rest.api.v2010.account.Message
 import com.twilio.type.PhoneNumber
+import com.zaxxer.hikari.HikariDataSource
 import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -53,7 +61,8 @@ class CodexService(
         val entityKeyIdService: EntityKeyIdService,
         val principalsManager: SecurePrincipalsManager,
         val organizations: HazelcastOrganizationService,
-        val executor: ListeningExecutorService ) {
+        val executor: ListeningExecutorService,
+        val hds: HikariDataSource) {
 
     companion object {
         private val logger = LoggerFactory.getLogger(CodexService::class.java)
@@ -207,7 +216,7 @@ class CodexService(
         /* create entities */
 
         val contactEDK = getContactEntityDataKey(organizationId, phoneNumber)
-        val messageEDK = getMessageEntityDataKey(organizationId, dateTime, messageId, text, isOutgoing = false, media = finalMedia )
+        val messageEDK = getMessageEntityDataKey(organizationId, dateTime, messageId, text, isOutgoing = false, media = finalMedia)
 
         /* create associations */
 
@@ -260,6 +269,33 @@ class CodexService(
         )
 
         return EntityDataKey(entitySetId, entityKeyId)
+    }
+
+    fun getScheduledMessagesForOrganization(organizationId: UUID): Map<UUID, MessageRequest> {
+        return BasePostgresIterable(PreparedStatementHolderSupplier(hds, GET_SCHEDULED_MESSAGES_FOR_ORG_SQL) {
+            it.setString(1, organizationId.toString())
+        }) {
+            val task = ResultSetAdapters.schedulableTask(it).task as ScheduledMessageTask
+            ResultSetAdapters.id(it) to task.message
+        }.toMap()
+    }
+
+    fun getScheduledMessagesForOrganizationAndPhoneNumber(organizationId: UUID, phoneNumber: String): Map<UUID, MessageRequest> {
+        return BasePostgresIterable(PreparedStatementHolderSupplier(hds, GET_SCHEDULED_MESSAGES_FOR_ORG_AND_PHONE_SQL) {
+            it.setString(1, organizationId.toString())
+            it.setString(2, phoneNumber)
+        }) {
+            val task = ResultSetAdapters.schedulableTask(it).task as ScheduledMessageTask
+            ResultSetAdapters.id(it) to task.message
+        }.toMap()
+    }
+
+    fun getMessageRequest(scheduledTaskId: UUID): MessageRequest {
+        return (scheduledTasks.getValue(scheduledTaskId).task as ScheduledMessageTask).message
+    }
+
+    fun deleteScheduledTask(scheduledTaskId: UUID) {
+        scheduledTasks.delete(scheduledTaskId)
     }
 
     private fun getMessageEntityDataKey(organizationId: UUID,
@@ -321,5 +357,14 @@ class CodexService(
     private fun getPropertyTypeId(property: CodexConstants.PropertyType): UUID {
         return propertyTypesByFqn.getValue(property.fqn)
     }
+
+    private val GET_SCHEDULED_MESSAGES_FOR_ORG_SQL = "" +
+            "SELECT * " +
+            "FROM ${SCHEDULED_TASKS.name} " +
+            "  WHERE ${CLASS_NAME.name} = '${ScheduledMessageTask::class.java.name}' " +
+            "  AND ${CLASS_PROPERTIES.name}->'${SerializationConstants.MESSAGE}'->>'${SerializationConstants.ORGANIZATION_ID}' = ? "
+
+    private val GET_SCHEDULED_MESSAGES_FOR_ORG_AND_PHONE_SQL = "$GET_SCHEDULED_MESSAGES_FOR_ORG_SQL " +
+            " AND ${CLASS_PROPERTIES.name}->'${SerializationConstants.MESSAGE}'->>'${SerializationConstants.PHONE_NUMBER}' = ?"
 
 }
