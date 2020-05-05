@@ -17,7 +17,6 @@ import com.openlattice.codex.CodexApi.Companion.STATUS
 import com.openlattice.codex.CodexService
 import com.openlattice.codex.MessageRequest
 import com.openlattice.controllers.exceptions.ForbiddenException
-import com.openlattice.hazelcast.HazelcastQueue
 import com.openlattice.twilio.TwilioConfiguration
 import com.twilio.rest.api.v2010.account.Message
 import com.twilio.security.RequestValidator
@@ -50,7 +49,6 @@ constructor(
         private val logger = LoggerFactory.getLogger(CodexController::class.java)!!
     }
 
-    private val twilioQueue = HazelcastQueue.TWILIO.getQueue(hazelcastInstance)
     private val validator = RequestValidator(twilioConfiguration.token)
 
     @Timed
@@ -58,7 +56,7 @@ constructor(
     override fun sendOutgoingText(@RequestBody contents: MessageRequest) {
         ensureWriteAccess(AclKey(contents.messageEntitySetId))
         contents.senderId = Principals.getCurrentUser().id
-        twilioQueue.put(contents)
+        codexService.scheduleOutgoingMessage(contents)
     }
 
     @Timed

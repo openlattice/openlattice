@@ -24,6 +24,7 @@ import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.HazelcastQueue
 import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.organizations.roles.SecurePrincipalsManager
+import com.openlattice.scheduling.ScheduledTask
 import com.openlattice.twilio.TwilioConfiguration
 import com.twilio.Twilio
 import com.twilio.rest.api.v2010.account.Message
@@ -65,6 +66,7 @@ class CodexService(
 
     val appId = appService.getApp(CodexConstants.APP_NAME).id
     val typesByFqn = CodexConstants.AppType.values().associate { it to appService.getAppType(it.fqn) }
+    val scheduledTasks: IMap<UUID, ScheduledTask> = HazelcastMap.SCHEDULED_TASKS.getMap(hazelcast)
     val appConfigs: IMap<AppConfigKey, AppTypeSetting> = HazelcastMap.APP_CONFIGS.getMap(hazelcast)
     val codexMedia: IMap<UUID, Base64Media> = HazelcastMap.CODEX_MEDIA.getMap(hazelcast)
     val propertyTypesByAppType = typesByFqn.values.associate { it.id to edmManager.getPropertyTypesOfEntityType(it.entityTypeId) }
@@ -116,6 +118,14 @@ class CodexService(
             } catch (e: Exception) {
                 logger.error("Unable to send outgoing feed update message to phone number $toPhoneNumber", e)
             }
+        }
+    }
+
+    fun scheduleOutgoingMessage(messageRequest: MessageRequest) {
+        var id = UUID.randomUUID()
+        val task = ScheduledMessageTask(messageRequest)
+        while (scheduledTasks.putIfAbsent(id, ScheduledTask(id, messageRequest.scheduledDateTime, task)) != null) {
+            id = UUID.randomUUID()
         }
     }
 
