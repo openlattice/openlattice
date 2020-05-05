@@ -1,7 +1,7 @@
 package com.openlattice.hazelcast
 
 import com.openlattice.client.RetrofitFactory
-import com.openlattice.codex.ScheduledMessageTask
+import com.openlattice.codex.SendCodexMessageTask
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.notifications.sms.SubscriptionNotification
 import com.openlattice.scheduling.ScheduledTask
@@ -78,11 +78,11 @@ class InternalTestDataFactory {
         }
 
         fun scheduledTask(): ScheduledTask {
-            return ScheduledTask(UUID.randomUUID(), OffsetDateTime.now(), scheduledMessageTask())
+            return ScheduledTask(UUID.randomUUID(), OffsetDateTime.now(), sendCodexMessageTask())
         }
 
-        fun scheduledMessageTask(): ScheduledMessageTask {
-            return ScheduledMessageTask(TestDataFactory.messageRequest())
+        fun sendCodexMessageTask(): SendCodexMessageTask {
+            return SendCodexMessageTask(TestDataFactory.messageRequest())
         }
     }
 

@@ -6,7 +6,7 @@ import com.openlattice.client.serialization.SerializationConstants
 import com.openlattice.hazelcast.HazelcastQueue
 import com.openlattice.scheduling.RunnableTask
 
-class ScheduledMessageTask(
+class SendCodexMessageTask(
         @JsonProperty( SerializationConstants.MESSAGE ) val message: MessageRequest
 ) : RunnableTask {
 
