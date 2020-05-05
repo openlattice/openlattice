@@ -1,8 +1,14 @@
 package com.openlattice.organization
 
+import com.openlattice.authorization.Permission
 import com.openlattice.postgres.PostgresConnectionType
 import retrofit2.http.*
 import java.util.*
+import com.openlattice.edm.requests.MetadataUpdate
+import java.util.UUID
+import retrofit2.http.PATCH
+
+
 
 const val SERVICE = "/datastore"
 const val CONTROLLER = "/organization-database"
@@ -12,6 +18,7 @@ const val EXTERNAL_DATABASE = "/external-database"
 const val EXTERNAL_DATABASE_COLUMN = "/external-database-column"
 const val EXTERNAL_DATABASE_TABLE = "/external-database-table"
 const val DATA = "/data"
+const val AUTHORIZED = "/authorized"
 
 const val ID = "id"
 const val ID_PATH = "/{$ID}"
@@ -27,6 +34,8 @@ const val USER_ID = "userId"
 const val USER_ID_PATH = "/{$USER_ID}"
 const val CONNECTION_TYPE = "connectionType"
 const val CONNECTION_TYPE_PATH = "/{$CONNECTION_TYPE}"
+const val PERMISSION = "permission"
+const val PERMISSION_PATH = "/{$PERMISSION}"
 
 interface DatasetApi {
 
@@ -77,7 +86,20 @@ interface DatasetApi {
      * @param organizationId The organization's UUID
      */
     @GET(BASE + ID_PATH + EXTERNAL_DATABASE_TABLE + EXTERNAL_DATABASE_COLUMN)
-    fun getExternalDatabaseTablesWithColumns(@Path(ID) organizationId: UUID): Map<OrganizationExternalDatabaseTable, Set<OrganizationExternalDatabaseColumn>>
+    fun getExternalDatabaseTablesWithColumnMetadata(@Path(ID) organizationId: UUID): Set<OrganizationExternalDatabaseTableColumnsPair>
+
+    /**
+     * Gets a map of all OrganizationExternalDatabaseTable objects to
+     * OrganizationExternalDatabase columns that are contained within each table
+     * based on the specified permission
+     * @param organizationId The organization's UUID
+     * @param permission The permission used to filter results
+     */
+    @GET(BASE + ID_PATH + PERMISSION_PATH + EXTERNAL_DATABASE_TABLE + EXTERNAL_DATABASE_COLUMN + AUTHORIZED)
+    fun getAuthorizedExternalDbTablesWithColumnMetadata(
+            @Path(ID) organizationId: UUID,
+            @Path(PERMISSION) permission: Permission
+    ): Set<OrganizationExternalDatabaseTableColumnsPair>
 
     /**
      * Gets an object containing an OrganizationExternalDatabaseTable
@@ -87,7 +109,10 @@ interface DatasetApi {
      * @param tableId The id of the organization's table
      */
     @GET(BASE + ID_PATH + TABLE_ID_PATH + EXTERNAL_DATABASE_TABLE + EXTERNAL_DATABASE_COLUMN)
-    fun getExternalDatabaseTableWithColumns(@Path(ID) organizationId: UUID, @Path(TABLE_ID) tableId: UUID): OrganizationExternalDatabaseTableColumnsPair
+    fun getExternalDatabaseTableWithColumnMetadata(
+            @Path(ID) organizationId: UUID,
+            @Path(TABLE_ID) tableId: UUID
+    ): OrganizationExternalDatabaseTableColumnsPair
 
     /**
      * Gets an OrganizationExternalDatabaseTable object with
@@ -99,7 +124,11 @@ interface DatasetApi {
      * Empty values in postgres are nulls in the list.
      */
     @GET(BASE + ID_PATH + TABLE_ID_PATH + ROW_COUNT_PATH + DATA)
-    fun getExternalDatabaseTableData(@Path(ID) organizationId: UUID, @Path(TABLE_ID) tableId: UUID, @Path(ROW_COUNT) rowCount: Int): Map<UUID, List<Any?>>
+    fun getExternalDatabaseTableData(
+            @Path(ID) organizationId: UUID,
+            @Path(TABLE_ID) tableId: UUID,
+            @Path(ROW_COUNT) rowCount: Int
+    ): Map<UUID, List<Any?>>
 
     /**
      * Gets an OrganizationExternalDatabaseTable object, which represents an
@@ -109,7 +138,9 @@ interface DatasetApi {
      */
     @GET(BASE + ID_PATH + TABLE_NAME_PATH + EXTERNAL_DATABASE_TABLE)
     fun getExternalDatabaseTable(
-            @Path(ID) organizationId: UUID, @Path(TABLE_NAME) tableName: String): OrganizationExternalDatabaseTable
+            @Path(ID) organizationId: UUID,
+            @Path(TABLE_NAME) tableName: String
+    ): OrganizationExternalDatabaseTable
 
     /**
      * Gets an OrganizationExternalDatabaseColumn object, which represents a column
@@ -120,8 +151,41 @@ interface DatasetApi {
      */
     @GET(BASE + ID_PATH + TABLE_NAME_PATH + COLUMN_NAME_PATH + EXTERNAL_DATABASE_COLUMN)
     fun getExternalDatabaseColumn(
-            @Path(ID) organizationId: UUID, @Path(TABLE_NAME) tableName: String, @Path(COLUMN_NAME) columnName: String): OrganizationExternalDatabaseColumn
+            @Path(ID) organizationId: UUID,
+            @Path(TABLE_NAME) tableName: String,
+            @Path(COLUMN_NAME) columnName: String
+    ): OrganizationExternalDatabaseColumn
 
+    //update
+
+    /**
+     * Updates an OrganizationExternalDatabaseTable object's fields that are included
+     * within a [MetadataUpdate]
+     * @param organizationId The organization's UUID
+     * @param tableName The exact name of the table in the database
+     * @param metadataUpdate The object used to specify update values
+     */
+    @PATCH(BASE + ID_PATH + TABLE_NAME_PATH + EXTERNAL_DATABASE_TABLE)
+    fun updateExternalDatabaseTable(
+            @Path(ID) organizationId: UUID,
+            @Path(TABLE_NAME) tableName: String,
+            @Body metadataUpdate: MetadataUpdate)
+
+
+    /**
+     * Updates an OrganizationExternalDatabaseTable object's fields that are included
+     * within a [MetadataUpdate]
+     * @param organizationId The organization's UUID
+     * @param tableName The exact name of the table in the database
+     * @param columnName The exact name of the column in the database
+     * @param metadataUpdate The object used to specify update values
+     */
+    @PATCH(BASE + ID_PATH + TABLE_NAME_PATH + COLUMN_NAME_PATH + EXTERNAL_DATABASE_COLUMN)
+    fun updateExternalDatabaseColumn(
+            @Path(ID) organizationId: UUID,
+            @Path(TABLE_NAME) tableName: String,
+            @Path(COLUMN_NAME) columnName: String,
+            @Body metadataUpdate: MetadataUpdate)
 
     //delete
     /**

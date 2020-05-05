@@ -2,6 +2,7 @@ package com.openlattice.admin
 
 import com.openlattice.authorization.Principal
 import com.openlattice.notifications.sms.SmsEntitySetInformation
+import com.openlattice.organizations.Organization
 import retrofit2.http.*
 import java.util.*
 
@@ -20,6 +21,8 @@ const val OMIT_ENTITY_SET_ID = "omitEntitySetId"
 const val ENTITY_SETS = "/entity/sets"
 const val COUNT = "/count"
 const val PHONE = "/phone"
+const val ORGANIZATION = "/organization"
+const val USAGE = "/usage"
 
 const val ID = "id"
 const val ID_PATH = "/{${ID}}"
@@ -67,5 +70,11 @@ interface AdminApi {
             @Path(ID) organizationId: UUID,
             @Body entitySetInformationList: List<SmsEntitySetInformation>
     ): Int?
+
+    @GET( BASE + ORGANIZATION + USAGE )
+    fun getEntityCountByOrganization(): Map<UUID, Long>
+
+    @GET(BASE + ORGANIZATION)
+    fun getAllOrganizations(): Iterable<Organization>
 
 }

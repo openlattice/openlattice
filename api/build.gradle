@@ -184,6 +184,7 @@ dependencies {
     compile "commons-validator:commons-validator:${commonsvalidator_version}"
     compile "org.apache.commons:commons-text:${commonsText_version}"
 
+    compile "com.google.maps:google-maps-services:${google_maps_services}"
     compile "com.google.guava:guava:${guava_version}"
     compile "org.apache.olingo:odata-commons-api:${odata_version}"
     compile "org.apache.olingo:odata-commons-core:${odata_version}"
