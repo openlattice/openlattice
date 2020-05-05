@@ -1,10 +1,6 @@
 package com.openlattice.codex
 
-import com.twilio.rest.api.v2010.account.Message
-import retrofit2.http.Body
-import retrofit2.http.GET
-import retrofit2.http.POST
-import retrofit2.http.Path
+import retrofit2.http.*
 import java.util.*
 
 interface CodexApi {
@@ -17,9 +13,13 @@ interface CodexApi {
         const val ID_PATH = "/{$ID}"
         const val ORG_ID = "orgId"
         const val ORG_ID_PATH = "/{$ORG_ID}"
+        const val PHONE = "phone"
+        const val PHONE_PATH = "/{$PHONE}"
+
         const val INCOMING = "/incoming"
         const val MEDIA = "/media"
         const val STATUS = "/status"
+        const val SCHEDULED = "/scheduled"
     }
 
     @POST(BASE + INCOMING + ORG_ID_PATH)
@@ -31,7 +31,16 @@ interface CodexApi {
     @POST(BASE + INCOMING + ORG_ID_PATH + STATUS)
     fun listenForTextStatus()
 
-    @GET( BASE + MEDIA + ID_PATH)
+    @GET(BASE + MEDIA + ID_PATH)
     fun readAndDeleteMedia(@Path(ID) mediaId: UUID)
+
+    @GET(BASE + SCHEDULED + ORG_ID_PATH)
+    fun getUpcomingScheduledMessages(@Path(ORG_ID) organizationId: UUID): Map<UUID, MessageRequest>
+
+    @GET(BASE + SCHEDULED + ORG_ID_PATH + PHONE_PATH)
+    fun getUpcomingScheduledMessagesToPhoneNumber(@Path(ORG_ID) organizationId: UUID, @Path(PHONE) phone: String): Map<UUID, MessageRequest>
+
+    @DELETE(BASE + SCHEDULED + ID_PATH)
+    fun cancelScheduledMessage(@Path(ID) messageId: UUID)
 
 }

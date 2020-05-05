@@ -180,6 +180,7 @@ public final class SerializationConstants {
     public static final String MATCH                            = "match";
     public static final String MAX_HITS                         = "maxHits";
     public static final String MEMBERS_FIELD                    = "members";
+    public static final String MESSAGE                          = "message";
     public static final String MESSAGE_ENTITY_SET               = "messageEntitySet";
     public static final String MIN                              = "min";
     public static final String MISSING                          = "missing";
