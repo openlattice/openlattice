@@ -7,5 +7,6 @@ data class MessageRequest (
         val messageEntitySetId : UUID,
         val messageContents: String,
         val phoneNumber: String,
-        var senderId: String = ""
+        var senderId: String = "",
+        val attachment: Base64Media? = null
 )
