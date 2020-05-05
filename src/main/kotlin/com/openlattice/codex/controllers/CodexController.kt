@@ -131,11 +131,11 @@ constructor(
 
     private fun getMessagesFilteredByPermissions(messages: Map<UUID, MessageRequest>): Map<UUID, MessageRequest> {
         val entitySetIds = messages.values.map { it.messageEntitySetId }.toSet()
-        val requests = entitySetIds.associate { AclKey(it) to EnumSet.of(Permission.WRITE) }
+        val requests = entitySetIds.associate { AclKey(it) to EnumSet.of(Permission.READ) }
 
-        val authorizedEntitySetIds = authorizationManager.authorize(requests, Principals.getCurrentPrincipals()).filter {
-            it.value.getValue(Permission.WRITE)
-        }.map { it.key[0] }.toSet()
+        val authorizedEntitySetIds = authorizationManager.authorize(requests, Principals.getCurrentPrincipals()).filterValues { permissionMap ->
+            permissionMap.getValue(Permission.READ)
+        }.map { aclKeyEntry -> aclKeyEntry.key[0] }.toSet()
 
         return messages.filterValues { authorizedEntitySetIds.contains(it.messageEntitySetId) }
     }
