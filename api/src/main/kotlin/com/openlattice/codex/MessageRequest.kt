@@ -7,7 +7,7 @@ data class MessageRequest (
         val organizationId: UUID,
         val messageEntitySetId : UUID,
         val messageContents: String,
-        val phoneNumber: String,
+        val phoneNumbers: Set<String>,
         var senderId: String = "",
         val attachment: Base64Media? = null,
         val scheduledDateTime: OffsetDateTime = OffsetDateTime.now()

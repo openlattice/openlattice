@@ -791,7 +791,7 @@ public final class TestDataFactory {
                 UUID.randomUUID(),
                 UUID.randomUUID(),
                 randomAlphabetic( 20 ),
-                randomAlphanumeric( 10 ),
+                ImmutableSet.of(randomAlphanumeric( 10 )),
                 randomAlphanumeric( 15 ),
                 base64Media(),
                 OffsetDateTime.now()
