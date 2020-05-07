@@ -3,6 +3,7 @@ package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
+import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers
 import com.openlattice.codex.Base64Media
 import com.openlattice.codex.MessageRequest
 import com.openlattice.hazelcast.StreamSerializerTypeIds
@@ -18,7 +19,7 @@ class MessageRequestStreamSerializer : TestableSelfRegisteringStreamSerializer<M
             UUIDStreamSerializer.serialize(out, `object`.organizationId)
             UUIDStreamSerializer.serialize(out, `object`.messageEntitySetId)
             out.writeUTF(`object`.messageContents)
-            out.writeUTF(`object`.phoneNumber)
+            SetStreamSerializers.fastStringSetSerialize(out, `object`.phoneNumbers)
             out.writeUTF(`object`.senderId)
 
             out.writeBoolean(`object`.attachment != null)
@@ -31,12 +32,12 @@ class MessageRequestStreamSerializer : TestableSelfRegisteringStreamSerializer<M
             val organizationId = UUIDStreamSerializer.deserialize(`in`)
             val messageEntitySetId = UUIDStreamSerializer.deserialize(`in`)
             val messageContents = `in`.readUTF()
-            val phoneNumber = `in`.readUTF()
+            val phoneNumbers = SetStreamSerializers.fastStringSetDeserialize(`in`)
             val senderId = `in`.readUTF()
             val attachment: Base64Media? = if (`in`.readBoolean()) Base64MediaStreamSerializer.deserialize(`in`) else null
             val scheduledDateTime = OffsetDateTimeStreamSerializer.deserialize(`in`)
 
-            return MessageRequest(organizationId, messageEntitySetId, messageContents, phoneNumber, senderId, attachment, scheduledDateTime)
+            return MessageRequest(organizationId, messageEntitySetId, messageContents, phoneNumbers, senderId, attachment, scheduledDateTime)
         }
 
     }
