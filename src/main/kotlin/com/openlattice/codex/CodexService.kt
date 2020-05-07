@@ -25,6 +25,7 @@ import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.HazelcastQueue
 import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.organizations.roles.SecurePrincipalsManager
+import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.PostgresColumn.CLASS_NAME
 import com.openlattice.postgres.PostgresColumn.CLASS_PROPERTIES
 import com.openlattice.postgres.PostgresTable.SCHEDULED_TASKS
@@ -88,7 +89,7 @@ class CodexService(
     val feedsQueue = HazelcastQueue.TWILIO_FEED.getQueue(hazelcast)
 
     val textingExecutorWorker = textingExecutor.execute {
-        Stream.generate { twilioQueue.take() }.forEach { (organizationId, messageEntitySetId, messageContents, toPhoneNumber, senderId, attachment) ->
+        Stream.generate { twilioQueue.take() }.forEach { (organizationId, messageEntitySetId, messageContents, toPhoneNumbers, senderId, attachment) ->
 
             try {
                 //Not very efficient.
@@ -103,18 +104,21 @@ class CodexService(
 
                 val callbackPath = "${twilioConfiguration.callbackBaseUrl}${CodexApi.BASE}${CodexApi.INCOMING}/$organizationId${CodexApi.STATUS}"
 
-                val messageCreator = Message
-                        .creator(PhoneNumber(toPhoneNumber), PhoneNumber(phone), messageContents)
-                        .setStatusCallback(URI.create(callbackPath))
+                toPhoneNumbers.forEach { toPhoneNumber ->
+                    val messageCreator = Message
+                            .creator(PhoneNumber(toPhoneNumber), PhoneNumber(phone), messageContents)
+                            .setStatusCallback(URI.create(callbackPath))
 
-                if (attachment != null) {
-                    messageCreator.setMediaUrl(writeMediaAndGetPath(attachment))
+                    if (attachment != null) {
+                        messageCreator.setMediaUrl(writeMediaAndGetPath(attachment))
+                    }
+
+                    val message = messageCreator.create()
+                    processOutgoingMessage(message, organizationId, senderId, attachment)
                 }
 
-                val message = messageCreator.create()
-                processOutgoingMessage(message, organizationId, senderId, attachment)
             } catch (e: Exception) {
-                logger.error("Unable to send outgoing message to phone number $toPhoneNumber in entity set $messageEntitySetId for organization $organizationId", e)
+                logger.error("Unable to send outgoing message to phone numbers $toPhoneNumbers in entity set $messageEntitySetId for organization $organizationId", e)
             }
         }
     }
@@ -283,7 +287,7 @@ class CodexService(
     fun getScheduledMessagesForOrganizationAndPhoneNumber(organizationId: UUID, phoneNumber: String): Map<UUID, MessageRequest> {
         return BasePostgresIterable(PreparedStatementHolderSupplier(hds, GET_SCHEDULED_MESSAGES_FOR_ORG_AND_PHONE_SQL) {
             it.setString(1, organizationId.toString())
-            it.setString(2, phoneNumber)
+            it.setString(2, DataTables.quote(phoneNumber))
         }) {
             val task = ResultSetAdapters.schedulableTask(it).task as SendCodexMessageTask
             ResultSetAdapters.id(it) to task.message
@@ -365,6 +369,6 @@ class CodexService(
             "  AND ${CLASS_PROPERTIES.name}->'${SerializationConstants.MESSAGE}'->>'${SerializationConstants.ORGANIZATION_ID}' = ? "
 
     private val GET_SCHEDULED_MESSAGES_FOR_ORG_AND_PHONE_SQL = "$GET_SCHEDULED_MESSAGES_FOR_ORG_SQL " +
-            " AND ${CLASS_PROPERTIES.name}->'${SerializationConstants.MESSAGE}'->>'${SerializationConstants.PHONE_NUMBER}' = ?"
+            " AND ${CLASS_PROPERTIES.name}->'${SerializationConstants.MESSAGE}'->'${SerializationConstants.PHONE_NUMBERS}' @> ?::jsonb"
 
 }
