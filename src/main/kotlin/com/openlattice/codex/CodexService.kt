@@ -174,7 +174,7 @@ class CodexService(
         /* create entities */
 
         val contactEDK = getContactEntityDataKey(organizationId, phoneNumber)
-        val messageEDK = getMessageEntityDataKey(organizationId, dateTime, messageId, text, isOutgoing = true, media = attachments)
+        val messageEDK = getMessageEntityDataKey(organizationId, dateTime, messageId, phoneNumber, text, isOutgoing = true, media = attachments)
 
         /* create associations */
 
@@ -220,7 +220,7 @@ class CodexService(
         /* create entities */
 
         val contactEDK = getContactEntityDataKey(organizationId, phoneNumber)
-        val messageEDK = getMessageEntityDataKey(organizationId, dateTime, messageId, text, isOutgoing = false, media = finalMedia)
+        val messageEDK = getMessageEntityDataKey(organizationId, dateTime, messageId, phoneNumber, text, isOutgoing = false, media = finalMedia)
 
         /* create associations */
 
@@ -305,6 +305,7 @@ class CodexService(
     private fun getMessageEntityDataKey(organizationId: UUID,
                                         dateTime: OffsetDateTime,
                                         messageId: String,
+                                        phoneNumber: String,
                                         text: String,
                                         isOutgoing: Boolean,
                                         media: Set<Map<String, String>>
@@ -313,6 +314,7 @@ class CodexService(
         val entity = mapOf(
                 getPropertyTypeId(CodexConstants.PropertyType.ID) to setOf(messageId),
                 getPropertyTypeId(CodexConstants.PropertyType.DATE_TIME) to setOf(dateTime),
+                getPropertyTypeId(CodexConstants.PropertyType.PHONE_NUMBER) to setOf(phoneNumber),
                 getPropertyTypeId(CodexConstants.PropertyType.TEXT) to setOf(text),
                 getPropertyTypeId(CodexConstants.PropertyType.IS_OUTGOING) to setOf(isOutgoing),
                 getPropertyTypeId(CodexConstants.PropertyType.IMAGE_DATA) to media
