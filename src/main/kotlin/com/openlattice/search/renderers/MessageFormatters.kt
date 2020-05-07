@@ -11,45 +11,18 @@ private val DATE_FORMAT = "MM/dd/yyyy"
 private val TIME_FORMAT = "hh:mm a, z"
 
 private val DATE = mapOf<MessageFormatters.TimeZones, DateTimeFormatter>(
-        Pair(
-                MessageFormatters.TimeZones.PST, DateTimeFormatter.ofPattern(DATE_FORMAT).withZone(
-                TimeZone.getTimeZone("America/Los_Angeles").toZoneId()
-        )
-        ),
-        Pair(
-                MessageFormatters.TimeZones.MST,
-                DateTimeFormatter.ofPattern(DATE_FORMAT).withZone(TimeZone.getTimeZone("America/Denver").toZoneId())
-        ),
-        Pair(
-                MessageFormatters.TimeZones.CST,
-                DateTimeFormatter.ofPattern(DATE_FORMAT).withZone(TimeZone.getTimeZone("America/Chicago").toZoneId())
-        ),
-        Pair(
-                MessageFormatters.TimeZones.EST,
-                DateTimeFormatter.ofPattern(DATE_FORMAT).withZone(TimeZone.getTimeZone("America/New_York").toZoneId())
-        )
+        MessageFormatters.TimeZones.PST to DateTimeFormatter.ofPattern(DATE_FORMAT).withZone(TimeZone.getTimeZone("America/Los_Angeles").toZoneId()),
+        MessageFormatters.TimeZones.MST to DateTimeFormatter.ofPattern(DATE_FORMAT).withZone(TimeZone.getTimeZone("America/Denver").toZoneId()),
+        MessageFormatters.TimeZones.CST to DateTimeFormatter.ofPattern(DATE_FORMAT).withZone(TimeZone.getTimeZone("America/Chicago").toZoneId()),
+        MessageFormatters.TimeZones.EST to DateTimeFormatter.ofPattern(DATE_FORMAT).withZone(TimeZone.getTimeZone("America/New_York").toZoneId())
 )
 
 private val TIME = mapOf<MessageFormatters.TimeZones, DateTimeFormatter>(
-        Pair(
-                MessageFormatters.TimeZones.PST, DateTimeFormatter.ofPattern(TIME_FORMAT).withZone(
-                TimeZone.getTimeZone("America/Los_Angeles").toZoneId()
-        )
-        ),
-        Pair(
-                MessageFormatters.TimeZones.MST,
-                DateTimeFormatter.ofPattern(TIME_FORMAT).withZone(TimeZone.getTimeZone("America/Denver").toZoneId())
-        ),
-        Pair(
-                MessageFormatters.TimeZones.CST,
-                DateTimeFormatter.ofPattern(TIME_FORMAT).withZone(TimeZone.getTimeZone("America/Chicago").toZoneId())
-        ),
-        Pair(
-                MessageFormatters.TimeZones.EST,
-                DateTimeFormatter.ofPattern(TIME_FORMAT).withZone(TimeZone.getTimeZone("America/New_York").toZoneId())
-        )
+        MessageFormatters.TimeZones.PST to DateTimeFormatter.ofPattern(TIME_FORMAT).withZone(TimeZone.getTimeZone("America/Los_Angeles").toZoneId()),
+        MessageFormatters.TimeZones.MST to DateTimeFormatter.ofPattern(TIME_FORMAT).withZone(TimeZone.getTimeZone("America/Denver").toZoneId()),
+        MessageFormatters.TimeZones.CST to DateTimeFormatter.ofPattern(TIME_FORMAT).withZone(TimeZone.getTimeZone("America/Chicago").toZoneId()),
+        MessageFormatters.TimeZones.EST to DateTimeFormatter.ofPattern(TIME_FORMAT).withZone(TimeZone.getTimeZone("America/New_York").toZoneId())
 )
-
 
 class MessageFormatters {
 
