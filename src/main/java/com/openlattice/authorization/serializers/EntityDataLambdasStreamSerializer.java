@@ -20,8 +20,9 @@ import java.io.IOException;
 import java.util.UUID;
 
 public class EntityDataLambdasStreamSerializer extends Serializer<EntityDataLambdas> {
-    private static final Logger        logger = LoggerFactory.getLogger( EntityDataLambdasStreamSerializer.class );
-    private              TypeReference ref    = new TypeReference<SetMultimap<UUID, Object>>() {
+    private static final Logger                                   logger = LoggerFactory
+            .getLogger( EntityDataLambdasStreamSerializer.class );
+    private              TypeReference<SetMultimap<UUID, Object>> ref    = new TypeReference<>() {
     };
 
     private ObjectMapper mapper;
@@ -66,11 +67,12 @@ public class EntityDataLambdasStreamSerializer extends Serializer<EntityDataLamb
         EntityDataKey edk = new EntityDataKey( entitySetId, entityKeyId );
 
         int numBytes = input.readInt();
-        SetMultimap<UUID, Object> propertyValues = HashMultimap.create();
+        final SetMultimap<UUID, Object> propertyValues;
         try {
             propertyValues = mapper.readValue( input.readBytes( numBytes ), ref );
         } catch ( IOException e ) {
             logger.debug( "Unable to deserialize entity with id: {}", entityKeyId );
+            throw new IllegalStateException( "Unable to deserialize entity with id: " + entityKeyId.toString() );
         }
 
         return new EntityDataLambdas( entityTypeId, edk, Multimaps.asMap( propertyValues ) );

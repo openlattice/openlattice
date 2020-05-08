@@ -34,6 +34,7 @@ import com.openlattice.edm.processors.CreateOrUpdateAuditRecordEntitySetsProcess
 import com.openlattice.edm.processors.UpdateAuditEdgeEntitySetIdProcessor
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.organization.OrganizationExternalDatabaseTable
 import com.openlattice.organizations.Organization
 import com.openlattice.postgres.mapstores.AuditRecordEntitySetConfigurationMapstore.ANY_AUDITING_ENTITY_SETS
 import com.openlattice.postgres.mapstores.AuditRecordEntitySetConfigurationMapstore.ANY_EDGE_AUDITING_ENTITY_SETS
@@ -60,10 +61,10 @@ class AuditRecordEntitySetsManager(
         private val hazelcastInstance: HazelcastInstance
 
 ) {
-    private val securableObjectTypes = HazelcastMap.SECURABLE_OBJECT_TYPES.getMap( hazelcastInstance )
-    private val auditRecordEntitySetConfigurations = HazelcastMap.AUDIT_RECORD_ENTITY_SETS.getMap( hazelcastInstance )
+    private val securableObjectTypes = HazelcastMap.SECURABLE_OBJECT_TYPES.getMap(hazelcastInstance)
+    private val auditRecordEntitySetConfigurations = HazelcastMap.AUDIT_RECORD_ENTITY_SETS.getMap(hazelcastInstance)
 
-    private val organizations = HazelcastMap.ORGANIZATIONS.getMap( hazelcastInstance )
+    private val organizations = HazelcastMap.ORGANIZATIONS.getMap(hazelcastInstance)
 
     private val edmAuditTypes = setOf(
             AuditEventType.CREATE_PROPERTY_TYPE,
@@ -108,12 +109,20 @@ class AuditRecordEntitySetsManager(
         }
     }
 
+    fun createAuditEntitySetForExternalDBTable(table: OrganizationExternalDatabaseTable) {
+        if (auditingTypes.isAuditingInitialized()) {
+            val name = table.name
+            createAuditEntitySet(name, AclKey(table.id), setOf(), table.organizationId)
+        }
+    }
+
     private fun createAuditEntitySet(
             name: String,
             aclKey: AclKey,
             contacts: Set<String>,
             organizationId: UUID,
-            partitions: Set<Int> = LinkedHashSet()) {
+            partitions: Set<Int> = LinkedHashSet()
+    ) {
         createAuditEntitySet(
                 aclKey,
                 buildAuditEntitySet(name, aclKey, contacts, organizationId, partitions),
@@ -348,15 +357,14 @@ class AuditRecordEntitySetsManager(
         val auditingEdgeEntityTypeId = auditingTypes.auditingEdgeEntityTypeId
 
         val entitySet = EntitySet(
-                auditingEdgeEntityTypeId,
-                entitySetName,
-                "Audit edge entity set for $name ($aclKey)",
-                Optional.of("This is an automatically generated auditing entity set."),
-                contacts,
-                Optional.empty(),
-                organizationId,
-                Optional.of(EnumSet.of(EntitySetFlag.AUDIT)),
-                Optional.of(partitions as LinkedHashSet<Int>)
+                entityTypeId = auditingEdgeEntityTypeId,
+                name = entitySetName,
+                _title = "Audit edge entity set for $name ($aclKey)",
+                _description = "This is an automatically generated auditing entity set.",
+                contacts = contacts.toMutableSet(),
+                organizationId = organizationId,
+                flags = EnumSet.of(EntitySetFlag.AUDIT),
+                partitions = partitions as LinkedHashSet<Int>
         )
 
         if (partitions.isEmpty()) {
@@ -377,15 +385,14 @@ class AuditRecordEntitySetsManager(
         val auditingEntityTypeId = auditingTypes.auditingEntityTypeId
 
         val entitySet = EntitySet(
-                auditingEntityTypeId,
-                entitySetName,
-                "Audit entity set for $name ($aclKey)",
-                Optional.of("This is an automatically generated auditing entity set."),
-                contacts,
-                Optional.empty(),
-                organizationId,
-                Optional.of(EnumSet.of(EntitySetFlag.AUDIT)),
-                Optional.of(partitions as LinkedHashSet<Int>)
+                entityTypeId = auditingEntityTypeId,
+                name = entitySetName,
+                _title = "Audit entity set for $name ($aclKey)",
+                _description = "This is an automatically generated auditing entity set.",
+                contacts = contacts.toMutableSet(),
+                organizationId = organizationId,
+                flags = EnumSet.of(EntitySetFlag.AUDIT),
+                partitions = partitions as LinkedHashSet<Int>
         )
 
         if (partitions.isEmpty()) {

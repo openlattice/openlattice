@@ -9,6 +9,7 @@ import com.openlattice.analysis.SqlBindInfo
 import com.openlattice.analysis.requests.Filter
 import com.openlattice.data.DeleteType
 import com.openlattice.data.WriteEvent
+import com.openlattice.data.storage.PostgresEntitySetSizesInitializationTask.Companion.ENTITY_SET_SIZES_VIEW
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.data.util.PostgresDataHasher
 import com.openlattice.edm.type.PropertyType
@@ -18,6 +19,7 @@ import com.openlattice.postgres.PostgresTable.DATA
 import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
+import com.openlattice.postgres.streams.StatementHolderSupplier
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.apache.olingo.commons.api.edm.FullQualifiedName
@@ -41,11 +43,18 @@ const val S3_DELETE_BATCH_SIZE = 10_000
 @Service
 class PostgresEntityDataQueryService(
         private val hds: HikariDataSource,
+        private val reader: HikariDataSource,
         private val byteBlobDataManager: ByteBlobDataManager,
         protected val partitionManager: PartitionManager
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(PostgresEntityDataQueryService::class.java)
+    }
+
+    fun getEntitySetCounts(): Map<UUID, Long> {
+        return BasePostgresIterable(StatementHolderSupplier(reader, "SELECT * FROM $ENTITY_SET_SIZES_VIEW")) {
+            ResultSetAdapters.entitySetId(it) to ResultSetAdapters.count(it)
+        }.toMap()
     }
 
     @JvmOverloads
@@ -202,7 +211,7 @@ class PostgresEntityDataQueryService(
                 detailed
         )
 
-        return BasePostgresIterable(PreparedStatementHolderSupplier(hds, sql, FETCH_SIZE) { ps ->
+        return BasePostgresIterable(PreparedStatementHolderSupplier(reader, sql, FETCH_SIZE) { ps ->
             val metaBinders = linkedSetOf<SqlBinder>()
             var bindIndex = 1
             metaBinders.add(
@@ -296,16 +305,16 @@ class PostgresEntityDataQueryService(
                 .forEach { (partition, batch) ->
                     var entityBatch = batch.associate { it.key to it.value }
 
-                    /* tombstoneFn must execute on the non-JsonDeserializer-formatted version of the entities,
-                       otherwise any values replaced by an empty set will not be tombstoned. */
-                    tombstoneFn(version, entityBatch)
-
                     if (!awsPassthrough) {
                         entityBatch = entityBatch.mapValues {
-                            Multimaps.asMap(JsonDeserializer.validateFormatAndNormalize(it.value, authorizedPropertyTypes)
-                            { "Entity set $entitySetId with entity key id ${it.key}" })
+                            JsonDeserializer.validateFormatAndNormalize(
+                                    it.value,
+                                    authorizedPropertyTypes
+                            ) { "Entity set $entitySetId with entity key id ${it.key}" }
                         }
                     }
+
+                    tombstoneFn(version, entityBatch)
 
                     val upc = upsertEntities(
                             entitySetId,
@@ -1081,7 +1090,9 @@ class PostgresEntityDataQueryService(
             sqlFormat: Int,
             deleteType: DeleteType
     ): BasePostgresIterable<UUID> {
-        val partitions = PostgresArrays.createIntArray(hds.connection, partitionManager.getEntitySetPartitions(entitySetId))
+        val partitions = PostgresArrays.createIntArray(
+                hds.connection, partitionManager.getEntitySetPartitions(entitySetId)
+        )
         return BasePostgresIterable(
                 PreparedStatementHolderSupplier(
                         hds,

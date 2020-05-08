@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019. OpenLattice, Inc.
+ * Copyright (C) 2020. OpenLattice, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,15 +18,22 @@
  *
  *
  */
+package com.openlattice.users.export
 
-package com.openlattice.users
+import com.auth0.net.TelemetryInterceptor
+import okhttp3.HttpUrl
+import okhttp3.OkHttpClient
 
-import com.google.common.util.concurrent.ListeningExecutorService
-import com.openlattice.tasks.HazelcastTaskDependencies
+class Auth0ApiExtension(val domain: String, private val apiToken: String) {
 
-data class Auth0SyncTaskDependencies(
-        val users: Auth0SyncService,
-        val userListingService: UserListingService,
-        val executor: ListeningExecutorService
-) : HazelcastTaskDependencies
+    private val baseUrl = HttpUrl.parse("https://$domain")
+            ?: throw IllegalArgumentException("Domain '$domain' couldn't be parsed as an URL.")
+    private val client = OkHttpClient.Builder()
+            .addInterceptor(TelemetryInterceptor())
+            .build()
 
+
+    fun userExport(): UserExportEntity {
+        return UserExportEntity(client, baseUrl, apiToken)
+    }
+}

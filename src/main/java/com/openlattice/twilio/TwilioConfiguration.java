@@ -36,20 +36,24 @@ public class TwilioConfiguration implements Configuration {
     private static final String SID_PROPERTY        = "sid";
     private static final String TOKEN_PROPERTY      = "token";
     private static final String SHORT_CODE_PROPERTY = "shortCode";
+    private static final String CALLBACK_BASE_URL   = "callbackBaseUrl";
 
     private final String sid;
     private final String token;
     private final String shortCode;
+    private final String callbackBaseUrl;
 
     @JsonCreator
     public TwilioConfiguration(
             @JsonProperty( SID_PROPERTY ) String sid,
             @JsonProperty( TOKEN_PROPERTY ) String token,
-            @JsonProperty( SHORT_CODE_PROPERTY ) String shortCode ) {
+            @JsonProperty( SHORT_CODE_PROPERTY ) String shortCode,
+            @JsonProperty( CALLBACK_BASE_URL ) String callbackBaseUrl ) {
 
         this.sid = sid;
         this.token = token;
         this.shortCode = shortCode;
+        this.callbackBaseUrl = callbackBaseUrl;
     }
 
     @JsonProperty( SID_PROPERTY )
@@ -65,6 +69,11 @@ public class TwilioConfiguration implements Configuration {
     @JsonProperty( SHORT_CODE_PROPERTY )
     public String getShortCode() {
         return shortCode;
+    }
+
+    @JsonProperty( CALLBACK_BASE_URL )
+    public String getCallbackBaseUrl() {
+        return callbackBaseUrl;
     }
 
     @Override
