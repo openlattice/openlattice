@@ -178,7 +178,7 @@ class ExternalDatabaseManagementService(
     }
 
     fun getColumnNamesByTable(dbName: String): Map<String, Set<String>> {
-        val columnNamesByTableName = Maps.newHashMapWithExpectedSize<String, MutableSet<String>>(organizationExternalDatabaseTables.size)
+        val columnNamesByTableName = mutableMapOf<String, MutableSet<String>>()
         val sql = getCurrentTableAndColumnNamesSql()
         BasePostgresIterable(
                 StatementHolderSupplier(acm.connect(dbName), sql, FETCH_SIZE)
