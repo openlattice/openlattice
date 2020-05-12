@@ -43,6 +43,8 @@ open class ScheduledTasksMapstore(
         hds
 ) {
 
+    private val testKey = UUID.randomUUID()
+
     companion object {
         @JvmStatic
         val SCHEDULED_DATE_TIME_INDEX = "scheduledDateTime"
@@ -52,11 +54,11 @@ open class ScheduledTasksMapstore(
     }
 
     override fun generateTestKey(): UUID {
-        return UUID.randomUUID()
+        return testKey
     }
 
     override fun generateTestValue(): ScheduledTask {
-        return InternalTestDataFactory.scheduledTask()
+        return InternalTestDataFactory.scheduledTask(testKey)
     }
 
     override fun bind(ps: PreparedStatement, key: UUID, value: ScheduledTask) {
@@ -89,7 +91,7 @@ open class ScheduledTasksMapstore(
     }
 
     override fun mapToValue(rs: ResultSet): ScheduledTask {
-        return ResultSetAdapters.schedulableTask(rs)
+        return ResultSetAdapters.scheduledTask(rs)
     }
 
 

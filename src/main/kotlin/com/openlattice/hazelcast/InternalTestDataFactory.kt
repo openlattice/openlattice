@@ -77,8 +77,8 @@ class InternalTestDataFactory {
             return SubscriptionNotification(TestDataFactory.randomAlphanumeric(20), TestDataFactory.randomAlphanumeric(10))
         }
 
-        fun scheduledTask(): ScheduledTask {
-            return ScheduledTask(UUID.randomUUID(), OffsetDateTime.now(), sendCodexMessageTask())
+        fun scheduledTask(id: UUID = UUID.randomUUID()): ScheduledTask {
+            return ScheduledTask(id, OffsetDateTime.now(), sendCodexMessageTask())
         }
 
         fun sendCodexMessageTask(): SendCodexMessageTask {

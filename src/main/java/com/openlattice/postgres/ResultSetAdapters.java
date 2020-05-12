@@ -1042,7 +1042,7 @@ public final class ResultSetAdapters {
         return new IntegrationJob( name, status );
     }
 
-    public static ScheduledTask schedulableTask( ResultSet rs )
+    public static ScheduledTask scheduledTask( ResultSet rs )
             throws SQLException, ClassNotFoundException, IOException {
 
         UUID id = id( rs );
