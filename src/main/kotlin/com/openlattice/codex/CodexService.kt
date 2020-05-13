@@ -279,7 +279,7 @@ class CodexService(
         return BasePostgresIterable(PreparedStatementHolderSupplier(hds, GET_SCHEDULED_MESSAGES_FOR_ORG_SQL) {
             it.setString(1, organizationId.toString())
         }) {
-            val task = ResultSetAdapters.schedulableTask(it).task as SendCodexMessageTask
+            val task = ResultSetAdapters.scheduledTask(it).task as SendCodexMessageTask
             ResultSetAdapters.id(it) to task.message
         }.toMap()
     }
@@ -289,7 +289,7 @@ class CodexService(
             it.setString(1, organizationId.toString())
             it.setString(2, DataTables.quote(phoneNumber))
         }) {
-            val task = ResultSetAdapters.schedulableTask(it).task as SendCodexMessageTask
+            val task = ResultSetAdapters.scheduledTask(it).task as SendCodexMessageTask
             ResultSetAdapters.id(it) to task.message
         }.toMap()
     }
