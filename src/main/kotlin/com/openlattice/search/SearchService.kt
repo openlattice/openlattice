@@ -687,7 +687,7 @@ class SearchService(eventBus: EventBus, metricRegistry: MetricRegistry) {
         val entityNeighbors = Maps.newConcurrentMap<UUID, MutableList<NeighborEntityDetails>>()
 
         // create a NeighborEntityDetails object for each edge based on authorizations
-        edges.parallelStream().forEach { edge ->
+        edges.stream().forEach { edge ->
             val vertexIsSrc = entityKeyIds.contains(edge.getKey().getSrc().getEntityKeyId())
             val entityId = if ((vertexIsSrc))
                 edge.getKey().getSrc().getEntityKeyId()
