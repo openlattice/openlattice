@@ -65,6 +65,8 @@ import com.openlattice.organizations.PrincipalSet;
 import com.openlattice.requests.Request;
 import com.openlattice.requests.RequestStatus;
 import com.openlattice.requests.Status;
+import com.openlattice.scheduling.RunnableTask;
+import com.openlattice.scheduling.ScheduledTask;
 import com.openlattice.search.PersistentSearchNotificationType;
 import com.openlattice.search.requests.PersistentSearch;
 import com.openlattice.search.requests.SearchConstraints;
@@ -90,7 +92,6 @@ import java.util.stream.Stream;
 import static com.openlattice.postgres.DataTables.*;
 import static com.openlattice.postgres.PostgresArrays.getTextArray;
 import static com.openlattice.postgres.PostgresColumn.*;
-import static com.openlattice.postgres.PostgresDatatype.*;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -1039,6 +1040,21 @@ public final class ResultSetAdapters {
         String name = name( rs );
         IntegrationStatus status = IntegrationStatus.valueOf( rs.getString( STATUS.getName() ).toUpperCase() );
         return new IntegrationJob( name, status );
+    }
+
+    public static ScheduledTask scheduledTask( ResultSet rs )
+            throws SQLException, ClassNotFoundException, IOException {
+
+        UUID id = id( rs );
+        OffsetDateTime scheduledDateTime = rs.getObject( SCHEDULED_DATE.getName(), OffsetDateTime.class );
+
+        Class<? extends RunnableTask> taskClass = (Class<? extends RunnableTask>) Class
+                .forName( rs.getString( CLASS_NAME.getName() ) );
+        String taskJson = rs.getString( CLASS_PROPERTIES.getName() );
+        RunnableTask task = mapper.readValue( taskJson, taskClass );
+
+        return new ScheduledTask( id, scheduledDateTime, task );
+
     }
 
 }

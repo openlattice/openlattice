@@ -38,18 +38,8 @@ import com.openlattice.auth0.Auth0Pod;
 import com.openlattice.auth0.Auth0TokenProvider;
 import com.openlattice.auth0.AwsAuth0TokenProvider;
 import com.openlattice.authentication.Auth0Configuration;
-import com.openlattice.authorization.AceKey;
-import com.openlattice.authorization.AceValue;
-import com.openlattice.authorization.AclKey;
-import com.openlattice.authorization.PostgresUserApi;
-import com.openlattice.authorization.SecurablePrincipal;
-import com.openlattice.authorization.mapstores.PermissionMapstore;
-import com.openlattice.authorization.mapstores.PostgresCredentialMapstore;
-import com.openlattice.authorization.mapstores.PrincipalMapstore;
-import com.openlattice.authorization.mapstores.PrincipalTreesMapstore;
-import com.openlattice.authorization.mapstores.ResolvedPrincipalTreesMapLoader;
-import com.openlattice.authorization.mapstores.SecurablePrincipalsMapLoader;
-import com.openlattice.authorization.mapstores.UserMapstore;
+import com.openlattice.authorization.*;
+import com.openlattice.authorization.mapstores.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.collections.CollectionTemplateKey;
 import com.openlattice.collections.EntitySetCollection;
@@ -80,6 +70,7 @@ import com.openlattice.postgres.PostgresTableManager;
 import com.openlattice.postgres.mapstores.*;
 import com.openlattice.requests.Status;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
+import com.openlattice.scheduling.mapstores.ScheduledTasksMapstore;
 import com.openlattice.shuttle.Integration;
 import com.openlattice.shuttle.IntegrationJob;
 import com.zaxxer.hikari.HikariDataSource;
@@ -102,7 +93,7 @@ import java.util.UUID;
 public class MapstoresPod {
     private static final Logger           logger = LoggerFactory.getLogger( MapstoresPod.class );
     @Inject
-    private HikariDataSource hikariDataSource;
+    private              HikariDataSource hikariDataSource;
 
     @Inject
     private PostgresTableManager ptMgr;
@@ -297,10 +288,16 @@ public class MapstoresPod {
 
     @Bean
     public SecurablePrincipalsMapLoader securablePrincipalsMapLoader() {
-        return new SecurablePrincipalsMapLoader( );
+        return new SecurablePrincipalsMapLoader();
     }
+
     @Bean
     public ResolvedPrincipalTreesMapLoader resolvedPrincipalTreesMapLoader() {
         return new ResolvedPrincipalTreesMapLoader();
+    }
+
+    @Bean
+    public ScheduledTasksMapstore scheduledTasksMapstore() {
+        return new ScheduledTasksMapstore( hikariDataSource );
     }
 }
