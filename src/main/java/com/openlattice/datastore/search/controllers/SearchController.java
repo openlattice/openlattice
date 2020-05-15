@@ -122,16 +122,6 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
     }
 
     @RequestMapping(
-            path = { POPULAR },
-            method = RequestMethod.GET,
-            produces = { MediaType.APPLICATION_JSON_VALUE } )
-    @Override
-    @Timed
-    public Iterable<EntitySet> getPopularEntitySet() {
-        return entitySetManager.getEntitySets();
-    }
-
-    @RequestMapping(
             path = { ENTITY_SETS + START_PATH + NUM_RESULTS_PATH },
             method = RequestMethod.GET,
             produces = { MediaType.APPLICATION_JSON_VALUE } )
