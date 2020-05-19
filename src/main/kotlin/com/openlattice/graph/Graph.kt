@@ -307,9 +307,7 @@ class Graph(
         //Step 4: Compute aggregations in memory
         val entityKeyIds = entitySetIds.associateWith { Optional.empty<Set<UUID>>() }
         val propertyTypes = authorizedPropertyTypes.values.flatMap { it.values }.associateBy { it.id }
-        val propertyTypeFilters = filteredRankings.map {
-
-        }
+        
         val srcEntities = pgDataQueryService.getEntitiesWithPropertyTypeIds(
                 entityKeyIds, authorizedPropertyTypes
         ).toMap()
