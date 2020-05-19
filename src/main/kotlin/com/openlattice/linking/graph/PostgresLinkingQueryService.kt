@@ -22,8 +22,9 @@
 package com.openlattice.linking.graph
 
 import com.openlattice.data.EntityDataKey
-import com.openlattice.data.storage.*
+import com.openlattice.data.storage.createOrUpdateLinkFromEntity
 import com.openlattice.data.storage.partitions.PartitionManager
+import com.openlattice.data.storage.tombstoneLinkForEntity
 import com.openlattice.linking.EntityKeyPair
 import com.openlattice.linking.LinkingQueryService
 import com.openlattice.postgres.DataTables.*
@@ -31,7 +32,10 @@ import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.*
 import com.openlattice.postgres.ResultSetAdapters
-import com.openlattice.postgres.streams.*
+import com.openlattice.postgres.streams.BasePostgresIterable
+import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
+import com.openlattice.postgres.streams.StatementHolder
+import com.openlattice.postgres.streams.StatementHolderSupplier
 import com.zaxxer.hikari.HikariDataSource
 import java.sql.Array
 import java.sql.Connection
@@ -43,7 +47,9 @@ import java.util.*
  *
  * @param hds A hikari datasource that can be used for executing SQL.
  */
-class PostgresLinkingQueryService(private val hds: HikariDataSource, private val partitionManager: PartitionManager) : LinkingQueryService {
+class PostgresLinkingQueryService(
+        private val hds: HikariDataSource,
+        private val partitionManager: PartitionManager) : LinkingQueryService {
 
     override fun lockClustersForUpdates(clusters: Set<UUID>): Connection {
         val connection = hds.connection
