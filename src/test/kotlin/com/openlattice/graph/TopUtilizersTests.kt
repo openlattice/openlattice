@@ -28,6 +28,7 @@ import com.openlattice.analysis.requests.AggregationType
 import com.openlattice.analysis.requests.DateRangeFilter
 import com.openlattice.analysis.requests.FilteredNeighborsRankingAggregation
 import com.openlattice.analysis.requests.WeightedRankingAggregation
+import com.openlattice.data.storage.PostgresEntityDataQueryService
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.type.PropertyType
@@ -104,7 +105,8 @@ class TopUtilizersTests {
         val hds = HikariDataSource()
         val esService = Mockito.mock(EntitySetManager::class.java)
         val partitionManager = Mockito.mock(PartitionManager::class.java)
-        val graph = Graph(hds, hds, esService, partitionManager)
+        val pgDataQueryService = Mockito.mock(PostgresEntityDataQueryService::class.java)
+        val graph = Graph(hds, hds, esService, partitionManager,pgDataQueryService)
 
         val limit = 200
         val entitySetIds = setOf(

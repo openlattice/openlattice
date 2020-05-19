@@ -27,6 +27,7 @@ import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking
 import com.openlattice.analysis.requests.FilteredNeighborsRankingAggregation
 import com.openlattice.data.storage.MetadataOption
 import com.openlattice.edm.type.PropertyType
+import com.openlattice.graph.AggregationResult
 import com.openlattice.graph.core.NeighborSets
 import com.openlattice.graph.edge.Edge
 import com.openlattice.postgres.streams.BasePostgresIterable
@@ -153,7 +154,7 @@ interface DataGraphManager {
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
             linked: Boolean,
             linkingEntitySetId: Optional<UUID>
-    ): Iterable<Map<String, Any>>
+    ): AggregationResult
 
     fun getNeighborEntitySets(entitySetIds: Set<UUID>): List<NeighborSets>
 
