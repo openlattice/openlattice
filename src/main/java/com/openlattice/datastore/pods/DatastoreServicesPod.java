@@ -31,7 +31,6 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.maps.GeoApiContext;
 import com.hazelcast.core.HazelcastInstance;
 import com.kryptnostic.rhizome.configuration.ConfigurationConstants;
-import com.openlattice.analysis.AnalysisService;
 import com.openlattice.assembler.Assembler;
 import com.openlattice.assembler.AssemblerConfiguration;
 import com.openlattice.assembler.AssemblerConnectionManager;
@@ -402,11 +401,6 @@ public class DatastoreServicesPod {
     @Bean
     public SyncTicketService sts() {
         return new SyncTicketService( hazelcastInstance );
-    }
-
-    @Bean
-    public AnalysisService analysisService() {
-        return new AnalysisService();
     }
 
     @Bean
