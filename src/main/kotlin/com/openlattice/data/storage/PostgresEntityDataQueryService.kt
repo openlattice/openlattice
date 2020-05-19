@@ -76,6 +76,26 @@ class PostgresEntityDataQueryService(
         }
     }
 
+    @JvmOverloads
+    fun getLinkedEntitiesWithPropertyTypeIds(
+            entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
+            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
+            propertyTypeFilters: Map<UUID, Set<Filter>> = mapOf(),
+            metadataOptions: Set<MetadataOption> = EnumSet.noneOf(MetadataOption::class.java),
+            version: Optional<Long> = Optional.empty()
+    ): BasePostgresIterable<Pair<UUID, Map<UUID, Set<Any>>>> {
+        return getEntitySetIterable(
+                entityKeyIds,
+                authorizedPropertyTypes,
+                propertyTypeFilters,
+                metadataOptions,
+                version,
+                linking = true
+        ) { rs ->
+            getEntityPropertiesByPropertyTypeId(rs, authorizedPropertyTypes, metadataOptions, byteBlobDataManager)
+        }
+    }
+
     fun getEntitySetWithPropertyTypeIdsIterable(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,

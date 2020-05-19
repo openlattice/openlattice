@@ -21,13 +21,11 @@
 
 package com.openlattice.graph
 
+import com.dataloom.mappers.ObjectMappers
 import com.google.common.collect.HashMultimap
 import com.google.common.collect.SetMultimap
 import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking
-import com.openlattice.analysis.requests.AggregationType
-import com.openlattice.analysis.requests.DateRangeFilter
-import com.openlattice.analysis.requests.FilteredNeighborsRankingAggregation
-import com.openlattice.analysis.requests.WeightedRankingAggregation
+import com.openlattice.analysis.requests.*
 import com.openlattice.data.storage.PostgresEntityDataQueryService
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.datastore.services.EntitySetManager
@@ -101,12 +99,57 @@ class TopUtilizersTests {
         logger.info(sql)
     }
 
+    @Test
+    fun testSerializingRankingAggregation() {
+        val filteredRanking = FilteredNeighborsRankingAggregation(
+                UUID.fromString("0a48710c-3899-4743-b1f7-28c6f99aa202"),
+                UUID.fromString("c5da7a05-24a4-480e-9573-f5a118daec1a"),
+                Optional.of(
+                        mapOf(
+                                UUID.fromString("0a48710c-3899-4743-b1f7-28c6f99aa202") to setOf(
+                                        DateRangeFilter(
+                                                Optional.of(LocalDate.MIN),
+                                                Optional.of(true),
+                                                Optional.of(LocalDate.now()),
+                                                Optional.of(true)
+                                        )
+                                )
+                        )
+                ),
+                Optional.of(
+                        mapOf(
+                                UUID.fromString("c5da7a05-24a4-480e-9573-f5a118daec1a") to setOf(
+                                        DateRangeFilter(
+                                                Optional.of(LocalDate.MIN),
+                                                Optional.of(true),
+                                                Optional.of(LocalDate.now()),
+                                                Optional.of(true)
+                                        )
+                                )
+                        )
+                ),
+                mapOf(
+                        UUID.fromString("0a48710c-3899-4743-b1f7-28c6f99aa202") to //
+                                WeightedRankingAggregation(AggregationType.MAX, 3.1)
+                ),
+                mapOf(
+                        UUID.fromString("c5da7a05-24a4-480e-9573-f5a118daec1a") to
+                                WeightedRankingAggregation(AggregationType.MAX, 3.1)
+                ),
+                true,
+                Optional.empty()
+        )
+        val mapper = ObjectMappers.newJsonMapper()
+        val rankingAgg = RankingAggregation(listOf(filteredRanking))
+        logger.info( mapper.writeValueAsString(rankingAgg) )
+    }
+
     private fun buildTopEntitiesQuery(linking: Boolean): String {
         val hds = HikariDataSource()
         val esService = Mockito.mock(EntitySetManager::class.java)
         val partitionManager = Mockito.mock(PartitionManager::class.java)
         val pgDataQueryService = Mockito.mock(PostgresEntityDataQueryService::class.java)
-        val graph = Graph(hds, hds, esService, partitionManager,pgDataQueryService)
+        val graph = Graph(hds, hds, esService, partitionManager, pgDataQueryService)
 
         val limit = 200
         val entitySetIds = setOf(
@@ -153,6 +196,7 @@ class TopUtilizersTests {
                 true,
                 Optional.empty()
         )
+
 
         val associationSets: Map<UUID, Set<UUID>> =
                 mapOf(
