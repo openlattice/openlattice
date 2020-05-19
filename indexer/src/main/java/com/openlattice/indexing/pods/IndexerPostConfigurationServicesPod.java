@@ -38,6 +38,8 @@ import com.openlattice.indexing.BackgroundIndexingService;
 import com.openlattice.indexing.BackgroundLinkingIndexingService;
 import com.openlattice.indexing.IndexingService;
 import com.openlattice.indexing.configuration.IndexerConfiguration;
+import com.openlattice.linking.LinkingQueryService;
+import com.openlattice.linking.PostgresLinkingFeedbackService;
 import com.openlattice.organizations.ExternalDatabaseManagementService;
 import com.zaxxer.hikari.HikariDataSource;
 import org.springframework.context.annotation.Bean;
@@ -83,6 +85,12 @@ public class IndexerPostConfigurationServicesPod {
 
     @Inject
     private AuditRecordEntitySetsManager ares;
+
+    @Inject
+    private LinkingQueryService lqs;
+
+    @Inject
+    private PostgresLinkingFeedbackService postgresLinkingFeedbackService;
 
     @Bean
     public PartitionManager partitionManager() {
