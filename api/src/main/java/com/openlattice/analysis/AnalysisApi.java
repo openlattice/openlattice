@@ -52,7 +52,7 @@ public interface AnalysisApi {
      * @return
      */
     @POST( BASE + ENTITY_SET_ID_PATH + NUM_RESULTS_PATH )
-    Iterable<Map<String, Object>> getTopUtilizers(
+    AggregationResult getTopUtilizers(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Path( NUM_RESULTS ) int numResults,
             @Body RankingAggregation rankingAggregation,
