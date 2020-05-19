@@ -405,7 +405,11 @@ public class DatastoreServicesPod {
 
     @Bean
     public GraphService graphApi() {
-        return new Graph( hikariDataSource, rds().getReadOnlyReplica(), entitySetManager(), partitionManager() );
+        return new Graph( hikariDataSource,
+                rds().getReadOnlyReplica(),
+                entitySetManager(),
+                partitionManager(),
+                dataQueryService() );
     }
 
     @Bean
