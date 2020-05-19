@@ -21,20 +21,20 @@
 package com.openlattice.hazelcast.serializers;
 
 import com.codahale.metrics.annotation.Timed;
-import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.authorization.AclKey;
-import com.openlattice.authorization.aggregators.AuthorizationAggregator;
 import com.openlattice.authorization.Permission;
+import com.openlattice.authorization.aggregators.AuthorizationAggregator;
+import com.openlattice.hazelcast.StreamSerializerTypeIds;
+import org.springframework.stereotype.Component;
+
 import java.io.IOException;
 import java.util.EnumMap;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-import org.springframework.stereotype.Component;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -80,25 +80,19 @@ public class AuthorizationAggregatorStreamSerializer
 
     public static void serializePermissionEntry( ObjectDataOutput out, EnumMap<Permission, Boolean> object )
             throws IOException {
-        PermissionMergerStreamSerializer
-                .serialize( out, object.entrySet().stream().filter( Entry::getValue ).map(
-                        Entry::getKey )::iterator );
-        PermissionMergerStreamSerializer
-                .serialize( out, object.entrySet().stream().filter( e -> !e.getValue() ).map(
-                        Entry::getKey )::iterator );
-
+        out.writeInt( object.size() );
+        for ( Map.Entry<Permission, Boolean> entry : object.entrySet() ) {
+            PermissionStreamSerializer.serialize( out, entry.getKey() );
+            out.writeBoolean( entry.getValue() );
+        }
     }
 
     public static EnumMap<Permission, Boolean> deserializePermissionEntry( ObjectDataInput in ) throws IOException {
-        EnumMap<Permission, Boolean> pMap = new EnumMap<>( Permission.class );
-        EnumSet<Permission> truePermissions = PermissionMergerStreamSerializer.deserialize( in );
-        EnumSet<Permission> falsePermissions = PermissionMergerStreamSerializer.deserialize( in );
-        for ( Permission p : truePermissions ) {
-            pMap.put( p, true );
-        }
+        int size = in.readInt();
 
-        for ( Permission p : falsePermissions ) {
-            pMap.put( p, false );
+        EnumMap<Permission, Boolean> pMap = new EnumMap<>( Permission.class );
+        for ( int i = 0; i < size; i++ ) {
+            pMap.put( PermissionStreamSerializer.deserialize( in ), in.readBoolean() );
         }
 
         return pMap;
