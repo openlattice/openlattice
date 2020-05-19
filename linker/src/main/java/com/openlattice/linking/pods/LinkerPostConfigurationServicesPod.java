@@ -24,6 +24,7 @@ import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.health.HealthCheckRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.geekbeast.hazelcast.HazelcastClientProvider;
+import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
 import com.openlattice.authorization.AuthorizationManager;
@@ -36,11 +37,9 @@ import com.openlattice.data.storage.IndexingMetadataManager;
 import com.openlattice.data.storage.PostgresEntityDataQueryService;
 import com.openlattice.data.storage.PostgresEntityDatastore;
 import com.openlattice.data.storage.partitions.PartitionManager;
-import com.openlattice.datastore.configuration.ReadonlyDatasourceSupplier;
 import com.openlattice.datastore.pods.ByteBlobServicePod;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.EntitySetManager;
-import com.openlattice.datastore.services.EntitySetService;
 import com.openlattice.edm.PostgresEdmManager;
 import com.openlattice.ids.HazelcastIdGenerationService;
 import com.openlattice.linking.BackgroundLinkingService;
@@ -56,7 +55,6 @@ import com.openlattice.linking.PostgresLinkingLogService;
 import com.openlattice.linking.blocking.ElasticsearchBlocker;
 import com.openlattice.linking.controllers.RealtimeLinkingController;
 import com.openlattice.linking.graph.PostgresLinkingQueryService;
-import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -73,7 +71,7 @@ public class LinkerPostConfigurationServicesPod {
     private static final Logger            logger = LoggerFactory.getLogger( LinkerPostConfigurationServicesPod.class );
 
     @Inject
-    private              HazelcastInstance hazelcastInstance;
+    private HazelcastInstance hazelcastInstance;
 
     @Inject
     private LinkingConfiguration linkingConfiguration;
@@ -118,6 +116,9 @@ public class LinkerPostConfigurationServicesPod {
     private ObjectMapper defaultObjectMapper;
 
     @Inject
+    private EventBus eventBus;
+
+    @Inject
     private MetricRegistry metricRegistry;
 
     @Inject
@@ -136,24 +137,6 @@ public class LinkerPostConfigurationServicesPod {
                 idGeneration(),
                 partitionManager );
     }
-//
-//    @Bean
-//    public ReadonlyDatasourceSupplier rds() {
-//        final var pgConfig = datastoreConfiguration.getReadOnlyReplica();
-//        final HikariDataSource reader;
-//
-//        if ( pgConfig.isEmpty() ) {
-//            reader = hikariDataSource;
-//        } else {
-//            HikariConfig hc = new HikariConfig( pgConfig );
-//            logger.info( "Read only replica JDBC URL = {}", hc.getJdbcUrl() );
-//            reader = new HikariDataSource( hc );
-//            reader.setHealthCheckRegistry( healthCheckRegistry );
-//            reader.setMetricRegistry( metricRegistry );
-//        }
-//
-//        return new ReadonlyDatasourceSupplier( reader );
-//    }
 
     @Bean
     public PostgresEntityDataQueryService dataQueryService() {
@@ -161,7 +144,6 @@ public class LinkerPostConfigurationServicesPod {
         return new PostgresEntityDataQueryService(
                 hikariDataSource,
                 hikariDataSource,
-//                rds().getReadOnlyReplica(),
                 byteBlobDataManager,
                 partitionManager
         );
@@ -188,7 +170,15 @@ public class LinkerPostConfigurationServicesPod {
 
     @Bean
     public EntityDatastore entityDatastore() {
-        return new PostgresEntityDatastore( dataQueryService(), pgEdmManager, entitySetManager, metricRegistry );
+        return new PostgresEntityDatastore(
+                dataQueryService(),
+                pgEdmManager,
+                entitySetManager,
+                metricRegistry,
+                eventBus,
+                postgresLinkingFeedbackQueryService(),
+                lqs()
+        );
     }
 
     @Bean
