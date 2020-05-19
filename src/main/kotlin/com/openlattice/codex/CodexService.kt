@@ -11,6 +11,7 @@ import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
 import com.openlattice.apps.AppConfigKey
 import com.openlattice.apps.AppTypeSetting
+import com.openlattice.client.serialization.SerializationConstants
 import com.openlattice.codex.controllers.CodexConstants
 import com.openlattice.controllers.exceptions.BadRequestException
 import com.openlattice.data.DataEdge
@@ -24,10 +25,19 @@ import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.HazelcastQueue
 import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.organizations.roles.SecurePrincipalsManager
+import com.openlattice.postgres.DataTables
+import com.openlattice.postgres.PostgresColumn.CLASS_NAME
+import com.openlattice.postgres.PostgresColumn.CLASS_PROPERTIES
+import com.openlattice.postgres.PostgresTable.SCHEDULED_TASKS
+import com.openlattice.postgres.ResultSetAdapters
+import com.openlattice.postgres.streams.BasePostgresIterable
+import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
+import com.openlattice.scheduling.ScheduledTask
 import com.openlattice.twilio.TwilioConfiguration
 import com.twilio.Twilio
 import com.twilio.rest.api.v2010.account.Message
 import com.twilio.type.PhoneNumber
+import com.zaxxer.hikari.HikariDataSource
 import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -52,7 +62,8 @@ class CodexService(
         val entityKeyIdService: EntityKeyIdService,
         val principalsManager: SecurePrincipalsManager,
         val organizations: HazelcastOrganizationService,
-        val executor: ListeningExecutorService ) {
+        val executor: ListeningExecutorService,
+        val hds: HikariDataSource) {
 
     companion object {
         private val logger = LoggerFactory.getLogger(CodexService::class.java)
@@ -65,6 +76,7 @@ class CodexService(
 
     val appId = appService.getApp(CodexConstants.APP_NAME).id
     val typesByFqn = CodexConstants.AppType.values().associate { it to appService.getAppType(it.fqn) }
+    val scheduledTasks: IMap<UUID, ScheduledTask> = HazelcastMap.SCHEDULED_TASKS.getMap(hazelcast)
     val appConfigs: IMap<AppConfigKey, AppTypeSetting> = HazelcastMap.APP_CONFIGS.getMap(hazelcast)
     val codexMedia: IMap<UUID, Base64Media> = HazelcastMap.CODEX_MEDIA.getMap(hazelcast)
     val propertyTypesByAppType = typesByFqn.values.associate { it.id to edmManager.getPropertyTypesOfEntityType(it.entityTypeId) }
@@ -77,7 +89,7 @@ class CodexService(
     val feedsQueue = HazelcastQueue.TWILIO_FEED.getQueue(hazelcast)
 
     val textingExecutorWorker = textingExecutor.execute {
-        Stream.generate { twilioQueue.take() }.forEach { (organizationId, messageEntitySetId, messageContents, toPhoneNumber, senderId, attachment) ->
+        Stream.generate { twilioQueue.take() }.forEach { (organizationId, messageEntitySetId, messageContents, toPhoneNumbers, senderId, attachment) ->
 
             try {
                 //Not very efficient.
@@ -92,18 +104,21 @@ class CodexService(
 
                 val callbackPath = "${twilioConfiguration.callbackBaseUrl}${CodexApi.BASE}${CodexApi.INCOMING}/$organizationId${CodexApi.STATUS}"
 
-                val messageCreator = Message
-                        .creator(PhoneNumber(toPhoneNumber), PhoneNumber(phone), messageContents)
-                        .setStatusCallback(URI.create(callbackPath))
+                toPhoneNumbers.forEach { toPhoneNumber ->
+                    val messageCreator = Message
+                            .creator(PhoneNumber(toPhoneNumber), PhoneNumber(phone), messageContents)
+                            .setStatusCallback(URI.create(callbackPath))
 
-                if (attachment != null) {
-                    messageCreator.setMediaUrl(writeMediaAndGetPath(attachment))
+                    if (attachment != null) {
+                        messageCreator.setMediaUrl(writeMediaAndGetPath(attachment))
+                    }
+
+                    val message = messageCreator.create()
+                    processOutgoingMessage(message, organizationId, senderId, attachment)
                 }
 
-                val message = messageCreator.create()
-                processOutgoingMessage(message, organizationId, senderId, attachment)
             } catch (e: Exception) {
-                logger.error("Unable to send outgoing message to phone number $toPhoneNumber in entity set $messageEntitySetId for organization $organizationId", e)
+                logger.error("Unable to send outgoing message to phone numbers $toPhoneNumbers in entity set $messageEntitySetId for organization $organizationId", e)
             }
         }
     }
@@ -116,6 +131,14 @@ class CodexService(
             } catch (e: Exception) {
                 logger.error("Unable to send outgoing feed update message to phone number $toPhoneNumber", e)
             }
+        }
+    }
+
+    fun scheduleOutgoingMessage(messageRequest: MessageRequest) {
+        var id = UUID.randomUUID()
+        val task = SendCodexMessageTask(messageRequest)
+        while (scheduledTasks.putIfAbsent(id, ScheduledTask(id, messageRequest.scheduledDateTime, task)) != null) {
+            id = UUID.randomUUID()
         }
     }
 
@@ -151,7 +174,7 @@ class CodexService(
         /* create entities */
 
         val contactEDK = getContactEntityDataKey(organizationId, phoneNumber)
-        val messageEDK = getMessageEntityDataKey(organizationId, dateTime, messageId, text, isOutgoing = true, media = attachments)
+        val messageEDK = getMessageEntityDataKey(organizationId, dateTime, messageId, phoneNumber, text, isOutgoing = true, media = attachments)
 
         /* create associations */
 
@@ -197,7 +220,7 @@ class CodexService(
         /* create entities */
 
         val contactEDK = getContactEntityDataKey(organizationId, phoneNumber)
-        val messageEDK = getMessageEntityDataKey(organizationId, dateTime, messageId, text, isOutgoing = false, media = finalMedia )
+        val messageEDK = getMessageEntityDataKey(organizationId, dateTime, messageId, phoneNumber, text, isOutgoing = false, media = finalMedia)
 
         /* create associations */
 
@@ -252,9 +275,37 @@ class CodexService(
         return EntityDataKey(entitySetId, entityKeyId)
     }
 
+    fun getScheduledMessagesForOrganization(organizationId: UUID): Map<UUID, MessageRequest> {
+        return BasePostgresIterable(PreparedStatementHolderSupplier(hds, GET_SCHEDULED_MESSAGES_FOR_ORG_SQL) {
+            it.setString(1, organizationId.toString())
+        }) {
+            val task = ResultSetAdapters.scheduledTask(it).task as SendCodexMessageTask
+            ResultSetAdapters.id(it) to task.message
+        }.toMap()
+    }
+
+    fun getScheduledMessagesForOrganizationAndPhoneNumber(organizationId: UUID, phoneNumber: String): Map<UUID, MessageRequest> {
+        return BasePostgresIterable(PreparedStatementHolderSupplier(hds, GET_SCHEDULED_MESSAGES_FOR_ORG_AND_PHONE_SQL) {
+            it.setString(1, organizationId.toString())
+            it.setString(2, DataTables.quote(phoneNumber))
+        }) {
+            val task = ResultSetAdapters.scheduledTask(it).task as SendCodexMessageTask
+            ResultSetAdapters.id(it) to task.message
+        }.toMap()
+    }
+
+    fun getMessageRequest(scheduledTaskId: UUID): MessageRequest {
+        return (scheduledTasks.getValue(scheduledTaskId).task as SendCodexMessageTask).message
+    }
+
+    fun deleteScheduledTask(scheduledTaskId: UUID) {
+        scheduledTasks.delete(scheduledTaskId)
+    }
+
     private fun getMessageEntityDataKey(organizationId: UUID,
                                         dateTime: OffsetDateTime,
                                         messageId: String,
+                                        phoneNumber: String,
                                         text: String,
                                         isOutgoing: Boolean,
                                         media: Set<Map<String, String>>
@@ -263,6 +314,7 @@ class CodexService(
         val entity = mapOf(
                 getPropertyTypeId(CodexConstants.PropertyType.ID) to setOf(messageId),
                 getPropertyTypeId(CodexConstants.PropertyType.DATE_TIME) to setOf(dateTime),
+                getPropertyTypeId(CodexConstants.PropertyType.PHONE_NUMBER) to setOf(phoneNumber),
                 getPropertyTypeId(CodexConstants.PropertyType.TEXT) to setOf(text),
                 getPropertyTypeId(CodexConstants.PropertyType.IS_OUTGOING) to setOf(isOutgoing),
                 getPropertyTypeId(CodexConstants.PropertyType.IMAGE_DATA) to media
@@ -311,5 +363,14 @@ class CodexService(
     private fun getPropertyTypeId(property: CodexConstants.PropertyType): UUID {
         return propertyTypesByFqn.getValue(property.fqn)
     }
+
+    private val GET_SCHEDULED_MESSAGES_FOR_ORG_SQL = "" +
+            "SELECT * " +
+            "FROM ${SCHEDULED_TASKS.name} " +
+            "  WHERE ${CLASS_NAME.name} = '${SendCodexMessageTask::class.java.name}' " +
+            "  AND ${CLASS_PROPERTIES.name}->'${SerializationConstants.MESSAGE}'->>'${SerializationConstants.ORGANIZATION_ID}' = ? "
+
+    private val GET_SCHEDULED_MESSAGES_FOR_ORG_AND_PHONE_SQL = "$GET_SCHEDULED_MESSAGES_FOR_ORG_SQL " +
+            " AND ${CLASS_PROPERTIES.name}->'${SerializationConstants.MESSAGE}'->'${SerializationConstants.PHONE_NUMBERS}' @> ?::jsonb"
 
 }

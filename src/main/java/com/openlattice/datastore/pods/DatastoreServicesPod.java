@@ -635,7 +635,8 @@ public class DatastoreServicesPod {
                 idService(),
                 principalService(),
                 organizationsManager(),
-                executor
+                executor,
+                hikariDataSource
         );
     }
 
