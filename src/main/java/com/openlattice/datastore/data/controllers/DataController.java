@@ -180,41 +180,40 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     private EntitySetData<FullQualifiedName> loadEntitySetData(
             UUID entitySetId,
             EntitySetSelection selection ) {
-        if ( authz.checkIfHasPermissions(
+        if ( !authz.checkIfHasPermissions(
                 new AclKey( entitySetId ), Principals.getCurrentPrincipals(), READ_PERMISSION ) ) {
-            final var entitySet = entitySetService.getEntitySet( entitySetId );
-            checkState( entitySet != null, "Could not find entity set with id: %s", entitySetId );
-
-            Optional<Set<UUID>> entityKeyIds = ( selection == null ) ? Optional.empty() : selection.getEntityKeyIds();
-            final var selectedProperties = getSelectedProperties( entitySetId, selection );
-
-            final var normalEntitySetIds = ( entitySet.isLinking() )
-                    ? Sets.newHashSet( entitySet.getLinkedEntitySets() )
-                    : Set.of( entitySetId );
-
-            final Map<UUID, Optional<Set<UUID>>> entityKeyIdsOfEntitySets = normalEntitySetIds.stream()
-                    .collect( Collectors.toMap( esId -> esId, esId -> entityKeyIds ) );
-            final var authorizedPropertyTypesOfEntitySets = getAuthorizedPropertyTypesForEntitySetRead(
-                    entitySet, normalEntitySetIds, selectedProperties
-            );
-
-            final var authorizedPropertyTypes = authorizedPropertyTypesOfEntitySets.values().iterator().next();
-            final LinkedHashSet<String> orderedPropertyNames = new LinkedHashSet<>( authorizedPropertyTypes.size() );
-            selectedProperties.stream()
-                    .filter( authorizedPropertyTypes::containsKey )
-                    .map( authorizedPropertyTypes::get )
-                    .map( pt -> pt.getType().getFullQualifiedNameAsString() )
-                    .forEach( orderedPropertyNames::add );
-
-            return dgm.getEntitySetData(
-                    entityKeyIdsOfEntitySets,
-                    orderedPropertyNames,
-                    authorizedPropertyTypesOfEntitySets,
-                    entitySet.isLinking() );
-        } else {
             throw new ForbiddenException( "Insufficient permissions to read the entity set " + entitySetId
                     + " or it doesn't exists." );
         }
+        final var entitySet = entitySetService.getEntitySet( entitySetId );
+        checkState( entitySet != null, "Could not find entity set with id: %s", entitySetId );
+
+        Optional<Set<UUID>> entityKeyIds = ( selection == null ) ? Optional.empty() : selection.getEntityKeyIds();
+        final var selectedProperties = getSelectedProperties( entitySetId, selection );
+
+        final var normalEntitySetIds = ( entitySet.isLinking() )
+                ? Sets.newHashSet( entitySet.getLinkedEntitySets() )
+                : Set.of( entitySetId );
+
+        final Map<UUID, Optional<Set<UUID>>> entityKeyIdsOfEntitySets = normalEntitySetIds.stream()
+                .collect( Collectors.toMap( esId -> esId, esId -> entityKeyIds ) );
+        final var authorizedPropertyTypesOfEntitySets = getAuthorizedPropertyTypesForEntitySetRead(
+                entitySet, normalEntitySetIds, selectedProperties
+        );
+
+        final var authorizedPropertyTypes = authorizedPropertyTypesOfEntitySets.values().iterator().next();
+        final LinkedHashSet<String> orderedPropertyNames = new LinkedHashSet<>( authorizedPropertyTypes.size() );
+        selectedProperties.stream()
+                .filter( authorizedPropertyTypes::containsKey )
+                .map( authorizedPropertyTypes::get )
+                .map( pt -> pt.getType().getFullQualifiedNameAsString() )
+                .forEach( orderedPropertyNames::add );
+
+        return dgm.getEntitySetData(
+                entityKeyIdsOfEntitySets,
+                orderedPropertyNames,
+                authorizedPropertyTypesOfEntitySets,
+                entitySet.isLinking() );
     }
 
     private Set<UUID> getSelectedProperties( UUID entitySetId, EntitySetSelection selection ) {
