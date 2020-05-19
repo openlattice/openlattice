@@ -14,7 +14,6 @@ import com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi
 import com.openlattice.data.DeleteType
-import com.openlattice.data.EntityKeyIdService
 import com.openlattice.data.events.EntitiesDeletedEvent
 import com.openlattice.data.events.EntitiesUpsertedEvent
 import com.openlattice.data.requests.NeighborEntityDetails
@@ -53,7 +52,9 @@ import kotlin.streams.toList
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 @Service
-class SearchService(eventBus: EventBus, metricRegistry: MetricRegistry) {
+class SearchService(
+        val eventBus: EventBus,
+        val metricRegistry: MetricRegistry) {
 
     companion object {
         private val logger = LoggerFactory.getLogger(SearchService::class.java)
@@ -65,13 +66,7 @@ class SearchService(eventBus: EventBus, metricRegistry: MetricRegistry) {
     }
 
     @Inject
-    private lateinit var eventBus: EventBus
-
-    @Inject
     private lateinit var authorizations: AuthorizationManager
-
-    @Inject
-    private lateinit var securableObjectTypes: SecurableObjectResolveTypeService
 
     @Inject
     private lateinit var elasticsearchApi: ConductorElasticsearchApi
@@ -87,9 +82,6 @@ class SearchService(eventBus: EventBus, metricRegistry: MetricRegistry) {
 
     @Inject
     private lateinit var dataManager: EntityDatastore
-
-    @Inject
-    private lateinit var entityKeyService: EntityKeyIdService
 
     @Inject
     private lateinit var indexingMetadataManager: IndexingMetadataManager
@@ -130,16 +122,19 @@ class SearchService(eventBus: EventBus, metricRegistry: MetricRegistry) {
                         SecurableObjectType.EntitySet,
                         READ_PERMISSION
                 ).collect(Collectors.toSet())
+
         return if (authorizedEntitySetIds.size == 0) {
             SearchResult(0, arrayListOf())
-        } else elasticsearchApi.executeEntitySetMetadataSearch(
-                optionalQuery,
-                optionalEntityType,
-                optionalPropertyTypes,
-                authorizedEntitySetIds,
-                start,
-                maxHits
-        )
+        } else {
+            elasticsearchApi.executeEntitySetMetadataSearch(
+                    optionalQuery,
+                    optionalEntityType,
+                    optionalPropertyTypes,
+                    authorizedEntitySetIds,
+                    start,
+                    maxHits
+            )
+        }
 
     }
 
@@ -150,20 +145,22 @@ class SearchService(eventBus: EventBus, metricRegistry: MetricRegistry) {
             maxHits: Int
     ): SearchResult {
 
-        val authorizedEntitySetCollectionIds = authorizations
-                .getAuthorizedObjectsOfType(
-                        Principals.getCurrentPrincipals(),
-                        SecurableObjectType.EntitySetCollection,
-                        READ_PERMISSION
-                ).collect(Collectors.toSet())
+        val authorizedEntitySetCollectionIds = authorizations.getAuthorizedObjectsOfType(
+                Principals.getCurrentPrincipals(),
+                SecurableObjectType.EntitySetCollection,
+                READ_PERMISSION
+        ).collect(Collectors.toSet())
+
         return if (authorizedEntitySetCollectionIds.size == 0) {
             SearchResult(0, Lists.newArrayList())
-        } else elasticsearchApi.executeEntitySetCollectionSearch(
-                searchTerm,
-                authorizedEntitySetCollectionIds,
-                start,
-                maxHits
-        )
+        } else {
+            elasticsearchApi.executeEntitySetCollectionSearch(
+                    searchTerm,
+                    authorizedEntitySetCollectionIds,
+                    start,
+                    maxHits
+            )
+        }
 
     }
 
@@ -226,21 +223,21 @@ class SearchService(eventBus: EventBus, metricRegistry: MetricRegistry) {
     @Timed
     @Subscribe
     fun createEntitySet(event: EntitySetCreatedEvent) {
-        val entityType = dataModelService!!.getEntityType(event.entitySet.entityTypeId)
-        elasticsearchApi!!.saveEntitySetToElasticsearch(entityType, event.entitySet, event.propertyTypes)
+        val entityType = dataModelService.getEntityType(event.entitySet.entityTypeId)
+        elasticsearchApi.saveEntitySetToElasticsearch(entityType, event.entitySet, event.propertyTypes)
     }
 
     @Timed
     @Subscribe
     fun deleteEntitySet(event: EntitySetDeletedEvent) {
-        elasticsearchApi!!.deleteEntitySet(event.entitySetId, event.entityTypeId)
+        elasticsearchApi.deleteEntitySet(event.entitySetId, event.entityTypeId)
     }
 
     @Subscribe
     fun deleteEntities(event: EntitiesDeletedEvent) {
         val deleteEntitiesContext = deleteEntitiesTimer.time()
-        val entityTypeId = entitySetService!!.getEntityTypeByEntitySetId(event.entitySetId).id
-        val entitiesDeleted = elasticsearchApi!!.deleteEntityDataBulk(entityTypeId, event.entityKeyIds)
+        val entityTypeId = entitySetService.getEntityTypeByEntitySetId(event.entitySetId).id
+        val entitiesDeleted = elasticsearchApi.deleteEntityDataBulk(entityTypeId, event.entityKeyIds)
         deleteEntitiesContext.stop()
 
         if (entitiesDeleted) {
