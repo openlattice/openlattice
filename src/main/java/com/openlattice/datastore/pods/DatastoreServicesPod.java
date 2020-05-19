@@ -20,8 +20,6 @@
 
 package com.openlattice.datastore.pods;
 
-import static com.openlattice.datastore.util.Util.returnAndLog;
-
 import com.auth0.client.mgmt.ManagementAPI;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.health.HealthCheckRegistry;
@@ -33,7 +31,6 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.maps.GeoApiContext;
 import com.hazelcast.core.HazelcastInstance;
 import com.kryptnostic.rhizome.configuration.ConfigurationConstants;
-import com.openlattice.analysis.AnalysisService;
 import com.openlattice.assembler.Assembler;
 import com.openlattice.assembler.AssemblerConfiguration;
 import com.openlattice.assembler.AssemblerConnectionManager;
@@ -130,8 +127,6 @@ import com.openlattice.twilio.pods.TwilioConfigurationPod;
 import com.openlattice.users.Auth0SyncService;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
-import javax.annotation.PostConstruct;
-import javax.inject.Inject;
 import org.jdbi.v3.core.Jdbi;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -139,6 +134,11 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Profile;
+
+import javax.annotation.PostConstruct;
+import javax.inject.Inject;
+
+import static com.openlattice.datastore.util.Util.returnAndLog;
 
 @Configuration
 @Import( {
@@ -315,7 +315,15 @@ public class DatastoreServicesPod {
 
     @Bean
     public EntityDatastore entityDatastore() {
-        return new PostgresEntityDatastore( dataQueryService(), pgEdmManager(), entitySetManager(), metricRegistry );
+        return new PostgresEntityDatastore(
+                dataQueryService(),
+                pgEdmManager(),
+                entitySetManager(),
+                metricRegistry,
+                eventBus,
+                postgresLinkingFeedbackQueryService(),
+                lqs()
+        );
     }
 
     @Bean
@@ -393,11 +401,6 @@ public class DatastoreServicesPod {
     @Bean
     public SyncTicketService sts() {
         return new SyncTicketService( hazelcastInstance );
-    }
-
-    @Bean
-    public AnalysisService analysisService() {
-        return new AnalysisService();
     }
 
     @Bean
@@ -492,7 +495,6 @@ public class DatastoreServicesPod {
 
     @Bean
     public PostgresEntityDataQueryService dataQueryService() {
-
         return new PostgresEntityDataQueryService(
                 hikariDataSource,
                 rds().getReadOnlyReplica(),
