@@ -21,6 +21,7 @@
 
 package com.openlattice.data
 
+import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Stopwatch
 import com.google.common.collect.ListMultimap
 import com.google.common.collect.Multimaps
@@ -336,7 +337,7 @@ class DataGraphService(
     }
 
     /* Top utilizers */
-
+    @Timed
     override fun getFilteredRankings(
             entitySetIds: Set<UUID>,
             numResults: Int,

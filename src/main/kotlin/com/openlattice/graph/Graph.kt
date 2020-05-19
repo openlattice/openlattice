@@ -21,6 +21,7 @@
 
 package com.openlattice.graph
 
+import com.codahale.metrics.annotation.Timed
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.collect.ImmutableList
 import com.google.common.collect.Multimaps
@@ -290,6 +291,7 @@ class Graph(
      * 3. Apply relevant filters for associations with an innner join.
      *
      */
+    @Timed
     override fun computeTopEntities(
             limit: Int,
             entitySetIds: Set<UUID>,
