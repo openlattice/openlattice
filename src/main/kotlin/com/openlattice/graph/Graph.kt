@@ -333,10 +333,13 @@ class Graph(
             val assocEntitySetIds = authorizedFilteredNeighborsRanking.associationSets.keys
             val dstEntitySetIds = authorizedFilteredNeighborsRanking.entitySets.keys
 
+
+            val dst = authorizedFilteredNeighborsRanking.filteredNeighborsRanking.dst
+
             var neighborsFilter = EntityNeighborsFilter(
                     srcEntities.keys,
-                    Optional.of(entitySetIds),
-                    Optional.of(dstEntitySetIds),
+                    if (dst) Optional.of(entitySetIds) else Optional.of(entitySetIds),
+                    if (dst) Optional.of(dstEntitySetIds) else Optional.of(entitySetIds),
                     Optional.of(assocEntitySetIds)
             )
 
@@ -424,7 +427,8 @@ class Graph(
     ): List<FilteredNeighborsRankingAggregationResult> {
         //We need to compute aggregation over all values based
         return srcEntities.map { (entityKeyId, _) ->
-            val neighbors = edges.getValue(entityKeyId)
+            val neighbors = edges[entityKeyId] ?: return listOf()
+
             val (associationsEntityKeyIds, neighborEntityKeyIds) = neighbors.unzip()
 
             val associationAggregationResult = computeAggregationSlice(
