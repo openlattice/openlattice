@@ -8,5 +8,5 @@ import java.util.*
  */
 data class EntityAggregationResult(
         val scorable: Map<UUID, Double>,
-        val passthrough: Map<UUID,Any?>
+        val comparable: Map<UUID,Comparable<*>>
 )

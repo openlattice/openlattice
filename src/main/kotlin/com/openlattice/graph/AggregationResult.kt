@@ -1,5 +1,6 @@
 package com.openlattice.graph
 
+import com.openlattice.graph.processing.NeighborhoodAggregationResult
 import java.util.*
 
 /**
@@ -7,8 +8,8 @@ import java.util.*
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 data class AggregationResult(
-        val entityKeyId: UUID,
-        val entity: Map<UUID, Set<Any>>,
+        val rankings: List<NeighborhoodAggregationResult>,
+        val entities: Map<UUID,Map<UUID, Set<Any>>>,
         val associations: Map<UUID, Map<UUID, Set<Any>>>,
         val neighbors: Map<UUID, Map<UUID,Set<Any>>>,
         val associationScores: Map<UUID, Double>,
