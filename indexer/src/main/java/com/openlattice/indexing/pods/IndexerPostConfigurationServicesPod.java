@@ -32,11 +32,14 @@ import com.openlattice.data.storage.EntityDatastore;
 import com.openlattice.data.storage.IndexingMetadataManager;
 import com.openlattice.data.storage.PostgresEntityDataQueryService;
 import com.openlattice.data.storage.partitions.PartitionManager;
-import com.openlattice.indexing.*;
+import com.openlattice.indexing.BackgroundExpiredDataDeletionService;
+import com.openlattice.indexing.BackgroundIndexedEntitiesDeletionService;
+import com.openlattice.indexing.BackgroundIndexingService;
+import com.openlattice.indexing.BackgroundLinkingIndexingService;
+import com.openlattice.indexing.IndexingService;
 import com.openlattice.indexing.configuration.IndexerConfiguration;
 import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.linking.PostgresLinkingFeedbackService;
-import com.openlattice.linking.graph.PostgresLinkingQueryService;
 import com.openlattice.organizations.ExternalDatabaseManagementService;
 import com.zaxxer.hikari.HikariDataSource;
 import org.springframework.context.annotation.Bean;
@@ -83,19 +86,15 @@ public class IndexerPostConfigurationServicesPod {
     @Inject
     private AuditRecordEntitySetsManager ares;
 
+    @Inject
+    private LinkingQueryService lqs;
+
+    @Inject
+    private PostgresLinkingFeedbackService postgresLinkingFeedbackService;
+
     @Bean
     public PartitionManager partitionManager() {
         return new PartitionManager( hazelcastInstance, hikariDataSource );
-    }
-
-    @Bean
-    public LinkingQueryService lqs() {
-        return new PostgresLinkingQueryService( hikariDataSource, partitionManager() );
-    }
-
-    @Bean
-    public PostgresLinkingFeedbackService postgresLinkingFeedbackService() {
-        return new PostgresLinkingFeedbackService( hikariDataSource, hazelcastInstance );
     }
 
     @Bean
