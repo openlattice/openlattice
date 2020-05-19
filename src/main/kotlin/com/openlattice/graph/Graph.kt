@@ -41,7 +41,7 @@ import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.core.GraphService
 import com.openlattice.graph.core.NeighborSets
 import com.openlattice.graph.edge.Edge
-import com.openlattice.graph.processing.NeighborhoodAggregationResult
+import com.openlattice.graph.processing.FilteredNeighborsRankingAggregationResult
 import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn
@@ -62,9 +62,12 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.OffsetDateTime
 import java.util.*
+import java.util.concurrent.ConcurrentSkipListMap
+import java.util.concurrent.ConcurrentSkipListSet
 import java.util.function.Function
 import java.util.function.Supplier
 import java.util.stream.Stream
+import kotlin.streams.asSequence
 import kotlin.streams.toList
 
 /**
@@ -297,7 +300,7 @@ class Graph(
             filteredRankings: List<AuthorizedFilteredNeighborsRanking>,
             linked: Boolean,
             linkingEntitySetId: Optional<UUID>
-    ): PostgresIterable<Map<String, Any>> {
+    ): AggregationResult {
         //Step 1:
         //Load all entity set data that satisfies filters
 
@@ -313,7 +316,10 @@ class Graph(
                 entityKeyIds, authorizedPropertyTypes
         ).toMap()
 
-        filteredRankings.map { authorizedFilteredNeighborsRanking ->
+        val rankings = sortedSetOf<NeighborhoodRankingAggregationResult>()
+        val neighbors = mutableMapOf<UUID, Map<UUID, Set<Any>>>()
+        val associations = mutableMapOf<UUID, Map<UUID, Set<Any>>>()
+        filteredRankings.parallelStream().flatMap { authorizedFilteredNeighborsRanking ->
             val assocEntitySetIds = authorizedFilteredNeighborsRanking.associationSets.keys
             val dstEntitySetIds = authorizedFilteredNeighborsRanking.entitySets.keys
 
@@ -352,6 +358,9 @@ class Graph(
                     authorizedFilteredNeighborsRanking.filteredNeighborsRanking.neighborFilters
             ).toMap()
 
+            associations.putAll(associationEntities)
+            neighbors.putAll(neighborEntities)
+
             computeAggregation(
                     authorizedFilteredNeighborsRanking,
                     srcEntities,
@@ -359,85 +368,20 @@ class Graph(
                     neighborEntities,
                     groupedEdges,
                     propertyTypes
-            )
-        }
-
-
-        /*
-         * The plan is that there are set of association entity sets and either source or destination entity sets.
-         *
-         * The plan is to do inner joins (ANDS) of property tables that are ORs of the filters and join them in to
-         *
-         * Join all association queries using full outer joins
-         * Join all entity set queries using full outer joins
-         *
-         * The plan is to do all the aggregations in subqueries and then do outer joins on (entity_set_id, entity_key_id)
-         * or linking_id while computing the score as the weighted sum of aggregates.
-         *
-         * For each association type we will query all entity sets of that type at once resulting in a table:
-         *
-         * | person_ek | edge_ek | 1_assoc_ptId | 2_assoc_pt_id | ...
-         *
-         * For each neighbor entity type we will query all entity sets of that type at once resulting in the table:
-         *
-         * | person_ek | other_ek | 1_assoc_ptId | 2_assoc_pt_id |
-         *
-         * The final table will be produced by doing a group by on the entity key or linking id resulting in a table:
-         *
-         * | person_ek | 1_assoc_ptId_agg | 2_assoc_pt_id_agg | 1_entity_ptId_agg | 2_entity_ptId_agg | score
-         */
-
-
-        val idColumns = listOf(
-                SELF_ENTITY_SET_ID to EdmPrimitiveTypeKind.Guid,
-                SELF_ENTITY_KEY_ID to EdmPrimitiveTypeKind.Guid
-        )
-
-        val aggregationColumns = filteredRankings.mapIndexed { index, authorizedFilteredRanking ->
-            buildAggregationColumnMap(
-                    index,
-                    authorizedFilteredRanking.associationPropertyTypes,
-                    authorizedFilteredRanking.filteredNeighborsRanking.associationAggregations,
-                    ASSOC
-            ).map {
-                it.value to authorizedFilteredRanking.associationPropertyTypes.getValue(
-                        it.key
-                ).datatype
-            } +
-                    buildAggregationColumnMap(
-                            index,
-                            authorizedFilteredRanking.entitySetPropertyTypes,
-                            authorizedFilteredRanking.filteredNeighborsRanking.neighborTypeAggregations,
-                            ENTITY
-                    ).map {
-                        it.value to authorizedFilteredRanking.entitySetPropertyTypes.getValue(
-                                it.key
-                        ).datatype
-                    } +
-                    (associationCountColumnName(index) to EdmPrimitiveTypeKind.Int64) +
-                    (entityCountColumnName(index) to EdmPrimitiveTypeKind.Int64)
-        }.flatten().plus(idColumns).plus(SCORE.name to EdmPrimitiveTypeKind.Double).toMap()
-
-        val sql = buildTopEntitiesQuery(
-                limit, entitySetIds, filteredRankings, linked, linkingEntitySetId
-        )
-
-        logger.info("Running top utilizers query")
-        logger.info(sql)
-        return PostgresIterable(
-                Supplier {
-                    val connection = hds.connection
-                    val stmt = connection.createStatement()
-                    val rs = stmt.executeQuery(sql)
-                    StatementHolder(connection, stmt, rs)
-                }, Function { rs ->
-            return@Function aggregationColumns.map { (col, type) ->
-                when (type) {
-                    EdmPrimitiveTypeKind.Guid -> col to (rs.getObject(col) as UUID)
-                    else -> col to rs.getObject(col)
+            ).stream()
+        }.asSequence().groupBy { it.entityKeyId }
+                .forEach { (entityKeyId, results) ->
+                    val next = NeighborhoodRankingAggregationResult(results.sumByDouble { it.score }, results)
+                    if (rankings.size < limit) {
+                        rankings.add(next)
+                    } else {
+                        if (rankings.first().score < next.score) {
+                            rankings.remove(rankings.first())
+                            rankings.add(next)
+                        }
+                    }
                 }
-            }.toMap()
-        })
+        return AggregationResult(rankings, srcEntities, associations, neighbors)
     }
 
     private fun computeAggregation(
@@ -447,7 +391,7 @@ class Graph(
             neighborEntities: Map<UUID, Map<UUID, Set<Any>>>,
             edges: Map<UUID, List<Pair<UUID, UUID>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): List<NeighborhoodAggregationResult> {
+    ): List<FilteredNeighborsRankingAggregationResult> {
         //We need to compute aggregation over all values based
         return srcEntities.map { (entityKeyId, _) ->
             val neighbors = edges.getValue(entityKeyId)
@@ -472,7 +416,14 @@ class Graph(
             var score = authorizedFilteredNeighborsRanking.filteredNeighborsRanking.countWeight.orElse(1.0)
             score *= (associationAggregationResult.scorable.values.sum() + neighborAggregationResult.scorable.values.sum())
 
-            NeighborhoodAggregationResult(entityKeyId, score, associationAggregationResult, neighborAggregationResult)
+            FilteredNeighborsRankingAggregationResult(
+                    entityKeyId,
+                    score,
+                    authorizedFilteredNeighborsRanking.filteredNeighborsRanking.associationTypeId,
+                    authorizedFilteredNeighborsRanking.filteredNeighborsRanking.neighborTypeId,
+                    associationAggregationResult,
+                    neighborAggregationResult
+            )
         }
     }
 
