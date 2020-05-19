@@ -313,7 +313,8 @@ class Graph(
         val propertyTypes = authorizedPropertyTypes.values.flatMap { it.values }.associateBy { it.id }
 
         val srcEntities = pgDataQueryService.getEntitiesWithPropertyTypeIds(
-                entityKeyIds, authorizedPropertyTypes
+                entityKeyIds,
+                authorizedPropertyTypes
         ).toMap()
 
         val rankings = sortedSetOf<NeighborhoodRankingAggregationResult>()
@@ -371,7 +372,11 @@ class Graph(
             ).stream()
         }.asSequence().groupBy { it.entityKeyId }
                 .forEach { (entityKeyId, results) ->
-                    val next = NeighborhoodRankingAggregationResult(results.sumByDouble { it.score }, results)
+                    val next = NeighborhoodRankingAggregationResult(
+                            entityKeyId,
+                            results.sumByDouble { it.score },
+                            results
+                    )
                     if (rankings.size < limit) {
                         rankings.add(next)
                     } else {
@@ -381,7 +386,13 @@ class Graph(
                         }
                     }
                 }
-        return AggregationResult(rankings, srcEntities, associations, neighbors)
+        
+        return AggregationResult(
+                rankings,
+                rankings.associate { it.entityKeyId to srcEntities.getValue(it.entityKeyId) },
+                rankings.associate { it.entityKeyId to associations.getValue(it.entityKeyId) },
+                rankings.associate { it.entityKeyId to neighbors.getValue(it.entityKeyId) }
+        )
     }
 
     private fun computeAggregation(
