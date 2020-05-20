@@ -21,7 +21,9 @@
 
 package com.openlattice.graph
 
+import com.codahale.metrics.MetricRegistry
 import com.codahale.metrics.annotation.Timed
+import com.geekbeast.metrics.time
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.collect.ImmutableList
 import com.google.common.collect.Multimaps
@@ -83,7 +85,8 @@ class Graph(
         private val reader: HikariDataSource,
         private val entitySetManager: EntitySetManager,
         private val partitionManager: PartitionManager,
-        private val pgDataQueryService: PostgresEntityDataQueryService
+        private val pgDataQueryService: PostgresEntityDataQueryService,
+        private val metricRegistry: MetricRegistry
 ) : GraphService {
 
     /* Create */
@@ -253,7 +256,7 @@ class Graph(
                     val rs = stmt.executeQuery()
                     StatementHolder(connection, stmt, rs)
                 },
-                Function<ResultSet, Edge> { ResultSetAdapters.edge(it) }
+                Function { ResultSetAdapters.edge(it) }
         ).stream()
     }
 
@@ -278,7 +281,7 @@ class Graph(
                     val rs = stmt.executeQuery()
                     StatementHolder(connection, stmt, rs)
                 },
-                Function<ResultSet, Edge> { ResultSetAdapters.edge(it) }
+                Function { ResultSetAdapters.edge(it) }
         ).stream()
     }
 
@@ -329,92 +332,112 @@ class Graph(
         val associations = mutableMapOf<UUID, Map<UUID, Set<Any>>>()
         val edgePairs = mutableMapOf<UUID, List<Pair<UUID, UUID>>>()
 
-        val step1 = filteredRankings.parallelStream().flatMap { authorizedFilteredNeighborsRanking ->
-            val assocEntitySetIds = authorizedFilteredNeighborsRanking.associationSets.keys
-            val dstEntitySetIds = authorizedFilteredNeighborsRanking.entitySets.keys
+        val neighborhoods = metricRegistry.time(Graph::class.java, "aggregate-neighborhood") { log, context ->
+            filteredRankings.parallelStream().flatMap { authorizedFilteredNeighborsRanking ->
+                val assocEntitySetIds = authorizedFilteredNeighborsRanking.associationSets.keys
+                val dstEntitySetIds = authorizedFilteredNeighborsRanking.entitySets.keys
 
 
-            val dst = authorizedFilteredNeighborsRanking.filteredNeighborsRanking.dst
+                val dst = authorizedFilteredNeighborsRanking.filteredNeighborsRanking.dst
 
-            var neighborsFilter = EntityNeighborsFilter(
-                    srcEntities.keys,
-                    if (dst) Optional.of(entitySetIds) else Optional.of(entitySetIds),
-                    if (dst) Optional.of(dstEntitySetIds) else Optional.of(entitySetIds),
-                    Optional.of(assocEntitySetIds)
-            )
+                var neighborsFilter = EntityNeighborsFilter(
+                        srcEntities.keys,
+                        if (dst) Optional.of(dstEntitySetIds) else Optional.of(entitySetIds),
+                        if (dst) Optional.of(entitySetIds) else Optional.of(dstEntitySetIds),
+                        Optional.of(assocEntitySetIds)
+                )
 
-            //Now we load all edges for this neighbor type into memory
-            val edges = getEdgesAndNeighborsForVerticesBulk(entitySetIds, neighborsFilter)
-                    .toList()
+                //Now we load all edges for this neighbor type into memory
+                val edges = getEdgesAndNeighborsForVerticesBulk(entitySetIds, neighborsFilter)
+                        .toList()
 
-            val groupedEdges = edges
-                    .groupBy({ it.src.entityKeyId }, { it.edge.entityKeyId to it.dst.entityKeyId })
+                val groupedEdges = edges
+                        .groupBy({ it.src.entityKeyId }, { it.edge.entityKeyId to it.dst.entityKeyId })
 
-            val associationEntityKeyIds = edges
-                    .groupBy({ it.edge.entitySetId }, { it.edge.entityKeyId })
-                    .mapValues { Optional.of(it.value.toSet()) }
+                val associationEntityKeyIds = edges
+                        .groupBy({ it.edge.entitySetId }, { it.edge.entityKeyId })
+                        .mapValues { Optional.of(it.value.toSet()) }
 
-            val neighborEntityKeyIds = edges
-                    .groupBy({ it.dst.entitySetId }, { it.dst.entityKeyId })
-                    .mapValues { Optional.of(it.value.toSet()) }
-
-
-            val associationEntities = pgDataQueryService.getEntitiesWithPropertyTypeIds(
-                    associationEntityKeyIds,
-                    authorizedPropertyTypes,
-                    authorizedFilteredNeighborsRanking.filteredNeighborsRanking.associationFilters
-            ).toMap()
-
-            val neighborEntities = pgDataQueryService.getEntitiesWithPropertyTypeIds(
-                    neighborEntityKeyIds,
-                    authorizedPropertyTypes,
-                    authorizedFilteredNeighborsRanking.filteredNeighborsRanking.neighborFilters
-            ).toMap()
+                val neighborEntityKeyIds = edges
+                        .groupBy({ it.dst.entitySetId }, { it.dst.entityKeyId })
+                        .mapValues { Optional.of(it.value.toSet()) }
 
 
-            associations.putAll(associationEntities)
-            neighbors.putAll(neighborEntities)
-            edgePairs.putAll(groupedEdges)
+                val associationEntities = pgDataQueryService.getEntitiesWithPropertyTypeIds(
+                        associationEntityKeyIds,
+                        authorizedPropertyTypes,
+                        authorizedFilteredNeighborsRanking.filteredNeighborsRanking.associationFilters
+                ).toMap()
 
-            computeAggregation(
-                    authorizedFilteredNeighborsRanking,
-                    srcEntities,
-                    associationEntities,
-                    neighborEntities,
-                    groupedEdges,
-                    propertyTypes
-            ).stream()
-        }.asSequence().groupBy { it.entityKeyId }
+                val neighborEntities = pgDataQueryService.getEntitiesWithPropertyTypeIds(
+                        neighborEntityKeyIds,
+                        authorizedPropertyTypes,
+                        authorizedFilteredNeighborsRanking.filteredNeighborsRanking.neighborFilters
+                ).toMap()
 
-        step1.forEach { (entityKeyId, results) ->
-            val next = NeighborhoodRankingAggregationResult(
-                    entityKeyId,
-                    results.sumByDouble { it.score },
-                    results
-            )
-            if (ascRankings.size < limit) {
-                ascRankings.add(next)
-            } else {
-                if (ascRankings.first().score < next.score) {
-                    ascRankings.remove(ascRankings.first())
-                    ascRankings.add(next)
+
+                associations.putAll(associationEntities)
+                neighbors.putAll(neighborEntities)
+                edgePairs.putAll(groupedEdges)
+
+                try {
+                    computeAggregation(
+                            authorizedFilteredNeighborsRanking,
+                            srcEntities,
+                            associationEntities,
+                            neighborEntities,
+                            groupedEdges,
+                            propertyTypes
+                    ).stream()
+                } finally {
+                    val neighborTypeId = authorizedFilteredNeighborsRanking.filteredNeighborsRanking.neighborTypeId
+                    val associationTypeId = authorizedFilteredNeighborsRanking.filteredNeighborsRanking.associationTypeId
+                    log.info("Aggregation for ($neighborTypeId,$associationTypeId) took ${context.stop() / 1000} ms")
                 }
-            }
+            }.asSequence().groupBy { it.entityKeyId }
         }
 
-        val rankings = ascRankings.descendingSet()
-        val resultEdges = rankings.associate { it.entityKeyId to edgePairs.getValue(it.entityKeyId).toMap() }
-        return AggregationResult(
-                rankings,
-                rankings.associate { it.entityKeyId to srcEntities.getValue(it.entityKeyId) },
-                resultEdges.values.flatMap { it.keys }.associateWith { associationEntityKeyId ->
-                    associations.getValue(associationEntityKeyId)
-                },
-                resultEdges.values.flatMap { it.values }.associateWith { neighborEntityKeyId ->
-                    neighbors.getValue(neighborEntityKeyId)
-                },
-                resultEdges
-        )
+        metricRegistry.time(Graph::class.java, "select-top-n") { log, context ->
+            neighborhoods.forEach { (entityKeyId, results) ->
+
+                val next = NeighborhoodRankingAggregationResult(
+                        entityKeyId,
+                        results.sumByDouble { it.score },
+                        results
+                )
+                if (ascRankings.size < limit) {
+                    ascRankings.add(next)
+                } else {
+                    if (ascRankings.first().score < next.score) {
+                        ascRankings.remove(ascRankings.first())
+                        ascRankings.add(next)
+                    }
+                }
+
+            }
+            log.info("Selecting top $limit took ${context.stop() / 1000} ms")
+        }
+
+        return metricRegistry.time(Graph::class.java, "prepare-results") { log, context ->
+            val rankings = ascRankings.descendingSet()
+            val resultEdges = rankings.associate { it.entityKeyId to edgePairs.getValue(it.entityKeyId).toMap() }
+            try {
+                AggregationResult(
+                        rankings,
+                        rankings.associate { it.entityKeyId to srcEntities.getValue(it.entityKeyId) },
+                        resultEdges.values.flatMap { it.keys }.associateWith { associationEntityKeyId ->
+                            associations.getValue(associationEntityKeyId)
+                        },
+                        resultEdges.values.flatMap { it.values }.associateWith { neighborEntityKeyId ->
+                            neighbors.getValue(neighborEntityKeyId)
+                        },
+                        resultEdges
+                )
+            } finally {
+                logger.info("Preparing results took ${context.stop()/1000} ms")
+            }
+
+        }
     }
 
     private fun computeAggregation(
