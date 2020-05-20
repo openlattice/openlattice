@@ -381,7 +381,7 @@ class Graph(
                 edgePairs.putAll(groupedEdges)
 
                 try {
-                    computeAggregation(
+                    computeAggregations(
                             authorizedFilteredNeighborsRanking,
                             srcEntities,
                             associationEntities,
@@ -440,15 +440,25 @@ class Graph(
         }
     }
 
-    private fun computeAggregation(
+    /**
+     * Computes the aggregations for a filtered neighbor ranking
+     * @param authorizedFilteredNeighborsRanking The aggregations to compute
+     * @param srcEntities The source entities.
+     * @param associationEntities The association entities
+     * @param neighborEntities The destination entities
+     * @param edges Each source entity key id and its neighborhood of entity key ids
+     * @param propertyTypes Property type definitions needed to compute aggregations.
+     * @return The computed aggregations.
+     */
+    private fun computeAggregations(
             authorizedFilteredNeighborsRanking: AuthorizedFilteredNeighborsRanking,
             srcEntities: Map<UUID, Map<UUID, Set<Any>>>,
             associationEntities: Map<UUID, Map<UUID, Set<Any>>>,
             neighborEntities: Map<UUID, Map<UUID, Set<Any>>>,
             edges: Map<UUID, List<Pair<UUID, UUID>>>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
+            propertyTypes: Map<UUID, PropertyType>
     ): List<FilteredNeighborsRankingAggregationResult> {
-        //We need to compute aggregation over all values based
+        //For each entity compute the association and neighbor aggregations.
         return srcEntities.map { (entityKeyId, _) ->
             val neighbors = edges[entityKeyId] ?: return listOf()
 
@@ -459,7 +469,7 @@ class Graph(
                     authorizedFilteredNeighborsRanking,
                     associationsEntityKeyIds,
                     associationEntities,
-                    authorizedPropertyTypes,
+                    propertyTypes,
                     true
             )
 
@@ -468,7 +478,7 @@ class Graph(
                     authorizedFilteredNeighborsRanking,
                     neighborEntityKeyIds,
                     neighborEntities,
-                    authorizedPropertyTypes
+                    propertyTypes
             )
 
             var score = authorizedFilteredNeighborsRanking.filteredNeighborsRanking.countWeight.orElse(1.0)
@@ -490,11 +500,13 @@ class Graph(
             authorizedFilteredNeighborsRanking: AuthorizedFilteredNeighborsRanking,
             entityKeyIds: Collection<UUID>,
             entities: Map<UUID, Map<UUID, Set<Any>>>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>,
+            propertyTypes: Map<UUID, PropertyType>,
             associationAggregation: Boolean = false
     ): EntityAggregationResult {
         val scorable = mutableMapOf<UUID, Double>()
         val passthrough = mutableMapOf<UUID, Comparable<*>>()
+
+        //Calculate all the aggregations requested for this filtered neighbors ranking
         if (associationAggregation) {
             authorizedFilteredNeighborsRanking.filteredNeighborsRanking
                     .associationAggregations
@@ -503,7 +515,7 @@ class Graph(
                     .neighborTypeAggregations
         }.forEach { (propertyTypeId, weightedRankingAggregation) ->
             val weight = weightedRankingAggregation.weight
-            when (authorizedPropertyTypes.getValue(propertyTypeId).datatype) {
+            when (propertyTypes.getValue(propertyTypeId).datatype) {
                 EdmPrimitiveTypeKind.GeographyPoint -> {
                     val values = entityKeyIds.mapNotNull {
                         entities[it]?.get(
