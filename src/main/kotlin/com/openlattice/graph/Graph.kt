@@ -342,8 +342,8 @@ class Graph(
 
                 var neighborsFilter = EntityNeighborsFilter(
                         srcEntities.keys,
-                        if (dst) Optional.of(entitySetIds) else Optional.of(dstEntitySetIds),
                         if (dst) Optional.of(dstEntitySetIds) else Optional.of(entitySetIds),
+                        if (dst) Optional.of(entitySetIds) else Optional.of(dstEntitySetIds),
                         Optional.of(assocEntitySetIds)
                 )
 
