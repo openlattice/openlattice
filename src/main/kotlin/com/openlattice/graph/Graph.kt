@@ -80,7 +80,7 @@ private const val BATCH_SIZE = 10_000
 
 private val logger = LoggerFactory.getLogger(Graph::class.java)
 
-class Graph(
+open class Graph(
         private val hds: HikariDataSource,
         private val reader: HikariDataSource,
         private val entitySetManager: EntitySetManager,
