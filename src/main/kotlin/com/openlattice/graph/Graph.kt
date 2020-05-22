@@ -29,8 +29,7 @@ import com.google.common.collect.ImmutableList
 import com.google.common.collect.Multimaps
 import com.google.common.collect.SetMultimap
 import com.openlattice.analysis.*
-import com.openlattice.analysis.requests.AggregationType
-import com.openlattice.analysis.requests.WeightedRankingAggregation
+import com.openlattice.analysis.requests.*
 import com.openlattice.data.DataEdgeKey
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.WriteEvent

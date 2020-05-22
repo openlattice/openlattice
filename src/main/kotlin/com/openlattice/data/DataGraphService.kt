@@ -33,7 +33,7 @@ import com.openlattice.data.storage.MetadataOption
 import com.openlattice.data.storage.PostgresEntitySetSizesTask
 import com.openlattice.edm.set.ExpirationBase
 import com.openlattice.edm.type.PropertyType
-import com.openlattice.analysis.AggregationResult
+import com.openlattice.analysis.requests.AggregationResult
 import com.openlattice.graph.core.GraphService
 import com.openlattice.graph.core.NeighborSets
 import com.openlattice.graph.edge.Edge

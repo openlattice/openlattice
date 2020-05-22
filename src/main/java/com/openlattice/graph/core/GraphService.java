@@ -24,7 +24,7 @@ import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking;
 import com.openlattice.data.DataEdgeKey;
 import com.openlattice.data.WriteEvent;
 import com.openlattice.edm.type.PropertyType;
-import com.openlattice.analysis.AggregationResult;
+import com.openlattice.analysis.requests.AggregationResult;
 import com.openlattice.graph.edge.Edge;
 import com.openlattice.postgres.streams.PostgresIterable;
 import com.openlattice.search.requests.EntityNeighborsFilter;
