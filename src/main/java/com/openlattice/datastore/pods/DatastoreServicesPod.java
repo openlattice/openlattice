@@ -410,7 +410,8 @@ public class DatastoreServicesPod {
                 rds().getReadOnlyReplica(),
                 entitySetManager(),
                 partitionManager(),
-                dataQueryService() );
+                dataQueryService(),
+                metricRegistry );
     }
 
     @Bean
