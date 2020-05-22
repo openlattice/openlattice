@@ -36,7 +36,7 @@ import com.openlattice.datastore.services.EdmService
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.EdmConstants.Companion.COUNT_FQN
 import com.openlattice.edm.EdmConstants.Companion.ID_FQN
-import com.openlattice.analysis.AggregationResult
+import com.openlattice.analysis.requests.AggregationResult
 import com.openlattice.analysis.AnalysisApi
 import com.openlattice.analysis.AnalysisApi.*
 import com.openlattice.web.mediatypes.CustomMediaType
