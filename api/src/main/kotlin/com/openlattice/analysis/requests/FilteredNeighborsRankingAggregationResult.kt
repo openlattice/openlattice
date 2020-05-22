@@ -1,5 +1,6 @@
-package com.openlattice.analysis
+package com.openlattice.analysis.requests
 
+import com.openlattice.analysis.requests.EntityAggregationResult
 import java.util.*
 
 /**

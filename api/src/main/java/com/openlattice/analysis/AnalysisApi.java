@@ -18,9 +18,9 @@
 
 package com.openlattice.analysis;
 
+import com.openlattice.analysis.requests.AggregationResult;
 import com.openlattice.analysis.requests.NeighborType;
 import com.openlattice.analysis.requests.RankingAggregation;
-import java.util.Map;
 import java.util.UUID;
 
 import com.openlattice.data.requests.FileType;
