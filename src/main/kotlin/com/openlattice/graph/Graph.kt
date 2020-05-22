@@ -56,6 +56,7 @@ import com.openlattice.search.requests.EntityNeighborsFilter
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.slf4j.LoggerFactory
+import org.springframework.stereotype.Service
 import java.security.InvalidParameterException
 import java.sql.PreparedStatement
 import java.sql.ResultSet
@@ -79,6 +80,7 @@ private const val BATCH_SIZE = 10_000
 
 private val logger = LoggerFactory.getLogger(Graph::class.java)
 
+@Service
 class Graph(
         private val hds: HikariDataSource,
         private val reader: HikariDataSource,
