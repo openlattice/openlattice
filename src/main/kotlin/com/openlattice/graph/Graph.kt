@@ -525,8 +525,8 @@ class Graph(
             propertyTypes: Map<UUID, PropertyType>
     ): List<FilteredNeighborsRankingAggregationResult> {
         //For each entity compute the association and neighbor aggregations.
-        return srcEntities.map { (entityKeyId, _) ->
-            val neighbors = edges[entityKeyId] ?: return listOf()
+        return srcEntities.mapNotNull { (entityKeyId, _) ->
+            val neighbors = edges[entityKeyId] ?: return@mapNotNull null
 
             val (associationsEntityKeyIds, neighborEntityKeyIds) = neighbors.unzip()
 
