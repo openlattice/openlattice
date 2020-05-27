@@ -57,7 +57,8 @@ import kotlin.collections.LinkedHashSet
 @SuppressFBWarnings(
         value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE", "BC_BAD_CAST_TO_ABSTRACT_COLLECTION"],
         justification = "Allowing redundant kotlin null check on lateinit variables, " +
-                "Allowing kotlin collection mapping cast to List")
+                "Allowing kotlin collection mapping cast to List"
+)
 @RestController
 @RequestMapping(CONTROLLER)
 class AnalysisController : AnalysisApi, AuthorizingComponent {
@@ -177,32 +178,25 @@ class AnalysisController : AnalysisApi, AuthorizingComponent {
                 entitySetIds.map { entitySetId ->
                     entitySetId to authzHelper.getAuthorizedPropertyTypes(entitySetId, EnumSet.of(Permission.READ))
                 }.toMap().toMutableMap()
+        authorizedPropertyTypes += analysisService.getAuthorizedNeighbors(entitySetIds)
+
+        val entitySets = entitySetManager.getEntitySetsAsMap(authorizedPropertyTypes.keys)
 
         val authorizedFilteredRankings = filteredRankings.neighbors.map { filteredRanking ->
             val authorizedAssociationPropertyTypes =
                     edm.getPropertyTypesAsMap(edm.getEntityType(filteredRanking.associationTypeId).properties)
             val authorizedEntitySetPropertyTypes =
                     edm.getPropertyTypesAsMap(edm.getEntityType(filteredRanking.neighborTypeId).properties)
-            val authorizedAssociations =
-                    entitySetManager.getEntitySetIdsOfType(filteredRanking.associationTypeId)
-                            .filter { entitySetIsAuthorized(it) }
-                            .map { accessCheckAndReturnAuthorizedPropetyTypes(filteredRanking.associationFilters, it) }
-                            .toMap()
-            val authorizedNeighbors =
-                    entitySetManager.getEntitySetIdsOfType(filteredRanking.neighborTypeId)
-                            .filter { entitySetIsAuthorized(it) }
-                            .map { accessCheckAndReturnAuthorizedPropetyTypes(filteredRanking.neighborFilters, it) }
-                            .toMap()
+            val authorizedAssociations = entitySets.asSequence()
+                    .filter { it.value.entityTypeId == filteredRanking.associationTypeId }
+                    .map { it.key to authorizedPropertyTypes.getValue(it.value.id).keys }
+                    .toMap()
 
-            authorizedAssociations.forEach { (entitySetId, propertyTypeIds) ->
-                authorizedPropertyTypes.getOrPut(entitySetId) { mutableMapOf() }
-                        .putAll(propertyTypeIds.associateWith { authorizedAssociationPropertyTypes.getValue(it) })
-            }
+            val authorizedNeighbors = entitySets.asSequence()
+                    .filter { it.value.entityTypeId == filteredRanking.neighborTypeId }
+                    .map { it.key to authorizedPropertyTypes.getValue(it.value.id).keys }
+                    .toMap()
 
-            authorizedNeighbors.forEach { (entitySetId, propertyTypeIds) ->
-                authorizedPropertyTypes.getOrPut(entitySetId) { mutableMapOf() }
-                        .putAll(propertyTypeIds.associateWith { authorizedEntitySetPropertyTypes.getValue(it) })
-            }
 
             AuthorizedFilteredNeighborsRanking(
                     filteredRanking,

@@ -411,6 +411,7 @@ public class DatastoreServicesPod {
                 entitySetManager(),
                 partitionManager(),
                 dataQueryService(),
+                idService(),
                 metricRegistry );
     }
 

@@ -25,24 +25,44 @@ import com.google.common.collect.Sets
 import com.openlattice.analysis.requests.NeighborType
 import com.openlattice.authorization.*
 import com.openlattice.data.DataGraphManager
+import com.openlattice.edm.type.PropertyType
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import java.util.*
 import java.util.stream.Collectors
 
 /**
- *
+ * This class is a bundle of layer violations.
+ * TODO: Make it not so.
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 @SuppressFBWarnings(
         value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE", "BC_BAD_CAST_TO_ABSTRACT_COLLECTION"],
         justification = "Allowing redundant kotlin null check on lateinit variables, " +
-                "Allowing kotlin collection mapping cast to List")
+                "Allowing kotlin collection mapping cast to List"
+)
 class AnalysisService(
         val dgm: DataGraphManager,
         val authorizations: AuthorizationManager,
         val edmManager: EdmManager,
         val entitySetManager: EntitySetManager
 ) : AuthorizingComponent {
+    private val authzHelper = EdmAuthorizationHelper(edmManager, authorizations, entitySetManager)
+
+    /**
+     * This function is a layer violation and should live in
+     */
+    fun getAuthorizedNeighbors(entitySetIds: Set<UUID>): Map<UUID, Map<UUID, PropertyType>> {
+        val neighborEntitySets = dgm.getNeighborEntitySets(entitySetIds)
+
+        val allEntitySetIds = neighborEntitySets.asSequence()
+                .flatMap { sequenceOf(it.srcEntitySetId, it.edgeEntitySetId, it.dstEntitySetId) }
+                .toSet()
+        return authzHelper.getAuthorizedPropertiesOnEntitySets(
+                allEntitySetIds,
+                EnumSet.of(Permission.READ),
+                Principals.getCurrentPrincipals()
+        )
+    }
 
     fun getNeighborTypes(entitySetIds: Set<UUID>): Iterable<NeighborType> {
         val neighborEntitySets = dgm.getNeighborEntitySets(entitySetIds)
