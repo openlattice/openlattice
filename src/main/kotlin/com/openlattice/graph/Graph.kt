@@ -421,7 +421,7 @@ class Graph(
                     ).stream()
                 } catch (e: Exception) {
                     log.error("wat", e)
-                    Stream.of()
+                    Stream.of<FilteredNeighborsRankingAggregationResult>()
                 } finally {
                     val neighborTypeId = authorizedFilteredNeighborsRanking.filteredNeighborsRanking.neighborTypeId
                     val associationTypeId = authorizedFilteredNeighborsRanking.filteredNeighborsRanking.associationTypeId
@@ -728,7 +728,7 @@ class Graph(
                         )?.first()
                         //TODO: Address jackson serialization causing unexpected data types here.
                         if( v!=null && v is Int){
-                            v.toDouble()
+                            v.toDouble() as Double?
                         } else {
                             v as Double?
                         }
