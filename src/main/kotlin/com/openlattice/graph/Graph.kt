@@ -462,9 +462,9 @@ class Graph(
             }
             val allNeighborsFilter = EntityNeighborsFilter(
                     ekids,
-                    Optional.empty(),
-                    Optional.empty(),
-                    Optional.empty()
+                    Optional.of(authorizedPropertyTypes.keys),
+                    Optional.of(authorizedPropertyTypes.keys),
+                    Optional.of(authorizedPropertyTypes.keys)
             )
             val allNeighborEdges = getEdgesAndNeighborsForVerticesBulk(entitySetIds, allNeighborsFilter)
             val associationEntityKeyIds = mutableMapOf<UUID, Optional<MutableSet<UUID>>>()
