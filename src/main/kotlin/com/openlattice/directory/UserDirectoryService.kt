@@ -37,6 +37,9 @@ interface UserDirectoryService {
     //TODO: Switch over to a Hazelcast map to relieve pressure from Auth0
     @Timed
     fun searchAllUsers(searchQuery: String): Map<String, Auth0UserBasic>
+
+    @Timed
+    fun deleteUser(userId: String)
 }
 
 
