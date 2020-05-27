@@ -361,9 +361,16 @@ class Graph(
                 val edges = getEdgesAndNeighborsForVerticesBulk(entitySetIds, neighborsFilter)
                         .toList()
 
-                val groupedEdges = edges.groupBy(
-                        { if (linked) getLinkingId(linkedEntities, it.src.entityKeyId) else it.src.entityKeyId },
-                        { it.edge.entityKeyId to it.dst.entityKeyId })
+                //Purposefully verbose for clarity.
+                val groupedEdges = if (dst) {
+                    edges.groupBy(
+                            { if (linked) getLinkingId(linkedEntities, it.dst.entityKeyId) else it.dst.entityKeyId },
+                            { it.edge.entityKeyId to it.src.entityKeyId })
+                } else {
+                    edges.groupBy(
+                            { if (linked) getLinkingId(linkedEntities, it.src.entityKeyId) else it.src.entityKeyId },
+                            { it.edge.entityKeyId to it.dst.entityKeyId })
+                }
 
                 val associationEntityKeyIds = edges
                         .groupBy({ it.edge.entitySetId }, { it.edge.entityKeyId })
@@ -431,7 +438,7 @@ class Graph(
 
         return metricRegistry.time(Graph::class.java, "prepare-results") { log, context ->
             val rankings = ascRankings.descendingSet()
-            val ekids = if( linked ) {
+            val ekids = if (linked) {
                 rankings.flatMap { reverseLinkedEntities.getValue(it.entityKeyId) }.toSet()
             } else {
                 rankings.map { it.entityKeyId }.toSet()
@@ -507,7 +514,6 @@ class Graph(
             val (associationsEntityKeyIds, neighborEntityKeyIds) = neighbors.unzip()
 
             val associationAggregationResult = computeAggregationSlice(
-                    entityKeyId,
                     authorizedFilteredNeighborsRanking,
                     associationsEntityKeyIds,
                     associationEntities,
@@ -516,7 +522,6 @@ class Graph(
             )
 
             val neighborAggregationResult = computeAggregationSlice(
-                    entityKeyId,
                     authorizedFilteredNeighborsRanking,
                     neighborEntityKeyIds,
                     neighborEntities,
@@ -542,7 +547,6 @@ class Graph(
     }
 
     private fun computeAggregationSlice(
-            entityKeyId: UUID,
             authorizedFilteredNeighborsRanking: AuthorizedFilteredNeighborsRanking,
             entityKeyIds: Collection<UUID>,
             entities: Map<UUID, Map<UUID, Set<Any>>>,
