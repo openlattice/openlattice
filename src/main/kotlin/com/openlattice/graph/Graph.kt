@@ -422,6 +422,9 @@ class Graph(
                             groupedEdges,
                             propertyTypes
                     ).stream()
+                } catch (e: Exception) {
+                    log.error("wat", e)
+                    Stream.of()
                 } finally {
                     val neighborTypeId = authorizedFilteredNeighborsRanking.filteredNeighborsRanking.neighborTypeId
                     val associationTypeId = authorizedFilteredNeighborsRanking.filteredNeighborsRanking.associationTypeId
