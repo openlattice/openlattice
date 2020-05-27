@@ -349,6 +349,7 @@ public class IndexerServicesPod {
                 entitySetManager(),
                 partitionManager(),
                 dataQueryService(),
+                idService(),
                 metricRegistry );
     }
 
