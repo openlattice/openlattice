@@ -435,7 +435,7 @@ class Graph(
                         resultEdges
                 )
             } finally {
-                logger.info("Preparing results took ${context.stop()/1000} ms")
+                logger.info("Preparing results took ${context.stop() / 1000} ms")
             }
 
         }
@@ -482,8 +482,12 @@ class Graph(
                     propertyTypes
             )
 
-            var score = authorizedFilteredNeighborsRanking.filteredNeighborsRanking.countWeight.orElse(1.0)
-            score *= (associationAggregationResult.scorable.values.sum() + neighborAggregationResult.scorable.values.sum())
+
+            var weight = authorizedFilteredNeighborsRanking.filteredNeighborsRanking.countWeight.orElse(1.0)
+
+            //TODO: Consider properly count edges.
+            var score = weight * neighborEntityKeyIds.size
+            score += (associationAggregationResult.scorable.values.sum() + neighborAggregationResult.scorable.values.sum())
 
             FilteredNeighborsRankingAggregationResult(
                     entityKeyId,
