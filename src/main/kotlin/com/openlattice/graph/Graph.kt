@@ -329,6 +329,7 @@ class Graph(
             ).toMap()
         }
 
+        logger.info("Source entities: {}", srcEntities.size)
         val linkedEntities = if (linked) {
             entityKeyIdService.getLinkingEntityKeyIds(entityKeyIds.keys)
         } else {
@@ -344,6 +345,7 @@ class Graph(
 
         val neighborhoods = metricRegistry.time(Graph::class.java, "aggregate-neighborhood") { log, context ->
             filteredRankings.parallelStream().flatMap { authorizedFilteredNeighborsRanking ->
+                logger.info("Filtered ranking: {}", authorizedFilteredNeighborsRanking)
                 val assocEntitySetIds = authorizedFilteredNeighborsRanking.associationSets.keys
                 val dstEntitySetIds = authorizedFilteredNeighborsRanking.entitySets.keys
 
@@ -361,6 +363,7 @@ class Graph(
                 val edges = getEdgesAndNeighborsForVerticesBulk(entitySetIds, neighborsFilter)
                         .toList()
 
+                logger.info("Edges: {}", edges.size)
                 //Purposefully verbose for clarity.
                 val groupedEdges = if (dst) {
                     edges.groupBy(
@@ -372,14 +375,19 @@ class Graph(
                             { it.edge.entityKeyId to it.dst.entityKeyId })
                 }
 
+                logger.info("Grouped edges: {}", groupedEdges.size)
+
                 val associationEntityKeyIds = edges
                         .groupBy({ it.edge.entitySetId }, { it.edge.entityKeyId })
                         .mapValues { Optional.of(it.value.toSet()) }
+
+                logger.info("Association entity key ids: {}", associationEntityKeyIds.size)
 
                 val neighborEntityKeyIds = edges
                         .groupBy({ it.dst.entitySetId }, { it.dst.entityKeyId })
                         .mapValues { Optional.of(it.value.toSet()) }
 
+                logger.info("Neighbor entity key ids: {}", associationEntityKeyIds.size)
 
                 val associationEntities = pgDataQueryService.getEntitiesWithPropertyTypeIds(
                         associationEntityKeyIds,
@@ -414,6 +422,8 @@ class Graph(
                 }
             }.asSequence().groupBy { it.entityKeyId }
         }
+
+        logger.info("Neighborhoods: {}", neighborhoods)
 
         metricRegistry.time(Graph::class.java, "select-top-n") { log, context ->
             neighborhoods.forEach { (entityKeyId, results) ->
