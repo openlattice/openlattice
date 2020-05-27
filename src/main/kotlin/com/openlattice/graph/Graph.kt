@@ -30,10 +30,7 @@ import com.google.common.collect.Multimaps
 import com.google.common.collect.SetMultimap
 import com.openlattice.analysis.*
 import com.openlattice.analysis.requests.*
-import com.openlattice.data.DataEdgeKey
-import com.openlattice.data.EntityDataKey
-import com.openlattice.data.EntityKeyIdService
-import com.openlattice.data.WriteEvent
+import com.openlattice.data.*
 import com.openlattice.data.storage.PostgresEntityDataQueryService
 import com.openlattice.data.storage.entityKeyIdColumns
 import com.openlattice.data.storage.getPartition
@@ -525,7 +522,14 @@ class Graph(
     ): List<FilteredNeighborsRankingAggregationResult> {
         //For each entity compute the association and neighbor aggregations.
         return srcEntities.mapNotNull { (entityKeyId, _) ->
-            val neighbors = edges[entityKeyId] ?: return@mapNotNull null
+            val neighbors = edges[entityKeyId] ?: return@mapNotNull FilteredNeighborsRankingAggregationResult(
+                    entityKeyId,
+                    0.0,
+                    authorizedFilteredNeighborsRanking.filteredNeighborsRanking.associationTypeId,
+                    authorizedFilteredNeighborsRanking.filteredNeighborsRanking.neighborTypeId,
+                    EntityAggregationResult(mapOf(), mapOf()),
+                    EntityAggregationResult(mapOf(), mapOf())
+            )
 
             val (associationsEntityKeyIds, neighborEntityKeyIds) = neighbors.unzip()
 
