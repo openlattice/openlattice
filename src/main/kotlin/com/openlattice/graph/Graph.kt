@@ -32,6 +32,7 @@ import com.openlattice.analysis.*
 import com.openlattice.analysis.requests.*
 import com.openlattice.data.DataEdgeKey
 import com.openlattice.data.EntityDataKey
+import com.openlattice.data.EntityKeyIdService
 import com.openlattice.data.WriteEvent
 import com.openlattice.data.storage.PostgresEntityDataQueryService
 import com.openlattice.data.storage.entityKeyIdColumns
@@ -87,6 +88,7 @@ class Graph(
         private val entitySetManager: EntitySetManager,
         private val partitionManager: PartitionManager,
         private val pgDataQueryService: PostgresEntityDataQueryService,
+        private val entityKeyIdService: EntityKeyIdService,
         private val metricRegistry: MetricRegistry
 ) : GraphService {
 
@@ -327,10 +329,17 @@ class Graph(
             ).toMap()
         }
 
+        val linkedEntities = if (linked) {
+            entityKeyIdService.getLinkingEntityKeyIds(entityKeyIds.keys)
+        } else {
+            mapOf()
+        }
+
+        val reverseLinkedEntities = linkedEntities.entries.groupBy({ it.value }, { it.key })
 
         val ascRankings = sortedSetOf<NeighborhoodRankingAggregationResult>()
-        val neighbors = mutableMapOf<UUID, Map<UUID, Set<Any>>>()
-        val associations = mutableMapOf<UUID, Map<UUID, Set<Any>>>()
+//        val neighbors = mutableMapOf<UUID, Map<UUID, Set<Any>>>()
+//        val associations = mutableMapOf<UUID, Map<UUID, Set<Any>>>()
         val edgePairs = mutableMapOf<UUID, List<Pair<UUID, UUID>>>()
 
         val neighborhoods = metricRegistry.time(Graph::class.java, "aggregate-neighborhood") { log, context ->
@@ -353,7 +362,9 @@ class Graph(
                         .toList()
 
                 val groupedEdges = edges
-                        .groupBy({ it.src.entityKeyId }, { it.edge.entityKeyId to it.dst.entityKeyId })
+                        .groupBy(
+                                { getLinkingId(linkedEntities, it.src.entityKeyId) },
+                                { it.edge.entityKeyId to it.dst.entityKeyId })
 
                 val associationEntityKeyIds = edges
                         .groupBy({ it.edge.entitySetId }, { it.edge.entityKeyId })
@@ -377,8 +388,8 @@ class Graph(
                 ).toMap()
 
 
-                associations.putAll(associationEntities)
-                neighbors.putAll(neighborEntities)
+//                associations.putAll(associationEntities)
+//                neighbors.putAll(neighborEntities)
                 edgePairs.putAll(groupedEdges)
 
                 try {
@@ -421,21 +432,47 @@ class Graph(
 
         return metricRegistry.time(Graph::class.java, "prepare-results") { log, context ->
             val rankings = ascRankings.descendingSet()
-            val resultEdges = rankings.associate { it.entityKeyId to edgePairs.getValue(it.entityKeyId).toMap() }
+            val allNeighborsFilter = EntityNeighborsFilter(
+                    rankings.flatMap { reverseLinkedEntities.getValue(it.entityKeyId) }.toSet(),
+                    Optional.empty(),
+                    Optional.empty(),
+                    Optional.empty()
+            )
+            val allNeighborEdges = getEdgesAndNeighborsForVerticesBulk(entitySetIds, allNeighborsFilter)
+            val associationEntityKeyIds = mutableMapOf<UUID, Optional<MutableSet<UUID>>>()
+            val neighborEntityKeyIds = mutableMapOf<UUID, Optional<MutableSet<UUID>>>()
+            val edges = mutableMapOf<UUID, MutableMap<UUID, UUID>>()
+            allNeighborEdges.forEach {
+                associationEntityKeyIds
+                        .getOrPut(it.edge.entitySetId) { Optional.of(mutableSetOf()) }
+                        .get()
+                        .add(it.edge.entityKeyId)
+
+                neighborEntityKeyIds
+                        .getOrPut(it.dst.entitySetId) { Optional.of(mutableSetOf()) }
+                        .get()
+                        .add(it.dst.entityKeyId)
+                edges.getOrPut(it.src.entityKeyId) { mutableMapOf() }[it.edge.entityKeyId] = it.dst.entityKeyId
+            }
+            val associations = pgDataQueryService.getEntitiesWithPropertyTypeIds(
+                    associationEntityKeyIds as Map<UUID, Optional<Set<UUID>>>,
+                    authorizedPropertyTypes
+            ).toMap()
+            var neighbors = pgDataQueryService.getEntitiesWithPropertyTypeIds(
+                    neighborEntityKeyIds as Map<UUID, Optional<Set<UUID>>>,
+                    authorizedPropertyTypes
+            ).toMap()
+            val allEntities = (srcEntities + associations + neighbors).mapValues { entityPair ->
+                entityPair.value.mapKeys { propertyTypes.getValue(it.key).type }
+            }
             try {
                 AggregationResult(
                         rankings,
-                        rankings.associate { it.entityKeyId to srcEntities.getValue(it.entityKeyId) },
-                        resultEdges.values.flatMap { it.keys }.associateWith { associationEntityKeyId ->
-                            associations.getValue(associationEntityKeyId)
-                        },
-                        resultEdges.values.flatMap { it.values }.associateWith { neighborEntityKeyId ->
-                            neighbors.getValue(neighborEntityKeyId)
-                        },
-                        resultEdges
+                        allEntities,
+                        edges
                 )
             } finally {
-                logger.info("Preparing results took ${context.stop()/1000} ms")
+                log.info("Preparing results took ${context.stop() / 1000} ms")
             }
 
         }
@@ -482,8 +519,12 @@ class Graph(
                     propertyTypes
             )
 
-            var score = authorizedFilteredNeighborsRanking.filteredNeighborsRanking.countWeight.orElse(1.0)
-            score *= (associationAggregationResult.scorable.values.sum() + neighborAggregationResult.scorable.values.sum())
+
+            var weight = authorizedFilteredNeighborsRanking.filteredNeighborsRanking.countWeight.orElse(1.0)
+
+            //TODO: Consider properly count edges.
+            var score = weight * neighborEntityKeyIds.size
+            score += (associationAggregationResult.scorable.values.sum() + neighborAggregationResult.scorable.values.sum())
 
             FilteredNeighborsRankingAggregationResult(
                     entityKeyId,
@@ -1002,6 +1043,8 @@ class Graph(
                 "GROUP BY ($groupingColumns)"
     }
 }
+
+internal fun getLinkingId(linkingIds: Map<UUID, UUID>, entityKeyId: UUID): UUID = linkingIds.getValue(entityKeyId)
 
 private val KEY_COLUMNS = E.primaryKey.map { col -> col.name }.toSet()
 

@@ -21,11 +21,13 @@
 
 package com.openlattice.graph
 
+import com.codahale.metrics.MetricRegistry
 import com.dataloom.mappers.ObjectMappers
 import com.google.common.collect.HashMultimap
 import com.google.common.collect.SetMultimap
 import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking
 import com.openlattice.analysis.requests.*
+import com.openlattice.data.EntityKeyIdService
 import com.openlattice.data.storage.PostgresEntityDataQueryService
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.datastore.services.EntitySetManager
@@ -141,7 +143,7 @@ class TopUtilizersTests {
         )
         val mapper = ObjectMappers.newJsonMapper()
         val rankingAgg = RankingAggregation(listOf(filteredRanking))
-        logger.info( mapper.writeValueAsString(rankingAgg) )
+        logger.info(mapper.writeValueAsString(rankingAgg))
     }
 
     private fun buildTopEntitiesQuery(linking: Boolean): String {
@@ -149,7 +151,9 @@ class TopUtilizersTests {
         val esService = Mockito.mock(EntitySetManager::class.java)
         val partitionManager = Mockito.mock(PartitionManager::class.java)
         val pgDataQueryService = Mockito.mock(PostgresEntityDataQueryService::class.java)
-        val graph = Graph(hds, hds, esService, partitionManager, pgDataQueryService)
+        val metricRegistry = Mockito.mock(MetricRegistry::class.java)
+        val idService = Mockito.mock(EntityKeyIdService::class.java)
+        val graph = Graph(hds, hds, esService, partitionManager, pgDataQueryService, idService, metricRegistry)
 
         val limit = 200
         val entitySetIds = setOf(
