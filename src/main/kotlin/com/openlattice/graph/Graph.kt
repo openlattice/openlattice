@@ -885,7 +885,8 @@ class Graph(
 
         val query = "SELECT DISTINCT ${SRC_ENTITY_SET_ID.name},${EDGE_ENTITY_SET_ID.name}, ${DST_ENTITY_SET_ID.name} " +
                 "FROM ${E.name} " +
-                "WHERE ${SRC_ENTITY_SET_ID.name} = ANY(?) OR ${DST_ENTITY_SET_ID.name} = ANY(?)"
+                "WHERE ${SRC_ENTITY_SET_ID.name} = ANY(?) OR ${DST_ENTITY_SET_ID.name} = ANY(?) " +
+                "AND ${VERSION.name} > 0"
         val connection = reader.connection
         connection.use {
             val ps = connection.prepareStatement(query)
