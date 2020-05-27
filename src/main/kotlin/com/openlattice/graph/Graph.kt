@@ -430,7 +430,7 @@ class Graph(
             }.asSequence().groupBy { it.entityKeyId }
         }
 
-        logger.info("Neighborhoods: {}", neighborhoods)
+        logger.info("Neighborhoods: {}", neighborhoods.size)
 
         metricRegistry.time(Graph::class.java, "select-top-n") { log, context ->
             neighborhoods.forEach { (entityKeyId, results) ->
@@ -632,7 +632,7 @@ class Graph(
                     }
                 }
                 EdmPrimitiveTypeKind.SByte, EdmPrimitiveTypeKind.Byte -> {
-                    val values = entityKeyIds.mapNotNull { entities[it]?.get(propertyTypeId)?.first() as Byte }
+                    val values = entityKeyIds.mapNotNull { entities[it]?.get(propertyTypeId)?.first() as Byte? }
                     if (values.isEmpty()) return@forEach
                     when (weightedRankingAggregation.type) {
                         AggregationType.AVG -> scorable[propertyTypeId] = values.average() * weight
@@ -723,9 +723,15 @@ class Graph(
                 }
                 EdmPrimitiveTypeKind.Double -> {
                     val values = entityKeyIds.mapNotNull {
-                        entities[it]?.get(
+                        val v = entities[it]?.get(
                                 propertyTypeId
-                        )?.first() as Double?
+                        )?.first()
+                        //TODO: Address jackson serialization causing unexpected data types here.
+                        if( v!=null && v is Int){
+                            v.toDouble()
+                        } else {
+                            v as Double?
+                        }
                     }
                     if (values.isEmpty()) return@forEach
                     when (weightedRankingAggregation.type) {
