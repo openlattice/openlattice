@@ -383,11 +383,17 @@ class Graph(
 
                 logger.info("Association entity key ids: {}", associationEntityKeyIds.size)
 
-                val neighborEntityKeyIds = edges
-                        .groupBy({ it.dst.entitySetId }, { it.dst.entityKeyId })
-                        .mapValues { Optional.of(it.value.toSet()) }
+                val neighborEntityKeyIds = if (dst) {
+                    edges
+                            .groupBy({ it.src.entitySetId }, { it.src.entityKeyId })
+                            .mapValues { Optional.of(it.value.toSet()) }
+                } else {
+                    edges
+                            .groupBy({ it.dst.entitySetId }, { it.dst.entityKeyId })
+                            .mapValues { Optional.of(it.value.toSet()) }
+                }
 
-                logger.info("Neighbor entity key ids: {}", associationEntityKeyIds.size)
+                logger.info("Neighbor entity key ids: {}", neighborEntityKeyIds.size)
 
                 val associationEntities = pgDataQueryService.getEntitiesWithPropertyTypeIds(
                         associationEntityKeyIds,
@@ -518,8 +524,8 @@ class Graph(
             propertyTypes: Map<UUID, PropertyType>
     ): List<FilteredNeighborsRankingAggregationResult> {
         //For each entity compute the association and neighbor aggregations.
-        return srcEntities.map { (entityKeyId, _) ->
-            val neighbors = edges[entityKeyId] ?: return listOf()
+        return srcEntities.mapNotNull { (entityKeyId, _) ->
+            val neighbors = edges[entityKeyId] ?: return@mapNotNull null
 
             val (associationsEntityKeyIds, neighborEntityKeyIds) = neighbors.unzip()
 
