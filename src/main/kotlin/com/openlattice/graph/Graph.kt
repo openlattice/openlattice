@@ -380,6 +380,7 @@ class Graph(
 
                 logger.info("Association entity key ids: {}", associationEntityKeyIds.size)
 
+                //Purposefully verbose for clarity.
                 val neighborEntityKeyIds = if (dst) {
                     edges
                             .groupBy({ it.src.entitySetId }, { it.src.entityKeyId })
@@ -418,6 +419,9 @@ class Graph(
                             groupedEdges,
                             propertyTypes
                     ).stream()
+                } catch (e: Exception) {
+                    log.error("wat", e)
+                    Stream.of()
                 } finally {
                     val neighborTypeId = authorizedFilteredNeighborsRanking.filteredNeighborsRanking.neighborTypeId
                     val associationTypeId = authorizedFilteredNeighborsRanking.filteredNeighborsRanking.associationTypeId
