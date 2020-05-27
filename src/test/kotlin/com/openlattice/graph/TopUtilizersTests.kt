@@ -21,6 +21,7 @@
 
 package com.openlattice.graph
 
+import com.codahale.metrics.MetricRegistry
 import com.dataloom.mappers.ObjectMappers
 import com.google.common.collect.HashMultimap
 import com.google.common.collect.SetMultimap
@@ -141,7 +142,7 @@ class TopUtilizersTests {
         )
         val mapper = ObjectMappers.newJsonMapper()
         val rankingAgg = RankingAggregation(listOf(filteredRanking))
-        logger.info( mapper.writeValueAsString(rankingAgg) )
+        logger.info(mapper.writeValueAsString(rankingAgg))
     }
 
     private fun buildTopEntitiesQuery(linking: Boolean): String {
@@ -149,7 +150,8 @@ class TopUtilizersTests {
         val esService = Mockito.mock(EntitySetManager::class.java)
         val partitionManager = Mockito.mock(PartitionManager::class.java)
         val pgDataQueryService = Mockito.mock(PostgresEntityDataQueryService::class.java)
-        val graph = Graph(hds, hds, esService, partitionManager, pgDataQueryService)
+        val metricRegistry = Mockito.mock(MetricRegistry::class.java)
+        val graph = Graph(hds, hds, esService, partitionManager, pgDataQueryService, metricRegistry)
 
         val limit = 200
         val entitySetIds = setOf(

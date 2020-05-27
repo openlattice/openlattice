@@ -435,7 +435,7 @@ class Graph(
                         resultEdges
                 )
             } finally {
-                logger.info("Preparing results took ${context.stop() / 1000} ms")
+                log.info("Preparing results took ${context.stop() / 1000} ms")
             }
 
         }
