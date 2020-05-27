@@ -7,7 +7,7 @@ import org.springframework.stereotype.Service
 
 @Service
 class LocalUserDirectoryService(auth0Configuration: Auth0Configuration) : UserDirectoryService {
-    val users = auth0Configuration.users.associateBy { it.id }
+    val users = auth0Configuration.users.associateBy { it.id }.toMutableMap()
     override fun getAllUsers(): Map<String, User> {
         return users
     }
@@ -22,5 +22,9 @@ class LocalUserDirectoryService(auth0Configuration: Auth0Configuration) : UserDi
                     user.identities.map { it.userId } + user.identities.map { it.connection })
                     .any { searchQuery.contains(it) }
         }.map { it.id to Auth0UserBasic(it.id, it.email, it.nickname, it.appMetadata) }.toMap()
+    }
+
+    override fun deleteUser(userId: String) {
+        users.remove(userId)
     }
 }
