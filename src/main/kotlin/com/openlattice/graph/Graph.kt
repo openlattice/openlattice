@@ -361,10 +361,9 @@ class Graph(
                 val edges = getEdgesAndNeighborsForVerticesBulk(entitySetIds, neighborsFilter)
                         .toList()
 
-                val groupedEdges = edges
-                        .groupBy(
-                                { getLinkingId(linkedEntities, it.src.entityKeyId) },
-                                { it.edge.entityKeyId to it.dst.entityKeyId })
+                val groupedEdges = edges.groupBy(
+                        { if (linked) getLinkingId(linkedEntities, it.src.entityKeyId) else it.src.entityKeyId },
+                        { it.edge.entityKeyId to it.dst.entityKeyId })
 
                 val associationEntityKeyIds = edges
                         .groupBy({ it.edge.entitySetId }, { it.edge.entityKeyId })
