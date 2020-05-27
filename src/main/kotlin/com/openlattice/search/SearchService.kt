@@ -521,9 +521,9 @@ class SearchService(
         val sw1 = Stopwatch.createStarted()
         val sw2 = Stopwatch.createStarted()
 
-        logger.info("Starting Entity Neighbor Search...")
+        logger.debug("Starting Entity Neighbor Search...")
         if (filter.associationEntitySetIds.isPresent && filter.associationEntitySetIds.get().isEmpty()) {
-            logger.info("Missing association entity set ids.. returning empty result")
+            logger.debug("Missing association entity set ids.. returning empty result")
             return ImmutableMap.of()
         }
 
@@ -581,7 +581,7 @@ class SearchService(
                         edge.getSrc().getEntitySetId()
             )
         }
-        logger.info(
+        logger.debug(
                 "Get edges and neighbors for vertices query for {} ids finished in {} ms",
                 filter.entityKeyIds.size,
                 sw1.elapsed(TimeUnit.MILLISECONDS)
@@ -633,7 +633,7 @@ class SearchService(
                     }
                 }
 
-        logger.info(
+        logger.debug(
                 "Access checks for entity sets and their properties finished in {} ms",
                 sw1.elapsed(TimeUnit.MILLISECONDS)
         )
@@ -664,12 +664,12 @@ class SearchService(
             }
 
         }
-        logger.info("Edge and neighbor entity key ids collected in {} ms", sw1.elapsed(TimeUnit.MILLISECONDS))
+        logger.debug("Edge and neighbor entity key ids collected in {} ms", sw1.elapsed(TimeUnit.MILLISECONDS))
         sw1.reset().start()
 
         val entitiesByEntitySetId = dataManager
                 .getEntitiesAcrossEntitySets(entitySetIdToEntityKeyId, entitySetsIdsToAuthorizedProps)
-        logger.info("Get entities across entity sets query finished in {} ms", sw1.elapsed(TimeUnit.MILLISECONDS))
+        logger.debug("Get entities across entity sets query finished in {} ms", sw1.elapsed(TimeUnit.MILLISECONDS))
         sw1.reset().start()
 
         val entities = Maps.newHashMap<UUID, Map<FullQualifiedName, Set<Any>>>()
@@ -708,7 +708,7 @@ class SearchService(
                 entityNeighbors.getValue(entityId).add(neighbor)
             }
         }
-        logger.info("Neighbor entity details collected in {} ms", sw1.elapsed(TimeUnit.MILLISECONDS))
+        logger.debug("Neighbor entity details collected in {} ms", sw1.elapsed(TimeUnit.MILLISECONDS))
 
         /* Map linkingIds to the collection of neighbors for all entityKeyIds in the cluster */
         entityKeyIdsByLinkingId.forEach { (linkingId, normalEntityKeyIds) ->
@@ -722,7 +722,7 @@ class SearchService(
         entityNeighbors.entries
                 .removeIf { entry -> !filter.entityKeyIds.contains(entry.key) }
 
-        logger.info("Finished entity neighbor search in {} ms", sw2.elapsed(TimeUnit.MILLISECONDS))
+        logger.debug("Finished entity neighbor search in {} ms", sw2.elapsed(TimeUnit.MILLISECONDS))
         return entityNeighbors
     }
 
