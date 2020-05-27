@@ -459,15 +459,17 @@ class Graph(
                     authorizedPropertyTypes
             ).toMap()
             var neighbors = pgDataQueryService.getEntitiesWithPropertyTypeIds(
-                    neighborEntityKeyIds as Map<UUID, Optional<Set<UUID>>>, 
+                    neighborEntityKeyIds as Map<UUID, Optional<Set<UUID>>>,
                     authorizedPropertyTypes
             ).toMap()
-
+            val allEntities = (srcEntities + associations + neighbors).mapValues { entityPair ->
+                entityPair.value.mapKeys { propertyTypes.getValue(it.key).type }
+            }
             try {
                 AggregationResult(
                         rankings,
-                        srcEntities + associations + neighbors,
-                     edges
+                        allEntities,
+                        edges
                 )
             } finally {
                 log.info("Preparing results took ${context.stop() / 1000} ms")
