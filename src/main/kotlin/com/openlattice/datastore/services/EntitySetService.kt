@@ -346,6 +346,10 @@ open class EntitySetService(
     @Timed
     override fun getPropertyTypesOfEntitySets(entitySetIds: Set<UUID>): Map<UUID, Map<UUID, PropertyType>> {
         val entityTypesOfEntitySets = getEntityTypeIdsByEntitySetIds(entitySetIds)
+        val missingEntitySetIds = entitySetIds - entityTypesOfEntitySets.keys
+
+        check( missingEntitySetIds.isEmpty() ) { "Missing the following entity set ids: $missingEntitySetIds" }
+
         val entityTypesAsMap = edm.getEntityTypesAsMap(entityTypesOfEntitySets.values.toSet())
         val propertyTypesAsMap = edm.getPropertyTypesAsMap(entityTypesAsMap.values.map { it.properties }.flatten().toSet())
 
