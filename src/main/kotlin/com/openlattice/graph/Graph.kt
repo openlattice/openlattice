@@ -383,11 +383,18 @@ class Graph(
 
                 logger.info("Association entity key ids: {}", associationEntityKeyIds.size)
 
-                val neighborEntityKeyIds = edges
-                        .groupBy({ it.dst.entitySetId }, { it.dst.entityKeyId })
-                        .mapValues { Optional.of(it.value.toSet()) }
+                //Purposefully verbose for clarity.
+                val neighborEntityKeyIds = if (dst) {
+                    edges
+                            .groupBy({ it.src.entitySetId }, { it.src.entityKeyId })
+                            .mapValues { Optional.of(it.value.toSet()) }
+                } else {
+                    edges
+                            .groupBy({ it.dst.entitySetId }, { it.dst.entityKeyId })
+                            .mapValues { Optional.of(it.value.toSet()) }
+                }
 
-                logger.info("Neighbor entity key ids: {}", associationEntityKeyIds.size)
+                logger.info("Neighbor entity key ids: {}", neighborEntityKeyIds.size)
 
                 val associationEntities = pgDataQueryService.getEntitiesWithPropertyTypeIds(
                         associationEntityKeyIds,
