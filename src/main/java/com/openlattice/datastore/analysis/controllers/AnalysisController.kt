@@ -95,9 +95,7 @@ class AnalysisController : AnalysisApi, AuthorizingComponent {
             response: HttpServletResponse
     ): AggregationResult {
         if (filteredRankings.neighbors.isEmpty()) {
-            return AggregationResult(
-                    sortedSetOf(), mapOf(), mapOf(), mapOf(), mapOf()
-            )
+            return AggregationResult(sortedSetOf(), mapOf(), mapOf()            )
         }
         ensureReadAccess(AclKey(entitySetId))
         val downloadType = fileType ?: FileType.json
