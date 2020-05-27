@@ -1,6 +1,7 @@
 package com.openlattice.analysis.requests
 
 import com.openlattice.analysis.requests.NeighborhoodRankingAggregationResult
+import org.apache.olingo.commons.api.edm.FullQualifiedName
 import java.util.*
 
 /**
@@ -9,8 +10,6 @@ import java.util.*
  */
 data class AggregationResult(
         val rankings: SortedSet<NeighborhoodRankingAggregationResult>,
-        val entities: Map<UUID,Map<UUID, Set<Any>>>,
-        val associations: Map<UUID, Map<UUID, Set<Any>>>,
-        val neighbors: Map<UUID, Map<UUID,Set<Any>>>,
-        val edges: Map<UUID, Map<UUID, UUID> >
+        val entities: Map<UUID, Map<FullQualifiedName, Set<Any>>>,
+        val edges: Map<UUID, Map<UUID, UUID>>
 )
