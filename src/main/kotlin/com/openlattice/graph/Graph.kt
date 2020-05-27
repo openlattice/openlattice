@@ -431,8 +431,13 @@ class Graph(
 
         return metricRegistry.time(Graph::class.java, "prepare-results") { log, context ->
             val rankings = ascRankings.descendingSet()
+            val ekids = if( linked ) {
+                rankings.flatMap { reverseLinkedEntities.getValue(it.entityKeyId) }.toSet()
+            } else {
+                rankings.map { it.entityKeyId }.toSet()
+            }
             val allNeighborsFilter = EntityNeighborsFilter(
-                    rankings.flatMap { reverseLinkedEntities.getValue(it.entityKeyId) }.toSet(),
+                    ekids,
                     Optional.empty(),
                     Optional.empty(),
                     Optional.empty()
