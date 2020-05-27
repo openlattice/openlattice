@@ -9,8 +9,6 @@ import java.util.*
  */
 data class AggregationResult(
         val rankings: SortedSet<NeighborhoodRankingAggregationResult>,
-        val entities: Map<UUID,Map<UUID, Set<Any>>>,
-        val associations: Map<UUID, Map<UUID, Set<Any>>>,
-        val neighbors: Map<UUID, Map<UUID,Set<Any>>>,
-        val edges: Map<UUID, Map<UUID, UUID> >
+        val entities: Map<UUID, Map<UUID, Set<Any>>>,
+        val edges: Map<UUID, Map<UUID, UUID>>
 )
