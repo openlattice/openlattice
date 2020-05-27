@@ -27,6 +27,7 @@ import com.google.common.collect.HashMultimap
 import com.google.common.collect.SetMultimap
 import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking
 import com.openlattice.analysis.requests.*
+import com.openlattice.data.EntityKeyIdService
 import com.openlattice.data.storage.PostgresEntityDataQueryService
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.datastore.services.EntitySetManager
@@ -151,7 +152,8 @@ class TopUtilizersTests {
         val partitionManager = Mockito.mock(PartitionManager::class.java)
         val pgDataQueryService = Mockito.mock(PostgresEntityDataQueryService::class.java)
         val metricRegistry = Mockito.mock(MetricRegistry::class.java)
-        val graph = Graph(hds, hds, esService, partitionManager, pgDataQueryService, metricRegistry)
+        val idService = Mockito.mock(EntityKeyIdService::class.java)
+        val graph = Graph(hds, hds, esService, partitionManager, pgDataQueryService, idService, metricRegistry)
 
         val limit = 200
         val entitySetIds = setOf(

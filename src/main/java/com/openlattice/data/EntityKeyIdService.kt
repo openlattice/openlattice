@@ -52,4 +52,6 @@ interface EntityKeyIdService {
     fun reserveEntityKeyIds(entityKeys: Set<EntityKey>): Set<UUID>
 
     fun reserveLinkingIds( count: Int): List<UUID>
+
+    fun getLinkingEntityKeyIds(entityKeyIds: Set<UUID>): Map<UUID, UUID>
 }
