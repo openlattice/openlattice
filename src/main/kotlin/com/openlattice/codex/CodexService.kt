@@ -128,7 +128,6 @@ class CodexService(
             } catch (e: Exception) {
                 logger.error("Unable to send outgoing message to phone numbers $toPhoneNumbers in entity set $messageEntitySetId for organization $organizationId", e)
             }
-
         }
     }
 
@@ -138,7 +137,7 @@ class CodexService(
         if (!twilioConfiguration.isCodexEnabled) {
             return@execute
         }
-        
+
         Stream.generate { feedsQueue.take() }.forEach { (messageContents, toPhoneNumber) ->
             try {
                 Message.creator(PhoneNumber(toPhoneNumber), fromPhone, messageContents).create()
