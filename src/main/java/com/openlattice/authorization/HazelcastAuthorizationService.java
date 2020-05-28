@@ -440,7 +440,7 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
                     EnumMap<Permission, Boolean> aclKeyPermissions = permissionMap.get( aceKey.getAclKey() );
 
                     ( (DelegatedPermissionEnumSet) permissions ).forEach( ( p ) -> {
-                        if ( permissionMap.containsKey( p ) ) {
+                        if ( aclKeyPermissions.containsKey( p ) ) {
                             aclKeyPermissions.put( p, true );
                         }
                     } );
