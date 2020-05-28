@@ -1,7 +1,6 @@
 package com.openlattice.authorization.processors
 
 import com.hazelcast.core.Offloadable
-import com.hazelcast.spi.ExecutionService
 import com.openlattice.authorization.AceKey
 import com.openlattice.authorization.AceValue
 import com.openlattice.authorization.DelegatedPermissionEnumSet
@@ -16,6 +15,6 @@ class AuthorizationEntryProcessor : AbstractReadOnlyRhizomeEntryProcessor<AceKey
     }
 
     override fun getExecutorName(): String {
-        return ExecutionService.OFFLOADABLE_EXECUTOR
+        return Offloadable.OFFLOADABLE_EXECUTOR
     }
 }
