@@ -57,6 +57,7 @@ class AnalysisService(
         val allEntitySetIds = neighborEntitySets.asSequence()
                 .flatMap { sequenceOf(it.srcEntitySetId, it.edgeEntitySetId, it.dstEntitySetId) }
                 .toSet()
+
         return authzHelper.getAuthorizedPropertiesOnEntitySets(
                 allEntitySetIds,
                 EnumSet.of(Permission.READ),
