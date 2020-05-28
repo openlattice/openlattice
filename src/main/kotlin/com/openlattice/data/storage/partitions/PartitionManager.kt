@@ -70,7 +70,7 @@ class PartitionManager @JvmOverloads constructor(
     fun setDefaultPartitions(organizationId: UUID, partitions: List<Int>) {
         organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
             it.partitions.clear()
-            it.partitions.addAll(partitions)
+            Result(it.partitions.addAll(partitions))
         })
 
     }
