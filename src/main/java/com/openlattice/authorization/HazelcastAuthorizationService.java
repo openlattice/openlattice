@@ -431,18 +431,21 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
             Map<AclKey, EnumSet<Permission>> requests,
             Set<Principal> principals ) {
 
-        Map<AclKey, EnumMap<Permission, Boolean>> permissionMap = Maps.newHashMap(transformValues( requests,
-                HazelcastAuthorizationService::noAccess ));
+        Map<AclKey, EnumMap<Permission, Boolean>> permissionMap = Maps.newHashMap( transformValues( requests,
+                HazelcastAuthorizationService::noAccess ) );
 
         aces.executeOnEntries( new AuthorizationEntryProcessor(), matches( requests.keySet(), principals ) )
-                .entrySet().forEach( entry -> {
+                .forEach( ( aceKey, permissions ) -> {
 
-                    AclKey aclKey = entry.getKey().getAclKey();
-                    EnumMap<Permission, Boolean> aclKeyPermissions = permissionMap.get( aclKey );
+                    EnumMap<Permission, Boolean> aclKeyPermissions = permissionMap.get( aceKey.getAclKey() );
 
-                    ( (DelegatedPermissionEnumSet) entry.getValue() ).forEach( p -> aclKeyPermissions.put( p, true ) );
+                    ( (DelegatedPermissionEnumSet) permissions ).forEach( ( p ) -> {
+                        if ( permissionMap.containsKey( p ) ) {
+                            aclKeyPermissions.put( p, true );
+                        }
+                    } );
 
-                    permissionMap.put( aclKey, aclKeyPermissions );
+                    permissionMap.put( aceKey.getAclKey(), aclKeyPermissions );
                 } );
 
         return permissionMap;
