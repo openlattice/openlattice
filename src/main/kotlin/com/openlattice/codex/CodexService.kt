@@ -93,54 +93,57 @@ class CodexService(
 
     val textingExecutorWorker = textingExecutor.execute {
 
-        if (twilioConfiguration.isCodexEnabled) {
+        if (!twilioConfiguration.isCodexEnabled) {
+            return@execute
+        }
 
-            Stream.generate { twilioQueue.take() }.forEach { (organizationId, messageEntitySetId, messageContents, toPhoneNumbers, senderId, attachment) ->
+        Stream.generate { twilioQueue.take() }.forEach { (organizationId, messageEntitySetId, messageContents, toPhoneNumbers, senderId, attachment) ->
 
-                try {
-                    //Not very efficient.
-                    val phone = organizations.getOrganization(organizationId)!!.smsEntitySetInfo
-                            .flatMap { (phoneNumber, _, entitySetIds, _) -> entitySetIds.map { it to phoneNumber } }
-                            .toMap()
-                            .getValue(messageEntitySetId)
+            try {
+                //Not very efficient.
+                val phone = organizations.getOrganization(organizationId)!!.smsEntitySetInfo
+                        .flatMap { (phoneNumber, _, entitySetIds, _) -> entitySetIds.map { it to phoneNumber } }
+                        .toMap()
+                        .getValue(messageEntitySetId)
 
-                    if (phone == "") {
-                        throw BadRequestException("No source phone number set for organization!")
-                    }
-
-                    val callbackPath = "${twilioConfiguration.callbackBaseUrl}${CodexApi.BASE}${CodexApi.INCOMING}/$organizationId${CodexApi.STATUS}"
-
-                    toPhoneNumbers.forEach { toPhoneNumber ->
-                        val messageCreator = Message
-                                .creator(PhoneNumber(toPhoneNumber), PhoneNumber(phone), messageContents)
-                                .setStatusCallback(URI.create(callbackPath))
-
-                        if (attachment != null) {
-                            messageCreator.setMediaUrl(writeMediaAndGetPath(attachment))
-                        }
-
-                        val message = messageCreator.create()
-                        processOutgoingMessage(message, organizationId, senderId, attachment)
-                    }
-
-                } catch (e: Exception) {
-                    logger.error("Unable to send outgoing message to phone numbers $toPhoneNumbers in entity set $messageEntitySetId for organization $organizationId", e)
+                if (phone == "") {
+                    throw BadRequestException("No source phone number set for organization!")
                 }
+
+                val callbackPath = "${twilioConfiguration.callbackBaseUrl}${CodexApi.BASE}${CodexApi.INCOMING}/$organizationId${CodexApi.STATUS}"
+
+                toPhoneNumbers.forEach { toPhoneNumber ->
+                    val messageCreator = Message
+                            .creator(PhoneNumber(toPhoneNumber), PhoneNumber(phone), messageContents)
+                            .setStatusCallback(URI.create(callbackPath))
+
+                    if (attachment != null) {
+                        messageCreator.setMediaUrl(writeMediaAndGetPath(attachment))
+                    }
+
+                    val message = messageCreator.create()
+                    processOutgoingMessage(message, organizationId, senderId, attachment)
+                }
+
+            } catch (e: Exception) {
+                logger.error("Unable to send outgoing message to phone numbers $toPhoneNumbers in entity set $messageEntitySetId for organization $organizationId", e)
             }
+
         }
     }
 
     val fromPhone = PhoneNumber(twilioConfiguration.shortCode)
     val feedsExecutorWorker = feedsExecutor.execute {
 
-        if (twilioConfiguration.isCodexEnabled) {
-
-            Stream.generate { feedsQueue.take() }.forEach { (messageContents, toPhoneNumber) ->
-                try {
-                    Message.creator(PhoneNumber(toPhoneNumber), fromPhone, messageContents).create()
-                } catch (e: Exception) {
-                    logger.error("Unable to send outgoing feed update message to phone number $toPhoneNumber", e)
-                }
+        if (!twilioConfiguration.isCodexEnabled) {
+            return@execute
+        }
+        
+        Stream.generate { feedsQueue.take() }.forEach { (messageContents, toPhoneNumber) ->
+            try {
+                Message.creator(PhoneNumber(toPhoneNumber), fromPhone, messageContents).create()
+            } catch (e: Exception) {
+                logger.error("Unable to send outgoing feed update message to phone number $toPhoneNumber", e)
             }
         }
     }
