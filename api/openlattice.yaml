@@ -4131,7 +4131,8 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/IntegrationStatus"
+                type: string
+                enum: [IN_PROGRESS, SUCCEEDED, FAILED, QUEUED, FAILED_TO_START]
   /shuttle/integration/status:
     get:
       summary: Polls the statuses of all running integrations
@@ -4813,9 +4814,6 @@ components:
           type: string
         description:
           type: string
-        "@class":
-          type: string
-          enum: ["com.openlattice.organization.roles.Role"]
     Organization:
       type: object
       properties:
@@ -4961,7 +4959,7 @@ components:
         type:
           type: string
           enum: [field, score, geoDistance]
-        isDescending:
+        descending:
           type: boolean
         propertyTypeId:
           type: string
@@ -5379,17 +5377,14 @@ components:
 
           
         
-      
-    IntegrationStatus:
-      type: string
-      enum: [IN_PROGRESS, SUCCEEDED, FAILED, QUEUED, FAILED_TO_START]
     IntegrationJob:
       type: object
       properties:
         name: 
           type: string
         status:
-          $ref: "#/components/schemas/IntegrationStatus"
+          type: string
+          enum: [IN_PROGRESS, SUCCEEDED, FAILED, QUEUED, FAILED_TO_START]
     IntegrationUpdate:
       type: object
       properties:
