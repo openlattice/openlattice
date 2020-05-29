@@ -1,4 +1,4 @@
-package com.openlattice.analysis
+package com.openlattice.analysis.requests
 
 import java.util.*
 

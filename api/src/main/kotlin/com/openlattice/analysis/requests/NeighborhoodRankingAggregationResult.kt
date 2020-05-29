@@ -1,4 +1,4 @@
-package com.openlattice.analysis
+package com.openlattice.analysis.requests
 
 import java.util.*
 
@@ -6,7 +6,7 @@ import java.util.*
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-class NeighborhoodRankingAggregationResult(
+data class NeighborhoodRankingAggregationResult(
         val entityKeyId: UUID,
         val score: Double,
         val results: List<FilteredNeighborsRankingAggregationResult>
