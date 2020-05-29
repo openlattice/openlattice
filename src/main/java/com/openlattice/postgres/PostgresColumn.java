@@ -96,6 +96,12 @@ public final class PostgresColumn {
     public static final String                   CATEGORY_FIELD                    = "category";
     public static final PostgresColumnDefinition CATEGORY                          =
             new PostgresColumnDefinition( CATEGORY_FIELD, TEXT ).notNull();
+    public static final String                   CLASS_NAME_FIELD                  = "class_name";
+    public static final PostgresColumnDefinition CLASS_NAME                        =
+            new PostgresColumnDefinition( CLASS_NAME_FIELD, TEXT );
+    public static final String                   CLASS_PROPERTIES_FIELD            = "class_properties";
+    public static final PostgresColumnDefinition CLASS_PROPERTIES                  =
+            new PostgresColumnDefinition( CLASS_PROPERTIES_FIELD, JSONB );
     public static final PostgresColumnDefinition CLAUSES                           =
             new PostgresColumnDefinition( "clauses", INTEGER_ARRAY );
     public static final String                   COLUMN_NAME_FIELD                 = "column_name";
@@ -424,6 +430,10 @@ public final class PostgresColumn {
     public static final String                   REFRESH_RATE_FIELD                = "refresh_rate";
     public static final PostgresColumnDefinition REFRESH_RATE                      =
             new PostgresColumnDefinition( REFRESH_RATE_FIELD, BIGINT );
+    public static final String                   SCHEDULED_DATE_FIELD              = "scheduled_date";
+    public static final PostgresColumnDefinition SCHEDULED_DATE                    = new PostgresColumnDefinition(
+            SCHEDULED_DATE_FIELD,
+            TIMESTAMPTZ ).notNull();
     public static final String                   SCHEMAS_FIELD                     = "schemas";
     public static final PostgresColumnDefinition SCHEMAS                           =
             new PostgresColumnDefinition( SCHEMAS_FIELD, TEXT_ARRAY ).notNull();
@@ -478,6 +488,10 @@ public final class PostgresColumn {
     public static final String                   STATUS_FIELD                      = "status";
     public static final PostgresColumnDefinition STATUS                            =
             new PostgresColumnDefinition( STATUS_FIELD, TEXT ).notNull();
+    public static final String                   STORAGE_TYPE_FIELD                = "storage_type";
+    public static final PostgresColumnDefinition STORAGE_TYPE                      = new PostgresColumnDefinition(
+            STORAGE_TYPE_FIELD,
+            TEXT );
     public static final String                   TABLE_ID_FIELD                    = "table_id";
     public static final PostgresColumnDefinition TABLE_ID                          =
             new PostgresColumnDefinition( TABLE_ID_FIELD, UUID ).notNull();

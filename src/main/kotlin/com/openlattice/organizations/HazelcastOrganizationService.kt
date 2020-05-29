@@ -81,6 +81,10 @@ class HazelcastOrganizationService(
         return securePrincipalsManager.maybeGetSecurablePrincipal(p)
     }
 
+    fun getAllOrganizations() :Iterable<Organization> {
+        return organizations.values
+    }
+
     private fun initializeOrganizationPrincipals(principal: Principal, organization: Organization) {
         require(
                 securePrincipalsManager.createSecurablePrincipalIfNotExists(

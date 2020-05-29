@@ -88,7 +88,7 @@ public class TestJacksonSerialization  {
         builder.put( p3, TestDataFactory.propertyType( EdmPrimitiveTypeKind.String ));
         builder.put( p4, TestDataFactory.propertyType( EdmPrimitiveTypeKind.String ));
 
-        SetMultimap<UUID, Object> details = JsonDeserializer.validateFormatAndNormalize( entity.getDetails(), builder.build() );
+        final var details = JsonDeserializer.validateFormatAndNormalize( entity.getDetails(), builder.build() );
         Assert.assertTrue( details.get( p1 ).stream().allMatch( Predicates.notNull()::test ) );
         Assert.assertTrue( details.get( p2 ).stream().allMatch( Predicates.notNull()::test ) );
     }

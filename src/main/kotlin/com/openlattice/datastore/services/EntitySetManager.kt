@@ -22,6 +22,7 @@ package com.openlattice.datastore.services
 
 import com.codahale.metrics.annotation.Timed
 import com.openlattice.auditing.AuditRecordEntitySetsManager
+import com.openlattice.authorization.Permission
 import com.openlattice.authorization.Principal
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.requests.MetadataUpdate
@@ -30,7 +31,7 @@ import com.openlattice.edm.set.EntitySetPropertyMetadata
 import com.openlattice.edm.type.AssociationType
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
-import java.util.UUID
+import java.util.*
 
 interface EntitySetManager {
 
@@ -94,4 +95,8 @@ interface EntitySetManager {
     fun containsFlag(entitySetId: UUID, flag: EntitySetFlag): Boolean
 
     fun entitySetsContainFlag(entitySetIds: Set<UUID>, flag: EntitySetFlag): Boolean
+
+    fun filterToAuthorizedNormalEntitySets(entitySetIds: Set<UUID>, permissions: EnumSet<Permission>): Set<UUID>
+
+    fun getPropertyTypesOfEntitySets(entitySetIds: Set<UUID>): Map<UUID, Map<UUID, PropertyType>>
 }

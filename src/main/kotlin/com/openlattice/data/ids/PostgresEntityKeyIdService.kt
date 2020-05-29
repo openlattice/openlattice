@@ -37,11 +37,15 @@ import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.*
 import com.openlattice.postgres.ResultSetAdapters
+import com.openlattice.postgres.streams.BasePostgresIterable
+import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
+import com.openlattice.postgres.streams.StatementHolder
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.slf4j.LoggerFactory
 import java.sql.Connection
 import java.util.*
+import java.util.function.Supplier
 import kotlin.collections.HashMap
 
 /**
@@ -51,6 +55,8 @@ import kotlin.collections.HashMap
 private val entityKeysSql = "SELECT * FROM ${IDS.name} WHERE ${ID.name} = ANY(?) "
 private val entityKeyIdsSql = "SELECT * FROM ${SYNC_IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${ENTITY_ID.name} = ANY(?) "
 private val entityKeyIdSql = "SELECT * FROM ${SYNC_IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${ENTITY_ID.name} = ? "
+private val linkedEntityKeyIdsSql = "SELECT ${ID.name},${LINKING_ID.name} as $ENTITY_KEY_IDS_FIELD FROM ${IDS.name} WHERE ${ID.name} = ANY(?) AND ${LINKING_ID.name} IS NOT NULL"
+
 private val INSERT_SQL = "INSERT INTO ${IDS.name} (${ENTITY_SET_ID.name},${ID.name},${PARTITION.name}) VALUES(?,?,?)"
 private val INSERT_ID_TO_DATA_SQL = "INSERT INTO ${DATA.name} (" +
         "${ENTITY_SET_ID.name}," +
@@ -60,6 +66,7 @@ private val INSERT_ID_TO_DATA_SQL = "INSERT INTO ${DATA.name} (" +
         "${VERSION.name}," +
         "${HASH.name}) VALUES (?,?,?,?,?,?)"
 private val INSERT_SYNC_SQL = "INSERT INTO ${SYNC_IDS.name} (${ENTITY_SET_ID.name},${ENTITY_ID.name},${ID.name}) VALUES(?,?,?)"
+
 private val logger = LoggerFactory.getLogger(PostgresEntityKeyIdService::class.java)
 
 class PostgresEntityKeyIdService(
@@ -70,8 +77,8 @@ class PostgresEntityKeyIdService(
         private val partitionManager: PartitionManager
 ) : EntityKeyIdService {
     private val hazelcastInstance = hazelcastClients.getClient(HazelcastClient.IDS.name)
-    private val idRefCounts = HazelcastMap.ID_REF_COUNTS.getMap( hazelcastInstance )
-    private val idMap = HazelcastMap.ID_CACHE.getMap( hazelcastInstance )
+    private val idRefCounts = HazelcastMap.ID_REF_COUNTS.getMap(hazelcastInstance)
+    private val idMap = HazelcastMap.ID_CACHE.getMap(hazelcastInstance)
 
     private fun genEntityKeyIds(entityIds: Set<EntityKey>): Map<EntityKey, UUID> {
         val ids = idGenerationService.getNextIds(entityIds.size)
@@ -294,8 +301,20 @@ class PostgresEntityKeyIdService(
         }
     }
 
+    /**
+     * @return A map of entity key ids to linking ids
+     */
+    override fun getLinkingEntityKeyIds( entityKeyIds: Set<UUID> ) : Map<UUID, UUID> {
+        return BasePostgresIterable(PreparedStatementHolderSupplier(hds, linkedEntityKeyIdsSql ) {
+            it.setArray(1, PostgresArrays.createUuidArray(it.connection,entityKeyIds))
+        }) {
+            it.getObject(ID.name, UUID::class.java) to it.getObject(LINKING_ID.name, UUID::class.java)
+        }.toMap()
+    }
+
     override fun getEntityKeyIds(
-            entityKeys: Set<EntityKey>, entityKeyIds: MutableMap<EntityKey, UUID>
+            entityKeys: Set<EntityKey>,
+            entityKeyIds: MutableMap<EntityKey, UUID>
     ): MutableMap<EntityKey, UUID> {
         val entityIdsByEntitySet = entityKeys.groupBy({ it.entitySetId },
                                                       { it.entityId }).mapValues { it.value.toSet() }

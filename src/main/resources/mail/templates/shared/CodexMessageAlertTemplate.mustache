@@ -1,0 +1,55 @@
+<!doctype html>
+<html>
+  <head>
+    <title>New Text From {{phoneNumber}}</title>
+    <style>
+
+      @import url("//fonts.googleapis.com/css?family=Open+Sans:300,400,600,700,800");
+
+      h1 {
+        font-family: 'Open Sans', sans-serif;
+        font-weight: 300;
+        font-size: 18px;
+        line-height: normal;
+        color: #555e6f;
+        text-transform: uppercase;
+      }
+
+      body {
+        font-family: 'Open Sans', sans-serif;
+        line-height: 1.8em;
+        color: #333;
+      }
+
+      .timestamp {
+        font-family: 'Open Sans', sans-serif;
+        padding-top: 5px;
+        font-style: italic;
+        font-size: 14px;
+      }
+
+      .message {
+        font-family: 'Open Sans', sans-serif;
+        padding: 30px;
+        font-size: 18px;
+        border-top: 1px solid #e1e1eb;
+        border-bottom: 1px solid #e1e1eb;
+      }
+
+      .path {
+        padding-top: 20px;
+        font-size: 14px;
+      }
+
+    </style>
+  </head>
+
+  <body>
+    <div>
+      <h1>New text from {{phoneNumber}}</h1>
+      <div class="message">{{text}}</div>
+      <div class="timestamp">Received {{dateTime}}</div>
+      <div class="path">View full conversation at {{{conversationURL}}}</div>
+    </div>
+  </body>
+</html>

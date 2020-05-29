@@ -24,6 +24,7 @@ import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking;
 import com.openlattice.data.DataEdgeKey;
 import com.openlattice.data.WriteEvent;
 import com.openlattice.edm.type.PropertyType;
+import com.openlattice.analysis.requests.AggregationResult;
 import com.openlattice.graph.edge.Edge;
 import com.openlattice.postgres.streams.PostgresIterable;
 import com.openlattice.search.requests.EntityNeighborsFilter;
@@ -68,7 +69,7 @@ public interface GraphService {
 
     Set<UUID> getEdgeEntitySetsConnectedToEntitySet( UUID entitySetId );
 
-    PostgresIterable<Map<String, Object>> computeTopEntities(
+    AggregationResult computeTopEntities(
             int limit,
             Set<UUID> entitySetIds,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,

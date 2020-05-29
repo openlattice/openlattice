@@ -27,7 +27,6 @@ import org.springframework.stereotype.Service
 import java.nio.ByteBuffer
 import java.util.*
 import java.util.stream.Stream
-import javax.inject.Inject
 import kotlin.streams.asSequence
 
 /**
@@ -39,22 +38,16 @@ class PostgresEntityDatastore(
         private val dataQueryService: PostgresEntityDataQueryService,
         private val postgresEdmManager: PostgresEdmManager,
         private val entitySetManager: EntitySetManager,
-        metricRegistry: MetricRegistry
+        private val metricRegistry: MetricRegistry,
+        private val eventBus: EventBus,
+        private val feedbackQueryService: PostgresLinkingFeedbackService,
+        private val linkingQueryService: LinkingQueryService
 ) : EntityDatastore {
 
     companion object {
         private val logger = LoggerFactory.getLogger(PostgresEntityDatastore::class.java)
         const val BATCH_INDEX_THRESHOLD = 256
     }
-
-    @Inject
-    private lateinit var eventBus: EventBus
-
-    @Inject
-    private lateinit var feedbackQueryService: PostgresLinkingFeedbackService
-
-    @Inject
-    private lateinit var linkingQueryService: LinkingQueryService
 
     private val getEntitiesTimer = metricRegistry.timer(
             MetricRegistry.name(
@@ -66,7 +59,6 @@ class PostgresEntityDatastore(
                     PostgresEntityDatastore::class.java, "getEntities(linked)"
             )
     )
-
 
     @Timed
     override fun createOrUpdateEntities(
