@@ -573,12 +573,12 @@ class SearchService(
                 )
         ).forEach { edge ->
             edges.add(edge)
-            allEntitySetIds.add(edge.getEdge().getEntitySetId())
+            allEntitySetIds.add(edge.edge.entitySetId)
             allEntitySetIds.add(
-                    if (entityKeyIds.contains(edge.getSrc().getEntityKeyId()))
-                        edge.getDst().getEntitySetId()
+                    if (entityKeyIds.contains(edge.src.entityKeyId))
+                        edge.dst.entitySetId
                     else
-                        edge.getSrc().getEntitySetId()
+                        edge.src.entitySetId
             )
         }
         logger.debug(
