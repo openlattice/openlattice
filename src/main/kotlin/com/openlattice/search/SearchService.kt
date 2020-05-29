@@ -641,18 +641,16 @@ class SearchService(
         sw1.reset().start()
 
         edges.forEach { edge ->
-            val edgeEntityKeyId = edge.getEdge().getEntityKeyId()
-            val neighborEntityKeyId = if ((entityKeyIds.contains(edge.getSrc().getEntityKeyId())))
-                edge.getDst()
-                        .getEntityKeyId()
+            val edgeEntityKeyId = edge.edge.entityKeyId
+            val neighborEntityKeyId = if ((entityKeyIds.contains(edge.src.entityKeyId)))
+                edge.dst.entityKeyId
             else
-                edge.getSrc().getEntityKeyId()
-            val edgeEntitySetId = edge.getEdge().getEntitySetId()
-            val neighborEntitySetId = if ((entityKeyIds.contains(edge.getSrc().getEntityKeyId())))
-                edge.getDst()
-                        .getEntitySetId()
+                edge.src.entityKeyId
+            val edgeEntitySetId = edge.edge.entitySetId
+            val neighborEntitySetId = if ((entityKeyIds.contains(edge.src.entityKeyId)))
+                edge.dst.entitySetId
             else
-                edge.getSrc().getEntitySetId()
+                edge.src.entitySetId
 
             if (entitySetsIdsToAuthorizedProps.containsKey(edgeEntitySetId)) {
                 entitySetIdToEntityKeyId.put(edgeEntitySetId, edgeEntityKeyId)
@@ -685,11 +683,11 @@ class SearchService(
 
         // create a NeighborEntityDetails object for each edge based on authorizations
         edges.stream().forEach { edge ->
-            val vertexIsSrc = entityKeyIds.contains(edge.getKey().getSrc().getEntityKeyId())
+            val vertexIsSrc = entityKeyIds.contains(edge.key.src.entityKeyId)
             val entityId = if ((vertexIsSrc))
-                edge.getKey().getSrc().getEntityKeyId()
+                edge.key.src.entityKeyId
             else
-                edge.getKey().getDst().getEntityKeyId()
+                edge.key.dst.entityKeyId
             if (!entityNeighbors.containsKey(entityId)) {
                 entityNeighbors.put(
                         entityId, Collections.synchronizedList(
