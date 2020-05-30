@@ -48,6 +48,7 @@ import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.users.Auth0SyncService;
 import com.openlattice.users.Auth0UtilsKt;
+
 import java.util.EnumSet;
 import java.util.Map;
 import java.util.Objects;
@@ -55,6 +56,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
+
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -243,6 +245,19 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
         ensureOwnerAccess( directedAclKeys.getSource() );
 
         spm.removePrincipalFromPrincipal( directedAclKeys.getSource(), directedAclKeys.getTarget() );
+
+        return null;
+    }
+
+    @Override
+    @DeleteMapping( path = USERS + USER_ID_PATH )
+    public Void deleteUserAccount( @PathVariable( USER_ID ) String userId ) {
+        ensureAdminAccess();
+
+        SecurablePrincipal securablePrincipal = spm.getPrincipal( userId );
+        spm.deletePrincipal( securablePrincipal.getAclKey() );
+
+        userDirectoryService.deleteUser( userId );
 
         return null;
     }
