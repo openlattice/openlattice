@@ -25,10 +25,7 @@ package com.openlattice.authorization;
 import com.codahale.metrics.annotation.Timed;
 import com.dataloom.streams.StreamUtil;
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Maps;
-import com.google.common.collect.SetMultimap;
+import com.google.common.collect.*;
 import com.google.common.eventbus.EventBus;
 import com.hazelcast.aggregation.Aggregators;
 import com.hazelcast.core.HazelcastInstance;
@@ -434,19 +431,25 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
         Map<AclKey, EnumMap<Permission, Boolean>> permissionMap = Maps.newHashMap( transformValues( requests,
                 HazelcastAuthorizationService::noAccess ) );
 
-        aces.executeOnEntries( new AuthorizationEntryProcessor(), matches( requests.keySet(), principals ) )
-                .forEach( ( aceKey, permissions ) -> {
+        Set<AceKey> aceKeys = Sets.newHashSetWithExpectedSize( requests.size() * principals.size() );
+        requests.keySet().forEach( aclKey ->
+                principals.forEach( principal ->
+                        aceKeys.add( new AceKey( aclKey, principal ) )
+                )
+        );
 
-                    EnumMap<Permission, Boolean> aclKeyPermissions = permissionMap.get( aceKey.getAclKey() );
+        aces.executeOnKeys( aceKeys, new AuthorizationEntryProcessor() ).forEach( ( aceKey, permissions ) -> {
 
-                    ( (DelegatedPermissionEnumSet) permissions ).forEach( ( p ) -> {
-                        if ( aclKeyPermissions.containsKey( p ) ) {
-                            aclKeyPermissions.put( p, true );
-                        }
-                    } );
+            EnumMap<Permission, Boolean> aclKeyPermissions = permissionMap.get( aceKey.getAclKey() );
 
-                    permissionMap.put( aceKey.getAclKey(), aclKeyPermissions );
-                } );
+            ( (DelegatedPermissionEnumSet) permissions ).forEach( ( p ) -> {
+                if ( aclKeyPermissions.containsKey( p ) ) {
+                    aclKeyPermissions.put( p, true );
+                }
+            } );
+
+            permissionMap.put( aceKey.getAclKey(), aclKeyPermissions );
+        } );
 
         return permissionMap;
     }
@@ -497,7 +500,10 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
 
         EnumSet<Permission> actualPermissions = EnumSet.noneOf( Permission.class );
 
-        aces.executeOnEntries( new AuthorizationEntryProcessor(), matches( key, principals ) ).values().forEach( pSet ->
+        Set<AceKey> aceKeys = Sets.newHashSetWithExpectedSize( principals.size() );
+        principals.forEach( p -> aceKeys.add( new AceKey( key, p ) ) );
+
+        aces.executeOnKeys( aceKeys, new AuthorizationEntryProcessor() ).values().forEach( pSet ->
                 actualPermissions.addAll( (DelegatedPermissionEnumSet) pSet )
         );
 
