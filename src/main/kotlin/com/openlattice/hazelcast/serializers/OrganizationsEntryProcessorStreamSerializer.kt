@@ -51,6 +51,7 @@ class OrganizationsEntryProcessorStreamSerializer : SelfRegisteringStreamSeriali
             OrganizationEntryProcessor { org ->
                 LoggerFactory.getLogger(OrganizationEntryProcessor::class.java)
                         .error("This entry processor didn't de-serialize correctly.")
+                OrganizationEntryProcessor.Result(null, false)
             }
         }
 

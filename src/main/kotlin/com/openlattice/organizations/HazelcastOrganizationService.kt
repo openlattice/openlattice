@@ -25,6 +25,7 @@ import com.openlattice.organizations.mapstores.CONNECTIONS_INDEX
 import com.openlattice.organizations.mapstores.DOMAINS_INDEX
 import com.openlattice.organizations.mapstores.MEMBERS_INDEX
 import com.openlattice.organizations.processors.OrganizationEntryProcessor
+import com.openlattice.organizations.processors.OrganizationEntryProcessor.Result
 import com.openlattice.organizations.processors.OrganizationReadEntryProcessor
 import com.openlattice.organizations.processors.UpdateOrganizationSmsEntitySetInformationEntryProcessor
 import com.openlattice.organizations.roles.SecurePrincipalsManager
@@ -64,8 +65,8 @@ class HazelcastOrganizationService(
         private val partitionManager: PartitionManager,
         private val assembler: Assembler
 ) {
-    private val organizations = HazelcastMap.ORGANIZATIONS.getMap( hazelcastInstance )
-    private val users = HazelcastMap.USERS.getMap( hazelcastInstance )
+    private val organizations = HazelcastMap.ORGANIZATIONS.getMap(hazelcastInstance)
+    private val users = HazelcastMap.USERS.getMap(hazelcastInstance)
 
     @Inject
     private lateinit var eventBus: EventBus
@@ -81,7 +82,7 @@ class HazelcastOrganizationService(
         return securePrincipalsManager.maybeGetSecurablePrincipal(p)
     }
 
-    fun getAllOrganizations() :Iterable<Organization> {
+    fun getAllOrganizations(): Iterable<Organization> {
         return organizations.values
     }
 
@@ -200,8 +201,12 @@ class HazelcastOrganizationService(
         val aclKey = AclKey(organizationId)
         securePrincipalsManager.updateTitle(aclKey, title)
         organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
-            it.securablePrincipal.title = title
-            null
+            if (title == it.securablePrincipal.title) {
+                Result(null, false)
+            } else {
+                it.securablePrincipal.title = title
+                Result(null)
+            }
         })
         eventBus.post(OrganizationUpdatedEvent(organizationId, Optional.of(title), Optional.empty()))
     }
@@ -210,8 +215,12 @@ class HazelcastOrganizationService(
         val aclKey = AclKey(organizationId)
         securePrincipalsManager.updateDescription(aclKey, description)
         organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
-            it.securablePrincipal.description = description
-            null
+            if (description == it.securablePrincipal.description) {
+                Result(null, false)
+            } else {
+                it.securablePrincipal.description = description
+                Result(null)
+            }
         })
         eventBus.post(OrganizationUpdatedEvent(organizationId, Optional.empty(), Optional.of(description)))
     }
@@ -223,23 +232,23 @@ class HazelcastOrganizationService(
     fun setEmailDomains(organizationId: UUID, emailDomains: Set<String>) {
         organizations.executeOnKey(organizationId, OrganizationEntryProcessor { organization ->
             organization.emailDomains.clear()
-            organization.emailDomains.addAll(emailDomains)
+            Result(organization.emailDomains.addAll(emailDomains))
         })
 
     }
 
     fun addEmailDomains(organizationId: UUID, emailDomains: Set<String>) {
-        organizations.executeOnKey(organizationId,
-                OrganizationEntryProcessor { organization ->
-                    organization.emailDomains.addAll(emailDomains)
-                })
+        organizations.executeOnKey(organizationId, OrganizationEntryProcessor { organization ->
+            val modified = organization.emailDomains.addAll(emailDomains)
+            Result(modified, modified)
+        })
     }
 
     fun removeEmailDomains(organizationId: UUID, emailDomains: Set<String>) {
-        organizations.executeOnKey(organizationId,
-                OrganizationEntryProcessor { organization ->
-                    organization.emailDomains.removeAll(emailDomains)
-                })
+        organizations.executeOnKey(organizationId, OrganizationEntryProcessor { organization ->
+            val modified = organization.emailDomains.removeAll(emailDomains)
+            Result(modified, modified)
+        })
     }
 
     fun getMembers(organizationId: UUID): Set<Principal> {
@@ -258,7 +267,9 @@ class HazelcastOrganizationService(
         if (newMembers.isNotEmpty()) {
             val securablePrincipals = securePrincipalsManager.getSecurablePrincipals(newMembers)
             eventBus.post(
-                    MembersAddedToOrganizationEvent(organizationId, SecurablePrincipalList(securablePrincipals.toMutableList()))
+                    MembersAddedToOrganizationEvent(
+                            organizationId, SecurablePrincipalList(securablePrincipals.toMutableList())
+                    )
             )
         }
     }
@@ -278,7 +289,7 @@ class HazelcastOrganizationService(
         val newMembers: Set<Principal> = organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
             val newMembers = members.filter { member -> !it.members.contains(member) }.toSet()
             it.members.addAll(newMembers)
-            return@OrganizationEntryProcessor newMembers
+            return@OrganizationEntryProcessor Result(newMembers, newMembers.isNotEmpty())
         }) as Set<Principal>
 
         if (newMembers.isNotEmpty()) {
@@ -343,7 +354,7 @@ class HazelcastOrganizationService(
 
         removeRolesFromMembers(getRoles(organizationId).map { it.aclKey }, userAclKeys)
         organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
-            it.members.removeAll(members)
+            Result(it.members.removeAll(members))
         })
 
         val orgAclKey = AclKey(organizationId)
@@ -385,7 +396,8 @@ class HazelcastOrganizationService(
          */
         val orgAdminRole = Principal(
                 PrincipalType.ROLE,
-                constructOrganizationAdminRolePrincipalId(orgPrincipal))
+                constructOrganizationAdminRolePrincipalId(orgPrincipal)
+        )
         if (orgAdminRole != role.principal) {
             authorizations.addPermission(role.aclKey, orgAdminRole, EnumSet.allOf(Permission::class.java))
         }
@@ -412,13 +424,15 @@ class HazelcastOrganizationService(
 
     fun addAppToOrg(organizationId: UUID, appId: UUID) {
         organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
-            it.apps.add(appId)
+            val modified = it.apps.add(appId)
+            Result(modified, modified)
         })
     }
 
     fun removeAppFromOrg(organizationId: UUID, appId: UUID) {
         organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
-            it.apps.remove(appId)
+            val modified = it.apps.remove(appId)
+            Result(modified, modified)
         })
 
     }
@@ -509,7 +523,9 @@ class HazelcastOrganizationService(
         phoneNumbers.setPhoneNumber(entitySetInformationList)
 
         entitySetInformationList.groupBy { it.organizationId }.map { (organizationId, entitySetInfoList) ->
-            organizations.submitToKey(organizationId, UpdateOrganizationSmsEntitySetInformationEntryProcessor(entitySetInfoList))
+            organizations.submitToKey(
+                    organizationId, UpdateOrganizationSmsEntitySetInformationEntryProcessor(entitySetInfoList)
+            )
         }.forEach { it.get() }
     }
 
@@ -523,34 +539,37 @@ class HazelcastOrganizationService(
     }
 
     fun removeUser(principal: Principal) {
-        organizations.executeOnEntries(OrganizationEntryProcessor { it.members.remove(principal) })
+        organizations.executeOnEntries(OrganizationEntryProcessor {
+            val modified = it.members.remove(principal)
+            Result(modified, modified)
+        })
     }
 
     fun updateRoleGrant(organizationId: UUID, roleId: UUID, grant: Grant) {
         organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
             it.grants.getOrPut(roleId) { mutableMapOf() }[grant.grantType] = grant
-            null
+            Result(null) //TODO: Being lazy not implementing diff as this should rarely be called.
         })
     }
 
     fun addConnections(organizationId: UUID, connections: Set<String>) {
         organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
             it.connections += connections
-            null
+            Result(null) //TODO: Being lazy not implementing diff as this should rarely be called.
         })
     }
 
     fun removeConnections(organizationId: UUID, connections: Set<String>) {
         organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
             it.connections -= connections
-            null
+            Result(null) //TODO: Being lazy not implementing diff as this should rarely be called.
         })
     }
 
     fun setConnections(organizationId: UUID, connections: Set<String>) {
         organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
             it.connections.clear()
-            it.connections.addAll(connections)
+            Result(it.connections.addAll(connections), true)
         })
     }
 
@@ -562,7 +581,7 @@ class HazelcastOrganizationService(
         return organizations.keySet(
                 Predicates.and(
                         Predicates.`in`(CONNECTIONS_INDEX, *connections.toTypedArray()),
-                        Predicates.not(Predicates.`in`(MEMBERS_INDEX, principal) )
+                        Predicates.not(Predicates.`in`(MEMBERS_INDEX, principal))
                 )
         )
     }
@@ -576,7 +595,7 @@ class HazelcastOrganizationService(
                 Predicates.and(
                         Predicates.`in`(CONNECTIONS_INDEX, *connections.toTypedArray()),
                         Predicates.`in`(DOMAINS_INDEX, emailDomain),
-                        Predicates.not(Predicates.`in`(MEMBERS_INDEX, principal) )
+                        Predicates.not(Predicates.`in`(MEMBERS_INDEX, principal))
                 )
         )
     }
