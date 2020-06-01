@@ -9,9 +9,9 @@ pluginManagement {
 rootProject.name='openlattice'
 
 include 'api'
-include 'conductor'
 include 'chronicle-server'
 include 'chronicle-api'
+include 'conductor'
 include 'conductor-client'
 include 'courier'
 include 'datastore'
