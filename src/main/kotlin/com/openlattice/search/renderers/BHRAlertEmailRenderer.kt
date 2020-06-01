@@ -116,10 +116,11 @@ class BHRAlertEmailRenderer {
                 persistentSearch: PersistentSearch,
                 report: Map<FullQualifiedName, Set<Any>>,
                 userEmail: String,
-                neighbors: List<NeighborEntityDetails>
+                neighbors: List<NeighborEntityDetails>,
+                alertName: String
         ): RenderableEmailRequest {
 
-            val subject = "New Behavioral Health Report"
+            val subject = "New Crisis Report ($alertName)"
 
             val templateObjects: MutableMap<String, Any> = Maps.newHashMap<String, Any>()
 

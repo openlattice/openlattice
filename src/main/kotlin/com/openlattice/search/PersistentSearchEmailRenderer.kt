@@ -26,7 +26,9 @@ class PersistentSearchEmailRenderer {
 
             when (persistentSearch.type) {
                 PersistentSearchNotificationType.ALPR_ALERT -> email = AlprAlertEmailRenderer.renderEmail(persistentSearch, entity, userEmail, neighbors, dependencies.mapboxToken)
-                PersistentSearchNotificationType.BHR_ALERT -> email = BHRAlertEmailRenderer.renderEmail(persistentSearch, entity, userEmail, neighbors)
+                PersistentSearchNotificationType.BHR_ALERT -> email = BHRAlertEmailRenderer.renderEmail(persistentSearch, entity, userEmail, neighbors, "Unsheltered Homeless")
+                PersistentSearchNotificationType.CRISIS_AFFILIATION_ALERT -> email = BHRAlertEmailRenderer.renderEmail(persistentSearch, entity, userEmail, neighbors, "University of Iowa Affiliate")
+                PersistentSearchNotificationType.CRISIS_VETERAN_ALERT -> email = BHRAlertEmailRenderer.renderEmail(persistentSearch, entity, userEmail, neighbors, "Veteran")
                 PersistentSearchNotificationType.CODEX_ALERT -> email = CodexAlertEmailRenderer.renderEmail(persistentSearch, entity, userEmail)
 
                 else -> {
