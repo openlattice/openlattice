@@ -55,3 +55,9 @@
 [submodule "linker"]
 	path = linker
 	url = git@github.com:openlattice/linker.git
+[submodule "chronicle-server"]
+	path = chronicle-server
+	url = https://github.com/openlattice/chronicle-server.git
+[submodule "chronicle-api"]
+	path = chronicle-api
+	url = https://github.com/openlattice/chronicle-api.git
