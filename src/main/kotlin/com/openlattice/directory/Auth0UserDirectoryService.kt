@@ -32,6 +32,11 @@ class Auth0UserDirectoryService(
         return users.getValue(userId)
     }
 
+    override fun deleteUser(userId: String) {
+        auth0ManagementApi.deleteUser(userId)
+        users.delete(userId)
+    }
+
     //TODO: Switch over to a Hazelcast map to relieve pressure from Auth0
     override fun searchAllUsers(searchQuery: String): Map<String, Auth0UserBasic> {
         logger.info("Searching auth0 users with query: $searchQuery")
