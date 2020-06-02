@@ -36,6 +36,7 @@ private val MILITARY_STATUS_FQN = FullQualifiedName("bhr.militaryStatus")
 private const val PERSON_ENTITY_SET_ID_METADATA = "personEntitySetId"
 private const val STAFF_ENTITY_SET_ID_METADATA = "staffEntitySetId"
 private const val TIME_ZONE_METADATA = "timezone"
+private const val ALERT_NAME_METADATA = "alertName"
 
 /*
 *
@@ -43,7 +44,8 @@ private const val TIME_ZONE_METADATA = "timezone"
 * {
 *   "personEntitySetId": <UUID>,
 *   "staffEntitySetId": <UUID>,
-*   "timezone": <TimeZones>
+*   "timezone": <TimeZones>,
+*   "alertName": <String>
 * }
 *
 */
@@ -120,11 +122,8 @@ class BHRAlertEmailRenderer {
                 persistentSearch: PersistentSearch,
                 report: Map<FullQualifiedName, Set<Any>>,
                 userEmail: String,
-                neighbors: List<NeighborEntityDetails>,
-                alertName: String
+                neighbors: List<NeighborEntityDetails>
         ): RenderableEmailRequest {
-
-            val subject = "New Crisis Report ($alertName)"
 
             val templateObjects: MutableMap<String, Any> = Maps.newHashMap<String, Any>()
 
@@ -135,6 +134,8 @@ class BHRAlertEmailRenderer {
                     persistentSearch.alertMetadata[STAFF_ENTITY_SET_ID_METADATA].toString()
             )
             val timezone = MessageFormatters.TimeZones.valueOf(persistentSearch.alertMetadata[TIME_ZONE_METADATA].toString())
+            val alertName = persistentSearch.alertMetadata[ALERT_NAME_METADATA]?.let { " ($it)" } ?: ""
+            val subject = "New Crisis Report$alertName";
 
             templateObjects.putAll(getPersonDetails(neighbors, personEntitySetId, timezone))
             templateObjects.putAll(getFilerDetails(neighbors, staffEntitySetId))
