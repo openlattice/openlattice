@@ -367,7 +367,7 @@ class PostgresEntityDataQueryService(
     ): Int {
         return hds.connection.use { connection ->
             //Update the versions of all entities.
-            val entityKeyIdsArr = PostgresArrays.createUuidArray(connection, entities.keys.sorted())
+            val entityKeyIdsArr = PostgresArrays.createUuidArray(connection, entities.keys)
             val versionsArrays = PostgresArrays.createLongArray(connection, version)
 
             /*
