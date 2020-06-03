@@ -362,9 +362,6 @@ class Graph(
 
                 logger.info("Edges: {}", edges.size)
 
-
-                logger.info("Grouped edges: {}", groupedEdges.size)
-
                 val associationEntityKeyIds = edges
                         .groupBy({ it.edge.entitySetId }, { it.edge.entityKeyId })
                         .mapValues { Optional.of(it.value.toSet()) }
@@ -426,6 +423,8 @@ class Graph(
                                     { it.edge.entityKeyId to it.dst.entityKeyId })
                 }
 
+                logger.info("Grouped edges: {}", groupedEdges.size)
+                
                 edgePairs.putAll(groupedEdges)
 
                 try {
