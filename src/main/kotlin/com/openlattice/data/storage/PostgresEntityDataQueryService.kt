@@ -367,7 +367,7 @@ class PostgresEntityDataQueryService(
     ): Int {
         return hds.connection.use { connection ->
             //Update the versions of all entities.
-            val entityKeyIdsArr = PostgresArrays.createUuidArray(connection, entities.keys)
+            val entityKeyIdsArr = PostgresArrays.createUuidArray(connection, entities.keys.sorted())
             val versionsArrays = PostgresArrays.createLongArray(connection, version)
 
             /*
@@ -412,14 +412,18 @@ class PostgresEntityDataQueryService(
             //Make data visible by marking new version in ids table.
             val upsertEntities = connection.prepareStatement(buildUpsertEntitiesAndLinkedData())
             val updatedLinkedEntities = attempt(LinearBackoff(60000, 125), 32) {
-                upsertEntities.setObject(1, versionsArrays)
-                upsertEntities.setObject(2, version)
-                upsertEntities.setObject(3, version)
-                upsertEntities.setObject(4, entitySetId)
-                upsertEntities.setArray(5, entityKeyIdsArr)
-                upsertEntities.setInt(6, partition)
-                upsertEntities.setInt(7, partition)
-                upsertEntities.setLong(8, version)
+                upsertEntities.setObject(1, entitySetId)
+                upsertEntities.setArray(2, entityKeyIdsArr)
+                upsertEntities.setInt(3, partition)
+
+                upsertEntities.setObject(4, versionsArrays)
+                upsertEntities.setObject(5, version)
+                upsertEntities.setObject(6, version)
+                upsertEntities.setObject(7, entitySetId)
+                upsertEntities.setArray(8, entityKeyIdsArr)
+                upsertEntities.setInt(9, partition)
+                upsertEntities.setInt(10, partition)
+                upsertEntities.setLong(11, version)
                 upsertEntities.executeUpdate()
             }
             logger.debug("Updated $updatedLinkedEntities linked entities as part of insert.")

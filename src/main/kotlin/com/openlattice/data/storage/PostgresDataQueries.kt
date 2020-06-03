@@ -328,8 +328,8 @@ fun buildUpsertEntitiesAndLinkedData(): String {
             ","
     ) { "${it.name} = EXCLUDED.${it.name}" }
 
-
-    return "WITH linking_map as ($upsertEntitiesSql) INSERT INTO ${DATA.name} ($metadataColumnsSql,$insertColumns) " +
+    val lockingSql = "SELECT 1 FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ? ORDER BY ${ID_VALUE.name} FOR UPDATE "
+    return "WITH entity_locks as ($lockingSql), linking_map as ($upsertEntitiesSql) INSERT INTO ${DATA.name} ($metadataColumnsSql,$insertColumns) " +
             "SELECT $metadataReadColumnsSql,$insertColumns FROM ${DATA.name} INNER JOIN " +
             "linking_map USING(${ENTITY_SET_ID.name},${ID.name},${PARTITION.name}) " +
             "WHERE ${LINKING_ID.name} IS NOT NULL AND version > ? " +
