@@ -4980,17 +4980,17 @@ components:
           items:
             type: string
             format: uuid
-        srcEntitySetIds:
+        src:
           type: array         
           items:
             type: string
             format: uuid
-        dstEntitySetIds:
+        dst:
           type: array         
           items:
             type: string
             format: uuid
-        associationEntitySetIds:
+        edge:
           type: array         
           items:
             type: string
