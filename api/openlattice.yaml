@@ -3079,7 +3079,20 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/SecurablePrincipal"
+                  $ref: "#/components/schemas/securablePrincipal"
+  /datastore/principals/sync/:
+    get:
+      summary: Activates a user in the OpenLattice system. This call must be made once before a user will be available for use in authorization policies.
+      operationId: syncCallingUser
+      tags:
+        - principal
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+
 
   ########################
   ## AUTHORIZATION APIs ##
