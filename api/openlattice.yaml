@@ -3079,7 +3079,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/securablePrincipal"
+                  $ref: "#/components/schemas/SecurablePrincipal"
   /datastore/principals/sync/:
     get:
       summary: Activates a user in the OpenLattice system. This call must be made once before a user will be available for use in authorization policies.
@@ -4286,7 +4286,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/metadataUpdate"
+              $ref: "#/components/schemas/MetadataUpdate"
       responses:
         "200":
           description: Success
@@ -4324,7 +4324,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/EntityTypeCollection"
+              $ref: "#/components/schemas/CollectionTemplateType"
       tags:
         - collections
       security:
@@ -4401,7 +4401,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/metadataUpdate"
+              $ref: "#/components/schemas/MetadataUpdate"
       responses:
         "200":
           description: Success
@@ -4451,7 +4451,7 @@ paths:
       responses:
         "200":
           description: Success
-  /datastore/collections/entity/type/entity/set/{entitySetCollectionId}:
+  /datastore/collections/entity/set/entity/type/{entitySetCollectionId}:
     get:
       summary: Returns all authorized EntitySetCollections for a given EntityTypeCollection id
       operationId: getEntitySetCollectionsOfType
@@ -5597,7 +5597,7 @@ components:
           format: uuid
           description: An optional UUID for the entity type collection.
         type:
-          $ref: "#/components/schemas/fullQualifiedName"
+          $ref: "#/components/schemas/FullQualifiedName"
           description: The FQN of the entity type collection.
         title:
           type: string
@@ -5608,7 +5608,7 @@ components:
         schemas:
           type: array
           items:
-            $ref: "#/components/schemas/fullQualifiedName"
+            $ref: "#/components/schemas/FullQualifiedName"
           description: A list of schemas the entity type collection should belong to.
         template:
           type: array
