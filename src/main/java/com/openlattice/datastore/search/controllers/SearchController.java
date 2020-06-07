@@ -21,7 +21,6 @@
 package com.openlattice.datastore.search.controllers;
 
 import com.codahale.metrics.annotation.Timed;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.*;
 import com.openlattice.auditing.AuditEventType;
 import com.openlattice.auditing.AuditableEvent;
@@ -30,7 +29,6 @@ import com.openlattice.auditing.AuditingManager;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.authorization.util.AuthorizationUtils;
-import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.requests.NeighborEntityDetails;
 import com.openlattice.data.requests.NeighborEntityIds;
 import com.openlattice.datastore.apps.services.AppService;
@@ -91,13 +89,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
     private SecurePrincipalsManager spm;
 
     @Inject
-    private ObjectMapper mapper;
-
-    @Inject
     private AuditingManager auditingManager;
-
-    @Inject
-    private DataGraphManager dgm;
 
     @RequestMapping(
             path = { "/", "" },
@@ -148,26 +140,31 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
 
         validateSearch( searchConstraints );
 
+        final UUID[] entitySetIds = searchConstraints.getEntitySetIds();
+
+        final LinkedHashSet<UUID> uniqueEntitySetIds = Sets.newLinkedHashSetWithExpectedSize( entitySetIds.length );
+
+        Collections.addAll(uniqueEntitySetIds, entitySetIds);
+
         // check read on entity sets
         final var authorizedEntitySetIds = entitySetManager
-                .filterToAuthorizedNormalEntitySets( Set.of( searchConstraints.getEntitySetIds() ), READ_PERMISSION );
+                .filterToAuthorizedNormalEntitySets( uniqueEntitySetIds, READ_PERMISSION );
 
         DataSearchResult results = new DataSearchResult( 0, Lists.newArrayList() );
 
         // if user has read access on all normal entity sets
-        if ( authorizedEntitySetIds.size() == searchConstraints.getEntitySetIds().length ) {
+        if ( authorizedEntitySetIds.containsAll( uniqueEntitySetIds ) ) {
             final var authorizedPropertyTypesByEntitySet = authorizationsHelper.getAuthorizedPropertiesOnEntitySets(
                     authorizedEntitySetIds, READ_PERMISSION, Principals.getCurrentPrincipals() );
 
-            results = searchService
-                    .executeSearch( searchConstraints, authorizedPropertyTypesByEntitySet );
+            results = searchService.executeSearch( searchConstraints, authorizedPropertyTypesByEntitySet );
         }
 
-        List<AuditableEvent> searchEvents = Lists.newArrayList();
-        for ( int i = 0; i < searchConstraints.getEntitySetIds().length; i++ ) {
+        List<AuditableEvent> searchEvents = new ArrayList(entitySetIds.length);
+        for ( int i = 0; i < entitySetIds.length; i++ ) {
             searchEvents.add( new AuditableEvent(
                     spm.getCurrentUserId(),
-                    new AclKey( searchConstraints.getEntitySetIds()[ i ] ),
+                    new AclKey( entitySetIds[ i ] ),
                     AuditEventType.SEARCH_ENTITY_SET_DATA,
                     "Entity set data searched through SearchApi.searchEntitySetData",
                     Optional.of( getEntityKeyIdsFromSearchResult( results ) ),
@@ -717,7 +714,6 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
         /* Check sort is valid */
         SortDefinition sort = searchConstraints.getSortDefinition();
         switch ( sort.getSortType() ) {
-
             case field:
             case geoDistance: {
                 UUID sortPropertyTypeId = sort.getPropertyTypeId();
