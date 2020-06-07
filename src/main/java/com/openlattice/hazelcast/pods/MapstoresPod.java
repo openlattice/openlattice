@@ -93,7 +93,7 @@ import java.util.UUID;
 public class MapstoresPod {
     private static final Logger           logger = LoggerFactory.getLogger( MapstoresPod.class );
     @Inject
-    private              HikariDataSource hikariDataSource;
+    private HikariDataSource hikariDataSource;
 
     @Inject
     private PostgresTableManager ptMgr;
@@ -115,7 +115,7 @@ public class MapstoresPod {
             stmt.addBatch( deleteUserSql );
             stmt.executeBatch();
         } catch ( SQLException | IOException e ) {
-            logger.error( "Unable to configure postgres functions for user management." );
+            logger.error( "Unable to configure postgres functions for user management.", e );
         }
 
         return jdbi.onDemand( PostgresUserApi.class );
