@@ -152,35 +152,35 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
             val entitySetIds = persistentSearch.searchConstraints.entitySetIds.toSet()
 
             val constraints = getUpdatedConstraints(persistentSearch)
-            var results = DataSearchResult(0, listOf())
-            if (authorizedEntitySetIds.containsAll(entitySetIds)) {
-                results = dependencies.searchService.executeSearch(constraints, authorizedPropertyTypesByEntitySet.filterKeys { entitySetIds.contains(it) })
+
+            if (!authorizedEntitySetIds.containsAll(entitySetIds)) {
+                return@forEach
             }
 
-            if (results.numHits > 0) {
-                val entitySets = dependencies.entitySets.getAll(entitySetIds).values.groupBy { it.isLinking }
-                val neighborsById = mutableMapOf<UUID, List<NeighborEntityDetails>>()
+            val results = dependencies.searchService.executeSearch(constraints, authorizedPropertyTypesByEntitySet.filterKeys { entitySetIds.contains(it) })
 
-                if (results.hits.isNotEmpty()) neighborsById.putAll(
-                        dependencies.searchService.executeEntityNeighborSearch(
-                                entitySets.getOrDefault(false, listOf()).map { it.id }.toSet(),
-                                EntityNeighborsFilter(
-                                        getHitEntityKeyIds(results.hits),
-                                        Optional.empty(),
-                                        Optional.empty(),
-                                        Optional.of(getAuthorizedAssociationEntitySets(allUserPrincipals))
-                                ),
-                                allUserPrincipals
-                        )
-                )
-                sendAlertsForNewWrites(userSecurablePrincipal, persistentSearch, results, neighborsById)
-                val lastReadDateTime = getLatestRead(results.hits)
-                logger.info(
-                        "Last read date time {} for alert {} with {} hits", lastReadDateTime, persistentSearch.id,
-                        results.numHits
-                )
-                lastReadDateTime?.let { updatedReadDateTimes[persistentSearch.id] = it }
+            if (results.hits.isEmpty()) {
+                return@forEach
             }
+
+            val entitySets = dependencies.entitySets.getAll(entitySetIds).values.groupBy { it.isLinking }
+            val neighborsById = dependencies.searchService.executeEntityNeighborSearch(
+                    entitySets.getOrDefault(false, listOf()).map { it.id }.toSet(),
+                    EntityNeighborsFilter(
+                            getHitEntityKeyIds(results.hits),
+                            Optional.empty(),
+                            Optional.empty(),
+                            Optional.of(getAuthorizedAssociationEntitySets(allUserPrincipals))
+                    ),
+                    allUserPrincipals
+            )
+            sendAlertsForNewWrites(userSecurablePrincipal, persistentSearch, results, neighborsById)
+            val lastReadDateTime = getLatestRead(results.hits)
+            logger.info(
+                    "Last read date time {} for alert {} with {} hits", lastReadDateTime, persistentSearch.id,
+                    results.numHits
+            )
+            lastReadDateTime?.let { updatedReadDateTimes[persistentSearch.id] = it }
         }
 
         return updatedReadDateTimes
