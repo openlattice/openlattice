@@ -153,7 +153,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
         DataSearchResult results = new DataSearchResult( 0, Lists.newArrayList() );
 
         // if user has read access on all normal entity sets
-        if ( authorizedEntitySetIds.containsAll( uniqueEntitySetIds ) ) {
+        if ( authorizedEntitySetIds.size() == searchConstraints.getEntitySetIds().length ) {
             final var authorizedPropertyTypesByEntitySet = authorizationsHelper.getAuthorizedPropertiesOnEntitySets(
                     authorizedEntitySetIds, READ_PERMISSION, Principals.getCurrentPrincipals() );
 
