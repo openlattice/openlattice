@@ -154,7 +154,7 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
             val constraints = getUpdatedConstraints(persistentSearch)
             var results = DataSearchResult(0, listOf())
             if (authorizedEntitySetIds.containsAll(entitySetIds)) {
-                results = dependencies.searchService.executeSearch(constraints, authorizedPropertyTypesByEntitySet)
+                results = dependencies.searchService.executeSearch(constraints, authorizedPropertyTypesByEntitySet.filterKeys { entitySetIds.contains(it) })
             }
 
             if (results.numHits > 0) {
