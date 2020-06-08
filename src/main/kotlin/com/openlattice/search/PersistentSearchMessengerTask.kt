@@ -207,7 +207,7 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
 
         val persistentSearchesById = BasePostgresIterable(
                 StatementHolderSupplier(dependencies.hds, LOAD_ACTIVE_ALERTS_SQL, 32_000)
-        ) { ResultSetAdapters.aclKey(it) to ResultSetAdapters.persistentSearch(it) }.toMap()
+        ) { ResultSetAdapters.aclKey(it) to ResultSetAdapters.persistentSearch(it) }.toList()
 
         logger.info("Loaded {} active persistent searches.", persistentSearchesById.size)
 
