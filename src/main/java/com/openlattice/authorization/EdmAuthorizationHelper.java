@@ -392,28 +392,8 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
             Set<UUID> entitySetIds,
             EnumSet<Permission> requiredPermissions,
             Set<Principal> principals ) {
-        return entitySetIds.stream()
-                .filter( entitySetId -> {
-                    var entitySet = entitySetManager.getEntitySet( entitySetId );
-                    var entitySetIdsToCheck = Sets.newHashSet( entitySetId );
-                    if ( entitySet.isLinking() ) {
-                        entitySetIdsToCheck.addAll( entitySet.getLinkedEntitySets() );
-                    }
-
-                    return entitySetIdsToCheck.stream().allMatch( esId -> authz.checkIfHasPermissions(
-                            new AclKey( esId ),
-                            principals,
-                            requiredPermissions ) );
-                } )
-                .collect( Collectors.toSet() );
+        return entitySetManager.filterToAuthorizedNormalEntitySets(entitySetIds, requiredPermissions, principals);
     }
-
-    @Timed
-    public Set<UUID> getAuthorizedEntitySets( Set<UUID> entitySetIds, EnumSet<Permission> requiredPermissions ) {
-        return getAuthorizedEntitySetsForPrincipals( entitySetIds,
-                requiredPermissions,
-                    Principals.getCurrentPrincipals() );
-        }
 
     /**
      * Get all property types of an entity set

@@ -7,3 +7,7 @@ regionName: "us-gov-west-1"
 timeToLive: 300000
 accessKeyId: "getme"
 secretAccessKey: "getme"
+searchConfiguration:
+  elasticsearchUrl: localhost
+  elasticsearchCluster: openlattice
+  elasticsearchPort: 9300
