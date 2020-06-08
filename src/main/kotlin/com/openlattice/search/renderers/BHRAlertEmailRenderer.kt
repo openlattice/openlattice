@@ -28,12 +28,15 @@ private val INCIDENT_DATE_TIME_FQN = FullQualifiedName("bhr.datetimeOccurred")
 private val NATURE_OF_CRISIS_FQN = FullQualifiedName("bhr.dispatchReason")
 private val HOUSING_SITUATION_FQN = FullQualifiedName("housing.living_arrangements")
 private val DISPOSITION_FQN = FullQualifiedName("bhr.disposition")
+private val AFFILIATION_FQN = FullQualifiedName("bhr.affiliation")
+private val MILITARY_STATUS_FQN = FullQualifiedName("bhr.militaryStatus")
 
 
 /* METADATA TAGS */
 private const val PERSON_ENTITY_SET_ID_METADATA = "personEntitySetId"
 private const val STAFF_ENTITY_SET_ID_METADATA = "staffEntitySetId"
 private const val TIME_ZONE_METADATA = "timezone"
+private const val ALERT_NAME_METADATA = "alertName"
 
 /*
 *
@@ -41,7 +44,8 @@ private const val TIME_ZONE_METADATA = "timezone"
 * {
 *   "personEntitySetId": <UUID>,
 *   "staffEntitySetId": <UUID>,
-*   "timezone": <TimeZones>
+*   "timezone": <TimeZones>,
+*   "alertName": <String>
 * }
 *
 */
@@ -108,6 +112,8 @@ class BHRAlertEmailRenderer {
             tags["housingSituation"] = (report[HOUSING_SITUATION_FQN] ?: emptySet()).joinToString(", ")
             tags["disposition"] = (report[DISPOSITION_FQN] ?: emptySet()).joinToString(", ")
             tags["age"] = (report[AGE_FQN] ?: emptySet()).joinToString(", ")
+            tags["militaryStatus"] = (report[MILITARY_STATUS_FQN] ?: emptySet()).joinToString(", ")
+            tags["affiliation"] = (report[AFFILIATION_FQN] ?: emptySet()).joinToString(", ")
 
             return tags
         }
@@ -119,8 +125,6 @@ class BHRAlertEmailRenderer {
                 neighbors: List<NeighborEntityDetails>
         ): RenderableEmailRequest {
 
-            val subject = "New Behavioral Health Report"
-
             val templateObjects: MutableMap<String, Any> = Maps.newHashMap<String, Any>()
 
             val personEntitySetId = UUID.fromString(
@@ -130,6 +134,8 @@ class BHRAlertEmailRenderer {
                     persistentSearch.alertMetadata[STAFF_ENTITY_SET_ID_METADATA].toString()
             )
             val timezone = MessageFormatters.TimeZones.valueOf(persistentSearch.alertMetadata[TIME_ZONE_METADATA].toString())
+            val alertName = persistentSearch.alertMetadata[ALERT_NAME_METADATA]?.let { " ($it)" } ?: ""
+            val subject = "New Crisis Report$alertName";
 
             templateObjects.putAll(getPersonDetails(neighbors, personEntitySetId, timezone))
             templateObjects.putAll(getFilerDetails(neighbors, staffEntitySetId))

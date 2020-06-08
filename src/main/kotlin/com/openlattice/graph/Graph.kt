@@ -361,18 +361,6 @@ class Graph(
                         .toList()
 
                 logger.info("Edges: {}", edges.size)
-                //Purposefully verbose for clarity.
-                val groupedEdges = if (dst) {
-                    edges.groupBy(
-                            { if (linked) getLinkingId(linkedEntities, it.dst.entityKeyId) else it.dst.entityKeyId },
-                            { it.edge.entityKeyId to it.src.entityKeyId })
-                } else {
-                    edges.groupBy(
-                            { if (linked) getLinkingId(linkedEntities, it.src.entityKeyId) else it.src.entityKeyId },
-                            { it.edge.entityKeyId to it.dst.entityKeyId })
-                }
-
-                logger.info("Grouped edges: {}", groupedEdges.size)
 
                 val associationEntityKeyIds = edges
                         .groupBy({ it.edge.entitySetId }, { it.edge.entityKeyId })
@@ -405,9 +393,38 @@ class Graph(
                         authorizedFilteredNeighborsRanking.filteredNeighborsRanking.neighborFilters
                 ).toMap()
 
+                //Purposefully verbose for clarity.
+                //Need to filter out associations and neighbors not matching filters.
+                val groupedEdges = if (dst) {
+                    edges
+                            .asSequence()
+                            .filter { edge ->
+                                neighborEntities.containsKey(edge.src.entityKeyId) &&
+                                        associationEntities.containsKey(edge.edge.entityKeyId)
+                            }
+                            .groupBy(
+                                    {
+                                        if (linked) getLinkingId(linkedEntities, it.dst.entityKeyId)
+                                        else it.dst.entityKeyId
+                                    },
+                                    { it.edge.entityKeyId to it.src.entityKeyId }
+                            )
+                } else {
+                    edges.asSequence()
+                            .filter { edge ->
+                                neighborEntities.containsKey(edge.dst.entityKeyId) &&
+                                        associationEntities.containsKey(edge.edge.entityKeyId)
+                            }
+                            .groupBy(
+                                    {
+                                        if (linked) getLinkingId(linkedEntities, it.src.entityKeyId)
+                                        else it.src.entityKeyId
+                                    },
+                                    { it.edge.entityKeyId to it.dst.entityKeyId })
+                }
 
-//                associations.putAll(associationEntities)
-//                neighbors.putAll(neighborEntities)
+                logger.info("Grouped edges: {}", groupedEdges.size)
+                
                 edgePairs.putAll(groupedEdges)
 
                 try {
@@ -727,7 +744,7 @@ class Graph(
                                 propertyTypeId
                         )?.first()
                         //TODO: Address jackson serialization causing unexpected data types here.
-                        if( v!=null && v is Int){
+                        if (v != null && v is Int) {
                             v.toDouble() as Double?
                         } else {
                             v as Double?
