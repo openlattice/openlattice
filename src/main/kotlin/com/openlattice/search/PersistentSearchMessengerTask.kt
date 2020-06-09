@@ -13,8 +13,6 @@ import com.openlattice.postgres.PostgresTable.PERSISTENT_SEARCHES
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.mapstores.EntitySetMapstore
 import com.openlattice.postgres.streams.BasePostgresIterable
-import com.openlattice.postgres.streams.PostgresIterable
-import com.openlattice.postgres.streams.StatementHolder
 import com.openlattice.postgres.streams.StatementHolderSupplier
 import com.openlattice.search.requests.DataSearchResult
 import com.openlattice.search.requests.EntityNeighborsFilter
@@ -25,12 +23,9 @@ import com.openlattice.tasks.HazelcastTaskDependencies
 import com.openlattice.tasks.Task
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
-import java.sql.ResultSet
 import java.time.OffsetDateTime
 import java.util.*
 import java.util.concurrent.TimeUnit
-import java.util.function.Function
-import java.util.function.Supplier
 import java.util.stream.Collectors
 import kotlin.streams.asSequence
 
@@ -123,7 +118,7 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
         return hits.map { UUID.fromString((it[EdmConstants.ID_FQN] ?: emptySet()).first().toString()) }.toSet()
     }
 
-    private fun findNewWritesForAlert(userAclKey: AclKey, persistentSearch: PersistentSearch): OffsetDateTime? {
+    private fun findNewWritesForAlerts(userAclKey: AclKey, persistentSearches: Set<PersistentSearch>): Map<UUID, OffsetDateTime> {
         val dependencies = getDependency()
 
         val userSecurablePrincipal = dependencies.principalsManager.getSecurablePrincipal(userAclKey)
@@ -136,40 +131,48 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
                     "Failed to send persistent search for unrecognized principal {} with aclKey {}",
                     userSecurablePrincipal, userAclKey
             )
-            return null
+            return mapOf()
         }
 
-        val entitySetIds = persistentSearch.searchConstraints.entitySetIds.toSet()
+        val allEntitySetIds = persistentSearches.flatMap { it.searchConstraints.entitySetIds.toSet() }.toSet()
+
         val authorizedEntitySetIds = dependencies.authorizationHelper
                 .getAuthorizedEntitySetsForPrincipals(
-                        entitySetIds, EdmAuthorizationHelper.READ_PERMISSION, allUserPrincipals
+                        allEntitySetIds, EdmAuthorizationHelper.READ_PERMISSION, allUserPrincipals
                 )
 
         val authorizedPropertyTypesByEntitySet = dependencies.authorizationHelper.getAuthorizedPropertiesOnEntitySets(
-                dependencies.entitySets.keys, EdmAuthorizationHelper.READ_PERMISSION, allUserPrincipals
+                authorizedEntitySetIds, EdmAuthorizationHelper.READ_PERMISSION, allUserPrincipals
         )
 
-        val constraints = getUpdatedConstraints(persistentSearch)
-        var results = DataSearchResult(0, listOf())
-        if (authorizedEntitySetIds.size == entitySetIds.size) {
-            results = dependencies.searchService.executeSearch(constraints, authorizedPropertyTypesByEntitySet)
-        }
+        val updatedReadDateTimes = mutableMapOf<UUID, OffsetDateTime>()
 
-        if (results.numHits > 0) {
+        persistentSearches.forEach { persistentSearch ->
+
+            val entitySetIds = persistentSearch.searchConstraints.entitySetIds.toSet()
+
+            val constraints = getUpdatedConstraints(persistentSearch)
+
+            if (!authorizedEntitySetIds.containsAll(entitySetIds)) {
+                return@forEach
+            }
+
+            val results = dependencies.searchService.executeSearch(constraints, authorizedPropertyTypesByEntitySet.filterKeys { entitySetIds.contains(it) })
+
+            if (results.hits.isEmpty()) {
+                return@forEach
+            }
+
             val entitySets = dependencies.entitySets.getAll(entitySetIds).values.groupBy { it.isLinking }
-            val neighborsById = mutableMapOf<UUID, List<NeighborEntityDetails>>()
-
-            if (results.hits.isNotEmpty()) neighborsById.putAll(
-                    dependencies.searchService.executeEntityNeighborSearch(
-                            entitySets.getOrDefault(false, listOf()).map { it.id }.toSet(),
-                            EntityNeighborsFilter(
-                                    getHitEntityKeyIds(results.hits),
-                                    Optional.empty(),
-                                    Optional.empty(),
-                                    Optional.of(getAuthorizedAssociationEntitySets(allUserPrincipals))
-                            ),
-                            allUserPrincipals
-                    )
+            val neighborsById = dependencies.searchService.executeEntityNeighborSearch(
+                    entitySets.getOrDefault(false, listOf()).map { it.id }.toSet(),
+                    EntityNeighborsFilter(
+                            getHitEntityKeyIds(results.hits),
+                            Optional.empty(),
+                            Optional.empty(),
+                            Optional.of(getAuthorizedAssociationEntitySets(allUserPrincipals))
+                    ),
+                    allUserPrincipals
             )
             sendAlertsForNewWrites(userSecurablePrincipal, persistentSearch, results, neighborsById)
             val lastReadDateTime = getLatestRead(results.hits)
@@ -177,10 +180,10 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
                     "Last read date time {} for alert {} with {} hits", lastReadDateTime, persistentSearch.id,
                     results.numHits
             )
-            return lastReadDateTime
+            lastReadDateTime?.let { updatedReadDateTimes[persistentSearch.id] = it }
         }
 
-        return null
+        return updatedReadDateTimes
     }
 
     private fun getAuthorizedAssociationEntitySets(principals: Set<Principal>): Set<UUID> {
@@ -207,13 +210,15 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
 
         val persistentSearchesById = BasePostgresIterable(
                 StatementHolderSupplier(dependencies.hds, LOAD_ACTIVE_ALERTS_SQL, 32_000)
-        ) { ResultSetAdapters.aclKey(it) to ResultSetAdapters.persistentSearch(it) }.toMap()
+        ) { ResultSetAdapters.aclKey(it) to ResultSetAdapters.persistentSearch(it) }
+                .groupBy { (aclKey, _) -> aclKey }
+                .mapValues { it.value.map { (_, persistentSearch) -> persistentSearch }.toSet() }
 
         logger.info("Loaded {} active persistent searches.", persistentSearchesById.size)
 
-        val lastWritesForMessagesSent = persistentSearchesById.mapNotNull { (aclKey, search) ->
-            val latestRead = findNewWritesForAlert(aclKey, search)
-            latestRead?.let { search to latestRead }
+        val lastWritesForMessagesSent = mutableMapOf<UUID, OffsetDateTime>()
+        persistentSearchesById.map { (aclKey, searches) ->
+            lastWritesForMessagesSent.putAll(findNewWritesForAlerts(aclKey, searches))
         }
 
         logger.info("Sent {} notifications for persistent searches.", lastWritesForMessagesSent.size)
@@ -222,15 +227,12 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
 
             connection.prepareStatement(updateLastReadSql()).use { ps ->
 
-                lastWritesForMessagesSent.forEach { (search, latestRead) ->
+                lastWritesForMessagesSent.forEach { (id, latestRead) ->
                     ps.setObject(1, latestRead)
-                    ps.setObject(2, search.id)
-                    if (logger.isDebugEnabled) {
-                        logger.debug("Updating last read for $search")
-                    } else {
-                        logger.info("Updating last read for ${search.id}")
-                    }
+                    ps.setObject(2, id)
                     ps.addBatch()
+
+                    logger.info("Updating last read for $id")
                 }
                 ps.executeBatch().sum()
             }
