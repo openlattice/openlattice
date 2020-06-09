@@ -105,4 +105,7 @@ public interface PrincipalApi {
 
     @DELETE( BASE + UPDATE )
     Void removePrincipalFromPrincipal( @Body DirectedAclKeys directedAclKeys );
+
+    @DELETE( BASE + USERS + USER_ID_PATH )
+    Void deleteUserAccount( @Path(USER_ID ) String userId );
 }
