@@ -329,7 +329,7 @@ open class EntitySetService(
 
     @Timed
     @Suppress("UNCHECKED_CAST")
-    override fun filterToAuthorizedNormalEntitySets(entitySetIds: Set<UUID>, permissions: EnumSet<Permission>): Set<UUID> {
+    override fun filterToAuthorizedNormalEntitySets(entitySetIds: Set<UUID>, permissions: EnumSet<Permission>, principals: Set<Principal>): Set<UUID> {
         val entitySetIdToNormalEntitySetIds = entitySets.executeOnKeys(entitySetIds, GetNormalEntitySetIdsEntryProcessor())
                 .mapValues { it.value as DelegatedUUIDSet }
 
@@ -337,7 +337,7 @@ open class EntitySetService(
 
         val accessChecks = normalEntitySetIds.associate { AclKey(it) to permissions }
 
-        val entitySetsToAuthorizedStatus = authorizations.authorize(accessChecks, Principals.getCurrentPrincipals())
+        val entitySetsToAuthorizedStatus = authorizations.authorize(accessChecks, principals)
                 .map { it.key.first() to it.value.values.all { bool ->  bool } }.toMap()
 
         return entitySetIdToNormalEntitySetIds.filterValues { it.all { id -> entitySetsToAuthorizedStatus.getValue(id) } }.keys
