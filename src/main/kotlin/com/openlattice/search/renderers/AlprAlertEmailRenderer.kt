@@ -232,9 +232,11 @@ class AlprAlertEmailRenderer {
 
             val attachments = extractVehicleImages(vehicle, mapboxToken).toTypedArray()
 
+            templateObjects["subscriber"] = userEmail
+
             return RenderableEmailRequest(
                     Optional.of(FROM_EMAIL),
-                    arrayOf(userEmail),
+                    arrayOf(userEmail) + persistentSearch.additionalEmailAddresses,
                     Optional.empty(),
                     Optional.empty(),
                     TEMPLATE_PATH,
