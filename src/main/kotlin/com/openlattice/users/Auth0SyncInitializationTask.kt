@@ -26,17 +26,11 @@ import com.openlattice.organizations.tasks.OrganizationsInitializationTask
 import com.openlattice.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies
 import com.openlattice.tasks.Task.AUTH0_SYNC_INITIALIZATION_TASK
-import org.springframework.core.env.Environment
-import javax.inject.Inject
-
-private const val AUTH0_EXPORT_CONFIGURATION = "auth0export"
 
 /**
  * This is the auth0 synchronization initialization task that loads all users on startup from auth0.
  */
 class Auth0SyncInitializationTask : HazelcastInitializationTask<Auth0SyncTask> {
-    @Inject
-    private lateinit var environment: Environment
 
     override fun getInitialDelay(): Long {
         return 0L
@@ -51,9 +45,7 @@ class Auth0SyncInitializationTask : HazelcastInitializationTask<Auth0SyncTask> {
     }
 
     override fun initialize(dependencies: Auth0SyncTask) {
-        if (environment.activeProfiles.contains(AUTH0_EXPORT_CONFIGURATION)) {
-            dependencies.initializeUsers()
-        }
+        dependencies.initializeUsers()
     }
 
     override fun after(): Set<Class<out HazelcastInitializationTask<*>>> {
