@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.inject.Inject;
 import java.time.OffsetDateTime;
+import java.util.Set;
 import java.util.UUID;
 
 @RestController
@@ -65,6 +66,19 @@ public class PersistentSearchController implements PersistentSearchApi {
             @PathVariable( ID ) UUID id,
             @RequestBody SearchConstraints searchConstraints ) {
         persistentSearchService.updatePersistentSearchConstraints( id, searchConstraints );
+        return null;
+    }
+
+    @Timed
+    @Override
+    @RequestMapping(
+            path = { EMAILS + ID_PATH },
+            consumes = { MediaType.APPLICATION_JSON_VALUE },
+            method = RequestMethod.PATCH )
+    public Void updatePersistentSearchAdditionalEmails(
+            @PathVariable( ID ) UUID id,
+            @RequestBody Set<String> additionalEmails ) {
+        persistentSearchService.updatePersistentSearchAdditionalEmails( id, additionalEmails );
         return null;
     }
 
