@@ -140,10 +140,11 @@ class BHRAlertEmailRenderer {
             templateObjects.putAll(getPersonDetails(neighbors, personEntitySetId, timezone))
             templateObjects.putAll(getFilerDetails(neighbors, staffEntitySetId))
             templateObjects.putAll(getReportDetails(report, timezone))
+            templateObjects["subscriber"] = userEmail
 
             return RenderableEmailRequest(
                     Optional.of(FROM_EMAIL),
-                    arrayOf(userEmail),
+                    arrayOf(userEmail) + persistentSearch.additionalEmailAddresses,
                     Optional.empty(),
                     Optional.empty(),
                     TEMPLATE_PATH,

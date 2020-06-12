@@ -54,6 +54,13 @@
         color: #ff3c5d;
       }
 
+      .footer {
+        padding-top: 10px;
+        border-top: 1px solid #e1e1eb;
+        margin-top: 30px;
+        color: #717175;
+      }
+
     </style>
   </head>
 
@@ -74,6 +81,11 @@
         {{#agencyId}}<div class="readDetail"><b>Agency:</b> {{agencyId}}</div>{{/agencyId}}
         {{#cameraId}}<div class="readDetail"><b>Camera ID:</b> {{cameraId}}</div>{{/cameraId}}
         {{#coordinates}}<div class="readDetail"><b>Location:</b> {{{coordinates}}}</div>{{/coordinates}}
+      </div>
+
+      <div class="footer">
+          <span>This subscription was created by {{subscriber}}.</span>
+          <span>To report an issue, go to <a href="https://support.openlattice.com/servicedesk/customer/portal/1">https://support.openlattice.com/servicedesk/customer/portal/1</a></span>
       </div>
 
     </div>

@@ -797,6 +797,10 @@ public final class ResultSetAdapters {
         return mapper.readValue( rs.getString( ALERT_METADATA_FIELD ), alertMetadataTypeRef );
     }
 
+    public static Set<String> emails( ResultSet rs ) throws SQLException {
+        return Sets.newHashSet( (String[]) rs.getArray( EMAILS.getName() ).getArray() );
+    }
+
     public static PersistentSearch persistentSearch( ResultSet rs ) throws SQLException, IOException {
         UUID id = id( rs );
         OffsetDateTime lastRead = lastRead( rs );
@@ -804,8 +808,9 @@ public final class ResultSetAdapters {
         PersistentSearchNotificationType alertType = alertType( rs );
         SearchConstraints searchConstraints = searchConstraints( rs );
         Map<String, Object> alertMetadata = alertMetadata( rs );
+        Set<String> emails = emails( rs );
 
-        return new PersistentSearch( id, lastRead, expiration, alertType, searchConstraints, alertMetadata );
+        return new PersistentSearch( id, lastRead, expiration, alertType, searchConstraints, alertMetadata, emails );
     }
 
     public static EntityLinkingFeedback entityLinkingFeedback( ResultSet rs ) throws SQLException {

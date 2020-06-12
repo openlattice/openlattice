@@ -88,9 +88,11 @@ class CodexAlertEmailRenderer {
 
             val subject = "New Text Message From ${templateObjects[PHONE_NUMBER_FIELD]}"
 
+            templateObjects["subscriber"] = userEmail
+
             return RenderableEmailRequest(
                     Optional.of(FROM_EMAIL),
-                    arrayOf(userEmail),
+                    arrayOf(userEmail) + persistentSearch.additionalEmailAddresses,
                     Optional.empty(),
                     Optional.empty(),
                     TEMPLATE_PATH,
