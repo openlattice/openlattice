@@ -280,21 +280,27 @@ fun optionalWhereClausesSingleEdk(
  *
  * The bind order is the following:
  *
- * 1 - versions
+ * 1 - entity set id
  *
- * 2 - version
+ * 2 - entity key ids
  *
- * 3 - version
+ * 3 - partition
  *
- * 4 - entity set id
+ * 4 - versions
  *
- * 5 - entity key ids
+ * 5 - version
  *
- * 6 - partition
+ * 6 - version
  *
- * 7 - partition
+ * 7 - entity set id
  *
- * 8 - version
+ * 8 - entity key ids
+ *
+ * 9 - partition
+ *
+ * 10 - partition
+ *
+ * 11 - version
  */
 fun buildUpsertEntitiesAndLinkedData(): String {
     val insertColumns = dataTableValueColumns.joinToString(",") { it.name }
@@ -328,8 +334,8 @@ fun buildUpsertEntitiesAndLinkedData(): String {
             ","
     ) { "${it.name} = EXCLUDED.${it.name}" }
 
-
-    return "WITH linking_map as ($upsertEntitiesSql) INSERT INTO ${DATA.name} ($metadataColumnsSql,$insertColumns) " +
+    val lockingSql = "SELECT 1 FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ? ORDER BY ${ID_VALUE.name} FOR UPDATE "
+    return "WITH entity_locks as ($lockingSql), linking_map as ($upsertEntitiesSql) INSERT INTO ${DATA.name} ($metadataColumnsSql,$insertColumns) " +
             "SELECT $metadataReadColumnsSql,$insertColumns FROM ${DATA.name} INNER JOIN " +
             "linking_map USING(${ENTITY_SET_ID.name},${ID.name},${PARTITION.name}) " +
             "WHERE ${LINKING_ID.name} IS NOT NULL AND version > ? " +

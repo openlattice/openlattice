@@ -61,6 +61,15 @@ class PersistentSearchService(private val hds: HikariDataSource, private val spm
         }
     }
 
+    fun updatePersistentSearchAdditionalEmails(id: UUID, additionalEmails: Set<String>) {
+        val connection = hds.connection
+        connection.use {
+            val ps: PreparedStatement = connection.prepareStatement(updateAdditionalEmailsSql(connection, id))
+            ps.setArray(1, PostgresArrays.createTextArray(it, additionalEmails))
+            ps.execute()
+        }
+    }
+
     fun updatePersistentSearchExpiration(id: UUID, expiration: OffsetDateTime) {
         val connection = hds.connection
         connection.use {
@@ -86,13 +95,19 @@ class PersistentSearchService(private val hds: HikariDataSource, private val spm
                 EXPIRATION_DATE.name,
                 ALERT_TYPE.name,
                 SEARCH_CONSTRAINTS.name,
-                ALERT_METADATA.name
+                ALERT_METADATA.name,
+                EMAILS.name
         )
 
         return "INSERT INTO ${PERSISTENT_SEARCHES.name} (${columns.joinToString(
                 ","
         )}) VALUES ('${search.id}'::uuid, '${getUserAclKeyArray(connection)}', '${search.lastRead}', '${search.expiration}', " +
-                "'${search.type}', ?::jsonb, ?::jsonb)"
+                "'${search.type}', ?::jsonb, ?::jsonb, ${PostgresArrays.createTextArray(connection, search.additionalEmailAddresses)})"
+    }
+
+    private fun updateAdditionalEmailsSql(connection: Connection, id: UUID): String {
+        return "UPDATE ${PERSISTENT_SEARCHES.name} SET ${EMAILS.name} = ? " +
+                "WHERE id = '$id' AND ${ACL_KEY.name} = '${getUserAclKeyArray(connection)}'"
     }
 
     private fun updateDateSql(connection: Connection, id: UUID, isExpiration: Boolean, value: OffsetDateTime): String {
