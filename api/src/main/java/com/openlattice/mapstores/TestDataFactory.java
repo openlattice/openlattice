@@ -686,7 +686,8 @@ public final class TestDataFactory {
                 OffsetDateTime.now(),
                 PersistentSearchNotificationType.ALPR_ALERT,
                 simpleSearchConstraints(),
-                ImmutableMap.of() );
+                ImmutableMap.of(),
+                Optional.empty() );
     }
 
     public static CollectionTemplateType collectionTemplateType() {
