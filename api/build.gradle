@@ -6,7 +6,7 @@ buildscript {
     }
 
     dependencies {
-        classpath "org.openapitools:openapi-generator-gradle-plugin:4.0.1"
+        classpath "org.openapitools:openapi-generator-gradle-plugin:4.3.1"
     }
 
     configurations.classpath {
@@ -55,12 +55,9 @@ licenseReport {
     renderers = [new InventoryHtmlReportRenderer()]
 }
 
-def versions = [
-        checkstyle: '7.4',
-]
-
 checkstyle {
-    toolVersion = "${versions.checkstyle}"
+    toolVersion = '7.4'
+    config project.resources.text.fromUri('https://raw.githubusercontent.com/openlattice/gradles/master/checkstyle.xml')
 }
 
 spotbugs {
