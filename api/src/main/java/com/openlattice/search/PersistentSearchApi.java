@@ -5,6 +5,7 @@ import com.openlattice.search.requests.SearchConstraints;
 import retrofit2.http.*;
 
 import java.time.OffsetDateTime;
+import java.util.Set;
 import java.util.UUID;
 
 public interface PersistentSearchApi {
@@ -14,6 +15,7 @@ public interface PersistentSearchApi {
     String BASE       = SERVICE + CONTROLLER;
 
     String ID         = "id";
+    String  EMAILS     = "/emails";
     String EXPIRATION = "/expiration";
 
     String ID_PATH         = "/{" + ID + "}";
@@ -32,6 +34,9 @@ public interface PersistentSearchApi {
 
     @PATCH( BASE + ID_PATH )
     Void updatePersistentSearchConstraints( @Path( ID ) UUID id, @Body SearchConstraints constraints );
+
+    @PATCH( BASE + EMAILS + ID_PATH )
+    Void updatePersistentSearchAdditionalEmails( @Path( ID ) UUID id, @Body Set<String> additionalEmails );
 
     @DELETE( BASE + ID_PATH )
     Void expirePersistentSearch( @Path( ID ) UUID id );
