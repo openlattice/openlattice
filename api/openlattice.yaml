@@ -5411,19 +5411,7 @@ components:
               type: string
           
            
-    DataSearchResult:
-      type: object
-      properties:
-        numHits:
-          type: integer
-        hits:
-          type: array
-          items:
-            type: object
-            additionalProperties:
-              type: array
-              items:
-                type: string
+
     OrganizationExternalDatabaseTable:
       type: object
       properties:
