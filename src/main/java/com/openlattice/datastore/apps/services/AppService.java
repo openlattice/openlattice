@@ -319,8 +319,10 @@ public class AppService {
         Map<UUID, Boolean> entitySetIsAuthorized = Maps.newHashMap();
 
         // User permissions and app permissions must be evaluated separately, since both must have permissions
-        Stream.concat( authorizationService.accessChecksForPrincipals( accessChecks, principals ),
-                authorizationService.accessChecksForPrincipals( accessChecks, allAppPrincipals ) )
+        Stream.concat(
+                authorizationService.accessChecksForPrincipals( accessChecks, principals ),
+                authorizationService.accessChecksForPrincipals( accessChecks, allAppPrincipals )
+        )
                 .forEach( authorization -> {
                     UUID entitySetId = AuthorizationUtilsKt.getLastAclKeySafely( authorization.getAclKey() );
                     boolean isAuthorized = !authorization.getPermissions().containsValue( false );
