@@ -38,7 +38,7 @@ import com.openlattice.authorization.Principals;
 import com.openlattice.authorization.SecurableObjectResolveTypeService;
 import com.openlattice.authorization.SecurablePrincipal;
 import com.openlattice.authorization.securable.SecurableObjectType;
-import com.openlattice.authorization.util.AuthorizationUtils;
+import com.openlattice.authorization.util.AuthorizationUtilsKt;
 import com.openlattice.controllers.exceptions.ForbiddenException;
 import com.openlattice.controllers.exceptions.ResourceNotFoundException;
 import com.openlattice.datastore.services.EntitySetManager;
@@ -122,7 +122,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
                 getAccessibleObjects( SecurableObjectType.Organization, EnumSet.of( Permission.READ ) )
                         .parallel()
                         .filter( Objects::nonNull )
-                        .map( AuthorizationUtils::getLastAclKeySafely )
+                        .map( AuthorizationUtilsKt::getLastAclKeySafely )
         );
 
         return StreamSupport.stream( orgs.spliterator(), false ).map( org -> {

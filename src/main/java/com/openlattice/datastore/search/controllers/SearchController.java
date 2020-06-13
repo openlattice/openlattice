@@ -28,7 +28,7 @@ import com.openlattice.auditing.AuditingComponent;
 import com.openlattice.auditing.AuditingManager;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
-import com.openlattice.authorization.util.AuthorizationUtils;
+import com.openlattice.authorization.util.AuthorizationUtilsKt;
 import com.openlattice.data.requests.NeighborEntityDetails;
 import com.openlattice.data.requests.NeighborEntityIds;
 import com.openlattice.datastore.apps.services.AppService;
@@ -685,7 +685,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
                                 EnumSet.of( Permission.READ ) ) // TODO: other access check??
                                 .parallel()
                                 .filter( Objects::nonNull )
-                                .map( AuthorizationUtils::getLastAclKeySafely ) ) );
+                                .map( AuthorizationUtilsKt::getLastAclKeySafely ) ) );
         searchService.triggerAllOrganizationsIndex( allOrganizations );
         return null;
     }
