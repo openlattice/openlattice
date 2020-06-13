@@ -41,7 +41,6 @@ public interface SearchApi {
     /*
      * Normal params
      */
-    String POPULAR           = "/popular";
     String ORGANIZATIONS     = "/organizations";
     String ENTITY_SETS       = "/entity_sets";
     String ENTITY_TYPES      = "/entity_types";
@@ -90,9 +89,6 @@ public interface SearchApi {
      */
     @POST( BASE )
     SearchResult executeEntitySetKeywordQuery( @Body Search search );
-
-    @GET( BASE + POPULAR )
-    Iterable<EntitySet> getPopularEntitySet();
 
     /**
      * Executes a search over all existing entity sets to populate the home page. The path parameters instruct which
