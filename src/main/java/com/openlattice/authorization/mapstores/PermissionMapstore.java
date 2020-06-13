@@ -25,6 +25,8 @@ import static com.openlattice.postgres.PostgresArrays.createUuidArray;
 
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.collect.ImmutableList;
+import com.google.common.eventbus.EventBus;
+import com.hazelcast.config.EntryListenerConfig;
 import com.hazelcast.config.InMemoryFormat;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MapIndexConfig;
@@ -36,6 +38,7 @@ import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.PrincipalType;
+import com.openlattice.authorization.listeners.PermissionMapListener;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.mapstores.TestDataFactory;
@@ -69,8 +72,10 @@ public class PermissionMapstore extends AbstractBasePostgresMapstore<AceKey, Ace
     public static final String ROOT_OBJECT_INDEX           = "__key#aclKey[0]";
     public static final String SECURABLE_OBJECT_TYPE_INDEX = "securableObjectType";
 
-    public PermissionMapstore( HikariDataSource hds ) {
+    private final EventBus eventBus;
+    public PermissionMapstore( HikariDataSource hds, EventBus eventBus ) {
         super( HazelcastMap.PERMISSIONS, PostgresTable.PERMISSIONS, hds );
+        this.eventBus = eventBus;
     }
 
     @Override protected void bind(
@@ -145,7 +150,8 @@ public class PermissionMapstore extends AbstractBasePostgresMapstore<AceKey, Ace
                 .addMapIndexConfig( new MapIndexConfig( SECURABLE_OBJECT_TYPE_INDEX, false ) )
                 .addMapIndexConfig( new MapIndexConfig( PERMISSIONS_INDEX, false ) )
                 .addMapIndexConfig( new MapIndexConfig( ROOT_OBJECT_INDEX, false ) )
-                .addMapIndexConfig( new MapIndexConfig( EXPIRATION_DATE_INDEX, true ) );
+                .addMapIndexConfig( new MapIndexConfig( EXPIRATION_DATE_INDEX, true ) )
+                .addEntryListenerConfig( new EntryListenerConfig( new PermissionMapListener(eventBus),false, true ) );
     }
 
     @Override

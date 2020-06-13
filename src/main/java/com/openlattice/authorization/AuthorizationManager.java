@@ -67,6 +67,23 @@ public interface AuthorizationManager {
             EnumSet<Permission> permissions,
             OffsetDateTime expirationDate );
 
+    /**
+     * Method for bulk adding permissions to a single principal across multiple acl keys of the same type.
+     * 
+     * @param keys
+     * @param principal
+     * @param permissions
+     * @param securableObjectType
+     * @param expirationDate
+     */
+    @Timed
+    void addPermissions(
+            Set<AclKey> keys,
+            Principal principal,
+            EnumSet<Permission> permissions,
+            SecurableObjectType securableObjectType,
+            OffsetDateTime expirationDate );
+
     @Timed
     void addPermissions( List<Acl> acls );
 
