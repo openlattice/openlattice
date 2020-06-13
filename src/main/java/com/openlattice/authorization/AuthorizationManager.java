@@ -47,6 +47,15 @@ import java.util.stream.Stream;
 public interface AuthorizationManager {
 
     /**
+     * Bulk function for setting or initializing securable object types.
+     *
+     * @param aclKeys The acl keys to set to a specific object type.
+     * @param objectType The securable object type to be set for the aclKeys
+     */
+    @Timed
+    void setSecurableObjectTypes( Set<AclKey> aclKeys, SecurableObjectType objectType );
+
+    /**
      * Creates an empty acl.
      *
      * @param aclKey     The key for the object whose acl is being created.
@@ -65,6 +74,40 @@ public interface AuthorizationManager {
             AclKey aclKeys,
             Principal principal,
             EnumSet<Permission> permissions,
+            OffsetDateTime expirationDate );
+
+    /**
+     * Method for bulk adding permissions to a single principal across multiple acl keys of the same type.
+     *
+     * @param keys The acl keys to which permissions will be added.
+     * @param principal The principal who will be receiving permissions.
+     * @param permissions The permissions that will be added.
+     * @param securableObjectType The securable object type for which the permissions are being added. This will
+     * override the existing object type, so care must be taken to call this for keys of the right type.
+     */
+    @Timed
+    void addPermissions(
+            Set<AclKey> keys,
+            Principal principal,
+            EnumSet<Permission> permissions,
+            SecurableObjectType securableObjectType);
+
+    /**
+     * Method for bulk adding permissions to a single principal across multiple acl keys of the same type.
+     *
+     * @param keys The acl keys to which permissions will be added.
+     * @param principal The principal who will be receiving permissions.
+     * @param permissions The permissions that will be added.
+     * @param securableObjectType The securable object type for which the permissions are being added. This will
+     * override the existing object type, so care must be taken to call this for keys of the right type.
+     * @param expirationDate The expiration data for the permission changes.
+     */
+    @Timed
+    void addPermissions(
+            Set<AclKey> keys,
+            Principal principal,
+            EnumSet<Permission> permissions,
+            SecurableObjectType securableObjectType,
             OffsetDateTime expirationDate );
 
     @Timed
