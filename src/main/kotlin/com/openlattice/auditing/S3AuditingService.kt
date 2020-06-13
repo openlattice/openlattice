@@ -5,17 +5,13 @@ import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.services.s3.model.PutObjectRequest
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import com.google.common.base.Stopwatch
 import com.google.common.collect.Queues
 import com.google.common.util.concurrent.MoreExecutors
 import com.openlattice.aws.newS3Client
 import com.openlattice.ids.HazelcastLongIdService
 import com.openlattice.ids.IdScopes
-import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType
-import java.lang.IllegalStateException
 import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 
 private const val LONG_IDS_BATCH_SIZE = 8192
 
@@ -23,8 +19,6 @@ private const val LONG_IDS_BATCH_SIZE = 8192
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-
-private val logger = LoggerFactory.getLogger(S3AuditingService::class.java)
 
 class S3AuditingService(
         auditingConfiguration: AuditingConfiguration,
@@ -68,9 +62,7 @@ class S3AuditingService(
         val id = getId()
         val partition = id % partitions.toLong()
         val key = "$partition/${System.currentTimeMillis()}/event-$id.json"
-        val s = Stopwatch.createStarted()
         s3.putObject(PutObjectRequest(bucket, key, eventsInputStream, metadata))
-        logger.info("Auditing took {} ms", s.elapsed(TimeUnit.MILLISECONDS))
         return events.size
     }
 

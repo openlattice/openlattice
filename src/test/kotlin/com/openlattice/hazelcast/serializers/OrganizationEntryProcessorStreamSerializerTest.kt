@@ -36,7 +36,7 @@ class OrganizationEntryProcessorStreamSerializerTest : AbstractStreamSerializerT
         return OrganizationEntryProcessor {
             it.emailDomains.add(t)
             it.grants.getOrPut(UUID.randomUUID()) { mutableMapOf() }[grant.grantType] = grant
-            null
+            OrganizationEntryProcessor.Result(null)
         }
     }
 

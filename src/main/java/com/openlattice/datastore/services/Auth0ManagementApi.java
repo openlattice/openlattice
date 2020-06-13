@@ -34,27 +34,30 @@ public interface Auth0ManagementApi {
 
     String BASIC_REQUEST_FIELDS = "?fields=user_id%2Cemail%2Cnickname%2Capp_metadata";
 
-    String PAGE = "page";
+    String PAGE     = "page";
     String PER_PAGE = "per_page";
-    String QUERY = "q";
-    String USERS = "users";
+    String QUERY    = "q";
+    String USERS    = "users";
 
     String USER_ID      = "userId";
     String USER_ID_PATH = "{" + USER_ID + "}";
 
     @GET( USERS + BASIC_REQUEST_FIELDS )
-    Set<Auth0UserBasic> getAllUsers( @Query( PAGE ) int page , @Query( PER_PAGE ) int perPage ) ;
+    Set<Auth0UserBasic> getAllUsers( @Query( PAGE ) int page, @Query( PER_PAGE ) int perPage );
 
     @GET( USERS + "/" + USER_ID_PATH + BASIC_REQUEST_FIELDS )
     Auth0UserBasic getUser( @Path( USER_ID ) String userId );
 
     @PATCH( USERS + "/" + USER_ID_PATH )
-    Void resetRolesOfUser( @Path( USER_ID ) String userId, @Body Map<String,Object> app_metadata );
+    Void resetRolesOfUser( @Path( USER_ID ) String userId, @Body Map<String, Object> app_metadata );
 
     @GET( USERS )
     Set<Auth0UserBasic> searchAllUsers(
             @Query( QUERY ) String searchQuery,
             @Query( PAGE ) int page,
             @Query( PER_PAGE ) int perPage );
+
+    @DELETE( USERS + "/" + USER_ID_PATH )
+    Void deleteUser( @Path( USER_ID ) String userId );
 
 }

@@ -69,6 +69,7 @@ import com.openlattice.postgres.PostgresTableManager;
 import com.openlattice.postgres.mapstores.*;
 import com.openlattice.requests.Status;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
+import com.openlattice.scheduling.mapstores.ScheduledTasksMapstore;
 import com.openlattice.shuttle.Integration;
 import com.openlattice.shuttle.IntegrationJob;
 import com.zaxxer.hikari.HikariDataSource;
@@ -113,7 +114,7 @@ public class MapstoresPod {
             stmt.addBatch( deleteUserSql );
             stmt.executeBatch();
         } catch ( SQLException | IOException e ) {
-            logger.error( "Unable to configure postgres functions for user management." );
+            logger.error( "Unable to configure postgres functions for user management.", e );
         }
 
         return jdbi.onDemand( PostgresUserApi.class );
@@ -287,5 +288,10 @@ public class MapstoresPod {
     @Bean
     public ResolvedPrincipalTreesMapLoader resolvedPrincipalTreesMapLoader() {
         return new ResolvedPrincipalTreesMapLoader();
+    }
+
+    @Bean
+    public ScheduledTasksMapstore scheduledTasksMapstore() {
+        return new ScheduledTasksMapstore( hikariDataSource );
     }
 }

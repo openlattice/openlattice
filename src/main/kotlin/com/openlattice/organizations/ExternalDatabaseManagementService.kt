@@ -7,6 +7,7 @@ import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.hazelcast.query.QueryConstants
 import com.openlattice.assembler.AssemblerConnectionManager
+import com.openlattice.assembler.AssemblerConnectionManager.Companion.MATERIALIZED_VIEWS_SCHEMA
 import com.openlattice.assembler.AssemblerConnectionManager.Companion.PUBLIC_SCHEMA
 import com.openlattice.assembler.PostgresDatabases
 import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresUsername
@@ -177,7 +178,7 @@ class ExternalDatabaseManagementService(
     }
 
     fun getColumnNamesByTable(dbName: String): Map<String, Set<String>> {
-        val columnNamesByTableName = Maps.newHashMapWithExpectedSize<String, MutableSet<String>>(organizationExternalDatabaseTables.size)
+        val columnNamesByTableName = mutableMapOf<String, MutableSet<String>>()
         val sql = getCurrentTableAndColumnNamesSql()
         BasePostgresIterable(
                 StatementHolderSupplier(acm.connect(dbName), sql, FETCH_SIZE)
@@ -477,7 +478,7 @@ class ExternalDatabaseManagementService(
     }
 
     private fun createDropColumnSql(columnNames: Set<String>): String {
-        return columnNames.joinToString(", ") { "DROP COLUMN $it" }
+        return columnNames.joinToString(", ") { "DROP COLUMN ${quote(it)}" }
     }
 
     private fun createPrivilegesUpdateSql(action: Action, privileges: List<String>, tableName: String, columnName: String, dbUser: String): String {
@@ -485,9 +486,9 @@ class ExternalDatabaseManagementService(
         checkState(action == Action.REMOVE || action == Action.ADD || action == Action.SET,
                 "Invalid action $action specified")
         return if (action == Action.REMOVE) {
-            "REVOKE $privilegesAsString ($columnName) ON $tableName FROM $dbUser"
+            "REVOKE $privilegesAsString (${quote(columnName)}) ON $tableName FROM $dbUser"
         } else {
-            "GRANT $privilegesAsString ($columnName) ON $tableName TO $dbUser"
+            "GRANT $privilegesAsString (${quote(columnName)}) ON $tableName TO $dbUser"
         }
     }
 
@@ -594,7 +595,7 @@ class ExternalDatabaseManagementService(
     /*INTERNAL SQL QUERIES*/
     private fun getCurrentTableAndColumnNamesSql(): String {
         return selectExpression + fromExpression + leftJoinColumnsExpression +
-                "WHERE information_schema.tables.table_schema='$PUBLIC_SCHEMA' " +
+                "WHERE information_schema.tables.table_schema='$MATERIALIZED_VIEWS_SCHEMA' " +
                 "AND table_type='BASE TABLE'"
     }
 

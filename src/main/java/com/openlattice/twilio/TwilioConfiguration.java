@@ -36,20 +36,28 @@ public class TwilioConfiguration implements Configuration {
     private static final String SID_PROPERTY        = "sid";
     private static final String TOKEN_PROPERTY      = "token";
     private static final String SHORT_CODE_PROPERTY = "shortCode";
+    private static final String CALLBACK_BASE_URL   = "callbackBaseUrl";
+    private static final String CODEX_ENABLED       = "codexEnabled";
 
     private final String sid;
     private final String token;
     private final String shortCode;
+    private final String callbackBaseUrl;
+    private final boolean codexEnabled;
 
     @JsonCreator
     public TwilioConfiguration(
             @JsonProperty( SID_PROPERTY ) String sid,
             @JsonProperty( TOKEN_PROPERTY ) String token,
-            @JsonProperty( SHORT_CODE_PROPERTY ) String shortCode ) {
+            @JsonProperty( SHORT_CODE_PROPERTY ) String shortCode,
+            @JsonProperty( CALLBACK_BASE_URL ) String callbackBaseUrl,
+            @JsonProperty( CODEX_ENABLED ) boolean codexEnabled ) {
 
         this.sid = sid;
         this.token = token;
         this.shortCode = shortCode;
+        this.callbackBaseUrl = callbackBaseUrl;
+        this.codexEnabled = codexEnabled;
     }
 
     @JsonProperty( SID_PROPERTY )
@@ -65,6 +73,16 @@ public class TwilioConfiguration implements Configuration {
     @JsonProperty( SHORT_CODE_PROPERTY )
     public String getShortCode() {
         return shortCode;
+    }
+
+    @JsonProperty( CALLBACK_BASE_URL )
+    public String getCallbackBaseUrl() {
+        return callbackBaseUrl;
+    }
+
+    @JsonProperty( CODEX_ENABLED )
+    public boolean isCodexEnabled() {
+        return codexEnabled;
     }
 
     @Override

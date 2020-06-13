@@ -21,6 +21,7 @@
 
 package com.openlattice.data
 
+import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Stopwatch
 import com.google.common.collect.ListMultimap
 import com.google.common.collect.Multimaps
@@ -28,9 +29,11 @@ import com.google.common.collect.SetMultimap
 import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking
 import com.openlattice.analysis.requests.FilteredNeighborsRankingAggregation
 import com.openlattice.data.storage.EntityDatastore
+import com.openlattice.data.storage.MetadataOption
 import com.openlattice.data.storage.PostgresEntitySetSizesTask
 import com.openlattice.edm.set.ExpirationBase
 import com.openlattice.edm.type.PropertyType
+import com.openlattice.analysis.requests.AggregationResult
 import com.openlattice.graph.core.GraphService
 import com.openlattice.graph.core.NeighborSets
 import com.openlattice.graph.edge.Edge
@@ -39,10 +42,12 @@ import com.openlattice.postgres.PostgresColumn
 import com.openlattice.postgres.PostgresDataTables
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PostgresIterable
+import org.apache.commons.lang3.NotImplementedException
 import org.apache.commons.lang3.tuple.Pair
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
+import org.springframework.stereotype.Service
 import java.nio.ByteBuffer
 import java.sql.Types
 import java.time.OffsetDateTime
@@ -57,13 +62,21 @@ import java.util.stream.Stream
  */
 private val logger = LoggerFactory.getLogger(DataGraphService::class.java)
 
-open class DataGraphService(
+@Service
+class DataGraphService(
         private val graphService: GraphService,
         private val idService: EntityKeyIdService,
         private val eds: EntityDatastore,
         private val entitySetSizesTask: PostgresEntitySetSizesTask
 
 ) : DataGraphManager {
+    override fun getEntitiesWithMetadata(
+            entityKeyIds: Map<UUID, Optional<Set<UUID>>>, authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
+            metadataOptions: EnumSet<MetadataOption>
+    ): Iterable<MutableMap<FullQualifiedName, MutableSet<Any>>> {
+        throw NotImplementedException("NOT YET IMPLEMENTED.")
+    }
+
     override fun getEntityKeyIds(entityKeys: Set<EntityKey>): Set<UUID> {
         return idService.reserveEntityKeyIds(entityKeys)
     }
@@ -324,7 +337,7 @@ open class DataGraphService(
     }
 
     /* Top utilizers */
-
+    @Timed
     override fun getFilteredRankings(
             entitySetIds: Set<UUID>,
             numResults: Int,
@@ -332,14 +345,7 @@ open class DataGraphService(
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
             linked: Boolean,
             linkingEntitySetId: Optional<UUID>
-    ): Iterable<Map<String, Any>> {
-//        val maybeUtilizers = queryCache
-//                .getIfPresent(MultiKey(entitySetIds, filteredRankings))
-//        val utilizers: PostgresIterable<Map<String, Object>>
-//
-//
-//        if (maybeUtilizers == null) {
-
+    ): AggregationResult {
         return graphService.computeTopEntities(
                 numResults,
                 entitySetIds,
@@ -349,24 +355,6 @@ open class DataGraphService(
                 linkingEntitySetId
         )
 
-//            queryCache.put(MultiKey(entitySetIds, filteredRankings), utilizers)
-//        } else {
-//            utilizers = maybeUtilizers
-//        }
-
-//        val entities = eds
-//                .getEntities(entitySetIds.first(), utilizers.map { it.id }.toSet(), authorizedPropertyTypes)
-//                .map { it[ID_FQN].first() as UUID to it }
-//                .toList()
-//                .toMap()
-
-//        return utilizers.map {
-//            val entity = entities[it.id]!!
-//            entity.put(COUNT_FQN, it.weight)
-//            entity
-//        }.stream()
-
-
     }
 
     override fun getTopUtilizers(
@@ -375,53 +363,6 @@ open class DataGraphService(
             numResults: Int,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Stream<SetMultimap<FullQualifiedName, Any>> {
-//        val maybeUtilizers = queryCache
-//                .getIfPresent(MultiKey(entitySetId, filteredNeighborsRankingList))
-//        val utilizers: Array<IncrementableWeightId>
-//
-//
-//        if (maybeUtilizers == null) {
-//            utilizers = graphService.computeTopEntities(
-//                    numResults, entitySetId, authorizedPropertyTypes, filteredNeighborsRankingList
-//            )
-//            //            utilizers = new TopUtilizers( numResults );
-//            val srcFilters = HashMultimap.create<UUID, UUID>()
-//            val dstFilters = HashMultimap.create<UUID, UUID>()
-//
-//            val associationPropertyTypeFilters = HashMultimap.create<UUID, Optional<SetMultimap<UUID, RangeFilter<Comparable<Any>>>>>()
-//            val srcPropertyTypeFilters = HashMultimap.create<UUID, Optional<SetMultimap<UUID, RangeFilter<Comparable<Any>>>>>()
-//            val dstPropertyTypeFilters = HashMultimap.create<UUID, Optional<SetMultimap<UUID, RangeFilter<Comparable<Any>>>>>()
-//            filteredNeighborsRankingList.forEach { details ->
-//                val associationSets = edm.getEntitySetsOfType(details.associationTypeIds).map { it.id }
-//                val neighborSets = edm.getEntitySetsOfType(details.neighborTypeId).map { it.id }
-//
-//                associationSets.forEach {
-//                    (if (details.utilizerIsSrc) srcFilters else dstFilters).putAll(it, neighborSets)
-//                    (if (details.utilizerIsSrc) srcPropertyTypeFilters else dstPropertyTypeFilters).putAll(
-//                            it, details.neighborFilters
-//                    )
-//                }
-//
-//            }
-//
-//            utilizers = graphService.computeGraphAggregation(numResults, entitySetId, srcFilters, dstFilters)
-//
-//            queryCache.put(MultiKey(entitySetId, filteredNeighborsRankingList), utilizers)
-//        } else {
-//            utilizers = maybeUtilizers
-//        }
-//
-//        val entities = eds
-//                .getEntities(entitySetId, utilizers.map { it.id }.toSet(), authorizedPropertyTypes)
-//                .map { it[ID_FQN].first() as UUID to it }
-//                .toList()
-//                .toMap()
-//
-//        return utilizers.map {
-//            val entity = entities[it.id]!!
-//            entity.put(COUNT_FQN, it.weight)
-//            entity
-//        }.stream()
         return Stream.empty()
     }
 
