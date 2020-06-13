@@ -23,6 +23,7 @@ import com.openlattice.postgres.streams.StatementHolderSupplier
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.apache.olingo.commons.api.edm.FullQualifiedName
+import org.postgresql.util.PSQLException
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.nio.ByteBuffer
@@ -409,23 +410,35 @@ class PostgresEntityDataQueryService(
                 upsertPropertyValues.values.map { it.executeBatch().sum() }.sum()
             }.sum()
 
+            connection.autoCommit = false
+            val lockEntities = connection.prepareStatement(lockEntitiesInIdsTable)
             //Make data visible by marking new version in ids table.
             val upsertEntities = connection.prepareStatement(buildUpsertEntitiesAndLinkedData())
-            val updatedLinkedEntities = attempt(LinearBackoff(60000, 125), 32) {
-                upsertEntities.setObject(1, entitySetId)
-                upsertEntities.setArray(2, entityKeyIdsArr)
-                upsertEntities.setInt(3, partition)
 
-                upsertEntities.setObject(4, versionsArrays)
-                upsertEntities.setObject(5, version)
-                upsertEntities.setObject(6, version)
-                upsertEntities.setObject(7, entitySetId)
-                upsertEntities.setArray(8, entityKeyIdsArr)
-                upsertEntities.setInt(9, partition)
-                upsertEntities.setInt(10, partition)
-                upsertEntities.setLong(11, version)
-                upsertEntities.executeUpdate()
+            val updatedLinkedEntities = attempt(LinearBackoff(60000, 125), 32) {
+                try {
+                    lockEntities.setObject(1, entitySetId)
+                    lockEntities.setArray(2, entityKeyIdsArr)
+                    lockEntities.setInt(3, partition)
+                    lockEntities.executeQuery()
+
+                    upsertEntities.setObject(1, versionsArrays)
+                    upsertEntities.setObject(2, version)
+                    upsertEntities.setObject(3, version)
+                    upsertEntities.setObject(4, entitySetId)
+                    upsertEntities.setArray(5, entityKeyIdsArr)
+                    upsertEntities.setInt(6, partition)
+                    upsertEntities.setInt(7, partition)
+                    upsertEntities.setLong(8, version)
+                    upsertEntities.executeUpdate()
+                } catch( ex: PSQLException) {
+                    //Should be pretty rare.
+                    connection.rollback()
+                    throw ex
+                }
             }
+            connection.commit()
+            connection.autoCommit = true
             logger.debug("Updated $updatedLinkedEntities linked entities as part of insert.")
             updatedPropertyCounts
         }
