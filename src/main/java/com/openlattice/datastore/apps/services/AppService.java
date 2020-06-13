@@ -298,28 +298,38 @@ public class AppService {
         List<AppConfig> availableConfigs = Lists.newArrayList();
         App app = apps.get( appId );
 
+        Map<UUID, String> appTypeFQNSById = Maps.newHashMapWithExpectedSize( app.getAppTypeIds().size() );
+        appTypes.getAll( app.getAppTypeIds() ).values().forEach( appType ->
+                appTypeFQNSById.put( appType.getId(), appType.getType().getFullQualifiedNameAsString() )
+        );
+
         Map<UUID, Organization> orgsById = StreamUtil.stream( organizations )
                 .collect( Collectors.toMap( Organization::getId, Function.identity() ) );
+        int numKeys = orgsById.size() * app.getAppTypeIds().size();
 
-        Map<UUID, Map<AppConfigKey, AppTypeSetting>> orgsToSettings = orgsById
-                .keySet()
-                .stream()
-                .filter( orgId -> organizationService.getOrganizationApps( orgId ).contains( appId ) )
-                .collect( Collectors
-                        .toMap( Function.identity(), orgId -> appConfigs.getAll(
-                                app.getAppTypeIds()
-                                        .stream()
-                                        .map( id -> new AppConfigKey( appId, orgId, id ) )
-                                        .collect( Collectors.toSet() )
-                        ) ) );
+        Set<AppConfigKey> keysToLoad = Sets.newHashSetWithExpectedSize( numKeys );
+        orgsById.keySet().forEach( organizationId ->
+                app.getAppTypeIds().forEach( appTypeId ->
+                        keysToLoad.add( new AppConfigKey( appId, organizationId, appTypeId ) )
+                )
+        );
 
-        Set<AccessCheck> accessChecks = orgsToSettings.values().stream().flatMap( map -> map.values().stream() )
-                .map( setting -> new AccessCheck( new AclKey( setting.getEntitySetId() ),
-                        setting.getPermissions() ) ).collect( Collectors.toSet() );
+        Map<UUID, Map<AppConfigKey, AppTypeSetting>> orgsToSettings = Maps.newHashMapWithExpectedSize( numKeys );
+        Set<AccessCheck> accessChecks = Sets.newHashSetWithExpectedSize( numKeys );
+        Set<Principal> allAppPrincipals = Sets.newHashSetWithExpectedSize( orgsById.size() );
 
-        Set<Principal> allAppPrincipals = orgsToSettings.keySet().stream()
-                .map( orgId -> new Principal( PrincipalType.APP,
-                        AppConfig.getAppPrincipalId( app.getId(), orgId ) ) ).collect( Collectors.toSet() );
+        appConfigs.getAll( keysToLoad ).forEach( ( key, value ) -> {
+            UUID orgId = key.getOrganizationId();
+
+            if ( !orgsToSettings.containsKey( orgId ) ) {
+                orgsToSettings.put( orgId, Maps.newHashMapWithExpectedSize( app.getAppTypeIds().size() ) );
+                allAppPrincipals
+                        .add( new Principal( PrincipalType.APP, AppConfig.getAppPrincipalId( app.getId(), orgId ) ) );
+            }
+
+            orgsToSettings.get( orgId ).put( key, value );
+            accessChecks.add( new AccessCheck( new AclKey( value.getEntitySetId() ), value.getPermissions() ) );
+        } );
 
         Map<UUID, Boolean> entitySetIsAuthorized = Maps.newHashMap();
 
@@ -349,8 +359,8 @@ public class AppService {
         } ).forEach( entry -> {
             Map<String, AppTypeSetting> config = entry.getValue().entrySet().stream()
                     .collect( Collectors
-                            .toMap( settingEntry -> appTypes.get( settingEntry.getKey().getAppTypeId() ).getType()
-                                    .getFullQualifiedNameAsString(), Map.Entry::getValue ) );
+                            .toMap( settingEntry -> appTypeFQNSById.get( settingEntry.getKey().getAppTypeId() ),
+                                    Map.Entry::getValue ) );
             AppConfig appConfig = new AppConfig( Optional.of( app.getId() ),
                     new Principal( PrincipalType.APP,
                             AppConfig.getAppPrincipalId( app.getId(), entry.getKey() ) ),
