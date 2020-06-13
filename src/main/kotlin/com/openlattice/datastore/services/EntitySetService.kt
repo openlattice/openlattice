@@ -128,7 +128,7 @@ open class EntitySetService(
             authorizations.setSecurableObjectType(AclKey(entitySetId), SecurableObjectType.EntitySet)
 
             val userAce = listOf(Ace(principal, EnumSet.allOf(Permission::class.java)))
-            val acls = entityType.properties.map { Acl(AclKey(entitySetId, it),userAce) } + Acl(AclKey(entitySetId), userAce)
+            val acls = entityType.properties.map { Acl(AclKey(entitySetId, it), userAce) } + Acl(AclKey(entitySetId), userAce)
             authorizations.addPermissions(acls)
 
             entityType.properties
