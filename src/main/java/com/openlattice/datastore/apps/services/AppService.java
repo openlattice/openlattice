@@ -20,6 +20,7 @@
 
 package com.openlattice.datastore.apps.services;
 
+import com.codahale.metrics.annotation.Timed;
 import com.dataloom.streams.StreamUtil;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
@@ -42,7 +43,7 @@ import com.openlattice.apps.processors.UpdateAppConfigPermissionsProcessor;
 import com.openlattice.apps.processors.UpdateAppMetadataProcessor;
 import com.openlattice.apps.processors.UpdateAppTypeMetadataProcessor;
 import com.openlattice.authorization.*;
-import com.openlattice.authorization.util.AuthorizationUtils;
+import com.openlattice.authorization.util.AuthorizationUtilsKt;
 import com.openlattice.controllers.exceptions.BadRequestException;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.EntitySetManager;
@@ -74,6 +75,7 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.springframework.stereotype.Service;
 
 public class AppService {
     private final IMap<UUID, App>                    apps;
@@ -282,6 +284,7 @@ public class AppService {
         return appTypes.getAll( appTypeIds );
     }
 
+    @Timed
     public List<AppConfig> getAvailableConfigs(
             UUID appId,
             Set<Principal> principals,
@@ -319,7 +322,7 @@ public class AppService {
         Stream.concat( authorizationService.accessChecksForPrincipals( accessChecks, principals ),
                 authorizationService.accessChecksForPrincipals( accessChecks, allAppPrincipals ) )
                 .forEach( authorization -> {
-                    UUID entitySetId = AuthorizationUtils.getLastAclKeySafely( authorization.getAclKey() );
+                    UUID entitySetId = AuthorizationUtilsKt.getLastAclKeySafely( authorization.getAclKey() );
                     boolean isAuthorized = !authorization.getPermissions().containsValue( false );
 
                     if ( !isAuthorized ) {
