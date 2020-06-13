@@ -70,11 +70,11 @@ import java.util.List;
                 PermissionsController.class, AuthorizationsController.class,
                 PrincipalDirectoryController.class,
                 EdmController.class, OrganizationsController.class,
-                DataStoreExceptionHandler.class, EntitySetsController.class, AnalysisController.class,
+                DataStoreExceptionHandler.class, EntitySetsController.class,
                 RequestsController.class, AppController.class, GraphController.class,
                 PersistentSearchController.class, AdminController.class, AssemblyAnalyzationController.class,
                 SubscriptionController.class, FeedsController.class, CodexController.class, CollectionsController.class,
-                DatasetController.class
+                DatasetController.class, AnalysisController.class
         },
         includeFilters = @ComponentScan.Filter(
                 value = { org.springframework.stereotype.Controller.class,

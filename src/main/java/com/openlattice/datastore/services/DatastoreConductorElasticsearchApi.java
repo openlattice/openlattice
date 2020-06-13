@@ -46,12 +46,14 @@ import org.slf4j.LoggerFactory;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 
+@Deprecated
 public class DatastoreConductorElasticsearchApi implements ConductorElasticsearchApi {
 
     private static final Logger logger = LoggerFactory.getLogger( DatastoreConductorElasticsearchApi.class );
 
     private final DurableExecutorService executor;
 
+    @Deprecated
     public DatastoreConductorElasticsearchApi( HazelcastInstance hazelcast ) {
         this.executor = hazelcast.getDurableExecutorService( "default" );
     }

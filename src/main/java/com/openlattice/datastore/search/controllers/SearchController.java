@@ -41,7 +41,6 @@ import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.Organization;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.search.SearchApi;
-import com.openlattice.search.SearchService;
 import com.openlattice.search.SortDefinition;
 import com.openlattice.search.requests.*;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -61,7 +60,7 @@ import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSI
 
 @SuppressFBWarnings(
         value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE",
-        justification = "NPEs are prevented by Preconditions.checkState but SpotBugs doesn't understand this")
+        justification = "NPEs are prevented by Preconditions.checkState but SpotBugs doesn't understand this" )
 @RestController
 @RequestMapping( SearchApi.CONTROLLER )
 public class SearchController implements SearchApi, AuthorizingComponent, AuditingComponent {
@@ -122,16 +121,6 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
     }
 
     @RequestMapping(
-            path = { POPULAR },
-            method = RequestMethod.GET,
-            produces = { MediaType.APPLICATION_JSON_VALUE } )
-    @Override
-    @Timed
-    public Iterable<EntitySet> getPopularEntitySet() {
-        return entitySetManager.getEntitySets();
-    }
-
-    @RequestMapping(
             path = { ENTITY_SETS + START_PATH + NUM_RESULTS_PATH },
             method = RequestMethod.GET,
             produces = { MediaType.APPLICATION_JSON_VALUE } )
@@ -158,16 +147,20 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
 
         validateSearch( searchConstraints );
 
+        Set<Principal> currentPrincipals = Principals.getCurrentPrincipals();
+
         // check read on entity sets
-        final var authorizedEntitySetIds = authorizationsHelper
-                .getAuthorizedEntitySets( Set.of( searchConstraints.getEntitySetIds() ), READ_PERMISSION );
+        final var authorizedEntitySetIds = entitySetManager
+                .filterToAuthorizedNormalEntitySets( Set.of( searchConstraints.getEntitySetIds() ),
+                        READ_PERMISSION,
+                        currentPrincipals );
 
         DataSearchResult results = new DataSearchResult( 0, Lists.newArrayList() );
 
         // if user has read access on all normal entity sets
         if ( authorizedEntitySetIds.size() == searchConstraints.getEntitySetIds().length ) {
             final var authorizedPropertyTypesByEntitySet = authorizationsHelper.getAuthorizedPropertiesOnEntitySets(
-                    authorizedEntitySetIds, READ_PERMISSION, Principals.getCurrentPrincipals() );
+                    authorizedEntitySetIds, READ_PERMISSION, currentPrincipals );
 
             results = searchService
                     .executeSearch( searchConstraints, authorizedPropertyTypesByEntitySet );
@@ -601,8 +594,8 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
         SetMultimap<UUID, UUID> neighborsByEntitySet = HashMultimap.create();
 
         result.values().forEach( associationMap ->
-                associationMap.forEach( (associationEsId, association) -> {
-                    association.forEach( (neighborEsId, neighbor) -> {
+                associationMap.forEach( ( associationEsId, association ) -> {
+                    association.forEach( ( neighborEsId, neighbor ) -> {
                         neighborsByEntitySet
                                 .put( associationEsId, neighbor.getAssociationEntityKeyId() );
                         neighborsByEntitySet

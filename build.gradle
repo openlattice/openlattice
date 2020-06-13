@@ -142,6 +142,7 @@ dependencies {
         logger.quiet(project.name + " using project dependencies.")
         compile project(":rhizome")
         compile project(":conductor-client")
+        compile project(":scrunchie")
         compile project(":api")
         testCompile project(":conductor")
         testCompile(project(path: ":api", configuration: "tests"))
@@ -151,6 +152,7 @@ dependencies {
         logger.quiet(project.name + " using jar dependencies.")
         compile "com.openlattice:rhizome:${rhizome_version}"
         compile "com.openlattice:conductor-client:${conductor_client_version}"
+        compile "com.openlattice:scrunchie:${scrunchie_version}"
         compile "com.openlattice:api:${api_version}"
         testCompile "com.openlattice:conductor:${conductor_version}"
         testCompile "com.openlattice:api:${api_version}:tests"

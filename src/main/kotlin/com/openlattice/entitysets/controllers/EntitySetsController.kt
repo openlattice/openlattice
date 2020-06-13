@@ -160,7 +160,7 @@ constructor(
                                 spm.currentUserId,
                                 AclKey(entitySet.id),
                                 AuditEventType.CREATE_ENTITY_SET,
-                                "Created entity set through EntitySetApi.createEntitySets",
+                                "Created entity set through EntitySetsApi.createEntitySets",
                                 Optional.empty(),
                                 ImmutableMap.of("entitySet", entitySet),
                                 OffsetDateTime.now(),
@@ -268,7 +268,7 @@ constructor(
                         spm.currentUserId,
                         AclKey(entitySetId),
                         AuditEventType.READ_ENTITY_SET,
-                        "Entity set read through EntitySetApi.getEntitySet",
+                        "Entity set read through EntitySetsApi.getEntitySet",
                         Optional.empty(),
                         ImmutableMap.of(),
                         OffsetDateTime.now(),
@@ -304,7 +304,7 @@ constructor(
                         spm.currentUserId,
                         AclKey(entitySetId),
                         AuditEventType.DELETE_ENTITY_SET,
-                        "Entity set deleted through EntitySetApi.deleteEntitySet",
+                        "Entity set deleted through EntitySetsApi.deleteEntitySet",
                         Optional.empty(),
                         ImmutableMap.of(),
                         OffsetDateTime.now(),
@@ -376,7 +376,7 @@ constructor(
                         spm.currentUserId,
                         AclKey(entitySetId),
                         AuditEventType.UPDATE_ENTITY_SET,
-                        "Entity set metadata updated through EntitySetApi.updateEntitySetMetadata",
+                        "Entity set metadata updated through EntitySetsApi.updateEntitySetMetadata",
                         Optional.empty(),
                         ImmutableMap.of("update", update),
                         OffsetDateTime.now(),
@@ -470,7 +470,7 @@ constructor(
                         spm.currentUserId,
                         AclKey(entitySetId, propertyTypeId),
                         AuditEventType.UPDATE_ENTITY_SET_PROPERTY_METADATA,
-                        "Entity set property metadata updated through EntitySetApi.updateEntitySetPropertyMetadata",
+                        "Entity set property metadata updated through EntitySetsApi.updateEntitySetPropertyMetadata",
                         Optional.empty(),
                         ImmutableMap.of("update", update),
                         OffsetDateTime.now(),
@@ -499,7 +499,7 @@ constructor(
                         spm.currentUserId,
                         AclKey(entitySetId),
                         AuditEventType.UPDATE_ENTITY_SET,
-                        "Entity set data expiration policy removed through EntitySetApi.removeDataExpirationPolicy",
+                        "Entity set data expiration policy removed through EntitySetsApi.removeDataExpirationPolicy",
                         Optional.empty(),
                         ImmutableMap.of("entitySetId", entitySetId),
                         OffsetDateTime.now(),
@@ -519,16 +519,30 @@ constructor(
             @RequestBody dateTime: String
     ): Set<UUID> {
         ensureReadAccess(AclKey(entitySetId))
-        val es = getEntitySet(entitySetId)
+        val es = entitySetManager.getEntitySet(entitySetId)!!
         check(es.hasExpirationPolicy()) { "Entity set ${es.name} does not have an expiration policy" }
 
-        val expirationPolicy = es.expiration
+        val expirationPolicy = es.expiration!!
         val expirationPT = expirationPolicy.startDateProperty.map { edmManager.getPropertyType(it) }
+
+        recordEvent(
+                AuditableEvent(
+                        spm.currentUserId,
+                        AclKey(entitySetId),
+                        AuditEventType.READ_ENTITY_SET,
+                        "EntitySetsApi.getExpiringEntitiesFromEntitySet() returned entity key ids",
+                        Optional.empty(),
+                        ImmutableMap.of("entitySetId", entitySetId),
+                        OffsetDateTime.now(),
+                        Optional.empty()
+                )
+        )
+
         return dgm.getExpiringEntitiesFromEntitySet(
                 entitySetId,
                 expirationPolicy,
                 OffsetDateTime.parse(dateTime),
-                es.expiration.deleteType,
+                expirationPolicy.deleteType,
                 expirationPT
         ).toSet()
     }
