@@ -40,7 +40,7 @@ import com.openlattice.datastore.search.controllers.SearchController;
 import com.openlattice.datastore.util.DataStoreExceptionHandler;
 import com.openlattice.entitysets.controllers.EntitySetsController;
 import com.openlattice.graph.controllers.GraphController;
-import com.openlattice.organizations.DatasetController;
+import com.openlattice.organizations.controllers.DatasetController;
 import com.openlattice.subscriptions.controllers.FeedsController;
 import com.openlattice.subscriptions.controllers.SubscriptionController;
 import com.openlattice.web.converters.CsvHttpMessageConverter;

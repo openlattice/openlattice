@@ -1,4 +1,4 @@
-package com.openlattice.organizations
+package com.openlattice.organizations.controllers
 
 import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Preconditions.checkState
@@ -7,6 +7,7 @@ import com.openlattice.authorization.*
 import com.openlattice.controllers.exceptions.ForbiddenException
 import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.organization.*
+import com.openlattice.organizations.ExternalDatabaseManagementService
 import com.openlattice.postgres.PostgresConnectionType
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.apache.olingo.commons.api.edm.FullQualifiedName
