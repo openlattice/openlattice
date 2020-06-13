@@ -380,7 +380,8 @@ public final class PostgresTable {
                             EXPIRATION_DATE,
                             ALERT_TYPE,
                             SEARCH_CONSTRAINTS,
-                            ALERT_METADATA )
+                            ALERT_METADATA,
+                            EMAILS )
                     .setUnique( ID, ACL_KEY );
     public static final PostgresTableDefinition PRINCIPALS          =
             new PostgresTableDefinition( "principals" )

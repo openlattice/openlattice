@@ -192,6 +192,9 @@ public final class PostgresColumn {
     public static final PostgresColumnDefinition ENTITY_SET_FLAGS                  =
             new PostgresColumnDefinition( ENTITY_SET_FLAGS_FIELD, TEXT_ARRAY )
                     .withDefault( "'{}'" );
+    public static final String                   EMAILS_FIELD                      = "emails";
+    public static final PostgresColumnDefinition EMAILS                            =
+            new PostgresColumnDefinition( EMAILS_FIELD, TEXT_ARRAY ).withDefault( "'{}'" ).notNull();
     public static final String                   ENTITY_SET_IDS_FIELD              = "entity_set_ids";
     public static final PostgresColumnDefinition ENTITY_SET_IDS                    =
             new PostgresColumnDefinition( ENTITY_SET_IDS_FIELD, UUID_ARRAY ).notNull();
