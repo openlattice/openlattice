@@ -32,7 +32,7 @@ import com.openlattice.authorization.AuthorizingComponent;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principals;
 import com.openlattice.authorization.securable.SecurableObjectType;
-import com.openlattice.authorization.util.AuthorizationUtils;
+import com.openlattice.authorization.util.AuthorizationUtilsKt;
 import com.openlattice.datastore.apps.services.AppService;
 import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.organizations.HazelcastOrganizationService;
@@ -222,7 +222,7 @@ public class AppController implements AppApi, AuthorizingComponent {
     private Iterable<Organization> getAvailableOrgs() {
         return getAccessibleObjects( SecurableObjectType.Organization,
                 EnumSet.of( Permission.READ ) )
-                .filter( Objects::nonNull ).map( AuthorizationUtils::getLastAclKeySafely )
+                .filter( Objects::nonNull ).map( AuthorizationUtilsKt::getLastAclKeySafely )
                 .map( organizations::getOrganization )
                 .filter( Objects::nonNull )::iterator;
     }
