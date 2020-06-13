@@ -28,7 +28,7 @@ import com.openlattice.auditing.*
 import com.openlattice.authorization.*
 import com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION
 import com.openlattice.authorization.securable.SecurableObjectType
-import com.openlattice.authorization.util.AuthorizationUtils
+import com.openlattice.authorization.util.getLastAclKeySafely
 import com.openlattice.controllers.exceptions.ForbiddenException
 import com.openlattice.controllers.exceptions.wrappers.BatchException
 import com.openlattice.controllers.exceptions.wrappers.ErrorsDTO
@@ -191,7 +191,7 @@ constructor(
                 EnumSet.of(Permission.READ)
         )
                 .asSequence()
-                .map { AuthorizationUtils.getLastAclKeySafely(it) }
+                .mapNotNull { getLastAclKeySafely(it) }
                 .toSet()
 
         return entitySetManager.getEntitySetsAsMap(entitySetIds).values.toSet()
