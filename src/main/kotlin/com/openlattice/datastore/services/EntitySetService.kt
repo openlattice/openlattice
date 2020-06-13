@@ -166,16 +166,16 @@ open class EntitySetService(
     private fun setupDefaultEntitySetPropertyMetadata(entitySetId: UUID, entityTypeId: UUID) {
         val et = edm.getEntityType(entityTypeId)
         val propertyTags = et.propertyTags
-        et.properties.forEach { propertyTypeId ->
-            val key = EntitySetPropertyKey(entitySetId, propertyTypeId)
-            val property = edm.getPropertyType(propertyTypeId)
+        entitySetPropertyMetadata.putAll(edm.getPropertyTypes(et.properties).associate {
+            val key = EntitySetPropertyKey(entitySetId, it.id)
             val metadata = EntitySetPropertyMetadata(
-                    property.title,
-                    property.description,
-                    LinkedHashSet(propertyTags.get(propertyTypeId)),
+                    it.title,
+                    it.description,
+                    LinkedHashSet(propertyTags.get(it.id)),
                     true)
-            entitySetPropertyMetadata[key] = metadata
-        }
+
+            key to metadata
+        })
     }
 
     private fun ensureValidEntitySet(entitySet: EntitySet) {
@@ -333,12 +333,12 @@ open class EntitySetService(
         val entitySetIdToNormalEntitySetIds = entitySets.executeOnKeys(entitySetIds, GetNormalEntitySetIdsEntryProcessor())
                 .mapValues { it.value as DelegatedUUIDSet }
 
-        val normalEntitySetIds =   entitySetIdToNormalEntitySetIds.values.flatten()
+        val normalEntitySetIds = entitySetIdToNormalEntitySetIds.values.flatten()
 
         val accessChecks = normalEntitySetIds.associate { AclKey(it) to permissions }
 
         val entitySetsToAuthorizedStatus = authorizations.authorize(accessChecks, principals)
-                .map { it.key.first() to it.value.values.all { bool ->  bool } }.toMap()
+                .map { it.key.first() to it.value.values.all { bool -> bool } }.toMap()
 
         return entitySetIdToNormalEntitySetIds.filterValues { it.all { id -> entitySetsToAuthorizedStatus.getValue(id) } }.keys
     }
@@ -348,7 +348,7 @@ open class EntitySetService(
         val entityTypesOfEntitySets = getEntityTypeIdsByEntitySetIds(entitySetIds)
         val missingEntitySetIds = entitySetIds - entityTypesOfEntitySets.keys
 
-        check( missingEntitySetIds.isEmpty() ) { "Missing the following entity set ids: $missingEntitySetIds" }
+        check(missingEntitySetIds.isEmpty()) { "Missing the following entity set ids: $missingEntitySetIds" }
 
         val entityTypesAsMap = edm.getEntityTypesAsMap(entityTypesOfEntitySets.values.toSet())
         val propertyTypesAsMap = edm.getPropertyTypesAsMap(entityTypesAsMap.values.map { it.properties }.flatten().toSet())
