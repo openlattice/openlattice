@@ -24,6 +24,7 @@ package com.openlattice.hazelcast.pods;
 
 import com.auth0.json.mgmt.users.User;
 import com.google.common.base.Charsets;
+import com.google.common.eventbus.EventBus;
 import com.google.common.io.Resources;
 import com.kryptnostic.rhizome.mapstores.SelfRegisteringMapStore;
 import com.openlattice.apps.App;
@@ -102,6 +103,9 @@ public class MapstoresPod {
     private Auth0Configuration auth0Configuration;
 
     @Inject
+    private EventBus eventBus;
+
+    @Inject
     private Jdbi jdbi;
 
     @Bean
@@ -133,7 +137,7 @@ public class MapstoresPod {
 
     @Bean
     public SelfRegisteringMapStore<AceKey, AceValue> permissionMapstore() {
-        return new PermissionMapstore( hikariDataSource );
+        return new PermissionMapstore( hikariDataSource, eventBus );
     }
 
     @Bean
