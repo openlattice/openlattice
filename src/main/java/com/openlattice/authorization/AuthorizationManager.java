@@ -31,6 +31,7 @@ import com.openlattice.authorization.securable.SecurableObjectType;
 import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.stream.Stream;
+import org.checkerframework.checker.units.qual.Time;
 
 /**
  * The authorization manager manages permissions for all securable objects in the system.
@@ -45,6 +46,15 @@ import java.util.stream.Stream;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public interface AuthorizationManager {
+
+    /**
+     * Bulk function for setting or initializing securable object types.
+     *
+     * @param aclKeys The acl keys to set to a specific object type.
+     * @param objectType The securable object type to be set for the aclKeys
+     */
+    @Timed
+    void setSecurableObjectTypes( Set<AclKey> aclKeys, SecurableObjectType objectType );
 
     /**
      * Creates an empty acl.
@@ -69,12 +79,29 @@ public interface AuthorizationManager {
 
     /**
      * Method for bulk adding permissions to a single principal across multiple acl keys of the same type.
-     * 
-     * @param keys
-     * @param principal
-     * @param permissions
-     * @param securableObjectType
-     * @param expirationDate
+     *
+     * @param keys The acl keys to which permissions will be added.
+     * @param principal The principal who will be receiving permissions.
+     * @param permissions The permissions that will be added.
+     * @param securableObjectType The securable object type for which the permissions are being added. This will
+     * override the existing object type, so care must be taken to call this for keys of the right type.
+     */
+    @Timed
+    void addPermissions(
+            Set<AclKey> keys,
+            Principal principal,
+            EnumSet<Permission> permissions,
+            SecurableObjectType securableObjectType);
+
+    /**
+     * Method for bulk adding permissions to a single principal across multiple acl keys of the same type.
+     *
+     * @param keys The acl keys to which permissions will be added.
+     * @param principal The principal who will be receiving permissions.
+     * @param permissions The permissions that will be added.
+     * @param securableObjectType The securable object type for which the permissions are being added. This will
+     * override the existing object type, so care must be taken to call this for keys of the right type.
+     * @param expirationDate The expiration data for the permission changes.
      */
     @Timed
     void addPermissions(

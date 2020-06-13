@@ -79,9 +79,10 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
         this.eventBus = checkNotNull( eventBus );
     }
 
+    @Override
     public void setSecurableObjectTypes( Set<AclKey> aclKeys, SecurableObjectType objectType ) {
         securableObjectTypes.putAll( Maps.asMap( aclKeys, k -> objectType ) );
-
+        aces.executeOnEntries( new SecurableObjectTypeUpdater( objectType ), hasAnyAclKeys( aclKeys ) );
     }
 
     @Override
@@ -130,6 +131,15 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
         aces.executeOnKey( new AceKey( key, principal ),
                 new PermissionMerger( permissions, securableObjectType, expirationDate ) );
         signalMaterializationPermissionChange( key, principal, permissions, securableObjectType );
+    }
+
+    @Override
+    public void addPermissions(
+            Set<AclKey> keys,
+            Principal principal,
+            EnumSet<Permission> permissions,
+            SecurableObjectType securableObjectType ) {
+        addPermissions( keys, principal, permissions, securableObjectType, OffsetDateTime.MAX );
     }
 
     @Override
