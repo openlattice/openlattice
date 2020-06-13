@@ -128,12 +128,6 @@ open class EntitySetService(
 
             authorizations.setSecurableObjectType(AclKey(entitySetId), SecurableObjectType.EntitySet)
 
-            authorizations.addPermission(
-                    AclKey(entitySetId),
-                    principal,
-                    EnumSet.allOf(Permission::class.java)
-            )
-
             val aclKeys = entityType.properties.mapTo( mutableSetOf() ) { propertyTypeId -> AclKey(entitySetId, propertyTypeId) }
             authorizations.setSecurableObjectTypes(aclKeys, PropertyTypeInEntitySet)
             authorizations.addPermissions(aclKeys, principal, EnumSet.allOf(Permission::class.java), PropertyTypeInEntitySet)
@@ -162,18 +156,16 @@ open class EntitySetService(
     private fun setupDefaultEntitySetPropertyMetadata(entitySetId: UUID, entityTypeId: UUID) {
         val et = edm.getEntityType(entityTypeId)
         val propertyTags = et.propertyTags
-
-        et.properties.forEach { propertyTypeId ->
-            val key = EntitySetPropertyKey(entitySetId, propertyTypeId)
-            val property = edm.getPropertyType(propertyTypeId)
+        entitySetPropertyMetadata.putAll(edm.getPropertyTypes(et.properties).associate {
+            val key = EntitySetPropertyKey(entitySetId, it.id)
             val metadata = EntitySetPropertyMetadata(
-                    property.title,
-                    property.description,
-                    LinkedHashSet(propertyTags.get(propertyTypeId)),
-                    true
-            )
-            entitySetPropertyMetadata[key] = metadata
-        }
+                    it.title,
+                    it.description,
+                    LinkedHashSet(propertyTags.get(it.id)),
+                    true)
+
+            key to metadata
+        })
     }
 
     private fun ensureValidEntitySet(entitySet: EntitySet) {
