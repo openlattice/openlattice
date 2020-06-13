@@ -102,7 +102,7 @@ class PersistentSearchService(private val hds: HikariDataSource, private val spm
         return "INSERT INTO ${PERSISTENT_SEARCHES.name} (${columns.joinToString(
                 ","
         )}) VALUES ('${search.id}'::uuid, '${getUserAclKeyArray(connection)}', '${search.lastRead}', '${search.expiration}', " +
-                "'${search.type}', ?::jsonb, ?::jsonb, ${PostgresArrays.createTextArray(connection, search.additionalEmailAddresses)})"
+                "'${search.type}', ?::jsonb, ?::jsonb, '${PostgresArrays.createTextArray(connection, search.additionalEmailAddresses)}')"
     }
 
     private fun updateAdditionalEmailsSql(connection: Connection, id: UUID): String {
