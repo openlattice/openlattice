@@ -65,8 +65,6 @@ import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet
 import edu.umd.cs.findbugs.classfile.ResourceNotFoundException
 import org.slf4j.LoggerFactory
 import java.util.*
-import java.util.stream.Stream
-import kotlin.streams.asSequence
 
 open class EntitySetService(
         hazelcastInstance: HazelcastInstance,
