@@ -126,9 +126,13 @@ open class EntitySetService(
         try {
             setupDefaultEntitySetPropertyMetadata(entitySetId, entitySet.entityTypeId)
 
-            authorizations.setSecurableObjectType(AclKey(entitySetId), SecurableObjectType.EntitySet)
+            val aclKey = AclKey(entitySetId)
+
+            authorizations.setSecurableObjectType(aclKey, SecurableObjectType.EntitySet)
+            authorizations.addPermission(aclKey, principal, EnumSet.allOf(Permission::class.java))
 
             val aclKeys = entityType.properties.mapTo( mutableSetOf() ) { propertyTypeId -> AclKey(entitySetId, propertyTypeId) }
+            
             authorizations.setSecurableObjectTypes(aclKeys, PropertyTypeInEntitySet)
             authorizations.addPermissions(aclKeys, principal, EnumSet.allOf(Permission::class.java), PropertyTypeInEntitySet)
 
