@@ -127,19 +127,14 @@ open class EntitySetService(
 
             authorizations.setSecurableObjectType(AclKey(entitySetId), SecurableObjectType.EntitySet)
 
-            authorizations.addPermission(
-                    AclKey(entitySetId),
-                    principal,
-                    EnumSet.allOf(Permission::class.java)
-            )
+            val userAce = listOf(Ace(principal, EnumSet.allOf(Permission::class.java)))
+            val acls = entityType.properties.map { Acl(AclKey(entitySetId, it),userAce) } + Acl(AclKey(entitySetId), userAce)
+            authorizations.addPermissions(acls)
 
             entityType.properties
                     .map { propertyTypeId -> AclKey(entitySetId, propertyTypeId) }
                     .onEach { aclKey ->
                         authorizations.setSecurableObjectType(aclKey, SecurableObjectType.PropertyTypeInEntitySet)
-                    }
-                    .forEach { aclKey ->
-                        authorizations.addPermission(aclKey, principal, EnumSet.allOf(Permission::class.java))
                     }
 
             aresManager.createAuditEntitySetForEntitySet(entitySet)
