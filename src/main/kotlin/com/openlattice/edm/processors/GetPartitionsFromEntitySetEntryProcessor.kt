@@ -5,7 +5,10 @@ import com.openlattice.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizome
 import java.util.*
 
 class GetPartitionsFromEntitySetEntryProcessor : AbstractReadOnlyRhizomeEntryProcessor<UUID, EntitySet, Set<Int>>() {
-    override fun process(entry: MutableMap.MutableEntry<UUID, EntitySet>): Set<Int> {
-        return entry.value.partitions
+    override fun process(entry: MutableMap.MutableEntry<UUID, EntitySet?>): Set<Int> {
+        if ( entry.value == null ){
+            return setOf()
+        }
+        return entry.value!!.partitions
     }
 }
