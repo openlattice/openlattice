@@ -446,7 +446,7 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
             Set<AccessCheck> accessChecks,
             Set<Principal> principals ) {
 
-        Map<AclKey, EnumSet<Permission>> requests = Maps.newHashMapWithExpectedSize( accessChecks.size() );
+        Map<AclKey, EnumSet<Permission>> requests = Maps.newLinkedHashMapWithExpectedSize( accessChecks.size() );
         accessChecks.forEach( ac -> {
             EnumSet<Permission> p = requests.getOrDefault( ac.getAclKey(), EnumSet.noneOf( Permission.class ) );
             p.addAll( ac.getPermissions() );
