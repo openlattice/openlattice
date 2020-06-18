@@ -25,8 +25,11 @@ import com.google.common.base.Stopwatch
 import com.google.common.collect.Sets
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.hazelcast.core.HazelcastInstance
+import com.hazelcast.query.Predicate
+import com.hazelcast.query.Predicates
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.EntityKeyIdService
+import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.HazelcastQueue
@@ -74,7 +77,9 @@ class BackgroundLinkingService(
     private val enqueuer = executor.submit {
         try {
             while (true) {
-                val priority = entitySets.getAll(priorityEntitySets).values.asSequence()
+                val priority = entitySets.values( Predicate<UUID, EntitySet> {
+                    mapEntry -> priorityEntitySets.contains(mapEntry.key)
+                })
 
                 //TODO: Switch to unlimited entity sets
                 (priority +
