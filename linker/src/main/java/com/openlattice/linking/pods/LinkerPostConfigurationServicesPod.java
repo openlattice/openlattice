@@ -56,8 +56,6 @@ import com.openlattice.linking.blocking.ElasticsearchBlocker;
 import com.openlattice.linking.controllers.RealtimeLinkingController;
 import com.openlattice.linking.graph.PostgresLinkingQueryService;
 import com.zaxxer.hikari.HikariDataSource;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -68,7 +66,6 @@ import java.io.IOException;
 @Configuration
 @Import( { ByteBlobServicePod.class } )
 public class LinkerPostConfigurationServicesPod {
-    private static final Logger            logger = LoggerFactory.getLogger( LinkerPostConfigurationServicesPod.class );
 
     @Inject
     private HazelcastInstance hazelcastInstance;

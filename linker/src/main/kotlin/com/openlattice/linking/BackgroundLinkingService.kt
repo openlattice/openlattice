@@ -25,11 +25,13 @@ import com.google.common.base.Stopwatch
 import com.google.common.collect.Sets
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.hazelcast.core.HazelcastInstance
+import com.hazelcast.query.Predicates
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.EntityKeyIdService
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.HazelcastQueue
+import com.openlattice.postgres.mapstores.EntitySetMapstore
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.sql.Connection
@@ -46,8 +48,7 @@ internal const val MINIMUM_SCORE = 0.75
  * Performs realtime linking of individuals as they are integrated ino the system.
  */
 @Component
-class BackgroundLinkingService
-(
+class BackgroundLinkingService(
         private val executor: ListeningExecutorService,
         hazelcastInstance: HazelcastInstance,
         private val blocker: Blocker,
@@ -64,22 +65,35 @@ class BackgroundLinkingService
         private val logger = LoggerFactory.getLogger(BackgroundLinkingService::class.java)
     }
 
-
     private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
-
     private val linkingLocks = HazelcastMap.LINKING_LOCKS.getMap(hazelcastInstance)
+    private val candidates = HazelcastQueue.LINKING_CANDIDATES.getQueue( hazelcastInstance )
+    private val priorityEntitySets = configuration.whitelist.orElseGet { setOf() }
+
+    private val limiter = Semaphore(configuration.parallelism)
 
     @Suppress("UNUSED")
     private val enqueuer = executor.submit {
         try {
             while (true) {
+                val filteredLinkableEntitySetIds = entitySets.keySet(
+                        Predicates.and(
+                                Predicates.`in`(EntitySetMapstore.ENTITY_TYPE_ID_INDEX, *linkableTypes.toTypedArray()),
+                                Predicates.notEqual(EntitySetMapstore.FLAGS_INDEX, EntitySetFlag.LINKING)
+                        )
+                )
+
+                val priority = priorityEntitySets.asSequence()
+
+                val rest = filteredLinkableEntitySetIds.filter {
+                    !priorityEntitySets.contains(it)
+                }.asSequence()
+
                 //TODO: Switch to unlimited entity sets
-                entitySets.values
-                        .asSequence()
-                        .filter { linkableTypes.contains(it.entityTypeId) && !it.flags.contains(EntitySetFlag.LINKING) }
-                        .flatMap { es ->
-                            logger.debug("Starting to queue linking candidates from entity set {}", es.id)
-                            val forLinking = lqs.getEntitiesNeedingLinking(es.id, 2 * configuration.loadSize)
+                (priority + rest)
+                        .flatMap { esid ->
+                            logger.debug("Starting to queue linking candidates from entity set {}", esid)
+                            val forLinking = lqs.getEntitiesNeedingLinking(esid, 2 * configuration.loadSize)
                                     .filter {
                                         val expiration = lockOrGetExpiration(it)
                                         logger.debug(
@@ -114,8 +128,6 @@ class BackgroundLinkingService
             logger.info("Encountered error while updating candidates for linking.", ex)
         }
     }
-    private val candidates = HazelcastQueue.LINKING_CANDIDATES.getQueue( hazelcastInstance )
-    private val limiter = Semaphore(configuration.parallelism)
 
     @Suppress("UNUSED")
     private val linkingWorker = if (isLinkingEnabled()) executor.submit {
