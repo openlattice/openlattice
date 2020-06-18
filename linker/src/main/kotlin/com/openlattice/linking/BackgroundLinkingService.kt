@@ -79,7 +79,7 @@ class BackgroundLinkingService(
             while (true) {
                 val priority = entitySets.values( Predicate<UUID, EntitySet> {
                     mapEntry -> priorityEntitySets.contains(mapEntry.key)
-                })
+                }).asSequence()
 
                 //TODO: Switch to unlimited entity sets
                 (priority +
