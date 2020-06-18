@@ -74,16 +74,16 @@ class BackgroundLinkingService(
     private val enqueuer = executor.submit {
         try {
             while (true) {
-                val priority = entitySets.values.asSequence().filter {
-                    priorityEntitySets.contains(it.id)
-                }
+                val priority = entitySets.getAll(priorityEntitySets).values.asSequence()
 
                 //TODO: Switch to unlimited entity sets
                 (priority +
                     entitySets.values
                         .asSequence()
                         .filter {
-                            linkableTypes.contains(it.entityTypeId) && !it.flags.contains(EntitySetFlag.LINKING)
+                            !priorityEntitySets.contains(it.id)
+                                    && linkableTypes.contains(it.entityTypeId)
+                                    && !it.flags.contains(EntitySetFlag.LINKING)
                         }).flatMap { es ->
                             logger.debug("Starting to queue linking candidates from entity set {}", es.id)
                             val forLinking = lqs.getEntitiesNeedingLinking(es.id, 2 * configuration.loadSize)
