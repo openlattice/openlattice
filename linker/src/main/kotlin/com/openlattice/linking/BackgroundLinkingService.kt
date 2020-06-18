@@ -28,14 +28,13 @@ import com.hazelcast.core.HazelcastInstance
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.EntityKeyIdService
 import com.openlattice.edm.set.EntitySetFlag
-import com.openlattice.entryprocessors.GetFilteredEntitySetIdsForLinking
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.HazelcastQueue
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.sql.Connection
 import java.time.Instant
-import java.util.*
+import java.util.UUID
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 import kotlin.streams.asSequence
@@ -77,7 +76,7 @@ class BackgroundLinkingService(
         try {
             while (true) {
                 val entitySets = entitySets.values.toSet()
-                
+
                 val priority = entitySets.stream().filter {
                     priorityEntitySets.contains(it.id)
                 }.asSequence()
