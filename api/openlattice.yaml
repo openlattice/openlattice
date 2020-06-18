@@ -2271,6 +2271,7 @@ paths:
                   type: array
                   items:
                     type: string
+  /datastore/data/set/{entitySetId}/{entityKeyId}:
     delete:
       summary: Deletes a single entity from an entity set.
       operationId: deleteEntity
