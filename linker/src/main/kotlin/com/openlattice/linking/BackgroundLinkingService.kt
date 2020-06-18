@@ -46,8 +46,7 @@ internal const val MINIMUM_SCORE = 0.75
  * Performs realtime linking of individuals as they are integrated ino the system.
  */
 @Component
-class BackgroundLinkingService
-(
+class BackgroundLinkingService(
         private val executor: ListeningExecutorService,
         hazelcastInstance: HazelcastInstance,
         private val blocker: Blocker,
@@ -64,20 +63,28 @@ class BackgroundLinkingService
         private val logger = LoggerFactory.getLogger(BackgroundLinkingService::class.java)
     }
 
-
     private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
-
     private val linkingLocks = HazelcastMap.LINKING_LOCKS.getMap(hazelcastInstance)
+    private val candidates = HazelcastQueue.LINKING_CANDIDATES.getQueue( hazelcastInstance )
+    private val priorityEntitySets = configuration.whitelist.orElseGet { setOf() }
+
+    private val limiter = Semaphore(configuration.parallelism)
 
     @Suppress("UNUSED")
     private val enqueuer = executor.submit {
         try {
             while (true) {
+                val priority = entitySets.values.asSequence().filter {
+                    priorityEntitySets.contains(it.id)
+                }
+
                 //TODO: Switch to unlimited entity sets
-                entitySets.values
+                (priority +
+                    entitySets.values
                         .asSequence()
-                        .filter { linkableTypes.contains(it.entityTypeId) && !it.flags.contains(EntitySetFlag.LINKING) }
-                        .flatMap { es ->
+                        .filter {
+                            linkableTypes.contains(it.entityTypeId) && !it.flags.contains(EntitySetFlag.LINKING)
+                        }).flatMap { es ->
                             logger.debug("Starting to queue linking candidates from entity set {}", es.id)
                             val forLinking = lqs.getEntitiesNeedingLinking(es.id, 2 * configuration.loadSize)
                                     .filter {
@@ -114,8 +121,6 @@ class BackgroundLinkingService
             logger.info("Encountered error while updating candidates for linking.", ex)
         }
     }
-    private val candidates = HazelcastQueue.LINKING_CANDIDATES.getQueue( hazelcastInstance )
-    private val limiter = Semaphore(configuration.parallelism)
 
     @Suppress("UNUSED")
     private val linkingWorker = if (isLinkingEnabled()) executor.submit {
