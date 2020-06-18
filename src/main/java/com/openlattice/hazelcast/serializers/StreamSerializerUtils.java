@@ -29,8 +29,8 @@ import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.hazelcast.serializers.IoPerformingConsumer;
 import com.kryptnostic.rhizome.hazelcast.serializers.IoPerformingFunction;
 import com.openlattice.authorization.Permission;
+
 import java.io.IOException;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 
@@ -105,23 +105,6 @@ public class StreamSerializerUtils {
             throws IOException {
         int size = in.readInt();
         return deserializeToMap( in, Maps.newHashMapWithExpectedSize( size ), size, fK, fV );
-    }
-
-    public static void serializeFromPermissionEnumSet( ObjectDataOutput out, EnumSet<Permission> object ) throws IOException {
-        out.writeInt( object.size() );
-        for ( Permission permission : object ) {
-            out.writeInt( permission.ordinal() );
-        }
-    }
-
-    public static EnumSet<Permission> deserializeToPermissionEnumSet( ObjectDataInput in ) throws IOException {
-        int size = in.readInt();
-        EnumSet<Permission> set = EnumSet.noneOf( Permission.class );
-        
-        for ( int i = 0; i < size; ++i ) {
-            set.add( permissions[ in.readInt() ] );
-        }
-        return set;
     }
 
 }
