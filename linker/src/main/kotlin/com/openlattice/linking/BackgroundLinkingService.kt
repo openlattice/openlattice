@@ -25,19 +25,20 @@ import com.google.common.base.Stopwatch
 import com.google.common.collect.Sets
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.hazelcast.core.HazelcastInstance
+import com.hazelcast.query.Predicates
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.EntityKeyIdService
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.HazelcastQueue
+import com.openlattice.postgres.mapstores.EntitySetMapstore
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.sql.Connection
 import java.time.Instant
-import java.util.UUID
+import java.util.*
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
-import kotlin.streams.asSequence
 
 internal const val REFRESH_PROPERTY_TYPES_INTERVAL_MILLIS = 30000L
 internal const val LINKING_BATCH_TIMEOUT_MILLIS = 120000L
@@ -75,23 +76,24 @@ class BackgroundLinkingService(
     private val enqueuer = executor.submit {
         try {
             while (true) {
-                val entitySets = entitySets.values.toSet()
+                val filteredLinkableEntitySetIds = entitySets.keySet(
+                        Predicates.and(
+                                Predicates.`in`(EntitySetMapstore.ENTITY_TYPE_ID_INDEX, *linkableTypes.toTypedArray()),
+                                Predicates.notEqual(EntitySetMapstore.FLAGS_INDEX, EntitySetFlag.LINKING)
+                        )
+                )
 
-                val priority = entitySets.stream().filter {
-                    priorityEntitySets.contains(it.id)
-                }.asSequence()
+                val priority = priorityEntitySets.asSequence()
 
-                val rest = entitySets.stream().filter {
-                    !priorityEntitySets.contains(it.id)
-                            && linkableTypes.contains(it.entityTypeId)
-                            && !it.flags.contains(EntitySetFlag.LINKING)
+                val rest = filteredLinkableEntitySetIds.filter {
+                    !priorityEntitySets.contains(it)
                 }.asSequence()
 
                 //TODO: Switch to unlimited entity sets
                 (priority + rest)
-                        .flatMap { es ->
-                            logger.debug("Starting to queue linking candidates from entity set {}", es.id)
-                            val forLinking = lqs.getEntitiesNeedingLinking(es.id, 2 * configuration.loadSize)
+                        .flatMap { esid ->
+                            logger.debug("Starting to queue linking candidates from entity set {}", esid)
+                            val forLinking = lqs.getEntitiesNeedingLinking(esid, 2 * configuration.loadSize)
                                     .filter {
                                         val expiration = lockOrGetExpiration(it)
                                         logger.debug(
