@@ -73,7 +73,6 @@ class BackgroundLinkingService(
     @Suppress("UNUSED")
     private val enqueuer = executor.submit {
         try {
-            logger.info(configuration.toString())
             while (true) {
                 val filteredLinkableEntitySetIds = entitySets.keySet(
                         Predicates.and(
