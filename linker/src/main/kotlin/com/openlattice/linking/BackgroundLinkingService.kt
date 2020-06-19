@@ -70,8 +70,6 @@ class BackgroundLinkingService(
     private val candidates = HazelcastQueue.LINKING_CANDIDATES.getQueue( hazelcastInstance )
     private val priorityEntitySets = configuration.whitelist.orElseGet { setOf() }
 
-    private val limiter = Semaphore(configuration.parallelism)
-
     @Suppress("UNUSED")
     private val enqueuer = executor.submit {
         try {
@@ -83,15 +81,15 @@ class BackgroundLinkingService(
                         )
                 )
 
-                val priority = priorityEntitySets.asSequence()
-
                 val rest = filteredLinkableEntitySetIds.filter {
                     !priorityEntitySets.contains(it)
                 }.asSequence()
 
+                val priority = priorityEntitySets.asSequence()
+
                 //TODO: Switch to unlimited entity sets
                 (priority + rest)
-                        .flatMap { esid ->
+                        .forEach { esid ->
                             logger.debug("Starting to queue linking candidates from entity set {}", esid)
                             val forLinking = lqs.getEntitiesNeedingLinking(esid, 2 * configuration.loadSize)
                                     .filter {
@@ -113,21 +111,16 @@ class BackgroundLinkingService(
                                 logger.info("Entities needing linking: {}", forLinking.size)
                                 logger.debug("Entities needing linking: {}", forLinking)
                             }
-                            forLinking.asSequence()
-                        }
-                        .chunked(configuration.loadSize)
-                        .forEach { keys ->
-                            candidates.addAll(keys)
-                            logger.debug(
-                                    "Queued entities needing linking {}",
-                                    keys
-                            )
+                            candidates.addAll(forLinking)
+                            logger.debug( "Queued entities needing linking {}", forLinking)
                         }
             }
         } catch (ex: Exception) {
             logger.info("Encountered error while updating candidates for linking.", ex)
         }
     }
+
+    private val limiter = Semaphore(configuration.parallelism)
 
     @Suppress("UNUSED")
     private val linkingWorker = if (isLinkingEnabled()) executor.submit {
