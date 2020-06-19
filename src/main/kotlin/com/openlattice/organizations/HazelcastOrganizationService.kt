@@ -66,8 +66,8 @@ class HazelcastOrganizationService(
         private val partitionManager: PartitionManager,
         private val assembler: Assembler
 ) {
-    private val organizations = HazelcastMap.ORGANIZATIONS.getMap(hazelcastInstance)
-    private val users = HazelcastMap.USERS.getMap(hazelcastInstance)
+    protected val organizations = HazelcastMap.ORGANIZATIONS.getMap(hazelcastInstance)
+    protected val users = HazelcastMap.USERS.getMap(hazelcastInstance)
 
     @Inject
     private lateinit var eventBus: EventBus
