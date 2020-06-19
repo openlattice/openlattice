@@ -73,6 +73,7 @@ class BackgroundLinkingService(
     @Suppress("UNUSED")
     private val enqueuer = executor.submit {
         try {
+            logger.info(configuration.toString())
             while (true) {
                 val filteredLinkableEntitySetIds = entitySets.keySet(
                         Predicates.and(
@@ -85,7 +86,9 @@ class BackgroundLinkingService(
                     !priorityEntitySets.contains(it)
                 }.asSequence()
 
-                val priority = priorityEntitySets.asSequence()
+                val priority = priorityEntitySets.filter {
+                    filteredLinkableEntitySetIds.contains(it)
+                }.asSequence()
 
                 //TODO: Switch to unlimited entity sets
                 (priority + rest)
