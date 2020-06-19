@@ -81,13 +81,13 @@ class BackgroundLinkingService(
                         )
                 )
 
-                val rest = filteredLinkableEntitySetIds.filter {
+                val rest = filteredLinkableEntitySetIds.asSequence().filter {
                     !priorityEntitySets.contains(it)
-                }.asSequence()
+                }
 
-                val priority = priorityEntitySets.filter {
+                val priority = priorityEntitySets.asSequence().filter {
                     filteredLinkableEntitySetIds.contains(it)
-                }.asSequence()
+                }
 
                 //TODO: Switch to unlimited entity sets
                 (priority + rest)
