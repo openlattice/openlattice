@@ -31,7 +31,8 @@ import com.openlattice.linking.util.PersonProperties
 import com.openlattice.postgres.mapstores.EntityTypeMapstore
 import com.openlattice.postgres.streams.BasePostgresIterable
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
-import java.util.*
+import java.util.UUID
+import java.util.Optional
 import java.util.concurrent.TimeUnit
 
 /**
