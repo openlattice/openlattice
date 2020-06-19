@@ -105,7 +105,6 @@ import javax.inject.Inject;
 @Import( { IndexerConfigurationPod.class, AuditingConfigurationPod.class, AssemblerConfigurationPod.class,
         ByteBlobServicePod.class, OrganizationExternalDatabaseConfigurationPod.class } )
 public class IndexerServicesPod {
-    private static Logger logger = LoggerFactory.getLogger( IndexerServicesPod.class );
 
     @Inject
     private PostgresTableManager tableManager;
