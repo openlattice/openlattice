@@ -36,7 +36,6 @@ import com.openlattice.indexing.pods.IndexerServicesPod;
 import com.openlattice.indexing.pods.IndexerServletsPod;
 import com.openlattice.indexing.pods.PlasmaCoupling;
 import com.openlattice.jdbc.JdbcPod;
-import com.openlattice.mail.pods.MailServicePod;
 import com.openlattice.mail.services.MailService;
 import com.openlattice.postgres.PostgresPod;
 import com.openlattice.postgres.PostgresTablesPod;
@@ -54,7 +53,6 @@ public class Indexer extends BaseRhizomeServer {
             IndexerServicesPod.class,
             IndexerPostConfigurationServicesPod.class,
             JdbcPod.class,
-            MailServicePod.class,
             MapstoresPod.class,
             HazelcastQueuePod.class,
             PlasmaCoupling.class,
@@ -72,7 +70,6 @@ public class Indexer extends BaseRhizomeServer {
     @Override
     public void start( String... profiles ) throws Exception {
         super.start( profiles );
-        getContext().getBean( MailService.class ).processEmailRequestsQueue();
     }
 
     public static void main( String[] args ) throws Exception {
