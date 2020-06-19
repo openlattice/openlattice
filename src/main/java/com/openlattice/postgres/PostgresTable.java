@@ -528,7 +528,7 @@ public final class PostgresTable {
                                 + ",(" + VERSION.getName() + " <= 0)" )
                         .name( "ids_needing_delete_index_idx" )
                         .ifNotExists(),
-                new PostgresExpressionIndexDefinition( ENTITY_KEY_IDS,
+                new PostgresExpressionIndexDefinition( IDS,
                         ENTITY_SET_ID.getName()
                                 + ",(" + LAST_LINK.getName() + " < " + LAST_WRITE.getName() + ")"
                                 + ",(" + LAST_INDEX.getName() + " >= " + LAST_WRITE.getName() + ")"
