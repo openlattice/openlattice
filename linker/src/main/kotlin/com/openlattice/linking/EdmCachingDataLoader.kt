@@ -30,7 +30,9 @@ import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.linking.util.PersonProperties
 import com.openlattice.postgres.mapstores.EntityTypeMapstore
 import com.openlattice.postgres.streams.BasePostgresIterable
-import java.util.*
+import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
+import java.util.UUID
+import java.util.Optional
 import java.util.concurrent.TimeUnit
 
 /**
@@ -48,7 +50,9 @@ class EdmCachingDataLoader(
             Predicates.equal(EntityTypeMapstore.FULLQUALIFIED_NAME_PREDICATE, PersonProperties.PERSON_TYPE_FQN.fullQualifiedNameAsString)
     ).first()
     private val authorizedPropertyTypesCache = Suppliers.memoizeWithExpiration(
-            { propertyTypes.getAll(personEntityType.properties) },
+            { propertyTypes.getAll(personEntityType.properties).filter{
+                it.value.datatype != EdmPrimitiveTypeKind.Binary
+            } },
             REFRESH_PROPERTY_TYPES_INTERVAL_MILLIS,
             TimeUnit.MILLISECONDS
     )
