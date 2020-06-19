@@ -38,7 +38,7 @@ public class SearchConstraints {
         Preconditions.checkNotNull( entitySetIds, "entitySetIds cannot be null" );
         Preconditions.checkArgument( entitySetIds.length > 0, "entitySetIds cannot be empty" );
 
-        for (UUID entitySetId : entitySetIds) {
+        for ( UUID entitySetId : entitySetIds ) {
             Preconditions.checkNotNull( entitySetId, "entitySetIds cannot contain a null value" );
         }
         
