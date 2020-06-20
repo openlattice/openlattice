@@ -34,7 +34,6 @@ import com.openlattice.hazelcast.HazelcastQueue
 import com.openlattice.postgres.mapstores.EntitySetMapstore
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
-import java.sql.Connection
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.Semaphore
@@ -72,6 +71,7 @@ class BackgroundLinkingService(
 
     @Suppress("UNUSED")
     private val enqueuer = executor.submit {
+
         try {
             while (true) {
                 val filteredLinkableEntitySetIds = entitySets.keySet(
@@ -170,9 +170,10 @@ class BackgroundLinkingService(
                 val clusters = lqs.getClustersForIds(setOf(candidate))
                 val cluster = clusters.entries.first()
                 val clusterId = cluster.key
+                lateinit var scoredCluster: ScoredCluster
 
                 lqs.lockClustersForUpdates(setOf(clusterId)).use { conn ->
-                    val scoredCluster = cluster(candidate, cluster, ::completeLinkCluster)
+                    scoredCluster = cluster(candidate, cluster, ::completeLinkCluster)
                     if (scoredCluster.score <= MINIMUM_SCORE) {
                         logger.error(
                                 "Recalculated score {} of linking id {} with positives feedbacks did not pass minimum score {}",
@@ -181,9 +182,9 @@ class BackgroundLinkingService(
                                 MINIMUM_SCORE
                         )
                     }
-
-                    insertMatches(conn, scoredCluster.clusterId, candidate, scoredCluster.cluster, false)
+                    lqs.insertMatchScores(conn, clusterId, scoredCluster.cluster)
                 }
+                insertMatches(clusterId, candidate, scoredCluster.cluster, false)
             } catch (ex: Exception) {
                 logger.error("An error occurred while performing linking.", ex)
                 throw IllegalStateException("Error occured while performing linking.", ex)
@@ -213,24 +214,23 @@ class BackgroundLinkingService(
             //Decision that needs to be made is whether to start new cluster or merge into existing cluster.
             //No locks are required since any items that block to this element will be skipped.
             try {
-                val clusters = lqs.getClustersForIds(dataKeys)
-                lqs.lockClustersForUpdates(clusters.keys).use { conn ->
+                val result = lqs.lockClustersDoWorkAndCommit( candidate, dataKeys, { clusters ->
                     val maybeBestCluster = clusters
                             .asSequence()
-                            .map { cluster -> cluster(candidate, cluster, ::completeLinkCluster) }
-                            .filter { scoredCluster -> scoredCluster.score > MINIMUM_SCORE }
-                            .maxBy { scoredCluster -> scoredCluster.score }
+                            .map { it -> cluster(candidate, it, ::completeLinkCluster) }
+                            .filter { it.score > MINIMUM_SCORE }
+                            .maxBy { it.score }
 
-                    if (maybeBestCluster != null) {
-                        return@use insertMatches(
-                                conn, maybeBestCluster.clusterId, candidate, maybeBestCluster.cluster, false
-                        )
+                    if ( maybeBestCluster != null ) {
+                        return@lockClustersDoWorkAndCommit Triple(maybeBestCluster.clusterId, maybeBestCluster.cluster, false)
                     }
-                    val clusterId = ids.reserveLinkingIds(1).first()
+                    val linkingId = ids.reserveLinkingIds(1).first()
                     val block = candidate to mapOf(candidate to elem)
+                    val cluster = matcher.match(block).second
                     //TODO: When creating new cluster do we really need to re-match or can we assume score of 1.0?
-                    return@use insertMatches(conn, clusterId, candidate, matcher.match(block).second, true)
-                }
+                    return@lockClustersDoWorkAndCommit Triple(linkingId, cluster, true)
+                })
+                insertMatches( result.first, candidate, result.second, result.third )
             } catch (ex: Exception) {
                 logger.error("An error occurred while performing linking.", ex)
                 throw IllegalStateException("Error occured while performing linking.", ex)
@@ -267,13 +267,11 @@ class BackgroundLinkingService(
     }
 
     private fun insertMatches(
-            conn: Connection,
             linkingId: UUID,
             newMember: EntityDataKey,
             scores: Map<EntityDataKey, Map<EntityDataKey, Double>>,
             newCluster: Boolean
     ) {
-        lqs.insertMatchScores(conn, linkingId, scores)
         lqs.updateIdsTable(linkingId, newMember)
 
         var toRemove = setOf<EntityDataKey>()
