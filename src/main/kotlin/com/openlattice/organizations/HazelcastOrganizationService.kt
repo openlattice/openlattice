@@ -152,8 +152,6 @@ class HazelcastOrganizationService(
                     partitionManager.allocateDefaultPartitions(organizationId, DEFAULT_PARTITION_COUNT)
             )
         }
-
-
     }
 
     @Timed
@@ -484,10 +482,6 @@ class HazelcastOrganizationService(
     fun getDefaultPartitions(organizationId: UUID): List<Int> {
         //TODO: This is mainly a pass through for convenience, but could get messy.
         return partitionManager.getDefaultPartitions(organizationId)
-    }
-
-    fun allocateDefaultPartitions(partitionCount: Int): List<Int> {
-        return partitionManager.allocateDefaultPartitions(partitionCount)
     }
 
     @Timed

@@ -107,7 +107,7 @@ class PartitionManager @JvmOverloads constructor(
      * Allocates default partitions for an organization based on emptiest partitions.
      */
     fun allocateDefaultPartitions(organizationId: UUID, partitionCount: Int): List<Int> {
-        val defaultPartitions = allocateDefaultPartitions(partitionCount)
+        val defaultPartitions = getEmptiestPartitions(partitionCount)
         setDefaultPartitions(organizationId, defaultPartitions)
         return defaultPartitions
     }
@@ -129,18 +129,15 @@ class PartitionManager @JvmOverloads constructor(
         }
     }
 
-    fun allocateDefaultPartitions(partitionCount: Int): List<Int> {
-        return getEmptiestPartitions(partitionCount).map { it.first }
-    }
-
-    private fun getEmptiestPartitions(partitionCount: Int): BasePostgresIterable<Pair<Int, Long>> {
+    private fun getEmptiestPartitions(partitionCount: Int): List<Int> {
         //A quick note is that the partitions materialized view shouldn't be turned into a distributed table
         //with out addressing the interaction of the order by and limit clauses.
         return BasePostgresIterable(
                 PreparedStatementHolderSupplier(hds, EMPTIEST_PARTITIONS) { ps ->
                     ps.setArray(1, PostgresArrays.createIntArray(ps.connection, partitionList))
                     ps.setInt(2, partitionCount)
-                }) { it.getInt(PARTITION.name) to it.getLong(COUNT) }
+                }) { it.getInt(PARTITION.name) to it.getLong(COUNT)
+        }.map { it.first }
     }
 
     /**
