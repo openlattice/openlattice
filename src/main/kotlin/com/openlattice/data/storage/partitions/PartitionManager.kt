@@ -3,17 +3,18 @@ package com.openlattice.data.storage.partitions
 import com.geekbeast.rhizome.hazelcast.DelegatedIntList
 import com.google.common.base.Preconditions.checkArgument
 import com.hazelcast.core.HazelcastInstance
+import com.openlattice.data.storage.PostgresEntitySetSizesInitializationTask.Companion.ENTITY_SET_SIZES_VIEW
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.processors.GetPartitionsFromEntitySetEntryProcessor
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organizations.processors.OrganizationEntryProcessor
 import com.openlattice.organizations.processors.OrganizationReadEntryProcessor
-import com.openlattice.postgres.PostgresArrays
-import com.openlattice.postgres.PostgresColumn.COUNT
-import com.openlattice.postgres.PostgresColumn.PARTITION
+import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresMaterializedViews.Companion.PARTITION_COUNTS
+import com.openlattice.postgres.PostgresTable.ENTITY_SETS
+import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.BasePostgresIterable
-import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
+import com.openlattice.postgres.streams.StatementHolderSupplier
 import com.openlattice.rhizome.DelegatedIntSet
 import com.zaxxer.hikari.HikariDataSource
 import org.springframework.scheduling.annotation.Scheduled
@@ -129,15 +130,15 @@ class PartitionManager @JvmOverloads constructor(
         }
     }
 
-    private fun getEmptiestPartitions(partitionCount: Int): List<Int> {
-        //A quick note is that the partitions materialized view shouldn't be turned into a distributed table
-        //with out addressing the interaction of the order by and limit clauses.
-        return BasePostgresIterable(
-                PreparedStatementHolderSupplier(hds, EMPTIEST_PARTITIONS) { ps ->
-                    ps.setArray(1, PostgresArrays.createIntArray(ps.connection, partitionList))
-                    ps.setInt(2, partitionCount)
-                }) { it.getInt(PARTITION.name) to it.getLong(COUNT)
-        }.map { it.first }
+    private fun getEmptiestPartitions(numPartitions: Int): List<Int> {
+        val partitionCounts = mutableMapOf<Int, Long>()
+        BasePostgresIterable(StatementHolderSupplier(hds, EMPTIEST_PARTITIONS)) {
+            ResultSetAdapters.count(it) to ResultSetAdapters.partitions(it)
+        }.forEach { (count, partitions) ->
+            val avg = count / partitions.size
+            partitions.forEach { partitionCounts[it] = partitionCounts.getOrDefault(it, 0) + avg }
+        }
+        return partitionCounts.entries.sortedBy { it.value }.take(numPartitions).map { it.key }
     }
 
     /**
@@ -154,5 +155,11 @@ class PartitionManager @JvmOverloads constructor(
 
 }
 
-private val ALL_PARTITIONS = "SELECT ${PARTITION.name}, COALESCE(count,0) as $COUNT FROM (SELECT unnest(?::integer[]) as ${PARTITION.name}) as partitions LEFT JOIN ${PARTITION_COUNTS.name} USING (${PARTITION.name}) ORDER BY $COUNT ASC "
-private val EMPTIEST_PARTITIONS = "$ALL_PARTITIONS LIMIT ?"
+private val EMPTIEST_PARTITIONS = """
+        SELECT $ENTITY_SET_SIZES_VIEW.$COUNT, ${ENTITY_SETS.name}.${PARTITIONS.name} 
+            FROM ${ENTITY_SETS.name} 
+            INNER JOIN $ENTITY_SET_SIZES_VIEW 
+            ON ${ENTITY_SETS.name}.${ID.name} = $ENTITY_SET_SIZES_VIEW.${ENTITY_SET_ID.name} 
+            WHERE $ENTITY_SET_SIZES_VIEW.$COUNT > 0 
+            AND array_length( ${PARTITIONS.name}, 1) > 0
+        """.trimIndent()
