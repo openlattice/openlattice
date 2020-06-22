@@ -1,5 +1,6 @@
 package com.openlattice.data.storage.partitions
 
+import com.geekbeast.rhizome.hazelcast.DelegatedIntList
 import com.google.common.base.Preconditions.checkArgument
 import com.hazelcast.core.HazelcastInstance
 import com.openlattice.datastore.util.Util
@@ -16,6 +17,7 @@ import com.openlattice.postgres.PostgresColumn.PARTITION
 import com.openlattice.postgres.PostgresMaterializedViews.Companion.PARTITION_COUNTS
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
+import com.openlattice.rhizome.DelegatedIntSet
 import com.zaxxer.hikari.HikariDataSource
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
@@ -76,15 +78,15 @@ class PartitionManager @JvmOverloads constructor(
     }
 
     fun getDefaultPartitions(organizationId: UUID): List<Int> {
-        return organizations.executeOnKey(organizationId, OrganizationReadEntryProcessor { it.partitions }) as List<Int>
+        return organizations.executeOnKey(organizationId, OrganizationReadEntryProcessor { DelegatedIntList(it.partitions) }) as DelegatedIntList
     }
 
     fun getEntitySetPartitions(entitySetId: UUID): Set<Int> {
-        return entitySets.executeOnKey(entitySetId, GetPartitionsFromEntitySetEntryProcessor()) as Set<Int>
+        return entitySets.executeOnKey(entitySetId, GetPartitionsFromEntitySetEntryProcessor()) as DelegatedIntSet
     }
 
     fun getPartitionsByEntitySetId(entitySetIds: Set<UUID>): Map<UUID, Set<Int>> {
-        return entitySets.executeOnKeys(entitySetIds, GetPartitionsFromEntitySetEntryProcessor()) as Map<UUID, Set<Int>>
+        return entitySets.executeOnKeys(entitySetIds, GetPartitionsFromEntitySetEntryProcessor()) as Map<UUID, DelegatedIntSet>
     }
 
     /**
