@@ -330,17 +330,23 @@ open class EntitySetService(
     @Timed
     @Suppress("UNCHECKED_CAST")
     override fun filterToAuthorizedNormalEntitySets(
-            entitySetIds: Set<UUID>, permissions: EnumSet<Permission>, principals: Set<Principal>
+            entitySetIds: Set<UUID>,
+            permissions: EnumSet<Permission>,
+            principals: Set<Principal>
     ): Set<UUID> {
+
+        val accessChecks = mutableMapOf<AclKey, EnumSet<Permission>>()
+
         val entitySetIdToNormalEntitySetIds = entitySets.executeOnKeys(
                 entitySetIds,
                 GetNormalEntitySetIdsEntryProcessor()
-        )
-                .mapValues { it.value as DelegatedUUIDSet }
-
-        val normalEntitySetIds = entitySetIdToNormalEntitySetIds.values.flatten()
-
-        val accessChecks = normalEntitySetIds.associate { AclKey(it) to permissions }
+        ).mapValues {
+            val set = (it.value as DelegatedUUIDSet).unwrap()
+            set.forEach {
+                accessChecks.putIfAbsent( AclKey(it), permissions )
+            }
+            set
+        }
 
         val entitySetsToAuthorizedStatus = authorizations.authorize(accessChecks, principals)
                 .map { it.key.first() to it.value.values.all { bool -> bool } }.toMap()
@@ -373,7 +379,7 @@ open class EntitySetService(
                 ?: throw  ResourceNotFoundException("Entity set $entitySetId does not exist.")
 
         val maybeEtProps = entityTypes.executeOnKey(maybeEtId, GetPropertiesFromEntityTypeEntryProcessor())
-                as? Set<UUID>
+                as? DelegatedUUIDSet
                 ?: throw  ResourceNotFoundException("Entity type $maybeEtId does not exist.")
 
         return propertyTypes.getAll(maybeEtProps)
