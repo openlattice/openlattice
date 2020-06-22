@@ -117,10 +117,6 @@ open class EntitySetService(
             entitySet.removeFlag(EntitySetFlag.ASSOCIATION)
         }
 
-        return createEntitySet(principal, entitySet, entityType)
-    }
-
-    private fun createEntitySet(principal: Principal, entitySet: EntitySet, entityType: EntityType): UUID {
         val entitySetId = reserveEntitySetIfNotExists(entitySet)
 
         try {

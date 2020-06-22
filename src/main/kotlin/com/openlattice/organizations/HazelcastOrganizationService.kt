@@ -9,8 +9,6 @@ import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.openlattice.assembler.Assembler
 import com.openlattice.authorization.*
-import com.openlattice.authorization.initializers.AuthorizationInitializationTask
-import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.data.storage.partitions.DEFAULT_PARTITION_COUNT
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.hazelcast.HazelcastMap
@@ -490,13 +488,6 @@ class HazelcastOrganizationService(
 
     fun allocateDefaultPartitions(partitionCount: Int): List<Int> {
         return partitionManager.allocateDefaultPartitions(partitionCount)
-    }
-
-    fun removeUser(principal: Principal) {
-        organizations.executeOnEntries(OrganizationEntryProcessor {
-            val modified = it.members.remove(principal)
-            Result(modified, modified)
-        })
     }
 
     @Timed
