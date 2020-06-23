@@ -9,7 +9,6 @@ import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.openlattice.assembler.Assembler
 import com.openlattice.authorization.*
-import com.openlattice.data.storage.partitions.DEFAULT_PARTITION_COUNT
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.notifications.sms.PhoneNumberService
@@ -33,7 +32,6 @@ import java.util.*
 import java.util.stream.Stream
 import javax.inject.Inject
 import kotlin.streams.asSequence
-
 
 /**
  * This class manages organizations.
@@ -69,10 +67,6 @@ class HazelcastOrganizationService(
 
     @Inject
     private lateinit var eventBus: EventBus
-
-    val numberOfPartitions: Int
-        get() = partitionManager.getPartitionCount()
-
 
     @Timed
     fun getOrganization(p: Principal): OrganizationPrincipal {
@@ -145,13 +139,11 @@ class HazelcastOrganizationService(
 
     private fun initializeOrganization(organization: Organization) {
         val organizationId = organization.securablePrincipal.id
-        organizations.set(organizationId, organization)
-
         if (organization.partitions.isEmpty()) {
-            organization.partitions.addAll(
-                    partitionManager.allocateDefaultPartitions(organizationId, DEFAULT_PARTITION_COUNT)
-            )
+            organization.partitions.addAll( partitionManager.allocateDefaultOrganizationPartitions(organizationId) )
         }
+
+        organizations.set(organizationId, organization)
     }
 
     @Timed

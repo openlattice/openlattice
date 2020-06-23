@@ -7,7 +7,6 @@ import com.openlattice.data.storage.PostgresEntitySetSizesInitializationTask.Com
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.processors.GetPartitionsFromEntitySetEntryProcessor
 import com.openlattice.hazelcast.HazelcastMap
-import com.openlattice.organizations.processors.OrganizationEntryProcessor
 import com.openlattice.organizations.processors.OrganizationReadEntryProcessor
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresMaterializedViews.Companion.PARTITION_COUNTS
@@ -21,7 +20,6 @@ import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import java.util.*
 
-const val DEFAULT_PARTITION_COUNT = 2
 
 /**
  *
@@ -31,19 +29,16 @@ const val DEFAULT_PARTITION_COUNT = 2
 class PartitionManager @JvmOverloads constructor(
         hazelcastInstance: HazelcastInstance,
         private val hds: HikariDataSource,
-        partitions: Int = 257
+        val numPartitions: Int = 257
 ) {
+    private val DEFAULT_ORG_PARTITION_COUNT = 2
     private val partitionList = mutableListOf<Int>()
     private val entitySets = HazelcastMap.ENTITY_SETS.getMap( hazelcastInstance )
     private val organizations = HazelcastMap.ORGANIZATIONS.getMap( hazelcastInstance )
 
     init {
         createMaterializedViewIfNotExists()
-        setPartitions(partitions)
-    }
-
-    fun getPartitionCount(): Int {
-        return partitionList.size
+        setPartitions(numPartitions)
     }
 
     @Synchronized
@@ -55,13 +50,6 @@ class PartitionManager @JvmOverloads constructor(
 
     fun getAllPartitions(): List<Int> {
         return partitionList
-    }
-
-    fun setDefaultPartitions(organizationId: UUID, partitions: List<Int>) {
-        organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
-            it.partitions.clear()
-            OrganizationEntryProcessor.Result(it.partitions.addAll(partitions))
-        })
     }
 
     fun getDefaultPartitions(organizationId: UUID): List<Int> {
@@ -87,7 +75,7 @@ class PartitionManager @JvmOverloads constructor(
      * @return Returns the entity set that was passed which has been modified with its partition allocation.
      */
     @JvmOverloads
-    fun allocatePartitions(entitySet: EntitySet, partitionCount: Int = 0): EntitySet {
+    fun allocateEntitySetPartitions(entitySet: EntitySet, partitionCount: Int = 0): EntitySet {
         isValidAllocation(partitionCount)
         val allocatedPartitions = computePartitions(entitySet, partitionCount)
         entitySet.setPartitions(allocatedPartitions)
@@ -104,13 +92,15 @@ class PartitionManager @JvmOverloads constructor(
         return defaults + (partitionList - defaults).toList().shuffled().take(partitionCount - defaults.size)
     }
 
+    fun allocateAllPartitions(entitySet: EntitySet): EntitySet {
+        return allocateEntitySetPartitions(entitySet, numPartitions)
+    }
+
     /**
      * Allocates default partitions for an organization based on emptiest partitions.
      */
-    fun allocateDefaultPartitions(organizationId: UUID, partitionCount: Int): List<Int> {
-        val defaultPartitions = getEmptiestPartitions(partitionCount)
-        setDefaultPartitions(organizationId, defaultPartitions)
-        return defaultPartitions
+    fun allocateDefaultOrganizationPartitions(organizationId: UUID, partitionCount: Int = DEFAULT_ORG_PARTITION_COUNT): List<Int> {
+        return getEmptiestPartitions(partitionCount)
     }
 
     private fun createMaterializedViewIfNotExists() {

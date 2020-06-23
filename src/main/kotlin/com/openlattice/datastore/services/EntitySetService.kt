@@ -106,7 +106,7 @@ open class EntitySetService(
         Principals.ensureUser(principal)
 
         if (entitySet.partitions.isEmpty()) {
-            partitionManager.allocatePartitions(entitySet)
+            partitionManager.allocateEntitySetPartitions(entitySet)
         }
 
         val entityType = entityTypes.getValue(entitySet.entityTypeId)
