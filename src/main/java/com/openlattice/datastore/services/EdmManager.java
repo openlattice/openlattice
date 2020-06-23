@@ -26,11 +26,19 @@ import com.hazelcast.map.EntryProcessor;
 import com.openlattice.edm.EntityDataModel;
 import com.openlattice.edm.EntityDataModelDiff;
 import com.openlattice.edm.requests.MetadataUpdate;
-import com.openlattice.edm.type.*;
+import com.openlattice.edm.type.AssociationDetails;
+import com.openlattice.edm.type.AssociationType;
+import com.openlattice.edm.type.EntityType;
+import com.openlattice.edm.type.EntityTypePropertyMetadata;
+import com.openlattice.edm.type.PropertyType;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 import javax.annotation.Nullable;
-import java.util.*;
+import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 public interface EdmManager {
     void clearTables();
