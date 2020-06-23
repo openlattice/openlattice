@@ -217,7 +217,7 @@ class BackgroundLinkingService(
                 val result = lqs.lockClustersDoWorkAndCommit( candidate, dataKeys, { clusters ->
                     val maybeBestCluster = clusters
                             .asSequence()
-                            .map { it -> cluster(candidate, it, ::completeLinkCluster) }
+                            .map { cluster -> cluster(candidate, cluster, ::completeLinkCluster) }
                             .filter { it.score > MINIMUM_SCORE }
                             .maxBy { it.score }
 
