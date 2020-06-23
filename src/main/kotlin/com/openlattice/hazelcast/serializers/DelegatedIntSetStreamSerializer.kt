@@ -5,10 +5,12 @@ import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.rhizome.DelegatedIntSet
+import org.springframework.stereotype.Component
 
 /**
  * @author Drew Bailey &lt;drew@openlattice.com&gt;
  */
+@Component
 class DelegatedIntSetStreamSerializer : TestableSelfRegisteringStreamSerializer<DelegatedIntSet> {
     override fun getTypeId(): Int {
         return StreamSerializerTypeIds.INT_SET.ordinal
