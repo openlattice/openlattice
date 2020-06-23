@@ -32,32 +32,18 @@ import com.openlattice.assembler.pods.AssemblerConfigurationPod;
 import com.openlattice.auditing.AuditingConfiguration;
 import com.openlattice.auditing.pods.AuditingConfigurationPod;
 import com.openlattice.authentication.Auth0Configuration;
-import com.openlattice.authorization.AuthorizationManager;
-import com.openlattice.authorization.AuthorizationQueryService;
-import com.openlattice.authorization.DbCredentialService;
-import com.openlattice.authorization.EdmAuthorizationHelper;
-import com.openlattice.authorization.HazelcastAclKeyReservationService;
-import com.openlattice.authorization.HazelcastAuthorizationService;
-import com.openlattice.authorization.HazelcastSecurableObjectResolveTypeService;
-import com.openlattice.authorization.PostgresUserApi;
-import com.openlattice.authorization.Principals;
-import com.openlattice.authorization.SecurableObjectResolveTypeService;
+import com.openlattice.authorization.*;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.EntitySetManager;
 import com.openlattice.datastore.services.EntitySetService;
-import com.openlattice.edm.PostgresEdmManager;
 import com.openlattice.edm.properties.PostgresTypeManager;
 import com.openlattice.edm.schemas.SchemaQueryService;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
 import com.openlattice.edm.schemas.postgres.PostgresSchemaQueryService;
-import com.openlattice.linking.LinkingConfiguration;
-import com.openlattice.linking.LinkingLogService;
-import com.openlattice.linking.Matcher;
-import com.openlattice.linking.PostgresLinkingFeedbackService;
-import com.openlattice.linking.PostgresLinkingLogService;
+import com.openlattice.linking.*;
 import com.openlattice.linking.matching.SocratesMatcher;
 import com.openlattice.linking.util.PersonProperties;
 import com.openlattice.notifications.sms.PhoneNumberService;
@@ -193,6 +179,7 @@ public class LinkerServicesPod {
     public PhoneNumberService phoneNumberService() {
         return new PhoneNumberService( hazelcastInstance );
     }
+
     @Bean
     public HazelcastOrganizationService organizationsManager() {
         return new HazelcastOrganizationService(
@@ -221,11 +208,6 @@ public class LinkerServicesPod {
     }
 
     @Bean
-    public PostgresEdmManager edmManager() {
-        return new PostgresEdmManager( hikariDataSource, hazelcastInstance );
-    }
-
-    @Bean
     public HazelcastSchemaManager schemaManager() {
         return new HazelcastSchemaManager( hazelcastInstance, schemaQueryService() );
     }
@@ -250,19 +232,16 @@ public class LinkerServicesPod {
                 hazelcastInstance,
                 aclKeyReservationService(),
                 authorizationManager(),
-                edmManager(),
                 entityTypeManager(),
                 schemaManager()
         );
     }
-
 
     @Bean
     public EntitySetManager entitySetManager() {
         return new EntitySetService(
                 hazelcastInstance,
                 eventBus,
-                edmManager(),
                 aclKeyReservationService(),
                 authorizationManager(),
                 partitionManager(),

@@ -31,27 +31,13 @@ import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.ids.PostgresEntityKeyIdService;
-import com.openlattice.data.storage.ByteBlobDataManager;
-import com.openlattice.data.storage.EntityDatastore;
-import com.openlattice.data.storage.IndexingMetadataManager;
-import com.openlattice.data.storage.PostgresEntityDataQueryService;
-import com.openlattice.data.storage.PostgresEntityDatastore;
+import com.openlattice.data.storage.*;
 import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.datastore.pods.ByteBlobServicePod;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.EntitySetManager;
-import com.openlattice.edm.PostgresEdmManager;
 import com.openlattice.ids.HazelcastIdGenerationService;
-import com.openlattice.linking.BackgroundLinkingService;
-import com.openlattice.linking.Blocker;
-import com.openlattice.linking.DataLoader;
-import com.openlattice.linking.EdmCachingDataLoader;
-import com.openlattice.linking.LinkingConfiguration;
-import com.openlattice.linking.LinkingLogService;
-import com.openlattice.linking.LinkingQueryService;
-import com.openlattice.linking.Matcher;
-import com.openlattice.linking.PostgresLinkingFeedbackService;
-import com.openlattice.linking.PostgresLinkingLogService;
+import com.openlattice.linking.*;
 import com.openlattice.linking.blocking.ElasticsearchBlocker;
 import com.openlattice.linking.controllers.RealtimeLinkingController;
 import com.openlattice.linking.graph.PostgresLinkingQueryService;
@@ -93,9 +79,6 @@ public class LinkerPostConfigurationServicesPod {
 
     @Inject
     private ConductorElasticsearchApi elasticsearchApi;
-
-    @Inject
-    private PostgresEdmManager pgEdmManager;
 
     @Inject
     private PartitionManager partitionManager;
@@ -169,7 +152,7 @@ public class LinkerPostConfigurationServicesPod {
     public EntityDatastore entityDatastore() {
         return new PostgresEntityDatastore(
                 dataQueryService(),
-                pgEdmManager,
+                edm,
                 entitySetManager,
                 metricRegistry,
                 eventBus,
