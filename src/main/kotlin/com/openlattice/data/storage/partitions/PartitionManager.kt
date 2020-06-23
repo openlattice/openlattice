@@ -9,14 +9,12 @@ import com.openlattice.edm.processors.GetPartitionsFromEntitySetEntryProcessor
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organizations.processors.OrganizationReadEntryProcessor
 import com.openlattice.postgres.PostgresColumn.*
-import com.openlattice.postgres.PostgresMaterializedViews.Companion.PARTITION_COUNTS
 import com.openlattice.postgres.PostgresTable.ENTITY_SETS
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.StatementHolderSupplier
 import com.openlattice.rhizome.DelegatedIntSet
 import com.zaxxer.hikari.HikariDataSource
-import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import java.util.*
 
@@ -37,7 +35,6 @@ class PartitionManager @JvmOverloads constructor(
     private val organizations = HazelcastMap.ORGANIZATIONS.getMap( hazelcastInstance )
 
     init {
-        createMaterializedViewIfNotExists()
         setPartitions(numPartitions)
     }
 
@@ -103,23 +100,6 @@ class PartitionManager @JvmOverloads constructor(
         return getEmptiestPartitions(partitionCount)
     }
 
-    private fun createMaterializedViewIfNotExists() {
-        hds.connection.use { conn ->
-            conn.createStatement().use { stmt ->
-                stmt.execute(PARTITION_COUNTS.createSql)
-            }
-        }
-    }
-
-    @Scheduled(fixedRate = 15 * 60000) //Update every 5 minutes.
-    fun refreshMaterializedView() {
-        hds.connection.use { conn ->
-            conn.createStatement().use { stmt ->
-                stmt.execute(PARTITION_COUNTS.refreshSql)
-            }
-        }
-    }
-
     private fun getEmptiestPartitions(numPartitions: Int): List<Int> {
         val partitionCounts = mutableMapOf<Int, Long>()
         BasePostgresIterable(StatementHolderSupplier(hds, EMPTIEST_PARTITIONS)) {
@@ -142,7 +122,6 @@ class PartitionManager @JvmOverloads constructor(
                 "Cannot request more partitions ($partitionCount) than exist (${partitionList.size}."
         )
     }
-
 }
 
 private val EMPTIEST_PARTITIONS = """
