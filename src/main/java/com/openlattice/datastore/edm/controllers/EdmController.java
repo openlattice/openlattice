@@ -87,7 +87,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
     private AuthorizationManager authorizations;
 
     @Inject
-    private PostgresEdmManager edmManager;
+    private PostgresEdmManager postgresEdmManager;
 
     @Inject
     private SecurableObjectResolveTypeService securableObjectTypes;
@@ -383,7 +383,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         Map<UUID, Iterable<PropertyUsageSummary>> allPropertySummaries = Maps
                 .newHashMapWithExpectedSize( propertyTypeIds.size() );
         for ( UUID propertyTypeId : propertyTypeIds ) {
-            allPropertySummaries.put( propertyTypeId, modelService.getPropertyUsageSummary( propertyTypeId ) );
+            allPropertySummaries.put( propertyTypeId, postgresEdmManager.getPropertyUsageSummary( propertyTypeId ) );
         }
         return allPropertySummaries;
     }
@@ -395,7 +395,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
             method = RequestMethod.GET )
     public Iterable<PropertyUsageSummary> getPropertyUsageSummary( @PathVariable( ID ) UUID propertyTypeId ) {
         ensureAdminAccess();
-        return modelService.getPropertyUsageSummary( propertyTypeId );
+        return postgresEdmManager.getPropertyUsageSummary( propertyTypeId );
     }
 
     @Timed
