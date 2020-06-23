@@ -11,7 +11,10 @@ import com.openlattice.data.DeleteType
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.UpdateType
 import com.openlattice.edm.requests.MetadataUpdate
-import com.openlattice.launchpad.configuration.*
+import com.openlattice.launchpad.configuration.DataLake
+import com.openlattice.launchpad.configuration.Integration
+import com.openlattice.launchpad.configuration.IntegrationConfiguration
+import com.openlattice.launchpad.configuration.IntegrationRunner
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.organization.OrganizationEntitySetFlag
 import com.openlattice.organizations.Organization
@@ -1186,29 +1189,25 @@ class AssemblerTest : AssemblerTestBase() {
         val integrationConfiguration = IntegrationConfiguration(
                 "assembler_integration",
                 "integration to make sure organization user can integrate to openlattice schema",
-                listOf(
-                        LaunchpadDatasource(
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.of(listOf(
+                        DataLake(
                                 sourceDb,
                                 "jdbc:postgresql://localhost:5432/openlattice",
                                 "org.postgresql.Driver",
-                                Optional.of("oltest"),
-                                Optional.of("test"),
-                                Optional.of(20000),
-                                Optional.empty()
-                        )
-                ),
-                listOf(
-                        LaunchpadDestination(
+                                username = "oltest",
+                                password ="test"
+                        ),
+                        DataLake(
                                 destinationDb,
                                 "jdbc:postgresql://localhost:5432/$organizationDataBaseName",
                                 "org.postgresql.Driver",
-                                Optional.of(organizationUserCredentials.user),
-                                Optional.of(organizationUserCredentials.credential),
-                                Optional.empty(),
-                                Optional.empty(),
-                                Optional.empty()
+                                username = organizationUserCredentials.user,
+                                password = organizationUserCredentials.credential
                         )
-                ),
+                )),
                 mapOf(sourceDb to integrations)
         )
         IntegrationRunner.runIntegrations(integrationConfiguration)
