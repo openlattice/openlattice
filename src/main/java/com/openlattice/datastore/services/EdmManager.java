@@ -23,21 +23,14 @@
 package com.openlattice.datastore.services;
 
 import com.hazelcast.map.EntryProcessor;
-import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.edm.EntityDataModel;
 import com.openlattice.edm.EntityDataModelDiff;
 import com.openlattice.edm.requests.MetadataUpdate;
-import com.openlattice.edm.type.AssociationDetails;
-import com.openlattice.edm.type.AssociationType;
-import com.openlattice.edm.type.EntityType;
-import com.openlattice.edm.type.EntityTypePropertyMetadata;
-import com.openlattice.edm.type.PropertyType;
-
-import java.util.*;
-
+import com.openlattice.edm.type.*;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 import javax.annotation.Nullable;
+import java.util.*;
 
 public interface EdmManager {
     void clearTables();
@@ -57,8 +50,6 @@ public interface EdmManager {
     Iterable<PropertyType> getPropertyTypes();
 
     Set<UUID> getAllPropertyTypeIds();
-
-    Iterable<PropertyUsageSummary> getPropertyUsageSummary( UUID propertyTypeId );
 
     void createEntityType( EntityType objectType );
 
@@ -179,4 +170,6 @@ public interface EdmManager {
     EntityTypePropertyMetadata getEntityTypePropertyMetadata( UUID entityTypeId, UUID propertyTypeId );
 
     Map<UUID, EntityTypePropertyMetadata> getAllEntityTypePropertyMetadata( UUID entityTypeId );
+
+    Set<UUID> getAllLinkingEntitySetIdsForEntitySet( UUID entitySetId );
 }

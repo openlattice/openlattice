@@ -41,7 +41,6 @@ import com.openlattice.authorization.securable.SecurableObjectType.PropertyTypeI
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.datastore.util.Util
 import com.openlattice.edm.EntitySet
-import com.openlattice.edm.PostgresEdmManager
 import com.openlattice.edm.events.*
 import com.openlattice.edm.processors.EntitySetsFlagFilteringAggregator
 import com.openlattice.edm.processors.GetEntityTypeFromEntitySetEntryProcessor
@@ -69,7 +68,6 @@ import java.util.*
 open class EntitySetService(
         hazelcastInstance: HazelcastInstance,
         private val eventBus: EventBus,
-        private val edmManager: PostgresEdmManager,
         private val aclKeyReservations: HazelcastAclKeyReservationService,
         private val authorizations: AuthorizationManager,
         private val partitionManager: PartitionManager,
@@ -228,7 +226,7 @@ open class EntitySetService(
      * @param entitySetId the id of the deleted entity set
      */
     private fun checkAndRemoveEntitySetLinks(entitySetId: UUID) {
-        edmManager.getAllLinkingEntitySetIdsForEntitySet(entitySetId).forEach { linkingEntitySetId ->
+        edm.getAllLinkingEntitySetIdsForEntitySet(entitySetId).forEach { linkingEntitySetId ->
             removeLinkedEntitySets(linkingEntitySetId, setOf(entitySetId))
             logger.info(
                     "Removed link between linking entity set ($linkingEntitySetId) and deleted entity set " +
@@ -255,7 +253,7 @@ open class EntitySetService(
     }
 
     override fun getEntitySets(): Iterable<EntitySet> {
-        return edmManager.allEntitySets
+        return entitySets.values
     }
 
     override fun getEntitySetsOfType(entityTypeIds: Set<UUID>): Collection<EntitySet> {

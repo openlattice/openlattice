@@ -34,7 +34,6 @@ import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.controllers.exceptions.TypeExistsException;
 import com.openlattice.controllers.exceptions.TypeNotFoundException;
-import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.datastore.util.Util;
 import com.openlattice.edm.*;
 import com.openlattice.edm.events.*;
@@ -86,7 +85,6 @@ public class EdmService implements EdmManager {
 
     private final HazelcastAclKeyReservationService aclKeyReservations;
     private final AuthorizationManager              authorizations;
-    private final PostgresEdmManager                edmManager;
     private final PostgresTypeManager               entityTypeManager;
     private final HazelcastSchemaManager            schemaManager;
 
@@ -101,12 +99,10 @@ public class EdmService implements EdmManager {
             HazelcastInstance hazelcastInstance,
             HazelcastAclKeyReservationService aclKeyReservations,
             AuthorizationManager authorizations,
-            PostgresEdmManager edmManager,
             PostgresTypeManager entityTypeManager,
             HazelcastSchemaManager schemaManager ) {
 
         this.authorizations = authorizations;
-        this.edmManager = edmManager;
         this.entityTypeManager = entityTypeManager;
         this.schemaManager = schemaManager;
         this.hazelcastInstance = hazelcastInstance;
@@ -127,7 +123,7 @@ public class EdmService implements EdmManager {
     @Override
     public void clearTables() {
         eventBus.post( new ClearAllDataEvent() );
-        for (HazelcastMap<?, ?> map : HazelcastMap.values()) {
+        for ( HazelcastMap<?, ?> map : HazelcastMap.values() ) {
             map.getMap( hazelcastInstance ).clear();
         }
         try ( java.sql.Connection connection = hds.getConnection() ) {
@@ -323,9 +319,9 @@ public class EdmService implements EdmManager {
             EntityTypePropertyMetadata metadata = new EntityTypePropertyMetadata(
                     property.getTitle(),
                     property.getDescription(),
-                    new LinkedHashSet(propertyTags.get(propertyTypeId)),
+                    new LinkedHashSet( propertyTags.get( propertyTypeId ) ),
                     true
-                    );
+            );
             entityTypePropertyMetadata.put( key, metadata );
         } );
     }
@@ -458,11 +454,6 @@ public class EdmService implements EdmManager {
     @Override
     public EntityType getEntityType( String namespace, String name ) {
         return getEntityType( new FullQualifiedName( namespace, name ) );
-    }
-
-    @Override
-    public Iterable<PropertyUsageSummary> getPropertyUsageSummary( UUID propertyTypeId ) {
-        return edmManager.getPropertyUsageSummary( propertyTypeId );
     }
 
     @Override
@@ -1342,6 +1333,11 @@ public class EdmService implements EdmManager {
                 eventBus.post( new AssociationTypeCreatedEvent( at ) );
             }
         } );
+    }
+
+    @Override
+    public Set<UUID> getAllLinkingEntitySetIdsForEntitySet( UUID entitySetId ) {
+        return entitySets.keySet( Predicates.equal( EntitySetMapstore.LINKED_ENTITY_SET_INDEX, entitySetId ) );
     }
 
     /* Entity set related functions */
