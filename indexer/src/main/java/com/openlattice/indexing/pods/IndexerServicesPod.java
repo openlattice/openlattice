@@ -32,43 +32,23 @@ import com.openlattice.assembler.Assembler;
 import com.openlattice.assembler.AssemblerConfiguration;
 import com.openlattice.assembler.AssemblerConnectionManager;
 import com.openlattice.assembler.pods.AssemblerConfigurationPod;
-import com.openlattice.auditing.AuditRecordEntitySetsManager;
-import com.openlattice.auditing.AuditingConfiguration;
-import com.openlattice.auditing.AuditingManager;
-import com.openlattice.auditing.AuditingProfiles;
-import com.openlattice.auditing.LocalAuditingService;
-import com.openlattice.auditing.S3AuditingService;
+import com.openlattice.auditing.*;
 import com.openlattice.auditing.pods.AuditingConfigurationPod;
 import com.openlattice.authentication.Auth0Configuration;
-import com.openlattice.authorization.AuthorizationManager;
-import com.openlattice.authorization.AuthorizationQueryService;
-import com.openlattice.authorization.DbCredentialService;
-import com.openlattice.authorization.EdmAuthorizationHelper;
-import com.openlattice.authorization.HazelcastAclKeyReservationService;
-import com.openlattice.authorization.HazelcastAuthorizationService;
-import com.openlattice.authorization.HazelcastSecurableObjectResolveTypeService;
-import com.openlattice.authorization.PostgresUserApi;
-import com.openlattice.authorization.Principals;
-import com.openlattice.authorization.SecurableObjectResolveTypeService;
+import com.openlattice.authorization.*;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.DataDeletionManager;
 import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.DataGraphService;
 import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.ids.PostgresEntityKeyIdService;
-import com.openlattice.data.storage.ByteBlobDataManager;
-import com.openlattice.data.storage.DataDeletionService;
-import com.openlattice.data.storage.EntityDatastore;
-import com.openlattice.data.storage.PostgresEntityDataQueryService;
-import com.openlattice.data.storage.PostgresEntityDatastore;
-import com.openlattice.data.storage.PostgresEntitySetSizesTask;
+import com.openlattice.data.storage.*;
 import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.datastore.pods.ByteBlobServicePod;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.EntitySetManager;
 import com.openlattice.datastore.services.EntitySetService;
-import com.openlattice.edm.PostgresEdmManager;
 import com.openlattice.edm.properties.PostgresTypeManager;
 import com.openlattice.edm.schemas.SchemaQueryService;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
@@ -91,8 +71,6 @@ import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.PostgresTableManager;
 import com.openlattice.scrunchie.search.ConductorElasticsearchImpl;
 import com.zaxxer.hikari.HikariDataSource;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -251,11 +229,6 @@ public class IndexerServicesPod {
     }
 
     @Bean
-    public PostgresEdmManager edmManager() {
-        return new PostgresEdmManager( hikariDataSource, hazelcastInstance );
-    }
-
-    @Bean
     public HazelcastSchemaManager schemaManager() {
         return new HazelcastSchemaManager( hazelcastInstance, schemaQueryService() );
     }
@@ -272,7 +245,6 @@ public class IndexerServicesPod {
                 hazelcastInstance,
                 aclKeyReservationService(),
                 authorizationManager(),
-                edmManager(),
                 entityTypeManager(),
                 schemaManager()
         );
@@ -283,7 +255,6 @@ public class IndexerServicesPod {
         return new EntitySetService(
                 hazelcastInstance,
                 eventBus,
-                edmManager(),
                 aclKeyReservationService(),
                 authorizationManager(),
                 partitionManager(),
@@ -320,7 +291,7 @@ public class IndexerServicesPod {
     public EntityDatastore entityDatastore() {
         return new PostgresEntityDatastore(
                 dataQueryService(),
-                edmManager(),
+                dataModelService(),
                 entitySetManager(),
                 metricRegistry,
                 eventBus,
