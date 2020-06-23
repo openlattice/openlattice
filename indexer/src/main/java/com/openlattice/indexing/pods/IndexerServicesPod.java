@@ -75,14 +75,12 @@ import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
 import com.openlattice.edm.schemas.postgres.PostgresSchemaQueryService;
 import com.openlattice.graph.Graph;
 import com.openlattice.graph.core.GraphService;
-import com.openlattice.hazelcast.HazelcastQueue;
 import com.openlattice.ids.HazelcastIdGenerationService;
 import com.openlattice.ids.HazelcastLongIdService;
 import com.openlattice.indexing.configuration.IndexerConfiguration;
 import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.linking.PostgresLinkingFeedbackService;
 import com.openlattice.linking.graph.PostgresLinkingQueryService;
-import com.openlattice.mail.config.MailServiceRequirements;
 import com.openlattice.notifications.sms.PhoneNumberService;
 import com.openlattice.organizations.ExternalDatabaseManagementService;
 import com.openlattice.organizations.HazelcastOrganizationService;
@@ -107,7 +105,6 @@ import javax.inject.Inject;
 @Import( { IndexerConfigurationPod.class, AuditingConfigurationPod.class, AssemblerConfigurationPod.class,
         ByteBlobServicePod.class, OrganizationExternalDatabaseConfigurationPod.class } )
 public class IndexerServicesPod {
-    private static Logger logger = LoggerFactory.getLogger( IndexerServicesPod.class );
 
     @Inject
     private PostgresTableManager tableManager;
@@ -266,11 +263,6 @@ public class IndexerServicesPod {
     @Bean
     public PostgresTypeManager entityTypeManager() {
         return new PostgresTypeManager( hikariDataSource );
-    }
-
-    @Bean
-    public MailServiceRequirements mailServiceRequirements() {
-        return () -> HazelcastQueue.EMAIL_SPOOL.getQueue( hazelcastInstance );
     }
 
     @Bean
