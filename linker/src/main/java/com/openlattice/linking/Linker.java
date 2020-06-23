@@ -32,9 +32,11 @@ import com.openlattice.hazelcast.pods.HazelcastQueuePod;
 import com.openlattice.hazelcast.pods.MapstoresPod;
 import com.openlattice.hazelcast.pods.SharedStreamSerializersPod;
 import com.openlattice.jdbc.JdbcPod;
-import com.openlattice.linking.pods.*;
-import com.openlattice.mail.pods.MailServicePod;
-import com.openlattice.mail.services.MailService;
+import com.openlattice.linking.pods.LinkerPostConfigurationServicesPod;
+import com.openlattice.linking.pods.LinkerSecurityPod;
+import com.openlattice.linking.pods.LinkerServicesPod;
+import com.openlattice.linking.pods.LinkerServletsPod;
+import com.openlattice.linking.pods.PlasmaCoupling;
 import com.openlattice.postgres.PostgresPod;
 import com.openlattice.postgres.PostgresTablesPod;
 import com.openlattice.tasks.pods.TaskSchedulerPod;
@@ -51,7 +53,6 @@ public class Linker extends BaseRhizomeServer {
             JdbcPod.class,
             LinkerPostConfigurationServicesPod.class,
             LinkerServicesPod.class,
-            MailServicePod.class,
             MapstoresPod.class,
             HazelcastQueuePod.class,
             PlasmaCoupling.class,
@@ -74,7 +75,6 @@ public class Linker extends BaseRhizomeServer {
     @Override
     public void start( String... profiles ) throws Exception {
         super.start( profiles );
-        getContext().getBean( MailService.class ).processEmailRequestsQueue();
     }
 
     public static void main( String[] args ) throws Exception {

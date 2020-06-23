@@ -31,7 +31,6 @@ import com.openlattice.assembler.AssemblerConnectionManager;
 import com.openlattice.assembler.pods.AssemblerConfigurationPod;
 import com.openlattice.auditing.AuditingConfiguration;
 import com.openlattice.auditing.pods.AuditingConfigurationPod;
-import com.openlattice.auth0.Auth0TokenProvider;
 import com.openlattice.authentication.Auth0Configuration;
 import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.authorization.AuthorizationQueryService;
@@ -49,14 +48,11 @@ import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.EntitySetManager;
 import com.openlattice.datastore.services.EntitySetService;
-import com.openlattice.directory.UserDirectoryService;
 import com.openlattice.edm.PostgresEdmManager;
 import com.openlattice.edm.properties.PostgresTypeManager;
 import com.openlattice.edm.schemas.SchemaQueryService;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
 import com.openlattice.edm.schemas.postgres.PostgresSchemaQueryService;
-import com.openlattice.hazelcast.HazelcastQueue;
-import com.openlattice.scrunchie.search.ConductorElasticsearchImpl;
 import com.openlattice.linking.LinkingConfiguration;
 import com.openlattice.linking.LinkingLogService;
 import com.openlattice.linking.Matcher;
@@ -64,12 +60,12 @@ import com.openlattice.linking.PostgresLinkingFeedbackService;
 import com.openlattice.linking.PostgresLinkingLogService;
 import com.openlattice.linking.matching.SocratesMatcher;
 import com.openlattice.linking.util.PersonProperties;
-import com.openlattice.mail.config.MailServiceRequirements;
 import com.openlattice.notifications.sms.PhoneNumberService;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.PostgresTableManager;
+import com.openlattice.scrunchie.search.ConductorElasticsearchImpl;
 import com.zaxxer.hikari.HikariDataSource;
 import org.deeplearning4j.nn.modelimport.keras.KerasModelImport;
 import org.deeplearning4j.nn.modelimport.keras.exceptions.InvalidKerasConfigurationException;
@@ -77,8 +73,6 @@ import org.deeplearning4j.nn.modelimport.keras.exceptions.UnsupportedKerasConfig
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.deeplearning4j.util.ModelSerializer;
 import org.nd4j.linalg.io.ClassPathResource;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -94,7 +88,6 @@ import static com.openlattice.linking.MatcherKt.KERAS;
 @Configuration
 @Import( { LinkerConfigurationPod.class, AuditingConfigurationPod.class, AssemblerConfigurationPod.class } )
 public class LinkerServicesPod {
-    private static Logger logger = LoggerFactory.getLogger( LinkerServicesPod.class );
 
     @Inject
     private PostgresTableManager tableManager;
@@ -240,11 +233,6 @@ public class LinkerServicesPod {
     @Bean
     public PostgresTypeManager entityTypeManager() {
         return new PostgresTypeManager( hikariDataSource );
-    }
-
-    @Bean
-    public MailServiceRequirements mailServiceRequirements() {
-        return () -> HazelcastQueue.EMAIL_SPOOL.getQueue( hazelcastInstance );
     }
 
     @Bean
