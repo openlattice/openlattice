@@ -24,7 +24,6 @@ package com.openlattice.authorization;
 
 import com.codahale.metrics.annotation.Timed;
 import com.dataloom.streams.StreamUtil;
-import com.google.common.base.Stopwatch;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
@@ -53,12 +52,10 @@ import org.slf4j.LoggerFactory;
 
 import java.time.OffsetDateTime;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.Maps.transformValues;
 import static com.openlattice.authorization.mapstores.PermissionMapstore.ACL_KEY_INDEX;
@@ -69,16 +66,13 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
 
     private final IMap<AclKey, SecurableObjectType> securableObjectTypes;
     private final IMap<AceKey, AceValue>            aces;
-    private final AuthorizationQueryService         aqs;
     private final EventBus                          eventBus;
 
     public HazelcastAuthorizationService(
             HazelcastInstance hazelcastInstance,
-            AuthorizationQueryService aqs,
             EventBus eventBus ) {
         this.aces = HazelcastMap.PERMISSIONS.getMap( hazelcastInstance );
         this.securableObjectTypes = HazelcastMap.SECURABLE_OBJECT_TYPES.getMap( hazelcastInstance );
-        this.aqs = checkNotNull( aqs );
         this.eventBus = checkNotNull( eventBus );
     }
 
