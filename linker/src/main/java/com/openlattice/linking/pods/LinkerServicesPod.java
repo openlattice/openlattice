@@ -32,16 +32,7 @@ import com.openlattice.assembler.pods.AssemblerConfigurationPod;
 import com.openlattice.auditing.AuditingConfiguration;
 import com.openlattice.auditing.pods.AuditingConfigurationPod;
 import com.openlattice.authentication.Auth0Configuration;
-import com.openlattice.authorization.AuthorizationManager;
-import com.openlattice.authorization.AuthorizationQueryService;
-import com.openlattice.authorization.DbCredentialService;
-import com.openlattice.authorization.EdmAuthorizationHelper;
-import com.openlattice.authorization.HazelcastAclKeyReservationService;
-import com.openlattice.authorization.HazelcastAuthorizationService;
-import com.openlattice.authorization.HazelcastSecurableObjectResolveTypeService;
-import com.openlattice.authorization.PostgresUserApi;
-import com.openlattice.authorization.Principals;
-import com.openlattice.authorization.SecurableObjectResolveTypeService;
+import com.openlattice.authorization.*;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.datastore.services.EdmManager;
@@ -140,11 +131,6 @@ public class LinkerServicesPod {
     }
 
     @Bean
-    public AuthorizationQueryService authorizationQueryService() {
-        return new AuthorizationQueryService( hikariDataSource, hazelcastInstance );
-    }
-
-    @Bean
     public HazelcastAclKeyReservationService aclKeyReservationService() {
         return new HazelcastAclKeyReservationService( hazelcastInstance );
     }
@@ -193,6 +179,7 @@ public class LinkerServicesPod {
     public PhoneNumberService phoneNumberService() {
         return new PhoneNumberService( hazelcastInstance );
     }
+
     @Bean
     public HazelcastOrganizationService organizationsManager() {
         return new HazelcastOrganizationService(
@@ -255,7 +242,6 @@ public class LinkerServicesPod {
                 schemaManager()
         );
     }
-
 
     @Bean
     public EntitySetManager entitySetManager() {
