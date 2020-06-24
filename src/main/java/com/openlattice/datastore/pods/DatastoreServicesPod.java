@@ -242,7 +242,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public AuthorizationManager authorizationManager() {
-        return new HazelcastAuthorizationService( hazelcastInstance, authorizationQueryService(), eventBus );
+        return new HazelcastAuthorizationService( hazelcastInstance, eventBus );
     }
 
     @Bean
