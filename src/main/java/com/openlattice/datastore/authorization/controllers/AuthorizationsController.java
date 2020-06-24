@@ -43,9 +43,6 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping( AuthorizationsApi.CONTROLLER )
 public class AuthorizationsController implements AuthorizationsApi, AuthorizingComponent {
-    private static final Logger logger            = LoggerFactory.getLogger( AuthorizationsController.class );
-    //Number of authorized objects in each page of results
-    private static final int    DEFAULT_PAGE_SIZE = 10;
 
     @Inject
     private AuthorizationManager authorizations;
@@ -57,52 +54,12 @@ public class AuthorizationsController implements AuthorizationsApi, AuthorizingC
             consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE )
     public Iterable<Authorization> checkAuthorizations( @RequestBody Set<AccessCheck> queries ) {
-        //        Map<AclKey, EnumMap<Permission, Boolean>> accessChecks = new HashMap<>( queries.size() );
-        //
-        //        for ( AccessCheck accessCheck : queries ) {
-        //            EnumMap<Permission, Boolean> results = new EnumMap<>( Permission.class );
-        //            accessCheck.getPermissions().forEach( p -> results.put( p, false ) );
-        //            accessChecks.put( accessCheck.getAclKey(), results );
-        //        }
-        //
-        //        Map<AceKey, AceValue> permissionMap =
-        //                authorizations.getPermissionMap( accessChecks.keySet(), Principals.getCurrentPrincipals() );
-        //
-        //        permissionMap.forEach( ( k, v ) -> {
-        //            //The permission map will have null ace values for missing aces.
-        //            if ( v != null ) {
-        //                EnumMap<Permission, Boolean> results = accessChecks.get( k.getAclKey() );
-        //                checkNotNull( results, "Got a permission back for an acl key that wasn't requested" );
-        //                EnumSet<Permission> permissions = v.getPermissions();
-        //
-        //                for ( Permission p : results.keySet() ) {
-        //                    if ( permissions.contains( p ) ) {
-        //                        results.put( p, true );
-        //                    }
-        //                }
-        //            }
-        //        } );
-
-        Iterable<Authorization> methodA = authorizations
-                .accessChecksForPrincipals( queries, Principals.getCurrentPrincipals() )::iterator;
-        //        Iterable<Authorization> methodB = authorizations
-        //                .maybeFastAccessChecksForPrincipals( queries, Principals.getCurrentPrincipals() )
-        //                .entrySet()
-        //                .stream()
-        //                .map( e -> new Authorization( e.getAclKey(), e.getValue() ) )::iterator;
-        return methodA;
+        return authorizations.accessChecksForPrincipals( queries, Principals.getCurrentPrincipals() )::iterator;
     }
 
     @Override
     public AuthorizationManager getAuthorizationManager() {
         return authorizations;
-    }
-
-    private Authorization getAuth( AccessCheck query ) {
-        Set<Permission> currentPermissions = authorizations
-                .getSecurableObjectPermissions( new AclKey( query.getAclKey() ), Principals.getCurrentPrincipals() );
-        Map<Permission, Boolean> permissionsMap = Maps.asMap( query.getPermissions(), currentPermissions::contains );
-        return new Authorization( query.getAclKey(), permissionsMap );
     }
 
     @Timed
