@@ -60,9 +60,7 @@ public class AuthorizationQueryService {
     private final IMap<AceKey, AceValue> aces;
 
     private final String aclsForSecurableObjectSql;
-    private final String ownersForSecurableObjectSql;
     private final String deletePermissionsByAclKeysSql;
-    private final String deletePermissionsByPrincipalSql;
 
     public AuthorizationQueryService( HikariDataSource hds, HazelcastInstance hazelcastInstance ) {
         this.hds = hds;
@@ -75,19 +73,12 @@ public class AuthorizationQueryService {
         String ACL_KEY = PostgresColumn.ACL_KEY.getName();
         String PRINCIPAL_TYPE = PostgresColumn.PRINCIPAL_TYPE.getName();
         String PRINCIPAL_ID = PostgresColumn.PRINCIPAL_ID.getName();
-        String PERMISSIONS = PostgresColumn.PERMISSIONS.getName();
 
         this.aclsForSecurableObjectSql = PostgresQuery
                 .selectColsFrom( PERMISSIONS_TABLE, ImmutableList.of( PRINCIPAL_TYPE, PRINCIPAL_ID ) )
                 .concat( PostgresQuery.whereEq( ImmutableList.of( ACL_KEY ), true ) );
-        this.ownersForSecurableObjectSql = PostgresQuery
-                .selectColsFrom( PERMISSIONS_TABLE, ImmutableList.of( PRINCIPAL_TYPE, PRINCIPAL_ID ) )
-                .concat( PostgresQuery.whereEq( ImmutableList.of( ACL_KEY ) ) )
-                .concat( PostgresQuery.AND ).concat( PostgresQuery.valueInArray( PERMISSIONS, true ) );
         this.deletePermissionsByAclKeysSql = PostgresQuery.deleteFrom( PERMISSIONS_TABLE )
                 .concat( PostgresQuery.whereEq( ImmutableList.of( ACL_KEY ), true ) );
-        this.deletePermissionsByPrincipalSql = PostgresQuery.deleteFrom( PERMISSIONS_TABLE )
-                .concat( PostgresQuery.whereEq( ImmutableList.of( PRINCIPAL_TYPE, PRINCIPAL_ID ), true ) );
 
     }
 
@@ -242,7 +233,7 @@ public class AuthorizationQueryService {
 
     }
 
-    public Stream<AclKey> getAuthorizedAclKeysForPrincipals(
+    private Stream<AclKey> getAuthorizedAclKeysForPrincipals(
             Set<Principal> principals,
             EnumSet<Permission> desiredPermissions,
             Optional<SecurableObjectType> securableObjectType ) {
@@ -253,7 +244,7 @@ public class AuthorizationQueryService {
                 Optional.empty() );
     }
 
-    public Stream<AclKey> getAuthorizedAclKeysForPrincipals(
+    private Stream<AclKey> getAuthorizedAclKeysForPrincipals(
             Set<Principal> principals,
             EnumSet<Permission> desiredPermissions,
             Optional<SecurableObjectType> securableObjectType,
@@ -280,7 +271,7 @@ public class AuthorizationQueryService {
         }
     }
 
-    public Stream<Principal> getPrincipalsForSecurableObject( AclKey aclKeys ) {
+    private Stream<Principal> getPrincipalsForSecurableObject( AclKey aclKeys ) {
         try ( Connection connection = hds.getConnection();
                 PreparedStatement ps = connection.prepareStatement( aclsForSecurableObjectSql ) ) {
             List<Principal> result = Lists.newArrayList();
@@ -307,47 +298,4 @@ public class AuthorizationQueryService {
 
     }
 
-    public void deletePermissionsByAclKeys( AclKey aclKey ) {
-        try ( Connection connection = hds.getConnection();
-                PreparedStatement ps = connection.prepareStatement( deletePermissionsByAclKeysSql ) ) {
-            ps.setArray( 1, PostgresArrays.createUuidArray( connection, aclKey.stream() ) );
-            ps.execute();
-            connection.close();
-            logger.info( "Deleted all permissions for aclKey {}", aclKey );
-        } catch ( SQLException e ) {
-            logger.debug( "Unable delete all permissions for aclKey {}.", aclKey, e );
-        }
-    }
-
-    public void deletePermissionsByPrincipal( Principal principal ) {
-        try ( Connection connection = hds.getConnection();
-                PreparedStatement ps = connection.prepareStatement( deletePermissionsByPrincipalSql ) ) {
-            ps.setString( 1, principal.getType().name() );
-            ps.setString( 2, principal.getId() );
-            ps.execute();
-            connection.close();
-            logger.info( "Deleted all permissions for principal {}", principal );
-        } catch ( SQLException e ) {
-            logger.debug( "Unable delete all permissions for principal {}.", principal, e );
-        }
-    }
-
-    public Iterable<Principal> getOwnersForSecurableObject( AclKey aclKeys ) {
-        try ( Connection connection = hds.getConnection();
-                PreparedStatement ps = connection.prepareStatement( ownersForSecurableObjectSql ) ) {
-            List<Principal> result = Lists.newArrayList();
-            ps.setArray( 1, PostgresArrays.createUuidArray( connection, aclKeys.stream() ) );
-            ps.setString( 2, Permission.OWNER.name() );
-
-            ResultSet rs = ps.executeQuery();
-            while ( rs.next() ) {
-                result.add( ResultSetAdapters.principal( rs ) );
-            }
-            connection.close();
-            return result;
-        } catch ( SQLException e ) {
-            logger.debug( "Unable to get owners for securable object {}.", aclKeys, e );
-            return ImmutableList.of();
-        }
-    }
 }

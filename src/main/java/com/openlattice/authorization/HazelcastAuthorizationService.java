@@ -354,7 +354,6 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
     public void deletePermissions( AclKey aclKey ) {
         securableObjectTypes.delete( aclKey );
         aces.removeAll( hasAclKey( aclKey ) );
-        aqs.deletePermissionsByAclKeys( aclKey );
     }
 
     @Timed
@@ -461,7 +460,7 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
 
     @Override
     public void deletePrincipalPermissions( Principal principal ) {
-        aqs.deletePermissionsByPrincipal( principal );
+        aces.removeAll( hasPrincipal( principal ) );
     }
 
     public Predicate matches( AclKey aclKey, Collection<Principal> principals ) {
@@ -637,8 +636,8 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
 
     @Timed
     @Override
-    public Iterable<Principal> getSecurableObjectOwners( AclKey key ) {
-        return aqs.getOwnersForSecurableObject( key );
+    public Set<Principal> getSecurableObjectOwners( AclKey key ) {
+        return getAuthorizedPrincipalsOnSecurableObject( key, EnumSet.of( Permission.OWNER ) );
     }
 
     @Timed

@@ -222,7 +222,7 @@ public interface AuthorizationManager {
 
     Stream<AclKey> getAuthorizedObjects( Set<Principal> principal, EnumSet<Permission> permissions );
 
-    Iterable<Principal> getSecurableObjectOwners( AclKey key );
+    Set<Principal> getSecurableObjectOwners( AclKey key );
 
     @Timed
     SetMultimap<AclKey, Principal> getOwnersForSecurableObjects( Collection<AclKey> aclKeys );
