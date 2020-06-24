@@ -361,57 +361,6 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
 
     @Timed
     @Override
-    public Map<AclKey, EnumMap<Permission, Boolean>> maybeFastAccessChecksForPrincipals(
-            Set<AccessCheck> accessChecks,
-            Set<Principal> principals ) {
-        final Map<AclKey, EnumMap<Permission, Boolean>> results = new HashMap<>( accessChecks.size() );
-        final Set<AceKey> aceKeys = new HashSet<>( accessChecks.size() * principals.size() );
-        final Map<AceKey, AceValue> aceMap;
-        Stopwatch w = Stopwatch.createStarted();
-        //Prepare the results data structure
-
-        accessChecks
-                .parallelStream()
-                .forEach( accessCheck -> {
-                    AclKey aclKey = accessCheck.getAclKey();
-                    EnumMap<Permission, Boolean> granted = results.get( aclKey );
-
-                    if ( granted == null ) {
-                        granted = new EnumMap<>( Permission.class );
-                        results.put( aclKey, granted );
-                    }
-
-                    for ( Permission permission : accessCheck.getPermissions() ) {
-                        granted.putIfAbsent( permission, false );
-                    }
-
-                    principals.forEach( p -> aceKeys.add( new AceKey( aclKey, p ) ) );
-                } );
-        logger.info( "Preparing result data structure took: {} ms", w.elapsed( TimeUnit.MILLISECONDS ) );
-
-        w.reset();
-        w.start();
-        aceMap = aces.getAll( aceKeys );
-        logger.info( "Preparing getting all data took: {} ms", w.elapsed( TimeUnit.MILLISECONDS ) );
-        w.reset();
-        w.start();
-
-        aceMap.forEach( ( ak, av ) -> {
-            EnumMap<Permission, Boolean> granted = results.get( ak.getAclKey() );
-            av.getPermissions().forEach( p -> {
-                if ( granted.containsKey( p ) ) {
-                    granted.put( p, true );
-                }
-            } );
-        } );
-
-        logger.info( "Populating return map took: {} ms", w.elapsed( TimeUnit.MILLISECONDS ) );
-
-        return results;
-    }
-
-    @Timed
-    @Override
     public Map<AclKey, EnumMap<Permission, Boolean>> authorize(
             Map<AclKey, EnumSet<Permission>> requests,
             Set<Principal> principals ) {
@@ -496,12 +445,6 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
         );
 
         return actualPermissions.containsAll( requiredPermissions );
-    }
-
-    @Override
-    public boolean checkIfUserIsOwner( AclKey aclKey, Principal principal ) {
-        checkArgument( principal.getType().equals( PrincipalType.USER ), "A role cannot be the owner of an object" );
-        return checkIfHasPermissions( aclKey, ImmutableSet.of( principal ), EnumSet.of( Permission.OWNER ) );
     }
 
     @Timed
@@ -622,18 +565,6 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
 
     @Timed
     @Override
-    public Stream<AclKey> getAuthorizedObjects( Principal principal, EnumSet<Permission> permissions ) {
-        return getAuthorizedObjects( ImmutableSet.of( principal ), permissions );
-    }
-
-    @Timed
-    @Override
-    public Stream<AclKey> getAuthorizedObjects( Set<Principal> principal, EnumSet<Permission> permissions ) {
-        return aqs.getAuthorizedAclKeys( principal, permissions );
-    }
-
-    @Timed
-    @Override
     public Set<Principal> getSecurableObjectOwners( AclKey key ) {
         return getAuthorizedPrincipalsOnSecurableObject( key, EnumSet.of( Permission.OWNER ) );
     }
@@ -647,17 +578,6 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
                 .forEach( aceKey -> result.put( aceKey.getAclKey(), aceKey.getPrincipal() ) );
 
         return result;
-    }
-
-    @Timed
-    @Override
-    public Map<AceKey, AceValue> getPermissionMap( Set<AclKey> aclKeys, Set<Principal> principals ) {
-        Set<AceKey> aceKeys = aclKeys
-                .stream()
-                .flatMap( aclKey -> principals.stream().map( p -> new AceKey( aclKey, p ) ) )
-                .collect( Collectors.toSet() );
-
-        return aces.getAll( aceKeys );
     }
 
     private static EnumMap<Permission, Boolean> noAccess( EnumSet<Permission> permissions ) {

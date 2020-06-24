@@ -154,10 +154,6 @@ public interface AuthorizationManager {
     @Timed
     void deletePrincipalPermissions( Principal principal );
 
-    @Timed Map<AclKey, EnumMap<Permission, Boolean>> maybeFastAccessChecksForPrincipals(
-            Set<AccessCheck> accessChecks,
-            Set<Principal> principals );
-
     @Timed Map<AclKey, EnumMap<Permission, Boolean>> authorize(
             Map<AclKey, EnumSet<Permission>> requests,
             Set<Principal> principals );
@@ -173,7 +169,6 @@ public interface AuthorizationManager {
             Set<Principal> principals,
             EnumSet<Permission> requiredPermissions );
 
-    boolean checkIfUserIsOwner( AclKey aclkeys, Principal principal );
     // Utility functions for retrieving permissions
 
     /**
@@ -215,14 +210,8 @@ public interface AuthorizationManager {
             EnumSet<Permission> permissions,
             Predicate additionalFilter );
 
-    Stream<AclKey> getAuthorizedObjects( Principal principal, EnumSet<Permission> permissions );
-
-    Stream<AclKey> getAuthorizedObjects( Set<Principal> principal, EnumSet<Permission> permissions );
-
     Set<Principal> getSecurableObjectOwners( AclKey key );
 
     @Timed
     SetMultimap<AclKey, Principal> getOwnersForSecurableObjects( Collection<AclKey> aclKeys );
-
-    Map<AceKey, AceValue> getPermissionMap( Set<AclKey> aclKeys, Set<Principal> principals );
 }
