@@ -24,7 +24,6 @@ package com.openlattice.authorization;
 
 import com.dataloom.streams.StreamUtil;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.hazelcast.core.HazelcastInstance;
@@ -60,23 +59,9 @@ public class AuthorizationQueryService {
     private final        HikariDataSource       hds;
     private final        IMap<AceKey, AceValue> aces;
 
-    private final String aclsForSecurableObjectSql;
-
     public AuthorizationQueryService( HikariDataSource hds, HazelcastInstance hazelcastInstance ) {
         this.hds = hds;
         aces = HazelcastMap.PERMISSIONS.getMap( hazelcastInstance );
-
-        // Tables
-        String PERMISSIONS_TABLE = PostgresTable.PERMISSIONS.getName();
-
-        // Columns
-        String ACL_KEY = PostgresColumn.ACL_KEY.getName();
-        String PRINCIPAL_TYPE = PostgresColumn.PRINCIPAL_TYPE.getName();
-        String PRINCIPAL_ID = PostgresColumn.PRINCIPAL_ID.getName();
-
-        this.aclsForSecurableObjectSql = PostgresQuery
-                .selectColsFrom( PERMISSIONS_TABLE, ImmutableList.of( PRINCIPAL_TYPE, PRINCIPAL_ID ) )
-                .concat( PostgresQuery.whereEq( ImmutableList.of( ACL_KEY ), true ) );
     }
 
     private String getAuthorizedAclKeyQuery(
@@ -128,53 +113,6 @@ public class AuthorizationQueryService {
 
         sql.append( PostgresQuery.END );
         return sql.toString();
-    }
-
-    /**
-     * get all authorized acl keys for a set of principals, of a fixed object type, with specified permission, starting from a page given from paging state.
-     */
-    public AuthorizedObjectsSearchResult getAuthorizedAclKeys(
-            NavigableSet<Principal> principals,
-            SecurableObjectType objectType,
-            Permission permission,
-            String offsetStr,
-            int pageSize ) {
-
-        int limit = pageSize;
-        int offset = ( offsetStr == null ) ? 0 : Integer.parseInt( offsetStr );
-
-        try ( Connection connection = hds.getConnection() ) {
-            PreparedStatement ps = prepareAuthorizedAclKeysQuery( connection,
-                    principals,
-                    EnumSet.of( permission ),
-                    Optional.of( objectType ),
-                    Optional.of( limit + 1 ),
-                    Optional.of( offset ) );
-            Set<AclKey> result = Sets.newHashSet();
-            ResultSet rs = ps.executeQuery();
-            boolean next;
-            while ( ( next = rs.next() ) && result.size() < limit ) {
-                result.add( ResultSetAdapters.aclKey( rs ) );
-            }
-            String newPage = next ? String.valueOf( offset + pageSize ) : null;
-
-            rs.close();
-            connection.close();
-
-            return new AuthorizedObjectsSearchResult( newPage, result );
-        } catch ( SQLException e ) {
-            logger.debug( "Unable to get authorized acl keys.", e );
-            return null;
-        }
-    }
-
-    /**
-     * get all authorized acl keys for a principal, of all object types, with desired permissions.
-     */
-    public Stream<AclKey> getAuthorizedAclKeys(
-            Principal principal,
-            EnumSet<Permission> desiredPermissions ) {
-        return getAuthorizedAclKeysForPrincipals( ImmutableSet.of( principal ), desiredPermissions, Optional.empty() );
     }
 
     /**
@@ -267,32 +205,4 @@ public class AuthorizationQueryService {
             return Stream.empty();
         }
     }
-
-    private Stream<Principal> getPrincipalsForSecurableObject( AclKey aclKeys ) {
-        try ( Connection connection = hds.getConnection();
-                PreparedStatement ps = connection.prepareStatement( aclsForSecurableObjectSql ) ) {
-            List<Principal> result = Lists.newArrayList();
-            ps.setArray( 1, PostgresArrays.createUuidArray( connection, aclKeys.stream() ) );
-
-            ResultSet rs = ps.executeQuery();
-            while ( rs.next() ) {
-                result.add( ResultSetAdapters.principal( rs ) );
-            }
-            connection.close();
-            return StreamUtil.stream( result );
-        } catch ( SQLException e ) {
-            logger.debug( "Unable to get principals for object {}.", aclKeys, e );
-            return Stream.empty();
-        }
-    }
-
-    public Acl getAclsForSecurableObject( AclKey aclKeys ) {
-        Stream<Ace> accessControlEntries = getPrincipalsForSecurableObject( aclKeys )
-                .map( principal -> new AceKey( aclKeys, principal ) )
-                .map( aceKey -> new AceFuture( aceKey.getPrincipal(), aces.getAsync( aceKey ) ) )
-                .map( AceFuture::getUninterruptibly );
-        return new Acl( aclKeys, accessControlEntries::iterator );
-
-    }
-
 }

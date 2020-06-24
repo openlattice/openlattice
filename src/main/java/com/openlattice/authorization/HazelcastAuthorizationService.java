@@ -25,7 +25,11 @@ package com.openlattice.authorization;
 import com.codahale.metrics.annotation.Timed;
 import com.dataloom.streams.StreamUtil;
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.*;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
+import com.google.common.collect.SetMultimap;
+import com.google.common.collect.Sets;
 import com.google.common.eventbus.EventBus;
 import com.hazelcast.aggregation.Aggregators;
 import com.hazelcast.core.HazelcastInstance;
@@ -36,7 +40,6 @@ import com.openlattice.assembler.events.MaterializePermissionChangeEvent;
 import com.openlattice.authorization.aggregators.AuthorizationSetAggregator;
 import com.openlattice.authorization.aggregators.PrincipalAggregator;
 import com.openlattice.authorization.mapstores.PermissionMapstore;
-import com.openlattice.authorization.paging.AuthorizedObjectsSearchResult;
 import com.openlattice.authorization.processors.AuthorizationEntryProcessor;
 import com.openlattice.authorization.processors.PermissionMerger;
 import com.openlattice.authorization.processors.PermissionRemover;
@@ -595,20 +598,15 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
 
     @Timed
     @Override
-    public AuthorizedObjectsSearchResult getAuthorizedObjectsOfType(
-            NavigableSet<Principal> principals,
-            SecurableObjectType objectType,
-            Permission permission,
-            String offset,
-            int pageSize ) {
-
-        return aqs.getAuthorizedAclKeys( principals, objectType, permission, offset, pageSize );
-    }
-
-    @Timed
-    @Override
     public Acl getAllSecurableObjectPermissions( AclKey key ) {
-        return aqs.getAclsForSecurableObject( key );
+        var permissionEntries = aces.entrySet( hasAclKey( key ) );
+        Set<Ace> acesWithPermissions = Sets.newHashSetWithExpectedSize( permissionEntries.size() );
+
+        permissionEntries.forEach( entry ->
+                acesWithPermissions.add( new Ace( entry.getKey().getPrincipal(), entry.getValue().getPermissions() ) )
+        );
+
+        return new Acl( key, acesWithPermissions );
     }
 
     @Override
@@ -625,7 +623,7 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
     @Timed
     @Override
     public Stream<AclKey> getAuthorizedObjects( Principal principal, EnumSet<Permission> permissions ) {
-        return aqs.getAuthorizedAclKeys( principal, permissions );
+        return getAuthorizedObjects( ImmutableSet.of( principal ), permissions );
     }
 
     @Timed
