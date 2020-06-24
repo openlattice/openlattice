@@ -235,8 +235,7 @@ public class AppService {
                 Optional.of( app.getDescription() + "\nInstalled for organization " + organizationId.toString() )
         ) );
 
-        Set<Principal> ownerPrincipals = Sets
-                .newHashSet( authorizations.getOwnersForSecurableObject( new AclKey( organizationId ) ) );
+        Set<Principal> ownerPrincipals = authorizationService.getSecurableObjectOwners( new AclKey( organizationId ) );
 
         app.getAppTypeIds().stream()
                 .forEach( appTypeId -> createEntitySetForApp( new AppConfigKey( appId, organizationId, appTypeId ),
@@ -472,8 +471,7 @@ public class AppService {
     private void updateAppConfigsForNewAppType( UUID appId, Set<UUID> appTypeIds ) {
         Set<AppConfigKey> appConfigKeys = appConfigs.keySet( Predicates.equal( AppConfigMapstore.APP_ID, appId ) );
         appConfigKeys.stream().map( AppConfigKey::getOrganizationId ).distinct().forEach( organizationId -> {
-            Set<Principal> ownerPrincipals = Sets
-                    .newHashSet( authorizations.getOwnersForSecurableObject( new AclKey( organizationId ) ) );
+            Set<Principal> ownerPrincipals = authorizationService.getSecurableObjectOwners( new AclKey( organizationId ) );
             Principal appPrincipal = new Principal( PrincipalType.APP,
                     AppConfig.getAppPrincipalId( appId, organizationId ) );
             Organization org = organizationService.getOrganization( organizationId );
