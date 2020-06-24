@@ -38,6 +38,7 @@ import com.openlattice.auditing.AuditingTypes
 import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.authorization.securable.SecurableObjectType.PropertyTypeInEntitySet
+import com.openlattice.data.storage.PostgresEntitySetSizesInitializationTask
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.datastore.util.Util
 import com.openlattice.edm.EntitySet
@@ -60,8 +61,10 @@ import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.processors.AddEntitySetsToLinkingEntitySetProcessor
 import com.openlattice.hazelcast.processors.RemoveDataExpirationPolicyProcessor
 import com.openlattice.hazelcast.processors.RemoveEntitySetsFromLinkingEntitySetProcessor
+import com.openlattice.postgres.PostgresColumn
 import com.openlattice.postgres.mapstores.EntitySetMapstore
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet
+import com.zaxxer.hikari.HikariDataSource
 import edu.umd.cs.findbugs.classfile.ResourceNotFoundException
 import org.slf4j.LoggerFactory
 import java.util.*
@@ -74,6 +77,7 @@ open class EntitySetService(
         private val authorizations: AuthorizationManager,
         private val partitionManager: PartitionManager,
         private val edm: EdmManager,
+        private val hds: HikariDataSource,
         auditingConfiguration: AuditingConfiguration
 ) : EntitySetManager {
 
@@ -84,7 +88,6 @@ open class EntitySetService(
             authorizations,
             hazelcastInstance
     )
-
 
     companion object {
         private val logger = LoggerFactory.getLogger(EntitySetManager::class.java)
@@ -99,7 +102,6 @@ open class EntitySetService(
             HazelcastMap.ENTITY_SET_PROPERTY_METADATA.getMap(hazelcastInstance)
 
     private val aclKeys = HazelcastMap.ACL_KEYS.getMap(hazelcastInstance)
-
 
     override fun createEntitySet(principal: Principal, entitySet: EntitySet): UUID {
         ensureValidEntitySet(entitySet)
@@ -234,6 +236,27 @@ open class EntitySetService(
                     "Removed link between linking entity set ($linkingEntitySetId) and deleted entity set " +
                             "($entitySetId)"
             )
+        }
+    }
+
+    private val GET_ENTITY_SET_COUNT = """
+        SELECT ${PostgresColumn.COUNT} 
+            FROM ${PostgresEntitySetSizesInitializationTask.ENTITY_SET_SIZES_VIEW} 
+            WHERE ${PostgresColumn.ENTITY_SET_ID.name} = ?
+    """.trimIndent()
+
+    override fun getEntitySetSize(entitySetId: UUID): Long {
+        return hds.connection.use { connection ->
+            connection.prepareStatement(GET_ENTITY_SET_COUNT).use { ps ->
+                ps.setObject(1, entitySetId)
+                ps.executeQuery().use { rs ->
+                    if (rs.next()) {
+                        rs.getLong(1)
+                    } else {
+                        0
+                    }
+                }
+            }
         }
     }
 

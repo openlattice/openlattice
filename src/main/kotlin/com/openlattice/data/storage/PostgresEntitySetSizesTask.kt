@@ -20,16 +20,11 @@
  */
 package com.openlattice.data.storage
 
-import com.openlattice.data.storage.PostgresEntitySetSizesInitializationTask.Companion.ENTITY_SET_SIZES_VIEW
 import com.openlattice.data.storage.PostgresEntitySetSizesInitializationTask.Companion.REFRESH_ENTITY_SET_COUNTS_VIEW
-import com.openlattice.postgres.PostgresColumn.COUNT
-import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
 import com.openlattice.tasks.HazelcastFixedRateTask
 import com.openlattice.tasks.Task
 import org.slf4j.LoggerFactory
-import java.util.*
 import java.util.concurrent.TimeUnit
-
 
 private val logger = LoggerFactory.getLogger(PostgresEntitySetSizesTask::class.java)
 
@@ -64,20 +59,4 @@ class PostgresEntitySetSizesTask : HazelcastFixedRateTask<PostgresEntitySetSizes
         return PostgresEntitySetSizesTaskDependency::class.java
     }
 
-    fun getEntitySetSize(entitySetId: UUID): Long {
-        return getDependency().hikariDataSource.connection.use { connection ->
-            connection.prepareStatement(GET_ENTITY_SET_COUNT).use { ps ->
-                ps.setObject(1, entitySetId)
-                ps.executeQuery().use { rs ->
-                    if (rs.next()) {
-                        rs.getLong(1)
-                    } else {
-                        0
-                    }
-                }
-            }
-        }
-    }
 }
-
-private val GET_ENTITY_SET_COUNT = "SELECT $COUNT FROM $ENTITY_SET_SIZES_VIEW WHERE ${ENTITY_SET_ID.name} = ?"

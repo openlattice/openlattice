@@ -55,8 +55,6 @@ interface DataGraphManager {
             linking: Boolean
     ): EntitySetData<FullQualifiedName>
 
-    fun getEntitySetSize(entitySetId: UUID): Long
-
     /*
      * CRUD methods for entity
      */
