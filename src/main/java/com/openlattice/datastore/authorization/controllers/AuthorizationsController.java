@@ -21,20 +21,10 @@
 package com.openlattice.datastore.authorization.controllers;
 
 import com.codahale.metrics.annotation.Timed;
-import com.openlattice.authorization.AccessCheck;
-import com.openlattice.authorization.Authorization;
-import com.openlattice.authorization.AuthorizationManager;
-import com.openlattice.authorization.AuthorizationsApi;
-import com.openlattice.authorization.AuthorizingComponent;
-import com.openlattice.authorization.Permission;
-import com.openlattice.authorization.Principals;
+import com.google.common.collect.Maps;
+import com.openlattice.authorization.*;
 import com.openlattice.authorization.paging.AuthorizedObjectsSearchResult;
 import com.openlattice.authorization.securable.SecurableObjectType;
-import com.google.common.collect.Maps;
-import com.openlattice.authorization.AclKey;
-import java.util.Map;
-import java.util.Set;
-import javax.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
@@ -43,6 +33,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import javax.inject.Inject;
+import java.util.EnumSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping( AuthorizationsApi.CONTROLLER )
@@ -89,11 +85,11 @@ public class AuthorizationsController implements AuthorizationsApi, AuthorizingC
 
         Iterable<Authorization> methodA = authorizations
                 .accessChecksForPrincipals( queries, Principals.getCurrentPrincipals() )::iterator;
-//        Iterable<Authorization> methodB = authorizations
-//                .maybeFastAccessChecksForPrincipals( queries, Principals.getCurrentPrincipals() )
-//                .entrySet()
-//                .stream()
-//                .map( e -> new Authorization( e.getAclKey(), e.getValue() ) )::iterator;
+        //        Iterable<Authorization> methodB = authorizations
+        //                .maybeFastAccessChecksForPrincipals( queries, Principals.getCurrentPrincipals() )
+        //                .entrySet()
+        //                .stream()
+        //                .map( e -> new Authorization( e.getAclKey(), e.getValue() ) )::iterator;
         return methodA;
     }
 
@@ -125,11 +121,14 @@ public class AuthorizationsController implements AuthorizationsApi, AuthorizingC
                     value = PAGING_TOKEN,
                     required = false ) String pagingToken
     ) {
-        return authorizations.getAuthorizedObjectsOfType( Principals.getCurrentPrincipals(),
+
+        Set<AclKey> authorizedAclKeys = authorizations.getAuthorizedObjectsOfType(
+                Principals.getCurrentPrincipals(),
                 objectType,
-                permission,
-                pagingToken,
-                DEFAULT_PAGE_SIZE );
+                EnumSet.of( permission )
+        ).collect( Collectors.toSet() );
+
+        return new AuthorizedObjectsSearchResult( null, authorizedAclKeys );
     }
 
 }
