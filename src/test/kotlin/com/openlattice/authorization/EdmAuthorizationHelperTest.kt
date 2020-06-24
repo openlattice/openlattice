@@ -60,6 +60,7 @@ class EdmAuthorizationHelperTest : HzAuthzTest() {
                 hzAuthz,
                 PartitionManager(hazelcastInstance, hds),
                 edmManager,
+                hds,
                 auditingConfig
         )
 
