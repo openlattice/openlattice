@@ -39,6 +39,9 @@ import com.openlattice.postgres.PostgresTable;
 import com.openlattice.postgres.ResultSetAdapters;
 import com.zaxxer.hikari.HikariDataSource;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -50,17 +53,14 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class AuthorizationQueryService {
-    private static final Logger logger = LoggerFactory
+    private static final Logger                 logger = LoggerFactory
             .getLogger( AuthorizationQueryService.class );
-    private final HikariDataSource                         hds;
-    private final IMap<AceKey, AceValue> aces;
+    private final        HikariDataSource       hds;
+    private final        IMap<AceKey, AceValue> aces;
 
     private final String aclsForSecurableObjectSql;
-    private final String deletePermissionsByAclKeysSql;
 
     public AuthorizationQueryService( HikariDataSource hds, HazelcastInstance hazelcastInstance ) {
         this.hds = hds;
@@ -77,9 +77,6 @@ public class AuthorizationQueryService {
         this.aclsForSecurableObjectSql = PostgresQuery
                 .selectColsFrom( PERMISSIONS_TABLE, ImmutableList.of( PRINCIPAL_TYPE, PRINCIPAL_ID ) )
                 .concat( PostgresQuery.whereEq( ImmutableList.of( ACL_KEY ), true ) );
-        this.deletePermissionsByAclKeysSql = PostgresQuery.deleteFrom( PERMISSIONS_TABLE )
-                .concat( PostgresQuery.whereEq( ImmutableList.of( ACL_KEY ), true ) );
-
     }
 
     private String getAuthorizedAclKeyQuery(
