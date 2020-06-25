@@ -32,15 +32,16 @@ import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.EntityTypePropertyMetadata;
 import com.openlattice.edm.type.PropertyType;
-
-import java.util.*;
-
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 import javax.annotation.Nullable;
+import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 public interface EdmManager {
-    void clearTables();
 
     PropertyType getPropertyType( FullQualifiedName propertyTypeFqn );
 
