@@ -28,7 +28,7 @@ import org.slf4j.LoggerFactory
 import java.util.*
 
 
-private val logger = LoggerFactory.getLogger(UpdateAuditEdgeEntitySetIdProcessor::class.java)
+private val logger = LoggerFactory.getLogger(CreateOrUpdateAuditRecordEntitySetsProcessor::class.java)
 
 /**
  * Entry processor for updating the audit entity set.
@@ -39,15 +39,19 @@ data class CreateOrUpdateAuditRecordEntitySetsProcessor(
 ) : AbstractRhizomeEntryProcessor<AclKey, AuditRecordEntitySetConfiguration, Void?>() {
     override fun process(entry: MutableMap.MutableEntry<AclKey, AuditRecordEntitySetConfiguration?>): Void? {
         val config = entry.value
+
         if (config == null) {
-            logger.error(
-                    "Encountered unexpected null value when updating audit record entity set id for securable object id {}.",
-                    entry.key
-            )
+
+            logger.debug("Initializing audit record entity set configuration for securable object id {}.", entry.key)
             entry.setValue(AuditRecordEntitySetConfiguration(auditRecordEntitySetId, auditEdgeEntitySetId))
         } else {
+
             config.activeAuditRecordEntitySetId = auditRecordEntitySetId
             config.auditRecordEntitySetIds.add(auditRecordEntitySetId)
+
+            config.activeAuditEdgeEntitySetId = auditEdgeEntitySetId
+            config.auditEdgeEntitySetIds.add(auditEdgeEntitySetId)
+
             entry.setValue(config)
         }
 
