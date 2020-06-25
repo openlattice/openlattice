@@ -56,7 +56,7 @@ class AuditRecordEntitySetsManager(
         private val entitySetManager: EntitySetManager,
         private val partitionManager: PartitionManager,
         private val authorizationManager: AuthorizationManager,
-        private val hazelcastInstance: HazelcastInstance
+        hazelcastInstance: HazelcastInstance
 
 ) {
     private val securableObjectTypes = HazelcastMap.SECURABLE_OBJECT_TYPES.getMap(hazelcastInstance)
@@ -89,7 +89,7 @@ class AuditRecordEntitySetsManager(
 
         if (auditingTypes.isAuditingInitialized()) {
             val name = auditedEntitySet.name
-            createAuditEntitySet(
+            createAuditEntitySets(
                     name,
                     AclKey(auditedEntitySet.id),
                     auditedEntitySet.contacts,
@@ -103,32 +103,32 @@ class AuditRecordEntitySetsManager(
     fun createAuditEntitySetForOrganization(organizationId: UUID) {
         if (auditingTypes.isAuditingInitialized()) {
             val name = organizations[organizationId]!!.title
-            createAuditEntitySet(name, AclKey(organizationId), ImmutableSet.of(), organizationId)
+            createAuditEntitySets(name, AclKey(organizationId), ImmutableSet.of(), organizationId)
         }
     }
 
     fun createAuditEntitySetForExternalDBTable(table: OrganizationExternalDatabaseTable) {
         if (auditingTypes.isAuditingInitialized()) {
             val name = table.name
-            createAuditEntitySet(name, AclKey(table.id), setOf(), table.organizationId)
+            createAuditEntitySets(name, AclKey(table.id), setOf(), table.organizationId)
         }
     }
 
-    private fun createAuditEntitySet(
+    private fun createAuditEntitySets(
             name: String,
             aclKey: AclKey,
             contacts: Set<String>,
             organizationId: UUID,
             partitions: Set<Int> = LinkedHashSet()
     ) {
-        createAuditEntitySet(
+        createAuditEntitySets(
                 aclKey,
                 buildAuditEntitySet(name, aclKey, contacts, organizationId, partitions),
                 buildAuditEdgeEntitySet(name, aclKey, contacts, organizationId, partitions)
         )
     }
 
-    fun createAuditEntitySet(aclKey: AclKey, entitySet: EntitySet, edgeEntitySet: EntitySet) {
+    private fun createAuditEntitySets(aclKey: AclKey, entitySet: EntitySet, edgeEntitySet: EntitySet) {
 
         val ownerPrincipals = authorizationManager.getAuthorizedPrincipalsOnSecurableObject(
                 aclKey, EnumSet.of(Permission.OWNER)
@@ -311,7 +311,7 @@ class AuditRecordEntitySetsManager(
                 auditEntitySet.partitions
         )
 
-        createAuditEntitySet(aclKey, newAuditEntitySet, newAuditEdgeEntitySet)
+        createAuditEntitySets(aclKey, newAuditEntitySet, newAuditEdgeEntitySet)
 
         val newAclKey = AclKey(newAuditEntitySet.id)
         val newEdgeAclKey = AclKey(newAuditEdgeEntitySet.id)
