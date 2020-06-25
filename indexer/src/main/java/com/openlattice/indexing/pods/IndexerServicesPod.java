@@ -243,7 +243,6 @@ public class IndexerServicesPod {
     @Bean
     public EdmManager dataModelService() {
         return new EdmService(
-                hikariDataSource,
                 hazelcastInstance,
                 aclKeyReservationService(),
                 authorizationManager(),
