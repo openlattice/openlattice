@@ -49,7 +49,8 @@ import java.util.*
  */
 class PostgresLinkingQueryService(
         private val hds: HikariDataSource,
-        private val partitionManager: PartitionManager) : LinkingQueryService {
+        private val partitionManager: PartitionManager
+) : LinkingQueryService {
 
     override fun lockClustersForUpdates(clusters: Set<UUID>): Connection {
         val connection = hds.connection

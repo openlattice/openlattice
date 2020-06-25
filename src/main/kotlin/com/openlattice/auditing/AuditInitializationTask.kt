@@ -1,6 +1,5 @@
 package com.openlattice.auditing
 
-import com.google.common.collect.ImmutableSet
 import com.hazelcast.core.HazelcastInstance
 import com.openlattice.IdConstants
 import com.openlattice.assembler.tasks.UsersAndRolesInitializationTask
@@ -79,18 +78,16 @@ class AuditInitializationTask(
 
             if (dependencies.entitySetManager.getAuditRecordEntitySetsManager().auditingTypes.isAuditingInitialized()) {
 
-                edmAuditEntitySet = dependencies.partitionManager.allocatePartitions(
-                        EntitySet(
-                                entityTypeId = dependencies.entitySetManager.getAuditRecordEntitySetsManager().auditingTypes
-                                        .auditingEntityTypeId,
-                                name = EDM_AUDIT_ENTITY_SET_NAME,
-                                _title = "EDM Audit Entity Set",
-                                _description = "Audit entity set for the entity data model",
-                                contacts = mutableSetOf(),
-                                organizationId = IdConstants.GLOBAL_ORGANIZATION_ID.id,
-                                flags = EnumSet.of(EntitySetFlag.AUDIT)
-                        ),
-                        dependencies.partitionManager.getPartitionCount()
+                edmAuditEntitySet = EntitySet(
+                        entityTypeId = dependencies.entitySetManager.getAuditRecordEntitySetsManager().auditingTypes
+                                .auditingEntityTypeId,
+                        name = EDM_AUDIT_ENTITY_SET_NAME,
+                        _title = "EDM Audit Entity Set",
+                        _description = "Audit entity set for the entity data model",
+                        contacts = mutableSetOf(),
+                        organizationId = IdConstants.GLOBAL_ORGANIZATION_ID.id,
+                        flags = EnumSet.of(EntitySetFlag.AUDIT),
+                        partitions = LinkedHashSet(dependencies.partitionManager.getAllPartitions())
                 )
 
                 dependencies.entitySetManager.createEntitySet(admins.first(), edmAuditEntitySet)
