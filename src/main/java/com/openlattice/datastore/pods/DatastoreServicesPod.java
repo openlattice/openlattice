@@ -48,7 +48,6 @@ import com.openlattice.auth0.Auth0Pod;
 import com.openlattice.auth0.AwsAuth0TokenProvider;
 import com.openlattice.authentication.Auth0Configuration;
 import com.openlattice.authorization.*;
-import com.openlattice.authorization.mapstores.ResolvedPrincipalTreesMapLoader;
 import com.openlattice.authorization.mapstores.SecurablePrincipalsMapLoader;
 import com.openlattice.codex.CodexService;
 import com.openlattice.collections.CollectionsManager;
@@ -177,9 +176,6 @@ public class DatastoreServicesPod {
 
     @Inject
     private SecurablePrincipalsMapLoader spml;
-
-    @Inject
-    private ResolvedPrincipalTreesMapLoader rptml;
 
     @Bean
     public PostgresUserApi pgUserApi() {
