@@ -50,8 +50,9 @@ class OrganizationsInitializationTask : HazelcastInitializationTask<Organization
         logger.info("Running bootstrap process for organizations.")
         val sw = Stopwatch.createStarted()
         val organizationService = dependencies.organizationService
+        val partitionManager = dependencies.partitionManager
         val globalOrg = organizationService.maybeGetOrganization(GLOBAL_ORG_PRINCIPAL)
-        val defaultPartitions = organizationService.allocateDefaultPartitions(organizationService.numberOfPartitions)
+        val defaultPartitions = partitionManager.getAllPartitions()
 
         if (globalOrg.isPresent) {
             val orgPrincipal = globalOrg.get()

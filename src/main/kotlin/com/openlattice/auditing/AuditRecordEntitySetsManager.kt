@@ -26,7 +26,6 @@ import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.openlattice.authorization.*
-import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.EntitySet
@@ -35,7 +34,6 @@ import com.openlattice.edm.processors.UpdateAuditEdgeEntitySetIdProcessor
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organization.OrganizationExternalDatabaseTable
-import com.openlattice.organizations.Organization
 import com.openlattice.postgres.mapstores.AuditRecordEntitySetConfigurationMapstore.ANY_AUDITING_ENTITY_SETS
 import com.openlattice.postgres.mapstores.AuditRecordEntitySetConfigurationMapstore.ANY_EDGE_AUDITING_ENTITY_SETS
 import org.slf4j.LoggerFactory
@@ -368,7 +366,7 @@ class AuditRecordEntitySetsManager(
         )
 
         if (partitions.isEmpty()) {
-            return partitionManager.allocatePartitions(entitySet, partitionManager.getPartitionCount())
+            return partitionManager.allocateAllPartitions(entitySet)
         }
 
         return entitySet
@@ -396,7 +394,7 @@ class AuditRecordEntitySetsManager(
         )
 
         if (partitions.isEmpty()) {
-            return partitionManager.allocatePartitions(entitySet, partitionManager.getPartitionCount())
+            return partitionManager.allocateAllPartitions(entitySet)
         }
 
         return entitySet
