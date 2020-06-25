@@ -28,6 +28,7 @@ import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organizations.Organization;
 import com.openlattice.search.requests.SearchResult;
+
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
@@ -178,11 +179,7 @@ public class ElasticsearchLambdas implements Serializable {
         return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ( api ) -> api
                 .deleteEntityDataBulk( entityTypeId, entityKeyIds );
     }
-
-    public static Function<ConductorElasticsearchApi, Boolean> clearAllData() {
-        return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ConductorElasticsearchApi::clearAllData;
-    }
-
+    
     public static Function<ConductorElasticsearchApi, Boolean> triggerSecurableObjectIndex(
             SecurableObjectType securableObjectType,
             Iterable<?> securableObjects ) {

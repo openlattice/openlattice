@@ -939,11 +939,6 @@ class SearchService(
         return dataManager.getEntityKeyIdsOfLinkingIds(linkingIds, normalEntitySetIds).toMap()
     }
 
-    @Subscribe
-    fun clearAllData(event: ClearAllDataEvent) {
-        elasticsearchApi.clearAllData()
-    }
-
     fun triggerPropertyTypeIndex(propertyTypes: List<PropertyType>) {
         elasticsearchApi.triggerSecurableObjectIndex(SecurableObjectType.PropertyTypeInEntitySet, propertyTypes)
     }
