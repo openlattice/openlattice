@@ -25,8 +25,17 @@ import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Preconditions;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.*;
-import com.openlattice.auditing.*;
-import com.openlattice.authorization.*;
+import com.openlattice.auditing.AuditEventType;
+import com.openlattice.auditing.AuditRecordEntitySetsManager;
+import com.openlattice.auditing.AuditableEvent;
+import com.openlattice.auditing.AuditingComponent;
+import com.openlattice.auditing.AuditingManager;
+import com.openlattice.authorization.AclKey;
+import com.openlattice.authorization.AuthorizationManager;
+import com.openlattice.authorization.AuthorizingComponent;
+import com.openlattice.authorization.EdmAuthorizationHelper;
+import com.openlattice.authorization.Permission;
+import com.openlattice.authorization.Principals;
 import com.openlattice.controllers.exceptions.BadRequestException;
 import com.openlattice.controllers.exceptions.ForbiddenException;
 import com.openlattice.data.*;
@@ -35,7 +44,6 @@ import com.openlattice.data.requests.EntitySetSelection;
 import com.openlattice.data.requests.FileType;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.EntitySetManager;
-import com.openlattice.datastore.services.SyncTicketService;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.set.EntitySetFlag;
 import com.openlattice.edm.type.PropertyType;
@@ -70,7 +78,9 @@ import java.util.stream.Stream;
 
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.Maps.transformValues;
-import static com.openlattice.authorization.EdmAuthorizationHelper.*;
+import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION;
+import static com.openlattice.authorization.EdmAuthorizationHelper.WRITE_PERMISSION;
+import static com.openlattice.authorization.EdmAuthorizationHelper.aclKeysForAccessCheck;
 
 @SuppressFBWarnings(
         value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE",
@@ -79,9 +89,6 @@ import static com.openlattice.authorization.EdmAuthorizationHelper.*;
 @RequestMapping( DataApi.CONTROLLER )
 public class DataController implements DataApi, AuthorizingComponent, AuditingComponent {
     private static final Logger logger = LoggerFactory.getLogger( DataController.class );
-
-    @Inject
-    private SyncTicketService sts;
 
     @Inject
     private EntitySetManager entitySetService;
