@@ -295,6 +295,7 @@ public class DatastoreServicesPod {
                 authorizationManager(),
                 partitionManager(),
                 dataModelService(),
+                hikariDataSource,
                 auditingConfiguration
         );
     }
@@ -431,7 +432,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public DataGraphManager dataGraphService() {
-        return new DataGraphService( graphApi(), idService(), entityDatastore(), postgresEntitySetSizeCacheManager() );
+        return new DataGraphService( graphApi(), idService(), entityDatastore() );
     }
 
     @Bean
@@ -563,16 +564,6 @@ public class DatastoreServicesPod {
     @Bean
     public PostgresEntitySetSizesTaskDependency postgresEntitySetSizesTaskDependency() {
         return new PostgresEntitySetSizesTaskDependency( hikariDataSource );
-    }
-
-    @Bean
-    public PostgresEntitySetSizesTask postgresEntitySetSizeCacheManager() {
-        return new PostgresEntitySetSizesTask();
-    }
-
-    @Bean
-    public PostgresEntitySetSizesInitializationTask postgresEntitySetSizesInitializationTask() {
-        return new PostgresEntitySetSizesInitializationTask();
     }
 
     @Bean

@@ -822,7 +822,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
 
         // If entityset is linking: should return distinct count of entities corresponding to the linking entity set,
         // which is the distinct count of linking_id s
-        return dgm.getEntitySetSize( entitySetId );
+        return entitySetService.getEntitySetSize( entitySetId );
     }
 
     @Timed
