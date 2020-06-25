@@ -83,7 +83,7 @@ class PartitionManager @JvmOverloads constructor(
         val defaults = getDefaultPartitions(entitySet.organizationId)
 
         if (defaults.size >= partitionCount) {
-            return defaults
+            return defaults.shuffled().take(partitionCount)
         }
 
         return defaults + (partitionList - defaults).toList().shuffled().take(partitionCount - defaults.size)
