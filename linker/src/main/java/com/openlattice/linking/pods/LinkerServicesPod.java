@@ -250,6 +250,7 @@ public class LinkerServicesPod {
                 authorizationManager(),
                 partitionManager(),
                 dataModelService(),
+                hikariDataSource,
                 auditingConfiguration
         );
     }
