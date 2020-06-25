@@ -23,10 +23,8 @@ package com.openlattice.datastore.data.controllers;
 import com.auth0.spring.security.api.authentication.PreAuthenticatedAuthenticationJsonWebToken;
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Preconditions;
-import com.google.common.cache.LoadingCache;
 import com.google.common.collect.*;
 import com.openlattice.auditing.AuditEventType;
-import com.openlattice.auditing.AuditRecordEntitySetsManager;
 import com.openlattice.auditing.AuditableEvent;
 import com.openlattice.auditing.AuditingComponent;
 import com.openlattice.auditing.AuditingManager;
@@ -54,7 +52,6 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.lang3.tuple.Triple;
-import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -109,9 +106,6 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     private AuthenticationManager authProvider;
 
     @Inject
-    private AuditRecordEntitySetsManager auditRecordEntitySetsManager;
-
-    @Inject
     private AuditingManager auditingManager;
 
     @Inject
@@ -122,10 +116,6 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
 
     @Inject
     private DataDeletionManager deletionManager;
-
-    private LoadingCache<UUID, EdmPrimitiveTypeKind> primitiveTypeKinds;
-
-    private LoadingCache<AuthorizationKey, Set<UUID>> authorizedPropertyCache;
 
     @RequestMapping(
             path = { "/" + ENTITY_SET + "/" + SET_ID_PATH },

@@ -1,3 +1,4 @@
+
 /*
  * Copyright (C) 2018. OpenLattice, Inc.
  *
@@ -25,39 +26,15 @@ import com.dataloom.streams.StreamUtil;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.google.common.eventbus.EventBus;
-
 import com.openlattice.auditing.AuditEventType;
 import com.openlattice.auditing.AuditableEvent;
 import com.openlattice.auditing.AuditingComponent;
 import com.openlattice.auditing.AuditingManager;
 import com.openlattice.authorization.*;
-import com.openlattice.authorization.AccessCheck;
-import com.openlattice.authorization.Ace;
-import com.openlattice.authorization.Acl;
-import com.openlattice.authorization.AclData;
-import com.openlattice.authorization.AclExplanation;
-import com.openlattice.authorization.AclKey;
-import com.openlattice.authorization.Action;
-import com.openlattice.authorization.Authorization;
-import com.openlattice.authorization.AuthorizationManager;
-import com.openlattice.authorization.AuthorizingComponent;
-import com.openlattice.authorization.Permission;
-import com.openlattice.authorization.PermissionsApi;
-import com.openlattice.authorization.Principal;
-import com.openlattice.authorization.PrincipalType;
-import com.openlattice.authorization.Principals;
-import com.openlattice.authorization.SecurablePrincipal;
 import com.openlattice.controllers.exceptions.BadRequestException;
 import com.openlattice.controllers.exceptions.ForbiddenException;
 import com.openlattice.organizations.ExternalDatabaseManagementService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
-
-import java.time.OffsetDateTime;
-import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,14 +45,10 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.inject.Inject;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.time.OffsetDateTime;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @RestController
 @RequestMapping( PermissionsApi.CONTROLLER )
@@ -90,9 +63,6 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
 
     @Inject
     private SecurePrincipalsManager securePrincipalsManager;
-
-    @Inject
-    private EventBus eventBus;
 
     @Inject
     private ExternalDatabaseManagementService edms;

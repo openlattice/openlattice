@@ -22,24 +22,32 @@ package com.openlattice.datastore.edm.controllers;
 
 import com.auth0.spring.security.api.authentication.PreAuthenticatedAuthenticationJsonWebToken;
 import com.codahale.metrics.annotation.Timed;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.openlattice.auditing.*;
-import com.openlattice.authorization.*;
+import com.openlattice.auditing.AuditEventType;
+import com.openlattice.auditing.AuditableEvent;
+import com.openlattice.auditing.AuditingComponent;
+import com.openlattice.auditing.AuditingManager;
+import com.openlattice.authorization.AclKey;
+import com.openlattice.authorization.AuthorizationManager;
+import com.openlattice.authorization.AuthorizingComponent;
+import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.controllers.exceptions.BadRequestException;
 import com.openlattice.controllers.exceptions.ForbiddenException;
-import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.data.requests.FileType;
-import com.openlattice.data.storage.EntityDatastore;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.EntitySetManager;
-import com.openlattice.edm.*;
+import com.openlattice.edm.EdmApi;
+import com.openlattice.edm.EdmDetails;
+import com.openlattice.edm.EntityDataModel;
+import com.openlattice.edm.EntityDataModelDiff;
+import com.openlattice.edm.EntitySet;
+import com.openlattice.edm.Schema;
 import com.openlattice.edm.requests.EdmDetailsSelector;
 import com.openlattice.edm.requests.EdmRequest;
 import com.openlattice.edm.requests.MetadataUpdate;
@@ -87,34 +95,12 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
     private AuthorizationManager authorizations;
 
     @Inject
-    private PostgresEdmManager edmManager;
-
-    @Inject
-    private SecurableObjectResolveTypeService securableObjectTypes;
-
-    @Inject
     private AuthenticationManager authenticationManager;
-
-    @Inject
-    private EntityDatastore dataManager;
-
-    @Inject
-    private EdmAuthorizationHelper authzHelper;
-
-    @Inject
-    private DataGraphManager dgm;
-
     @Inject
     private Environment env;
 
     @Inject
     private SecurePrincipalsManager spm;
-
-    @Inject
-    private ObjectMapper mapper;
-
-    @Inject
-    private AuditRecordEntitySetsManager auditRecordEntitySetsManager;
 
     @Inject
     private AuditingManager auditingManager;
