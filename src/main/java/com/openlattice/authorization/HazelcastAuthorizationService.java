@@ -24,8 +24,11 @@ package com.openlattice.authorization;
 
 import com.codahale.metrics.annotation.Timed;
 import com.dataloom.streams.StreamUtil;
-import com.google.common.base.Stopwatch;
-import com.google.common.collect.*;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
+import com.google.common.collect.SetMultimap;
+import com.google.common.collect.Sets;
 import com.google.common.eventbus.EventBus;
 import com.hazelcast.aggregation.Aggregators;
 import com.hazelcast.core.HazelcastInstance;
@@ -36,7 +39,6 @@ import com.openlattice.assembler.events.MaterializePermissionChangeEvent;
 import com.openlattice.authorization.aggregators.AuthorizationSetAggregator;
 import com.openlattice.authorization.aggregators.PrincipalAggregator;
 import com.openlattice.authorization.mapstores.PermissionMapstore;
-import com.openlattice.authorization.paging.AuthorizedObjectsSearchResult;
 import com.openlattice.authorization.processors.AuthorizationEntryProcessor;
 import com.openlattice.authorization.processors.PermissionMerger;
 import com.openlattice.authorization.processors.PermissionRemover;
@@ -50,12 +52,10 @@ import org.slf4j.LoggerFactory;
 
 import java.time.OffsetDateTime;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.Maps.transformValues;
 import static com.openlattice.authorization.mapstores.PermissionMapstore.ACL_KEY_INDEX;
@@ -66,16 +66,13 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
 
     private final IMap<AclKey, SecurableObjectType> securableObjectTypes;
     private final IMap<AceKey, AceValue>            aces;
-    private final AuthorizationQueryService         aqs;
     private final EventBus                          eventBus;
 
     public HazelcastAuthorizationService(
             HazelcastInstance hazelcastInstance,
-            AuthorizationQueryService aqs,
             EventBus eventBus ) {
         this.aces = HazelcastMap.PERMISSIONS.getMap( hazelcastInstance );
         this.securableObjectTypes = HazelcastMap.SECURABLE_OBJECT_TYPES.getMap( hazelcastInstance );
-        this.aqs = checkNotNull( aqs );
         this.eventBus = checkNotNull( eventBus );
     }
 
@@ -354,58 +351,6 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
     public void deletePermissions( AclKey aclKey ) {
         securableObjectTypes.delete( aclKey );
         aces.removeAll( hasAclKey( aclKey ) );
-        aqs.deletePermissionsByAclKeys( aclKey );
-    }
-
-    @Timed
-    @Override
-    public Map<AclKey, EnumMap<Permission, Boolean>> maybeFastAccessChecksForPrincipals(
-            Set<AccessCheck> accessChecks,
-            Set<Principal> principals ) {
-        final Map<AclKey, EnumMap<Permission, Boolean>> results = new HashMap<>( accessChecks.size() );
-        final Set<AceKey> aceKeys = new HashSet<>( accessChecks.size() * principals.size() );
-        final Map<AceKey, AceValue> aceMap;
-        Stopwatch w = Stopwatch.createStarted();
-        //Prepare the results data structure
-
-        accessChecks
-                .parallelStream()
-                .forEach( accessCheck -> {
-                    AclKey aclKey = accessCheck.getAclKey();
-                    EnumMap<Permission, Boolean> granted = results.get( aclKey );
-
-                    if ( granted == null ) {
-                        granted = new EnumMap<>( Permission.class );
-                        results.put( aclKey, granted );
-                    }
-
-                    for ( Permission permission : accessCheck.getPermissions() ) {
-                        granted.putIfAbsent( permission, false );
-                    }
-
-                    principals.forEach( p -> aceKeys.add( new AceKey( aclKey, p ) ) );
-                } );
-        logger.info( "Preparing result data structure took: {} ms", w.elapsed( TimeUnit.MILLISECONDS ) );
-
-        w.reset();
-        w.start();
-        aceMap = aces.getAll( aceKeys );
-        logger.info( "Preparing getting all data took: {} ms", w.elapsed( TimeUnit.MILLISECONDS ) );
-        w.reset();
-        w.start();
-
-        aceMap.forEach( ( ak, av ) -> {
-            EnumMap<Permission, Boolean> granted = results.get( ak.getAclKey() );
-            av.getPermissions().forEach( p -> {
-                if ( granted.containsKey( p ) ) {
-                    granted.put( p, true );
-                }
-            } );
-        } );
-
-        logger.info( "Populating return map took: {} ms", w.elapsed( TimeUnit.MILLISECONDS ) );
-
-        return results;
     }
 
     @Timed
@@ -461,7 +406,7 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
 
     @Override
     public void deletePrincipalPermissions( Principal principal ) {
-        aqs.deletePermissionsByPrincipal( principal );
+        aces.removeAll( hasPrincipal( principal ) );
     }
 
     public Predicate matches( AclKey aclKey, Collection<Principal> principals ) {
@@ -494,12 +439,6 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
         );
 
         return actualPermissions.containsAll( requiredPermissions );
-    }
-
-    @Override
-    public boolean checkIfUserIsOwner( AclKey aclKey, Principal principal ) {
-        checkArgument( principal.getType().equals( PrincipalType.USER ), "A role cannot be the owner of an object" );
-        return checkIfHasPermissions( aclKey, ImmutableSet.of( principal ), EnumSet.of( Permission.OWNER ) );
     }
 
     @Timed
@@ -596,20 +535,15 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
 
     @Timed
     @Override
-    public AuthorizedObjectsSearchResult getAuthorizedObjectsOfType(
-            NavigableSet<Principal> principals,
-            SecurableObjectType objectType,
-            Permission permission,
-            String offset,
-            int pageSize ) {
-
-        return aqs.getAuthorizedAclKeys( principals, objectType, permission, offset, pageSize );
-    }
-
-    @Timed
-    @Override
     public Acl getAllSecurableObjectPermissions( AclKey key ) {
-        return aqs.getAclsForSecurableObject( key );
+        var permissionEntries = aces.entrySet( hasAclKey( key ) );
+        Set<Ace> acesWithPermissions = Sets.newHashSetWithExpectedSize( permissionEntries.size() );
+
+        permissionEntries.forEach( entry ->
+                acesWithPermissions.add( new Ace( entry.getKey().getPrincipal(), entry.getValue().getPermissions() ) )
+        );
+
+        return new Acl( key, acesWithPermissions );
     }
 
     @Override
@@ -625,20 +559,8 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
 
     @Timed
     @Override
-    public Stream<AclKey> getAuthorizedObjects( Principal principal, EnumSet<Permission> permissions ) {
-        return aqs.getAuthorizedAclKeys( principal, permissions );
-    }
-
-    @Timed
-    @Override
-    public Stream<AclKey> getAuthorizedObjects( Set<Principal> principal, EnumSet<Permission> permissions ) {
-        return aqs.getAuthorizedAclKeys( principal, permissions );
-    }
-
-    @Timed
-    @Override
-    public Iterable<Principal> getSecurableObjectOwners( AclKey key ) {
-        return aqs.getOwnersForSecurableObject( key );
+    public Set<Principal> getSecurableObjectOwners( AclKey key ) {
+        return getAuthorizedPrincipalsOnSecurableObject( key, EnumSet.of( Permission.OWNER ) );
     }
 
     @Timed
@@ -650,17 +572,6 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
                 .forEach( aceKey -> result.put( aceKey.getAclKey(), aceKey.getPrincipal() ) );
 
         return result;
-    }
-
-    @Timed
-    @Override
-    public Map<AceKey, AceValue> getPermissionMap( Set<AclKey> aclKeys, Set<Principal> principals ) {
-        Set<AceKey> aceKeys = aclKeys
-                .stream()
-                .flatMap( aclKey -> principals.stream().map( p -> new AceKey( aclKey, p ) ) )
-                .collect( Collectors.toSet() );
-
-        return aces.getAll( aceKeys );
     }
 
     private static EnumMap<Permission, Boolean> noAccess( EnumSet<Permission> permissions ) {

@@ -20,20 +20,20 @@
 
 package com.openlattice.authorization;
 
-import java.util.EnumSet;
-import java.util.NavigableSet;
-import java.util.TreeSet;
-import java.util.UUID;
-
+import com.openlattice.authorization.securable.SecurableObjectType;
+import com.openlattice.mapstores.TestDataFactory;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.openlattice.authorization.paging.AuthorizedObjectsSearchResult;
-import com.openlattice.authorization.securable.SecurableObjectType;
-import com.openlattice.mapstores.TestDataFactory;
+import java.util.EnumSet;
+import java.util.NavigableSet;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 public class PagingSecurableObjectsTest extends HzAuthzTest {
     private static final Logger logger = LoggerFactory.getLogger( PagingSecurableObjectsTest.class );
@@ -67,79 +67,24 @@ public class PagingSecurableObjectsTest extends HzAuthzTest {
     }
 
     @Test
-    public void testListSecurableObjectsInOnePage() {
-        int LARGE_PAGE_SIZE = 20;
-        AuthorizedObjectsSearchResult result = hzAuthz.getAuthorizedObjectsOfType( currentPrincipals,
+    public void testListSecurableObjects() {
+        Set<AclKey> result = hzAuthz.getAuthorizedObjectsOfType(
+                currentPrincipals,
                 SecurableObjectType.EntitySet,
-                Permission.READ,
-                null,
-                LARGE_PAGE_SIZE );
+                EnumSet.of( Permission.READ )
+        ).collect( Collectors.toSet() );
 
-        Assert.assertNull( result.getPagingToken() );
-        Assert.assertEquals( 3, result.getAuthorizedObjects().size() );
-    }
-
-    @Test
-    public void testListSecurableObjectsInMultiplePages() {
-        //There should be 3 results in total.
-        int SMALL_PAGE_SIZE = 1;
-
-        AuthorizedObjectsSearchResult result = hzAuthz.getAuthorizedObjectsOfType( currentPrincipals,
-                SecurableObjectType.EntitySet,
-                Permission.READ,
-                null,
-                SMALL_PAGE_SIZE );
-
-        logger.debug( "First page has result: " + result );
-        //First page should have 1 result.
-        Assert.assertNotNull( result.getPagingToken() );
-        Assert.assertEquals( 1, result.getAuthorizedObjects().size() );
-
-        result = hzAuthz.getAuthorizedObjectsOfType( currentPrincipals,
-                SecurableObjectType.EntitySet,
-                Permission.READ,
-                result.getPagingToken(),
-                SMALL_PAGE_SIZE );
-
-        logger.debug( "Second page has result: " + result );
-        //Second page should have 1 result.
-        Assert.assertNotNull( result.getPagingToken() );
-        Assert.assertEquals( 1, result.getAuthorizedObjects().size() );
-
-        result = hzAuthz.getAuthorizedObjectsOfType( currentPrincipals,
-                SecurableObjectType.EntitySet,
-                Permission.READ,
-                result.getPagingToken(),
-                SMALL_PAGE_SIZE );
-
-        logger.debug( "Third page has result: " + result );
-        //Third page should have 1 result.
-        try {
-            Assert.assertNull( result.getPagingToken() );
-        } catch ( AssertionError e ) {
-            result = hzAuthz.getAuthorizedObjectsOfType( currentPrincipals,
-                    SecurableObjectType.EntitySet,
-                    Permission.READ,
-                    result.getPagingToken(),
-                    SMALL_PAGE_SIZE );
-            logger.debug( "Paging token should be null but it is not: next page using the token gives " + result );
-            throw e;
-        }
-        Assert.assertEquals( 1, result.getAuthorizedObjects().size() );
+        Assert.assertEquals( 3, result.size() );
     }
 
     @Test
     public void testNoResults() {
-        int SMALL_PAGE_SIZE = 1;
-
-        AuthorizedObjectsSearchResult result = hzAuthz.getAuthorizedObjectsOfType( currentPrincipals,
+        Set<AclKey> result = hzAuthz.getAuthorizedObjectsOfType( currentPrincipals,
                 SecurableObjectType.Organization,
-                Permission.READ,
-                null,
-                SMALL_PAGE_SIZE );
+                EnumSet.of( Permission.READ )
+        ).collect( Collectors.toSet() );
 
-        Assert.assertNull( result.getPagingToken() );
-        Assert.assertEquals( 0, result.getAuthorizedObjects().size() );
+        Assert.assertEquals( 0, result.size() );
     }
 
 }

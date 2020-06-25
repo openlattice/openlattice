@@ -25,11 +25,15 @@ package com.openlattice.authorization;
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.collect.SetMultimap;
 import com.hazelcast.query.Predicate;
-import com.openlattice.authorization.paging.AuthorizedObjectsSearchResult;
 import com.openlattice.authorization.securable.SecurableObjectType;
 
 import java.time.OffsetDateTime;
-import java.util.*;
+import java.util.Collection;
+import java.util.EnumMap;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Stream;
 
 /**
@@ -49,7 +53,7 @@ public interface AuthorizationManager {
     /**
      * Bulk function for setting or initializing securable object types.
      *
-     * @param aclKeys The acl keys to set to a specific object type.
+     * @param aclKeys    The acl keys to set to a specific object type.
      * @param objectType The securable object type to be set for the aclKeys
      */
     @Timed
@@ -79,28 +83,28 @@ public interface AuthorizationManager {
     /**
      * Method for bulk adding permissions to a single principal across multiple acl keys of the same type.
      *
-     * @param keys The acl keys to which permissions will be added.
-     * @param principal The principal who will be receiving permissions.
-     * @param permissions The permissions that will be added.
+     * @param keys                The acl keys to which permissions will be added.
+     * @param principal           The principal who will be receiving permissions.
+     * @param permissions         The permissions that will be added.
      * @param securableObjectType The securable object type for which the permissions are being added. This will
-     * override the existing object type, so care must be taken to call this for keys of the right type.
+     *                            override the existing object type, so care must be taken to call this for keys of the right type.
      */
     @Timed
     void addPermissions(
             Set<AclKey> keys,
             Principal principal,
             EnumSet<Permission> permissions,
-            SecurableObjectType securableObjectType);
+            SecurableObjectType securableObjectType );
 
     /**
      * Method for bulk adding permissions to a single principal across multiple acl keys of the same type.
      *
-     * @param keys The acl keys to which permissions will be added.
-     * @param principal The principal who will be receiving permissions.
-     * @param permissions The permissions that will be added.
+     * @param keys                The acl keys to which permissions will be added.
+     * @param principal           The principal who will be receiving permissions.
+     * @param permissions         The permissions that will be added.
      * @param securableObjectType The securable object type for which the permissions are being added. This will
-     * override the existing object type, so care must be taken to call this for keys of the right type.
-     * @param expirationDate The expiration data for the permission changes.
+     *                            override the existing object type, so care must be taken to call this for keys of the right type.
+     * @param expirationDate      The expiration data for the permission changes.
      */
     @Timed
     void addPermissions(
@@ -150,10 +154,6 @@ public interface AuthorizationManager {
     @Timed
     void deletePrincipalPermissions( Principal principal );
 
-    @Timed Map<AclKey, EnumMap<Permission, Boolean>> maybeFastAccessChecksForPrincipals(
-            Set<AccessCheck> accessChecks,
-            Set<Principal> principals );
-
     @Timed Map<AclKey, EnumMap<Permission, Boolean>> authorize(
             Map<AclKey, EnumSet<Permission>> requests,
             Set<Principal> principals );
@@ -169,7 +169,6 @@ public interface AuthorizationManager {
             Set<Principal> principals,
             EnumSet<Permission> requiredPermissions );
 
-    boolean checkIfUserIsOwner( AclKey aclkeys, Principal principal );
     // Utility functions for retrieving permissions
 
     /**
@@ -211,21 +210,8 @@ public interface AuthorizationManager {
             EnumSet<Permission> permissions,
             Predicate additionalFilter );
 
-    AuthorizedObjectsSearchResult getAuthorizedObjectsOfType(
-            NavigableSet<Principal> principals,
-            SecurableObjectType objectType,
-            Permission permission,
-            String offset,
-            int pageSize );
-
-    Stream<AclKey> getAuthorizedObjects( Principal principal, EnumSet<Permission> permissions );
-
-    Stream<AclKey> getAuthorizedObjects( Set<Principal> principal, EnumSet<Permission> permissions );
-
-    Iterable<Principal> getSecurableObjectOwners( AclKey key );
+    Set<Principal> getSecurableObjectOwners( AclKey key );
 
     @Timed
     SetMultimap<AclKey, Principal> getOwnersForSecurableObjects( Collection<AclKey> aclKeys );
-
-    Map<AceKey, AceValue> getPermissionMap( Set<AclKey> aclKeys, Set<Principal> principals );
 }

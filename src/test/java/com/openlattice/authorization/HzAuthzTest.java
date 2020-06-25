@@ -346,10 +346,8 @@ public class HzAuthzTest extends TestServer {
 
     @BeforeClass
     public static void init() {
-        final var aqs = new AuthorizationQueryService( hds, hazelcastInstance );
         hzAuthz = new HazelcastAuthorizationService(
                 hazelcastInstance,
-                aqs,
                 testServer.getContext().getBean( EventBus.class )
         );
     }
