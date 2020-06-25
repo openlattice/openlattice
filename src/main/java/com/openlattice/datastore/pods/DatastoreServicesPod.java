@@ -200,11 +200,6 @@ public class DatastoreServicesPod {
     }
 
     @Bean
-    public AuthorizationQueryService authorizationQueryService() {
-        return new AuthorizationQueryService( hikariDataSource, hazelcastInstance );
-    }
-
-    @Bean
     public GraphQueryService graphQueryService() {
         return new PostgresGraphQueryService( hikariDataSource, entitySetManager(), dataQueryService() );
     }
@@ -219,7 +214,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public AuthorizationManager authorizationManager() {
-        return new HazelcastAuthorizationService( hazelcastInstance, authorizationQueryService(), eventBus );
+        return new HazelcastAuthorizationService( hazelcastInstance, eventBus );
     }
 
     @Bean
@@ -427,7 +422,6 @@ public class DatastoreServicesPod {
                         hazelcastInstance,
                         dataModelService(),
                         organizationsManager(),
-                        authorizationQueryService(),
                         authorizationManager(),
                         principalService(),
                         aclKeyReservationService(),
