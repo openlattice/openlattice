@@ -130,11 +130,6 @@ public class LinkerServicesPod {
     }
 
     @Bean
-    public AuthorizationQueryService authorizationQueryService() {
-        return new AuthorizationQueryService( hikariDataSource, hazelcastInstance );
-    }
-
-    @Bean
     public HazelcastAclKeyReservationService aclKeyReservationService() {
         return new HazelcastAclKeyReservationService( hazelcastInstance );
     }
@@ -149,7 +144,7 @@ public class LinkerServicesPod {
 
     @Bean
     public AuthorizationManager authorizationManager() {
-        return new HazelcastAuthorizationService( hazelcastInstance, authorizationQueryService(), eventBus );
+        return new HazelcastAuthorizationService( hazelcastInstance, eventBus );
     }
 
     @Bean
