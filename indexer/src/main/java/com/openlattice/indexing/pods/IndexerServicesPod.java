@@ -52,7 +52,6 @@ import com.openlattice.data.storage.DataDeletionService;
 import com.openlattice.data.storage.EntityDatastore;
 import com.openlattice.data.storage.PostgresEntityDataQueryService;
 import com.openlattice.data.storage.PostgresEntityDatastore;
-import com.openlattice.data.storage.PostgresEntitySetSizesTask;
 import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.datastore.pods.ByteBlobServicePod;
 import com.openlattice.datastore.services.EdmManager;
@@ -272,6 +271,7 @@ public class IndexerServicesPod {
                 authorizationManager(),
                 partitionManager(),
                 dataModelService(),
+                hikariDataSource,
                 auditingConfiguration
         );
     }
@@ -314,11 +314,6 @@ public class IndexerServicesPod {
     }
 
     @Bean
-    public PostgresEntitySetSizesTask postgresEntitySetSizeCacheManager() {
-        return new PostgresEntitySetSizesTask();
-    }
-
-    @Bean
     public GraphService graphApi() {
         return new Graph( hikariDataSource,
                 hikariDataSource,
@@ -341,7 +336,7 @@ public class IndexerServicesPod {
 
     @Bean
     public DataGraphManager dataGraphService() {
-        return new DataGraphService( graphApi(), idService(), entityDatastore(), postgresEntitySetSizeCacheManager() );
+        return new DataGraphService( graphApi(), idService(), entityDatastore() );
     }
 
     @Bean ExternalDatabaseManagementService edms() {
