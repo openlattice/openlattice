@@ -297,12 +297,8 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
     public Schema getSchemaContentsFormatted(
             @PathVariable( NAMESPACE ) String namespace,
             @PathVariable( NAME ) String name,
-            @RequestParam(
-                    value = FILE_TYPE,
-                    required = true ) FileType fileType,
-            @RequestParam(
-                    value = TOKEN,
-                    required = false ) String token,
+            @RequestParam( value = FILE_TYPE ) FileType fileType,
+            @RequestParam( value = TOKEN, required = false ) String token,
             HttpServletResponse response ) {
         setContentDisposition( response, namespace + "." + name, fileType );
         setDownloadContentType( response, fileType );
@@ -468,11 +464,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
             method = RequestMethod.GET,
             produces = MediaType.APPLICATION_JSON_VALUE )
     public Iterable<EntityType> getEntityTypes() {
-        return modelService.getEntityTypes()::iterator;
-    }
-
-    public Iterable<EntityType> getEntityTypesStrict() {
-        return modelService.getEntityTypesStrict()::iterator;
+        return modelService.getEntityTypes();
     }
 
     @Timed
@@ -482,7 +474,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
             method = RequestMethod.GET,
             produces = MediaType.APPLICATION_JSON_VALUE )
     public Iterable<EntityType> getAssociationEntityTypes() {
-        return modelService.getAssociationEntityTypes()::iterator;
+        return modelService.getAssociationEntityTypes();
     }
 
     @Timed
@@ -492,7 +484,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
             method = RequestMethod.GET,
             produces = MediaType.APPLICATION_JSON_VALUE )
     public Iterable<AssociationType> getAssociationTypes() {
-        return modelService.getAssociationTypes()::iterator;
+        return modelService.getAssociationTypes();
     }
 
     @Override
@@ -684,7 +676,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
             produces = MediaType.APPLICATION_JSON_VALUE )
     @ResponseStatus( HttpStatus.OK )
     public Iterable<PropertyType> getPropertyTypes() {
-        return modelService.getPropertyTypes()::iterator;
+        return modelService.getPropertyTypes();
     }
 
     @Timed
