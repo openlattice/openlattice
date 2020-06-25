@@ -30,25 +30,36 @@ import com.hazelcast.core.IMap;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.query.Predicates;
 import com.openlattice.assembler.events.MaterializedEntitySetEdmChangeEvent;
-import com.openlattice.authorization.*;
+import com.openlattice.authorization.AclKey;
+import com.openlattice.authorization.AuthorizationManager;
+import com.openlattice.authorization.HazelcastAclKeyReservationService;
+import com.openlattice.authorization.Permission;
+import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.controllers.exceptions.TypeExistsException;
 import com.openlattice.controllers.exceptions.TypeNotFoundException;
 import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.datastore.util.Util;
-import com.openlattice.edm.*;
+import com.openlattice.edm.EntityDataModel;
+import com.openlattice.edm.EntityDataModelDiff;
+import com.openlattice.edm.EntitySet;
+import com.openlattice.edm.PostgresEdmManager;
+import com.openlattice.edm.Schema;
 import com.openlattice.edm.events.*;
 import com.openlattice.edm.properties.PostgresTypeManager;
 import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
 import com.openlattice.edm.set.EntitySetPropertyKey;
 import com.openlattice.edm.set.EntitySetPropertyMetadata;
-import com.openlattice.edm.type.*;
+import com.openlattice.edm.type.AssociationDetails;
+import com.openlattice.edm.type.AssociationType;
+import com.openlattice.edm.type.EntityType;
+import com.openlattice.edm.type.EntityTypePropertyKey;
+import com.openlattice.edm.type.EntityTypePropertyMetadata;
+import com.openlattice.edm.type.PropertyType;
 import com.openlattice.edm.types.processors.*;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.hazelcast.HazelcastUtils;
-import com.openlattice.postgres.PostgresQuery;
-import com.openlattice.postgres.PostgresTablesPod;
 import com.openlattice.postgres.mapstores.EntitySetMapstore;
 import com.openlattice.postgres.mapstores.EntityTypeMapstore;
 import com.openlattice.postgres.mapstores.EntityTypePropertyMetadataMapstore;
@@ -60,8 +71,6 @@ import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import javax.inject.Inject;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.function.Function;
@@ -90,14 +99,10 @@ public class EdmService implements EdmManager {
     private final PostgresTypeManager               entityTypeManager;
     private final HazelcastSchemaManager            schemaManager;
 
-    private final HazelcastInstance hazelcastInstance;
-    private final HikariDataSource  hds;
-
     @Inject
     private EventBus eventBus;
 
     public EdmService(
-            HikariDataSource hds,
             HazelcastInstance hazelcastInstance,
             HazelcastAclKeyReservationService aclKeyReservations,
             AuthorizationManager authorizations,
@@ -109,8 +114,6 @@ public class EdmService implements EdmManager {
         this.edmManager = edmManager;
         this.entityTypeManager = entityTypeManager;
         this.schemaManager = schemaManager;
-        this.hazelcastInstance = hazelcastInstance;
-        this.hds = hds;
         this.propertyTypes = HazelcastMap.PROPERTY_TYPES.getMap( hazelcastInstance );
         this.entityTypes = HazelcastMap.ENTITY_TYPES.getMap( hazelcastInstance );
         this.entitySets = HazelcastMap.ENTITY_SETS.getMap( hazelcastInstance );
@@ -122,26 +125,6 @@ public class EdmService implements EdmManager {
         this.aclKeyReservations = aclKeyReservations;
         propertyTypes.values().forEach( propertyType -> logger.debug( "Property type read: {}", propertyType ) );
         entityTypes.values().forEach( entityType -> logger.debug( "Object type read: {}", entityType ) );
-    }
-
-    @Override
-    public void clearTables() {
-        eventBus.post( new ClearAllDataEvent() );
-        for (HazelcastMap<?, ?> map : HazelcastMap.values()) {
-            map.getMap( hazelcastInstance ).clear();
-        }
-        try ( java.sql.Connection connection = hds.getConnection() ) {
-            new PostgresTablesPod().postgresTables().tables().forEach( table -> {
-                try ( PreparedStatement ps = connection
-                        .prepareStatement( PostgresQuery.truncate( table.getName() ) ) ) {
-                    ps.execute();
-                } catch ( SQLException e ) {
-                    logger.debug( "Unable to truncate table {}", table.getName(), e );
-                }
-            } );
-        } catch ( SQLException e ) {
-            logger.debug( "Unable to clear all data.", e );
-        }
     }
 
     /*
