@@ -54,8 +54,6 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.lang3.tuple.Triple;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.jetbrains.annotations.NotNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.core.Authentication;
@@ -85,7 +83,6 @@ import static com.openlattice.authorization.EdmAuthorizationHelper.aclKeysForAcc
 @RestController
 @RequestMapping( DataApi.CONTROLLER )
 public class DataController implements DataApi, AuthorizingComponent, AuditingComponent {
-    private static final Logger logger = LoggerFactory.getLogger( DataController.class );
 
     @Inject
     private EntitySetManager entitySetService;
@@ -586,7 +583,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                 .forEach( ( entitySetId, entities ) ->
                         entityKeyIds.putAll( entitySetId, createEntities( entitySetId, entities ) ) );
         final ListMultimap<UUID, DataEdge> toBeCreated = ArrayListMultimap.create();
-        Multimaps.asMap( data.getAssociations() )
+        data.getAssociations().asMap()
                 .forEach( ( entitySetId, associations ) -> {
                     for ( DataAssociation association : associations ) {
                         final UUID srcEntitySetId = association.getSrcEntitySetId();
