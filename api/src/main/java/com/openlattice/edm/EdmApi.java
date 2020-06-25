@@ -23,7 +23,11 @@ import com.openlattice.data.requests.FileType;
 import com.openlattice.edm.requests.EdmDetailsSelector;
 import com.openlattice.edm.requests.EdmRequest;
 import com.openlattice.edm.requests.MetadataUpdate;
-import com.openlattice.edm.type.*;
+import com.openlattice.edm.type.AssociationDetails;
+import com.openlattice.edm.type.AssociationType;
+import com.openlattice.edm.type.EntityType;
+import com.openlattice.edm.type.EntityTypePropertyMetadata;
+import com.openlattice.edm.type.PropertyType;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import retrofit2.http.*;
 
@@ -85,7 +89,6 @@ public interface EdmApi {
     String SRC_PATH              = "/src";
     String DST_PATH              = "/dst";
     String DIFF_PATH             = "/diff";
-    String CLEAR_PATH            = "/clear";
     String FORCE_PATH            = "/force";
     String KEY_PATH              = "/key";
     String SUMMARY_PATH          = "/summary";
@@ -105,9 +108,6 @@ public interface EdmApi {
     String PROPERTY_TYPE_BASE_PATH    = BASE + PROPERTY_TYPE_PATH;
     String ASSOCIATION_TYPE_BASE_PATH = BASE + ASSOCIATION_TYPE_PATH;
     String SUMMARY_BASE_PATH          = BASE + SUMMARY_PATH;
-
-    @DELETE( BASE + CLEAR_PATH )
-    void clearAllData();
 
     /**
      * Gets the entity data model, including namespaces, schemas, entity types, association types, and property types.
