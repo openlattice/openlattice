@@ -66,6 +66,22 @@ class PostgresLinkingQueryService(
         return connection
     }
 
+    override fun lockClustersDoWorkAndCommit(
+            candidate: EntityDataKey,
+            candidates: Set<EntityDataKey>,
+            doWork: ( clusters: Map<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>>  ) -> Triple<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>, Boolean>
+    ): Triple<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>, Boolean> {
+        val clusters = getClustersForIds( candidates )
+
+        lockClustersForUpdates(clusters.keys).use { conn ->
+            val resultTriple = doWork( clusters )
+            val linkingId = resultTriple.first
+            val scores = resultTriple.second
+            insertMatchScores(conn, linkingId, scores)
+            return resultTriple
+        }
+    }
+
     override fun getLinkableEntitySets(
             linkableEntityTypeIds: Set<UUID>,
             entitySetBlacklist: Set<UUID>,
