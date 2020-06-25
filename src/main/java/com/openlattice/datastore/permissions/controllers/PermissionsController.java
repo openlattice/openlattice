@@ -188,18 +188,24 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
             Set<Principal> parentLayer = new HashSet<>();
             for ( Principal p : currentLayer ) {
                 List<List<Principal>> child_paths = principalToPrincipalPaths.get( p );
+
                 Set<Principal> currentParents = securePrincipalsManager
                         .getParentPrincipalsOfPrincipal( securePrincipalsManager.lookup( p ) ).stream()
                         .map( SecurablePrincipal::getPrincipal )
                         .collect( Collectors.toSet() );
-                if ( currentParents.contains( p ) ) { currentParents.remove( p ); } //removes self-loops
+
+                //removes self-loops
+                currentParents.remove( p );
+
                 for ( Principal parent : currentParents ) {
-                    List<List<Principal>> paths = principalToPrincipalPaths
-                            .getOrDefault( parent, new ArrayList<>() );
+
+                    List<List<Principal>> paths = principalToPrincipalPaths.getOrDefault( parent, new ArrayList<>() );
+
                     //if map doesn't contain entry for parent, add it to map with current empty paths object
                     if ( paths.isEmpty() ) {
                         principalToPrincipalPaths.put( parent, paths );
                     }
+
                     //build paths
                     for ( List<Principal> path : child_paths ) {
                         var new_path = new ArrayList<>( path );
@@ -213,11 +219,11 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
         }
 
         //collect map entries as aclExplanations
-        Collection<AclExplanation> aclExplanations = principalToPrincipalPaths.entrySet().stream().map( entry -> {
-            AclExplanation aclExp = new AclExplanation( entry.getKey(), entry.getValue() );
-            return aclExp;
-        } ).collect( Collectors.toSet() );
-        return aclExplanations;
+        return principalToPrincipalPaths
+                .entrySet()
+                .stream()
+                .map( entry -> new AclExplanation( entry.getKey(), entry.getValue() ) )
+                .collect( Collectors.toSet() );
     }
 
     @Override
@@ -235,7 +241,7 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
         Set<AclKey> aclKeys = acls.stream().map( acl -> new AclKey( acl.getAclKey() ) ).collect( Collectors.toSet() );
         Set<AclKey> allOrgExternalDBAclKeys = securableObjectResolveTypeService
                 .getOrganizationExternalDbColumnAclKeys( aclKeys );
-        return acls.stream().filter( acl -> allOrgExternalDBAclKeys.contains( acl.getAclKey() ) )
+        return acls.stream().filter( acl -> allOrgExternalDBAclKeys.contains( new AclKey( acl.getAclKey() ) ) )
                 .collect( Collectors.toList() );
     }
 
