@@ -38,7 +38,6 @@ import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.EntitySetManager;
 import com.openlattice.datastore.services.EntitySetService;
-import com.openlattice.edm.PostgresEdmManager;
 import com.openlattice.edm.properties.PostgresTypeManager;
 import com.openlattice.edm.schemas.SchemaQueryService;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
@@ -200,11 +199,6 @@ public class LinkerServicesPod {
     }
 
     @Bean
-    public PostgresEdmManager edmManager() {
-        return new PostgresEdmManager( hikariDataSource, hazelcastInstance );
-    }
-
-    @Bean
     public HazelcastSchemaManager schemaManager() {
         return new HazelcastSchemaManager( hazelcastInstance, schemaQueryService() );
     }
@@ -228,7 +222,6 @@ public class LinkerServicesPod {
                 hazelcastInstance,
                 aclKeyReservationService(),
                 authorizationManager(),
-                edmManager(),
                 entityTypeManager(),
                 schemaManager()
         );
@@ -239,7 +232,6 @@ public class LinkerServicesPod {
         return new EntitySetService(
                 hazelcastInstance,
                 eventBus,
-                edmManager(),
                 aclKeyReservationService(),
                 authorizationManager(),
                 partitionManager(),
