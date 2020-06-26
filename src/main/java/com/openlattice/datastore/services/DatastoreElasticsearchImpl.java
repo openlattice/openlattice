@@ -54,13 +54,7 @@ import org.elasticsearch.common.unit.Fuzziness;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentType;
-import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.MatchQueryBuilder;
-import org.elasticsearch.index.query.Operator;
-import org.elasticsearch.index.query.QueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.index.query.QueryStringQueryBuilder;
-import org.elasticsearch.index.query.RangeQueryBuilder;
+import org.elasticsearch.index.query.*;
 import org.elasticsearch.index.reindex.BulkByScrollResponse;
 import org.elasticsearch.index.reindex.DeleteByQueryAction;
 import org.elasticsearch.index.reindex.DeleteByQueryRequestBuilder;
@@ -478,7 +472,7 @@ public class DatastoreElasticsearchImpl implements ConductorElasticsearchApi {
      * Add new mappings to existing index.
      * Updating the entity set model is handled in {@link #updatePropertyTypesInEntitySet(UUID, java.util.List)}
      *
-     * @param entityType the entity type to which the new properties are added
+     * @param entityType       the entity type to which the new properties are added
      * @param newPropertyTypes the ids of the new properties
      */
     @Override
@@ -514,7 +508,7 @@ public class DatastoreElasticsearchImpl implements ConductorElasticsearchApi {
 
     /**
      * @param entityValues Property values of a linked entity mapped by the normal entity set id, normal entity key id
-     * and property type ids respectively.
+     *                     and property type ids respectively.
      */
     private byte[] formatLinkedEntity( Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> entityValues ) {
 
@@ -1314,21 +1308,6 @@ public class DatastoreElasticsearchImpl implements ConductorElasticsearchApi {
 
         return triggerIndex( indexName, typeName, securableObjects, getIdFnForType( securableObjectType ) );
 
-    }
-
-    @Override
-    public boolean clearAllData() {
-        client.admin().indices()
-                .delete( new DeleteIndexRequest( DATA_INDEX_PREFIX + "*" ) );
-        new DeleteByQueryRequestBuilder( client, DeleteByQueryAction.INSTANCE )
-                .filter( QueryBuilders.matchAllQuery() ).source( ENTITY_SET_DATA_MODEL,
-                ENTITY_TYPE_INDEX,
-                PROPERTY_TYPE_INDEX,
-                ASSOCIATION_TYPE_INDEX,
-                ORGANIZATIONS,
-                APP_INDEX )
-                .get();
-        return true;
     }
 
     private String getFormattedFuzzyString( String searchTerm ) {

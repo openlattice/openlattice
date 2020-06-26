@@ -248,7 +248,6 @@ public class DatastoreServicesPod {
     @Bean
     public EdmManager dataModelService() {
         return new EdmService(
-                hikariDataSource,
                 hazelcastInstance,
                 aclKeyReservationService(),
                 authorizationManager(),
