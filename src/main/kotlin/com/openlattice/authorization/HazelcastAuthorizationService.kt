@@ -114,11 +114,7 @@ class HazelcastAuthorizationService(
 
     override fun addPermission(key: AclKey, principal: Principal, permissions: EnumSet<Permission>, expirationDate: OffsetDateTime) {
         //TODO: We should do something better than reading the securable object type.
-        val securableObjectType = securableObjectTypes.getOrDefault(key, SecurableObjectType.Unknown)
-
-        if (securableObjectType == SecurableObjectType.Unknown) {
-            logger.warn("Unrecognized object type for acl key {} key ", key)
-        }
+        val securableObjectType = getDefaultObjectType(securableObjectTypes, key)
 
         aces.executeOnKey(AceKey(key, principal), PermissionMerger(permissions, securableObjectType, expirationDate))
 
@@ -185,7 +181,7 @@ class HazelcastAuthorizationService(
         }
 
         signalMaterializationPermissionChange(
-                key, principal, permissions, securableObjectTypes.getOrDefault(key, SecurableObjectType.Unknown)
+                key, principal, permissions, getDefaultObjectType(securableObjectTypes, key)
         )
 
         aces.executeOnKey(AceKey(key, principal), PermissionRemover(permissions))
@@ -203,17 +199,13 @@ class HazelcastAuthorizationService(
     /** Set Permissions **/
 
     override fun setPermissions(acls: List<Acl>) {
-        val types = securableObjectTypes.getAll(acls.map { AclKey(it.aclKey) }.toSet())
+        val types = getSecurableObjectTypeMapForAcls(acls)
 
         val updates = mutableMapOf<AceKey, AceValue>()
 
         acls.forEach {
             val aclKey = AclKey(it.aclKey)
-            val securableObjectType = types.getOrDefault(aclKey, SecurableObjectType.Unknown)
-
-            if (securableObjectType == SecurableObjectType.Unknown) {
-                logger.warn("Unrecognized object type for acl key {} key ", aclKey)
-            }
+            val securableObjectType = getDefaultObjectType(types, aclKey)
 
             it.aces.forEach { ace: Ace ->
                 val principal = ace.principal
@@ -245,7 +237,7 @@ class HazelcastAuthorizationService(
         }
 
         //This should be a rare call to overwrite all permissions, so it's okay to do a read before write.
-        val securableObjectType = securableObjectTypes.getOrDefault(key, SecurableObjectType.Unknown)
+        val securableObjectType = getDefaultObjectType(securableObjectTypes, key)
         signalMaterializationPermissionChange(key, principal, permissions, securableObjectType)
         aces[AceKey(key, principal)] = AceValue(permissions, securableObjectType, expirationDate)
     }
@@ -260,7 +252,7 @@ class HazelcastAuthorizationService(
         val newPermissions: MutableMap<AceKey, AceValue> = HashMap(aclKeys.size * principals.size)
 
         aclKeys.forEach {
-            val objectType = securableObjectTypesForAclKeys.getOrDefault(it, SecurableObjectType.Unknown)
+            val objectType = getDefaultObjectType(securableObjectTypesForAclKeys, it)
             val aceValue = AceValue(permissions, objectType, OffsetDateTime.MAX)
 
             principals.forEach { principal ->
@@ -286,7 +278,7 @@ class HazelcastAuthorizationService(
 
         permissions.forEach { (aceKey: AceKey, acePermissions: EnumSet<Permission>) ->
             val aclKey = aceKey.aclKey
-            val objectType = securableObjectTypesForAclKeys.getOrDefault(aclKey, SecurableObjectType.Unknown)
+            val objectType = getDefaultObjectType(securableObjectTypesForAclKeys, aclKey)
             newPermissions[aceKey] = AceValue(acePermissions, objectType, OffsetDateTime.MAX)
             signalMaterializationPermissionChange(aclKey, aceKey.principal, acePermissions, objectType)
         }
@@ -478,16 +470,13 @@ class HazelcastAuthorizationService(
     }
 
     private fun getAceValueToAceKeyMap(acls: List<Acl>): SetMultimap<AceValue, AceKey> {
-        val types = securableObjectTypes.getAll(acls.map { AclKey(it.aclKey) }.toSet())
+        val types = getSecurableObjectTypeMapForAcls(acls)
 
         val map: SetMultimap<AceValue, AceKey> = HashMultimap.create()
         acls.forEach { acl: Acl ->
 
             val aclKey = AclKey(acl.aclKey)
-            val securableObjectType = types.getOrDefault(aclKey, SecurableObjectType.Unknown)
-            if (securableObjectType == SecurableObjectType.Unknown) {
-                logger.warn("Unrecognized object type for acl key {} key ", aclKey)
-            }
+            val securableObjectType = getDefaultObjectType(types, aclKey)
 
             acl.aces.forEach {
                 map.put(AceValue(it.permissions, securableObjectType, it.expirationDate), AceKey(aclKey, it.principal))
@@ -521,6 +510,19 @@ class HazelcastAuthorizationService(
                 && (securableObjectType == SecurableObjectType.PropertyTypeInEntitySet || securableObjectType == SecurableObjectType.EntitySet)) {
             eventBus.post(MaterializePermissionChangeEvent(principal, setOf(key[0]), securableObjectType))
         }
+    }
+
+    private fun getSecurableObjectTypeMapForAcls(acls: Collection<Acl>): Map<AclKey, SecurableObjectType> {
+        return securableObjectTypes.getAll(acls.map { AclKey(it.aclKey) }.toSet())
+    }
+
+    private fun getDefaultObjectType(types: Map<AclKey, SecurableObjectType>, aclKey: AclKey): SecurableObjectType {
+        val securableObjectType = types.getOrDefault(aclKey, SecurableObjectType.Unknown)
+        if (securableObjectType == SecurableObjectType.Unknown) {
+            logger.warn("Unrecognized object type for acl key {} key ", aclKey)
+        }
+
+        return securableObjectType
     }
 
 }
