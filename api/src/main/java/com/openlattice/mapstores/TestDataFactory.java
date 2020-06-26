@@ -686,7 +686,8 @@ public final class TestDataFactory {
                 OffsetDateTime.now(),
                 PersistentSearchNotificationType.ALPR_ALERT,
                 simpleSearchConstraints(),
-                ImmutableMap.of() );
+                ImmutableMap.of(),
+                Optional.empty() );
     }
 
     public static CollectionTemplateType collectionTemplateType() {
@@ -791,9 +792,10 @@ public final class TestDataFactory {
                 UUID.randomUUID(),
                 UUID.randomUUID(),
                 randomAlphabetic( 20 ),
-                randomAlphanumeric( 10 ),
+                ImmutableSet.of(randomAlphanumeric( 10 )),
                 randomAlphanumeric( 15 ),
-                base64Media()
+                base64Media(),
+                OffsetDateTime.now()
         );
     }
 
