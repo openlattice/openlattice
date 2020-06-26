@@ -21,12 +21,9 @@
 package com.openlattice.datastore.authorization.controllers;
 
 import com.codahale.metrics.annotation.Timed;
-import com.google.common.collect.Maps;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.paging.AuthorizedObjectsSearchResult;
 import com.openlattice.authorization.securable.SecurableObjectType;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -36,7 +33,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.inject.Inject;
 import java.util.EnumSet;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -68,15 +64,9 @@ public class AuthorizationsController implements AuthorizationsApi, AuthorizingC
             method = RequestMethod.GET,
             produces = MediaType.APPLICATION_JSON_VALUE )
     public AuthorizedObjectsSearchResult getAccessibleObjects(
-            @RequestParam(
-                    value = OBJECT_TYPE,
-                    required = true ) SecurableObjectType objectType,
-            @RequestParam(
-                    value = PERMISSION,
-                    required = true ) Permission permission,
-            @RequestParam(
-                    value = PAGING_TOKEN,
-                    required = false ) String pagingToken
+            @RequestParam( value = OBJECT_TYPE ) SecurableObjectType objectType,
+            @RequestParam( value = PERMISSION ) Permission permission,
+            @RequestParam( value = PAGING_TOKEN, required = false ) String pagingToken
     ) {
 
         Set<AclKey> authorizedAclKeys = authorizations.getAuthorizedObjectsOfType(
