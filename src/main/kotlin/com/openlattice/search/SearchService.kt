@@ -44,7 +44,6 @@ import java.time.OffsetDateTime
 import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.stream.Collectors
-import javax.inject.Inject
 import kotlin.streams.toList
 
 /**
@@ -54,7 +53,15 @@ import kotlin.streams.toList
 @Service
 class SearchService(
         val eventBus: EventBus,
-        val metricRegistry: MetricRegistry) {
+        val metricRegistry: MetricRegistry,
+        val authorizations: AuthorizationManager,
+        val elasticsearchApi: ConductorElasticsearchApi,
+        val dataModelService: EdmManager,
+        val entitySetService: EntitySetManager,
+        val graphService: GraphService,
+        val dataManager: EntityDatastore,
+        val indexingMetadataManager: IndexingMetadataManager
+) {
 
     companion object {
         private val logger = LoggerFactory.getLogger(SearchService::class.java)
@@ -64,27 +71,6 @@ class SearchService(
             return UUID.fromString(entity.getValue(EdmConstants.ID_FQN).first().toString())
         }
     }
-
-    @Inject
-    private lateinit var authorizations: AuthorizationManager
-
-    @Inject
-    private lateinit var elasticsearchApi: ConductorElasticsearchApi
-
-    @Inject
-    private lateinit var dataModelService: EdmManager
-
-    @Inject
-    private lateinit var entitySetService: EntitySetManager
-
-    @Inject
-    private lateinit var graphService: GraphService
-
-    @Inject
-    private lateinit var dataManager: EntityDatastore
-
-    @Inject
-    private lateinit var indexingMetadataManager: IndexingMetadataManager
 
     init {
         eventBus.register(this)
@@ -937,11 +923,6 @@ class SearchService(
             normalEntitySetIds: Set<UUID>
     ): Map<UUID, Set<UUID>> {
         return dataManager.getEntityKeyIdsOfLinkingIds(linkingIds, normalEntitySetIds).toMap()
-    }
-
-    @Subscribe
-    fun clearAllData(event: ClearAllDataEvent) {
-        elasticsearchApi.clearAllData()
     }
 
     fun triggerPropertyTypeIndex(propertyTypes: List<PropertyType>) {

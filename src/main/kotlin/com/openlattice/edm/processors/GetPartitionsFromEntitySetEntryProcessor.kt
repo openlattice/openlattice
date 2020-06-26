@@ -7,10 +7,7 @@ import java.util.*
 
 class GetPartitionsFromEntitySetEntryProcessor : AbstractReadOnlyRhizomeEntryProcessor<UUID, EntitySet, DelegatedIntSet>() {
     override fun process(entry: MutableMap.MutableEntry<UUID, EntitySet?>): DelegatedIntSet {
-        val value = entry.value
-        if ( value == null ){
-            return DelegatedIntSet(setOf())
-        }
+        val value = entry.value ?: return DelegatedIntSet(setOf())
         return DelegatedIntSet(value.partitions)
     }
 }

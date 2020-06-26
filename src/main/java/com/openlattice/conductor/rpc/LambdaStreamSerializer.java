@@ -22,15 +22,6 @@
 
 package com.openlattice.conductor.rpc;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.lang.invoke.SerializedLambda;
-
-import org.objenesis.strategy.StdInstantiatorStrategy;
-import org.springframework.stereotype.Component;
-
-import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
@@ -38,8 +29,15 @@ import com.esotericsoftware.kryo.serializers.ClosureSerializer;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
-
+import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import org.objenesis.strategy.StdInstantiatorStrategy;
+import org.springframework.stereotype.Component;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.lang.invoke.SerializedLambda;
 
 @Component
 public class LambdaStreamSerializer implements SelfRegisteringStreamSerializer<Runnable> {
@@ -52,7 +50,6 @@ public class LambdaStreamSerializer implements SelfRegisteringStreamSerializer<R
         kryo.register( Class.class );
 
         // Shared Lambdas
-        kryo.register( ElasticsearchLambdas.class );
         kryo.register( SerializedLambda.class );
 
         // always needed for closure serialization, also if registrationRequired=false
