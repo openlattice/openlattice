@@ -26,7 +26,6 @@ import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.datastore.services.EdmService
 import com.openlattice.datastore.services.EntitySetService
-import com.openlattice.edm.PostgresEdmManager
 import com.openlattice.edm.properties.PostgresTypeManager
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager
 import com.openlattice.edm.schemas.postgres.PostgresSchemaQueryService
@@ -47,14 +46,12 @@ class EdmAuthorizationHelperTest : HzAuthzTest() {
                 hazelcastInstance,
                 HazelcastAclKeyReservationService(hazelcastInstance),
                 hzAuthz,
-                PostgresEdmManager(hds, hazelcastInstance),
                 PostgresTypeManager(hds),
                 HazelcastSchemaManager(hazelcastInstance, PostgresSchemaQueryService(hds))
         )
         val entitySetManager = EntitySetService(
                 hazelcastInstance,
                 Mockito.mock(EventBus::class.java),
-                PostgresEdmManager(hds, hazelcastInstance),
                 HazelcastAclKeyReservationService(hazelcastInstance),
                 hzAuthz,
                 PartitionManager(hazelcastInstance, hds),

@@ -38,12 +38,10 @@ import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.controllers.exceptions.TypeExistsException;
 import com.openlattice.controllers.exceptions.TypeNotFoundException;
-import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.datastore.util.Util;
 import com.openlattice.edm.EntityDataModel;
 import com.openlattice.edm.EntityDataModelDiff;
 import com.openlattice.edm.EntitySet;
-import com.openlattice.edm.PostgresEdmManager;
 import com.openlattice.edm.Schema;
 import com.openlattice.edm.events.*;
 import com.openlattice.edm.properties.PostgresTypeManager;
@@ -63,7 +61,6 @@ import com.openlattice.hazelcast.HazelcastUtils;
 import com.openlattice.postgres.mapstores.EntitySetMapstore;
 import com.openlattice.postgres.mapstores.EntityTypeMapstore;
 import com.openlattice.postgres.mapstores.EntityTypePropertyMetadataMapstore;
-import com.zaxxer.hikari.HikariDataSource;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
@@ -95,7 +92,6 @@ public class EdmService implements EdmManager {
 
     private final HazelcastAclKeyReservationService aclKeyReservations;
     private final AuthorizationManager              authorizations;
-    private final PostgresEdmManager                edmManager;
     private final PostgresTypeManager               entityTypeManager;
     private final HazelcastSchemaManager            schemaManager;
 
@@ -106,12 +102,10 @@ public class EdmService implements EdmManager {
             HazelcastInstance hazelcastInstance,
             HazelcastAclKeyReservationService aclKeyReservations,
             AuthorizationManager authorizations,
-            PostgresEdmManager edmManager,
             PostgresTypeManager entityTypeManager,
             HazelcastSchemaManager schemaManager ) {
 
         this.authorizations = authorizations;
-        this.edmManager = edmManager;
         this.entityTypeManager = entityTypeManager;
         this.schemaManager = schemaManager;
         this.propertyTypes = HazelcastMap.PROPERTY_TYPES.getMap( hazelcastInstance );
@@ -306,9 +300,9 @@ public class EdmService implements EdmManager {
             EntityTypePropertyMetadata metadata = new EntityTypePropertyMetadata(
                     property.getTitle(),
                     property.getDescription(),
-                    new LinkedHashSet(propertyTags.get(propertyTypeId)),
+                    new LinkedHashSet<>( propertyTags.get( propertyTypeId ) ),
                     true
-                    );
+            );
             entityTypePropertyMetadata.put( key, metadata );
         } );
     }
@@ -441,11 +435,6 @@ public class EdmService implements EdmManager {
     @Override
     public EntityType getEntityType( String namespace, String name ) {
         return getEntityType( new FullQualifiedName( namespace, name ) );
-    }
-
-    @Override
-    public Iterable<PropertyUsageSummary> getPropertyUsageSummary( UUID propertyTypeId ) {
-        return edmManager.getPropertyUsageSummary( propertyTypeId );
     }
 
     @Override
@@ -1221,7 +1210,7 @@ public class EdmService implements EdmManager {
         return entityTypePropertyMetadata
                 .entrySet( Predicates.equal( EntityTypePropertyMetadataMapstore.ENTITY_TYPE_INDEX, entityTypeId ) )
                 .stream()
-                .collect( Collectors.toMap( entry -> entry.getKey().getPropertyTypeId(), entry -> entry.getValue() ) );
+                .collect( Collectors.toMap( entry -> entry.getKey().getPropertyTypeId(), Map.Entry::getValue ) );
     }
 
     @Override
@@ -1325,6 +1314,11 @@ public class EdmService implements EdmManager {
                 eventBus.post( new AssociationTypeCreatedEvent( at ) );
             }
         } );
+    }
+
+    @Override
+    public Set<UUID> getAllLinkingEntitySetIdsForEntitySet( UUID entitySetId ) {
+        return entitySets.keySet( Predicates.equal( EntitySetMapstore.LINKED_ENTITY_SET_INDEX, entitySetId ) );
     }
 
     /* Entity set related functions */
