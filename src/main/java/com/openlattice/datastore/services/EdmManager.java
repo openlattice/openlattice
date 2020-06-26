@@ -23,7 +23,6 @@
 package com.openlattice.datastore.services;
 
 import com.hazelcast.map.EntryProcessor;
-import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.edm.EntityDataModel;
 import com.openlattice.edm.EntityDataModelDiff;
 import com.openlattice.edm.requests.MetadataUpdate;
@@ -58,8 +57,6 @@ public interface EdmManager {
     Iterable<PropertyType> getPropertyTypes();
 
     Set<UUID> getAllPropertyTypeIds();
-
-    Iterable<PropertyUsageSummary> getPropertyUsageSummary( UUID propertyTypeId );
 
     void createEntityType( EntityType objectType );
 
@@ -180,4 +177,6 @@ public interface EdmManager {
     EntityTypePropertyMetadata getEntityTypePropertyMetadata( UUID entityTypeId, UUID propertyTypeId );
 
     Map<UUID, EntityTypePropertyMetadata> getAllEntityTypePropertyMetadata( UUID entityTypeId );
+
+    Set<UUID> getAllLinkingEntitySetIdsForEntitySet( UUID entitySetId );
 }
