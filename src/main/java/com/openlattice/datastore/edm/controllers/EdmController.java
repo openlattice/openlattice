@@ -41,12 +41,7 @@ import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.data.requests.FileType;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.EntitySetManager;
-import com.openlattice.edm.EdmApi;
-import com.openlattice.edm.EdmDetails;
-import com.openlattice.edm.EntityDataModel;
-import com.openlattice.edm.EntityDataModelDiff;
-import com.openlattice.edm.EntitySet;
-import com.openlattice.edm.Schema;
+import com.openlattice.edm.*;
 import com.openlattice.edm.requests.EdmDetailsSelector;
 import com.openlattice.edm.requests.EdmRequest;
 import com.openlattice.edm.requests.MetadataUpdate;
@@ -89,6 +84,9 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
 
     @Inject
     private AuthorizationManager authorizations;
+
+    @Inject
+    private PostgresEdmManager postgresEdmManager;
 
     @Inject
     private AuthenticationManager authenticationManager;
@@ -346,7 +344,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         Map<UUID, Iterable<PropertyUsageSummary>> allPropertySummaries = Maps
                 .newHashMapWithExpectedSize( propertyTypeIds.size() );
         for ( UUID propertyTypeId : propertyTypeIds ) {
-            allPropertySummaries.put( propertyTypeId, modelService.getPropertyUsageSummary( propertyTypeId ) );
+            allPropertySummaries.put( propertyTypeId, postgresEdmManager.getPropertyUsageSummary( propertyTypeId ) );
         }
         return allPropertySummaries;
     }
@@ -358,7 +356,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
             method = RequestMethod.GET )
     public Iterable<PropertyUsageSummary> getPropertyUsageSummary( @PathVariable( ID ) UUID propertyTypeId ) {
         ensureAdminAccess();
-        return modelService.getPropertyUsageSummary( propertyTypeId );
+        return postgresEdmManager.getPropertyUsageSummary( propertyTypeId );
     }
 
     @Timed
