@@ -66,7 +66,12 @@ import com.openlattice.data.storage.partitions.PartitionManager;
 import com.openlattice.datastore.apps.services.AppService;
 import com.openlattice.datastore.configuration.DatastoreConfiguration;
 import com.openlattice.datastore.configuration.ReadonlyDatasourceSupplier;
-import com.openlattice.datastore.services.*;
+import com.openlattice.datastore.services.AnalysisService;
+import com.openlattice.datastore.services.DatastoreElasticsearchImpl;
+import com.openlattice.datastore.services.EdmManager;
+import com.openlattice.datastore.services.EdmService;
+import com.openlattice.datastore.services.EntitySetManager;
+import com.openlattice.datastore.services.EntitySetService;
 import com.openlattice.directory.Auth0UserDirectoryService;
 import com.openlattice.directory.LocalUserDirectoryService;
 import com.openlattice.directory.UserDirectoryService;
@@ -247,7 +252,6 @@ public class DatastoreServicesPod {
     @Bean
     public EdmManager dataModelService() {
         return new EdmService(
-                hikariDataSource,
                 hazelcastInstance,
                 aclKeyReservationService(),
                 authorizationManager(),
@@ -371,11 +375,6 @@ public class DatastoreServicesPod {
     }
 
     @Bean
-    public SyncTicketService sts() {
-        return new SyncTicketService( hazelcastInstance );
-    }
-
-    @Bean
     public GraphService graphApi() {
         return new Graph( hikariDataSource,
                 rds().getReadOnlyReplica(),
@@ -447,7 +446,17 @@ public class DatastoreServicesPod {
 
     @Bean
     public SearchService searchService() {
-        return new SearchService( eventBus, metricRegistry );
+        return new SearchService(
+                eventBus,
+                metricRegistry,
+                authorizationManager(),
+                conductorElasticsearchApi(),
+                dataModelService(),
+                entitySetManager(),
+                graphApi(),
+                entityDatastore(),
+                indexingMetadataManager()
+        );
     }
 
     @Bean

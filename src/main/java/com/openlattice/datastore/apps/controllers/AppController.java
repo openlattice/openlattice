@@ -222,7 +222,9 @@ public class AppController implements AppApi, AuthorizingComponent {
     private Iterable<Organization> getAvailableOrgs() {
         return getAccessibleObjects( SecurableObjectType.Organization,
                 EnumSet.of( Permission.READ ) )
-                .filter( Objects::nonNull ).map( AuthorizationUtilsKt::getLastAclKeySafely )
+                .filter( Objects::nonNull )
+                .map( AuthorizationUtilsKt::getLastAclKeySafely )
+                .filter( Objects::nonNull )
                 .map( organizations::getOrganization )
                 .filter( Objects::nonNull )::iterator;
     }

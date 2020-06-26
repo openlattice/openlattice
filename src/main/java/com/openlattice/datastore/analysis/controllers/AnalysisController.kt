@@ -24,8 +24,10 @@ package com.openlattice.datastore.analysis.controllers
 import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Preconditions.checkArgument
 import com.google.common.base.Preconditions.checkState
+import com.openlattice.analysis.AnalysisApi
+import com.openlattice.analysis.AnalysisApi.*
 import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking
-import com.openlattice.analysis.requests.Filter
+import com.openlattice.analysis.requests.AggregationResult
 import com.openlattice.analysis.requests.NeighborType
 import com.openlattice.analysis.requests.RankingAggregation
 import com.openlattice.authorization.*
@@ -36,9 +38,6 @@ import com.openlattice.datastore.services.EdmService
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.EdmConstants.Companion.COUNT_FQN
 import com.openlattice.edm.EdmConstants.Companion.ID_FQN
-import com.openlattice.analysis.requests.AggregationResult
-import com.openlattice.analysis.AnalysisApi
-import com.openlattice.analysis.AnalysisApi.*
 import com.openlattice.web.mediatypes.CustomMediaType
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.apache.olingo.commons.api.edm.FullQualifiedName
@@ -95,7 +94,7 @@ class AnalysisController : AnalysisApi, AuthorizingComponent {
             response: HttpServletResponse
     ): AggregationResult {
         if (filteredRankings.neighbors.isEmpty()) {
-            return AggregationResult(sortedSetOf(), mapOf(), mapOf()            )
+            return AggregationResult(sortedSetOf(), mapOf(), mapOf())
         }
         ensureReadAccess(AclKey(entitySetId))
         val downloadType = fileType ?: FileType.json
@@ -125,7 +124,7 @@ class AnalysisController : AnalysisApi, AuthorizingComponent {
         }
 
         checkArgument(
-                !entitySet.linkedEntitySets.isEmpty(),
+                entitySet.linkedEntitySets.isNotEmpty(),
                 "Linked entity sets does not consist of any entity sets."
         )
         return getFilteredRankings(
@@ -146,21 +145,6 @@ class AnalysisController : AnalysisApi, AuthorizingComponent {
                         .map(FullQualifiedName::getFullQualifiedNameAsString)
                         .plus(COUNT_FQN.fullQualifiedNameAsString)
                         .plus(ID_FQN.fullQualifiedNameAsString)
-        )
-    }
-
-    private fun accessCheckAndReturnAuthorizedPropetyTypes(
-            filters: Map<UUID, Set<Filter>>,
-            entitySetId: UUID
-    ): Pair<UUID, Set<UUID>> {
-        val authorizedPropertyTypes = authzHelper.getAuthorizedPropertyTypes(entitySetId, EnumSet.of(Permission.READ))
-        authzHelper.accessCheck(authorizedPropertyTypes, filters.keys)
-        return entitySetId to authorizedPropertyTypes.keys
-    }
-
-    private fun entitySetIsAuthorized(entitySetId: UUID): Boolean {
-        return authorizations.checkIfHasPermissions(
-                AclKey(entitySetId), Principals.getCurrentPrincipals(), EnumSet.of(Permission.READ)
         )
     }
 
@@ -227,17 +211,15 @@ class AnalysisController : AnalysisApi, AuthorizingComponent {
         val entitySet = entitySetManager.getEntitySet(entitySetId)!!
 
         val allEntitySetIds = if (entitySet.isLinking) {
-            val linkedEntitySetIds = HashSet(entitySet.linkedEntitySets)
             checkState(
-                    !linkedEntitySetIds.isEmpty(),
+                    entitySet.linkedEntitySets.isNotEmpty(),
                     "Linked entity sets are empty for linking entity set %s, id %s",
                     entitySet.name,
                     entitySet.id
             )
-            val authorizedLinkedEntitySetIds = entitySet.linkedEntitySets
-                    .filter { isAuthorized(Permission.READ).test(AclKey(entitySetId)) }.toSet()
 
-            authorizedLinkedEntitySetIds
+            entitySet.linkedEntitySets.filter { isAuthorized(Permission.READ).test(AclKey(entitySetId)) }.toSet()
+
         } else {
             setOf(entitySetId)
         }

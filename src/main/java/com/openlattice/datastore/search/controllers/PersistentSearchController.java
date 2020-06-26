@@ -1,13 +1,17 @@
 package com.openlattice.datastore.search.controllers;
 
 import com.codahale.metrics.annotation.Timed;
-import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.search.PersistentSearchApi;
 import com.openlattice.search.PersistentSearchService;
 import com.openlattice.search.requests.PersistentSearch;
 import com.openlattice.search.requests.SearchConstraints;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import javax.inject.Inject;
 import java.time.OffsetDateTime;
@@ -20,9 +24,6 @@ public class PersistentSearchController implements PersistentSearchApi {
 
     @Inject
     private PersistentSearchService persistentSearchService;
-
-    @Inject
-    private SecurePrincipalsManager spm;
 
     @Timed
     @Override

@@ -20,24 +20,12 @@
 
 package com.openlattice.datastore.directory.controllers;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
-import com.auth0.client.auth.AuthAPI;
 import com.auth0.client.mgmt.ManagementAPI;
 import com.auth0.exception.Auth0Exception;
 import com.auth0.json.mgmt.users.User;
 import com.codahale.metrics.annotation.Timed;
-import com.google.common.eventbus.EventBus;
 import com.openlattice.assembler.PostgresRoles;
-import com.openlattice.authorization.AclKey;
-import com.openlattice.authorization.AuthorizationManager;
-import com.openlattice.authorization.AuthorizingComponent;
-import com.openlattice.authorization.DbCredentialService;
-import com.openlattice.authorization.Permission;
-import com.openlattice.authorization.Principal;
-import com.openlattice.authorization.PrincipalType;
-import com.openlattice.authorization.Principals;
-import com.openlattice.authorization.SecurablePrincipal;
+import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.directory.MaterializedViewAccount;
 import com.openlattice.directory.PrincipalApi;
@@ -48,46 +36,41 @@ import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.users.Auth0SyncService;
 import com.openlattice.users.Auth0UtilsKt;
+import org.springframework.http.MediaType;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.web.bind.annotation.*;
 
+import javax.inject.Inject;
 import java.util.EnumSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import javax.inject.Inject;
 
-import org.springframework.http.MediaType;
-import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 @RestController
 @RequestMapping( PrincipalApi.CONTROLLER )
 public class PrincipalDirectoryController implements PrincipalApi, AuthorizingComponent {
 
     @Inject
-    private DbCredentialService     dbCredService;
+    private DbCredentialService dbCredService;
+
     @Inject
-    private UserDirectoryService    userDirectoryService;
+    private UserDirectoryService userDirectoryService;
+
     @Inject
     private SecurePrincipalsManager spm;
+
     @Inject
-    private AuthorizationManager    authorizations;
+    private AuthorizationManager authorizations;
+
     @Inject
-    private AuthAPI                 authApi;
+    private ManagementAPI managementApi;
+
     @Inject
-    private ManagementAPI           managementApi;
-    @Inject
-    private Auth0SyncService        syncService;
-    @Inject
-    private EventBus                eventBus;
+    private Auth0SyncService syncService;
 
     @Timed
     @Override

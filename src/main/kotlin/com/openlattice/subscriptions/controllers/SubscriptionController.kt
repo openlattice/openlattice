@@ -12,7 +12,6 @@ import com.openlattice.subscriptions.Subscription
 import com.openlattice.subscriptions.SubscriptionApi
 import com.openlattice.subscriptions.SubscriptionService
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
-import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.*
 import java.util.*
 import javax.inject.Inject
@@ -30,14 +29,11 @@ constructor(
         private val subscriptionService: SubscriptionService,
         private val edmAuthorizationHelper: EdmAuthorizationHelper
 ) : SubscriptionApi, AuthorizingComponent {
-    companion object {
-        private val logger = LoggerFactory.getLogger(SubscriptionController::class.java)!!
-    }
 
     @Timed
     @RequestMapping(path = ["", "/"], method = [RequestMethod.PUT])
-    override fun createOrUpdateSubscriptionContactInfo(@RequestBody subscription: Subscription) {
-        val query = subscription.query
+    override fun createOrUpdateSubscriptionContactInfo(@RequestBody contactInfo: Subscription) {
+        val query = contactInfo.query
         if (query.ids.isEmpty()) {
             throw BadRequestException("Must specify entity key ids to subscribe to")
         }
@@ -78,7 +74,7 @@ constructor(
         )
 
         ensureReadOnRequired(authorizedPropertyTypes, requiredPropertyTypes)
-        subscriptionService.createOrUpdateSubscription(subscription, Principals.getCurrentUser())
+        subscriptionService.createOrUpdateSubscription(contactInfo, Principals.getCurrentUser())
     }
 
     @Timed
@@ -105,7 +101,7 @@ constructor(
         val requiredAuthorizations: MutableMap<UUID, MutableSet<UUID>> = mutableMapOf()
         val allEntitySetIds = baseEntitySetIds.asSequence() +
                 (query.srcSelections.asSequence() + query.dstSelections.asSequence()).flatMap { selection ->
-                    getRequiredAuthorizations(selection).forEach { entitySetId, requiredPropertyTypeIds ->
+                    getRequiredAuthorizations(selection).forEach { (entitySetId, requiredPropertyTypeIds) ->
                         requiredAuthorizations
                                 .getOrPut(entitySetId) { mutableSetOf() }
                                 .addAll(requiredPropertyTypeIds)
