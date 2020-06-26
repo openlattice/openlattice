@@ -28,11 +28,19 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.openlattice.auditing.*;
-import com.openlattice.authorization.*;
+import com.openlattice.auditing.AuditEventType;
+import com.openlattice.auditing.AuditRecordEntitySetsManager;
+import com.openlattice.auditing.AuditableEvent;
+import com.openlattice.auditing.AuditingComponent;
+import com.openlattice.auditing.AuditingManager;
+import com.openlattice.authorization.AclKey;
+import com.openlattice.authorization.AuthorizationManager;
+import com.openlattice.authorization.AuthorizingComponent;
+import com.openlattice.authorization.EdmAuthorizationHelper;
+import com.openlattice.authorization.Permission;
+import com.openlattice.authorization.SecurableObjectResolveTypeService;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.controllers.exceptions.BadRequestException;
-import com.openlattice.controllers.exceptions.ForbiddenException;
 import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.data.requests.FileType;
@@ -67,8 +75,6 @@ import javax.servlet.http.HttpServletResponse;
 import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
-
-import static com.kryptnostic.rhizome.configuration.ConfigurationConstants.Environments.TEST_PROFILE;
 
 @RestController
 @RequestMapping( EdmApi.CONTROLLER )
@@ -118,19 +124,6 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
 
     @Inject
     private AuditingManager auditingManager;
-
-    @RequestMapping(
-            path = CLEAR_PATH,
-            method = RequestMethod.DELETE )
-    @ResponseStatus( HttpStatus.OK )
-    public void clearAllData() {
-        if ( !env.acceptsProfiles( TEST_PROFILE ) ) {
-            throw new ForbiddenException(
-                    "Clearing all entity set tables is only allowed in " + TEST_PROFILE + " environment" );
-        }
-        ensureAdminAccess();
-        modelService.clearTables();
-    }
 
     @Timed
     @RequestMapping(
