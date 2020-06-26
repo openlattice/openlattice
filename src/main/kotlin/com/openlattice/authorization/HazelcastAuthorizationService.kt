@@ -1,7 +1,6 @@
 package com.openlattice.authorization
 
 import com.codahale.metrics.annotation.Timed
-import com.google.common.base.Preconditions.checkNotNull
 import com.google.common.collect.HashMultimap
 import com.google.common.collect.ImmutableSet
 import com.google.common.collect.Maps
