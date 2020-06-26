@@ -38,9 +38,9 @@ class HazelcastAuthorizationService(
         eventBus: EventBus
 ) : AuthorizationManager {
 
-    private var securableObjectTypes: IMap<AclKey, SecurableObjectType> = HazelcastMap.SECURABLE_OBJECT_TYPES.getMap(hazelcastInstance)
-    private var aces: IMap<AceKey, AceValue> = HazelcastMap.PERMISSIONS.getMap(hazelcastInstance)
-    private var eventBus: EventBus = checkNotNull(eventBus)
+    private val securableObjectTypes: IMap<AclKey, SecurableObjectType> = HazelcastMap.SECURABLE_OBJECT_TYPES.getMap(hazelcastInstance)
+    private val aces: IMap<AceKey, AceValue> = HazelcastMap.PERMISSIONS.getMap(hazelcastInstance)
+    private val eventBus: EventBus = eventBus
 
     companion object {
         private val logger = LoggerFactory.getLogger(HazelcastAuthorizationService::class.java)
