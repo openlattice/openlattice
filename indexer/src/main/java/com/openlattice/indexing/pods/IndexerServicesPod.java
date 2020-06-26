@@ -39,7 +39,6 @@ import com.openlattice.auditing.AuditingProfiles;
 import com.openlattice.auditing.LocalAuditingService;
 import com.openlattice.auditing.S3AuditingService;
 import com.openlattice.auditing.pods.AuditingConfigurationPod;
-import com.openlattice.authentication.Auth0Configuration;
 import com.openlattice.authorization.*;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.DataDeletionManager;
@@ -78,7 +77,6 @@ import com.openlattice.organizations.OrganizationExternalDatabaseConfiguration;
 import com.openlattice.organizations.pods.OrganizationExternalDatabaseConfigurationPod;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
-import com.openlattice.postgres.PostgresTableManager;
 import com.openlattice.scrunchie.search.ConductorElasticsearchImpl;
 import com.zaxxer.hikari.HikariDataSource;
 import org.springframework.context.annotation.Bean;
@@ -95,13 +93,7 @@ import javax.inject.Inject;
 public class IndexerServicesPod {
 
     @Inject
-    private PostgresTableManager tableManager;
-
-    @Inject
     private HazelcastInstance hazelcastInstance;
-
-    @Inject
-    private Auth0Configuration auth0Configuration;
 
     @Inject
     private HikariDataSource hikariDataSource;
@@ -251,7 +243,6 @@ public class IndexerServicesPod {
     @Bean
     public EdmManager dataModelService() {
         return new EdmService(
-                hikariDataSource,
                 hazelcastInstance,
                 aclKeyReservationService(),
                 authorizationManager(),
