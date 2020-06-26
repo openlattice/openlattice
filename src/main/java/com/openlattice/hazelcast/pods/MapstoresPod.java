@@ -180,7 +180,7 @@ public class MapstoresPod {
 
     @Bean
     public SelfRegisteringMapStore<String, String> dbCredentialsMapstore() {
-        return new PostgresCredentialMapstore( hikariDataSource, pgUserApi() );
+        return new PostgresCredentialMapstore( hikariDataSource );
     }
 
     @Bean
