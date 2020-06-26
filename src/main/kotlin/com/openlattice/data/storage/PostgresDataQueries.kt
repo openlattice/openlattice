@@ -689,12 +689,9 @@ internal val selectEntitySetTextProperties = "SELECT COALESCE(${getSourceDataCol
  */
 internal val selectEntitiesTextProperties = "$selectEntitySetTextProperties AND ${ID_VALUE.name} = ANY(?)"
 
-fun partitionSelectorFromId(entityKeyId: UUID): Int {
-    return entityKeyId.leastSignificantBits.toInt()
-}
-
+// Consistently Ordered, Unique Values, Constant Index
 fun getPartition(entityKeyId: UUID, partitions: List<Int>): Int {
-    return partitions[partitionSelectorFromId(entityKeyId) % partitions.size]
+    return partitions[entityKeyId.leastSignificantBits.toInt() % partitions.size]
 }
 
 /**
