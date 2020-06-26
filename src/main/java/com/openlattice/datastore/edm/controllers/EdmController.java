@@ -61,7 +61,6 @@ import com.openlattice.web.mediatypes.CustomMediaType;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.jetbrains.annotations.NotNull;
-import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -93,8 +92,6 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
 
     @Inject
     private AuthenticationManager authenticationManager;
-    @Inject
-    private Environment env;
 
     @Inject
     private SecurePrincipalsManager spm;
