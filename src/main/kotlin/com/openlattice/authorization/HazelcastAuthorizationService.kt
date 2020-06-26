@@ -34,12 +34,11 @@ import java.util.stream.Stream
 
 class HazelcastAuthorizationService(
         hazelcastInstance: HazelcastInstance,
-        eventBus: EventBus
+        val eventBus: EventBus
 ) : AuthorizationManager {
 
     private val securableObjectTypes: IMap<AclKey, SecurableObjectType> = HazelcastMap.SECURABLE_OBJECT_TYPES.getMap(hazelcastInstance)
     private val aces: IMap<AceKey, AceValue> = HazelcastMap.PERMISSIONS.getMap(hazelcastInstance)
-    private val eventBus: EventBus = eventBus
 
     companion object {
         private val logger = LoggerFactory.getLogger(HazelcastAuthorizationService::class.java)
