@@ -359,7 +359,7 @@ class HazelcastAuthorizationService(
             aclKeySets: Collection<Set<AclKey>>,
             principals: Set<Principal>
     ): Map<Set<AclKey>, EnumSet<Permission>> {
-        return aclKeySets.parallelStream().collect(Collectors.toMap(
+        return aclKeySets.parallelStream().collect(Collectors.toMap<Set<AclKey>, Set<AclKey>, EnumSet<Permission>>(
                 Function.identity(),
                 Function { getSecurableObjectSetPermissions(it, principals) }
         ))
