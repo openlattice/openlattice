@@ -31,7 +31,6 @@ import com.openlattice.assembler.AssemblerConnectionManager;
 import com.openlattice.assembler.pods.AssemblerConfigurationPod;
 import com.openlattice.auditing.AuditingConfiguration;
 import com.openlattice.auditing.pods.AuditingConfigurationPod;
-import com.openlattice.authentication.Auth0Configuration;
 import com.openlattice.authorization.*;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.storage.partitions.PartitionManager;
@@ -55,7 +54,6 @@ import com.openlattice.notifications.sms.PhoneNumberService;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
-import com.openlattice.postgres.PostgresTableManager;
 import com.openlattice.scrunchie.search.ConductorElasticsearchImpl;
 import com.zaxxer.hikari.HikariDataSource;
 import org.deeplearning4j.nn.modelimport.keras.KerasModelImport;
@@ -81,13 +79,7 @@ import static com.openlattice.linking.MatcherKt.KERAS;
 public class LinkerServicesPod {
 
     @Inject
-    private PostgresTableManager tableManager;
-
-    @Inject
     private HazelcastInstance hazelcastInstance;
-
-    @Inject
-    private Auth0Configuration auth0Configuration;
 
     @Inject
     private HikariDataSource hikariDataSource;
@@ -233,7 +225,6 @@ public class LinkerServicesPod {
     @Bean
     public EdmManager dataModelService() {
         return new EdmService(
-                hikariDataSource,
                 hazelcastInstance,
                 aclKeyReservationService(),
                 authorizationManager(),
