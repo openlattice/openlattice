@@ -41,7 +41,6 @@ import java.util.Set;
 import java.util.UUID;
 
 public interface EdmManager {
-    void clearTables();
 
     PropertyType getPropertyType( FullQualifiedName propertyTypeFqn );
 

@@ -29,14 +29,7 @@ import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.serializers.AclKeyKryoSerializer;
 import com.openlattice.authorization.serializers.EntityDataLambdasStreamSerializer;
-import com.openlattice.conductor.rpc.BulkEntityDataLambdas;
-import com.openlattice.conductor.rpc.BulkLinkedDataLambdas;
-import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
-import com.openlattice.conductor.rpc.ConductorElasticsearchCall;
-import com.openlattice.conductor.rpc.ElasticsearchLambdas;
-import com.openlattice.conductor.rpc.EntityDataLambdas;
-import com.openlattice.conductor.rpc.ReIndexEntitySetMetadataLambdas;
-import com.openlattice.conductor.rpc.SearchWithConstraintsLambda;
+import com.openlattice.conductor.rpc.*;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.openlattice.organizations.Organization;
 import com.openlattice.organizations.PrincipalSet;
@@ -76,7 +69,6 @@ public class ConductorElasticsearchCallStreamSerializer
 
 
         // Shared Lambdas
-        kryo.register( ElasticsearchLambdas.class );
         kryo.register( EntityDataLambdas.class, new EntityDataLambdasStreamSerializer() );
         kryo.register( BulkEntityDataLambdas.class, new BulkEntityDataLambdasStreamSerializer() );
         kryo.register( BulkLinkedDataLambdas.class, new BulkLinkedDataLambdasStreamSerializer() );
