@@ -28,7 +28,6 @@ import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.openlattice.authorization.*
 import com.openlattice.authorization.mapstores.PrincipalMapstore
-import com.openlattice.controllers.exceptions.TypeExistsException
 import com.openlattice.datastore.util.Util
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organization.roles.Role
@@ -42,7 +41,6 @@ import com.openlattice.principals.UserCreatedEvent
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.util.*
-import java.util.stream.Collectors
 
 @Service
 class HazelcastPrincipalService(
@@ -78,14 +76,13 @@ class HazelcastPrincipalService(
     }
 
     override fun createSecurablePrincipalIfNotExists(owner: Principal, principal: SecurablePrincipal): Boolean {
-        return try {
-            createSecurablePrincipal(owner, principal)
-            true
-        } catch (e: TypeExistsException) {
+        if (reservations.isReserved(principal.name)) {
             logger.warn("Securable Principal {} already exists", principal)
-            logger.debug("Stack trace for securable principal already exists.", e)
-            false
+            return false
         }
+
+        createSecurablePrincipal(owner, principal)
+        return true
     }
 
     override fun createSecurablePrincipal(owner: Principal, principal: SecurablePrincipal) {
@@ -189,15 +186,10 @@ class HazelcastPrincipalService(
         val principalsWithPrincipal = parentLayer.toMutableSet()
 
         while (parentLayer.isNotEmpty()) {
-
-//            parentLayer = principalTrees.keySet(hasAnySecurablePrincipal(parentLayer))
-
-            parentLayer = parentLayer
-                    .parallelStream()
-                    .flatMap { principalTrees.keySet(hasSecurablePrincipal(it)).stream() }
-                    .collect(Collectors.toSet())
+            parentLayer = principalTrees.keySet(hasAnySecurablePrincipal(parentLayer))
             principalsWithPrincipal.addAll(parentLayer)
         }
+
         return principals.getAll(principalsWithPrincipal).values
     }
 
