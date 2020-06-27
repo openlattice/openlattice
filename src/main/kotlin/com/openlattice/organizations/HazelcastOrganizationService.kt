@@ -75,7 +75,11 @@ class HazelcastOrganizationService(
 
     @Timed
     fun maybeGetOrganization(p: Principal): Optional<SecurablePrincipal> {
-        return securePrincipalsManager.maybeGetSecurablePrincipal(p)
+        return try {
+            Optional.of(securePrincipalsManager.getPrincipal(p.id))
+        } catch (e: NullPointerException) {
+            Optional.empty()
+        }
     }
 
     @Timed
@@ -140,7 +144,7 @@ class HazelcastOrganizationService(
     private fun initializeOrganization(organization: Organization) {
         val organizationId = organization.securablePrincipal.id
         if (organization.partitions.isEmpty()) {
-            organization.partitions.addAll( partitionManager.allocateDefaultOrganizationPartitions(organizationId) )
+            organization.partitions.addAll(partitionManager.allocateDefaultOrganizationPartitions(organizationId))
         }
 
         organizations.set(organizationId, organization)
@@ -373,11 +377,11 @@ class HazelcastOrganizationService(
     }
 
     private fun removeRolesFromMembers(roles: Collection<AclKey>, members: Set<AclKey>) {
-        securePrincipalsManager.removePrincipalsFromPrincipals(roles, members)
+        securePrincipalsManager.removePrincipalsFromPrincipals(roles.toSet(), members)
     }
 
     private fun removeOrganizationFromMembers(organization: AclKey, members: Set<AclKey>) {
-        securePrincipalsManager.removePrincipalsFromPrincipals(listOf(organization), members)
+        securePrincipalsManager.removePrincipalsFromPrincipals(setOf(organization), members)
     }
 
     @Timed
