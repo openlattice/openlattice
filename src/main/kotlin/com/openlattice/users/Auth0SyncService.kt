@@ -64,6 +64,28 @@ class Auth0SyncService(
         syncUserEnrollmentsAndAuthentication(user)
     }
 
+    fun createOrUpdateUsers(usersToUpdate: Collection<User>) {
+
+        val usersByPrincipal = usersToUpdate.associateBy { getPrincipal(it) }.toMutableMap()
+
+        val existingUserPrincipals = spm.getSecurablePrincipals(usersByPrincipal.keys).map { it.principal }
+        val principalsToCreate = usersByPrincipal.keys - existingUserPrincipals
+
+        logger.debug("Creating users {} and updating principals {}",
+                principalsToCreate.map { it.id },
+                existingUserPrincipals.map { it.id }
+        )
+
+        principalsToCreate.forEach {
+            if (!tryCreateNewUserPrincipal(usersByPrincipal.getValue(it), it)) {
+                usersByPrincipal.remove(it)
+            }
+        }
+
+        users.putAll(usersToUpdate.associateBy { it.id })
+
+    }
+
     fun updateUser(user: User) {
         logger.info("Updating user ${user.id}")
         ensureSecurablePrincipalExists(user)
@@ -178,9 +200,8 @@ class Auth0SyncService(
                 }) { rs -> mapper.readValue(rs.getString(USER_DATA.name)) }
     }
 
-    private fun ensureSecurablePrincipalExists(user: User): Principal {
-        val principal = getPrincipal(user)
-        if (!spm.principalExists(principal)) {
+    private fun tryCreateNewUserPrincipal(user: User, principal: Principal): Boolean {
+        try {
             val title = if (!user.nickname.isNullOrEmpty()) {
                 user.nickname
             } else {
@@ -191,7 +212,21 @@ class Auth0SyncService(
                     principal,
                     SecurablePrincipal(Optional.empty(), principal, title, Optional.empty())
             )
+        } catch (e: Exception)  {
+            logger.error("Unable to create user {} with principal {}", user, principal, e)
+            return false
         }
+
+        return true
+    }
+
+    private fun ensureSecurablePrincipalExists(user: User): Principal {
+        val principal = getPrincipal(user)
+
+        if (!spm.principalExists(principal)) {
+            tryCreateNewUserPrincipal(user, principal)
+        }
+
         return principal
     }
 

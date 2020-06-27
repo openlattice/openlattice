@@ -217,8 +217,8 @@ class HazelcastPrincipalService(
         return principals.values(p)
     }
 
-    override fun getSecurablePrincipals(members: Collection<Principal>): Collection<SecurablePrincipal> {
-        return principals.values(findPrincipals(members))
+    override fun getSecurablePrincipals(simplePrincipals: Collection<Principal>): Collection<SecurablePrincipal> {
+        return principals.values(findPrincipals(simplePrincipals))
     }
 
     override fun principalExists(p: Principal): Boolean {
