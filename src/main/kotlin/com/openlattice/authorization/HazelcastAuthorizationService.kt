@@ -25,13 +25,14 @@ import com.openlattice.authorization.util.toAceKeys
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organizations.PrincipalSet
 import org.slf4j.LoggerFactory
+import org.springframework.stereotype.Service
 import java.time.OffsetDateTime
 import java.util.*
 import java.util.function.Function
 import java.util.stream.Collectors
 import java.util.stream.Stream
 
-
+@Service
 class HazelcastAuthorizationService(
         hazelcastInstance: HazelcastInstance,
         val eventBus: EventBus
