@@ -76,11 +76,17 @@ class Auth0SyncService(
                 existingUserPrincipals.map { it.id }
         )
 
-        principalsToCreate.forEach {
-            if (!tryCreateNewUserPrincipal(usersByPrincipal.getValue(it), it)) {
+        val newlyCreatedUsers = principalsToCreate.filter {
+            val wasSuccessfullyCreated = tryCreateNewUserPrincipal(usersByPrincipal.getValue(it), it)
+
+            if (!wasSuccessfullyCreated) {
                 usersByPrincipal.remove(it)
             }
-        }
+
+            wasSuccessfullyCreated
+        }.associateWith { usersByPrincipal.getValue(it) }
+
+        processGlobalEnrollments(newlyCreatedUsers)
 
         users.putAll(usersToUpdate.associateBy { it.id })
 
@@ -101,7 +107,7 @@ class Auth0SyncService(
         logger.info("Synchronizing enrollments and authentication cache for user ${user.id}")
         val principal = getPrincipal(user)
 
-        processGlobalEnrollments(principal, user)
+        processGlobalEnrollments(mapOf(principal to user))
         processOrganizationEnrollments(principal, user)
 
         syncAuthenticationCache(principal.id)
@@ -159,33 +165,20 @@ class Auth0SyncService(
 
     }
 
-    private fun processGlobalEnrollments(principal: Principal, user: User) {
+    private fun processGlobalEnrollments(principalMap: Map<Principal, User>) {
         orgService.addMembers(
                 IdConstants.GLOBAL_ORGANIZATION_ID.id,
-                setOf(principal),
-                mapOf(principal to getAppMetadata(user))
+                principalMap.keys,
+                principalMap.mapValues { getAppMetadata(it.value) }
         )
     }
 
-    private fun processOrganizationEnrollments(
-            principal: Principal,
-            user: User,
-            emailDomain: String = user.email ?: ""
-    ) {
+    private fun processOrganizationEnrollments(principal: Principal, user: User ) {
         val connections = getConnections(user).values
-
-        val missingOrgsForEmailDomains = if (emailDomain.isNotBlank()) {
-            orgService.getOrganizationsWithoutUserAndWithConnectionsAndDomains(
-                    principal,
-                    connections,
-                    emailDomain
-            )
-        } else setOf()
 
         val missingOrgsForConnections = orgService.getOrganizationsWithoutUserAndWithConnection(connections, principal)
 
-
-        (missingOrgsForEmailDomains + missingOrgsForConnections).forEach { orgId ->
+        missingOrgsForConnections.forEach { orgId ->
             orgService.addMembers(orgId, setOf(principal))
         }
 
@@ -212,6 +205,7 @@ class Auth0SyncService(
                     principal,
                     SecurablePrincipal(Optional.empty(), principal, title, Optional.empty())
             )
+
         } catch (e: Exception)  {
             logger.error("Unable to create user {} with principal {}", user, principal, e)
             return false
