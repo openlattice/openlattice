@@ -43,7 +43,7 @@ import kotlin.streams.asSequence
  * Access to organizations is handled by the organization manager.
  *
  *
- * Membership in an organization is stored in the membersOf field whcih is accessed via an IMAP. Only principals of type
+ * Membership in an organization is stored in the membersOf field which is accessed via an IMAP. Only principals of type
  * [PrincipalType.USER]. This is mainly because we don't store the principal type field along with the principal id.
  * This may change in the future.
  *
