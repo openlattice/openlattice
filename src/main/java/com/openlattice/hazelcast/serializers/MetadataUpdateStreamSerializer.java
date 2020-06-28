@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 
 import java.io.DataInput;
 import java.io.IOException;
+import java.util.LinkedHashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -56,6 +57,9 @@ public class MetadataUpdateStreamSerializer implements SelfRegisteringStreamSeri
         OptionalStreamSerializers
                 .serialize( out, object.getPropertyTags(), GuavaStreamSerializersKt::serializeSetMultimap );
         OptionalStreamSerializers.serialize( out, object.getOrganizationId(), UUIDStreamSerializer::serialize );
+        OptionalStreamSerializers.serialize( out,
+                object.getPartitions(),
+                ( output, elem ) -> output.writeIntArray( elem.stream().mapToInt( e -> e ).toArray() ) );
         if ( object.getDataExpiration().isPresent() ) {
             out.writeBoolean( true );
             OptionalStreamSerializers
@@ -79,6 +83,8 @@ public class MetadataUpdateStreamSerializer implements SelfRegisteringStreamSeri
                 .deserialize( in, GuavaStreamSerializersKt::deserializeLinkedHashMultimap );
         Optional<UUID> organizationId = OptionalStreamSerializers
                 .deserialize( in, UUIDStreamSerializer::deserialize );
+        Optional<LinkedHashSet<Integer>> partitions = OptionalStreamSerializers
+                .deserialize( in, input -> toLinkedHashSet( input.readIntArray() ) );
         Optional<DataExpiration> dataExpiration;
         boolean hasExpiration = in.readBoolean();
         if ( hasExpiration ) {
@@ -97,7 +103,15 @@ public class MetadataUpdateStreamSerializer implements SelfRegisteringStreamSeri
                 url,
                 propertyTags,
                 organizationId,
-                Optional.empty(),
+                partitions,
                 dataExpiration );
+    }
+
+    private static LinkedHashSet<Integer> toLinkedHashSet( int[] array ) {
+        final var s = new LinkedHashSet<Integer>( array.length );
+        for ( int value : array ) {
+            s.add( value );
+        }
+        return s;
     }
 }
