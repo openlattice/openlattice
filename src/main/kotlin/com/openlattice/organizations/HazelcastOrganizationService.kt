@@ -512,10 +512,6 @@ class HazelcastOrganizationService(
         })
     }
 
-    fun getOrganizationsWithConnection(connection: String): Set<UUID> {
-        return organizations.keySet(Predicates.equal(CONNECTIONS_INDEX, connection))
-    }
-
     fun getOrganizationsWithoutUserAndWithConnection(connections: Collection<String>, principal: Principal): Set<UUID> {
         return organizations.keySet(
                 Predicates.and(
