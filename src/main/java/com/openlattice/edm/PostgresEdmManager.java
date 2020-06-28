@@ -46,47 +46,12 @@ import static com.openlattice.postgres.PostgresTable.*;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class PostgresEdmManager {
-    private static final String getAllEntitySets = "SELECT * FROM " + PostgresTable.ENTITY_SETS.getName();
     private static final Logger logger = LoggerFactory.getLogger( PostgresEdmManager.class );
 
     private final HikariDataSource hds;
 
-    private final IMap<UUID, EntitySet> entitySets;
-
-
-    public PostgresEdmManager( HikariDataSource hds, HazelcastInstance hazelcastInstance ) {
+    public PostgresEdmManager( HikariDataSource hds ) {
         this.hds = hds;
-        this.entitySets = HazelcastMap.ENTITY_SETS.getMap( hazelcastInstance );
-    }
-
-    public PostgresIterable<EntitySet> getAllEntitySets() {
-        return new PostgresIterable<>(
-                () -> {
-                    try {
-                        Connection connection = hds.getConnection();
-                        connection.setAutoCommit( false );
-                        PreparedStatement ps = connection.prepareStatement( getAllEntitySets );
-                        ps.setFetchSize( 10000 );
-                        ResultSet rs = ps.executeQuery();
-                        return new StatementHolder( connection, ps, rs );
-                    } catch ( SQLException e ) {
-                        logger.error( "Unable to load all entity sets", e );
-                        throw new IllegalStateException( "Unable to load entity sets.", e );
-                    }
-                },
-                rs -> {
-                    try {
-                        return ResultSetAdapters.entitySet( rs );
-                    } catch ( SQLException e ) {
-                        logger.error( "Unable to read entity set", e );
-                        throw new IllegalStateException( "Unable to read entity set.", e );
-                    }
-                }
-        );
-    }
-
-    public Set<UUID> getAllLinkingEntitySetIdsForEntitySet( UUID entitySetId ) {
-        return entitySets.keySet( Predicates.equal( EntitySetMapstore.LINKED_ENTITY_SET_INDEX, entitySetId ) );
     }
 
     public Iterable<PropertyUsageSummary> getPropertyUsageSummary( UUID propertyTypeId ) {
