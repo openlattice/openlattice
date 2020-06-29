@@ -2,7 +2,6 @@ package com.openlattice.users
 
 import com.auth0.json.mgmt.users.User
 import com.dataloom.mappers.ObjectMappers
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicates
 import com.openlattice.IdConstants
@@ -12,17 +11,9 @@ import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.organizations.SortedPrincipalSet
 import com.openlattice.organizations.roles.SecurePrincipalsManager
-import com.openlattice.postgres.PostgresColumn.*
-import com.openlattice.postgres.PostgresTable.USERS
-import com.openlattice.postgres.streams.BasePostgresIterable
-import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import java.util.*
-
-const val DELETE_BATCH_SIZE = 1024
-private val markUserSql = "UPDATE ${USERS.name} SET ${EXPIRATION.name} = ? WHERE ${USER_ID.name} = ?"
-private val expiredUsersSql = "SELECT ${USER_DATA.name} from ${USERS.name} WHERE ${EXPIRATION.name} < ? "
 
 /**
  *
@@ -109,17 +100,6 @@ class Auth0SyncService(
         processOrganizationEnrollments(principal, user)
 
         syncAuthenticationCache(principal.id)
-        markUser(user.id)
-    }
-
-    private fun markUser(userId: String) {
-        hds.connection.use { connection ->
-            connection.prepareStatement(markUserSql).use { ps ->
-                ps.setLong(1, System.currentTimeMillis())
-                ps.setString(2, userId)
-                ps.executeUpdate()
-            }
-        }
     }
 
     fun syncAuthenticationCacheForPrincipalIds(principalIds: Set<String>) {
@@ -209,15 +189,6 @@ class Auth0SyncService(
             orgService.addMembers(orgId, setOf(principal))
         }
 
-    }
-
-    // TODO handle user expiration
-    fun getExpiredUsers(): BasePostgresIterable<User> {
-        val expirationThreshold = System.currentTimeMillis() - 6 * REFRESH_INTERVAL_MILLIS
-        return BasePostgresIterable<User>(
-                PreparedStatementHolderSupplier(hds, expiredUsersSql, DELETE_BATCH_SIZE) { ps ->
-                    ps.setLong(1, expirationThreshold)
-                }) { rs -> mapper.readValue(rs.getString(USER_DATA.name)) }
     }
 
     private fun tryCreateNewUserPrincipal(user: User, principal: Principal): Boolean {
