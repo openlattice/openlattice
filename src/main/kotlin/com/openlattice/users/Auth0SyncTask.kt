@@ -121,14 +121,17 @@ class Auth0SyncTask
         val ds = getDependency()
         logger.info("Synchronizing users.")
 
-        ds.users.getCachedUsers()
+        ds.users.getCachedUsers().chunked(CHUNK_SIZE)
                 .map {
                     syncSemaphore.acquire()
+
+                    val userIds = it.map { user -> user.id }.toSet()
+
                     ds.executor.submit {
                         try {
-                            ds.users.syncUserEnrollmentsAndAuthentication(it)
+                            ds.users.syncAuthenticationCacheForPrincipalIds(userIds)
                         } catch (ex: Exception) {
-                            logger.error("Unable to synchronize enrollments and permissions for user ${it.id}", ex)
+                            logger.error("Unable to synchronize enrollments and permissions for users $userIds", ex)
                         } finally {
                             syncSemaphore.release()
                         }

@@ -4,12 +4,10 @@ import com.auth0.json.mgmt.users.User
 import com.dataloom.mappers.ObjectMappers
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.hazelcast.core.HazelcastInstance
-import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.openlattice.IdConstants
 import com.openlattice.authorization.*
 import com.openlattice.authorization.mapstores.PrincipalMapstore
-import com.openlattice.authorization.mapstores.ReadSecurablePrincipalAggregator
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.organizations.SortedPrincipalSet
@@ -124,8 +122,22 @@ class Auth0SyncService(
         }
     }
 
+    fun syncAuthenticationCacheForPrincipalIds(principalIds: Set<String>) {
+
+        val securablePrincipals = principals.entrySet(Predicates.`in`(
+                PrincipalMapstore.PRINCIPAL_INDEX,
+                *principalIds.map { Principal(PrincipalType.USER, it) }.toTypedArray()
+        )).associate { it.value.principal.id to it.value }
+        authnPrincipalCache.putAll(securablePrincipals)
+
+        authnRolesCache.putAll(getPrincipalTreesByPrincipalId(securablePrincipals.values.toSet()))
+    }
+
     private fun syncAuthenticationCache(principalId: String) {
-        val sp = getPrincipal(principalId) ?: return
+        val sp = principals.values(Predicates.equal(
+                PrincipalMapstore.PRINCIPAL_INDEX,
+                Principal(PrincipalType.USER, principalId)
+        )).firstOrNull() ?: return
         authnPrincipalCache.set(principalId, sp)
         val securablePrincipals = getAllPrincipals(sp) ?: return
 
@@ -142,6 +154,32 @@ class Auth0SyncService(
         return AclKeySet(principalTrees.getAll(aclKeys).values.flatMap { it.value })
     }
 
+    private fun getPrincipalTreesByPrincipalId(sps: Set<SecurablePrincipal>): Map<String, SortedPrincipalSet> {
+        val aclKeyPrincipals = principalTrees.getAll(sps.map { it.aclKey }.toSet())
+
+        // Bulk load all relevant principal trees from hazelcast
+        var nextLayer = aclKeyPrincipals.values.flatMap { it.value }.toSet()
+        while (nextLayer.isNotEmpty()) {
+            val nextLayerMap     = principalTrees.getAll(nextLayer) - aclKeyPrincipals.keys
+            nextLayer = nextLayerMap.keys
+            aclKeyPrincipals.putAll(nextLayerMap)
+        }
+
+        // Map all loaded principals to SecurablePrincipals
+        val aclKeysToPrincipals = principals.getAll(aclKeyPrincipals.keys + aclKeyPrincipals.values.flatten())
+
+        // Map each SecurablePrincipal to all its aclKey children from the in-memory map, and from there a SortedPrincipalSet
+        return sps.associate {
+            val childAclKeys = aclKeyPrincipals.getOrDefault(it.aclKey, AclKeySet())
+            var nextAclKeyLayer = childAclKeys
+            while (nextAclKeyLayer.isNotEmpty()) {
+                nextAclKeyLayer = AclKeySet((nextAclKeyLayer.associateWith { ak -> aclKeyPrincipals.getOrDefault(ak, mutableSetOf<AclKey>()) }.values.flatten().toMutableSet() - childAclKeys).toMutableSet())
+                childAclKeys.addAll(nextAclKeyLayer)
+            }
+           it.principal.id to SortedPrincipalSet(TreeSet(childAclKeys.map { aclKey -> aclKeysToPrincipals.getValue(aclKey).principal }))
+        }
+    }
+
     private fun getAllPrincipals(sp: SecurablePrincipal): Collection<SecurablePrincipal>? {
         val roles = getLayer(setOf(sp.aclKey))
         var nextLayer: Set<AclKey> = roles
@@ -152,17 +190,6 @@ class Auth0SyncService(
         }
 
         return principals.getAll(roles).values
-    }
-
-    @Suppress("UNCHECKED_CAST")
-    private fun getPrincipal(principalId: String): SecurablePrincipal? {
-        return principals.aggregate(
-                ReadSecurablePrincipalAggregator(),
-                Predicates.equal(
-                        PrincipalMapstore.PRINCIPAL_INDEX, Principals.getUserPrincipal(principalId)
-                ) as Predicate<AclKey, SecurablePrincipal>
-        )
-
     }
 
     private fun processGlobalEnrollments(principalMap: Map<Principal, User>) {
