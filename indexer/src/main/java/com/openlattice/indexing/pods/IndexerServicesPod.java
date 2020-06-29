@@ -139,7 +139,7 @@ public class IndexerServicesPod {
 
     @Bean
     public DbCredentialService dbcs() {
-        return new DbCredentialService( hazelcastInstance, pgUserApi );
+        return new DbCredentialService( hazelcastInstance );
     }
 
     @Bean
