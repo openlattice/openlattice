@@ -109,23 +109,6 @@ public class MapstoresPod {
     private Jdbi jdbi;
 
     @Bean
-    public PostgresUserApi pgUserApi() {
-        try ( Connection conn = hikariDataSource.getConnection(); Statement stmt = conn.createStatement() ) {
-            String createUserSql = Resources.toString( Resources.getResource( "create_user.sql" ), Charsets.UTF_8 );
-            String alterUserSql = Resources.toString( Resources.getResource( "alter_user.sql" ), Charsets.UTF_8 );
-            String deleteUserSql = Resources.toString( Resources.getResource( "delete_user.sql" ), Charsets.UTF_8 );
-            stmt.addBatch( createUserSql );
-            stmt.addBatch( alterUserSql );
-            stmt.addBatch( deleteUserSql );
-            stmt.executeBatch();
-        } catch ( SQLException | IOException e ) {
-            logger.error( "Unable to configure postgres functions for user management.", e );
-        }
-
-        return jdbi.onDemand( PostgresUserApi.class );
-    }
-
-    @Bean
     public SelfRegisteringMapStore<UUID, OrganizationAssembly> organizationAssemblies() {
         return new OrganizationAssemblyMapstore( hikariDataSource );
     }
@@ -197,7 +180,7 @@ public class MapstoresPod {
 
     @Bean
     public SelfRegisteringMapStore<String, String> dbCredentialsMapstore() {
-        return new PostgresCredentialMapstore( hikariDataSource, pgUserApi() );
+        return new PostgresCredentialMapstore( hikariDataSource );
     }
 
     @Bean
