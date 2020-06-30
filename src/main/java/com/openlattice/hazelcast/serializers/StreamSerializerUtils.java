@@ -37,8 +37,6 @@ import java.util.Map;
 public class StreamSerializerUtils {
     private StreamSerializerUtils() {};
 
-    private static final Permission[] permissions = Permission.values();
-
     public static <T> void serializeFromList( ObjectDataOutput out, List<T> elements, IoPerformingConsumer<T> c )
             throws IOException {
         out.writeInt( elements.size() );

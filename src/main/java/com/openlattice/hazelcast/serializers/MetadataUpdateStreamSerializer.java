@@ -7,6 +7,8 @@ import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.data.DataExpiration;
 import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import org.springframework.stereotype.Component;
 
 import java.io.DataInput;
 import java.io.IOException;
@@ -14,9 +16,6 @@ import java.util.LinkedHashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
-import org.springframework.stereotype.Component;
 
 @Component
 public class MetadataUpdateStreamSerializer implements SelfRegisteringStreamSerializer<MetadataUpdate> {
