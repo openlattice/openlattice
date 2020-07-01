@@ -2,6 +2,7 @@ package com.openlattice.data.storage
 
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.storage.partitions.PartitionManager
+import com.openlattice.data.storage.partitions.getPartition
 import com.openlattice.postgres.DataTables.LAST_INDEX
 import com.openlattice.postgres.DataTables.LAST_LINK
 import com.openlattice.postgres.PostgresArrays
@@ -33,7 +34,11 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
 
                     val partitions = entitySetPartitions.getValue(entitySetId).toList()
                     entities.entries
-                            .groupBy({ getPartition(it.key, partitions) }, { it.toPair() })
+                            .groupBy({
+                                         getPartition(
+                                                 it.key, partitions
+                                         )
+                                     }, { it.toPair() })
                             .mapValues { it.value.toMap() }
                             .forEach { (partition, entitiesWithLastWrite) ->
 
@@ -70,7 +75,11 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
 
                     val partitions = entitySetPartitions.getValue(entitySetId).toList()
                     entities.entries
-                            .groupBy({ getPartition(it.key, partitions) }, { it.toPair() })
+                            .groupBy({
+                                         getPartition(
+                                                 it.key, partitions
+                                         )
+                                     }, { it.toPair() })
                             .mapValues { it.value.toMap() }
                             .forEach { (partition, linkingIdsByOriginId) ->
 
@@ -133,7 +142,11 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
 
                     val partitions = entitySetPartitions.getValue(entitySetId).toList()
 
-                    entities.groupBy { getPartition(it, partitions) }
+                    entities.groupBy {
+                        getPartition(
+                                it, partitions
+                        )
+                    }
                             .forEach { (partition, entities) ->
 
                                 val idsArray = PostgresArrays.createUuidArray(connection, entities)
@@ -198,7 +211,11 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
                 normalEntityKeys.forEach { (entitySetId, normalIds) ->
                     val partitions = entitySetPartitions.getValue(entitySetId).toList()
 
-                    normalIds.groupBy { getPartition(it, partitions) }
+                    normalIds.groupBy {
+                        getPartition(
+                                it, partitions
+                        )
+                    }
                             .forEach { (partition, normalEntityKeyIds) ->
                                 val normalEntityKeyIdsArray = PostgresArrays.createUuidArray(connection, normalEntityKeyIds)
                                 stmt.setObject(1, entitySetId)
