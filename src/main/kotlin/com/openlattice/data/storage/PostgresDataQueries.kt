@@ -695,7 +695,7 @@ fun getPartition(entityKeyId: UUID, partitions: List<Int>): Int {
 }
 
 fun getPartition(entityKeyId: UUID, partitions: Array<Int>): Int {
-    return partitions[partitionSelectorFromId(entityKeyId) % partitions.size]
+    return partitions[entityKeyId.leastSignificantBits.toInt() % partitions.size]
 }
 
 /**
