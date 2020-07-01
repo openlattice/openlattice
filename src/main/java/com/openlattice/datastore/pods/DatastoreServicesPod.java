@@ -387,13 +387,12 @@ public class DatastoreServicesPod {
 
     @Bean
     public HazelcastIdGenerationService idGenerationService() {
-        return new HazelcastIdGenerationService( hazelcastClientProvider, executor );
+        return new HazelcastIdGenerationService( hazelcastClientProvider );
     }
 
     @Bean
     public EntityKeyIdService idService() {
-        return new PostgresEntityKeyIdService( hazelcastClientProvider,
-                executor,
+        return new PostgresEntityKeyIdService(
                 hikariDataSource,
                 idGenerationService(),
                 partitionManager() );
