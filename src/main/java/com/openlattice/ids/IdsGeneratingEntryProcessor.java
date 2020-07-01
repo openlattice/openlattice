@@ -23,6 +23,7 @@ package com.openlattice.ids;
 import com.google.common.annotations.VisibleForTesting;
 import com.hazelcast.core.Offloadable;
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor;
+import com.openlattice.rhizome.hazelcast.DelegatedUUIDList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map.Entry;
@@ -44,7 +45,7 @@ public class IdsGeneratingEntryProcessor extends AbstractRhizomeEntryProcessor<I
         final Range range = entry.getValue(); //Range should never be null in the EP.
         final UUID[] ids = getIds( range );
         entry.setValue( range );
-        return Arrays.asList( ids );
+        return DelegatedUUIDList.wrap( Arrays.asList( ids ) );
     }
 
     public int getCount() {

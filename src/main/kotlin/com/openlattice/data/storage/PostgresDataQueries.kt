@@ -697,6 +697,10 @@ fun getPartition(entityKeyId: UUID, partitions: List<Int>): Int {
     return partitions[partitionSelectorFromId(entityKeyId) % partitions.size]
 }
 
+fun getPartition(entityKeyId: UUID, partitions: Array<Int>): Int {
+    return partitions[partitionSelectorFromId(entityKeyId) % partitions.size]
+}
+
 /**
  * Builds the list of partitions for a given set of entity key ids.
  * @param entityKeyIds The entity key ids whose partitions will be retrieved.
