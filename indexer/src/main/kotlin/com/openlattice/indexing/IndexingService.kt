@@ -26,7 +26,7 @@ import com.geekbeast.util.StopWatch
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.hazelcast.core.HazelcastInstance
 import com.openlattice.admin.indexing.IndexingState
-import com.openlattice.data.storage.getPartition
+import com.openlattice.data.storage.partitions.getPartition
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.HazelcastQueue
