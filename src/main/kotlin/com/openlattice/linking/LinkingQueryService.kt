@@ -48,7 +48,7 @@ interface LinkingQueryService {
             scores: Map<EntityDataKey, Map<EntityDataKey, Double>>): Int
 
     /**
-     * Performs the following operataions:
+     * Performs the following operations:
      *
      * - Creates a transaction with lockClustersForUpdates
      * - Invokes doWork function
