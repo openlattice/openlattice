@@ -111,8 +111,6 @@ class HazelcastMap<K, V> internal constructor(val name: String) : TypedMapIdenti
         @JvmField val EXPIRATION_LOCKS = HazelcastMap<UUID, Long>("EXPIRATION_LOCKS")
         @JvmField val HBA_AUTHENTICATION_RECORDS = HazelcastMap<String, PostgresAuthenticationRecord>("HBA_AUTHENTICATION_RECORDS")
         @JvmField val ID_GENERATION = HazelcastMap<Long, Range>("ID_GENERATION")
-        @JvmField val ID_REF_COUNTS = HazelcastMap<EntityKey, Long>("ID_REF_COUNTS")
-        @JvmField val ID_CACHE = HazelcastMap<EntityKey, UUID>("ID_CACHE")
         @JvmField val INDEXING_JOBS = HazelcastMap<UUID, DelegatedUUIDSet>("INDEXING_JOBS")
         @JvmField val INDEXING_LOCKS = HazelcastMap<UUID, Long>("INDEXING_LOCKS")
         @JvmField val INDEXING_PROGRESS = HazelcastMap<UUID, UUID>("INDEXING_PROGRESS")
