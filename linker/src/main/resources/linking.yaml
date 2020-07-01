@@ -10,7 +10,7 @@ entity-types:
 
 block-size: 1000
 blacklist:
-  - c5512075-bbf4-4b74-80f3-391dbaf0bc7d
+  - c5512075-bbf4-4b74-80f3-391dbaf0bc7d #JC BHR people
   - 8c9e3bcf-89df-4049-a24e-2322037162a4
   - 152eb3e4-c9b3-4ecc-89b8-a19e81677d09
   - efd3a154-dbc7-4a09-9062-72f131e8fcce # JC subjects
@@ -19,12 +19,44 @@ blacklist:
   - 2ef9d5ce-0245-4f85-95ab-6e4b06f8c8a7
   - 71ddddd6-3c5d-4a8b-8fe3-808d1eb13f19
 whitelist:
-  - c5512075-bbf4-4b74-80f3-391dbaf0bc7d #JC BHR people
-  - 1dbad7b6-73db-436d-a1a1-15313d8883ec #Iowa City BHR people
-  - d189f747-fa39-4b41-b86e-a056100ed2fa # JC Inmates
+  - 2deb5292-11b5-4874-b4b1-2a5a57804e68
+  - e9dc56bf-7cf9-4e25-8969-1ac4c1b1e1ec #BerksInmates
   - 9d9a6c3e-fd82-4599-9dcc-a2602e2bd54d #BerksHC
-  - 6576d2d5-aa5e-4a15-ab56-48387aa405c4 #Guilford Inmates
-  - 681712a1-450f-4a2e-a40d-5d10cb5d6523 #Guilford Arrestees
+  - 5722abca-5b64-4744-8eb9-26a74fb3013b # MS-Ac
+  - a6d7d333-4905-4562-bcda-34fe773775eb # MS-Ar
+  - 46c83978-a50c-4cff-939a-7b1a8c0ad52c # MS-Bu
+  - 2ab42bf5-8d16-4f8d-a549-7b2de4a525cf # MS-Bi
+  - 608f403c-8bd2-4411-aec8-6830762f0ca3 # MS-Ch
+  - 06a7f19e-c7d5-4453-bfe9-6810d907cd7a # MS-NR
+  - c4689df7-54b0-47d8-8105-08def794da0a # MS-Re
+  - c33c2561-d347-462c-9cce-6eb77e72a1da # MS-CamSuspects
+  - 1776d96c-79ac-4e98-9f7c-5248383bc14d # MS-Low
+  - 4a92d4b6-7c45-4a35-b24f-640f5fcc4545
+  - fed0eb58-e55e-46c9-a0dd-a0f30a8bd719
+  - 4e4133b4-e660-445a-8af2-38442ba629ba
+  - 31a59929-0f46-4644-8a87-81404d16d4b7
+  - dcd42f2b-83bb-444d-a01a-eacd0b2a96f7
+  - f8563155-959e-442d-8c0f-1a66a69232f5
+  - 1ca3d675-9bc0-4725-bef8-cc7eeb03154d
+  - 0808c547-08f1-4837-ba9c-fedca3fb13f1
+  - d20f3b39-1bcc-441c-b91d-00992a3bef7a
+  - 5948af80-dc4a-4183-8098-01f2517caed6
+  - 86e05482-c18c-4bd9-9992-63204279acdb
+  - ec1db659-f9a5-43d9-a55b-2d2854cc822f
+  - 5adfb530-a178-4cf4-afba-9ce3c99c02c7
+  - 12f200bd-f497-4b66-b24b-daf28f910568
+  - 02006268-af22-41b0-8ad5-4ceea1246a6c
+  - 58cd5e5e-6936-481e-ac6c-8141b1f39d2c
+  - 7fc912ed-9ee5-4f50-8fb3-b7a064085f58
+  - 9bbc888f-e925-4d2a-ac8e-2acd63ecf8df
+  - c4cc0800-bafc-4a97-9952-e8576ca49013
+
+  # - c5512075-bbf4-4b74-80f3-391dbaf0bc7d #JC BHR people
+  # - 1dbad7b6-73db-436d-a1a1-15313d8883ec #Iowa City BHR people
+  # - d189f747-fa39-4b41-b86e-a056100ed2fa # JC Inmates
+  # - 9d9a6c3e-fd82-4599-9dcc-a2602e2bd54d #BerksHC
+  # - 6576d2d5-aa5e-4a15-ab56-48387aa405c4 #Guilford Inmates
+  # - 681712a1-450f-4a2e-a40d-5d10cb5d6523 #Guilford Arrestees
   #   - 2cade629-d165-4a9d-92e2-44d7836142e2 # MSO
   # - 5722abca-5b64-4744-8eb9-26a74fb3013b # MS-Ac
   # - 2ab42bf5-8d16-4f8d-a549-7b2de4a525cf # MS-Bi
@@ -33,9 +65,9 @@ whitelist:
   # - a6d7d333-4905-4562-bcda-34fe773775eb # MS-Ar
   # - 46c83978-a50c-4cff-939a-7b1a8c0ad52c # MS-Bu
   #   - c5a9e6b5-822e-44ca-b19d-e10628618574
-  - e9dc56bf-7cf9-4e25-8969-1ac4c1b1e1ec #BerksInmates
-  - 87707f36-14f4-44c2-a3cb-f140389f7067 #BerksParolees
-  - 4e369747-66aa-432f-8aa3-2591cee0fa8d #BerksCEH
+  # - e9dc56bf-7cf9-4e25-8969-1ac4c1b1e1ec #BerksInmates
+  # - 87707f36-14f4-44c2-a3cb-f140389f7067 #BerksParolees
+  # - 4e369747-66aa-432f-8aa3-2591cee0fa8d #BerksCEH
   #   - 6b32e5a9-9858-449a-a228-8340486d84b7 # JC1
   #   - b278d952-3bad-420e-9e0d-f66352760f42 # JC2
   # - c33c2561-d347-462c-9cce-6eb77e72a1da #MS-CamSuspects
@@ -44,8 +76,8 @@ whitelist:
   # - 1776d96c-79ac-4e98-9f7c-5248383bc14d #MS-Low
   #   - 1f87a73a-c8fa-4963-a33a-7737cb5060db
   # - 06a7f19e-c7d5-4453-bfe9-6810d907cd7a # MS-NR
-  - 30d476d8-de21-4157-a4da-91b46b5d4341 # DEMO1
-  - a8328e14-5024-4595-b4da-a4a3ebb57b2a # DEMO2
+  # - 30d476d8-de21-4157-a4da-91b46b5d4341 # DEMO1
+  # - a8328e14-5024-4595-b4da-a4a3ebb57b2a # DEMO2
   #   - 51992ab5-c315-4696-be93-7780c29d490f #BerksRelcust
   # - fb861624-8374-42dc-b5c2-8ec778c44026 #DaWi
   # - a0790efc-d6df-42a0-8165-2a08ef12b032 #DaWi
@@ -56,8 +88,7 @@ whitelist:
   # - 9cd97623-0a21-4617-a23c-3489f6f65309 #DaWi
 
   # Only for rehearsal tests
-  - 91551726-afa2-4aee-8579-46cdfc610b97 #SocratesTestA
-  - 14b10482-31de-42ed-b5c8-6260d9f25e24 #SocratesTestB
-  - 65847f7b-c939-414f-bb45-863cd594e412 #SocratesTestC
-  - 8c97bf63-ca7a-4f37-ba1c-40338b1032d4 #SocratesTestD
-
+  # - 91551726-afa2-4aee-8579-46cdfc610b97 #SocratesTestA
+  # - 14b10482-31de-42ed-b5c8-6260d9f25e24 #SocratesTestB
+  # - 65847f7b-c939-414f-bb45-863cd594e412 #SocratesTestC
+  # - 8c97bf63-ca7a-4f37-ba1c-40338b1032d4 #SocratesTestD
