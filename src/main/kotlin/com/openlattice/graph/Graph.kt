@@ -33,7 +33,7 @@ import com.openlattice.analysis.requests.*
 import com.openlattice.data.*
 import com.openlattice.data.storage.PostgresEntityDataQueryService
 import com.openlattice.data.storage.entityKeyIdColumns
-import com.openlattice.data.storage.getPartition
+import com.openlattice.data.storage.partitions.getPartition
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.data.storage.selectEntitySetWithCurrentVersionOfPropertyTypes
 import com.openlattice.datastore.services.EntitySetManager
@@ -116,7 +116,9 @@ class Graph(
     private fun addKeyIds(ps: PreparedStatement, dataEdgeKey: DataEdgeKey, startIndex: Int = 1) {
         val edk = dataEdgeKey.src
         val partitions = partitionManager.getEntitySetPartitions(edk.entitySetId)
-        val partition = getPartition(edk.entityKeyId, partitions.toList())
+        val partition = getPartition(
+                edk.entityKeyId, partitions.toList()
+        )
         ps.setObject(startIndex, partition)
         ps.setObject(startIndex + 1, dataEdgeKey.src.entityKeyId)
         ps.setObject(startIndex + 2, dataEdgeKey.dst.entityKeyId)
@@ -1406,7 +1408,9 @@ fun bindColumnsForEdge(
 
     var index = 1
 
-    ps.setObject(index++, getPartition(edk.entityKeyId, partitions))
+    ps.setObject(index++,
+                 getPartition(edk.entityKeyId, partitions)
+    )
     ps.setObject(index++, dataEdgeKey.src.entitySetId)
     ps.setObject(index++, dataEdgeKey.src.entityKeyId)
     ps.setObject(index++, dataEdgeKey.dst.entitySetId)

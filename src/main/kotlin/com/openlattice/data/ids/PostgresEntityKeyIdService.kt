@@ -21,18 +21,13 @@
 
 package com.openlattice.data.ids
 
-import com.geekbeast.hazelcast.HazelcastClientProvider
 import com.google.common.base.Preconditions.checkState
-import com.google.common.collect.Queues
-import com.google.common.util.concurrent.ListeningExecutorService
 import com.openlattice.IdConstants
 import com.openlattice.data.EntityKey
 import com.openlattice.data.EntityKeyIdService
-import com.openlattice.data.storage.getPartition
 import com.openlattice.data.storage.partitions.PartitionManager
+import com.openlattice.data.storage.partitions.getPartition
 import com.openlattice.data.util.PostgresDataHasher
-import com.openlattice.hazelcast.HazelcastClient
-import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.ids.HazelcastIdGenerationService
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
@@ -43,10 +38,8 @@ import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.slf4j.LoggerFactory
-import java.sql.Connection
 import java.sql.PreparedStatement
 import java.util.*
-import java.util.concurrent.BlockingQueue
 import kotlin.collections.HashMap
 
 /**
@@ -67,7 +60,7 @@ private val INSERT_ID_TO_DATA_SQL = "INSERT INTO ${DATA.name} (" +
         "${VERSION.name}," +
         "${HASH.name}) VALUES (?,?,?,?,?,?) " +
         "ON CONFLICT DO NOTHING"
-private val INSERT_SYNC_SQL = "INSERT INTO ${SYNC_IDS.name} (${ENTITY_SET_ID.name},${ENTITY_ID.name},${ID.name}) VALUES(?,?,?) ON CONFLICT DO NOTHING"
+private val  INSERT_SYNC_SQL = "INSERT INTO ${SYNC_IDS.name} (${ENTITY_SET_ID.name},${ENTITY_ID.name},${ID.name}) VALUES(?,?,?) ON CONFLICT DO NOTHING"
 
 private val logger = LoggerFactory.getLogger(PostgresEntityKeyIdService::class.java)
 
@@ -85,7 +78,7 @@ class PostgresEntityKeyIdService(
     private fun storeEntityKeyIdReservations(
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
-            partitions: Array<Int> = partitionManager.getEntitySetPartitions(entitySetId).toTypedArray()
+            partitions: IntArray = partitionManager.getEntitySetPartitions(entitySetId).toIntArray()
     ) {
         hds.connection.use { connection ->
             val insertIds = connection.prepareStatement(INSERT_SQL)
@@ -105,7 +98,7 @@ class PostgresEntityKeyIdService(
     private fun storeEntityKeyIds(entityKeyIds: Map<EntityKey, UUID>): Map<EntityKey, UUID> {
         val partitionsByEntitySet = partitionManager
                 .getPartitionsByEntitySetId(entityKeyIds.keys.map { it.entitySetId }.toSet())
-                .mapValues { it.value.toTypedArray() }
+                .mapValues { it.value.toIntArray() }
         /**
          * The new algorithm will result in more reads, but reduce the amount of hazelcast traffic
          * for locking during id generation. This will only happen if a request to assign entity key ids
@@ -173,7 +166,7 @@ class PostgresEntityKeyIdService(
             entityKeyId: UUID,
             insertIds: PreparedStatement,
             insertToData: PreparedStatement,
-            partitions: Array<Int> = partitionManager.getEntitySetPartitions(entitySetId).toTypedArray()
+            partitions: IntArray = partitionManager.getEntitySetPartitions(entitySetId).toIntArray()
     ) {
         val partition = getPartition(entityKeyId, partitions)
 
@@ -211,7 +204,7 @@ class PostgresEntityKeyIdService(
         val ids = idGenerationService.getNextIds(count)
         storeEntityKeyIdReservations(
                 IdConstants.LINKING_ENTITY_SET_ID.id, ids,
-                partitionManager.getAllPartitions().toTypedArray()
+                partitionManager.getAllPartitions().toIntArray()
         )
         return ids.toList()
     }

@@ -132,3 +132,12 @@ private val EMPTIEST_PARTITIONS = """
             WHERE $ENTITY_SET_SIZES_VIEW.$COUNT > 0 
             AND array_length( ${PARTITIONS.name}, 1) > 0
         """.trimIndent()
+
+// Consistently Ordered, Unique Values, Constant Index
+fun getPartition(entityKeyId: UUID, partitions: List<Int>): Int {
+    return partitions[entityKeyId.leastSignificantBits.toInt() % partitions.size]
+}
+
+fun getPartition(entityKeyId: UUID, partitions: IntArray): Int {
+    return partitions[entityKeyId.leastSignificantBits.toInt() % partitions.size]
+}

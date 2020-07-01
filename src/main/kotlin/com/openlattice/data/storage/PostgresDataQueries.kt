@@ -4,6 +4,7 @@ package com.openlattice.data.storage
 import com.openlattice.IdConstants
 import com.openlattice.analysis.SqlBindInfo
 import com.openlattice.analysis.requests.Filter
+import com.openlattice.data.storage.partitions.getPartition
 import com.openlattice.edm.PostgresEdmTypeConverter
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.*
@@ -689,15 +690,6 @@ internal val selectEntitySetTextProperties = "SELECT COALESCE(${getSourceDataCol
  */
 internal val selectEntitiesTextProperties = "$selectEntitySetTextProperties AND ${ID_VALUE.name} = ANY(?)"
 
-// Consistently Ordered, Unique Values, Constant Index
-fun getPartition(entityKeyId: UUID, partitions: List<Int>): Int {
-    return partitions[entityKeyId.leastSignificantBits.toInt() % partitions.size]
-}
-
-fun getPartition(entityKeyId: UUID, partitions: Array<Int>): Int {
-    return partitions[entityKeyId.leastSignificantBits.toInt() % partitions.size]
-}
-
 /**
  * Builds the list of partitions for a given set of entity key ids.
  * @param entityKeyIds The entity key ids whose partitions will be retrieved.
@@ -705,7 +697,11 @@ fun getPartition(entityKeyId: UUID, partitions: Array<Int>): Int {
  * @return A list of partitions.
  */
 fun getPartitionsInfo(entityKeyIds: Set<UUID>, partitions: List<Int>): List<Int> {
-    return entityKeyIds.map { entityKeyId -> getPartition(entityKeyId, partitions) }
+    return entityKeyIds.map { entityKeyId ->
+        getPartition(
+                entityKeyId, partitions
+        )
+    }
 }
 
 /**
@@ -718,7 +714,11 @@ fun getPartitionsInfo(entityKeyIds: Set<UUID>, partitions: List<Int>): List<Int>
  */
 @Deprecated("Unused")
 fun getPartitionsInfoMap(entityKeyIds: Set<UUID>, partitions: List<Int>): Map<UUID, Int> {
-    return entityKeyIds.associateWith { entityKeyId -> getPartition(entityKeyId, partitions) }
+    return entityKeyIds.associateWith { entityKeyId ->
+        getPartition(
+                entityKeyId, partitions
+        )
+    }
 }
 
 fun getMergedDataColumnName(datatype: PostgresDatatype): String {
