@@ -84,9 +84,6 @@ public class LinkerServicesPod {
     private HikariDataSource hikariDataSource;
 
     @Inject
-    private PostgresUserApi pgUserApi;
-
-    @Inject
     private EventBus eventBus;
 
     @Inject
