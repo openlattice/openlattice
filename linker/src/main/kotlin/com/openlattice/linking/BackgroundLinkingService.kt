@@ -33,6 +33,7 @@ import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.HazelcastQueue
 import com.openlattice.postgres.mapstores.EntitySetMapstore
 import org.slf4j.LoggerFactory
+import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import java.time.Instant
 import java.util.*
@@ -42,6 +43,7 @@ import java.util.concurrent.TimeUnit
 internal const val REFRESH_PROPERTY_TYPES_INTERVAL_MILLIS = 30000L
 internal const val LINKING_BATCH_TIMEOUT_MILLIS = 120000L
 internal const val MINIMUM_SCORE = 0.75
+internal const val LINKING_RATE = 300_000L
 
 /**
  * Performs realtime linking of individuals as they are integrated ino the system.
@@ -70,10 +72,10 @@ class BackgroundLinkingService(
     private val priorityEntitySets = configuration.whitelist.orElseGet { setOf() }
 
     @Suppress("UNUSED")
-    private val enqueuer = executor.submit {
-
-        try {
-            while (true) {
+    @Scheduled(fixedRate = LINKING_RATE)
+    fun enqueue() {
+        executor.submit {
+            try {
                 val filteredLinkableEntitySetIds = entitySets.keySet(
                         Predicates.and(
                                 Predicates.`in`(EntitySetMapstore.ENTITY_TYPE_ID_INDEX, *linkableTypes.toTypedArray()),
@@ -116,9 +118,9 @@ class BackgroundLinkingService(
                             candidates.addAll(forLinking)
                             logger.debug( "Queued entities needing linking {}", forLinking)
                         }
+            } catch (ex: Exception) {
+                logger.info("Encountered error while updating candidates for linking.", ex)
             }
-        } catch (ex: Exception) {
-            logger.info("Encountered error while updating candidates for linking.", ex)
         }
     }
 
