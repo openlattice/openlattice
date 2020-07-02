@@ -110,53 +110,66 @@ class PostgresEntityKeyIdService(
          * 3. Issue batched inserts for actual entity key ids. May end up performin a lot of no-ops.
          */
         return hds.connection.use { connection ->
-            val insertSyncIds = connection.prepareStatement(INSERT_SYNC_SQL)
-            entityKeyIds.forEach {
-                insertSyncIds.setObject(1, it.key.entitySetId)
-                insertSyncIds.setString(2, it.key.entityId)
-                insertSyncIds.setObject(3, it.value)
-                insertSyncIds.addBatch()
-            }
-
-            val totalSyncIdRowsWritten = insertSyncIds.executeBatch()
-
-            val syncIds = entityKeyIds.keys
-                    .groupBy({ it.entitySetId }, { it.entityId })
-                    .mapValues { it.value.toSet() }
-
-            val actualEntityKeyIds = loadEntityKeyIds(syncIds)
-
-            val insertIds = connection.prepareStatement(INSERT_SQL)
-            val insertToData = connection.prepareStatement(INSERT_ID_TO_DATA_SQL)
-
-            actualEntityKeyIds.forEach {
-                storeEntityKeyIdAddBatch(
-                        it.key.entitySetId,
-                        entityKeyId = it.value,
-                        insertIds = insertIds,
-                        insertToData = insertToData,
-                        partitions = partitionsByEntitySet.getValue(it.key.entitySetId)
-                )
-            }
-
-            val totalWritten = insertIds.executeBatch().sum()
-            val totalDataRowsWritten = insertToData.executeBatch().sum()
-
-            if (logger.isDebugEnabled) {
-                logger.debug("Inserted ${totalSyncIdRowsWritten.sum()} sync ids.")
-                logger.debug("Inserted $totalWritten ids.")
-                logger.debug("Inserted $totalDataRowsWritten data ids.")
-            }
-
-            //Take the actual entity key ids of instead of the generated ones.
-            entityKeyIds.mapValues {
-                val actualEntityKeyId = actualEntityKeyIds[it.key]
-                return@mapValues if (actualEntityKeyId == null) {
-                    it.value
-                } else {
-                    idGenerationService.returnId(it.value)
-                    actualEntityKeyId
+            try {
+                connection.autoCommit = false
+                
+                val insertSyncIds = connection.prepareStatement(INSERT_SYNC_SQL)
+                entityKeyIds.forEach {
+                    insertSyncIds.setObject(1, it.key.entitySetId)
+                    insertSyncIds.setString(2, it.key.entityId)
+                    insertSyncIds.setObject(3, it.value)
+                    insertSyncIds.addBatch()
                 }
+
+                val totalSyncIdRowsWritten = insertSyncIds.executeBatch()
+
+                val syncIds = entityKeyIds.keys
+                        .groupBy({ it.entitySetId }, { it.entityId })
+                        .mapValues { it.value.toSet() }
+
+                val actualEntityKeyIds = loadEntityKeyIds(syncIds)
+
+                val insertIds = connection.prepareStatement(INSERT_SQL)
+                val insertToData = connection.prepareStatement(INSERT_ID_TO_DATA_SQL)
+
+                actualEntityKeyIds.forEach {
+                    storeEntityKeyIdAddBatch(
+                            it.key.entitySetId,
+                            entityKeyId = it.value,
+                            insertIds = insertIds,
+                            insertToData = insertToData,
+                            partitions = partitionsByEntitySet.getValue(it.key.entitySetId)
+                    )
+                }
+
+                val totalWritten = insertIds.executeBatch().sum()
+                val totalDataRowsWritten = insertToData.executeBatch().sum()
+
+                connection.commit()
+
+                if (logger.isDebugEnabled) {
+                    logger.debug("Inserted ${totalSyncIdRowsWritten.sum()} sync ids.")
+                    logger.debug("Inserted $totalWritten ids.")
+                    logger.debug("Inserted $totalDataRowsWritten data ids.")
+                }
+
+                //Take the actual entity key ids of instead of the generated ones.
+                entityKeyIds.mapValues {
+                    val actualEntityKeyId = actualEntityKeyIds[it.key]
+                    return@mapValues if (actualEntityKeyId == null) {
+                        it.value
+                    } else {
+                        idGenerationService.returnId(it.value)
+                        actualEntityKeyId
+                    }
+                }
+
+            } catch( ex: Exception ) {
+                logger.error("Unable to generate entity key ids. ", ex )
+                connection.rollback()
+                throw ex
+            } finally {
+                connection.autoCommit = true
             }
         }
     }
