@@ -433,7 +433,7 @@ class PostgresEntityDataQueryService(
                     val updatedCount = upsertEntities.executeUpdate()
                     connection.commit()
                     updatedCount
-                } catch( ex: PSQLException) {
+                } catch (ex: PSQLException) {
                     //Should be pretty rare.
                     connection.rollback()
                     throw ex
