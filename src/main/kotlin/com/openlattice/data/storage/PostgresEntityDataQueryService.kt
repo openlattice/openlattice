@@ -430,14 +430,16 @@ class PostgresEntityDataQueryService(
                     upsertEntities.setInt(6, partition)
                     upsertEntities.setInt(7, partition)
                     upsertEntities.setLong(8, version)
-                    upsertEntities.executeUpdate()
+                    val updatedCount = upsertEntities.executeUpdate()
+                    connection.commit()
+                    updatedCount
                 } catch( ex: PSQLException) {
                     //Should be pretty rare.
                     connection.rollback()
                     throw ex
                 }
             }
-            connection.commit()
+
             connection.autoCommit = true
             logger.debug("Updated $updatedLinkedEntities linked entities as part of insert.")
             updatedPropertyCounts
