@@ -111,9 +111,14 @@ class PostgresEntityKeyIdService(
          */
         return hds.connection.use { connection ->
             try {
+                /**
+                 * The reason for committing as a single transaction is that you don't want to assign an id
+                 * to an entity key, without successfully committing the id to the ids table.
+                 */
                 connection.autoCommit = false
-                
+
                 val insertSyncIds = connection.prepareStatement(INSERT_SYNC_SQL)
+
                 entityKeyIds.forEach {
                     insertSyncIds.setObject(1, it.key.entitySetId)
                     insertSyncIds.setString(2, it.key.entityId)
