@@ -38,8 +38,12 @@ import org.apache.commons.lang3.RandomStringUtils
 import org.junit.Assert
 import org.junit.BeforeClass
 import org.junit.Test
+import org.mockito.Mockito
 import org.slf4j.LoggerFactory
 import java.util.*
+import java.util.concurrent.Executors
+import java.util.concurrent.Future
+import javax.mail.Part
 
 /**
  *
@@ -47,9 +51,11 @@ import java.util.*
  */
 class PostgresEntityKeyIdServiceTest : TestServer() {
     companion object {
+        const val NUM_THREADS = 8
         private lateinit var postgresEntityKeyIdService: PostgresEntityKeyIdService
         private lateinit var idGenService: HazelcastIdGenerationService
         private val logger = LoggerFactory.getLogger(PostgresEntityKeyIdService::class.java)
+        private val executor = Executors.newFixedThreadPool(NUM_THREADS)
 
         @BeforeClass
         @JvmStatic
@@ -62,7 +68,9 @@ class PostgresEntityKeyIdServiceTest : TestServer() {
 
             }
 
-            val partMgr = PartitionManager(hazelcastInstance, hds)
+            val partMgr = Mockito.mock(PartitionManager::class.java)
+            val clazz = Mockito.any(UUID::class.java)
+            Mockito.`when`(partMgr.getEntitySetPartitions(clazz)).thenReturn((0 until 257).toSet())
             idGenService = HazelcastIdGenerationService(hzClientProvider)
             postgresEntityKeyIdService = PostgresEntityKeyIdService(
                     hds,
@@ -84,11 +92,19 @@ class PostgresEntityKeyIdServiceTest : TestServer() {
     @Test
     fun testUniqueIdAssignment() {
         val entitySetId = UUID.randomUUID()
-        val entityKeys = (0 until 100000).map { EntityKey(entitySetId, RandomStringUtils.randomAlphanumeric(10)) }
+        val entityKeys = (0 until 10000).map { EntityKey(entitySetId, RandomStringUtils.randomAlphanumeric(10)) }
+        val idGroups = (0 until 8)
+                .map {
+                    executor.submit {
+                        postgresEntityKeyIdService.getEntityKeyIds(entityKeys.toSet())
+                    } as Future<MutableMap<EntityKey, UUID>>
+                }
+                .map { it.get() }
         val expected = postgresEntityKeyIdService.getEntityKeyIds(entityKeys.toSet())
-        val actual = postgresEntityKeyIdService.getEntityKeyIds(entityKeys.toSet())
-        Assert.assertEquals(expected.keys, actual.keys)
-        Assert.assertEquals(expected.values, actual.values)
+        idGroups.forEach {
+            Assert.assertEquals("Keys don't match", expected.keys, it.keys)
+            Assert.assertEquals("Values don't match", expected.values.toSet(), it.values.toSet())
+        }
     }
 
 }

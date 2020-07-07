@@ -443,7 +443,7 @@ class PostgresEntityDataQueryService(
                     throw ex
                 }
             }
-
+            
             connection.autoCommit = true
             logger.debug("Updated $updatedLinkedEntities linked entities as part of insert.")
             updatedPropertyCounts
