@@ -453,7 +453,7 @@ public final class PostgresTable {
                     .primaryKey( ID, PRINCIPAL_ID );
     public static final PostgresTableDefinition SYNC_IDS          =
             new CitusDistributedTableDefinition( "sync_ids" )
-                    .addColumns( ENTITY_SET_ID, ENTITY_ID, ID_VALUE )
+                    .addColumns( ENTITY_SET_ID, ENTITY_ID, ID_VALUE, ID_WRITTEN )
                     .primaryKey( ENTITY_SET_ID, ENTITY_ID )
                     .distributionColumn( ENTITY_ID );
 
