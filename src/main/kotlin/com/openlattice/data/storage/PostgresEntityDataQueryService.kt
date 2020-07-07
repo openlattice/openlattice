@@ -423,7 +423,7 @@ class PostgresEntityDataQueryService(
                         lockEntities.setInt(3, partition)
                         lockEntities.addBatch()
                     }
-                    val lockCount = lockEntities.executeBatch()
+                    val lockCount = lockEntities.executeBatch().sum()
                     logger.info("Successfully locked batch of $lockCount entities for update.")
 
                     upsertEntities.setObject(1, versionsArrays)
