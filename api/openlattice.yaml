@@ -2631,15 +2631,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties:
-                  type: object
-                  additionalProperties:
-                    type: object
-                    additionalProperties:
-                      type: array
-                      items:
-                        $ref: "#/components/schemas/NeighborEntityIds"  
+                $ref: "#/components/schemas/SearchResult"  
     patch:
       summary: Executes a search over the data of a given entity set to find rows that match the search term
       operationId: searchEntitySetData
@@ -4378,6 +4370,22 @@ components:
           items:
             type: string
             format: uuid
+    SearchResult:
+      type: object
+      properties:
+        numHits:
+          type: integer
+        hits:
+          type: array
+          items:
+            type: object
+            properties:
+              propertyTypes:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PropertyType"
+              entitySet:
+                $ref: "#/components/schemas/EntitySet"
     DataSearchResult:
       type: object
       properties:
@@ -4887,16 +4895,6 @@ components:
           type: integer
         maxHits:
           type: integer
-    SearchResult:
-      type: object
-      description: A search result object, containing the total number of hits for the given query, and the hits themselves.
-      properties:
-        numHits: 
-          type: integer
-        hits:
-          type: object
-          additionalProperties:
-            type: string
     OrganizationExternalDatabaseTable:
       type: object
       properties:
