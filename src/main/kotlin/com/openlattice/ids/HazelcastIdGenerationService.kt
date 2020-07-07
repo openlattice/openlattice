@@ -25,7 +25,7 @@ class HazelcastIdGenerationService(clients: IHazelcastClientProvider) {
         /*
          * Leaving PARTITION_SCROLL_SIZE at 1 because of this Hazelcast bug: https://github.com/hazelcast/hazelcast/issues/10065
          */
-        private const val PARTITION_SCROLL_SIZE = 1
+        private const val PARTITION_SCROLL_SIZE = 5
         private const val MASK_LENGTH = 16
         const val NUM_PARTITIONS = 1 shl MASK_LENGTH //65536
         private val logger = LoggerFactory.getLogger(HazelcastIdGenerationService::class.java)

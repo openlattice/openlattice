@@ -45,6 +45,7 @@ import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
+import java.util.concurrent.locks.ReentrantLock
 import javax.mail.Part
 
 /**
@@ -74,7 +75,7 @@ class PostgresEntityKeyIdServiceTest : TestServer() {
 
             Mockito.doReturn((0 until 257).toSet()).`when`(partMgr).getEntitySetPartitions(UUID.randomUUID())
             Mockito.doAnswer {
-                val entitySetIds =  it.arguments[0] as Set<UUID>
+                val entitySetIds = it.arguments[0] as Set<UUID>
                 entitySetIds.associateWith { (0 until 257).toSet() }
             }.`when`(partMgr).getPartitionsByEntitySetId(anySet() as Set<UUID>)
 
@@ -97,9 +98,40 @@ class PostgresEntityKeyIdServiceTest : TestServer() {
     }
 
     @Test
+    fun testUniqueIdAssignment2() {
+        val entitySetId = UUID.randomUUID()
+        var testLock = ReentrantLock()
+        testLock.lock()
+        executor.submit {
+            while (!testLock.tryLock()) {
+                idGenService.getNextId()
+            }
+        }
+        try {
+            val entityKeys1 = (0 until 65000).map {
+                EntityKey(entitySetId, RandomStringUtils.randomAlphanumeric(10))
+            }.toSet()
+            val entityKeys2 = (0 until 1000).map {
+                EntityKey(entitySetId, RandomStringUtils.randomAlphanumeric(10))
+            }.toSet()
+            val idGroup1 = executor.submit<MutableMap<EntityKey, UUID>> {
+                postgresEntityKeyIdService.getEntityKeyIds(entityKeys1)
+            }.get()
+            val idGroup1a = executor.submit<MutableMap<EntityKey, UUID>> {
+                postgresEntityKeyIdService.getEntityKeyIds(entityKeys1)
+            }.get()
+            val idGroup2 = postgresEntityKeyIdService.getEntityKeyIds(entityKeys2.toSet())
+            Assert.assertTrue(idGroup1.values.toSet().intersect(idGroup2.values).isEmpty())
+        } finally {
+            testLock.unlock()
+        }
+
+    }
+
+    @Test
     fun testUniqueIdAssignment() {
         val entitySetId = UUID.randomUUID()
-        val entityKeys = (0 until 10000).map { EntityKey(entitySetId, RandomStringUtils.randomAlphanumeric(10)) }
+        val entityKeys = (0 until 1000).map { EntityKey(entitySetId, RandomStringUtils.randomAlphanumeric(10)) }
         val idGroups = (0 until 8)
                 .map {
                     executor.submit<MutableMap<EntityKey, UUID>> {

@@ -12,6 +12,7 @@ hazelcast:
     password: "trellis"
     seed-nodes: 
         - "localhost"
+    cp-member-count: 0
 
 postgres:
     hikari:
