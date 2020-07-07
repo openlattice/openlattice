@@ -131,7 +131,7 @@ class PostgresEntityKeyIdServiceTest : TestServer() {
     @Test
     fun testUniqueIdAssignment() {
         val entitySetId = UUID.randomUUID()
-        val entityKeys = (0 until 64000).map { EntityKey(entitySetId, RandomStringUtils.randomAlphanumeric(10)) }
+        val entityKeys = (0 until 70000).map { EntityKey(entitySetId, RandomStringUtils.randomAlphanumeric(10)) }
         val idGroups = (0 until 8)
                 .map {
                     executor.submit<MutableMap<EntityKey, UUID>> {
@@ -139,9 +139,9 @@ class PostgresEntityKeyIdServiceTest : TestServer() {
                     } as Future<MutableMap<EntityKey, UUID>>
                 }
                 .map { it.get() }
-        val expectedCount = idGroups.sumBy { it.values.size }
+        val expectedCount = 64000
         val actualCount = idGroups.flatMapTo(mutableSetOf()) { it.values }.size
-        Assert.assertEquals("", expectedCount, actualCount )
+        Assert.assertEquals("Number of keys do not match.", expectedCount, actualCount )
     }
 
 }
