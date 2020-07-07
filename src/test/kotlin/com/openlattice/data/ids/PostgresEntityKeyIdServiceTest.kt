@@ -85,7 +85,10 @@ class PostgresEntityKeyIdServiceTest : TestServer() {
     fun testUniqueIdAssignment() {
         val entitySetId = UUID.randomUUID()
         val entityKeys = (0 until 100000).map { EntityKey(entitySetId, RandomStringUtils.randomAlphanumeric(10)) }
-        postgresEntityKeyIdService.getEntityKeyIds(entityKeys.toSet())
+        val expected = postgresEntityKeyIdService.getEntityKeyIds(entityKeys.toSet())
+        val actual = postgresEntityKeyIdService.getEntityKeyIds(entityKeys.toSet())
+        Assert.assertEquals(expected.keys, actual.keys)
+        Assert.assertEquals(expected.values, actual.values)
     }
 
 }
