@@ -4,6 +4,7 @@ package com.openlattice.data.storage
 import com.openlattice.IdConstants
 import com.openlattice.analysis.SqlBindInfo
 import com.openlattice.analysis.requests.Filter
+import com.openlattice.data.storage.partitions.getPartition
 import com.openlattice.edm.PostgresEdmTypeConverter
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.*
@@ -353,8 +354,7 @@ fun buildUpsertEntitiesAndLinkedData(): String {
  */
 val lockEntitiesInIdsTable =
         "SELECT 1 FROM ${IDS.name} " +
-                "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ? " +
-                "ORDER BY ${ID_VALUE.name} " +
+                "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ? AND ${PARTITION.name} = ? " +
                 "FOR UPDATE"
 
 /**
@@ -689,14 +689,6 @@ internal val selectEntitySetTextProperties = "SELECT COALESCE(${getSourceDataCol
  */
 internal val selectEntitiesTextProperties = "$selectEntitySetTextProperties AND ${ID_VALUE.name} = ANY(?)"
 
-fun partitionSelectorFromId(entityKeyId: UUID): Int {
-    return entityKeyId.leastSignificantBits.toInt()
-}
-
-fun getPartition(entityKeyId: UUID, partitions: List<Int>): Int {
-    return partitions[partitionSelectorFromId(entityKeyId) % partitions.size]
-}
-
 /**
  * Builds the list of partitions for a given set of entity key ids.
  * @param entityKeyIds The entity key ids whose partitions will be retrieved.
@@ -704,7 +696,11 @@ fun getPartition(entityKeyId: UUID, partitions: List<Int>): Int {
  * @return A list of partitions.
  */
 fun getPartitionsInfo(entityKeyIds: Set<UUID>, partitions: List<Int>): List<Int> {
-    return entityKeyIds.map { entityKeyId -> getPartition(entityKeyId, partitions) }
+    return entityKeyIds.map { entityKeyId ->
+        getPartition(
+                entityKeyId, partitions
+        )
+    }
 }
 
 /**
@@ -717,7 +713,11 @@ fun getPartitionsInfo(entityKeyIds: Set<UUID>, partitions: List<Int>): List<Int>
  */
 @Deprecated("Unused")
 fun getPartitionsInfoMap(entityKeyIds: Set<UUID>, partitions: List<Int>): Map<UUID, Int> {
-    return entityKeyIds.associateWith { entityKeyId -> getPartition(entityKeyId, partitions) }
+    return entityKeyIds.associateWith { entityKeyId ->
+        getPartition(
+                entityKeyId, partitions
+        )
+    }
 }
 
 fun getMergedDataColumnName(datatype: PostgresDatatype): String {

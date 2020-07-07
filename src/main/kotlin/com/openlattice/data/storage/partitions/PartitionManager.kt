@@ -74,13 +74,22 @@ class PartitionManager @JvmOverloads constructor(
     @JvmOverloads
     fun allocateEntitySetPartitions(entitySet: EntitySet, partitionCount: Int = 0): EntitySet {
         isValidAllocation(partitionCount)
-        val allocatedPartitions = computePartitions(entitySet, partitionCount)
+        val allocatedPartitions = computePartitions(entitySet.organizationId, partitionCount)
         entitySet.setPartitions(allocatedPartitions)
         return entitySet
     }
 
-    private fun computePartitions(entitySet: EntitySet, partitionCount: Int): List<Int> {
-        val defaults = getDefaultPartitions(entitySet.organizationId)
+    /**
+     * This will assign partitionCount partitions, drawing first from the specified organization's partition pool at
+     * random, and then, if needed, from the remaining set of partitions. If partitionCount == 0, the organization's
+     * full partition pool will be returned.
+     */
+    private fun computePartitions(organizationId: UUID, partitionCount: Int): List<Int> {
+        val defaults = getDefaultPartitions(organizationId)
+
+        if (partitionCount == 0) {
+            return defaults
+        }
 
         if (defaults.size >= partitionCount) {
             return defaults.shuffled().take(partitionCount)
@@ -132,3 +141,12 @@ private val EMPTIEST_PARTITIONS = """
             WHERE $ENTITY_SET_SIZES_VIEW.$COUNT > 0 
             AND array_length( ${PARTITIONS.name}, 1) > 0
         """.trimIndent()
+
+// Consistently Ordered, Unique Values, Constant Index
+fun getPartition(entityKeyId: UUID, partitions: List<Int>): Int {
+    return partitions[entityKeyId.leastSignificantBits.toInt() % partitions.size]
+}
+
+fun getPartition(entityKeyId: UUID, partitions: IntArray): Int {
+    return partitions[entityKeyId.leastSignificantBits.toInt() % partitions.size]
+}
