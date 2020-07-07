@@ -47,7 +47,8 @@ import kotlin.collections.HashMap
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 private val entityKeysSql = "SELECT * FROM ${IDS.name} WHERE ${ID.name} = ANY(?) "
-private val entityKeyIdsSql = "SELECT * FROM ${SYNC_IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${ENTITY_ID.name} = ANY(?) AND NOT ${ID_WRITTEN.name} "
+private val entityKeyIdsSqlNotIdWritten = "SELECT * FROM ${SYNC_IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${ENTITY_ID.name} = ANY(?) AND NOT ${ID_WRITTEN.name} "
+private val entityKeyIdsSqlAny = "SELECT * FROM ${SYNC_IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${ENTITY_ID.name} = ANY(?)"
 private val entityKeyIdSql = "SELECT * FROM ${SYNC_IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${ENTITY_ID.name} = ? "
 private val linkedEntityKeyIdsSql = "SELECT ${ID.name},${LINKING_ID.name} as $ENTITY_KEY_IDS_FIELD FROM ${IDS.name} WHERE ${ID.name} = ANY(?) AND ${LINKING_ID.name} IS NOT NULL"
 
@@ -133,7 +134,7 @@ class PostgresEntityKeyIdService(
                     .groupBy({ it.entitySetId }, { it.entityId })
                     .mapValues { it.value.toSet() }
 
-            val actualEntityKeyIds = loadEntityKeyIds(syncIds)
+            val actualEntityKeyIds = loadEntityKeyIds(syncIds, true)
 
             val insertIds = connection.prepareStatement(INSERT_SQL)
             val insertToData = connection.prepareStatement(INSERT_ID_TO_DATA_SQL)
@@ -265,11 +266,14 @@ class PostgresEntityKeyIdService(
         }
     }
 
-    private fun loadEntityKeyIds(entityIds: Map<UUID, Set<String>>): MutableMap<EntityKey, UUID> {
+    private fun loadEntityKeyIds(
+            entityIds: Map<UUID, Set<String>>,
+            allIdWritten: Boolean = false
+    ): MutableMap<EntityKey, UUID> {
         return hds.connection.use { connection ->
             val ids = HashMap<EntityKey, UUID>(entityIds.values.sumBy { it.size })
 
-            val ps = connection.prepareStatement(entityKeyIdsSql)
+            val ps = connection.prepareStatement(if (allIdWritten) entityKeyIdsSqlAny else entityKeyIdsSqlNotIdWritten)
             entityIds
                     .forEach { (entitySetId, entityIdValues) ->
                         ps.setObject(1, entitySetId)
