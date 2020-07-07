@@ -154,8 +154,9 @@ class PostgresEntityKeyIdService(
 
             //Mark all the ids as updated.
             syncIds.forEach { (entitySetId, entityIds) ->
+                val entityIdsArray = PostgresArrays.createTextArray(connection, entityIds)
                 updateIdsWritten.setObject(1, entitySetId)
-                updateIdsWritten.setObject(2, entityIds)
+                updateIdsWritten.setArray(2, entityIdsArray)
                 updateIdsWritten.addBatch()
             }
 
