@@ -1,6 +1,7 @@
 package com.openlattice.ids
 
 import com.geekbeast.hazelcast.HazelcastClientProvider
+import com.geekbeast.hazelcast.IHazelcastClientProvider
 import com.google.common.collect.Queues
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.openlattice.hazelcast.HazelcastClient
@@ -15,7 +16,7 @@ import java.util.concurrent.Executors
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-class HazelcastIdGenerationService(clients: HazelcastClientProvider) {
+class HazelcastIdGenerationService(clients: IHazelcastClientProvider) {
 
     /*
      * This should be good enough until we scale past 65536 Hazelcast nodes.

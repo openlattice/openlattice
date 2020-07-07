@@ -170,7 +170,7 @@ dependencies {
         testCompile "com.openlattice:rhizome-client:${rhizome_client_version}:tests"
         testCompile "com.openlattice:scribe:${scribe_version}:tests"
     }
-
+    testImplementation "junit:junit:${junit_version}"
     /*
      * TESTING
      */
