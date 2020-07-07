@@ -47,10 +47,12 @@ import kotlin.collections.HashMap
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 private val entityKeysSql = "SELECT * FROM ${IDS.name} WHERE ${ID.name} = ANY(?) "
-private val entityKeyIdsSql = "SELECT * FROM ${SYNC_IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${ENTITY_ID.name} = ANY(?) "
+private val entityKeyIdsSql = "SELECT * FROM ${SYNC_IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${ENTITY_ID.name} = ANY(?) AND NOT ${ID_WRITTEN.name} "
 private val entityKeyIdSql = "SELECT * FROM ${SYNC_IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${ENTITY_ID.name} = ? "
 private val linkedEntityKeyIdsSql = "SELECT ${ID.name},${LINKING_ID.name} as $ENTITY_KEY_IDS_FIELD FROM ${IDS.name} WHERE ${ID.name} = ANY(?) AND ${LINKING_ID.name} IS NOT NULL"
 
+//Only update ids the need updating to minimize i/o
+private val UPDATE_IDS_WRITTEN = "UPDATE ${SYNC_IDS.name} SET ${ID_WRITTEN.name} = TRUE WHERE ${ENTITY_SET_ID.name} = ? AND ${ENTITY_ID.name} = ANY(?) AND NOT ${ID_WRITTEN.name}"
 private val INSERT_SQL = "INSERT INTO ${IDS.name} (${ENTITY_SET_ID.name},${ID.name},${PARTITION.name}) VALUES(?,?,?) ON CONFLICT DO NOTHING"
 private val INSERT_ID_TO_DATA_SQL = "INSERT INTO ${DATA.name} (" +
         "${ENTITY_SET_ID.name}," +
@@ -60,7 +62,7 @@ private val INSERT_ID_TO_DATA_SQL = "INSERT INTO ${DATA.name} (" +
         "${VERSION.name}," +
         "${HASH.name}) VALUES (?,?,?,?,?,?) " +
         "ON CONFLICT DO NOTHING"
-private val  INSERT_SYNC_SQL = "INSERT INTO ${SYNC_IDS.name} (${ENTITY_SET_ID.name},${ENTITY_ID.name},${ID.name}) VALUES(?,?,?) ON CONFLICT DO NOTHING"
+private val INSERT_SYNC_SQL = "INSERT INTO ${SYNC_IDS.name} (${ENTITY_SET_ID.name},${ENTITY_ID.name},${ID.name}) VALUES(?,?,?) ON CONFLICT DO NOTHING"
 
 private val logger = LoggerFactory.getLogger(PostgresEntityKeyIdService::class.java)
 
@@ -110,72 +112,73 @@ class PostgresEntityKeyIdService(
          * 3. Issue batched inserts for actual entity key ids. May end up performin a lot of no-ops.
          */
         return hds.connection.use { connection ->
-            try {
-                /**
-                 * The reason for committing as a single transaction is that you don't want to assign an id
-                 * to an entity key, without successfully committing the id to the ids table.
-                 */
-                connection.autoCommit = false
 
-                val insertSyncIds = connection.prepareStatement(INSERT_SYNC_SQL)
+            /**
+             * We don't need to commit this as a single transaction as it is fail-safe. If client fails in the middle
+             * of a request, retrying the request with identical entity key will successfully complete the assignment process.
+             */
 
-                entityKeyIds.forEach {
-                    insertSyncIds.setObject(1, it.key.entitySetId)
-                    insertSyncIds.setString(2, it.key.entityId)
-                    insertSyncIds.setObject(3, it.value)
-                    insertSyncIds.addBatch()
+            val insertSyncIds = connection.prepareStatement(INSERT_SYNC_SQL)
+
+            entityKeyIds.forEach {
+                insertSyncIds.setObject(1, it.key.entitySetId)
+                insertSyncIds.setString(2, it.key.entityId)
+                insertSyncIds.setObject(3, it.value)
+                insertSyncIds.addBatch()
+            }
+
+            val totalSyncIdRowsWritten = insertSyncIds.executeBatch()
+
+            val syncIds = entityKeyIds.keys
+                    .groupBy({ it.entitySetId }, { it.entityId })
+                    .mapValues { it.value.toSet() }
+
+            val actualEntityKeyIds = loadEntityKeyIds(syncIds)
+
+            val insertIds = connection.prepareStatement(INSERT_SQL)
+            val insertToData = connection.prepareStatement(INSERT_ID_TO_DATA_SQL)
+            val updateIdsWritten = connection.prepareStatement(UPDATE_IDS_WRITTEN)
+
+            actualEntityKeyIds.forEach {
+                storeEntityKeyIdAddBatch(
+                        it.key.entitySetId,
+                        entityKeyId = it.value,
+                        insertIds = insertIds,
+                        insertToData = insertToData,
+                        partitions = partitionsByEntitySet.getValue(it.key.entitySetId)
+                )
+            }
+
+            val totalWritten = insertIds.executeBatch().sum()
+            val totalDataRowsWritten = insertToData.executeBatch().sum()
+
+            //Mark all the ids as updated.
+            syncIds.forEach { (entitySetId, entityIds) ->
+                updateIdsWritten.setObject(1, entitySetId)
+                updateIdsWritten.setObject(2, entityIds)
+                updateIdsWritten.addBatch()
+            }
+
+            val idsWrittenCount = updateIdsWritten.executeBatch()
+
+            if (logger.isDebugEnabled) {
+                logger.debug("Inserted ${totalSyncIdRowsWritten.sum()} sync ids.")
+                logger.debug("Inserted $totalWritten ids.")
+                logger.debug("Inserted $totalDataRowsWritten data ids.")
+                logger.debug("Updated $idsWrittenCount id written flags.")
+            }
+
+
+            //Take the actual entity key ids of instead of the generated ones.
+            entityKeyIds.mapValues {
+                //Actual entity key ids should have all entity key ids
+                val actualEntityKeyId = actualEntityKeyIds.getValue(it.key)
+                return@mapValues if (actualEntityKeyId != it.value) {
+                    idGenerationService.returnId(it.value)
+                    actualEntityKeyId
+                } else {
+                    it.value
                 }
-
-                val totalSyncIdRowsWritten = insertSyncIds.executeBatch()
-
-                val syncIds = entityKeyIds.keys
-                        .groupBy({ it.entitySetId }, { it.entityId })
-                        .mapValues { it.value.toSet() }
-
-                val actualEntityKeyIds = loadEntityKeyIds(syncIds)
-
-                val insertIds = connection.prepareStatement(INSERT_SQL)
-                val insertToData = connection.prepareStatement(INSERT_ID_TO_DATA_SQL)
-
-                actualEntityKeyIds.forEach {
-                    storeEntityKeyIdAddBatch(
-                            it.key.entitySetId,
-                            entityKeyId = it.value,
-                            insertIds = insertIds,
-                            insertToData = insertToData,
-                            partitions = partitionsByEntitySet.getValue(it.key.entitySetId)
-                    )
-                }
-
-                val totalWritten = insertIds.executeBatch().sum()
-                val totalDataRowsWritten = insertToData.executeBatch().sum()
-
-                connection.commit()
-
-                if (logger.isDebugEnabled) {
-                    logger.debug("Inserted ${totalSyncIdRowsWritten.sum()} sync ids.")
-                    logger.debug("Inserted $totalWritten ids.")
-                    logger.debug("Inserted $totalDataRowsWritten data ids.")
-                }
-
-                //Take the actual entity key ids of instead of the generated ones.
-                entityKeyIds.mapValues {
-                    //Actual entity key ids should have all entity key ids
-                    val actualEntityKeyId = actualEntityKeyIds.getValue(it.key)
-                    return@mapValues if (actualEntityKeyId != it.value) {
-                        idGenerationService.returnId(it.value)
-                        actualEntityKeyId
-                    } else {
-                        it.value
-                    }
-                }
-
-            } catch( ex: Exception ) {
-                logger.error("Unable to generate entity key ids. ", ex )
-                connection.rollback()
-                throw ex
-            } finally {
-                connection.autoCommit = true
             }
         }
     }
@@ -301,6 +304,7 @@ class PostgresEntityKeyIdService(
 
         //Making this line O(n) is why we chose to just take a set instead of a sequence (thus allowing lazy views since copy is required anyway)
         val missing = entityKeys.minus(entityKeyIds.keys)
+
         val missingMap = assignEntityKeyIds(missing)
         entityKeyIds.putAll(missingMap)
 

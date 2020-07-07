@@ -179,6 +179,9 @@ public final class PostgresColumn {
     public static final String                   EDGE_ENTITY_SET_ID_FIELD          = "edge_entity_set_id";
     public static final PostgresColumnDefinition EDGE_ENTITY_SET_ID                =
             new PostgresColumnDefinition( EDGE_ENTITY_SET_ID_FIELD, UUID );
+    public static final String                   EMAILS_FIELD                      = "emails";
+    public static final PostgresColumnDefinition EMAILS                            =
+            new PostgresColumnDefinition( EMAILS_FIELD, TEXT_ARRAY ).withDefault( "'{}'" ).notNull();
     public static final String                   ENTITY_ID_FIELD                   = "entity_id";
     public static final PostgresColumnDefinition ENTITY_ID                         =
             new PostgresColumnDefinition( ENTITY_ID_FIELD, TEXT );
@@ -192,9 +195,6 @@ public final class PostgresColumn {
     public static final PostgresColumnDefinition ENTITY_SET_FLAGS                  =
             new PostgresColumnDefinition( ENTITY_SET_FLAGS_FIELD, TEXT_ARRAY )
                     .withDefault( "'{}'" );
-    public static final String                   EMAILS_FIELD                      = "emails";
-    public static final PostgresColumnDefinition EMAILS                            =
-            new PostgresColumnDefinition( EMAILS_FIELD, TEXT_ARRAY ).withDefault( "'{}'" ).notNull();
     public static final String                   ENTITY_SET_IDS_FIELD              = "entity_set_ids";
     public static final PostgresColumnDefinition ENTITY_SET_IDS                    =
             new PostgresColumnDefinition( ENTITY_SET_IDS_FIELD, UUID_ARRAY ).notNull();
@@ -252,6 +252,10 @@ public final class PostgresColumn {
             new PostgresColumnDefinition( ID_MAP_FIELD, JSONB );
     public static final PostgresColumnDefinition ID_VALUE                          =
             new PostgresColumnDefinition( ID_FIELD, UUID );
+    public static final String                   ID_WRITTEN_FIELD                  = "id_written";
+    public static final PostgresColumnDefinition ID_WRITTEN                        = new PostgresColumnDefinition(
+            ID_WRITTEN_FIELD,
+            BOOLEAN ).notNull().withDefault( "false" );
     public static final String                   INDEX_TYPE_FIELD                  = "index_type";
     public static final PostgresColumnDefinition INDEX_TYPE                        = new PostgresColumnDefinition(
             INDEX_TYPE_FIELD,
