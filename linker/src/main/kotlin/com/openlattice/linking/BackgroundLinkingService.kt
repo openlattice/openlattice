@@ -74,53 +74,51 @@ class BackgroundLinkingService(
     @Suppress("UNUSED")
     @Scheduled(fixedRate = LINKING_RATE)
     fun enqueue() {
-        executor.submit {
-            try {
-                val filteredLinkableEntitySetIds = entitySets.keySet(
-                        Predicates.and(
-                                Predicates.`in`(EntitySetMapstore.ENTITY_TYPE_ID_INDEX, *linkableTypes.toTypedArray()),
-                                Predicates.notEqual(EntitySetMapstore.FLAGS_INDEX, EntitySetFlag.LINKING)
-                        )
-                )
+        try {
+            val filteredLinkableEntitySetIds = entitySets.keySet(
+                    Predicates.and(
+                            Predicates.`in`(EntitySetMapstore.ENTITY_TYPE_ID_INDEX, *linkableTypes.toTypedArray()),
+                            Predicates.notEqual(EntitySetMapstore.FLAGS_INDEX, EntitySetFlag.LINKING)
+                    )
+            )
 
-                val rest = filteredLinkableEntitySetIds.asSequence().filter {
-                    !priorityEntitySets.contains(it)
-                }
-
-                val priority = priorityEntitySets.asSequence().filter {
-                    filteredLinkableEntitySetIds.contains(it)
-                }
-
-                //TODO: Switch to unlimited entity sets
-                (priority + rest)
-                        .forEach { esid ->
-                            logger.debug("Starting to queue linking candidates from entity set {}", esid)
-                            val forLinking = lqs.getEntitiesNeedingLinking(esid, 2 * configuration.loadSize)
-                                    .filter {
-                                        val expiration = lockOrGetExpiration(it)
-                                        logger.debug(
-                                                "Considering candidate {} with expiration {} at {}",
-                                                it,
-                                                expiration,
-                                                Instant.now().toEpochMilli()
-                                        )
-                                        if (expiration != null && Instant.now().toEpochMilli() >= expiration) {
-                                            logger.info("Refreshing expiration for {}", it)
-                                            //Assume original lock holder died, probably somewhat unsafe
-                                            refreshExpiration(it)
-                                            true
-                                        } else expiration == null
-                                    }
-                            if (forLinking.isNotEmpty()) {
-                                logger.info("Entities needing linking: {}", forLinking.size)
-                                logger.debug("Entities needing linking: {}", forLinking)
-                            }
-                            candidates.addAll(forLinking)
-                            logger.debug( "Queued entities needing linking {}", forLinking)
-                        }
-            } catch (ex: Exception) {
-                logger.info("Encountered error while updating candidates for linking.", ex)
+            val rest = filteredLinkableEntitySetIds.asSequence().filter {
+                !priorityEntitySets.contains(it)
             }
+
+            val priority = priorityEntitySets.asSequence().filter {
+                filteredLinkableEntitySetIds.contains(it)
+            }
+
+            //TODO: Switch to unlimited entity sets
+            (priority + rest)
+                    .forEach { esid ->
+                        logger.debug("Starting to queue linking candidates from entity set {}", esid)
+                        val forLinking = lqs.getEntitiesNeedingLinking(esid, 2 * configuration.loadSize)
+                                .filter {
+                                    val expiration = lockOrGetExpiration(it)
+                                    logger.debug(
+                                            "Considering candidate {} with expiration {} at {}",
+                                            it,
+                                            expiration,
+                                            Instant.now().toEpochMilli()
+                                    )
+                                    if (expiration != null && Instant.now().toEpochMilli() >= expiration) {
+                                        logger.info("Refreshing expiration for {}", it)
+                                        //Assume original lock holder died, probably somewhat unsafe
+                                        refreshExpiration(it)
+                                        true
+                                    } else expiration == null
+                                }
+                        if (forLinking.isNotEmpty()) {
+                            logger.info("Entities needing linking: {}", forLinking.size)
+                            logger.debug("Entities needing linking: {}", forLinking)
+                        }
+                        candidates.addAll(forLinking)
+                        logger.debug( "Queued entities needing linking {}", forLinking)
+                    }
+        } catch (ex: Exception) {
+            logger.info("Encountered error while updating candidates for linking.", ex)
         }
     }
 
