@@ -417,10 +417,14 @@ class PostgresEntityDataQueryService(
 
             val updatedLinkedEntities = attempt(LinearBackoff(60000, 125), 32) {
                 try {
-                    lockEntities.setObject(1, entitySetId)
-                    lockEntities.setArray(2, entityKeyIdsArr)
-                    lockEntities.setInt(3, partition)
-                    lockEntities.executeQuery()
+                    entities.keys.sorted().forEach { id ->
+                        lockEntities.setObject(1, entitySetId)
+                        lockEntities.setObject(2, id)
+                        lockEntities.setInt(3, partition)
+                        lockEntities.addBatch()
+                    }
+                    val lockCount = lockEntities.executeBatch()
+                    logger.info("Successfully locked batch of $lockCount entities for update.")
 
                     upsertEntities.setObject(1, versionsArrays)
                     upsertEntities.setObject(2, version)
@@ -439,7 +443,7 @@ class PostgresEntityDataQueryService(
                     throw ex
                 }
             }
-
+            
             connection.autoCommit = true
             logger.debug("Updated $updatedLinkedEntities linked entities as part of insert.")
             updatedPropertyCounts

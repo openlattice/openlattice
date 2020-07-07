@@ -354,8 +354,7 @@ fun buildUpsertEntitiesAndLinkedData(): String {
  */
 val lockEntitiesInIdsTable =
         "SELECT 1 FROM ${IDS.name} " +
-                "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ? " +
-                "ORDER BY ${ID_VALUE.name} " +
+                "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ? AND ${PARTITION.name} = ? " +
                 "FOR UPDATE"
 
 /**
