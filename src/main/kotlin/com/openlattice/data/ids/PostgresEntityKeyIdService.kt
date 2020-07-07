@@ -160,12 +160,13 @@ class PostgresEntityKeyIdService(
 
                 //Take the actual entity key ids of instead of the generated ones.
                 entityKeyIds.mapValues {
-                    val actualEntityKeyId = actualEntityKeyIds[it.key]
-                    return@mapValues if (actualEntityKeyId == null) {
-                        it.value
-                    } else {
+                    //Actual entity key ids should have all entity key ids
+                    val actualEntityKeyId = actualEntityKeyIds.getValue(it.key)
+                    return@mapValues if (actualEntityKeyId != it.value) {
                         idGenerationService.returnId(it.value)
                         actualEntityKeyId
+                    } else {
+                        it.value
                     }
                 }
 
