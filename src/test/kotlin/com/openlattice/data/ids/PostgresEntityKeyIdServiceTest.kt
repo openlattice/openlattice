@@ -38,6 +38,8 @@ import org.apache.commons.lang3.RandomStringUtils
 import org.junit.Assert
 import org.junit.BeforeClass
 import org.junit.Test
+import org.mockito.Matchers.any
+import org.mockito.Matchers.anySet
 import org.mockito.Mockito
 import org.slf4j.LoggerFactory
 import java.util.*
@@ -54,7 +56,7 @@ class PostgresEntityKeyIdServiceTest : TestServer() {
         const val NUM_THREADS = 8
         private lateinit var postgresEntityKeyIdService: PostgresEntityKeyIdService
         private lateinit var idGenService: HazelcastIdGenerationService
-        private val logger = LoggerFactory.getLogger(PostgresEntityKeyIdService::class.java)
+        private val logger = LoggerFactory.getLogger(PostgresEntityKeyIdServiceTest::class.java)
         private val executor = Executors.newFixedThreadPool(NUM_THREADS)
 
         @BeforeClass
@@ -69,8 +71,13 @@ class PostgresEntityKeyIdServiceTest : TestServer() {
             }
 
             val partMgr = Mockito.mock(PartitionManager::class.java)
-            val clazz = Mockito.any(UUID::class.java)
-            Mockito.`when`(partMgr.getEntitySetPartitions(clazz)).thenReturn((0 until 257).toSet())
+
+            Mockito.doReturn((0 until 257).toSet()).`when`(partMgr).getEntitySetPartitions(UUID.randomUUID())
+            Mockito.doAnswer {
+                val entitySetIds =  it.arguments[0] as Set<UUID>
+                entitySetIds.associateWith { (0 until 257).toSet() }
+            }.`when`(partMgr).getPartitionsByEntitySetId(anySet() as Set<UUID>)
+
             idGenService = HazelcastIdGenerationService(hzClientProvider)
             postgresEntityKeyIdService = PostgresEntityKeyIdService(
                     hds,
@@ -95,8 +102,8 @@ class PostgresEntityKeyIdServiceTest : TestServer() {
         val entityKeys = (0 until 10000).map { EntityKey(entitySetId, RandomStringUtils.randomAlphanumeric(10)) }
         val idGroups = (0 until 8)
                 .map {
-                    executor.submit {
-                        postgresEntityKeyIdService.getEntityKeyIds(entityKeys.toSet())
+                    executor.submit<MutableMap<EntityKey, UUID>> {
+                        return@submit postgresEntityKeyIdService.getEntityKeyIds(entityKeys.toSet())
                     } as Future<MutableMap<EntityKey, UUID>>
                 }
                 .map { it.get() }
