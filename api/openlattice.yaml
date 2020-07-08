@@ -4891,6 +4891,22 @@ components:
           items:
             type: string
             format: uuid
+    SearchResult:
+      type: object
+      properties:
+        numHits:
+          type: integer
+        hits:
+          type: array
+          items:
+            type: object
+            properties:
+              propertyTypes:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PropertyType"
+              entitySet:
+                $ref: "#/components/schemas/EntitySet"
     DataSearchResult:
       type: object
       properties:
@@ -5429,9 +5445,6 @@ components:
             type: object
             additionalProperties:
               type: string
-          
-           
-
     OrganizationExternalDatabaseTable:
       type: object
       properties:
