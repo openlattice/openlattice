@@ -421,11 +421,9 @@ class PostgresEntityDataQueryService(
                         lockEntities.setObject(1, entitySetId)
                         lockEntities.setObject(2, id)
                         lockEntities.setInt(3, partition)
-                        lockEntities.addBatch()
+                        lockEntities.execute()
                     }
-
-                    lockEntities.executeBatch()
-
+                    
                     upsertEntities.setObject(1, versionsArrays)
                     upsertEntities.setObject(2, version)
                     upsertEntities.setObject(3, version)
