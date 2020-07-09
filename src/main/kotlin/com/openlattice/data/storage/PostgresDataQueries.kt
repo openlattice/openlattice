@@ -103,12 +103,14 @@ internal fun selectEntitiesGroupedByIdAndPropertyTypeId(
         idsPresent: Boolean = true,
         partitionsPresent: Boolean = true,
         entitySetsPresent: Boolean = true,
-        detailed: Boolean = false
+        detailed: Boolean = false,
+        linking: Boolean = true
 ): String {
     //Already have the comma prefix
     val metadataOptionsSql = metadataOptions.joinToString("") { mapMetaDataToSelector(it) }
     val columnsSql = if (detailed) detailedValueColumnsSql else valuesColumnsSql
-    return "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name},${PROPERTY_TYPE_ID.name}$metadataOptionsSql,$columnsSql " +
+    val idColumn = if (linking) ORIGIN_ID.name else ID_VALUE.name
+    return "SELECT ${ENTITY_SET_ID.name},$idColumn,${PARTITION.name},${PROPERTY_TYPE_ID.name}$metadataOptionsSql,$columnsSql " +
             "FROM ${DATA.name} ${optionalWhereClauses(idsPresent, partitionsPresent, entitySetsPresent)}"
 }
 
@@ -230,7 +232,9 @@ internal fun doBind(ps: PreparedStatement, info: SqlBindInfo) {
 }
 
 internal val ESID_EKID_PART = "${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name}"
+internal val ESID_LID_PART = "${ENTITY_SET_ID.name},${ORIGIN_ID.name},${PARTITION.name}"
 internal val ESID_EKID_PART_PTID = "${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name},${PROPERTY_TYPE_ID.name}"
+internal val ESID_LID_PART_PTID = "${ENTITY_SET_ID.name},${ORIGIN_ID.name}, ${PARTITION.name},${PROPERTY_TYPE_ID.name}"
 
 internal fun groupBy(columns: String): String {
     return "GROUP BY ($columns)"
