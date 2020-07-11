@@ -104,8 +104,7 @@ internal fun selectEntitiesGroupedByIdAndPropertyTypeId(
         idsPresent: Boolean = true,
         partitionsPresent: Boolean = true,
         entitySetsPresent: Boolean = true,
-        detailed: Boolean = false,
-        linking: Boolean = false
+        detailed: Boolean = false
 ): String {
     //Already have the comma prefix
     val metadataOptionsSql = metadataOptions.joinToString("") { mapMetaDataToSelector(it) }
@@ -232,9 +231,7 @@ internal fun doBind(ps: PreparedStatement, info: SqlBindInfo) {
 }
 
 internal val ESID_EKID_PART = "${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name}"
-internal val ESID_LID_PART = "${ENTITY_SET_ID.name},${ORIGIN_ID.name},${PARTITION.name}"
 internal val ESID_EKID_PART_PTID = "${ENTITY_SET_ID.name},${ID_VALUE.name}, ${PARTITION.name},${PROPERTY_TYPE_ID.name}"
-internal val ESID_LID_PART_PTID = "${ENTITY_SET_ID.name},${ORIGIN_ID.name}, ${PARTITION.name},${PROPERTY_TYPE_ID.name}"
 
 internal fun groupBy(columns: String): String {
     return "GROUP BY ($columns)"
