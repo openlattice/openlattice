@@ -427,7 +427,7 @@ class PostgresEntityDataQueryService(
             val entityKeyIdsArr = PostgresArrays.createUuidArray(connection, entities.keys)
             val lockEntities = connection.prepareStatement(lockEntitiesInIdsTable)
             //Make data visible by marking new version in ids table.
-            val upsertEntities = connection.prepareStatement(buildUpsertEntitiesAndLinkedData())
+            val upsertEntities = connection.prepareStatement(upsertEntitiesSql)
             val updatedLinkedEntities = try {
                 entities.keys.sorted().forEach { id ->
                     lockEntities.setObject(1, entitySetId)
@@ -442,10 +442,9 @@ class PostgresEntityDataQueryService(
                 upsertEntities.setObject(4, entitySetId)
                 upsertEntities.setArray(5, entityKeyIdsArr)
                 upsertEntities.setInt(6, partition)
-                upsertEntities.setInt(7, partition)
-                upsertEntities.setLong(8, version)
                 val updatedCount = upsertEntities.executeUpdate()
                 connection.commit()
+                logger.info("Committed $updatedCount entities to complete an insert.")
                 updatedCount
             } catch (ex: PSQLException) {
                 //Should be pretty rare.
