@@ -424,7 +424,7 @@ class PostgresEntityDataQueryService(
                         lockEntities.setInt(3, partition)
                         lockEntities.execute()
                     }
-                    
+
                     upsertEntities.setObject(1, versionsArrays)
                     upsertEntities.setObject(2, version)
                     upsertEntities.setObject(3, version)
@@ -442,7 +442,7 @@ class PostgresEntityDataQueryService(
                     throw ex
                 }
             }
-            
+
             connection.autoCommit = true
             logger.debug("Updated $updatedLinkedEntities linked entities as part of insert.")
             updatedPropertyCounts
@@ -984,19 +984,21 @@ class PostgresEntityDataQueryService(
         val entityKeyIdsArr = PostgresArrays.createUuidArray(conn, entityKeyIds)
 
         val partitionsArr = PostgresArrays.createIntArray(conn, entityKeyIds.map {
-            getPartition(
-                    it, partitions
-            )
+            getPartition(it, partitions)
         })
 
-        val numUpdated = conn.prepareStatement(updateVersionsForEntitiesInEntitySet).use { ps ->
-            ps.setLong(1, -version)
-            ps.setLong(2, -version)
-            ps.setLong(3, -version)
-            ps.setObject(4, entitySetId)
-            ps.setArray(5, entityKeyIdsArr)
-            ps.setArray(6, partitionsArr)
-            ps.executeUpdate()
+        val partitionsByEDK = entityKeyIds.associate { EntityDataKey(entitySetId, it) to getPartition(it, partitions) }
+
+        val numUpdated = RetryableLockedIdsOperator.lockIdsAndExecute(conn, partitionsByEDK) { connection ->
+            connection.prepareStatement(updateVersionsForEntitiesInEntitySet).use { ps ->
+                ps.setLong(1, -version)
+                ps.setLong(2, -version)
+                ps.setLong(3, -version)
+                ps.setObject(4, entitySetId)
+                ps.setArray(5, entityKeyIdsArr)
+                ps.setArray(6, partitionsArr)
+                ps.executeUpdate()
+            }
         }
 
         return WriteEvent(version, numUpdated)
