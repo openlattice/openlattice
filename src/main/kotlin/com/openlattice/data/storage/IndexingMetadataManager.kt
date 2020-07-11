@@ -29,7 +29,7 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
         val entitySetPartitions = partitionManager.getPartitionsByEntitySetId(entityKeyIdsWithLastWrite.keys).mapValues { it.value.toList() }
 
         val partitionByEDK = entityKeyIdsWithLastWrite
-                .mapValues { it.value.keys.map { ekid-> EntityDataKey(it.key, ekid) } }
+                .mapValues { it.value.keys.map { ekid -> EntityDataKey(it.key, ekid) } }
                 .flatMap { it.value }
                 .associateWith { getPartition(it.entityKeyId, entitySetPartitions.getValue(it.entitySetId)) }
 
@@ -134,21 +134,23 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
      * @param entityKeyIds Map of (normal) entity set ids to entity key ids.
      */
     fun markAsUnIndexed(entityKeyIds: Map<UUID, Set<UUID>>): Int {
-        val entitySetPartitions = partitionManager.getPartitionsByEntitySetId(entityKeyIds.keys)
+        val entitySetPartitions = partitionManager.getPartitionsByEntitySetId(entityKeyIds.keys).mapValues { it.value.toList() }
 
-        return hds.connection.use { connection ->
+        val partitionsByEDK = entityKeyIds
+                .mapValues { it.value.map { ekid -> EntityDataKey(it.key, ekid) } }
+                .flatMap { it.value }
+                .associateWith { getPartition(it.entityKeyId, entitySetPartitions.getValue(it.entitySetId)) }
+
+        return lockIdsAndExecute(hds.connection, partitionsByEDK) { connection ->
             val updateSql = markLastIndexSql
 
             connection.prepareStatement(updateSql).use { stmt ->
-
                 entityKeyIds.forEach { (entitySetId, entities) ->
 
-                    val partitions = entitySetPartitions.getValue(entitySetId).toList()
+                    val partitions = entitySetPartitions.getValue(entitySetId)
 
                     entities.groupBy {
-                        getPartition(
-                                it, partitions
-                        )
+                        getPartition(it, partitions)
                     }
                             .forEach { (partition, entities) ->
 
