@@ -88,7 +88,8 @@ fun buildPreparableFiltersSql(
             metadataOptions,
             idsPresent = idsPresent,
             partitionsPresent = partitionsPresent,
-            detailed = detailed
+            detailed = detailed,
+            linking = linking
     ) + linkingClause + filtersClause + innerGroupBy
 
     val sql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name}$metadataOptionColumnsSql," +
@@ -104,13 +105,12 @@ internal fun selectEntitiesGroupedByIdAndPropertyTypeId(
         partitionsPresent: Boolean = true,
         entitySetsPresent: Boolean = true,
         detailed: Boolean = false,
-        linking: Boolean = true
+        linking: Boolean = false
 ): String {
     //Already have the comma prefix
     val metadataOptionsSql = metadataOptions.joinToString("") { mapMetaDataToSelector(it) }
     val columnsSql = if (detailed) detailedValueColumnsSql else valuesColumnsSql
-    val idColumn = if (linking) ORIGIN_ID.name else ID_VALUE.name
-    return "SELECT ${ENTITY_SET_ID.name},$idColumn,${PARTITION.name},${PROPERTY_TYPE_ID.name}$metadataOptionsSql,$columnsSql " +
+    return "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name},${PROPERTY_TYPE_ID.name}$metadataOptionsSql,$columnsSql " +
             "FROM ${DATA.name} ${optionalWhereClauses(idsPresent, partitionsPresent, entitySetsPresent)}"
 }
 
@@ -143,7 +143,7 @@ private fun mapMetaDataToColumnName(metadataOption: MetadataOption): String {
 private fun mapMetaDataToSelector(metadataOption: MetadataOption): String {
     return when (metadataOption) {
         MetadataOption.LAST_WRITE -> ",max(${LAST_WRITE.name}) AS ${mapMetaDataToColumnName(metadataOption)}"
-        MetadataOption.ENTITY_KEY_IDS -> ",${ORIGIN_ID.name}"
+        MetadataOption.ENTITY_KEY_IDS -> ",${ID_VALUE.name} as ${ORIGIN_ID.name}" //Adapter for queries for now.
         else -> throw UnsupportedOperationException("No implementation yet for metadata option $metadataOption")
     }
 }
