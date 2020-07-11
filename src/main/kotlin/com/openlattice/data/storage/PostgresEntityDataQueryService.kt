@@ -593,11 +593,14 @@ class PostgresEntityDataQueryService(
      */
     private fun tombstone(conn: Connection, entitySetId: UUID, version: Long): WriteEvent {
 
+        val partitions = PostgresArrays.createIntArray(conn, partitionManager.getEntitySetPartitions(entitySetId))
+
         val numUpdated = conn.prepareStatement(updateVersionsForEntitySet).use { ps ->
             ps.setLong(1, -version)
             ps.setLong(2, -version)
             ps.setLong(3, -version)
             ps.setObject(4, entitySetId)
+            ps.setArray(5, partitions)
             ps.executeUpdate()
         }
 
@@ -607,6 +610,7 @@ class PostgresEntityDataQueryService(
             ps.setLong(2, -version)
             ps.setLong(3, -version)
             ps.setObject(4, entitySetId)
+            ps.setArray(5, partitions)
             ps.executeUpdate()
         }
 
@@ -951,13 +955,15 @@ class PostgresEntityDataQueryService(
             version: Long
     ): WriteEvent {
         val propertyTypeIdsArr = PostgresArrays.createUuidArray(conn, propertyTypesToTombstone.map { it.id })
+        val partitions = PostgresArrays.createIntArray(conn, partitionManager.getEntitySetPartitions(entitySetId))
 
         val numUpdated = conn.prepareStatement(updateVersionsForPropertyTypesInEntitySet).use { ps ->
             ps.setLong(1, -version)
             ps.setLong(2, -version)
             ps.setLong(3, -version)
             ps.setObject(4, entitySetId)
-            ps.setArray(5, propertyTypeIdsArr)
+            ps.setArray(5, partitions)
+            ps.setArray(6, propertyTypeIdsArr)
             ps.executeUpdate()
         }
 
@@ -994,8 +1000,8 @@ class PostgresEntityDataQueryService(
                 ps.setLong(2, -version)
                 ps.setLong(3, -version)
                 ps.setObject(4, entitySetId)
-                ps.setArray(5, entityKeyIdsArr)
-                ps.setArray(6, partitionsArr)
+                ps.setArray(5, partitionsArr)
+                ps.setArray(6, entityKeyIdsArr)
                 ps.executeUpdate()
             }
         }
@@ -1039,9 +1045,10 @@ class PostgresEntityDataQueryService(
                 ps.setLong(2, -version)
                 ps.setLong(3, -version)
                 ps.setObject(4, entitySetId)
-                ps.setArray(5, propertyTypeIdsArr)
-                ps.setArray(6, entityKeyIdsArr)
-                ps.setArray(7, partitionsArr)
+                ps.setArray(5, partitionsArr)
+                ps.setArray(6, propertyTypeIdsArr)
+                ps.setArray(7, entityKeyIdsArr)
+                ps.setArray(8, partitionsArr)
                 ps.executeUpdate()
             }
 
@@ -1052,9 +1059,10 @@ class PostgresEntityDataQueryService(
                 ps.setLong(2, -version)
                 ps.setLong(3, -version)
                 ps.setObject(4, entitySetId)
-                ps.setArray(5, propertyTypeIdsArr)
-                ps.setArray(6, entityKeyIdsArr)
-                ps.setArray(7, partitionsArr)
+                ps.setArray(5, partitionsArr)
+                ps.setArray(6, propertyTypeIdsArr)
+                ps.setArray(7, entityKeyIdsArr)
+                ps.setArray(8, partitionsArr)
                 ps.executeUpdate()
             }
 
@@ -1113,9 +1121,9 @@ class PostgresEntityDataQueryService(
                                 updatePropertyValueVersion.setLong(2, -version)
                                 updatePropertyValueVersion.setLong(3, -version)
                                 updatePropertyValueVersion.setObject(4, entitySetId)
-                                updatePropertyValueVersion.setArray(5, propertyTypeIdsArr)
-                                updatePropertyValueVersion.setArray(6, entityKeyIdsArr)
-                                updatePropertyValueVersion.setArray(7, partitionsArr)
+                                updatePropertyValueVersion.setArray(5, partitionsArr)
+                                updatePropertyValueVersion.setArray(6, propertyTypeIdsArr)
+                                updatePropertyValueVersion.setArray(7, entityKeyIdsArr)
                                 updatePropertyValueVersion.setBytes(8, update.array())
                                 updatePropertyValueVersion.addBatch()
 
@@ -1123,9 +1131,9 @@ class PostgresEntityDataQueryService(
                                 tombstoneLinks.setLong(2, -version)
                                 tombstoneLinks.setLong(3, -version)
                                 tombstoneLinks.setObject(4, entitySetId)
-                                tombstoneLinks.setArray(5, propertyTypeIdsArr)
-                                tombstoneLinks.setArray(6, entityKeyIdsArr)
-                                tombstoneLinks.setArray(7, partitionsArr)
+                                tombstoneLinks.setArray(5, partitionsArr)
+                                tombstoneLinks.setArray(6, propertyTypeIdsArr)
+                                tombstoneLinks.setArray(7, entityKeyIdsArr)
                                 tombstoneLinks.setBytes(8, update.array())
                                 tombstoneLinks.addBatch()
                             }

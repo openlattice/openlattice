@@ -201,9 +201,9 @@ class PostgresLinkingQueryService(
                     ps.setLong(2, version)
                     ps.setLong(3, version)
                     ps.setObject(4, edk.entitySetId) // esid
-                    ps.setObject(5, linkingId) // ID value
-                    ps.setObject(6, edk.entityKeyId) // origin id
-                    ps.setArray(7, partitions)
+                    ps.setArray(5, partitions)
+                    ps.setObject(6, linkingId) // ID value
+                    ps.setObject(7, edk.entityKeyId) // origin id
                     println(ps.toString())
                     ps.addBatch()
                 }
