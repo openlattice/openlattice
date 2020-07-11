@@ -24,6 +24,7 @@ package com.openlattice.linking.graph
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.storage.createOrUpdateLinkFromEntity
 import com.openlattice.data.storage.partitions.PartitionManager
+import com.openlattice.data.storage.partitions.getPartition
 import com.openlattice.data.storage.tombstoneLinkForEntity
 import com.openlattice.linking.EntityKeyPair
 import com.openlattice.linking.LinkingQueryService
@@ -32,6 +33,7 @@ import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.*
 import com.openlattice.postgres.ResultSetAdapters
+import com.openlattice.postgres.RetryableLockedIdsOperator.Companion.lockIdsAndExecute
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.openlattice.postgres.streams.StatementHolder
@@ -69,12 +71,12 @@ class PostgresLinkingQueryService(
     override fun lockClustersDoWorkAndCommit(
             candidate: EntityDataKey,
             candidates: Set<EntityDataKey>,
-            doWork: ( clusters: Map<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>>  ) -> Triple<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>, Boolean>
+            doWork: (clusters: Map<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>>) -> Triple<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>, Boolean>
     ): Triple<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>, Boolean> {
-        val clusters = getClustersForIds( candidates )
+        val clusters = getClustersForIds(candidates)
 
         lockClustersForUpdates(clusters.keys).use { conn ->
-            val resultTriple = doWork( clusters )
+            val resultTriple = doWork(clusters)
             val linkingId = resultTriple.first
             val scores = resultTriple.second
             insertMatchScores(conn, linkingId, scores)
@@ -119,14 +121,16 @@ class PostgresLinkingQueryService(
     }
 
     override fun updateIdsTable(clusterId: UUID, newMember: EntityDataKey): Int {
-        hds.connection.use { connection ->
+        val entitySetPartitions = partitionManager.getEntitySetPartitions(newMember.entitySetId).toList()
+        val partition = getPartition(newMember.entityKeyId, entitySetPartitions)
+
+        return lockIdsAndExecute(hds.connection, mapOf(newMember to partition)) { connection ->
             connection.prepareStatement(UPDATE_LINKED_ENTITIES_SQL).use { ps ->
-                val partitions = getPartitionsAsPGArray(connection, newMember.entitySetId)
                 ps.setObject(1, clusterId)
-                ps.setArray(2, partitions)
+                ps.setInt(2, partition)
                 ps.setObject(3, newMember.entitySetId)
                 ps.setObject(4, newMember.entityKeyId)
-                return ps.executeUpdate()
+                ps.executeUpdate()
             }
         }
     }
@@ -396,7 +400,7 @@ private val INSERT_SQL = "INSERT INTO ${MATCHED_ENTITIES.name} ($COLUMNS) VALUES
  */
 private val UPDATE_LINKED_ENTITIES_SQL = "UPDATE ${IDS.name} " +
         "SET ${LINKING_ID.name} = ?, ${LAST_LINK.name} = now() " +
-        "WHERE ${PARTITION.name} = ANY(?) AND ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name}= ?"
+        "WHERE ${PARTITION.name} = ? AND ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name}= ?"
 
 private val ENTITY_KEY_IDS_NEEDING_LINKING = "SELECT ${ENTITY_SET_ID.name},${ID.name} " +
         "FROM ${IDS.name} " +
