@@ -427,6 +427,7 @@ class PostgresEntityDataQueryService(
             val entityKeyIdsArr = PostgresArrays.createUuidArray(connection, entities.keys)
             val lockEntities = connection.prepareStatement(lockEntitiesInIdsTable)
             //Make data visible by marking new version in ids table.
+
             val upsertEntities = connection.prepareStatement(upsertEntitiesSql)
             val updatedLinkedEntities = try {
                 entities.keys.sorted().forEach { id ->
