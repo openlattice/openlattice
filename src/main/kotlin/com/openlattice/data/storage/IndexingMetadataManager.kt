@@ -27,11 +27,7 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
             entityKeyIdsWithLastWrite: Map<UUID, Map<UUID, OffsetDateTime>> // entity_set_id -> id -> last_write
     ): Int {
         val entitySetPartitions = partitionManager.getPartitionsByEntitySetId(entityKeyIdsWithLastWrite.keys).mapValues { it.value.toList() }
-
-        val partitionByEDK = entityKeyIdsWithLastWrite
-                .mapValues { it.value.keys.map { ekid -> EntityDataKey(it.key, ekid) } }
-                .flatMap { it.value }
-                .associateWith { getPartition(it.entityKeyId, entitySetPartitions.getValue(it.entitySetId)) }
+        val partitionByEDK = getPartitionByEDK(entitySetPartitions, entityKeyIdsWithLastWrite.mapValues { it.value.keys })
 
         return lockIdsAndExecute(hds.connection, partitionByEDK) { connection ->
             connection.prepareStatement(updateLastIndexSql).use { stmt ->
@@ -68,20 +64,18 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
     fun markLinkingEntitiesAsIndexed(
             linkingIdsWithLastWrite: Map<UUID, Map<UUID, Map<UUID, OffsetDateTime>>>
     ): Int {
-        val entitySetPartitions = partitionManager.getPartitionsByEntitySetId(linkingIdsWithLastWrite.keys)
+        val entitySetPartitions = partitionManager.getPartitionsByEntitySetId(linkingIdsWithLastWrite.keys).mapValues { it.value.toList() }
+        val partitionByEDK = getPartitionByEDK(entitySetPartitions, linkingIdsWithLastWrite.mapValues { it.value.keys })
 
-        return hds.connection.use { connection ->
 
+        return lockIdsAndExecute(hds.connection, partitionByEDK) { connection ->
             connection.prepareStatement(updateLastLinkingIndexSql).use { stmt ->
-
                 linkingIdsWithLastWrite.forEach { (entitySetId, entities) ->
 
-                    val partitions = entitySetPartitions.getValue(entitySetId).toList()
+                    val partitions = entitySetPartitions.getValue(entitySetId)
                     entities.entries
                             .groupBy({
-                                getPartition(
-                                        it.key, partitions
-                                )
+                                getPartition(it.key, partitions)
                             }, { it.toPair() })
                             .mapValues { it.value.toMap() }
                             .forEach { (partition, linkingIdsByOriginId) ->
@@ -135,11 +129,7 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
      */
     fun markAsUnIndexed(entityKeyIds: Map<UUID, Set<UUID>>): Int {
         val entitySetPartitions = partitionManager.getPartitionsByEntitySetId(entityKeyIds.keys).mapValues { it.value.toList() }
-
-        val partitionsByEDK = entityKeyIds
-                .mapValues { it.value.map { ekid -> EntityDataKey(it.key, ekid) } }
-                .flatMap { it.value }
-                .associateWith { getPartition(it.entityKeyId, entitySetPartitions.getValue(it.entitySetId)) }
+        val partitionsByEDK = getPartitionByEDK(entitySetPartitions, entityKeyIds)
 
         return lockIdsAndExecute(hds.connection, partitionsByEDK) { connection ->
             val updateSql = markLastIndexSql
@@ -240,7 +230,18 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
         }
     }
 
+    private fun getPartitionByEDK(
+            entitySetPartitions: Map<UUID, List<Int>>,
+            entitySetIdToEntityKeyIds: Map<UUID, Collection<UUID>>
+    ): Map<EntityDataKey, Int> {
+        return entitySetIdToEntityKeyIds
+                .mapValues { it.value.map { entityKeyId -> EntityDataKey(it.key, entityKeyId) } }
+                .flatMap { it.value }
+                .associateWith { getPartition(it.entityKeyId, entitySetPartitions.getValue(it.entitySetId)) }
+    }
+
 }
+
 // @formatter:off
 
 /**
