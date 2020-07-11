@@ -110,9 +110,9 @@ internal fun selectEntitiesGroupedByIdAndPropertyTypeId(
     //Already have the comma prefix
     val metadataOptionsSql = metadataOptions.joinToString("") { mapMetaDataToSelector(it) }
     val columnsSql = if (detailed) detailedValueColumnsSql else valuesColumnsSql
-    val idColumn = if( linking ) ORIGIN_ID.name else ID_VALUE.name
+    val idColumn = if (linking) ORIGIN_ID.name else ID_VALUE.name
     return "SELECT ${ENTITY_SET_ID.name},$idColumn as ${ID_VALUE.name},${PARTITION.name},${PROPERTY_TYPE_ID.name}$metadataOptionsSql,$columnsSql " +
-            "FROM ${DATA.name} ${optionalWhereClauses(idsPresent, partitionsPresent, entitySetsPresent)}"
+            "FROM ${DATA.name} ${optionalWhereClauses(idsPresent, partitionsPresent, entitySetsPresent, linking)}"
 }
 
 /**
@@ -144,7 +144,7 @@ private fun mapMetaDataToColumnName(metadataOption: MetadataOption): String {
 private fun mapMetaDataToSelector(metadataOption: MetadataOption): String {
     return when (metadataOption) {
         MetadataOption.LAST_WRITE -> ",max(${LAST_WRITE.name}) AS ${mapMetaDataToColumnName(metadataOption)}"
-        MetadataOption.ENTITY_KEY_IDS -> "${ID_VALUE.name} as ${ORIGIN_ID.name}" //Adapter for queries for now.
+        MetadataOption.ENTITY_KEY_IDS -> ",${ID_VALUE.name} as ${ORIGIN_ID.name}" //Adapter for queries for now.
         else -> throw UnsupportedOperationException("No implementation yet for metadata option $metadataOption")
     }
 }
@@ -252,10 +252,12 @@ internal fun groupBy(columns: String): String {
 fun optionalWhereClauses(
         idsPresent: Boolean = true,
         partitionsPresent: Boolean = true,
-        entitySetsPresent: Boolean = true
+        entitySetsPresent: Boolean = true,
+        linking: Boolean = false
 ): String {
     val entitySetClause = if (entitySetsPresent) "${ENTITY_SET_ID.name} = ANY(?)" else ""
-    val idsClause = if (idsPresent) "${ID_VALUE.name} = ANY(?)" else ""
+    val idsColumn = if (linking) ORIGIN_ID.name else ID_VALUE.name
+    val idsClause = if (idsPresent) "$idsColumn = ANY(?)" else ""
     val partitionClause = if (partitionsPresent) "${PARTITION.name} = ANY(?)" else ""
     val versionsClause = "${VERSION.name} > 0 "
 
