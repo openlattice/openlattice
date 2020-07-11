@@ -7,6 +7,7 @@ import com.openlattice.IdConstants
 import com.openlattice.analysis.SqlBindInfo
 import com.openlattice.analysis.requests.Filter
 import com.openlattice.data.DeleteType
+import com.openlattice.data.EntityDataKey
 import com.openlattice.data.WriteEvent
 import com.openlattice.data.storage.PostgresEntitySetSizesInitializationTask.Companion.ENTITY_SET_SIZES_VIEW
 import com.openlattice.data.storage.partitions.PartitionManager
@@ -880,8 +881,9 @@ class PostgresEntityDataQueryService(
      */
     fun deleteEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): WriteEvent {
         val partitions = partitionManager.getEntitySetPartitions(entitySetId).toList()
+        val partitionByEDK = entityKeyIds.associate { EntityDataKey(entitySetId, it) to getPartition(it, partitions) }
 
-        val numUpdates = hds.connection.use { conn ->
+        val numUpdates = RetryableLockedIdsOperator.lockIdsAndExecute(hds.connection, partitionByEDK) { conn ->
             val ps = conn.prepareStatement(deleteEntityKeys)
             entityKeyIds
                     .groupBy { getPartition(it, partitions) }
@@ -893,8 +895,8 @@ class PostgresEntityDataQueryService(
 
                         ps.addBatch()
                     }
-            ps.executeBatch()
-        }.sum()
+            ps.executeBatch().sum()
+        }
 
         return WriteEvent(System.currentTimeMillis(), numUpdates)
     }
