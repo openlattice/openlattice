@@ -352,7 +352,7 @@ fun buildUpsertEntitiesAndLinkedData(): String {
  *
  * 1 - entity set id
  *
- * 2 - entity key ids
+ * 2 - entity key id
  *
  * 3 - partition
  */
@@ -360,6 +360,24 @@ val lockEntitiesInIdsTable =
         "SELECT 1 FROM ${IDS.name} " +
                 "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ? AND ${PARTITION.name} = ? " +
                 "FOR UPDATE"
+
+/**
+ * Preparable sql to lock entities in [IDS] table.
+ *
+ * This query will lock provided entities that have an assigned linking id in ID order.
+ *
+ * The bind order is the following:
+ *
+ * 1 - entity key ids
+ *
+ * 2 - partition
+ */
+val bulkLockEntitiesInIdsTable =
+        "SELECT 1 FROM ${IDS.name} " +
+                "WHERE ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ? " +
+                "ORDER BY ${ID_VALUE.name}" +
+                "FOR UPDATE"
+
 
 /**
  * Preparable sql to lock entities in [IDS] table.
