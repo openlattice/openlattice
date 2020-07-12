@@ -86,7 +86,7 @@ class PostgresEntityDataQueryServiceTest {
                         propertyTypes.associateBy { it.id },
                         mapOf(),
                         EnumSet.of(MetadataOption.ENTITY_KEY_IDS),
-                        linking = false,
+                        linking = true,
                         idsPresent = true,
                         partitionsPresent = true
                 ).first
