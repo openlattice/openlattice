@@ -15,11 +15,11 @@ class RetryableLockedIdsOperator {
         private const val RETRY_OFFSET: Long = 125
         private const val MAX_RETRY_ATTEMPTS = 32
 
-        fun lockIdsAndExecute(
+        fun <T> lockIdsAndExecute(
                 connection: Connection,
                 entitySetIdToEntityKeyId: Map<EntityDataKey, Int>,
-                operateOnConnectionFn: (Connection) -> Int
-        ): Int {
+                operateOnConnectionFn: (Connection) -> T
+        ): T {
 
             return connection.use { conn ->
 
