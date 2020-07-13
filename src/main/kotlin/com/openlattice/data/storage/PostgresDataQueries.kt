@@ -88,7 +88,8 @@ fun buildPreparableFiltersSql(
             metadataOptions,
             idsPresent = idsPresent,
             partitionsPresent = partitionsPresent,
-            detailed = detailed
+            detailed = detailed,
+            linking = linking
     ) + linkingClause + filtersClause + innerGroupBy
 
     val sql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name}$metadataOptionColumnsSql," +
@@ -103,13 +104,15 @@ internal fun selectEntitiesGroupedByIdAndPropertyTypeId(
         idsPresent: Boolean = true,
         partitionsPresent: Boolean = true,
         entitySetsPresent: Boolean = true,
-        detailed: Boolean = false
+        detailed: Boolean = false,
+        linking: Boolean = false
 ): String {
     //Already have the comma prefix
     val metadataOptionsSql = metadataOptions.joinToString("") { mapMetaDataToSelector(it) }
     val columnsSql = if (detailed) detailedValueColumnsSql else valuesColumnsSql
-    return "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name},${PROPERTY_TYPE_ID.name}$metadataOptionsSql,$columnsSql " +
-            "FROM ${DATA.name} ${optionalWhereClauses(idsPresent, partitionsPresent, entitySetsPresent)}"
+    val idColumn = if (linking) ORIGIN_ID.name else ID_VALUE.name
+    return "SELECT ${ENTITY_SET_ID.name},$idColumn as ${ID_VALUE.name},${PARTITION.name},${PROPERTY_TYPE_ID.name}$metadataOptionsSql,$columnsSql " +
+            "FROM ${DATA.name} ${optionalWhereClauses(idsPresent, partitionsPresent, entitySetsPresent, linking)}"
 }
 
 /**
@@ -141,7 +144,7 @@ private fun mapMetaDataToColumnName(metadataOption: MetadataOption): String {
 private fun mapMetaDataToSelector(metadataOption: MetadataOption): String {
     return when (metadataOption) {
         MetadataOption.LAST_WRITE -> ",max(${LAST_WRITE.name}) AS ${mapMetaDataToColumnName(metadataOption)}"
-        MetadataOption.ENTITY_KEY_IDS -> ",${ORIGIN_ID.name}"
+        MetadataOption.ENTITY_KEY_IDS -> ",${ID_VALUE.name} as ${ORIGIN_ID.name}" //Adapter for queries for now.
         else -> throw UnsupportedOperationException("No implementation yet for metadata option $metadataOption")
     }
 }
@@ -249,10 +252,12 @@ internal fun groupBy(columns: String): String {
 fun optionalWhereClauses(
         idsPresent: Boolean = true,
         partitionsPresent: Boolean = true,
-        entitySetsPresent: Boolean = true
+        entitySetsPresent: Boolean = true,
+        linking: Boolean = false
 ): String {
     val entitySetClause = if (entitySetsPresent) "${ENTITY_SET_ID.name} = ANY(?)" else ""
-    val idsClause = if (idsPresent) "${ID_VALUE.name} = ANY(?)" else ""
+    val idsColumn = if (linking) ORIGIN_ID.name else ID_VALUE.name
+    val idsClause = if (idsPresent) "$idsColumn = ANY(?)" else ""
     val partitionClause = if (partitionsPresent) "${PARTITION.name} = ANY(?)" else ""
     val versionsClause = "${VERSION.name} > 0 "
 
@@ -348,7 +353,7 @@ fun buildUpsertEntitiesAndLinkedData(): String {
  *
  * 1 - entity set id
  *
- * 2 - entity key ids
+ * 2 - entity key id
  *
  * 3 - partition
  */
@@ -356,6 +361,24 @@ val lockEntitiesInIdsTable =
         "SELECT 1 FROM ${IDS.name} " +
                 "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ? AND ${PARTITION.name} = ? " +
                 "FOR UPDATE"
+
+/**
+ * Preparable sql to lock entities in [IDS] table.
+ *
+ * This query will lock provided entities that have an assigned linking id in ID order.
+ *
+ * The bind order is the following:
+ *
+ * 1 - entity key ids
+ *
+ * 2 - partition
+ */
+val bulkLockEntitiesInIdsTable =
+        "SELECT 1 FROM ${IDS.name} " +
+                "WHERE ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ? " +
+                "ORDER BY ${ID_VALUE.name}" +
+                "FOR UPDATE"
+
 
 /**
  * Preparable sql to lock entities in [IDS] table.
