@@ -1,11 +1,12 @@
 package com.openlattice.postgres
 
-import com.geekbeast.util.LinearBackoff
-import com.geekbeast.util.attempt
-import com.openlattice.data.EntityDataKey
 import com.openlattice.data.storage.lockEntitiesInIdsTable
+import com.openlattice.postgres.PostgresColumn.*
+import com.openlattice.postgres.PostgresTable.IDS
 import org.postgresql.util.PSQLException
 import java.sql.Connection
+import java.sql.PreparedStatement
+import java.util.*
 
 class LockedIdsOperator {
 
@@ -15,28 +16,36 @@ class LockedIdsOperator {
         private const val RETRY_OFFSET: Long = 125
         private const val MAX_RETRY_ATTEMPTS = 32
 
-        fun <T> lockIdsAndExecute(
+        fun lockIdsAndExecute(
                 connection: Connection,
-                entitySetIdToEntityKeyId: Map<EntityDataKey, Int>,
-                operateOnConnectionFn: (Connection) -> T
-        ): T {
+                query: String,
+                entitySetId: UUID,
+                entityKeyIdsByPartition: Map<Int, Collection<UUID>>,
+                shouldLockEntireEntitySet: Boolean = false,
+                bindPreparedStatementFn: (PreparedStatement, Int, Int) -> Unit
+        ): Int {
 
             return connection.use { conn ->
 
                 conn.autoCommit = false
-                val lockEntities = conn.prepareStatement(lockEntitiesInIdsTable)
+
+                val lockingCTE = if (shouldLockEntireEntitySet) LOCKING_CTE_WITHOUT_IDS else LOCKING_CTE_WITH_IDS
+                val ps = conn.prepareStatement("$lockingCTE $query")
 
                 try {
-                    entitySetIdToEntityKeyId.entries.sortedBy { it.key.entityKeyId }.forEach {
+                    entityKeyIdsByPartition.forEach { (partition, entityKeyIds) ->
+                        var index = 1
+                        ps.setObject(index++, entitySetId)
+                        ps.setInt(index++, partition)
+                        if (shouldLockEntireEntitySet) {
+                            ps.setArray(index++, PostgresArrays.createUuidArray(conn, entityKeyIds))
+                        }
 
-                        lockEntities.setObject(1, it.key.entitySetId)
-                        lockEntities.setObject(2, it.key.entityKeyId)
-                        lockEntities.setInt(3, it.value)
-                        lockEntities.execute()
+                        bindPreparedStatementFn(ps, partition, index)
+                        ps.addBatch()
                     }
 
-                    val numUpdates = operateOnConnectionFn(conn)
-
+                    val numUpdates = ps.executeBatch().sum()
                     conn.commit()
 
                     numUpdates
@@ -49,5 +58,22 @@ class LockedIdsOperator {
 
 
         }
+
+        private val LOCKING_CTE_WITH_IDS = "WITH id_locks AS (" +
+                "  SELECT 1" +
+                "  FROM ${IDS.name} " +
+                "    WHERE ${ENTITY_SET_ID.name} = ? " +
+                "    AND ${PARTITION.name} = ? " +
+                "    AND ${ID.name} = ANY(?) " +
+                "  ORDER BY ${ID.name} " +
+                ") "
+
+        private val LOCKING_CTE_WITHOUT_IDS = "WITH id_locks AS (" +
+                "  SELECT 1" +
+                "  FROM ${IDS.name} " +
+                "    WHERE ${ENTITY_SET_ID.name} = ? " +
+                "    AND ${PARTITION.name} = ? " +
+                "  ORDER BY ${ID.name} " +
+                ") "
     }
 }

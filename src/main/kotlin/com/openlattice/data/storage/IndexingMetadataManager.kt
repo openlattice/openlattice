@@ -5,11 +5,10 @@ import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.data.storage.partitions.getPartition
 import com.openlattice.postgres.DataTables.LAST_INDEX
 import com.openlattice.postgres.DataTables.LAST_LINK
+import com.openlattice.postgres.LockedIdsOperator.Companion.lockIdsAndExecute
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.IDS
-import com.openlattice.postgres.LockedIdsOperator
-import com.openlattice.postgres.LockedIdsOperator.Companion.lockIdsAndExecute
 import com.zaxxer.hikari.HikariDataSource
 import java.sql.Connection
 import java.sql.PreparedStatement
@@ -27,32 +26,31 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
             entityKeyIdsWithLastWrite: Map<UUID, Map<UUID, OffsetDateTime>> // entity_set_id -> id -> last_write
     ): Int {
         val entitySetPartitions = partitionManager.getPartitionsByEntitySetId(entityKeyIdsWithLastWrite.keys).mapValues { it.value.toList() }
-        val partitionByEDK = getPartitionByEDK(entitySetPartitions, entityKeyIdsWithLastWrite.mapValues { it.value.keys })
+        return entityKeyIdsWithLastWrite.map { (entitySetId, entities) ->
 
-        return lockIdsAndExecute(hds.connection, partitionByEDK) { connection ->
-            connection.prepareStatement(updateLastIndexSql).use { stmt ->
-                entityKeyIdsWithLastWrite.forEach { (entitySetId, entities) ->
+            val connection = hds.connection
+            val partitions = entitySetPartitions.getValue(entitySetId)
+            val entitiesByPartition = entities.entries
+                    .groupBy({ getPartition(it.key, partitions) }, { it.toPair() })
+                    .mapValues { it.value.toMap() }
 
-                    val partitions = entitySetPartitions.getValue(entitySetId)
-                    entities.entries
-                            .groupBy({
-                                getPartition(it.key, partitions)
-                            }, { it.toPair() })
-                            .mapValues { it.value.toMap() }
-                            .forEach { (partition, entitiesWithLastWrite) ->
-
-                                prepareIndexQuery(
-                                        connection,
-                                        stmt,
-                                        entitySetId,
-                                        partition,
-                                        entitiesWithLastWrite
-                                )
-                            }
-                }
-                stmt.executeBatch().sum()
+            lockIdsAndExecute(
+                    connection,
+                    updateLastIndexSql,
+                    entitySetId,
+                    entitiesByPartition.mapValues { it.value.keys }
+            ) { ps, partition, index ->
+                prepareIndexQuery(
+                        connection,
+                        ps,
+                        entitySetId,
+                        partition,
+                        entitiesByPartition.getValue(partition),
+                        index
+                )
             }
-        }
+        }.sum()
+
     }
 
     /**
@@ -105,18 +103,19 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
             stmt: PreparedStatement,
             entitySetId: UUID,
             partition: Int,
-            idsWithLastWrite: Map<UUID, OffsetDateTime>
+            idsWithLastWrite: Map<UUID, OffsetDateTime>,
+            startingIndex: Int
     ) {
         idsWithLastWrite.entries
                 .groupBy { it.value }
                 .mapValues { it.value.map { it.key } }
                 .forEach { (lastWrite, entities) ->
+                    var index = startingIndex
 
-                    val idsArray = PostgresArrays.createUuidArray(connection, entities)
-                    stmt.setObject(1, lastWrite)
-                    stmt.setObject(2, entitySetId)
-                    stmt.setArray(3, idsArray)
-                    stmt.setInt(4, partition)
+                    stmt.setObject(index++, lastWrite)
+                    stmt.setObject(index++, entitySetId)
+                    stmt.setArray(index++, PostgresArrays.createUuidArray(connection, entities))
+                    stmt.setInt(index, partition)
 
                     stmt.addBatch()
                 }
@@ -196,38 +195,29 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
     fun markAsNeedsToBeLinked(normalEntityDataKeys: Set<EntityDataKey>): Int {
         val normalEntityKeys = normalEntityDataKeys
                 .groupBy { it.entitySetId }
-                .mapValues {
-                    it.value.map { it.entityKeyId }
-                }
-        val entitySetPartitions = partitionManager.getPartitionsByEntitySetId(normalEntityKeys.keys)
+                .mapValues { it.value.map { edk -> edk.entityKeyId } }
+        val entitySetPartitions = partitionManager.getPartitionsByEntitySetId(normalEntityKeys.keys).mapValues { it.toList() }
 
+        return normalEntityKeys.map { (entitySetId, entityKeyIds) ->
 
-        val partitionByEDK = normalEntityDataKeys.associateWith {
-            getPartition(it.entityKeyId, entitySetPartitions.getValue(it.entitySetId).toList())
-        }
+            val partitions = entitySetPartitions.getValue(entitySetId)
+            val idsByPartition = entityKeyIds.groupBy { getPartition(it, partitions) }
+            val connection = hds.connection
 
-        return lockIdsAndExecute(hds.connection, partitionByEDK) { connection ->
-
-            connection.prepareStatement(markAsNeedsToBeLinkedSql).use { stmt ->
-
-                normalEntityKeys.forEach { (entitySetId, normalIds) ->
-                    val partitions = entitySetPartitions.getValue(entitySetId).toList()
-
-                    normalIds
-                            .groupBy { getPartition(it, partitions) }
-                            .forEach { (partition, normalEntityKeyIds) ->
-                                val normalEntityKeyIdsArray = PostgresArrays.createUuidArray(connection, normalEntityKeyIds)
-                                stmt.setObject(1, entitySetId)
-                                stmt.setArray(2, normalEntityKeyIdsArray)
-                                stmt.setInt(3, partition)
-
-                                stmt.addBatch()
-                            }
-                }
-
-                stmt.executeBatch().sum()
+            lockIdsAndExecute(
+                    connection,
+                    markAsNeedsToBeLinkedSql,
+                    entitySetId,
+                    idsByPartition
+            ) { ps, partition, initialIndex ->
+                var index = initialIndex
+                val normalEntityKeyIdsArray = PostgresArrays.createUuidArray(connection, idsByPartition.getValue(partition))
+                ps.setObject(index++, entitySetId)
+                ps.setArray(index++, normalEntityKeyIdsArray)
+                ps.setInt(index, partition)
             }
-        }
+        }.sum()
+
     }
 
     private fun getPartitionByEDK(
