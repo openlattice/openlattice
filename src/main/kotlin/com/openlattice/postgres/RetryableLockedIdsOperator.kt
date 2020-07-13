@@ -21,34 +21,32 @@ class RetryableLockedIdsOperator {
                 operateOnConnectionFn: (Connection) -> Int
         ): Int {
 
-            return attempt(LinearBackoff(MAX_INTERVAL, RETRY_OFFSET), MAX_RETRY_ATTEMPTS) {
+            return connection.use { conn ->
 
-                connection.use { conn ->
+                conn.autoCommit = false
+                val lockEntities = conn.prepareStatement(lockEntitiesInIdsTable)
 
-                    conn.autoCommit = false
-                    val lockEntities = conn.prepareStatement(lockEntitiesInIdsTable)
+                try {
+                    entitySetIdToEntityKeyId.entries.sortedBy { it.key.entityKeyId }.forEach {
 
-                    try {
-                        entitySetIdToEntityKeyId.entries.sortedBy { it.key.entityKeyId }.forEach {
-
-                            lockEntities.setObject(1, it.key.entitySetId)
-                            lockEntities.setObject(2, it.key.entityKeyId)
-                            lockEntities.setInt(3, it.value)
-                            lockEntities.execute()
-                        }
-
-                        val numUpdates = operateOnConnectionFn(conn)
-
-                        conn.commit()
-
-                        numUpdates
-                    } catch (ex: PSQLException) {
-                        //Should be pretty rare.
-                        conn.rollback()
-                        throw ex
+                        lockEntities.setObject(1, it.key.entitySetId)
+                        lockEntities.setObject(2, it.key.entityKeyId)
+                        lockEntities.setInt(3, it.value)
+                        lockEntities.execute()
                     }
+
+                    val numUpdates = operateOnConnectionFn(conn)
+
+                    conn.commit()
+
+                    numUpdates
+                } catch (ex: PSQLException) {
+                    //Should be pretty rare.
+                    conn.rollback()
+                    throw ex
                 }
             }
+
 
         }
     }
