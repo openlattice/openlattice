@@ -18,7 +18,7 @@ import com.openlattice.postgres.*
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.DATA
 import com.openlattice.postgres.PostgresTable.IDS
-import com.openlattice.postgres.RetryableLockedIdsOperator.Companion.lockIdsAndExecute
+import com.openlattice.postgres.LockedIdsOperator.Companion.lockIdsAndExecute
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.openlattice.postgres.streams.StatementHolderSupplier

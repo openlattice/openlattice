@@ -7,7 +7,7 @@ import com.openlattice.data.storage.lockEntitiesInIdsTable
 import org.postgresql.util.PSQLException
 import java.sql.Connection
 
-class RetryableLockedIdsOperator {
+class LockedIdsOperator {
 
     companion object {
 

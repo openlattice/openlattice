@@ -8,8 +8,8 @@ import com.openlattice.postgres.DataTables.LAST_LINK
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.IDS
-import com.openlattice.postgres.RetryableLockedIdsOperator
-import com.openlattice.postgres.RetryableLockedIdsOperator.Companion.lockIdsAndExecute
+import com.openlattice.postgres.LockedIdsOperator
+import com.openlattice.postgres.LockedIdsOperator.Companion.lockIdsAndExecute
 import com.zaxxer.hikari.HikariDataSource
 import java.sql.Connection
 import java.sql.PreparedStatement
