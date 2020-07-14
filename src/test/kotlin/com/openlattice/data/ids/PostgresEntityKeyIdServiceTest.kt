@@ -117,9 +117,6 @@ class PostgresEntityKeyIdServiceTest : TestServer() {
             val idGroup1 = executor.submit<MutableMap<EntityKey, UUID>> {
                 postgresEntityKeyIdService.getEntityKeyIds(entityKeys1)
             }.get()
-            val idGroup1a = executor.submit<MutableMap<EntityKey, UUID>> {
-                postgresEntityKeyIdService.getEntityKeyIds(entityKeys1)
-            }.get()
             val idGroup2 = postgresEntityKeyIdService.getEntityKeyIds(entityKeys2.toSet())
             Assert.assertTrue(idGroup1.values.toSet().intersect(idGroup2.values).isEmpty())
         } finally {
