@@ -8,6 +8,8 @@ import com.openlattice.postgres.DataTables.LAST_LINK
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.IDS
+import com.openlattice.postgres.getIdsByPartition
+import com.openlattice.postgres.getPartitionMapForEntitySet
 import com.openlattice.postgres.lockIdsAndExecute
 import com.zaxxer.hikari.HikariDataSource
 import java.sql.PreparedStatement
@@ -124,7 +126,7 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
 
         return entityKeyIds.map { (entitySetId, entityKeyIds) ->
             val partitions = entitySetPartitions.getValue(entitySetId)
-            val idsByPartition = entityKeyIds.groupBy { getPartition(it, partitions) }
+            val idsByPartition = getIdsByPartition(entityKeyIds, partitions)
 
             lockIdsAndExecute(
                     hds.connection,
@@ -155,7 +157,7 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
                 hds.connection,
                 markEntitySetLastIndexSql,
                 entitySetId,
-                partitions.associateWith { setOf<UUID>() },
+                getPartitionMapForEntitySet(partitions),
                 shouldLockEntireEntitySet = true
         ) { ps, partition, initialIndex ->
             var index = initialIndex
@@ -174,7 +176,7 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
                     hds.connection,
                     markEntitySetsAsNeedsToBeIndexedSql(linking),
                     entitySetId,
-                    entitySetPartitions.getValue(entitySetId).associateWith { setOf<UUID>() },
+                    getPartitionMapForEntitySet(entitySetPartitions.getValue(entitySetId)),
                     shouldLockEntireEntitySet = true
             ) { ps, partition, initialIndex ->
                 var index = initialIndex
@@ -194,7 +196,7 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
         return normalEntityKeys.map { (entitySetId, entityKeyIds) ->
 
             val partitions = entitySetPartitions.getValue(entitySetId)
-            val idsByPartition = entityKeyIds.groupBy { getPartition(it, partitions) }
+            val idsByPartition = getIdsByPartition(entityKeyIds, partitions)
 
             lockIdsAndExecute(
                     hds.connection,

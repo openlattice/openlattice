@@ -1,5 +1,6 @@
 package com.openlattice.postgres
 
+import com.openlattice.data.storage.partitions.getPartition
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.IDS
 import java.sql.Connection
@@ -62,6 +63,14 @@ fun lockIdsAndExecute(
     }
 
 
+}
+
+fun getIdsByPartition(entityKeyIds: Collection<UUID>, partitions: List<Int>): Map<Int, List<UUID>> {
+    return entityKeyIds.groupBy { getPartition(it, partitions) }
+}
+
+fun getPartitionMapForEntitySet(partitions: Collection<Int>): Map<Int, List<UUID>> {
+    return partitions.associateWith { listOf<UUID>() }
 }
 
 private val LOCKING_CTE_WITH_IDS = "WITH id_locks AS (" +

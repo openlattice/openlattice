@@ -600,7 +600,7 @@ class PostgresEntityDataQueryService(
                 conn,
                 updateVersionsForEntitySet,
                 entitySetId,
-                partitions.associateWith { setOf<UUID>() },
+                getPartitionMapForEntitySet(partitions),
                 shouldLockEntireEntitySet = true
         ) { ps, partition, initialIndex ->
             var index = initialIndex
@@ -881,7 +881,7 @@ class PostgresEntityDataQueryService(
                 hds.connection,
                 zeroVersionsForEntitySet,
                 entitySetId,
-                partitions.associateWith { setOf<UUID>() },
+                getPartitionMapForEntitySet(partitions),
                 shouldLockEntireEntitySet = true
         ) { ps, partition, initialIndex ->
             var index = initialIndex
@@ -898,7 +898,7 @@ class PostgresEntityDataQueryService(
      */
     fun deleteEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): WriteEvent {
         val partitions = partitionManager.getEntitySetPartitions(entitySetId).toList()
-        val entitiesByPartition = entityKeyIds.groupBy { getPartition(it, partitions) }
+        val entitiesByPartition = getIdsByPartition(entityKeyIds, partitions)
 
         val numUpdates = lockIdsAndExecute(
                 hds.connection,
@@ -922,7 +922,7 @@ class PostgresEntityDataQueryService(
      */
     fun tombstoneDeletedEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): WriteEvent {
         val partitions = partitionManager.getEntitySetPartitions(entitySetId).toList()
-        val entitiesByPartition = entityKeyIds.groupBy { getPartition(it, partitions) }
+        val entitiesByPartition = getIdsByPartition(entityKeyIds, partitions)
 
         val numUpdates = lockIdsAndExecute(
                 hds.connection,
@@ -991,7 +991,7 @@ class PostgresEntityDataQueryService(
             version: Long,
             partitions: List<Int> = partitionManager.getEntitySetPartitions(entitySetId).toList()
     ): WriteEvent {
-        val idsByPartition = entityKeyIds.groupBy { getPartition(it, partitions) }
+        val idsByPartition = getIdsByPartition(entityKeyIds, partitions)
 
         val numUpdated = lockIdsAndExecute(
                 hds.connection,
