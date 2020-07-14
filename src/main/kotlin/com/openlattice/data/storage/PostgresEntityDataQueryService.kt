@@ -7,7 +7,6 @@ import com.openlattice.IdConstants
 import com.openlattice.analysis.SqlBindInfo
 import com.openlattice.analysis.requests.Filter
 import com.openlattice.data.DeleteType
-import com.openlattice.data.EntityDataKey
 import com.openlattice.data.WriteEvent
 import com.openlattice.data.storage.PostgresEntitySetSizesInitializationTask.Companion.ENTITY_SET_SIZES_VIEW
 import com.openlattice.data.storage.partitions.PartitionManager
@@ -15,10 +14,10 @@ import com.openlattice.data.storage.partitions.getPartition
 import com.openlattice.data.util.PostgresDataHasher
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.*
+import com.openlattice.postgres.LockedIdsOperator.Companion.lockIdsAndExecute
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.DATA
 import com.openlattice.postgres.PostgresTable.IDS
-import com.openlattice.postgres.LockedIdsOperator.Companion.lockIdsAndExecute
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.openlattice.postgres.streams.StatementHolderSupplier
@@ -370,13 +369,13 @@ class PostgresEntityDataQueryService(
     ): Int {
         return hds.connection.use { connection ->
             //Update the versions of all entities.
-            val entityKeyIdsArr = PostgresArrays.createUuidArray(connection, entities.keys)
             val versionsArrays = PostgresArrays.createLongArray(connection, version)
 
             /*
-             * We do not need entity level locking as our version field ensures that data is consistent even across
-             * transactions in all cases, except deletes (clear is fine) as long entity version is not bumped until
-             * all properties are written.
+             * We do not need entity level locking as the version in the ids table ensures that data is consistent even
+             * if the follow property upserts fails halfway through.
+             *
+             * Previous me said deletes had to be handled specially, but it makes sense that clear is fine.
              *
              */
 
@@ -412,7 +411,16 @@ class PostgresEntityDataQueryService(
                 upsertPropertyValues.values.map { it.executeBatch().sum() }.sum()
             }.sum()
 
+            /**
+             * At this point, we either need to either commit all versions by updating the version in the ids table our
+             * fail out. Dead locks should be impossible due to explicit locking within the transaction.
+             *
+             * TODO: Switch back to the single SELECT FOR UPDATE statement instead of sequence of statements for perf
+             * reasons.
+             */
+
             connection.autoCommit = false
+            val entityKeyIdsArr = PostgresArrays.createUuidArray(connection, entities.keys)
             val lockEntities = connection.prepareStatement(lockEntitiesInIdsTable)
             //Make data visible by marking new version in ids table.
             val upsertEntities = connection.prepareStatement(buildUpsertEntitiesAndLinkedData())
@@ -442,11 +450,22 @@ class PostgresEntityDataQueryService(
                     connection.rollback()
                     throw ex
                 }
+
+                upsertEntities.setObject(1, versionsArrays)
+                upsertEntities.setObject(2, version)
+                upsertEntities.setObject(3, version)
+                upsertEntities.setObject(4, entitySetId)
+                upsertEntities.setArray(5, entityKeyIdsArr)
+                upsertEntities.setInt(6, partition)
+                val updatedCount = upsertEntities.executeUpdate()
+                connection.commit()
+                logger.info("Committed $updatedCount entities to complete an insert.")
+                updatedCount
             }
 
             connection.autoCommit = true
             logger.debug("Updated $updatedLinkedEntities linked entities as part of insert.")
-            updatedPropertyCounts
+            return updatedPropertyCounts
         }
 
     }
@@ -657,16 +676,16 @@ class PostgresEntityDataQueryService(
 
         val version = System.currentTimeMillis()
 
-        return hds.connection.use { conn ->
-            tombstone(
-                    entitySetId,
-                    entityKeyIds,
-                    authorizedPropertyTypes.values,
-                    version,
-                    partitions
-            )
-            tombstoneIdsTable(conn, entitySetId, entityKeyIds, version, partitions)
-        }
+
+        tombstone(
+                entitySetId,
+                entityKeyIds,
+                authorizedPropertyTypes.values,
+                version,
+                partitions
+        )
+        return tombstoneIdsTable(entitySetId, entityKeyIds, version, partitions)
+
     }
 
     /**
@@ -986,7 +1005,6 @@ class PostgresEntityDataQueryService(
      * @param partitions Contains the partition information for the requested entity set.
      */
     private fun tombstoneIdsTable(
-            conn: Connection,
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
             version: Long,
@@ -995,13 +1013,13 @@ class PostgresEntityDataQueryService(
         val idsByPartition = entityKeyIds.groupBy { getPartition(it, partitions) }
 
         val numUpdated = lockIdsAndExecute(
-                conn,
+                hds.connection,
                 updateVersionsForEntitiesInEntitySet,
                 entitySetId,
                 idsByPartition
         ) { ps, partition, initialIndex ->
             var index = initialIndex
-            val entityKeyIdsArr = PostgresArrays.createUuidArray(conn, idsByPartition.getValue(partition))
+            val entityKeyIdsArr = PostgresArrays.createUuidArray(ps.connection, idsByPartition.getValue(partition))
 
             ps.setLong(index++, -version)
             ps.setLong(index++, -version)
@@ -1013,6 +1031,7 @@ class PostgresEntityDataQueryService(
 
         return WriteEvent(version, numUpdated)
     }
+
 
     /**
      * Tombstones the provided set of property types for each provided entity key.
@@ -1045,7 +1064,9 @@ class PostgresEntityDataQueryService(
                 )
             })
 
-            val numUpdated = conn.prepareStatement(updateVersionsForPropertyTypesInEntitiesInEntitySet()).use { ps ->
+            val numUpdated = conn.prepareStatement(
+                    updateVersionsForPropertyTypesInEntitiesInEntitySet()
+            ).use { ps ->
                 ps.setLong(1, -version)
                 ps.setLong(2, -version)
                 ps.setLong(3, -version)
