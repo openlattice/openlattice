@@ -1,6 +1,5 @@
 package com.openlattice.postgres
 
-import com.openlattice.data.storage.lockEntitiesInIdsTable
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.IDS
 import org.postgresql.util.PSQLException
@@ -12,10 +11,29 @@ class LockedIdsOperator {
 
     companion object {
 
-        private const val MAX_INTERVAL: Long = 60 * 1_000
-        private const val RETRY_OFFSET: Long = 125
-        private const val MAX_RETRY_ATTEMPTS = 32
-
+        /**
+         * This function prepares a statement for the requested query, prepended with a CTE that acquires
+         * locks on the [IDS] table, executes the query in batches per partition, and returns the number
+         * of rows updated.
+         *
+         * This should only wrap queries that update existing rows in the [IDS] table, and should operate on
+         * a single partition of a single entity set.
+         *
+         * @param connection The Hikari connection that will be used to execute the transaction
+         * @param query The SQL query that will be executed once the locks have been acquired
+         * @param entitySetId The entity set id that will be updated
+         * @param entityKeyIdsByPartition A map from partition to a collection of entityKeyIds on that partition to
+         * update. If the query operates on an entire entity set (as opposed to specific entity key ids) the values
+         * in this map will be ignored.
+         * @param shouldLockEntireEntitySet A boolean indicating whether the locks should operate on an entire entity
+         * set, or whether they should apply a filter on the id values in [entityKeyIdsByPartition]. Defaults to false.
+         * @param bindPreparedStatementFn A function that binds any remaining PreparedStatement parameters. This function
+         * operates on the PreparedStatement, an Int (indicating the partition being operated on), and an Int (indicating
+         * the current bind index).
+         *
+         * @return The number of rows that were udpated.
+         *
+         */
         fun lockIdsAndExecute(
                 connection: Connection,
                 query: String,
@@ -26,8 +44,6 @@ class LockedIdsOperator {
         ): Int {
 
             return connection.use { conn ->
-
-                conn.autoCommit = false
 
                 val lockingCTE = if (shouldLockEntireEntitySet) LOCKING_CTE_WITHOUT_IDS else LOCKING_CTE_WITH_IDS
                 val ps = conn.prepareStatement("$lockingCTE $query")
