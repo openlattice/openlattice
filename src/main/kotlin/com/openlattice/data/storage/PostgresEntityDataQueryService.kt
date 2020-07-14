@@ -876,14 +876,18 @@ class PostgresEntityDataQueryService(
      */
     fun tombstoneDeletedEntitySet(entitySetId: UUID): WriteEvent {
         val partitions = partitionManager.getEntitySetPartitions(entitySetId)
+        
+        lockIdsAndExecute(
+                hds.connection,
+                zeroVersionsForEntitySet,
+                entitySetId,
+                partitions.associateWith { setOf<UUID>() },
+                shouldLockEntireEntitySet = true
+        ) { ps, partition, initialIndex ->
+            var index = initialIndex
 
-        val numUpdates = hds.connection.use {
-            val ps = it.prepareStatement(zeroVersionsForEntitySet)
-            val partitionsArr = PostgresArrays.createIntArray(it, partitions)
-
-            ps.setObject(1, entitySetId)
-            ps.setArray(2, partitionsArr)
-            ps.executeUpdate()
+            ps.setObject(index++, entitySetId)
+            ps.setInt(index, partition)
         }
 
         return WriteEvent(System.currentTimeMillis(), numUpdates)
@@ -926,13 +930,11 @@ class PostgresEntityDataQueryService(
                 entitySetId,
                 entitiesByPartition
         ) { ps, partition, initialIndex ->
-// TODO katherine
             var index = initialIndex
             val idsArr = PostgresArrays.createUuidArray(ps.connection, entitiesByPartition.getValue(partition))
-            val partitionsArr = PostgresArrays.createIntArray(ps.connection, listOf(partition))
 
             ps.setObject(index++, entitySetId)
-            ps.setArray(index++, partitionsArr)
+            ps.setInt(index++, partition)
             ps.setArray(index, idsArr)
         }
 

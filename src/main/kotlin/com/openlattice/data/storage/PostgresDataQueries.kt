@@ -457,7 +457,7 @@ internal val updateVersionsForEntitiesInEntitySet = "$updateVersionsForEntitySet
  * The following bind order is expected:
  *
  * 1. entity set id
- * 2. partition (uuid array)
+ * 2. partition
  */
 // @formatter:off
 internal val zeroVersionsForEntitySet = "UPDATE ${IDS.name} " +
@@ -467,7 +467,7 @@ internal val zeroVersionsForEntitySet = "UPDATE ${IDS.name} " +
             "${LAST_WRITE.name} = 'now()' " +
         "WHERE " +
             "${ENTITY_SET_ID.name} = ? AND " +
-            "${PARTITION.name} = ANY(?) "
+            "${PARTITION.name} = ? "
 // @formatter:on
 
 
@@ -478,7 +478,7 @@ internal val zeroVersionsForEntitySet = "UPDATE ${IDS.name} " +
  * The following bind order is expected:
  *
  * 1. entity set id
- * 2. partition (uuid array)
+ * 2. partition
  * 3. id (uuid array)
  */
 internal val zeroVersionsForEntitiesInEntitySet = "$zeroVersionsForEntitySet AND ${ID.name} = ANY(?) "
