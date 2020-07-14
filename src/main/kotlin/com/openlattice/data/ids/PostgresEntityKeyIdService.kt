@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions.checkState
 import com.openlattice.IdConstants
 import com.openlattice.data.EntityKey
 import com.openlattice.data.EntityKeyIdService
+import com.openlattice.data.storage.lockEntitiesInIdsTable
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.data.storage.partitions.getPartition
 import com.openlattice.data.util.PostgresDataHasher
@@ -38,6 +39,7 @@ import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.slf4j.LoggerFactory
+import java.sql.Connection
 import java.sql.PreparedStatement
 import java.util.*
 import kotlin.collections.HashMap
@@ -128,13 +130,13 @@ class PostgresEntityKeyIdService(
                 insertSyncIds.addBatch()
             }
 
-            val totalSyncIdRowsWritten = insertSyncIds.executeBatch()
+            val totalSyncIdRowsWritten = insertSyncIds.executeBatch().sum()
 
             val syncIds = entityKeyIds.keys
                     .groupBy({ it.entitySetId }, { it.entityId })
                     .mapValues { it.value.toSet() }
 
-            val actualEntityKeyIds = loadEntityKeyIds(syncIds, true)
+            val actualEntityKeyIds = loadEntityKeyIds(syncIds, true, connection)
 
             val insertIds = connection.prepareStatement(INSERT_SQL)
             val insertToData = connection.prepareStatement(INSERT_ID_TO_DATA_SQL)
@@ -164,7 +166,7 @@ class PostgresEntityKeyIdService(
             val idsWrittenCount = updateIdsWritten.executeBatch()
 
             if (logger.isDebugEnabled) {
-                logger.debug("Inserted ${totalSyncIdRowsWritten.sum()} sync ids.")
+                logger.debug("Inserted $totalSyncIdRowsWritten sync ids.")
                 logger.debug("Inserted $totalWritten ids.")
                 logger.debug("Inserted $totalDataRowsWritten data ids.")
                 logger.debug("Updated $idsWrittenCount id written flags.")
@@ -268,9 +270,10 @@ class PostgresEntityKeyIdService(
 
     private fun loadEntityKeyIds(
             entityIds: Map<UUID, Set<String>>,
-            allIdWritten: Boolean = false
+            allIdWritten: Boolean = false,
+            connection : Connection = hds.connection
     ): MutableMap<EntityKey, UUID> {
-        return hds.connection.use { connection ->
+        return connection.use { connection ->
             val ids = HashMap<EntityKey, UUID>(entityIds.values.sumBy { it.size })
 
             val ps = connection.prepareStatement(if (allIdWritten) entityKeyIdsSqlAny else entityKeyIdsSqlNotIdWritten)
