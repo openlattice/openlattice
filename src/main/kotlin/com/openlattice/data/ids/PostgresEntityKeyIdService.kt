@@ -48,7 +48,7 @@ import kotlin.collections.HashMap
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-private val entityKeysSql = "SELECT * FROM ${IDS.name} WHERE ${ID.name} = ANY(?) "
+private val entityKeysSql = "SELECT * FROM ${SYNC_IDS.name} WHERE ${ID.name} = ANY(?) "
 private val entityKeyIdsSqlNotIdWritten = "SELECT * FROM ${SYNC_IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${ENTITY_ID.name} = ANY(?) AND NOT ${ID_WRITTEN.name} "
 private val entityKeyIdsSqlAny = "SELECT * FROM ${SYNC_IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${ENTITY_ID.name} = ANY(?)"
 private val entityKeyIdSql = "SELECT * FROM ${SYNC_IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${ENTITY_ID.name} = ? "
