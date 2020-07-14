@@ -129,13 +129,11 @@ class PostgresLinkingQueryService(
                 UPDATE_LINKED_ENTITIES_SQL,
                 newMember.entitySetId,
                 mapOf(partition to setOf(newMember.entityKeyId))
-        ) { ps, _, initialIndex ->
-            var index = initialIndex
-
-            ps.setObject(index++, clusterId)
-            ps.setInt(index++, partition)
-            ps.setObject(index++, newMember.entitySetId)
-            ps.setObject(index, newMember.entityKeyId)
+        ) { ps, _, offset ->
+            ps.setObject(1 + offset, clusterId)
+            ps.setInt(2 + offset, partition)
+            ps.setObject(3 + offset, newMember.entitySetId)
+            ps.setObject(4 + offset, newMember.entityKeyId)
         }
     }
 

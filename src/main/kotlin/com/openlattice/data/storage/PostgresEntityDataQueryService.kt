@@ -423,15 +423,13 @@ class PostgresEntityDataQueryService(
                         upsertEntitiesSql,
                         entitySetId,
                         mapOf(partition to entities.keys)
-                ) { ps, _, initialIndex ->
-                    var index = initialIndex
-
-                    ps.setObject(index++, versionsArrays)
-                    ps.setObject(index++, version)
-                    ps.setObject(index++, version)
-                    ps.setObject(index++, entitySetId)
-                    ps.setArray(index++, PostgresArrays.createUuidArray(connection, entities.keys))
-                    ps.setInt(index, partition)
+                ) { ps, _, offset ->
+                    ps.setObject(1 + offset, versionsArrays)
+                    ps.setObject(2 + offset, version)
+                    ps.setObject(3 + offset, version)
+                    ps.setObject(4 + offset, entitySetId)
+                    ps.setArray(5 + offset, PostgresArrays.createUuidArray(connection, entities.keys))
+                    ps.setInt(6 + offset, partition)
                 }
 
                 connection.commit()
@@ -602,14 +600,12 @@ class PostgresEntityDataQueryService(
                 entitySetId,
                 getPartitionMapForEntitySet(partitions),
                 shouldLockEntireEntitySet = true
-        ) { ps, partition, initialIndex ->
-            var index = initialIndex
-
-            ps.setLong(index++, -version)
-            ps.setLong(index++, -version)
-            ps.setLong(index++, -version)
-            ps.setObject(index++, entitySetId)
-            ps.setInt(index, partition)
+        ) { ps, partition, offset ->
+            ps.setLong(1 + offset, -version)
+            ps.setLong(2 + offset, -version)
+            ps.setLong(3 + offset, -version)
+            ps.setObject(4 + offset, entitySetId)
+            ps.setInt(5 + offset, partition)
         }
 
         //We don't count property type updates.
@@ -883,11 +879,9 @@ class PostgresEntityDataQueryService(
                 entitySetId,
                 getPartitionMapForEntitySet(partitions),
                 shouldLockEntireEntitySet = true
-        ) { ps, partition, initialIndex ->
-            var index = initialIndex
-
-            ps.setObject(index++, entitySetId)
-            ps.setInt(index, partition)
+        ) { ps, partition, offset ->
+            ps.setObject(1 + offset, entitySetId)
+            ps.setInt(2 + offset, partition)
         }
 
         return WriteEvent(System.currentTimeMillis(), numUpdates)
@@ -905,13 +899,12 @@ class PostgresEntityDataQueryService(
                 deleteEntityKeys,
                 entitySetId,
                 entitiesByPartition
-        ) { ps, partition, initialIndex ->
-            var index = initialIndex
+        ) { ps, partition, offset ->
             val entityArr = PostgresArrays.createUuidArray(ps.connection, entitiesByPartition.getValue(partition))
 
-            ps.setObject(index++, entitySetId)
-            ps.setArray(index++, entityArr)
-            ps.setInt(index, partition)
+            ps.setObject(1 + offset, entitySetId)
+            ps.setArray(2  + offset, entityArr)
+            ps.setInt(3 + offset, partition)
         }
 
         return WriteEvent(System.currentTimeMillis(), numUpdates)
@@ -929,13 +922,12 @@ class PostgresEntityDataQueryService(
                 zeroVersionsForEntitiesInEntitySet,
                 entitySetId,
                 entitiesByPartition
-        ) { ps, partition, initialIndex ->
-            var index = initialIndex
+        ) { ps, partition, offset ->
             val idsArr = PostgresArrays.createUuidArray(ps.connection, entitiesByPartition.getValue(partition))
 
-            ps.setObject(index++, entitySetId)
-            ps.setInt(index++, partition)
-            ps.setArray(index, idsArr)
+            ps.setObject(1 + offset, entitySetId)
+            ps.setInt(2 + offset, partition)
+            ps.setArray(3 + offset, idsArr)
         }
 
         return WriteEvent(System.currentTimeMillis(), numUpdates)
@@ -998,16 +990,15 @@ class PostgresEntityDataQueryService(
                 updateVersionsForEntitiesInEntitySet,
                 entitySetId,
                 idsByPartition
-        ) { ps, partition, initialIndex ->
-            var index = initialIndex
+        ) { ps, partition, offset ->
             val entityKeyIdsArr = PostgresArrays.createUuidArray(ps.connection, idsByPartition.getValue(partition))
 
-            ps.setLong(index++, -version)
-            ps.setLong(index++, -version)
-            ps.setLong(index++, -version)
-            ps.setObject(index++, entitySetId)
-            ps.setInt(index++, partition)
-            ps.setArray(index, entityKeyIdsArr)
+            ps.setLong(1 + offset, -version)
+            ps.setLong(2 + offset, -version)
+            ps.setLong(3 + offset, -version)
+            ps.setObject(4 + offset, entitySetId)
+            ps.setInt(5 + offset, partition)
+            ps.setArray(6 + offset, entityKeyIdsArr)
         }
 
         return WriteEvent(version, numUpdated)

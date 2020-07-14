@@ -39,13 +39,13 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
                     updateLastIndexSql,
                     entitySetId,
                     entitiesByPartition.mapValues { it.value.keys }
-            ) { ps, partition, index ->
+            ) { ps, partition, offset ->
                 prepareIndexQuery(
                         ps,
                         entitySetId,
                         partition,
                         entitiesByPartition.getValue(partition),
-                        index
+                        offset
                 )
             }
         }.sum()
@@ -74,7 +74,7 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
                     updateLastLinkingIndexSql,
                     entitySetId,
                     entitiesByPartition.mapValues { it.value.keys }
-            ) { ps, partition, initialIndex ->
+            ) { ps, partition, offset ->
                 val mergedLinkingIdsWithLastWrite = entitiesByPartition.getValue(partition).values
                         .fold(mutableMapOf<UUID, OffsetDateTime>()) { acc, map ->
                             acc.putAll(map)
@@ -86,7 +86,7 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
                         entitySetId,
                         partition,
                         mergedLinkingIdsWithLastWrite,
-                        initialIndex
+                        offset
                 )
 
             }
@@ -133,13 +133,12 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
                     markLastIndexSql,
                     entitySetId,
                     idsByPartition
-            ) { ps, partition, initialIndex ->
-                var index = initialIndex
+            ) { ps, partition, offset ->
                 val idsArray = PostgresArrays.createUuidArray(ps.connection, idsByPartition.getValue(partition))
 
-                ps.setObject(index++, entitySetId)
-                ps.setArray(index++, idsArray)
-                ps.setInt(index, partition)
+                ps.setObject(1 + offset, entitySetId)
+                ps.setArray(2 + offset, idsArray)
+                ps.setInt(3 + offset, partition)
 
             }
         }.sum()
@@ -159,11 +158,9 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
                 entitySetId,
                 getPartitionMapForEntitySet(partitions),
                 shouldLockEntireEntitySet = true
-        ) { ps, partition, initialIndex ->
-            var index = initialIndex
-
-            ps.setObject(index++, entitySetId)
-            ps.setInt(index, partition)
+        ) { ps, partition, offset ->
+            ps.setObject(1 + offset, entitySetId)
+            ps.setInt(2 + offset, partition)
         }
     }
 
@@ -178,11 +175,9 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
                     entitySetId,
                     getPartitionMapForEntitySet(entitySetPartitions.getValue(entitySetId)),
                     shouldLockEntireEntitySet = true
-            ) { ps, partition, initialIndex ->
-                var index = initialIndex
-
-                ps.setObject(index++, entitySetId)
-                ps.setInt(index, partition)
+            ) { ps, partition, offset ->
+                ps.setObject(1 + offset, entitySetId)
+                ps.setInt(2 + offset, partition)
             }
         }.sum()
     }
@@ -203,12 +198,11 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
                     markAsNeedsToBeLinkedSql,
                     entitySetId,
                     idsByPartition
-            ) { ps, partition, initialIndex ->
-                var index = initialIndex
+            ) { ps, partition, offset ->
                 val normalEntityKeyIdsArray = PostgresArrays.createUuidArray(ps.connection, idsByPartition.getValue(partition))
-                ps.setObject(index++, entitySetId)
-                ps.setArray(index++, normalEntityKeyIdsArray)
-                ps.setInt(index, partition)
+                ps.setObject(1 + offset, entitySetId)
+                ps.setArray(2 + offset, normalEntityKeyIdsArray)
+                ps.setInt(3 + offset, partition)
             }
         }.sum()
 

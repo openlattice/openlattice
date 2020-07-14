@@ -53,7 +53,9 @@ fun lockIdsAndExecute(
                 ps.setArray(index++, PostgresArrays.createUuidArray(conn, entityKeyIds))
             }
 
-            bindPreparedStatementFn(ps, partition, index)
+            // We set index to the last bound index so that the [bindPreparedStatementFn] can use
+            // manual bind numbering added to this offset (which is 1-indexed)
+            bindPreparedStatementFn(ps, partition, index - 1)
             ps.addBatch()
         }
 
