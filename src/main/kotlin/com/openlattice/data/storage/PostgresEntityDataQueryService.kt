@@ -876,8 +876,8 @@ class PostgresEntityDataQueryService(
      */
     fun tombstoneDeletedEntitySet(entitySetId: UUID): WriteEvent {
         val partitions = partitionManager.getEntitySetPartitions(entitySetId)
-        
-        lockIdsAndExecute(
+
+        val numUpdates = lockIdsAndExecute(
                 hds.connection,
                 zeroVersionsForEntitySet,
                 entitySetId,
