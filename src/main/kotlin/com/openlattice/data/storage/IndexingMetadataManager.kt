@@ -10,7 +10,6 @@ import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.IDS
 import com.zaxxer.hikari.HikariDataSource
-import java.sql.Connection
 import java.sql.PreparedStatement
 import java.time.OffsetDateTime
 import java.util.*
@@ -28,20 +27,18 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
         val entitySetPartitions = partitionManager.getPartitionsByEntitySetId(entityKeyIdsWithLastWrite.keys).mapValues { it.value.toList() }
         return entityKeyIdsWithLastWrite.map { (entitySetId, entities) ->
 
-            val connection = hds.connection
             val partitions = entitySetPartitions.getValue(entitySetId)
             val entitiesByPartition = entities.entries
                     .groupBy({ getPartition(it.key, partitions) }, { it.toPair() })
                     .mapValues { it.value.toMap() }
 
             lockIdsAndExecute(
-                    connection,
+                    hds.connection,
                     updateLastIndexSql,
                     entitySetId,
                     entitiesByPartition.mapValues { it.value.keys }
             ) { ps, partition, index ->
                 prepareIndexQuery(
-                        connection,
                         ps,
                         entitySetId,
                         partition,
@@ -69,10 +66,9 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
             val entitiesByPartition = entities.entries
                     .groupBy({ getPartition(it.key, partitions) }, { it.toPair() })
                     .mapValues { it.value.toMap() }
-            val connection = hds.connection
 
             lockIdsAndExecute(
-                    connection,
+                    hds.connection,
                     updateLastLinkingIndexSql,
                     entitySetId,
                     entitiesByPartition.mapValues { it.value.keys }
@@ -84,7 +80,6 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
                         }
 
                 prepareIndexQuery(
-                        connection,
                         ps,
                         entitySetId,
                         partition,
@@ -98,7 +93,6 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
     }
 
     private fun prepareIndexQuery(
-            connection: Connection,
             stmt: PreparedStatement,
             entitySetId: UUID,
             partition: Int,
@@ -107,13 +101,13 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
     ) {
         idsWithLastWrite.entries
                 .groupBy { it.value }
-                .mapValues { it.value.map { it.key } }
+                .mapValues { it.value.map { entry -> entry.key } }
                 .forEach { (lastWrite, entities) ->
                     var index = startingIndex
 
                     stmt.setObject(index++, lastWrite)
                     stmt.setObject(index++, entitySetId)
-                    stmt.setArray(index++, PostgresArrays.createUuidArray(connection, entities))
+                    stmt.setArray(index++, PostgresArrays.createUuidArray(stmt.connection, entities))
                     stmt.setInt(index, partition)
 
                     stmt.addBatch()
@@ -131,16 +125,15 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
         return entityKeyIds.map { (entitySetId, entityKeyIds) ->
             val partitions = entitySetPartitions.getValue(entitySetId)
             val idsByPartition = entityKeyIds.groupBy { getPartition(it, partitions) }
-            val connection = hds.connection
 
             lockIdsAndExecute(
-                    connection,
+                    hds.connection,
                     markLastIndexSql,
                     entitySetId,
                     idsByPartition
             ) { ps, partition, initialIndex ->
                 var index = initialIndex
-                val idsArray = PostgresArrays.createUuidArray(connection, idsByPartition.getValue(partition))
+                val idsArray = PostgresArrays.createUuidArray(ps.connection, idsByPartition.getValue(partition))
 
                 ps.setObject(index++, entitySetId)
                 ps.setArray(index++, idsArray)
@@ -196,16 +189,15 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
 
             val partitions = entitySetPartitions.getValue(entitySetId)
             val idsByPartition = entityKeyIds.groupBy { getPartition(it, partitions) }
-            val connection = hds.connection
 
             lockIdsAndExecute(
-                    connection,
+                    hds.connection,
                     markAsNeedsToBeLinkedSql,
                     entitySetId,
                     idsByPartition
             ) { ps, partition, initialIndex ->
                 var index = initialIndex
-                val normalEntityKeyIdsArray = PostgresArrays.createUuidArray(connection, idsByPartition.getValue(partition))
+                val normalEntityKeyIdsArray = PostgresArrays.createUuidArray(ps.connection, idsByPartition.getValue(partition))
                 ps.setObject(index++, entitySetId)
                 ps.setArray(index++, normalEntityKeyIdsArray)
                 ps.setInt(index, partition)
