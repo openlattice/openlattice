@@ -44,10 +44,7 @@ import java.sql.PreparedStatement
 import java.util.*
 import kotlin.collections.HashMap
 
-/**
- *
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
- */
+
 private val entityKeysSql = "SELECT * FROM ${IDS.name} WHERE ${ID.name} = ANY(?) "
 private val entityKeyIdsSqlNotIdWritten = "SELECT * FROM ${SYNC_IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${ENTITY_ID.name} = ANY(?) AND NOT ${ID_WRITTEN.name} "
 private val entityKeyIdsSqlAny = "SELECT * FROM ${SYNC_IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${ENTITY_ID.name} = ANY(?)"
@@ -69,6 +66,11 @@ private val INSERT_SYNC_SQL = "INSERT INTO ${SYNC_IDS.name} (${ENTITY_SET_ID.nam
 
 private val logger = LoggerFactory.getLogger(PostgresEntityKeyIdService::class.java)
 
+/**
+ * This service is responsible for assigning ids to entity keys and persisting the mapping in postgres.
+ *
+ * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
+ */
 class PostgresEntityKeyIdService(
         private val hds: HikariDataSource,
         private val idGenerationService: HazelcastIdGenerationService,
@@ -76,7 +78,7 @@ class PostgresEntityKeyIdService(
 ) : EntityKeyIdService {
     private fun genEntityKeyIds(entityIds: Set<EntityKey>): Map<EntityKey, UUID> {
         val ids = idGenerationService.getNextIds(entityIds.size)
-        checkState(ids.size == entityIds.size, "Insufficient ids generated.")
+        require(ids.size == entityIds.size) { "Insufficient ids generated." }
         return entityIds.zip(ids).toMap()
     }
 
