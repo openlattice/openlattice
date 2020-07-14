@@ -417,7 +417,7 @@ class PostgresEntityDataQueryService(
 
             //Make data visible by marking new version in ids table.
             connection.autoCommit = false
-            
+
             val updatedLinkedEntities = try {
                 val updatedCount = lockIdsAndExecute(
                         connection,
@@ -1056,7 +1056,6 @@ class PostgresEntityDataQueryService(
                 ps.setArray(5, partitionsArr)
                 ps.setArray(6, propertyTypeIdsArr)
                 ps.setArray(7, entityKeyIdsArr)
-                ps.setArray(8, partitionsArr)
                 ps.executeUpdate()
             }
 
@@ -1070,7 +1069,6 @@ class PostgresEntityDataQueryService(
                 ps.setArray(5, partitionsArr)
                 ps.setArray(6, propertyTypeIdsArr)
                 ps.setArray(7, entityKeyIdsArr)
-                ps.setArray(8, partitionsArr)
                 ps.executeUpdate()
             }
 
