@@ -82,6 +82,7 @@ class LockedIdsOperator {
                 "    AND ${PARTITION.name} = ? " +
                 "    AND ${ID.name} = ANY(?) " +
                 "  ORDER BY ${ID.name} " +
+                "  FOR UPDATE " +
                 ") "
 
         private val LOCKING_CTE_WITHOUT_IDS = "WITH id_locks AS (" +
@@ -90,6 +91,7 @@ class LockedIdsOperator {
                 "    WHERE ${ENTITY_SET_ID.name} = ? " +
                 "    AND ${PARTITION.name} = ? " +
                 "  ORDER BY ${ID.name} " +
+                "  FOR UPDATE " +
                 ") "
     }
 }
