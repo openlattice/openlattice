@@ -5,10 +5,10 @@ import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.data.storage.partitions.getPartition
 import com.openlattice.postgres.DataTables.LAST_INDEX
 import com.openlattice.postgres.DataTables.LAST_LINK
-import com.openlattice.postgres.LockedIdsOperator.Companion.lockIdsAndExecute
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.IDS
+import com.openlattice.postgres.lockIdsAndExecute
 import com.zaxxer.hikari.HikariDataSource
 import java.sql.PreparedStatement
 import java.time.OffsetDateTime

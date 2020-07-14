@@ -29,11 +29,11 @@ import com.openlattice.data.storage.tombstoneLinkForEntity
 import com.openlattice.linking.EntityKeyPair
 import com.openlattice.linking.LinkingQueryService
 import com.openlattice.postgres.DataTables.*
-import com.openlattice.postgres.LockedIdsOperator.Companion.lockIdsAndExecute
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.*
 import com.openlattice.postgres.ResultSetAdapters
+import com.openlattice.postgres.lockIdsAndExecute
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.openlattice.postgres.streams.StatementHolder
