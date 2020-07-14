@@ -2,7 +2,6 @@ package com.openlattice.postgres
 
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.IDS
-import org.postgresql.util.PSQLException
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.util.*
@@ -48,28 +47,21 @@ class LockedIdsOperator {
                 val lockingCTE = if (shouldLockEntireEntitySet) LOCKING_CTE_WITHOUT_IDS else LOCKING_CTE_WITH_IDS
                 val ps = conn.prepareStatement("$lockingCTE $query")
 
-                try {
-                    entityKeyIdsByPartition.forEach { (partition, entityKeyIds) ->
-                        var index = 1
-                        ps.setObject(index++, entitySetId)
-                        ps.setInt(index++, partition)
-                        if (shouldLockEntireEntitySet) {
-                            ps.setArray(index++, PostgresArrays.createUuidArray(conn, entityKeyIds))
-                        }
-
-                        bindPreparedStatementFn(ps, partition, index)
-                        ps.addBatch()
+                entityKeyIdsByPartition.forEach { (partition, entityKeyIds) ->
+                    var index = 1
+                    ps.setObject(index++, entitySetId)
+                    ps.setInt(index++, partition)
+                    if (shouldLockEntireEntitySet) {
+                        ps.setArray(index++, PostgresArrays.createUuidArray(conn, entityKeyIds))
                     }
 
-                    val numUpdates = ps.executeBatch().sum()
-                    conn.commit()
-
-                    numUpdates
-                } catch (ex: PSQLException) {
-                    //Should be pretty rare.
-                    conn.rollback()
-                    throw ex
+                    bindPreparedStatementFn(ps, partition, index)
+                    ps.addBatch()
                 }
+
+                val numUpdates = ps.executeBatch().sum()
+
+                numUpdates
             }
 
 
