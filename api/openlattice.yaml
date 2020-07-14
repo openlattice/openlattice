@@ -5622,16 +5622,6 @@ components:
           type: integer
         maxHits:
           type: integer
-    SearchResult:
-      type: object
-      description: A search result object, containing the total number of hits for the given query, and the hits themselves.
-      properties:
-        numHits: 
-          type: integer
-        hits:
-            type: object
-            additionalProperties:
-              type: string
     OrganizationExternalDatabaseTable:
       type: object
       properties:
