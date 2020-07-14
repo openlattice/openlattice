@@ -151,32 +151,38 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
     fun markAsUnIndexed(entitySetId: UUID): Int {
         val partitions = partitionManager.getEntitySetPartitions(entitySetId)
 
-        return hds.connection.use { connection ->
-            connection.prepareStatement(markEntitySetLastIndexSql).use { stmt ->
-                val partitionsArray = PostgresArrays.createIntArray(connection, partitions)
-                stmt.setObject(1, entitySetId)
-                stmt.setArray(2, partitionsArray)
+        return lockIdsAndExecute(
+                hds.connection,
+                markEntitySetLastIndexSql,
+                entitySetId,
+                partitions.associateWith { setOf<UUID>() },
+                shouldLockEntireEntitySet = true
+        ) { ps, partition, initialIndex ->
+            var index = initialIndex
 
-                stmt.executeUpdate()
-            }
+            ps.setObject(index++, entitySetId)
+            ps.setInt(index, partition)
         }
     }
 
 
     fun markEntitySetsAsNeedsToBeIndexed(entitySetIds: Set<UUID>, linking: Boolean): Int {
-        val entitySetPartitions = partitionManager.getPartitionsByEntitySetId(entitySetIds).values.flatten()
+        val entitySetPartitions = partitionManager.getPartitionsByEntitySetId(entitySetIds)
 
-        return hds.connection.use { connection ->
-            val updateSql = markEntitySetsAsNeedsToBeIndexedSql(linking)
-            connection.prepareStatement(updateSql).use { stmt ->
-                val entitySetIdsArray = PostgresArrays.createUuidArray(connection, entitySetIds)
-                val partitionsArray = PostgresArrays.createIntArray(connection, entitySetPartitions)
-                stmt.setArray(1, entitySetIdsArray)
-                stmt.setArray(2, partitionsArray)
+        return entitySetIds.map { entitySetId ->
+            lockIdsAndExecute(
+                    hds.connection,
+                    markEntitySetsAsNeedsToBeIndexedSql(linking),
+                    entitySetId,
+                    entitySetPartitions.getValue(entitySetId).associateWith { setOf<UUID>() },
+                    shouldLockEntireEntitySet = true
+            ) { ps, partition, initialIndex ->
+                var index = initialIndex
 
-                stmt.executeUpdate()
+                ps.setObject(index++, entitySetId)
+                ps.setInt(index, partition)
             }
-        }
+        }.sum()
     }
 
     fun markAsNeedsToBeLinked(normalEntityDataKeys: Set<EntityDataKey>): Int {
@@ -232,11 +238,11 @@ private val linkingIdsInEntitySet =
 
 /**
  * 1. entity set id
- * 2. partitions (int array)
+ * 2. partition
  */
-private val entitySet =
+private val entitySetPartition =
         " ${ENTITY_SET_ID.name} = ? " +
-        "AND ${PARTITION.name} = ANY(?) "
+        "AND ${PARTITION.name} = ? "
 
 
 /**
@@ -269,22 +275,22 @@ private val markLastIndexSql = "UPDATE ${IDS.name} SET ${LAST_INDEX.name} = 'now
 /**
  * Arguments of preparable sql in order:
  * 1. entity set id
- * 2. partitions (int array)
+ * 2. partition
  */
-private val markEntitySetLastIndexSql = "UPDATE ${IDS.name} SET ${LAST_INDEX.name} = 'now()' WHERE $entitySet"
+private val markEntitySetLastIndexSql = "UPDATE ${IDS.name} SET ${LAST_INDEX.name} = 'now()' WHERE $entitySetPartition"
 
 
 
 /**
  * Arguments of preparable sql in order:
- * 1. entity set ids (uuid array)
- * 2. partitions (int array)
+ * 1. entity set id
+ * 2. partition
  */
 fun markEntitySetsAsNeedsToBeIndexedSql(linking: Boolean): String {
     val updateColumn = if (linking) LAST_LINK_INDEX.name else LAST_INDEX.name
 
     return "UPDATE ${IDS.name} SET $updateColumn = '-infinity()' " +
-            "WHERE ${ENTITY_SET_ID.name} = ANY(?) AND ${PARTITION.name} = ANY(?)"
+            "WHERE ${ENTITY_SET_ID.name} = ? AND ${PARTITION.name} = ?"
 }
 
 /**
