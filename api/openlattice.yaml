@@ -5776,7 +5776,7 @@ components:
           type: string
           format: uuid
         environment:
-          description: the retrofit environment (e.g. production, local)
+          description: the retrofit environment (e.g. PROD_INTEGRATION, LOCAL)
           type: string
           enum: [ PROD_INTEGRATION, STAGING_INTEGRATION, LOCAL ]
         s3Bucket:
@@ -5926,7 +5926,7 @@ components:
       type: object
       properties:
         environment:
-          description: the retrofit environment (e.g. production, local)
+          description: the retrofit environment (e.g. PROD_INTEGRATION, LOCAL)
           type: string
           enum: [ PROD_INTEGRATION, STAGING_INTEGRATION, LOCAL ]
         s3Bucket:
