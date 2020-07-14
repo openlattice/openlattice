@@ -415,57 +415,41 @@ class PostgresEntityDataQueryService(
              * At this point, we either need to either commit all versions by updating the version in the ids table our
              * fail out. Dead locks should be impossible due to explicit locking within the transaction.
              *
-             * TODO: Switch back to the single SELECT FOR UPDATE statement instead of sequence of statements for perf
-             * reasons.
              */
 
-            connection.autoCommit = false
-            val entityKeyIdsArr = PostgresArrays.createUuidArray(connection, entities.keys)
-            val lockEntities = connection.prepareStatement(lockEntitiesInIdsTable)
             //Make data visible by marking new version in ids table.
-            val upsertEntities = connection.prepareStatement(buildUpsertEntitiesAndLinkedData())
+            connection.autoCommit = false
+            
+            val updatedLinkedEntities = try {
+                val updatedCount = lockIdsAndExecute(
+                        connection,
+                        upsertEntitiesSql,
+                        entitySetId,
+                        mapOf(partition to entities.keys)
+                ) { ps, _, initialIndex ->
+                    var index = initialIndex
 
-            val updatedLinkedEntities = attempt(LinearBackoff(60000, 125), 32) {
-                try {
-                    entities.keys.sorted().forEach { id ->
-                        lockEntities.setObject(1, entitySetId)
-                        lockEntities.setObject(2, id)
-                        lockEntities.setInt(3, partition)
-                        lockEntities.execute()
-                    }
-
-                    upsertEntities.setObject(1, versionsArrays)
-                    upsertEntities.setObject(2, version)
-                    upsertEntities.setObject(3, version)
-                    upsertEntities.setObject(4, entitySetId)
-                    upsertEntities.setArray(5, entityKeyIdsArr)
-                    upsertEntities.setInt(6, partition)
-                    upsertEntities.setInt(7, partition)
-                    upsertEntities.setLong(8, version)
-                    val updatedCount = upsertEntities.executeUpdate()
-                    connection.commit()
-                    updatedCount
-                } catch (ex: PSQLException) {
-                    //Should be pretty rare.
-                    connection.rollback()
-                    throw ex
+                    ps.setObject(index++, versionsArrays)
+                    ps.setObject(index++, version)
+                    ps.setObject(index++, version)
+                    ps.setObject(index++, entitySetId)
+                    ps.setArray(index++, PostgresArrays.createUuidArray(connection, entities.keys))
+                    ps.setInt(index, partition)
                 }
 
-                upsertEntities.setObject(1, versionsArrays)
-                upsertEntities.setObject(2, version)
-                upsertEntities.setObject(3, version)
-                upsertEntities.setObject(4, entitySetId)
-                upsertEntities.setArray(5, entityKeyIdsArr)
-                upsertEntities.setInt(6, partition)
-                val updatedCount = upsertEntities.executeUpdate()
                 connection.commit()
                 logger.info("Committed $updatedCount entities to complete an insert.")
                 updatedCount
+            } catch (ex: PSQLException) {
+                //Should be pretty rare.
+                connection.rollback()
+                throw ex
             }
 
             connection.autoCommit = true
             logger.debug("Updated $updatedLinkedEntities linked entities as part of insert.")
             return updatedPropertyCounts
+
         }
 
     }
