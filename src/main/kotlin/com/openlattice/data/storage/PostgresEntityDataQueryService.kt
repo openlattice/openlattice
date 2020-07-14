@@ -1,8 +1,6 @@
 package com.openlattice.data.storage
 
 import com.codahale.metrics.annotation.Timed
-import com.geekbeast.util.LinearBackoff
-import com.geekbeast.util.attempt
 import com.openlattice.IdConstants
 import com.openlattice.analysis.SqlBindInfo
 import com.openlattice.analysis.requests.Filter
