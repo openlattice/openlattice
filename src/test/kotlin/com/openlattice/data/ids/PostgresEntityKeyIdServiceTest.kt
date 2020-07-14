@@ -54,7 +54,7 @@ import javax.mail.Part
  */
 class PostgresEntityKeyIdServiceTest : TestServer() {
     companion object {
-        const val NUM_THREADS = 8
+        private const val NUM_THREADS = 8
         private lateinit var postgresEntityKeyIdService: PostgresEntityKeyIdService
         private lateinit var idGenService: HazelcastIdGenerationService
         private val logger = LoggerFactory.getLogger(PostgresEntityKeyIdServiceTest::class.java)
