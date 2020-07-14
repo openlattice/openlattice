@@ -593,15 +593,23 @@ class PostgresEntityDataQueryService(
      */
     private fun tombstone(conn: Connection, entitySetId: UUID, version: Long): WriteEvent {
 
-        val partitions = PostgresArrays.createIntArray(conn, partitionManager.getEntitySetPartitions(entitySetId))
+        val partitions = partitionManager.getEntitySetPartitions(entitySetId)
+        val partitionsArr = PostgresArrays.createIntArray(conn, partitionManager.getEntitySetPartitions(entitySetId))
 
-        val numUpdated = conn.prepareStatement(updateVersionsForEntitySet).use { ps ->
-            ps.setLong(1, -version)
-            ps.setLong(2, -version)
-            ps.setLong(3, -version)
-            ps.setObject(4, entitySetId)
-            ps.setArray(5, partitions)
-            ps.executeUpdate()
+        val numUpdated = lockIdsAndExecute(
+                conn,
+                updateVersionsForEntitySet,
+                entitySetId,
+                partitions.associateWith { setOf<UUID>() },
+                shouldLockEntireEntitySet = true
+        ) { ps, partition, initialIndex ->
+            var index = initialIndex
+
+            ps.setLong(index++, -version)
+            ps.setLong(index++, -version)
+            ps.setLong(index++, -version)
+            ps.setObject(index++, entitySetId)
+            ps.setInt(index, partition)
         }
 
         //We don't count property type updates.
@@ -610,7 +618,7 @@ class PostgresEntityDataQueryService(
             ps.setLong(2, -version)
             ps.setLong(3, -version)
             ps.setObject(4, entitySetId)
-            ps.setArray(5, partitions)
+            ps.setArray(5, partitionsArr)
             ps.executeUpdate()
         }
 
@@ -886,21 +894,20 @@ class PostgresEntityDataQueryService(
      */
     fun deleteEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): WriteEvent {
         val partitions = partitionManager.getEntitySetPartitions(entitySetId).toList()
-        val partitionByEDK = entityKeyIds.associate { EntityDataKey(entitySetId, it) to getPartition(it, partitions) }
+        val entitiesByPartition = entityKeyIds.groupBy { getPartition(it, partitions) }
 
-        val numUpdates = lockIdsAndExecute(hds.connection, partitionByEDK) { conn ->
-            val ps = conn.prepareStatement(deleteEntityKeys)
-            entityKeyIds
-                    .groupBy { getPartition(it, partitions) }
-                    .forEach { (partition, rawEntityBatch) ->
-                        val arr = PostgresArrays.createUuidArray(conn, rawEntityBatch)
-                        ps.setObject(1, entitySetId)
-                        ps.setArray(2, arr)
-                        ps.setInt(3, partition)
+        val numUpdates = lockIdsAndExecute(
+                hds.connection,
+                deleteEntityKeys,
+                entitySetId,
+                entitiesByPartition
+        ) { ps, partition, initialIndex ->
+            var index = initialIndex
+            val entityArr = PostgresArrays.createUuidArray(ps.connection, entitiesByPartition.getValue(partition))
 
-                        ps.addBatch()
-                    }
-            ps.executeBatch().sum()
+            ps.setObject(index++, entitySetId)
+            ps.setArray(index++, entityArr)
+            ps.setInt(index, partition)
         }
 
         return WriteEvent(System.currentTimeMillis(), numUpdates)
@@ -911,25 +918,22 @@ class PostgresEntityDataQueryService(
      */
     fun tombstoneDeletedEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): WriteEvent {
         val partitions = partitionManager.getEntitySetPartitions(entitySetId).toList()
-        val partitionByEDK = entityKeyIds.associate { EntityDataKey(entitySetId, it) to getPartition(it, partitions) }
+        val entitiesByPartition = entityKeyIds.groupBy { getPartition(it, partitions) }
 
-        val numUpdates = lockIdsAndExecute(hds.connection, partitionByEDK) { conn ->
-            val ps = conn.prepareStatement(zeroVersionsForEntitiesInEntitySet)
+        val numUpdates = lockIdsAndExecute(
+                hds.connection,
+                zeroVersionsForEntitiesInEntitySet,
+                entitySetId,
+                entitiesByPartition
+        ) { ps, partition, initialIndex ->
+// TODO katherine
+            var index = initialIndex
+            val idsArr = PostgresArrays.createUuidArray(ps.connection, entitiesByPartition.getValue(partition))
+            val partitionsArr = PostgresArrays.createIntArray(ps.connection, listOf(partition))
 
-            entityKeyIds
-                    .groupBy { getPartition(it, partitions) }
-                    .forEach { (partition, rawEntityBatch) ->
-                        val partitionsArr = PostgresArrays.createIntArray(conn, listOf(partition))
-                        val idsArr = PostgresArrays.createUuidArray(conn, rawEntityBatch)
-
-                        ps.setObject(1, entitySetId)
-                        ps.setArray(2, partitionsArr)
-                        ps.setArray(3, idsArr)
-
-                        ps.addBatch()
-                    }
-
-            ps.executeBatch().sum()
+            ps.setObject(index++, entitySetId)
+            ps.setArray(index++, partitionsArr)
+            ps.setArray(index, idsArr)
         }
 
         return WriteEvent(System.currentTimeMillis(), numUpdates)
@@ -986,24 +990,23 @@ class PostgresEntityDataQueryService(
             version: Long,
             partitions: List<Int> = partitionManager.getEntitySetPartitions(entitySetId).toList()
     ): WriteEvent {
-        val entityKeyIdsArr = PostgresArrays.createUuidArray(conn, entityKeyIds)
+        val idsByPartition = entityKeyIds.groupBy { getPartition(it, partitions) }
 
-        val partitionsArr = PostgresArrays.createIntArray(conn, entityKeyIds.map {
-            getPartition(it, partitions)
-        })
+        val numUpdated = lockIdsAndExecute(
+                conn,
+                updateVersionsForEntitiesInEntitySet,
+                entitySetId,
+                idsByPartition
+        ) { ps, partition, initialIndex ->
+            var index = initialIndex
+            val entityKeyIdsArr = PostgresArrays.createUuidArray(conn, idsByPartition.getValue(partition))
 
-        val partitionsByEDK = entityKeyIds.associate { EntityDataKey(entitySetId, it) to getPartition(it, partitions) }
-
-        val numUpdated = lockIdsAndExecute(conn, partitionsByEDK) { connection ->
-            connection.prepareStatement(updateVersionsForEntitiesInEntitySet).use { ps ->
-                ps.setLong(1, -version)
-                ps.setLong(2, -version)
-                ps.setLong(3, -version)
-                ps.setObject(4, entitySetId)
-                ps.setArray(5, partitionsArr)
-                ps.setArray(6, entityKeyIdsArr)
-                ps.executeUpdate()
-            }
+            ps.setLong(index++, -version)
+            ps.setLong(index++, -version)
+            ps.setLong(index++, -version)
+            ps.setObject(index++, entitySetId)
+            ps.setInt(index++, partition)
+            ps.setArray(index, entityKeyIdsArr)
         }
 
         return WriteEvent(version, numUpdated)

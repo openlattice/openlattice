@@ -418,7 +418,7 @@ val upsertEntitiesSql = "UPDATE ${IDS.name} " +
  * 2. version
  * 3. version
  * 4. entity set id
- * 5. partitions (int array)
+ * 5. partition
  */
 // @formatter:off
 internal val updateVersionsForEntitySet = "UPDATE ${IDS.name} " +
@@ -432,8 +432,7 @@ internal val updateVersionsForEntitySet = "UPDATE ${IDS.name} " +
                 "END, " +
             "${LAST_WRITE.name} = 'now()' " +
         "WHERE ${ENTITY_SET_ID.name} = ? " +
-        "AND ${PARTITION.name} = ANY(?)"
-// TODO do we need partition here??
+        "AND ${PARTITION.name} = ? "
 // @formatter:on
 /**
  * Preparable SQL that upserts a version and sets last write to current datetime for all entities in a given entity set
@@ -445,7 +444,7 @@ internal val updateVersionsForEntitySet = "UPDATE ${IDS.name} " +
  * 2. version
  * 3. version
  * 4. entity set id
- * 5. partitions (int array)
+ * 5. partition
  * 6. entity key ids (uuid array)
  */
 internal val updateVersionsForEntitiesInEntitySet = "$updateVersionsForEntitySet " +
