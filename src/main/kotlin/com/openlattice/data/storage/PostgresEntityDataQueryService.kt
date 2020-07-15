@@ -903,7 +903,7 @@ class PostgresEntityDataQueryService(
             val entityArr = PostgresArrays.createUuidArray(ps.connection, entitiesByPartition.getValue(partition))
 
             ps.setObject(1 + offset, entitySetId)
-            ps.setArray(2  + offset, entityArr)
+            ps.setArray(2 + offset, entityArr)
             ps.setInt(3 + offset, partition)
         }
 
@@ -985,20 +985,22 @@ class PostgresEntityDataQueryService(
     ): WriteEvent {
         val idsByPartition = getIdsByPartition(entityKeyIds, partitions)
 
-        val numUpdated = lockIdsAndExecute(
-                hds.connection,
-                updateVersionsForEntitiesInEntitySet,
-                entitySetId,
-                idsByPartition
-        ) { ps, partition, offset ->
-            val entityKeyIdsArr = PostgresArrays.createUuidArray(ps.connection, idsByPartition.getValue(partition))
+        val numUpdated = hds.connection.use { connection ->
+            lockIdsAndExecute(
+                    connection,
+                    updateVersionsForEntitiesInEntitySet,
+                    entitySetId,
+                    idsByPartition
+            ) { ps, partition, offset ->
+                val entityKeyIdsArr = PostgresArrays.createUuidArray(ps.connection, idsByPartition.getValue(partition))
 
-            ps.setLong(1 + offset, -version)
-            ps.setLong(2 + offset, -version)
-            ps.setLong(3 + offset, -version)
-            ps.setObject(4 + offset, entitySetId)
-            ps.setInt(5 + offset, partition)
-            ps.setArray(6 + offset, entityKeyIdsArr)
+                ps.setLong(1 + offset, -version)
+                ps.setLong(2 + offset, -version)
+                ps.setLong(3 + offset, -version)
+                ps.setObject(4 + offset, entitySetId)
+                ps.setInt(5 + offset, partition)
+                ps.setArray(6 + offset, entityKeyIdsArr)
+            }
         }
 
         return WriteEvent(version, numUpdated)
