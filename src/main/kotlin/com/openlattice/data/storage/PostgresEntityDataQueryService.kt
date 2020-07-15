@@ -909,7 +909,7 @@ class PostgresEntityDataQueryService(
                 ps.setInt(3 + offset, partition)
             }
         }
-        
+
         return WriteEvent(System.currentTimeMillis(), numUpdates)
     }
 
