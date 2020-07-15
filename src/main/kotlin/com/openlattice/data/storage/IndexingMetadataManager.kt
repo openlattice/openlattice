@@ -105,18 +105,16 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
             entitySetId: UUID,
             partition: Int,
             idsWithLastWrite: Map<UUID, OffsetDateTime>,
-            startingIndex: Int
+            offset: Int
     ) {
         idsWithLastWrite.entries
                 .groupBy { it.value }
                 .mapValues { it.value.map { entry -> entry.key } }
                 .forEach { (lastWrite, entities) ->
-                    var index = startingIndex
-
-                    stmt.setObject(index++, lastWrite)
-                    stmt.setObject(index++, entitySetId)
-                    stmt.setArray(index++, PostgresArrays.createUuidArray(stmt.connection, entities))
-                    stmt.setInt(index, partition)
+                    stmt.setObject(1 + offset, lastWrite)
+                    stmt.setObject(2 + offset, entitySetId)
+                    stmt.setArray(3 + offset, PostgresArrays.createUuidArray(stmt.connection, entities))
+                    stmt.setInt(4 + offset, partition)
 
                     stmt.addBatch()
                 }
