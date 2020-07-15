@@ -28,7 +28,7 @@ import java.util.*
  * operates on the PreparedStatement, an Int (indicating the partition being operated on), and an Int (indicating
  * the current bind index).
  *
- * @return The number of rows that were udpated.
+ * @return The number of rows that were updated.
  *
  */
 fun lockIdsAndExecute(
@@ -39,33 +39,26 @@ fun lockIdsAndExecute(
         shouldLockEntireEntitySet: Boolean = false,
         bindPreparedStatementFn: (PreparedStatement, Int, Int) -> Unit
 ): Int {
+    val lockingCTE = if (shouldLockEntireEntitySet) LOCKING_CTE_WITHOUT_IDS else LOCKING_CTE_WITH_IDS
+    val ps = connection.prepareStatement("$lockingCTE $query")
 
-    return connection.use { conn ->
-
-        val lockingCTE = if (shouldLockEntireEntitySet) LOCKING_CTE_WITHOUT_IDS else LOCKING_CTE_WITH_IDS
-        val ps = conn.prepareStatement("$lockingCTE $query")
-
-        entityKeyIdsByPartition.forEach { (partition, entityKeyIds) ->
-            var index = 1
-            ps.setObject(index++, entitySetId)
-            ps.setInt(index++, partition)
-            if (shouldLockEntireEntitySet) {
-                ps.setArray(index++, PostgresArrays.createUuidArray(conn, entityKeyIds))
-            }
-
-            // We set index to the last bound index so that the [bindPreparedStatementFn] can use
-            // manual bind numbering added to this offset (which is 1-indexed)
-            bindPreparedStatementFn(ps, partition, index - 1)
-            ps.addBatch()
+    entityKeyIdsByPartition.forEach { (partition, entityKeyIds) ->
+        var index = 1
+        ps.setObject(index++, entitySetId)
+        ps.setInt(index++, partition)
+        if (shouldLockEntireEntitySet) {
+            ps.setArray(index++, PostgresArrays.createUuidArray(connection, entityKeyIds))
         }
 
-        val numUpdates = ps.executeBatch().sum()
-
-        numUpdates
+        // We set index to the last bound index so that the [bindPreparedStatementFn] can use
+        // manual bind numbering added to this offset (which is 1-indexed)
+        bindPreparedStatementFn(ps, partition, index - 1)
+        ps.addBatch()
     }
 
-
+    return ps.executeBatch().sum()
 }
+
 
 fun getIdsByPartition(entityKeyIds: Collection<UUID>, partitions: List<Int>): Map<Int, List<UUID>> {
     return entityKeyIds.groupBy { getPartition(it, partitions) }
