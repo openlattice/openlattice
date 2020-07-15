@@ -46,7 +46,7 @@ fun lockIdsAndExecute(
         var index = 1
         ps.setObject(index++, entitySetId)
         ps.setInt(index++, partition)
-        if (shouldLockEntireEntitySet) {
+        if (!shouldLockEntireEntitySet) {
             ps.setArray(index++, PostgresArrays.createUuidArray(connection, entityKeyIds))
         }
 
