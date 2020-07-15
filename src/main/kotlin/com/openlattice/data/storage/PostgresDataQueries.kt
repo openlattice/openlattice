@@ -280,71 +280,6 @@ fun optionalWhereClausesSingleEdk(
 }
 
 /**
- * Preparable sql to upsert entities in [IDS] table.
- *
- * It sets a positive version and updates last write to current time.
- *
- * The bind order is the following:
- *
- *
- * 1 - versions
- *
- * 2 - version
- *
- * 3 - version
- *
- * 4 - entity set id
- *
- * 5 - entity key ids
- *
- * 6 - partition
- *
- * 7 - partition
- *
- * 8 - version
- */
-fun buildUpsertEntitiesAndLinkedData(): String {
-    val insertColumns = dataTableValueColumns.joinToString(",") { it.name }
-
-    val metadataColumns = listOf(
-            ENTITY_SET_ID,
-            ID_VALUE,
-            PARTITION,
-            ORIGIN_ID,
-            PROPERTY_TYPE_ID,
-            HASH,
-            LAST_WRITE,
-            VERSION,
-            VERSIONS
-    )
-    val metadataColumnsSql = metadataColumns.joinToString(",") { it.name }
-
-    val metadataReadColumnsSql = listOf(
-            ENTITY_SET_ID.name,
-            LINKING_ID.name,
-            "?",
-            ID_VALUE.name,
-            PROPERTY_TYPE_ID.name,
-            HASH.name,
-            LAST_WRITE.name,
-            VERSION.name,
-            VERSIONS.name
-    ).joinToString(",")
-
-    val conflictClause = (metadataColumns + dataTableValueColumns).joinToString(
-            ","
-    ) { "${it.name} = EXCLUDED.${it.name}" }
-
-    return "WITH linking_map as ($upsertEntitiesSql) INSERT INTO ${DATA.name} ($metadataColumnsSql,$insertColumns) " +
-            "SELECT $metadataReadColumnsSql,$insertColumns FROM ${DATA.name} INNER JOIN " +
-            "linking_map USING(${ENTITY_SET_ID.name},${ID.name},${PARTITION.name}) " +
-            "WHERE ${LINKING_ID.name} IS NOT NULL AND version > ? " +
-//            "ORDER BY ${ENTITY_SET_ID.name},${ID.name},${PARTITION.name},${PROPERTY_TYPE_ID.name},${HASH.name},${ORIGIN_ID.name} " +
-            "ON CONFLICT ($primaryKeyColumnNamesAsString) " +
-            "DO UPDATE SET $conflictClause"
-}
-
-/**
  * Preparable sql to lock entities in [IDS] table.
  *
  * This query will lock provided entities that have an assigned linking id in ID order.
@@ -426,8 +361,7 @@ val upsertEntitiesSql = "UPDATE ${IDS.name} " +
                 "WHEN abs(${IDS.name}.${VERSION.name}) <= abs(?) THEN ? " +
                 "ELSE ${IDS.name}.${VERSION.name} " +
             "END " +
-        "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ? " +
-        "RETURNING ${ENTITY_SET_ID.name},${ID.name},${PARTITION.name},${LINKING_ID.name} "
+        "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ? "
 // @formatter:on
 
 

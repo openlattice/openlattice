@@ -124,16 +124,18 @@ class PostgresLinkingQueryService(
         val entitySetPartitions = partitionManager.getEntitySetPartitions(newMember.entitySetId).toList()
         val partition = getPartition(newMember.entityKeyId, entitySetPartitions)
 
-        return lockIdsAndExecute(
-                hds.connection,
-                UPDATE_LINKED_ENTITIES_SQL,
-                newMember.entitySetId,
-                mapOf(partition to setOf(newMember.entityKeyId))
-        ) { ps, _, offset ->
-            ps.setObject(1 + offset, clusterId)
-            ps.setInt(2 + offset, partition)
-            ps.setObject(3 + offset, newMember.entitySetId)
-            ps.setObject(4 + offset, newMember.entityKeyId)
+        return hds.connection.use { connection ->
+            lockIdsAndExecute(
+                    connection,
+                    UPDATE_LINKED_ENTITIES_SQL,
+                    newMember.entitySetId,
+                    mapOf(partition to setOf(newMember.entityKeyId))
+            ) { ps, _, offset ->
+                ps.setObject(1 + offset, clusterId)
+                ps.setInt(2 + offset, partition)
+                ps.setObject(3 + offset, newMember.entitySetId)
+                ps.setObject(4 + offset, newMember.entityKeyId)
+            }
         }
     }
 
@@ -256,7 +258,9 @@ class PostgresLinkingQueryService(
 
     override fun deleteNeighborhood(entity: EntityDataKey, positiveFeedbacks: Collection<EntityKeyPair>): Int {
         val deleteNeighborHoodSql = DELETE_NEIGHBORHOOD_SQL +
-                if (positiveFeedbacks.isNotEmpty()) " AND NOT ( ${buildFilterEntityKeyPairs(positiveFeedbacks)} )" else ""
+                if (positiveFeedbacks.isNotEmpty()) " AND NOT ( ${buildFilterEntityKeyPairs(
+                        positiveFeedbacks
+                )} )" else ""
         hds.connection.use {
             it.prepareStatement(deleteNeighborHoodSql).use {
                 it.setObject(1, entity.entitySetId)
