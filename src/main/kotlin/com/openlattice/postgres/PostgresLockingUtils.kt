@@ -56,6 +56,8 @@ fun lockIdsAndExecute(
             lock.setArray(3, PostgresArrays.createUuidArray(connection, entityKeyIds))
         }
 
+        lock.execute()
+
         execute()
     } catch (ex: Exception) {
         connection.rollback()
@@ -88,6 +90,8 @@ fun lockIdsAndExecute(
             if (!shouldLockEntireEntitySet) {
                 lock.setArray(3, PostgresArrays.createUuidArray(connection, entityKeyIds))
             }
+
+            lock.execute()
 
             execute(ps, partition, entityKeyIds)
             if (batch) {
@@ -134,6 +138,8 @@ fun lockIdsAndExecuteAndCommit(
             if (!shouldLockEntireEntitySet) {
                 lock.setArray(3, PostgresArrays.createUuidArray(connection, entityKeyIds))
             }
+
+            lock.execute()
 
             val ps = connection.prepareStatement(preparableQuery)
             bind(ps)
