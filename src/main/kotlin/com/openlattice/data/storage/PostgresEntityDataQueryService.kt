@@ -21,7 +21,6 @@ import com.openlattice.postgres.streams.StatementHolderSupplier
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.apache.olingo.commons.api.edm.FullQualifiedName
-import org.postgresql.util.PSQLException
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.lang.Exception
@@ -586,8 +585,8 @@ class PostgresEntityDataQueryService(
     private fun tombstone(conn: Connection, entitySetId: UUID, version: Long): WriteEvent {
         conn.autoCommit = false
         val partitions = partitionManager.getEntitySetPartitions(entitySetId)
-        val ps = conn.prepareStatement(updateVersionsForEntitySet)
-        val linkingTombstones = conn.prepareStatement(updateVersionsForPropertiesInEntitySet)
+        val idTombstones = conn.prepareStatement(updateVersionsForEntitySet)
+        val dataTombstones = conn.prepareStatement(updateVersionsForPropertiesInEntitySet)
 
         val numUpdates = try {
             val updates = partitions.map { partition ->
@@ -596,40 +595,42 @@ class PostgresEntityDataQueryService(
                         entitySetId,
                         partition
                 ) {
-                    ps.setLong(1, -version)
-                    ps.setLong(2, -version)
-                    ps.setLong(3, -version)
-                    ps.setObject(4, entitySetId)
-                    ps.setArray(5, PostgresArrays.createIntArray(conn, partition))
-                    ps.addBatch()
-
-                    linkingTombstones.setLong(1, -version)
-                    linkingTombstones.setLong(2, -version)
-                    linkingTombstones.setLong(3, -version)
-                    linkingTombstones.setObject(4, entitySetId)
-                    linkingTombstones.setArray(5, PostgresArrays.createIntArray(conn, partition))
-                    linkingTombstones.addBatch()
+                    idTombstones.setLong(1, -version)
+                    idTombstones.setLong(2, -version)
+                    idTombstones.setLong(3, -version)
+                    idTombstones.setObject(4, entitySetId)
+                    idTombstones.setArray(5, PostgresArrays.createIntArray(conn, partition))
+                    idTombstones.addBatch()
 
                     0
                 }
-
-                val numUpdated = ps.executeBatch()
-                linkingTombstones.executeBatch()
-                //We don't count property type updates.
-
-                numUpdated
             }
+            val numUpdated = idTombstones.executeBatch()
+
+
+            dataTombstones.executeBatch()
             conn.commit()
-            conn.autoCommit = false
+            conn.autoCommit = true
+
             updates
         } catch (ex: Exception) {
             conn.rollback()
-            conn.autoCommit = false
+            conn.autoCommit = true
             logger.error("Unable to tombstone entity set $entitySetId with version $version.", ex)
             throw ex
         }
 
-        return WriteEvent(version, numUpdates.sumBy { it.sum() })
+        //We don't count the number of property types that were updated
+        //TODO: Someday if we encounter deadlocks when deleting entity sets, we will probably have to implement locking
+        //Only likely to happen if someone is actively writing to an entity set that is being cleared.
+        dataTombstones.setLong(1, -version)
+        dataTombstones.setLong(2, -version)
+        dataTombstones.setLong(3, -version)
+        dataTombstones.setObject(4, entitySetId)
+        dataTombstones.setArray(5, PostgresArrays.createIntArray(conn, partitions))
+        dataTombstones.executeUpdate()
+
+        return WriteEvent(version, numUpdates.sum())
     }
 
     /**
@@ -885,17 +886,29 @@ class PostgresEntityDataQueryService(
         val partitions = partitionManager.getEntitySetPartitions(entitySetId)
 
         val numUpdates = hds.connection.use { connection ->
-            lockIdsAndExecute(
-                    connection,
-                    zeroVersionsForEntitySet,
-                    entitySetId,
-                    getPartitionMapForEntitySet(partitions),
-                    shouldLockEntireEntitySet = true
-            ) { ps, partition, offset ->
-                ps.setObject(1 + offset, entitySetId)
-                ps.setInt(2 + offset, partition)
-            }
+            connection.autoCommit = false
+            val ps = connection.prepareStatement(zeroVersionsForEntitySet)
+            try {
+                partitions.map { partition ->
+                    lockIdsAndExecute(
+                            connection,
+                            entitySetId,
+                            partition,
+                            shouldLockEntireEntitySet = true
+                    ) {
+                        ps.setObject(1, entitySetId)
+                        ps.setInt(2, partition)
+                        ps.addBatch()
+                        0
+                    }
+                }
+                ps.executeBatch()
+            } catch (ex: Exception) {
+                logger.error("Unable to mark entity set $entitySetId for deletion.")
+                throw ex
+            }.sum()
         }
+
         return WriteEvent(System.currentTimeMillis(), numUpdates)
     }
 
