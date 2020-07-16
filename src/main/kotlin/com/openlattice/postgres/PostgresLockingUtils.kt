@@ -63,6 +63,52 @@ fun lockIdsAndExecute(
     }
 }
 
+fun lockIdsAndExecute(
+        connection: Connection,
+        query: String,
+        entitySetId: UUID,
+        idsByPartition: Map<Int, Collection<UUID>>,
+        shouldLockEntireEntitySet: Boolean = false,
+        batch: Boolean = false,
+        execute: (PreparedStatement, Int, Collection<UUID>) -> Unit
+): Int {
+    val ac = connection.autoCommit
+
+    if (idsByPartition.isEmpty() && !shouldLockEntireEntitySet) {
+        return 0
+    }
+
+    val lockSql = if (shouldLockEntireEntitySet) LOCKING_WITHOUT_IDS else LOCKING_WITH_IDS
+    val lock = connection.prepareStatement(lockSql)
+    val ps = connection.prepareStatement(query)
+    return try {
+        val updates = idsByPartition.map { (partition, entityKeyIds) ->
+            lock.setObject(1, entitySetId)
+            lock.setInt(2, partition)
+            if (!shouldLockEntireEntitySet) {
+                lock.setArray(3, PostgresArrays.createUuidArray(connection, entityKeyIds))
+            }
+
+            execute(ps, partition, entityKeyIds)
+            if (batch) {
+                ps.addBatch()
+                0
+            } else {
+                ps.executeUpdate()
+            }
+        }
+
+        val count = if (batch) ps.executeBatch().sum() else updates.sum()
+        connection.commit()
+        connection.autoCommit = ac
+        count
+
+    } catch (ex: Exception) {
+        connection.rollback()
+        throw ex
+    }
+}
+
 fun lockIdsAndExecuteAndCommit(
         hds: HikariDataSource,
         preparableQuery: String,

@@ -902,8 +902,11 @@ class PostgresEntityDataQueryService(
                         0
                     }
                 }
-                ps.executeBatch()
+                val updated = ps.executeBatch()
+                connection.commit()
+                updated
             } catch (ex: Exception) {
+                connection.rollback()
                 logger.error("Unable to mark entity set $entitySetId for deletion.")
                 throw ex
             }.sum()
@@ -920,19 +923,35 @@ class PostgresEntityDataQueryService(
         val entitiesByPartition = getIdsByPartition(entityKeyIds, partitions)
 
         val numUpdates = hds.connection.use { connection ->
-            lockIdsAndExecute(
-                    connection,
-                    deleteEntityKeys,
-                    entitySetId,
-                    entitiesByPartition
-            ) { ps, partition, offset ->
-                val entityArr = PostgresArrays.createUuidArray(ps.connection, entitiesByPartition.getValue(partition))
+            val ps = connection.prepareStatement(deleteEntityKeys)
+            try {
+                entitiesByPartition.forEach { (partition, ids) ->
+                    lockIdsAndExecute(
+                            connection,
+                            entitySetId,
+                            partition,
+                            entityKeyIds,
+                    ) {
+                        val entityArr = PostgresArrays.createUuidArray(
+                                ps.connection, entitiesByPartition.getValue(partition)
+                        )
 
-                ps.setObject(1 + offset, entitySetId)
-                ps.setArray(2 + offset, entityArr)
-                ps.setInt(3 + offset, partition)
+                        ps.setObject(1, entitySetId)
+                        ps.setArray(2, entityArr)
+                        ps.setInt(3, partition)
+                        ps.addBatch()
+                        0
+                    }
+                }
+                val updated = ps.executeBatch()
+                connection.commit()
+                updated
+            } catch (ex: Exception) {
+                connection.rollback()
+                logger.error("Unable to delete entities ($entityKeyIds) in $entitySetId.")
+                throw ex
             }
-        }
+        }.sum()
 
         return WriteEvent(System.currentTimeMillis(), numUpdates)
     }
@@ -946,17 +965,25 @@ class PostgresEntityDataQueryService(
 
 
         val numUpdates = hds.connection.use { connection ->
-            lockIdsAndExecute(
-                    connection,
-                    zeroVersionsForEntitiesInEntitySet,
-                    entitySetId,
-                    entitiesByPartition
-            ) { ps, partition, offset ->
-                val idsArr = PostgresArrays.createUuidArray(ps.connection, entitiesByPartition.getValue(partition))
+            try {
+                lockIdsAndExecute(
+                        connection,
+                        zeroVersionsForEntitiesInEntitySet,
+                        entitySetId,
+                        entitiesByPartition,
+                        shouldLockEntireEntitySet = false,
+                        batch = true
+                ) { ps, partition, entityKeyIds ->
+                    val idsArr = PostgresArrays.createUuidArray(ps.connection, entityKeyIds)
 
-                ps.setObject(1 + offset, entitySetId)
-                ps.setInt(2 + offset, partition)
-                ps.setArray(3 + offset, idsArr)
+                    ps.setObject(1, entitySetId)
+                    ps.setInt(2, partition)
+                    ps.setArray(3, idsArr)
+                }
+
+            } catch (ex: Exception) {
+                logger.error("Unable to market entities for deletion ($entityKeyIds) in $entitySetId.")
+                throw ex
             }
         }
         return WriteEvent(System.currentTimeMillis(), numUpdates)
