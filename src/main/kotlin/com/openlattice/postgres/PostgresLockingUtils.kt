@@ -75,7 +75,7 @@ private fun lockEntitySet(lock: PreparedStatement, entitySetId: UUID, partition:
 }
 
 private fun batchLockIds(lock: PreparedStatement, entitySetId: UUID, partition: Int, entityKeyIds: Collection<UUID>) {
-    entityKeyIds.forEach { entityKeyId ->
+    entityKeyIds.sorted().forEach { entityKeyId ->
         lock.setObject(1, entitySetId)
         lock.setInt(2, partition)
         lock.setObject(3, entityKeyId)
