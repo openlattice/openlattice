@@ -589,7 +589,7 @@ class PostgresEntityDataQueryService(
         val dataTombstones = conn.prepareStatement(updateVersionsForPropertiesInEntitySet)
 
         val numUpdates = try {
-            val updates = partitions.map { partition ->
+            partitions.map { partition ->
                 lockIdsAndExecute(
                         conn,
                         entitySetId,
@@ -612,7 +612,7 @@ class PostgresEntityDataQueryService(
             conn.commit()
             conn.autoCommit = true
 
-            updates
+            numUpdated
         } catch (ex: Exception) {
             conn.rollback()
             conn.autoCommit = true

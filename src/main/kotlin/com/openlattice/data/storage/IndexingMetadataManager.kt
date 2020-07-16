@@ -70,38 +70,35 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
                 .getPartitionsByEntitySetId(linkingIdsWithLastWrite.keys)
                 .mapValues { it.value.toList() }
 
-        return hds.connection.use { connection ->
-            linkingIdsWithLastWrite.map { (entitySetId, entities) ->
-                val partitions = entitySetPartitions.getValue(entitySetId)
-                entities.entries
-                        .groupBy({ getPartition(it.key, partitions) }, { it.value })
-                        .map { (partition, idsAndExpiration) ->
+        return linkingIdsWithLastWrite.map { (entitySetId, entities) ->
+            val partitions = entitySetPartitions.getValue(entitySetId)
+            entities.entries
+                    .groupBy({ getPartition(it.key, partitions) }, { it.value })
+                    .map { (partition, idsAndExpiration) ->
 
-                            lockIdsAndExecuteAndCommit(
-                                    hds,
-                                    updateLastLinkingIndexSql,
+                        lockIdsAndExecuteAndCommit(
+                                hds,
+                                updateLastLinkingIndexSql,
+                                entitySetId,
+                                partition,
+                                shouldLockEntireEntitySet = true
+                        ) { ps ->
+                            val mergedLinkingIdsWithLastWrite = idsAndExpiration
+                                    .fold(mutableMapOf<UUID, OffsetDateTime>()) { acc, map ->
+                                        acc.putAll(map)
+                                        acc
+                                    }
+
+                            prepareIndexQuery(
+                                    ps,
                                     entitySetId,
                                     partition,
-                                    shouldLockEntireEntitySet = true
-                            ) { ps ->
-                                val mergedLinkingIdsWithLastWrite = idsAndExpiration
-                                        .fold(mutableMapOf<UUID, OffsetDateTime>()) { acc, map ->
-                                            acc.putAll(map)
-                                            acc
-                                        }
-
-                                prepareIndexQuery(
-                                        ps,
-                                        entitySetId,
-                                        partition,
-                                        mergedLinkingIdsWithLastWrite,
-                                        1
-                                )
-                            }
-                        }.sum()
-            }.sum()
-        }
-
+                                    mergedLinkingIdsWithLastWrite,
+                                    1
+                            )
+                        }
+                    }.sum()
+        }.sum()
 
     }
 

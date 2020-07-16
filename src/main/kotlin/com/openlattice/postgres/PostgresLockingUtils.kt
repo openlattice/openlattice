@@ -140,12 +140,11 @@ fun lockIdsAndExecuteAndCommit(
             val updateCount = ps.executeUpdate()
 
             connection.commit()
+            connection.autoCommit = true
             return@use updateCount
         } catch (ex: Exception) {
             connection.rollback()
-            0
-        } finally {
-            connection.autoCommit = true
+            throw ex
         }
     }
 }
