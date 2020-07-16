@@ -321,6 +321,7 @@ class PostgresEntityDataQueryService(
 
         entities.entries
                 .groupBy { getPartition(it.key, partitions) }
+                .toSortedMap()
                 .forEach { (partition, batch) ->
                     var entityBatch = batch.associate { it.key to it.value }
 
@@ -589,7 +590,7 @@ class PostgresEntityDataQueryService(
         val dataTombstones = conn.prepareStatement(updateVersionsForPropertiesInEntitySet)
 
         val numUpdates = try {
-            partitions.map { partition ->
+            partitions.sorted().map { partition ->
                 lockIdsAndExecute(
                         conn,
                         entitySetId,

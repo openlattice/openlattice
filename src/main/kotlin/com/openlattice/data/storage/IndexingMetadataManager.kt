@@ -34,6 +34,7 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
                 val partitions = entitySetPartitions.getValue(entitySetId)
                 entities.entries
                         .groupBy({ getPartition(it.key, partitions) }, { it.toPair() })
+                        .toSortedMap()
                         .map { (partition, idsAndExpirations) ->
                             val idsAndExpirationsMap = idsAndExpirations.toMap()
                             lockIdsAndExecuteAndCommit(
@@ -74,6 +75,7 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
             val partitions = entitySetPartitions.getValue(entitySetId)
             entities.entries
                     .groupBy({ getPartition(it.key, partitions) }, { it.value })
+                    .toSortedMap()
                     .map { (partition, idsAndExpiration) ->
 
                         lockIdsAndExecuteAndCommit(
@@ -135,7 +137,9 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
         return entityKeyIds.map { (entitySetId, entityKeyIds) ->
             val partitions = entitySetPartitions.getValue(entitySetId)
 
-            val numUpdated = getIdsByPartition(entityKeyIds, partitions).map { (partition, ids) ->
+            val numUpdated = getIdsByPartition(entityKeyIds, partitions)
+                    .toSortedMap()
+                    .map { (partition, ids) ->
                 lockIdsAndExecuteAndCommit(
                         hds,
                         markLastIndexSql,
@@ -158,7 +162,7 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
      * @param entitySetId The id of the (normal) entity set id.
      */
     fun markAsUnIndexed(entitySetId: UUID): Int {
-        return partitionManager.getEntitySetPartitions(entitySetId).map { partition ->
+        return partitionManager.getEntitySetPartitions(entitySetId).sorted().map { partition ->
 
             lockIdsAndExecuteAndCommit(
                     hds,
@@ -180,7 +184,7 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
         val query = markEntitySetsAsNeedsToBeIndexedSql(linking)
 
         return entitySetIds.map { entitySetId ->
-            val numUpdated = entitySetPartitions.getValue(entitySetId).map { partition ->
+            val numUpdated = entitySetPartitions.getValue(entitySetId).sorted().map { partition ->
                 lockIdsAndExecuteAndCommit(
                         hds,
                         query,
@@ -208,7 +212,9 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
         return normalEntityKeys.map { (entitySetId, entityKeyIds) ->
 
             val partitions = entitySetPartitions.getValue(entitySetId)
-            val numUpdated = getIdsByPartition(entityKeyIds, partitions).map { (partition, ids) ->
+            val numUpdated = getIdsByPartition(entityKeyIds, partitions)
+                    .toSortedMap()
+                    .map { (partition, ids) ->
                 lockIdsAndExecuteAndCommit(
                         hds,
                         markAsNeedsToBeLinkedSql,
