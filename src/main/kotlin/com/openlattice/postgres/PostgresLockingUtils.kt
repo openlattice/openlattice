@@ -42,7 +42,7 @@ fun lockIdsAndExecute(
 ): Int {
     require(!connection.autoCommit) { "Connection must not be in autocommit mode." }
 
-    if (shouldLockEntireEntitySet && entityKeyIds.isEmpty()) {
+    if (!shouldLockEntireEntitySet && entityKeyIds.isEmpty()) {
         return 0
     }
 
@@ -72,7 +72,7 @@ fun lockIdsAndExecuteAndCommit(
         shouldLockEntireEntitySet: Boolean = false,
         bind: (PreparedStatement) -> Unit
 ): Int {
-    if (shouldLockEntireEntitySet && entityKeyIds.isEmpty()) {
+    if (!shouldLockEntireEntitySet && entityKeyIds.isEmpty()) {
         return 0
     }
 
