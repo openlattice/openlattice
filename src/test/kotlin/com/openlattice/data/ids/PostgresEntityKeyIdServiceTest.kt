@@ -79,7 +79,7 @@ class PostgresEntityKeyIdServiceTest : TestServer() {
                 entitySetIds.associateWith { (0 until 257).toSet() }
             }.`when`(partMgr).getPartitionsByEntitySetId(anySet() as Set<UUID>)
 
-            idGenService = HazelcastIdGenerationService(hzClientProvider)
+            idGenService = HazelcastIdGenerationService(hzClientProvider,true)
             postgresEntityKeyIdService = PostgresEntityKeyIdService(
                     hds,
                     idGenService,
@@ -87,6 +87,88 @@ class PostgresEntityKeyIdServiceTest : TestServer() {
             )
 
         }
+    }
+
+    @Test
+    fun testMassiveInsertAndReadBack() {
+        logger.info("Testing insertion and massive readback")
+        val smallBatchSize = 8192
+        val medBatchSize = 32768
+        val largeBatchSize = 128000
+        val entitySetId = UUID.randomUUID()
+
+        val smallBatch = generateSequence { EntityKey(entitySetId, RandomStringUtils.randomAlphanumeric(10)) }
+                .take(smallBatchSize).toList()
+        val medBatch = generateSequence { EntityKey(entitySetId, RandomStringUtils.randomAlphanumeric(10)) }
+                .take(medBatchSize).toList() + smallBatch
+        val largeBatch = medBatch +
+                generateSequence { EntityKey(entitySetId, RandomStringUtils.randomAlphanumeric(10)) }
+                        .take(largeBatchSize).toList()
+
+        Assert.assertNotEquals(smallBatch, medBatch.subList(0, smallBatchSize))
+
+
+        val lbf = executor.submit<Map<EntityKey, UUID>> {
+            hds.connection.use {
+                storeEntityKeyIds(
+                        it,
+                        mapOf(entitySetId to (0 until 1024).toList().toIntArray()),
+                        largeBatch.associateWith { UUID.randomUUID() }, idGenService
+                )
+            }
+        }
+
+        val mbf = executor.submit<Map<EntityKey, UUID>> {
+            hds.connection.use {
+                storeEntityKeyIds(
+                        it,
+                        mapOf(entitySetId to (0 until 1024).toList().toIntArray()),
+                        medBatch.associateWith { UUID.randomUUID() }, idGenService
+                )
+            }
+        }
+
+        val sbf = executor.submit<Map<EntityKey, UUID>> {
+            hds.connection.use {
+                storeEntityKeyIds(
+                        it,
+                        mapOf(entitySetId to (0 until 1024).toList().toIntArray()),
+                        smallBatch.associateWith { UUID.randomUUID() }, idGenService
+                )
+            }
+        }
+        val futures = listOf(
+        executor.submit<Map<EntityKey, UUID>> {
+            hds.connection.use {
+                storeEntityKeyIds(
+                        it,
+                        mapOf(entitySetId to (0 until 1024).toList().toIntArray()),
+                        largeBatch.associateWith { UUID.randomUUID() }, idGenService
+                )
+            }
+        },
+
+        executor.submit<Map<EntityKey, UUID>> {
+            hds.connection.use {
+                storeEntityKeyIds(
+                        it,
+                        mapOf(entitySetId to (0 until 1024).toList().toIntArray()),
+                        medBatch.associateWith { UUID.randomUUID() }, idGenService
+                )
+            }
+        },
+
+        executor.submit<Map<EntityKey, UUID>> {
+            hds.connection.use {
+                storeEntityKeyIds(
+                        it,
+                        mapOf(entitySetId to (0 until 1024).toList().toIntArray()),
+                        smallBatch.associateWith { UUID.randomUUID() }, idGenService
+                )
+            }
+        })
+
+        (futures+lbf+mbf+sbf).map{it.get()}
     }
 
     @Test
@@ -129,7 +211,11 @@ class PostgresEntityKeyIdServiceTest : TestServer() {
     fun testUniqueIdAssignment() {
         val entitySetId = UUID.randomUUID()
         val expectedCount = 70000
-        val entityKeys = (0 until expectedCount).map { EntityKey(entitySetId, RandomStringUtils.randomAlphanumeric(10)) }
+        val entityKeys = (0 until expectedCount).map {
+            EntityKey(
+                    entitySetId, RandomStringUtils.randomAlphanumeric(10)
+            )
+        }
         val idGroups = (0 until 8)
                 .map {
                     executor.submit<MutableMap<EntityKey, UUID>> {
@@ -139,7 +225,7 @@ class PostgresEntityKeyIdServiceTest : TestServer() {
                 .map { it.get() }
 
         val actualCount = idGroups.flatMapTo(mutableSetOf()) { it.values }.size
-        Assert.assertEquals("Number of keys do not match.", expectedCount, actualCount )
+        Assert.assertEquals("Number of keys do not match.", expectedCount, actualCount)
     }
 
 }

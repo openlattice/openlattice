@@ -144,9 +144,9 @@ private val EMPTIEST_PARTITIONS = """
 
 // Consistently Ordered, Unique Values, Constant Index
 fun getPartition(entityKeyId: UUID, partitions: List<Int>): Int {
-    return partitions[entityKeyId.leastSignificantBits.toInt() % partitions.size]
+    return partitions[Math.floorMod(entityKeyId.leastSignificantBits.toInt(), partitions.size)]
 }
 
 fun getPartition(entityKeyId: UUID, partitions: IntArray): Int {
-    return partitions[entityKeyId.leastSignificantBits.toInt() % partitions.size]
+    return partitions[Math.floorMod(entityKeyId.leastSignificantBits.toInt(), partitions.size)]
 }
