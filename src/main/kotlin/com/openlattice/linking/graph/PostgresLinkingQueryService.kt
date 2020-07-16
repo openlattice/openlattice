@@ -123,19 +123,14 @@ class PostgresLinkingQueryService(
     override fun updateIdsTable(clusterId: UUID, newMember: EntityDataKey): Int {
         val entitySetPartitions = partitionManager.getEntitySetPartitions(newMember.entitySetId).toList()
         val partition = getPartition(newMember.entityKeyId, entitySetPartitions)
-
+        //Does not need locking only affects a single row.
         return hds.connection.use { connection ->
-            lockIdsAndExecute(
-                    connection,
-                    UPDATE_LINKED_ENTITIES_SQL,
-                    newMember.entitySetId,
-                    mapOf(partition to setOf(newMember.entityKeyId))
-            ) { ps, _, offset ->
-                ps.setObject(1 + offset, clusterId)
-                ps.setInt(2 + offset, partition)
-                ps.setObject(3 + offset, newMember.entitySetId)
-                ps.setObject(4 + offset, newMember.entityKeyId)
-            }
+            val ps = connection.prepareStatement(UPDATE_LINKED_ENTITIES_SQL)
+            ps.setObject(1, clusterId)
+            ps.setInt(2, partition)
+            ps.setObject(3, newMember.entitySetId)
+            ps.setObject(4, newMember.entityKeyId)
+            ps.executeUpdate()
         }
     }
 
@@ -196,16 +191,19 @@ class PostgresLinkingQueryService(
     }
 
     override fun tombstoneLinks(linkingId: UUID, toRemove: Set<EntityDataKey>): Int {
+        val entitySetPartitions = partitionManager
+                .getPartitionsByEntitySetId(toRemove.map { it.entitySetId }.toSet())
+                .mapValues { it.value.toList() }
         hds.connection.use { connection ->
             connection.prepareStatement(tombstoneLinkForEntity).use { ps ->
                 val version = System.currentTimeMillis()
                 toRemove.forEach { edk ->
-                    val partitions = PostgresArrays.createIntArray(connection, partitionManager.getAllPartitions())
+                    val partition = getPartition(edk.entityKeyId, entitySetPartitions.getValue(edk.entitySetId))
                     ps.setLong(1, version)
                     ps.setLong(2, version)
                     ps.setLong(3, version)
                     ps.setObject(4, edk.entitySetId) // esid
-                    ps.setArray(5, partitions)
+                    ps.setInt(5, partition)
                     ps.setObject(6, linkingId) // ID value
                     ps.setObject(7, edk.entityKeyId) // origin id
                     println(ps.toString())
