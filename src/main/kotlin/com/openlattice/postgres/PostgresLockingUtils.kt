@@ -52,8 +52,6 @@ fun lockIdsAndExecute(
             lock.setArray(3, PostgresArrays.createUuidArray(connection, entityKeyIds))
         }
 
-        // We set index to the last bound index so that the [bindPreparedStatementFn] can use
-        // manual bind numbering added to this offset (which is 1-indexed)
         execute()
     } catch (ex: Exception) {
         connection.rollback()
