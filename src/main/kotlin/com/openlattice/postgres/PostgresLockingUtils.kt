@@ -37,11 +37,15 @@ fun lockIdsAndExecute(
         entitySetId: UUID,
         partition: Int,
         entityKeyIds: Collection<UUID> = listOf(),
+        shouldLockEntireEntitySet: Boolean = false,
         execute: () -> Int
 ): Int {
     require(!connection.autoCommit) { "Connection must not be in autocommit mode." }
 
-    val shouldLockEntireEntitySet = entityKeyIds.isEmpty()
+    if (shouldLockEntireEntitySet && entityKeyIds.isEmpty()) {
+        return 0
+    }
+
     val lockSql = if (shouldLockEntireEntitySet) LOCKING_WITHOUT_IDS else LOCKING_WITH_IDS
     val lock = connection.prepareStatement(lockSql)
 
@@ -52,8 +56,6 @@ fun lockIdsAndExecute(
             lock.setArray(3, PostgresArrays.createUuidArray(connection, entityKeyIds))
         }
 
-        // We set index to the last bound index so that the [bindPreparedStatementFn] can use
-        // manual bind numbering added to this offset (which is 1-indexed)
         execute()
     } catch (ex: Exception) {
         connection.rollback()
@@ -67,11 +69,16 @@ fun lockIdsAndExecuteAndCommit(
         entitySetId: UUID,
         partition: Int,
         entityKeyIds: Collection<UUID> = listOf(),
+        shouldLockEntireEntitySet: Boolean = false,
         bind: (PreparedStatement) -> Unit
 ): Int {
+    if (shouldLockEntireEntitySet && entityKeyIds.isEmpty()) {
+        return 0
+    }
+
     return hds.connection.use { connection ->
+
         connection.autoCommit = false
-        val shouldLockEntireEntitySet = entityKeyIds.isEmpty()
         val lockSql = if (shouldLockEntireEntitySet) LOCKING_WITHOUT_IDS else LOCKING_WITH_IDS
         val lock = connection.prepareStatement(lockSql)
 
