@@ -33,30 +33,31 @@ import java.util.*
  */
 fun lockIdsAndExecute(
         connection: Connection,
-        query: String,
         entitySetId: UUID,
-        entityKeyIdsByPartition: Map<Int, Collection<UUID>>,
-        shouldLockEntireEntitySet: Boolean = false,
-        bindPreparedStatementFn: (PreparedStatement, Int, Int) -> Unit
-): Int {
-    val lockingCTE = if (shouldLockEntireEntitySet) LOCKING_CTE_WITHOUT_IDS else LOCKING_CTE_WITH_IDS
-    val ps = connection.prepareStatement("$lockingCTE $query")
+        partition: Int,
+        entityKeyIds: Collection<UUID> = listOf(),
+        execute: () -> Int
+) : Int {
+    require( !connection.autoCommit ) { "Connection must not be in autocommit mode." }
 
-    entityKeyIdsByPartition.forEach { (partition, entityKeyIds) ->
-        var index = 1
-        ps.setObject(index++, entitySetId)
-        ps.setInt(index++, partition)
-        if (!shouldLockEntireEntitySet) {
-            ps.setArray(index++, PostgresArrays.createUuidArray(connection, entityKeyIds))
-        }
+    val shouldLockEntireEntitySet = entityKeyIds.isEmpty()
+    val lockSql = if (shouldLockEntireEntitySet) LOCKING_WITHOUT_IDS else LOCKING_WITH_IDS
+    val lock = connection.prepareStatement(lockSql)
 
-        // We set index to the last bound index so that the [bindPreparedStatementFn] can use
-        // manual bind numbering added to this offset (which is 1-indexed)
-        bindPreparedStatementFn(ps, partition, index - 1)
-        ps.addBatch()
+    return try {
+            lock.setObject(1, entitySetId)
+            lock.setInt(2, partition)
+            if (!shouldLockEntireEntitySet) {
+                lock.setArray(3, PostgresArrays.createUuidArray(connection, entityKeyIds))
+            }
+
+            // We set index to the last bound index so that the [bindPreparedStatementFn] can use
+            // manual bind numbering added to this offset (which is 1-indexed)
+            execute()
+    } catch (ex: Exception) {
+        connection.rollback()
+        0
     }
-
-    return ps.executeBatch().sum()
 }
 
 
@@ -68,21 +69,17 @@ fun getPartitionMapForEntitySet(partitions: Collection<Int>): Map<Int, List<UUID
     return partitions.associateWith { listOf<UUID>() }
 }
 
-private val LOCKING_CTE_WITH_IDS = "WITH id_locks AS (" +
-        "  SELECT 1" +
+private val LOCKING_WITH_IDS = "SELECT 1" +
         "  FROM ${IDS.name} " +
         "    WHERE ${ENTITY_SET_ID.name} = ? " +
         "    AND ${PARTITION.name} = ? " +
         "    AND ${ID.name} = ANY(?) " +
         "  ORDER BY ${ID.name} " +
-        "  FOR UPDATE " +
-        ") "
+        "  FOR UPDATE "
 
-private val LOCKING_CTE_WITHOUT_IDS = "WITH id_locks AS (" +
-        "  SELECT 1" +
+private val LOCKING_WITHOUT_IDS = "SELECT 1" +
         "  FROM ${IDS.name} " +
         "    WHERE ${ENTITY_SET_ID.name} = ? " +
         "    AND ${PARTITION.name} = ? " +
         "  ORDER BY ${ID.name} " +
-        "  FOR UPDATE " +
-        ") "
+        "  FOR UPDATE "
