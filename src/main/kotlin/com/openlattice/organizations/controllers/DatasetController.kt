@@ -130,11 +130,10 @@ class DatasetController : DatasetApi, AuthorizingComponent {
     }
 
     @Timed
-    @GetMapping(path = [ID_PATH + TABLE_NAME_PATH + EXTERNAL_DATABASE_TABLE])
+    @GetMapping(path = [ID_PATH + TABLE_ID_PATH + EXTERNAL_DATABASE_TABLE])
     override fun getExternalDatabaseTable(
             @PathVariable(ID) organizationId: UUID,
-            @PathVariable(TABLE_NAME) tableName: String): OrganizationExternalDatabaseTable {
-        val (_, tableId) = getExternalDatabaseObjectFqnToIdPair(organizationId, tableName)
+            @PathVariable(TABLE_ID) tableId: UUID): OrganizationExternalDatabaseTable {
         ensureReadAccess(AclKey(tableId))
         return edms.getOrganizationExternalDatabaseTable(tableId)
     }
