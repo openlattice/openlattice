@@ -67,7 +67,7 @@ fun lockIdsAndExecuteAndCommit(
         entitySetId: UUID,
         partition: Int,
         entityKeyIds: Collection<UUID> = listOf(),
-        execute: (PreparedStatement) -> Int
+        bind: (PreparedStatement) -> Unit
 ): Int {
     return hds.connection.use { connection ->
         val shouldLockEntireEntitySet = entityKeyIds.isEmpty()
@@ -81,9 +81,10 @@ fun lockIdsAndExecuteAndCommit(
                 lock.setArray(3, PostgresArrays.createUuidArray(connection, entityKeyIds))
             }
 
-            // We set index to the last bound index so that the [bindPreparedStatementFn] can use
-            // manual bind numbering added to this offset (which is 1-indexed)
-            val updateCount = execute(connection.prepareStatement(preparableQuery))
+            val ps = connection.prepareStatement(preparableQuery)
+            bind(ps)
+            val updateCount  =ps.executeUpdate()
+
             connection.commit()
             return@use updateCount
         } catch (ex: Exception) {

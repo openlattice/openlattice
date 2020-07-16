@@ -3,14 +3,11 @@ package com.openlattice.data.storage
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.data.storage.partitions.getPartition
+import com.openlattice.postgres.*
 import com.openlattice.postgres.DataTables.LAST_INDEX
 import com.openlattice.postgres.DataTables.LAST_LINK
-import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.IDS
-import com.openlattice.postgres.getIdsByPartition
-import com.openlattice.postgres.getPartitionMapForEntitySet
-import com.openlattice.postgres.lockIdsAndExecute
 import com.zaxxer.hikari.HikariDataSource
 import java.sql.PreparedStatement
 import java.time.OffsetDateTime
@@ -31,19 +28,19 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
                 .mapValues { it.value.toList() }
         return hds.connection.use { connection ->
             connection.autoCommit = false
-            val ps = connection.prepareStatement(updateLastIndexSql)
             entityKeyIdsWithLastWrite.map { (entitySetId, entities) ->
                 val partitions = entitySetPartitions.getValue(entitySetId)
                 entities.entries
                         .groupBy({ getPartition(it.key, partitions) }, { it.toPair() })
                         .map { (partition, idsAndExpirations) ->
                             val idsAndExpirationsMap = idsAndExpirations.toMap()
-                            lockIdsAndExecute(
-                                    connection,
+                            lockIdsAndExecuteAndCommit(
+                                    hds,
+                                    updateLastIndexSql,
                                     entitySetId,
                                     partition,
                                     idsAndExpirationsMap.keys
-                            ) {
+                            ) { ps->
                                 prepareIndexQuery(
                                         ps,
                                         entitySetId,
@@ -51,9 +48,6 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
                                         idsAndExpirationsMap,
                                         1
                                 )
-                                val updateCount = ps.executeUpdate()
-                                connection.commit()
-                                return@lockIdsAndExecute updateCount
                             }
                         }.sum()
             }.sum()
@@ -75,18 +69,18 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
                 .mapValues { it.value.toList() }
 
         return hds.connection.use { connection ->
-            val ps = connection.prepareStatement(updateLastLinkingIndexSql)
             linkingIdsWithLastWrite.map { (entitySetId, entities) ->
                 val partitions = entitySetPartitions.getValue(entitySetId)
                 entities.entries
                         .groupBy({ getPartition(it.key, partitions) }, { it.value })
                         .map {  (partition, idsAndExpiration) ->
 
-                    lockIdsAndExecute(
-                            connection,
+                    lockIdsAndExecuteAndCommit(
+                            hds,
+                            updateLastLinkingIndexSql,
                             entitySetId,
                             partition
-                    ) {
+                    ) {ps ->
                         val mergedLinkingIdsWithLastWrite = idsAndExpiration
                                 .fold(mutableMapOf<UUID, OffsetDateTime>()) { acc, map ->
                                     acc.putAll(map)
@@ -100,9 +94,6 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
                                 mergedLinkingIdsWithLastWrite,
                                 1
                         )
-                        val updateCount = ps.executeUpdate()
-                        connection.commit()
-                        return@lockIdsAndExecute updateCount
                     }
                 }.sum()
             }.sum()
