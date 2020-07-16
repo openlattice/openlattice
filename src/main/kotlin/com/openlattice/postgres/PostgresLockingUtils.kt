@@ -38,23 +38,23 @@ fun lockIdsAndExecute(
         partition: Int,
         entityKeyIds: Collection<UUID> = listOf(),
         execute: () -> Int
-) : Int {
-    require( !connection.autoCommit ) { "Connection must not be in autocommit mode." }
+): Int {
+    require(!connection.autoCommit) { "Connection must not be in autocommit mode." }
 
     val shouldLockEntireEntitySet = entityKeyIds.isEmpty()
     val lockSql = if (shouldLockEntireEntitySet) LOCKING_WITHOUT_IDS else LOCKING_WITH_IDS
     val lock = connection.prepareStatement(lockSql)
 
     return try {
-            lock.setObject(1, entitySetId)
-            lock.setInt(2, partition)
-            if (!shouldLockEntireEntitySet) {
-                lock.setArray(3, PostgresArrays.createUuidArray(connection, entityKeyIds))
-            }
+        lock.setObject(1, entitySetId)
+        lock.setInt(2, partition)
+        if (!shouldLockEntireEntitySet) {
+            lock.setArray(3, PostgresArrays.createUuidArray(connection, entityKeyIds))
+        }
 
-            // We set index to the last bound index so that the [bindPreparedStatementFn] can use
-            // manual bind numbering added to this offset (which is 1-indexed)
-            execute()
+        // We set index to the last bound index so that the [bindPreparedStatementFn] can use
+        // manual bind numbering added to this offset (which is 1-indexed)
+        execute()
     } catch (ex: Exception) {
         connection.rollback()
         0
@@ -70,6 +70,7 @@ fun lockIdsAndExecuteAndCommit(
         bind: (PreparedStatement) -> Unit
 ): Int {
     return hds.connection.use { connection ->
+        connection.autoCommit = false
         val shouldLockEntireEntitySet = entityKeyIds.isEmpty()
         val lockSql = if (shouldLockEntireEntitySet) LOCKING_WITHOUT_IDS else LOCKING_WITH_IDS
         val lock = connection.prepareStatement(lockSql)
@@ -83,13 +84,15 @@ fun lockIdsAndExecuteAndCommit(
 
             val ps = connection.prepareStatement(preparableQuery)
             bind(ps)
-            val updateCount  =ps.executeUpdate()
+            val updateCount = ps.executeUpdate()
 
             connection.commit()
             return@use updateCount
         } catch (ex: Exception) {
             connection.rollback()
             0
+        } finally {
+            connection.autoCommit = true
         }
     }
 }
