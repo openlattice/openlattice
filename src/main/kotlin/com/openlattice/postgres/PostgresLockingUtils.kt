@@ -3,6 +3,7 @@ package com.openlattice.postgres
 import com.openlattice.data.storage.partitions.getPartition
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.IDS
+import com.zaxxer.hikari.HikariDataSource
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.util.*
@@ -33,32 +34,121 @@ import java.util.*
  */
 fun lockIdsAndExecute(
         connection: Connection,
-        query: String,
         entitySetId: UUID,
-        entityKeyIdsByPartition: Map<Int, Collection<UUID>>,
+        partition: Int,
+        entityKeyIds: Collection<UUID> = listOf(),
         shouldLockEntireEntitySet: Boolean = false,
-        bindPreparedStatementFn: (PreparedStatement, Int, Int) -> Unit
+        execute: () -> Int
 ): Int {
-    val lockingCTE = if (shouldLockEntireEntitySet) LOCKING_CTE_WITHOUT_IDS else LOCKING_CTE_WITH_IDS
-    val ps = connection.prepareStatement("$lockingCTE $query")
+    require(!connection.autoCommit) { "Connection must not be in autocommit mode." }
 
-    entityKeyIdsByPartition.forEach { (partition, entityKeyIds) ->
-        var index = 1
-        ps.setObject(index++, entitySetId)
-        ps.setInt(index++, partition)
-        if (!shouldLockEntireEntitySet) {
-            ps.setArray(index++, PostgresArrays.createUuidArray(connection, entityKeyIds))
-        }
-
-        // We set index to the last bound index so that the [bindPreparedStatementFn] can use
-        // manual bind numbering added to this offset (which is 1-indexed)
-        bindPreparedStatementFn(ps, partition, index - 1)
-        ps.addBatch()
+    if (!shouldLockEntireEntitySet && entityKeyIds.isEmpty()) {
+        return 0
     }
 
-    return ps.executeBatch().sum()
+    val lockSql = if (shouldLockEntireEntitySet) LOCKING_WITHOUT_IDS else LOCKING_WITH_IDS
+    val lock = connection.prepareStatement(lockSql)
+
+    return try {
+        lock.setObject(1, entitySetId)
+        lock.setInt(2, partition)
+        if (!shouldLockEntireEntitySet) {
+            lock.setArray(3, PostgresArrays.createUuidArray(connection, entityKeyIds))
+        }
+
+        execute()
+    } catch (ex: Exception) {
+        connection.rollback()
+        0
+    }
 }
 
+fun lockIdsAndExecute(
+        connection: Connection,
+        query: String,
+        entitySetId: UUID,
+        idsByPartition: Map<Int, Collection<UUID>>,
+        shouldLockEntireEntitySet: Boolean = false,
+        batch: Boolean = false,
+        execute: (PreparedStatement, Int, Collection<UUID>) -> Unit
+): Int {
+    val ac = connection.autoCommit
+
+    if (idsByPartition.isEmpty() && !shouldLockEntireEntitySet) {
+        return 0
+    }
+
+    val lockSql = if (shouldLockEntireEntitySet) LOCKING_WITHOUT_IDS else LOCKING_WITH_IDS
+    val lock = connection.prepareStatement(lockSql)
+    val ps = connection.prepareStatement(query)
+    return try {
+        val updates = idsByPartition.map { (partition, entityKeyIds) ->
+            lock.setObject(1, entitySetId)
+            lock.setInt(2, partition)
+            if (!shouldLockEntireEntitySet) {
+                lock.setArray(3, PostgresArrays.createUuidArray(connection, entityKeyIds))
+            }
+
+            execute(ps, partition, entityKeyIds)
+            if (batch) {
+                ps.addBatch()
+                0
+            } else {
+                ps.executeUpdate()
+            }
+        }
+
+        val count = if (batch) ps.executeBatch().sum() else updates.sum()
+        connection.commit()
+        connection.autoCommit = ac
+        count
+
+    } catch (ex: Exception) {
+        connection.rollback()
+        throw ex
+    }
+}
+
+fun lockIdsAndExecuteAndCommit(
+        hds: HikariDataSource,
+        preparableQuery: String,
+        entitySetId: UUID,
+        partition: Int,
+        entityKeyIds: Collection<UUID> = listOf(),
+        shouldLockEntireEntitySet: Boolean = false,
+        bind: (PreparedStatement) -> Unit
+): Int {
+    if (!shouldLockEntireEntitySet && entityKeyIds.isEmpty()) {
+        return 0
+    }
+
+    return hds.connection.use { connection ->
+
+        connection.autoCommit = false
+        val lockSql = if (shouldLockEntireEntitySet) LOCKING_WITHOUT_IDS else LOCKING_WITH_IDS
+        val lock = connection.prepareStatement(lockSql)
+
+        try {
+            lock.setObject(1, entitySetId)
+            lock.setInt(2, partition)
+            if (!shouldLockEntireEntitySet) {
+                lock.setArray(3, PostgresArrays.createUuidArray(connection, entityKeyIds))
+            }
+
+            val ps = connection.prepareStatement(preparableQuery)
+            bind(ps)
+            val updateCount = ps.executeUpdate()
+
+            connection.commit()
+            return@use updateCount
+        } catch (ex: Exception) {
+            connection.rollback()
+            0
+        } finally {
+            connection.autoCommit = true
+        }
+    }
+}
 
 fun getIdsByPartition(entityKeyIds: Collection<UUID>, partitions: List<Int>): Map<Int, List<UUID>> {
     return entityKeyIds.groupBy { getPartition(it, partitions) }
@@ -68,21 +158,17 @@ fun getPartitionMapForEntitySet(partitions: Collection<Int>): Map<Int, List<UUID
     return partitions.associateWith { listOf<UUID>() }
 }
 
-private val LOCKING_CTE_WITH_IDS = "WITH id_locks AS (" +
-        "  SELECT 1" +
+private val LOCKING_WITH_IDS = "SELECT 1" +
         "  FROM ${IDS.name} " +
         "    WHERE ${ENTITY_SET_ID.name} = ? " +
         "    AND ${PARTITION.name} = ? " +
         "    AND ${ID.name} = ANY(?) " +
         "  ORDER BY ${ID.name} " +
-        "  FOR UPDATE " +
-        ") "
+        "  FOR UPDATE "
 
-private val LOCKING_CTE_WITHOUT_IDS = "WITH id_locks AS (" +
-        "  SELECT 1" +
+private val LOCKING_WITHOUT_IDS = "SELECT 1" +
         "  FROM ${IDS.name} " +
         "    WHERE ${ENTITY_SET_ID.name} = ? " +
         "    AND ${PARTITION.name} = ? " +
         "  ORDER BY ${ID.name} " +
-        "  FOR UPDATE " +
-        ") "
+        "  FOR UPDATE "
