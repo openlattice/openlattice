@@ -886,30 +886,22 @@ class PostgresEntityDataQueryService(
         val partitions = partitionManager.getEntitySetPartitions(entitySetId)
 
         val numUpdates = hds.connection.use { connection ->
-            connection.autoCommit = false
-            val ps = connection.prepareStatement(zeroVersionsForEntitySet)
             try {
-                partitions.map { partition ->
-                    lockIdsAndExecute(
-                            connection,
-                            entitySetId,
-                            partition,
-                            shouldLockEntireEntitySet = true
-                    ) {
-                        ps.setObject(1, entitySetId)
-                        ps.setInt(2, partition)
-                        ps.addBatch()
-                        0
-                    }
+                lockIdsAndExecute(
+                        connection,
+                        zeroVersionsForEntitySet,
+                        entitySetId,
+                        partitions.associateWith { listOf<UUID>() },
+                        batch = true,
+                        shouldLockEntireEntitySet = true
+                ) { ps, partition, _ ->
+                    ps.setObject(1, entitySetId)
+                    ps.setInt(2, partition)
                 }
-                val updated = ps.executeBatch()
-                connection.commit()
-                updated
             } catch (ex: Exception) {
-                connection.rollback()
                 logger.error("Unable to mark entity set $entitySetId for deletion.")
                 throw ex
-            }.sum()
+            }
         }
 
         return WriteEvent(System.currentTimeMillis(), numUpdates)
@@ -923,35 +915,24 @@ class PostgresEntityDataQueryService(
         val entitiesByPartition = getIdsByPartition(entityKeyIds, partitions)
 
         val numUpdates = hds.connection.use { connection ->
-            val ps = connection.prepareStatement(deleteEntityKeys)
             try {
-                entitiesByPartition.forEach { (partition, ids) ->
-                    lockIdsAndExecute(
-                            connection,
-                            entitySetId,
-                            partition,
-                            entityKeyIds,
-                    ) {
-                        val entityArr = PostgresArrays.createUuidArray(
-                                ps.connection, entitiesByPartition.getValue(partition)
-                        )
-
-                        ps.setObject(1, entitySetId)
-                        ps.setArray(2, entityArr)
-                        ps.setInt(3, partition)
-                        ps.addBatch()
-                        0
-                    }
+                lockIdsAndExecute(
+                        connection,
+                        deleteEntityKeys,
+                        entitySetId,
+                        entitiesByPartition,
+                        batch = true
+                ) { ps, partition, entityKeyIds ->
+                    val entityArr = PostgresArrays.createUuidArray(ps.connection, entityKeyIds)
+                    ps.setObject(1, entitySetId)
+                    ps.setArray(2, entityArr)
+                    ps.setInt(3, partition)
                 }
-                val updated = ps.executeBatch()
-                connection.commit()
-                updated
             } catch (ex: Exception) {
-                connection.rollback()
                 logger.error("Unable to delete entities ($entityKeyIds) in $entitySetId.")
                 throw ex
             }
-        }.sum()
+        }
 
         return WriteEvent(System.currentTimeMillis(), numUpdates)
     }
@@ -1046,16 +1027,16 @@ class PostgresEntityDataQueryService(
                     connection,
                     updateVersionsForEntitiesInEntitySet,
                     entitySetId,
-                    idsByPartition
-            ) { ps, partition, offset ->
-                val entityKeyIdsArr = PostgresArrays.createUuidArray(ps.connection, idsByPartition.getValue(partition))
-
-                ps.setLong(1 + offset, -version)
-                ps.setLong(2 + offset, -version)
-                ps.setLong(3 + offset, -version)
-                ps.setObject(4 + offset, entitySetId)
-                ps.setInt(5 + offset, partition)
-                ps.setArray(6 + offset, entityKeyIdsArr)
+                    idsByPartition,
+                    batch = true
+            ) { ps, partition, ids ->
+                val entityKeyIdsArr = PostgresArrays.createUuidArray(ps.connection, ids)
+                ps.setLong(1, -version)
+                ps.setLong(2, -version)
+                ps.setLong(3, -version)
+                ps.setObject(4, entitySetId)
+                ps.setInt(5, partition)
+                ps.setArray(6, entityKeyIdsArr)
             }
         }
 
