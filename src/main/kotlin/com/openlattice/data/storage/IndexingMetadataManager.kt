@@ -81,7 +81,8 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
                                     hds,
                                     updateLastLinkingIndexSql,
                                     entitySetId,
-                                    partition
+                                    partition,
+                                    shouldLockEntireEntitySet = true
                             ) { ps ->
                                 val mergedLinkingIdsWithLastWrite = idsAndExpiration
                                         .fold(mutableMapOf<UUID, OffsetDateTime>()) { acc, map ->
@@ -166,7 +167,8 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
                     hds,
                     markEntitySetLastIndexSql,
                     entitySetId,
-                    partition
+                    partition,
+                    shouldLockEntireEntitySet = true
             ) { ps ->
                 ps.setObject(1, entitySetId)
                 ps.setInt(2, partition)
@@ -186,7 +188,8 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
                         hds,
                         query,
                         entitySetId,
-                        partition
+                        partition,
+                        shouldLockEntireEntitySet = true
                 ) { ps ->
                     ps.setObject(1, entitySetId)
                     ps.setInt(2, partition)
