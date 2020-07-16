@@ -3,6 +3,7 @@ package com.openlattice.postgres
 import com.openlattice.data.storage.partitions.getPartition
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.IDS
+import com.zaxxer.hikari.HikariDataSource
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.util.*
@@ -60,6 +61,37 @@ fun lockIdsAndExecute(
     }
 }
 
+fun lockIdsAndExecuteAndCommit(
+        hds: HikariDataSource,
+        preparableQuery: String,
+        entitySetId: UUID,
+        partition: Int,
+        entityKeyIds: Collection<UUID> = listOf(),
+        execute: (PreparedStatement) -> Int
+): Int {
+    return hds.connection.use { connection ->
+        val shouldLockEntireEntitySet = entityKeyIds.isEmpty()
+        val lockSql = if (shouldLockEntireEntitySet) LOCKING_WITHOUT_IDS else LOCKING_WITH_IDS
+        val lock = connection.prepareStatement(lockSql)
+
+        try {
+            lock.setObject(1, entitySetId)
+            lock.setInt(2, partition)
+            if (!shouldLockEntireEntitySet) {
+                lock.setArray(3, PostgresArrays.createUuidArray(connection, entityKeyIds))
+            }
+
+            // We set index to the last bound index so that the [bindPreparedStatementFn] can use
+            // manual bind numbering added to this offset (which is 1-indexed)
+            val updateCount = execute(connection.prepareStatement(preparableQuery))
+            connection.commit()
+            return@use updateCount
+        } catch (ex: Exception) {
+            connection.rollback()
+            0
+        }
+    }
+}
 
 fun getIdsByPartition(entityKeyIds: Collection<UUID>, partitions: List<Int>): Map<Int, List<UUID>> {
     return entityKeyIds.groupBy { getPartition(it, partitions) }
