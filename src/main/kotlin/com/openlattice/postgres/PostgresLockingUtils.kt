@@ -72,12 +72,12 @@ fun lockIdsAndExecute(
         batch: Boolean = false,
         execute: (PreparedStatement, Int, Collection<UUID>) -> Unit
 ): Int {
-    val ac = connection.autoCommit
 
     if (idsByPartition.isEmpty() && !shouldLockEntireEntitySet) {
         return 0
     }
-
+    val ac = connection.autoCommit
+    connection.autoCommit = false
     val lockSql = if (shouldLockEntireEntitySet) LOCKING_WITHOUT_IDS else LOCKING_WITH_IDS
     val lock = connection.prepareStatement(lockSql)
     val ps = connection.prepareStatement(query)
