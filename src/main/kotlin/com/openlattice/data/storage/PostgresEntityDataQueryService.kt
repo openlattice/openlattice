@@ -439,7 +439,7 @@ class PostgresEntityDataQueryService(
                             partition,
                             entities.keys
                     ) {
-                        ps.setObject(1, versionsArrays)
+                        ps.setArray(1, versionsArrays)
                         ps.setObject(2, version)
                         ps.setObject(3, version)
                         ps.setObject(4, entitySetId)
