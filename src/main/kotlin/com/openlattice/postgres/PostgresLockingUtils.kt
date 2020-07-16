@@ -82,7 +82,7 @@ fun lockIdsAndExecute(
     val lock = connection.prepareStatement(lockSql)
     val ps = connection.prepareStatement(query)
     return try {
-        val updates = idsByPartition.map { (partition, entityKeyIds) ->
+        val updates = idsByPartition.toSortedMap().map { (partition, entityKeyIds) ->
             lock.setObject(1, entitySetId)
             lock.setInt(2, partition)
             if (!shouldLockEntireEntitySet) {
