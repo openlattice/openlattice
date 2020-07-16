@@ -38,6 +38,7 @@ import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.slf4j.LoggerFactory
+import org.springframework.stereotype.Service
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.util.*
@@ -70,10 +71,11 @@ private val logger = LoggerFactory.getLogger(PostgresEntityKeyIdService::class.j
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
+@Service
 class PostgresEntityKeyIdService(
         private val hds: HikariDataSource,
         private val idGenerationService: HazelcastIdGenerationService,
-        private val partitionManager: PartitionManager
+        protected val partitionManager: PartitionManager
 ) : EntityKeyIdService {
     private fun genEntityKeyIds(entityIds: Set<EntityKey>): Map<EntityKey, UUID> {
         val ids = idGenerationService.getNextIds(entityIds.size)
@@ -84,7 +86,7 @@ class PostgresEntityKeyIdService(
     private fun storeEntityKeyIdReservations(
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
-            partitions: IntArray = partitionManager.getEntitySetPartitions(entitySetId).toIntArray()
+            partitions: IntArray
     ) {
         hds.connection.use { connection ->
             val insertIds = connection.prepareStatement(INSERT_SQL)
@@ -129,7 +131,8 @@ class PostgresEntityKeyIdService(
     override fun reserveLinkingIds(count: Int): List<UUID> {
         val ids = idGenerationService.getNextIds(count)
         storeEntityKeyIdReservations(
-                IdConstants.LINKING_ENTITY_SET_ID.id, ids,
+                IdConstants.LINKING_ENTITY_SET_ID.id,
+                ids,
                 partitionManager.getAllPartitions().toIntArray()
         )
         return ids.toList()
@@ -137,7 +140,11 @@ class PostgresEntityKeyIdService(
 
     override fun reserveIds(entitySetId: UUID, count: Int): List<UUID> {
         val ids = idGenerationService.getNextIds(count)
-        storeEntityKeyIdReservations(entitySetId, ids)
+        storeEntityKeyIdReservations(
+                entitySetId,
+                ids,
+                partitionManager.getEntitySetPartitions(entitySetId).toIntArray()
+        )
         return ids.toList()
     }
 

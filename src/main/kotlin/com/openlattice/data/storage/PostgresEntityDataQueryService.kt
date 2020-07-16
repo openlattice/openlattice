@@ -416,28 +416,41 @@ class PostgresEntityDataQueryService(
              */
 
             //Make data visible by marking new version in ids table.
-            connection.autoCommit = false
-            val ps = connection.prepareStatement(upsertEntitiesSql)
-            val updatedLinkedEntities =
-                    lockIdsAndExecute(
-                            connection,
-                            entitySetId,
-                            partition,
-                            entities.keys
-                    ) {
-                        ps.setObject(1, versionsArrays)
-                        ps.setObject(2, version)
-                        ps.setObject(3, version)
-                        ps.setObject(4, entitySetId)
-                        ps.setArray(5, PostgresArrays.createUuidArray(connection, entities.keys))
-                        ps.setInt(6, partition)
-                        val updateCount = ps.executeUpdate()
-                        connection.commit()
-                        logger.info("Committed $updateCount entities to complete an insert.")
-                        return@lockIdsAndExecute updateCount
-                    }
+//            connection.autoCommit = false
+            val ps = connection.prepareStatement(updateIdVersionSql)
 
-            connection.autoCommit = true
+                entities.keys.sorted().forEach { entityKeyId ->
+                ps.setObject(1, versionsArrays)
+                ps.setObject(2, version)
+                ps.setObject(3, version)
+                ps.setObject(4, entitySetId)
+                ps.setObject(5, entityKeyId)
+                ps.setInt(6, partition)
+                ps.addBatch()
+            }
+
+            val updatedLinkedEntities = ps.executeBatch().sum()
+
+//            val updatedLinkedEntities =
+//                    lockIdsAndExecute(
+//                            connection,
+//                            entitySetId,
+//                            partition,
+//                            entities.keys
+//                    ) {
+//                        ps.setObject(1, versionsArrays)
+//                        ps.setObject(2, version)
+//                        ps.setObject(3, version)
+//                        ps.setObject(4, entitySetId)
+//                        ps.setArray(5, PostgresArrays.createUuidArray(connection, entities.keys))
+//                        ps.setInt(6, partition)
+//                        val updateCount = ps.executeUpdate()
+//                        connection.commit()
+//                        logger.info("Committed $updateCount entities to complete an insert.")
+//                        return@lockIdsAndExecute updateCount
+//                    }
+
+//            connection.autoCommit = true
             logger.debug("Updated $updatedLinkedEntities linked entities as part of insert.")
             return updatedPropertyCounts
         }
@@ -615,7 +628,6 @@ class PostgresEntityDataQueryService(
 
             numUpdated
         } catch (ex: Exception) {
-            conn.rollback()
             conn.autoCommit = true
             logger.error("Unable to tombstone entity set $entitySetId with version $version.", ex)
             throw ex
