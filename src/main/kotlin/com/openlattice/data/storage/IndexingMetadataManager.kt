@@ -48,8 +48,7 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
                                         ps,
                                         entitySetId,
                                         partition,
-                                        idsAndExpirationsMap,
-                                        1
+                                        idsAndExpirationsMap
                                 )
                             }
                         }.sum()
@@ -95,8 +94,7 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
                                     ps,
                                     entitySetId,
                                     partition,
-                                    mergedLinkingIdsWithLastWrite,
-                                    1
+                                    mergedLinkingIdsWithLastWrite
                             )
                         }
                     }.sum()
@@ -108,17 +106,16 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
             stmt: PreparedStatement,
             entitySetId: UUID,
             partition: Int,
-            idsWithLastWrite: Map<UUID, OffsetDateTime>,
-            offset: Int
+            idsWithLastWrite: Map<UUID, OffsetDateTime>
     ) {
         idsWithLastWrite.entries
                 .groupBy { it.value }
                 .mapValues { it.value.map { entry -> entry.key } }
                 .forEach { (lastWrite, entities) ->
-                    stmt.setObject(1 + offset, lastWrite)
-                    stmt.setObject(2 + offset, entitySetId)
-                    stmt.setArray(3 + offset, PostgresArrays.createUuidArray(stmt.connection, entities))
-                    stmt.setInt(4 + offset, partition)
+                    stmt.setObject(1, lastWrite)
+                    stmt.setObject(2, entitySetId)
+                    stmt.setArray(3, PostgresArrays.createUuidArray(stmt.connection, entities))
+                    stmt.setInt(4, partition)
 
                     stmt.addBatch()
                 }
