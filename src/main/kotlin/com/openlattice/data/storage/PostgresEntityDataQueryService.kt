@@ -416,6 +416,20 @@ class PostgresEntityDataQueryService(
              */
 
             //Make data visible by marking new version in ids table.
+
+//            val ps = connection.prepareStatement(updateIdVersionSql)
+//
+//                entities.keys.sorted().forEach { entityKeyId ->
+//                ps.setObject(1, versionsArrays)
+//                ps.setObject(2, version)
+//                ps.setObject(3, version)
+//                ps.setObject(4, entitySetId)
+//                ps.setObject(5, entityKeyId)
+//                ps.setInt(6, partition)
+//                ps.addBatch()
+//            }
+
+//            val updatedLinkedEntities = ps.executeBatch().sum()
             connection.autoCommit = false
             val ps = connection.prepareStatement(upsertEntitiesSql)
             val updatedLinkedEntities =
@@ -425,7 +439,7 @@ class PostgresEntityDataQueryService(
                             partition,
                             entities.keys
                     ) {
-                        ps.setObject(1, versionsArrays)
+                        ps.setArray(1, versionsArrays)
                         ps.setObject(2, version)
                         ps.setObject(3, version)
                         ps.setObject(4, entitySetId)
@@ -615,7 +629,6 @@ class PostgresEntityDataQueryService(
 
             numUpdated
         } catch (ex: Exception) {
-            conn.rollback()
             conn.autoCommit = true
             logger.error("Unable to tombstone entity set $entitySetId with version $version.", ex)
             throw ex

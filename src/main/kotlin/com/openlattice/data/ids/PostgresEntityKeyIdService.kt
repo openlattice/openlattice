@@ -37,6 +37,7 @@ import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.slf4j.LoggerFactory
+import org.springframework.stereotype.Service
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.util.*
@@ -50,7 +51,7 @@ private val entityKeyIdSql = "SELECT * FROM ${SYNC_IDS.name} WHERE ${ENTITY_SET_
 private val linkedEntityKeyIdsSql = "SELECT ${ID.name},${LINKING_ID.name} as $ENTITY_KEY_IDS_FIELD FROM ${IDS.name} WHERE ${ID.name} = ANY(?) AND ${LINKING_ID.name} IS NOT NULL"
 
 //Only update ids the need updating to minimize i/o
-private val UPDATE_IDS_WRITTEN = "UPDATE ${SYNC_IDS.name} SET ${ID_WRITTEN.name} = TRUE WHERE ${ENTITY_SET_ID.name} = ? AND ${ENTITY_ID.name} = ANY(?) AND NOT ${ID_WRITTEN.name}"
+private val UPDATE_ID_WRITTEN = "UPDATE ${SYNC_IDS.name} SET ${ID_WRITTEN.name} = TRUE WHERE ${ENTITY_SET_ID.name} = ? AND ${ENTITY_ID.name} = ? AND NOT ${ID_WRITTEN.name}"
 private val INSERT_SQL = "INSERT INTO ${IDS.name} (${ENTITY_SET_ID.name},${ID.name},${PARTITION.name}) VALUES(?,?,?) ON CONFLICT DO NOTHING"
 private val INSERT_ID_TO_DATA_SQL = "INSERT INTO ${DATA.name} (" +
         "${ENTITY_SET_ID.name}," +
@@ -69,10 +70,11 @@ private val logger = LoggerFactory.getLogger(PostgresEntityKeyIdService::class.j
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
+@Service
 class PostgresEntityKeyIdService(
         private val hds: HikariDataSource,
         private val idGenerationService: HazelcastIdGenerationService,
-        private val partitionManager: PartitionManager
+        protected val partitionManager: PartitionManager
 ) : EntityKeyIdService {
     private fun genEntityKeyIds(entityIds: Set<EntityKey>): Map<EntityKey, UUID> {
         val ids = idGenerationService.getNextIds(entityIds.size)
@@ -83,7 +85,7 @@ class PostgresEntityKeyIdService(
     private fun storeEntityKeyIdReservations(
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
-            partitions: IntArray = partitionManager.getEntitySetPartitions(entitySetId).toIntArray()
+            partitions: IntArray
     ) {
         hds.connection.use { connection ->
             val insertIds = connection.prepareStatement(INSERT_SQL)
@@ -128,7 +130,8 @@ class PostgresEntityKeyIdService(
     override fun reserveLinkingIds(count: Int): List<UUID> {
         val ids = idGenerationService.getNextIds(count)
         storeEntityKeyIdReservations(
-                IdConstants.LINKING_ENTITY_SET_ID.id, ids,
+                IdConstants.LINKING_ENTITY_SET_ID.id,
+                ids,
                 partitionManager.getAllPartitions().toIntArray()
         )
         return ids.toList()
@@ -136,7 +139,11 @@ class PostgresEntityKeyIdService(
 
     override fun reserveIds(entitySetId: UUID, count: Int): List<UUID> {
         val ids = idGenerationService.getNextIds(count)
-        storeEntityKeyIdReservations(entitySetId, ids)
+        storeEntityKeyIdReservations(
+                entitySetId,
+                ids,
+                partitionManager.getEntitySetPartitions(entitySetId).toIntArray()
+        )
         return ids.toList()
     }
 
@@ -313,7 +320,7 @@ internal fun storeEntityKeyIds(
 
     val insertIds = connection.prepareStatement(INSERT_SQL)
     val insertToData = connection.prepareStatement(INSERT_ID_TO_DATA_SQL)
-    val updateIdsWritten = connection.prepareStatement(UPDATE_IDS_WRITTEN)
+    val updateIdsWritten = connection.prepareStatement(UPDATE_ID_WRITTEN)
 
     actualEntityKeyIds.forEach {
         storeEntityKeyIdAddBatch(
@@ -330,10 +337,11 @@ internal fun storeEntityKeyIds(
 
     //Mark all the ids as updated.
     syncIds.forEach { (entitySetId, entityIds) ->
-        val entityIdsArray = PostgresArrays.createTextArray(connection, entityIds)
-        updateIdsWritten.setObject(1, entitySetId)
-        updateIdsWritten.setArray(2, entityIdsArray)
-        updateIdsWritten.addBatch()
+        entityIds.forEach { entityId ->
+            updateIdsWritten.setObject(1, entitySetId)
+            updateIdsWritten.setObject(2, entityId)
+            updateIdsWritten.addBatch()
+        }
     }
 
     val idsWrittenCount = updateIdsWritten.executeBatch().sum()

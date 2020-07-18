@@ -364,6 +364,35 @@ val upsertEntitiesSql = "UPDATE ${IDS.name} " +
         "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ? "
 // @formatter:on
 
+/**
+ * Preparable sql to upsert entities in [IDS] table.
+ *
+ * It sets a positive version and updates last write to current time.
+ *
+ * The bind order is the following:
+ *
+ * 1 - versions
+ *
+ * 2 - version
+ *
+ * 3 - version
+ *
+ * 4 - entity set id
+ *
+ * 5 - entity key ids
+ *
+ * 6 - partition
+ */
+// @formatter:off
+val updateIdVersionSql = "UPDATE ${IDS.name} " +
+        "SET ${VERSIONS.name} = ${VERSIONS.name} || ?, " +
+        "${LAST_WRITE.name} = now(), " +
+        "${VERSION.name} = CASE " +
+        "WHEN abs(${IDS.name}.${VERSION.name}) <= abs(?) THEN ? " +
+        "ELSE ${IDS.name}.${VERSION.name} " +
+        "END " +
+        "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ? AND ${PARTITION.name} = ? "
+// @formatter:on
 
 /**
  * Preparable SQL that upserts a version and sets last write to current datetime for all entities in a given entity set
