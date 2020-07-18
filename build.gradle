@@ -149,7 +149,7 @@ dependencies {
     compile "net.jpountz.lz4:lz4:${lz4_version}"
     compile "de.javakaffee:kryo-serializers:${kryo_serializers_version}"
     compile "com.google.code.findbugs:findbugs:${findbugs_version}"
-    
+
     if( project.hasProperty('developmentMode') && project.developmentMode ) {
         logger.quiet(project.name + " using project dependencies.")
         compile project(":api")
