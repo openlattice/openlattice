@@ -52,6 +52,7 @@ import java.util.stream.Stream
 import javax.servlet.http.HttpServletRequest
 
 private const val SYNC_INTERVAL_MILLIS = 1_000L * 60 * 30 // 30 minutes
+private const val JSON_EXT = ".json"
 
 @Service
 class CodexService(
@@ -222,8 +223,12 @@ class CodexService(
             phoneNumber: String,
             startDateTime: OffsetDateTime
     ): OffsetDateTime {
-        val formattedDateTime = DateTime(org.joda.time.Instant(startDateTime.toInstant().toEpochMilli()))
-        val range = Range.greaterThan(formattedDateTime)
+        val range = if (startDateTime == OffsetDateTime.MIN) {
+            Range.all<DateTime>()
+        } else {
+            val formattedDateTime = DateTime(org.joda.time.Instant(startDateTime.toInstant().toEpochMilli()))
+            Range.greaterThan(formattedDateTime)
+        }
 
         // process outgoing messages
         val latestOutgoingMessage = integrateMessages(
@@ -358,8 +363,9 @@ class CodexService(
     }
 
     fun retrieveMediaAsBaseSixtyFour(mediaUri: String): ListenableFuture<String> {
+        val path = if (mediaUri.endsWith(JSON_EXT)) mediaUri.substring(0, mediaUri.length - JSON_EXT.length) else mediaUri
         return executor.submit(Callable {
-            encoder.encodeToString(URL("https://api.twilio.com$mediaUri").readBytes())
+            encoder.encodeToString(URL("https://api.twilio.com$path").readBytes())
         })
     }
 
@@ -428,9 +434,9 @@ class CodexService(
                 getPropertyTypeId(CodexConstants.PropertyType.ID) to setOf(message.sid),
                 getPropertyTypeId(CodexConstants.PropertyType.DATE_TIME) to setOf(dateTime),
                 getPropertyTypeId(CodexConstants.PropertyType.PHONE_NUMBER) to setOf(phoneNumber),
-                getPropertyTypeId(CodexConstants.PropertyType.TEXT) to setOf(setOf(message.body)),
+                getPropertyTypeId(CodexConstants.PropertyType.TEXT) to setOf(message.body),
                 getPropertyTypeId(CodexConstants.PropertyType.IS_OUTGOING) to setOf(isOutgoing),
-                getPropertyTypeId(CodexConstants.PropertyType.IMAGE_DATA) to setOf(media)
+                getPropertyTypeId(CodexConstants.PropertyType.IMAGE_DATA) to media
         )
     }
 
