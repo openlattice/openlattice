@@ -603,14 +603,14 @@ public class DatastoreServicesPod {
         return new CodexService(
                 twilioConfiguration,
                 hazelcastInstance,
+                appService(),
                 dataModelService(),
                 dataGraphService(),
                 idService(),
                 principalService(),
                 organizationsManager(),
                 executor,
-                hikariDataSource,
-                aclKeyReservationService()
+                hikariDataSource
         );
     }
 
