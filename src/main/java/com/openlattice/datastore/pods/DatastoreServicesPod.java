@@ -1,3 +1,4 @@
+
 /*
  * Copyright (C) 2018. OpenLattice, Inc.
  *
@@ -602,14 +603,14 @@ public class DatastoreServicesPod {
         return new CodexService(
                 twilioConfiguration,
                 hazelcastInstance,
-                appService(),
                 dataModelService(),
                 dataGraphService(),
                 idService(),
                 principalService(),
                 organizationsManager(),
                 executor,
-                hikariDataSource
+                hikariDataSource,
+                aclKeyReservationService()
         );
     }
 
