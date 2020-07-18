@@ -10,6 +10,7 @@ import com.hazelcast.core.IMap
 import com.openlattice.apps.AppConfigKey
 import com.openlattice.apps.AppTypeSetting
 import com.openlattice.client.serialization.SerializationConstants
+import com.openlattice.codex.controllers.CodexConstants
 import com.openlattice.controllers.exceptions.BadRequestException
 import com.openlattice.data.*
 import com.openlattice.datastore.apps.services.AppService
