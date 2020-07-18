@@ -7,15 +7,16 @@ import java.time.OffsetDateTime
 
 class UpdateSmsInformationLastSyncEntryProcessor(
         val lastSync: OffsetDateTime
-) : AbstractRhizomeEntryProcessor<SmsInformationKey, SmsEntitySetInformation, Unit>() {
-    override fun process(entry: MutableMap.MutableEntry<SmsInformationKey, SmsEntitySetInformation>): Unit {
+) : AbstractRhizomeEntryProcessor<SmsInformationKey, SmsEntitySetInformation, Boolean>() {
+    override fun process(entry: MutableMap.MutableEntry<SmsInformationKey, SmsEntitySetInformation>): Boolean {
         val value = entry.value
 
         if (value == null) {
-            return
+            return false
         }
 
         value.lastSync = lastSync
         entry.setValue(value)
+        return true
     }
 }
