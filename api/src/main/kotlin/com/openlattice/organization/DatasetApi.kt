@@ -134,12 +134,12 @@ interface DatasetApi {
      * Gets an OrganizationExternalDatabaseTable object, which represents an
      * organization's table in an external database
      * @param organizationId The organization's UUID
-     * @param tableName The exact name of the table in the database
+     * @param tableId The id of the organization's table
      */
-    @GET(BASE + ID_PATH + TABLE_NAME_PATH + EXTERNAL_DATABASE_TABLE)
+    @GET(BASE + ID_PATH + TABLE_ID_PATH + EXTERNAL_DATABASE_TABLE)
     fun getExternalDatabaseTable(
             @Path(ID) organizationId: UUID,
-            @Path(TABLE_NAME) tableName: String
+            @Path(TABLE_ID) tableId: UUID
     ): OrganizationExternalDatabaseTable
 
     /**
