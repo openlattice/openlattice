@@ -428,34 +428,8 @@ class PostgresEntityDataQueryService(
                 ps.setInt(6, partition)
                 ps.addBatch()
             }
-
-
+            
             val updatedEntities = ps.executeBatch().sum()
-
-//            val updatedLinkedEntities = ps.executeBatch().sum()
-//            connection.autoCommit = false
-//            val ps = connection.prepareStatement(upsertEntitiesSql)
-//            val updatedLinkedEntities =
-//                    lockIdsAndExecute(
-//                            connection,
-//                            entitySetId,
-//                            partition,
-//                            entities.keys
-//                    ) {
-//                        ps.setArray(1, versionsArrays)
-//                        ps.setObject(2, version)
-//                        ps.setObject(3, version)
-//                        ps.setObject(4, entitySetId)
-//                        ps.setArray(5, PostgresArrays.createUuidArray(connection, entities.keys))
-//                        ps.setInt(6, partition)
-//                        val updateCount = ps.executeUpdate()
-//                        connection.commit()
-//                        logger.info("Committed $updateCount entities to complete an insert.")
-//                        return@lockIdsAndExecute updateCount
-//                    }
-//
-//            connection.autoCommit = true
-//            logger.debug("Updated $updatedLinkedEntities linked entities as part of insert.")
             logger.debug("Updated $updatedEntities entities as part of insert.")
             return updatedPropertyCounts
         }

@@ -216,7 +216,7 @@ private val entityKeyIdsInEntitySet =
 
 /**
  * 1. entity set id
- * 2. entity key ids (uuid array)
+ * 2. entity key id
  * 3. partition
  */
 private val entityKeyIdInEntitySet =
