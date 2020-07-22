@@ -37,25 +37,18 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
                         .toSortedMap()
                         .map { (partition, idsAndExpirations) ->
                             val idsAndExpirationsMap = idsAndExpirations.toMap()
-                            lockIdsAndExecuteAndCommit(
-                                    hds,
-                                    updateLastIndexSql,
+                            val ps = connection.prepareStatement(updateLastIndexSql)
+                            prepareIndexQuery(
+                                    ps,
                                     entitySetId,
                                     partition,
-                                    idsAndExpirationsMap.keys
-                            ) { ps ->
-                                prepareIndexQuery(
-                                        ps,
-                                        entitySetId,
-                                        partition,
-                                        idsAndExpirationsMap,
-                                        1
-                                )
-                            }
+                                    idsAndExpirationsMap
+                            )
+                            ps.executeBatch().sum()
                         }.sum()
             }.sum()
-
         }
+
     }
 
     /**
@@ -71,20 +64,16 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
                 .getPartitionsByEntitySetId(linkingIdsWithLastWrite.keys)
                 .mapValues { it.value.toList() }
 
-        return linkingIdsWithLastWrite.map { (entitySetId, entities) ->
-            val partitions = entitySetPartitions.getValue(entitySetId)
-            entities.entries
-                    .groupBy({ getPartition(it.key, partitions) }, { it.value })
-                    .toSortedMap()
-                    .map { (partition, idsAndExpiration) ->
+        return hds.connection.use { connection ->
+            val ps = connection.prepareStatement(updateLastLinkingIndexSql)
+            linkingIdsWithLastWrite.map { (entitySetId, entities) ->
+                val partitions = entitySetPartitions.getValue(entitySetId)
+                entities.entries
+                        .groupBy({ getPartition(it.key, partitions) }, { it.value })
+                        .toSortedMap()
+                        .map { (partition, idsAndExpiration) ->
 
-                        lockIdsAndExecuteAndCommit(
-                                hds,
-                                updateLastLinkingIndexSql,
-                                entitySetId,
-                                partition,
-                                shouldLockEntireEntitySet = true
-                        ) { ps ->
+
                             val mergedLinkingIdsWithLastWrite = idsAndExpiration
                                     .fold(mutableMapOf<UUID, OffsetDateTime>()) { acc, map ->
                                         acc.putAll(map)
@@ -95,12 +84,12 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
                                     ps,
                                     entitySetId,
                                     partition,
-                                    mergedLinkingIdsWithLastWrite,
-                                    1
+                                    mergedLinkingIdsWithLastWrite
                             )
-                        }
-                    }.sum()
-        }.sum()
+                            ps.executeBatch().sum()
+                        }.sum()
+            }.sum()
+        }
 
     }
 
@@ -108,18 +97,14 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
             stmt: PreparedStatement,
             entitySetId: UUID,
             partition: Int,
-            idsWithLastWrite: Map<UUID, OffsetDateTime>,
-            offset: Int
+            idsWithLastWrite: Map<UUID, OffsetDateTime>
     ) {
-        idsWithLastWrite.entries
-                .groupBy { it.value }
-                .mapValues { it.value.map { entry -> entry.key } }
-                .forEach { (lastWrite, entities) ->
-                    stmt.setObject(1 + offset, lastWrite)
-                    stmt.setObject(2 + offset, entitySetId)
-                    stmt.setArray(3 + offset, PostgresArrays.createUuidArray(stmt.connection, entities))
-                    stmt.setInt(4 + offset, partition)
-
+        idsWithLastWrite
+                .forEach { (id, lastWrite) ->
+                    stmt.setObject(1, lastWrite)
+                    stmt.setObject(2, entitySetId)
+                    stmt.setObject(3, id)
+                    stmt.setInt(4, partition)
                     stmt.addBatch()
                 }
     }
@@ -134,26 +119,25 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
                 entityKeyIds.keys
         ).mapValues { it.value.toList() }
 
-        return entityKeyIds.map { (entitySetId, entityKeyIds) ->
-            val partitions = entitySetPartitions.getValue(entitySetId)
+        return hds.connection.use { connection ->
+            val ps = connection.prepareStatement(markLastIndexSql)
+            entityKeyIds.map { (entitySetId, entityKeyIds) ->
+                val partitions = entitySetPartitions.getValue(entitySetId)
 
-            val numUpdated = getIdsByPartition(entityKeyIds, partitions)
-                    .toSortedMap()
-                    .map { (partition, ids) ->
-                lockIdsAndExecuteAndCommit(
-                        hds,
-                        markLastIndexSql,
-                        entitySetId,
-                        partition,
-                        ids
-                ) { ps ->
-                    ps.setObject(1, entitySetId)
-                    ps.setArray(2, PostgresArrays.createUuidArray(ps.connection, ids))
-                    ps.setInt(3, partition)
-                }
+                getIdsByPartition(entityKeyIds, partitions)
+                        .toSortedMap()
+                        .map { (partition, ids) ->
+
+                            ids.forEach { id ->
+                                ps.setObject(1, entitySetId)
+                                ps.setObject(2, id)
+                                ps.setInt(3, partition)
+                                ps.addBatch()
+                            }
+                            ps.executeBatch().sum()
+                        }.sum()
             }.sum()
-            numUpdated
-        }.sum()
+        }
     }
 
     /**
@@ -162,20 +146,15 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
      * @param entitySetId The id of the (normal) entity set id.
      */
     fun markAsUnIndexed(entitySetId: UUID): Int {
-        return partitionManager.getEntitySetPartitions(entitySetId).sorted().map { partition ->
-
-            lockIdsAndExecuteAndCommit(
-                    hds,
-                    markEntitySetLastIndexSql,
-                    entitySetId,
-                    partition,
-                    shouldLockEntireEntitySet = true
-            ) { ps ->
+        return hds.connection.use { connection ->
+            val ps = connection.prepareStatement(markEntitySetLastIndexSql)
+            partitionManager.getEntitySetPartitions(entitySetId).sorted().map { partition ->
                 ps.setObject(1, entitySetId)
                 ps.setInt(2, partition)
+                ps.addBatch()
             }
-        }.sum()
-
+            ps.executeBatch().sum()
+        }
     }
 
 
@@ -183,22 +162,17 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
         val entitySetPartitions = partitionManager.getPartitionsByEntitySetId(entitySetIds)
         val query = markEntitySetsAsNeedsToBeIndexedSql(linking)
 
-        return entitySetIds.map { entitySetId ->
-            val numUpdated = entitySetPartitions.getValue(entitySetId).sorted().map { partition ->
-                lockIdsAndExecuteAndCommit(
-                        hds,
-                        query,
-                        entitySetId,
-                        partition,
-                        shouldLockEntireEntitySet = true
-                ) { ps ->
+        return hds.connection.use { connection ->
+            val ps = connection.prepareStatement(query)
+            entitySetIds.map { entitySetId ->
+                entitySetPartitions.getValue(entitySetId).sorted().map { partition ->
                     ps.setObject(1, entitySetId)
                     ps.setInt(2, partition)
+                    ps.addBatch()
                 }
+                ps.executeBatch().sum()
             }.sum()
-
-            numUpdated
-        }.sum()
+        }
     }
 
     fun markAsNeedsToBeLinked(normalEntityDataKeys: Set<EntityDataKey>): Int {
@@ -209,32 +183,26 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
                 normalEntityKeys.keys
         ).mapValues { it.value.toList() }
 
-        return normalEntityKeys.map { (entitySetId, entityKeyIds) ->
+        return hds.connection.use { connection ->
+            val ps = connection.prepareStatement(markAsNeedsToBeLinkedSql)
+            normalEntityKeys.map { (entitySetId, entityKeyIds) ->
 
-            val partitions = entitySetPartitions.getValue(entitySetId)
-            val numUpdated = getIdsByPartition(entityKeyIds, partitions)
-                    .toSortedMap()
-                    .map { (partition, ids) ->
-                lockIdsAndExecuteAndCommit(
-                        hds,
-                        markAsNeedsToBeLinkedSql,
-                        entitySetId,
-                        partition,
-                        ids
-                ) { ps ->
-                    val normalEntityKeyIdsArray = PostgresArrays.createUuidArray(ps.connection, ids)
-                    ps.setObject(1, entitySetId)
-                    ps.setArray(2, normalEntityKeyIdsArray)
-                    ps.setInt(3, partition)
-                }
+                val partitions = entitySetPartitions.getValue(entitySetId)
+                getIdsByPartition(entityKeyIds, partitions)
+                        .toSortedMap()
+                        .map { (partition, ids) ->
+                            ids.forEach { id ->
+                                ps.setObject(1, entitySetId)
+                                ps.setObject(2, id)
+                                ps.setInt(3, partition)
+                                ps.addBatch()
+                            }
+                            ps.executeBatch().sum()
+                        }.sum()
             }.sum()
-            numUpdated
-        }.sum()
-
+        }
     }
-
 }
-
 // @formatter:off
 
 /**
@@ -249,6 +217,16 @@ private val entityKeyIdsInEntitySet =
 
 /**
  * 1. entity set id
+ * 2. entity key ids (uuid array)
+ * 3. partition
+ */
+private val entityKeyIdInEntitySet =
+        " ${ENTITY_SET_ID.name} = ? " +
+                "AND ${ID.name} = ? " +
+                "AND ${PARTITION.name} = ? "
+
+/**
+ * 1. entity set id
  * 2. linking ids (uuid array)
  * 3. partition
  */
@@ -256,6 +234,16 @@ private val linkingIdsInEntitySet =
         " ${ENTITY_SET_ID.name} = ? " +
         "AND ${LINKING_ID.name} = ANY(?) " +
         "AND ${PARTITION.name} = ? "
+
+/**
+ * 1. entity set id
+ * 2. linking id
+ * 3. partition
+ */
+private val linkingIdInEntitySet =
+        " ${ENTITY_SET_ID.name} = ? " +
+                "AND ${LINKING_ID.name} = ? " +
+                "AND ${PARTITION.name} = ? "
 
 /**
  * 1. entity set id
@@ -270,10 +258,10 @@ private val entitySetPartition =
  * Arguments of preparable sql in order:
  * 1. last index
  * 2. entity set id
- * 3. entity key ids (uuid array)
+ * 3. entity key id
  * 4. partition
  */
-private val updateLastIndexSql = "UPDATE ${IDS.name} SET ${LAST_INDEX.name} = ? WHERE $entityKeyIdsInEntitySet"
+private val updateLastIndexSql = "UPDATE ${IDS.name} SET ${LAST_INDEX.name} = ? WHERE $entityKeyIdInEntitySet"
 
 /**
  * Arguments of preparable sql in order:
@@ -283,7 +271,7 @@ private val updateLastIndexSql = "UPDATE ${IDS.name} SET ${LAST_INDEX.name} = ? 
  * 4. partition
  */
 private val updateLastLinkingIndexSql =
-        "UPDATE ${IDS.name} SET ${LAST_LINK_INDEX.name} = ? WHERE $linkingIdsInEntitySet"
+        "UPDATE ${IDS.name} SET ${LAST_LINK_INDEX.name} = ? WHERE $linkingIdInEntitySet"
 
 /**
  * Arguments of preparable sql in order:
@@ -291,7 +279,7 @@ private val updateLastLinkingIndexSql =
  * 2. entity key ids (uuid array)
  * 3. partition
  */
-private val markLastIndexSql = "UPDATE ${IDS.name} SET ${LAST_INDEX.name} = 'now()' WHERE $entityKeyIdsInEntitySet"
+private val markLastIndexSql = "UPDATE ${IDS.name} SET ${LAST_INDEX.name} = 'now()' WHERE $entityKeyIdInEntitySet"
 
 /**
  * Arguments of preparable sql in order:
@@ -321,6 +309,6 @@ fun markEntitySetsAsNeedsToBeIndexedSql(linking: Boolean): String {
  * 3. partition
  */
 private val markAsNeedsToBeLinkedSql =
-        "UPDATE ${IDS.name} SET ${LAST_LINK.name} = '-infinity()' WHERE ${VERSION.name} > 0 AND $entityKeyIdsInEntitySet"
+        "UPDATE ${IDS.name} SET ${LAST_LINK.name} = '-infinity()' WHERE ${VERSION.name} > 0 AND $entityKeyIdInEntitySet"
 
 // @formatter:on

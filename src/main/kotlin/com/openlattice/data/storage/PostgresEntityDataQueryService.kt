@@ -417,7 +417,7 @@ class PostgresEntityDataQueryService(
 
             //Make data visible by marking new version in ids table.
 
-            val ps = connection.prepareStatement(updateIdVersionSql)
+            val ps = connection.prepareStatement(updateEntitySql)
 
                 entities.keys.sorted().forEach { entityKeyId ->
                 ps.setArray(1, versionsArrays)
@@ -429,7 +429,9 @@ class PostgresEntityDataQueryService(
                 ps.addBatch()
             }
 
-            val updatedLinkedEntities = ps.executeBatch().sum()
+            val updatedEntities = ps.executeBatch().sum()
+
+//            val updatedLinkedEntities = ps.executeBatch().sum()
 //            connection.autoCommit = false
 //            val ps = connection.prepareStatement(upsertEntitiesSql)
 //            val updatedLinkedEntities =
@@ -452,7 +454,8 @@ class PostgresEntityDataQueryService(
 //                    }
 //
 //            connection.autoCommit = true
-            logger.debug("Updated $updatedLinkedEntities linked entities as part of insert.")
+//            logger.debug("Updated $updatedLinkedEntities linked entities as part of insert.")
+            logger.debug("Updated $updatedEntities entities as part of insert.")
             return updatedPropertyCounts
         }
     }
@@ -595,39 +598,24 @@ class PostgresEntityDataQueryService(
     }
 
     /**
+     * This is fail safe as all id tombstones should commit at once.
      * Tombstones all entities in an entity set in both [IDS] and [DATA] table.
      */
     private fun tombstone(conn: Connection, entitySetId: UUID, version: Long): WriteEvent {
-        conn.autoCommit = false
         val partitions = partitionManager.getEntitySetPartitions(entitySetId)
         val idTombstones = conn.prepareStatement(updateVersionsForEntitySet)
         val dataTombstones = conn.prepareStatement(updateVersionsForPropertiesInEntitySet)
 
         val numUpdates = try {
             partitions.sorted().map { partition ->
-                lockIdsAndExecute(
-                        conn,
-                        entitySetId,
-                        partition
-                ) {
                     idTombstones.setLong(1, -version)
                     idTombstones.setLong(2, -version)
                     idTombstones.setLong(3, -version)
                     idTombstones.setObject(4, entitySetId)
-                    idTombstones.setArray(5, PostgresArrays.createIntArray(conn, partition))
+                    idTombstones.setInt(5, partition)
                     idTombstones.addBatch()
-
-                    0
-                }
             }
-            val numUpdated = idTombstones.executeBatch()
-
-
-            dataTombstones.executeBatch()
-            conn.commit()
-            conn.autoCommit = true
-
-            numUpdated
+            idTombstones.executeBatch().sum()
         } catch (ex: Exception) {
             conn.autoCommit = true
             logger.error("Unable to tombstone entity set $entitySetId with version $version.", ex)
@@ -644,7 +632,7 @@ class PostgresEntityDataQueryService(
         dataTombstones.setArray(5, PostgresArrays.createIntArray(conn, partitions))
         dataTombstones.executeUpdate()
 
-        return WriteEvent(version, numUpdates.sum())
+        return WriteEvent(version, numUpdates)
     }
 
     /**

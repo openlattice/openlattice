@@ -83,7 +83,6 @@ private fun batchLockIds(lock: PreparedStatement, entitySetId: UUID, partition: 
     }
 }
 
-
 fun lockIdsAndExecute(
         connection: Connection,
         query: String,
