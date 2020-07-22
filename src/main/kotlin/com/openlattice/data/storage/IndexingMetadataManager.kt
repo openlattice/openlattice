@@ -29,7 +29,6 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
                 .getPartitionsByEntitySetId(entityKeyIdsWithLastWrite.keys)
                 .mapValues { it.value.toList() }
         return hds.connection.use { connection ->
-            connection.autoCommit = false
             entityKeyIdsWithLastWrite.map { (entitySetId, entities) ->
                 val partitions = entitySetPartitions.getValue(entitySetId)
                 entities.entries

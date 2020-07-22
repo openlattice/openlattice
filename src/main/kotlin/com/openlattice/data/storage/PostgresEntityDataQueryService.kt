@@ -418,7 +418,7 @@ class PostgresEntityDataQueryService(
             //Make data visible by marking new version in ids table.
 
             val ps = connection.prepareStatement(updateEntitySql)
-            
+
             entities.keys.sorted().forEach { entityKeyId ->
                 ps.setArray(1, versionsArrays)
                 ps.setObject(2, version)
