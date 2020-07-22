@@ -428,7 +428,7 @@ class PostgresEntityDataQueryService(
                 ps.setInt(6, partition)
                 ps.addBatch()
             }
-            
+
             val updatedEntities = ps.executeBatch().sum()
             logger.debug("Updated $updatedEntities entities as part of insert.")
             return updatedPropertyCounts

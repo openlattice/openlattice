@@ -29,6 +29,7 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
                 .getPartitionsByEntitySetId(entityKeyIdsWithLastWrite.keys)
                 .mapValues { it.value.toList() }
         return hds.connection.use { connection ->
+            val ps = connection.prepareStatement(updateLastIndexSql)
             entityKeyIdsWithLastWrite.map { (entitySetId, entities) ->
                 val partitions = entitySetPartitions.getValue(entitySetId)
                 entities.entries
@@ -36,7 +37,6 @@ class IndexingMetadataManager(private val hds: HikariDataSource, private val par
                         .toSortedMap()
                         .map { (partition, idsAndExpirations) ->
                             val idsAndExpirationsMap = idsAndExpirations.toMap()
-                            val ps = connection.prepareStatement(updateLastIndexSql)
                             prepareIndexQuery(
                                     ps,
                                     entitySetId,
