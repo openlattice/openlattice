@@ -52,6 +52,7 @@ import java.util.stream.Stream
 import javax.servlet.http.HttpServletRequest
 
 private const val SYNC_INTERVAL_MILLIS = 1_000L * 60 * 30 // 30 minutes
+private const val MESSAGE_PAGE_SIZE = 200
 private const val JSON_EXT = ".json"
 
 @Service
@@ -230,21 +231,39 @@ class CodexService(
             Range.greaterThan(formattedDateTime)
         }
 
-        // process outgoing messages
-        val latestOutgoingMessage = integrateMessages(
-                organizationId,
-                Message.reader().setDateSent(range).setFrom(phoneNumber).read().toSet(),
-                isOutgoing = true
-        )
+        var latestMessage = OffsetDateTime.MIN
 
-        // process incoming messages
-        val latestIncomingMessage = integrateMessages(
-                organizationId,
-                Message.reader().setDateSent(range).setTo(phoneNumber).read().toSet(),
-                isOutgoing = false
-        )
+        listOf(true, false).forEach { isOutgoing ->
+            val messageReader = Message
+                    .reader()
+                    .setDateSent(range)
+                    .let { if (isOutgoing) it.setFrom(phoneNumber) else it.setTo(phoneNumber) }
+                    .pageSize(MESSAGE_PAGE_SIZE)
 
-        return if (latestOutgoingMessage.isAfter(latestIncomingMessage)) latestOutgoingMessage else latestIncomingMessage
+            var page = messageReader.firstPage()
+            var isNotLastPage = true
+            while (isNotLastPage) {
+
+                val latestDateForPage = integrateMessages(
+                        organizationId,
+                        page.records,
+                        isOutgoing
+                )
+                if (latestDateForPage.isAfter(latestMessage)) {
+                    latestMessage = latestDateForPage
+                }
+
+                logger.info("Integrated page of ${page.records.size} messages.")
+
+                if (page.hasNextPage()) {
+                    page = messageReader.nextPage(page)
+                } else {
+                    isNotLastPage = false
+                }
+            }
+        }
+
+        return latestMessage
     }
 
     fun processOutgoingMessage(message: Message, organizationId: UUID, senderId: String, attatchment: Base64Media?) {
@@ -279,10 +298,10 @@ class CodexService(
                 EntityDataKey(sentFromEntitySetId, idsByEntityKey.getValue(sentFromEntityKey))
         )))
 
-        integrateMessages(organizationId, setOf(message), isOutgoing = true)
+        integrateMessages(organizationId, listOf(message), isOutgoing = true)
     }
 
-    fun integrateMessages(organizationId: UUID, messages: Set<Message>, isOutgoing: Boolean): OffsetDateTime {
+    fun integrateMessages(organizationId: UUID, messages: List<Message>, isOutgoing: Boolean): OffsetDateTime {
         var latestDateTime = OffsetDateTime.MIN
         val associationAppType = if (isOutgoing) CodexConstants.AppType.SENT_TO else CodexConstants.AppType.SENT_FROM
 
@@ -340,7 +359,7 @@ class CodexService(
         val messageId = request.getParameter(CodexConstants.Request.SID.parameter)
         val message = Message.fetcher(messageId).fetch()
 
-        integrateMessages(organizationId, setOf(message), isOutgoing = false)
+        integrateMessages(organizationId, listOf(message), isOutgoing = false)
     }
 
     fun updateMessageStatus(organizationId: UUID, messageId: String, status: Message.Status) {
