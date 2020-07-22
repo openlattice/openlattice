@@ -365,7 +365,7 @@ val upsertEntitiesSql = "UPDATE ${IDS.name} " +
 // @formatter:on
 
 /**
- * Preparable sql to upsert entities in [IDS] table.
+ * Preparable sql to update an entity in the [IDS] table.
  *
  * It sets a positive version and updates last write to current time.
  *
@@ -379,12 +379,12 @@ val upsertEntitiesSql = "UPDATE ${IDS.name} " +
  *
  * 4 - entity set id
  *
- * 5 - entity key ids
+ * 5 - entity key id
  *
  * 6 - partition
  */
 // @formatter:off
-val updateIdVersionSql = "UPDATE ${IDS.name} " +
+val updateEntitySql = "UPDATE ${IDS.name} " +
         "SET ${VERSIONS.name} = ${VERSIONS.name} || ?, " +
         "${LAST_WRITE.name} = now(), " +
         "${VERSION.name} = CASE " +

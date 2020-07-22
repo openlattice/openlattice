@@ -417,42 +417,20 @@ class PostgresEntityDataQueryService(
 
             //Make data visible by marking new version in ids table.
 
-//            val ps = connection.prepareStatement(updateIdVersionSql)
-//
-//                entities.keys.sorted().forEach { entityKeyId ->
-//                ps.setObject(1, versionsArrays)
-//                ps.setObject(2, version)
-//                ps.setObject(3, version)
-//                ps.setObject(4, entitySetId)
-//                ps.setObject(5, entityKeyId)
-//                ps.setInt(6, partition)
-//                ps.addBatch()
-//            }
+            val ps = connection.prepareStatement(updateEntitySql)
 
-//            val updatedLinkedEntities = ps.executeBatch().sum()
-            connection.autoCommit = false
-            val ps = connection.prepareStatement(upsertEntitiesSql)
-            val updatedLinkedEntities =
-                    lockIdsAndExecute(
-                            connection,
-                            entitySetId,
-                            partition,
-                            entities.keys
-                    ) {
-                        ps.setArray(1, versionsArrays)
-                        ps.setObject(2, version)
-                        ps.setObject(3, version)
-                        ps.setObject(4, entitySetId)
-                        ps.setArray(5, PostgresArrays.createUuidArray(connection, entities.keys))
-                        ps.setInt(6, partition)
-                        val updateCount = ps.executeUpdate()
-                        connection.commit()
-                        logger.info("Committed $updateCount entities to complete an insert.")
-                        return@lockIdsAndExecute updateCount
-                    }
+            entities.keys.sorted().forEach { entityKeyId ->
+                ps.setArray(1, versionsArrays)
+                ps.setObject(2, version)
+                ps.setObject(3, version)
+                ps.setObject(4, entitySetId)
+                ps.setObject(5, entityKeyId)
+                ps.setInt(6, partition)
+                ps.addBatch()
+            }
 
-            connection.autoCommit = true
-            logger.debug("Updated $updatedLinkedEntities linked entities as part of insert.")
+            val updatedEntities = ps.executeBatch().sum()
+            logger.debug("Updated $updatedEntities entities as part of insert.")
             return updatedPropertyCounts
         }
     }
@@ -595,44 +573,24 @@ class PostgresEntityDataQueryService(
     }
 
     /**
+     * This is fail safe as all id tombstones should commit at once.
      * Tombstones all entities in an entity set in both [IDS] and [DATA] table.
      */
     private fun tombstone(conn: Connection, entitySetId: UUID, version: Long): WriteEvent {
-        conn.autoCommit = false
         val partitions = partitionManager.getEntitySetPartitions(entitySetId)
         val idTombstones = conn.prepareStatement(updateVersionsForEntitySet)
         val dataTombstones = conn.prepareStatement(updateVersionsForPropertiesInEntitySet)
 
-        val numUpdates = try {
-            partitions.sorted().map { partition ->
-                lockIdsAndExecute(
-                        conn,
-                        entitySetId,
-                        partition
-                ) {
-                    idTombstones.setLong(1, -version)
-                    idTombstones.setLong(2, -version)
-                    idTombstones.setLong(3, -version)
-                    idTombstones.setObject(4, entitySetId)
-                    idTombstones.setArray(5, PostgresArrays.createIntArray(conn, partition))
-                    idTombstones.addBatch()
-
-                    0
-                }
-            }
-            val numUpdated = idTombstones.executeBatch()
-
-
-            dataTombstones.executeBatch()
-            conn.commit()
-            conn.autoCommit = true
-
-            numUpdated
-        } catch (ex: Exception) {
-            conn.autoCommit = true
-            logger.error("Unable to tombstone entity set $entitySetId with version $version.", ex)
-            throw ex
+        partitions.sorted().map { partition ->
+            idTombstones.setLong(1, -version)
+            idTombstones.setLong(2, -version)
+            idTombstones.setLong(3, -version)
+            idTombstones.setObject(4, entitySetId)
+            idTombstones.setInt(5, partition)
+            idTombstones.addBatch()
         }
+        val numUpdates = idTombstones.executeBatch().sum()
+
 
         //We don't count the number of property types that were updated
         //TODO: Someday if we encounter deadlocks when deleting entity sets, we will probably have to implement locking
@@ -644,7 +602,7 @@ class PostgresEntityDataQueryService(
         dataTombstones.setArray(5, PostgresArrays.createIntArray(conn, partitions))
         dataTombstones.executeUpdate()
 
-        return WriteEvent(version, numUpdates.sum())
+        return WriteEvent(version, numUpdates)
     }
 
     /**
