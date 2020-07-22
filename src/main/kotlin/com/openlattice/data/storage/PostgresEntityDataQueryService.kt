@@ -419,7 +419,7 @@ class PostgresEntityDataQueryService(
 
             val ps = connection.prepareStatement(updateEntitySql)
 
-                entities.keys.sorted().forEach { entityKeyId ->
+            entities.keys.sorted().forEach { entityKeyId ->
                 ps.setArray(1, versionsArrays)
                 ps.setObject(2, version)
                 ps.setObject(3, version)
@@ -606,21 +606,16 @@ class PostgresEntityDataQueryService(
         val idTombstones = conn.prepareStatement(updateVersionsForEntitySet)
         val dataTombstones = conn.prepareStatement(updateVersionsForPropertiesInEntitySet)
 
-        val numUpdates = try {
-            partitions.sorted().map { partition ->
-                    idTombstones.setLong(1, -version)
-                    idTombstones.setLong(2, -version)
-                    idTombstones.setLong(3, -version)
-                    idTombstones.setObject(4, entitySetId)
-                    idTombstones.setInt(5, partition)
-                    idTombstones.addBatch()
-            }
-            idTombstones.executeBatch().sum()
-        } catch (ex: Exception) {
-            conn.autoCommit = true
-            logger.error("Unable to tombstone entity set $entitySetId with version $version.", ex)
-            throw ex
+        partitions.sorted().map { partition ->
+            idTombstones.setLong(1, -version)
+            idTombstones.setLong(2, -version)
+            idTombstones.setLong(3, -version)
+            idTombstones.setObject(4, entitySetId)
+            idTombstones.setInt(5, partition)
+            idTombstones.addBatch()
         }
+        val numUpdates = idTombstones.executeBatch().sum()
+
 
         //We don't count the number of property types that were updated
         //TODO: Someday if we encounter deadlocks when deleting entity sets, we will probably have to implement locking
