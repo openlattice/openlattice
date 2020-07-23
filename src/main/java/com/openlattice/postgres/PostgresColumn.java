@@ -23,7 +23,18 @@ package com.openlattice.postgres;
 import com.openlattice.IdConstants;
 import com.openlattice.edm.type.Analyzer;
 
-import static com.openlattice.postgres.PostgresDatatype.*;
+import static com.openlattice.postgres.PostgresDatatype.BIGINT;
+import static com.openlattice.postgres.PostgresDatatype.BIGINT_ARRAY;
+import static com.openlattice.postgres.PostgresDatatype.BOOLEAN;
+import static com.openlattice.postgres.PostgresDatatype.BYTEA;
+import static com.openlattice.postgres.PostgresDatatype.INTEGER;
+import static com.openlattice.postgres.PostgresDatatype.INTEGER_ARRAY;
+import static com.openlattice.postgres.PostgresDatatype.JSONB;
+import static com.openlattice.postgres.PostgresDatatype.TEXT;
+import static com.openlattice.postgres.PostgresDatatype.TEXT_ARRAY;
+import static com.openlattice.postgres.PostgresDatatype.TIMESTAMPTZ;
+import static com.openlattice.postgres.PostgresDatatype.UUID;
+import static com.openlattice.postgres.PostgresDatatype.UUID_ARRAY;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
