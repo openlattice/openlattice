@@ -34,8 +34,6 @@ import com.openlattice.shuttle.conditions.ConditionValueMapper;
 import com.openlattice.shuttle.transformations.Transformation;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
 import java.util.*;
@@ -59,6 +57,7 @@ public class EntityDefinition implements Serializable {
     protected final String                                                      alias;
     protected final Optional<SerializableFunction<Map<String, Object>, String>> generator;
     protected final UpdateType                                                  updateType;
+    protected final boolean                                                     associateOnly;
 
     @JsonCreator
     public EntityDefinition(
@@ -71,7 +70,9 @@ public class EntityDefinition implements Serializable {
             @JsonProperty( SerializationConstants.NAME ) String alias,
             @JsonProperty( SerializationConstants.CONDITIONS ) Optional<List<Condition>> condition,
             @JsonProperty( SerializationConstants.GENERATOR ) Optional<SerializableFunction<Map<String, Object>, String>> generator,
-            @JsonProperty( SerializationConstants.UPDATE_TYPE ) Optional<UpdateType> updateType ) {
+            @JsonProperty( SerializationConstants.UPDATE_TYPE ) Optional<UpdateType> updateType,
+            @JsonProperty( SerializationConstants.ASSOCIATE_ONLY ) Optional<Boolean> associateOnly
+    ) {
 
         this.id = id;
         this.entityTypeFqn = entityTypeFqn == null ? null : new FullQualifiedName( entityTypeFqn );
@@ -82,6 +83,7 @@ public class EntityDefinition implements Serializable {
         this.condition = condition;
         this.updateType = updateType.orElse( UpdateType.Merge );
         this.generator = generator;
+        this.associateOnly = associateOnly.orElse( false );
 
         if ( condition.isPresent() ) {
             final List<Condition> internalConditions;
@@ -112,6 +114,7 @@ public class EntityDefinition implements Serializable {
         this.condition = Optional.empty();
         this.valueMapper = null;
         this.updateType = updateType;
+        this.associateOnly = false;
     }
 
     private EntityDefinition( EntityDefinition.Builder builder ) {
@@ -125,6 +128,7 @@ public class EntityDefinition implements Serializable {
         this.alias = builder.alias;
         this.generator = Optional.ofNullable( builder.entityIdGenerator );
         this.updateType = builder.updateType;
+        this.associateOnly = builder.associateOnly;
     }
 
     @JsonProperty( SerializationConstants.ID_FIELD )
@@ -140,6 +144,11 @@ public class EntityDefinition implements Serializable {
     @JsonProperty( SerializationConstants.FQN )
     public String getFqn() {
         return this.entityTypeFqn == null ? null : this.entityTypeFqn.getFullQualifiedNameAsString();
+    }
+
+    @JsonProperty( SerializationConstants.ASSOCIATE_ONLY )
+    public boolean getAssociateOnly() {
+        return associateOnly;
     }
 
     @JsonProperty( SerializationConstants.ENTITY_SET_NAME )
@@ -235,6 +244,7 @@ public class EntityDefinition implements Serializable {
         private String                                            alias;
         private SerializableFunction<Map<String, Object>, String> entityIdGenerator;
         private UpdateType                                        updateType;
+        private boolean                                           associateOnly;
 
         public Builder(
                 String alias,
@@ -282,6 +292,11 @@ public class EntityDefinition implements Serializable {
         public Builder entityIdGenerator(
                 SerializableFunction<Map<String, Object>, String> generator ) {
             this.entityIdGenerator = generator;
+            return this;
+        }
+
+        public Builder associateOnly( boolean associateOnly ) {
+            this.associateOnly = associateOnly;
             return this;
         }
 
