@@ -57,9 +57,9 @@ public class AssociationDefinition extends EntityDefinition implements Serializa
 
     @JsonCreator
     public AssociationDefinition(
-            @JsonProperty( SerializationConstants.FQN ) String entityTypeFqn,
+            @JsonProperty( SerializationConstants.FQN ) Optional<String> entityTypeFqn,
             @JsonProperty( SerializationConstants.ENTITY_SET_NAME ) String entitySetName,
-            @JsonProperty( SerializationConstants.KEY_FIELD ) List<FullQualifiedName> key,
+            @JsonProperty( SerializationConstants.KEY_FIELD ) Optional<List<FullQualifiedName>> key,
             @JsonProperty( SerializationConstants.SRC ) String srcAlias,
             @JsonProperty( SerializationConstants.DST ) String dstAlias,
             @JsonProperty( SerializationConstants.PROPERTY_DEFINITIONS )
@@ -67,7 +67,8 @@ public class AssociationDefinition extends EntityDefinition implements Serializa
             @JsonProperty( SerializationConstants.CONDITIONS ) Optional<List<Condition>> condition,
             @JsonProperty( SerializationConstants.NAME ) String alias,
             @JsonProperty( SerializationConstants.GENERATOR ) Optional<SerializableFunction<Map<String, Object>, String>> generator,
-            @JsonProperty( SerializationConstants.UPDATE_TYPE ) Optional<UpdateType> updateType ) {
+            @JsonProperty( SerializationConstants.UPDATE_TYPE ) Optional<UpdateType> updateType,
+            @JsonProperty( SerializationConstants.ASSOCIATE_ONLY ) Optional<Boolean> associateOnly ) {
         super( Optional.empty(),
                 entityTypeFqn,
                 entitySetName,
@@ -76,7 +77,8 @@ public class AssociationDefinition extends EntityDefinition implements Serializa
                 alias,
                 condition,
                 generator,
-                updateType );
+                updateType,
+                associateOnly );
         this.srcAlias = srcAlias;
         this.dstAlias = dstAlias;
     }
