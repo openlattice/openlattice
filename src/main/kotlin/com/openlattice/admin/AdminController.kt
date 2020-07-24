@@ -7,6 +7,7 @@ import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
 import com.openlattice.authorization.Principal
 import com.openlattice.authorization.Principals
+import com.openlattice.data.DataGraphManager
 import com.openlattice.data.storage.MetadataOption
 import com.openlattice.data.storage.PostgresEntityDataQueryService
 import com.openlattice.data.storage.selectEntitySetWithCurrentVersionOfPropertyTypes
@@ -59,6 +60,9 @@ class AdminController : AdminApi, AuthorizingComponent {
 
     @Inject
     private lateinit var pedqs: PostgresEntityDataQueryService
+
+    @Inject
+    private lateinit var dgm: DataGraphManager
 
     @GetMapping(value = [SQL + ID_PATH], produces = [MediaType.APPLICATION_JSON_VALUE])
     override fun getEntitySetSql(
@@ -188,6 +192,11 @@ class AdminController : AdminApi, AuthorizingComponent {
         ensureAdminAccess()
         return organizations.getAllOrganizations()
     }
+
+    @Timed
+    @PutMapping(value =[ID_PATH+ PARTITIONS_PATH])
+    override fun setPartitions(@PathVariable(ID)entitySetId: UUID, @RequestBody partitions: Set<Int>): Int = dgm.setPartitions(entitySetId, partitions)
+
 
     override fun getAuthorizationManager(): AuthorizationManager {
         return authorizationManager
