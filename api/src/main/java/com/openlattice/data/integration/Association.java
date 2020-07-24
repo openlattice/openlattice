@@ -47,6 +47,7 @@ import com.openlattice.client.serialization.SerializationConstants;
 import com.openlattice.data.EntityKey;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
@@ -54,23 +55,19 @@ public class Association {
     private final EntityKey              key;
     private final EntityKey              src;
     private final EntityKey              dst;
-    // This is the actual values of the LinkSet, which can be thought of as "association details" of this association
-    private final Map<UUID, Set<Object>> details;
 
     @JsonCreator
     public Association(
             @JsonProperty( SerializationConstants.KEY_FIELD ) EntityKey key,
             @JsonProperty( SerializationConstants.SRC ) EntityKey src,
-            @JsonProperty( SerializationConstants.DST ) EntityKey dst,
-            @JsonProperty( SerializationConstants.DETAILS_FIELD ) Map<UUID, Set<Object>> details ) {
+            @JsonProperty( SerializationConstants.DST ) EntityKey dst ) {
         this.key = key;
         this.src = src;
         this.dst = dst;
-        this.details = details;
     }
 
     public Association( EntityKey key, EntityKey src, EntityKey dst, SetMultimap<UUID, Object> details ) {
-        this( key, src, dst, Multimaps.asMap( details ) );
+        this( key, src, dst );
     }
 
     @JsonProperty( SerializationConstants.KEY_FIELD )
@@ -88,45 +85,29 @@ public class Association {
         return dst;
     }
 
-    @JsonProperty( SerializationConstants.DETAILS_FIELD )
-    public Map<UUID, Set<Object>> getDetails() {
-        return details;
+    @Override
+    public String toString() {
+        return "Association{" +
+                "key=" + key +
+                ", src=" + src +
+                ", dst=" + dst +
+                '}';
     }
 
     @Override
-    public String toString() {
-        return "Association [key=" + key + ", src=" + src + ", dst=" + dst + ", details=" + details + "]";
+    public boolean equals( Object o ) {
+        if ( this == o )
+            return true;
+        if ( o == null || getClass() != o.getClass() )
+            return false;
+        Association that = (Association) o;
+        return Objects.equals( key, that.key ) &&
+                Objects.equals( src, that.src ) &&
+                Objects.equals( dst, that.dst );
     }
 
     @Override
     public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + ( ( details == null ) ? 0 : details.hashCode() );
-        result = prime * result + ( ( dst == null ) ? 0 : dst.hashCode() );
-        result = prime * result + ( ( key == null ) ? 0 : key.hashCode() );
-        result = prime * result + ( ( src == null ) ? 0 : src.hashCode() );
-        return result;
-    }
-
-    @Override
-    public boolean equals( Object obj ) {
-        if ( this == obj ) { return true; }
-        if ( obj == null ) { return false; }
-        if ( getClass() != obj.getClass() ) { return false; }
-        Association other = (Association) obj;
-        if ( details == null ) {
-            if ( other.details != null ) { return false; }
-        } else if ( !details.equals( other.details ) ) { return false; }
-        if ( dst == null ) {
-            if ( other.dst != null ) { return false; }
-        } else if ( !dst.equals( other.dst ) ) { return false; }
-        if ( key == null ) {
-            if ( other.key != null ) { return false; }
-        } else if ( !key.equals( other.key ) ) { return false; }
-        if ( src == null ) {
-            if ( other.src != null ) { return false; }
-        } else if ( !src.equals( other.src ) ) { return false; }
-        return true;
+        return Objects.hash( key, src, dst );
     }
 }
