@@ -18,7 +18,8 @@ import javax.imageio.ImageIO
 
 private const val FROM_EMAIL = "courier@openlattice.com"
 private const val TEMPLATE_PATH = "mail/templates/shared/CodexMessageAlertTemplate.mustache"
-private const val PERSON_ENTITY_TYPE_ID = UUID.fromString("31cf5595-3fe9-4d3e-a9cf-39355a4b8cab")
+
+private val PERSON_ENTITY_TYPE_ID = UUID.fromString("31cf5595-3fe9-4d3e-a9cf-39355a4b8cab")
 
 private val PHONE_NUMBER_FQN = FullQualifiedName("contact.phonenumber")
 private val MESSAGE_TEXT_FQN = FullQualifiedName("ol.text")
