@@ -49,8 +49,6 @@ public class EntityDefinition implements Serializable {
 
     private static final long serialVersionUID = -3565689091187367622L;
 
-    private static final Logger logger = LoggerFactory.getLogger( EntityDefinition.class );
-
     protected final Optional<List<Condition>>                                        condition;
     protected final SerializableFunction<Map<String, Object>, ?>                valueMapper;
     protected final Optional<UUID>                                              id;
