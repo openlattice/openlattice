@@ -41,19 +41,17 @@ package com.openlattice.data.integration;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.SetMultimap;
 import com.openlattice.client.serialization.SerializationConstants;
 import com.openlattice.data.EntityKey;
 import com.openlattice.util.Hashcodes;
 
 import java.util.Objects;
-import java.util.UUID;
 
 public class Association {
-    private final EntityKey              key;
-    private final EntityKey              src;
-    private final EntityKey              dst;
-    private final int                    hashcode;
+    private final EntityKey key;
+    private final EntityKey src;
+    private final EntityKey dst;
+    private final int       hashcode;
 
     @JsonCreator
     public Association(
@@ -64,10 +62,6 @@ public class Association {
         this.src = src;
         this.dst = dst;
         hashcode = Hashcodes.generate( key, src, dst );
-    }
-
-    public Association( EntityKey key, EntityKey src, EntityKey dst, SetMultimap<UUID, Object> details ) {
-        this( key, src, dst );
     }
 
     @JsonProperty( SerializationConstants.KEY_FIELD )
