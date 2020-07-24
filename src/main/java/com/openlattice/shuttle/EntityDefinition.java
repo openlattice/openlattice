@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.openlattice.client.serialization.SerializableFunction;
@@ -62,9 +63,9 @@ public class EntityDefinition implements Serializable {
     @JsonCreator
     public EntityDefinition(
             @JsonProperty( SerializationConstants.ID_FIELD ) Optional<UUID> id,
-            @JsonProperty( SerializationConstants.FQN ) String entityTypeFqn,
+            @JsonProperty( SerializationConstants.FQN ) Optional<String> entityTypeFqn,
             @JsonProperty( SerializationConstants.ENTITY_SET_NAME ) String entitySetName,
-            @JsonProperty( SerializationConstants.KEY_FIELD ) List<FullQualifiedName> key,
+            @JsonProperty( SerializationConstants.KEY_FIELD ) Optional<List<FullQualifiedName>> key,
             @JsonProperty( SerializationConstants.PROPERTY_DEFINITIONS )
                     Map<FullQualifiedName, PropertyDefinition> propertyDefinitions,
             @JsonProperty( SerializationConstants.NAME ) String alias,
@@ -75,10 +76,10 @@ public class EntityDefinition implements Serializable {
     ) {
 
         this.id = id;
-        this.entityTypeFqn = entityTypeFqn == null ? null : new FullQualifiedName( entityTypeFqn );
+        this.entityTypeFqn = entityTypeFqn.map( FullQualifiedName::new ).orElse( null );
         this.entitySetName = entitySetName;
         this.propertyDefinitions = propertyDefinitions;
-        this.key = key;
+        this.key = key.orElse( ImmutableList.of() );
         this.alias = alias == null ? entitySetName : alias;
         this.condition = condition;
         this.updateType = updateType.orElse( UpdateType.Merge );
