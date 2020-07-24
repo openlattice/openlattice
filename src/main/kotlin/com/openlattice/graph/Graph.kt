@@ -262,6 +262,10 @@ class Graph(
         ).stream()
     }
 
+    override fun setPartitions(entitySetId: UUID, partitions: MutableSet<Int>): Int {
+        TODO("Not yet implemented")
+    }
+
 
     override fun getEdgesAndNeighborsForVerticesBulk(
             entitySetIds: Set<UUID>,
@@ -426,7 +430,7 @@ class Graph(
                 }
 
                 logger.info("Grouped edges: {}", groupedEdges.size)
-                
+
                 edgePairs.putAll(groupedEdges)
 
                 try {
@@ -1408,9 +1412,7 @@ fun bindColumnsForEdge(
 
     var index = 1
 
-    ps.setObject(index++,
-                 getPartition(edk.entityKeyId, partitions)
-    )
+    ps.setObject(index++, getPartition(edk.entityKeyId, partitions))
     ps.setObject(index++, dataEdgeKey.src.entitySetId)
     ps.setObject(index++, dataEdgeKey.src.entityKeyId)
     ps.setObject(index++, dataEdgeKey.dst.entitySetId)
