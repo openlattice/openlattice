@@ -79,7 +79,7 @@ public class EntityDefinition implements Serializable {
         this.entityTypeFqn = entityTypeFqn.map( FullQualifiedName::new ).orElse( null );
         this.entitySetName = entitySetName;
         this.propertyDefinitions = propertyDefinitions;
-        this.key = key.orElse( ImmutableList.of() );
+        this.key = key.orElse( null );
         this.alias = alias == null ? entitySetName : alias;
         this.condition = condition;
         this.updateType = updateType.orElse( UpdateType.Merge );
