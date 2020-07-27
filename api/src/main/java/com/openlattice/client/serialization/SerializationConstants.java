@@ -166,6 +166,7 @@ public final class SerializationConstants {
     public static final String KEY_FIELD                        = "key";
     public static final String LAST_INDEX                       = "lastIndex";
     public static final String LAST_READ                        = "lastRead";
+    public static final String LAST_SYNC                        = "lastSync";
     public static final String LAST_WRITE                       = "lastWrite";
     public static final String LATITUDE                         = "latitude";
     public static final String LINK                             = "link";
