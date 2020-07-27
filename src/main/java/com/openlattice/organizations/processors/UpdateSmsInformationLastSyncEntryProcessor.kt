@@ -5,7 +5,7 @@ import com.openlattice.notifications.sms.SmsEntitySetInformation
 import com.openlattice.notifications.sms.SmsInformationKey
 import java.time.OffsetDateTime
 
-class UpdateSmsInformationLastSyncEntryProcessor(
+data class UpdateSmsInformationLastSyncEntryProcessor(
         val lastSync: OffsetDateTime
 ) : AbstractRhizomeEntryProcessor<SmsInformationKey, SmsEntitySetInformation, Boolean>() {
     override fun process(entry: MutableMap.MutableEntry<SmsInformationKey, SmsEntitySetInformation>): Boolean {
