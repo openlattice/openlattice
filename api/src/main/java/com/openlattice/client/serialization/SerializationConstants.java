@@ -37,6 +37,7 @@ public final class SerializationConstants {
     public static final String APP_TYPE_ID                      = "appTypeId";
     public static final String APP_TYPE_IDS_FIELD               = "appTypeIds";
     public static final String ASSOCIATIONS                     = "associations";
+    public static final String ASSOCIATE_ONLY                   = "associateOnly";
     public static final String ASSOCIATIONS_ENTITY_KEY_MAPPINGS = "associationsEntityKeyMappings";
     public static final String ASSOCIATION_AGGREGATIONS         = "associationAggregations";
     public static final String ASSOCIATION_CONSTRAINT           = "associationConstraint";
