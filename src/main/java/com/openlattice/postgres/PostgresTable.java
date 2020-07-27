@@ -438,7 +438,7 @@ public final class PostgresTable {
                     .primaryKey( ACL_KEY );
     public static final PostgresTableDefinition SMS_INFORMATION   =
             new PostgresTableDefinition( "sms_information" )
-                    .addColumns( PHONE_NUMBER, ORGANIZATION_ID, ENTITY_SET_IDS, TAGS )
+                    .addColumns( PHONE_NUMBER, ORGANIZATION_ID, ENTITY_SET_IDS, TAGS, LAST_SYNC )
                     .primaryKey( PHONE_NUMBER, ORGANIZATION_ID );
     public static final PostgresTableDefinition SUBSCRIPTIONS     =
             new PostgresTableDefinition( "subscriptions" )
