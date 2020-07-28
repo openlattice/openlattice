@@ -155,7 +155,8 @@ class BackgroundExternalDatabaseSyncingService(
 
 
         if (missingColumnIds.isNotEmpty()) {
-            val missingColumnsByTable = organizationExternalDatabaseColumns.getAll(missingColumnIds).entries
+            val missingColumnsByTable = organizationExternalDatabaseColumns
+                    .getAll(missingColumnIds).entries
                     .groupBy { it.value.tableId }
                     .mapValues { it.value.map { entry -> entry.key!! }.toSet() }
 
