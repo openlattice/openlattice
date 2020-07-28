@@ -152,12 +152,13 @@ class BackgroundExternalDatabaseSyncingService(
 
         //check if columns have been deleted in the database
         val missingColumnIds = organizationExternalDatabaseColumns.keys - currentColumnIds
-        val missingColumnsByTable = mutableMapOf<UUID, MutableSet<UUID>>()
+
+
         if (missingColumnIds.isNotEmpty()) {
-            missingColumnIds.forEach {
-                val tableId = organizationExternalDatabaseColumns.getValue(it).tableId
-                missingColumnsByTable.getOrPut(tableId) { mutableSetOf() }.add(it)
-            }
+            val missingColumnsByTable = organizationExternalDatabaseColumns.getAll(missingColumnIds).entries
+                    .groupBy { it.value.tableId }
+                    .mapValues { it.value.map { entry -> entry.key!! }.toSet() }
+
             edms.deleteOrganizationExternalDatabaseColumnObjects(missingColumnsByTable)
             totalSynced += missingColumnIds.size
         }
