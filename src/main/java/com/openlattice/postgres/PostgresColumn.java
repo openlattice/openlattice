@@ -20,6 +20,9 @@
 
 package com.openlattice.postgres;
 
+import com.openlattice.IdConstants;
+import com.openlattice.edm.type.Analyzer;
+
 import static com.openlattice.postgres.PostgresDatatype.BIGINT;
 import static com.openlattice.postgres.PostgresDatatype.BIGINT_ARRAY;
 import static com.openlattice.postgres.PostgresDatatype.BOOLEAN;
@@ -32,9 +35,6 @@ import static com.openlattice.postgres.PostgresDatatype.TEXT_ARRAY;
 import static com.openlattice.postgres.PostgresDatatype.TIMESTAMPTZ;
 import static com.openlattice.postgres.PostgresDatatype.UUID;
 import static com.openlattice.postgres.PostgresDatatype.UUID_ARRAY;
-
-import com.openlattice.IdConstants;
-import com.openlattice.edm.type.Analyzer;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -320,6 +320,12 @@ public final class PostgresColumn {
             .withDefault( "'-infinity'" )
             .notNull();
     public static final String                   LAST_WRITE_FIELD                  = "last_write";
+    public static final String                   LAST_SYNC_FIELD                   = "last_sync";
+    public static final PostgresColumnDefinition LAST_SYNC                         = new PostgresColumnDefinition(
+            LAST_SYNC_FIELD,
+            TIMESTAMPTZ )
+            .withDefault( "'-infinity'" )
+            .notNull();
     public static final String                   LINKED_ENTITY_SETS_FIELD          = "linked_entity_sets";
     public static final PostgresColumnDefinition LINKED_ENTITY_SETS                =
             new PostgresColumnDefinition( LINKED_ENTITY_SETS_FIELD, UUID_ARRAY );

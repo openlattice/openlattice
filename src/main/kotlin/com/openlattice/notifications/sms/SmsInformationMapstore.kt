@@ -62,10 +62,12 @@ class SmsInformationMapstore(
 
         ps.setArray(offset++, PostgresArrays.createUuidArray(ps.connection, value.entitySetIds))
         ps.setArray(offset++, PostgresArrays.createTextArray(ps.connection, value.tags))
+        ps.setObject(offset++, value.lastSync)
 
         //For update clause
         ps.setArray(offset++, PostgresArrays.createUuidArray(ps.connection, value.entitySetIds))
-        ps.setArray(offset, PostgresArrays.createTextArray(ps.connection, value.tags))
+        ps.setArray(offset++, PostgresArrays.createTextArray(ps.connection, value.tags))
+        ps.setObject(offset, value.lastSync)
     }
 
     override fun mapToKey(rs: ResultSet): SmsInformationKey {
