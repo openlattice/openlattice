@@ -20,7 +20,7 @@
 
 package com.openlattice.mail;
 
-import com.hazelcast.core.IQueue;
+import com.hazelcast.collection.IQueue;
 import org.junit.Test;
 import org.mockito.Mockito;
 

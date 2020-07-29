@@ -21,7 +21,7 @@
 package com.openlattice.mail.requirements;
 
 import com.openlattice.mail.RenderableEmailRequest;
-import com.hazelcast.core.IQueue;
+import com.hazelcast.collection.IQueue;
 
 /**
  * This is used to express dependencies of the mail service.

@@ -20,7 +20,7 @@
 
 package com.openlattice.mail;
 
-import com.hazelcast.core.IQueue;
+import com.hazelcast.collection.IQueue;
 
 public class MailServiceClient {
     private final IQueue<RenderableEmailRequest> emailRequestQueue;
