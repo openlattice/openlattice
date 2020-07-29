@@ -21,9 +21,7 @@
 package com.openlattice.scheduling.mapstores
 
 import com.dataloom.mappers.ObjectMappers
-import com.hazelcast.config.InMemoryFormat
-import com.hazelcast.config.MapConfig
-import com.hazelcast.config.MapIndexConfig
+import com.hazelcast.config.*
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.InternalTestDataFactory
 import com.openlattice.postgres.PostgresTable
@@ -82,7 +80,7 @@ open class ScheduledTasksMapstore(
 
     override fun getMapConfig(): MapConfig {
         return super.getMapConfig()
-                .addMapIndexConfig(MapIndexConfig(SCHEDULED_DATE_TIME_INDEX, true))
+                .addIndexConfig(IndexConfig(IndexType.HASH,SCHEDULED_DATE_TIME_INDEX))
                 .setInMemoryFormat(InMemoryFormat.OBJECT)
     }
 

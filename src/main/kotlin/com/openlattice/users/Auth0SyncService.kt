@@ -131,8 +131,9 @@ class Auth0SyncService(
         return principals.aggregate(
                 ReadSecurablePrincipalAggregator(),
                 Predicates.equal(
-                        PrincipalMapstore.PRINCIPAL_INDEX, Principals.getUserPrincipal(principalId)
-                ) as Predicate<AclKey, SecurablePrincipal>
+                        PrincipalMapstore.PRINCIPAL_INDEX,
+                        Principals.getUserPrincipal(principalId)
+                ) 
         )
 
     }

@@ -467,7 +467,7 @@ class HazelcastOrganizationService(
             organizations.submitToKey(
                     organizationId, UpdateOrganizationSmsEntitySetInformationEntryProcessor(entitySetInfoList)
             )
-        }.forEach { it.get() }
+        }.forEach { it.toCompletableFuture().get() }
     }
 
     @Timed
@@ -515,8 +515,8 @@ class HazelcastOrganizationService(
     fun getOrganizationsWithoutUserAndWithConnection(connections: Collection<String>, principal: Principal): Set<UUID> {
         return organizations.keySet(
                 Predicates.and(
-                        Predicates.`in`(CONNECTIONS_INDEX, *connections.toTypedArray()),
-                        Predicates.not(Predicates.`in`(MEMBERS_INDEX, principal))
+                        Predicates.`in`<UUID, Organization>(CONNECTIONS_INDEX, *connections.toTypedArray()),
+                        Predicates.not<UUID, Organization>(Predicates.`in`<UUID, Organization>(MEMBERS_INDEX, principal))
                 )
         )
     }
@@ -528,9 +528,9 @@ class HazelcastOrganizationService(
     ): Set<UUID> {
         return organizations.keySet(
                 Predicates.and(
-                        Predicates.`in`(CONNECTIONS_INDEX, *connections.toTypedArray()),
-                        Predicates.`in`(DOMAINS_INDEX, emailDomain),
-                        Predicates.not(Predicates.`in`(MEMBERS_INDEX, principal))
+                        Predicates.`in`<UUID, Organization>(CONNECTIONS_INDEX, *connections.toTypedArray()),
+                        Predicates.`in`<UUID, Organization>(DOMAINS_INDEX, emailDomain),
+                        Predicates.not<UUID, Organization>(Predicates.`in`<UUID, Organization>(MEMBERS_INDEX, principal))
                 )
         )
     }
@@ -561,10 +561,10 @@ class HazelcastOrganizationService(
             )
         }
 
-        private fun getOrganizationPredicate(organizationId: UUID): Predicate<*, *> {
+        private fun getOrganizationPredicate(organizationId: UUID): Predicate<UUID, Organization> {
             return Predicates.and(
-                    Predicates.equal("principalType", PrincipalType.ORGANIZATION),
-                    Predicates.equal("aclKey[0]", organizationId)
+                    Predicates.equal<UUID, Organization>("principalType", PrincipalType.ORGANIZATION),
+                    Predicates.equal<UUID, Organization>("aclKey[0]", organizationId)
             )
         }
     }
