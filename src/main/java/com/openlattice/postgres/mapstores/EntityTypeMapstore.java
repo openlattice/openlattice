@@ -5,8 +5,9 @@ import static com.openlattice.postgres.PostgresTable.ENTITY_TYPES;
 import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hazelcast.config.IndexConfig;
+import com.hazelcast.config.IndexType;
 import com.hazelcast.config.MapConfig;
-import com.hazelcast.config.MapIndexConfig;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.mapstores.TestDataFactory;
@@ -22,9 +23,9 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.postgresql.util.PGobject;
 
 public class EntityTypeMapstore extends AbstractBasePostgresMapstore<UUID, EntityType> {
-    public static final String PROPERTIES_INDEX = "properties[any]";
-    public static final String FULLQUALIFIED_NAME_PREDICATE = "type.fullQualifiedNameAsString";
-    private final ObjectMapper mapper;
+    public static final String       FULLQUALIFIED_NAME_PREDICATE = "type.fullQualifiedNameAsString";
+    public static final String       PROPERTIES_INDEX             = "properties[any]";
+    private final       ObjectMapper mapper;
 
     public EntityTypeMapstore( HikariDataSource hds ) {
         this( hds, ObjectMappers.newJsonMapper() );
@@ -100,7 +101,7 @@ public class EntityTypeMapstore extends AbstractBasePostgresMapstore<UUID, Entit
 
     @Override public MapConfig getMapConfig() {
         return super.getMapConfig()
-                .addMapIndexConfig( new MapIndexConfig( PROPERTIES_INDEX, false ) );
+                .addIndexConfig( new IndexConfig( IndexType.HASH, PROPERTIES_INDEX ) );
     }
 
     @Override public UUID generateTestKey() {

@@ -32,7 +32,7 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.hazelcast.core.IMap;
+import com.hazelcast.map.IMap;
 
 public final class Util {
     private static final Logger logger = LoggerFactory.getLogger( Util.class );

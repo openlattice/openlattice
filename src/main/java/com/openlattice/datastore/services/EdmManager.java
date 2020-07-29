@@ -144,7 +144,7 @@ public interface EdmManager {
 
     Map<UUID, EntityType> getEntityTypesAsMap( Set<UUID> entityTypeIds );
 
-    <V> Map<UUID, V> fromPropertyTypes( Set<UUID> propertyTypeIds, EntryProcessor<UUID, PropertyType> ep );
+    <V> Map<UUID, V> fromPropertyTypes( Set<UUID> propertyTypeIds, EntryProcessor<UUID, PropertyType, V> ep );
 
     Set<UUID> getPropertyTypeIdsOfEntityType( UUID entityTypeId );
 

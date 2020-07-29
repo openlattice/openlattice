@@ -29,7 +29,7 @@ import java.util.Map.Entry;
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class PrincipalProjection extends Projection<Entry<AclKey, SecurablePrincipal>, Principal> {
+public class PrincipalProjection implements Projection<Entry<AclKey, SecurablePrincipal>, Principal> {
     @Override public Principal transform( Entry<AclKey, SecurablePrincipal> input ) {
         return input.getValue().getPrincipal();
     }

@@ -1,8 +1,6 @@
 package com.openlattice.hazelcast.mapstores.shuttle
 
-import com.hazelcast.config.InMemoryFormat
-import com.hazelcast.config.MapConfig
-import com.hazelcast.config.MapIndexConfig
+import com.hazelcast.config.*
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.InternalTestDataFactory
 import com.openlattice.postgres.PostgresTable.INTEGRATION_JOBS
@@ -59,7 +57,7 @@ class IntegrationJobsMapstore(hds: HikariDataSource) : AbstractBasePostgresMapst
 
     override fun getMapConfig(): MapConfig {
         return super.getMapConfig()
-                .addMapIndexConfig(MapIndexConfig(INTEGRATION_STATUS, false))
+                .addIndexConfig(IndexConfig(IndexType.HASH,INTEGRATION_STATUS))
                 .setInMemoryFormat(InMemoryFormat.OBJECT)
     }
 }

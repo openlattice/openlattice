@@ -22,7 +22,7 @@
 
 package com.openlattice.hazelcast;
 
-import com.hazelcast.core.IMap;
+import com.hazelcast.map.IMap;
 import com.openlattice.datastore.util.Util;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDList;
 import java.util.List;

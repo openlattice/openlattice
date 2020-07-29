@@ -22,6 +22,7 @@
 
 package com.openlattice.edm.schemas.processors;
 
+import com.google.common.base.Preconditions;
 import java.util.Collection;
 import java.util.Map.Entry;
 import java.util.UUID;
@@ -29,27 +30,26 @@ import java.util.UUID;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 import com.openlattice.authorization.securable.AbstractSchemaAssociatedSecurableType;
-import com.hazelcast.util.Preconditions;
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor;
+
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
- *
  */
-public class AddSchemasToType extends AbstractRhizomeEntryProcessor<UUID, AbstractSchemaAssociatedSecurableType, Void> {
-    private static final long                   serialVersionUID = 7905367675743576380L;
-    private final Collection<FullQualifiedName> schemas;
+public class AddSchemasToType<T extends  AbstractSchemaAssociatedSecurableType> extends AbstractRhizomeEntryProcessor<UUID, T, Void> {
+    private static final long                          serialVersionUID = 7905367675743576380L;
+    private final        Collection<FullQualifiedName> schemas;
 
     public AddSchemasToType( Collection<FullQualifiedName> schemas ) {
         this.schemas = Preconditions.checkNotNull( schemas );
     }
 
     @Override
-    public Void process( Entry<UUID, AbstractSchemaAssociatedSecurableType> entry ) {
-        AbstractSchemaAssociatedSecurableType propertyType = entry.getValue();
-        if ( propertyType != null ) {
-            propertyType.addToSchemas( schemas );
-            entry.setValue( propertyType );
+    public Void process( Entry<UUID, T> entry ) {
+        T securableType = entry.getValue();
+        if ( securableType != null ) {
+            securableType.addToSchemas( schemas );
+            entry.setValue( securableType );
         }
         return null;
     }

@@ -20,7 +20,7 @@
  */
 package com.openlattice.assembler
 
-import com.hazelcast.core.IMap
+import com.hazelcast.map.IMap
 import com.openlattice.authorization.EdmAuthorizationHelper
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.organizations.HazelcastOrganizationService

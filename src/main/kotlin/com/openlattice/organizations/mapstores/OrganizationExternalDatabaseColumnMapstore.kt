@@ -1,8 +1,6 @@
 package com.openlattice.organizations.mapstores
 
-import com.hazelcast.config.InMemoryFormat
-import com.hazelcast.config.MapConfig
-import com.hazelcast.config.MapIndexConfig
+import com.hazelcast.config.*
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
@@ -20,7 +18,7 @@ const val ORGANIZATION_ID_INDEX = "organizationId"
 open class OrganizationExternalDatabaseColumnMapstore(
         hds: HikariDataSource
 ) : AbstractBasePostgresMapstore<UUID, OrganizationExternalDatabaseColumn>
-(HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_COLUMN, PostgresTable.ORGANIZATION_EXTERNAL_DATABASE_COLUMN, hds) {
+    (HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_COLUMN, PostgresTable.ORGANIZATION_EXTERNAL_DATABASE_COLUMN, hds) {
 
     override fun bind(ps: PreparedStatement, key: UUID, value: OrganizationExternalDatabaseColumn) {
         var index = bind(ps, key, 1)
@@ -46,7 +44,7 @@ open class OrganizationExternalDatabaseColumnMapstore(
         ps.setInt(index++, value.ordinalPosition)
     }
 
-    override fun bind(ps: PreparedStatement, key: UUID, offset: Int) : Int {
+    override fun bind(ps: PreparedStatement, key: UUID, offset: Int): Int {
         var index = offset
         ps.setObject(index++, key)
         return index
@@ -62,9 +60,9 @@ open class OrganizationExternalDatabaseColumnMapstore(
 
     override fun getMapConfig(): MapConfig {
         return super.getMapConfig()
-                .addMapIndexConfig(MapIndexConfig(TABLE_ID_INDEX, false))
-                .addMapIndexConfig(MapIndexConfig(ORGANIZATION_ID_INDEX, false))
-                .setInMemoryFormat( InMemoryFormat.OBJECT )
+                .addIndexConfig(IndexConfig(IndexType.HASH, TABLE_ID_INDEX))
+                .addIndexConfig(IndexConfig(IndexType.HASH, ORGANIZATION_ID_INDEX))
+                .setInMemoryFormat(InMemoryFormat.OBJECT)
     }
 
     override fun generateTestKey(): UUID {

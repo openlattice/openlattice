@@ -31,7 +31,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.SetMultimap;
 import com.google.common.eventbus.EventBus;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.IMap;
+import com.hazelcast.map.IMap;
 import com.hazelcast.query.Predicate;
 import com.hazelcast.query.Predicates;
 import com.openlattice.authorization.*;
@@ -367,15 +367,15 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
         return authorizations;
     }
 
-    private static Predicate findPrincipal( Principal p ) {
+    private static Predicate<AclKey,SecurablePrincipal> findPrincipal( Principal p ) {
         return Predicates.equal( PrincipalMapstore.PRINCIPAL_INDEX, p );
     }
 
-    private static Predicate findPrincipals( Collection<Principal> principals ) {
+    private static Predicate<AclKey,SecurablePrincipal> findPrincipals( Collection<Principal> principals ) {
         return Predicates.in( PrincipalMapstore.PRINCIPAL_INDEX, principals.toArray( new Principal[] {} ) );
     }
 
-    private static Predicate hasSecurablePrincipal( AclKey principalAclKey ) {
+    private static Predicate<AclKey,AclKeySet> hasSecurablePrincipal( AclKey principalAclKey ) {
         return Predicates.and( Predicates.equal( "this.index[any]", principalAclKey.getIndex() ) );
     }
 

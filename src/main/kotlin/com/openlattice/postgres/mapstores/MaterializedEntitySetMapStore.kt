@@ -21,9 +21,7 @@
 package com.openlattice.postgres.mapstores
 
 import com.google.common.collect.MapMaker
-import com.hazelcast.config.InMemoryFormat
-import com.hazelcast.config.MapConfig
-import com.hazelcast.config.MapIndexConfig
+import com.hazelcast.config.*
 import com.openlattice.assembler.EntitySetAssemblyKey
 import com.openlattice.assembler.MaterializedEntitySet
 import com.openlattice.hazelcast.HazelcastMap
@@ -98,11 +96,11 @@ open class MaterializedEntitySetMapStore(
 
     override fun getMapConfig(): MapConfig {
         return super.getMapConfig()
-                .addMapIndexConfig(MapIndexConfig(ORGANIZATION_ID_INDEX, false))
-                .addMapIndexConfig(MapIndexConfig(ENTITY_SET_ID_INDEX, false))
-                .addMapIndexConfig(MapIndexConfig(FLAGS_INDEX, false))
-                .addMapIndexConfig(MapIndexConfig(LAST_REFRESH_INDEX, true))
-                .addMapIndexConfig(MapIndexConfig(REFRESH_RATE_INDEX, true))
+                .addIndexConfig(IndexConfig(IndexType.HASH, ORGANIZATION_ID_INDEX))
+                .addIndexConfig(IndexConfig(IndexType.HASH, ENTITY_SET_ID_INDEX))
+                .addIndexConfig(IndexConfig(IndexType.HASH,FLAGS_INDEX))
+                .addIndexConfig(IndexConfig(IndexType.HASH,LAST_REFRESH_INDEX))
+                .addIndexConfig(IndexConfig(IndexType.HASH,REFRESH_RATE_INDEX))
                 .setInMemoryFormat(InMemoryFormat.OBJECT)
     }
 
