@@ -8,7 +8,7 @@ import com.google.common.collect.Sets
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.hazelcast.core.HazelcastInstance
-import com.hazelcast.core.IMap
+import com.hazelcast.map.IMap
 import com.openlattice.apps.AppConfigKey
 import com.openlattice.apps.AppTypeSetting
 import com.openlattice.client.serialization.SerializationConstants
