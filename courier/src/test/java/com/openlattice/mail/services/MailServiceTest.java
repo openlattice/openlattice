@@ -39,7 +39,7 @@ import org.mockito.Mockito;
 
 import com.openlattice.mail.RenderableEmailRequest;
 import com.google.common.collect.ImmutableMap;
-import com.hazelcast.core.IQueue;
+import com.hazelcast.collection.IQueue;
 
 public class MailServiceTest extends GreenMailTest {
     private static final IQueue<RenderableEmailRequest> emailRequests = Mockito.mock( IQRER.class );

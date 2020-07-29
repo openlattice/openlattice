@@ -21,7 +21,7 @@
 package com.openlattice.mail.services;
 
 import com.google.common.base.Preconditions;
-import com.hazelcast.core.IQueue;
+import com.hazelcast.collection.IQueue;
 import com.openlattice.mail.RenderableEmailRequest;
 import com.openlattice.mail.config.MailServiceConfig;
 import jodd.mail.Email;
