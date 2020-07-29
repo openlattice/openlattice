@@ -807,8 +807,8 @@ public class EdmService implements EdmManager {
 
     @SuppressWarnings( "unchecked" )
     @Override
-    public <V> Map<UUID, V> fromPropertyTypes( Set<UUID> propertyTypeIds, EntryProcessor<UUID, PropertyType> ep ) {
-        return (Map<UUID, V>) propertyTypes.executeOnKeys( propertyTypeIds, ep );
+    public <V> Map<UUID, V> fromPropertyTypes( Set<UUID> propertyTypeIds, EntryProcessor<UUID, PropertyType, V> ep ) {
+        return propertyTypes.executeOnKeys( propertyTypeIds, ep );
     }
 
     @Override

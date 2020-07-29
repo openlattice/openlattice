@@ -1,8 +1,9 @@
 package com.openlattice.postgres.mapstores;
 
 import com.google.common.collect.ImmutableList;
+import com.hazelcast.config.IndexConfig;
+import com.hazelcast.config.IndexType;
 import com.hazelcast.config.MapConfig;
-import com.hazelcast.config.MapIndexConfig;
 import com.openlattice.auditing.AuditRecordEntitySetConfiguration;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.hazelcast.HazelcastMap;
@@ -63,8 +64,8 @@ public class AuditRecordEntitySetConfigurationMapstore
 
     @Override public MapConfig getMapConfig() {
         return super.getMapConfig()
-                .addMapIndexConfig( new MapIndexConfig( ANY_AUDITING_ENTITY_SETS, false ) )
-                .addMapIndexConfig( new MapIndexConfig( ANY_EDGE_AUDITING_ENTITY_SETS, false ) );
+                .addIndexConfig( new IndexConfig( IndexType.HASH, ANY_AUDITING_ENTITY_SETS ) )
+                .addIndexConfig( new IndexConfig( IndexType.HASH, ANY_EDGE_AUDITING_ENTITY_SETS ) );
     }
 
     @Override public AclKey generateTestKey() {
