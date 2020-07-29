@@ -27,7 +27,7 @@ class PersistentSearchEmailRenderer {
             when (persistentSearch.type) {
                 PersistentSearchNotificationType.ALPR_ALERT -> email = AlprAlertEmailRenderer.renderEmail(persistentSearch, entity, userEmail, neighbors, dependencies.mapboxToken)
                 PersistentSearchNotificationType.BHR_ALERT -> email = BHRAlertEmailRenderer.renderEmail(persistentSearch, entity, userEmail, neighbors)
-                PersistentSearchNotificationType.CODEX_ALERT -> email = CodexAlertEmailRenderer.renderEmail(persistentSearch, entity, userEmail)
+                PersistentSearchNotificationType.CODEX_ALERT -> email = CodexAlertEmailRenderer.renderEmail(persistentSearch, entity, userEmail, neighbors)
 
                 else -> {
                     logger.error("Unable to render email for type {}", persistentSearch.type)
