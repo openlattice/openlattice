@@ -17,7 +17,7 @@ import java.sql.SQLException;
 import java.util.UUID;
 
 public class SecurableObjectTypeMapstore extends AbstractBasePostgresMapstore<AclKey, SecurableObjectType> {
-    public static final String ACL_KEY_INDEX               = "__key#index";
+    public static final String ACL_KEY_INDEX               = "__key.index";
     public static final String SECURABLE_OBJECT_TYPE_INDEX = "this";
 
     public SecurableObjectTypeMapstore( HikariDataSource hds ) {

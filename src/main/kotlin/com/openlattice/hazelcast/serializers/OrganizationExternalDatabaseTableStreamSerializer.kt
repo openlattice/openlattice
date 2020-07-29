@@ -2,6 +2,7 @@ package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.organization.OrganizationExternalDatabaseTable
@@ -13,19 +14,19 @@ class OrganizationExternalDatabaseTableStreamSerializer : SelfRegisteringStreamS
 
     companion object {
         fun serialize(output: ObjectDataOutput, obj: OrganizationExternalDatabaseTable) {
-            UUIDStreamSerializer.serialize(output, obj.id)
+            UUIDStreamSerializerUtils.serialize(output, obj.id)
             output.writeUTF(obj.name)
             output.writeUTF(obj.title)
             output.writeUTF(obj.description)
-            UUIDStreamSerializer.serialize(output, obj.organizationId)
+            UUIDStreamSerializerUtils.serialize(output, obj.organizationId)
         }
 
         fun deserialize(input: ObjectDataInput): OrganizationExternalDatabaseTable {
-            val id = UUIDStreamSerializer.deserialize(input)
+            val id = UUIDStreamSerializerUtils.deserialize(input)
             val name = input.readUTF()
             val title = input.readUTF()
             val description = input.readUTF()
-            val orgId = UUIDStreamSerializer.deserialize(input)
+            val orgId = UUIDStreamSerializerUtils.deserialize(input)
             return OrganizationExternalDatabaseTable(id, name, title, Optional.of(description), orgId)
         }
     }

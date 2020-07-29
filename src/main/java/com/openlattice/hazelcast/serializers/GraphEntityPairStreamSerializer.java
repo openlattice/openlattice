@@ -20,6 +20,7 @@
 
 package com.openlattice.hazelcast.serializers;
 
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -44,13 +45,13 @@ public class GraphEntityPairStreamSerializer implements SelfRegisteringStreamSer
     }
 
     public static void serialize( ObjectDataOutput out, GraphEntityPair object ) throws IOException {
-        UUIDStreamSerializer.serialize( out, object.getGraphId() );
-        UUIDStreamSerializer.serialize( out, object.getEntityKeyId() );
+        UUIDStreamSerializerUtils.serialize( out, object.getGraphId() );
+        UUIDStreamSerializerUtils.serialize( out, object.getEntityKeyId() );
     }
 
     public static GraphEntityPair deserialize( ObjectDataInput in ) throws IOException {
-        UUID graphId = UUIDStreamSerializer.deserialize( in );
-        UUID entityKeyId = UUIDStreamSerializer.deserialize( in );
+        UUID graphId = UUIDStreamSerializerUtils.deserialize( in );
+        UUID entityKeyId = UUIDStreamSerializerUtils.deserialize( in );
         return new GraphEntityPair( graphId, entityKeyId );
     }
 

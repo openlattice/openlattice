@@ -20,6 +20,7 @@
 
 package com.openlattice.hazelcast.serializers;
 
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -38,19 +39,19 @@ public class AppTypeStreamSerializer implements SelfRegisteringStreamSerializer<
     }
 
     @Override public void write( ObjectDataOutput out, AppType object ) throws IOException {
-        UUIDStreamSerializer.serialize( out, object.getId() );
+        UUIDStreamSerializerUtils.serialize( out, object.getId() );
         FullQualifiedNameStreamSerializer.serialize( out, object.getType() );
         out.writeUTF( object.getTitle() );
         out.writeUTF( object.getDescription() );
-        UUIDStreamSerializer.serialize( out, object.getEntityTypeId() );
+        UUIDStreamSerializerUtils.serialize( out, object.getEntityTypeId() );
     }
 
     @Override public AppType read( ObjectDataInput in ) throws IOException {
-        UUID id = UUIDStreamSerializer.deserialize( in );
+        UUID id = UUIDStreamSerializerUtils.deserialize( in );
         FullQualifiedName type = FullQualifiedNameStreamSerializer.deserialize( in );
         String title = in.readUTF();
         Optional<String> description = Optional.of( in.readUTF() );
-        UUID entityTypeId = UUIDStreamSerializer.deserialize( in );
+        UUID entityTypeId = UUIDStreamSerializerUtils.deserialize( in );
         return new AppType( id, type, title, description, entityTypeId );
     }
 

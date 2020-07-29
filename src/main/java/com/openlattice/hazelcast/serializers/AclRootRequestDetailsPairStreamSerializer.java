@@ -24,6 +24,7 @@ package com.openlattice.hazelcast.serializers;
 
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.openlattice.requests.AclRootRequestDetailsPair;
@@ -39,13 +40,14 @@ public class AclRootRequestDetailsPairStreamSerializer implements SelfRegisterin
 
     @Override
     public void write( ObjectDataOutput out, AclRootRequestDetailsPair object ) throws IOException {
-        StreamSerializerUtils.serializeFromList( out, object.getAclRoot(), ( UUID key ) -> UUIDStreamSerializer.serialize( out, key ) );
+        StreamSerializerUtils.serializeFromList( out, object.getAclRoot(), ( UUID key ) -> UUIDStreamSerializerUtils
+                .serialize( out, key ) );
         PermissionsRequestDetailsStreamSerializer.serialize( out, object.getDetails() );
     }
 
     @Override
     public AclRootRequestDetailsPair read( ObjectDataInput in ) throws IOException {
-        List<UUID> aclRoot = StreamSerializerUtils.deserializeToList( in, UUIDStreamSerializer::deserialize );
+        List<UUID> aclRoot = StreamSerializerUtils.deserializeToList( in, UUIDStreamSerializerUtils::deserialize );
         PermissionsRequestDetails details = PermissionsRequestDetailsStreamSerializer.deserialize( in );
         return new AclRootRequestDetailsPair( aclRoot, details );
     }

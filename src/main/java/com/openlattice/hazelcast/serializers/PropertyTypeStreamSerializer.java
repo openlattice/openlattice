@@ -25,6 +25,7 @@ package com.openlattice.hazelcast.serializers;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers;
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.edm.type.Analyzer;
 import com.openlattice.edm.type.PropertyType;
@@ -58,7 +59,7 @@ public class PropertyTypeStreamSerializer implements SelfRegisteringStreamSerial
     }
 
     public static void serialize( ObjectDataOutput out, PropertyType object ) throws IOException {
-        UUIDStreamSerializer.serialize( out, object.getId() );
+        UUIDStreamSerializerUtils.serialize( out, object.getId() );
         FullQualifiedNameStreamSerializer.serialize( out, object.getType() );
         out.writeUTF( object.getTitle() );
         out.writeUTF( object.getDescription() );
@@ -73,7 +74,7 @@ public class PropertyTypeStreamSerializer implements SelfRegisteringStreamSerial
     }
 
     public static PropertyType deserialize( ObjectDataInput in ) throws IOException {
-        UUID id = UUIDStreamSerializer.deserialize( in );
+        UUID id = UUIDStreamSerializerUtils.deserialize( in );
         FullQualifiedName type = FullQualifiedNameStreamSerializer.deserialize( in );
         String title = in.readUTF();
         Optional<String> description = Optional.of( in.readUTF() );

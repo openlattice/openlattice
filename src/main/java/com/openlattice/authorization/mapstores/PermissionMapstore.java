@@ -65,12 +65,12 @@ import org.apache.commons.lang3.StringUtils;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class PermissionMapstore extends AbstractBasePostgresMapstore<AceKey, AceValue> {
-    public static final String ACL_KEY_INDEX               = "__key#aclKey.index";
+    public static final String ACL_KEY_INDEX               = "__key.aclKey.index";
     public static final String EXPIRATION_DATE_INDEX       = "expirationDate";
     public static final String PERMISSIONS_INDEX           = "permissions[any]";
-    public static final String PRINCIPAL_INDEX             = "__key#principal";
-    public static final String PRINCIPAL_TYPE_INDEX        = "__key#principal.type";
-    public static final String ROOT_OBJECT_INDEX           = "__key#aclKey[0]";
+    public static final String PRINCIPAL_INDEX             = "__key.principal";
+    public static final String PRINCIPAL_TYPE_INDEX        = "__key.principal.type";
+    public static final String ROOT_OBJECT_INDEX           = "__key.aclKey[0]";
     public static final String SECURABLE_OBJECT_TYPE_INDEX = "securableObjectType";
 
     private final EventBus eventBus;

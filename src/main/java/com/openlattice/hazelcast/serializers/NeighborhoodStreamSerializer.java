@@ -25,7 +25,7 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.SetMultimap;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.kryptnostic.rhizome.hazelcast.serializers.AbstractUUIDStreamSerializer;
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.graph.core.Neighborhood;
 import java.io.IOException;
@@ -47,14 +47,14 @@ public class NeighborhoodStreamSerializer implements SelfRegisteringStreamSerial
     @Override public void write( ObjectDataOutput out, Neighborhood object ) throws IOException {
         out.writeInt( object.getNeighborhood().size() );
         for ( Map.Entry<UUID, Map<UUID, SetMultimap<UUID, UUID>>> e : object.getNeighborhood().entrySet() ) {
-            AbstractUUIDStreamSerializer.serialize( out, e.getKey() );
+            UUIDStreamSerializerUtils.serialize( out, e.getKey() );
             out.writeInt( e.getValue().size() );
             for ( Map.Entry<UUID, SetMultimap<UUID, UUID>> e1 : e.getValue().entrySet() ) {
-                AbstractUUIDStreamSerializer.serialize( out, e1.getKey() );
+                UUIDStreamSerializerUtils.serialize( out, e1.getKey() );
                 out.writeInt( e1.getValue().size() );
                 for ( Map.Entry<UUID, UUID> e2 : e1.getValue().entries() ) {
-                    AbstractUUIDStreamSerializer.serialize( out, e2.getKey() );
-                    AbstractUUIDStreamSerializer.serialize( out, e2.getValue() );
+                    UUIDStreamSerializerUtils.serialize( out, e2.getKey() );
+                    UUIDStreamSerializerUtils.serialize( out, e2.getValue() );
                 }
             }
         }
@@ -64,18 +64,18 @@ public class NeighborhoodStreamSerializer implements SelfRegisteringStreamSerial
         int size = in.readInt();
         Map<UUID, Map<UUID, SetMultimap<UUID, UUID>>> m = new HashMap<>( size );
         for ( int i = 0; i < size; ++i ) {
-            UUID id1 = AbstractUUIDStreamSerializer.deserialize( in );
+            UUID id1 = UUIDStreamSerializerUtils.deserialize( in );
             int size1 = in.readInt();
             Map<UUID, SetMultimap<UUID, UUID>> m1 = new HashMap<>( size1 );
             m.put( id1, m1 );
             for ( int j = 0; j < size1; ++j ) {
-                UUID id2 = AbstractUUIDStreamSerializer.deserialize( in );
+                UUID id2 = UUIDStreamSerializerUtils.deserialize( in );
                 int size2 = in.readInt();
                 SetMultimap<UUID, UUID> m3 = HashMultimap.create();
                 m1.put( id2, m3 );
                 for ( int k = 0; k < size2; ++k ) {
-                    UUID key = AbstractUUIDStreamSerializer.deserialize( in );
-                    UUID v = AbstractUUIDStreamSerializer.deserialize( in );
+                    UUID key = UUIDStreamSerializerUtils.deserialize( in );
+                    UUID v = UUIDStreamSerializerUtils.deserialize( in );
                     m3.put( key, v );
                 }
             }
