@@ -34,7 +34,7 @@ import kotlin.streams.asSequence
  * Manages CRUD for entities and entity sets in the system.
  */
 @Service
-class PostgresEntityDatastore(
+ch class PostgresEntityDatastore(
         private val dataQueryService: PostgresEntityDataQueryService,
         private val edmManager: EdmManager,
         private val entitySetManager: EntitySetManager,

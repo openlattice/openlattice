@@ -416,9 +416,9 @@ class AuditRecordEntitySetsManager(
 
 }
 
-private fun isAnAuditEntitySetPredicate(entitySetId: UUID): Predicate<*, *> {
+private fun isAnAuditEntitySetPredicate(entitySetId: UUID): Predicate<AclKey, AuditRecordEntitySetConfiguration> {
     return Predicates.or(
-            Predicates.equal(ANY_AUDITING_ENTITY_SETS, entitySetId),
-            Predicates.equal(ANY_EDGE_AUDITING_ENTITY_SETS, entitySetId)
+            Predicates.equal<AclKey, AuditRecordEntitySetConfiguration>(ANY_AUDITING_ENTITY_SETS, entitySetId),
+            Predicates.equal<AclKey, AuditRecordEntitySetConfiguration>(ANY_EDGE_AUDITING_ENTITY_SETS, entitySetId)
     )
 }

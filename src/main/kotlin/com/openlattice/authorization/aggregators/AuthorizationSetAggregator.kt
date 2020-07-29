@@ -30,7 +30,7 @@ import java.util.*
 
 data class AuthorizationSetAggregator(
         val permissionsMap: MutableMap<AclKey, EnumSet<Permission>>
-) : Aggregator<MutableMap.MutableEntry<AceKey, AceValue>, EnumSet<Permission>>() {
+) : Aggregator<MutableMap.MutableEntry<AceKey, AceValue>, EnumSet<Permission>> {
 
     companion object {
         private val logger = LoggerFactory.getLogger(AuthorizationSetAggregator::class.java)
@@ -38,7 +38,7 @@ data class AuthorizationSetAggregator(
 
     override fun accumulate(input: MutableMap.MutableEntry<AceKey, AceValue>) {
         val permissions = input.value.permissions
-        
+
         if (permissions == null) {
             logger.error("Encountered null permissions for ${input.key}")
         } else {

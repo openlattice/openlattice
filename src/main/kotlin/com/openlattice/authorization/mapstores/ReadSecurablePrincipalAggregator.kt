@@ -10,7 +10,7 @@ import com.openlattice.authorization.SecurablePrincipal
  */
 data class ReadSecurablePrincipalAggregator(
         var sp: SecurablePrincipal? = null
-) : Aggregator<MutableMap.MutableEntry<AclKey, SecurablePrincipal>, SecurablePrincipal>() {
+) : Aggregator<MutableMap.MutableEntry<AclKey, SecurablePrincipal>, SecurablePrincipal> {
 
     override fun accumulate(input: MutableMap.MutableEntry<AclKey, SecurablePrincipal>) {
         sp = input.value

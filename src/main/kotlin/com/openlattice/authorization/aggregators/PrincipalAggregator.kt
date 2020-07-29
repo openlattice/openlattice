@@ -8,7 +8,7 @@ import java.util.Map
 
 
 class PrincipalAggregator(private val principalsMap: MutableMap<AclKey, PrincipalSet>
-) : Aggregator<MutableMap.MutableEntry<AceKey, AceValue>, PrincipalAggregator>() {
+) : Aggregator<MutableMap.MutableEntry<AceKey, AceValue>, PrincipalAggregator> {
 
     override fun accumulate(input: MutableMap.MutableEntry<AceKey, AceValue>) {
         val key = input.key.aclKey
