@@ -28,6 +28,7 @@ import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicates
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.EntityKeyIdService
+import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.HazelcastQueue
@@ -76,8 +77,8 @@ class BackgroundLinkingService(
             while (true) {
                 val filteredLinkableEntitySetIds = entitySets.keySet(
                         Predicates.and(
-                                Predicates.`in`(EntitySetMapstore.ENTITY_TYPE_ID_INDEX, *linkableTypes.toTypedArray()),
-                                Predicates.notEqual(EntitySetMapstore.FLAGS_INDEX, EntitySetFlag.LINKING)
+                                Predicates.`in`<UUID, EntitySet>(EntitySetMapstore.ENTITY_TYPE_ID_INDEX, *linkableTypes.toTypedArray()),
+                                Predicates.notEqual<UUID, EntitySet>(EntitySetMapstore.FLAGS_INDEX, EntitySetFlag.LINKING)
                         )
                 )
 
