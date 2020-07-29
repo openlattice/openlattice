@@ -59,18 +59,18 @@ class HazelcastPrincipalService(
                 .getLogger(HazelcastPrincipalService::class.java)
 
         private fun findPrincipal(p: Principal): Predicate<AclKey, SecurablePrincipal> {
-            return Predicates.equal<AclKey, SecurablePrincipal>(PrincipalMapstore.PRINCIPAL_INDEX, p)
+            return Predicates.equal(PrincipalMapstore.PRINCIPAL_INDEX, p)
         }
 
-        private fun findPrincipals(principals: Collection<Principal>): Predicate<*, *> {
+        private fun findPrincipals(principals: Collection<Principal>): Predicate<AclKey, SecurablePrincipal> {
             return Predicates.`in`(PrincipalMapstore.PRINCIPAL_INDEX, *principals.toTypedArray())
         }
 
-        private fun hasSecurablePrincipal(principalAclKey: AclKey): Predicate<*, *> {
+        private fun hasSecurablePrincipal(principalAclKey: AclKey): Predicate<AclKey, AclKeySet> {
             return Predicates.equal("this.index[any]", principalAclKey.index)
         }
 
-        private fun hasAnySecurablePrincipal(aclKeys: Set<AclKey>): Predicate<*, *> {
+        private fun hasAnySecurablePrincipal(aclKeys: Set<AclKey>): Predicate<AclKey, AclKeySet> {
             return Predicates.`in`("this.index[any]", *aclKeys.map { it.index }.toTypedArray())
         }
     }
@@ -145,9 +145,9 @@ class HazelcastPrincipalService(
     }
 
     override fun getAllRolesInOrganization(organizationId: UUID): Collection<SecurablePrincipal> {
-        val rolesInOrganization = Predicates.and(
-                Predicates.equal(PrincipalMapstore.PRINCIPAL_TYPE_INDEX, PrincipalType.ROLE),
-                Predicates.equal(PrincipalMapstore.ACL_KEY_ROOT_INDEX, organizationId)
+        val rolesInOrganization = Predicates.and<AclKey, SecurablePrincipal>(
+                Predicates.equal<AclKey, SecurablePrincipal>(PrincipalMapstore.PRINCIPAL_TYPE_INDEX, PrincipalType.ROLE),
+                Predicates.equal<AclKey, SecurablePrincipal>(PrincipalMapstore.ACL_KEY_ROOT_INDEX, organizationId)
         )
         return principals.values(rolesInOrganization)
     }
@@ -193,6 +193,10 @@ class HazelcastPrincipalService(
         return principals.getAll(principalsWithPrincipal).values
     }
 
+    override fun getSecurablePrincipals(p: Predicate<AclKey, SecurablePrincipal>): MutableCollection<SecurablePrincipal> {
+        return principals.values(p)
+    }
+
     override fun getParentPrincipalsOfPrincipal(aclKey: AclKey): Collection<SecurablePrincipal> {
         val parentLayer = principalTrees.keySet(hasSecurablePrincipal(aclKey))
         return principals.getAll(parentLayer).values
@@ -211,10 +215,6 @@ class HazelcastPrincipalService(
 
     override fun getAllUserProfilesWithPrincipal(principal: AclKey): Collection<User> {
         return users.getAll(getAllUsersWithPrincipal(principal).map { it.id }.toSet()).values
-    }
-
-    override fun getSecurablePrincipals(p: Predicate<*, *>?): Collection<SecurablePrincipal> {
-        return principals.values(p)
     }
 
     override fun getSecurablePrincipals(simplePrincipals: Collection<Principal>): Collection<SecurablePrincipal> {
@@ -263,7 +263,7 @@ class HazelcastPrincipalService(
         )
     }
 
-    private fun getFirstSecurablePrincipal(p: Predicate<*, *>): SecurablePrincipal {
+    private fun getFirstSecurablePrincipal(p: Predicate<AclKey, SecurablePrincipal>): SecurablePrincipal {
         return principals.values(p).first()
     }
 

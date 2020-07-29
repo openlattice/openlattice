@@ -55,7 +55,7 @@ public interface SecurePrincipalsManager {
 
     Collection<SecurablePrincipal> getAllRolesInOrganization( UUID organizationId );
 
-    Collection<SecurablePrincipal> getSecurablePrincipals( Predicate p );
+    Collection<SecurablePrincipal> getSecurablePrincipals( Predicate<AclKey, SecurablePrincipal> p );
 
     void createSecurablePrincipal(
             Principal owner, SecurablePrincipal principal );
