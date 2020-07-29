@@ -1,7 +1,7 @@
 package com.openlattice.principals
 
 import com.hazelcast.core.Offloadable
-import com.hazelcast.spi.ExecutionService
+import com.hazelcast.spi.impl.executionservice.ExecutionService
 import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.SecurablePrincipal
 import com.openlattice.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor
