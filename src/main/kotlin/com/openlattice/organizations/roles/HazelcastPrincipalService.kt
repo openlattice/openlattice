@@ -58,8 +58,8 @@ class HazelcastPrincipalService(
         private val logger = LoggerFactory
                 .getLogger(HazelcastPrincipalService::class.java)
 
-        private fun findPrincipal(p: Principal): Predicate<*, *> {
-            return Predicates.equal(PrincipalMapstore.PRINCIPAL_INDEX, p)
+        private fun findPrincipal(p: Principal): Predicate<AclKey, SecurablePrincipal> {
+            return Predicates.equal<AclKey, SecurablePrincipal>(PrincipalMapstore.PRINCIPAL_INDEX, p)
         }
 
         private fun findPrincipals(principals: Collection<Principal>): Predicate<*, *> {

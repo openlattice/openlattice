@@ -27,6 +27,7 @@ import com.openlattice.organizations.processors.UpdateOrganizationSmsEntitySetIn
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet
 import com.openlattice.users.getAppMetadata
+import com.openlattice.users.processors.aggregators.UsersWithConnectionsAggregator
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.util.*
@@ -495,6 +496,8 @@ class HazelcastOrganizationService(
             it.connections += connections
             Result(null) //TODO: Being lazy not implementing diff as this should rarely be called.
         })
+
+        addUsersMatchingConnections(organizationId, connections)
     }
 
     @Timed
@@ -511,6 +514,8 @@ class HazelcastOrganizationService(
             it.connections.clear()
             Result(it.connections.addAll(connections), true)
         })
+
+        addUsersMatchingConnections(organizationId, connections)
     }
 
     fun getOrganizationsWithoutUserAndWithConnection(connections: Collection<String>, principal: Principal): Set<UUID> {
@@ -520,6 +525,15 @@ class HazelcastOrganizationService(
                         Predicates.not<UUID, Organization>(Predicates.`in`<UUID, Organization>(MEMBERS_INDEX, principal))
                 )
         )
+    }
+
+    private fun addUsersMatchingConnections(organizationId: UUID, connections: Set<String>) {
+        val usersWithConnections = users.aggregate(UsersWithConnectionsAggregator(connections, mutableSetOf()))
+        val profiles = usersWithConnections.associate {
+            Principal(PrincipalType.USER, it.id) to getAppMetadata(it)
+        }
+
+        addMembers(organizationId, profiles.keys, profiles)
     }
 
     companion object {
