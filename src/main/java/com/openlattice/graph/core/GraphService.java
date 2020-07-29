@@ -31,6 +31,7 @@ import com.openlattice.search.requests.EntityNeighborsFilter;
 
 import java.util.*;
 import java.util.stream.Stream;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Graph Object supporting CRUD operations of vertices and edges to the graph.
@@ -78,4 +79,8 @@ public interface GraphService {
             Optional<UUID> linkingEntitySetId );
 
     List<NeighborSets> getNeighborEntitySets( Set<UUID> entitySetIds );
+
+    int setPartitions(
+            @NotNull UUID entitySetId,
+            @NotNull Set<Integer> partitions );
 }

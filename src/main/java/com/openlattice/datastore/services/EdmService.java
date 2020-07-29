@@ -26,7 +26,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.*;
 import com.google.common.eventbus.EventBus;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.IMap;
+import com.hazelcast.map.IMap;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.query.Predicates;
 import com.openlattice.assembler.events.MaterializedEntitySetEdmChangeEvent;

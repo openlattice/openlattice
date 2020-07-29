@@ -4,7 +4,7 @@ import com.hazelcast.aggregation.Aggregator;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.HazelcastInstanceAware;
 import com.hazelcast.core.ILock;
-import com.hazelcast.core.IQueue;
+import com.hazelcast.collection.IQueue;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
