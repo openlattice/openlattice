@@ -3,8 +3,8 @@ package com.openlattice.indexing
 import com.google.common.base.Stopwatch
 import com.google.common.collect.ImmutableMap
 import com.google.common.collect.Iterables
+import com.hazelcast.config.IndexType
 import com.hazelcast.core.HazelcastInstance
-import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.hazelcast.query.QueryConstants
 import com.openlattice.IdConstants
@@ -12,7 +12,8 @@ import com.openlattice.auditing.AuditEventType
 import com.openlattice.auditing.AuditableEvent
 import com.openlattice.auditing.AuditingManager
 import com.openlattice.authorization.AclKey
-import com.openlattice.data.*
+import com.openlattice.data.DataDeletionManager
+import com.openlattice.data.DataGraphManager
 import com.openlattice.data.storage.DataDeletionService.Companion.MAX_BATCH_SIZE
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.EntitySet
@@ -46,14 +47,14 @@ class BackgroundExpiredDataDeletionService(
         private val logger = LoggerFactory.getLogger(BackgroundExpiredDataDeletionService::class.java)!!
     }
 
-    private val entitySets = HazelcastMap.ENTITY_SETS.getMap( hazelcastInstance )
-    private val expirationLocks = HazelcastMap.EXPIRATION_LOCKS.getMap( hazelcastInstance )
+    private val entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
+    private val expirationLocks = HazelcastMap.EXPIRATION_LOCKS.getMap(hazelcastInstance)
 
     @Inject
     private lateinit var edm: EdmManager
 
     init {
-        expirationLocks.addIndex(QueryConstants.THIS_ATTRIBUTE_NAME.value(), true)
+        expirationLocks.addIndex(IndexType.SORTED, QueryConstants.THIS_ATTRIBUTE_NAME.value())
     }
 
     private val taskLock = ReentrantLock()
@@ -65,7 +66,7 @@ class BackgroundExpiredDataDeletionService(
                 Predicates.lessThan(
                         QueryConstants.THIS_ATTRIBUTE_NAME.value(),
                         System.currentTimeMillis()
-                ) as Predicate<UUID, Long>
+                )
         )
     }
 
@@ -125,7 +126,11 @@ class BackgroundExpiredDataDeletionService(
 
         val expirationPT = entitySet.expiration!!.startDateProperty.map { propertyTypes[it]!! }
         val entityKeyIds = dataGraphService.getExpiringEntitiesFromEntitySet(
-                entitySet.id, entitySet.expiration!!, OffsetDateTime.now(), entitySet.expiration!!.deleteType, expirationPT
+                entitySet.id,
+                entitySet.expiration!!,
+                OffsetDateTime.now(),
+                entitySet.expiration!!.deleteType,
+                expirationPT
         )
         while (entityKeyIds.iterator().hasNext()) {
             val deletedEntityKeyIds: MutableSet<UUID> = mutableSetOf()
@@ -135,7 +140,11 @@ class BackgroundExpiredDataDeletionService(
             for (idsChunk in chunkedEntityKeyIds) {
                 val ids = idsChunk.toSet()
 
-                val writeEvent = deletionManager.clearOrDeleteEntities(entitySet.id, ids, entitySet.expiration!!.deleteType)
+                val writeEvent = deletionManager.clearOrDeleteEntities(
+                        entitySet.id,
+                        ids,
+                        entitySet.expiration!!.deleteType
+                )
 
                 logger.info(
                         "Completed deleting {} expired elements from entity set {}.",

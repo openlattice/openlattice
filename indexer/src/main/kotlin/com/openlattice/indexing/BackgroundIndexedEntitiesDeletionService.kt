@@ -21,19 +21,19 @@
 package com.openlattice.indexing
 
 import com.google.common.base.Stopwatch
+import com.hazelcast.config.IndexType
 import com.hazelcast.core.HazelcastInstance
-import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.hazelcast.query.QueryConstants
 import com.openlattice.data.storage.PostgresEntityDataQueryService
-import com.openlattice.postgres.PostgresTable.IDS
-import com.openlattice.postgres.DataTables.LAST_INDEX
 import com.openlattice.edm.EntitySet
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.indexing.configuration.IndexerConfiguration
+import com.openlattice.postgres.DataTables.LAST_INDEX
 import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
+import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
@@ -69,7 +69,7 @@ class BackgroundIndexedEntitiesDeletionService(
     private val deletionLocks = HazelcastMap.DELETION_LOCKS.getMap( hazelcastInstance )
 
     init {
-        deletionLocks.addIndex(QueryConstants.THIS_ATTRIBUTE_NAME.value(), true)
+        deletionLocks.addIndex(IndexType.SORTED, QueryConstants.THIS_ATTRIBUTE_NAME.value())
     }
 
     private val taskLock = ReentrantLock()
@@ -81,7 +81,7 @@ class BackgroundIndexedEntitiesDeletionService(
                 Predicates.lessThan(
                         QueryConstants.THIS_ATTRIBUTE_NAME.value(),
                         System.currentTimeMillis()
-                ) as Predicate<UUID, Long>
+                )
         )
     }
 
