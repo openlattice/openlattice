@@ -126,7 +126,8 @@ public final class ResultSetAdapters {
         final var organizationId = organizationId( rs );
         final var entitySetIds = entitySetIds( rs );
         final var tags = tags( rs );
-        return new SmsEntitySetInformation( phoneNumber, organizationId, entitySetIds, tags );
+        final var lastSync = rs.getObject( LAST_SYNC.getName(), OffsetDateTime.class );
+        return new SmsEntitySetInformation( phoneNumber, organizationId, entitySetIds, tags, lastSync );
     }
 
     @NotNull

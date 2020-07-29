@@ -26,7 +26,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.*;
 import com.google.common.eventbus.EventBus;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.IMap;
+import com.hazelcast.map.IMap;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.query.Predicates;
 import com.openlattice.assembler.events.MaterializedEntitySetEdmChangeEvent;
@@ -807,8 +807,8 @@ public class EdmService implements EdmManager {
 
     @SuppressWarnings( "unchecked" )
     @Override
-    public <V> Map<UUID, V> fromPropertyTypes( Set<UUID> propertyTypeIds, EntryProcessor<UUID, PropertyType> ep ) {
-        return (Map<UUID, V>) propertyTypes.executeOnKeys( propertyTypeIds, ep );
+    public <V> Map<UUID, V> fromPropertyTypes( Set<UUID> propertyTypeIds, EntryProcessor<UUID, PropertyType, V> ep ) {
+        return propertyTypes.executeOnKeys( propertyTypeIds, ep );
     }
 
     @Override

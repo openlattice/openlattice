@@ -8,7 +8,7 @@ import com.google.common.collect.SetMultimap
 import com.google.common.eventbus.EventBus
 import com.hazelcast.aggregation.Aggregators
 import com.hazelcast.core.HazelcastInstance
-import com.hazelcast.core.IMap
+import com.hazelcast.map.IMap
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.openlattice.assembler.events.MaterializePermissionChangeEvent
@@ -51,44 +51,44 @@ class HazelcastAuthorizationService(
         }
 
         private fun matches(aclKeys: Collection<AclKey>, principals: Set<Principal>): Predicate<AceKey, AceValue> {
-            return Predicates.and(hasAnyAclKeys(aclKeys), hasAnyPrincipals(principals)) as Predicate<AceKey, AceValue>
+            return Predicates.and<AceKey, AceValue>(hasAnyAclKeys(aclKeys), hasAnyPrincipals(principals))
         }
 
         private fun matches(aclKey: AclKey, permissions: EnumSet<Permission>): Predicate<AceKey, AceValue> {
-            return Predicates.and(hasAclKey(aclKey), hasExactPermissions(permissions)) as Predicate<AceKey, AceValue>
+            return Predicates.and<AceKey, AceValue>(hasAclKey(aclKey), hasExactPermissions(permissions))
         }
 
         private fun hasExactPermissions(permissions: EnumSet<Permission>): Predicate<AceKey, AceValue> {
 
             val subPredicates = permissions
-                    .map { Predicates.equal(PermissionMapstore.PERMISSIONS_INDEX, it) }
+                    .map { Predicates.equal<AceKey, AceValue>(PermissionMapstore.PERMISSIONS_INDEX, it) }
                     .toTypedArray()
 
-            return Predicates.and(*subPredicates) as Predicate<AceKey, AceValue>
+            return Predicates.and<AceKey, AceValue>(*subPredicates) 
         }
 
         private fun hasAnyPrincipals(principals: Collection<Principal>): Predicate<AceKey, AceValue> {
-            return Predicates.`in`(PermissionMapstore.PRINCIPAL_INDEX, *principals.toTypedArray()) as Predicate<AceKey, AceValue>
+            return Predicates.`in`<AceKey, AceValue>(PermissionMapstore.PRINCIPAL_INDEX, *principals.toTypedArray()) 
         }
 
         private fun hasAnyAclKeys(aclKeys: Collection<AclKey>): Predicate<AceKey, AceValue> {
-            return Predicates.`in`(ACL_KEY_INDEX, *aclKeys.map { it.index }.toTypedArray()) as Predicate<AceKey, AceValue>
+            return Predicates.`in`<AceKey, AceValue>(ACL_KEY_INDEX, *aclKeys.map { it.index }.toTypedArray()) 
         }
 
         private fun hasAclKey(aclKey: AclKey): Predicate<AceKey, AceValue> {
-            return Predicates.equal(ACL_KEY_INDEX, aclKey.index) as Predicate<AceKey, AceValue>
+            return Predicates.equal(ACL_KEY_INDEX, aclKey.index) 
         }
 
         private fun hasType(objectType: SecurableObjectType): Predicate<AceKey, AceValue> {
-            return Predicates.equal(PermissionMapstore.SECURABLE_OBJECT_TYPE_INDEX, objectType) as Predicate<AceKey, AceValue>
+            return Predicates.equal(PermissionMapstore.SECURABLE_OBJECT_TYPE_INDEX, objectType) 
         }
 
         private fun hasPrincipal(principal: Principal): Predicate<AceKey, AceValue> {
-            return Predicates.equal(PermissionMapstore.PRINCIPAL_INDEX, principal) as Predicate<AceKey, AceValue>
+            return Predicates.equal(PermissionMapstore.PRINCIPAL_INDEX, principal) 
         }
 
         private fun hasPrincipalType(type: PrincipalType): Predicate<AceKey, AceValue> {
-            return Predicates.equal(PermissionMapstore.PRINCIPAL_TYPE_INDEX, type) as Predicate<AceKey, AceValue>
+            return Predicates.equal(PermissionMapstore.PRINCIPAL_TYPE_INDEX, type) 
         }
     }
 
@@ -383,11 +383,11 @@ class HazelcastAuthorizationService(
             objectType: SecurableObjectType,
             permissions: EnumSet<Permission>): Stream<AclKey> {
         val principalPredicate = if (principals.size == 1) hasPrincipal(principals.first()) else hasAnyPrincipals(principals)
-        val p = Predicates.and(
+        val p = Predicates.and<AceKey, AceValue>(
                 principalPredicate,
                 hasType(objectType),
                 hasExactPermissions(permissions)
-        ) as Predicate<AceKey, AceValue>
+        )
 
         return aces.keySet(p)
                 .stream()
@@ -401,11 +401,11 @@ class HazelcastAuthorizationService(
             objectType: SecurableObjectType,
             permissions: EnumSet<Permission>,
             additionalFilter: Predicate<*, *>): Stream<AclKey> {
-        val p = Predicates.and(
+        val p = Predicates.and<AceKey, AceValue>(
                 hasAnyPrincipals(principals),
                 hasType(objectType),
                 hasExactPermissions(permissions),
-                additionalFilter) as Predicate<AceKey, AceValue>
+                additionalFilter) 
         return aces.keySet(p)
                 .stream()
                 .map { obj: AceKey -> obj.aclKey }
@@ -453,12 +453,12 @@ class HazelcastAuthorizationService(
                 .collect(Collectors.toSet())
         if (userPrincipals.size > 0) {
 
-            val allOtherUserOwnersPredicate = Predicates.and(
+            val allOtherUserOwnersPredicate = Predicates.and<AceKey, AceValue>(
                     hasAnyAclKeys(aclKeys),
                     hasExactPermissions(EnumSet.of(Permission.OWNER)),
-                    Predicates.not(hasAnyPrincipals(userPrincipals)),
+                    Predicates.not<AceKey, AceValue>(hasAnyPrincipals(userPrincipals)),
                     hasPrincipalType(PrincipalType.USER)
-            ) as Predicate<AceKey, AceValue>
+            )
 
             val allOtherUserOwnersCount: Long = aces.aggregate(Aggregators.count<Map.Entry<AceKey, AceValue>>(), allOtherUserOwnersPredicate)
             check(allOtherUserOwnersCount != 0L) {

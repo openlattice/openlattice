@@ -254,7 +254,7 @@ class ExternalDatabaseManagementService(
             securableObjectTypes.remove(aclKey)
             aclKeyReservations.release(it)
         }
-        organizationExternalDatabaseTables.executeOnEntries(DeleteOrganizationExternalDatabaseTableEntryProcessor(), idsPredicate(tableIds))
+        organizationExternalDatabaseTables.removeAll(idsPredicate(tableIds))
     }
 
     fun deleteOrganizationExternalDatabaseColumns(orgId: UUID, columnsByTable: Map<Pair<String, UUID>, Map<String, UUID>>) {
@@ -280,13 +280,13 @@ class ExternalDatabaseManagementService(
 
     fun deleteOrganizationExternalDatabaseColumnObjects(columnIdsByTableId: Map<UUID, Set<UUID>>) {
         columnIdsByTableId.forEach { (tableId, columnIds) ->
-            columnIds.forEach {
-                val aclKey = AclKey(tableId, it)
+            columnIds.forEach { columnId ->
+                val aclKey = AclKey(tableId, columnId)
                 authorizationManager.deletePermissions(aclKey)
                 securableObjectTypes.remove(aclKey)
-                aclKeyReservations.release(it)
+                aclKeyReservations.release(columnId)
             }
-            organizationExternalDatabaseColumns.executeOnEntries(DeleteOrganizationExternalDatabaseColumnsEntryProcessor(), idsPredicate(columnIds))
+            organizationExternalDatabaseColumns.removeAll(idsPredicate(columnIds))
         }
     }
 
@@ -650,15 +650,15 @@ class ExternalDatabaseManagementService(
     }
 
     /*PREDICATES*/
-    private fun idsPredicate(ids: Set<UUID>): Predicate<*, *> {
+    private fun <T> idsPredicate(ids: Set<UUID>): Predicate<UUID, T> {
         return Predicates.`in`(QueryConstants.KEY_ATTRIBUTE_NAME.value(), *ids.toTypedArray())
     }
 
-    private fun belongsToOrganization(orgId: UUID): Predicate<*, *> {
+    private fun belongsToOrganization(orgId: UUID): Predicate<UUID, OrganizationExternalDatabaseTable> {
         return Predicates.equal(ORGANIZATION_ID_INDEX, orgId)
     }
 
-    private fun belongsToTable(tableId: UUID): Predicate<*, *> {
+    private fun belongsToTable(tableId: UUID): Predicate<UUID, OrganizationExternalDatabaseColumn> {
         return Predicates.equal(TABLE_ID_INDEX, tableId)
     }
 

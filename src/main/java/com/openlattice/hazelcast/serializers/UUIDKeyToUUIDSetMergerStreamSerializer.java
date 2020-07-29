@@ -20,6 +20,7 @@
 
 package com.openlattice.hazelcast.serializers;
 
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.openlattice.hazelcast.processors.UUIDKeyToUUIDSetMerger;
 import com.hazelcast.nio.ObjectDataInput;
@@ -40,12 +41,12 @@ public class UUIDKeyToUUIDSetMergerStreamSerializer implements SelfRegisteringSt
         SetStreamSerializers.serialize(
                 out,
                 object.getBackingCollection(),
-                elem -> UUIDStreamSerializer.serialize( out, elem ) );
+                elem -> UUIDStreamSerializerUtils.serialize( out, elem ) );
     }
 
     @Override public UUIDKeyToUUIDSetMerger read( ObjectDataInput in ) throws IOException {
         return new UUIDKeyToUUIDSetMerger(
-                SetStreamSerializers.deserialize( in, UUIDStreamSerializer::deserialize )
+                SetStreamSerializers.deserialize( in, UUIDStreamSerializerUtils::deserialize )
         );
     }
 

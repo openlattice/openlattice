@@ -11,7 +11,7 @@ import com.openlattice.organizations.SecurablePrincipalList
  */
 data class SecurablePrincipalAccumulator(
         var v: SecurablePrincipalList? = null
-) : Aggregator<MutableMap.MutableEntry<AclKey, SecurablePrincipal>, SecurablePrincipalList>() {
+) : Aggregator<MutableMap.MutableEntry<AclKey, SecurablePrincipal>, SecurablePrincipalList> {
     override fun accumulate(input: MutableMap.MutableEntry<AclKey, SecurablePrincipal>) {
         if (v == null) {
             v = SecurablePrincipalList(mutableListOf())

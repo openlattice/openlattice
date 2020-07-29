@@ -6,6 +6,7 @@ import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.authorization.util.getLastAclKeySafely
 import com.openlattice.data.requests.NeighborEntityDetails
 import com.openlattice.edm.EdmConstants
+import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.PostgresColumn.*
@@ -196,9 +197,9 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
         ).asSequence().map { getLastAclKeySafely(it) }.toSet()
 
         return dependencies.entitySets.keySet(Predicates.and(
-                Predicates.`in`(EntitySetMapstore.ID_INDEX, *readableEntitySetIds.toTypedArray()),
-                Predicates.equal(EntitySetMapstore.FLAGS_INDEX, EntitySetFlag.ASSOCIATION),
-                Predicates.notEqual(EntitySetMapstore.FLAGS_INDEX, EntitySetFlag.AUDIT)
+                Predicates.`in`<UUID, EntitySet>(EntitySetMapstore.ID_INDEX, *readableEntitySetIds.toTypedArray()),
+                Predicates.equal<UUID, EntitySet>(EntitySetMapstore.FLAGS_INDEX, EntitySetFlag.ASSOCIATION),
+                Predicates.notEqual<UUID, EntitySet>(EntitySetMapstore.FLAGS_INDEX, EntitySetFlag.AUDIT)
         ))
     }
 

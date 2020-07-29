@@ -25,8 +25,9 @@ import com.openlattice.assembler.EntitySetAssemblyKey
 import com.openlattice.assembler.MaterializedEntitySet
 import java.time.OffsetDateTime
 
-class MaterializedEntitySetsRefreshAggregator(val refreshableEntitySets: MutableSet<EntitySetAssemblyKey> = mutableSetOf())
-    : Aggregator<Map.Entry<EntitySetAssemblyKey, MaterializedEntitySet>, Set<EntitySetAssemblyKey>>() {
+class MaterializedEntitySetsRefreshAggregator(
+        val refreshableEntitySets: MutableSet<EntitySetAssemblyKey> = mutableSetOf()
+) : Aggregator<Map.Entry<EntitySetAssemblyKey, MaterializedEntitySet>, Set<EntitySetAssemblyKey>> {
 
     override fun accumulate(input: Map.Entry<EntitySetAssemblyKey, MaterializedEntitySet>) {
         // the processor expects MaterializedEntitySets, where refreshRate is not null

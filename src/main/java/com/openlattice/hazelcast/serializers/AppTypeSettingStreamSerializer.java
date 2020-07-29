@@ -20,6 +20,7 @@
 
 package com.openlattice.hazelcast.serializers;
 
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -38,12 +39,12 @@ public class AppTypeSettingStreamSerializer implements SelfRegisteringStreamSeri
     }
 
     @Override public void write( ObjectDataOutput out, AppTypeSetting object ) throws IOException {
-        UUIDStreamSerializer.serialize( out, object.getEntitySetId() );
+        UUIDStreamSerializerUtils.serialize( out, object.getEntitySetId() );
         DelegatedPermissionEnumSetStreamSerializer.serialize( out, object.getPermissions() );
     }
 
     @Override public AppTypeSetting read( ObjectDataInput in ) throws IOException {
-        UUID entitySetId = UUIDStreamSerializer.deserialize( in );
+        UUID entitySetId = UUIDStreamSerializerUtils.deserialize( in );
         EnumSet<Permission> permissions = DelegatedPermissionEnumSetStreamSerializer.deserialize( in );
         return new AppTypeSetting( entitySetId, permissions );
     }

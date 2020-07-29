@@ -1,17 +1,17 @@
 package com.openlattice.postgres.mapstores;
 
+import com.hazelcast.config.IndexConfig;
+import com.hazelcast.config.IndexType;
+import com.hazelcast.config.MapConfig;
+import com.hazelcast.config.MapStoreConfig;
 import com.openlattice.apps.AppConfigKey;
 import com.openlattice.apps.AppTypeSetting;
 import com.openlattice.authorization.Permission;
 import com.openlattice.hazelcast.HazelcastMap;
-import com.hazelcast.config.MapConfig;
-import com.hazelcast.config.MapIndexConfig;
-import com.hazelcast.config.MapStoreConfig;
 import com.openlattice.postgres.PostgresArrays;
 import com.openlattice.postgres.PostgresTable;
 import com.openlattice.postgres.ResultSetAdapters;
 import com.zaxxer.hikari.HikariDataSource;
-
 import java.sql.Array;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -20,8 +20,8 @@ import java.util.EnumSet;
 import java.util.UUID;
 
 public class AppConfigMapstore extends AbstractBasePostgresMapstore<AppConfigKey, AppTypeSetting> {
-    public static final String APP_ID = "__key#appId";
-    public static final String ORGANIZATION_ID = "__key#organizationId";
+    public static final String APP_ID          = "__key.appId";
+    public static final String ORGANIZATION_ID = "__key.organizationId";
 
     public AppConfigMapstore( HikariDataSource hds ) {
         super( HazelcastMap.APP_CONFIGS, PostgresTable.APP_CONFIGS, hds );
@@ -63,8 +63,8 @@ public class AppConfigMapstore extends AbstractBasePostgresMapstore<AppConfigKey
 
     @Override public MapConfig getMapConfig() {
         return super.getMapConfig()
-                .addMapIndexConfig( new MapIndexConfig( APP_ID, false ) )
-                .addMapIndexConfig( new MapIndexConfig( ORGANIZATION_ID, false ) );
+                .addIndexConfig( new IndexConfig( IndexType.HASH, APP_ID ) )
+                .addIndexConfig( new IndexConfig( IndexType.HASH, ORGANIZATION_ID ) );
     }
 
     @Override public AppConfigKey generateTestKey() {

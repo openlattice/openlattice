@@ -23,6 +23,7 @@ package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.AssemblerConnectionManagerDependent
@@ -90,7 +91,7 @@ class MaterializeEntitySetProcessorStreamSerializer
 
         out.writeInt(obj.materializablePropertyTypes.size)
         obj.materializablePropertyTypes.forEach { (propertyTypeId, propertyType) ->
-            UUIDStreamSerializer.serialize(out, propertyTypeId)
+            UUIDStreamSerializerUtils.serialize(out, propertyTypeId)
             PropertyTypeStreamSerializer.serialize(out, propertyType)
         }
 
@@ -102,7 +103,7 @@ class MaterializeEntitySetProcessorStreamSerializer
 
         val materializablePropertySize = input.readInt()
         val materializablePropertyTypes = ((0 until materializablePropertySize).map {
-            UUIDStreamSerializer.deserialize(input) to PropertyTypeStreamSerializer.deserialize(input)
+            UUIDStreamSerializerUtils.deserialize(input) to PropertyTypeStreamSerializer.deserialize(input)
         }.toMap())
 
         val authorizedPropertyTypesOfPrincipals = deserializeAuthorizedPropertyTypesOfPrincipals(input)

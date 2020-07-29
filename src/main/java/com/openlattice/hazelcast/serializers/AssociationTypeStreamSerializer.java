@@ -20,6 +20,7 @@
 
 package com.openlattice.hazelcast.serializers;
 
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -38,8 +39,9 @@ public class AssociationTypeStreamSerializer implements SelfRegisteringStreamSer
 
     @Override
     public void write( ObjectDataOutput out, AssociationType object ) throws IOException {
-        SetStreamSerializers.serialize( out, object.getSrc(), ( UUID key ) -> UUIDStreamSerializer.serialize( out, key ) );
-        SetStreamSerializers.serialize( out, object.getDst(), ( UUID property ) -> UUIDStreamSerializer.serialize( out, property ) );
+        SetStreamSerializers.serialize( out, object.getSrc(), ( UUID key ) -> UUIDStreamSerializerUtils
+                .serialize( out, key ) );
+        SetStreamSerializers.serialize( out, object.getDst(), ( UUID property ) -> UUIDStreamSerializerUtils.serialize( out, property ) );
         out.writeBoolean( object.isBidirectional() );
 
         EntityType maybeEntityType = object.getAssociationEntityType();
@@ -53,8 +55,8 @@ public class AssociationTypeStreamSerializer implements SelfRegisteringStreamSer
 
     @Override
     public AssociationType read( ObjectDataInput in ) throws IOException {
-        LinkedHashSet<UUID> src = SetStreamSerializers.orderedDeserialize( in, UUIDStreamSerializer::deserialize );
-        LinkedHashSet<UUID> dst = SetStreamSerializers.orderedDeserialize( in, UUIDStreamSerializer::deserialize );
+        LinkedHashSet<UUID> src = SetStreamSerializers.orderedDeserialize( in, UUIDStreamSerializerUtils::deserialize );
+        LinkedHashSet<UUID> dst = SetStreamSerializers.orderedDeserialize( in, UUIDStreamSerializerUtils::deserialize );
         boolean bidirectional = in.readBoolean();
         Optional<EntityType> entityType = Optional.empty();
         if ( in.readBoolean() ) entityType = Optional.of( EntityTypeStreamSerializer.deserialize( in ) );

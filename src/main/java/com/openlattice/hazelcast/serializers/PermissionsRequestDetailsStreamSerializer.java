@@ -25,6 +25,7 @@ package com.openlattice.hazelcast.serializers;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.hazelcast.serializers.RhizomeUtils;
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.authorization.Permission;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
@@ -68,14 +69,14 @@ public class PermissionsRequestDetailsStreamSerializer
 
     public static void serialize( ObjectDataOutput out, PermissionsRequestDetails object ) throws IOException {
         StreamSerializerUtils.serializeFromMap( out, object.getPermissions(),
-                ( UUID key ) -> UUIDStreamSerializer.serialize( out, key ),
+                ( UUID key ) -> UUIDStreamSerializerUtils.serialize( out, key ),
                 ( EnumSet<Permission> permissions ) -> RhizomeUtils.Serializers.serializeEnumSet( out, Permission.class, permissions ) );
         out.writeInt( object.getStatus().ordinal() );
     }
     
     public static PermissionsRequestDetails deserialize( ObjectDataInput in ) throws IOException {
         Map<UUID, EnumSet<Permission>> permissions = StreamSerializerUtils.deserializeToMap( in,
-                UUIDStreamSerializer::deserialize,
+                UUIDStreamSerializerUtils::deserialize,
                 ( objectDataInput ) -> RhizomeUtils.Serializers.deSerializeEnumSet( in, Permission.class ) );
         RequestStatus st = status[ in.readInt() ];
         return new PermissionsRequestDetails( permissions, st );

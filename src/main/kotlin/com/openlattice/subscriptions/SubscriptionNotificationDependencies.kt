@@ -1,6 +1,6 @@
 package com.openlattice.subscriptions
 
-import com.hazelcast.core.IQueue
+import com.hazelcast.collection.IQueue
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.EdmAuthorizationHelper
 import com.openlattice.graph.GraphQueryService

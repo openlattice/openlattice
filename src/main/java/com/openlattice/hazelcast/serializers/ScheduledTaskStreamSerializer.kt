@@ -3,6 +3,7 @@ package com.openlattice.hazelcast.serializers
 import com.dataloom.mappers.ObjectMappers
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
 import com.openlattice.hazelcast.InternalTestDataFactory
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.scheduling.RunnableTask
@@ -30,7 +31,7 @@ class ScheduledTaskStreamSerializer : TestableSelfRegisteringStreamSerializer<Sc
     }
 
     override fun write(out: ObjectDataOutput, `object`: ScheduledTask) {
-        UUIDStreamSerializer.serialize(out, `object`.id)
+        UUIDStreamSerializerUtils.serialize(out, `object`.id)
         OffsetDateTimeStreamSerializer.serialize(out, `object`.scheduledDateTime)
 
         out.writeUTF(`object`.task.javaClass.name)
@@ -39,7 +40,7 @@ class ScheduledTaskStreamSerializer : TestableSelfRegisteringStreamSerializer<Sc
     }
 
     override fun read(`in`: ObjectDataInput): ScheduledTask {
-        val id = UUIDStreamSerializer.deserialize(`in`)
+        val id = UUIDStreamSerializerUtils.deserialize(`in`)
         val scheduledDateTime = OffsetDateTimeStreamSerializer.deserialize(`in`)
 
         val clazz = Class.forName(`in`.readUTF()) as Class<out RunnableTask>

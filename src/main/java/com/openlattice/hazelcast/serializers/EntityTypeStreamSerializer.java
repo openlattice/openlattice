@@ -22,6 +22,7 @@
 
 package com.openlattice.hazelcast.serializers;
 
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -65,13 +66,17 @@ public class EntityTypeStreamSerializer implements SelfRegisteringStreamSerializ
     }
 
     public static void serialize( ObjectDataOutput out, EntityType object ) throws IOException {
-        UUIDStreamSerializer.serialize( out, object.getId() );
+        UUIDStreamSerializerUtils.serialize( out, object.getId() );
         FullQualifiedNameStreamSerializer.serialize( out, object.getType() );
         out.writeUTF( object.getTitle() );
         out.writeUTF( object.getDescription() );
-        SetStreamSerializers.serialize( out, object.getSchemas(), ( FullQualifiedName schema ) -> FullQualifiedNameStreamSerializer.serialize( out, schema ) );
-        SetStreamSerializers.serialize( out, object.getKey(), ( UUID key ) -> UUIDStreamSerializer.serialize( out, key ) );
-        SetStreamSerializers.serialize( out, object.getProperties(), ( UUID property ) -> UUIDStreamSerializer.serialize( out, property ) );
+        SetStreamSerializers.serialize( out,
+                object.getSchemas(),
+                ( FullQualifiedName schema ) -> FullQualifiedNameStreamSerializer.serialize( out, schema ) );
+        SetStreamSerializers
+                .serialize( out, object.getKey(), ( UUID key ) -> UUIDStreamSerializerUtils.serialize( out, key ) );
+        SetStreamSerializers.serialize( out, object.getProperties(), ( UUID property ) -> UUIDStreamSerializerUtils
+                .serialize( out, property ) );
 
         // TODO: get rid of this setmultimap
         GuavaStreamSerializersKt.serializeSetMultimap( out, object.getPropertyTags() );
@@ -82,27 +87,28 @@ public class EntityTypeStreamSerializer implements SelfRegisteringStreamSerializ
         out.writeBoolean( present );
 
         if ( present ) {
-            UUIDStreamSerializer.serialize( out, baseType.get() );
+            UUIDStreamSerializerUtils.serialize( out, baseType.get() );
         }
         out.writeUTF( object.getCategory().toString() );
         out.writeInt( object.getShards() );
     }
 
     public static EntityType deserialize( ObjectDataInput in ) throws IOException {
-        final UUID id = UUIDStreamSerializer.deserialize( in );
+        final UUID id = UUIDStreamSerializerUtils.deserialize( in );
         final FullQualifiedName type = FullQualifiedNameStreamSerializer.deserialize( in );
         final String title = in.readUTF();
         final Optional<String> description = Optional.of( in.readUTF() );
         final Set<FullQualifiedName> schemas = SetStreamSerializers.deserialize( in,
                 FullQualifiedNameStreamSerializer::deserialize );
-        final LinkedHashSet<UUID> keys = SetStreamSerializers.orderedDeserialize( in, UUIDStreamSerializer::deserialize );
+        final LinkedHashSet<UUID> keys = SetStreamSerializers
+                .orderedDeserialize( in, UUIDStreamSerializerUtils::deserialize );
         final LinkedHashSet<UUID> properties = SetStreamSerializers.orderedDeserialize( in,
-                UUIDStreamSerializer::deserialize );
+                UUIDStreamSerializerUtils::deserialize );
         final var propertyTags = GuavaStreamSerializersKt.deserializeLinkedHashMultimap( in );
         final Optional<UUID> baseType;
 
         if ( in.readBoolean() ) {
-            baseType = Optional.of( UUIDStreamSerializer.deserialize( in ) );
+            baseType = Optional.of( UUIDStreamSerializerUtils.deserialize( in ) );
         } else {
             baseType = Optional.empty();
         }

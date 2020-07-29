@@ -20,6 +20,7 @@
 
 package com.openlattice.hazelcast.serializers;
 
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -37,11 +38,11 @@ public class UpdateAppConfigEntitySetProcessorStreamSerializer
 
     @Override public void write(
             ObjectDataOutput out, UpdateAppConfigEntitySetProcessor object ) throws IOException {
-        UUIDStreamSerializer.serialize( out, object.getEntitySetId() );
+        UUIDStreamSerializerUtils.serialize( out, object.getEntitySetId() );
     }
 
     @Override public UpdateAppConfigEntitySetProcessor read( ObjectDataInput in ) throws IOException {
-        return new UpdateAppConfigEntitySetProcessor( UUIDStreamSerializer.deserialize( in ) );
+        return new UpdateAppConfigEntitySetProcessor( UUIDStreamSerializerUtils.deserialize( in ) );
     }
 
     @Override public int getTypeId() {

@@ -20,6 +20,7 @@
 
 package com.openlattice.hazelcast.serializers;
 
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -34,14 +35,14 @@ public class EntitySetPropertyKeyStreamSerializer implements SelfRegisteringStre
 
     @Override
     public void write( ObjectDataOutput out, EntitySetPropertyKey object ) throws IOException {
-        UUIDStreamSerializer.serialize( out, object.getEntitySetId() );
-        UUIDStreamSerializer.serialize( out, object.getPropertyTypeId() );
+        UUIDStreamSerializerUtils.serialize( out, object.getEntitySetId() );
+        UUIDStreamSerializerUtils.serialize( out, object.getPropertyTypeId() );
     }
 
     @Override
     public EntitySetPropertyKey read( ObjectDataInput in ) throws IOException {
-        UUID entitySetId = UUIDStreamSerializer.deserialize( in );
-        UUID propertyTypeId = UUIDStreamSerializer.deserialize( in );
+        UUID entitySetId = UUIDStreamSerializerUtils.deserialize( in );
+        UUID propertyTypeId = UUIDStreamSerializerUtils.deserialize( in );
         return new EntitySetPropertyKey( entitySetId, propertyTypeId );
     }
 

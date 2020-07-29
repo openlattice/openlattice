@@ -19,10 +19,14 @@ import javax.imageio.ImageIO
 private const val FROM_EMAIL = "courier@openlattice.com"
 private const val TEMPLATE_PATH = "mail/templates/shared/CodexMessageAlertTemplate.mustache"
 
+private val PERSON_ENTITY_TYPE_ID = UUID.fromString("31cf5595-3fe9-4d3e-a9cf-39355a4b8cab")
+
 private val PHONE_NUMBER_FQN = FullQualifiedName("contact.phonenumber")
 private val MESSAGE_TEXT_FQN = FullQualifiedName("ol.text")
 private val DATETIME_FQN = FullQualifiedName("general.datetime")
 private val ATTACHMENT_FQN = FullQualifiedName("ol.imagedata")
+private val FIRST_NAME_FQN = FullQualifiedName("nc.PersonGivenName")
+private val LAST_NAME_FQN = FullQualifiedName("nc.PersonSurName")
 
 
 /*
@@ -73,10 +77,29 @@ class CodexAlertEmailRenderer {
             return tags
         }
 
+        private fun getSenderFromNeighbors(phoneNumber: String, neighbors: List<NeighborEntityDetails>): String {
+            val personNeighbors = neighbors
+                    .filter { it.neighborEntitySet.isPresent && it.neighborEntitySet.get().entityTypeId == PERSON_ENTITY_TYPE_ID }
+                    .map { it.neighborDetails.get() }
+
+            if (personNeighbors.isEmpty()) {
+                return phoneNumber
+            }
+
+            val names = personNeighbors.joinToString(", ") {
+                val first = it[FIRST_NAME_FQN]?.first() ?: ""
+                val last = it[LAST_NAME_FQN]?.first() ?: ""
+                arrayOf(first, last).joinToString(" ")
+            }
+
+            return "$names ($phoneNumber)"
+        }
+
         fun renderEmail(
                 persistentSearch: PersistentSearch,
                 message: Map<FullQualifiedName, Set<Any>>,
-                userEmail: String
+                userEmail: String,
+                neighbors: List<NeighborEntityDetails>
         ): RenderableEmailRequest {
 
             val templateObjects: MutableMap<String, Any> = mutableMapOf()
@@ -86,7 +109,9 @@ class CodexAlertEmailRenderer {
             templateObjects.putAll(getMessageDetails(message, timezone))
             templateObjects.putAll(getMetadataTemplateObjects(persistentSearch.alertMetadata))
 
-            val subject = "New Text Message From ${templateObjects[PHONE_NUMBER_FIELD]}"
+            val sender = getSenderFromNeighbors(templateObjects[PHONE_NUMBER_FIELD].toString(), neighbors)
+
+            val subject = "New Text Message From $sender"
 
             templateObjects["subscriber"] = userEmail
 

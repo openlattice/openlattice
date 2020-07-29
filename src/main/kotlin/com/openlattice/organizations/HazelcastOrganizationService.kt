@@ -9,6 +9,7 @@ import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.openlattice.assembler.Assembler
 import com.openlattice.authorization.*
+import com.openlattice.authorization.mapstores.PrincipalMapstore
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.notifications.sms.PhoneNumberService
@@ -471,7 +472,7 @@ class HazelcastOrganizationService(
             organizations.submitToKey(
                     organizationId, UpdateOrganizationSmsEntitySetInformationEntryProcessor(entitySetInfoList)
             )
-        }.forEach { it.get() }
+        }.forEach { it.toCompletableFuture().get() }
     }
 
     @Timed
@@ -515,8 +516,8 @@ class HazelcastOrganizationService(
     fun getOrganizationsWithoutUserAndWithConnection(connections: Collection<String>, principal: Principal): Set<UUID> {
         return organizations.keySet(
                 Predicates.and(
-                        Predicates.`in`(CONNECTIONS_INDEX, *connections.toTypedArray()),
-                        Predicates.not(Predicates.`in`(MEMBERS_INDEX, principal))
+                        Predicates.`in`<UUID, Organization>(CONNECTIONS_INDEX, *connections.toTypedArray()),
+                        Predicates.not<UUID, Organization>(Predicates.`in`<UUID, Organization>(MEMBERS_INDEX, principal))
                 )
         )
     }
@@ -546,10 +547,10 @@ class HazelcastOrganizationService(
             )
         }
 
-        private fun getOrganizationPredicate(organizationId: UUID): Predicate<*, *> {
+        private fun getOrganizationPredicate(organizationId: UUID): Predicate<UUID, Organization> {
             return Predicates.and(
-                    Predicates.equal("principalType", PrincipalType.ORGANIZATION),
-                    Predicates.equal("aclKey[0]", organizationId)
+                    Predicates.equal<UUID, Organization>(PrincipalMapstore.PRINCIPAL_TYPE_INDEX, PrincipalType.ORGANIZATION),
+                    Predicates.equal<UUID, Organization>(PrincipalMapstore.ACL_KEY_ROOT_INDEX, organizationId)
             )
         }
     }

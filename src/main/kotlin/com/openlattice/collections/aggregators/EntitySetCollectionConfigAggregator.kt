@@ -7,7 +7,7 @@ import java.util.*
 
 data class EntitySetCollectionConfigAggregator(
         val collectionTemplates: CollectionTemplates
-) : Aggregator<Map.Entry<CollectionTemplateKey, UUID>, CollectionTemplates>() {
+) : Aggregator<Map.Entry<CollectionTemplateKey, UUID>, CollectionTemplates> {
 
     override fun accumulate(input: Map.Entry<CollectionTemplateKey, UUID>) {
         val entitySetCollectionId = input.key.entitySetCollectionId

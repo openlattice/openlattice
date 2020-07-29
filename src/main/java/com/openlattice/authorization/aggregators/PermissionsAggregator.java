@@ -34,8 +34,8 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Map;
 import java.util.Set;
 
-public class PermissionsAggregator extends Aggregator<Map.Entry<AceKey, AceValue>, Set<AclKey>>
-        implements HazelcastInstanceAware {
+public class PermissionsAggregator
+        implements Aggregator<Map.Entry<AceKey, AceValue>, Set<AclKey>>, HazelcastInstanceAware {
     private static final long serialVersionUID = -1015754054455567010L;
 
     private final SecurableObjectType objectType;

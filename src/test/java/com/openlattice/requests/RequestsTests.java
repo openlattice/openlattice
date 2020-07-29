@@ -23,7 +23,7 @@
 package com.openlattice.requests;
 
 import com.google.common.collect.ImmutableSet;
-import com.hazelcast.core.IMap;
+import com.hazelcast.map.IMap;
 import com.hazelcast.spi.exception.RetryableHazelcastException;
 import com.openlattice.authorization.AceKey;
 import com.openlattice.authorization.AclKey;

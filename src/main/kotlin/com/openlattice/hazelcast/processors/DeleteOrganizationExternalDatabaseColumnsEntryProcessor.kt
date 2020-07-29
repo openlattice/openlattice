@@ -5,9 +5,9 @@ import com.openlattice.organization.OrganizationExternalDatabaseColumn
 import java.util.*
 
 class DeleteOrganizationExternalDatabaseColumnsEntryProcessor()
-    : AbstractRhizomeEntryProcessor<UUID, Set<OrganizationExternalDatabaseColumn>, Set<OrganizationExternalDatabaseColumn>>() {
+    : AbstractRhizomeEntryProcessor<UUID, OrganizationExternalDatabaseColumn, Set<OrganizationExternalDatabaseColumn>>() {
 
-    override fun process(entry: MutableMap.MutableEntry<UUID, Set<OrganizationExternalDatabaseColumn>?>): Set<OrganizationExternalDatabaseColumn>? {
+    override fun process(entry: MutableMap.MutableEntry<UUID, OrganizationExternalDatabaseColumn?>): Set<OrganizationExternalDatabaseColumn>? {
         entry.setValue(null)
         return null
     }

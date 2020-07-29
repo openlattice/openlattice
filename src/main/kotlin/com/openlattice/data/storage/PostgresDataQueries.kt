@@ -88,7 +88,8 @@ fun buildPreparableFiltersSql(
             metadataOptions,
             idsPresent = idsPresent,
             partitionsPresent = partitionsPresent,
-            detailed = detailed
+            detailed = detailed,
+            linking = linking
     ) + linkingClause + filtersClause + innerGroupBy
 
     val sql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name}$metadataOptionColumnsSql," +
@@ -103,13 +104,15 @@ internal fun selectEntitiesGroupedByIdAndPropertyTypeId(
         idsPresent: Boolean = true,
         partitionsPresent: Boolean = true,
         entitySetsPresent: Boolean = true,
-        detailed: Boolean = false
+        detailed: Boolean = false,
+        linking: Boolean = false
 ): String {
     //Already have the comma prefix
     val metadataOptionsSql = metadataOptions.joinToString("") { mapMetaDataToSelector(it) }
     val columnsSql = if (detailed) detailedValueColumnsSql else valuesColumnsSql
-    return "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name},${PARTITION.name},${PROPERTY_TYPE_ID.name}$metadataOptionsSql,$columnsSql " +
-            "FROM ${DATA.name} ${optionalWhereClauses(idsPresent, partitionsPresent, entitySetsPresent)}"
+    val idColumn = if (linking) ORIGIN_ID.name else ID_VALUE.name
+    return "SELECT ${ENTITY_SET_ID.name},$idColumn as ${ID_VALUE.name},${PARTITION.name},${PROPERTY_TYPE_ID.name}$metadataOptionsSql,$columnsSql " +
+            "FROM ${DATA.name} ${optionalWhereClauses(idsPresent, partitionsPresent, entitySetsPresent, linking)}"
 }
 
 /**
@@ -141,7 +144,7 @@ private fun mapMetaDataToColumnName(metadataOption: MetadataOption): String {
 private fun mapMetaDataToSelector(metadataOption: MetadataOption): String {
     return when (metadataOption) {
         MetadataOption.LAST_WRITE -> ",max(${LAST_WRITE.name}) AS ${mapMetaDataToColumnName(metadataOption)}"
-        MetadataOption.ENTITY_KEY_IDS -> ",${ORIGIN_ID.name}"
+        MetadataOption.ENTITY_KEY_IDS -> ",${ID_VALUE.name} as ${ORIGIN_ID.name}" //Adapter for queries for now.
         else -> throw UnsupportedOperationException("No implementation yet for metadata option $metadataOption")
     }
 }
@@ -249,10 +252,12 @@ internal fun groupBy(columns: String): String {
 fun optionalWhereClauses(
         idsPresent: Boolean = true,
         partitionsPresent: Boolean = true,
-        entitySetsPresent: Boolean = true
+        entitySetsPresent: Boolean = true,
+        linking: Boolean = false
 ): String {
     val entitySetClause = if (entitySetsPresent) "${ENTITY_SET_ID.name} = ANY(?)" else ""
-    val idsClause = if (idsPresent) "${ID_VALUE.name} = ANY(?)" else ""
+    val idsColumn = if (linking) ORIGIN_ID.name else ID_VALUE.name
+    val idsClause = if (idsPresent) "$idsColumn = ANY(?)" else ""
     val partitionClause = if (partitionsPresent) "${PARTITION.name} = ANY(?)" else ""
     val versionsClause = "${VERSION.name} > 0 "
 
@@ -275,71 +280,6 @@ fun optionalWhereClausesSingleEdk(
 }
 
 /**
- * Preparable sql to upsert entities in [IDS] table.
- *
- * It sets a positive version and updates last write to current time.
- *
- * The bind order is the following:
- *
- *
- * 1 - versions
- *
- * 2 - version
- *
- * 3 - version
- *
- * 4 - entity set id
- *
- * 5 - entity key ids
- *
- * 6 - partition
- *
- * 7 - partition
- *
- * 8 - version
- */
-fun buildUpsertEntitiesAndLinkedData(): String {
-    val insertColumns = dataTableValueColumns.joinToString(",") { it.name }
-
-    val metadataColumns = listOf(
-            ENTITY_SET_ID,
-            ID_VALUE,
-            PARTITION,
-            ORIGIN_ID,
-            PROPERTY_TYPE_ID,
-            HASH,
-            LAST_WRITE,
-            VERSION,
-            VERSIONS
-    )
-    val metadataColumnsSql = metadataColumns.joinToString(",") { it.name }
-
-    val metadataReadColumnsSql = listOf(
-            ENTITY_SET_ID.name,
-            LINKING_ID.name,
-            "?",
-            ID_VALUE.name,
-            PROPERTY_TYPE_ID.name,
-            HASH.name,
-            LAST_WRITE.name,
-            VERSION.name,
-            VERSIONS.name
-    ).joinToString(",")
-
-    val conflictClause = (metadataColumns + dataTableValueColumns).joinToString(
-            ","
-    ) { "${it.name} = EXCLUDED.${it.name}" }
-
-    return "WITH linking_map as ($upsertEntitiesSql) INSERT INTO ${DATA.name} ($metadataColumnsSql,$insertColumns) " +
-            "SELECT $metadataReadColumnsSql,$insertColumns FROM ${DATA.name} INNER JOIN " +
-            "linking_map USING(${ENTITY_SET_ID.name},${ID.name},${PARTITION.name}) " +
-            "WHERE ${LINKING_ID.name} IS NOT NULL AND version > ? " +
-//            "ORDER BY ${ENTITY_SET_ID.name},${ID.name},${PARTITION.name},${PROPERTY_TYPE_ID.name},${HASH.name},${ORIGIN_ID.name} " +
-            "ON CONFLICT ($primaryKeyColumnNamesAsString) " +
-            "DO UPDATE SET $conflictClause"
-}
-
-/**
  * Preparable sql to lock entities in [IDS] table.
  *
  * This query will lock provided entities that have an assigned linking id in ID order.
@@ -348,7 +288,7 @@ fun buildUpsertEntitiesAndLinkedData(): String {
  *
  * 1 - entity set id
  *
- * 2 - entity key ids
+ * 2 - entity key id
  *
  * 3 - partition
  */
@@ -356,6 +296,24 @@ val lockEntitiesInIdsTable =
         "SELECT 1 FROM ${IDS.name} " +
                 "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ? AND ${PARTITION.name} = ? " +
                 "FOR UPDATE"
+
+/**
+ * Preparable sql to lock entities in [IDS] table.
+ *
+ * This query will lock provided entities that have an assigned linking id in ID order.
+ *
+ * The bind order is the following:
+ *
+ * 1 - entity key ids
+ *
+ * 2 - partition
+ */
+val bulkLockEntitiesInIdsTable =
+        "SELECT 1 FROM ${IDS.name} " +
+                "WHERE ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ? " +
+                "ORDER BY ${ID_VALUE.name}" +
+                "FOR UPDATE"
+
 
 /**
  * Preparable sql to lock entities in [IDS] table.
@@ -403,10 +361,38 @@ val upsertEntitiesSql = "UPDATE ${IDS.name} " +
                 "WHEN abs(${IDS.name}.${VERSION.name}) <= abs(?) THEN ? " +
                 "ELSE ${IDS.name}.${VERSION.name} " +
             "END " +
-        "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ? " +
-        "RETURNING ${ENTITY_SET_ID.name},${ID.name},${PARTITION.name},${LINKING_ID.name} "
+        "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?) AND ${PARTITION.name} = ? "
 // @formatter:on
 
+/**
+ * Preparable sql to update an entity in the [IDS] table.
+ *
+ * It sets a positive version and updates last write to current time.
+ *
+ * The bind order is the following:
+ *
+ * 1 - versions
+ *
+ * 2 - version
+ *
+ * 3 - version
+ *
+ * 4 - entity set id
+ *
+ * 5 - entity key id
+ *
+ * 6 - partition
+ */
+// @formatter:off
+val updateEntitySql = "UPDATE ${IDS.name} " +
+        "SET ${VERSIONS.name} = ${VERSIONS.name} || ?, " +
+        "${LAST_WRITE.name} = now(), " +
+        "${VERSION.name} = CASE " +
+        "WHEN abs(${IDS.name}.${VERSION.name}) <= abs(?) THEN ? " +
+        "ELSE ${IDS.name}.${VERSION.name} " +
+        "END " +
+        "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ? AND ${PARTITION.name} = ? "
+// @formatter:on
 
 /**
  * Preparable SQL that upserts a version and sets last write to current datetime for all entities in a given entity set
@@ -418,6 +404,7 @@ val upsertEntitiesSql = "UPDATE ${IDS.name} " +
  * 2. version
  * 3. version
  * 4. entity set id
+ * 5. partition
  */
 // @formatter:off
 internal val updateVersionsForEntitySet = "UPDATE ${IDS.name} " +
@@ -430,8 +417,8 @@ internal val updateVersionsForEntitySet = "UPDATE ${IDS.name} " +
                     "ELSE ${IDS.name}.${VERSION.name} " +
                 "END, " +
             "${LAST_WRITE.name} = 'now()' " +
-        "WHERE ${ENTITY_SET_ID.name} = ? "
-// TODO do we need partition here??
+        "WHERE ${ENTITY_SET_ID.name} = ? " +
+        "AND ${PARTITION.name} = ? "
 // @formatter:on
 /**
  * Preparable SQL that upserts a version and sets last write to current datetime for all entities in a given entity set
@@ -443,12 +430,11 @@ internal val updateVersionsForEntitySet = "UPDATE ${IDS.name} " +
  * 2. version
  * 3. version
  * 4. entity set id
- * 5. entity key ids (uuid array)
- * 6. partitions (int array)
+ * 5. partition
+ * 6. entity key ids (uuid array)
  */
 internal val updateVersionsForEntitiesInEntitySet = "$updateVersionsForEntitySet " +
-        "AND ${ID_VALUE.name} = ANY(?) " +
-        "AND ${PARTITION.name} = ANY(?) "
+        "AND ${ID_VALUE.name} = ANY(?) "
 
 /**
  * Preparable SQL that zeroes out the version and sets last write to current datetime for all entities in a given
@@ -457,7 +443,7 @@ internal val updateVersionsForEntitiesInEntitySet = "$updateVersionsForEntitySet
  * The following bind order is expected:
  *
  * 1. entity set id
- * 2. partition (uuid array)
+ * 2. partition
  */
 // @formatter:off
 internal val zeroVersionsForEntitySet = "UPDATE ${IDS.name} " +
@@ -467,7 +453,7 @@ internal val zeroVersionsForEntitySet = "UPDATE ${IDS.name} " +
             "${LAST_WRITE.name} = 'now()' " +
         "WHERE " +
             "${ENTITY_SET_ID.name} = ? AND " +
-            "${PARTITION.name} = ANY(?) "
+            "${PARTITION.name} = ? "
 // @formatter:on
 
 
@@ -478,7 +464,7 @@ internal val zeroVersionsForEntitySet = "UPDATE ${IDS.name} " +
  * The following bind order is expected:
  *
  * 1. entity set id
- * 2. partition (uuid array)
+ * 2. partition
  * 3. id (uuid array)
  */
 internal val zeroVersionsForEntitiesInEntitySet = "$zeroVersionsForEntitySet AND ${ID.name} = ANY(?) "
@@ -493,6 +479,7 @@ internal val zeroVersionsForEntitiesInEntitySet = "$zeroVersionsForEntitySet AND
  * 2. version
  * 3. version
  * 4. entity set id
+ * 5. partitions (int array)
  */
 // @formatter:off
 internal val updateVersionsForPropertiesInEntitySet = "UPDATE ${DATA.name} " +
@@ -505,7 +492,8 @@ internal val updateVersionsForPropertiesInEntitySet = "UPDATE ${DATA.name} " +
                     "ELSE ${DATA.name}.${VERSION.name} " +
                 "END, " +
             "${LAST_WRITE.name} = 'now()' " +
-        "WHERE ${ENTITY_SET_ID.name} = ? "
+        "WHERE ${ENTITY_SET_ID.name} = ? " +
+        "AND ${PARTITION.name} = ANY(?) "
 // @formatter:on
 /**
  * Preparable SQL that updates a version and sets last write to current datetime for all properties in a given entity
@@ -517,7 +505,8 @@ internal val updateVersionsForPropertiesInEntitySet = "UPDATE ${DATA.name} " +
  * 2. version
  * 3. version
  * 4. entity set id
- * 5. property type ids
+ * 5. partition(s) (int array)
+ * 6. property type ids
  */
 internal val updateVersionsForPropertyTypesInEntitySet = "$updateVersionsForPropertiesInEntitySet " +
         "AND ${PROPERTY_TYPE_ID.name} = ANY(?)"
@@ -532,11 +521,11 @@ internal val updateVersionsForPropertyTypesInEntitySet = "$updateVersionsForProp
  * 2. version
  * 3. version
  * 4. entity set id
- * 5. property type ids
- * 6. entity key ids
+ * 5. partition(s) (int array)
+ * 6. property type ids
+ * 7. entity key ids
  *    IF LINKING    checks against ORIGIN_ID
  *    ELSE          checks against ID column
- * 7. partitions
  */
 fun updateVersionsForPropertyTypesInEntitiesInEntitySet(linking: Boolean = false): String {
     val idsSql = if (linking) {
@@ -545,8 +534,7 @@ fun updateVersionsForPropertyTypesInEntitiesInEntitySet(linking: Boolean = false
         "AND ${ID_VALUE.name} = ANY(?)"
     }
 
-    return "$updateVersionsForPropertyTypesInEntitySet $idsSql " +
-            "AND ${PARTITION.name} = ANY(?) "
+    return "$updateVersionsForPropertyTypesInEntitySet $idsSql "
 }
 
 /**
@@ -559,11 +547,11 @@ fun updateVersionsForPropertyTypesInEntitiesInEntitySet(linking: Boolean = false
  * 2. version
  * 3. version
  * 4. entity set id
- * 5. property type ids
- * 6. entity key ids (if linking: linking ids)
- * 7. partitions
- * 8. {origin ids}: only if linking
- * 9. hash
+ * 5. partitions
+ * 6. property type ids
+ * 7. entity key ids (if linking: linking ids)
+ *    {origin ids}: only if linking
+ * 8. hash
  */
 internal fun updateVersionsForPropertyValuesInEntitiesInEntitySet(linking: Boolean = false): String {
     return "${updateVersionsForPropertyTypesInEntitiesInEntitySet(linking)} AND ${HASH.name} = ? "
@@ -580,14 +568,13 @@ internal fun updateVersionsForPropertyValuesInEntitiesInEntitySet(linking: Boole
  *
  * Where :
  * 4. ENTITY_SET: entity set id
- * 5. ID_VALUE: linking id
- * 6. ORIGIN_ID: entity key id
- * 7. PARTITION: partition(s) (array)
+ * 5. PARTITION: partition(s) (array)
+ * 6. ID_VALUE: linking id
+ * 7. ORIGIN_ID: entity key id
  */
 val tombstoneLinkForEntity = "$updateVersionsForPropertiesInEntitySet " +
         "AND ${ID_VALUE.name} = ? " +
-        "AND ${ORIGIN_ID.name} = ? " +
-        "AND ${PARTITION.name} = ANY(?) "
+        "AND ${ORIGIN_ID.name} = ? "
 
 /**
  * Preparable SQL deletes a given property in a given entity set in [DATA]

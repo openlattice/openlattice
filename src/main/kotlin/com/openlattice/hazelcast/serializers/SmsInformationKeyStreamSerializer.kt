@@ -2,6 +2,7 @@ package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.notifications.sms.SmsInformationKey
@@ -23,12 +24,12 @@ class SmsInformationKeyStreamSerializer : SelfRegisteringStreamSerializer<SmsInf
 
     override fun write(out: ObjectDataOutput, obj: SmsInformationKey) {
         out.writeUTF(obj.phoneNumber)
-        UUIDStreamSerializer.serialize(out, obj.organizationId)
+        UUIDStreamSerializerUtils.serialize(out, obj.organizationId)
     }
 
     override fun read(input: ObjectDataInput): SmsInformationKey {
         val phoneNumber = input.readUTF()
-        val organizationId = UUIDStreamSerializer.deserialize(input)
+        val organizationId = UUIDStreamSerializerUtils.deserialize(input)
         return SmsInformationKey(phoneNumber, organizationId)
     }
 }

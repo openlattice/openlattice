@@ -3,6 +3,7 @@ package com.openlattice.hazelcast.serializers
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.hazelcast.serializers.StreamSerializers.Companion.deserializeMapMap
@@ -35,9 +36,9 @@ class OrganizationStreamSerializer: SelfRegisteringStreamSerializer<Organization
             SetStreamSerializers.fastStringSetSerialize(out, obj.connections)
 
             serializeMapMap(out, obj.grants,
-                    { key: UUID -> UUIDStreamSerializer.serialize(out, key) },
-                    { subKey: GrantType -> GrantTypeStreamSerializer.serialize(out, subKey) },
-                    { `val`: Grant -> GrantStreamSerializer.serialize(out, `val`) })
+                            { key: UUID -> UUIDStreamSerializerUtils.serialize(out, key) },
+                            { subKey: GrantType -> GrantTypeStreamSerializer.serialize(out, subKey) },
+                            { `val`: Grant -> GrantStreamSerializer.serialize(out, `val`) })
         }
 
         @JvmStatic
@@ -59,7 +60,7 @@ class OrganizationStreamSerializer: SelfRegisteringStreamSerializer<Organization
 
             val grants = deserializeMapMap(input,
                     mutableMapOf(),
-                    { UUIDStreamSerializer.deserialize(input) },
+                    { UUIDStreamSerializerUtils.deserialize(input) },
                     { GrantTypeStreamSerializer.deserialize(input) },
                     { GrantStreamSerializer.deserialize(input) })
             return Organization(op, email, members, roles, sms, partitions, apps, connections, grants)

@@ -21,7 +21,7 @@
 package com.openlattice.hazelcast
 
 import com.hazelcast.core.HazelcastInstance
-import com.hazelcast.core.IQueue
+import com.hazelcast.collection.IQueue
 import com.openlattice.auditing.AuditableEvent
 import com.openlattice.codex.MessageRequest
 import com.openlattice.data.EntityDataKey

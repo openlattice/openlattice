@@ -25,7 +25,7 @@ package com.openlattice.requests;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.IMap;
+import com.hazelcast.map.IMap;
 import com.openlattice.authorization.AceKey;
 import com.openlattice.authorization.AceValue;
 import com.openlattice.authorization.AclKey;

@@ -7,7 +7,7 @@ import com.openlattice.authorization.AclKeySet
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-class AccumulatingReadAggregator<K> : Aggregator<MutableMap.MutableEntry<K, AclKeySet>, AclKeySet>() {
+class AccumulatingReadAggregator<K> : Aggregator<MutableMap.MutableEntry<K, AclKeySet>, AclKeySet> {
     private var v: AclKeySet? = null
     override fun accumulate(input: MutableMap.MutableEntry<K, AclKeySet>) {
         if (v == null) {

@@ -110,7 +110,7 @@ class PartitionManager @JvmOverloads constructor(
     }
 
     private fun getEmptiestPartitions(numPartitions: Int): List<Int> {
-        val partitionCounts = mutableMapOf<Int, Long>()
+        val partitionCounts = partitionList.associateWith { 0L }.toMutableMap()
         BasePostgresIterable(StatementHolderSupplier(hds, EMPTIEST_PARTITIONS)) {
             ResultSetAdapters.count(it) to ResultSetAdapters.partitions(it)
         }.forEach { (count, partitions) ->
@@ -144,9 +144,9 @@ private val EMPTIEST_PARTITIONS = """
 
 // Consistently Ordered, Unique Values, Constant Index
 fun getPartition(entityKeyId: UUID, partitions: List<Int>): Int {
-    return partitions[entityKeyId.leastSignificantBits.toInt() % partitions.size]
+    return partitions[Math.floorMod(entityKeyId.leastSignificantBits.toInt(), partitions.size)]
 }
 
 fun getPartition(entityKeyId: UUID, partitions: IntArray): Int {
-    return partitions[entityKeyId.leastSignificantBits.toInt() % partitions.size]
+    return partitions[Math.floorMod(entityKeyId.leastSignificantBits.toInt(), partitions.size)]
 }

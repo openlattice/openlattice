@@ -21,8 +21,9 @@
 package com.openlattice.authorization.mapstores;
 
 import com.hazelcast.config.InMemoryFormat;
+import com.hazelcast.config.IndexConfig;
+import com.hazelcast.config.IndexType;
 import com.hazelcast.config.MapConfig;
-import com.hazelcast.config.MapIndexConfig;
 import com.hazelcast.config.MapStoreConfig;
 import com.hazelcast.config.MapStoreConfig.InitialLoadMode;
 import com.openlattice.authorization.AclKey;
@@ -98,10 +99,10 @@ public class PrincipalMapstore extends AbstractBasePostgresMapstore<AclKey, Secu
 
     @Override public MapConfig getMapConfig() {
         return super.getMapConfig()
-                .addMapIndexConfig( new MapIndexConfig( PRINCIPAL_INDEX, false ) )
-                .addMapIndexConfig( new MapIndexConfig( PRINCIPAL_ID_INDEX, false ) )
-                .addMapIndexConfig( new MapIndexConfig( ACL_KEY_ROOT_INDEX, false ) )
-                .addMapIndexConfig( new MapIndexConfig( PRINCIPAL_TYPE_INDEX, false ) )
+                .addIndexConfig( new IndexConfig( IndexType.HASH, PRINCIPAL_INDEX ) )
+                .addIndexConfig( new IndexConfig( IndexType.HASH, PRINCIPAL_ID_INDEX ) )
+                .addIndexConfig( new IndexConfig( IndexType.HASH, ACL_KEY_ROOT_INDEX ) )
+                .addIndexConfig( new IndexConfig( IndexType.HASH, PRINCIPAL_TYPE_INDEX ) )
                 .setInMemoryFormat( InMemoryFormat.OBJECT );
     }
 
