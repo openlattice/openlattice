@@ -2,6 +2,7 @@ package com.openlattice
 
 import com.google.common.base.Stopwatch
 import com.google.common.collect.ImmutableMap
+import com.hazelcast.config.IndexType
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
@@ -14,6 +15,8 @@ import com.openlattice.auditing.AuditingManager
 import com.openlattice.authorization.Acl
 import com.openlattice.authorization.AclKey
 import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.hazelcast.HazelcastMap.Companion.ORGANIZATION_EXTERNAL_DATABASE_COLUMN
+import com.openlattice.hazelcast.HazelcastMap.Companion.ORGANIZATION_EXTERNAL_DATABASE_TABLE
 import com.openlattice.indexing.MAX_DURATION_MILLIS
 import com.openlattice.indexing.configuration.IndexerConfiguration
 import com.openlattice.organization.OrganizationExternalDatabaseColumn
@@ -43,15 +46,16 @@ class BackgroundExternalDatabaseSyncingService(
         private val logger = LoggerFactory.getLogger(BackgroundExternalDatabaseSyncingService::class.java)
     }
 
-    private val organizationExternalDatabaseColumns = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_COLUMN.getMap(hazelcastInstance)
-    private val organizationExternalDatabaseTables = HazelcastMap.ORGANIZATION_EXTERNAL_DATABASE_TABLE.getMap(hazelcastInstance)
+    private val organizationExternalDatabaseColumns = ORGANIZATION_EXTERNAL_DATABASE_COLUMN.getMap(hazelcastInstance)
+    private val organizationExternalDatabaseTables = ORGANIZATION_EXTERNAL_DATABASE_TABLE.getMap(hazelcastInstance)
+
     private val aclKeys = HazelcastMap.ACL_KEYS.getMap(hazelcastInstance)
     private val organizations = HazelcastMap.ORGANIZATIONS.getMap(hazelcastInstance)
     private val expirationLocks = HazelcastMap.EXPIRATION_LOCKS.getMap(hazelcastInstance)
 
 
     init {
-        expirationLocks.addIndex(QueryConstants.THIS_ATTRIBUTE_NAME.value(), true)
+        expirationLocks.addIndex(IndexType.SORTED, QueryConstants.THIS_ATTRIBUTE_NAME.value())
     }
 
     private val taskLock = ReentrantLock()
@@ -63,7 +67,7 @@ class BackgroundExternalDatabaseSyncingService(
                 Predicates.lessThan(
                         QueryConstants.THIS_ATTRIBUTE_NAME.value(),
                         System.currentTimeMillis()
-                ) as Predicate<UUID, Long>
+                )
         )
     }
 
@@ -98,9 +102,11 @@ class BackgroundExternalDatabaseSyncingService(
 
             lockedOrganizationIds.forEach(this::deleteIndexingLock)
 
-            logger.info("Completed syncing {} database objects in {}",
+            logger.info(
+                    "Completed syncing {} database objects in {}",
                     totalSynced,
-                    timer)
+                    timer
+            )
         } finally {
             taskLock.unlock()
         }
@@ -119,12 +125,26 @@ class BackgroundExternalDatabaseSyncingService(
             val tableId = aclKeys[tableFQN.fullQualifiedNameAsString]
             if (tableId == null) {
                 //create new securable object for this table
-                val newTable = OrganizationExternalDatabaseTable(Optional.empty(), tableName, tableName, Optional.empty(), orgId)
+                val newTable = OrganizationExternalDatabaseTable(
+                        Optional.empty(),
+                        tableName,
+                        tableName,
+                        Optional.empty(),
+                        orgId
+                )
                 val newTableId = createSecurableTableObject(dbName, orgOwnerIds, orgId, currentTableIds, newTable)
                 totalSynced++
 
                 //create new securable objects for columns in this table
-                totalSynced += createSecurableColumnObjects(dbName, orgOwnerIds, orgId, newTable.name, newTableId, Optional.empty(), currentColumnIds)
+                totalSynced += createSecurableColumnObjects(
+                        dbName,
+                        orgOwnerIds,
+                        orgId,
+                        newTable.name,
+                        newTableId,
+                        Optional.empty(),
+                        currentColumnIds
+                )
             } else {
                 currentTableIds.add(tableId)
                 //check if columns existed previously
@@ -133,7 +153,15 @@ class BackgroundExternalDatabaseSyncingService(
                     val columnId = aclKeys[columnFQN.fullQualifiedNameAsString]
                     if (columnId == null) {
                         //create new securable object for this column
-                        totalSynced += createSecurableColumnObjects(dbName, orgOwnerIds, orgId, tableName, tableId, Optional.of(it), currentColumnIds)
+                        totalSynced += createSecurableColumnObjects(
+                                dbName,
+                                orgOwnerIds,
+                                orgId,
+                                tableName,
+                                tableId,
+                                Optional.of(it),
+                                currentColumnIds
+                        )
                     } else {
                         currentColumnIds.add(columnId)
                     }
@@ -142,7 +170,7 @@ class BackgroundExternalDatabaseSyncingService(
             }
 
         }
-        
+
         return totalSynced
     }
 
@@ -157,7 +185,15 @@ class BackgroundExternalDatabaseSyncingService(
         currentTableIds.add(newTableId)
 
         //add table-level permissions
-        val acls = edms.syncPermissions(dbName, orgOwnerIds, orgId, newTableId, table.name, Optional.empty(), Optional.empty())
+        val acls = edms.syncPermissions(
+                dbName,
+                orgOwnerIds,
+                orgId,
+                newTableId,
+                table.name,
+                Optional.empty(),
+                Optional.empty()
+        )
 
         //create audit entity set and audit permissions
         ares.createAuditEntitySetForExternalDBTable(table)
@@ -197,7 +233,15 @@ class BackgroundExternalDatabaseSyncingService(
         currentColumnIds.add(newColumnId)
 
         //add and audit column-level permissions and postgres privileges
-        val acls = edms.syncPermissions(dbName, orgOwnerIds, orgId, column.tableId, tableName, Optional.of(newColumnId), Optional.of(column.name))
+        val acls = edms.syncPermissions(
+                dbName,
+                orgOwnerIds,
+                orgId,
+                column.tableId,
+                tableName,
+                Optional.of(newColumnId),
+                Optional.of(column.name)
+        )
         val events = createAuditableEvents(acls, AuditEventType.ADD_PERMISSION)
         auditingManager.recordEvents(events)
     }

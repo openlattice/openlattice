@@ -23,9 +23,9 @@ package com.openlattice.indexing
 import com.google.common.base.Stopwatch
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.ListeningExecutorService
-import com.hazelcast.core.*
-import com.hazelcast.map.listener.EntryEvictedListener
+import com.hazelcast.collection.IQueue
 import com.hazelcast.core.HazelcastInstance
+import com.hazelcast.map.listener.EntryEvictedListener
 import com.hazelcast.query.Predicates
 import com.hazelcast.spi.exception.DistributedObjectDestroyedException
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi
