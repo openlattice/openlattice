@@ -20,8 +20,8 @@ import java.util.EnumSet;
 import java.util.UUID;
 
 public class AppConfigMapstore extends AbstractBasePostgresMapstore<AppConfigKey, AppTypeSetting> {
-    public static final String APP_ID          = "__key#appId";
-    public static final String ORGANIZATION_ID = "__key#organizationId";
+    public static final String APP_ID          = "__key.appId";
+    public static final String ORGANIZATION_ID = "__key.organizationId";
 
     public AppConfigMapstore( HikariDataSource hds ) {
         super( HazelcastMap.APP_CONFIGS, PostgresTable.APP_CONFIGS, hds );

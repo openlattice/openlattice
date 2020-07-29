@@ -30,8 +30,8 @@ class SmsInformationMapstore(
         hds
 ) {
     companion object {
-        const val ORGANIZATION_ID_INDEX = "__key#organizationId"
-        const val PHONE_NUMBER_INDEX = "__key#phoneNumber"
+        const val ORGANIZATION_ID_INDEX = "__key.organizationId"
+        const val PHONE_NUMBER_INDEX = "__key.phoneNumber"
         const val ANY_ENTITY_SET_ID_INDEX = "entitySetIds[any]"
         const val ANY_TAG_INDEX = "entitySetIds[any]"
     }

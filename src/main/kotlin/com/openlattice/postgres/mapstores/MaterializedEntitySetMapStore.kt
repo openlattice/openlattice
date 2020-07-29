@@ -49,10 +49,10 @@ open class MaterializedEntitySetMapStore(
 
     companion object {
         @JvmStatic
-        val ORGANIZATION_ID_INDEX = "__key#organizationId"
+        val ORGANIZATION_ID_INDEX = "__key.organizationId"
 
         @JvmStatic
-        val ENTITY_SET_ID_INDEX = "__key#entitySetId"
+        val ENTITY_SET_ID_INDEX = "__key.entitySetId"
 
         @JvmStatic
         val FLAGS_INDEX = "flags[any]"

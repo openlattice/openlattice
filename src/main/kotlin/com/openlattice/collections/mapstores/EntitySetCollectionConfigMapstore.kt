@@ -11,7 +11,7 @@ import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.util.*
 
-const val ENTITY_SET_COLLECTION_ID_INDEX = "__key#entitySetCollectionId"
+const val ENTITY_SET_COLLECTION_ID_INDEX = "__key.entitySetCollectionId"
 const val ENTITY_SET_ID_INDEX = "this"
 
 open class EntitySetCollectionConfigMapstore(
