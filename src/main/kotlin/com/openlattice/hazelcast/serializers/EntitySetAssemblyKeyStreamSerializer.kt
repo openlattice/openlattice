@@ -22,6 +22,7 @@ package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.assembler.EntitySetAssemblyKey
 import com.openlattice.hazelcast.StreamSerializerTypeIds
@@ -33,12 +34,12 @@ class EntitySetAssemblyKeyStreamSerializer : SelfRegisteringStreamSerializer<Ent
     companion object {
 
         fun serialize(out: ObjectDataOutput, obj: EntitySetAssemblyKey) {
-            UUIDStreamSerializer.serialize(out, obj.entitySetId)
-            UUIDStreamSerializer.serialize(out, obj.organizationId)
+            UUIDStreamSerializerUtils.serialize(out, obj.entitySetId)
+            UUIDStreamSerializerUtils.serialize(out, obj.organizationId)
         }
 
         fun deserialize(input: ObjectDataInput): EntitySetAssemblyKey {
-            return EntitySetAssemblyKey(UUIDStreamSerializer.deserialize(input), UUIDStreamSerializer.deserialize(input))
+            return EntitySetAssemblyKey(UUIDStreamSerializerUtils.deserialize(input), UUIDStreamSerializerUtils.deserialize(input))
         }
 
     }

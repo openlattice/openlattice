@@ -20,6 +20,7 @@
 
 package com.openlattice.hazelcast.serializers;
 
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -36,15 +37,15 @@ public class AppConfigKeyStreamSerializer implements SelfRegisteringStreamSerial
     }
 
     @Override public void write( ObjectDataOutput out, AppConfigKey object ) throws IOException {
-        UUIDStreamSerializer.serialize( out, object.getAppId() );
-        UUIDStreamSerializer.serialize( out, object.getOrganizationId() );
-        UUIDStreamSerializer.serialize( out, object.getAppTypeId() );
+        UUIDStreamSerializerUtils.serialize( out, object.getAppId() );
+        UUIDStreamSerializerUtils.serialize( out, object.getOrganizationId() );
+        UUIDStreamSerializerUtils.serialize( out, object.getAppTypeId() );
     }
 
     @Override public AppConfigKey read( ObjectDataInput in ) throws IOException {
-        UUID appId = UUIDStreamSerializer.deserialize( in );
-        UUID organizationId = UUIDStreamSerializer.deserialize( in );
-        UUID appTypeId = UUIDStreamSerializer.deserialize( in );
+        UUID appId = UUIDStreamSerializerUtils.deserialize( in );
+        UUID organizationId = UUIDStreamSerializerUtils.deserialize( in );
+        UUID appTypeId = UUIDStreamSerializerUtils.deserialize( in );
         return new AppConfigKey( appId, organizationId, appTypeId );
     }
 

@@ -2,11 +2,11 @@ package com.openlattice.hazelcast.serializers.shuttle
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
 import com.openlattice.client.RetrofitFactory
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.hazelcast.serializers.OptionalStreamSerializers
 import com.openlattice.hazelcast.serializers.TestableSelfRegisteringStreamSerializer
-import com.openlattice.hazelcast.serializers.UUIDStreamSerializer
 import com.openlattice.shuttle.FlightPlanParametersUpdate
 import com.openlattice.shuttle.IntegrationUpdate
 import org.springframework.stereotype.Component
@@ -23,7 +23,7 @@ class IntegrationUpdateStreamSerializer : TestableSelfRegisteringStreamSerialize
             OptionalStreamSerializers.serialize(output, obj.s3bucket, ObjectDataOutput::writeUTF)
             OptionalStreamSerializers.serializeSet(output, obj.contacts, ObjectDataOutput::writeUTF)
             OptionalStreamSerializers.serialize(output, obj.organizationId) { out: ObjectDataOutput, orgId: UUID ->
-                UUIDStreamSerializer.serialize(out, orgId)
+                UUIDStreamSerializerUtils.serialize(out, orgId)
             }
             OptionalStreamSerializers.serialize(output, obj.maxConnections, ObjectDataOutput::writeInt)
             OptionalStreamSerializers.serializeList(output, obj.callbackUrls, ObjectDataOutput::writeUTF)
@@ -47,7 +47,7 @@ class IntegrationUpdateStreamSerializer : TestableSelfRegisteringStreamSerialize
             val s3bucket = OptionalStreamSerializers.deserialize(input, ObjectDataInput::readUTF)
             val contacts = OptionalStreamSerializers.deserializeSet(input, ObjectDataInput::readUTF)
             val orgId = OptionalStreamSerializers.deserialize(input) {
-                UUIDStreamSerializer.deserialize(it)
+                UUIDStreamSerializerUtils.deserialize(it)
             }
             val maxConnections = OptionalStreamSerializers.deserialize(input, ObjectDataInput::readInt)
             val callbackUrls = OptionalStreamSerializers.deserializeList(input, ObjectDataInput::readUTF)

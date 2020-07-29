@@ -20,6 +20,7 @@
 
 package com.openlattice.hazelcast.serializers;
 
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.openlattice.organizations.processors.OrganizationAppRemover;
 import com.hazelcast.nio.ObjectDataInput;
@@ -40,13 +41,13 @@ public class OrganizationAppRemoverStreamSerializer implements SelfRegisteringSt
         SetStreamSerializers.serialize(
                 out,
                 object.getBackingCollection(),
-                elem -> UUIDStreamSerializer.serialize( out, elem )
+                elem -> UUIDStreamSerializerUtils.serialize( out, elem )
         );
     }
 
     @Override public OrganizationAppRemover read( ObjectDataInput in ) throws IOException {
         return new OrganizationAppRemover(
-                SetStreamSerializers.deserialize( in, UUIDStreamSerializer::deserialize )
+                SetStreamSerializers.deserialize( in, UUIDStreamSerializerUtils::deserialize )
         );
     }
 

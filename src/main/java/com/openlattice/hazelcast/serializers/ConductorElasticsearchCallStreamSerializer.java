@@ -25,6 +25,7 @@ import com.esotericsoftware.kryo.serializers.ClosureSerializer;
 import com.google.common.base.Preconditions;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.serializers.AclKeyKryoSerializer;
@@ -100,7 +101,7 @@ public class ConductorElasticsearchCallStreamSerializer
     @Override
     @SuppressFBWarnings
     public void write( ObjectDataOutput out, ConductorElasticsearchCall object ) throws IOException {
-        UUIDStreamSerializer.serialize( out, object.getUserId() );
+        UUIDStreamSerializerUtils.serialize( out, object.getUserId() );
         Jdk8StreamSerializers.serializeWithKryo( kryoThreadLocal.get(), out, object.getFunction(), 32 );
     }
 
@@ -108,7 +109,7 @@ public class ConductorElasticsearchCallStreamSerializer
     @SuppressWarnings( "unchecked" )
     @SuppressFBWarnings
     public ConductorElasticsearchCall read( ObjectDataInput in ) throws IOException {
-        UUID userId = UUIDStreamSerializer.deserialize( in );
+        UUID userId = UUIDStreamSerializerUtils.deserialize( in );
         Function<ConductorElasticsearchApi, ?> f = (Function<ConductorElasticsearchApi, ?>) Jdk8StreamSerializers
                 .deserializeWithKryo( kryoThreadLocal.get(), in, 32 );
         return new ConductorElasticsearchCall( userId, f, api );
