@@ -2,6 +2,7 @@ package com.openlattice.graph.processing
 
 import com.google.common.base.Preconditions.checkState
 import com.google.common.base.Stopwatch
+import com.hazelcast.config.IndexType
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.map.IMap
 import com.hazelcast.query.QueryConstants
@@ -52,7 +53,7 @@ class GraphProcessingService(
         if(propagationGraphProcessor.hasCycle()) {
             throw IllegalStateException("There is a cycle in the background graph processing")
         }
-        processingLocks.addIndex(QueryConstants.THIS_ATTRIBUTE_NAME.value(), true)
+        processingLocks.addIndex(IndexType.HASH,QueryConstants.THIS_ATTRIBUTE_NAME.value())
     }
 
     private val taskLock = ReentrantLock()

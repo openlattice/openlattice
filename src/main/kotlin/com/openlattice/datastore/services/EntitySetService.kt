@@ -294,7 +294,7 @@ open class EntitySetService(
                 Predicates.`in`(
                         QueryConstants.KEY_ATTRIBUTE_NAME.value(),
                         *entitySetIds.toTypedArray()
-                ) as Predicate<UUID, EntitySet>
+                ) 
         )
     }
 
