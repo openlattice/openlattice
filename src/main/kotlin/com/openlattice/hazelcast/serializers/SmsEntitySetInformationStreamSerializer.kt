@@ -38,6 +38,7 @@ class SmsEntitySetInformationStreamSerializer : SelfRegisteringStreamSerializer<
             UUIDStreamSerializer.serialize(out, obj.organizationId)
             SetStreamSerializers.fastUUIDSetSerialize(out, obj.entitySetIds)
             SetStreamSerializers.fastOrderedStringSetSerializeAsArray(out, obj.tags)
+            OffsetDateTimeStreamSerializer.serialize(out, obj.lastSync)
         }
 
         @JvmStatic
@@ -46,11 +47,13 @@ class SmsEntitySetInformationStreamSerializer : SelfRegisteringStreamSerializer<
             val organizationId = UUIDStreamSerializer.deserialize(input)
             val entitySetIds = SetStreamSerializers.fastUUIDSetDeserialize(input)
             val tags = SetStreamSerializers.fastOrderedStringSetDeserializeFromArray(input)
+            val lastSync = OffsetDateTimeStreamSerializer.deserialize(input)
             return SmsEntitySetInformation(
                     phoneNumber,
                     organizationId,
                     entitySetIds,
-                    tags
+                    tags,
+                    lastSync
             )
         }
     }

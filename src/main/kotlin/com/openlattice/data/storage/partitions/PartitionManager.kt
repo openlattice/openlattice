@@ -110,7 +110,7 @@ class PartitionManager @JvmOverloads constructor(
     }
 
     private fun getEmptiestPartitions(numPartitions: Int): List<Int> {
-        val partitionCounts = mutableMapOf<Int, Long>()
+        val partitionCounts = partitionList.associateWith { 0L }.toMutableMap()
         BasePostgresIterable(StatementHolderSupplier(hds, EMPTIEST_PARTITIONS)) {
             ResultSetAdapters.count(it) to ResultSetAdapters.partitions(it)
         }.forEach { (count, partitions) ->

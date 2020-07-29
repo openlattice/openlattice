@@ -21,7 +21,6 @@
 
 package com.openlattice.data.ids
 
-import com.google.common.base.Preconditions.checkState
 import com.openlattice.IdConstants
 import com.openlattice.data.EntityKey
 import com.openlattice.data.EntityKeyIdService
