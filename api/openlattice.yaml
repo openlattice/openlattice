@@ -1043,7 +1043,7 @@ paths:
     get:
       summary: Get all EntitySet definitions.
       operationId: getAllEntitySets
-      tags: [entitySets, edm]
+      tags: [entitySets]
       security:
         - openlattice_auth: []
         - http_auth: []
@@ -1067,7 +1067,7 @@ paths:
               type: array
               items:
                 $ref: "#/components/schemas/EntitySet"
-      tags: [entitySets, edm]
+      tags: [entitySets]
       security:
         - openlattice_auth: []
         - http_auth: []
@@ -1085,7 +1085,7 @@ paths:
               type: array
               items:
                 type: string
-      tags: [entitySets, edm]
+      tags: [entitySets]
       security:
         - openlattice_auth: []
         - http_auth: []
@@ -1109,7 +1109,7 @@ paths:
           required: true
           schema:
             type: string
-      tags: [entitySets, edm]
+      tags: [entitySets]
       security:
         - openlattice_auth: []
         - http_auth: []
@@ -1132,7 +1132,7 @@ paths:
           schema:
             type: string
             format: uuid
-      tags: [entitySets, edm]
+      tags: [entitySets]
       security:
         - openlattice_auth: []
         - http_auth: []
@@ -1153,7 +1153,7 @@ paths:
           schema:
             type: string
             format: uuid
-      tags: [entitySets, edm]
+      tags: [entitySets]
       security:
         - openlattice_auth: []
         - http_auth: []
@@ -1171,7 +1171,7 @@ paths:
               type: array
               items:
                 type: string
-      tags: [entitySets, edm]
+      tags: [entitySets]
       security:
         - openlattice_auth: []
         - http_auth: []
@@ -1197,7 +1197,7 @@ paths:
           schema:
             type: string
             format: uuid
-      tags: [entitySets, edm]
+      tags: [entitySets]
       security:
         - openlattice_auth: []
         - http_auth: []
@@ -1221,7 +1221,7 @@ paths:
           schema:
             type: string
             format: uuid
-      tags: [entitySets, edm]
+      tags: [entitySets]
       security:
         - openlattice_auth: []
         - http_auth: []
@@ -1251,7 +1251,7 @@ paths:
           schema:
             type: string
             format: uuid
-      tags: [entitySets, edm]
+      tags: [entitySets]
       security:
         - openlattice_auth: []
         - http_auth: []
@@ -1265,7 +1265,7 @@ paths:
     post:
       summary: Updates the property type metadata for the given entity set.
       operationId: updateEntitySetPropertyMetadata
-      tags: [entitySets, edm]
+      tags: [entitySets]
       security:
         - openlattice_auth: []
         - http_auth: []
@@ -1308,7 +1308,7 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/MetadataUpdate"
-      tags: [entitySets, edm]
+      tags: [entitySets]
       security:
         - openlattice_auth: []
         - http_auth: []
@@ -1338,7 +1338,7 @@ paths:
               items:
                 type: string
                 format: uuid
-      tags: [entitySets, edm]
+      tags: [entitySets]
       security:
         - openlattice_auth: []
         - http_auth: []
@@ -1366,7 +1366,7 @@ paths:
               items:
                 type: string
                 format: uuid
-      tags: [entitySets, edm]
+      tags: [entitySets]
       security:
         - openlattice_auth: []
         - http_auth: []
@@ -1398,7 +1398,7 @@ paths:
                 items:
                   type: string
                   format: uuid
-      tags: [entitySets, edm]
+      tags: [entitySets]
       security:
         - openlattice_auth: []
         - http_auth: []
@@ -1430,7 +1430,7 @@ paths:
                 items:
                   type: string
                   format: uuid
-      tags: [entitySets, edm]
+      tags: [entitySets]
       security:
         - openlattice_auth: []
         - http_auth: []

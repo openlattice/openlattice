@@ -37,6 +37,7 @@ public final class SerializationConstants {
     public static final String APP_TYPE_ID                      = "appTypeId";
     public static final String APP_TYPE_IDS_FIELD               = "appTypeIds";
     public static final String ASSOCIATIONS                     = "associations";
+    public static final String ASSOCIATE_ONLY                   = "associateOnly";
     public static final String ASSOCIATIONS_ENTITY_KEY_MAPPINGS = "associationsEntityKeyMappings";
     public static final String ASSOCIATION_AGGREGATIONS         = "associationAggregations";
     public static final String ASSOCIATION_CONSTRAINT           = "associationConstraint";
@@ -165,6 +166,7 @@ public final class SerializationConstants {
     public static final String KEY_FIELD                        = "key";
     public static final String LAST_INDEX                       = "lastIndex";
     public static final String LAST_READ                        = "lastRead";
+    public static final String LAST_SYNC                        = "lastSync";
     public static final String LAST_WRITE                       = "lastWrite";
     public static final String LATITUDE                         = "latitude";
     public static final String LINK                             = "link";
