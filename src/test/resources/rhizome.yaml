@@ -15,9 +15,12 @@ hazelcast:
     cp-member-count: 0
 
 postgres:
+    citus: true
+    initialize-tables: true
+    initialize-indices: true
     hikari:
-        jdbcUrl: jdbc:postgresql://localhost:5432/openlattice
+        jdbcUrl: jdbc:postgresql://localhost:5433/openlattice
         username: "oltest"
         password: "test"
-        maximumPoolSize: 10
+        maximumPoolSize: 32
         connectionTimeout: 12000000 #20 minutes

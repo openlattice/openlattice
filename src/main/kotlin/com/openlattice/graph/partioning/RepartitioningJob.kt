@@ -35,7 +35,20 @@ class RepartitioningJob(state: DistributedJobState) : AbstractDistributedJob<Lon
         (state as RepartitioningJobState)
         return false
     }
+
+    fun repartitionIds() {
+
+    }
+
+    fun repartitionEdges() {
+
+    }
+
+    fun repartitionData() {
+        
+    }
 }
+
 
 private val REPARTITION_SELECTOR = "partitions[ 1 + ((array_length(partitions,1) + (('x'||right(${SRC_ENTITY_KEY_ID.name}::text,8))::bit(32)::int % array_length(partitions,1))) % array_length(partitions,1))]"
 private val REPARTITION_COLUMNS = E.columns.joinToString(",") { if (it == PARTITION) REPARTITION_SELECTOR else it.name }
