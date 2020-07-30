@@ -38,7 +38,7 @@ class RepartitioningJob(
         return null
     }
 
-    override fun next() {
+    override fun processNextBatch() {
         /**
          * Do a INSERT INTO ... SELECT FROM to re-partition the data.
          *
