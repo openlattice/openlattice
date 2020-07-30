@@ -1,7 +1,7 @@
 package com.openlattice.admin
 
+import com.geekbeast.rhizome.jobs.DistributableJob
 import com.openlattice.authorization.Principal
-import com.openlattice.entitysets.EntitySetsApi
 import com.openlattice.notifications.sms.SmsEntitySetInformation
 import com.openlattice.organizations.Organization
 import retrofit2.http.*
@@ -21,7 +21,6 @@ const val LINKING = "linking"
 const val OMIT_ENTITY_SET_ID = "omitEntitySetId"
 const val ENTITY_SETS = "/entity/sets"
 const val COUNT = "/count"
-const val PARTITIONS_PATH = "/partitions"
 const val PHONE = "/phone"
 const val ORGANIZATION = "/organization"
 const val USAGE = "/usage"
@@ -30,6 +29,8 @@ const val ID = "id"
 const val ID_PATH = "/{${ID}}"
 const val NAME = "name"
 const val NAME_PATH = "/{${NAME}}"
+
+const val JOBS = "/jobs"
 
 interface AdminApi {
 
@@ -79,14 +80,6 @@ interface AdminApi {
     @GET(BASE + ORGANIZATION)
     fun getAllOrganizations(): Iterable<Organization>
 
-    /**
-     * Used to set the new partitions for an entity set. This will shuffle corresponding ids, edges, and data table rows
-     * for the entity set.
-     *
-     * @param entitySetId The id of the entity set to update.
-     * @param partitions The partitions to set.
-     *
-     */
-    @PUT(BASE + ID_PATH + PARTITIONS_PATH)
-    fun setPartitions(@Path(ID) entitySetId: UUID, @Body partitions: Set<Int>): Int
+    @GET( BASE + JOBS )
+    fun getJobs() : Map<UUID, com.geekbeast.rhizome.jobs.AbstractDistributedJob<*, *>>
 }

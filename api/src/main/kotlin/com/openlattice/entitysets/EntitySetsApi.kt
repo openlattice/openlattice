@@ -54,6 +54,8 @@ interface EntitySetsApi {
         const val METADATA_PATH = "/metadata"
         const val EXPIRATION_PATH = "/expiration"
 
+        const val PARTITIONS_PATH = "/partitions"
+
         const val PROPERTY_TYPE_ID = "propertyTypeId"
         const val PROPERTY_TYPE_ID_PATH = "/{$PROPERTY_TYPE_ID}"
     }
@@ -208,4 +210,14 @@ interface EntitySetsApi {
     fun getExpiringEntitiesFromEntitySet(@Path(ID) entitySetId: UUID,
                                          @Body dateTime: String): Set<UUID>
 
+    /**
+     * Used to set the new partitions for an entity set. This will shuffle corresponding ids, edges, and data table rows
+     * for the entity set.
+     *
+     * @param entitySetId The id of the entity set to update.
+     * @param partitions The partitions to set.
+     *
+     */
+    @PUT(BASE + ID_PATH + PARTITIONS_PATH)
+    fun setPartitions(@Path(com.openlattice.admin.ID) entitySetId: UUID, @Body partitions: Set<Int>): UUID
 }
