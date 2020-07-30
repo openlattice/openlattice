@@ -26,7 +26,7 @@ import com.google.common.collect.Maps
 import com.google.common.collect.Sets
 import com.google.common.eventbus.EventBus
 import com.hazelcast.core.HazelcastInstance
-import com.hazelcast.core.IMap
+import com.hazelcast.map.IMap
 import com.hazelcast.query.Predicates
 import com.openlattice.apps.*
 import com.openlattice.apps.historical.HistoricalAppConfig
@@ -47,7 +47,6 @@ import com.openlattice.organization.roles.Role
 import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.postgres.mapstores.AppConfigMapstore
-import com.openlattice.users.getRoles
 import java.util.*
 import javax.inject.Inject
 
@@ -55,7 +54,6 @@ class AppService(
         hazelcast: HazelcastInstance,
         private val edmService: EdmManager,
         private val organizationService: HazelcastOrganizationService,
-        private val authorizations: AuthorizationQueryService,
         private val authorizationService: AuthorizationManager,
         private val principalsService: SecurePrincipalsManager,
         private val reservations: HazelcastAclKeyReservationService,
@@ -323,8 +321,8 @@ class AppService(
         val aclKeysByPrincipalType = principalAclKeys.entries.groupBy { it.key.type }.mapValues { it.value.map { entry -> entry.value } }
 
         return appConfigs.entrySet(Predicates.and(
-                Predicates.equal(AppConfigMapstore.APP_ID, appId),
-                Predicates.`in`(AppConfigMapstore.ORGANIZATION_ID, *(aclKeysByPrincipalType[PrincipalType.ORGANIZATION]
+                Predicates.equal<AppConfigKey, AppTypeSetting>(AppConfigMapstore.APP_ID, appId),
+                Predicates.`in`<AppConfigKey, AppTypeSetting>(AppConfigMapstore.ORGANIZATION_ID, *(aclKeysByPrincipalType[PrincipalType.ORGANIZATION]
                         ?: listOf()).map { it[0] }.toTypedArray()))).map {
 
             val organizationId = it.key.organizationId
