@@ -6,6 +6,7 @@ class CodexConstants() {
 
     companion object {
         val COLLECTION_FQN = FullQualifiedName("app.codex")
+        const val APP_NAME = "codex"
     }
 
     enum class CollectionTemplateType(val typeName: String) {

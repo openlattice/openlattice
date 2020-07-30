@@ -38,9 +38,6 @@ import javax.inject.Inject
 class AuditController : AuditApi, AuditingComponent {
 
     @Inject
-    private lateinit var auditRecordEntitySetsManager: AuditRecordEntitySetsManager
-
-    @Inject
     private lateinit var auditingManager: AuditingManager
 
     override fun getAuditingManager(): AuditingManager {

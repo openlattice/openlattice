@@ -25,7 +25,6 @@ import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Preconditions.checkArgument
 import com.openlattice.authorization.*
 import com.openlattice.controllers.exceptions.ForbiddenException
-import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.*
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
@@ -47,7 +46,6 @@ class GraphController
 constructor(
         private val graphQueryService: GraphQueryService,
         private val authorizationManager: AuthorizationManager,
-        private val edm: EdmManager,
         private val edmAuthorizationHelper: EdmAuthorizationHelper
 ) : GraphApi, AuthorizingComponent {
     @Timed
@@ -122,7 +120,7 @@ constructor(
         val requiredAuthorizations: MutableMap<UUID, MutableSet<UUID>> = mutableMapOf()
         val allEntitySetIds = baseEntitySetIds.asSequence() +
                 (query.srcSelections.asSequence() + query.dstSelections.asSequence()).flatMap { selection ->
-                    getRequiredAuthorizations(selection).forEach { entitySetId, requiredPropertyTypeIds ->
+                    getRequiredAuthorizations(selection).forEach { (entitySetId, requiredPropertyTypeIds) ->
                         requiredAuthorizations
                                 .getOrPut(entitySetId) { mutableSetOf() }
                                 .addAll(requiredPropertyTypeIds)

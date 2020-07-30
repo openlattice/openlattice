@@ -21,10 +21,18 @@
 package com.openlattice.datastore.apps.controllers;
 
 import com.codahale.metrics.annotation.Timed;
-import com.openlattice.apps.*;
+import com.openlattice.apps.App;
+import com.openlattice.apps.AppApi;
+import com.openlattice.apps.AppInstallation;
+import com.openlattice.apps.AppRole;
+import com.openlattice.apps.UserAppConfig;
 import com.openlattice.apps.historical.HistoricalAppConfig;
 import com.openlattice.apps.services.AppService;
-import com.openlattice.authorization.*;
+import com.openlattice.authorization.AclKey;
+import com.openlattice.authorization.AuthorizationManager;
+import com.openlattice.authorization.AuthorizingComponent;
+import com.openlattice.authorization.Permission;
+import com.openlattice.authorization.Principals;
 import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import org.springframework.http.HttpStatus;
@@ -32,7 +40,11 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
 import javax.inject.Inject;
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 
 @RestController
 @RequestMapping( AppApi.CONTROLLER )

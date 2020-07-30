@@ -1,4 +1,4 @@
-package com.openlattice.organizations
+package com.openlattice.organizations.controllers
 
 import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Preconditions.checkState
@@ -7,6 +7,7 @@ import com.openlattice.authorization.*
 import com.openlattice.controllers.exceptions.ForbiddenException
 import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.organization.*
+import com.openlattice.organizations.ExternalDatabaseManagementService
 import com.openlattice.postgres.PostgresConnectionType
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.apache.olingo.commons.api.edm.FullQualifiedName
@@ -28,9 +29,6 @@ class DatasetController : DatasetApi, AuthorizingComponent {
 
     @Inject
     private lateinit var authorizations: AuthorizationManager
-
-    @Inject
-    private lateinit var securableObjectTypes: SecurableObjectResolveTypeService
 
     @Inject
     private lateinit var aclKeyReservations: HazelcastAclKeyReservationService
@@ -132,11 +130,10 @@ class DatasetController : DatasetApi, AuthorizingComponent {
     }
 
     @Timed
-    @GetMapping(path = [ID_PATH + TABLE_NAME_PATH + EXTERNAL_DATABASE_TABLE])
+    @GetMapping(path = [ID_PATH + TABLE_ID_PATH + EXTERNAL_DATABASE_TABLE])
     override fun getExternalDatabaseTable(
             @PathVariable(ID) organizationId: UUID,
-            @PathVariable(TABLE_NAME) tableName: String): OrganizationExternalDatabaseTable {
-        val (_, tableId) = getExternalDatabaseObjectFqnToIdPair(organizationId, tableName)
+            @PathVariable(TABLE_ID) tableId: UUID): OrganizationExternalDatabaseTable {
         ensureReadAccess(AclKey(tableId))
         return edms.getOrganizationExternalDatabaseTable(tableId)
     }

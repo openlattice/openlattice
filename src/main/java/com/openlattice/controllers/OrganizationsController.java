@@ -25,28 +25,14 @@ import com.codahale.metrics.annotation.Timed;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.openlattice.assembler.Assembler;
-import com.openlattice.authorization.AccessCheck;
-import com.openlattice.authorization.AclKey;
-import com.openlattice.authorization.Authorization;
-import com.openlattice.authorization.AuthorizationManager;
-import com.openlattice.authorization.AuthorizingComponent;
-import com.openlattice.authorization.EdmAuthorizationHelper;
-import com.openlattice.authorization.Permission;
-import com.openlattice.authorization.Principal;
-import com.openlattice.authorization.PrincipalType;
-import com.openlattice.authorization.Principals;
-import com.openlattice.authorization.SecurableObjectResolveTypeService;
-import com.openlattice.authorization.SecurablePrincipal;
+import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
-import com.openlattice.authorization.util.AuthorizationUtils;
+import com.openlattice.authorization.util.AuthorizationUtilsKt;
 import com.openlattice.controllers.exceptions.ForbiddenException;
-import com.openlattice.controllers.exceptions.ResourceNotFoundException;
 import com.openlattice.datastore.services.EntitySetManager;
-import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organization.OrganizationEntitySetFlag;
 import com.openlattice.organization.OrganizationIntegrationAccount;
 import com.openlattice.organization.OrganizationMember;
-import com.openlattice.organization.OrganizationPrincipal;
 import com.openlattice.organization.OrganizationsApi;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.ExternalDatabaseManagementService;
@@ -55,26 +41,13 @@ import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.Organization;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import org.apache.commons.lang3.NotImplementedException;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import javax.inject.Inject;
-import java.util.Collection;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -103,9 +76,6 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     private EntitySetManager entitySetManager;
 
     @Inject
-    private EdmAuthorizationHelper authzHelper;
-
-    @Inject
     private ExternalDatabaseManagementService edms;
 
     @Timed
@@ -122,13 +92,12 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
                 getAccessibleObjects( SecurableObjectType.Organization, EnumSet.of( Permission.READ ) )
                         .parallel()
                         .filter( Objects::nonNull )
-                        .map( AuthorizationUtils::getLastAclKeySafely )
+                        .map( AuthorizationUtilsKt::getLastAclKeySafely )
         );
 
-        return StreamSupport.stream( orgs.spliterator(), false ).map( org -> {
-            org.getRoles().removeIf( role -> !authorizedRoles.contains( role.getAclKey() ) );
-            return org;
-        } ).collect( Collectors.toList() );
+        return StreamSupport.stream( orgs.spliterator(), false ).peek( org ->
+            org.getRoles().removeIf( role -> !authorizedRoles.contains( role.getAclKey() ) )
+        ).collect( Collectors.toList() );
     }
 
     @Timed
@@ -321,39 +290,6 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         return null;
     }
 
-    private Map<UUID, Map<UUID, PropertyType>> getAuthorizedPropertiesForMaterialization(
-            UUID organizationId,
-            Set<UUID> entitySetIds ) {
-        // materialize should be a property level permission that can only be granted to organization principals and
-        // the person requesting materialize should be the owner of the organization
-        ensureOwner( organizationId );
-        final var organizationPrincipal = organizations.getOrganizationPrincipal( organizationId );
-
-        if ( organizationPrincipal == null ) {
-            //This will be rare, since it is unlikely you have access to an organization that does not exist.
-            throw new ResourceNotFoundException( "Organization does not exist." );
-        }
-
-        // check materialization on all linking and normal entity sets
-        final var entitySets = entitySetManager.getEntitySetsAsMap( entitySetIds );
-        final var allEntitySetIds = entitySets.values().stream()
-                .flatMap( entitySet -> {
-                    var entitySetIdsToCheck = Sets.newHashSet( entitySet.getId() );
-                    if ( entitySet.isLinking() ) {
-                        entitySetIdsToCheck.addAll( entitySet.getLinkedEntitySets() );
-                    }
-
-                    return entitySetIdsToCheck.stream();
-                } ).collect( Collectors.toList() );
-
-        allEntitySetIds.forEach( entitySetId -> ensureMaterialize( entitySetId, organizationPrincipal ) );
-
-        // first we collect authorized property types of normal entity sets and then for each linking entity set, we
-        // check materialization on normal entity sets and get the intersection of their authorized property types
-        return authzHelper.getAuthorizedPropertiesOnEntitySets(
-                entitySetIds, EnumSet.of( Permission.MATERIALIZE ), Set.of( organizationPrincipal.getPrincipal() ) );
-    }
-
     private Long getRefreshRateMillisFromMins( Integer refreshRateInMins ) {
         if ( refreshRateInMins < 1 ) {
             throw new IllegalArgumentException( "Minimum refresh rate is 1 minute." );
@@ -523,7 +459,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         ensureRead( organizationId );
         Set<Role> roles = organizations.getRoles( organizationId );
         Set<AclKey> authorizedRoleAclKeys = getAuthorizedRoleAclKeys( roles );
-        return Sets.filter( roles, role -> authorizedRoleAclKeys.contains( role.getAclKey() ) );
+        return Sets.filter( roles, role -> role != null && authorizedRoleAclKeys.contains( role.getAclKey() ) );
     }
 
     private Set<AclKey> getAuthorizedRoleAclKeys( Set<Role> roles ) {
@@ -587,7 +523,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     public Void updateRoleGrant(
             @PathVariable( ID ) UUID organizationId,
             @PathVariable( ROLE_ID ) UUID roleId,
-            @RequestBody Grant grant ) {
+            @NotNull @RequestBody Grant grant ) {
         ensureRoleAdminAccess( organizationId, roleId );
         organizations.updateRoleGrant( organizationId, roleId, grant );
         return null;
@@ -692,18 +628,6 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
 
     private void ensureRead( UUID organizationId ) {
         ensureReadAccess( new AclKey( organizationId ) );
-    }
-
-    private void ensureMaterialize( UUID entitySetId, OrganizationPrincipal principal ) {
-        AclKey aclKey = new AclKey( entitySetId );
-
-        if ( !getAuthorizationManager().checkIfHasPermissions(
-                aclKey,
-                Set.of( principal.getPrincipal() ),
-                EnumSet.of( Permission.MATERIALIZE ) ) ) {
-            throw new ForbiddenException( "EntitySet " + aclKey.toString() + " is not accessible by organization " +
-                    "principal " + principal.getPrincipal().getId() + " ." );
-        }
     }
 
 }
