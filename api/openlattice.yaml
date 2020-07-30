@@ -1043,7 +1043,7 @@ paths:
     get:
       summary: Get all EntitySet definitions.
       operationId: getAllEntitySets
-      tags: [entitySets, edm]
+      tags: [entitySets]
       security:
         - openlattice_auth: []
         - http_auth: []
@@ -1067,7 +1067,7 @@ paths:
               type: array
               items:
                 $ref: "#/components/schemas/EntitySet"
-      tags: [entitySets, edm]
+      tags: [entitySets]
       security:
         - openlattice_auth: []
         - http_auth: []
@@ -1085,7 +1085,7 @@ paths:
               type: array
               items:
                 type: string
-      tags: [entitySets, edm]
+      tags: [entitySets]
       security:
         - openlattice_auth: []
         - http_auth: []
@@ -1109,7 +1109,7 @@ paths:
           required: true
           schema:
             type: string
-      tags: [entitySets, edm]
+      tags: [entitySets]
       security:
         - openlattice_auth: []
         - http_auth: []
@@ -1132,7 +1132,7 @@ paths:
           schema:
             type: string
             format: uuid
-      tags: [entitySets, edm]
+      tags: [entitySets]
       security:
         - openlattice_auth: []
         - http_auth: []
@@ -1153,7 +1153,7 @@ paths:
           schema:
             type: string
             format: uuid
-      tags: [entitySets, edm]
+      tags: [entitySets]
       security:
         - openlattice_auth: []
         - http_auth: []
@@ -1171,7 +1171,7 @@ paths:
               type: array
               items:
                 type: string
-      tags: [entitySets, edm]
+      tags: [entitySets]
       security:
         - openlattice_auth: []
         - http_auth: []
@@ -1197,7 +1197,7 @@ paths:
           schema:
             type: string
             format: uuid
-      tags: [entitySets, edm]
+      tags: [entitySets]
       security:
         - openlattice_auth: []
         - http_auth: []
@@ -1221,7 +1221,7 @@ paths:
           schema:
             type: string
             format: uuid
-      tags: [entitySets, edm]
+      tags: [entitySets]
       security:
         - openlattice_auth: []
         - http_auth: []
@@ -1251,7 +1251,7 @@ paths:
           schema:
             type: string
             format: uuid
-      tags: [entitySets, edm]
+      tags: [entitySets]
       security:
         - openlattice_auth: []
         - http_auth: []
@@ -1265,7 +1265,7 @@ paths:
     post:
       summary: Updates the property type metadata for the given entity set.
       operationId: updateEntitySetPropertyMetadata
-      tags: [entitySets, edm]
+      tags: [entitySets]
       security:
         - openlattice_auth: []
         - http_auth: []
@@ -1308,7 +1308,7 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/MetadataUpdate"
-      tags: [entitySets, edm]
+      tags: [entitySets]
       security:
         - openlattice_auth: []
         - http_auth: []
@@ -1338,7 +1338,7 @@ paths:
               items:
                 type: string
                 format: uuid
-      tags: [entitySets, edm]
+      tags: [entitySets]
       security:
         - openlattice_auth: []
         - http_auth: []
@@ -1366,7 +1366,7 @@ paths:
               items:
                 type: string
                 format: uuid
-      tags: [entitySets, edm]
+      tags: [entitySets]
       security:
         - openlattice_auth: []
         - http_auth: []
@@ -1398,7 +1398,7 @@ paths:
                 items:
                   type: string
                   format: uuid
-      tags: [entitySets, edm]
+      tags: [entitySets]
       security:
         - openlattice_auth: []
         - http_auth: []
@@ -1430,7 +1430,7 @@ paths:
                 items:
                   type: string
                   format: uuid
-      tags: [entitySets, edm]
+      tags: [entitySets]
       security:
         - openlattice_auth: []
         - http_auth: []
@@ -2271,6 +2271,7 @@ paths:
                   type: array
                   items:
                     type: string
+  /datastore/data/set/{entitySetId}/{entityKeyId}:
     delete:
       summary: Deletes a single entity from an entity set.
       operationId: deleteEntity
@@ -3079,7 +3080,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/securablePrincipal"
+                  $ref: "#/components/schemas/SecurablePrincipal"
   /datastore/principals/sync/:
     get:
       summary: Activates a user in the OpenLattice system. This call must be made once before a user will be available for use in authorization policies.
@@ -4286,7 +4287,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/metadataUpdate"
+              $ref: "#/components/schemas/MetadataUpdate"
       responses:
         "200":
           description: Success
@@ -4324,7 +4325,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/EntityTypeCollection"
+              $ref: "#/components/schemas/CollectionTemplateType"
       tags:
         - collections
       security:
@@ -4401,7 +4402,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/metadataUpdate"
+              $ref: "#/components/schemas/MetadataUpdate"
       responses:
         "200":
           description: Success
@@ -4451,7 +4452,7 @@ paths:
       responses:
         "200":
           description: Success
-  /datastore/collections/entity/type/entity/set/{entitySetCollectionId}:
+  /datastore/collections/entity/set/entity/type/{entitySetCollectionId}:
     get:
       summary: Returns all authorized EntitySetCollections for a given EntityTypeCollection id
       operationId: getEntitySetCollectionsOfType
@@ -4476,6 +4477,196 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/EntitySetCollection"
+
+
+  ##################
+  ## SHUTTLE APIs ##
+  ##################
+  
+  /shuttle/integration/definition/{integrationName}:
+    get:
+      summary: Gets an existing integration definition
+      operationId: readIntegrationDefinition
+      parameters:
+        - name: integrationName
+          in: path
+          required: true
+          schema:
+            type: string
+      tags:
+        - shuttle
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Integration"
+    post:
+      summary: Creates a new integration definition for running recurring integrations
+      operationId: createIntegrationDefinition
+      parameters:
+        - name: integrationName
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Integration"
+      tags:
+        - shuttle
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: string
+                format: uuid
+    patch:
+      summary: Replaces any number of fields within an existing integration definition
+      operationId: updateIntegrationDefinition
+      parameters:
+      - name: integrationName
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IntegrationUpdate"
+      tags:
+        - shuttle
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+    delete:
+      summary: Replaces any number of fields within an existing integration definition
+      operationId: deleteIntegrationDefinition
+      parameters:
+        - name: integrationName
+          in: path
+          required: true
+          schema:
+            type: string
+      tags:
+        - shuttle
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+  /shuttle/integration/{integrationName}/{integrationKey}:
+    get:
+      summary: Enqueues an integration on Shuttle Server for a given integration
+      operationId: enqueueIntegration
+      parameters:
+        - name: integrationName
+          description: the name of the integration to be run
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: integrationKey
+          description: the unique id used to authenticate an integration run
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      tags:
+        - shuttle
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: string
+                format: uuid
+  /shuttle/integration/status/{jobId}:
+    delete:
+      summary: Deletes an integration job status from the integrationJobs map
+      operationId: deleteIntegrationJobStatus
+      parameters:
+      - name: jobId
+        description: the unique id of the integration job
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      tags:
+        - shuttle
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success        
+    get:
+      summary: Polls the status of an integration
+      operationId: pollIntegration
+      parameters:
+        - name: jobId
+          description: the unique id of the integration job
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      tags:
+        - shuttle
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: string
+                enum: [IN_PROGRESS, SUCCEEDED, FAILED, QUEUED, FAILED_TO_START]
+  /shuttle/integration/status:
+    get:
+      summary: Polls the statuses of all running integrations
+      operationId: pollAllIntegrations
+      tags:
+        - shuttle
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  $ref: "#/components/schemas/IntegrationJob"
+
 components:
   securitySchemes:
     http_auth:
@@ -4890,6 +5081,22 @@ components:
           items:
             type: string
             format: uuid
+    SearchResult:
+      type: object
+      properties:
+        numHits:
+          type: integer
+        hits:
+          type: array
+          items:
+            type: object
+            properties:
+              propertyTypes:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PropertyType"
+              entitySet:
+                $ref: "#/components/schemas/EntitySet"
     DataSearchResult:
       type: object
       properties:
@@ -5102,6 +5309,25 @@ components:
           description: An existing entityKeyId
           type: string
           format: uuid
+        dstEntitySetId:
+          description: the ID of the dst entity set
+          type: string
+          format: uuid
+        dstEntityIndex:
+          description: The index of an entity 
+          type: string
+          format: uuid
+        dstEntityKeyId:
+          description: An existing entityKeyId
+          type: string
+          format: uuid
+        data:
+          description: data
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
     DataGraphIds:
       type: object
       properties:
@@ -5135,9 +5361,6 @@ components:
           type: string
         description:
           type: string
-        "@class":
-          type: string
-          enum: ["com.openlattice.organization.roles.Role"]
     Organization:
       type: object
       properties:
@@ -5399,31 +5622,6 @@ components:
           type: integer
         maxHits:
           type: integer
-    SearchResult:
-      type: object
-      description: A search result object, containing the total number of hits for the given query, and the hits themselves.
-      properties:
-        numHits: 
-          type: integer
-        hits:
-            type: object
-            additionalProperties:
-              type: string
-          
-           
-    DataSearchResult:
-      type: object
-      properties:
-        numHits:
-          type: integer
-        hits:
-          type: array
-          items:
-            type: object
-            additionalProperties:
-              type: array
-              items:
-                type: string
     OrganizationExternalDatabaseTable:
       type: object
       properties:
@@ -5569,6 +5767,198 @@ components:
           type: integer
         count:
           type: integer
+    Integration:
+      description: Represents a data integration, including all fields required to run the integration.
+      type: object
+      properties:
+        key:
+          description: a unique ID used for authorizing a call to run an integration
+          type: string
+          format: uuid
+        environment:
+          description: the retrofit environment (e.g. PROD_INTEGRATION, LOCAL)
+          type: string
+          enum: [ PROD_INTEGRATION, STAGING_INTEGRATION, LOCAL ]
+        s3Bucket:
+          description: the url of the s3bucket to be used
+          type: string
+        contacts:
+          description: the set of email addresses of those responsible for the integration
+          type: array
+          items:
+            type: string
+        organizationId:
+          description: the id of the organization that owns the integration
+          type: string
+          format: uuid
+        entitySetId:
+          description: the id of the entity set that stores the logs for this integration
+          type: string
+          format: uuid
+        maxConnections:
+          description: maximum number of connections to postgres allowed for this integration
+          type: integer
+        callback:
+          description: urls to receive a POST when integration has completed
+          type: array
+          items:
+            type: string
+        flightPlanParameters:
+          description: a map from [Flight] name to [FlightPlanParameters]
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/FlightPlanParameters"
+    FlightPlanParameters:
+      description: Represents the parameters required to create a flight plan (i.e. a Map<Flight, Payload>)
+      type: object
+      properties:
+        sql:
+          description: the sql query to be used to pull cleaned data from postgres
+          type: string
+        src:
+          description: postgres data source for pulling clean data
+          type: object
+          additionalProperties:
+            type: string
+        srcPrimaryKeyColumns:
+          description: the columns that are primary keys in the cleaned data
+          type: array
+          items:
+            type: string
+        path:
+          description: the path to the flight yaml (i.e. https://raw.githubusercontent.com/pathToFlight.yaml)
+          type: string
+        flight:
+          $ref: "#/components/schemas/Flight"
+        
+    FlightPlanParametersUpdate:
+      type: object
+      properties:
+        sql:
+          description: the sql query to be used to pull cleaned data from postgres
+          type: string
+        src:
+          description: postgres data source for pulling clean data
+          type: object
+          additionalProperties:
+            type: string
+        srcPrimaryKeyColumns:
+          description: the columns that are primary keys in the cleaned data
+          type: array
+          items:
+            type: string
+        path:
+          description: the path to the flight yaml (i.e. https://raw.githubusercontent.com/pathToFlight.yaml)
+          type: string
+    Flight:
+      type: object
+      properties:
+        name:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        organizationId:
+          type: string
+          format: uuid
+        entityDefinitions:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/EntityDefinition"
+        associationDefinitions:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/AssociationDefinition"
+    PropertyDefinition:
+      type: object
+      properties:
+        type:
+          $ref: "#/components/schemas/FullQualifiedName"
+        column:
+          type: string
+                  
+    EntityDefinition:
+      type: object
+      properties:
+        fqn:
+          $ref: "#/components/schemas/FullQualifiedName"
+        entitySetName:
+          type: string
+        propertyDefinitions:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/PropertyDefinition"
+        updateType:
+          type: string
+          enum: [Replace, PartialReplace, Merge]
+    AssociationDefinition:
+      type: object
+      properties:
+        fqn:
+          $ref: "#/components/schemas/FullQualifiedName"
+        entitySetName:
+          type: string
+        propertyDefinitions:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/PropertyDefinition"
+        updateType:
+          type: string
+          enum: [Replace, PartialReplace, Merge]
+        src:
+          type: string
+        dst:
+          type: string
+
+
+          
+        
+    IntegrationJob:
+      type: object
+      properties:
+        name: 
+          type: string
+        status:
+          type: string
+          enum: [IN_PROGRESS, SUCCEEDED, FAILED, QUEUED, FAILED_TO_START]
+    IntegrationUpdate:
+      type: object
+      properties:
+        environment:
+          description: the retrofit environment (e.g. PROD_INTEGRATION, LOCAL)
+          type: string
+          enum: [ PROD_INTEGRATION, STAGING_INTEGRATION, LOCAL ]
+        s3Bucket:
+          description: the url of the s3bucket to be used
+          type: string
+        contacts:
+          description: the set of email addresses of those responsible for the integration
+          type: array
+          items:
+            type: string
+        organizationId:
+          description: the id of the organization that owns the integration
+          type: string
+          format: uuid
+        maxConnections:
+          description: maximum number of connections to postgres allowed for this integration
+          type: integer
+        callbackUrls:
+          description: urls to receive a POST when integration has completed
+          type: array
+          items:
+            type: string
+        flightPlanParameters:
+          description: a map from [Flight] name to [FlightPlanParametersUpdate]
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/FlightPlanParametersUpdate"
+      
+          
+          
+        
+        
     CollectionTemplateType:
       type: object
       properties:
@@ -5597,7 +5987,7 @@ components:
           format: uuid
           description: An optional UUID for the entity type collection.
         type:
-          $ref: "#/components/schemas/fullQualifiedName"
+          $ref: "#/components/schemas/FullQualifiedName"
           description: The FQN of the entity type collection.
         title:
           type: string
@@ -5608,7 +5998,7 @@ components:
         schemas:
           type: array
           items:
-            $ref: "#/components/schemas/fullQualifiedName"
+            $ref: "#/components/schemas/FullQualifiedName"
           description: A list of schemas the entity type collection should belong to.
         template:
           type: array
@@ -5652,9 +6042,7 @@ components:
           description: The id of the organization that this entity set collection belongs to.
         
       
-  
-          
-    
+      
 tags:
   - name: edm
     description: API endpoints to the entity data model.
