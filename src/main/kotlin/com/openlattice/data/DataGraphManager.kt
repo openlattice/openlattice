@@ -189,5 +189,5 @@ interface DataGraphManager {
 
     fun getEdgeEntitySetsConnectedToEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): Set<UUID>
     fun getEdgeEntitySetsConnectedToEntitySet(entitySetId: UUID): Set<UUID>
-    fun setPartitions(entitySetId: UUID, partitions: Set<Int>) : Int
+    fun setPartitions(entitySetId: UUID, partitions: Set<Int>) : UUID
 }

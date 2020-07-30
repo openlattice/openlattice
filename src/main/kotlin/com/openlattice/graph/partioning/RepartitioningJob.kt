@@ -16,12 +16,22 @@ import java.util.*
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 class RepartitioningJob(
-        partitions: List<Int>,
-        entitySetId: UUID,
-        private val hds: HikariDataSource //TODO: Handle data not being on same connection
-) : AbstractDistributedJob<Long, RepartitioningJobState>(RepartitioningJobState(entitySetId, partitions, 0)) {
+        jobState: RepartitioningJobState
+) : AbstractDistributedJob<Long, RepartitioningJobState>(jobState) {
+
+    constructor(
+            entitySetId: UUID,
+            partitions: List<Int>
+    ) : this(RepartitioningJobState(entitySetId, partitions, 0))
+
+    private lateinit var hds: HikariDataSource
+
     private val currentlyMigratingPartition: Int
         get() = state.partitions[state.currentlyMigratingPartitionIndex]
+
+    fun setHikariDataSource(hds: HikariDataSource) {
+        this.hds = hds
+    }
 
     override fun result(): Long? {
         //There not really any relevant work to wait on, so we just return null.
