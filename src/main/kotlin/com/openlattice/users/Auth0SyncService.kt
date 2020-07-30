@@ -81,7 +81,7 @@ class Auth0SyncService(
 
     }
 
-    fun updateUser(user: User) {
+    private fun updateUser(user: User) {
         logger.info("Updating user ${user.id}")
         ensureSecurablePrincipalExists(user)
 
@@ -89,7 +89,7 @@ class Auth0SyncService(
         users.set(user.id, user)
     }
 
-    fun syncUserEnrollmentsAndAuthentication(user: User) {
+    private fun syncUserEnrollmentsAndAuthentication(user: User) {
         //Figure out which users need to be added to which organizations.
         //Since we don't want to do O( # organizations ) for each user, we need to lookup organizations on a per user
         //basis and see if the user needs to be added.
