@@ -1,5 +1,6 @@
 package com.openlattice.graph.partioning
 
+import com.fasterxml.jackson.annotation.JsonCreator
 import com.geekbeast.rhizome.jobs.AbstractDistributedJob
 import com.geekbeast.rhizome.jobs.JobStatus
 import com.openlattice.postgres.DataTables.*
@@ -15,27 +16,27 @@ import java.util.*
  * Background job for re-partitioning data in an entity set.
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-class RepartitioningJob(
+class RepartitioningJob
+@JsonCreator constructor(
         jobState: RepartitioningJobState
 ) : AbstractDistributedJob<Long, RepartitioningJobState>(jobState) {
-
     constructor(
             entitySetId: UUID,
-            partitions: List<Int>
-    ) : this(RepartitioningJobState(entitySetId, partitions, 0))
+            oldPartitions: List<Int>
+    ) : this(RepartitioningJobState(entitySetId, oldPartitions))
 
+    @Transient
     private lateinit var hds: HikariDataSource
 
     private val currentlyMigratingPartition: Int
-        get() = state.partitions[state.currentlyMigratingPartitionIndex]
+        get() = state.oldPartitions[state.currentlyMigratingPartitionIndex]
 
     fun setHikariDataSource(hds: HikariDataSource) {
         this.hds = hds
     }
 
     override fun result(): Long? {
-        //There not really any relevant work to wait on, so we just return null.
-        return null
+        return state.repartitionCount
     }
 
     override fun processNextBatch() {
@@ -62,7 +63,7 @@ class RepartitioningJob(
     }
 
     private fun markPartitionCompleted() {
-        if (++state.currentlyMigratingPartitionIndex == state.partitions.size) {
+        if (++state.currentlyMigratingPartitionIndex == state.oldPartitions.size) {
             hasWorkRemaining = false
         }
         this.status = JobStatus.FINISHED
