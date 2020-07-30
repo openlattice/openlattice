@@ -533,7 +533,7 @@ class HazelcastOrganizationService(
             Principal(PrincipalType.USER, it.id) to getAppMetadata(it)
         }
 
-        addMembers(organizationId, profiles.keys, profiles)
+        addMembers(organizationId, profiles.keys.toSet(), profiles)
     }
 
     companion object {
