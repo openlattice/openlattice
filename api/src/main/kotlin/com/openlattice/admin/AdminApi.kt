@@ -81,5 +81,5 @@ interface AdminApi {
     fun getAllOrganizations(): Iterable<Organization>
 
     @GET( BASE + JOBS )
-    fun getJobs() : Map<UUID, com.geekbeast.rhizome.jobs.AbstractDistributedJob<*, *>>
+    fun getJobs() : Map<UUID, DistributableJob<*>>
 }
