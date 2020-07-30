@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Maps;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.apps.AppTypeSetting;
 import com.openlattice.authorization.AclKey;
@@ -39,7 +40,7 @@ import java.util.UUID;
 @Component
 public class AppTypeSettingStreamSerializer implements SelfRegisteringStreamSerializer<AppTypeSetting> {
 
-    private static ObjectMapper mapper = ObjectMappers.getJsonMapper();
+    private static ObjectMapper                       mapper  = ObjectMappers.getJsonMapper();
     private static TypeReference<Map<String, Object>> typeRef = new TypeReference<Map<String, Object>>() {
     };
 
@@ -48,26 +49,26 @@ public class AppTypeSettingStreamSerializer implements SelfRegisteringStreamSeri
     }
 
     @Override public void write( ObjectDataOutput out, AppTypeSetting object ) throws IOException {
-        UUIDStreamSerializer.serialize( out, object.getId() );
-        UUIDStreamSerializer.serialize( out, object.getEntitySetCollectionId() );
+        UUIDStreamSerializerUtils.serialize( out, object.getId() );
+        UUIDStreamSerializerUtils.serialize( out, object.getEntitySetCollectionId() );
 
         out.writeInt( object.getRoles().size() );
         for ( Map.Entry<UUID, AclKey> entry : object.getRoles().entrySet() ) {
-            UUIDStreamSerializer.serialize( out, entry.getKey() );
+            UUIDStreamSerializerUtils.serialize( out, entry.getKey() );
             AclKeyStreamSerializer.serialize( out, entry.getValue() );
         }
         out.writeByteArray( mapper.writeValueAsBytes( object.getSettings() ) );
     }
 
     @Override public AppTypeSetting read( ObjectDataInput in ) throws IOException {
-        UUID id = UUIDStreamSerializer.deserialize( in );
-        UUID entitySetCollectionId = UUIDStreamSerializer.deserialize( in );
+        UUID id = UUIDStreamSerializerUtils.deserialize( in );
+        UUID entitySetCollectionId = UUIDStreamSerializerUtils.deserialize( in );
 
         int roleMapSize = in.readInt();
         Map<UUID, AclKey> roleMap = Maps.newHashMapWithExpectedSize( roleMapSize );
 
         for ( int i = 0; i < roleMapSize; i++ ) {
-            UUID roleId = UUIDStreamSerializer.deserialize( in );
+            UUID roleId = UUIDStreamSerializerUtils.deserialize( in );
             AclKey roleAclKey = AclKeyStreamSerializer.deserialize( in );
 
             roleMap.put( roleId, roleAclKey );

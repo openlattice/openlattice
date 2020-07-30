@@ -3,8 +3,9 @@ package com.openlattice.postgres.mapstores;
 import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hazelcast.config.IndexConfig;
+import com.hazelcast.config.IndexType;
 import com.hazelcast.config.MapConfig;
-import com.hazelcast.config.MapIndexConfig;
 import com.hazelcast.config.MapStoreConfig;
 import com.openlattice.apps.AppConfigKey;
 import com.openlattice.apps.AppTypeSetting;
@@ -20,8 +21,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 public class AppConfigMapstore extends AbstractBasePostgresMapstore<AppConfigKey, AppTypeSetting> {
-    public static final String APP_ID          = "__key#appId";
-    public static final String ORGANIZATION_ID = "__key#organizationId";
+    public static final String APP_ID          = "__key.appId";
+    public static final String ORGANIZATION_ID = "__key.organizationId";
 
     private static final ObjectMapper mapper = ObjectMappers.getJsonMapper();
 
@@ -82,8 +83,8 @@ public class AppConfigMapstore extends AbstractBasePostgresMapstore<AppConfigKey
 
     @Override public MapConfig getMapConfig() {
         return super.getMapConfig()
-                .addMapIndexConfig( new MapIndexConfig( APP_ID, false ) )
-                .addMapIndexConfig( new MapIndexConfig( ORGANIZATION_ID, false ) );
+                .addIndexConfig( new IndexConfig( IndexType.HASH, APP_ID ) )
+                .addIndexConfig( new IndexConfig( IndexType.HASH, ORGANIZATION_ID ) );
     }
 
     @Override public AppConfigKey generateTestKey() {

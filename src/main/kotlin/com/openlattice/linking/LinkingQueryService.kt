@@ -23,7 +23,6 @@ package com.openlattice.linking
 
 import com.openlattice.data.EntityDataKey
 import com.openlattice.postgres.streams.BasePostgresIterable
-import com.openlattice.postgres.streams.PostgresIterable
 import java.sql.Connection
 import java.util.*
 
@@ -37,6 +36,8 @@ interface LinkingQueryService {
      * Inserts the results scoring pairs of elements within a cluster to persistent storage. The initial cluster usually
      * consists of all scored pairs within a single block returned by the [com.openlattice.linking.Blocker].
      *
+     * Commits the transaction, assuming that lockClustersForUpdates was called at some point before calling this
+     *
      * @param clusterId A unique identifier for cluster that is being stored.
      * @param scores The scores pairs of elements within a cluster.
      * @return The total number of stored elements.
@@ -46,6 +47,23 @@ interface LinkingQueryService {
             clusterId: UUID,
             scores: Map<EntityDataKey, Map<EntityDataKey, Double>>): Int
 
+    /**
+     * Performs the following operations:
+     *
+     * - Creates a transaction with lockClustersForUpdates
+     * - Invokes doWork function
+     * - Commits the transaction with insertMatchScores
+     * - Returns the results of doWork
+     *
+     * @param doWork A function that takes a set of locked clusters, performs clustering and blocking
+     *  returning the final cluster as well as whether it was newly created
+     * @return A triple consisting of the final cluster (first + second) and whether it was newly created (third)
+     */
+    fun lockClustersDoWorkAndCommit(
+            candidate: EntityDataKey,
+            candidates: Set<EntityDataKey>,
+            doWork: ( clusters: Map<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>>  ) -> Triple<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>, Boolean>
+    ): Triple<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>, Boolean>
 
     fun createLinks(linkingId: UUID, toAdd: Set<EntityDataKey>): Int
 
@@ -78,6 +96,11 @@ interface LinkingQueryService {
             whitelist: Set<UUID>
     ): BasePostgresIterable<UUID>
 
+
+    /**
+     * Opens a transaction, locking rows in Matched Entities table
+     *  assuming that insertMatchScores will be called at some point later
+     */
     fun lockClustersForUpdates(clusters: Set<UUID>): Connection
 
     fun getEntityKeyIdsOfLinkingIds(

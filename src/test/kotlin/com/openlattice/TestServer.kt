@@ -27,7 +27,6 @@ import com.kryptnostic.rhizome.core.RhizomeApplicationServer
 import com.openlattice.auditing.pods.AuditingConfigurationPod
 import com.openlattice.auth0.Auth0Pod
 import com.openlattice.datastore.constants.DatastoreProfiles
-import com.openlattice.edm.PostgresEdmManager
 import com.openlattice.hazelcast.pods.MapstoresPod
 import com.openlattice.hazelcast.pods.SharedStreamSerializersPod
 import com.openlattice.hazelcast.pods.TestPod
@@ -66,7 +65,6 @@ open class TestServer {
             hds = testServer.context.getBean(HikariDataSource::class.java)
 
             testServer.context.getBean(EventBus::class.java)
-                    .register(PostgresEdmManager(hds, hazelcastInstance))
         }
     }
 }

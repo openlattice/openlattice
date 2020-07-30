@@ -18,8 +18,6 @@ class SerializersTest {
 
         private var serializers: MutableCollection<TestableSelfRegisteringStreamSerializer<*>> = testServer.context.getBeansOfType(TestableSelfRegisteringStreamSerializer::class.java).values
 
-        private var failed = false
-
         private fun test(tss: TestableSelfRegisteringStreamSerializer<Any>) {
             val expected = tss.generateTestValue()
             val ss1 = DefaultSerializationServiceBuilder().build()
@@ -29,12 +27,8 @@ class SerializersTest {
                 val inputData = dataOut.toByteArray()
                 val dataIn: ObjectDataInput = ss1.createObjectDataInput(inputData)
                 val actual = tss.read(dataIn)
-                if (expected != actual) {
-                    logger.error("Incorrect serialization/deserialization of type\n {}:\n\tExpected {}\n\tbut got {}",
-                            tss.clazz,
-                            expected,
-                            actual)
-                    failed = true
+                require (expected == actual) {
+                    "Incorrect serialization/deserialization of type ${tss.clazz.canonicalName}: \tExpected $expected but got $actual"
                 }
             } catch (e: Exception) {
                 logger.error("Unable to serialize/deserialize type {}", tss.clazz, e)
@@ -49,7 +43,6 @@ class SerializersTest {
         serializers.stream()
                 .filter { !excluded.contains(it.clazz) }
                 .forEach { test(it as TestableSelfRegisteringStreamSerializer<Any>) }
-        Assert.assertFalse(failed)
     }
 
 }

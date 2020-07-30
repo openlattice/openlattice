@@ -22,6 +22,7 @@ package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.assembler.processors.AddFlagsToOrganizationMaterializedEntitySetProcessor
 import com.openlattice.hazelcast.StreamSerializerTypeIds
@@ -42,7 +43,7 @@ class AddFlagsToOrganizationMaterializedEntitySetProcessorStreamSerializer
     }
 
     override fun write(out: ObjectDataOutput, obj: AddFlagsToOrganizationMaterializedEntitySetProcessor) {
-        UUIDStreamSerializer.serialize(out, obj.entitySetId)
+        UUIDStreamSerializerUtils.serialize(out, obj.entitySetId)
 
         out.writeInt(obj.flags.size)
         obj.flags.forEach {
@@ -51,7 +52,7 @@ class AddFlagsToOrganizationMaterializedEntitySetProcessorStreamSerializer
     }
 
     override fun read(input: ObjectDataInput): AddFlagsToOrganizationMaterializedEntitySetProcessor {
-        val entitySetId = UUIDStreamSerializer.deserialize(input)
+        val entitySetId = UUIDStreamSerializerUtils.deserialize(input)
 
         val size = input.readInt()
         val flags = LinkedHashSet<OrganizationEntitySetFlag>(size)

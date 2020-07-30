@@ -2,6 +2,7 @@ package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.collections.processors.RemoveKeyFromEntityTypeCollectionTemplateProcessor
 import com.openlattice.hazelcast.StreamSerializerTypeIds
@@ -19,10 +20,10 @@ class RemoveKeyFromEntityTypeCollectionTemplateProcessorStreamSerializer : SelfR
     }
 
     override fun write(out: ObjectDataOutput, `object`: RemoveKeyFromEntityTypeCollectionTemplateProcessor) {
-        UUIDStreamSerializer.serialize(out, `object`.templateTypeId)
+        UUIDStreamSerializerUtils.serialize(out, `object`.templateTypeId)
     }
 
     override fun read(`in`: ObjectDataInput): RemoveKeyFromEntityTypeCollectionTemplateProcessor {
-        return RemoveKeyFromEntityTypeCollectionTemplateProcessor(UUIDStreamSerializer.deserialize(`in`))
+        return RemoveKeyFromEntityTypeCollectionTemplateProcessor(UUIDStreamSerializerUtils.deserialize(`in`))
     }
 }

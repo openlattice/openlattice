@@ -45,6 +45,8 @@ interface EntitySetManager {
 
     fun getEntitySetsAsMap(entitySetIds: Set<UUID>): Map<UUID, EntitySet>
 
+    fun getEntitySetSize(entitySetId: UUID): Long
+
     fun getEntitySets(): Iterable<EntitySet>
 
     fun getEntitySetsOfType(entityTypeIds: Set<UUID>): Collection<EntitySet>

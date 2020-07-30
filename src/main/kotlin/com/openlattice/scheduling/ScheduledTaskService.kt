@@ -1,7 +1,7 @@
 package com.openlattice.scheduling
 
 import com.hazelcast.core.HazelcastInstance
-import com.hazelcast.core.IMap
+import com.hazelcast.map.IMap
 import com.hazelcast.query.Predicates
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.scheduling.mapstores.ScheduledTasksMapstore

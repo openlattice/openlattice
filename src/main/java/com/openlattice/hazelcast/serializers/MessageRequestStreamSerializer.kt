@@ -4,6 +4,7 @@ package com.openlattice.hazelcast.serializers
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
 import com.openlattice.codex.Base64Media
 import com.openlattice.codex.MessageRequest
 import com.openlattice.hazelcast.StreamSerializerTypeIds
@@ -16,8 +17,8 @@ class MessageRequestStreamSerializer : TestableSelfRegisteringStreamSerializer<M
     companion object {
 
         fun serialize(out: ObjectDataOutput, `object`: MessageRequest) {
-            UUIDStreamSerializer.serialize(out, `object`.organizationId)
-            UUIDStreamSerializer.serialize(out, `object`.messageEntitySetId)
+            UUIDStreamSerializerUtils.serialize(out, `object`.organizationId)
+            UUIDStreamSerializerUtils.serialize(out, `object`.messageEntitySetId)
             out.writeUTF(`object`.messageContents)
             SetStreamSerializers.fastStringSetSerialize(out, `object`.phoneNumbers)
             out.writeUTF(`object`.senderId)
@@ -29,8 +30,8 @@ class MessageRequestStreamSerializer : TestableSelfRegisteringStreamSerializer<M
         }
 
         fun deserialize(`in`: ObjectDataInput): MessageRequest {
-            val organizationId = UUIDStreamSerializer.deserialize(`in`)
-            val messageEntitySetId = UUIDStreamSerializer.deserialize(`in`)
+            val organizationId = UUIDStreamSerializerUtils.deserialize(`in`)
+            val messageEntitySetId = UUIDStreamSerializerUtils.deserialize(`in`)
             val messageContents = `in`.readUTF()
             val phoneNumbers = SetStreamSerializers.fastStringSetDeserialize(`in`)
             val senderId = `in`.readUTF()

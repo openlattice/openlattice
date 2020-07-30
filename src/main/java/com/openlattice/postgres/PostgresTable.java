@@ -435,7 +435,7 @@ public final class PostgresTable {
                     .primaryKey( ACL_KEY );
     public static final PostgresTableDefinition SMS_INFORMATION   =
             new PostgresTableDefinition( "sms_information" )
-                    .addColumns( PHONE_NUMBER, ORGANIZATION_ID, ENTITY_SET_IDS, TAGS )
+                    .addColumns( PHONE_NUMBER, ORGANIZATION_ID, ENTITY_SET_IDS, TAGS, LAST_SYNC )
                     .primaryKey( PHONE_NUMBER, ORGANIZATION_ID );
     public static final PostgresTableDefinition SUBSCRIPTIONS     =
             new PostgresTableDefinition( "subscriptions" )
@@ -450,7 +450,7 @@ public final class PostgresTable {
                     .primaryKey( ID, PRINCIPAL_ID );
     public static final PostgresTableDefinition SYNC_IDS          =
             new CitusDistributedTableDefinition( "sync_ids" )
-                    .addColumns( ENTITY_SET_ID, ENTITY_ID, ID_VALUE )
+                    .addColumns( ENTITY_SET_ID, ENTITY_ID, ID_VALUE, ID_WRITTEN )
                     .primaryKey( ENTITY_SET_ID, ENTITY_ID )
                     .distributionColumn( ENTITY_ID );
 
@@ -525,7 +525,7 @@ public final class PostgresTable {
                                 + ",(" + VERSION.getName() + " <= 0)" )
                         .name( "ids_needing_delete_index_idx" )
                         .ifNotExists(),
-                new PostgresExpressionIndexDefinition( ENTITY_KEY_IDS,
+                new PostgresExpressionIndexDefinition( IDS,
                         ENTITY_SET_ID.getName()
                                 + ",(" + LAST_LINK.getName() + " < " + LAST_WRITE.getName() + ")"
                                 + ",(" + LAST_INDEX.getName() + " >= " + LAST_WRITE.getName() + ")"

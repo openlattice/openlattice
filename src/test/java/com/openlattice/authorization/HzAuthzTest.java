@@ -40,18 +40,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class HzAuthzTest extends TestServer {
-    protected static HazelcastAuthorizationService  hzAuthz;
-    private static final Logger                     logger = LoggerFactory.getLogger( HzAuthzTest.class );
-
-    @BeforeClass
-    public static void init() {
-        final var aqs = new AuthorizationQueryService( hds, hazelcastInstance );
-        hzAuthz = new HazelcastAuthorizationService(
-                hazelcastInstance,
-                aqs,
-                testServer.getContext().getBean( EventBus.class )
-        );
-    }
+    private static final Logger                        logger = LoggerFactory.getLogger( HzAuthzTest.class );
+    protected static     HazelcastAuthorizationService hzAuthz;
 
     @Test
     public void testAddEntitySetPermission() {
@@ -63,6 +53,23 @@ public class HzAuthzTest extends TestServer {
         hzAuthz.addPermission( key, p, permissions );
         Assert.assertTrue(
                 hzAuthz.checkIfHasPermissions( key, ImmutableSet.of( p ), permissions ) );
+    }
+
+    @Test
+    public void testAddEntitySetsPermissions() {
+        Set<AclKey> aclKeys = ImmutableSet.of( new AclKey( UUID.randomUUID() ),
+                new AclKey( UUID.randomUUID() ),
+                new AclKey( UUID.randomUUID() ) );
+
+        Principal p = new Principal( PrincipalType.USER, "grid|TRON" );
+        EnumSet<Permission> permissions = EnumSet.of( Permission.DISCOVER, Permission.READ );
+        aclKeys.forEach( key ->
+                Assert.assertFalse(
+                        hzAuthz.checkIfHasPermissions( key, ImmutableSet.of( p ), permissions ) ) );
+        hzAuthz.addPermissions( aclKeys, p, permissions, SecurableObjectType.EntitySet );
+        aclKeys.forEach( key ->
+                Assert.assertTrue(
+                        hzAuthz.checkIfHasPermissions( key, ImmutableSet.of( p ), permissions ) ) );
     }
 
     @Test
@@ -184,23 +191,23 @@ public class HzAuthzTest extends TestServer {
     public void testAccessChecks() {
         final int size = 100;
         Set<AccessCheck> accessChecks = new HashSet<>( size );
-        AclKey[] aclKeys = new AclKey[size];
+        AclKey[] aclKeys = new AclKey[ size ];
         //        Principal[] p1s = new Principal[ size ];
-        Principal[] p2s = new Principal[size];
-        EnumSet<Permission>[] permissions1s = new EnumSet[size];
-        EnumSet<Permission>[] permissions2s = new EnumSet[size];
+        Principal[] p2s = new Principal[ size ];
+        EnumSet<Permission>[] permissions1s = new EnumSet[ size ];
+        EnumSet<Permission>[] permissions2s = new EnumSet[ size ];
         EnumSet<Permission> all = EnumSet.noneOf( Permission.class );
 
         for ( int i = 0; i < size; ++i ) {
             AclKey key = new AclKey( UUID.randomUUID() );
             Principal p1 = TestDataFactory.userPrincipal();
             Principal p2 = TestDataFactory.userPrincipal();
-            aclKeys[i] = key;
+            aclKeys[ i ] = key;
             //            p1s[ i ] = p1;
-            p2s[i] = p2;
+            p2s[ i ] = p2;
 
-            EnumSet<Permission> permissions1 = permissions1s[i] = TestDataFactory.nonEmptyPermissions();
-            EnumSet<Permission> permissions2 = permissions2s[i] = TestDataFactory.nonEmptyPermissions();
+            EnumSet<Permission> permissions1 = permissions1s[ i ] = TestDataFactory.nonEmptyPermissions();
+            EnumSet<Permission> permissions2 = permissions2s[ i ] = TestDataFactory.nonEmptyPermissions();
 
             all.addAll( permissions2 );
 
@@ -228,9 +235,9 @@ public class HzAuthzTest extends TestServer {
             AclKey key = ac.getAclKey();
             //            Principal p1 = p1s[ i ];
             i = keys.indexOf( key );
-            Principal p2 = p2s[i];
-            EnumSet<Permission> permissions1 = permissions1s[i];
-            EnumSet<Permission> permissions2 = permissions2s[i++];
+            Principal p2 = p2s[ i ];
+            EnumSet<Permission> permissions1 = permissions1s[ i ];
+            EnumSet<Permission> permissions2 = permissions2s[ i++ ];
 
             Map<AclKey, EnumMap<Permission, Boolean>> result =
                     hzAuthz.accessChecksForPrincipals( ImmutableSet.of( ac ), ImmutableSet.of( p2 ) )
@@ -282,7 +289,6 @@ public class HzAuthzTest extends TestServer {
         var key5 = new AclKey( UUID.randomUUID() );
         var key6 = new AclKey( UUID.randomUUID() );
 
-
         Principal principal = TestDataFactory.userPrincipal();
         EnumSet<Permission> read = EnumSet.of( Permission.READ );
         EnumSet<Permission> write = EnumSet.of( Permission.WRITE );
@@ -312,7 +318,6 @@ public class HzAuthzTest extends TestServer {
         // no permissions at all
         var aclKeySet3 = Set.of( key5, key6 );
 
-
         final var reducedPermissionsMap1 = hzAuthz.getSecurableObjectSetsPermissions(
                 List.of( aclKeySet1, aclKeySet2, aclKeySet3 ),
                 Set.of( principal ) );
@@ -320,7 +325,6 @@ public class HzAuthzTest extends TestServer {
         Assert.assertEquals( read, reducedPermissionsMap1.get( aclKeySet1 ) );
         Assert.assertEquals( EnumSet.noneOf( Permission.class ), reducedPermissionsMap1.get( aclKeySet2 ) );
         Assert.assertEquals( EnumSet.noneOf( Permission.class ), reducedPermissionsMap1.get( aclKeySet3 ) );
-
 
         // different principals permissions should accumulate toghether
         Principal p1 = TestDataFactory.userPrincipal();
@@ -338,6 +342,14 @@ public class HzAuthzTest extends TestServer {
                 List.of( aclKeySet1 ),
                 Set.of( p1, p2, p3 ) );
         Assert.assertEquals( read, reducedPermissionsMap2.get( aclKeySet1 ) );
+    }
+
+    @BeforeClass
+    public static void init() {
+        hzAuthz = new HazelcastAuthorizationService(
+                hazelcastInstance,
+                testServer.getContext().getBean( EventBus.class )
+        );
     }
 
 }

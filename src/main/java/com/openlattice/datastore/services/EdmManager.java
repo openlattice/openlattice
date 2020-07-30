@@ -23,7 +23,6 @@
 package com.openlattice.datastore.services;
 
 import com.hazelcast.map.EntryProcessor;
-import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.edm.EntityDataModel;
 import com.openlattice.edm.EntityDataModelDiff;
 import com.openlattice.edm.requests.MetadataUpdate;
@@ -32,15 +31,16 @@ import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.EntityTypePropertyMetadata;
 import com.openlattice.edm.type.PropertyType;
-
-import java.util.*;
-
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 import javax.annotation.Nullable;
+import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 public interface EdmManager {
-    void clearTables();
 
     PropertyType getPropertyType( FullQualifiedName propertyTypeFqn );
 
@@ -57,8 +57,6 @@ public interface EdmManager {
     Iterable<PropertyType> getPropertyTypes();
 
     Set<UUID> getAllPropertyTypeIds();
-
-    Iterable<PropertyUsageSummary> getPropertyUsageSummary( UUID propertyTypeId );
 
     void createEntityType( EntityType objectType );
 
@@ -146,7 +144,7 @@ public interface EdmManager {
 
     Map<UUID, EntityType> getEntityTypesAsMap( Set<UUID> entityTypeIds );
 
-    <V> Map<UUID, V> fromPropertyTypes( Set<UUID> propertyTypeIds, EntryProcessor<UUID, PropertyType> ep );
+    <V> Map<UUID, V> fromPropertyTypes( Set<UUID> propertyTypeIds, EntryProcessor<UUID, PropertyType, V> ep );
 
     Set<UUID> getPropertyTypeIdsOfEntityType( UUID entityTypeId );
 
@@ -179,4 +177,6 @@ public interface EdmManager {
     EntityTypePropertyMetadata getEntityTypePropertyMetadata( UUID entityTypeId, UUID propertyTypeId );
 
     Map<UUID, EntityTypePropertyMetadata> getAllEntityTypePropertyMetadata( UUID entityTypeId );
+
+    Set<UUID> getAllLinkingEntitySetIdsForEntitySet( UUID entitySetId );
 }

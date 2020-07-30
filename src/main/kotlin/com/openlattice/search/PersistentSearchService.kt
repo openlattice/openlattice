@@ -39,6 +39,7 @@ class PersistentSearchService(private val hds: HikariDataSource, private val spm
             val ps: PreparedStatement = connection.prepareStatement(insertSql(connection, search))
             ps.setString(1, mapper.writeValueAsString(search.searchConstraints))
             ps.setString(2, mapper.writeValueAsString(search.alertMetadata))
+            ps.setArray(3, PostgresArrays.createTextArray(connection, search.additionalEmailAddresses))
             ps.execute()
         }
         return search.id
@@ -102,7 +103,7 @@ class PersistentSearchService(private val hds: HikariDataSource, private val spm
         return "INSERT INTO ${PERSISTENT_SEARCHES.name} (${columns.joinToString(
                 ","
         )}) VALUES ('${search.id}'::uuid, '${getUserAclKeyArray(connection)}', '${search.lastRead}', '${search.expiration}', " +
-                "'${search.type}', ?::jsonb, ?::jsonb, ${PostgresArrays.createTextArray(connection, search.additionalEmailAddresses)})"
+                "'${search.type}', ?::jsonb, ?::jsonb, ?)"
     }
 
     private fun updateAdditionalEmailsSql(connection: Connection, id: UUID): String {

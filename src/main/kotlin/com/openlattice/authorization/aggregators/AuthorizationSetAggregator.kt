@@ -27,19 +27,18 @@ import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.Permission
 import org.slf4j.LoggerFactory
 import java.util.*
-import java.util.Map
 
 data class AuthorizationSetAggregator(
         val permissionsMap: MutableMap<AclKey, EnumSet<Permission>>
-) : Aggregator<Map.Entry<AceKey, AceValue>, EnumSet<Permission>>() {
+) : Aggregator<MutableMap.MutableEntry<AceKey, AceValue>, EnumSet<Permission>> {
 
     companion object {
         private val logger = LoggerFactory.getLogger(AuthorizationSetAggregator::class.java)
     }
 
-    override fun accumulate(input: Map.Entry<AceKey, AceValue>) {
+    override fun accumulate(input: MutableMap.MutableEntry<AceKey, AceValue>) {
         val permissions = input.value.permissions
-        
+
         if (permissions == null) {
             logger.error("Encountered null permissions for ${input.key}")
         } else {

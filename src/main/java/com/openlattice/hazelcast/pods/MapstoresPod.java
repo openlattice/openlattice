@@ -24,6 +24,7 @@ package com.openlattice.hazelcast.pods;
 
 import com.auth0.json.mgmt.users.User;
 import com.google.common.base.Charsets;
+import com.google.common.eventbus.EventBus;
 import com.google.common.io.Resources;
 import com.kryptnostic.rhizome.mapstores.SelfRegisteringMapStore;
 import com.openlattice.apps.App;
@@ -101,24 +102,10 @@ public class MapstoresPod {
     private Auth0Configuration auth0Configuration;
 
     @Inject
+    private EventBus eventBus;
+
+    @Inject
     private Jdbi jdbi;
-
-    @Bean
-    public PostgresUserApi pgUserApi() {
-        try ( Connection conn = hikariDataSource.getConnection(); Statement stmt = conn.createStatement() ) {
-            String createUserSql = Resources.toString( Resources.getResource( "create_user.sql" ), Charsets.UTF_8 );
-            String alterUserSql = Resources.toString( Resources.getResource( "alter_user.sql" ), Charsets.UTF_8 );
-            String deleteUserSql = Resources.toString( Resources.getResource( "delete_user.sql" ), Charsets.UTF_8 );
-            stmt.addBatch( createUserSql );
-            stmt.addBatch( alterUserSql );
-            stmt.addBatch( deleteUserSql );
-            stmt.executeBatch();
-        } catch ( SQLException | IOException e ) {
-            logger.error( "Unable to configure postgres functions for user management.", e );
-        }
-
-        return jdbi.onDemand( PostgresUserApi.class );
-    }
 
     @Bean
     public SelfRegisteringMapStore<UUID, OrganizationAssembly> organizationAssemblies() {
@@ -132,7 +119,7 @@ public class MapstoresPod {
 
     @Bean
     public SelfRegisteringMapStore<AceKey, AceValue> permissionMapstore() {
-        return new PermissionMapstore( hikariDataSource );
+        return new PermissionMapstore( hikariDataSource, eventBus );
     }
 
     @Bean
@@ -192,7 +179,7 @@ public class MapstoresPod {
 
     @Bean
     public SelfRegisteringMapStore<String, String> dbCredentialsMapstore() {
-        return new PostgresCredentialMapstore( hikariDataSource, pgUserApi() );
+        return new PostgresCredentialMapstore( hikariDataSource );
     }
 
     @Bean

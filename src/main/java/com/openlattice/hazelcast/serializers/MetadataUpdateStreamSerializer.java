@@ -3,10 +3,13 @@ package com.openlattice.hazelcast.serializers;
 import com.google.common.collect.LinkedHashMultimap;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.data.DataExpiration;
 import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import org.springframework.stereotype.Component;
 
 import java.io.DataInput;
 import java.io.IOException;
@@ -14,9 +17,6 @@ import java.util.LinkedHashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
-import org.springframework.stereotype.Component;
 
 @Component
 public class MetadataUpdateStreamSerializer implements SelfRegisteringStreamSerializer<MetadataUpdate> {
@@ -57,7 +57,7 @@ public class MetadataUpdateStreamSerializer implements SelfRegisteringStreamSeri
         // TODO: get rid of this setmultimap
         OptionalStreamSerializers
                 .serialize( out, object.getPropertyTags(), GuavaStreamSerializersKt::serializeSetMultimap );
-        OptionalStreamSerializers.serialize( out, object.getOrganizationId(), UUIDStreamSerializer::serialize );
+        OptionalStreamSerializers.serialize( out, object.getOrganizationId(), UUIDStreamSerializerUtils::serialize );
         OptionalStreamSerializers.serialize( out,
                 object.getPartitions(),
                 ( output, elem ) -> output.writeIntArray( elem.stream().mapToInt( e -> e ).toArray() ) );
@@ -83,7 +83,7 @@ public class MetadataUpdateStreamSerializer implements SelfRegisteringStreamSeri
         Optional<LinkedHashMultimap<UUID, String>> propertyTags = OptionalStreamSerializers
                 .deserialize( in, GuavaStreamSerializersKt::deserializeLinkedHashMultimap );
         Optional<UUID> organizationId = OptionalStreamSerializers
-                .deserialize( in, UUIDStreamSerializer::deserialize );
+                .deserialize( in, UUIDStreamSerializerUtils::deserialize );
         Optional<LinkedHashSet<Integer>> partitions = OptionalStreamSerializers
                 .deserialize( in, input -> toLinkedHashSet( input.readIntArray() ) );
         Optional<DataExpiration> dataExpiration;

@@ -186,4 +186,6 @@ interface EntityDatastore {
             deleteType: DeleteType
     ) : BasePostgresIterable<UUID>
 
+    fun setPartitions(entitySetId: UUID, partitions: Set<Int>): Int
+
 }

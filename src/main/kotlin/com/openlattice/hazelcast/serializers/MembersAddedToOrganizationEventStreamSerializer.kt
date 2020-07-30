@@ -23,6 +23,7 @@ package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.organizations.events.MembersAddedToOrganizationEvent
@@ -33,13 +34,13 @@ class MembersAddedToOrganizationEventStreamSerializer
     : SelfRegisteringStreamSerializer<MembersAddedToOrganizationEvent> {
 
     override fun write(out: ObjectDataOutput, obj: MembersAddedToOrganizationEvent) {
-        UUIDStreamSerializer.serialize(out, obj.organizationId)
+        UUIDStreamSerializerUtils.serialize(out, obj.organizationId)
         SecurablePrincipalListStreamSerializer().write(out, obj.newMembers)
     }
 
     override fun read(input: ObjectDataInput): MembersAddedToOrganizationEvent {
         return MembersAddedToOrganizationEvent(
-                UUIDStreamSerializer.deserialize(input),
+                UUIDStreamSerializerUtils.deserialize(input),
                 SecurablePrincipalListStreamSerializer().read(input))
     }
 

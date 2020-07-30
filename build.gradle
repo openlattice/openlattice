@@ -170,7 +170,7 @@ dependencies {
         testCompile "com.openlattice:rhizome-client:${rhizome_client_version}:tests"
         testCompile "com.openlattice:scribe:${scribe_version}:tests"
     }
-
+    testImplementation "junit:junit:${junit_version}"
     /*
      * TESTING
      */
@@ -180,6 +180,10 @@ dependencies {
         exclude module : 'hamcrest-core'
     }
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+}
+
+test {
+    maxHeapSize = "8g"
 }
 
 install {

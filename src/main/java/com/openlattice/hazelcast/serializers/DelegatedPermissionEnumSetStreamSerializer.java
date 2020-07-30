@@ -22,21 +22,21 @@
 
 package com.openlattice.hazelcast.serializers;
 
-import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
+import com.kryptnostic.rhizome.hazelcast.serializers.RhizomeUtils;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.authorization.DelegatedPermissionEnumSet;
 import com.openlattice.authorization.Permission;
+import com.openlattice.hazelcast.StreamSerializerTypeIds;
+import org.springframework.stereotype.Component;
+
 import java.io.IOException;
 import java.util.EnumSet;
-import org.springframework.stereotype.Component;
 
 @Component
 public class DelegatedPermissionEnumSetStreamSerializer
         implements SelfRegisteringStreamSerializer<DelegatedPermissionEnumSet> {
-
-    private static final Permission[] permissions = Permission.values();
 
     @Override
     public void write( ObjectDataOutput out, DelegatedPermissionEnumSet object ) throws IOException {
@@ -62,19 +62,11 @@ public class DelegatedPermissionEnumSetStreamSerializer
     }
 
     public static void serialize( ObjectDataOutput out, EnumSet<Permission> object ) throws IOException {
-        out.writeInt( object.size() );
-        for ( Permission permission : object ) {
-            out.writeInt( permission.ordinal() );
-        }
+        RhizomeUtils.Serializers.serializeEnumSet( out, Permission.class, object );
     }
 
     public static EnumSet<Permission> deserialize( ObjectDataInput in ) throws IOException {
-        int size = in.readInt();
-        EnumSet<Permission> set = EnumSet.noneOf( Permission.class );
-        for ( int i = 0; i < size; ++i ) {
-            set.add( permissions[ in.readInt() ] );
-        }
-        return set;
+        return RhizomeUtils.Serializers.deSerializeEnumSet( in, Permission.class );
     }
 
 }

@@ -2,10 +2,10 @@ package com.openlattice.hazelcast.serializers.shuttle
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
-import com.openlattice.hazelcast.StreamSerializerTypeIds
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
 import com.openlattice.hazelcast.InternalTestDataFactory
+import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.hazelcast.serializers.TestableSelfRegisteringStreamSerializer
-import com.openlattice.hazelcast.serializers.UUIDStreamSerializer
 import com.openlattice.shuttle.QueuedIntegrationJob
 import org.springframework.stereotype.Component
 import java.util.*
@@ -14,12 +14,12 @@ import java.util.*
 class QueuedIntegrationJobStreamSerializer : TestableSelfRegisteringStreamSerializer<QueuedIntegrationJob> {
     companion object {
         fun serialize(output: ObjectDataOutput, obj: QueuedIntegrationJob) {
-            UUIDStreamSerializer.serialize(output, obj.jobId)
+            UUIDStreamSerializerUtils.serialize(output, obj.jobId)
             IntegrationJobStreamSerializer.serialize(output, obj.integrationJob)
         }
 
         fun deserialize(input: ObjectDataInput): QueuedIntegrationJob {
-            val jobId = UUIDStreamSerializer.deserialize(input)
+            val jobId = UUIDStreamSerializerUtils.deserialize(input)
             val integrationJob = IntegrationJobStreamSerializer.deserialize(input)
             return QueuedIntegrationJob(jobId, integrationJob)
         }

@@ -22,7 +22,7 @@ package com.openlattice.hazelcast.serializers;
 
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.kryptnostic.rhizome.hazelcast.serializers.AbstractUUIDStreamSerializer;
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.edm.processors.UpdateAuditEdgeEntitySetIdProcessor;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
@@ -49,11 +49,11 @@ public class UpdateAuditRecordEntitySetIdProcessorStreamSerializer
 
     @Override public void write(
             ObjectDataOutput out, UpdateAuditEdgeEntitySetIdProcessor object ) throws IOException {
-        AbstractUUIDStreamSerializer.serialize( out, object.getAuditEdgeEntitySetId() );
+        UUIDStreamSerializerUtils.serialize( out, object.getAuditEdgeEntitySetId() );
 
     }
 
     @Override public UpdateAuditEdgeEntitySetIdProcessor read( ObjectDataInput in ) throws IOException {
-        return new UpdateAuditEdgeEntitySetIdProcessor( AbstractUUIDStreamSerializer.deserialize( in ) );
+        return new UpdateAuditEdgeEntitySetIdProcessor( UUIDStreamSerializerUtils.deserialize( in ) );
     }
 }

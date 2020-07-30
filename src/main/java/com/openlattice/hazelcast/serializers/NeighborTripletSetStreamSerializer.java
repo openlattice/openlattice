@@ -20,6 +20,7 @@
 
 package com.openlattice.hazelcast.serializers;
 
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.google.common.collect.Sets;
 import com.hazelcast.nio.ObjectDataInput;
@@ -56,9 +57,9 @@ public class NeighborTripletSetStreamSerializer implements SelfRegisteringStream
     public static void serialize( ObjectDataOutput out, NeighborTripletSet object ) throws IOException {
         out.writeInt( object.size() );
         for ( DelegatedUUIDList triplet : object ) {
-            UUIDStreamSerializer.serialize( out, triplet.get( 0 ) );
-            UUIDStreamSerializer.serialize( out, triplet.get( 1 ) );
-            UUIDStreamSerializer.serialize( out, triplet.get( 2 ) );
+            UUIDStreamSerializerUtils.serialize( out, triplet.get( 0 ) );
+            UUIDStreamSerializerUtils.serialize( out, triplet.get( 1 ) );
+            UUIDStreamSerializerUtils.serialize( out, triplet.get( 2 ) );
         }
     }
 
@@ -66,9 +67,9 @@ public class NeighborTripletSetStreamSerializer implements SelfRegisteringStream
         NeighborTripletSet result = new NeighborTripletSet( Sets.newHashSet() );
         int size = in.readInt();
         for ( int i = 0; i < size; i++ ) {
-            UUID src = UUIDStreamSerializer.deserialize( in );
-            UUID assoc = UUIDStreamSerializer.deserialize( in );
-            UUID dst = UUIDStreamSerializer.deserialize( in );
+            UUID src = UUIDStreamSerializerUtils.deserialize( in );
+            UUID assoc = UUIDStreamSerializerUtils.deserialize( in );
+            UUID dst = UUIDStreamSerializerUtils.deserialize( in );
             result.add( new DelegatedUUIDList( src, assoc, dst ) );
         }
         return result;
