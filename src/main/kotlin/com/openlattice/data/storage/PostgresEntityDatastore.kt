@@ -489,5 +489,5 @@ class PostgresEntityDatastore(
                 entitySetId, expirationBaseColumn, formattedDateMinusTTE, sqlFormat, deleteType
         )
     }
-    
+
 }
