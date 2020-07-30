@@ -489,9 +489,5 @@ class PostgresEntityDatastore(
                 entitySetId, expirationBaseColumn, formattedDateMinusTTE, sqlFormat, deleteType
         )
     }
-
-    override fun setPartitions(entitySetId: UUID, partitions: Set<Int>): Int {
-        TODO("Not yet implemented")
-    }
-
+    
 }
