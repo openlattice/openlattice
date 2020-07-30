@@ -206,9 +206,11 @@ interface EntitySetsApi {
      *
      * @return Set of entity key ids that will expire before the specified date time
      */
-    @POST(BASE + ALL + ID_PATH + EXPIRATION_PATH )
-    fun getExpiringEntitiesFromEntitySet(@Path(ID) entitySetId: UUID,
-                                         @Body dateTime: String): Set<UUID>
+    @POST(BASE + ALL + ID_PATH + EXPIRATION_PATH)
+    fun getExpiringEntitiesFromEntitySet(
+            @Path(ID) entitySetId: UUID,
+            @Body dateTime: String
+    ): Set<UUID>
 
     /**
      * Used to set the new partitions for an entity set. This will shuffle corresponding ids, edges, and data table rows
@@ -216,8 +218,8 @@ interface EntitySetsApi {
      *
      * @param entitySetId The id of the entity set to update.
      * @param partitions The partitions to set.
-     *
+     * @return The job id for the repartioning job.
      */
     @PUT(BASE + ID_PATH + PARTITIONS_PATH)
-    fun setPartitions(@Path(com.openlattice.admin.ID) entitySetId: UUID, @Body partitions: Set<Int>): UUID
+    fun setPartitions(@Path(ID) entitySetId: UUID, @Body partitions: Set<Int>): UUID
 }
