@@ -9,16 +9,11 @@ import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.map.IMap
 import com.openlattice.apps.AppConfigKey
 import com.openlattice.apps.AppTypeSetting
-import com.openlattice.apps.services.AppService
 import com.openlattice.authorization.HazelcastAclKeyReservationService
 import com.openlattice.client.serialization.SerializationConstants
 import com.openlattice.codex.controllers.CodexConstants
 import com.openlattice.collections.CollectionsManager
 import com.openlattice.controllers.exceptions.BadRequestException
-import com.openlattice.data.DataEdge
-import com.openlattice.data.DataGraphManager
-import com.openlattice.data.EntityDataKey
-import com.openlattice.data.EntityKeyIdService
 import com.openlattice.data.*
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.type.PropertyType
@@ -63,16 +58,15 @@ private const val JSON_EXT = ".json"
 
 @Service
 class CodexService(
+        reservationService: HazelcastAclKeyReservationService,
         val twilioConfiguration: TwilioConfiguration,
         val hazelcast: HazelcastInstance,
-        val appService: AppService,
         val edmManager: EdmManager,
         val dataGraphManager: DataGraphManager,
         val entityKeyIdService: EntityKeyIdService,
         val principalsManager: SecurePrincipalsManager,
         val organizations: HazelcastOrganizationService,
         val collectionsManager: CollectionsManager,
-        val reservationService: HazelcastAclKeyReservationService,
         val executor: ListeningExecutorService,
         val hds: HikariDataSource
 ) {

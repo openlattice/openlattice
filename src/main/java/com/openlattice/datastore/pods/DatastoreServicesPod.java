@@ -601,16 +601,15 @@ public class DatastoreServicesPod {
     @Bean
     public CodexService codexService() {
         return new CodexService(
+                aclKeyReservationService(),
                 twilioConfiguration,
                 hazelcastInstance,
-                appService(),
                 dataModelService(),
                 dataGraphService(),
                 idService(),
                 principalService(),
                 organizationsManager(),
                 collectionsManager(),
-                aclKeyReservationService(),
                 executor,
                 hikariDataSource
         );
