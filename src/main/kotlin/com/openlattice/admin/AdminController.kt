@@ -1,6 +1,9 @@
 package com.openlattice.admin
 
 import com.codahale.metrics.annotation.Timed
+import com.geekbeast.rhizome.jobs.AbstractDistributedJob
+import com.geekbeast.rhizome.jobs.DistributableJob
+import com.geekbeast.rhizome.jobs.HazelcastJobService
 import com.google.common.collect.Iterables
 import com.hazelcast.core.HazelcastInstance
 import com.openlattice.authorization.AuthorizationManager
@@ -30,7 +33,8 @@ import javax.inject.Inject
 @SuppressFBWarnings(
         value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE", "BC_BAD_CAST_TO_ABSTRACT_COLLECTION"],
         justification = "Allowing redundant kotlin null check on lateinit variables, " +
-                "Allowing kotlin collection mapping cast to List")
+                "Allowing kotlin collection mapping cast to List"
+)
 @RestController
 @RequestMapping(CONTROLLER)
 class AdminController : AdminApi, AuthorizingComponent {
@@ -63,6 +67,9 @@ class AdminController : AdminApi, AuthorizingComponent {
 
     @Inject
     private lateinit var dgm: DataGraphManager
+
+    @Inject
+    private lateinit var jobService: HazelcastJobService
 
     @GetMapping(value = [SQL + ID_PATH], produces = [MediaType.APPLICATION_JSON_VALUE])
     override fun getEntitySetSql(
@@ -125,7 +132,7 @@ class AdminController : AdminApi, AuthorizingComponent {
         HazelcastMap.values().forEach {
             logger.info("Reloading map $it")
             try {
-                it.getMap( hazelcast ).loadAll(true)
+                it.getMap(hazelcast).loadAll(true)
             } catch (e: IllegalArgumentException) {
                 logger.error("Unable to reload map $it", e)
             }
@@ -136,7 +143,7 @@ class AdminController : AdminApi, AuthorizingComponent {
     @GetMapping(value = [RELOAD_CACHE + NAME_PATH])
     override fun reloadCache(@PathVariable(NAME) name: String) {
         ensureAdminAccess()
-        HazelcastMap.valueOf(name).getMap( hazelcast ).loadAll(true)
+        HazelcastMap.valueOf(name).getMap(hazelcast).loadAll(true)
     }
 
     @Timed
@@ -161,7 +168,8 @@ class AdminController : AdminApi, AuthorizingComponent {
     override// Hopefully spring is in the frameworks that accepts plain quoted string as a valid value.
     fun setOrganizationEntitySetInformation(
             @PathVariable(ID) organizationId: UUID,
-            @RequestBody entitySetInformationList: List<SmsEntitySetInformation>): Int? {
+            @RequestBody entitySetInformationList: List<SmsEntitySetInformation>
+    ): Int? {
         ensureAdminAccess()
         organizations.setSmsEntitySetInformation(entitySetInformationList)
         return entitySetInformationList.size
@@ -194,9 +202,11 @@ class AdminController : AdminApi, AuthorizingComponent {
     }
 
     @Timed
-    @PutMapping(value =[ID_PATH+ PARTITIONS_PATH])
-    override fun setPartitions(@PathVariable(ID)entitySetId: UUID, @RequestBody partitions: Set<Int>): Int = dgm.setPartitions(entitySetId, partitions)
-
+    @GetMapping(value = [JOBS], produces = [MediaType.APPLICATION_JSON_VALUE])
+    override fun getJobs(): Map<UUID, AbstractDistributedJob<*, *>> {
+        ensureAdminAccess()
+        return jobService.getJobs()
+    }
 
     override fun getAuthorizationManager(): AuthorizationManager {
         return authorizationManager

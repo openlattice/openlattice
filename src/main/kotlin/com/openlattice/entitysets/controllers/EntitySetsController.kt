@@ -37,6 +37,7 @@ import com.openlattice.data.DataDeletionManager
 import com.openlattice.data.DataGraphManager
 import com.openlattice.data.DeleteType
 import com.openlattice.data.WriteEvent
+import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.EntitySet
@@ -56,6 +57,7 @@ import com.openlattice.entitysets.EntitySetsApi.Companion.LINKING
 import com.openlattice.entitysets.EntitySetsApi.Companion.METADATA_PATH
 import com.openlattice.entitysets.EntitySetsApi.Companion.NAME
 import com.openlattice.entitysets.EntitySetsApi.Companion.NAME_PATH
+import com.openlattice.entitysets.EntitySetsApi.Companion.PARTITIONS_PATH
 import com.openlattice.entitysets.EntitySetsApi.Companion.PROPERTIES_PATH
 import com.openlattice.entitysets.EntitySetsApi.Companion.PROPERTY_TYPE_ID
 import com.openlattice.entitysets.EntitySetsApi.Companion.PROPERTY_TYPE_ID_PATH
@@ -86,7 +88,8 @@ constructor(
         private val spm: SecurePrincipalsManager,
         private val authzHelper: EdmAuthorizationHelper,
         private val deletionManager: DataDeletionManager,
-        private val entitySetManager: EntitySetManager
+        private val entitySetManager: EntitySetManager,
+        private val partitionManager: PartitionManager
 ) : EntitySetsApi, AuthorizingComponent, AuditingComponent {
 
     override fun getAuditingManager(): AuditingManager {
@@ -646,6 +649,13 @@ constructor(
         }
 
         return entitySet
+    }
+    @Timed
+    @PutMapping(value =[ID_PATH + PARTITIONS_PATH])
+    override fun setPartitions(@PathVariable(com.openlattice.admin.ID)entitySetId: UUID, @RequestBody partitions: Set<Int>): UUID {
+        val oldPartitions = partitionManager.getEntitySetPartitions(entitySetId)
+        entitySetManager.setPartitions( entitySetId, partitions )
+        return dgm.setPartitions(entitySetId, oldPartitions)
     }
 
     override fun getAuthorizationManager(): AuthorizationManager {
