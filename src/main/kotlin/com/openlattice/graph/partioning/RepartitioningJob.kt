@@ -16,7 +16,7 @@ import java.util.*
 
 /**
  * Background job for re-partitioning data in an entity set.
- * 
+ *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 class RepartitioningJob
@@ -43,6 +43,11 @@ class RepartitioningJob
     }
 
     override fun processNextBatch() {
+        if( state.needsMigrationCount == 0L ) {
+            hasWorkRemaining = false
+            return
+        }
+
         /**
          * Do an INSERT INTO ... SELECT FROM to re-partition the data.
          *
@@ -62,7 +67,7 @@ class RepartitioningJob
         state.deleteCount += delete(DELETE_IDS_SQL)
         state.deleteCount += delete(DELETE_EDGES_SQL)
 
-        result = state.repartitionCount
+        result = state.repartitionCount + state.deleteCount
         hasWorkRemaining = (++state.currentlyMigratingPartitionIndex < state.oldPartitions.size)
     }
 
@@ -80,7 +85,12 @@ class RepartitioningJob
         }
     }
 
+    override fun updateProgress() {
+        progress = ((100*(state.repartitionCount + state.deleteCount) )/state.needsMigrationCount).toByte()
+    }
+
     private fun repartition(repartitionSql: String): Long = hds.connection.use { connection ->
+        progress = ((100*state.repartitionCount)/state.needsMigrationCount).toByte()
         try {
             connection.prepareStatement(repartitionSql).use { repartitionData ->
                 bind(repartitionData)
@@ -110,7 +120,7 @@ class RepartitioningJob
         }
     }
 
-    private fun getNeedsMigrationCount(): Long = state.oldPartitions.fold(0L) { count, partition ->
+    private fun getNeedsMigrationCount(): Long = 2*state.oldPartitions.fold(0L) { count, partition ->
         count + getCount(idsNeedingMigrationCountSql, partition) +
                 getCount(dataNeedingMigrationCountSql, partition) +
                 getCount(edgesNeedingMigrationCountSql, partition)
