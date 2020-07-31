@@ -417,11 +417,11 @@ class HazelcastOrganizationService(
 
     @Timed
     fun addRoleToPrincipalInOrganization(organizationId: UUID, roleId: UUID, principal: Principal) {
-        val roleKey = AclKey(organizationId, roleId)
-        val userPrincipal = securePrincipalsManager.lookup(principal)
+        val roleAclKey = AclKey(organizationId, roleId)
+        val userAclKey = securePrincipalsManager.lookup(principal)
 
-        if (!securePrincipalsManager.principalHasChildPrincipal(userPrincipal, roleKey)) {
-            securePrincipalsManager.addPrincipalToPrincipal(roleKey, userPrincipal)
+        if (!securePrincipalsManager.principalHasChildPrincipal(userAclKey, roleAclKey)) {
+            securePrincipalsManager.addPrincipalToPrincipal(roleAclKey, userAclKey)
         }
     }
 

@@ -32,4 +32,24 @@ data class MaterializedEntitySet(
          */
         var refreshRate: Long?,
         val flags: EnumSet<OrganizationEntitySetFlag> = EnumSet.noneOf(OrganizationEntitySetFlag::class.java),
-        var lastRefresh: OffsetDateTime = OffsetDateTime.now())
+        var lastRefresh: OffsetDateTime = OffsetDateTime.now()) {
+        override fun equals(other: Any?): Boolean {
+                if (this === other) return true
+                if (other !is MaterializedEntitySet) return false
+
+                if (assemblyKey != other.assemblyKey) return false
+                if (refreshRate != other.refreshRate) return false
+                if (flags != other.flags) return false
+                if (lastRefresh.toInstant() != other.lastRefresh.toInstant()) return false
+
+                return true
+        }
+
+        override fun hashCode(): Int {
+                var result = assemblyKey.hashCode()
+                result = 31 * result + (refreshRate?.hashCode() ?: 0)
+                result = 31 * result + flags.hashCode()
+                result = 31 * result + lastRefresh.hashCode()
+                return result
+        }
+}
