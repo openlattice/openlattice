@@ -2,11 +2,9 @@ package com.openlattice.graph.partioning
 
 import com.fasterxml.jackson.annotation.JsonCreator
 import com.geekbeast.rhizome.jobs.AbstractDistributedJob
-import com.geekbeast.rhizome.jobs.JobStatus
 import com.openlattice.postgres.DataTables.*
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresColumnDefinition
-import com.openlattice.postgres.PostgresResultSetAdapters
 import com.openlattice.postgres.PostgresTable.*
 import com.openlattice.postgres.PostgresTableDefinition
 import com.openlattice.postgres.ResultSetAdapters
@@ -21,8 +19,8 @@ import java.util.*
  */
 class RepartitioningJob
 @JsonCreator constructor(
-        jobState: RepartitioningJobState
-) : AbstractDistributedJob<Long, RepartitioningJobState>(jobState) {
+        state: RepartitioningJobState
+) : AbstractDistributedJob<Long, RepartitioningJobState>(state) {
     constructor(
             entitySetId: UUID,
             oldPartitions: List<Int>
