@@ -9,6 +9,7 @@ import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.openlattice.assembler.Assembler
 import com.openlattice.authorization.*
+import com.openlattice.authorization.mapstores.PrincipalMapstore
 import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.notifications.sms.PhoneNumberService
@@ -26,6 +27,7 @@ import com.openlattice.organizations.processors.UpdateOrganizationSmsEntitySetIn
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet
 import com.openlattice.users.getAppMetadata
+import com.openlattice.users.processors.aggregators.UsersWithConnectionsAggregator
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.util.*
@@ -43,7 +45,7 @@ import kotlin.streams.asSequence
  * Access to organizations is handled by the organization manager.
  *
  *
- * Membership in an organization is stored in the membersOf field whcih is accessed via an IMAP. Only principals of type
+ * Membership in an organization is stored in the membersOf field which is accessed via an IMAP. Only principals of type
  * [PrincipalType.USER]. This is mainly because we don't store the principal type field along with the principal id.
  * This may change in the future.
  *
@@ -75,7 +77,11 @@ class HazelcastOrganizationService(
 
     @Timed
     fun maybeGetOrganization(p: Principal): Optional<SecurablePrincipal> {
-        return securePrincipalsManager.maybeGetSecurablePrincipal(p)
+        return try {
+            Optional.of(securePrincipalsManager.getPrincipal(p.id))
+        } catch (e: NullPointerException) {
+            Optional.empty()
+        }
     }
 
     @Timed
@@ -140,7 +146,7 @@ class HazelcastOrganizationService(
     private fun initializeOrganization(organization: Organization) {
         val organizationId = organization.securablePrincipal.id
         if (organization.partitions.isEmpty()) {
-            organization.partitions.addAll( partitionManager.allocateDefaultOrganizationPartitions(organizationId) )
+            organization.partitions.addAll(partitionManager.allocateDefaultOrganizationPartitions(organizationId))
         }
 
         organizations.set(organizationId, organization)
@@ -373,11 +379,11 @@ class HazelcastOrganizationService(
     }
 
     private fun removeRolesFromMembers(roles: Collection<AclKey>, members: Set<AclKey>) {
-        securePrincipalsManager.removePrincipalsFromPrincipals(roles, members)
+        securePrincipalsManager.removePrincipalsFromPrincipals(roles.toSet(), members)
     }
 
     private fun removeOrganizationFromMembers(organization: AclKey, members: Set<AclKey>) {
-        securePrincipalsManager.removePrincipalsFromPrincipals(listOf(organization), members)
+        securePrincipalsManager.removePrincipalsFromPrincipals(setOf(organization), members)
     }
 
     @Timed
@@ -411,11 +417,11 @@ class HazelcastOrganizationService(
 
     @Timed
     fun addRoleToPrincipalInOrganization(organizationId: UUID, roleId: UUID, principal: Principal) {
-        val roleKey = AclKey(organizationId, roleId)
-        val userPrincipal = securePrincipalsManager.lookup(principal)
+        val roleAclKey = AclKey(organizationId, roleId)
+        val userAclKey = securePrincipalsManager.lookup(principal)
 
-        if (!securePrincipalsManager.principalHasChildPrincipal(userPrincipal, roleKey)) {
-            securePrincipalsManager.addPrincipalToPrincipal(roleKey, userPrincipal)
+        if (!securePrincipalsManager.principalHasChildPrincipal(userAclKey, roleAclKey)) {
+            securePrincipalsManager.addPrincipalToPrincipal(roleAclKey, userAclKey)
         }
     }
 
@@ -490,6 +496,8 @@ class HazelcastOrganizationService(
             it.connections += connections
             Result(null) //TODO: Being lazy not implementing diff as this should rarely be called.
         })
+
+        addUsersMatchingConnections(organizationId, connections)
     }
 
     @Timed
@@ -506,10 +514,8 @@ class HazelcastOrganizationService(
             it.connections.clear()
             Result(it.connections.addAll(connections), true)
         })
-    }
 
-    fun getOrganizationsWithConnection(connection: String): Set<UUID> {
-        return organizations.keySet(Predicates.equal(CONNECTIONS_INDEX, connection))
+        addUsersMatchingConnections(organizationId, connections)
     }
 
     fun getOrganizationsWithoutUserAndWithConnection(connections: Collection<String>, principal: Principal): Set<UUID> {
@@ -521,20 +527,14 @@ class HazelcastOrganizationService(
         )
     }
 
-    fun getOrganizationsWithoutUserAndWithConnectionsAndDomains(
-            principal: Principal,
-            connections: Collection<String>,
-            emailDomain: String
-    ): Set<UUID> {
-        return organizations.keySet(
-                Predicates.and(
-                        Predicates.`in`<UUID, Organization>(CONNECTIONS_INDEX, *connections.toTypedArray()),
-                        Predicates.`in`<UUID, Organization>(DOMAINS_INDEX, emailDomain),
-                        Predicates.not<UUID, Organization>(Predicates.`in`<UUID, Organization>(MEMBERS_INDEX, principal))
-                )
-        )
-    }
+    private fun addUsersMatchingConnections(organizationId: UUID, connections: Set<String>) {
+        val usersWithConnections = users.aggregate(UsersWithConnectionsAggregator(connections, mutableSetOf()))
+        val profiles = usersWithConnections.associate {
+            Principal(PrincipalType.USER, it.id) to getAppMetadata(it)
+        }
 
+        addMembers(organizationId, profiles.keys.toSet(), profiles)
+    }
 
     companion object {
 
@@ -561,10 +561,10 @@ class HazelcastOrganizationService(
             )
         }
 
-        private fun getOrganizationPredicate(organizationId: UUID): Predicate<UUID, Organization> {
+        private fun getOrganizationPredicate(organizationId: UUID): Predicate<AclKey, SecurablePrincipal> {
             return Predicates.and(
-                    Predicates.equal<UUID, Organization>("principalType", PrincipalType.ORGANIZATION),
-                    Predicates.equal<UUID, Organization>("aclKey[0]", organizationId)
+                    Predicates.equal<UUID, Organization>(PrincipalMapstore.PRINCIPAL_TYPE_INDEX, PrincipalType.ORGANIZATION),
+                    Predicates.equal<UUID, Organization>(PrincipalMapstore.ACL_KEY_ROOT_INDEX, organizationId)
             )
         }
     }

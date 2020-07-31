@@ -21,14 +21,18 @@
 package com.openlattice.organizations.roles;
 
 import com.auth0.json.mgmt.users.User;
-import com.openlattice.authorization.*;
-import com.openlattice.organization.roles.Role;
-import com.google.common.collect.SetMultimap;
 import com.hazelcast.query.Predicate;
+import com.openlattice.authorization.AclKey;
+import com.openlattice.authorization.Permission;
+import com.openlattice.authorization.Principal;
+import com.openlattice.authorization.SecurablePrincipal;
+import com.openlattice.organization.roles.Role;
 
-import java.util.*;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import java.util.Collection;
+import java.util.EnumSet;
+import java.util.Set;
+import java.util.UUID;
 
 public interface SecurePrincipalsManager {
 
@@ -49,15 +53,9 @@ public interface SecurePrincipalsManager {
 
     @Nonnull SecurablePrincipal getPrincipal( String principalId );
 
-    Optional<SecurablePrincipal> maybeGetSecurablePrincipal( Principal p );
-
-    Collection<SecurablePrincipal> getSecurablePrincipals( PrincipalType principalType );
-
     Collection<SecurablePrincipal> getAllRolesInOrganization( UUID organizationId );
 
-    SetMultimap<SecurablePrincipal, SecurablePrincipal> getRolesForUsersInOrganization( UUID organizationId );
-
-    Collection<SecurablePrincipal> getSecurablePrincipals( Predicate p );
+    Collection<SecurablePrincipal> getSecurablePrincipals( Predicate<AclKey, SecurablePrincipal> p );
 
     void createSecurablePrincipal(
             Principal owner, SecurablePrincipal principal );
@@ -74,11 +72,7 @@ public interface SecurePrincipalsManager {
 
     void removePrincipalFromPrincipal( AclKey source, AclKey target );
 
-    void removePrincipalsFromPrincipals( Collection<AclKey> sources, Set<AclKey> target );
-
-    //More logical to use Principal
-
-    void removePrincipalFromPrincipals( AclKey source, Predicate targetFilter );
+    void removePrincipalsFromPrincipals( Set<AclKey> sources, Set<AclKey> target );
 
     Collection<SecurablePrincipal> getAllPrincipalsWithPrincipal( AclKey aclKey );
 
@@ -93,8 +87,6 @@ public interface SecurePrincipalsManager {
 
     boolean principalExists( Principal p );
 
-    boolean isPrincipalIdAvailable( String principalId );
-
     User getUser( String userId );
 
     Role getRole( UUID organizationId, UUID roleId );
@@ -102,8 +94,6 @@ public interface SecurePrincipalsManager {
     AclKey lookup( Principal p );
 
     Role lookupRole( Principal principal );
-
-    Collection<Principal> getPrincipals( Predicate<AclKey, SecurablePrincipal> p );
 
     Collection<SecurablePrincipal> getSecurablePrincipals( Collection<Principal> members );
 
