@@ -35,9 +35,6 @@ class RepartitioningJob
         this.hds = hds
     }
 
-    override fun result(): Long? {
-        return state.repartitionCount
-    }
 
     override fun processNextBatch() {
         /**
@@ -59,14 +56,8 @@ class RepartitioningJob
         state.deleteCount += delete(DELETE_IDS_SQL)
         state.deleteCount += delete(DELETE_EDGES_SQL)
 
-        markPartitionCompleted()
-    }
-
-    private fun markPartitionCompleted() {
-        if (++state.currentlyMigratingPartitionIndex == state.oldPartitions.size) {
-            hasWorkRemaining = false
-        }
-        this.status = JobStatus.FINISHED
+        result = state.repartitionCount
+        hasWorkRemaining = (++state.currentlyMigratingPartitionIndex < state.oldPartitions.size)
     }
 
     private fun delete(deleteSql: String): Long = hds.connection.use { connection ->
