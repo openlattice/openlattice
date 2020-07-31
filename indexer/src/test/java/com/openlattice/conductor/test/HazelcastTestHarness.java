@@ -21,14 +21,13 @@
 package com.openlattice.conductor.test;
 
 import com.hazelcast.config.Config;
-import com.hazelcast.config.GroupConfig;
 import com.hazelcast.config.JoinConfig;
 import com.hazelcast.config.MulticastConfig;
 import com.hazelcast.config.NetworkConfig;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.map.IMap;
-import com.hazelcast.map.AbstractEntryProcessor;
 import java.util.Map.Entry;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -48,7 +47,7 @@ public class HazelcastTestHarness {
         test.put( "hello", "world" );
         test.put( "bye", "sam" );
 
-        test.executeOnEntries( new AbstractEntryProcessor<String, String>() {
+        test.executeOnEntries( new EntryProcessor<>() {
             private static final long serialVersionUID = 1L;
 
             @Override
@@ -64,7 +63,7 @@ public class HazelcastTestHarness {
     public static final void initHazelcast() {
         if ( hazelcast == null ) {
             Config config = new Config( "test" );
-            config.setGroupConfig( new GroupConfig( "test", "osterone" ) );
+            config.setClusterName( "test" );
             config.setNetworkConfig( new NetworkConfig().setPort( 5801 ).setPortAutoIncrement( true )
                     .setJoin( new JoinConfig().setMulticastConfig( new MulticastConfig().setEnabled( false ) ) ) );
 
