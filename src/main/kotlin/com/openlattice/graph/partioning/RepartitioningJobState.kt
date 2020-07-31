@@ -13,5 +13,6 @@ data class RepartitioningJobState(
         val batchSize: Long = 0,
         var currentlyMigratingPartitionIndex: Int = 0,
         var repartitionCount: Long = 0,
-        var deleteCount: Long = 0
+        var deleteCount: Long = 0,
+        internal var needsMigrationCount: Long = 0
 ) : JobState

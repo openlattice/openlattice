@@ -6,14 +6,17 @@ import com.geekbeast.rhizome.jobs.JobStatus
 import com.openlattice.postgres.DataTables.*
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresColumnDefinition
+import com.openlattice.postgres.PostgresResultSetAdapters
 import com.openlattice.postgres.PostgresTable.*
 import com.openlattice.postgres.PostgresTableDefinition
+import com.openlattice.postgres.ResultSetAdapters
 import com.zaxxer.hikari.HikariDataSource
 import java.sql.PreparedStatement
 import java.util.*
 
 /**
  * Background job for re-partitioning data in an entity set.
+ * 
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 class RepartitioningJob
@@ -35,9 +38,13 @@ class RepartitioningJob
         this.hds = hds
     }
 
+    override fun initialize() {
+        state.needsMigrationCount = getNeedsMigrationCount()
+    }
+
     override fun processNextBatch() {
         /**
-         * Do a INSERT INTO ... SELECT FROM to re-partition the data.
+         * Do an INSERT INTO ... SELECT FROM to re-partition the data.
          *
          * Entity key id depenedent operations will not see data, until data has been inserted to the appropriate partition.
          */
@@ -65,6 +72,9 @@ class RepartitioningJob
                 bind(deleteData)
                 deleteData.executeLargeUpdate()
             }
+        } catch (ex: Exception) {
+            abort { "Job $id terminated: ${ex.message}" }
+            throw ex
         } finally {
             publishJobState()
         }
@@ -76,14 +86,40 @@ class RepartitioningJob
                 bind(repartitionData)
                 repartitionData.executeLargeUpdate()
             }
+        } catch (ex: Exception) {
+            abort { "Job $id terminated: ${ex.message}" }
+            throw ex
         } finally {
             publishJobState()
         }
     }
 
-    private fun bind(ps: PreparedStatement) {
+    private fun getCount(countSql: String, partition: Int): Long = hds.connection.use { connection ->
+        try {
+            connection.prepareStatement(countSql).use { countQuery ->
+                bind(countQuery, partition)
+                val rs = countQuery.executeQuery()
+                rs.next()
+                ResultSetAdapters.count(rs)
+            }
+        } catch (ex: Exception) {
+            abort { "Job $id terminated: ${ex.message}" }
+            throw ex
+        } finally {
+            publishJobState()
+        }
+    }
+
+    private fun getNeedsMigrationCount(): Long = state.oldPartitions.fold(0L) { count, partition ->
+        count + getCount(idsNeedingMigrationCountSql, partition) +
+                getCount(dataNeedingMigrationCountSql, partition) +
+                getCount(edgesNeedingMigrationCountSql, partition)
+    }
+
+
+    private fun bind(ps: PreparedStatement, partition: Int = currentlyMigratingPartition) {
         ps.setObject(1, state.entitySetId)
-        ps.setObject(2, currentlyMigratingPartition)
+        ps.setInt(2, partition)
     }
 }
 
@@ -93,6 +129,26 @@ private val REPARTITION_SELECTOR = "partitions[ 1 + ((array_length(partitions,1)
 private fun buildRepartitionColumns(ptd: PostgresTableDefinition): String {
     return ptd.columns.joinToString(",") { if (it == PARTITION) REPARTITION_SELECTOR else it.name }
 }
+
+private val idsNeedingMigrationCountSql = """
+    SELECT count(*) 
+    FROM ${IDS.name} INNER JOIN (select id as ${ENTITY_SET_ID.name},${PARTITIONS.name} FROM ${ENTITY_SETS.name}) as es
+    WHERE ${ENTITY_SET_ID.name} = ? AND ${PARTITION.name} = ? AND ${PARTITION.name}!=$REPARTITION_SELECTOR
+""".trimIndent()
+
+private val dataNeedingMigrationCountSql = """
+    SELECT count(*) 
+    FROM ${DATA.name} INNER JOIN (select ${ID.name} as ${ENTITY_SET_ID.name}, ${PARTITIONS.name} from ${ENTITY_SETS.name}) as es 
+    USING ( ${ENTITY_SET_ID.name} )
+    WHERE ${ENTITY_SET_ID.name} = ? AND ${PARTITION.name} = ? AND ${PARTITION.name}!=$REPARTITION_SELECTOR
+""".trimIndent()
+
+private val edgesNeedingMigrationCountSql = """
+    SELECT count(*)
+    FROM ${E.name} INNER JOIN (select id as ${SRC_ENTITY_SET_ID.name}, ${PARTITIONS.name} from ${ENTITY_SETS.name}) as es
+    USING (${SRC_ENTITY_SET_ID.name})
+    WHERE ${ENTITY_SET_ID.name} = ? AND ${PARTITION.name} = ? AND ${PARTITION.name}!=$REPARTITION_SELECTOR
+""".trimIndent()
 
 private fun latestSql(
         column: PostgresColumnDefinition,
@@ -118,7 +174,7 @@ private val REPARTITION_EDGES_COLUMNS = buildRepartitionColumns(IDS)
  */
 private val REPARTITION_DATA_SQL = """
 INSERT INTO ${DATA.name} SELECT $REPARTITION_DATA_COLUMNS
-    FROM ${DATA.name} INNER JOIN (select id as ${ENTITY_SET_ID.name}, partitions from entity_sets) as es 
+    FROM ${DATA.name} INNER JOIN (select ${ID.name} as ${ENTITY_SET_ID.name}, ${PARTITIONS.name} from ${ENTITY_SETS.name}) as es 
     USING ( ${ENTITY_SET_ID.name} )
     WHERE ${ENTITY_SET_ID.name} = ? AND ${PARTITION.name} = ? AND ${PARTITION.name}!=$REPARTITION_SELECTOR
     ON CONFLICT DO UPDATE SET
@@ -139,7 +195,7 @@ INSERT INTO ${DATA.name} SELECT $REPARTITION_DATA_COLUMNS
  */
 private val REPARTITION_IDS_SQL = """
 INSERT INTO ${IDS.name} SELECT $REPARTITION_IDS_COLUMNS
-    FROM ${IDS.name} INNER JOIN (select id as ${ENTITY_SET_ID.name}, ${PARTITIONS.name} from entity_sets) as es 
+    FROM ${IDS.name} INNER JOIN (select id as ${ENTITY_SET_ID.name}, ${PARTITIONS.name} from ${ENTITY_SETS.name}) as es 
     USING (${ENTITY_SET_ID.name})
     WHERE ${ENTITY_SET_ID.name} = ? AND ${PARTITION.name} = ? AND ${PARTITION.name}!=$REPARTITION_SELECTOR
     ON CONFLICT DO UPDATE SET
@@ -162,7 +218,7 @@ INSERT INTO ${IDS.name} SELECT $REPARTITION_IDS_COLUMNS
  */
 private val REPARTITION_EDGES_SQL = """
 INSERT INTO ${E.name} SELECT $REPARTITION_EDGES_COLUMNS
-    FROM ${E.name} INNER JOIN (select id as ${SRC_ENTITY_SET_ID.name}, ${PARTITIONS.name} from entity_sets) as es
+    FROM ${E.name} INNER JOIN (select id as ${SRC_ENTITY_SET_ID.name}, ${PARTITIONS.name} from ${ENTITY_SETS.name}) as es
     USING (${SRC_ENTITY_SET_ID.name})
     WHERE ${ENTITY_SET_ID.name} = ? AND ${PARTITION.name} = ? AND ${PARTITION.name}!=$REPARTITION_SELECTOR
     ON CONFLICT DO UPDATE SET
@@ -177,7 +233,7 @@ INSERT INTO ${E.name} SELECT $REPARTITION_EDGES_COLUMNS
  */
 private val DELETE_DATA_SQL = """
 DELETE FROM ${DATA.name} 
-    USING (SELECT ${ID.name},${ENTITY_SET_ID.name},${PARTITION.name} FROM ${DATA.name} INNER JOIN (select ${ID.name} as ${ENTITY_SET_ID.name}, ${PARTITIONS.name} from entity_sets) as es USING (${ENTITY_SET_ID.name})) as to_be_deleted
+    USING (SELECT ${ID.name},${ENTITY_SET_ID.name},${PARTITION.name} FROM ${DATA.name} INNER JOIN (select ${ID.name} as ${ENTITY_SET_ID.name}, ${PARTITIONS.name} from ${ENTITY_SETS.name}) as es USING (${ENTITY_SET_ID.name})) as to_be_deleted
     WHERE ${ENTITY_SET_ID.name} = ? and ${PARTITION.name} = ? AND partition!=$REPARTITION_SELECTOR AND to_be_deleted.${ID.name} = ids.${ID.name} and to_be_deleted.${PARTITION.name} = ids.${PARTITION.name};  
 """.trimIndent()
 
@@ -188,7 +244,7 @@ DELETE FROM ${DATA.name}
  */
 private val DELETE_IDS_SQL = """
 DELETE FROM ${ID.name} 
-    USING (SELECT ${ID.name},${ENTITY_SET_ID.name},${PARTITION.name} FROM ${IDS.name} INNER JOIN (select ${ID.name} as ${ENTITY_SET_ID.name}, ${PARTITIONS.name} from entity_sets) as es USING (${ENTITY_SET_ID.name})) as to_be_deleted
+    USING (SELECT ${ID.name},${ENTITY_SET_ID.name},${PARTITION.name} FROM ${IDS.name} INNER JOIN (select ${ID.name} as ${ENTITY_SET_ID.name}, ${PARTITIONS.name} from ${ENTITY_SETS.name}) as es USING (${ENTITY_SET_ID.name})) as to_be_deleted
     WHERE ${ENTITY_SET_ID.name} = ? and ${PARTITION.name} = ? AND ${PARTITION.name}!=$REPARTITION_SELECTOR AND to_be_deleted.${ID.name} = ids.${ID.name} and to_be_deleted.${PARTITION.name} = ids.${PARTITION.name};  
 """.trimIndent()
 
@@ -200,6 +256,6 @@ DELETE FROM ${ID.name}
  */
 private val DELETE_EDGES_SQL = """
 DELETE FROM ${E.name} 
-    USING (SELECT ${SRC_ENTITY_SET_ID.name},${SRC_ENTITY_KEY_ID.name},${PARTITION.name} FROM ${E.name} INNER JOIN (select ${ID.name} as ${SRC_ENTITY_SET_ID.name}, ${PARTITIONS.name} from entity_sets) as es USING (${SRC_ENTITY_SET_ID.name})) as to_be_deleted
+    USING (SELECT ${SRC_ENTITY_SET_ID.name},${SRC_ENTITY_KEY_ID.name},${PARTITION.name} FROM ${E.name} INNER JOIN (select ${ID.name} as ${SRC_ENTITY_SET_ID.name}, ${PARTITIONS.name} from ${ENTITY_SETS.name}) as es USING (${SRC_ENTITY_SET_ID.name})) as to_be_deleted
     WHERE ${SRC_ENTITY_SET_ID.name} = ? and ${PARTITION.name} = ? AND ${PARTITION.name}!=$REPARTITION_SELECTOR AND to_be_deleted.${ID.name} = ids.${ID.name} and to_be_deleted.${PARTITION.name} = ids.${PARTITION.name};
 """.trimIndent()
