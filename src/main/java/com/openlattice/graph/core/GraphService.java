@@ -79,8 +79,4 @@ public interface GraphService {
             Optional<UUID> linkingEntitySetId );
 
     List<NeighborSets> getNeighborEntitySets( Set<UUID> entitySetIds );
-
-    int setPartitions(
-            @NotNull UUID entitySetId,
-            @NotNull Set<Integer> partitions );
 }

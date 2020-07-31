@@ -262,11 +262,6 @@ class Graph(
         ).stream()
     }
 
-    override fun setPartitions(entitySetId: UUID, partitions: MutableSet<Int>): Int {
-        TODO("BLAME MTR")
-    }
-
-
     override fun getEdgesAndNeighborsForVerticesBulk(
             entitySetIds: Set<UUID>,
             filter: EntityNeighborsFilter

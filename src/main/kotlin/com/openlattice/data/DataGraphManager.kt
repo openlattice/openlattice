@@ -180,14 +180,16 @@ interface DataGraphManager {
     fun getEdgesConnectedToEntities(
             entitySetId: UUID, entityKeyIds: Set<UUID>, includeClearedEdges: Boolean
     ): PostgresIterable<DataEdgeKey>
-    fun getExpiringEntitiesFromEntitySet(entitySetId: UUID,
-                                         expirationPolicy: DataExpiration,
-                                         dateTime: OffsetDateTime,
-                                         deleteType: DeleteType,
-                                         expirationPropertyType: Optional<PropertyType>
+
+    fun getExpiringEntitiesFromEntitySet(
+            entitySetId: UUID,
+            expirationPolicy: DataExpiration,
+            dateTime: OffsetDateTime,
+            deleteType: DeleteType,
+            expirationPropertyType: Optional<PropertyType>
     ): BasePostgresIterable<UUID>
 
     fun getEdgeEntitySetsConnectedToEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): Set<UUID>
     fun getEdgeEntitySetsConnectedToEntitySet(entitySetId: UUID): Set<UUID>
-    fun setPartitions(entitySetId: UUID, partitions: Set<Int>) : Int
+    fun setPartitions(entitySetId: UUID, oldPartitions: Set<Int>): UUID
 }
