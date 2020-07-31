@@ -160,7 +160,7 @@ class DataGraphService(
         return graphService.getEdgeEntitySetsConnectedToEntitySet(entitySetId)
     }
 
-    override fun setPartitions(
+    override fun repartitionEntitySet(
             entitySetId: UUID,
             partitions: Set<Int>
     ): UUID {

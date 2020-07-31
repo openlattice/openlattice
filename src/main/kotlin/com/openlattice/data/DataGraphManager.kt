@@ -191,5 +191,16 @@ interface DataGraphManager {
 
     fun getEdgeEntitySetsConnectedToEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): Set<UUID>
     fun getEdgeEntitySetsConnectedToEntitySet(entitySetId: UUID): Set<UUID>
-    fun setPartitions(entitySetId: UUID, oldPartitions: Set<Int>): UUID
+
+    /**
+     * Re-partitions the data for an entity set.
+     *
+     * NOTE: This function is a bit of a layer violation. It only migrates data from the provided partitions, which
+     * must be known by the caller. It assumes that new partitions have been properly assigned to the entity set and
+     * have been persisted to the database by the caller.
+     *
+     * @param entitySetId The id of the entity set to repartition
+     * @param oldPartitions The previous data partitions for the entity set.
+     */
+    fun repartitionEntitySet(entitySetId: UUID, oldPartitions: Set<Int>): UUID
 }
