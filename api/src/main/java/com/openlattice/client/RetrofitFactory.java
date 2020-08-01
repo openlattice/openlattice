@@ -35,6 +35,7 @@ import retrofit2.Retrofit;
 
 public final class RetrofitFactory {
     private static final String BASE_URL                = "https://api.openlattice.com/";
+    private static final String CHILDCARE_URL           = "https://api.childcare.openlattice.com";
     private static final String INTEGRATION_URL         = "https://integration.openlattice.com/";
     private static final String LOCAL_BASE_URL          = "http://localhost:8080/";
     private static final String STAGING_BASE_URL        = "https://api.staging.openlattice.com/";
@@ -42,6 +43,7 @@ public final class RetrofitFactory {
     private static final String TESTING_BASE_URL        = "http://localhost:8080/";
     private static final String TESTING_INDEXER_URL     = "http://localhost:8081/";
     private static final String TESTING_LINKER_URL      = "http://localhost:8082/";
+    private static final String TESTING_CHRONICLE_URL   = "http://localhost:8090/";
 
     private static final ObjectMapper jsonMapper = ObjectMappers.getJsonMapper();
 
@@ -56,7 +58,9 @@ public final class RetrofitFactory {
         LOCAL( LOCAL_BASE_URL ),
         TESTING( TESTING_BASE_URL ),
         TESTING_INDEXER( TESTING_INDEXER_URL ),
-        TESTING_LINKER( TESTING_LINKER_URL );
+        TESTING_LINKER( TESTING_LINKER_URL ),
+        TESTING_CHRONICLE( TESTING_CHRONICLE_URL ),
+        CHILDCARE( CHILDCARE_URL );
 
         private final String baseUrl;
 

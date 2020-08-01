@@ -29,6 +29,7 @@ import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.AbstractSecurableType;
 import com.openlattice.authorization.securable.SecurableObjectType;
+import com.openlattice.codex.Base64Media;
 import com.openlattice.codex.MessageRequest;
 import com.openlattice.collections.CollectionTemplateType;
 import com.openlattice.collections.EntitySetCollection;
@@ -75,6 +76,7 @@ import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.jetbrains.annotations.NotNull;
 
 @SuppressFBWarnings( value = "SECPR", justification = "Only used for testing." )
 public final class TestDataFactory {
@@ -101,6 +103,50 @@ public final class TestDataFactory {
             .build();
 
     private TestDataFactory() {
+    }
+
+    @NotNull public static Map<UUID, Map<UUID, Set<Object>>> entities(
+            int numEntities,
+            @NotNull Map<UUID, PropertyType> propertyTypes ) {
+        final Map<UUID, Map<UUID, Set<Object>>> entities = new HashMap<>( numEntities );
+
+        for ( int i = 0; i < numEntities; ++i ) {
+            final var properties = Maps.newHashMap( propertyTypes.
+                    values()
+                    .stream()
+                    .collect( Collectors.toMap( PropertyType::getId, TestDataFactory::randomElements ) ) );
+            final var id = UUID.randomUUID();
+            properties.put( IdConstants.ID_ID.getId(), Sets.newHashSet( id.toString() ) );
+            properties.put( IdConstants.LAST_WRITE_ID.getId(), Sets.newHashSet( OffsetDateTime.now() ) );
+            properties.put( IdConstants.VERSION_ID.getId(), Sets.newHashSet( System.currentTimeMillis() ) );
+
+            entities.put( UUID.randomUUID(), properties );
+        }
+        return entities;
+    }
+
+    public static Set<Object> randomElements( PropertyType pt ) {
+        final var count = 1 + r.nextInt( 5 );
+        final var elements = new HashSet<Object>( count );
+        for ( int i = 0; i < count; ++i ) {
+            elements.add( randomElement( pt ) );
+        }
+        return elements;
+    }
+
+    public static Object randomElement( PropertyType pt ) {
+        switch ( pt.getDatatype() ) {
+            case Int64:
+                return r.nextLong();
+            case Int32:
+                return r.nextInt();
+            case Int16:
+                return (short) r.nextInt( Short.MAX_VALUE );
+            case String:
+            default:
+                return RandomStringUtils.random( 10 );
+
+        }
     }
 
     public static EntityDataKey entityDataKey() {
@@ -273,7 +319,7 @@ public final class TestDataFactory {
                 entityTypeId,
                 randomAlphanumeric( 5 ),
                 randomAlphanumeric( 5 ),
-                Optional.of( randomAlphanumeric( 5 ) ),
+                randomAlphanumeric( 5 ),
                 ImmutableSet.of( email(), email() ),
                 IdConstants.GLOBAL_ORGANIZATION_ID.getId() );
     }
@@ -632,7 +678,8 @@ public final class TestDataFactory {
                 OffsetDateTime.now(),
                 PersistentSearchNotificationType.ALPR_ALERT,
                 simpleSearchConstraints(),
-                ImmutableMap.of() );
+                ImmutableMap.of(),
+                Optional.empty() );
     }
 
     public static CollectionTemplateType collectionTemplateType() {
@@ -721,7 +768,15 @@ public final class TestDataFactory {
                 randomAlphanumeric( 12 ),
                 UUID.randomUUID(),
                 ImmutableSet.of( UUID.randomUUID() ),
-                ImmutableSet.of( randomAlphanumeric( 5 ), randomAlphanumeric( 5 ) )
+                ImmutableSet.of( randomAlphanumeric( 5 ), randomAlphanumeric( 5 ) ),
+                OffsetDateTime.now()
+        );
+    }
+
+    public static Base64Media base64Media() {
+        return new Base64Media(
+                randomAlphabetic( 20 ),
+                randomAlphabetic( 200 )
         );
     }
 
@@ -730,8 +785,10 @@ public final class TestDataFactory {
                 UUID.randomUUID(),
                 UUID.randomUUID(),
                 randomAlphabetic( 20 ),
-                randomAlphanumeric( 10 ),
-                randomAlphanumeric( 15 )
+                ImmutableSet.of(randomAlphanumeric( 10 )),
+                randomAlphanumeric( 15 ),
+                base64Media(),
+                OffsetDateTime.now()
         );
     }
 
