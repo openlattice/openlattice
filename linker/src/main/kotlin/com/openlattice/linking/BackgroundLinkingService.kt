@@ -78,8 +78,8 @@ class BackgroundLinkingService(
         try {
             val filteredLinkableEntitySetIds = entitySets.keySet(
                     Predicates.and(
-                            Predicates.`in`(EntitySetMapstore.ENTITY_TYPE_ID_INDEX, *linkableTypes.toTypedArray()),
-                            Predicates.notEqual(EntitySetMapstore.FLAGS_INDEX, EntitySetFlag.LINKING)
+                            Predicates.`in`<UUID,EntitySet>(EntitySetMapstore.ENTITY_TYPE_ID_INDEX, *linkableTypes.toTypedArray()),
+                            Predicates.notEqual<UUID,EntitySet>(EntitySetMapstore.FLAGS_INDEX, EntitySetFlag.LINKING)
                     )
             )
 
