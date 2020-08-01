@@ -34,6 +34,7 @@ import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.HazelcastQueue
 import com.openlattice.postgres.mapstores.EntitySetMapstore
 import org.slf4j.LoggerFactory
+import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import java.time.Instant
 import java.util.*
@@ -43,6 +44,7 @@ import java.util.concurrent.TimeUnit
 internal const val REFRESH_PROPERTY_TYPES_INTERVAL_MILLIS = 30000L
 internal const val LINKING_BATCH_TIMEOUT_MILLIS = 120000L
 internal const val MINIMUM_SCORE = 0.75
+internal const val LINKING_RATE = 300_000L
 
 /**
  * Performs realtime linking of individuals as they are integrated ino the system.
@@ -71,53 +73,51 @@ class BackgroundLinkingService(
     private val priorityEntitySets = configuration.whitelist.orElseGet { setOf() }
 
     @Suppress("UNUSED")
-    private val enqueuer = executor.submit {
-
+    @Scheduled(fixedRate = LINKING_RATE)
+    fun enqueue() {
         try {
-            while (true) {
-                val filteredLinkableEntitySetIds = entitySets.keySet(
-                        Predicates.and(
-                                Predicates.`in`<UUID, EntitySet>(EntitySetMapstore.ENTITY_TYPE_ID_INDEX, *linkableTypes.toTypedArray()),
-                                Predicates.notEqual<UUID, EntitySet>(EntitySetMapstore.FLAGS_INDEX, EntitySetFlag.LINKING)
-                        )
-                )
+            val filteredLinkableEntitySetIds = entitySets.keySet(
+                    Predicates.and(
+                            Predicates.`in`(EntitySetMapstore.ENTITY_TYPE_ID_INDEX, *linkableTypes.toTypedArray()),
+                            Predicates.notEqual(EntitySetMapstore.FLAGS_INDEX, EntitySetFlag.LINKING)
+                    )
+            )
 
-                val rest = filteredLinkableEntitySetIds.asSequence().filter {
-                    !priorityEntitySets.contains(it)
-                }
-
-                val priority = priorityEntitySets.asSequence().filter {
-                    filteredLinkableEntitySetIds.contains(it)
-                }
-
-                //TODO: Switch to unlimited entity sets
-                (priority + rest)
-                        .forEach { esid ->
-                            logger.debug("Starting to queue linking candidates from entity set {}", esid)
-                            val forLinking = lqs.getEntitiesNeedingLinking(esid, 2 * configuration.loadSize)
-                                    .filter {
-                                        val expiration = lockOrGetExpiration(it)
-                                        logger.debug(
-                                                "Considering candidate {} with expiration {} at {}",
-                                                it,
-                                                expiration,
-                                                Instant.now().toEpochMilli()
-                                        )
-                                        if (expiration != null && Instant.now().toEpochMilli() >= expiration) {
-                                            logger.info("Refreshing expiration for {}", it)
-                                            //Assume original lock holder died, probably somewhat unsafe
-                                            refreshExpiration(it)
-                                            true
-                                        } else expiration == null
-                                    }
-                            if (forLinking.isNotEmpty()) {
-                                logger.info("Entities needing linking: {}", forLinking.size)
-                                logger.debug("Entities needing linking: {}", forLinking)
-                            }
-                            candidates.addAll(forLinking)
-                            logger.debug( "Queued entities needing linking {}", forLinking)
-                        }
+            val rest = filteredLinkableEntitySetIds.asSequence().filter {
+                !priorityEntitySets.contains(it)
             }
+
+            val priority = priorityEntitySets.asSequence().filter {
+                filteredLinkableEntitySetIds.contains(it)
+            }
+
+            //TODO: Switch to unlimited entity sets
+            (priority + rest)
+                    .forEach { esid ->
+                        logger.debug("Starting to queue linking candidates from entity set {}", esid)
+                        val forLinking = lqs.getEntitiesNeedingLinking(esid, 2 * configuration.loadSize)
+                                .filter {
+                                    val expiration = lockOrGetExpiration(it)
+                                    logger.debug(
+                                            "Considering candidate {} with expiration {} at {}",
+                                            it,
+                                            expiration,
+                                            Instant.now().toEpochMilli()
+                                    )
+                                    if (expiration != null && Instant.now().toEpochMilli() >= expiration) {
+                                        logger.info("Refreshing expiration for {}", it)
+                                        //Assume original lock holder died, probably somewhat unsafe
+                                        refreshExpiration(it)
+                                        true
+                                    } else expiration == null
+                                }
+                        if (forLinking.isNotEmpty()) {
+                            logger.info("Entities needing linking: {}", forLinking.size)
+                            logger.debug("Entities needing linking: {}", forLinking)
+                        }
+                        candidates.addAll(forLinking)
+                        logger.debug( "Queued entities needing linking {}", forLinking)
+                    }
         } catch (ex: Exception) {
             logger.info("Encountered error while updating candidates for linking.", ex)
         }
