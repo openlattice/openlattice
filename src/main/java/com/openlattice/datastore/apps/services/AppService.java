@@ -69,8 +69,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class AppService {
-    private final IMap<UUID, App>                    apps;
-    private final IMap<UUID, AppType>                appTypes;
+    private final IMap<UUID, App>     apps;
+    private final IMap<UUID, AppType> appTypes;
     private final IMap<AppConfigKey, AppTypeSetting> appConfigs;
     private final IMap<String, UUID>                 aclKeys;
 
