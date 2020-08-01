@@ -28,7 +28,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.eventbus.EventBus;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.IMap;
+import com.hazelcast.map.IMap;
 import com.hazelcast.query.Predicates;
 import com.openlattice.apps.App;
 import com.openlattice.apps.AppConfig;
@@ -69,8 +69,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class AppService {
-    private final IMap<UUID, App>                    apps;
-    private final IMap<UUID, AppType>                appTypes;
+    private final IMap<UUID, App>     apps;
+    private final IMap<UUID, AppType> appTypes;
     private final IMap<AppConfigKey, AppTypeSetting> appConfigs;
     private final IMap<String, UUID>                 aclKeys;
 
