@@ -23,10 +23,17 @@ package com.openlattice.datastore.data.controllers;
 import com.auth0.spring.security.api.authentication.PreAuthenticatedAuthenticationJsonWebToken;
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Preconditions;
-import com.google.common.cache.LoadingCache;
 import com.google.common.collect.*;
-import com.openlattice.auditing.*;
-import com.openlattice.authorization.*;
+import com.openlattice.auditing.AuditEventType;
+import com.openlattice.auditing.AuditableEvent;
+import com.openlattice.auditing.AuditingComponent;
+import com.openlattice.auditing.AuditingManager;
+import com.openlattice.authorization.AclKey;
+import com.openlattice.authorization.AuthorizationManager;
+import com.openlattice.authorization.AuthorizingComponent;
+import com.openlattice.authorization.EdmAuthorizationHelper;
+import com.openlattice.authorization.Permission;
+import com.openlattice.authorization.Principals;
 import com.openlattice.controllers.exceptions.BadRequestException;
 import com.openlattice.controllers.exceptions.ForbiddenException;
 import com.openlattice.data.*;
@@ -35,7 +42,6 @@ import com.openlattice.data.requests.EntitySetSelection;
 import com.openlattice.data.requests.FileType;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.EntitySetManager;
-import com.openlattice.datastore.services.SyncTicketService;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.set.EntitySetFlag;
 import com.openlattice.edm.type.PropertyType;
@@ -46,11 +52,8 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.lang3.tuple.Triple;
-import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.jetbrains.annotations.NotNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.core.Authentication;
@@ -70,7 +73,9 @@ import java.util.stream.Stream;
 
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.Maps.transformValues;
-import static com.openlattice.authorization.EdmAuthorizationHelper.*;
+import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION;
+import static com.openlattice.authorization.EdmAuthorizationHelper.WRITE_PERMISSION;
+import static com.openlattice.authorization.EdmAuthorizationHelper.aclKeysForAccessCheck;
 
 @SuppressFBWarnings(
         value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE",
@@ -78,10 +83,6 @@ import static com.openlattice.authorization.EdmAuthorizationHelper.*;
 @RestController
 @RequestMapping( DataApi.CONTROLLER )
 public class DataController implements DataApi, AuthorizingComponent, AuditingComponent {
-    private static final Logger logger = LoggerFactory.getLogger( DataController.class );
-
-    @Inject
-    private SyncTicketService sts;
 
     @Inject
     private EntitySetManager entitySetService;
@@ -102,9 +103,6 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     private AuthenticationManager authProvider;
 
     @Inject
-    private AuditRecordEntitySetsManager auditRecordEntitySetsManager;
-
-    @Inject
     private AuditingManager auditingManager;
 
     @Inject
@@ -115,10 +113,6 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
 
     @Inject
     private DataDeletionManager deletionManager;
-
-    private LoadingCache<UUID, EdmPrimitiveTypeKind> primitiveTypeKinds;
-
-    private LoadingCache<AuthorizationKey, Set<UUID>> authorizedPropertyCache;
 
     @RequestMapping(
             path = { "/" + ENTITY_SET + "/" + SET_ID_PATH },
@@ -180,41 +174,40 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     private EntitySetData<FullQualifiedName> loadEntitySetData(
             UUID entitySetId,
             EntitySetSelection selection ) {
-        if ( authz.checkIfHasPermissions(
+        if ( !authz.checkIfHasPermissions(
                 new AclKey( entitySetId ), Principals.getCurrentPrincipals(), READ_PERMISSION ) ) {
-            final var entitySet = entitySetService.getEntitySet( entitySetId );
-            checkState( entitySet != null, "Could not find entity set with id: %s", entitySetId );
-
-            Optional<Set<UUID>> entityKeyIds = ( selection == null ) ? Optional.empty() : selection.getEntityKeyIds();
-            final var selectedProperties = getSelectedProperties( entitySetId, selection );
-
-            final var normalEntitySetIds = ( entitySet.isLinking() )
-                    ? Sets.newHashSet( entitySet.getLinkedEntitySets() )
-                    : Set.of( entitySetId );
-
-            final Map<UUID, Optional<Set<UUID>>> entityKeyIdsOfEntitySets = normalEntitySetIds.stream()
-                    .collect( Collectors.toMap( esId -> esId, esId -> entityKeyIds ) );
-            final var authorizedPropertyTypesOfEntitySets = getAuthorizedPropertyTypesForEntitySetRead(
-                    entitySet, normalEntitySetIds, selectedProperties
-            );
-
-            final var authorizedPropertyTypes = authorizedPropertyTypesOfEntitySets.values().iterator().next();
-            final LinkedHashSet<String> orderedPropertyNames = new LinkedHashSet<>( authorizedPropertyTypes.size() );
-            selectedProperties.stream()
-                    .filter( authorizedPropertyTypes::containsKey )
-                    .map( authorizedPropertyTypes::get )
-                    .map( pt -> pt.getType().getFullQualifiedNameAsString() )
-                    .forEach( orderedPropertyNames::add );
-
-            return dgm.getEntitySetData(
-                    entityKeyIdsOfEntitySets,
-                    orderedPropertyNames,
-                    authorizedPropertyTypesOfEntitySets,
-                    entitySet.isLinking() );
-        } else {
             throw new ForbiddenException( "Insufficient permissions to read the entity set " + entitySetId
                     + " or it doesn't exists." );
         }
+        final var entitySet = entitySetService.getEntitySet( entitySetId );
+        checkState( entitySet != null, "Could not find entity set with id: %s", entitySetId );
+
+        Optional<Set<UUID>> entityKeyIds = ( selection == null ) ? Optional.empty() : selection.getEntityKeyIds();
+        final var selectedProperties = getSelectedProperties( entitySetId, selection );
+
+        final var normalEntitySetIds = ( entitySet.isLinking() )
+                ? Sets.newHashSet( entitySet.getLinkedEntitySets() )
+                : Set.of( entitySetId );
+
+        final Map<UUID, Optional<Set<UUID>>> entityKeyIdsOfEntitySets = normalEntitySetIds.stream()
+                .collect( Collectors.toMap( esId -> esId, esId -> entityKeyIds ) );
+        final var authorizedPropertyTypesOfEntitySets = getAuthorizedPropertyTypesForEntitySetRead(
+                entitySet, normalEntitySetIds, selectedProperties
+        );
+
+        final var authorizedPropertyTypes = authorizedPropertyTypesOfEntitySets.values().iterator().next();
+        final LinkedHashSet<String> orderedPropertyNames = new LinkedHashSet<>( authorizedPropertyTypes.size() );
+        selectedProperties.stream()
+                .filter( authorizedPropertyTypes::containsKey )
+                .map( authorizedPropertyTypes::get )
+                .map( pt -> pt.getType().getFullQualifiedNameAsString() )
+                .forEach( orderedPropertyNames::add );
+
+        return dgm.getEntitySetData(
+                entityKeyIdsOfEntitySets,
+                orderedPropertyNames,
+                authorizedPropertyTypesOfEntitySets,
+                entitySet.isLinking() );
     }
 
     private Set<UUID> getSelectedProperties( UUID entitySetId, EntitySetSelection selection ) {
@@ -590,7 +583,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                 .forEach( ( entitySetId, entities ) ->
                         entityKeyIds.putAll( entitySetId, createEntities( entitySetId, entities ) ) );
         final ListMultimap<UUID, DataEdge> toBeCreated = ArrayListMultimap.create();
-        Multimaps.asMap( data.getAssociations() )
+        data.getAssociations().asMap()
                 .forEach( ( entitySetId, associations ) -> {
                     for ( DataAssociation association : associations ) {
                         final UUID srcEntitySetId = association.getSrcEntitySetId();
@@ -823,7 +816,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
 
         // If entityset is linking: should return distinct count of entities corresponding to the linking entity set,
         // which is the distinct count of linking_id s
-        return dgm.getEntitySetSize( entitySetId );
+        return entitySetService.getEntitySetSize( entitySetId );
     }
 
     @Timed

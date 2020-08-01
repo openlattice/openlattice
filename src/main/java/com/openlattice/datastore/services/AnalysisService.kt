@@ -19,43 +19,51 @@
  *
  */
 
-package com.openlattice.analysis
+package com.openlattice.datastore.services
 
 import com.google.common.collect.Sets
 import com.openlattice.analysis.requests.NeighborType
 import com.openlattice.authorization.*
 import com.openlattice.data.DataGraphManager
-import com.openlattice.datastore.services.EdmManager
-import com.openlattice.datastore.services.EntitySetManager
+import com.openlattice.edm.type.PropertyType
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
-import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.stream.Collectors
-import javax.inject.Inject
 
 /**
- *
+ * This class is a bundle of layer violations.
+ * TODO: Make it not so.
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 @SuppressFBWarnings(
         value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE", "BC_BAD_CAST_TO_ABSTRACT_COLLECTION"],
         justification = "Allowing redundant kotlin null check on lateinit variables, " +
-                "Allowing kotlin collection mapping cast to List")
-class AnalysisService : AuthorizingComponent {
-    private val logger = LoggerFactory.getLogger(AnalysisService::class.java)
+                "Allowing kotlin collection mapping cast to List"
+)
+class AnalysisService(
+        val dgm: DataGraphManager,
+        val authorizations: AuthorizationManager,
+        val edmManager: EdmManager,
+        val entitySetManager: EntitySetManager
+) : AuthorizingComponent {
+    private val authzHelper = EdmAuthorizationHelper(edmManager, authorizations, entitySetManager)
 
-    @Inject
-    private lateinit var dgm: DataGraphManager
+    /**
+     * This function is a layer violation and should live in
+     */
+    fun getAuthorizedNeighbors(entitySetIds: Set<UUID>): Map<UUID, Map<UUID, PropertyType>> {
+        val neighborEntitySets = dgm.getNeighborEntitySets(entitySetIds)
 
-    @Inject
-    private lateinit var authorizations: AuthorizationManager
+        val allEntitySetIds = neighborEntitySets.asSequence()
+                .flatMap { sequenceOf(it.srcEntitySetId, it.edgeEntitySetId, it.dstEntitySetId) }
+                .toSet()
 
-    @Inject
-    private lateinit var edmManager: EdmManager
-
-    @Inject
-    private lateinit var entitySetManager: EntitySetManager
-
+        return authzHelper.getAuthorizedPropertiesOnEntitySets(
+                allEntitySetIds,
+                EnumSet.of(Permission.READ),
+                Principals.getCurrentPrincipals()
+        )
+    }
 
     fun getNeighborTypes(entitySetIds: Set<UUID>): Iterable<NeighborType> {
         val neighborEntitySets = dgm.getNeighborEntitySets(entitySetIds)

@@ -54,13 +54,7 @@ import org.elasticsearch.common.unit.Fuzziness;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentType;
-import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.MatchQueryBuilder;
-import org.elasticsearch.index.query.Operator;
-import org.elasticsearch.index.query.QueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.index.query.QueryStringQueryBuilder;
-import org.elasticsearch.index.query.RangeQueryBuilder;
+import org.elasticsearch.index.query.*;
 import org.elasticsearch.index.reindex.BulkByScrollResponse;
 import org.elasticsearch.index.reindex.DeleteByQueryAction;
 import org.elasticsearch.index.reindex.DeleteByQueryRequestBuilder;
@@ -141,6 +135,8 @@ public class DatastoreElasticsearchImpl implements ConductorElasticsearchApi {
     private       String                              server;
     private       String                              cluster;
     private       int                                 port;
+    private       int                                 defaultNumReplicas;
+    private       int                                 defaultNumShards;
     // @formatter:on
 
     public DatastoreElasticsearchImpl( SearchConfiguration config ) {
@@ -160,6 +156,8 @@ public class DatastoreElasticsearchImpl implements ConductorElasticsearchApi {
         cluster = config.getElasticsearchCluster();
         port = config.getElasticsearchPort();
         factory = new ElasticsearchTransportClientFactory( server, port, cluster );
+        defaultNumReplicas = config.getNumReplicas();
+        defaultNumShards = config.getNumShards();
     }
 
     /* INDEX CREATION */
@@ -215,7 +213,7 @@ public class DatastoreElasticsearchImpl implements ConductorElasticsearchApi {
                 .endObject()
                 .endObject()
                 .field( NUM_SHARDS, numShards )
-                .field( NUM_REPLICAS, 2 )
+                .field( NUM_REPLICAS, defaultNumReplicas )
                 .endObject();
         return settings;
     }
@@ -250,7 +248,7 @@ public class DatastoreElasticsearchImpl implements ConductorElasticsearchApi {
 
         try {
             client.admin().indices().prepareCreate( ENTITY_SET_DATA_MODEL )
-                    .setSettings( getMetaphoneSettings( 5 ) )
+                    .setSettings( getMetaphoneSettings( defaultNumShards ) )
                     .addMapping( ENTITY_SET_TYPE, mapping )
                     .execute().actionGet();
             return true;
@@ -273,8 +271,8 @@ public class DatastoreElasticsearchImpl implements ConductorElasticsearchApi {
 
         client.admin().indices().prepareCreate( ORGANIZATIONS )
                 .setSettings( Settings.builder()
-                        .put( NUM_SHARDS, 5 )
-                        .put( NUM_REPLICAS, 2 ) )
+                        .put( NUM_SHARDS, defaultNumShards )
+                        .put( NUM_REPLICAS, defaultNumReplicas ) )
                 .addMapping( ORGANIZATION_TYPE, ImmutableMap.of( ORGANIZATION_TYPE, organizationData ) )
                 .execute().actionGet();
         return true;
@@ -290,8 +288,8 @@ public class DatastoreElasticsearchImpl implements ConductorElasticsearchApi {
         Map<String, Object> mapping = ImmutableMap.of( typeName, ImmutableMap.of() );
         client.admin().indices().prepareCreate( indexName )
                 .setSettings( Settings.builder()
-                        .put( NUM_SHARDS, 5 )
-                        .put( NUM_REPLICAS, 2 ) )
+                        .put( NUM_SHARDS, defaultNumShards )
+                        .put( NUM_REPLICAS, defaultNumReplicas ) )
                 .addMapping( typeName, mapping )
                 .execute().actionGet();
         return true;
@@ -695,26 +693,6 @@ public class DatastoreElasticsearchImpl implements ConductorElasticsearchApi {
         return new EntityDataKeySearchResult( totalHits, entityDataKeys );
     }
 
-    /**
-     * Creates for each authorized property type a map with key of that property type id and puts 1 weights as value.
-     */
-    private static Map<UUID, Map<String, Float>> getFieldsMap(
-            UUID entitySetId,
-            Map<UUID, DelegatedUUIDSet> authorizedPropertyTypesByEntitySet ) {
-        Map<UUID, Map<String, Float>> fieldsMap = Maps.newHashMap();
-        authorizedPropertyTypesByEntitySet.get( entitySetId ).forEach( propertyTypeId -> {
-            String fieldName = getFieldName( propertyTypeId );
-
-            // authorized property types are the same within 1 linking entity set (no need for extra check)
-            fieldsMap.put( propertyTypeId, Map.of( fieldName, 1F ) );
-        } );
-        return fieldsMap;
-    }
-
-    private static String getFieldName( UUID propertyTypeId ) {
-        return ENTITY + "." + propertyTypeId;
-    }
-
     private BoolQueryBuilder getAdvancedSearchQuery(
             Constraint constraints,
             Map<UUID, Map<String, Float>> authorizedFieldsMap ) {
@@ -842,22 +820,19 @@ public class DatastoreElasticsearchImpl implements ConductorElasticsearchApi {
                     case advanced:
                         BoolQueryBuilder advancedSearchQuery = getAdvancedSearchQuery( constraint,
                                 authorizedFieldsMap );
-                        if ( advancedSearchQuery.hasClauses() )
-                            subQuery.should( advancedSearchQuery );
+                        if ( advancedSearchQuery.hasClauses() ) { subQuery.should( advancedSearchQuery ); }
                         break;
 
                     case geoDistance:
                         BoolQueryBuilder geoDistanceSearchQuery = getGeoDistanceSearchQuery( constraint,
                                 authorizedFieldsMap );
-                        if ( geoDistanceSearchQuery.hasClauses() )
-                            subQuery.should( geoDistanceSearchQuery );
+                        if ( geoDistanceSearchQuery.hasClauses() ) { subQuery.should( geoDistanceSearchQuery ); }
                         break;
 
                     case geoPolygon:
                         BoolQueryBuilder geoPolygonSearchQuery = getGeoPolygonSearchQuery( constraint,
                                 authorizedFieldsMap );
-                        if ( geoPolygonSearchQuery.hasClauses() )
-                            subQuery.should( geoPolygonSearchQuery );
+                        if ( geoPolygonSearchQuery.hasClauses() ) { subQuery.should( geoPolygonSearchQuery ); }
                         break;
 
                     case simple:
@@ -1335,24 +1310,6 @@ public class DatastoreElasticsearchImpl implements ConductorElasticsearchApi {
 
     }
 
-    @Override
-    public boolean clearAllData() {
-        client.admin().indices()
-                .delete( new DeleteIndexRequest( DATA_INDEX_PREFIX + "*" ) );
-        new DeleteByQueryRequestBuilder( client, DeleteByQueryAction.INSTANCE )
-                .filter( QueryBuilders.matchAllQuery() ).source( ENTITY_SET_DATA_MODEL,
-                ENTITY_TYPE_INDEX,
-                PROPERTY_TYPE_INDEX,
-                ASSOCIATION_TYPE_INDEX,
-                ORGANIZATIONS,
-                APP_INDEX )
-                .get();
-        return true;
-    }
-
-
-    /* HELPERS */
-
     private String getFormattedFuzzyString( String searchTerm ) {
         return Stream.of( searchTerm.split( " " ) )
                 .map( term -> term.endsWith( "~" ) || term.endsWith( "\"" ) ? term : term + "~" )
@@ -1373,6 +1330,9 @@ public class DatastoreElasticsearchImpl implements ConductorElasticsearchApi {
         }
         return false;
     }
+
+
+    /* HELPERS */
 
     private boolean deleteObjectById( String index, String type, String id ) {
         if ( !verifyElasticsearchConnection() ) { return false; }
@@ -1501,14 +1461,6 @@ public class DatastoreElasticsearchImpl implements ConductorElasticsearchApi {
         return true;
     }
 
-    private static Map<String, Object> getOrganizationObject( Organization organization ) {
-        Map<String, Object> organizationObject = Maps.newHashMap();
-        organizationObject.put( SerializationConstants.ID_FIELD, organization.getId() );
-        organizationObject.put( SerializationConstants.TITLE_FIELD, organization.getTitle() );
-        organizationObject.put( SerializationConstants.DESCRIPTION_FIELD, organization.getDescription() );
-        return organizationObject;
-    }
-
     public boolean verifyElasticsearchConnection() {
         if ( connected ) {
             if ( !factory.isConnected( client ) ) {
@@ -1526,6 +1478,35 @@ public class DatastoreElasticsearchImpl implements ConductorElasticsearchApi {
     @Scheduled( fixedRate = 1800000 )
     public void verifyRunner() throws UnknownHostException {
         verifyElasticsearchConnection();
+    }
+
+    /**
+     * Creates for each authorized property type a map with key of that property type id and puts 1 weights as value.
+     */
+    private static Map<UUID, Map<String, Float>> getFieldsMap(
+            UUID entitySetId,
+            Map<UUID, DelegatedUUIDSet> authorizedPropertyTypesByEntitySet ) {
+        Map<UUID, Map<String, Float>> fieldsMap = Maps.newHashMap();
+        authorizedPropertyTypesByEntitySet.getOrDefault( entitySetId, DelegatedUUIDSet.wrap( ImmutableSet.of() ) )
+                .forEach( propertyTypeId -> {
+                    String fieldName = getFieldName( propertyTypeId );
+
+                    // authorized property types are the same within 1 linking entity set (no need for extra check)
+                    fieldsMap.put( propertyTypeId, Map.of( fieldName, 1F ) );
+                } );
+        return fieldsMap;
+    }
+
+    private static String getFieldName( UUID propertyTypeId ) {
+        return ENTITY + "." + propertyTypeId;
+    }
+
+    private static Map<String, Object> getOrganizationObject( Organization organization ) {
+        Map<String, Object> organizationObject = Maps.newHashMap();
+        organizationObject.put( SerializationConstants.ID_FIELD, organization.getId() );
+        organizationObject.put( SerializationConstants.TITLE_FIELD, organization.getTitle() );
+        organizationObject.put( SerializationConstants.DESCRIPTION_FIELD, organization.getDescription() );
+        return organizationObject;
     }
 
 }

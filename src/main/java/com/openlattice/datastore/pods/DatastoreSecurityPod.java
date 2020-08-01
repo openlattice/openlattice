@@ -47,6 +47,7 @@ public class DatastoreSecurityPod extends Auth0SecurityPod {
                 .antMatchers( HttpMethod.GET, "/datastore/edm/**" ).permitAll()
                 .antMatchers( "/datastore/data/entitydata/*" ).permitAll()
                 .antMatchers( "/datastore/codex/incoming/**" ).permitAll()
+                .antMatchers( "/datastore/codex/media/*" ).permitAll()
                 .antMatchers( "/datastore/**" ).authenticated();
     }
 

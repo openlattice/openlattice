@@ -25,19 +25,20 @@ import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Preconditions.checkArgument
 import com.google.common.base.Preconditions.checkState
 import com.openlattice.analysis.AnalysisApi
-import com.openlattice.analysis.AnalysisService
+import com.openlattice.analysis.AnalysisApi.*
 import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking
+import com.openlattice.analysis.requests.AggregationResult
 import com.openlattice.analysis.requests.NeighborType
 import com.openlattice.analysis.requests.RankingAggregation
-import com.openlattice.analysis.requests.Filter
 import com.openlattice.authorization.*
 import com.openlattice.data.DataGraphManager
 import com.openlattice.data.requests.FileType
-import com.openlattice.web.mediatypes.CustomMediaType
+import com.openlattice.datastore.services.AnalysisService
 import com.openlattice.datastore.services.EdmService
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.EdmConstants.Companion.COUNT_FQN
 import com.openlattice.edm.EdmConstants.Companion.ID_FQN
+import com.openlattice.web.mediatypes.CustomMediaType
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.springframework.http.MediaType
@@ -55,9 +56,10 @@ import kotlin.collections.LinkedHashSet
 @SuppressFBWarnings(
         value = ["RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE", "BC_BAD_CAST_TO_ABSTRACT_COLLECTION"],
         justification = "Allowing redundant kotlin null check on lateinit variables, " +
-                "Allowing kotlin collection mapping cast to List")
+                "Allowing kotlin collection mapping cast to List"
+)
 @RestController
-@RequestMapping(AnalysisApi.CONTROLLER)
+@RequestMapping(CONTROLLER)
 class AnalysisController : AnalysisApi, AuthorizingComponent {
     @Inject
     private lateinit var analysisService: AnalysisService
@@ -79,20 +81,20 @@ class AnalysisController : AnalysisApi, AuthorizingComponent {
 
     @Timed
     @RequestMapping(
-            path = [(AnalysisApi.ENTITY_SET_ID_PATH + AnalysisApi.NUM_RESULTS_PATH)],
+            path = [(ENTITY_SET_ID_PATH + NUM_RESULTS_PATH)],
             method = [(RequestMethod.POST)],
             produces = [(MediaType.APPLICATION_JSON_VALUE), (CustomMediaType.TEXT_CSV_VALUE)]
     )
     fun getTopUtilizers(
-            @PathVariable(AnalysisApi.ENTITY_SET_ID) entitySetId: UUID,
-            @PathVariable(AnalysisApi.NUM_RESULTS) numResults: Int,
+            @PathVariable(ENTITY_SET_ID) entitySetId: UUID,
+            @PathVariable(NUM_RESULTS) numResults: Int,
             @RequestBody filteredRankings: RankingAggregation,
-            @RequestParam(value = AnalysisApi.FILE_TYPE, required = false)
+            @RequestParam(value = FILE_TYPE, required = false)
             fileType: FileType?,
             response: HttpServletResponse
-    ): Iterable<Map<String, Any>> {
+    ): AggregationResult {
         if (filteredRankings.neighbors.isEmpty()) {
-            return listOf()
+            return AggregationResult(sortedSetOf(), mapOf(), mapOf())
         }
         ensureReadAccess(AclKey(entitySetId))
         val downloadType = fileType ?: FileType.json
@@ -104,35 +106,35 @@ class AnalysisController : AnalysisApi, AuthorizingComponent {
     override fun getTopUtilizers(
             entitySetId: UUID,
             numResults: Int,
-            filteredRankings: RankingAggregation,
+            rankingAggregation: RankingAggregation,
             fileType: FileType?
-    ): Iterable<Map<String, Any>> {
+    ): AggregationResult {
         val entitySet = entitySetManager.getEntitySet(entitySetId)!!
         val columnTitles = getEntitySetColumns(entitySetManager.getEntityTypeByEntitySetId(entitySetId).id)
 
-        //TODO: Make this more concise
-        if (entitySet.isLinking) {
-            checkArgument(
-                    !entitySet.linkedEntitySets.isEmpty(),
-                    "Linked entity sets does not consist of any entity sets."
-            )
-            return getFilteredRankings(
-                    entitySet.linkedEntitySets,
-                    numResults,
-                    filteredRankings,
-                    columnTitles,
-                    entitySet.isLinking, Optional.of(entitySetId)
-            )
-        } else {
+        if (!entitySet.isLinking) {
             return getFilteredRankings(
                     setOf(entitySetId),
                     numResults,
-                    filteredRankings,
+                    rankingAggregation,
                     columnTitles,
-                    entitySet.isLinking, Optional.empty()
+                    entitySet.isLinking,
+                    Optional.empty()
             )
         }
 
+        checkArgument(
+                entitySet.linkedEntitySets.isNotEmpty(),
+                "Linked entity sets does not consist of any entity sets."
+        )
+        return getFilteredRankings(
+                entitySet.linkedEntitySets,
+                numResults,
+                rankingAggregation,
+                columnTitles,
+                entitySet.isLinking,
+                Optional.of(entitySetId)
+        )
     }
 
     private fun getEntitySetColumns(entityTypeId: UUID): LinkedHashSet<String> {
@@ -146,21 +148,6 @@ class AnalysisController : AnalysisApi, AuthorizingComponent {
         )
     }
 
-    private fun accessCheckAndReturnAuthorizedPropetyTypes(
-            filters: Map<UUID, Set<Filter>>,
-            entitySetId: UUID
-    ): Pair<UUID, Set<UUID>> {
-        val authorizedPropertyTypes = authzHelper.getAuthorizedPropertyTypes(entitySetId, EnumSet.of(Permission.READ))
-        authzHelper.accessCheck(authorizedPropertyTypes, filters.keys)
-        return entitySetId to authorizedPropertyTypes.keys
-    }
-
-    private fun entitySetIsAuthorized(entitySetId: UUID): Boolean {
-        return authorizations.checkIfHasPermissions(
-                AclKey(entitySetId), Principals.getCurrentPrincipals(), EnumSet.of(Permission.READ)
-        )
-    }
-
     fun getFilteredRankings(
             entitySetIds: Set<UUID>,
             numResults: Int,
@@ -168,27 +155,31 @@ class AnalysisController : AnalysisApi, AuthorizingComponent {
             columnTitles: LinkedHashSet<String>,
             linked: Boolean,
             linkingEntitySetId: Optional<UUID>
-    ): Iterable<Map<String, Any>> {
+    ): AggregationResult {
         val authorizedPropertyTypes =
                 entitySetIds.map { entitySetId ->
                     entitySetId to authzHelper.getAuthorizedPropertyTypes(entitySetId, EnumSet.of(Permission.READ))
-                }.toMap()
+                }.toMap().toMutableMap()
+        authorizedPropertyTypes += analysisService.getAuthorizedNeighbors(entitySetIds)
+
+        val entitySets = entitySetManager.getEntitySetsAsMap(authorizedPropertyTypes.keys)
 
         val authorizedFilteredRankings = filteredRankings.neighbors.map { filteredRanking ->
             val authorizedAssociationPropertyTypes =
                     edm.getPropertyTypesAsMap(edm.getEntityType(filteredRanking.associationTypeId).properties)
             val authorizedEntitySetPropertyTypes =
                     edm.getPropertyTypesAsMap(edm.getEntityType(filteredRanking.neighborTypeId).properties)
-            val authorizedAssociations =
-                    entitySetManager.getEntitySetIdsOfType(filteredRanking.associationTypeId)
-                            .filter { entitySetIsAuthorized(it) }
-                            .map { accessCheckAndReturnAuthorizedPropetyTypes(filteredRanking.associationFilters, it) }
-                            .toMap()
-            val authorizedNeighbors =
-                    entitySetManager.getEntitySetIdsOfType(filteredRanking.neighborTypeId)
-                            .filter { entitySetIsAuthorized(it) }
-                            .map { accessCheckAndReturnAuthorizedPropetyTypes(filteredRanking.neighborFilters, it) }
-                            .toMap()
+            val authorizedAssociations = entitySets.asSequence()
+                    .filter { it.value.entityTypeId == filteredRanking.associationTypeId }
+                    .map { it.key to authorizedPropertyTypes.getValue(it.value.id).keys }
+                    .toMap()
+
+            val authorizedNeighbors = entitySets.asSequence()
+                    .filter { it.value.entityTypeId == filteredRanking.neighborTypeId }
+                    .map { it.key to authorizedPropertyTypes.getValue(it.value.id).keys }
+                    .toMap()
+
+
             AuthorizedFilteredNeighborsRanking(
                     filteredRanking,
                     authorizedAssociations,
@@ -209,28 +200,26 @@ class AnalysisController : AnalysisApi, AuthorizingComponent {
     }
 
     @RequestMapping(
-            path = [(AnalysisApi.ENTITY_SET_ID_PATH + AnalysisApi.TYPES_PATH)],
+            path = [(ENTITY_SET_ID_PATH + TYPES_PATH)],
             method = [(RequestMethod.GET)],
             produces = [(MediaType.APPLICATION_JSON_VALUE)]
     )
     @Timed
-    override fun getNeighborTypes(@PathVariable(AnalysisApi.ENTITY_SET_ID) entitySetId: UUID): Iterable<NeighborType> {
+    override fun getNeighborTypes(@PathVariable(ENTITY_SET_ID) entitySetId: UUID): Iterable<NeighborType> {
         ensureReadAccess(AclKey(entitySetId))
 
         val entitySet = entitySetManager.getEntitySet(entitySetId)!!
 
         val allEntitySetIds = if (entitySet.isLinking) {
-            val linkedEntitySetIds = HashSet(entitySet.linkedEntitySets)
             checkState(
-                    !linkedEntitySetIds.isEmpty(),
+                    entitySet.linkedEntitySets.isNotEmpty(),
                     "Linked entity sets are empty for linking entity set %s, id %s",
                     entitySet.name,
                     entitySet.id
             )
-            val authorizedLinkedEntitySetIds = entitySet.linkedEntitySets
-                    .filter { isAuthorized(Permission.READ).test(AclKey(entitySetId)) }.toSet()
 
-            authorizedLinkedEntitySetIds
+            entitySet.linkedEntitySets.filter { isAuthorized(Permission.READ).test(AclKey(entitySetId)) }.toSet()
+
         } else {
             setOf(entitySetId)
         }
@@ -250,3 +239,4 @@ class AnalysisController : AnalysisApi, AuthorizingComponent {
         }
     }
 }
+

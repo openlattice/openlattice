@@ -21,7 +21,6 @@
 package com.openlattice.datastore.search.controllers;
 
 import com.codahale.metrics.annotation.Timed;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.*;
 import com.openlattice.auditing.AuditEventType;
 import com.openlattice.auditing.AuditableEvent;
@@ -29,8 +28,7 @@ import com.openlattice.auditing.AuditingComponent;
 import com.openlattice.auditing.AuditingManager;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
-import com.openlattice.authorization.util.AuthorizationUtils;
-import com.openlattice.data.DataGraphManager;
+import com.openlattice.authorization.util.AuthorizationUtilsKt;
 import com.openlattice.data.requests.NeighborEntityDetails;
 import com.openlattice.data.requests.NeighborEntityIds;
 import com.openlattice.datastore.apps.services.AppService;
@@ -61,7 +59,7 @@ import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSI
 
 @SuppressFBWarnings(
         value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE",
-        justification = "NPEs are prevented by Preconditions.checkState but SpotBugs doesn't understand this")
+        justification = "NPEs are prevented by Preconditions.checkState but SpotBugs doesn't understand this" )
 @RestController
 @RequestMapping( SearchApi.CONTROLLER )
 public class SearchController implements SearchApi, AuthorizingComponent, AuditingComponent {
@@ -91,13 +89,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
     private SecurePrincipalsManager spm;
 
     @Inject
-    private ObjectMapper mapper;
-
-    @Inject
     private AuditingManager auditingManager;
-
-    @Inject
-    private DataGraphManager dgm;
 
     @RequestMapping(
             path = { "/", "" },
@@ -119,16 +111,6 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
                         search.getOptionalPropertyTypes(),
                         search.getStart(),
                         search.getMaxHits() );
-    }
-
-    @RequestMapping(
-            path = { POPULAR },
-            method = RequestMethod.GET,
-            produces = { MediaType.APPLICATION_JSON_VALUE } )
-    @Override
-    @Timed
-    public Iterable<EntitySet> getPopularEntitySet() {
-        return entitySetManager.getEntitySets();
     }
 
     @RequestMapping(
@@ -158,26 +140,35 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
 
         validateSearch( searchConstraints );
 
+        final UUID[] entitySetIds = searchConstraints.getEntitySetIds();
+
+        final LinkedHashSet<UUID> uniqueEntitySetIds = Sets.newLinkedHashSetWithExpectedSize( entitySetIds.length );
+
+        Collections.addAll(uniqueEntitySetIds, entitySetIds);
+
+        Set<Principal> currentPrincipals = Principals.getCurrentPrincipals();
+
         // check read on entity sets
-        final var authorizedEntitySetIds = authorizationsHelper
-                .getAuthorizedEntitySets( Set.of( searchConstraints.getEntitySetIds() ), READ_PERMISSION );
+        final var authorizedEntitySetIds = entitySetManager
+                .filterToAuthorizedNormalEntitySets( Set.of( searchConstraints.getEntitySetIds() ),
+                        READ_PERMISSION,
+                        currentPrincipals );
 
         DataSearchResult results = new DataSearchResult( 0, Lists.newArrayList() );
 
         // if user has read access on all normal entity sets
         if ( authorizedEntitySetIds.size() == searchConstraints.getEntitySetIds().length ) {
             final var authorizedPropertyTypesByEntitySet = authorizationsHelper.getAuthorizedPropertiesOnEntitySets(
-                    authorizedEntitySetIds, READ_PERMISSION, Principals.getCurrentPrincipals() );
+                    authorizedEntitySetIds, READ_PERMISSION, currentPrincipals );
 
-            results = searchService
-                    .executeSearch( searchConstraints, authorizedPropertyTypesByEntitySet );
+            results = searchService.executeSearch( searchConstraints, authorizedPropertyTypesByEntitySet );
         }
 
-        List<AuditableEvent> searchEvents = Lists.newArrayList();
-        for ( int i = 0; i < searchConstraints.getEntitySetIds().length; i++ ) {
+        List<AuditableEvent> searchEvents = new ArrayList(entitySetIds.length);
+        for ( int i = 0; i < entitySetIds.length; i++ ) {
             searchEvents.add( new AuditableEvent(
                     spm.getCurrentUserId(),
-                    new AclKey( searchConstraints.getEntitySetIds()[ i ] ),
+                    new AclKey( entitySetIds[ i ] ),
                     AuditEventType.SEARCH_ENTITY_SET_DATA,
                     "Entity set data searched through SearchApi.searchEntitySetData",
                     Optional.of( getEntityKeyIdsFromSearchResult( results ) ),
@@ -601,8 +592,8 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
         SetMultimap<UUID, UUID> neighborsByEntitySet = HashMultimap.create();
 
         result.values().forEach( associationMap ->
-                associationMap.forEach( (associationEsId, association) -> {
-                    association.forEach( (neighborEsId, neighbor) -> {
+                associationMap.forEach( ( associationEsId, association ) -> {
+                    association.forEach( ( neighborEsId, neighbor ) -> {
                         neighborsByEntitySet
                                 .put( associationEsId, neighbor.getAssociationEntityKeyId() );
                         neighborsByEntitySet
@@ -694,7 +685,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
                                 EnumSet.of( Permission.READ ) ) // TODO: other access check??
                                 .parallel()
                                 .filter( Objects::nonNull )
-                                .map( AuthorizationUtils::getLastAclKeySafely ) ) );
+                                .map( AuthorizationUtilsKt::getLastAclKeySafely ) ) );
         searchService.triggerAllOrganizationsIndex( allOrganizations );
         return null;
     }
@@ -727,7 +718,6 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
         /* Check sort is valid */
         SortDefinition sort = searchConstraints.getSortDefinition();
         switch ( sort.getSortType() ) {
-
             case field:
             case geoDistance: {
                 UUID sortPropertyTypeId = sort.getPropertyTypeId();

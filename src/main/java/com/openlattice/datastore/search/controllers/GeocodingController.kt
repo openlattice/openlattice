@@ -10,11 +10,11 @@ import com.openlattice.geocoding.GeocodingApi
 import com.openlattice.geocoding.GeocodingApi.Companion.AUTOCOMPLETE
 import com.openlattice.geocoding.GeocodingApi.Companion.CONTROLLER
 import com.openlattice.geocoding.GeocodingApi.Companion.GEOCODE
+import com.openlattice.geocoding.GeocodingApi.Companion.ID
+import com.openlattice.geocoding.GeocodingApi.Companion.ID_PATH
+import com.openlattice.geocoding.GeocodingApi.Companion.PLACE
 import com.openlattice.geocoding.GeocodingRequest
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.bind.annotation.*
 import java.util.*
 import javax.inject.Inject
 
@@ -46,6 +46,20 @@ class GeocodingController : GeocodingApi {
 
 
         return autocompleteRequest.await()
+    }
+
+    @GetMapping(value = [PLACE + ID_PATH])
+    override fun geocodePlace(@PathVariable(ID) placeId: String): Array<out GeocodingResult> {
+        return geocode(
+                GeocodingRequest(
+                        Optional.of(""),
+                        Optional.of(placeId),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty()
+                )
+        )
     }
 
     @PostMapping(value = [GEOCODE])
