@@ -10,6 +10,7 @@ import java.util.*
 data class RepartitioningJobState(
         val entitySetId: UUID,
         val oldPartitions: List<Int>,
+        val newPartitions: Set<Int>,
         val batchSize: Long = 0,
         var currentlyMigratingPartitionIndex: Int = 0,
         var repartitionCount: Long = 0,
