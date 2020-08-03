@@ -73,13 +73,14 @@ class RepartitioningJob
         state.repartitionCount += repartition(REPARTITION_EDGES_SQL)
 
         /**
-         * Phase 2
+         * Phase 1
          * Delete data whose partition doesn't match it's computed partition.
          */
-
-        state.deleteCount += delete(DELETE_DATA_SQL)
-        state.deleteCount += delete(DELETE_IDS_SQL)
-        state.deleteCount += delete(DELETE_EDGES_SQL)
+        if( phase == 1 ) {
+            state.deleteCount += delete(DELETE_DATA_SQL)
+            state.deleteCount += delete(DELETE_IDS_SQL)
+            state.deleteCount += delete(DELETE_EDGES_SQL)
+        }
 
         result = state.repartitionCount + state.deleteCount
         hasWorkRemaining = (++state.currentlyMigratingPartitionIndex < state.oldPartitions.size)
@@ -88,6 +89,8 @@ class RepartitioningJob
         //Once we are done, set the partitions.
         if( !hasWorkRemaining && phase == 0) {
             setPartitions(state.entitySetId,state.newPartitions)
+            //The 4*getCount was an estimate, we remove estimate and addin updated value.
+            state.needsMigrationCount /= 2
             state.needsMigrationCount += getNeedsMigrationCount()
             state.currentlyMigratingPartitionIndex = 0
             hasWorkRemaining = true
@@ -144,7 +147,7 @@ class RepartitioningJob
         }
     }
 
-    private fun getNeedsMigrationCount(): Long = 2 * state.oldPartitions.fold(0L) { count, partition ->
+    private fun getNeedsMigrationCount(): Long = 4 * state.oldPartitions.fold(0L) { count, partition ->
         count + getCount(idsNeedingMigrationCountSql, partition) +
                 getCount(dataNeedingMigrationCountSql, partition) +
                 getCount(edgesNeedingMigrationCountSql, partition)
