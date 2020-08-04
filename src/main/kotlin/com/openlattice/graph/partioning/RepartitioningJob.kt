@@ -50,7 +50,7 @@ class RepartitioningJob(
             newPartitions: Set<Int>
     ) : this(RepartitioningJobState(entitySetId, oldPartitions, newPartitions))
 
-    var phase:RepartitioningPhase = RepartitioningPhase.POPULATE
+    var phase: RepartitioningPhase = RepartitioningPhase.POPULATE
         private set
 
     @Transient
@@ -134,7 +134,11 @@ class RepartitioningJob(
     }
 
     override fun updateProgress() {
-        progress = ((100 * (state.repartitionCount + state.deleteCount)) / state.needsMigrationCount).toByte()
+        progress = if (state.needsMigrationCount == 0L) {
+            0
+        } else {
+            ((100 * (state.repartitionCount + state.deleteCount)) / state.needsMigrationCount).toByte()
+        }
     }
 
     private fun repartition(repartitionSql: String): Long = hds.connection.use { connection ->
