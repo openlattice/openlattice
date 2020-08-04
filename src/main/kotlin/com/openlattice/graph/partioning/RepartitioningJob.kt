@@ -298,7 +298,7 @@ INSERT INTO ${DATA.name} SELECT $REPARTITION_DATA_COLUMNS
     FROM ${DATA.name} INNER JOIN (select ? as ${ENTITY_SET_ID.name},? as ${PARTITIONS.name} ) as es 
     USING ( ${ENTITY_SET_ID.name} )
     WHERE ${PARTITION.name} = ? AND ${PARTITION.name}!=$REPARTITION_SELECTOR
-    ON CONFLICT DO UPDATE SET
+    ON CONFLICT (${DATA.primaryKey.joinToString(",")}) DO UPDATE SET
         ${latestSql(ORIGIN_ID, VERSION)},
         ${latestSql(VERSION, VERSION)},
         ${VERSIONS.name} = ARRAY( SELECT DISTINCT UNNEST(${VERSIONS.name} || EXCLUDED.${VERSIONS.name} ) ORDER BY 1  ),  
@@ -320,7 +320,7 @@ INSERT INTO ${IDS.name} SELECT $REPARTITION_IDS_COLUMNS
     FROM ${IDS.name} INNER JOIN (select ? as ${ENTITY_SET_ID.name},? as ${PARTITIONS.name} ) as es 
     USING (${ENTITY_SET_ID.name})
     WHERE ${PARTITION.name} = ? AND ${PARTITION.name}!=$REPARTITION_SELECTOR
-    ON CONFLICT DO UPDATE SET
+    ON CONFLICT (${IDS.primaryKey.joinToString(",")}) DO UPDATE SET
         ${latestSql(LINKING_ID, LAST_LINK)}, 
         ${latestSql(VERSION, VERSION)},
         ${VERSIONS.name} = ARRAY( SELECT DISTINCT UNNEST(${VERSIONS.name} || EXCLUDED.${VERSIONS.name} ) ORDER BY 1  ),  
@@ -345,7 +345,7 @@ INSERT INTO ${E.name} SELECT $REPARTITION_EDGES_COLUMNS
     FROM ${E.name} INNER JOIN (select ? as ${SRC_ENTITY_SET_ID.name},? as ${PARTITIONS.name} ) as es
     USING (${SRC_ENTITY_SET_ID.name})
     WHERE ${PARTITION.name} = ? AND ${PARTITION.name}!=$REPARTITION_SELECTOR
-    ON CONFLICT DO UPDATE SET
+    ON CONFLICT (${E.primaryKey.joinToString(",")}) DO UPDATE SET
         ${latestSql(VERSION, VERSION)},
         ${VERSIONS.name} = ARRAY( SELECT DISTINCT UNNEST(${VERSIONS.name} || EXCLUDED.${VERSIONS.name} ) ORDER BY 1  )
 """.trimIndent()
