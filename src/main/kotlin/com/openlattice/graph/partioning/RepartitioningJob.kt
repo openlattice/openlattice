@@ -270,11 +270,12 @@ private val edgesNeedingMigrationCountSql = """
 """.trimIndent()
 
 private fun latestSql(
+        table: PostgresTableDefinition,
         column: PostgresColumnDefinition,
         comparison: PostgresColumnDefinition = column,
         whenExcludedGreater: PostgresColumnDefinition = column,
         otherwise: PostgresColumnDefinition = column
-): String = "${column.name} = CASE WHEN EXCLUDED.${comparison.name} > ${comparison.name} THEN EXCLUDED.${whenExcludedGreater.name} ELSE ${otherwise.name} END"
+): String = "${column.name} = CASE WHEN EXCLUDED.${comparison.name} > ${table.name}.${comparison.name} THEN EXCLUDED.${whenExcludedGreater.name} ELSE ${table.name}.${otherwise.name} END"
 
 
 private val REPARTITION_DATA_COLUMNS = buildRepartitionColumns(DATA)
@@ -299,11 +300,11 @@ INSERT INTO ${DATA.name} SELECT $REPARTITION_DATA_COLUMNS
     USING ( ${ENTITY_SET_ID.name} )
     WHERE ${PARTITION.name} = ? AND ${PARTITION.name}!=$REPARTITION_SELECTOR
     ON CONFLICT (${DATA.primaryKey.joinToString(",") { it.name }}) DO UPDATE SET
-        ${latestSql(ORIGIN_ID, VERSION)},
-        ${latestSql(VERSION, VERSION)},
-        ${VERSIONS.name} = ARRAY( SELECT DISTINCT UNNEST(${VERSIONS.name} || EXCLUDED.${VERSIONS.name} ) ORDER BY 1  ),  
-        ${latestSql(LAST_WRITE, VERSION)},
-        ${latestSql(LAST_PROPAGATE, VERSION)}
+        ${latestSql(DATA, ORIGIN_ID, VERSION)},
+        ${latestSql(DATA, VERSION, VERSION)},
+        ${VERSIONS.name} = ARRAY( SELECT DISTINCT UNNEST(${DATA.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name} ) ORDER BY 1  ),  
+        ${latestSql(DATA, LAST_WRITE, VERSION)},
+        ${latestSql(DATA, LAST_PROPAGATE, VERSION)}
 """.trimIndent()
 
 /**
@@ -320,16 +321,16 @@ INSERT INTO ${IDS.name} SELECT $REPARTITION_IDS_COLUMNS
     FROM ${IDS.name} INNER JOIN (select ? as ${ENTITY_SET_ID.name},? as ${PARTITIONS.name} ) as es 
     USING (${ENTITY_SET_ID.name})
     WHERE ${PARTITION.name} = ? AND ${PARTITION.name}!=$REPARTITION_SELECTOR
-    ON CONFLICT (${IDS.primaryKey.joinToString(","){it.name}}) DO UPDATE SET
-        ${latestSql(LINKING_ID, LAST_LINK)}, 
-        ${latestSql(VERSION, VERSION)},
-        ${VERSIONS.name} = ARRAY( SELECT DISTINCT UNNEST(${VERSIONS.name} || EXCLUDED.${VERSIONS.name} ) ORDER BY 1  ),  
-        ${latestSql(LAST_WRITE, VERSION)},
-        ${latestSql(LAST_INDEX, VERSION)},
-        ${latestSql(LAST_PROPAGATE, VERSION)},
-        ${latestSql(LAST_MIGRATE, VERSION)},
-        ${latestSql(LAST_LINK_INDEX, VERSION)}
-""".trimIndent()
+    ON CONFLICT (${IDS.primaryKey.joinToString(",") { it.name }}) DO UPDATE SET
+        ${latestSql(DATA, LINKING_ID, LAST_LINK)}, 
+        ${latestSql(DATA, VERSION, VERSION)},
+        ${VERSIONS.name} = ARRAY( SELECT DISTINCT UNNEST(${IDS.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name} ) ORDER BY 1  ),  
+        ${latestSql(DATA, LAST_WRITE, VERSION)},
+        ${latestSql(DATA, LAST_INDEX, VERSION)},
+        ${latestSql(DATA, LAST_PROPAGATE, VERSION)},
+        ${latestSql(DATA, LAST_MIGRATE, VERSION)},
+        ${latestSql(DATA, LAST_LINK_INDEX, VERSION)}
+""".trimIndent(),
 
 /**
  * Query for repartition a partition of edges.
@@ -345,9 +346,9 @@ INSERT INTO ${E.name} SELECT $REPARTITION_EDGES_COLUMNS
     FROM ${E.name} INNER JOIN (select ? as ${SRC_ENTITY_SET_ID.name},? as ${PARTITIONS.name} ) as es
     USING (${SRC_ENTITY_SET_ID.name})
     WHERE ${PARTITION.name} = ? AND ${PARTITION.name}!=$REPARTITION_SELECTOR
-    ON CONFLICT (${E.primaryKey.joinToString(","){it.name}}) DO UPDATE SET
-        ${latestSql(VERSION, VERSION)},
-        ${VERSIONS.name} = ARRAY( SELECT DISTINCT UNNEST(${VERSIONS.name} || EXCLUDED.${VERSIONS.name} ) ORDER BY 1  )
+    ON CONFLICT (${E.primaryKey.joinToString(",") { it.name }}) DO UPDATE SET
+        ${latestSql(DATA, VERSION, VERSION)},
+        ${VERSIONS.name} = ARRAY( SELECT DISTINCT UNNEST(${E.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name} ) ORDER BY 1  )
 """.trimIndent()
 
 /**
