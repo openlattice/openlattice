@@ -280,7 +280,7 @@ private val REPARTITION_EDGES_COLUMNS = buildRepartitionColumns(IDS)
  * 1. entity set id
  * 2. partitions (array)
  * 3. partition
- * 
+ *
  * NOTE: We do not attempt to move data values on conflict. In theory, data is immutable and a conflict wouldn't impact the
  * actual content of the data columns, unless a hash collection had occured during a re-partition.
  * NOTE: We set origin_id based on version. This should be fine in 99.999% of cases as the latest version should have
@@ -378,5 +378,5 @@ DELETE FROM ${ID.name}
 private val DELETE_EDGES_SQL = """
 DELETE FROM ${E.name} 
     USING (SELECT ${SRC_ENTITY_SET_ID.name},${SRC_ENTITY_KEY_ID.name},${PARTITION.name} FROM ${E.name} INNER JOIN (select ? as ${SRC_ENTITY_SET_ID.name},? as ${PARTITIONS.name} ) as es USING (${SRC_ENTITY_SET_ID.name})) as to_be_deleted
-    WHERE ${SRC_ENTITY_SET_ID.name} = ? and ${PARTITION.name} = ? AND ${PARTITION.name}!=$REPARTITION_SELECTOR AND to_be_deleted.${ID.name} = ids.${ID.name} and to_be_deleted.${PARTITION.name} = ids.${PARTITION.name};
+    WHERE ${PARTITION.name} = ? AND ${PARTITION.name}!=$REPARTITION_SELECTOR AND to_be_deleted.${ID.name} = ids.${ID.name} and to_be_deleted.${PARTITION.name} = ids.${PARTITION.name};
 """.trimIndent()
