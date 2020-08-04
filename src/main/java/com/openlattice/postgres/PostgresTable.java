@@ -20,6 +20,7 @@
 
 package com.openlattice.postgres;
 
+import com.geekbeast.rhizome.jobs.PostgresJobsMapStore;
 import com.google.common.collect.ImmutableList;
 
 import java.util.List;
@@ -31,7 +32,7 @@ import static com.openlattice.postgres.PostgresColumn.*;
  * Tables definitions for all tables used in the OpenLattice platform.
  */
 public final class PostgresTable {
-
+    public static final PostgresTableDefinition JOBS = PostgresJobsMapStore.JOBS;
     public static final PostgresTableDefinition ACL_KEYS          =
             new PostgresTableDefinition( "acl_keys" )
                     .addColumns( NAME, SECURABLE_OBJECTID )
