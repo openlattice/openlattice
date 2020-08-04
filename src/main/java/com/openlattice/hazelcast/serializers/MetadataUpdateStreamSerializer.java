@@ -4,16 +4,20 @@ import com.google.common.collect.Maps;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers;
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils;
 import com.openlattice.data.DataExpiration;
 import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.openlattice.mapstores.TestDataFactory;
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
-import org.springframework.stereotype.Component;
-
 import java.io.DataInput;
 import java.io.IOException;
-import java.util.*;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import org.springframework.stereotype.Component;
 
 @Component
 public class MetadataUpdateStreamSerializer implements TestableSelfRegisteringStreamSerializer<MetadataUpdate> {
@@ -51,6 +55,7 @@ public class MetadataUpdateStreamSerializer implements TestableSelfRegisteringSt
         OptionalStreamSerializers.serialize( out, object.getPii(), ObjectDataOutput::writeBoolean );
         OptionalStreamSerializers.serialize( out, object.getDefaultShow(), ObjectDataOutput::writeBoolean );
         OptionalStreamSerializers.serialize( out, object.getUrl(), ObjectDataOutput::writeUTF );
+
         OptionalStreamSerializers.serialize(
                 out,
                 object.getPropertyTags(),
@@ -62,7 +67,8 @@ public class MetadataUpdateStreamSerializer implements TestableSelfRegisteringSt
                 }
 
         );
-        OptionalStreamSerializers.serialize( out, object.getOrganizationId(), UUIDStreamSerializer::serialize );
+        OptionalStreamSerializers.serialize( out, object.getOrganizationId(), UUIDStreamSerializerUtils::serialize );
+
         OptionalStreamSerializers.serialize( out,
                 object.getPartitions(),
                 ( output, elem ) -> output.writeIntArray( elem.stream().mapToInt( e -> e ).toArray() ) );
@@ -106,7 +112,7 @@ public class MetadataUpdateStreamSerializer implements TestableSelfRegisteringSt
 
 
         Optional<UUID> organizationId = OptionalStreamSerializers
-                .deserialize( in, UUIDStreamSerializer::deserialize );
+                .deserialize( in, UUIDStreamSerializerUtils::deserialize );
         Optional<LinkedHashSet<Integer>> partitions = OptionalStreamSerializers
                 .deserialize( in, input -> toLinkedHashSet( input.readIntArray() ) );
         Optional<DataExpiration> dataExpiration;

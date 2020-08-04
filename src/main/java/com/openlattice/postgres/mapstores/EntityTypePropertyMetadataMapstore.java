@@ -1,10 +1,11 @@
 package com.openlattice.postgres.mapstores;
 
+import static com.openlattice.postgres.PostgresTable.ENTITY_TYPE_PROPERTY_METADATA;
+
 import com.hazelcast.config.InMemoryFormat;
+import com.hazelcast.config.IndexConfig;
+import com.hazelcast.config.IndexType;
 import com.hazelcast.config.MapConfig;
-import com.hazelcast.config.MapIndexConfig;
-import com.openlattice.edm.set.EntitySetPropertyKey;
-import com.openlattice.edm.set.EntitySetPropertyMetadata;
 import com.openlattice.edm.type.EntityTypePropertyKey;
 import com.openlattice.edm.type.EntityTypePropertyMetadata;
 import com.openlattice.hazelcast.HazelcastMap;
@@ -12,7 +13,6 @@ import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.postgres.PostgresArrays;
 import com.openlattice.postgres.ResultSetAdapters;
 import com.zaxxer.hikari.HikariDataSource;
-
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -20,12 +20,10 @@ import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.UUID;
 
-import static com.openlattice.postgres.PostgresTable.ENTITY_TYPE_PROPERTY_METADATA;
-
 public class EntityTypePropertyMetadataMapstore
         extends AbstractBasePostgresMapstore<EntityTypePropertyKey, EntityTypePropertyMetadata> {
 
-    public static final String ENTITY_TYPE_INDEX = "__key#entityTypeId";
+    public static final String ENTITY_TYPE_INDEX = "__key.entityTypeId";
 
     public EntityTypePropertyMetadataMapstore( HikariDataSource hds ) {
         super( HazelcastMap.ENTITY_TYPE_PROPERTY_METADATA, ENTITY_TYPE_PROPERTY_METADATA, hds );
@@ -78,6 +76,6 @@ public class EntityTypePropertyMetadataMapstore
         return super
                 .getMapConfig()
                 .setInMemoryFormat( InMemoryFormat.OBJECT )
-                .addMapIndexConfig( new MapIndexConfig( ENTITY_TYPE_INDEX, false ) );
+                .addIndexConfig( new IndexConfig( IndexType.HASH, ENTITY_TYPE_INDEX ) );
     }
 }

@@ -24,8 +24,9 @@ package com.openlattice.postgres.mapstores;
 import static com.openlattice.postgres.PostgresTable.ORGANIZATION_ASSEMBLIES;
 
 import com.hazelcast.config.InMemoryFormat;
+import com.hazelcast.config.IndexConfig;
+import com.hazelcast.config.IndexType;
 import com.hazelcast.config.MapConfig;
-import com.hazelcast.config.MapIndexConfig;
 import com.openlattice.assembler.OrganizationAssembly;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.organization.OrganizationEntitySetFlag;
@@ -66,13 +67,13 @@ public class OrganizationAssemblyMapstore extends AbstractBasePostgresMapstore<U
 
     @Override protected OrganizationAssembly mapToValue( ResultSet rs ) throws SQLException {
         final UUID organizationId = ResultSetAdapters.organizationId( rs );
-        final boolean initialized = ResultSetAdapters.initialized(rs);
+        final boolean initialized = ResultSetAdapters.initialized( rs );
 
         final Map<UUID, EnumSet<OrganizationEntitySetFlag>> materializedEntitySets =
                 materializedEntitySetsMapStore
                         .loadMaterializedEntitySetsForOrganization( rs.getStatement().getConnection(), organizationId );
 
-        return new OrganizationAssembly(organizationId, initialized, materializedEntitySets);
+        return new OrganizationAssembly( organizationId, initialized, materializedEntitySets );
     }
 
     @Override protected UUID mapToKey( ResultSet rs ) throws SQLException {
@@ -93,8 +94,8 @@ public class OrganizationAssemblyMapstore extends AbstractBasePostgresMapstore<U
     @Override public MapConfig getMapConfig() {
         return super
                 .getMapConfig()
-                .addMapIndexConfig( new MapIndexConfig( INITIALIZED_INDEX, false ) )
-                .addMapIndexConfig( new MapIndexConfig( MATERIALIZED_ENTITY_SETS_ID_INDEX, false ) )
+                .addIndexConfig( new IndexConfig( IndexType.HASH, INITIALIZED_INDEX ) )
+                .addIndexConfig( new IndexConfig( IndexType.HASH, MATERIALIZED_ENTITY_SETS_ID_INDEX ) )
                 .setInMemoryFormat( InMemoryFormat.OBJECT );
     }
 }

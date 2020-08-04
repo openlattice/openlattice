@@ -20,6 +20,7 @@
 
 package com.openlattice.hazelcast.serializers;
 
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils;
 import com.openlattice.graph.core.objects.VertexKey;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.hazelcast.nio.ObjectDataInput;
@@ -59,12 +60,12 @@ public class VertexStreamSerializer implements SelfRegisteringStreamSerializer<V
     }
 
     public static void serialize( ObjectDataOutput out, VertexKey object ) throws IOException {
-        UUIDStreamSerializer.serialize( out, object.getKey() );
+        UUIDStreamSerializerUtils.serialize( out, object.getKey() );
         EntityKeyStreamSerializer.serialize( out, object.getReference() );
     }
 
     public static VertexKey deserialize( ObjectDataInput in ) throws IOException {
-        final UUID key = UUIDStreamSerializer.deserialize( in );
+        final UUID key = UUIDStreamSerializerUtils.deserialize( in );
         final EntityKey reference = EntityKeyStreamSerializer.deserialize( in );
         return new VertexKey( key, reference );
     }

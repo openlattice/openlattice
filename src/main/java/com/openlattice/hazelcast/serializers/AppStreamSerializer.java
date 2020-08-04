@@ -20,6 +20,7 @@
 
 package com.openlattice.hazelcast.serializers;
 
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -38,19 +39,19 @@ public class AppStreamSerializer implements SelfRegisteringStreamSerializer<App>
     }
 
     @Override public void write( ObjectDataOutput out, App object ) throws IOException {
-        UUIDStreamSerializer.serialize( out, object.getId() );
+        UUIDStreamSerializerUtils.serialize( out, object.getId() );
         out.writeUTF( object.getName() );
         out.writeUTF( object.getTitle() );
         out.writeUTF( object.getUrl() );
         out.writeUTF( object.getDescription() );
         out.writeInt( object.getAppTypeIds().size() );
         for ( UUID id : object.getAppTypeIds() ) {
-            UUIDStreamSerializer.serialize( out, id );
+            UUIDStreamSerializerUtils.serialize( out, id );
         }
     }
 
     @Override public App read( ObjectDataInput in ) throws IOException {
-        UUID id = UUIDStreamSerializer.deserialize( in );
+        UUID id = UUIDStreamSerializerUtils.deserialize( in );
         String name = in.readUTF();
         String title = in.readUTF();
         String url = in.readUTF();
@@ -59,7 +60,7 @@ public class AppStreamSerializer implements SelfRegisteringStreamSerializer<App>
         int numConfigTypeIds = in.readInt();
         LinkedHashSet<UUID> configTypeIds = new LinkedHashSet<>();
         for ( int i = 0; i < numConfigTypeIds; i++ ) {
-            configTypeIds.add( UUIDStreamSerializer.deserialize( in ) );
+            configTypeIds.add( UUIDStreamSerializerUtils.deserialize( in ) );
         }
         return new App( id, name, title, description, configTypeIds, url );
     }

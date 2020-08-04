@@ -22,46 +22,44 @@
 
 package com.openlattice.authorization;
 
+import com.google.common.util.concurrent.ListenableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.util.concurrent.ListenableFuture;
-import com.hazelcast.core.ExecutionCallback;
-import com.hazelcast.core.ICompletableFuture;
-
 public class AceFuture implements ListenableFuture<Ace> {
-    private static final Logger                              logger = LoggerFactory.getLogger( AceFuture.class );
-    private final Principal                                      principal;
-    private final ICompletableFuture<AceValue> futureAceValue;
+    private static final Logger                    logger = LoggerFactory.getLogger( AceFuture.class );
+    private final        Principal                 principal;
+    private              CompletionStage<AceValue> futureAceValue;
 
-    public AceFuture( Principal principal, ICompletableFuture<AceValue> futureAceValue ) {
+    public AceFuture( Principal principal, CompletionStage<AceValue> futureAceValue ) {
         this.principal = principal;
         this.futureAceValue = futureAceValue;
     }
 
     @Override
     public boolean cancel( boolean mayInterruptIfRunning ) {
-        return futureAceValue.cancel( mayInterruptIfRunning );
+        return futureAceValue.toCompletableFuture().cancel( mayInterruptIfRunning );
     }
 
     @Override
     public boolean isCancelled() {
-        return futureAceValue.isCancelled();
+        return futureAceValue.toCompletableFuture().isCancelled();
     }
 
     @Override
     public boolean isDone() {
-        return futureAceValue.isDone();
+        return futureAceValue.toCompletableFuture().isDone();
     }
 
     @Override
     public Ace get() throws InterruptedException, ExecutionException {
-        return new Ace( principal, futureAceValue.get().getPermissions(), futureAceValue.get().getExpirationDate() );
+        final var aceValue = futureAceValue.toCompletableFuture().get();
+        return new Ace( principal, aceValue.getPermissions(), aceValue.getExpirationDate() );
     }
 
     public Ace getUninterruptibly() {
@@ -75,22 +73,18 @@ public class AceFuture implements ListenableFuture<Ace> {
 
     @Override
     public Ace get( long timeout, TimeUnit unit ) throws InterruptedException, ExecutionException, TimeoutException {
-        return new Ace( principal, futureAceValue.get( timeout, unit ).getPermissions(), futureAceValue.get( timeout, unit ).getExpirationDate() );
+        final var aceValue = futureAceValue.toCompletableFuture().get( timeout, unit );
+        return new Ace( principal, aceValue.getPermissions(), aceValue.getExpirationDate() );
     }
 
     @Override
     public void addListener( Runnable listener, Executor executor ) {
-        futureAceValue.andThen( new ExecutionCallback<>() {
-
-            @Override
-            public void onResponse( AceValue response ) {
-                listener.run();
-            }
-
-            @Override
-            public void onFailure( Throwable t ) {
+        futureAceValue = futureAceValue.whenCompleteAsync( ( v, t ) -> {
+            if ( t == null ) {
+                executor.execute( listener );
+            } else {
                 logger.error( "Unable to retrieve Ace.", t );
             }
-        }, executor );
+        } );
     }
 }

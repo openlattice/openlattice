@@ -64,24 +64,28 @@ public class Flight implements Serializable {
         this.tags = tags.orElseGet( ImmutableSet::of );
         this.organizationId = organizationId;
         if ( condition.isPresent() ) {
-            this.valueMapper = new ConditionValueMapper( condition.get() );
+            valueMapper = new ConditionValueMapper( condition.get() );
         } else {
-            this.valueMapper = null;
+            valueMapper = null;
         }
     }
 
     private Flight( Builder builder ) {
-        this.entityDefinitions = builder.entityDefinitionMap;
-        this.condition = Optional.empty();
-        this.valueMapper = null;
-        this.associationDefinitions = builder.associationDefinitionMap;
-        this.name = builder.name;
-        this.tags = ImmutableSet.of();
-        this.organizationId = builder.organizationId;
+        entityDefinitions = builder.entityDefinitionMap;
+        condition = Optional.empty();
+        valueMapper = null;
+        associationDefinitions = builder.associationDefinitionMap;
+        name = builder.name;
+        tags = ImmutableSet.of();
+        organizationId = builder.organizationId;
     }
 
     public static Builder newFlight() {
         return new Builder();
+    }
+
+    public static Flight failed() {
+        return new Builder().failed();
     }
 
     public static Builder newFlight( String name ) {
@@ -134,18 +138,18 @@ public class Flight implements Serializable {
         private Optional<UUID>                     organizationId = Optional.empty();
 
         public Builder() {
-            this.entityDefinitionMap = Maps.newHashMap();
-            this.associationDefinitionMap = Maps.newHashMap();
+            entityDefinitionMap = Maps.newHashMap();
+            associationDefinitionMap = Maps.newHashMap();
         }
 
         public Builder( String name ) {
-            this.entityDefinitionMap = Maps.newHashMap();
-            this.associationDefinitionMap = Maps.newHashMap();
+            entityDefinitionMap = Maps.newHashMap();
+            associationDefinitionMap = Maps.newHashMap();
             this.name = name;
         }
 
         public Flight.Builder organizationId( UUID id ) {
-            this.organizationId = Optional.of( id );
+            organizationId = Optional.of( id );
             return this;
         }
 
@@ -160,14 +164,18 @@ public class Flight implements Serializable {
         public AssociationGroup.Builder createAssociations() {
 
             BuilderCallback<AssociationGroup> onBuild = associations ->
-                    this.associationDefinitionMap = associations.getAssociationDefinitions();
+                    associationDefinitionMap = associations.getAssociationDefinitions();
 
             return new AssociationGroup.Builder( entityDefinitionMap.keySet(), this, onBuild );
         }
 
+        public Flight failed() {
+            return new Flight( this );
+        }
+
         public Flight done() {
 
-            if ( this.entityDefinitionMap.size() == 0 ) {
+            if ( entityDefinitionMap.size() == 0 ) {
                 throw new IllegalStateException( "invoking createEntities() at least once is required" );
             }
 

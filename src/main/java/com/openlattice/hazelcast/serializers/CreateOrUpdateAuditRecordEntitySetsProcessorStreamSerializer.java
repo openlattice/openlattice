@@ -22,7 +22,7 @@ package com.openlattice.hazelcast.serializers;
 
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.kryptnostic.rhizome.hazelcast.serializers.AbstractUUIDStreamSerializer;
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.edm.processors.CreateOrUpdateAuditRecordEntitySetsProcessor;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
@@ -49,14 +49,14 @@ public class CreateOrUpdateAuditRecordEntitySetsProcessorStreamSerializer
 
     @Override public void write(
             ObjectDataOutput out, CreateOrUpdateAuditRecordEntitySetsProcessor object ) throws IOException {
-        AbstractUUIDStreamSerializer.serialize( out, object.getAuditRecordEntitySetId() );
-        AbstractUUIDStreamSerializer.serialize( out, object.getAuditEdgeEntitySetId() );
+        UUIDStreamSerializerUtils.serialize( out, object.getAuditRecordEntitySetId() );
+        UUIDStreamSerializerUtils.serialize( out, object.getAuditEdgeEntitySetId() );
 
     }
 
     @Override public CreateOrUpdateAuditRecordEntitySetsProcessor read( ObjectDataInput in ) throws IOException {
         return new CreateOrUpdateAuditRecordEntitySetsProcessor(
-                AbstractUUIDStreamSerializer.deserialize( in ),
-                AbstractUUIDStreamSerializer.deserialize( in ) );
+                UUIDStreamSerializerUtils.deserialize( in ),
+                UUIDStreamSerializerUtils.deserialize( in ) );
     }
 }

@@ -2,10 +2,7 @@ package com.openlattice.organizations.mapstores
 
 import com.dataloom.mappers.ObjectMappers
 import com.fasterxml.jackson.module.kotlin.readValue
-import com.hazelcast.config.InMemoryFormat
-import com.hazelcast.config.MapConfig
-import com.hazelcast.config.MapIndexConfig
-import com.hazelcast.config.MapStoreConfig
+import com.hazelcast.config.*
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.organizations.Organization
@@ -66,8 +63,9 @@ class OrganizationsMapstore(val hds: HikariDataSource) : AbstractBasePostgresMap
 
     override fun getMapConfig(): MapConfig {
         return super.getMapConfig()
-                .addMapIndexConfig(MapIndexConfig(CONNECTIONS_INDEX, false))
-                .addMapIndexConfig(MapIndexConfig(MEMBERS_INDEX, false))
+                .addIndexConfig(IndexConfig(IndexType.HASH, CONNECTIONS_INDEX))
+                .addIndexConfig(IndexConfig(IndexType.HASH, MEMBERS_INDEX))
+                .addIndexConfig(IndexConfig(IndexType.HASH, DOMAINS_INDEX))
                 .setInMemoryFormat(InMemoryFormat.OBJECT)
     }
 

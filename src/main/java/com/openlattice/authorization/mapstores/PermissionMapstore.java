@@ -25,9 +25,12 @@ import static com.openlattice.postgres.PostgresArrays.createUuidArray;
 
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.collect.ImmutableList;
+import com.google.common.eventbus.EventBus;
+import com.hazelcast.config.EntryListenerConfig;
 import com.hazelcast.config.InMemoryFormat;
+import com.hazelcast.config.IndexConfig;
+import com.hazelcast.config.IndexType;
 import com.hazelcast.config.MapConfig;
-import com.hazelcast.config.MapIndexConfig;
 import com.hazelcast.config.MapStoreConfig;
 import com.hazelcast.config.MapStoreConfig.InitialLoadMode;
 import com.openlattice.authorization.AceKey;
@@ -36,6 +39,7 @@ import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.PrincipalType;
+import com.openlattice.authorization.listeners.PermissionMapListener;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.mapstores.TestDataFactory;
@@ -61,16 +65,19 @@ import org.apache.commons.lang3.StringUtils;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class PermissionMapstore extends AbstractBasePostgresMapstore<AceKey, AceValue> {
-    public static final String ACL_KEY_INDEX               = "__key#aclKey.index";
+    public static final String ACL_KEY_INDEX               = "__key.aclKey.index";
     public static final String EXPIRATION_DATE_INDEX       = "expirationDate";
     public static final String PERMISSIONS_INDEX           = "permissions[any]";
-    public static final String PRINCIPAL_INDEX             = "__key#principal";
-    public static final String PRINCIPAL_TYPE_INDEX        = "__key#principal.type";
-    public static final String ROOT_OBJECT_INDEX           = "__key#aclKey[0]";
+    public static final String PRINCIPAL_INDEX             = "__key.principal";
+    public static final String PRINCIPAL_TYPE_INDEX        = "__key.principal.type";
+    public static final String ROOT_OBJECT_INDEX           = "__key.aclKey[0]";
     public static final String SECURABLE_OBJECT_TYPE_INDEX = "securableObjectType";
 
-    public PermissionMapstore( HikariDataSource hds ) {
+    private final EventBus eventBus;
+
+    public PermissionMapstore( HikariDataSource hds, EventBus eventBus ) {
         super( HazelcastMap.PERMISSIONS, PostgresTable.PERMISSIONS, hds );
+        this.eventBus = eventBus;
     }
 
     @Override protected void bind(
@@ -139,13 +146,16 @@ public class PermissionMapstore extends AbstractBasePostgresMapstore<AceKey, Ace
         return super
                 .getMapConfig()
                 .setInMemoryFormat( InMemoryFormat.OBJECT )
-                .addMapIndexConfig( new MapIndexConfig( ACL_KEY_INDEX, false ) )
-                .addMapIndexConfig( new MapIndexConfig( PRINCIPAL_INDEX, false ) )
-                .addMapIndexConfig( new MapIndexConfig( PRINCIPAL_TYPE_INDEX, false ) )
-                .addMapIndexConfig( new MapIndexConfig( SECURABLE_OBJECT_TYPE_INDEX, false ) )
-                .addMapIndexConfig( new MapIndexConfig( PERMISSIONS_INDEX, false ) )
-                .addMapIndexConfig( new MapIndexConfig( ROOT_OBJECT_INDEX, false ) )
-                .addMapIndexConfig( new MapIndexConfig( EXPIRATION_DATE_INDEX, true ) );
+                .addIndexConfig( new IndexConfig( IndexType.HASH, ACL_KEY_INDEX ) )
+                .addIndexConfig( new IndexConfig( IndexType.HASH, PRINCIPAL_INDEX ) )
+                .addIndexConfig( new IndexConfig( IndexType.HASH, PRINCIPAL_TYPE_INDEX ) )
+                .addIndexConfig( new IndexConfig( IndexType.HASH, SECURABLE_OBJECT_TYPE_INDEX ) )
+                .addIndexConfig( new IndexConfig( IndexType.HASH, PERMISSIONS_INDEX ) )
+                .addIndexConfig( new IndexConfig( IndexType.HASH, ROOT_OBJECT_INDEX ) )
+                .addIndexConfig( new IndexConfig( IndexType.SORTED, EXPIRATION_DATE_INDEX ) )
+                .addEntryListenerConfig( new EntryListenerConfig( new PermissionMapListener( eventBus ),
+                        false,
+                        true ) );
     }
 
     @Override

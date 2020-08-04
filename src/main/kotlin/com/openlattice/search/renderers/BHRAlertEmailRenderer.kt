@@ -13,56 +13,6 @@ import java.util.*
 private const val FROM_EMAIL = "courier@openlattice.com"
 private const val TEMPLATE_PATH = "mail/templates/shared/BHRAlertTemplate.mustache"
 
-/* TIME ZONE SETUP */
-private enum class BHRTimeZone {
-    PST,
-    MST,
-    CST,
-    EST
-}
-
-private val DATE_FORMAT = "MM/dd/yyyy"
-private val TIME_FORMAT = "hh:mm a, z"
-
-private val DATE_FORMATTERS = mapOf<BHRTimeZone, DateTimeFormatter>(
-        Pair(
-                BHRTimeZone.PST, DateTimeFormatter.ofPattern(DATE_FORMAT).withZone(
-                TimeZone.getTimeZone("America/Los_Angeles").toZoneId()
-        )
-        ),
-        Pair(
-                BHRTimeZone.MST,
-                DateTimeFormatter.ofPattern(DATE_FORMAT).withZone(TimeZone.getTimeZone("America/Denver").toZoneId())
-        ),
-        Pair(
-                BHRTimeZone.CST,
-                DateTimeFormatter.ofPattern(DATE_FORMAT).withZone(TimeZone.getTimeZone("America/Chicago").toZoneId())
-        ),
-        Pair(
-                BHRTimeZone.EST,
-                DateTimeFormatter.ofPattern(DATE_FORMAT).withZone(TimeZone.getTimeZone("America/New_York").toZoneId())
-        )
-)
-
-private val TIME_FORMATTERS = mapOf<BHRTimeZone, DateTimeFormatter>(
-        Pair(
-                BHRTimeZone.PST, DateTimeFormatter.ofPattern(TIME_FORMAT).withZone(
-                TimeZone.getTimeZone("America/Los_Angeles").toZoneId()
-        )
-        ),
-        Pair(
-                BHRTimeZone.MST,
-                DateTimeFormatter.ofPattern(TIME_FORMAT).withZone(TimeZone.getTimeZone("America/Denver").toZoneId())
-        ),
-        Pair(
-                BHRTimeZone.CST,
-                DateTimeFormatter.ofPattern(TIME_FORMAT).withZone(TimeZone.getTimeZone("America/Chicago").toZoneId())
-        ),
-        Pair(
-                BHRTimeZone.EST,
-                DateTimeFormatter.ofPattern(TIME_FORMAT).withZone(TimeZone.getTimeZone("America/New_York").toZoneId())
-        )
-)
 
 /* FQNs */
 private val PERSON_ID_FQN = FullQualifiedName("nc.SubjectIdentification")
@@ -78,12 +28,15 @@ private val INCIDENT_DATE_TIME_FQN = FullQualifiedName("bhr.datetimeOccurred")
 private val NATURE_OF_CRISIS_FQN = FullQualifiedName("bhr.dispatchReason")
 private val HOUSING_SITUATION_FQN = FullQualifiedName("housing.living_arrangements")
 private val DISPOSITION_FQN = FullQualifiedName("bhr.disposition")
+private val AFFILIATION_FQN = FullQualifiedName("bhr.affiliation")
+private val MILITARY_STATUS_FQN = FullQualifiedName("bhr.militaryStatus")
 
 
 /* METADATA TAGS */
 private const val PERSON_ENTITY_SET_ID_METADATA = "personEntitySetId"
 private const val STAFF_ENTITY_SET_ID_METADATA = "staffEntitySetId"
 private const val TIME_ZONE_METADATA = "timezone"
+private const val ALERT_NAME_METADATA = "alertName"
 
 /*
 *
@@ -91,7 +44,8 @@ private const val TIME_ZONE_METADATA = "timezone"
 * {
 *   "personEntitySetId": <UUID>,
 *   "staffEntitySetId": <UUID>,
-*   "timezone": <BHRTimeZone>
+*   "timezone": <TimeZones>,
+*   "alertName": <String>
 * }
 *
 */
@@ -114,7 +68,7 @@ class BHRAlertEmailRenderer {
         }
 
         private fun getPersonDetails(
-                neighbors: List<NeighborEntityDetails>, personEntitySetId: UUID, timeZone: BHRTimeZone
+                neighbors: List<NeighborEntityDetails>, personEntitySetId: UUID, timeZone: MessageFormatters.TimeZones
         ): Map<String, Any> {
             val combinedEntity = getCombinedNeighbors(neighbors, personEntitySetId)
 
@@ -129,9 +83,7 @@ class BHRAlertEmailRenderer {
             tags["race"] = (combinedEntity[RACE_FQN] ?: emptySet()).joinToString(", ")
             tags["sex"] = (combinedEntity[SEX_FQN] ?: emptySet()).joinToString(", ")
             tags["dob"] = (combinedEntity[DOB_FQN] ?: emptySet()).joinToString(", ") {
-                LocalDate.parse(it.toString()).format(
-                        DATE_FORMATTERS[timeZone]
-                )
+                MessageFormatters.formatDate(LocalDate.parse(it.toString()), timeZone)
             }
 
             return tags
@@ -148,18 +100,20 @@ class BHRAlertEmailRenderer {
         }
 
         private fun getReportDetails(
-                report: Map<FullQualifiedName, Set<Any>>, timeZone: BHRTimeZone
+                report: Map<FullQualifiedName, Set<Any>>, timeZone: MessageFormatters.TimeZones
         ): Map<String, Any> {
             val tags = mutableMapOf<String, String>()
 
             val dates = (report[INCIDENT_DATE_TIME_FQN] ?: emptySet()).map { OffsetDateTime.parse(it.toString()) }
-            tags["date"] = dates.joinToString(", ") { it.format(DATE_FORMATTERS[timeZone]) }
-            tags["time"] = dates.joinToString(", ") { it.format(TIME_FORMATTERS[timeZone]) }
+            tags["date"] = dates.joinToString(", ") { MessageFormatters.formatDate(it, timeZone) }
+            tags["time"] = dates.joinToString(", ") { MessageFormatters.formatTime(it, timeZone) }
 
             tags["natureOfCrisis"] = (report[NATURE_OF_CRISIS_FQN] ?: emptySet()).joinToString(", ")
             tags["housingSituation"] = (report[HOUSING_SITUATION_FQN] ?: emptySet()).joinToString(", ")
             tags["disposition"] = (report[DISPOSITION_FQN] ?: emptySet()).joinToString(", ")
             tags["age"] = (report[AGE_FQN] ?: emptySet()).joinToString(", ")
+            tags["militaryStatus"] = (report[MILITARY_STATUS_FQN] ?: emptySet()).joinToString(", ")
+            tags["affiliation"] = (report[AFFILIATION_FQN] ?: emptySet()).joinToString(", ")
 
             return tags
         }
@@ -171,8 +125,6 @@ class BHRAlertEmailRenderer {
                 neighbors: List<NeighborEntityDetails>
         ): RenderableEmailRequest {
 
-            val subject = "New Behavioral Health Report"
-
             val templateObjects: MutableMap<String, Any> = Maps.newHashMap<String, Any>()
 
             val personEntitySetId = UUID.fromString(
@@ -181,15 +133,18 @@ class BHRAlertEmailRenderer {
             val staffEntitySetId = UUID.fromString(
                     persistentSearch.alertMetadata[STAFF_ENTITY_SET_ID_METADATA].toString()
             )
-            val timezone = BHRTimeZone.valueOf(persistentSearch.alertMetadata[TIME_ZONE_METADATA].toString())
+            val timezone = MessageFormatters.TimeZones.valueOf(persistentSearch.alertMetadata[TIME_ZONE_METADATA].toString())
+            val alertName = persistentSearch.alertMetadata[ALERT_NAME_METADATA]?.let { " ($it)" } ?: ""
+            val subject = "New Crisis Report$alertName";
 
             templateObjects.putAll(getPersonDetails(neighbors, personEntitySetId, timezone))
             templateObjects.putAll(getFilerDetails(neighbors, staffEntitySetId))
             templateObjects.putAll(getReportDetails(report, timezone))
+            templateObjects["subscriber"] = userEmail
 
             return RenderableEmailRequest(
                     Optional.of(FROM_EMAIL),
-                    arrayOf(userEmail),
+                    arrayOf(userEmail) + persistentSearch.additionalEmailAddresses,
                     Optional.empty(),
                     Optional.empty(),
                     TEMPLATE_PATH,

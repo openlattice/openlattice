@@ -1,7 +1,6 @@
 package com.openlattice.data.storage.aws
 
 import com.amazonaws.HttpMethod
-import com.google.common.collect.Lists
 import com.openlattice.data.integration.S3EntityData
 import com.openlattice.data.storage.ByteBlobDataManager
 import com.openlattice.data.storage.PostgresEntityDataQueryService
@@ -13,16 +12,17 @@ import java.util.*
 class AwsDataSinkService(
         partitionManager: PartitionManager,
         private val byteBlobDataManager: ByteBlobDataManager,
-        hds: HikariDataSource
+        hds: HikariDataSource,
+        reader: HikariDataSource
 ) {
-    private val dqs = PostgresEntityDataQueryService(hds, byteBlobDataManager, partitionManager)
+    private val dqs = PostgresEntityDataQueryService(hds, reader, byteBlobDataManager, partitionManager)
 
     fun generatePresignedUrls(
             entities: List<S3EntityData>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
     ): List<String> {
         val data = mutableMapOf<UUID, MutableMap<UUID, MutableMap<UUID, MutableSet<Any>>>>()
-        val urls = Lists.newArrayList<String>()
+        val urls = ArrayList<String>(entities.size)
         val expirationTime = Date()
         val timeToLive = expirationTime.time + 6000000
         expirationTime.time = timeToLive

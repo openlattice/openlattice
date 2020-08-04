@@ -21,12 +21,13 @@
 package com.openlattice.organizations.roles.processors;
 
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor;
+import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.SecurablePrincipal;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.UUID;
 
-public class PrincipalTitleUpdater extends AbstractRhizomeEntryProcessor<List<UUID>, SecurablePrincipal, Object> {
+public class PrincipalTitleUpdater extends AbstractRhizomeEntryProcessor<AclKey, SecurablePrincipal, Object> {
     private static final long serialVersionUID = -717197511031518227L;
     private final String newTitle;
 
@@ -35,7 +36,7 @@ public class PrincipalTitleUpdater extends AbstractRhizomeEntryProcessor<List<UU
     }
 
     @Override
-    public Object process( Entry<List<UUID>, SecurablePrincipal> entry ) {
+    public Object process( Entry<AclKey, SecurablePrincipal> entry ) {
         SecurablePrincipal principal = entry.getValue();
         if ( principal != null ) {
             principal.setTitle( newTitle );

@@ -42,11 +42,10 @@ import java.util.Map;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class PostgresCredentialMapstore extends AbstractBasePostgresMapstore<String, String> {
-    private final PostgresUserApi dcqs;
+//    private final PostgresUserApi dcqs;
 
-    public PostgresCredentialMapstore( HikariDataSource hds, PostgresUserApi pgUserApi ) {
+    public PostgresCredentialMapstore( HikariDataSource hds) {
         super( HazelcastMap.DB_CREDS, PostgresTable.DB_CREDS, hds );
-        this.dcqs = pgUserApi;
     }
 
     @Override public String generateTestKey() {
@@ -71,21 +70,14 @@ public class PostgresCredentialMapstore extends AbstractBasePostgresMapstore<Str
 
     @Override public void store( String key, String value ) {
         super.store( key, value );
-        dcqs.setUserCredential( key, value );
     }
 
-    @Override public void storeAll( Map<String, String> map ) {
-        super.storeAll( map );
-        map.forEach( ( key, value ) -> dcqs.setUserCredential( key, value ) );
-    }
 
     @Override public void delete( String key ) {
-        dcqs.deleteUser( key );
         super.delete( key );
     }
 
     @Override public void deleteAll( Collection<String> keys ) {
-        keys.forEach( dcqs::deleteUser );
         super.deleteAll( keys );
     }
 

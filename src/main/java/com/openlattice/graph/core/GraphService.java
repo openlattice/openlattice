@@ -24,12 +24,14 @@ import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking;
 import com.openlattice.data.DataEdgeKey;
 import com.openlattice.data.WriteEvent;
 import com.openlattice.edm.type.PropertyType;
+import com.openlattice.analysis.requests.AggregationResult;
 import com.openlattice.graph.edge.Edge;
 import com.openlattice.postgres.streams.PostgresIterable;
 import com.openlattice.search.requests.EntityNeighborsFilter;
 
 import java.util.*;
 import java.util.stream.Stream;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Graph Object supporting CRUD operations of vertices and edges to the graph.
@@ -68,7 +70,7 @@ public interface GraphService {
 
     Set<UUID> getEdgeEntitySetsConnectedToEntitySet( UUID entitySetId );
 
-    PostgresIterable<Map<String, Object>> computeTopEntities(
+    AggregationResult computeTopEntities(
             int limit,
             Set<UUID> entitySetIds,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
@@ -77,4 +79,8 @@ public interface GraphService {
             Optional<UUID> linkingEntitySetId );
 
     List<NeighborSets> getNeighborEntitySets( Set<UUID> entitySetIds );
+
+    int setPartitions(
+            @NotNull UUID entitySetId,
+            @NotNull Set<Integer> partitions );
 }

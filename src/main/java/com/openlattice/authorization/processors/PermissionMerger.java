@@ -24,6 +24,7 @@ package com.openlattice.authorization.processors;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.hazelcast.core.Offloadable;
 import com.openlattice.authorization.AceKey;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.securable.SecurableObjectType;
@@ -33,7 +34,7 @@ import com.openlattice.authorization.AceValue;
 import java.time.OffsetDateTime;
 import java.util.EnumSet;
 
-public class PermissionMerger extends AbstractMerger<AceKey, AceValue, Permission> {
+public class PermissionMerger extends AbstractMerger<AceKey, AceValue, Permission> implements Offloadable {
     private static final long serialVersionUID = -3504613417625318717L;
     private final SecurableObjectType securableObjectType;
     private final OffsetDateTime expirationDate;
@@ -71,5 +72,9 @@ public class PermissionMerger extends AbstractMerger<AceKey, AceValue, Permissio
 
     public OffsetDateTime getExpirationDate() {
         return expirationDate;
+    }
+
+    @Override public String getExecutorName() {
+        return OFFLOADABLE_EXECUTOR;
     }
 }

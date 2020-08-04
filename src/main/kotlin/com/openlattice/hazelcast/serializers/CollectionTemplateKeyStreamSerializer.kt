@@ -2,6 +2,7 @@ package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.collections.CollectionTemplateKey
 import com.openlattice.hazelcast.StreamSerializerTypeIds
@@ -18,13 +19,13 @@ class CollectionTemplateKeyStreamSerializer : SelfRegisteringStreamSerializer<Co
     }
 
     override fun write(out: ObjectDataOutput, `object`: CollectionTemplateKey) {
-        UUIDStreamSerializer.serialize(out, `object`.entitySetCollectionId)
-        UUIDStreamSerializer.serialize(out, `object`.templateTypeId)
+        UUIDStreamSerializerUtils.serialize(out, `object`.entitySetCollectionId)
+        UUIDStreamSerializerUtils.serialize(out, `object`.templateTypeId)
     }
 
     override fun read(`in`: ObjectDataInput?): CollectionTemplateKey {
-        val entitySetCollectionId = UUIDStreamSerializer.deserialize(`in`)
-        val templateTypeId = UUIDStreamSerializer.deserialize(`in`)
+        val entitySetCollectionId = UUIDStreamSerializerUtils.deserialize(`in`)
+        val templateTypeId = UUIDStreamSerializerUtils.deserialize(`in`)
 
         return CollectionTemplateKey(entitySetCollectionId, templateTypeId)
     }

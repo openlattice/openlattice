@@ -26,15 +26,19 @@ import com.google.common.collect.Maps;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers;
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.openlattice.mapstores.TestDataFactory;
+import java.io.IOException;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.springframework.stereotype.Component;
-
-import java.io.IOException;
-import java.util.*;
 
 @Component
 public class EntityTypeStreamSerializer implements TestableSelfRegisteringStreamSerializer<EntityType> {
@@ -64,10 +68,11 @@ public class EntityTypeStreamSerializer implements TestableSelfRegisteringStream
     }
 
     public static void serialize( ObjectDataOutput out, EntityType object ) throws IOException {
-        UUIDStreamSerializer.serialize( out, object.getId() );
+        UUIDStreamSerializerUtils.serialize( out, object.getId() );
         FullQualifiedNameStreamSerializer.serialize( out, object.getType() );
         out.writeUTF( object.getTitle() );
         out.writeUTF( object.getDescription() );
+
         SetStreamSerializers.serialize(
                 out,
                 object.getSchemas(),
@@ -76,12 +81,12 @@ public class EntityTypeStreamSerializer implements TestableSelfRegisteringStream
         SetStreamSerializers.serialize(
                 out,
                 object.getKey(),
-                ( UUID key ) -> UUIDStreamSerializer.serialize( out, key )
+                ( UUID key ) -> UUIDStreamSerializerUtils.serialize( out, key )
         );
         SetStreamSerializers.serialize(
                 out,
                 object.getProperties(),
-                ( UUID property ) -> UUIDStreamSerializer.serialize( out, property )
+                ( UUID property ) -> UUIDStreamSerializerUtils.serialize( out, property )
         );
 
         SetStreamSerializers.fastUUIDSetSerialize( out, object.getPropertyTags().keySet() );
@@ -95,24 +100,24 @@ public class EntityTypeStreamSerializer implements TestableSelfRegisteringStream
         out.writeBoolean( present );
 
         if ( present ) {
-            UUIDStreamSerializer.serialize( out, baseType.get() );
+            UUIDStreamSerializerUtils.serialize( out, baseType.get() );
         }
         out.writeUTF( object.getCategory().toString() );
         out.writeInt( object.getShards() );
     }
 
     public static EntityType deserialize( ObjectDataInput in ) throws IOException {
-        final UUID id = UUIDStreamSerializer.deserialize( in );
+        final UUID id = UUIDStreamSerializerUtils.deserialize( in );
         final FullQualifiedName type = FullQualifiedNameStreamSerializer.deserialize( in );
         final String title = in.readUTF();
         final Optional<String> description = Optional.of( in.readUTF() );
         final Set<FullQualifiedName> schemas = SetStreamSerializers.deserialize( in,
                 FullQualifiedNameStreamSerializer::deserialize );
         final LinkedHashSet<UUID> keys = SetStreamSerializers.orderedDeserialize(
-                in, UUIDStreamSerializer::deserialize
+                in, UUIDStreamSerializerUtils::deserialize
         );
         final LinkedHashSet<UUID> properties = SetStreamSerializers.orderedDeserialize( in,
-                UUIDStreamSerializer::deserialize );
+                UUIDStreamSerializerUtils::deserialize );
 
         final LinkedHashSet<UUID> propertyTagKeys = SetStreamSerializers.fastOrderedUUIDSetDeserialize( in );
         final LinkedHashMap<UUID, LinkedHashSet<String>> propertyTags =
@@ -123,7 +128,7 @@ public class EntityTypeStreamSerializer implements TestableSelfRegisteringStream
 
         final Optional<UUID> baseType;
         if ( in.readBoolean() ) {
-            baseType = Optional.of( UUIDStreamSerializer.deserialize( in ) );
+            baseType = Optional.of( UUIDStreamSerializerUtils.deserialize( in ) );
         } else {
             baseType = Optional.empty();
         }

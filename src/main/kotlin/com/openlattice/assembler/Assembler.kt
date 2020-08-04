@@ -130,11 +130,11 @@ class Assembler(
         if (isEntitySetMaterialized(entitySetId)) {
             materializedEntitySets.executeOnEntries(
                     AddFlagsToMaterializedEntitySetProcessor(setOf(flag)),
-                    entitySetIdPredicate(entitySetId)
+                    entitySetIdPredicate(entitySetId) as Predicate<EntitySetAssemblyKey, MaterializedEntitySet>
             )
             assemblies.executeOnEntries(
                     AddFlagsToOrganizationMaterializedEntitySetProcessor(entitySetId, setOf(flag)),
-                    entitySetIdInOrganizationPredicate(entitySetId)
+                    entitySetIdInOrganizationPredicate(entitySetId) as Predicate<UUID, OrganizationAssembly>
             )
         }
     }
@@ -193,7 +193,7 @@ class Assembler(
             )
 
             val entitySetAssembliesToDelete = materializedEntitySets.keySet(
-                    entitySetIdPredicate(entitySetDeletedEvent.entitySetId)
+                    entitySetIdPredicate(entitySetDeletedEvent.entitySetId) as Predicate<EntitySetAssemblyKey, MaterializedEntitySet>
             )
             deleteEntitySetAssemblies(entitySetAssembliesToDelete)
         }
@@ -240,7 +240,7 @@ class Assembler(
                 RenameMaterializedEntitySetProcessor(
                         entitySetNameUpdatedEvent.newName, entitySetNameUpdatedEvent.oldName
                 ).init(acm),
-                entitySetIdPredicate(entitySetNameUpdatedEvent.entitySetId)
+                entitySetIdPredicate(entitySetNameUpdatedEvent.entitySetId) as Predicate<EntitySetAssemblyKey, MaterializedEntitySet>
         )
     }
 
@@ -386,7 +386,7 @@ class Assembler(
      */
     private fun isEntitySetMaterialized(entitySetId: UUID): Boolean {
         return materializedEntitySets
-                .keySet(entitySetIdPredicate(entitySetId))
+                .keySet(entitySetIdPredicate(entitySetId) as Predicate<EntitySetAssemblyKey, MaterializedEntitySet>)
                 .isNotEmpty()
     }
 
@@ -394,7 +394,7 @@ class Assembler(
      * Returns true, if the entity set is materialized in the organization
      */
     private fun isEntitySetMaterialized(entitySetAssemblyKey: EntitySetAssemblyKey): Boolean {
-        return materializedEntitySets.keySet(entitySetAssemblyKeyPredicate(entitySetAssemblyKey)).isNotEmpty()
+        return materializedEntitySets.keySet(entitySetAssemblyKeyPredicate(entitySetAssemblyKey) as Predicate<EntitySetAssemblyKey, MaterializedEntitySet>).isNotEmpty()
     }
 
     private fun ensureEntitySetMaterialized(entitySetAssemblyKey: EntitySetAssemblyKey) {
@@ -415,21 +415,33 @@ class Assembler(
     }
 
     private fun entitySetIdPredicate(entitySetId: UUID): Predicate<*, *> {
-        return Predicates.equal(MaterializedEntitySetMapStore.ENTITY_SET_ID_INDEX, entitySetId)
+        return Predicates.equal<EntitySetAssemblyKey, MaterializedEntitySet>(
+                MaterializedEntitySetMapStore.ENTITY_SET_ID_INDEX,
+                entitySetId
+        )
     }
 
     @Suppress("UNCHECKED_CAST")
     private fun organizationIdPredicate(entitySetId: UUID): Predicate<EntitySetAssemblyKey, MaterializedEntitySet> {
-        return Predicates.equal(MaterializedEntitySetMapStore.ORGANIZATION_ID_INDEX, entitySetId)
+        return Predicates.equal<EntitySetAssemblyKey, MaterializedEntitySet>(
+                MaterializedEntitySetMapStore.ORGANIZATION_ID_INDEX,
+                entitySetId
+        )
                 as Predicate<EntitySetAssemblyKey, MaterializedEntitySet>
     }
 
     private fun entitySetIdInOrganizationPredicate(entitySetId: UUID): Predicate<*, *> {
-        return Predicates.equal(OrganizationAssemblyMapstore.MATERIALIZED_ENTITY_SETS_ID_INDEX, entitySetId)
+        return Predicates.equal<EntitySetAssemblyKey, MaterializedEntitySet>(
+                OrganizationAssemblyMapstore.MATERIALIZED_ENTITY_SETS_ID_INDEX,
+                entitySetId
+        )
     }
 
     private fun entitySetAssemblyKeyPredicate(entitySetAssemblyKey: EntitySetAssemblyKey): Predicate<*, *> {
-        return Predicates.equal(QueryConstants.KEY_ATTRIBUTE_NAME.value(), entitySetAssemblyKey)
+        return Predicates.equal<EntitySetAssemblyKey, MaterializedEntitySet>(
+                QueryConstants.KEY_ATTRIBUTE_NAME.value(),
+                entitySetAssemblyKey
+        )
     }
 
 
@@ -468,11 +480,11 @@ class Assembler(
             val currentOrganizations =
                     dependencies
                             .securableObjectTypes.keySet(
-                            Predicates.equal(
-                                    "this"
-                                    , SecurableObjectType.Organization
+                                    Predicates.equal(
+                                            "this"
+                                            , SecurableObjectType.Organization
+                                    )
                             )
-                    )
                             .map { it.first() }
                             .toSet()
 

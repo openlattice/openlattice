@@ -46,6 +46,7 @@ import com.openlattice.edm.set.EntitySetPropertyKey;
 import com.openlattice.edm.set.EntitySetPropertyMetadata;
 import com.openlattice.edm.set.ExpirationBase;
 import com.openlattice.edm.type.*;
+import com.openlattice.entitysets.StorageType;
 import com.openlattice.graph.NeighborhoodQuery;
 import com.openlattice.graph.NeighborhoodSelection;
 import com.openlattice.graph.edge.Edge;
@@ -64,6 +65,8 @@ import com.openlattice.organizations.PrincipalSet;
 import com.openlattice.requests.Request;
 import com.openlattice.requests.RequestStatus;
 import com.openlattice.requests.Status;
+import com.openlattice.scheduling.RunnableTask;
+import com.openlattice.scheduling.ScheduledTask;
 import com.openlattice.search.PersistentSearchNotificationType;
 import com.openlattice.search.requests.PersistentSearch;
 import com.openlattice.search.requests.SearchConstraints;
@@ -89,7 +92,6 @@ import java.util.stream.Stream;
 import static com.openlattice.postgres.DataTables.*;
 import static com.openlattice.postgres.PostgresArrays.getTextArray;
 import static com.openlattice.postgres.PostgresColumn.*;
-import static com.openlattice.postgres.PostgresDatatype.*;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -124,7 +126,8 @@ public final class ResultSetAdapters {
         final var organizationId = organizationId( rs );
         final var entitySetIds = entitySetIds( rs );
         final var tags = tags( rs );
-        return new SmsEntitySetInformation( phoneNumber, organizationId, entitySetIds, tags );
+        final var lastSync = rs.getObject( LAST_SYNC.getName(), OffsetDateTime.class );
+        return new SmsEntitySetInformation( phoneNumber, organizationId, entitySetIds, tags, lastSync );
     }
 
     @NotNull
@@ -587,6 +590,7 @@ public final class ResultSetAdapters {
         final var flags = entitySetFlags( rs );
         final var partitions = partitions( rs );
         final var expirationData = dataExpiration( rs );
+        final var storageType = storageType( rs );
         return new EntitySet( id,
                 entityTypeId,
                 name,
@@ -597,7 +601,12 @@ public final class ResultSetAdapters {
                 organization,
                 flags,
                 new LinkedHashSet<>( Arrays.asList( partitions ) ),
-                expirationData );
+                expirationData,
+                storageType );
+    }
+
+    public static StorageType storageType( ResultSet rs ) throws SQLException {
+        return StorageType.valueOf( rs.getString( STORAGE_TYPE_FIELD ) );
     }
 
     public static Integer[] partitions( ResultSet rs ) throws SQLException {
@@ -791,6 +800,10 @@ public final class ResultSetAdapters {
         return mapper.readValue( rs.getString( ALERT_METADATA_FIELD ), alertMetadataTypeRef );
     }
 
+    public static Set<String> emails( ResultSet rs ) throws SQLException {
+        return Sets.newHashSet( (String[]) rs.getArray( EMAILS.getName() ).getArray() );
+    }
+
     public static PersistentSearch persistentSearch( ResultSet rs ) throws SQLException, IOException {
         UUID id = id( rs );
         OffsetDateTime lastRead = lastRead( rs );
@@ -798,8 +811,9 @@ public final class ResultSetAdapters {
         PersistentSearchNotificationType alertType = alertType( rs );
         SearchConstraints searchConstraints = searchConstraints( rs );
         Map<String, Object> alertMetadata = alertMetadata( rs );
+        Set<String> emails = emails( rs );
 
-        return new PersistentSearch( id, lastRead, expiration, alertType, searchConstraints, alertMetadata );
+        return new PersistentSearch( id, lastRead, expiration, alertType, searchConstraints, alertMetadata, emails );
     }
 
     public static EntityLinkingFeedback entityLinkingFeedback( ResultSet rs ) throws SQLException {
@@ -984,7 +998,7 @@ public final class ResultSetAdapters {
 
     public static PostgresDatatype sqlDataType( ResultSet rs ) throws SQLException {
         String dataType = rs.getString( DATATYPE.getName() ).toUpperCase();
-        return PostgresDatatype.valueOf( dataType );
+        return PostgresDatatype.getEnum( dataType );
     }
 
     public static Integer ordinalPosition( ResultSet rs ) throws SQLException {
@@ -1033,6 +1047,21 @@ public final class ResultSetAdapters {
         String name = name( rs );
         IntegrationStatus status = IntegrationStatus.valueOf( rs.getString( STATUS.getName() ).toUpperCase() );
         return new IntegrationJob( name, status );
+    }
+
+    public static ScheduledTask scheduledTask( ResultSet rs )
+            throws SQLException, ClassNotFoundException, IOException {
+
+        UUID id = id( rs );
+        OffsetDateTime scheduledDateTime = rs.getObject( SCHEDULED_DATE.getName(), OffsetDateTime.class );
+
+        Class<? extends RunnableTask> taskClass = (Class<? extends RunnableTask>) Class
+                .forName( rs.getString( CLASS_NAME.getName() ) );
+        String taskJson = rs.getString( CLASS_PROPERTIES.getName() );
+        RunnableTask task = mapper.readValue( taskJson, taskClass );
+
+        return new ScheduledTask( id, scheduledDateTime, task );
+
     }
 
 }

@@ -22,6 +22,7 @@
 
 package com.openlattice.hazelcast.serializers;
 
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -62,12 +63,12 @@ public class EntityKeyStreamSerializer implements SelfRegisteringStreamSerialize
     }
 
     public static void serialize( ObjectDataOutput out, EntityKey object ) throws IOException {
-        UUIDStreamSerializer.serialize( out, object.getEntitySetId() );
+        UUIDStreamSerializerUtils.serialize( out, object.getEntitySetId() );
         out.writeUTF( object.getEntityId() );
     }
 
     public static EntityKey deserialize( ObjectDataInput in ) throws IOException {
-        final UUID entitySetId = UUIDStreamSerializer.deserialize( in );
+        final UUID entitySetId = UUIDStreamSerializerUtils.deserialize( in );
         final String entityId = in.readUTF();
         return new EntityKey( entitySetId, entityId );
     }

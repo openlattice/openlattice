@@ -20,6 +20,7 @@
 
 package com.openlattice.authorization.processors;
 
+import com.hazelcast.core.Offloadable;
 import com.openlattice.authorization.AceKey;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor;
@@ -29,16 +30,17 @@ import java.util.Map.Entry;
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class SecurableObjectTypeUpdater extends AbstractRhizomeEntryProcessor<AceKey,AceValue,Void> {
+public class SecurableObjectTypeUpdater extends AbstractRhizomeEntryProcessor<AceKey, AceValue, Void>
+        implements Offloadable {
     private final SecurableObjectType securableObjectType;
 
     public SecurableObjectTypeUpdater( SecurableObjectType securableObjectType ) {
         this.securableObjectType = securableObjectType;
     }
 
-    @Override public Void process( Entry<AceKey,AceValue> entry ) {
+    @Override public Void process( Entry<AceKey, AceValue> entry ) {
         AceValue value = entry.getValue();
-        if(value!=null) {
+        if ( value != null ) {
             value.setSecurableObjectType( securableObjectType );
             entry.setValue( value );
         }
@@ -47,5 +49,9 @@ public class SecurableObjectTypeUpdater extends AbstractRhizomeEntryProcessor<Ac
 
     public SecurableObjectType getSecurableObjectType() {
         return securableObjectType;
+    }
+
+    @Override public String getExecutorName() {
+        return Offloadable.OFFLOADABLE_EXECUTOR;
     }
 }

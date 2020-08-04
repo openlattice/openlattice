@@ -2,11 +2,11 @@ package com.openlattice.hazelcast.serializers.shuttle
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
-import com.openlattice.hazelcast.StreamSerializerTypeIds
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
 import com.openlattice.hazelcast.InternalTestDataFactory
+import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.hazelcast.serializers.OptionalStreamSerializers
 import com.openlattice.hazelcast.serializers.TestableSelfRegisteringStreamSerializer
-import com.openlattice.hazelcast.serializers.UUIDStreamSerializer
 import com.openlattice.shuttle.Integration
 import org.springframework.stereotype.Component
 
@@ -15,12 +15,12 @@ class IntegrationStreamSerializer : TestableSelfRegisteringStreamSerializer<Inte
 
     companion object {
         fun serialize(output: ObjectDataOutput, obj: Integration) {
-            UUIDStreamSerializer.serialize(output, obj.key)
+            UUIDStreamSerializerUtils.serialize(output, obj.key)
             EnvironmentStreamSerializer.serialize(output, obj.environment)
             output.writeUTF(obj.s3bucket)
             output.writeUTFArray(obj.contacts.toTypedArray())
-            UUIDStreamSerializer.serialize(output, obj.organizationId)
-            OptionalStreamSerializers.serialize(output, obj.logEntitySetId, UUIDStreamSerializer::serialize)
+            UUIDStreamSerializerUtils.serialize(output, obj.organizationId)
+            OptionalStreamSerializers.serialize(output, obj.logEntitySetId, UUIDStreamSerializerUtils::serialize)
             OptionalStreamSerializers.serialize(output, obj.maxConnections, ObjectDataOutput::writeInt)
             OptionalStreamSerializers.serializeList(output, obj.callbackUrls, ObjectDataOutput::writeUTF)
             output.writeUTFArray(obj.flightPlanParameters.keys.toTypedArray())
@@ -28,12 +28,12 @@ class IntegrationStreamSerializer : TestableSelfRegisteringStreamSerializer<Inte
         }
 
         fun deserialize(input: ObjectDataInput): Integration {
-            val key = UUIDStreamSerializer.deserialize(input)
+            val key = UUIDStreamSerializerUtils.deserialize(input)
             val environment = EnvironmentStreamSerializer.deserialize(input)
             val s3bucket = input.readUTF()
             val contacts = input.readUTFArray().toSet()
-            val orgId = UUIDStreamSerializer.deserialize(input)
-            val logEntitySetId = OptionalStreamSerializers.deserialize(input, UUIDStreamSerializer::deserialize)
+            val orgId = UUIDStreamSerializerUtils.deserialize(input)
+            val logEntitySetId = OptionalStreamSerializers.deserialize(input, UUIDStreamSerializerUtils::deserialize)
             val maxConnections = OptionalStreamSerializers.deserialize(input, ObjectDataInput::readInt)
             val callbackUrls = OptionalStreamSerializers.deserializeList(input, ObjectDataInput::readUTF)
             val flightPlanParamsKeys = input.readUTFArray()

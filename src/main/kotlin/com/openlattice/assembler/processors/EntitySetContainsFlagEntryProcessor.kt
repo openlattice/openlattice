@@ -1,7 +1,7 @@
 package com.openlattice.assembler.processors
 
 import com.hazelcast.core.Offloadable
-import com.hazelcast.spi.ExecutionService
+import com.hazelcast.spi.impl.executionservice.ExecutionService
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.rhizome.hazelcast.entryprocessors.AbstractReadOnlyRhizomeEntryProcessor

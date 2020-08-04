@@ -1,11 +1,14 @@
 package com.openlattice.hazelcast
 
 import com.openlattice.client.RetrofitFactory
+import com.openlattice.codex.SendCodexMessageTask
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.notifications.sms.SubscriptionNotification
+import com.openlattice.scheduling.ScheduledTask
 import com.openlattice.shuttle.*
 import org.apache.commons.text.CharacterPredicates
 import org.apache.commons.text.RandomStringGenerator
+import java.time.OffsetDateTime
 import java.util.*
 
 class InternalTestDataFactory {
@@ -72,6 +75,14 @@ class InternalTestDataFactory {
         @JvmStatic
         fun subscriptionNotification(): SubscriptionNotification {
             return SubscriptionNotification(TestDataFactory.randomAlphanumeric(20), TestDataFactory.randomAlphanumeric(10))
+        }
+
+        fun scheduledTask(id: UUID = UUID.randomUUID()): ScheduledTask {
+            return ScheduledTask(id, OffsetDateTime.now(), sendCodexMessageTask())
+        }
+
+        fun sendCodexMessageTask(): SendCodexMessageTask {
+            return SendCodexMessageTask(TestDataFactory.messageRequest())
         }
     }
 
