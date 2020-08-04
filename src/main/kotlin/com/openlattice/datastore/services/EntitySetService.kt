@@ -387,19 +387,6 @@ open class EntitySetService(
         }
     }
 
-    override fun setPartitions(entitySetId: UUID, partitions: Set<Int>) {
-        require(entitySets.containsKey(entitySetId)) {
-            "Entity set $entitySetId not found"
-        }
-        entitySets.executeOnKey(entitySetId) {
-            val v = it.value
-            if( v != null ) {
-                v.setPartitions(partitions)
-                it.setValue(v)
-            }
-        }
-    }
-
     @Timed
     @Suppress("UNCHECKED_CAST")
     override fun getPropertyTypesForEntitySet(entitySetId: UUID): Map<UUID, PropertyType> {

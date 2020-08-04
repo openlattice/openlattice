@@ -101,6 +101,4 @@ interface EntitySetManager {
     fun filterToAuthorizedNormalEntitySets(entitySetIds: Set<UUID>, permissions: EnumSet<Permission>, principals: Set<Principal>): Set<UUID>
 
     fun getPropertyTypesOfEntitySets(entitySetIds: Set<UUID>): Map<UUID, Map<UUID, PropertyType>>
-
-    fun setPartitions(entitySetId: UUID, partitions: Set<Int>)
 }

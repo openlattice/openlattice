@@ -202,5 +202,9 @@ interface DataGraphManager {
      * @param entitySetId The id of the entity set to repartition
      * @param oldPartitions The previous data partitions for the entity set.
      */
-    fun repartitionEntitySet(entitySetId: UUID, oldPartitions: Set<Int>): UUID
+    fun repartitionEntitySet(
+            entitySetId: UUID,
+            oldPartitions: Set<Int>,
+            newPartitions: Set<Int>
+    ): UUID
 }

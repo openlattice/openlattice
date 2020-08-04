@@ -43,7 +43,6 @@ import com.openlattice.postgres.PostgresColumn
 import com.openlattice.postgres.PostgresDataTables
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PostgresIterable
-import com.zaxxer.hikari.HikariDataSource
 import org.apache.commons.lang3.NotImplementedException
 import org.apache.commons.lang3.tuple.Pair
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
@@ -162,9 +161,10 @@ class DataGraphService(
 
     override fun repartitionEntitySet(
             entitySetId: UUID,
-            partitions: Set<Int>
+            oldPartitions: Set<Int>,
+            newPartitions: Set<Int>
     ): UUID {
-        return jobService.submitJob(RepartitioningJob(entitySetId, partitions.toList() ) )
+        return jobService.submitJob(RepartitioningJob(entitySetId, oldPartitions.toList(), newPartitions))
     }
 
     /* Delete */

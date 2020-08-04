@@ -30,7 +30,7 @@ public abstract class HazelcastStream<T, K, V> implements Iterable<T> {
     private final Logger logger = subclassLoggers.computeIfAbsent( getClass(), LoggerFactory::getLogger );
 
     private UUID                     streamId;
-    private FencedLock                    streamLock;
+    private FencedLock               streamLock;
     private IQueue<StreamElement<T>> stream;
 
     protected HazelcastStream( HazelcastInstance hazelcastInstance ) {
@@ -83,12 +83,12 @@ public abstract class HazelcastStream<T, K, V> implements Iterable<T> {
     }
 
     public static class HazelcastIterator<T> implements Iterator<T> {
-        private static final Logger logger = LoggerFactory.getLogger( HazelcastIterator.class );
-        private final FencedLock  streamLock;
-        private final UUID   streamId;
-        private final IQueue stream;
-        private final Lock lock = new ReentrantLock();
-        private Object next;
+        private static final Logger     logger = LoggerFactory.getLogger( HazelcastIterator.class );
+        private final        FencedLock streamLock;
+        private final        UUID       streamId;
+        private final        IQueue     stream;
+        private final        Lock       lock   = new ReentrantLock();
+        private              Object     next;
 
         public HazelcastIterator(
                 FencedLock streamLock,
