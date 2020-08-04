@@ -1,25 +1,26 @@
 package com.openlattice.hazelcast.serializers;
 
-import com.google.common.collect.LinkedHashMultimap;
+import com.google.common.collect.Maps;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
+import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers;
 import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils;
-import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.data.DataExpiration;
 import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
-import org.springframework.stereotype.Component;
-
+import com.openlattice.mapstores.TestDataFactory;
 import java.io.DataInput;
 import java.io.IOException;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import org.springframework.stereotype.Component;
 
 @Component
-public class MetadataUpdateStreamSerializer implements SelfRegisteringStreamSerializer<MetadataUpdate> {
+public class MetadataUpdateStreamSerializer implements TestableSelfRegisteringStreamSerializer<MetadataUpdate> {
 
     @Override
     public void write( ObjectDataOutput out, MetadataUpdate object ) throws IOException {
@@ -54,10 +55,20 @@ public class MetadataUpdateStreamSerializer implements SelfRegisteringStreamSeri
         OptionalStreamSerializers.serialize( out, object.getPii(), ObjectDataOutput::writeBoolean );
         OptionalStreamSerializers.serialize( out, object.getDefaultShow(), ObjectDataOutput::writeBoolean );
         OptionalStreamSerializers.serialize( out, object.getUrl(), ObjectDataOutput::writeUTF );
-        // TODO: get rid of this setmultimap
-        OptionalStreamSerializers
-                .serialize( out, object.getPropertyTags(), GuavaStreamSerializersKt::serializeSetMultimap );
+
+        OptionalStreamSerializers.serialize(
+                out,
+                object.getPropertyTags(),
+                propertyTags -> {
+                    SetStreamSerializers.fastUUIDSetSerialize( out, propertyTags.keySet() );
+                    for ( LinkedHashSet<String> tags : propertyTags.values() ) {
+                        SetStreamSerializers.fastOrderedStringSetSerializeAsArray( out, tags );
+                    }
+                }
+
+        );
         OptionalStreamSerializers.serialize( out, object.getOrganizationId(), UUIDStreamSerializerUtils::serialize );
+
         OptionalStreamSerializers.serialize( out,
                 object.getPartitions(),
                 ( output, elem ) -> output.writeIntArray( elem.stream().mapToInt( e -> e ).toArray() ) );
@@ -80,8 +91,26 @@ public class MetadataUpdateStreamSerializer implements SelfRegisteringStreamSeri
         Optional<Boolean> pii = OptionalStreamSerializers.deserialize( in, ObjectDataInput::readBoolean );
         Optional<Boolean> defaultShow = OptionalStreamSerializers.deserialize( in, ObjectDataInput::readBoolean );
         Optional<String> url = OptionalStreamSerializers.deserialize( in, ObjectDataInput::readUTF );
-        Optional<LinkedHashMultimap<UUID, String>> propertyTags = OptionalStreamSerializers
-                .deserialize( in, GuavaStreamSerializersKt::deserializeLinkedHashMultimap );
+
+        Optional<LinkedHashMap<UUID, LinkedHashSet<String>>> propertyTags = OptionalStreamSerializers.deserialize(
+                in,
+                input -> {
+                    final LinkedHashSet<UUID> propertyTagKeys = SetStreamSerializers
+                            .fastOrderedUUIDSetDeserialize( input );
+                    final LinkedHashMap<UUID, LinkedHashSet<String>> tags =
+                            Maps.newLinkedHashMapWithExpectedSize( propertyTagKeys.size() );
+                    for ( UUID propertyTagKey : propertyTagKeys ) {
+                        tags.put(
+                                propertyTagKey,
+                                SetStreamSerializers.fastOrderedStringSetDeserializeFromArray( input )
+                        );
+                    }
+
+                    return tags;
+                }
+        );
+
+
         Optional<UUID> organizationId = OptionalStreamSerializers
                 .deserialize( in, UUIDStreamSerializerUtils::deserialize );
         Optional<LinkedHashSet<Integer>> partitions = OptionalStreamSerializers
@@ -114,5 +143,10 @@ public class MetadataUpdateStreamSerializer implements SelfRegisteringStreamSeri
             s.add( value );
         }
         return s;
+    }
+
+    @Override
+    public MetadataUpdate generateTestValue() {
+        return TestDataFactory.metadataUpdate();
     }
 }

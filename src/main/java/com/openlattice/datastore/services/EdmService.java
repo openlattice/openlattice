@@ -300,7 +300,7 @@ public class EdmService implements EdmManager {
             EntityTypePropertyMetadata metadata = new EntityTypePropertyMetadata(
                     property.getTitle(),
                     property.getDescription(),
-                    new LinkedHashSet<>( propertyTags.get( propertyTypeId ) ),
+                    propertyTags.getOrDefault( propertyTypeId, new LinkedHashSet<>() ),
                     true
             );
             entityTypePropertyMetadata.put( key, metadata );
@@ -499,7 +499,7 @@ public class EdmService implements EdmManager {
                                 EntitySetPropertyMetadata defaultMetadata = new EntitySetPropertyMetadata(
                                         pt.getTitle(),
                                         pt.getDescription(),
-                                        new LinkedHashSet<>( propertyTags.get( pt.getId() ) ),
+                                        propertyTags.getOrDefault( pt.getId(), new LinkedHashSet<>() ),
                                         true );
 
                                 entitySetPropertyMetadata.put(
