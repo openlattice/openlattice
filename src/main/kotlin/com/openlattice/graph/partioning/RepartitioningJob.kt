@@ -220,6 +220,13 @@ private fun buildRepartitionColumns(ptd: PostgresTableDefinition): String {
     return ptd.columns.joinToString(",") { if (it == PARTITION) selector else it.name }
 }
 
+/**
+ * Counts ids that need migrating on a single partition. We do one partition at a time to be able to re-use same
+ * bind order across all queries in this class.
+ * 1. entity set id
+ * 2. partitions (array)
+ * 3. partition
+ */
 private val idsNeedingMigrationCountSql = """
     SELECT count(*) 
     FROM ${IDS.name} INNER JOIN (select ? as ${ENTITY_SET_ID.name},? as ${PARTITIONS.name} ) as es
@@ -227,6 +234,13 @@ private val idsNeedingMigrationCountSql = """
     WHERE ${PARTITION.name} = ? AND ${PARTITION.name}!=$REPARTITION_SELECTOR
 """.trimIndent()
 
+/**
+ * Counts data rows that need migrating on a single partition. We do one partition at a time to be able to re-use same
+ * bind order across all queries in this class.
+ * 1. entity set id
+ * 2. partitions (array)
+ * 3. partition
+ */
 private val dataNeedingMigrationCountSql = """
     SELECT count(*) 
     FROM ${DATA.name} INNER JOIN (select ? as ${ENTITY_SET_ID.name},? as ${PARTITIONS.name} ) as es 
@@ -234,6 +248,13 @@ private val dataNeedingMigrationCountSql = """
     WHERE ${PARTITION.name} = ? AND ${PARTITION.name}!=$REPARTITION_SELECTOR
 """.trimIndent()
 
+/**
+ * Counts edges that need migrating on a single partition. We do one partition at a time to be able to re-use same
+ * bind order across all queries in this class.
+ * 1. entity set id
+ * 2. partitions (array)
+ * 3. partition
+ */
 private val edgesNeedingMigrationCountSql = """
     SELECT count(*)
     FROM ${E.name} INNER JOIN (select ? as ${SRC_ENTITY_SET_ID.name},? as ${PARTITIONS.name} ) as es
@@ -257,7 +278,9 @@ private val REPARTITION_EDGES_COLUMNS = buildRepartitionColumns(IDS)
  * Query for repartition a partition of data.
  *
  * 1. entity set id
- * 2. partition
+ * 2. partitions (array)
+ * 3. partition
+ * 
  * NOTE: We do not attempt to move data values on conflict. In theory, data is immutable and a conflict wouldn't impact the
  * actual content of the data columns, unless a hash collection had occured during a re-partition.
  * NOTE: We set origin_id based on version. This should be fine in 99.999% of cases as the latest version should have
@@ -280,7 +303,8 @@ INSERT INTO ${DATA.name} SELECT $REPARTITION_DATA_COLUMNS
  * Query for repartition a partition of ids.
  *
  * 1. entity set id
- * 2. partition
+ * 2. partitions (array)
+ * 3. partition
  *
  * NOTE: Using last_link for LINKING_ID in this query because a link can happen without triggering a version update.
  */
@@ -304,7 +328,9 @@ INSERT INTO ${IDS.name} SELECT $REPARTITION_IDS_COLUMNS
  * Query for repartition a partition of edges.
  *
  * 1. entity set id
- * 2. partition
+ * 2. partitions (array)
+ * 3. partition
+ *
  * NOTE: Using last_link for LINKING_ID in this query because a link can happen without triggering a version update.
  */
 private val REPARTITION_EDGES_SQL = """
@@ -320,7 +346,9 @@ INSERT INTO ${E.name} SELECT $REPARTITION_EDGES_COLUMNS
 /**
  * Computes the actual partition and compares it to current partition. If partitions do not match deletes the row.
  * 1. entity set id
- * 2. partition
+ * 2. partitions (array)
+ * 3. partition
+ *
  */
 private val DELETE_DATA_SQL = """
 DELETE FROM ${DATA.name} 
@@ -331,7 +359,8 @@ DELETE FROM ${DATA.name}
 /**
  * Computes the actual partition and compares it to current partition. If partitions do not match deletes the row.
  * 1. entity set id
- * 2. partition
+ * 2. partitions (array)
+ * 3. partition
  */
 private val DELETE_IDS_SQL = """
 DELETE FROM ${ID.name} 
@@ -343,7 +372,8 @@ DELETE FROM ${ID.name}
  * Computes the actual partition and compares it to current partition. If partitions do not match deletes the row.
  *
  * 1. entity set id
- * 2. partition
+ * 2. partitions (array)
+ * 3. partition
  */
 private val DELETE_EDGES_SQL = """
 DELETE FROM ${E.name} 
