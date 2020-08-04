@@ -258,7 +258,7 @@ private val REPARTITION_EDGES_COLUMNS = buildRepartitionColumns(IDS)
  *
  * 1. entity set id
  * 2. partition
- * NOTE: We not attempt to move data values on conflict. In theory, data is immutable and a conflict wouldn't impact the
+ * NOTE: We do not attempt to move data values on conflict. In theory, data is immutable and a conflict wouldn't impact the
  * actual content of the data columns, unless a hash collection had occured during a re-partition.
  * NOTE: We set origin_id based on version. This should be fine in 99.999% of cases as the latest version should have
  * the most up to date linkined. See note on  for exceptional case [REPARTITION_IDS_SQL]
