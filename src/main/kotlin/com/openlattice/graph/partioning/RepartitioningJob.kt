@@ -142,7 +142,7 @@ class RepartitioningJob(
     }
 
     private fun repartition(repartitionSql: String): Long = hds.connection.use { connection ->
-        progress = ((100 * state.repartitionCount) / state.needsMigrationCount).toByte()
+        updateProgress()
         try {
             connection.prepareStatement(repartitionSql).use { repartitionData ->
                 bind(repartitionData)
@@ -301,7 +301,7 @@ INSERT INTO ${DATA.name} SELECT $REPARTITION_DATA_COLUMNS
     ON CONFLICT DO UPDATE SET
         ${latestSql(ORIGIN_ID, VERSION)},
         ${latestSql(VERSION, VERSION)},
-        ${VERSIONS.name} = ARRAY( SELECT DISTINCT UNNEST(${VERSIONS.name} || EXCLUDED.${VERSIONS.name} ) ORDER BY 1  )  
+        ${VERSIONS.name} = ARRAY( SELECT DISTINCT UNNEST(${VERSIONS.name} || EXCLUDED.${VERSIONS.name} ) ORDER BY 1  ),  
         ${latestSql(LAST_WRITE, VERSION)},
         ${latestSql(LAST_PROPAGATE, VERSION)},
 """.trimIndent()
