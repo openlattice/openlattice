@@ -25,7 +25,11 @@ import com.dataloom.streams.StreamUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.google.common.collect.*;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.SecurableObjectType;
@@ -42,7 +46,12 @@ import com.openlattice.organizations.Organization;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
 import com.openlattice.search.SortDefinition;
-import com.openlattice.search.requests.*;
+import com.openlattice.search.requests.Constraint;
+import com.openlattice.search.requests.ConstraintGroup;
+import com.openlattice.search.requests.EntityDataKeySearchResult;
+import com.openlattice.search.requests.SearchConstraints;
+import com.openlattice.search.requests.SearchDetails;
+import com.openlattice.search.requests.SearchResult;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.lucene.search.join.ScoreMode;
@@ -69,19 +78,31 @@ import org.elasticsearch.index.reindex.BulkByScrollResponse;
 import org.elasticsearch.index.reindex.DeleteByQueryAction;
 import org.elasticsearch.index.reindex.DeleteByQueryRequestBuilder;
 import org.elasticsearch.search.SearchHit;
-import org.elasticsearch.search.sort.*;
+import org.elasticsearch.search.sort.FieldSortBuilder;
+import org.elasticsearch.search.sort.GeoDistanceSortBuilder;
+import org.elasticsearch.search.sort.NestedSortBuilder;
+import org.elasticsearch.search.sort.ScoreSortBuilder;
+import org.elasticsearch.search.sort.SortBuilder;
+import org.elasticsearch.search.sort.SortOrder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 
 import java.io.IOException;
 import java.net.UnknownHostException;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.openlattice.IdConstants.*;
+import static com.openlattice.IdConstants.ENTITY_SET_ID_KEY_ID;
+import static com.openlattice.IdConstants.ID_ID;
+import static com.openlattice.IdConstants.LAST_WRITE_ID;
 import static java.util.stream.Collectors.toSet;
 
 public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
@@ -133,6 +154,8 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     private       String                              server;
     private       String                              cluster;
     private       int                                 port;
+    private       int                                 defaultNumReplicas;
+    private       int                                 defaultNumShards;
     // @formatter:on
 
     public ConductorElasticsearchImpl( SearchConfiguration config ) {
@@ -152,6 +175,8 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         cluster = config.getElasticsearchCluster();
         port = config.getElasticsearchPort();
         factory = new ElasticsearchTransportClientFactory( server, port, cluster );
+        defaultNumReplicas = config.getNumReplicas();
+        defaultNumShards = config.getNumShards();
     }
 
     /* INDEX CREATION */
@@ -207,7 +232,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 	    .endObject()
         	        .endObject()
         	        .field( NUM_SHARDS, numShards )
-        	        .field( NUM_REPLICAS, 2 )
+        	        .field( NUM_REPLICAS, defaultNumReplicas )
     	        .endObject();
     	return settings;
     }
@@ -242,7 +267,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
         try {
             client.admin().indices().prepareCreate( ENTITY_SET_DATA_MODEL )
-                    .setSettings( getMetaphoneSettings( 5 ) )
+                    .setSettings( getMetaphoneSettings( defaultNumShards ) )
                     .addMapping( ENTITY_SET_TYPE, mapping )
                     .execute().actionGet();
             return true;
@@ -265,8 +290,8 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
         client.admin().indices().prepareCreate( ORGANIZATIONS )
                 .setSettings( Settings.builder()
-                        .put( NUM_SHARDS, 5 )
-                        .put( NUM_REPLICAS, 2 ) )
+                        .put( NUM_SHARDS, defaultNumShards )
+                        .put( NUM_REPLICAS, defaultNumReplicas ) )
                 .addMapping( ORGANIZATION_TYPE, ImmutableMap.of( ORGANIZATION_TYPE, organizationData ) )
                 .execute().actionGet();
         return true;
@@ -282,8 +307,8 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         Map<String, Object> mapping = ImmutableMap.of( typeName, ImmutableMap.of() );
         client.admin().indices().prepareCreate( indexName )
                 .setSettings( Settings.builder()
-                        .put( NUM_SHARDS, 5 )
-                        .put( NUM_REPLICAS, 2 ) )
+                        .put( NUM_SHARDS, defaultNumShards )
+                        .put( NUM_REPLICAS, defaultNumReplicas ) )
                 .addMapping( typeName, mapping )
                 .execute().actionGet();
         return true;
@@ -1324,22 +1349,6 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         String typeName = typeNamesByIndexName.get( indexName );
 
         return triggerIndex( indexName, typeName, securableObjects, getIdFnForType( securableObjectType ) );
-
-    }
-
-    @Override
-    public boolean clearAllData() {
-        client.admin().indices()
-                .delete( new DeleteIndexRequest( DATA_INDEX_PREFIX + "*" ) );
-        new DeleteByQueryRequestBuilder( client, DeleteByQueryAction.INSTANCE )
-                .filter( QueryBuilders.matchAllQuery() ).source( ENTITY_SET_DATA_MODEL,
-                ENTITY_TYPE_INDEX,
-                PROPERTY_TYPE_INDEX,
-                ASSOCIATION_TYPE_INDEX,
-                ORGANIZATIONS,
-                APP_INDEX )
-                .get();
-        return true;
     }
 
 
@@ -1392,7 +1401,8 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             case geoDistance:
                 sort = new GeoDistanceSortBuilder( getFieldName( sortDefinition.getPropertyTypeId() ),
                         sortDefinition.getLatitude().get(),
-                        sortDefinition.getLongitude().get() );
+                        sortDefinition.getLongitude().get() )
+                        .setNestedSort( new NestedSortBuilder( ENTITY ) );
                 break;
 
             case score:

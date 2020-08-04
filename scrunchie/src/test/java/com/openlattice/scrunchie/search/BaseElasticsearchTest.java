@@ -20,8 +20,8 @@
 
 package com.openlattice.scrunchie.search;
 
-import com.clearspring.analytics.util.Lists;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.kryptnostic.rhizome.configuration.service.ConfigurationService.StaticLoader;
@@ -35,17 +35,16 @@ import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organizations.Organization;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
-import org.junit.BeforeClass;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import org.junit.BeforeClass;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @SuppressFBWarnings( "MS_PKGPROTECT" )
 public class BaseElasticsearchTest {
@@ -176,29 +175,23 @@ public class BaseElasticsearchTest {
         );
 
         chicagoEmployees = new EntitySet(
-                Optional.of( chicagoEmployeesEntitySetId ),
+                chicagoEmployeesEntitySetId,
                 ENTITY_TYPE_ID,
                 "chicago_employees",
                 "Chicago Employees",
-                Optional.of( "employees that are in chicago" ),
-                ImmutableSet.of( "foo@bar.com", "foobar@foo.net" ),
-                Optional.empty(),
-                UUID.randomUUID(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty() );
+                "employees that are in chicago",
+                Sets.newHashSet( "foo@bar.com", "foobar@foo.net" ),
+                UUID.randomUUID() );
+
         entitySet2 = new EntitySet(
-                Optional.of( entitySet2Id ),
+                entitySet2Id,
                 ENTITY_TYPE_ID,
                 "entity_set2",
                 "EntitySet2",
-                Optional.of( "this is the second entity set" ),
-                ImmutableSet.of( "foo@bar.com", "foobar@foo.net" ),
-                Optional.empty(),
-                UUID.randomUUID(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty() );
+                "this is the second entity set",
+                Sets.newHashSet( "foo@bar.com", "foobar@foo.net" ),
+                UUID.randomUUID()
+        );
 
         owner = new Principal( PrincipalType.USER, "support@openlattice.com" );
         openlatticeUser = new Principal( PrincipalType.ROLE, "openlatticeUser" );
