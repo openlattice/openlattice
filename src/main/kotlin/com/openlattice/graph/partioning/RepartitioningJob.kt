@@ -6,6 +6,7 @@ import com.geekbeast.rhizome.jobs.AbstractDistributedJob
 import com.geekbeast.rhizome.jobs.JobStatus
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.map.IMap
+import com.openlattice.data.storage.getPartitioningSelector
 import com.openlattice.edm.EntitySet
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.serializers.decorators.MetastoreAware
@@ -36,9 +37,11 @@ class RepartitioningJob(
             progress: Byte,
             hasWorkRemaining: Boolean,
             result: Long?,
-            state: RepartitioningJobState
+            state: RepartitioningJobState,
+            phase: RepartitioningPhase
     ) : this(state) {
         initialize(id, taskId, status, progress, hasWorkRemaining, result)
+        this.phase = phase
     }
 
     constructor(
@@ -47,7 +50,8 @@ class RepartitioningJob(
             newPartitions: Set<Int>
     ) : this(RepartitioningJobState(entitySetId, oldPartitions, newPartitions))
 
-    private var phase = 0
+    var phase:RepartitioningPhase = RepartitioningPhase.POPULATE
+        private set
 
     @Transient
     private lateinit var hds: HikariDataSource
@@ -93,7 +97,7 @@ class RepartitioningJob(
          * Phase 1
          * Delete data whose partition doesn't match it's computed partition.
          */
-        if (phase == 1) {
+        if (phase == RepartitioningPhase.FINALIZE) {
             state.deleteCount += delete(DELETE_DATA_SQL)
             state.deleteCount += delete(DELETE_IDS_SQL)
             state.deleteCount += delete(DELETE_EDGES_SQL)
@@ -104,14 +108,14 @@ class RepartitioningJob(
 
         //TODO: Consider adding completion hook to distributable jobs framework
         //Once we are done, set the partitions.
-        if (!hasWorkRemaining && phase == 0) {
+        if (!hasWorkRemaining && phase == RepartitioningPhase.POPULATE) {
             setPartitions(state.entitySetId, state.newPartitions)
             //The 4*getCount was an estimate, we remove estimate and addin updated value.
             state.needsMigrationCount /= 2
             state.needsMigrationCount += getNeedsMigrationCount()
             state.currentlyMigratingPartitionIndex = 0
             hasWorkRemaining = true
-            phase = 1
+            phase = RepartitioningPhase.FINALIZE
         }
     }
 
@@ -202,15 +206,14 @@ class RepartitioningJob(
 
     override fun hashCode(): Int {
         var result = super.hashCode()
-        result = 31 * result + phase
+        result = 31 * result + phase.hashCode()
         return result
     }
 
 }
 
-
-private val REPARTITION_SELECTOR = "partitions[ 1 + ((array_length(partitions,1) + (('x'||right(${ID.name}::text,8))::bit(32)::int % array_length(partitions,1))) % array_length(partitions,1))]"
-private val REPARTITION_SELECTOR_E = "partitions[ 1 + ((array_length(partitions,1) + (('x'||right(${SRC_ENTITY_KEY_ID.name}::text,8))::bit(32)::int % array_length(partitions,1))) % array_length(partitions,1))]"
+private val REPARTITION_SELECTOR = getPartitioningSelector(ID)
+private val REPARTITION_SELECTOR_E = getPartitioningSelector(SRC_ENTITY_KEY_ID)
 
 private fun buildRepartitionColumns(ptd: PostgresTableDefinition): String {
     val selector = when (ptd) {
