@@ -27,8 +27,10 @@ fun getUpdatedUsersPage(
             UserFilter()
                     .withSearchEngine(SEARCH_ENGINE_VERSION)
                     .withQuery("$UPDATED_AT={$lastSync TO $currentSync]")
-                    .withFields("$USER_ID,$EMAIL,$NICKNAME,$APP_METADATA,$IDENTITIES", true)
-                    .withFields("$NAME,$GIVEN_NAME,$FAMILY_NAME", true)
+                    .withFields(
+                            "$USER_ID,$EMAIL,$NICKNAME,$APP_METADATA,$IDENTITIES, $NAME,$GIVEN_NAME,$FAMILY_NAME",
+                            true
+                    )
                     .withPage(page, pageSize)
     ).execute()
 }
