@@ -1,6 +1,7 @@
 package com.openlattice.admin
 
 import com.geekbeast.rhizome.jobs.DistributableJob
+import com.geekbeast.rhizome.jobs.JobStatus
 import com.openlattice.authorization.Principal
 import com.openlattice.notifications.sms.SmsEntitySetInformation
 import com.openlattice.organizations.Organization
@@ -80,6 +81,12 @@ interface AdminApi {
     @GET(BASE + ORGANIZATION)
     fun getAllOrganizations(): Iterable<Organization>
 
-    @GET( BASE + JOBS )
-    fun getJobs() : Map<UUID, DistributableJob<*>>
+    @GET(BASE + JOBS)
+    fun getJobs(): Map<UUID, DistributableJob<*>>
+
+    @POST(BASE + JOBS)
+    fun getJobs(@Body statuses: Set<JobStatus>): Map<UUID, DistributableJob<*>>
+
+    @GET(BASE + JOBS + ID_PATH)
+    fun getJob(@Path(ID) jobId: UUID): DistributableJob<*>
 }
