@@ -279,8 +279,8 @@ private fun latestSql(
 
 
 private val REPARTITION_DATA_COLUMNS = buildRepartitionColumns(DATA)
-private val REPARTITION_IDS_COLUMNS = buildRepartitionColumns(E)
-private val REPARTITION_EDGES_COLUMNS = buildRepartitionColumns(IDS)
+private val REPARTITION_IDS_COLUMNS = buildRepartitionColumns(IDS)
+private val REPARTITION_EDGES_COLUMNS = buildRepartitionColumns(E)
 
 /**
  * Query for repartition a partition of data.
@@ -322,15 +322,15 @@ INSERT INTO ${IDS.name} SELECT $REPARTITION_IDS_COLUMNS
     USING (${ENTITY_SET_ID.name})
     WHERE ${PARTITION.name} = ? AND ${PARTITION.name}!=$REPARTITION_SELECTOR
     ON CONFLICT (${IDS.primaryKey.joinToString(",") { it.name }}) DO UPDATE SET
-        ${latestSql(DATA, LINKING_ID, LAST_LINK)}, 
-        ${latestSql(DATA, VERSION, VERSION)},
+        ${latestSql(IDS, LINKING_ID, LAST_LINK)}, 
+        ${latestSql(IDS, VERSION, VERSION)},
         ${VERSIONS.name} = ARRAY( SELECT DISTINCT UNNEST(${IDS.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name} ) ORDER BY 1  ),  
-        ${latestSql(DATA, LAST_WRITE, VERSION)},
-        ${latestSql(DATA, LAST_INDEX, VERSION)},
-        ${latestSql(DATA, LAST_PROPAGATE, VERSION)},
-        ${latestSql(DATA, LAST_MIGRATE, VERSION)},
-        ${latestSql(DATA, LAST_LINK_INDEX, VERSION)}
-""".trimIndent(),
+        ${latestSql(IDS, LAST_WRITE, VERSION)},
+        ${latestSql(IDS, LAST_INDEX, VERSION)},
+        ${latestSql(IDS, LAST_PROPAGATE, VERSION)},
+        ${latestSql(IDS, LAST_MIGRATE, VERSION)},
+        ${latestSql(IDS, LAST_LINK_INDEX, VERSION)}
+""".trimIndent()
 
 /**
  * Query for repartition a partition of edges.
@@ -345,9 +345,9 @@ private val REPARTITION_EDGES_SQL = """
 INSERT INTO ${E.name} SELECT $REPARTITION_EDGES_COLUMNS
     FROM ${E.name} INNER JOIN (select ? as ${SRC_ENTITY_SET_ID.name},? as ${PARTITIONS.name} ) as es
     USING (${SRC_ENTITY_SET_ID.name})
-    WHERE ${PARTITION.name} = ? AND ${PARTITION.name}!=$REPARTITION_SELECTOR
+    WHERE ${PARTITION.name} = ? AND ${PARTITION.name}!=$REPARTITION_SELECTOR_E
     ON CONFLICT (${E.primaryKey.joinToString(",") { it.name }}) DO UPDATE SET
-        ${latestSql(DATA, VERSION, VERSION)},
+        ${latestSql(E, VERSION, VERSION)},
         ${VERSIONS.name} = ARRAY( SELECT DISTINCT UNNEST(${E.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name} ) ORDER BY 1  )
 """.trimIndent()
 
