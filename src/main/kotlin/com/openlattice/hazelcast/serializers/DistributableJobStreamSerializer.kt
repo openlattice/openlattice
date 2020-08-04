@@ -23,6 +23,7 @@ package com.openlattice.hazelcast.serializers
 
 import com.geekbeast.rhizome.jobs.AbstractDistributableJobStreamSerializer
 import com.geekbeast.rhizome.jobs.DistributableJob
+import com.google.common.annotations.VisibleForTesting
 import com.hazelcast.nio.ObjectDataInput
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.hazelcast.serializers.decorators.MetastoreAware
@@ -38,6 +39,7 @@ import javax.inject.Inject
 class DistributableJobStreamSerializer : AbstractDistributableJobStreamSerializer() {
     @Inject
     private lateinit var hds: HikariDataSource
+
     override fun getTypeId(): Int = StreamSerializerTypeIds.DISTRIBUTABLE_JOB.ordinal
     override fun read(`in`: ObjectDataInput): DistributableJob<*> {
         val job = super.read(`in`)
@@ -45,5 +47,10 @@ class DistributableJobStreamSerializer : AbstractDistributableJobStreamSerialize
             job.setHikariDataSource(hds)
         }
         return job
+    }
+
+    @VisibleForTesting
+    internal fun setHikariDataSource( hds:HikariDataSource ) {
+        this.hds = hds
     }
 }

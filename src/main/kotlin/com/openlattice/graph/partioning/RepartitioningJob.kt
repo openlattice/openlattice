@@ -1,7 +1,9 @@
 package com.openlattice.graph.partioning
 
 import com.fasterxml.jackson.annotation.JsonCreator
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.geekbeast.rhizome.jobs.AbstractDistributedJob
+import com.geekbeast.rhizome.jobs.JobStatus
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.map.IMap
 import com.openlattice.edm.EntitySet
@@ -23,15 +25,28 @@ import java.util.*
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-class RepartitioningJob
-@JsonCreator constructor(
+class RepartitioningJob(
         state: RepartitioningJobState
 ) : AbstractDistributedJob<Long, RepartitioningJobState>(state), MetastoreAware {
+    @JsonCreator
+    constructor(
+            id: UUID?,
+            taskId: Long?,
+            status: JobStatus,
+            progress: Byte,
+            hasWorkRemaining: Boolean,
+            result: Long?,
+            state: RepartitioningJobState
+    ) : this(state) {
+        initialize(id, taskId, status, progress, hasWorkRemaining, result)
+    }
+
     constructor(
             entitySetId: UUID,
             oldPartitions: List<Int>,
             newPartitions: Set<Int>
-    ) : this(RepartitioningJobState(entitySetId, oldPartitions,newPartitions))
+    ) : this(RepartitioningJobState(entitySetId, oldPartitions, newPartitions))
+
     private var phase = 0
 
     @Transient
@@ -43,11 +58,13 @@ class RepartitioningJob
     private val currentlyMigratingPartition: Int
         get() = state.oldPartitions[state.currentlyMigratingPartitionIndex]
 
+    @JsonIgnore
     override fun setHazelcastInstance(hazelcastInstance: HazelcastInstance) {
         super.setHazelcastInstance(hazelcastInstance)
         this.entitySets = HazelcastMap.ENTITY_SETS.getMap(hazelcastInstance)
     }
 
+    @JsonIgnore
     override fun setHikariDataSource(hds: HikariDataSource) {
         this.hds = hds
     }
@@ -76,7 +93,7 @@ class RepartitioningJob
          * Phase 1
          * Delete data whose partition doesn't match it's computed partition.
          */
-        if( phase == 1 ) {
+        if (phase == 1) {
             state.deleteCount += delete(DELETE_DATA_SQL)
             state.deleteCount += delete(DELETE_IDS_SQL)
             state.deleteCount += delete(DELETE_EDGES_SQL)
@@ -87,8 +104,8 @@ class RepartitioningJob
 
         //TODO: Consider adding completion hook to distributable jobs framework
         //Once we are done, set the partitions.
-        if( !hasWorkRemaining && phase == 0) {
-            setPartitions(state.entitySetId,state.newPartitions)
+        if (!hasWorkRemaining && phase == 0) {
+            setPartitions(state.entitySetId, state.newPartitions)
             //The 4*getCount was an estimate, we remove estimate and addin updated value.
             state.needsMigrationCount /= 2
             state.needsMigrationCount += getNeedsMigrationCount()
@@ -156,7 +173,7 @@ class RepartitioningJob
 
     private fun bind(ps: PreparedStatement, partition: Int = currentlyMigratingPartition) {
         ps.setObject(1, state.entitySetId)
-        ps.setArray(2, PostgresArrays.createIntArray(ps.connection,state.newPartitions))
+        ps.setArray(2, PostgresArrays.createIntArray(ps.connection, state.newPartitions))
         ps.setInt(3, partition)
     }
 
@@ -172,6 +189,23 @@ class RepartitioningJob
             }
         }
     }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is RepartitioningJob) return false
+        if (!super.equals(other)) return false
+
+        if (phase != other.phase) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = super.hashCode()
+        result = 31 * result + phase
+        return result
+    }
+
 }
 
 
@@ -179,7 +213,7 @@ private val REPARTITION_SELECTOR = "partitions[ 1 + ((array_length(partitions,1)
 private val REPARTITION_SELECTOR_E = "partitions[ 1 + ((array_length(partitions,1) + (('x'||right(${SRC_ENTITY_KEY_ID.name}::text,8))::bit(32)::int % array_length(partitions,1))) % array_length(partitions,1))]"
 
 private fun buildRepartitionColumns(ptd: PostgresTableDefinition): String {
-    val selector = when( ptd ){
+    val selector = when (ptd) {
         E -> REPARTITION_SELECTOR_E
         else -> REPARTITION_SELECTOR
     }
