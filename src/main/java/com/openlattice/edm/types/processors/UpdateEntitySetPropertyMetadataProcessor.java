@@ -22,7 +22,6 @@ package com.openlattice.edm.types.processors;
 
 import java.util.LinkedHashSet;
 import java.util.Map.Entry;
-import java.util.stream.Collectors;
 
 import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.edm.set.EntitySetPropertyKey;
@@ -56,8 +55,9 @@ public class UpdateEntitySetPropertyMetadataProcessor
             }
             if ( update.getPropertyTags().isPresent() && update.getPropertyTags().get()
                     .containsKey( entry.getKey().getPropertyTypeId() ) ) {
-                metadata.setTags( update.getPropertyTags().get().get( entry.getKey().getPropertyTypeId() ).stream()
-                        .collect( Collectors.toCollection( LinkedHashSet::new ) ) );
+                metadata.setTags(
+                        new LinkedHashSet<> ( update.getPropertyTags().get().get( entry.getKey().getPropertyTypeId() ) )
+                );
             }
             entry.setValue( metadata );
         }
