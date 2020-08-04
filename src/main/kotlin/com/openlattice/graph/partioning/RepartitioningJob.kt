@@ -266,7 +266,7 @@ private val edgesNeedingMigrationCountSql = """
     SELECT count(*)
     FROM ${E.name} INNER JOIN (select ? as ${SRC_ENTITY_SET_ID.name},? as ${PARTITIONS.name} ) as es
     USING (${SRC_ENTITY_SET_ID.name})
-    WHERE ${PARTITION.name} = ? AND ${PARTITION.name}!=$REPARTITION_SELECTOR
+    WHERE ${PARTITION.name} = ? AND ${PARTITION.name}!=$REPARTITION_SELECTOR_E
 """.trimIndent()
 
 private fun latestSql(
