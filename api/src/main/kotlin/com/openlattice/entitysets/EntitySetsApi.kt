@@ -54,6 +54,8 @@ interface EntitySetsApi {
         const val METADATA_PATH = "/metadata"
         const val EXPIRATION_PATH = "/expiration"
 
+        const val PARTITIONS_PATH = "/partitions"
+
         const val PROPERTY_TYPE_ID = "propertyTypeId"
         const val PROPERTY_TYPE_ID_PATH = "/{$PROPERTY_TYPE_ID}"
     }
@@ -204,8 +206,22 @@ interface EntitySetsApi {
      *
      * @return Set of entity key ids that will expire before the specified date time
      */
-    @POST(BASE + ALL + ID_PATH + EXPIRATION_PATH )
-    fun getExpiringEntitiesFromEntitySet(@Path(ID) entitySetId: UUID,
-                                         @Body dateTime: String): Set<UUID>
+    @POST(BASE + ALL + ID_PATH + EXPIRATION_PATH)
+    fun getExpiringEntitiesFromEntitySet(
+            @Path(ID) entitySetId: UUID,
+            @Body dateTime: String
+    ): Set<UUID>
 
+    /**
+     * Used to repartition an entity set. This will shuffle corresponding ids, edges, and data table rows
+     * for the entity set.
+     *
+     * This API requires admin privileges.
+     *
+     * @param entitySetId The id of the entity set to update.
+     * @param partitions The partitions to set.
+     * @return The job id for the repartioning job.
+     */
+    @PUT(BASE + ID_PATH + PARTITIONS_PATH)
+    fun repartitionEntitySet(@Path(ID) entitySetId: UUID, @Body partitions: Set<Int>): UUID
 }

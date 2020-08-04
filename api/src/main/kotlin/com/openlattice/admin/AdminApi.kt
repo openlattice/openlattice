@@ -1,5 +1,6 @@
 package com.openlattice.admin
 
+import com.geekbeast.rhizome.jobs.DistributableJob
 import com.openlattice.authorization.Principal
 import com.openlattice.notifications.sms.SmsEntitySetInformation
 import com.openlattice.organizations.Organization
@@ -28,6 +29,8 @@ const val ID = "id"
 const val ID_PATH = "/{${ID}}"
 const val NAME = "name"
 const val NAME_PATH = "/{${NAME}}"
+
+const val JOBS = "/jobs"
 
 interface AdminApi {
 
@@ -71,10 +74,12 @@ interface AdminApi {
             @Body entitySetInformationList: List<SmsEntitySetInformation>
     ): Int?
 
-    @GET( BASE + ORGANIZATION + USAGE )
+    @GET(BASE + ORGANIZATION + USAGE)
     fun getEntityCountByOrganization(): Map<UUID, Long>
 
     @GET(BASE + ORGANIZATION)
     fun getAllOrganizations(): Iterable<Organization>
 
+    @GET( BASE + JOBS )
+    fun getJobs() : Map<UUID, DistributableJob<*>>
 }
