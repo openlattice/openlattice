@@ -68,9 +68,7 @@ class Auth0UserListingService(
      */
     private fun getUsers(auth0ApiExtension: Auth0ApiExtension): List<User> {
         val exportEntity = auth0ApiExtension.userExport()
-        val job = exportEntity.submitExportJob(
-                UserExportJobRequest(listOf(USER_ID, EMAIL, NICKNAME, APP_METADATA, IDENTITIES))
-        )
+        val job = exportEntity.submitExportJob(UserExportJobRequest(AUTH0_USER_FIELDS))
 
         // will fail if export job hangs too long with too many requests error (429 status code)
         // https://auth0.com/docs/policies/rate-limits
