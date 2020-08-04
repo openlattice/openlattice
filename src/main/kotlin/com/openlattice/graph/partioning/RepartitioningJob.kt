@@ -303,7 +303,7 @@ INSERT INTO ${DATA.name} SELECT $REPARTITION_DATA_COLUMNS
         ${latestSql(VERSION, VERSION)},
         ${VERSIONS.name} = ARRAY( SELECT DISTINCT UNNEST(${VERSIONS.name} || EXCLUDED.${VERSIONS.name} ) ORDER BY 1  ),  
         ${latestSql(LAST_WRITE, VERSION)},
-        ${latestSql(LAST_PROPAGATE, VERSION)},
+        ${latestSql(LAST_PROPAGATE, VERSION)}
 """.trimIndent()
 
 /**
