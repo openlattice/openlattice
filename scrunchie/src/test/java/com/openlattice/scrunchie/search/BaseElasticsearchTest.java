@@ -21,8 +21,8 @@
 package com.openlattice.scrunchie.search;
 
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.kryptnostic.rhizome.configuration.service.ConfigurationService.StaticLoader;
 import com.openlattice.authorization.Principal;
@@ -35,17 +35,16 @@ import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organizations.Organization;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
-import org.junit.BeforeClass;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import org.junit.BeforeClass;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @SuppressFBWarnings( "MS_PKGPROTECT" )
 public class BaseElasticsearchTest {
@@ -169,7 +168,7 @@ public class BaseElasticsearchTest {
                 ImmutableSet.of(),
                 propertyTypeIds,
                 propertyTypeIds,
-                LinkedHashMultimap.create(),
+                Maps.newLinkedHashMap(),
                 Optional.empty(),
                 Optional.of( SecurableObjectType.EntityType ),
                 Optional.empty()
