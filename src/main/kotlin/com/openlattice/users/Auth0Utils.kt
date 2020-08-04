@@ -16,6 +16,16 @@ import java.time.Instant
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 
+val AUTH0_USER_FIELDS = listOf(
+        APP_METADATA,
+        EMAIL,
+        FAMILY_NAME,
+        GIVEN_NAME,
+        IDENTITIES,
+        NAME,
+        NICKNAME,
+        USER_ID
+)
 
 @Throws(Auth0Exception::class)
 fun getUpdatedUsersPage(
@@ -27,7 +37,7 @@ fun getUpdatedUsersPage(
             UserFilter()
                     .withSearchEngine(SEARCH_ENGINE_VERSION)
                     .withQuery("$UPDATED_AT={$lastSync TO $currentSync]")
-                    .withFields("$USER_ID,$EMAIL,$NICKNAME,$APP_METADATA,$IDENTITIES", true)
+                    .withFields(AUTH0_USER_FIELDS.joinToString(","), true)
                     .withPage(page, pageSize)
     ).execute()
 }
