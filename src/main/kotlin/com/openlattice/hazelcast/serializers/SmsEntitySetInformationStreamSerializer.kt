@@ -49,6 +49,7 @@ class SmsEntitySetInformationStreamSerializer : SelfRegisteringStreamSerializer<
             val entitySetIds = SetStreamSerializers.fastUUIDSetDeserialize(input)
             val tags = SetStreamSerializers.fastOrderedStringSetDeserializeFromArray(input)
             val lastSync = OffsetDateTimeStreamSerializer.deserialize(input)
+
             return SmsEntitySetInformation(
                     phoneNumber,
                     organizationId,

@@ -9,7 +9,6 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.Serializable;
 import java.util.LinkedHashSet;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 public class UpdateEntityTypePropertyMetadataProcessor extends
         AbstractRhizomeEntryProcessor<EntityTypePropertyKey, EntityTypePropertyMetadata, Object> implements
@@ -38,8 +37,9 @@ public class UpdateEntityTypePropertyMetadataProcessor extends
             }
             if ( update.getPropertyTags().isPresent() && update.getPropertyTags().get()
                     .containsKey( entry.getKey().getPropertyTypeId() ) ) {
-                metadata.setTags( update.getPropertyTags().get().get( entry.getKey().getPropertyTypeId() ).stream()
-                        .collect( Collectors.toCollection( LinkedHashSet::new ) ) );
+                metadata.setTags(
+                        new LinkedHashSet<>( update.getPropertyTags().get().get( entry.getKey().getPropertyTypeId() ) )
+                );
             }
             entry.setValue( metadata );
         }

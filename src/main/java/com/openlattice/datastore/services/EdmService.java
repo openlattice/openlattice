@@ -300,7 +300,7 @@ public class EdmService implements EdmManager {
             EntityTypePropertyMetadata metadata = new EntityTypePropertyMetadata(
                     property.getTitle(),
                     property.getDescription(),
-                    new LinkedHashSet<>( propertyTags.get( propertyTypeId ) ),
+                    propertyTags.getOrDefault( propertyTypeId, new LinkedHashSet<>() ),
                     true
             );
             entityTypePropertyMetadata.put( key, metadata );
@@ -499,7 +499,7 @@ public class EdmService implements EdmManager {
                                 EntitySetPropertyMetadata defaultMetadata = new EntitySetPropertyMetadata(
                                         pt.getTitle(),
                                         pt.getDescription(),
-                                        new LinkedHashSet<>( propertyTags.get( pt.getId() ) ),
+                                        propertyTags.getOrDefault( pt.getId(), new LinkedHashSet<>() ),
                                         true );
 
                                 entitySetPropertyMetadata.put(
@@ -945,7 +945,7 @@ public class EdmService implements EdmManager {
                     ? Optional.empty() : Optional.of( et.getDescription() );
             Optional<FullQualifiedName> optionalFqnUpdate = ( fqn.equals( existing.getType() ) )
                     ? Optional.empty() : Optional.of( fqn );
-            Optional<LinkedHashMultimap<UUID, String>> optionalPropertyTagsUpdate = ( et.getPropertyTags()
+            Optional<LinkedHashMap<UUID, LinkedHashSet<String>>> optionalPropertyTagsUpdate = ( et.getPropertyTags()
                     .equals( existing.getPropertyTags() ) )
                     ? Optional.empty() : Optional.of( existing.getPropertyTags() );
             updateEntityTypeMetadata( existing.getId(), new MetadataUpdate(
