@@ -644,18 +644,21 @@ constructor(
                 .getAuthorizedPropertyTypes(entitySetId, EdmAuthorizationHelper.OWNER_PERMISSION)
         val missingPropertyTypes = entityType.properties.subtract(authorizedPropertyTypes.keys)
         if (missingPropertyTypes.isNotEmpty()) {
-            throw ForbiddenException("Cannot delete entity set. Missing ${Permission.OWNER} permission for property " +
-                    "types $missingPropertyTypes.")
+            throw ForbiddenException(
+                    "Cannot delete entity set. Missing ${Permission.OWNER} permission for property " +
+                            "types $missingPropertyTypes."
+            )
         }
 
         return entitySet
     }
+
     @Timed
-    @PutMapping(value =[ID_PATH + PARTITIONS_PATH])
-    override fun setPartitions(@PathVariable(com.openlattice.admin.ID)entitySetId: UUID, @RequestBody partitions: Set<Int>): UUID {
+    @PutMapping(value = [ID_PATH + PARTITIONS_PATH])
+    override fun repartitionEntitySet(@PathVariable(ID) entitySetId: UUID, @RequestBody partitions: Set<Int>): UUID {
+        ensureAdminAccess()
         val oldPartitions = partitionManager.getEntitySetPartitions(entitySetId)
-        entitySetManager.setPartitions( entitySetId, partitions )
-        return dgm.setPartitions(entitySetId, oldPartitions)
+        return dgm.repartitionEntitySet(entitySetId, oldPartitions, partitions)
     }
 
     override fun getAuthorizationManager(): AuthorizationManager {
