@@ -189,12 +189,13 @@ class RepartitioningJob(
         require(entitySets.containsKey(entitySetId)) {
             "Entity set $entitySetId not found"
         }
-        entitySets.executeOnKey(entitySetId) {
+        entitySets.executeOnKey<Any>(entitySetId) {
             val v = it.value
             if (v != null) {
                 v.setPartitions(partitions)
                 it.setValue(v)
             }
+            null
         }
     }
 
