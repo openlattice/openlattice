@@ -945,7 +945,7 @@ public class EdmService implements EdmManager {
                     ? Optional.empty() : Optional.of( et.getDescription() );
             Optional<FullQualifiedName> optionalFqnUpdate = ( fqn.equals( existing.getType() ) )
                     ? Optional.empty() : Optional.of( fqn );
-            Optional<LinkedHashMultimap<UUID, String>> optionalPropertyTagsUpdate = ( et.getPropertyTags()
+            Optional<LinkedHashMap<UUID, LinkedHashSet<String>>> optionalPropertyTagsUpdate = ( et.getPropertyTags()
                     .equals( existing.getPropertyTags() ) )
                     ? Optional.empty() : Optional.of( existing.getPropertyTags() );
             updateEntityTypeMetadata( existing.getId(), new MetadataUpdate(
