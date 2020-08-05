@@ -65,10 +65,12 @@ import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet
 import com.zaxxer.hikari.HikariDataSource
 import edu.umd.cs.findbugs.classfile.ResourceNotFoundException
 import org.slf4j.LoggerFactory
+import org.springframework.stereotype.Service
 import java.util.*
 import kotlin.collections.LinkedHashSet
 
-open class EntitySetService(
+@Service
+class EntitySetService(
         hazelcastInstance: HazelcastInstance,
         private val eventBus: EventBus,
         private val aclKeyReservations: HazelcastAclKeyReservationService,
@@ -399,6 +401,8 @@ open class EntitySetService(
         }
     }
 
+    override fun exists(entitySetId: UUID): Boolean = entitySets.containsKey(entitySetId)
+
     @Timed
     @Suppress("UNCHECKED_CAST")
     override fun getPropertyTypesForEntitySet(entitySetId: UUID): Map<UUID, PropertyType> {
@@ -567,7 +571,7 @@ open class EntitySetService(
     }
 
     override fun getLinkedEntitySetIds(entitySetId: UUID): Set<UUID> {
-        return getEntitySet(entitySetId)!!.linkedEntitySets ?: setOf()
+        return entitySets.executeOnKey(entitySetId) { DelegatedUUIDSet.wrap(it.value?.linkedEntitySets ?: mutableSetOf()) }
     }
 
     override fun removeDataExpirationPolicy(entitySetId: UUID) {
