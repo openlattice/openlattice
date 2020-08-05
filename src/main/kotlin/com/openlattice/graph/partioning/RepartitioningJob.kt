@@ -136,6 +136,7 @@ class RepartitioningJob(
         try {
             connection.prepareStatement(deleteSql).use { deleteData ->
                 bind(deleteData)
+                logger.info(deleteData.toString())
                 deleteData.executeLargeUpdate()
             }
         } catch (ex: Exception) {
@@ -376,7 +377,7 @@ INSERT INTO ${E.name} SELECT $REPARTITION_EDGES_COLUMNS
 private val DELETE_DATA_SQL = """
 DELETE FROM ${DATA.name} 
     USING (SELECT ${ID.name},${ENTITY_SET_ID.name},${PARTITION.name},${PARTITIONS.name} FROM ${DATA.name} INNER JOIN (select ? as ${ENTITY_SET_ID.name},? as ${PARTITIONS.name} ) as es USING (${ENTITY_SET_ID.name})) as to_be_deleted
-    WHERE ${DATA.name}.${PARTITION.name} = ? AND  ${DATA.name}.${PARTITION.name}!=${getPartitioningSelector(DATA.name + "." + ID.name)} AND to_be_deleted.${ID.name} = ${DATA.name}.${ID.name} and to_be_deleted.${PARTITION.name} = ${DATA.name}.${PARTITION.name};  
+    WHERE ${DATA.name}.${PARTITION.name} = ? AND ${DATA.name}.${PARTITION.name}!=${getPartitioningSelector(DATA.name + "." + ID.name)} AND to_be_deleted.${ID.name} = ${DATA.name}.${ID.name} and to_be_deleted.${PARTITION.name} = ${DATA.name}.${PARTITION.name};  
 """.trimIndent()
 
 /**
@@ -388,7 +389,7 @@ DELETE FROM ${DATA.name}
 private val DELETE_IDS_SQL = """
 DELETE FROM ${IDS.name} 
     USING (SELECT ${ID.name},${ENTITY_SET_ID.name},${PARTITION.name},${PARTITIONS.name} FROM ${IDS.name} INNER JOIN (select ? as ${ENTITY_SET_ID.name},? as ${PARTITIONS.name} ) as es USING (${ENTITY_SET_ID.name})) as to_be_deleted
-    WHERE ${ID.name}.${PARTITION.name} = ? AND ${ID.name}.${PARTITION.name}!=${getPartitioningSelector(IDS.name + "." + ID.name)} AND to_be_deleted.${ID.name} = ${IDS.name}.${ID.name} and to_be_deleted.${PARTITION.name} = ${IDS.name}.${PARTITION.name};  
+    WHERE ${ID.name}.${PARTITION.name} = ? AND ${IDS.name}.${PARTITION.name}!=${getPartitioningSelector(IDS.name + "." + ID.name)} AND to_be_deleted.${ID.name} = ${IDS.name}.${ID.name} and to_be_deleted.${PARTITION.name} = ${IDS.name}.${PARTITION.name};  
 """.trimIndent()
 
 /**
