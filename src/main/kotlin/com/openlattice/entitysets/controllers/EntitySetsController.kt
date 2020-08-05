@@ -657,6 +657,7 @@ constructor(
     @PutMapping(value = [ID_PATH + PARTITIONS_PATH])
     override fun repartitionEntitySet(@PathVariable(ID) entitySetId: UUID, @RequestBody partitions: Set<Int>): UUID {
         ensureAdminAccess()
+        require ( entitySetManager.exists( entitySetId ) ) { "Entity set must exist."}
         val oldPartitions = partitionManager.getEntitySetPartitions(entitySetId)
         return dgm.repartitionEntitySet(entitySetId, oldPartitions, partitions)
     }
