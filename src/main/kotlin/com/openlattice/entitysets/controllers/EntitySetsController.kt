@@ -37,6 +37,7 @@ import com.openlattice.data.DataDeletionManager
 import com.openlattice.data.DataGraphManager
 import com.openlattice.data.DeleteType
 import com.openlattice.data.WriteEvent
+import com.openlattice.data.storage.partitions.PartitionManager
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.EntitySet
@@ -56,6 +57,7 @@ import com.openlattice.entitysets.EntitySetsApi.Companion.LINKING
 import com.openlattice.entitysets.EntitySetsApi.Companion.METADATA_PATH
 import com.openlattice.entitysets.EntitySetsApi.Companion.NAME
 import com.openlattice.entitysets.EntitySetsApi.Companion.NAME_PATH
+import com.openlattice.entitysets.EntitySetsApi.Companion.PARTITIONS_PATH
 import com.openlattice.entitysets.EntitySetsApi.Companion.PROPERTIES_PATH
 import com.openlattice.entitysets.EntitySetsApi.Companion.PROPERTY_TYPE_ID
 import com.openlattice.entitysets.EntitySetsApi.Companion.PROPERTY_TYPE_ID_PATH
@@ -86,7 +88,8 @@ constructor(
         private val spm: SecurePrincipalsManager,
         private val authzHelper: EdmAuthorizationHelper,
         private val deletionManager: DataDeletionManager,
-        private val entitySetManager: EntitySetManager
+        private val entitySetManager: EntitySetManager,
+        private val partitionManager: PartitionManager
 ) : EntitySetsApi, AuthorizingComponent, AuditingComponent {
 
     override fun getAuditingManager(): AuditingManager {
@@ -641,11 +644,22 @@ constructor(
                 .getAuthorizedPropertyTypes(entitySetId, EdmAuthorizationHelper.OWNER_PERMISSION)
         val missingPropertyTypes = entityType.properties.subtract(authorizedPropertyTypes.keys)
         if (missingPropertyTypes.isNotEmpty()) {
-            throw ForbiddenException("Cannot delete entity set. Missing ${Permission.OWNER} permission for property " +
-                    "types $missingPropertyTypes.")
+            throw ForbiddenException(
+                    "Cannot delete entity set. Missing ${Permission.OWNER} permission for property " +
+                            "types $missingPropertyTypes."
+            )
         }
 
         return entitySet
+    }
+
+    @Timed
+    @PutMapping(value = [ID_PATH + PARTITIONS_PATH])
+    override fun repartitionEntitySet(@PathVariable(ID) entitySetId: UUID, @RequestBody partitions: Set<Int>): UUID {
+        ensureAdminAccess()
+        require ( entitySetManager.exists( entitySetId ) ) { "Entity set must exist."}
+        val oldPartitions = partitionManager.getEntitySetPartitions(entitySetId)
+        return dgm.repartitionEntitySet(entitySetId, oldPartitions, partitions)
     }
 
     override fun getAuthorizationManager(): AuthorizationManager {
