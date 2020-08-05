@@ -129,6 +129,7 @@ class Auth0SyncService(
         val currentPrincipals: NavigableSet<Principal> = TreeSet()
         currentPrincipals.add(sp.principal)
         securablePrincipals
+                .asSequence()
                 .map(SecurablePrincipal::getPrincipal)
                 .forEach { currentPrincipals.add(it) }
 
