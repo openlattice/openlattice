@@ -151,7 +151,7 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
          *
          * This is safe since token has been validated and has an auth0 assigned unique id.
          *
-         * It is very important that this is the *first* call for a new user. W
+         * It is very important that this is the *first* call for a new user.
          */
         Principal principal = checkNotNull( Principals.getCurrentUser() );
 
