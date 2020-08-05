@@ -389,7 +389,7 @@ DELETE FROM ${DATA.name}
 private val DELETE_IDS_SQL = """
 DELETE FROM ${IDS.name} 
     USING (SELECT ${ID.name},${ENTITY_SET_ID.name},${PARTITION.name},${PARTITIONS.name} FROM ${IDS.name} INNER JOIN (select ? as ${ENTITY_SET_ID.name},? as ${PARTITIONS.name} ) as es USING (${ENTITY_SET_ID.name})) as to_be_deleted
-    WHERE ${ID.name}.${PARTITION.name} = ? AND ${IDS.name}.${PARTITION.name}!=${getPartitioningSelector(IDS.name + "." + ID.name)} AND to_be_deleted.${ID.name} = ${IDS.name}.${ID.name} and to_be_deleted.${PARTITION.name} = ${IDS.name}.${PARTITION.name};  
+    WHERE ${IDS.name}.${PARTITION.name} = ? AND ${IDS.name}.${PARTITION.name}!=${getPartitioningSelector(IDS.name + "." + ID.name)} AND to_be_deleted.${ID.name} = ${IDS.name}.${ID.name} and to_be_deleted.${PARTITION.name} = ${IDS.name}.${PARTITION.name};  
 """.trimIndent()
 
 /**
