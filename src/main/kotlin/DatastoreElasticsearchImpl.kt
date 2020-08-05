@@ -107,19 +107,14 @@ class DatastoreKotlinElasticsearchImpl(
         }
     }
 
-    private var client: Client?
-    private var factory: ElasticsearchTransportClientFactory
     private var connected = true
-    private var server: String
-    private var cluster: String
-    private var port: Int
+    private val server = config.elasticsearchUrl
+    private val cluster = config.elasticsearchCluster
+    private val port = config.elasticsearchPort
+    private var factory = ElasticsearchTransportClientFactory(server, port, cluster)
+    private var client: Client = someClient.orElseGet { factory.client }
 
     init {
-        server = config.elasticsearchUrl
-        cluster = config.elasticsearchCluster
-        port = config.elasticsearchPort
-        factory = ElasticsearchTransportClientFactory(server, port, cluster)
-        client = someClient.orElseGet { factory.client }
         initializeIndices()
     }
 
