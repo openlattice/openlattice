@@ -4,6 +4,7 @@ import com.codahale.metrics.annotation.Timed
 import com.geekbeast.rhizome.jobs.AbstractDistributedJob
 import com.geekbeast.rhizome.jobs.DistributableJob
 import com.geekbeast.rhizome.jobs.HazelcastJobService
+import com.geekbeast.rhizome.jobs.JobStatus
 import com.google.common.collect.Iterables
 import com.hazelcast.core.HazelcastInstance
 import com.openlattice.authorization.AuthorizationManager
@@ -203,9 +204,23 @@ class AdminController : AdminApi, AuthorizingComponent {
 
     @Timed
     @GetMapping(value = [JOBS], produces = [MediaType.APPLICATION_JSON_VALUE])
-    override fun getJobs(): Map<UUID, AbstractDistributedJob<*, *>> {
+    override fun getJobs(): Map<UUID, DistributableJob<*>> {
         ensureAdminAccess()
         return jobService.getJobs()
+    }
+
+    @Timed
+    @PostMapping(value = [JOBS], produces = [MediaType.APPLICATION_JSON_VALUE])
+    override fun getJobs(@RequestBody statuses: Set<JobStatus>): Map<UUID, DistributableJob<*>> {
+        ensureAdminAccess()
+        return jobService.getJobs(statuses)
+    }
+
+    @Timed
+    @GetMapping(value = [JOBS + ID_PATH], produces = [MediaType.APPLICATION_JSON_VALUE])
+    override fun getJob(@PathVariable(ID) jobId: UUID): Map<UUID,DistributableJob<*>> {
+        ensureAdminAccess()
+        return jobService.getJobs(listOf(jobId))
     }
 
     override fun getAuthorizationManager(): AuthorizationManager {
