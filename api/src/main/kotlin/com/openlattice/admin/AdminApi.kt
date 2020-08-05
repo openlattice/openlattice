@@ -88,5 +88,5 @@ interface AdminApi {
     fun getJobs(@Body statuses: Set<JobStatus>): Map<UUID, DistributableJob<*>>
 
     @GET(BASE + JOBS + ID_PATH)
-    fun getJob(@Path(ID) jobId: UUID): DistributableJob<*>
+    fun getJob(@Path(ID) jobId: UUID): Map<UUID, DistributableJob<*>>
 }
