@@ -262,11 +262,6 @@ class Graph(
         ).stream()
     }
 
-    override fun setPartitions(entitySetId: UUID, partitions: MutableSet<Int>): Int {
-        TODO("BLAME MTR")
-    }
-
-
     override fun getEdgesAndNeighborsForVerticesBulk(
             entitySetIds: Set<UUID>,
             filter: EntityNeighborsFilter
@@ -1190,9 +1185,7 @@ private val EDGE_IDS_SQL = "${EDGE_ENTITY_KEY_ID.name} = ANY(?) AND ${EDGE_ENTIT
 private val SRC_IDS_AND_ENTITY_SETS_SQL = "${SRC_ENTITY_KEY_ID.name} = ANY(?) AND ${SRC_ENTITY_SET_ID.name} = ANY(?)"
 private val DST_IDS_AND_ENTITY_SETS_SQL = "${DST_ENTITY_KEY_ID.name} = ANY(?) AND ${DST_ENTITY_SET_ID.name} = ANY(?)"
 
-const val REPARTITION_SELECTOR = "partitions[ 1 + (('x'||right(id::text,8))::bit(32)::int % array_length(partitions,1))]"
-private val REPARTITION_COLUMNS = E.columns.joinToString(",") { if (it == PARTITION) REPARTITION_SELECTOR else it.name }
-private val REPARTITION_SQL = "INSERT INTO ${E.name} SELECT $REPARTITION_COLUMNS FROM ${E.name} INNER JOIN"
+//private val REPARTITION_SQL = "INSERT INTO ${E.name} SELECT $REPARTITION_COLUMNS FROM ${E.name} INNER JOIN (select id as entity_set_id, partitions from entity_sets) as es using (entity_set_id) WHERE entity_set_id = ? AND "
 
 /**
  * Loads edges where either the source, destination, or association matches a set of entityKeyIds from a specific entity set

@@ -490,8 +490,4 @@ class PostgresEntityDatastore(
         )
     }
 
-    override fun setPartitions(entitySetId: UUID, partitions: Set<Int>): Int {
-        TODO("Not yet implemented")
-    }
-
 }

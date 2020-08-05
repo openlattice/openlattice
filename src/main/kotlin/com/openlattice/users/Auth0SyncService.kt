@@ -61,8 +61,8 @@ class Auth0SyncService(
         val principalsToCreate = usersByPrincipal.keys - existingUserPrincipals
 
         logger.debug("Creating users {} and updating principals {}",
-                principalsToCreate.map { it.id },
-                existingUserPrincipals.map { it.id }
+                     principalsToCreate.map { it.id },
+                     existingUserPrincipals.map { it.id }
         )
 
         val newlyCreatedUsers = principalsToCreate.filter {
@@ -103,27 +103,33 @@ class Auth0SyncService(
     }
 
     fun syncAuthenticationCacheForPrincipalIds(principalIds: Set<String>) {
-
-        val securablePrincipals = principals.entrySet(Predicates.`in`(
-                PrincipalMapstore.PRINCIPAL_INDEX,
-                *principalIds.map { Principal(PrincipalType.USER, it) }.toTypedArray()
-        )).associate { it.value.principal.id to it.value }
+        val principalsById = principalIds.associateWith { Principal(PrincipalType.USER, it) }
+        val securablePrincipals = principals.entrySet(
+                Predicates.`in`(
+                        PrincipalMapstore.PRINCIPAL_INDEX,
+                        *principalsById.values.toTypedArray()
+                )
+        ).associate { it.value.principal.id to it.value }
         authnPrincipalCache.putAll(securablePrincipals)
-
+        val principalTrees = getPrincipalTreesByPrincipalId(securablePrincipals.values.toSet())
+        principalsById.forEach { (principalId, principal) -> principalTrees[principalId]?.add(principal) }
         authnRolesCache.putAll(getPrincipalTreesByPrincipalId(securablePrincipals.values.toSet()))
     }
 
     private fun syncAuthenticationCache(principalId: String) {
-        val sp = principals.values(Predicates.equal(
-                PrincipalMapstore.PRINCIPAL_INDEX,
-                Principal(PrincipalType.USER, principalId)
-        )).firstOrNull() ?: return
+        val sp = principals.values(
+                Predicates.equal(
+                        PrincipalMapstore.PRINCIPAL_INDEX,
+                        Principal(PrincipalType.USER, principalId)
+                )
+        ).firstOrNull() ?: return
         authnPrincipalCache.set(principalId, sp)
         val securablePrincipals = getAllPrincipals(sp) ?: return
 
         val currentPrincipals: NavigableSet<Principal> = TreeSet()
         currentPrincipals.add(sp.principal)
-        securablePrincipals.stream()
+        securablePrincipals
+                .asSequence()
                 .map(SecurablePrincipal::getPrincipal)
                 .forEach { currentPrincipals.add(it) }
 
@@ -140,7 +146,8 @@ class Auth0SyncService(
         // Bulk load all relevant principal trees from hazelcast
         var nextLayer = aclKeyPrincipals.values.flatMap { it.value }.toSet()
         while (nextLayer.isNotEmpty()) {
-            val nextLayerMap     = principalTrees.getAll(nextLayer) - aclKeyPrincipals.keys
+            //Don't load what's already been loaded.
+            val nextLayerMap = principalTrees.getAll(nextLayer - aclKeyPrincipals.keys)
             nextLayer = nextLayerMap.keys
             aclKeyPrincipals.putAll(nextLayerMap)
         }
@@ -149,14 +156,24 @@ class Auth0SyncService(
         val aclKeysToPrincipals = principals.getAll(aclKeyPrincipals.keys + aclKeyPrincipals.values.flatten())
 
         // Map each SecurablePrincipal to all its aclKey children from the in-memory map, and from there a SortedPrincipalSet
-        return sps.associate {
-            val childAclKeys = aclKeyPrincipals.getOrDefault(it.aclKey, AclKeySet())
-            var nextAclKeyLayer = childAclKeys
+        return sps.associate { sp ->
+            val childAclKeys = mutableSetOf<AclKey>()
+            aclKeyPrincipals.getOrDefault(sp.aclKey, AclKeySet()).forEach { childAclKeys.add(it) }
+
+            var nextAclKeyLayer = childAclKeys.toSet()
+
             while (nextAclKeyLayer.isNotEmpty()) {
-                nextAclKeyLayer = AclKeySet((nextAclKeyLayer.associateWith { ak -> aclKeyPrincipals.getOrDefault(ak, mutableSetOf<AclKey>()) }.values.flatten().toMutableSet() - childAclKeys).toMutableSet())
-                childAclKeys.addAll(nextAclKeyLayer)
+                val nextAclKeyLayer = (nextAclKeyLayer.flatMapTo(mutableSetOf<AclKey>()) {
+                    aclKeyPrincipals[it] ?: setOf()
+                }) - childAclKeys
+                childAclKeys += nextAclKeyLayer
             }
-           it.principal.id to SortedPrincipalSet(TreeSet(childAclKeys.map { aclKey -> aclKeysToPrincipals.getValue(aclKey).principal }))
+
+            sp.principal.id to SortedPrincipalSet(TreeSet(childAclKeys.map { aclKey ->
+                aclKeysToPrincipals.getValue(
+                        aclKey
+                ).principal
+            }))
         }
     }
 
@@ -180,7 +197,7 @@ class Auth0SyncService(
         )
     }
 
-    private fun processOrganizationEnrollments(principal: Principal, user: User ) {
+    private fun processOrganizationEnrollments(principal: Principal, user: User) {
         val connections = getConnections(user).values
 
         val missingOrgsForConnections = orgService.getOrganizationsWithoutUserAndWithConnection(connections, principal)
@@ -204,7 +221,7 @@ class Auth0SyncService(
                     SecurablePrincipal(Optional.empty(), principal, title, Optional.empty())
             )
 
-        } catch (e: Exception)  {
+        } catch (e: Exception) {
             logger.error("Unable to create user {} with principal {}", user, principal, e)
             return false
         }

@@ -49,7 +49,7 @@ class ScheduledTaskService : HazelcastFixedRateTask<ScheduledTaskServiceDependen
             scheduledTask.task.run(getDependency().hazelcast)
             scheduledTasks.delete(scheduledTask.id)
         } else {
-            logger.info("Skipping scheduled task ${scheduledTask.id} as it has already been attempted within the past hour.")
+            logger.debug("Skipping scheduled task ${scheduledTask.id} as it has already been attempted within the past hour.")
         }
     }
 
