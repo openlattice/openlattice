@@ -141,7 +141,7 @@ class Auth0SyncService(
     }
 
     private fun getPrincipalTreesByPrincipalId(sps: Set<SecurablePrincipal>): Map<String, SortedPrincipalSet> {
-        val aclKeyPrincipals = principalTrees.getAll(sps.map { it.aclKey }.toSet())
+        val aclKeyPrincipals = principalTrees.getAll(sps.map { it.aclKey }.toSet()).toMutableMap()
 
         // Bulk load all relevant principal trees from hazelcast
         var nextLayer = aclKeyPrincipals.values.flatMap { it.value }.toSet()
