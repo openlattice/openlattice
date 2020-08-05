@@ -1481,9 +1481,9 @@ class DatastoreKotlinElasticsearchImpl(
             return false
         }
 
-        val bulkRequest = client!!.prepareBulk()
+        val bulkRequest = client.prepareBulk()
 
-        client!!.admin().indices().delete(DeleteIndexRequest(index)).actionGet()
+        client.admin().indices().delete(DeleteIndexRequest(index)).actionGet()
 
         createIndex(index)
         objects.forEach {
@@ -1492,7 +1492,7 @@ class DatastoreKotlinElasticsearchImpl(
                 val s = ObjectMappers.getJsonMapper().writeValueAsString(it)
                 bulkRequest
                         .add(
-                                client!!.prepareIndex(index, type, id)
+                                client.prepareIndex(index, type, id)
                                         .setSource(s, XContentType.JSON)
                         )
             } catch (e: JsonProcessingException) {
