@@ -1,4 +1,3 @@
-
 package com.openlattice.datastore.services;
 
 import com.dataloom.mappers.ObjectMappers
@@ -62,9 +61,9 @@ import java.util.stream.Stream
 class DatastoreKotlinElasticsearchImpl(
         val config: SearchConfiguration,
         val someClient: Optional<Client>
-): ConductorElasticsearchApi {
+) : ConductorElasticsearchApi {
 
-    constructor( config: SearchConfiguration ): this(config, Optional.empty())
+    constructor(config: SearchConfiguration) : this(config, Optional.empty())
 
     companion object {
         private val MAX_CONCURRENT_SEARCHES = 3
@@ -102,6 +101,7 @@ class DatastoreKotlinElasticsearchImpl(
 
         private val mapper = ObjectMappers.newJsonMapper()
         private val logger = LoggerFactory.getLogger(DatastoreKotlinElasticsearchImpl::class.java)
+
         init {
             mapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false)
         }
@@ -194,16 +194,39 @@ class DatastoreKotlinElasticsearchImpl(
 
         // entity_set type mapping
         val properties = ImmutableMap.builder<String, Any>()
-        properties.put(ConductorElasticsearchApi.PROPERTY_TYPES, ImmutableMap.of(ConductorElasticsearchApi.TYPE, ConductorElasticsearchApi.NESTED))
-        properties.put(ConductorElasticsearchApi.ENTITY_SET, ImmutableMap.of(ConductorElasticsearchApi.TYPE, ConductorElasticsearchApi.OBJECT))
+        properties.put(
+                ConductorElasticsearchApi.PROPERTY_TYPES,
+                ImmutableMap.of(ConductorElasticsearchApi.TYPE, ConductorElasticsearchApi.NESTED)
+        )
+        properties.put(
+                ConductorElasticsearchApi.ENTITY_SET,
+                ImmutableMap.of(ConductorElasticsearchApi.TYPE, ConductorElasticsearchApi.OBJECT)
+        )
         val typeTextAnalyzerMetaphoneAnalyzer: Map<String, String> = ImmutableMap
-                .of(ConductorElasticsearchApi.TYPE, ConductorElasticsearchApi.TEXT, ConductorElasticsearchApi.ANALYZER, ConductorElasticsearchApi.METAPHONE_ANALYZER)
-        properties.put(ConductorElasticsearchApi.ENTITY_SET + "." + SerializationConstants.NAME_FIELD, typeTextAnalyzerMetaphoneAnalyzer)
-        properties.put(ConductorElasticsearchApi.ENTITY_SET + "." + SerializationConstants.TITLE_FIELD, typeTextAnalyzerMetaphoneAnalyzer)
+                .of(
+                        ConductorElasticsearchApi.TYPE,
+                        ConductorElasticsearchApi.TEXT,
+                        ConductorElasticsearchApi.ANALYZER,
+                        ConductorElasticsearchApi.METAPHONE_ANALYZER
+                )
+        properties.put(
+                ConductorElasticsearchApi.ENTITY_SET + "." + SerializationConstants.NAME_FIELD,
+                typeTextAnalyzerMetaphoneAnalyzer
+        )
+        properties.put(
+                ConductorElasticsearchApi.ENTITY_SET + "." + SerializationConstants.TITLE_FIELD,
+                typeTextAnalyzerMetaphoneAnalyzer
+        )
         properties
-                .put(ConductorElasticsearchApi.ENTITY_SET + "." + SerializationConstants.DESCRIPTION_FIELD, typeTextAnalyzerMetaphoneAnalyzer)
+                .put(
+                        ConductorElasticsearchApi.ENTITY_SET + "." + SerializationConstants.DESCRIPTION_FIELD,
+                        typeTextAnalyzerMetaphoneAnalyzer
+                )
         val mapping: Map<String, Any> = ImmutableMap
-                .of<String, Any>(ConductorElasticsearchApi.ENTITY_SET_TYPE, ImmutableMap.of(ConductorElasticsearchApi.MAPPING_PROPERTIES, properties.build()))
+                .of<String, Any>(
+                        ConductorElasticsearchApi.ENTITY_SET_TYPE,
+                        ImmutableMap.of(ConductorElasticsearchApi.MAPPING_PROPERTIES, properties.build())
+                )
         return try {
             client!!.admin().indices().prepareCreate(ConductorElasticsearchApi.ENTITY_SET_DATA_MODEL)
                     .setSettings(getMetaphoneSettings(5))
@@ -225,13 +248,27 @@ class DatastoreKotlinElasticsearchImpl(
         }
 
         // entity_set type mapping
-        val properties: Map<String, Any> = ImmutableMap.of<String, Any>(ConductorElasticsearchApi.ORGANIZATION, ImmutableMap.of(ConductorElasticsearchApi.TYPE, ConductorElasticsearchApi.OBJECT))
-        val organizationData: Map<String, Any> = ImmutableMap.of<String, Any>(ConductorElasticsearchApi.MAPPING_PROPERTIES, properties)
+        val properties: Map<String, Any> = ImmutableMap.of<String, Any>(
+                ConductorElasticsearchApi.ORGANIZATION,
+                ImmutableMap.of(
+                        ConductorElasticsearchApi.TYPE,
+                        ConductorElasticsearchApi.OBJECT
+                )
+        )
+        val organizationData: Map<String, Any> = ImmutableMap.of<String, Any>(
+                ConductorElasticsearchApi.MAPPING_PROPERTIES,
+                properties
+        )
         client!!.admin().indices().prepareCreate(ConductorElasticsearchApi.ORGANIZATIONS)
-                .setSettings(Settings.builder()
-                        .put(ConductorElasticsearchApi.NUM_SHARDS, 5)
-                        .put(ConductorElasticsearchApi.NUM_REPLICAS, 2))
-                .addMapping(ConductorElasticsearchApi.ORGANIZATION_TYPE, ImmutableMap.of<String, Any>(ConductorElasticsearchApi.ORGANIZATION_TYPE, organizationData))
+                .setSettings(
+                        Settings.builder()
+                                .put(ConductorElasticsearchApi.NUM_SHARDS, 5)
+                                .put(ConductorElasticsearchApi.NUM_REPLICAS, 2)
+                )
+                .addMapping(
+                        ConductorElasticsearchApi.ORGANIZATION_TYPE,
+                        ImmutableMap.of<String, Any>(ConductorElasticsearchApi.ORGANIZATION_TYPE, organizationData)
+                )
                 .execute().actionGet()
         return true
     }
@@ -245,9 +282,11 @@ class DatastoreKotlinElasticsearchImpl(
         }
         val mapping: Map<String?, Any> = ImmutableMap.of<String?, Any>(typeName, ImmutableMap.of<Any, Any>())
         client!!.admin().indices().prepareCreate(indexName)
-                .setSettings(Settings.builder()
-                        .put(ConductorElasticsearchApi.NUM_SHARDS, 5)
-                        .put(ConductorElasticsearchApi.NUM_REPLICAS, 2))
+                .setSettings(
+                        Settings.builder()
+                                .put(ConductorElasticsearchApi.NUM_SHARDS, 5)
+                                .put(ConductorElasticsearchApi.NUM_REPLICAS, 2)
+                )
                 .addMapping(typeName, mapping)
                 .execute().actionGet()
         return true
@@ -338,7 +377,8 @@ class DatastoreKotlinElasticsearchImpl(
 
     private fun addMappingToEntityTypeDataIndex(
             entityType: EntityType,
-            propertyTypes: List<PropertyType>): Boolean {
+            propertyTypes: List<PropertyType>
+    ): Boolean {
         val indexName = getIndexName(entityType.id)
         val typeName = getTypeName(entityType.id)
         val entityTypeDataMapping = prepareEntityTypeDataMappings(typeName, propertyTypes)
@@ -355,12 +395,19 @@ class DatastoreKotlinElasticsearchImpl(
 
     private fun prepareEntityTypeDataMappings(
             typeName: String,
-            propertyTypes: List<PropertyType>): Map<String, Any?> {
-        val keywordMapping: Map<String, Any> = ImmutableMap.of<String, Any>(ConductorElasticsearchApi.TYPE, ConductorElasticsearchApi.KEYWORD)
+            propertyTypes: List<PropertyType>
+    ): Map<String, Any?> {
+        val keywordMapping: Map<String, Any> = ImmutableMap.of<String, Any>(
+                ConductorElasticsearchApi.TYPE,
+                ConductorElasticsearchApi.KEYWORD
+        )
         // securable_object_row type mapping
         val entityPropertiesMapping = ImmutableMap.builder<String, Any>()
         entityPropertiesMapping.put(IdConstants.ENTITY_SET_ID_KEY_ID.id.toString(), keywordMapping)
-        entityPropertiesMapping.put(IdConstants.LAST_WRITE_ID.id.toString(), ImmutableMap.of(ConductorElasticsearchApi.TYPE, ConductorElasticsearchApi.DATE))
+        entityPropertiesMapping.put(
+                IdConstants.LAST_WRITE_ID.id.toString(),
+                ImmutableMap.of(ConductorElasticsearchApi.TYPE, ConductorElasticsearchApi.DATE)
+        )
         for (propertyType in propertyTypes) {
             if (propertyType.datatype != EdmPrimitiveTypeKind.Binary) {
                 entityPropertiesMapping.put(propertyType.id.toString(), getFieldMapping(propertyType))
@@ -368,28 +415,38 @@ class DatastoreKotlinElasticsearchImpl(
         }
         val entityMapping: Map<String, Any> = ImmutableMap.of<String, Any>(
                 ConductorElasticsearchApi.MAPPING_PROPERTIES, entityPropertiesMapping.build(),
-                ConductorElasticsearchApi.TYPE, ConductorElasticsearchApi.NESTED)
+                ConductorElasticsearchApi.TYPE, ConductorElasticsearchApi.NESTED
+        )
         val properties: Map<String, Any> = ImmutableMap.of<String, Any>(
                 ConductorElasticsearchApi.ENTITY, entityMapping,
-                ConductorElasticsearchApi.ENTITY_SET_ID_FIELD, keywordMapping)
+                ConductorElasticsearchApi.ENTITY_SET_ID_FIELD, keywordMapping
+        )
         return ImmutableMap.of<String, Any?>(
                 typeName, ImmutableMap.of(
-                ConductorElasticsearchApi.MAPPING_PROPERTIES, properties))
+                ConductorElasticsearchApi.MAPPING_PROPERTIES, properties
+        )
+        )
     }
 
     override fun saveEntitySetToElasticsearch(
             entityType: EntityType?,
             entitySet: EntitySet,
-            propertyTypes: List<PropertyType?>): Boolean {
+            propertyTypes: List<PropertyType?>
+    ): Boolean {
         if (!verifyElasticsearchConnection()) {
             return false
         }
         val entitySetDataModel: Map<String, Any> = ImmutableMap.of(
                 ConductorElasticsearchApi.ENTITY_SET, entitySet,
-                ConductorElasticsearchApi.PROPERTY_TYPES, propertyTypes)
+                ConductorElasticsearchApi.PROPERTY_TYPES, propertyTypes
+        )
         try {
             val s = ObjectMappers.getJsonMapper().writeValueAsString(entitySetDataModel)
-            client!!.prepareIndex(ConductorElasticsearchApi.ENTITY_SET_DATA_MODEL, ConductorElasticsearchApi.ENTITY_SET_TYPE, entitySet.id.toString())
+            client!!.prepareIndex(
+                    ConductorElasticsearchApi.ENTITY_SET_DATA_MODEL,
+                    ConductorElasticsearchApi.ENTITY_SET_TYPE,
+                    entitySet.id.toString()
+            )
                     .setSource(s, XContentType.JSON)
                     .execute().actionGet()
             return true
@@ -407,7 +464,12 @@ class DatastoreKotlinElasticsearchImpl(
      * @param newPropertyTypes the ids of the new properties
      */
     override fun addPropertyTypesToEntityType(entityType: EntityType, newPropertyTypes: List<PropertyType>): Boolean {
-        saveObjectToElasticsearch(ConductorElasticsearchApi.ENTITY_TYPE_INDEX, ConductorElasticsearchApi.ENTITY_TYPE, entityType, entityType.id.toString())
+        saveObjectToElasticsearch(
+                ConductorElasticsearchApi.ENTITY_TYPE_INDEX,
+                ConductorElasticsearchApi.ENTITY_TYPE,
+                entityType,
+                entityType.id.toString()
+        )
         return addMappingToEntityTypeDataIndex(entityType, newPropertyTypes)
     }
 
@@ -415,15 +477,21 @@ class DatastoreKotlinElasticsearchImpl(
         if (!verifyElasticsearchConnection()) {
             return false
         }
-        client!!.prepareDelete(ConductorElasticsearchApi.ENTITY_SET_DATA_MODEL, ConductorElasticsearchApi.ENTITY_SET_TYPE, entitySetId.toString()).execute().actionGet()
+        client!!.prepareDelete(
+                ConductorElasticsearchApi.ENTITY_SET_DATA_MODEL,
+                ConductorElasticsearchApi.ENTITY_SET_TYPE,
+                entitySetId.toString()
+        ).execute().actionGet()
         val response = DeleteByQueryRequestBuilder(client, DeleteByQueryAction.INSTANCE)
                 .filter(QueryBuilders.termQuery(ConductorElasticsearchApi.ENTITY_SET_ID_FIELD, entitySetId.toString()))
                 .source(getIndexName(entityTypeId))
                 .get()
-        logger.info("Deleted {} documents from index {} for entity set {}",
+        logger.info(
+                "Deleted {} documents from index {} for entity set {}",
                 response.deleted,
                 entityTypeId,
-                entitySetId)
+                entitySetId
+        )
         return true
     }
 
@@ -465,14 +533,23 @@ class DatastoreKotlinElasticsearchImpl(
         entity.forEach { (key: UUID, value: Set<Any?>) -> values[key] = value }
         values[IdConstants.ENTITY_SET_ID_KEY_ID.id] = entitySetId
         return try {
-            mapper.writeValueAsBytes(ImmutableMap.of(ConductorElasticsearchApi.ENTITY, values, ConductorElasticsearchApi.ENTITY_SET_ID_FIELD, entitySetId))
+            mapper.writeValueAsBytes(
+                    ImmutableMap.of(
+                            ConductorElasticsearchApi.ENTITY,
+                            values,
+                            ConductorElasticsearchApi.ENTITY_SET_ID_FIELD,
+                            entitySetId
+                    )
+            )
         } catch (e: JsonProcessingException) {
             logger.debug("error creating entity data")
             null
         }
     }
 
-    override fun createEntityData(entityTypeId: UUID, edk: EntityDataKey, propertyValues: Map<UUID, Set<Any?>>): Boolean {
+    override fun createEntityData(
+            entityTypeId: UUID, edk: EntityDataKey, propertyValues: Map<UUID, Set<Any?>>
+    ): Boolean {
         if (!verifyElasticsearchConnection()) {
             return false
         }
@@ -490,7 +567,8 @@ class DatastoreKotlinElasticsearchImpl(
     override fun createBulkEntityData(
             entityTypeId: UUID,
             entitySetId: UUID,
-            entitiesById: Map<UUID, Map<UUID, Set<Any?>>>): Boolean {
+            entitiesById: Map<UUID, Map<UUID, Set<Any?>>>
+    ): Boolean {
         if (!verifyElasticsearchConnection()) {
             return false
         }
@@ -503,15 +581,18 @@ class DatastoreKotlinElasticsearchImpl(
                 if (data != null) {
                     requestBuilder.add(
                             client!!.prepareIndex(indexName, indexType, entityKeyId.toString())
-                                    .setSource(data, XContentType.JSON))
+                                    .setSource(data, XContentType.JSON)
+                    )
                 }
             }
             val resp = requestBuilder.execute().actionGet()
             if (resp.hasFailures()) {
-                logger.info("At least one failure observed when attempting to index {} entities for entity set {}: {}",
+                logger.info(
+                        "At least one failure observed when attempting to index {} entities for entity set {}: {}",
                         entitiesById.size,
                         entitySetId,
-                        resp.buildFailureMessage())
+                        resp.buildFailureMessage()
+                )
                 return false
             }
         }
@@ -534,15 +615,18 @@ class DatastoreKotlinElasticsearchImpl(
                 if (data != null) {
                     requestBuilder.add(
                             client!!.prepareIndex(indexName, indexType, linkingId.toString())
-                                    .setSource(data, XContentType.JSON))
+                                    .setSource(data, XContentType.JSON)
+                    )
                 }
             }
             val resp = requestBuilder.execute().actionGet()
             if (resp.hasFailures()) {
-                logger.info("At least one failure observed when attempting to index linking entities with linking " +
-                        "ids {}: {}",
+                logger.info(
+                        "At least one failure observed when attempting to index linking entities with linking " +
+                                "ids {}: {}",
                         entitiesByLinkingId.keys,
-                        resp.buildFailureMessage())
+                        resp.buildFailureMessage()
+                )
                 return false
             }
         }
@@ -556,7 +640,15 @@ class DatastoreKotlinElasticsearchImpl(
         val index = getIndexName(entityTypeId)
         val type = getTypeName(entityTypeId)
         val request = client!!.prepareBulk()
-        entityKeyIds.forEach(Consumer { entityKeyId: UUID -> request.add(client!!.prepareDelete(index, type, entityKeyId.toString())) }
+        entityKeyIds.forEach(Consumer { entityKeyId: UUID ->
+            request.add(
+                    client!!.prepareDelete(
+                            index,
+                            type,
+                            entityKeyId.toString()
+                    )
+            )
+        }
         )
         request.execute().actionGet()
         return true
@@ -571,8 +663,10 @@ class DatastoreKotlinElasticsearchImpl(
                 .source(getIndexName(entityTypeId))
                 .execute()
                 .actionGet()
-        logger.info("Deleted {} normal entity documents while deleting entity set data {}", resp.deleted,
-                entitySetId)
+        logger.info(
+                "Deleted {} normal entity documents while deleting entity set data {}", resp.deleted,
+                entitySetId
+        )
         return true
     }
 
@@ -582,8 +676,12 @@ class DatastoreKotlinElasticsearchImpl(
         var totalHits = 0
         for (item in response.responses) {
             for (hit in item.response.hits) {
-                entityDataKeys.add(EntityDataKey(getEntitySetIdFromHit(hit),
-                        UUID.fromString(hit.id)))
+                entityDataKeys.add(
+                        EntityDataKey(
+                                getEntitySetIdFromHit(hit),
+                                UUID.fromString(hit.id)
+                        )
+                )
             }
             totalHits += item.response.hits.totalHits.value.toInt()
         }
@@ -595,7 +693,8 @@ class DatastoreKotlinElasticsearchImpl(
      */
     private fun getFieldsMap(
             entitySetId: UUID,
-            authorizedPropertyTypesByEntitySet: Map<UUID, DelegatedUUIDSet>): Map<UUID, Map<String, Float>> {
+            authorizedPropertyTypesByEntitySet: Map<UUID, DelegatedUUIDSet>
+    ): Map<UUID, Map<String, Float>> {
         val fieldsMap: MutableMap<UUID, Map<String, Float>> = Maps.newHashMap()
         authorizedPropertyTypesByEntitySet[entitySetId]!!.forEach(Consumer { propertyTypeId: UUID ->
             val fieldName = getFieldName(propertyTypeId)
@@ -612,7 +711,8 @@ class DatastoreKotlinElasticsearchImpl(
 
     private fun getAdvancedSearchQuery(
             constraints: Constraint,
-            authorizedFieldsMap: Map<UUID, Map<String, Float>>): BoolQueryBuilder {
+            authorizedFieldsMap: Map<UUID, Map<String, Float>>
+    ): BoolQueryBuilder {
         val query = QueryBuilders.boolQuery().minimumShouldMatch(1)
         for (search in constraints.searches.get()) {
             if (authorizedFieldsMap.keys.contains(search.propertyType)) {
@@ -632,13 +732,14 @@ class DatastoreKotlinElasticsearchImpl(
 
     private fun getSimpleSearchQuery(
             constraints: Constraint,
-            authorizedFieldsMap: Map<UUID, Map<String, Float>>): QueryBuilder? {
+            authorizedFieldsMap: Map<UUID, Map<String, Float>>
+    ): QueryBuilder? {
         val searchTerm = constraints.searchTerm.get()
         val formattedSearchTerm = if (constraints.fuzzy.get()) getFormattedFuzzyString(searchTerm) else searchTerm
 
-        return QueryBuilders.queryStringQuery( formattedSearchTerm )
+        return QueryBuilders.queryStringQuery(formattedSearchTerm)
                 .fields(
-                        authorizedFieldsMap.values.flatMap{
+                        authorizedFieldsMap.values.flatMap {
                             it.entries
                         }.map {
                             it.key to it.value
@@ -648,7 +749,8 @@ class DatastoreKotlinElasticsearchImpl(
 
     private fun getGeoDistanceSearchQuery(
             constraints: Constraint,
-            authorizedFieldsMap: Map<UUID, Map<String, Float>>): BoolQueryBuilder? {
+            authorizedFieldsMap: Map<UUID, Map<String, Float>>
+    ): BoolQueryBuilder? {
         val propertyTypeId = constraints.propertyTypeId.get()
         if ((authorizedFieldsMap[propertyTypeId] ?: ImmutableMap.of()).size == 0) {
             return null
@@ -658,10 +760,12 @@ class DatastoreKotlinElasticsearchImpl(
         val radius = constraints.radius.get()
         val query = QueryBuilders.boolQuery().minimumShouldMatch(1)
         authorizedFieldsMap[propertyTypeId]!!.keys.forEach(Consumer { fieldName: String? ->
-            query.should(QueryBuilders
-                    .geoDistanceQuery(fieldName)
-                    .point(latitude, longitude)
-                    .distance(radius, DistanceUnit.fromString(constraints.distanceUnit.get().name)))
+            query.should(
+                    QueryBuilders
+                            .geoDistanceQuery(fieldName)
+                            .point(latitude, longitude)
+                            .distance(radius, DistanceUnit.fromString(constraints.distanceUnit.get().name))
+            )
         }
         )
         return query
@@ -669,7 +773,8 @@ class DatastoreKotlinElasticsearchImpl(
 
     private fun getGeoPolygonSearchQuery(
             constraints: Constraint,
-            authorizedFieldsMap: Map<UUID, Map<String, Float>>): BoolQueryBuilder? {
+            authorizedFieldsMap: Map<UUID, Map<String, Float>>
+    ): BoolQueryBuilder? {
         val propertyTypeId = constraints.propertyTypeId.get()
         if ((authorizedFieldsMap[propertyTypeId] ?: ImmutableMap.of()).size == 0) {
             return null
@@ -679,7 +784,14 @@ class DatastoreKotlinElasticsearchImpl(
             val polygon = zone.stream().map { pair: List<Double> -> GeoPoint(pair[1], pair[0]) }
                     .collect(Collectors.toList())
             authorizedFieldsMap[propertyTypeId]!!.keys
-                    .forEach(Consumer { fieldName: String? -> query.should(QueryBuilders.geoPolygonQuery(fieldName, polygon)) })
+                    .forEach(Consumer { fieldName: String? ->
+                        query.should(
+                                QueryBuilders.geoPolygonQuery(
+                                        fieldName,
+                                        polygon
+                                )
+                        )
+                    })
         }
         return query
     }
@@ -702,7 +814,8 @@ class DatastoreKotlinElasticsearchImpl(
     private fun getQueryForSearch(
             entitySetIds: Set<UUID>,
             searchConstraints: SearchConstraints,
-            authorizedFieldsMap: Map<UUID, Map<String, Float>>): QueryBuilder? {
+            authorizedFieldsMap: Map<UUID, Map<String, Float>>
+    ): QueryBuilder? {
         val query = QueryBuilders.boolQuery()
         if (authorizedFieldsMap.size == 0) {
             return null
@@ -713,23 +826,33 @@ class DatastoreKotlinElasticsearchImpl(
             for (constraint in constraintGroup.constraints) {
                 when (constraint.searchType) {
                     SearchType.advanced -> {
-                        val advancedSearchQuery = getAdvancedSearchQuery(constraint,
-                                authorizedFieldsMap)
+                        val advancedSearchQuery = getAdvancedSearchQuery(
+                                constraint,
+                                authorizedFieldsMap
+                        )
                         if (advancedSearchQuery.hasClauses()) subQuery.should(advancedSearchQuery)
                     }
                     SearchType.geoDistance -> {
-                        val geoDistanceSearchQuery = getGeoDistanceSearchQuery(constraint,
-                                authorizedFieldsMap)
+                        val geoDistanceSearchQuery = getGeoDistanceSearchQuery(
+                                constraint,
+                                authorizedFieldsMap
+                        )
                         if (geoDistanceSearchQuery!!.hasClauses()) subQuery.should(geoDistanceSearchQuery)
                     }
                     SearchType.geoPolygon -> {
-                        val geoPolygonSearchQuery = getGeoPolygonSearchQuery(constraint,
-                                authorizedFieldsMap)
+                        val geoPolygonSearchQuery = getGeoPolygonSearchQuery(
+                                constraint,
+                                authorizedFieldsMap
+                        )
                         if (geoPolygonSearchQuery!!.hasClauses()) subQuery.should(geoPolygonSearchQuery)
                     }
                     SearchType.simple -> subQuery.should(getSimpleSearchQuery(constraint, authorizedFieldsMap))
-                    SearchType.writeDateTimeFilter -> subQuery.should(getWriteDateTimeFilterQuery(searchConstraints.entitySetIds,
-                            constraint))
+                    SearchType.writeDateTimeFilter -> subQuery.should(
+                            getWriteDateTimeFilterQuery(
+                                    searchConstraints.entitySetIds,
+                                    constraint
+                            )
+                    )
                 }
             }
             if (!subQuery.hasClauses()) {
@@ -740,8 +863,10 @@ class DatastoreKotlinElasticsearchImpl(
         val entitySetQuery = QueryBuilders.boolQuery().minimumShouldMatch(1)
         entitySetIds.forEach(Consumer { entitySetId: UUID ->
             entitySetQuery.should(
-                    QueryBuilders.termQuery(getFieldName(IdConstants.ENTITY_SET_ID_KEY_ID.id),
-                            entitySetId.toString())
+                    QueryBuilders.termQuery(
+                            getFieldName(IdConstants.ENTITY_SET_ID_KEY_ID.id),
+                            entitySetId.toString()
+                    )
             )
         })
         query.must(QueryBuilders.nestedQuery(ConductorElasticsearchApi.ENTITY, entitySetQuery, ScoreMode.Max))
@@ -753,7 +878,8 @@ class DatastoreKotlinElasticsearchImpl(
             searchConstraints: SearchConstraints,
             entityTypesByEntitySetId: Map<UUID?, UUID?>,
             authorizedPropertyTypesByEntitySet: Map<UUID, DelegatedUUIDSet>,
-            linkingEntitySets: Map<UUID?, DelegatedUUIDSet>): EntityDataKeySearchResult? {
+            linkingEntitySets: Map<UUID?, DelegatedUUIDSet>
+    ): EntityDataKeySearchResult? {
         if (!verifyElasticsearchConnection()) {
             return EntityDataKeySearchResult(0, ImmutableList.of())
         }
@@ -768,12 +894,16 @@ class DatastoreKotlinElasticsearchImpl(
             if (searchQuery != null) {
                 val query = BoolQueryBuilder().queryName(entitySetId.toString()).must(searchQuery)
                 if (linkingEntitySets.containsKey(entitySetId)) {
-                    query.mustNot(QueryBuilders
-                            .existsQuery(ConductorElasticsearchApi.ENTITY_SET_ID_FIELD)) // this field will not exist for linked entity
+                    query.mustNot(
+                            QueryBuilders
+                                    .existsQuery(ConductorElasticsearchApi.ENTITY_SET_ID_FIELD)
+                    ) // this field will not exist for linked entity
                     // documents
                 } else {
-                    query.must(QueryBuilders
-                            .termQuery(ConductorElasticsearchApi.ENTITY_SET_ID_FIELD, entitySetId.toString())) // match entity set id
+                    query.must(
+                            QueryBuilders
+                                    .termQuery(ConductorElasticsearchApi.ENTITY_SET_ID_FIELD, entitySetId.toString())
+                    ) // match entity set id
                 }
                 val request = client!!
                         .prepareSearch(getIndexName(entityTypesByEntitySetId[entitySetId]))
@@ -797,9 +927,10 @@ class DatastoreKotlinElasticsearchImpl(
             entityTypeId: UUID?,
             fieldSearches: Map<UUID?, DelegatedStringSet>,
             size: Int,
-            explain: Boolean): Map<UUID?, Set<UUID?>?>? {
-        if (!verifyElasticsearchConnection()) {
-            return null
+            explain: Boolean
+    ): Map<UUID, Set<UUID>> {
+        require(verifyElasticsearchConnection()) {
+            "A connection to the search service is required."
         }
         val valuesQuery = BoolQueryBuilder()
         fieldSearches.entries.stream().forEach { entry: Map.Entry<UUID?, DelegatedStringSet> ->
@@ -807,7 +938,8 @@ class DatastoreKotlinElasticsearchImpl(
             entry.value.stream().forEach { searchTerm: String ->
                 fieldQuery.should(
                         mustMatchQuery(getFieldName(entry.key), searchTerm).fuzziness(Fuzziness.AUTO)
-                                .lenient(true))
+                                .lenient(true)
+                )
             }
             fieldQuery.minimumShouldMatch(1)
             valuesQuery.should(QueryBuilders.nestedQuery(ConductorElasticsearchApi.ENTITY, fieldQuery, ScoreMode.Avg))
@@ -815,24 +947,32 @@ class DatastoreKotlinElasticsearchImpl(
         valuesQuery.minimumShouldMatch(1)
         val query = QueryBuilders.boolQuery().must(valuesQuery)
                 .must(QueryBuilders.existsQuery(ConductorElasticsearchApi.ENTITY_SET_ID_FIELD))
-        return StreamUtil.stream(client!!.prepareSearch(getIndexName(entityTypeId))
+        return client!!.prepareSearch(getIndexName(entityTypeId))
                 .setQuery(query)
                 .setFrom(0)
                 .setSize(size)
                 .setExplain(explain)
                 .setFetchSource(ConductorElasticsearchApi.ENTITY_SET_ID_FIELD, null)
                 .execute()
-                .actionGet().hits)
+                .actionGet().hits.asSequence()
                 .map { hit: SearchHit ->
                     Pair
-                            .of(UUID.fromString(hit.sourceAsMap[ConductorElasticsearchApi.ENTITY_SET_ID_FIELD].toString()),
-                                    UUID.fromString(hit.id))
+                            .of(
+                                    UUID.fromString(hit.sourceAsMap[ConductorElasticsearchApi.ENTITY_SET_ID_FIELD].toString()),
+                                    UUID.fromString(hit.id)
+                            )
                 }
-                .collect(Collectors.groupingBy(Function { obj: Pair<UUID?, UUID?> -> obj.key }, Collectors.mapping({ obj: Pair<UUID?, UUID?> -> obj.value }, Collectors.toSet())))
+                .groupingBy { it.key }
+                .fold({ _, _ -> mutableSetOf<UUID>() }) { _, acc, elem ->
+                    acc.add(elem.value)
+                    acc
+                }
     }
 
     /*** EDM OBJECT CRUD TRIGGERING INDEX UPDATES  */
-    override fun updateOrganization(id: UUID, optionalTitle: Optional<String?>, optionalDescription: Optional<String?>): Boolean {
+    override fun updateOrganization(
+            id: UUID, optionalTitle: Optional<String?>, optionalDescription: Optional<String?>
+    ): Boolean {
         if (!verifyElasticsearchConnection()) {
             return false
         }
@@ -845,7 +985,11 @@ class DatastoreKotlinElasticsearchImpl(
         }
         try {
             val s = ObjectMappers.getJsonMapper().writeValueAsString(updatedFields)
-            val updateRequest = UpdateRequest(ConductorElasticsearchApi.ORGANIZATIONS, ConductorElasticsearchApi.ORGANIZATION_TYPE, id.toString())
+            val updateRequest = UpdateRequest(
+                    ConductorElasticsearchApi.ORGANIZATIONS,
+                    ConductorElasticsearchApi.ORGANIZATION_TYPE,
+                    id.toString()
+            )
                     .doc(s, XContentType.JSON)
             client!!.update(updateRequest).actionGet()
             return true
@@ -856,27 +1000,36 @@ class DatastoreKotlinElasticsearchImpl(
     }
 
     override fun saveEntityTypeToElasticsearch(entityType: EntityType, propertyTypes: List<PropertyType>): Boolean {
-        saveObjectToElasticsearch(ConductorElasticsearchApi.ENTITY_TYPE_INDEX, ConductorElasticsearchApi.ENTITY_TYPE, entityType, entityType.id.toString())
+        saveObjectToElasticsearch(
+                ConductorElasticsearchApi.ENTITY_TYPE_INDEX,
+                ConductorElasticsearchApi.ENTITY_TYPE,
+                entityType,
+                entityType.id.toString()
+        )
         return createEntityTypeDataIndex(entityType, propertyTypes)
     }
 
     override fun saveAssociationTypeToElasticsearch(
             associationType: AssociationType,
-            propertyTypes: List<PropertyType>): Boolean {
+            propertyTypes: List<PropertyType>
+    ): Boolean {
         val entityType = associationType.associationEntityType
         if (entityType == null) {
             logger.debug("An association type must have an entity type present in order to save to elasticsearch")
             return false
         }
-        saveObjectToElasticsearch(ConductorElasticsearchApi.ASSOCIATION_TYPE_INDEX,
+        saveObjectToElasticsearch(
+                ConductorElasticsearchApi.ASSOCIATION_TYPE_INDEX,
                 ConductorElasticsearchApi.ASSOCIATION_TYPE,
                 associationType,
-                entityType.id.toString())
+                entityType.id.toString()
+        )
         return createEntityTypeDataIndex(entityType, propertyTypes)
     }
 
     override fun saveSecurableObjectToElasticsearch(
-            securableObjectType: SecurableObjectType, securableObject: Any): Boolean {
+            securableObjectType: SecurableObjectType, securableObject: Any
+    ): Boolean {
         val indexName = indexNamesByObjectType[securableObjectType]
         val typeName = typeNamesByIndexName[indexName]
         val id = getIdFnForType(securableObjectType).apply(securableObject)
@@ -884,7 +1037,8 @@ class DatastoreKotlinElasticsearchImpl(
     }
 
     override fun deleteSecurableObjectFromElasticsearch(
-            securableObjectType: SecurableObjectType, objectId: UUID): Boolean {
+            securableObjectType: SecurableObjectType, objectId: UUID
+    ): Boolean {
         if (securableObjectType == SecurableObjectType.EntityType || (securableObjectType
                         == SecurableObjectType.AssociationType)) {
             client!!.admin().indices()
@@ -906,7 +1060,8 @@ class DatastoreKotlinElasticsearchImpl(
             val updateRequest = UpdateRequest(
                     ConductorElasticsearchApi.ENTITY_SET_DATA_MODEL,
                     ConductorElasticsearchApi.ENTITY_SET_TYPE,
-                    entitySet.id.toString()).doc(s, XContentType.JSON)
+                    entitySet.id.toString()
+            ).doc(s, XContentType.JSON)
             client!!.update(updateRequest).actionGet()
             return true
         } catch (e: IOException) {
@@ -926,7 +1081,8 @@ class DatastoreKotlinElasticsearchImpl(
             val updateRequest = UpdateRequest(
                     ConductorElasticsearchApi.ENTITY_SET_DATA_MODEL,
                     ConductorElasticsearchApi.ENTITY_SET_TYPE,
-                    entitySetId.toString()).doc(s, XContentType.JSON)
+                    entitySetId.toString()
+            ).doc(s, XContentType.JSON)
             client!!.update(updateRequest).actionGet()
             return true
         } catch (e: IOException) {
@@ -941,7 +1097,11 @@ class DatastoreKotlinElasticsearchImpl(
         }
         try {
             val s = ObjectMappers.getJsonMapper().writeValueAsString(getOrganizationObject(organization))
-            client!!.prepareIndex(ConductorElasticsearchApi.ORGANIZATIONS, ConductorElasticsearchApi.ORGANIZATION_TYPE, organization.id.toString())
+            client!!.prepareIndex(
+                    ConductorElasticsearchApi.ORGANIZATIONS,
+                    ConductorElasticsearchApi.ORGANIZATION_TYPE,
+                    organization.id.toString()
+            )
                     .setSource(s, XContentType.JSON)
                     .execute().actionGet()
             return true
@@ -953,7 +1113,8 @@ class DatastoreKotlinElasticsearchImpl(
 
     /*** METADATA SEARCHES  */
     override fun executeSecurableObjectSearch(
-            securableObjectType: SecurableObjectType, searchTerm: String, start: Int, maxHits: Int): SearchResult? {
+            securableObjectType: SecurableObjectType, searchTerm: String, start: Int, maxHits: Int
+    ): SearchResult? {
         if (!verifyElasticsearchConnection()) {
             return SearchResult(0, Lists.newArrayList())
         }
@@ -977,19 +1138,28 @@ class DatastoreKotlinElasticsearchImpl(
     }
 
     override fun executeSecurableObjectFQNSearch(
-            securableObjectType: SecurableObjectType, namespace: String, name: String, start: Int, maxHits: Int): SearchResult? {
+            securableObjectType: SecurableObjectType, namespace: String, name: String, start: Int, maxHits: Int
+    ): SearchResult? {
         if (!verifyElasticsearchConnection()) {
             return SearchResult(0, Lists.newArrayList())
         }
         val indexName = indexNamesByObjectType[securableObjectType]
         val typeName = typeNamesByIndexName[indexName]
         val query = BoolQueryBuilder()
-        query.must(QueryBuilders
-                .regexpQuery(SerializationConstants.TYPE_FIELD + "." + SerializationConstants.NAMESPACE_FIELD,
-                        ".*$namespace.*"))
-                .must(QueryBuilders
-                        .regexpQuery(SerializationConstants.TYPE_FIELD + "." + SerializationConstants.NAME_FIELD,
-                                ".*$name.*"))
+        query.must(
+                QueryBuilders
+                        .regexpQuery(
+                                SerializationConstants.TYPE_FIELD + "." + SerializationConstants.NAMESPACE_FIELD,
+                                ".*$namespace.*"
+                        )
+        )
+                .must(
+                        QueryBuilders
+                                .regexpQuery(
+                                        SerializationConstants.TYPE_FIELD + "." + SerializationConstants.NAME_FIELD,
+                                        ".*$name.*"
+                                )
+                )
         val response = client!!.prepareSearch(indexName)
                 .setTypes(typeName)
                 .setQuery(query)
@@ -1005,7 +1175,8 @@ class DatastoreKotlinElasticsearchImpl(
     }
 
     override fun executeEntitySetCollectionSearch(
-            searchTerm: String?, authorizedEntitySetCollectionIds: Set<AclKey?>?, start: Int, maxHits: Int): SearchResult? {
+            searchTerm: String?, authorizedEntitySetCollectionIds: Set<AclKey?>?, start: Int, maxHits: Int
+    ): SearchResult? {
         return null
     }
 
@@ -1013,20 +1184,26 @@ class DatastoreKotlinElasticsearchImpl(
             searchTerm: String?,
             authorizedOrganizationIds: Set<AclKey>,
             start: Int,
-            maxHits: Int): SearchResult? {
+            maxHits: Int
+    ): SearchResult? {
         if (!verifyElasticsearchConnection()) {
             return SearchResult(0, Lists.newArrayList())
         }
 
         val query = BoolQueryBuilder()
-                .should(QueryBuilders.queryStringQuery(searchTerm).field(SerializationConstants.TITLE_FIELD)
-                        .lenient(true).fuzziness(Fuzziness.AUTO))
-                .should(QueryBuilders.queryStringQuery(searchTerm).field(SerializationConstants.DESCRIPTION_FIELD)
-                        .lenient(true).fuzziness(Fuzziness.AUTO))
+                .should(
+                        QueryBuilders.queryStringQuery(searchTerm).field(SerializationConstants.TITLE_FIELD)
+                                .lenient(true).fuzziness(Fuzziness.AUTO)
+                )
+                .should(
+                        QueryBuilders.queryStringQuery(searchTerm).field(SerializationConstants.DESCRIPTION_FIELD)
+                                .lenient(true).fuzziness(Fuzziness.AUTO)
+                )
                 .minimumShouldMatch(1)
 
-        query.filter(QueryBuilders.idsQuery()
-                .addIds(*authorizedOrganizationIds.map {
+        query.filter(
+                QueryBuilders.idsQuery()
+                        .addIds(*authorizedOrganizationIds.map {
                             it[0].toString()
                         }.toTypedArray())
         )
@@ -1053,7 +1230,8 @@ class DatastoreKotlinElasticsearchImpl(
             optionalPropertyTypes: Optional<Set<UUID>?>,
             authorizedAclKeys: Set<AclKey>,
             start: Int,
-            maxHits: Int): SearchResult? {
+            maxHits: Int
+    ): SearchResult? {
         if (!verifyElasticsearchConnection()) {
             return SearchResult(0, Lists.newArrayList())
         }
@@ -1065,31 +1243,49 @@ class DatastoreKotlinElasticsearchImpl(
             fieldsMap[ConductorElasticsearchApi.ENTITY_SET + "." + SerializationConstants.NAME] = 1f
             fieldsMap[ConductorElasticsearchApi.ENTITY_SET + "." + SerializationConstants.TITLE_FIELD] = 1f
             fieldsMap[ConductorElasticsearchApi.ENTITY_SET + "." + SerializationConstants.DESCRIPTION_FIELD] = 1f
-            query.must(QueryBuilders.queryStringQuery(getFormattedFuzzyString(searchTerm)).fields(fieldsMap)
-                    .lenient(true).fuzziness(Fuzziness.AUTO))
+            query.must(
+                    QueryBuilders.queryStringQuery(getFormattedFuzzyString(searchTerm)).fields(fieldsMap)
+                            .lenient(true).fuzziness(Fuzziness.AUTO)
+            )
         }
         if (optionalEntityType.isPresent) {
             val eid = optionalEntityType.get()
-            query.must(mustMatchQuery(ConductorElasticsearchApi.ENTITY_SET + "." + SerializationConstants.ENTITY_TYPE_ID, eid.toString()))
+            query.must(
+                    mustMatchQuery(
+                            ConductorElasticsearchApi.ENTITY_SET + "." + SerializationConstants.ENTITY_TYPE_ID,
+                            eid.toString()
+                    )
+            )
         } else if (optionalPropertyTypes.isPresent) {
             val propertyTypes = optionalPropertyTypes.get()
             for (pid in propertyTypes) {
-                query.must(QueryBuilders.nestedQuery(ConductorElasticsearchApi.PROPERTY_TYPES,
-                        mustMatchQuery(ConductorElasticsearchApi.PROPERTY_TYPES + "." + SerializationConstants.ID_FIELD, pid.toString()),
-                        ScoreMode.Avg))
+                query.must(
+                        QueryBuilders.nestedQuery(
+                                ConductorElasticsearchApi.PROPERTY_TYPES,
+                                mustMatchQuery(
+                                        ConductorElasticsearchApi.PROPERTY_TYPES + "." + SerializationConstants.ID_FIELD,
+                                        pid.toString()
+                                ),
+                                ScoreMode.Avg
+                        )
+                )
             }
         }
 
-        query.filter(QueryBuilders.idsQuery()
-                .addIds(*authorizedAclKeys.map {
-                    it[0].toString()
-                }.toTypedArray())
+        query.filter(
+                QueryBuilders.idsQuery()
+                        .addIds(*authorizedAclKeys.map {
+                            it[0].toString()
+                        }.toTypedArray())
         )
 
         val response = client!!.prepareSearch(ConductorElasticsearchApi.ENTITY_SET_DATA_MODEL)
                 .setTypes(ConductorElasticsearchApi.ENTITY_SET_TYPE)
                 .setQuery(query)
-                .setFetchSource(arrayOf(ConductorElasticsearchApi.ENTITY_SET, ConductorElasticsearchApi.PROPERTY_TYPES), null)
+                .setFetchSource(
+                        arrayOf(ConductorElasticsearchApi.ENTITY_SET, ConductorElasticsearchApi.PROPERTY_TYPES),
+                        null
+                )
                 .setFrom(start)
                 .setSize(maxHits)
                 .execute()
@@ -1110,15 +1306,23 @@ class DatastoreKotlinElasticsearchImpl(
 
     override fun triggerEntitySetIndex(
             entitySets: Map<EntitySet?, Set<UUID?>>,
-            propertyTypes: Map<UUID?, PropertyType?>): Boolean {
+            propertyTypes: Map<UUID?, PropertyType?>
+    ): Boolean {
         val idFn = Function { map: Any -> (map as Map<String?, EntitySet>)[ConductorElasticsearchApi.ENTITY_SET]!!.id.toString() }
         val entitySetMaps = entitySets.entries.stream().map<Map<String, Any?>> { entry: Map.Entry<EntitySet?, Set<UUID?>> ->
             val entitySetMap: MutableMap<String, Any?> = Maps.newHashMap()
             entitySetMap[ConductorElasticsearchApi.ENTITY_SET] = entry.key
-            entitySetMap[ConductorElasticsearchApi.PROPERTY_TYPES] = entry.value.stream().map { key: UUID? -> propertyTypes[key] }.collect(Collectors.toList())
+            entitySetMap[ConductorElasticsearchApi.PROPERTY_TYPES] = entry.value.stream().map { key: UUID? -> propertyTypes[key] }.collect(
+                    Collectors.toList()
+            )
             entitySetMap
         }.collect(Collectors.toList())
-        return triggerIndex(ConductorElasticsearchApi.ENTITY_SET_DATA_MODEL, ConductorElasticsearchApi.ENTITY_SET_TYPE, entitySetMaps, idFn)
+        return triggerIndex(
+                ConductorElasticsearchApi.ENTITY_SET_DATA_MODEL,
+                ConductorElasticsearchApi.ENTITY_SET_TYPE,
+                entitySetMaps,
+                idFn
+        )
     }
 
     override fun triggerOrganizationIndex(organizations: List<Organization>): Boolean {
@@ -1127,30 +1331,39 @@ class DatastoreKotlinElasticsearchImpl(
         }
 
         val organizationObjects = organizations.map {
-            getOrganizationObject( it )
+            getOrganizationObject(it)
         }.toList()
 
-        return triggerIndex(ConductorElasticsearchApi.ORGANIZATIONS, ConductorElasticsearchApi.ORGANIZATION_TYPE, organizationObjects, idFn)
+        return triggerIndex(
+                ConductorElasticsearchApi.ORGANIZATIONS,
+                ConductorElasticsearchApi.ORGANIZATION_TYPE,
+                organizationObjects,
+                idFn
+        )
     }
 
     override fun triggerSecurableObjectIndex(
             securableObjectType: SecurableObjectType,
-            securableObjects: Iterable<*>): Boolean {
+            securableObjects: Iterable<*>
+    ): Boolean {
         val indexName = indexNamesByObjectType[securableObjectType]
         val typeName = typeNamesByIndexName[indexName]
         return triggerIndex(indexName, typeName, securableObjects, getIdFnForType(securableObjectType))
     }
 
-    override fun clearAllData(): Boolean {
+    //TODO: Seems dangerous and like we should delete?
+    fun clearAllData(): Boolean {
         client!!.admin().indices()
                 .delete(DeleteIndexRequest(ConductorElasticsearchApi.DATA_INDEX_PREFIX + "*"))
         DeleteByQueryRequestBuilder(client, DeleteByQueryAction.INSTANCE)
-                .filter(QueryBuilders.matchAllQuery()).source(ConductorElasticsearchApi.ENTITY_SET_DATA_MODEL,
+                .filter(QueryBuilders.matchAllQuery()).source(
+                        ConductorElasticsearchApi.ENTITY_SET_DATA_MODEL,
                         ConductorElasticsearchApi.ENTITY_TYPE_INDEX,
                         ConductorElasticsearchApi.PROPERTY_TYPE_INDEX,
                         ConductorElasticsearchApi.ASSOCIATION_TYPE_INDEX,
                         ConductorElasticsearchApi.ORGANIZATIONS,
-                        ConductorElasticsearchApi.APP_INDEX)
+                        ConductorElasticsearchApi.APP_INDEX
+                )
                 .get()
         return true
     }
@@ -1193,16 +1406,19 @@ class DatastoreKotlinElasticsearchImpl(
         return QueryBuilders.matchQuery(field, value).operator(Operator.AND)
     }
 
-    @SuppressFBWarnings(value = ["NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"], justification = "propertyTypeId cannot be " +
-            "null")
+    @SuppressFBWarnings(
+            value = ["NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"], justification = "propertyTypeId cannot be " +
+            "null"
+    )
     private fun buildSort(sortDefinition: SortDefinition): SortBuilder<*> {
-        val sort: SortBuilder<*>
-        sort = when (sortDefinition.sortType) {
+        val sort: SortBuilder<*> = when (sortDefinition.sortType) {
             SortType.field -> FieldSortBuilder(getFieldName(sortDefinition.propertyTypeId))
                     .setNestedSort(NestedSortBuilder(ConductorElasticsearchApi.ENTITY))
-            SortType.geoDistance -> GeoDistanceSortBuilder(getFieldName(sortDefinition.propertyTypeId),
+            SortType.geoDistance -> GeoDistanceSortBuilder(
+                    getFieldName(sortDefinition.propertyTypeId),
                     sortDefinition.latitude.get(),
-                    sortDefinition.longitude.get())
+                    sortDefinition.longitude.get()
+            )
                     .setNestedSort(NestedSortBuilder(ConductorElasticsearchApi.ENTITY))
             SortType.score -> ScoreSortBuilder()
             else -> ScoreSortBuilder()
@@ -1214,15 +1430,21 @@ class DatastoreKotlinElasticsearchImpl(
     private fun getFieldsMap(objectType: SecurableObjectType): Map<String, Float> {
         val f = 1f
         val fieldsMap: MutableMap<String, Float> = Maps.newHashMap()
-        val fields: MutableList<String> = Lists.newArrayList(SerializationConstants.ID_FIELD,
+        val fields: MutableList<String> = Lists.newArrayList(
+                SerializationConstants.ID_FIELD,
                 SerializationConstants.TITLE_FIELD,
-                SerializationConstants.DESCRIPTION_FIELD)
+                SerializationConstants.DESCRIPTION_FIELD
+        )
         when (objectType) {
             SecurableObjectType.AssociationType -> {
-                fields.add(SerializationConstants.ENTITY_TYPE + "." + SerializationConstants.TYPE_FIELD + "."
-                        + SerializationConstants.NAME)
-                fields.add(SerializationConstants.ENTITY_TYPE + "." + SerializationConstants.TYPE_FIELD + "."
-                        + SerializationConstants.NAMESPACE)
+                fields.add(
+                        SerializationConstants.ENTITY_TYPE + "." + SerializationConstants.TYPE_FIELD + "."
+                                + SerializationConstants.NAME
+                )
+                fields.add(
+                        SerializationConstants.ENTITY_TYPE + "." + SerializationConstants.TYPE_FIELD + "."
+                                + SerializationConstants.NAMESPACE
+                )
             }
             SecurableObjectType.App -> {
                 fields.add(SerializationConstants.NAME)
@@ -1257,7 +1479,8 @@ class DatastoreKotlinElasticsearchImpl(
             index: String?,
             type: String?,
             objects: Iterable<*>,
-            idFn: Function<Any, String>): Boolean {
+            idFn: Function<Any, String>
+    ): Boolean {
         if (!verifyElasticsearchConnection()) {
             return false
         }
@@ -1272,8 +1495,10 @@ class DatastoreKotlinElasticsearchImpl(
                 val id = idFn.apply(it!!)
                 val s = ObjectMappers.getJsonMapper().writeValueAsString(it)
                 bulkRequest
-                        .add(client!!.prepareIndex(index, type, id)
-                                .setSource(s, XContentType.JSON))
+                        .add(
+                                client!!.prepareIndex(index, type, id)
+                                        .setSource(s, XContentType.JSON)
+                        )
             } catch (e: JsonProcessingException) {
                 logger.error("Error re-indexing securable object type to index {}", index)
             }
@@ -1290,9 +1515,11 @@ class DatastoreKotlinElasticsearchImpl(
     }
 
     private fun getOrganizationObject(organization: Organization): Map<String, Any>? {
-        return mapOf( SerializationConstants.ID_FIELD to organization.id,
+        return mapOf(
+                SerializationConstants.ID_FIELD to organization.id,
                 SerializationConstants.TITLE_FIELD to organization.title,
-                SerializationConstants.DESCRIPTION_FIELD to organization.description)
+                SerializationConstants.DESCRIPTION_FIELD to organization.description
+        )
     }
 
     fun verifyElasticsearchConnection(): Boolean {
