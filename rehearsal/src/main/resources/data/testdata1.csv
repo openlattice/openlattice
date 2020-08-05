@@ -1,4 +1,4 @@
-,trainingid,firstname,lastname,ssn,sex,dob,race,ethnicity
+index,trainingid,firstname,lastname,ssn,sex,dob,race,ethnicity
 0,cea531fc-8ad9-11e8-a1c7-0242ac110003,Beverly,Amelung,724-62-2327,,1964-08-01,other,
 1,cd7e18d4-8ad9-11e8-a1c7-0242ac110003,,Tetreault,,M,1996-11-07,asian,
 2,ce444fae-8ad9-11e8-a1c7-0242ac110003,Bill,Vitullo,,M,1947-08-05,white,nonhispanic

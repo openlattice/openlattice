@@ -62,7 +62,7 @@ class DataControllerLinkingTest : SetupTestData() {
         @BeforeClass
         fun init() {
             importedEntitySets.forEach {
-                importDataSet(it.value.first, it.value.second)
+                importDataSetFromCSV(it.value.first, it.value.second)
             }
 
             Thread.sleep(10000L)

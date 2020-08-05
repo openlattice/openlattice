@@ -36,42 +36,73 @@ open class SetupTestData : MultipleAuthenticatedUsersBase() {
     companion object {
         private const val DATA_FOLDER = "data"
         private const val FLIGHT_FOLDER = "flights"
+        private const val CONFIG_FOLDER = "config"
 
         init {
             MissionControl.continueAfterSuccess()
         }
 
-        @Test
-        fun doImport() {
-            importDataSet("$DATA_FOLDER/socratesA.yaml","$FLIGHT_FOLDER/testdata1.csv")
-            importDataSet("$DATA_FOLDER/socratesB.yaml","$FLIGHT_FOLDER/testdata2.csv")
-        }
-        /**
-         * Import datasets via Shuttle
-         * @param
-         */
-        fun importDataSet(flightFileName: String, dataFileName: String) {
-            loginAs("admin")
+        fun getDefaultShuttleArgs(): Array<String> {
+            loginAs("admin");
             val tokenAdmin = AuthenticationTest.getAuthentication(authOptions).credentials
+            val email = getUserInfo(SetupEnvironment.admin).email
 
+            return arrayOf(
+                    "-${ShuttleCliOptions.ENVIRONMENT}=LOCAL",
+                    "-${ShuttleCliOptions.FETCHSIZE}=1000",
+                    "-${ShuttleCliOptions.UPLOAD_SIZE}=1000",
+                    "-${ShuttleCliOptions.TOKEN}=$tokenAdmin",
+                    "-${ShuttleCliOptions.CREATE}=$email")
+        }
+
+        /**
+         * Import datasets from CSV via Shuttle
+         * @param flightFileName
+         * @param dataFileName
+         */
+        fun importDataSetFromCSV(flightFileName: String, dataFileName: String) {
             val flightFile = File(Thread.currentThread().contextClassLoader.getResource(FLIGHT_FOLDER).file,
                     flightFileName).absolutePath
             val dataFile = File(Thread.currentThread().contextClassLoader.getResource(DATA_FOLDER).file, dataFileName)
                     .absolutePath
-            val email = getUserInfo(SetupEnvironment.admin).email
+            val shuttleArgs : Array<String> = getDefaultShuttleArgs()
 
-            main(arrayOf(
-                    "-${ShuttleCliOptions.FLIGHT}=$flightFile",
-                    "-${ShuttleCliOptions.CSV}=$dataFile",
-                    "-${ShuttleCliOptions.ENVIRONMENT}=LOCAL",
-                    "-${ShuttleCliOptions.TOKEN}=$tokenAdmin",
-                    "-${ShuttleCliOptions.CREATE}=$email"))
+            main(shuttleArgs.plus(
+                    arrayOf(
+                            "-${ShuttleCliOptions.FLIGHT}=$flightFile",
+                            "-${ShuttleCliOptions.CSV}=$dataFile"
+                    )
+            ))
         }
+
+        /**
+         * Import datasets from CSV via Shuttle
+         * @param flightFileName
+         * @param flightSql
+         * @param dataConfiguration
+         * @param dataConfigurationKey
+         */
+        fun importDataSetFromAtlas(flightFileName: String, flightSql: String, dataConfiguration: String, dataConfigurationKey: String) {
+            val flightFile = File(Thread.currentThread().contextClassLoader.getResource(FLIGHT_FOLDER).file,
+                    flightFileName).absolutePath
+            val configFile = File(Thread.currentThread().contextClassLoader.getResource(CONFIG_FOLDER).file, dataConfiguration)
+                        .absolutePath
+            val shuttleArgs : Array<String> = getDefaultShuttleArgs()
+            main(shuttleArgs.plus(
+                    arrayOf(
+                            "-${ShuttleCliOptions.FLIGHT}=$flightFile",
+                            "-${ShuttleCliOptions.SQL}=$flightSql",
+                            "-${ShuttleCliOptions.CONFIGURATION}=$configFile",
+                            "-${ShuttleCliOptions.DATASOURCE}=$dataConfigurationKey"
+                    )
+            ))
+        }
+
 
         /**
          * Indicates whether the [com.openlattice.linking.RealtimeLinkingService] is finished for entitysets
          */
-        fun checkLinkingFinished( importedGeneralPersonFqns: Set<String>): Boolean {
+        fun checkLinkingFinished(importedGeneralPersonFqns: Set<String>): Boolean {
             val finishedEntitySets = realtimeLinkingApi.linkingFinishedEntitySets
             val finished = importedGeneralPersonFqns.all { finishedEntitySets.contains(entitySetsApi.getEntitySetId(it)) }
 
@@ -79,5 +110,12 @@ open class SetupTestData : MultipleAuthenticatedUsersBase() {
             return finished
         }
     }
+
+    @Test
+    fun doImport() {
+        importDataSetFromCSV("socratesA.yaml", "testdata1.csv")
+        importDataSetFromCSV("socratesB.yaml", "testdata2.csv")
+    }
+
 
 }
