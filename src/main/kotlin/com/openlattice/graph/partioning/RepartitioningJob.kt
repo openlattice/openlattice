@@ -50,6 +50,8 @@ class RepartitioningJob(
             newPartitions: Set<Int>
     ) : this(RepartitioningJobState(entitySetId, oldPartitions, newPartitions))
 
+    override val resumable: Boolean = true
+
     var phase: RepartitioningPhase = RepartitioningPhase.POPULATE
         private set
 
@@ -109,13 +111,24 @@ class RepartitioningJob(
         //TODO: Consider adding completion hook to distributable jobs framework
         //Once we are done, set the partitions.
         if (!hasWorkRemaining && phase == RepartitioningPhase.POPULATE) {
+            //First, we save job progress with the latest job status so that the job can safely be resumed.
+            state.currentlyMigratingPartitionIndex = 0
+            hasWorkRemaining = true
+            phase = RepartitioningPhase.FINALIZE
+            try {
+                //Make sure we pull any status updates, in case job has been canceled or pause
+                updateJobStatus()
+            } finally {
+                //Even if something goes wrong with pulling job status let's save the state we are in.
+                publishJobState()
+            }
+
             setPartitions(state.entitySetId, state.newPartitions)
             //The 4*getCount was an estimate, we remove estimate and addin updated value.
             state.needsMigrationCount /= 2
             state.needsMigrationCount += getNeedsMigrationCount()
-            state.currentlyMigratingPartitionIndex = 0
-            hasWorkRemaining = true
-            phase = RepartitioningPhase.FINALIZE
+            //Another publish to save needsMigrationCount
+            publishJobState()
         }
     }
 
