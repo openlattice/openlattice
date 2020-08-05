@@ -1470,6 +1470,7 @@ class DatastoreKotlinElasticsearchImpl(
         return fieldsMap
     }
 
+    //TODO: Make sure these really have to be null paramters.
     fun triggerIndex(
             index: String?,
             type: String?,
