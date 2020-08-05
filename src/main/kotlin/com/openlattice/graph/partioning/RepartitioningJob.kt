@@ -375,7 +375,7 @@ INSERT INTO ${E.name} SELECT $REPARTITION_EDGES_COLUMNS
  */
 private val DELETE_DATA_SQL = """
 DELETE FROM ${DATA.name} 
-    USING (SELECT ${ID.name},${ENTITY_SET_ID.name},${PARTITION.name} FROM ${DATA.name} INNER JOIN (select ? as ${ENTITY_SET_ID.name},? as ${PARTITIONS.name} ) as es USING (${ENTITY_SET_ID.name})) as to_be_deleted
+    USING (SELECT ${ID.name},${ENTITY_SET_ID.name},${PARTITION.name},${PARTITIONS.name} FROM ${DATA.name} INNER JOIN (select ? as ${ENTITY_SET_ID.name},? as ${PARTITIONS.name} ) as es USING (${ENTITY_SET_ID.name})) as to_be_deleted
     WHERE ${DATA.name}.${PARTITION.name} = ? AND  ${DATA.name}.${PARTITION.name}!=$REPARTITION_SELECTOR AND to_be_deleted.${ID.name} = ${DATA.name}.${ID.name} and to_be_deleted.${PARTITION.name} = ${DATA.name}.${PARTITION.name};  
 """.trimIndent()
 
@@ -387,7 +387,7 @@ DELETE FROM ${DATA.name}
  */
 private val DELETE_IDS_SQL = """
 DELETE FROM ${ID.name} 
-    USING (SELECT ${ID.name},${ENTITY_SET_ID.name},${PARTITION.name} FROM ${IDS.name} INNER JOIN (select ? as ${ENTITY_SET_ID.name},? as ${PARTITIONS.name} ) as es USING (${ENTITY_SET_ID.name})) as to_be_deleted
+    USING (SELECT ${ID.name},${ENTITY_SET_ID.name},${PARTITION.name},${PARTITIONS.name} FROM ${IDS.name} INNER JOIN (select ? as ${ENTITY_SET_ID.name},? as ${PARTITIONS.name} ) as es USING (${ENTITY_SET_ID.name})) as to_be_deleted
     WHERE ${ID.name}.${PARTITION.name} = ? AND ${ID.name}.${PARTITION.name}!=$REPARTITION_SELECTOR AND to_be_deleted.${ID.name} = ${IDS.name}.${ID.name} and to_be_deleted.${PARTITION.name} = ${IDS.name}.${PARTITION.name};  
 """.trimIndent()
 
@@ -400,6 +400,6 @@ DELETE FROM ${ID.name}
  */
 private val DELETE_EDGES_SQL = """
 DELETE FROM ${E.name} 
-    USING (SELECT ${SRC_ENTITY_SET_ID.name},${SRC_ENTITY_KEY_ID.name},${PARTITION.name} FROM ${E.name} INNER JOIN (select ? as ${SRC_ENTITY_SET_ID.name},? as ${PARTITIONS.name} ) as es USING (${SRC_ENTITY_SET_ID.name})) as to_be_deleted
+    USING (SELECT ${SRC_ENTITY_SET_ID.name},${SRC_ENTITY_KEY_ID.name},${PARTITION.name},${PARTITIONS.name} FROM ${E.name} INNER JOIN (select ? as ${SRC_ENTITY_SET_ID.name},? as ${PARTITIONS.name} ) as es USING (${SRC_ENTITY_SET_ID.name})) as to_be_deleted
     WHERE ${E.name}.${PARTITION.name} = ? AND ${E.name}.${PARTITION.name}!=$REPARTITION_SELECTOR AND to_be_deleted.${ID.name} = ${E.name}.${ID.name} and to_be_deleted.${PARTITION.name} = ${E.name}.${PARTITION.name};
 """.trimIndent()
