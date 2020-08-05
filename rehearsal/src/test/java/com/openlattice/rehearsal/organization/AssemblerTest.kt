@@ -24,6 +24,7 @@ import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.rehearsal.assertException
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
+import org.apache.spark.sql.SparkSession
 import org.junit.Assert
 import org.junit.BeforeClass
 import org.junit.Test
@@ -1210,7 +1211,10 @@ class AssemblerTest : AssemblerTestBase() {
                 )),
                 mapOf(sourceDb to integrations)
         )
-        IntegrationRunner.runIntegrations(integrationConfiguration)
+
+        IntegrationRunner.configureOrGetSparkSession( integrationConfiguration ).use { session ->
+            IntegrationRunner.runIntegrations(integrationConfiguration, session)
+        }
 
         // check if table is there
         val organizationDataSource2 = TestAssemblerConnectionManager.connect(organization2.id)
