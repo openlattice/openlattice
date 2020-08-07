@@ -171,6 +171,27 @@ class BackgroundExternalDatabaseSyncingService(
 
         }
 
+        //check if tables have been deleted in the database
+        val missingTableIds = organizationExternalDatabaseTables.keys - currentTableIds
+        if (missingTableIds.isNotEmpty()) {
+            edms.deleteOrganizationExternalDatabaseTableObjects(missingTableIds)
+            totalSynced += missingTableIds.size
+        }
+
+        //check if columns have been deleted in the database
+        val missingColumnIds = organizationExternalDatabaseColumns.keys - currentColumnIds
+
+
+        if (missingColumnIds.isNotEmpty()) {
+            val missingColumnsByTable = organizationExternalDatabaseColumns
+                    .getAll(missingColumnIds).entries
+                    .groupBy { it.value.tableId }
+                    .mapValues { it.value.map { entry -> entry.key!! }.toSet() }
+
+            edms.deleteOrganizationExternalDatabaseColumnObjects(missingColumnsByTable)
+            totalSynced += missingColumnIds.size
+        }
+
         return totalSynced
     }
 
