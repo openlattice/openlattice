@@ -97,7 +97,7 @@ class Auth0UserListingService(
             // if at any point we have too many users, we might have to download the file
             return buffered.lines().map { line -> mapper.readValue(line, User::class.java) }.collect(Collectors.toList())
         } catch (e: Exception) {
-            logger.error("Couldn't read list of users from download url $downloadUrl.")
+            logger.error("Couldn't read list of users from download url $downloadUrl.",e)
             throw e
         }
     }
