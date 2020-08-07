@@ -391,15 +391,19 @@ class PostgresEntityDataQueryService(
                         val dataType = authorizedPropertyTypes.getValue(propertyTypeId).datatype
 
                         val (propertyHash, insertValue) = getPropertyHash(
-                                entitySetId, entityKeyId, propertyTypeId,
-                                value, dataType, awsPassthrough
+                                entitySetId,
+                                entityKeyId,
+                                propertyTypeId,
+                                value,
+                                dataType,
+                                awsPassthrough
                         )
 
                         upsertPropertyValue.setObject(1, entitySetId)
                         upsertPropertyValue.setObject(2, entityKeyId)
                         upsertPropertyValue.setInt(3, partition)
                         upsertPropertyValue.setObject(4, propertyTypeId)
-                        upsertPropertyValue.setObject(5, propertyHash)
+                        upsertPropertyValue.setBytes(5, propertyHash)
                         upsertPropertyValue.setObject(6, version)
                         upsertPropertyValue.setArray(7, versionsArrays)
                         upsertPropertyValue.setObject(8, insertValue)
