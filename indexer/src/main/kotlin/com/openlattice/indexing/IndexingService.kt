@@ -78,8 +78,7 @@ class IndexingService(
 
     init {
         //Add back in jobs that did not complete but are still registered.
-        val jobIds = indexingJobs.keys
-        jobIds.removeIf(indexingQueue::contains)
+        val jobIds = indexingJobs.keys.filter { !indexingQueue.contains(it) }
         logger.info("Re-adding the following jobs that were registered but not in the queue: {}", jobIds)
         if (jobIds.isNotEmpty()) {
             //If jobIds is empty it will add all entity sets for indexing.
