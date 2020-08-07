@@ -18,7 +18,6 @@ import com.openlattice.organization.OrganizationPrincipal
 import com.openlattice.organization.roles.Role
 import com.openlattice.organizations.events.*
 import com.openlattice.organizations.mapstores.CONNECTIONS_INDEX
-import com.openlattice.organizations.mapstores.DOMAINS_INDEX
 import com.openlattice.organizations.mapstores.MEMBERS_INDEX
 import com.openlattice.organizations.processors.OrganizationEntryProcessor
 import com.openlattice.organizations.processors.OrganizationEntryProcessor.Result
@@ -30,6 +29,7 @@ import com.openlattice.users.getAppMetadata
 import com.openlattice.users.processors.aggregators.UsersWithConnectionsAggregator
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
+import java.io.Serializable
 import java.util.*
 import java.util.stream.Stream
 import javax.inject.Inject
@@ -291,7 +291,7 @@ class HazelcastOrganizationService(
     ): Set<Principal> {
         require(orgAclKey.size == 1) { "Organization acl key should only be of length 1" }
 
-        val members = membersToAdd.toSet()
+        val members = if (membersToAdd is Serializable) membersToAdd else membersToAdd.toSet()
 
         val nonUserPrincipals = members.filter { it.type != PrincipalType.USER }
         require(nonUserPrincipals.isEmpty()) { "Cannot add non-users principals $nonUserPrincipals to organization $orgAclKey" }
