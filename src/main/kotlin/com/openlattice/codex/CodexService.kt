@@ -179,6 +179,8 @@ class CodexService(
             val phoneNumber = smsDetails.phoneNumber
             val lastSync = smsDetails.lastSync
 
+            logger.info("About to sync messages for organization {} after date {}", organizationId, lastSync)
+
             val newLastSync = integrateMessagesFromTwilioAfterLastSync(
                     organizationId,
                     phoneNumber,
