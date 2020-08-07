@@ -345,8 +345,8 @@ class CodexService(
                 edgesByEntityKey.map { triple ->
                     DataEdgeKey(
                             EntityDataKey(messageEntitySetId, idsByEntityKey.getValue(triple.first)),
-                            EntityDataKey(assocEntitySetId, idsByEntityKey.getValue(triple.second)),
-                            EntityDataKey(contactEntitySetId, idsByEntityKey.getValue(triple.third))
+                            EntityDataKey(contactEntitySetId, idsByEntityKey.getValue(triple.third)),
+                            EntityDataKey(assocEntitySetId, idsByEntityKey.getValue(triple.second))
                     )
                 }.toSet()
         )
