@@ -77,6 +77,8 @@ class Auth0UserListingService(
             exportJobResult = exportEntity.getJob(job.id)
         }
 
+        Thread.sleep(1000) // TODO actually fix
+
         return readUsersFromLocation(exportJobResult)
     }
 
