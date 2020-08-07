@@ -286,10 +286,12 @@ class HazelcastOrganizationService(
 
     private fun addMembers(
             orgAclKey: AclKey,
-            members: Set<Principal>,
+            membersToAdd: Set<Principal>,
             profiles: Map<Principal, Map<String, Set<String>>>
     ): Set<Principal> {
         require(orgAclKey.size == 1) { "Organization acl key should only be of length 1" }
+
+        val members = membersToAdd.toSet()
 
         val nonUserPrincipals = members.filter { it.type != PrincipalType.USER }
         require(nonUserPrincipals.isEmpty()) { "Cannot add non-users principals $nonUserPrincipals to organization $orgAclKey" }
