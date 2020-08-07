@@ -337,9 +337,13 @@ class CodexService(
 
         val allPropertyTypes = getPropertyTypes(CodexConstants.AppType.MESSAGES) + getPropertyTypes(associationAppType) + getPropertyTypes(CodexConstants.AppType.CONTACT_INFO)
 
+        logger.info("MESSAGE PAGE:")
+        logger.info("entitiesByEntityKey: {}", entitiesByEntityKey)
+
         entitiesByEntityKey.entries.groupBy { it.key.entitySetId }.mapValues {
             it.value.associate { entry -> idsByEntityKey.getValue(entry.key) to entry.value }
         }.forEach { (entitySetId, entities) ->
+            logger.info("Entities grouped for entity set {}: {}", entitySetId, entities)
             dataGraphManager.partialReplaceEntities(entitySetId, entities, allPropertyTypes)
         }
 
