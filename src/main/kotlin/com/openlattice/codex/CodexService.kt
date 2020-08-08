@@ -311,7 +311,6 @@ class CodexService(
         val contactEntitySetId = getEntitySetId(organizationId, CodexConstants.AppType.CONTACT_INFO)
         val assocEntitySetId = getEntitySetId(organizationId, associationAppType)
 
-        val mediaByEntityKey = mutableMapOf<EntityKey, Map<UUID, Set<Any>>>()
         val entitiesByEntityKey = mutableMapOf<EntityKey, Map<UUID, Set<Any>>>()
         val edgesByEntityKey = mutableListOf<Triple<EntityKey, EntityKey, EntityKey>>()
 
@@ -331,11 +330,6 @@ class CodexService(
             entitiesByEntityKey[associationEntityKey] = getAssociationEntity(dateTime)
             entitiesByEntityKey[contactEntityKey] = getContactEntity(phoneNumber)
 
-            val messageMedia = getMessageMedia(it)
-            if (messageMedia.isNotEmpty()) {
-                mediaByEntityKey[messageEntityKey] = messageMedia
-            }
-
             edgesByEntityKey.add(Triple(messageEntityKey, associationEntityKey, contactEntityKey))
         }
 
@@ -343,22 +337,11 @@ class CodexService(
 
         val allPropertyTypes = getPropertyTypes(CodexConstants.AppType.MESSAGES) + getPropertyTypes(associationAppType) + getPropertyTypes(CodexConstants.AppType.CONTACT_INFO)
 
-        logger.info("MESSAGE PAGE:")
-        logger.info("entitiesByEntityKey: {}", entitiesByEntityKey)
-
         entitiesByEntityKey.entries.groupBy { it.key.entitySetId }.mapValues {
             it.value.associate { entry -> idsByEntityKey.getValue(entry.key) to entry.value }
         }.forEach { (entitySetId, entities) ->
             logger.info("Entities grouped for entity set {}: {}", entitySetId, entities)
             dataGraphManager.partialReplaceEntities(entitySetId, entities, allPropertyTypes)
-        }
-
-        if (mediaByEntityKey.isNotEmpty()) {
-            dataGraphManager.partialReplaceEntities(
-                    messageEntitySetId,
-                    mediaByEntityKey.mapKeys { idsByEntityKey.getValue(it.key) },
-                    allPropertyTypes
-            )
         }
 
         dataGraphManager.createAssociations(
@@ -477,21 +460,6 @@ class CodexService(
                 getPropertyTypeId(CodexConstants.PropertyType.IS_OUTGOING) to setOf(isOutgoing),
                 getPropertyTypeId(CodexConstants.PropertyType.IMAGE_DATA) to media
         )
-    }
-
-    private fun getMessageMedia(message: Message): Map<UUID, Set<Any>> {
-        val numMedia = message.numMedia.toInt()
-        val media = Sets.newLinkedHashSetWithExpectedSize<Map<String, String>>(numMedia)
-
-        if (numMedia > 0) {
-            Media.reader(message.sid).read().forEach {
-                media.add(mapOf(
-                        "content-type" to it.contentType,
-                        "data" to retrieveMediaAsBaseSixtyFour(it.uri.toString()).get()))
-            }
-        }
-
-        return if (media.isEmpty()) mapOf() else mapOf(getPropertyTypeId(CodexConstants.PropertyType.IMAGE_DATA) to media)
     }
 
     private fun getAssociationEntity(dateTime: OffsetDateTime): Map<UUID, Set<Any>> {
