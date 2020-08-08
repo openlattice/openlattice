@@ -179,6 +179,8 @@ class CodexService(
             val phoneNumber = smsDetails.phoneNumber
             val lastSync = smsDetails.lastSync
 
+            logger.info("About to sync messages for organization {} after date {}", organizationId, lastSync)
+
             val newLastSync = integrateMessagesFromTwilioAfterLastSync(
                     organizationId,
                     phoneNumber,
@@ -448,6 +450,8 @@ class CodexService(
                         "data" to retrieveMediaAsBaseSixtyFour(it.uri.toString()).get()))
             }
         }
+
+        logger.info("Base64 message with sid {}: {}", message.sid, Base64.getEncoder().encode(message.body.byteInputStream().readAllBytes()))
 
         return mapOf(
                 getPropertyTypeId(CodexConstants.PropertyType.ID) to setOf(message.sid),
