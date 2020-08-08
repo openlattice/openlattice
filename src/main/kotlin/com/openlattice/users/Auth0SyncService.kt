@@ -163,7 +163,7 @@ class Auth0SyncService(
             var nextAclKeyLayer = childAclKeys.toSet()
 
             while (nextAclKeyLayer.isNotEmpty()) {
-                val nextAclKeyLayer = (nextAclKeyLayer.flatMapTo(mutableSetOf<AclKey>()) {
+                nextAclKeyLayer = (nextAclKeyLayer.flatMapTo(mutableSetOf<AclKey>()) {
                     aclKeyPrincipals[it] ?: setOf()
                 }) - childAclKeys
                 childAclKeys += nextAclKeyLayer
