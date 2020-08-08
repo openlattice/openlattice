@@ -340,7 +340,6 @@ class CodexService(
         entitiesByEntityKey.entries.groupBy { it.key.entitySetId }.mapValues {
             it.value.associate { entry -> idsByEntityKey.getValue(entry.key) to entry.value }
         }.forEach { (entitySetId, entities) ->
-            logger.info("Entities grouped for entity set {}: {}", entitySetId, entities)
             dataGraphManager.partialReplaceEntities(entitySetId, entities, allPropertyTypes)
         }
 
@@ -451,6 +450,8 @@ class CodexService(
                         "data" to retrieveMediaAsBaseSixtyFour(it.uri.toString()).get()))
             }
         }
+
+        logger.info("Base64 message with sid {}: {}", message.sid, Base64.getEncoder().encode(message.body.byteInputStream().readAllBytes()))
 
         return mapOf(
                 getPropertyTypeId(CodexConstants.PropertyType.ID) to setOf(message.sid),
