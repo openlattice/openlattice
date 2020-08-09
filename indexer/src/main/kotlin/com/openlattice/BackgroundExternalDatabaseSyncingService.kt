@@ -172,14 +172,18 @@ class BackgroundExternalDatabaseSyncingService(
         }
 
         //check if tables have been deleted in the database
-        val missingTableIds = organizationExternalDatabaseTables.keys - currentTableIds
+        val missingTableIds = organizationExternalDatabaseTables
+                .filter { it.value.organizationId == orgId }
+                .keys - currentTableIds
         if (missingTableIds.isNotEmpty()) {
             edms.deleteOrganizationExternalDatabaseTableObjects(missingTableIds)
             totalSynced += missingTableIds.size
         }
 
         //check if columns have been deleted in the database
-        val missingColumnIds = organizationExternalDatabaseColumns.keys - currentColumnIds
+        val missingColumnIds = organizationExternalDatabaseColumns
+                .filter { it.value.organizationId == orgId }
+                .keys - currentColumnIds
 
 
         if (missingColumnIds.isNotEmpty()) {
