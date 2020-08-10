@@ -55,6 +55,3 @@
 [submodule "linker"]
 	path = linker
 	url = git@github.com:openlattice/linker.git
-[submodule "analyzer"]
-	path = analyzer
-	url = git@github.com:openlattice/analyzer.git
