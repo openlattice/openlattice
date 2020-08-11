@@ -1,5 +1,6 @@
 package transforms
 
+import com.fasterxml.jackson.annotation.JsonCreator
 import com.openlattice.shuttle.transformations.Transformation
 import java.util.*
 
@@ -8,8 +9,11 @@ import java.util.*
  *
  * @author Drew Bailey &lt;drew@openlattice.com&gt;
  */
-class Base64DecodeTransform: Transformation<MutableMap<String, String>>(
-){
+class Base64DecodeTransform: Transformation<MutableMap<String, String>>{
+
+    @JsonCreator
+    constructor(): super()
+
     companion object {
         @JvmStatic
         val decoder = Base64.getDecoder()
