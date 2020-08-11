@@ -157,7 +157,7 @@ class Auth0SyncService(
 
         // Map each SecurablePrincipal to all its aclKey children from the in-memory map, and from there a SortedPrincipalSet
         return sps.associate { sp ->
-            val childAclKeys = mutableSetOf<AclKey>()
+            val childAclKeys = mutableSetOf<AclKey>(sp.aclKey) //Need to include self.
             aclKeyPrincipals.getOrDefault(sp.aclKey, AclKeySet()).forEach { childAclKeys.add(it) }
 
             var nextAclKeyLayer = childAclKeys.toSet()
@@ -169,9 +169,15 @@ class Auth0SyncService(
                 childAclKeys += nextAclKeyLayer
             }
 
-            sp.principal.id to SortedPrincipalSet(TreeSet(childAclKeys.mapNotNull { aclKey ->
+            val sortedPrincipals = SortedPrincipalSet(TreeSet(childAclKeys.mapNotNull { aclKey ->
                 aclKeysToPrincipals[aclKey]?.principal
             }))
+
+            if (childAclKeys.size != sortedPrincipals.size) {
+                logger.warn("Unable to retrieve principals for acl keys: ${childAclKeys - aclKeysToPrincipals.keys}")
+            }
+
+            sp.principal.id to sortedPrincipals
         }
     }
 
