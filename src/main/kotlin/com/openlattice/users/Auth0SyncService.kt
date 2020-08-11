@@ -169,10 +169,8 @@ class Auth0SyncService(
                 childAclKeys += nextAclKeyLayer
             }
 
-            sp.principal.id to SortedPrincipalSet(TreeSet(childAclKeys.map { aclKey ->
-                aclKeysToPrincipals.getValue(
-                        aclKey
-                ).principal
+            sp.principal.id to SortedPrincipalSet(TreeSet(childAclKeys.mapNotNull { aclKey ->
+                aclKeysToPrincipals[aclKey]?.principal
             }))
         }
     }
