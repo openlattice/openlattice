@@ -111,8 +111,6 @@ class Auth0SyncService(
                 )
         ).associate { it.value.principal.id to it.value }
         authnPrincipalCache.putAll(securablePrincipals)
-        val principalTrees = getPrincipalTreesByPrincipalId(securablePrincipals.values.toSet())
-        principalsById.forEach { (principalId, principal) -> principalTrees[principalId]?.add(principal) }
         authnRolesCache.putAll(getPrincipalTreesByPrincipalId(securablePrincipals.values.toSet()))
     }
 
@@ -141,14 +139,14 @@ class Auth0SyncService(
     }
 
     private fun getPrincipalTreesByPrincipalId(sps: Set<SecurablePrincipal>): Map<String, SortedPrincipalSet> {
-        val aclKeyPrincipals = principalTrees.getAll(sps.map { it.aclKey }.toSet()).toMutableMap()
+        val aclKeyPrincipals = principalTrees.getAll(sps.mapTo(mutableSetOf()) { it.aclKey }).toMutableMap()
 
         // Bulk load all relevant principal trees from hazelcast
         var nextLayer = aclKeyPrincipals.values.flatMap { it.value }.toSet()
         while (nextLayer.isNotEmpty()) {
             //Don't load what's already been loaded.
             val nextLayerMap = principalTrees.getAll(nextLayer - aclKeyPrincipals.keys)
-            nextLayer = nextLayerMap.keys
+            nextLayer = nextLayerMap.values.flatMap { it.value }.toSet()
             aclKeyPrincipals.putAll(nextLayerMap)
         }
 
