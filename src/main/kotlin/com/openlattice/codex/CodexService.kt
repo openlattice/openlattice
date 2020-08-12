@@ -72,6 +72,7 @@ class CodexService(
     companion object {
         private val logger = LoggerFactory.getLogger(CodexService::class.java)
         private val encoder: Base64.Encoder = Base64.getEncoder()
+        private val NULL_BYTE = 0x00.toByte()
     }
 
     init {
@@ -433,6 +434,10 @@ class CodexService(
      * Entity mapping helpers
      */
 
+    private fun filterNullBytes(text: String): String {
+        return String(text.toByteArray().filter { it != NULL_BYTE }.toByteArray())
+    }
+
     private fun getMessageEntity(
             message: Message,
             phoneNumber: String,
@@ -457,7 +462,7 @@ class CodexService(
                 getPropertyTypeId(CodexConstants.PropertyType.ID) to setOf(message.sid),
                 getPropertyTypeId(CodexConstants.PropertyType.DATE_TIME) to setOf(dateTime),
                 getPropertyTypeId(CodexConstants.PropertyType.PHONE_NUMBER) to setOf(phoneNumber),
-                getPropertyTypeId(CodexConstants.PropertyType.TEXT) to setOf(message.body),
+                getPropertyTypeId(CodexConstants.PropertyType.TEXT) to setOf(filterNullBytes(message.body)),
                 getPropertyTypeId(CodexConstants.PropertyType.IS_OUTGOING) to setOf(isOutgoing),
                 getPropertyTypeId(CodexConstants.PropertyType.IMAGE_DATA) to media
         )
