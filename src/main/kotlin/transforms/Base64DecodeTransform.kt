@@ -9,20 +9,28 @@ import java.util.*
  *
  * @author Drew Bailey &lt;drew@openlattice.com&gt;
  */
-class Base64DecodeTransform: Transformation<MutableMap<String, String>>{
+class Base64DecodeTransform: Transformation<Map<String, String>>{
 
     @JsonCreator
     constructor(): super()
 
     companion object {
         @JvmStatic
-        val decoder = Base64.getDecoder()
+        private val decoder = Base64.getDecoder()
+
+        @JvmStatic
+        private val EMPTY_BYTES = ByteArray(0)
+
+        @JvmStatic
+        fun process( s: String? ): ByteArray {
+            if ( s == null ) {
+                return EMPTY_BYTES
+            }
+            return decoder.decode(s)
+        }
     }
 
     override fun applyValue(s: String?): Any {
-        if ( s == null ) {
-            return ByteArray(0)
-        }
-        return decoder.decode(s)
+        return process(s)
     }
 }
