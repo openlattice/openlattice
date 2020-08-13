@@ -7,6 +7,7 @@ import com.google.common.eventbus.EventBus
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
+import com.openlattice.admin.ORGANIZATION
 import com.openlattice.assembler.Assembler
 import com.openlattice.authorization.*
 import com.openlattice.authorization.mapstores.PrincipalMapstore
@@ -18,7 +19,6 @@ import com.openlattice.organization.OrganizationPrincipal
 import com.openlattice.organization.roles.Role
 import com.openlattice.organizations.events.*
 import com.openlattice.organizations.mapstores.CONNECTIONS_INDEX
-import com.openlattice.organizations.mapstores.DOMAINS_INDEX
 import com.openlattice.organizations.mapstores.MEMBERS_INDEX
 import com.openlattice.organizations.processors.OrganizationEntryProcessor
 import com.openlattice.organizations.processors.OrganizationEntryProcessor.Result
@@ -30,6 +30,7 @@ import com.openlattice.users.getAppMetadata
 import com.openlattice.users.processors.aggregators.UsersWithConnectionsAggregator
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
+import java.io.Serializable
 import java.util.*
 import java.util.stream.Stream
 import javax.inject.Inject
@@ -286,10 +287,12 @@ class HazelcastOrganizationService(
 
     private fun addMembers(
             orgAclKey: AclKey,
-            members: Set<Principal>,
+            membersToAdd: Set<Principal>,
             profiles: Map<Principal, Map<String, Set<String>>>
     ): Set<Principal> {
         require(orgAclKey.size == 1) { "Organization acl key should only be of length 1" }
+
+        val members = if (membersToAdd is Serializable) membersToAdd else membersToAdd.toSet()
 
         val nonUserPrincipals = members.filter { it.type != PrincipalType.USER }
         require(nonUserPrincipals.isEmpty()) { "Cannot add non-users principals $nonUserPrincipals to organization $orgAclKey" }
@@ -522,7 +525,12 @@ class HazelcastOrganizationService(
         return organizations.keySet(
                 Predicates.and(
                         Predicates.`in`<UUID, Organization>(CONNECTIONS_INDEX, *connections.toTypedArray()),
-                        Predicates.not<UUID, Organization>(Predicates.`in`<UUID, Organization>(MEMBERS_INDEX, principal))
+                        Predicates.not<UUID, Organization>(
+                                Predicates.`in`<UUID, Organization>(
+                                        MEMBERS_INDEX,
+                                        principal
+                                )
+                        )
                 )
         )
     }
@@ -534,6 +542,24 @@ class HazelcastOrganizationService(
         }
 
         addMembers(organizationId, profiles.keys.toSet(), profiles)
+    }
+
+    @JvmOverloads
+    fun removeMemberFromAllOrganizations(principal: Principal, clearPermissions: Boolean = true) {
+        val membersPredicate = Predicates.equal<UUID, Organization>(MEMBERS_INDEX, principal)
+        val organizationIds = if (clearPermissions) {
+            val orgIds = organizations.keySet(membersPredicate)
+            orgIds.forEach { organizationId ->
+                removeMembers(organizationId, setOf(principal))
+            }
+            orgIds
+        } else {
+            organizations.executeOnEntries(OrganizationEntryProcessor {
+                Result(null, it.members.remove(principal))
+            }, membersPredicate).keys
+        }
+
+        logger.info("Removed {} from organizations: {}", organizationIds)
     }
 
     companion object {
@@ -563,7 +589,10 @@ class HazelcastOrganizationService(
 
         private fun getOrganizationPredicate(organizationId: UUID): Predicate<AclKey, SecurablePrincipal> {
             return Predicates.and(
-                    Predicates.equal<UUID, Organization>(PrincipalMapstore.PRINCIPAL_TYPE_INDEX, PrincipalType.ORGANIZATION),
+                    Predicates.equal<UUID, Organization>(
+                            PrincipalMapstore.PRINCIPAL_TYPE_INDEX,
+                            PrincipalType.ORGANIZATION
+                    ),
                     Predicates.equal<UUID, Organization>(PrincipalMapstore.ACL_KEY_ROOT_INDEX, organizationId)
             )
         }

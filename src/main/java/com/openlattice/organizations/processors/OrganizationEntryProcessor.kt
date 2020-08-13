@@ -29,7 +29,7 @@ class OrganizationEntryProcessor(
         }
         return null
     }
-    data class Result( val value: Any?, val modified: Boolean = true )
+    data class Result( val value: Any? , val modified: Boolean = true )
 }
 
 

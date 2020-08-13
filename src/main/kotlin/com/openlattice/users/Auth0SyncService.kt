@@ -111,8 +111,6 @@ class Auth0SyncService(
                 )
         ).associate { it.value.principal.id to it.value }
         authnPrincipalCache.putAll(securablePrincipals)
-        val principalTrees = getPrincipalTreesByPrincipalId(securablePrincipals.values.toSet())
-        principalsById.forEach { (principalId, principal) -> principalTrees[principalId]?.add(principal) }
         authnRolesCache.putAll(getPrincipalTreesByPrincipalId(securablePrincipals.values.toSet()))
     }
 
@@ -141,14 +139,14 @@ class Auth0SyncService(
     }
 
     private fun getPrincipalTreesByPrincipalId(sps: Set<SecurablePrincipal>): Map<String, SortedPrincipalSet> {
-        val aclKeyPrincipals = principalTrees.getAll(sps.map { it.aclKey }.toSet()).toMutableMap()
+        val aclKeyPrincipals = mutableMapOf<AclKey,AclKeySet>()
 
         // Bulk load all relevant principal trees from hazelcast
-        var nextLayer = aclKeyPrincipals.values.flatMap { it.value }.toSet()
+        var nextLayer = sps.mapTo(mutableSetOf()) { it.aclKey }
         while (nextLayer.isNotEmpty()) {
             //Don't load what's already been loaded.
             val nextLayerMap = principalTrees.getAll(nextLayer - aclKeyPrincipals.keys)
-            nextLayer = nextLayerMap.keys
+            nextLayer = nextLayerMap.values.flatMapTo(mutableSetOf()) { it.value }
             aclKeyPrincipals.putAll(nextLayerMap)
         }
 
@@ -157,23 +155,27 @@ class Auth0SyncService(
 
         // Map each SecurablePrincipal to all its aclKey children from the in-memory map, and from there a SortedPrincipalSet
         return sps.associate { sp ->
-            val childAclKeys = mutableSetOf<AclKey>()
+            val childAclKeys = mutableSetOf<AclKey>(sp.aclKey) //Need to include self.
             aclKeyPrincipals.getOrDefault(sp.aclKey, AclKeySet()).forEach { childAclKeys.add(it) }
 
-            var nextAclKeyLayer = childAclKeys.toSet()
+            var nextAclKeyLayer : Set<AclKey> = childAclKeys
 
             while (nextAclKeyLayer.isNotEmpty()) {
-                val nextAclKeyLayer = (nextAclKeyLayer.flatMapTo(mutableSetOf<AclKey>()) {
+                nextAclKeyLayer = (nextAclKeyLayer.flatMapTo(mutableSetOf<AclKey>()) {
                     aclKeyPrincipals[it] ?: setOf()
                 }) - childAclKeys
                 childAclKeys += nextAclKeyLayer
             }
 
-            sp.principal.id to SortedPrincipalSet(TreeSet(childAclKeys.map { aclKey ->
-                aclKeysToPrincipals.getValue(
-                        aclKey
-                ).principal
+            val sortedPrincipals = SortedPrincipalSet(TreeSet(childAclKeys.mapNotNull { aclKey ->
+                aclKeysToPrincipals[aclKey]?.principal
             }))
+
+            if (childAclKeys.size != sortedPrincipals.size) {
+                logger.warn("Unable to retrieve principals for acl keys: ${childAclKeys - aclKeysToPrincipals.keys}")
+            }
+
+            sp.principal.id to sortedPrincipals
         }
     }
 

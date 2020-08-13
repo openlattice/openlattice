@@ -226,7 +226,7 @@ class HazelcastPrincipalService(
     }
 
     override fun getUser(userId: String): User {
-        return Util.getSafely(users, userId)
+        return users.getValue(userId)
     }
 
     override fun getRole(organizationId: UUID, roleId: UUID): Role {
