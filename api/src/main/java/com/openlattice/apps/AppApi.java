@@ -5,7 +5,11 @@ import com.openlattice.authorization.Permission;
 import com.openlattice.edm.requests.MetadataUpdate;
 import retrofit2.http.*;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 
 public interface AppApi {
 
@@ -15,26 +19,20 @@ public interface AppApi {
 
     String INSTALL_PATH = "/install";
     String CONFIG_PATH  = "/config";
-    String BULK_PATH    = "/bulk";
     String LOOKUP_PATH  = "/lookup";
     String UPDATE_PATH  = "/update";
     String ROLE_PATH    = "/role";
 
-    String ENTITY_SET_COLLECTION_ID = "entitySetCollectionId";
-    String ID                       = "id";
-    String ORGANIZATION_ID          = "organizationId";
-    String NAME                     = "name";
-    String NAMESPACE                = "namespace";
-    String APP_ID                   = "appId";
-    String ROLE_ID                  = "roleId";
+    String ID              = "id";
+    String ORGANIZATION_ID = "organizationId";
+    String NAME            = "name";
+    String NAMESPACE       = "namespace";
+    String ROLE_ID         = "roleId";
 
-    String ENTITY_SET_COLLECTION_ID_PATH = "/{" + ENTITY_SET_COLLECTION_ID + "}";
-    String ID_PATH                       = "/{" + ID + "}";
-    String ORGANIZATION_ID_PATH          = "/{" + ORGANIZATION_ID + "}";
-    String NAME_PATH                     = "/{" + NAME + "}";
-    String NAMESPACE_PATH                = "/{" + NAMESPACE + "}";
-    String APP_ID_PATH                   = "/{" + APP_ID + "}";
-    String ROLE_ID_PATH                  = "/{" + ROLE_ID + "}";
+    String ID_PATH              = "/{" + ID + "}";
+    String ORGANIZATION_ID_PATH = "/{" + ORGANIZATION_ID + "}";
+    String NAME_PATH            = "/{" + NAME + "}";
+    String ROLE_ID_PATH         = "/{" + ROLE_ID + "}";
 
     /**
      * App CRUD
@@ -50,7 +48,7 @@ public interface AppApi {
     App getApp( @Path( ID ) UUID id );
 
     @GET( BASE + LOOKUP_PATH + NAME_PATH )
-    App getApp( @Path( NAME ) String name );
+    App getAppByName( @Path( NAME ) String name );
 
     @DELETE( BASE + ID_PATH )
     void deleteApp( @Path( ID ) UUID id );
