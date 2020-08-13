@@ -72,6 +72,7 @@ class CodexService(
     companion object {
         private val logger = LoggerFactory.getLogger(CodexService::class.java)
         private val encoder: Base64.Encoder = Base64.getEncoder()
+        private val NULL_BYTE = 0x00.toByte()
     }
 
     init {
@@ -178,6 +179,8 @@ class CodexService(
             val organizationId = smsDetails.organizationId
             val phoneNumber = smsDetails.phoneNumber
             val lastSync = smsDetails.lastSync
+
+            logger.info("About to sync messages for organization {} after date {}", organizationId, lastSync)
 
             val newLastSync = integrateMessagesFromTwilioAfterLastSync(
                     organizationId,
@@ -345,8 +348,8 @@ class CodexService(
                 edgesByEntityKey.map { triple ->
                     DataEdgeKey(
                             EntityDataKey(messageEntitySetId, idsByEntityKey.getValue(triple.first)),
-                            EntityDataKey(assocEntitySetId, idsByEntityKey.getValue(triple.second)),
-                            EntityDataKey(contactEntitySetId, idsByEntityKey.getValue(triple.third))
+                            EntityDataKey(contactEntitySetId, idsByEntityKey.getValue(triple.third)),
+                            EntityDataKey(assocEntitySetId, idsByEntityKey.getValue(triple.second))
                     )
                 }.toSet()
         )
@@ -431,6 +434,10 @@ class CodexService(
      * Entity mapping helpers
      */
 
+    private fun filterNullBytes(text: String): String {
+        return String(text.toByteArray().filter { it != NULL_BYTE }.toByteArray())
+    }
+
     private fun getMessageEntity(
             message: Message,
             phoneNumber: String,
@@ -448,12 +455,12 @@ class CodexService(
                         "data" to retrieveMediaAsBaseSixtyFour(it.uri.toString()).get()))
             }
         }
-
+        
         return mapOf(
                 getPropertyTypeId(CodexConstants.PropertyType.ID) to setOf(message.sid),
                 getPropertyTypeId(CodexConstants.PropertyType.DATE_TIME) to setOf(dateTime),
                 getPropertyTypeId(CodexConstants.PropertyType.PHONE_NUMBER) to setOf(phoneNumber),
-                getPropertyTypeId(CodexConstants.PropertyType.TEXT) to setOf(message.body),
+                getPropertyTypeId(CodexConstants.PropertyType.TEXT) to setOf(filterNullBytes(message.body)),
                 getPropertyTypeId(CodexConstants.PropertyType.IS_OUTGOING) to setOf(isOutgoing),
                 getPropertyTypeId(CodexConstants.PropertyType.IMAGE_DATA) to media
         )
