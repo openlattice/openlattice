@@ -99,7 +99,7 @@ public class AppController implements AppApi, AuthorizingComponent {
             method = RequestMethod.GET,
             produces = MediaType.APPLICATION_JSON_VALUE )
     @ResponseStatus( HttpStatus.OK )
-    public App getApp( @PathVariable( NAME ) String name ) {
+    public App getAppByName( @PathVariable( NAME ) String name ) {
         return appService.getApp( name );
     }
 
