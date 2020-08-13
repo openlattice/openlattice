@@ -18,7 +18,12 @@
 
 package com.openlattice.mapstores;
 
-import com.google.common.collect.*;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.openlattice.IdConstants;
 import com.openlattice.apps.App;
 import com.openlattice.apps.AppConfigKey;
@@ -39,7 +44,11 @@ import com.openlattice.edm.EdmDetails;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.edm.set.EntitySetFlag;
-import com.openlattice.edm.type.*;
+import com.openlattice.edm.type.Analyzer;
+import com.openlattice.edm.type.AssociationType;
+import com.openlattice.edm.type.EntityType;
+import com.openlattice.edm.type.EntityTypePropertyMetadata;
+import com.openlattice.edm.type.PropertyType;
 import com.openlattice.notifications.sms.SmsEntitySetInformation;
 import com.openlattice.organization.OrganizationExternalDatabaseColumn;
 import com.openlattice.organization.OrganizationExternalDatabaseTable;
@@ -66,12 +75,12 @@ import org.apache.commons.text.CharacterPredicates;
 import org.apache.commons.text.RandomStringGenerator;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import org.jetbrains.annotations.NotNull;
 
 import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.jetbrains.annotations.NotNull;
 
 @SuppressFBWarnings( value = "SECPR", justification = "Only used for testing." )
 public final class TestDataFactory {
@@ -241,10 +250,11 @@ public final class TestDataFactory {
                 ? Arrays.asList( keys ).stream().map( PropertyType::getId )
                 .collect( Collectors.toCollection( Sets::newLinkedHashSet ) )
                 : Sets.newLinkedHashSet( Arrays.asList( UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID() ) );
-        var propertyTags = LinkedHashMultimap.<UUID, String>create();
+        var propertyTags = new LinkedHashMap<UUID, LinkedHashSet<String>>( k.size() );
 
         for ( UUID id : k ) {
-            propertyTags.put( id, "PRIMARY KEY TAG" );
+            propertyTags.put( id, new LinkedHashSet<>() );
+            propertyTags.get( id ).add( "PRIMARY KEY TAG" );
         }
 
         SecurableObjectType entityTypeCategory = ( category == null ) ? SecurableObjectType.EntityType : category;
@@ -563,12 +573,12 @@ public final class TestDataFactory {
         Map<UUID, Map<UUID, Set<Object>>> data = new HashMap<>();
         for ( int i = 0; i < numberOfEntries; i++ ) {
             UUID entityId = UUID.randomUUID();
-            SetMultimap<UUID, Object> entity = HashMultimap.create();
+            Map<UUID, Set<Object>> entity = Maps.newHashMapWithExpectedSize( propertyIds.size() );
             for ( UUID propertyId : propertyIds ) {
-                entity.put( propertyId, randomAlphanumeric( 5 ) );
+                entity.put( propertyId, Set.of( randomAlphanumeric( 5 ) ) );
             }
 
-            data.put( entityId, Multimaps.asMap( entity ) );
+            data.put( entityId, entity );
         }
         return data;
     }
@@ -582,8 +592,9 @@ public final class TestDataFactory {
     }
 
     public static EntityType entityTypesFromKeyAndTypes( PropertyType key, PropertyType... propertyTypes ) {
-        final var propertyTags = LinkedHashMultimap.<UUID, String>create();
-        propertyTags.put( key.getId(), "PRIMARY KEY TAG" );
+        final var propertyTags = new LinkedHashMap<UUID, LinkedHashSet<String>>();
+        propertyTags.put( key.getId(), new LinkedHashSet<>() );
+        propertyTags.get( key.getId() ).add( "PRIMARY KEY TAG" );
         return new EntityType( UUID.randomUUID(),
                 fqn(),
                 randomAlphanumeric( 5 ),
@@ -621,20 +632,24 @@ public final class TestDataFactory {
     }
 
     public static Map<UUID, Set<Object>> randomElement( UUID keyType, UUID binaryType ) {
-        SetMultimap<UUID, Object> element = HashMultimap.create();
-        element.put( keyType, random( 5 ) );
-        element.put( binaryType,
-                ImmutableMap.of( "content-type", "application/octet-stream", "data", RandomUtils.nextBytes( 128 ) ) );
-        element.put( binaryType,
-                ImmutableMap.of( "content-type", "application/octet-stream", "data", RandomUtils.nextBytes( 128 ) ) );
-        element.put( binaryType,
-                ImmutableMap.of( "content-type", "application/octet-stream", "data", RandomUtils.nextBytes( 128 ) ) );
-        return Multimaps.asMap( element );
+        return Map.of(
+                keyType,
+                Set.of( random( 5 ) ),
+                binaryType,
+                Set.of(
+                        ImmutableMap.of( "content-type", "application/octet-stream", "data",
+                                RandomUtils.nextBytes( 128 ) ),
+                        ImmutableMap.of( "content-type", "application/octet-stream", "data",
+                                RandomUtils.nextBytes( 128 ) ),
+                        ImmutableMap.of( "content-type", "application/octet-stream", "data",
+                                RandomUtils.nextBytes( 128 ) )
+                ) );
     }
 
     public static MetadataUpdate metadataUpdate() {
-        final var propertyTags = LinkedHashMultimap.<UUID, String>create();
-        propertyTags.put( UUID.randomUUID(), "SOME PROPERTY TAG" );
+        final var propertyTags = new LinkedHashMap<UUID, LinkedHashSet<String>>();
+        propertyTags.put( UUID.randomUUID(), Sets.newLinkedHashSet( Set.of( "SOME PROPERTY TAG" ) ) );
+
         return new MetadataUpdate( Optional.of( randomAlphanumeric( 5 ) ),
                 Optional.of( randomAlphanumeric( 5 ) ),
                 Optional.empty(),
@@ -816,7 +831,7 @@ public final class TestDataFactory {
                 UUID.randomUUID(),
                 UUID.randomUUID(),
                 randomAlphabetic( 20 ),
-                ImmutableSet.of(randomAlphanumeric( 10 )),
+                ImmutableSet.of( randomAlphanumeric( 10 ) ),
                 randomAlphanumeric( 15 ),
                 base64Media(),
                 OffsetDateTime.now()

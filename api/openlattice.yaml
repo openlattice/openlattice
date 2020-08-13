@@ -2983,7 +2983,7 @@ paths:
                 type: object
                 additionalProperties:
                   $ref: "#/components/schemas/Auth0userBasic"
-  /datastore/principals/users/search/"{searchQuery}":
+  /datastore/principals/users/search/{searchQuery}:
     get:
       summary: Get the user id for the given search.
       operationId: searchAllUsers
