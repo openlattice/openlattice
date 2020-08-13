@@ -33,6 +33,7 @@ import com.openlattice.directory.UserDirectoryService;
 import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.directory.pojo.DirectedAclKeys;
 import com.openlattice.organization.roles.Role;
+import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.users.Auth0SyncService;
 import com.openlattice.users.Auth0UtilsKt;
@@ -71,6 +72,9 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
 
     @Inject
     private Auth0SyncService syncService;
+
+    @Inject
+    private HazelcastOrganizationService organizationService;
 
     @Timed
     @Override
@@ -151,7 +155,7 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
          *
          * This is safe since token has been validated and has an auth0 assigned unique id.
          *
-         * It is very important that this is the *first* call for a new user. W
+         * It is very important that this is the *first* call for a new user.
          */
         Principal principal = checkNotNull( Principals.getCurrentUser() );
 
@@ -237,8 +241,11 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
     public Void deleteUserAccount( @PathVariable( USER_ID ) String userId ) {
         ensureAdminAccess();
 
+        //First remove from all organizations
+        organizationService.removeMemberFromAllOrganizations( new Principal(PrincipalType.USER, userId));
         SecurablePrincipal securablePrincipal = spm.getPrincipal( userId );
         spm.deletePrincipal( securablePrincipal.getAclKey() );
+
 
         userDirectoryService.deleteUser( userId );
 
