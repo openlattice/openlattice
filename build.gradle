@@ -34,6 +34,7 @@ plugins {
     id 'org.jetbrains.dokka' version '0.9.18'
     id 'java'
     id 'com.github.jk1.dependency-license-report' version '1.11'
+    id 'org.owasp.dependencycheck' version '5.2.1'
 }
 
 description = "Conductor Client"
