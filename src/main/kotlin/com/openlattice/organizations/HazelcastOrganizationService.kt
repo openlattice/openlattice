@@ -544,6 +544,7 @@ class HazelcastOrganizationService(
         addMembers(organizationId, profiles.keys.toSet(), profiles)
     }
 
+    @JvmOverloads
     fun removeMemberFromAllOrganizations(principal: Principal, clearPermissions: Boolean = true) {
         val membersPredicate = Predicates.equal<UUID, Organization>(MEMBERS_INDEX, principal)
         val organizationIds = if (clearPermissions) {
