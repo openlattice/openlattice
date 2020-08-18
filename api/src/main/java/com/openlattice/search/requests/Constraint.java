@@ -142,6 +142,23 @@ public class Constraint {
                 endDate );
     }
 
+    public static Constraint simpleSearchConstraint( String searchTerm, boolean fuzzy ) {
+        return new Constraint(
+                SearchType.simple,
+                Optional.of( searchTerm ),
+                Optional.of( fuzzy ),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty()
+        );
+    }
+
     @JsonProperty( SerializationConstants.TYPE_FIELD )
     public SearchType getSearchType() {
         return searchType;
