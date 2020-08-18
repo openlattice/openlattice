@@ -262,8 +262,6 @@ class CodexService(
                     latestMessage = latestDateForPage
                 }
 
-                logger.info("Integrated page of ${page.records.size} messages.")
-
                 if (page.hasNextPage()) {
                     page = messageReader.nextPage(page)
                 } else {
@@ -339,7 +337,7 @@ class CodexService(
         val existingMessageIds = searchService.executeSearch(
                 searchConstraints,
                 mapOf(messageEntitySetId to getPropertyTypes(CodexConstants.AppType.MESSAGES))
-        ).hits.flatMap { it.getValue(idType.fqn) }.map { it.toString() }.toSet()
+        ).hits.flatMap { it.getOrDefault(idType.fqn, setOf()) }.map { it.toString() }.toSet()
 
         return messages.filter { !existingMessageIds.contains(it.sid) }
     }
@@ -360,7 +358,8 @@ class CodexService(
         val entitiesByEntityKey = mutableMapOf<EntityKey, Map<UUID, Set<Any>>>()
         val edgesByEntityKey = mutableListOf<Triple<EntityKey, EntityKey, EntityKey>>()
 
-        filterToMissingMessages(messageEntitySetId, messages).forEach {
+        val missingMessages = filterToMissingMessages(messageEntitySetId, messages)
+        missingMessages.forEach {
             val messageId = it.sid
             val phoneNumber = if (isOutgoing) it.to else it.from.toString()
             val dateTime = formatDateTime(it.dateCreated)
@@ -403,6 +402,8 @@ class CodexService(
                     )
                 }.toSet()
         )
+
+        logger.info("Integrated page of ${missingMessages.size} messages for organization $organizationId.")
 
         return latestDateTime
     }
