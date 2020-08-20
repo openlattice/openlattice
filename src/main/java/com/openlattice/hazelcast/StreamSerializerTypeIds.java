@@ -30,7 +30,7 @@ public enum StreamSerializerTypeIds {
     /**
      * Move this one, break everything.
      */
-    STREAM_SERIALIZER_IDS_MUST_BE_POSTIVE,
+    STREAM_SERIALIZER_IDS_MUST_BE_POSITIVE,
     ACE_VALUE,
     ACL_KEY,
     ACL_KEY_SET,
