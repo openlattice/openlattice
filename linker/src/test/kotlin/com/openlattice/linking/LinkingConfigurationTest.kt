@@ -26,7 +26,7 @@ import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.serializer.AbstractJacksonYamlSerializationTest
 import com.openlattice.serializer.AbstractJacksonYamlSerializationTest.registerModule
-import org.apache.commons.lang.math.RandomUtils
+import org.apache.commons.lang3.RandomUtils
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.junit.BeforeClass
 import java.util.*
