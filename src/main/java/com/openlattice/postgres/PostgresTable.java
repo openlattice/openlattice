@@ -99,36 +99,6 @@ public final class PostgresTable {
                             DST_ENTITY_KEY_ID,
                             EDGE_ENTITY_KEY_ID )
                     .distributionColumn( PARTITION );
-    @Deprecated
-    public static final PostgresTableDefinition EDGES                         =
-            new CitusDistributedTableDefinition( "edges" )
-                    .addColumns(
-                            ID_VALUE,
-                            EDGE_COMP_1,
-                            EDGE_COMP_2,
-                            COMPONENT_TYPES,
-                            SRC_ENTITY_SET_ID,
-                            DST_ENTITY_SET_ID,
-                            EDGE_ENTITY_SET_ID,
-                            VERSION,
-                            VERSIONS )
-                    .primaryKey( ID, EDGE_COMP_1, EDGE_COMP_2, COMPONENT_TYPES )
-                    .distributionColumn( ID_VALUE );
-    @Deprecated
-    public static final PostgresTableDefinition ENTITY_KEY_IDS                =
-            new CitusDistributedTableDefinition( "entity_key_ids" )
-                    .addColumns( ENTITY_SET_ID,
-                            ID,
-                            LINKING_ID,
-                            VERSION,
-                            VERSIONS,
-                            LAST_WRITE,
-                            LAST_INDEX,
-                            LAST_LINK,
-                            LAST_PROPAGATE,
-                            LAST_MIGRATE,
-                            LAST_LINK_INDEX )
-                    .distributionColumn( ID );
     public static final PostgresTableDefinition ENTITY_QUERIES                =
             new PostgresTableDefinition( "entity_graph_queries" )
                     .addColumns( QUERY_ID, ID_VALUE, CLAUSES )

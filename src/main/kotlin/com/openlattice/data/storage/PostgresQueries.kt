@@ -24,7 +24,6 @@ package com.openlattice.data.storage
 import com.openlattice.analysis.requests.Filter
 import com.openlattice.postgres.DataTables.*
 import com.openlattice.postgres.PostgresColumn.*
-import com.openlattice.postgres.PostgresTable.ENTITY_KEY_IDS
 import com.openlattice.postgres.ResultSetAdapters
 import org.slf4j.LoggerFactory
 import java.util.*
@@ -126,9 +125,9 @@ private fun buildWithClauseOld(linking: Boolean, entitiesClause: String): String
     } else {
         listOf(ENTITY_SET_ID.name, ID_VALUE.name)
     }
-    val selectColumns = joinColumns.joinToString(",") { "${ENTITY_KEY_IDS.name}.$it AS $it" }
+    val selectColumns = joinColumns.joinToString(",") { "entity_key_ids.$it AS $it" }
 
-    val queriesSql = "SELECT $selectColumns FROM ${ENTITY_KEY_IDS.name} WHERE ${VERSION.name} > 0 $entitiesClause"
+    val queriesSql = "SELECT $selectColumns FROM entity_key_ids WHERE ${VERSION.name} > 0 $entitiesClause"
 
     return "WITH $FILTERED_ENTITY_KEY_IDS AS ( $queriesSql ) "
 }
@@ -179,7 +178,7 @@ internal fun selectEntityKeyIdsWithCurrentVersionSubquerySql(
     val selectColumns = joinColumnsSql +
             // used in materialized entitysets for both linking and non-linking entity sets to join on edges
             if (metadataOptions.contains(MetadataOption.ENTITY_KEY_IDS)) {
-                ", array_agg(${ENTITY_KEY_IDS.name}.${ID.name}) AS " +
+                ", array_agg(entity_key_ids.${ID.name}) AS " +
                         ResultSetAdapters.mapMetadataOptionToPostgresColumn(MetadataOption.ENTITY_KEY_IDS)
             } else {
                 ""
@@ -192,7 +191,7 @@ internal fun selectEntityKeyIdsWithCurrentVersionSubquerySql(
                     } else {
                         ""
                     } + if (metadataOptions.contains(MetadataOption.ENTITY_SET_IDS)) {
-                        ", array_agg(${ENTITY_KEY_IDS.name}.${ENTITY_SET_ID.name}) AS " +
+                        ", array_agg(entity_key_ids.${ENTITY_SET_ID.name}) AS " +
                                 ResultSetAdapters.mapMetadataOptionToPostgresColumn(MetadataOption.ENTITY_SET_IDS)
                     } else {
                         ""
@@ -218,7 +217,7 @@ internal fun selectEntityKeyIdsWithCurrentVersionSubquerySql(
         }
     }
 
-    return "( SELECT $selectColumns FROM ${ENTITY_KEY_IDS.name} INNER JOIN $FILTERED_ENTITY_KEY_IDS USING($joinColumnsSql) WHERE true $entitiesClause $groupBy ) as $ENTITIES_TABLE_ALIAS"
+    return "( SELECT $selectColumns FROM entity_key_ids INNER JOIN $FILTERED_ENTITY_KEY_IDS USING($joinColumnsSql) WHERE true $entitiesClause $groupBy ) as $ENTITIES_TABLE_ALIAS"
 }
 
 
@@ -234,7 +233,7 @@ internal fun buildEntitiesClause(entityKeyIds: Map<UUID, Optional<Set<UUID>>>, l
                 .filter { ids -> ids.isNotEmpty() }
                 .map { ids -> " $idsColumn IN (" + ids.joinToString(",") { id -> "'$id'" } + ") AND" }
                 .orElse("")
-        " ($idsClause ${ENTITY_KEY_IDS.name}.${ENTITY_SET_ID.name} = '${it.key}' )"
+        " ($idsClause entity_key_ids.${ENTITY_SET_ID.name} = '${it.key}' )"
     } + ")"
 }
 
