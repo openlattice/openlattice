@@ -20,7 +20,7 @@ import com.openlattice.twilio.TwilioConfiguration
 import com.twilio.rest.api.v2010.account.Message
 import com.twilio.security.RequestValidator
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
-import org.apache.commons.lang.NotImplementedException
+import org.apache.commons.lang3.NotImplementedException
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
