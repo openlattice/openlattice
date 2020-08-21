@@ -287,22 +287,26 @@ class CodexService(
 
         val idsByEntityKey = entityKeyIdService.getEntityKeyIds(setOf(senderEntityKey, messageEntityKey, sentFromEntityKey))
 
-        dataGraphManager.createEntities(
+        val senderEntityKeyId = idsByEntityKey.getValue(senderEntityKey)
+        val messageEntityKeyId = idsByEntityKey.getValue(messageEntityKey)
+        val sentFromEntityKeyId = idsByEntityKey.getValue(sentFromEntityKey)
+
+        dataGraphManager.mergeEntities(
                 senderEntitySetId,
-                listOf(getSenderEntity(sender)),
+                mapOf(senderEntityKeyId to getSenderEntity(sender)),
                 getPropertyTypes(CodexConstants.AppType.PEOPLE)
         )
 
-        dataGraphManager.createEntities(
+        dataGraphManager.mergeEntities(
                 sentFromEntitySetId,
-                listOf(getAssociationEntity(formatDateTime(message.dateCreated))),
+                mapOf(sentFromEntityKeyId to getAssociationEntity(formatDateTime(message.dateCreated))),
                 getPropertyTypes(CodexConstants.AppType.SENT_FROM)
         )
 
         dataGraphManager.createAssociations(setOf(DataEdgeKey(
-                EntityDataKey(messageEntitySetId, idsByEntityKey.getValue(messageEntityKey)),
-                EntityDataKey(senderEntitySetId, idsByEntityKey.getValue(senderEntityKey)),
-                EntityDataKey(sentFromEntitySetId, idsByEntityKey.getValue(sentFromEntityKey))
+                EntityDataKey(messageEntitySetId, messageEntityKeyId),
+                EntityDataKey(senderEntitySetId, senderEntityKeyId),
+                EntityDataKey(sentFromEntitySetId, sentFromEntityKeyId)
         )))
 
         integrateMissingMessages(organizationId, listOf(message), isOutgoing = true)
