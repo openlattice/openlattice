@@ -42,7 +42,6 @@ import static com.openlattice.postgres.PostgresColumn.BIDIRECTIONAL;
 import static com.openlattice.postgres.PostgresColumn.CATEGORY;
 import static com.openlattice.postgres.PostgresColumn.CLASS_NAME;
 import static com.openlattice.postgres.PostgresColumn.CLASS_PROPERTIES;
-import static com.openlattice.postgres.PostgresColumn.COMPONENT_TYPES;
 import static com.openlattice.postgres.PostgresColumn.CONFIG_TYPE_ID;
 import static com.openlattice.postgres.PostgresColumn.CONFIG_TYPE_IDS;
 import static com.openlattice.postgres.PostgresColumn.CONNECTION_TYPE;
@@ -58,8 +57,6 @@ import static com.openlattice.postgres.PostgresColumn.DST_ENTITY_KEY_ID;
 import static com.openlattice.postgres.PostgresColumn.DST_ENTITY_SET_ID;
 import static com.openlattice.postgres.PostgresColumn.DST_PROPERTY_TYPE_ID;
 import static com.openlattice.postgres.PostgresColumn.DST_SELECTS;
-import static com.openlattice.postgres.PostgresColumn.EDGE_COMP_1;
-import static com.openlattice.postgres.PostgresColumn.EDGE_COMP_2;
 import static com.openlattice.postgres.PostgresColumn.EDGE_ENTITY_KEY_ID;
 import static com.openlattice.postgres.PostgresColumn.EDGE_ENTITY_SET_ID;
 import static com.openlattice.postgres.PostgresColumn.EMAILS;
@@ -159,26 +156,26 @@ import static com.openlattice.postgres.PostgresColumn.VERSIONS;
  * Tables definitions for all tables used in the OpenLattice platform.
  */
 public final class PostgresTable {
-    public static final PostgresTableDefinition JOBS                        = PostgresJobsMapStore.JOBS;
-    public static final PostgresTableDefinition ACL_KEYS                    =
+    public static final PostgresTableDefinition JOBS                          = PostgresJobsMapStore.JOBS;
+    public static final PostgresTableDefinition ACL_KEYS                      =
             new PostgresTableDefinition( "acl_keys" )
                     .addColumns( NAME, SECURABLE_OBJECTID )
                     .primaryKey( NAME );
-    public static final PostgresTableDefinition APPS                        =
+    public static final PostgresTableDefinition APPS                          =
             new PostgresTableDefinition( "apps" )
                     .addColumns( ID, NAME, TITLE, DESCRIPTION, CONFIG_TYPE_IDS, URL );
-    public static final PostgresTableDefinition APP_CONFIGS                 =
+    public static final PostgresTableDefinition APP_CONFIGS                   =
             new PostgresTableDefinition( "app_configs" )
                     .addColumns( APP_ID, ORGANIZATION_ID, CONFIG_TYPE_ID, PostgresColumn.PERMISSIONS, ENTITY_SET_ID )
                     .primaryKey( APP_ID, ORGANIZATION_ID, CONFIG_TYPE_ID );
     //.setUnique( NAMESPACE, NAME ); //Not allowed by postgres xl
-    public static final PostgresTableDefinition APP_TYPES                   =
+    public static final PostgresTableDefinition APP_TYPES                     =
             new PostgresTableDefinition( "app_types" )
                     .addColumns( ID, NAMESPACE, NAME, TITLE, DESCRIPTION, ENTITY_TYPE_ID );
-    public static final PostgresTableDefinition ASSOCIATION_TYPES           =
+    public static final PostgresTableDefinition ASSOCIATION_TYPES             =
             new PostgresTableDefinition( "association_types" )
                     .addColumns( ID, SRC, DST, BIDIRECTIONAL );
-    public static final PostgresTableDefinition AUDIT_RECORD_ENTITY_SET_IDS =
+    public static final PostgresTableDefinition AUDIT_RECORD_ENTITY_SET_IDS   =
             new PostgresTableDefinition( "audit_record_entity_set_ids" )
                     .addColumns( ACL_KEY,
                             AUDIT_RECORD_ENTITY_SET_ID,
@@ -186,17 +183,17 @@ public final class PostgresTable {
                             PostgresColumn.AUDIT_RECORD_ENTITY_SET_IDS,
                             AUDIT_EDGE_ENTITY_SET_IDS )
                     .primaryKey( ACL_KEY );
-    public static final PostgresTableDefinition BASE_LONG_IDS               =
+    public static final PostgresTableDefinition BASE_LONG_IDS                 =
             new PostgresTableDefinition( "base_long_ids" )
                     .addColumns( SCOPE, BASE )
                     .primaryKey( SCOPE );
-    public static final PostgresTableDefinition DATA                        = PostgresDataTables
+    public static final PostgresTableDefinition DATA                          = PostgresDataTables
             .buildDataTableDefinition();
-    public static final PostgresTableDefinition DB_CREDS                    =
+    public static final PostgresTableDefinition DB_CREDS                      =
             new PostgresTableDefinition( "db_creds" )
                     .addColumns( PRINCIPAL_ID, CREDENTIAL )
                     .primaryKey( PRINCIPAL_ID );
-    public static final PostgresTableDefinition E                           =
+    public static final PostgresTableDefinition E                             =
             new CitusDistributedTableDefinition( "e" )
                     .addColumns(
                             PARTITION,
@@ -213,37 +210,6 @@ public final class PostgresTable {
                             DST_ENTITY_KEY_ID,
                             EDGE_ENTITY_KEY_ID )
                     .distributionColumn( PARTITION );
-    @Deprecated
-    public static final PostgresTableDefinition EDGES                       =
-            new CitusDistributedTableDefinition( "edges" )
-                    .addColumns(
-                            ID_VALUE,
-                            EDGE_COMP_1,
-                            EDGE_COMP_2,
-                            COMPONENT_TYPES,
-                            SRC_ENTITY_SET_ID,
-                            DST_ENTITY_SET_ID,
-                            EDGE_ENTITY_SET_ID,
-                            VERSION,
-                            VERSIONS )
-                    .primaryKey( ID, EDGE_COMP_1, EDGE_COMP_2, COMPONENT_TYPES )
-                    .distributionColumn( ID_VALUE );
-    @Deprecated
-    public static final PostgresTableDefinition ENTITY_KEY_IDS              =
-            new CitusDistributedTableDefinition( "entity_key_ids" )
-                    .addColumns( ENTITY_SET_ID,
-                            ID,
-                            LINKING_ID,
-                            VERSION,
-                            VERSIONS,
-                            LAST_WRITE,
-                            LAST_INDEX,
-                            LAST_LINK,
-                            LAST_PROPAGATE,
-                            LAST_MIGRATE,
-                            LAST_LINK_INDEX )
-                    .distributionColumn( ID );
-
     public static final PostgresTableDefinition ENTITY_SETS                   =
             new PostgresTableDefinition( "entity_sets" )
                     .addColumns(

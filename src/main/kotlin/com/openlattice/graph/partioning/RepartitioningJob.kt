@@ -81,6 +81,10 @@ class RepartitioningJob(
 
     override fun processNextBatch() {
         if (state.needsMigrationCount == 0L) {
+            if (phase == RepartitioningPhase.POPULATE) {
+                setPartitions(state.entitySetId, state.newPartitions)
+            }
+
             hasWorkRemaining = false
             return
         }
@@ -88,7 +92,7 @@ class RepartitioningJob(
         /**
          * Do an INSERT INTO ... SELECT FROM to re-partition the data.
          *
-         * Entity key id depenedent operations will not see data, until data has been inserted to the appropriate partition.
+         * Entity key id dependent operations will not see data, until data has been inserted to the appropriate partition.
          */
 
         state.repartitionCount += repartition(REPARTITION_DATA_SQL)
@@ -97,7 +101,7 @@ class RepartitioningJob(
 
         /**
          * Phase 1
-         * Delete data whose partition doesn't match it's computed partition.
+         * Delete data whose partition doesn't match its computed partition.
          */
         if (phase == RepartitioningPhase.FINALIZE) {
             state.deleteCount += delete(DELETE_DATA_SQL)
