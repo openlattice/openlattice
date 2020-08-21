@@ -31,22 +31,26 @@ import org.slf4j.LoggerFactory
 import java.sql.Connection
 import java.util.function.Supplier
 
-const val SRC_TABLE_ALIAS = "SRC_TABLE"
-const val EDGE_TABLE_ALIAS = "EDGE_TABLE"
-const val DST_TABLE_ALIAS = "DST_TABLE"
-
-class AssemblerQueryService(private val edmService: EdmManager) {
+@Deprecated("Unused, needs rewrite")
+class AssemblerQueryService(
+        private val edmService: EdmManager
+) {
 
     companion object {
         private val logger = LoggerFactory.getLogger(AssemblerQueryService::class.java)
+
+        const val SRC_TABLE_ALIAS = "SRC_TABLE"
+        const val EDGE_TABLE_ALIAS = "EDGE_TABLE"
+        const val DST_TABLE_ALIAS = "DST_TABLE"
     }
 
-    fun simpleAggregation(connection: Connection,
-                          srcEntitySetName: String, edgeEntitySetName: String, dstEntitySetName: String,
-                          srcGroupColumns: List<String>, edgeGroupColumns: List<String>, dstGroupColumns: List<String>,
-                          srcAggregates: Map<String, List<AggregationType>>, edgeAggregates: Map<String, List<AggregationType>>, dstAggregates: Map<String, List<AggregationType>>,
-                          calculations: Set<Calculation>,
-                          srcFilters: Map<String, List<Filter>>, edgeFilters: Map<String, List<Filter>>, dstFilters: Map<String, List<Filter>>
+    fun simpleAggregation(
+            connection: Connection,
+            srcEntitySetName: String, edgeEntitySetName: String, dstEntitySetName: String,
+            srcGroupColumns: List<String>, edgeGroupColumns: List<String>, dstGroupColumns: List<String>,
+            srcAggregates: Map<String, List<AggregationType>>, edgeAggregates: Map<String, List<AggregationType>>, dstAggregates: Map<String, List<AggregationType>>,
+            calculations: Set<Calculation>,
+            srcFilters: Map<String, List<Filter>>, edgeFilters: Map<String, List<Filter>>, dstFilters: Map<String, List<Filter>>
     ): Iterable<Map<String, Any?>> {
 
         // Groupings
@@ -194,7 +198,7 @@ class AssemblerQueryService(private val edmService: EdmManager) {
     fun simpleAggregationJoinSql(srcEntitySetName: String, edgeEntitySetName: String, dstEntitySetName: String,
                                  cols: String, groupingColAliases: String, aggregateCols: String, calculationCols: String,
                                  filtersSql: String): String {
-        return "SELECT $cols, $aggregateCols $calculationCols FROM ${AssemblerConnectionManager.MATERIALIZED_VIEWS_SCHEMA}.${PostgresTable.EDGES.name} " +
+        return "SELECT $cols, $aggregateCols $calculationCols FROM ${AssemblerConnectionManager.MATERIALIZED_VIEWS_SCHEMA}.${PostgresTable.E.name} " +
                 "INNER JOIN ${AssemblerConnectionManager.entitySetNameTableName(srcEntitySetName)} AS $SRC_TABLE_ALIAS USING( ${PostgresColumn.ID.name} ) " +
                 "INNER JOIN ${AssemblerConnectionManager.entitySetNameTableName(edgeEntitySetName)} AS $EDGE_TABLE_ALIAS ON( $EDGE_TABLE_ALIAS.${PostgresColumn.ID.name} = ${PostgresColumn.EDGE_COMP_2.name} ) " +
                 "INNER JOIN ${AssemblerConnectionManager.entitySetNameTableName(dstEntitySetName)} AS $DST_TABLE_ALIAS ON( $DST_TABLE_ALIAS.${PostgresColumn.ID.name} = ${PostgresColumn.EDGE_COMP_1.name} ) " +

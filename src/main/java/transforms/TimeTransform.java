@@ -3,7 +3,6 @@ package transforms;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.openlattice.shuttle.dates.JavaDateTimeHelper;
-import com.openlattice.shuttle.dates.TimeZones;
 import com.openlattice.shuttle.transformations.Transformation;
 import com.openlattice.shuttle.util.Constants;
 
@@ -27,8 +26,8 @@ public class TimeTransform extends Transformation<String> {
 
     @Override
     public Object applyValue( String o ) {
-        final JavaDateTimeHelper dtHelper = new JavaDateTimeHelper( TimeZones.America_NewYork,
-                pattern );
+        final JavaDateTimeHelper dtHelper = new JavaDateTimeHelper( Constants.DEFAULT_TIMEZONE,
+                pattern, false );
         return dtHelper.parseTime( o );
     }
 
