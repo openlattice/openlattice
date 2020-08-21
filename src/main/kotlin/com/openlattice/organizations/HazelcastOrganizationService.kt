@@ -129,7 +129,7 @@ class HazelcastOrganizationService(
         when (principal.type) {
             PrincipalType.USER ->
                 //Add the organization principal to the creator marking them as a member of the organization
-                addMembers(organization.getAclKey(), ImmutableSet.of(principal), mapOf())
+                addMembers(organization.getAclKey().first(), ImmutableSet.of(principal), mapOf())
             PrincipalType.ROLE ->
                 //For a role we ensure that it has
                 logger.debug("Creating an organization with no members, but accessible by {}", principal)
@@ -273,7 +273,12 @@ class HazelcastOrganizationService(
             profiles: Map<Principal, Map<String, Set<String>>> = members
                     .associateWith { getAppMetadata(users.getValue(it.id)) }
     ) {
-        val newMembers = addMembers(AclKey(organizationId), members, profiles)
+        val nonUserPrincipals = members.filter { it.type != PrincipalType.USER }
+        require(nonUserPrincipals.isEmpty()) { "Cannot add non-users principals $nonUserPrincipals to organization $organizationId" }
+
+        val securablePrincipals = members.associateWith { principal -> securePrincipalsManager.lookup(principal) }
+
+        val newMembers = addMembers(AclKey(organizationId), securablePrincipals, profiles)
 
         if (newMembers.isNotEmpty()) {
             val securablePrincipals = securePrincipalsManager.getSecurablePrincipals(newMembers)
@@ -285,36 +290,39 @@ class HazelcastOrganizationService(
         }
     }
 
+    /**
+     * Do not invoke this directly as it bypasses checks in [HazelcastOrganizationService.addMembers]
+     *
+     */
     private fun addMembers(
             orgAclKey: AclKey,
-            membersToAdd: Set<Principal>,
+            membersToAdd: Map<Principal, AclKey>,
             profiles: Map<Principal, Map<String, Set<String>>>
     ): Set<Principal> {
         require(orgAclKey.size == 1) { "Organization acl key should only be of length 1" }
-
-        val members = if (membersToAdd is Serializable) membersToAdd else membersToAdd.toSet()
-
-        val nonUserPrincipals = members.filter { it.type != PrincipalType.USER }
-        require(nonUserPrincipals.isEmpty()) { "Cannot add non-users principals $nonUserPrincipals to organization $orgAclKey" }
+        val members = membersToAdd.keys.toSet()
         val organizationId = orgAclKey[0]
-
-
         val newMembers: Set<Principal> = organizations.executeOnKey(organizationId, OrganizationEntryProcessor {
-            val newMembers = members.filter { member -> !it.members.contains(member) }.toSet()
+            val newMembers = members - it.members
             it.members.addAll(newMembers)
-            return@OrganizationEntryProcessor Result(newMembers, newMembers.isNotEmpty())
+            //We're always persisting here.
+            return@OrganizationEntryProcessor Result(newMembers)
         }) as Set<Principal>
 
-        if (newMembers.isNotEmpty()) {
-            grantOrganizationPrincipals(organizationId, newMembers, orgAclKey, profiles)
-        }
+        //Always trigger as this won't cause a write to organizations table.
+        grantOrganizationPrincipals(
+                organizationId,
+                membersToAdd,
+                orgAclKey,
+                profiles
+        )
 
         return newMembers
     }
 
     private fun grantOrganizationPrincipals(
             organizationId: UUID,
-            members: Set<Principal>,
+            members: Map<Principal, AclKey>,
             orgAclKey: AclKey = AclKey(organizationId),
             profiles: Map<Principal, Map<String, Set<String>>> = mapOf()
     ) {
@@ -322,7 +330,7 @@ class HazelcastOrganizationService(
          * Grant each member any of the roles, for which they meet the crieria.
          */
         val organization = organizations.getValue(organizationId)
-        members.forEach { member ->
+        members.forEach { (member, _) ->
             organization.grants.forEach { (roleId, grants) ->
                 grants.forEach { (_, grant) ->
                     val profile = profiles.getOrElse(member) { mapOf() }
@@ -348,13 +356,12 @@ class HazelcastOrganizationService(
             }
         }
         //Add the organization principal to each user
-        members.map { principal ->
+        members.forEach { (principal, target) ->
             //Grant read on the organization
             authorizations.addPermission(orgAclKey, principal, EnumSet.of(Permission.READ))
             //Assign organization principal.
-            securePrincipalsManager.lookup(principal)
-        }.forEach { target -> securePrincipalsManager.addPrincipalToPrincipal(orgAclKey, target) }
-
+            securePrincipalsManager.addPrincipalToPrincipal(orgAclKey, target)
+        }
     }
 
     @Timed
