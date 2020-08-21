@@ -157,9 +157,6 @@ public final class PostgresColumn {
     public static final String                   DST_FIELD                         = "dst";
     public static final PostgresColumnDefinition DST                               =
             new PostgresColumnDefinition( DST_FIELD, UUID_ARRAY );
-    public static final String                   DST_LINKING_VERTEX_ID_FIELD       = "dst_linking_vertex_id";
-    public static final PostgresColumnDefinition DST_LINKING_VERTEX_ID             =
-            new PostgresColumnDefinition( DST_LINKING_VERTEX_ID_FIELD, UUID );
     // filters applied to outgoing edges
     public static final String                   DST_SELECTS_FIELD                 = "dst_selections";
     public static final PostgresColumnDefinition DST_SELECTS                       = new PostgresColumnDefinition(
@@ -283,12 +280,6 @@ public final class PostgresColumn {
             TIMESTAMPTZ )
             .withDefault( "'-infinity'" )
             .notNull();
-    public static final String                   LAST_MARK_FIELD                   = "last_mark";
-    public static final PostgresColumnDefinition LAST_MARK                         = new PostgresColumnDefinition(
-            LAST_MARK_FIELD,
-            TIMESTAMPTZ )
-            .withDefault( "'-infinity'" )
-            .notNull();
     public static final String                   LAST_MIGRATE_FIELD                = "last_migrate";
     public static final PostgresColumnDefinition LAST_MIGRATE                      = new PostgresColumnDefinition(
             LAST_MIGRATE_FIELD,
@@ -365,9 +356,6 @@ public final class PostgresColumn {
     public static final String                   NAME_SET_FIELD                    = "name_set";
     public static final PostgresColumnDefinition NAME_SET                          =
             new PostgresColumnDefinition( NAME_SET_FIELD, TEXT_ARRAY ).notNull();
-    public static final String                   NEW_VERTEX_ID_FIELD               = "new_vertex_id";
-    public static final PostgresColumnDefinition NEW_VERTEX_ID                     =
-            new PostgresColumnDefinition( NEW_VERTEX_ID_FIELD, UUID ).notNull();
     public static final String                   NULLABLE_TITLE_FIELD              = "title";
     public static final PostgresColumnDefinition NULLABLE_TITLE                    =
             new PostgresColumnDefinition( NULLABLE_TITLE_FIELD, TEXT );
@@ -407,9 +395,6 @@ public final class PostgresColumn {
             new PostgresColumnDefinition( PII_FIELD, BOOLEAN )
                     .withDefault( false )
                     .notNull();
-    public static final String                   PRINCIPAL_IDS_FIELD               = "principal_ids";
-    public static final PostgresColumnDefinition PRINCIPAL_IDS                     =
-            new PostgresColumnDefinition( PRINCIPAL_IDS_FIELD, TEXT_ARRAY );
     public static final String                   PRINCIPAL_ID_FIELD                = "principal_id";
     public static final PostgresColumnDefinition PRINCIPAL_ID                      =
             new PostgresColumnDefinition( PRINCIPAL_ID_FIELD, TEXT );
