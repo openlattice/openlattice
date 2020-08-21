@@ -26,8 +26,9 @@ import com.google.common.collect.ImmutableSet;
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.mapstores.TestDataFactory;
+import org.apache.commons.lang3.RandomUtils;
+
 import java.io.Serializable;
-import org.apache.commons.lang.math.RandomUtils;
 
 public class EntitySetStreamSerializerTest extends AbstractStreamSerializerTest<EntitySetStreamSerializer, EntitySet>
         implements Serializable {
@@ -37,9 +38,9 @@ public class EntitySetStreamSerializerTest extends AbstractStreamSerializerTest<
     protected EntitySet createInput() {
         final var es = TestDataFactory.entitySet();
         es.setPartitions( ImmutableSet
-                .of( RandomUtils.nextInt( 1024 ),
-                        RandomUtils.nextInt( 1024 ),
-                        RandomUtils.nextInt( 1024 ) ) );
+                .of( RandomUtils.nextInt( 0, 1024 ),
+                        RandomUtils.nextInt( 0, 1024 ),
+                        RandomUtils.nextInt( 0, 1024 ) ) );
         return es;
     }
 
