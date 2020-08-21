@@ -365,6 +365,22 @@ class PostgresEntityDataQueryService(
             partition: Int,
             awsPassthrough: Boolean
     ): Int {
+
+        val entitiesWithHashAndInsertData = entities.mapValues { entityKeyIdToEntity ->
+            entityKeyIdToEntity.value.mapValues { propertyTypeIdToPropertyValues ->
+                propertyTypeIdToPropertyValues.value.map { propertyValue ->
+                    getPropertyHash(
+                            entitySetId,
+                            entityKeyIdToEntity.key,
+                            propertyTypeIdToPropertyValues.key,
+                            propertyValue,
+                            authorizedPropertyTypes.getValue(propertyTypeIdToPropertyValues.key).datatype,
+                            awsPassthrough
+                    )
+                }
+            }
+        }
+
         return hds.connection.use { connection ->
             //Update the versions of all entities.
             val versionsArrays = PostgresArrays.createLongArray(connection, version)
@@ -379,26 +395,15 @@ class PostgresEntityDataQueryService(
 
             //Update property values. We use multiple prepared statements in batch while re-using ARRAY[version].
             val upsertPropertyValues = mutableMapOf<UUID, PreparedStatement>()
-            val updatedPropertyCounts = entities.entries.map { (entityKeyId, entityData) ->
+            val updatedPropertyCounts = entitiesWithHashAndInsertData.entries.map { (entityKeyId, entityData) ->
 
-                entityData.map { (propertyTypeId, values) ->
+                entityData.map { (propertyTypeId, hashAndInsertValue) ->
                     val upsertPropertyValue = upsertPropertyValues.getOrPut(propertyTypeId) {
                         val pt = authorizedPropertyTypes[propertyTypeId] ?: abortInsert(entitySetId, entityKeyId)
                         connection.prepareStatement(upsertPropertyValueSql(pt))
                     }
 
-                    values.map { value ->
-                        val dataType = authorizedPropertyTypes.getValue(propertyTypeId).datatype
-
-                        val (propertyHash, insertValue) = getPropertyHash(
-                                entitySetId,
-                                entityKeyId,
-                                propertyTypeId,
-                                value,
-                                dataType,
-                                awsPassthrough
-                        )
-
+                    hashAndInsertValue.map { (propertyHash, insertValue) ->
                         upsertPropertyValue.setObject(1, entitySetId)
                         upsertPropertyValue.setObject(2, entityKeyId)
                         upsertPropertyValue.setInt(3, partition)
