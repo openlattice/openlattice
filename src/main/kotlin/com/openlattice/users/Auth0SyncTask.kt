@@ -87,18 +87,17 @@ class Auth0SyncTask
      * Retrieves updated users from auth0 and adds them to hazelcast.
      */
     private fun updateUsersCache() {
-        val ds = getDependency()
+        val deps = getDependency()
         logger.info("Updating users.")
         val currentSync = Instant.now()
 
-        ds.userListingService
-                .getUpdatedUsers(lastSync, currentSync)
+        deps.userListingService.getUpdatedUsers(lastSync, currentSync)
                 .chunked(CHUNK_SIZE)
                 .map {
                     syncSemaphore.acquire()
-                    ds.executor.submit {
+                    deps.executor.submit {
                         try {
-                            ds.users.createOrUpdateUsers(it)
+                            deps.users.createOrUpdateUsers(it)
                         } catch (ex: Exception) {
                             logger.error("Unable to update users $it", ex)
                         } finally {
@@ -121,7 +120,8 @@ class Auth0SyncTask
         val ds = getDependency()
         logger.info("Synchronizing users.")
 
-        ds.users.getCachedUsers().chunked(CHUNK_SIZE)
+        ds.users.getCachedUsers()
+                .chunked(CHUNK_SIZE)
                 .map {
                     syncSemaphore.acquire()
 

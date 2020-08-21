@@ -134,7 +134,7 @@ class AuditRecordEntitySetsManager(
                 aclKey, EnumSet.of(Permission.OWNER)
         )
 
-        var firstUserPrincipal: Principal
+        val firstUserPrincipal: Principal
 
         try {
             firstUserPrincipal = ownerPrincipals.first { it.type == PrincipalType.USER }
@@ -190,7 +190,7 @@ class AuditRecordEntitySetsManager(
                     aclKey, EnumSet.of(Permission.OWNER)
             )
 
-            var firstUserPrincipal: Principal
+            val firstUserPrincipal: Principal
 
             try {
                 firstUserPrincipal = ownerPrincipals.first { it.type == PrincipalType.USER }
