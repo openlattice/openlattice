@@ -78,6 +78,7 @@ tasks.withType(com.github.spotbugs.SpotBugsTask) {
         xml.enabled = false
         html.enabled = true
     }
+    ignoreFailures = true
 }
 
 tasks.withType(Javadoc) {
