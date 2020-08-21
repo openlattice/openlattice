@@ -71,7 +71,7 @@ class LocalUserListingService(auth0Configuration: Auth0Configuration) : UserList
     }
 
     override fun getUpdatedUsers(from: Instant, to: Instant): Sequence<User> {
-        return emptySequence()
+        return users.values.asSequence()
     }
 
 }
