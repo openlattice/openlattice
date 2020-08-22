@@ -23,6 +23,8 @@
 package com.openlattice.hazelcast.pods;
 
 import com.auth0.json.mgmt.users.User;
+import com.geekbeast.rhizome.jobs.DistributableJob;
+import com.geekbeast.rhizome.jobs.PostgresJobsMapStore;
 import com.google.common.base.Charsets;
 import com.google.common.eventbus.EventBus;
 import com.google.common.io.Resources;
@@ -91,7 +93,8 @@ import java.util.UUID;
 @Configuration
 @Import( { PostgresPod.class, Auth0Pod.class } )
 public class MapstoresPod {
-    private static final Logger           logger = LoggerFactory.getLogger( MapstoresPod.class );
+    private static final Logger logger = LoggerFactory.getLogger( MapstoresPod.class );
+
     @Inject
     private HikariDataSource hikariDataSource;
 
@@ -106,6 +109,11 @@ public class MapstoresPod {
 
     @Inject
     private Jdbi jdbi;
+
+    @Bean
+    public SelfRegisteringMapStore<UUID, DistributableJob<?>> jobsMapstore() {
+        return new PostgresJobsMapStore( hikariDataSource );
+    }
 
     @Bean
     public SelfRegisteringMapStore<UUID, OrganizationAssembly> organizationAssemblies() {

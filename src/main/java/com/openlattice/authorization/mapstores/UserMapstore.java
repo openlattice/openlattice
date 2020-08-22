@@ -20,10 +20,6 @@
 
 package com.openlattice.authorization.mapstores;
 
-import static com.openlattice.postgres.PostgresColumn.USER_DATA;
-import static com.openlattice.postgres.PostgresColumn.USER_ID;
-import static com.openlattice.postgres.PostgresTable.USERS;
-
 import com.auth0.json.mgmt.users.User;
 import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -36,13 +32,17 @@ import com.hazelcast.config.MapStoreConfig;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.postgres.mapstores.AbstractBasePostgresMapstore;
 import com.zaxxer.hikari.HikariDataSource;
+import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.commons.lang3.RandomUtils;
+
 import java.io.IOException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-import org.apache.commons.lang.RandomStringUtils;
-import org.apache.commons.lang3.RandomUtils;
+import static com.openlattice.postgres.PostgresColumn.USER_DATA;
+import static com.openlattice.postgres.PostgresColumn.USER_ID;
+import static com.openlattice.postgres.PostgresTable.USERS;
 
 /**
  * Implementation of persistence layer for users from auth0.

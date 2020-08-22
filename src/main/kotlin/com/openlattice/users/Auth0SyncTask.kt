@@ -34,6 +34,7 @@ import java.util.concurrent.TimeUnit
 
 const val REFRESH_INTERVAL_MILLIS = 120_000L // 2 min
 private const val MAX_JOBS = 8
+private const val CHUNK_SIZE = 10_000
 private const val LAST_SYNC = "lastSync"
 private val logger = LoggerFactory.getLogger(Auth0SyncTask::class.java)
 
@@ -86,19 +87,19 @@ class Auth0SyncTask
      * Retrieves updated users from auth0 and adds them to hazelcast.
      */
     private fun updateUsersCache() {
-        val ds = getDependency()
+        val deps = getDependency()
         logger.info("Updating users.")
         val currentSync = Instant.now()
 
-        ds.userListingService
-                .getUpdatedUsers(lastSync, currentSync)
+        deps.userListingService.getUpdatedUsers(lastSync, currentSync)
+                .chunked(CHUNK_SIZE)
                 .map {
                     syncSemaphore.acquire()
-                    ds.executor.submit {
+                    deps.executor.submit {
                         try {
-                            ds.users.updateUser(it)
+                            deps.users.createOrUpdateUsers(it)
                         } catch (ex: Exception) {
-                            logger.error("Unable to update user ${it.id}", ex)
+                            logger.error("Unable to update users $it", ex)
                         } finally {
                             syncSemaphore.release()
                         }
@@ -120,13 +121,17 @@ class Auth0SyncTask
         logger.info("Synchronizing users.")
 
         ds.users.getCachedUsers()
+                .chunked(CHUNK_SIZE)
                 .map {
                     syncSemaphore.acquire()
+
+                    val userIds = it.map { user -> user.id }.toSet()
+
                     ds.executor.submit {
                         try {
-                            ds.users.syncUserEnrollmentsAndAuthentication(it)
+                            ds.users.syncAuthenticationCacheForPrincipalIds(userIds)
                         } catch (ex: Exception) {
-                            logger.error("Unable to synchronize enrollments and permissions for user ${it.id}", ex)
+                            logger.error("Unable to synchronize enrollments and permissions for users $userIds", ex)
                         } finally {
                             syncSemaphore.release()
                         }

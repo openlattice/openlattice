@@ -15,7 +15,18 @@ import org.springframework.stereotype.Component
  */
 @Component
 class Auth0UserStreamSerializer : SelfRegisteringStreamSerializer<User> {
-    private val mapper = ObjectMappers.newJsonMapper()
+
+    companion object {
+        private val mapper = ObjectMappers.newJsonMapper()
+
+        fun serialize(out: ObjectDataOutput, user: User) {
+            out.writeByteArray(mapper.writeValueAsBytes(user))
+        }
+
+        fun deserialize(input: ObjectDataInput): User {
+            return mapper.readValue(input.readByteArray())
+        }
+    }
 
     override fun getTypeId(): Int {
         return StreamSerializerTypeIds.AUTH0_USER.ordinal
@@ -26,10 +37,10 @@ class Auth0UserStreamSerializer : SelfRegisteringStreamSerializer<User> {
     }
 
     override fun write(out: ObjectDataOutput, user: User) {
-        out.writeByteArray(mapper.writeValueAsBytes(user))
+        serialize(out, user)
     }
 
     override fun read(input: ObjectDataInput): User {
-        return mapper.readValue(input.readByteArray())
+        return deserialize(input)
     }
 }

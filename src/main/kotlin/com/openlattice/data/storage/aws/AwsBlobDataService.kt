@@ -21,9 +21,7 @@ import org.springframework.stereotype.Service
 import java.net.URL
 import java.util.*
 import java.util.concurrent.Callable
-import com.geekbeast.util.ExponentialBackoff
-import com.geekbeast.util.RetryStrategy
-import com.geekbeast.util.attempt
+
 
 private val logger = LoggerFactory.getLogger(AwsBlobDataService::class.java)
 const val MAX_ERROR_RETRIES = 5

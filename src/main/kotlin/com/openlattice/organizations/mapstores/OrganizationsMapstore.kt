@@ -65,6 +65,7 @@ class OrganizationsMapstore(val hds: HikariDataSource) : AbstractBasePostgresMap
         return super.getMapConfig()
                 .addIndexConfig(IndexConfig(IndexType.HASH, CONNECTIONS_INDEX))
                 .addIndexConfig(IndexConfig(IndexType.HASH, MEMBERS_INDEX))
+                .addIndexConfig(IndexConfig(IndexType.HASH, DOMAINS_INDEX))
                 .setInMemoryFormat(InMemoryFormat.OBJECT)
     }
 

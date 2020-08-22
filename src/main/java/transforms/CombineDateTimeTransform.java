@@ -3,6 +3,7 @@ package transforms;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.openlattice.shuttle.dates.JavaDateTimeHelper;
+import com.openlattice.shuttle.dates.TimeZones;
 import com.openlattice.shuttle.transformations.Transformation;
 import com.openlattice.shuttle.util.Constants;
 import org.apache.commons.lang3.StringUtils;
@@ -12,7 +13,6 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.util.Map;
-import java.util.Optional;
 import java.util.TimeZone;
 
 public class CombineDateTimeTransform extends Transformation<Map<String, String>> {
@@ -21,6 +21,7 @@ public class CombineDateTimeTransform extends Transformation<Map<String, String>
     private final String   timeColumn;
     private final String[] timePattern;
     private final TimeZone timezone;
+    private final Boolean  shouldAddTimezone;
 
     /**
      * Represents a transformation from string to datetime.
@@ -29,7 +30,7 @@ public class CombineDateTimeTransform extends Transformation<Map<String, String>
      * @param datePattern: list of patterns of date
      * @param timeColumn:  column of time
      * @param timePattern: list of patterns of time
-     * @param timezone: name of the timezone
+     * @param timezone:    name of the timezone
      */
     @JsonCreator
     public CombineDateTimeTransform(
@@ -37,24 +38,22 @@ public class CombineDateTimeTransform extends Transformation<Map<String, String>
             @JsonProperty( Constants.DATE_PATTERN ) String[] datePattern,
             @JsonProperty( Constants.TIME_COLUMN ) String timeColumn,
             @JsonProperty( Constants.TIME_PATTERN ) String[] timePattern,
-            @JsonProperty( Constants.TIMEZONE ) Optional<String> timezone
+            @JsonProperty( Constants.TIMEZONE ) String timezone
     ) {
         this.dateColumn = dateColumn;
         this.datePattern = datePattern;
         this.timeColumn = timeColumn;
         this.timePattern = timePattern;
-        if (timezone.isPresent()){
-            this.timezone = TimeZone.getTimeZone( timezone.get() );
-        } else {
-            this.timezone = Constants.DEFAULT_TIMEZONE;
-        }
+        this.timezone = TimeZones.checkTimezone( timezone );
+        this.shouldAddTimezone = timezone == null;
     }
 
     @Override
     public Object apply( Map<String, String> row ) {
 
         if ( !( row.containsKey( dateColumn ) || row.containsKey( timeColumn ) ) ) {
-            throw new IllegalStateException( String.format( "The column %s or %s is not found.", dateColumn, timeColumn ) );
+            throw new IllegalStateException( String
+                    .format( "The column %s or %s is not found.", dateColumn, timeColumn ) );
         }
 
         // get date
@@ -63,7 +62,7 @@ public class CombineDateTimeTransform extends Transformation<Map<String, String>
             return null;
         }
         final JavaDateTimeHelper dHelper = new JavaDateTimeHelper( this.timezone,
-                datePattern );
+                this.datePattern, this.shouldAddTimezone );
 
         LocalDate date;
         try {
@@ -78,22 +77,21 @@ public class CombineDateTimeTransform extends Transformation<Map<String, String>
             return null;
         }
         final JavaDateTimeHelper tHelper = new JavaDateTimeHelper( this.timezone,
-                timePattern );
+                this.timePattern, this.shouldAddTimezone );
 
         LocalTime time;
         try {
             time = tHelper.parseTime( t );
         } catch ( Exception e ) {
-            time = dHelper.parseDateTimeAsTime( d );
+            time = tHelper.parseDateTimeAsTime( t );
         }
 
-        if ((date == null) || (time == null)){return null;};
-
         // combine
-        if ( date  == null |  time == null ) {
+        if ( date == null || time == null ) {
             return null;
         }
         LocalDateTime dateTime = LocalDateTime.of( date, time );
+
         TimeZone tz = this.timezone;
         OffsetDateTime out = dateTime.atZone( tz.toZoneId() ).toOffsetDateTime();
         return out;

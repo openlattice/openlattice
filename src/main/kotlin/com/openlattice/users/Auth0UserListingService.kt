@@ -24,7 +24,6 @@ package com.openlattice.users
 import com.auth0.client.mgmt.ManagementAPI
 import com.auth0.json.mgmt.users.User
 import com.dataloom.mappers.ObjectMappers
-import com.geekbeast.auth0.*
 import com.openlattice.users.export.Auth0ApiExtension
 import com.openlattice.users.export.JobStatus
 import com.openlattice.users.export.UserExportJobRequest
@@ -36,8 +35,6 @@ import java.time.Instant
 import java.util.stream.Collectors
 import java.util.zip.GZIPInputStream
 
-const val SEARCH_ENGINE_VERSION = "v3"
-const val MAX_PAGE_SIZE = 100
 private const val DEFAULT_PAGE_SIZE = 100
 
 /**
@@ -68,17 +65,17 @@ class Auth0UserListingService(
      */
     private fun getUsers(auth0ApiExtension: Auth0ApiExtension): List<User> {
         val exportEntity = auth0ApiExtension.userExport()
-        val job = exportEntity.submitExportJob(
-                UserExportJobRequest(listOf(USER_ID, EMAIL, NICKNAME, APP_METADATA, IDENTITIES))
-        )
+        val job = exportEntity.submitExportJob(UserExportJobRequest(AUTH0_USER_FIELDS))
 
         // will fail if export job hangs too long with too many requests error (429 status code)
         // https://auth0.com/docs/policies/rate-limits
         var exportJobResult = exportEntity.getJob(job.id)
-        while (exportJobResult.status == JobStatus.PENDING) {
+        while (exportJobResult.status == JobStatus.PENDING || exportJobResult.status == JobStatus.PROCESSING) {
             Thread.sleep(200) // wait before calling again for job status
             exportJobResult = exportEntity.getJob(job.id)
         }
+
+        Thread.sleep(1000) // TODO actually fix
 
         return readUsersFromLocation(exportJobResult)
     }
@@ -99,7 +96,7 @@ class Auth0UserListingService(
             // if at any point we have too many users, we might have to download the file
             return buffered.lines().map { line -> mapper.readValue(line, User::class.java) }.collect(Collectors.toList())
         } catch (e: Exception) {
-            logger.error("Couldn't read list of users from download url $downloadUrl.")
+            logger.error("Couldn't read list of users from download url $downloadUrl.",e)
             throw e
         }
     }

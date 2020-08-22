@@ -113,7 +113,7 @@ class PostgresEntityKeyIdServiceTest : TestServer() {
             executor.submit<Int> {
                 val partitionsMap = ids
                         .shuffled()
-                        .take(32768)
+                        .take(4096)
                         .groupBy { getPartition(it, partitions) }
                 hds.connection.use { connection ->
                     connection.autoCommit = false
@@ -147,9 +147,9 @@ class PostgresEntityKeyIdServiceTest : TestServer() {
     @Test
     fun testMassiveInsertAndReadBack() {
         logger.info("Testing insertion and massive readback")
-        val smallBatchSize = 8192
-        val medBatchSize = 32768
-        val largeBatchSize = 128000
+        val smallBatchSize = 128
+        val medBatchSize = 512
+        val largeBatchSize = 2048
         val entitySetId = UUID.randomUUID()
 
         val smallBatch = generateSequence { EntityKey(entitySetId, RandomStringUtils.randomAlphanumeric(10)) }
@@ -239,13 +239,16 @@ class PostgresEntityKeyIdServiceTest : TestServer() {
         val entitySetId = UUID.randomUUID()
         var testLock = ReentrantLock()
         testLock.lock()
+
         executor.submit {
             while (!testLock.tryLock()) {
-                idGenService.getNextId()
+                generateSequence { idGenService.getNextId() }.take(2048).forEach {
+                    idGenService.returnId(it)
+                }
             }
         }
         try {
-            val entityKeys1 = (0 until 65000).map {
+            val entityKeys1 = (0 until 1000).map {
                 EntityKey(entitySetId, RandomStringUtils.randomAlphanumeric(10))
             }.toSet()
             val entityKeys2 = (0 until 1000).map {
@@ -265,7 +268,7 @@ class PostgresEntityKeyIdServiceTest : TestServer() {
     @Test
     fun testUniqueIdAssignment() {
         val entitySetId = UUID.randomUUID()
-        val expectedCount = 70000
+        val expectedCount = 4096
         val entityKeys = (0 until expectedCount).map {
             EntityKey(
                     entitySetId, RandomStringUtils.randomAlphanumeric(10)

@@ -826,6 +826,20 @@ fun selectPropertyTypesOfEntitySetColumnar(
     return "SELECT $selectArrayColumns FROM (SELECT $selectColumns FROM ($entitySetData) as entity_set_data) as grouped_data GROUP BY ($groupByColumns)"
 }
 
+/**
+ * Partitioning selector requires an unambiguous data column called partitions to exist in the query to correcly compute partitions.
+ */
+fun getPartitioningSelector(
+        idColumn: PostgresColumnDefinition
+) = getPartitioningSelector(idColumn.name)
+
+/**
+ * Partitioning selector requires an unambiguous data column called partitions to exist in the query to correcly compute partitions.
+ */
+fun getPartitioningSelector(
+        idColumn: String
+) = "partitions[ 1 + ((array_length(partitions,1) + (('x'||right(${idColumn}::text,8))::bit(32)::int % array_length(partitions,1))) % array_length(partitions,1))]"
+
 
 private fun selectPropertyColumn(propertyType: PropertyType): String {
     val dataType = PostgresEdmTypeConverter.map(propertyType.datatype).sql()

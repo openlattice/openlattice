@@ -64,6 +64,8 @@ enum class JobStatus {
     COMPLETED,
     @JsonProperty("pending")
     PENDING,
+    @JsonProperty("processing")
+    PROCESSING,
     @JsonProperty("expired")
     EXPIRED
 }
