@@ -426,6 +426,6 @@ DELETE FROM ${E.name}
       ${E.name}.${PARTITION.name} = ? 
       AND ${E.name}.${SRC_ENTITY_SET_ID.name} = ?
       AND ${E.name}.${PARTITION.name}!=${getPartitioningSelector(E.name + "." + SRC_ENTITY_KEY_ID.name)} 
-      AND to_be_deleted.${SRC_ENTITY_SET_ID.name} = ${E.name}.${SRC_ENTITY_SET_ID.name} 
+      AND to_be_deleted.${SRC_ENTITY_KEY_ID.name} = ${E.name}.${SRC_ENTITY_KEY_ID.name} 
       AND to_be_deleted.${PARTITION.name} = ${E.name}.${PARTITION.name};
 """.trimIndent()
