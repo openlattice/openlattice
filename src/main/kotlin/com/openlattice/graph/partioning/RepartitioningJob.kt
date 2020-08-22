@@ -421,11 +421,25 @@ DELETE FROM ${IDS.name}
  */
 private val DELETE_EDGES_SQL = """
 DELETE FROM ${E.name} 
-    USING (SELECT ${SRC_ENTITY_SET_ID.name},${SRC_ENTITY_KEY_ID.name},${PARTITION.name},${PARTITIONS.name} FROM ${E.name} INNER JOIN (select ? as ${SRC_ENTITY_SET_ID.name},? as ${PARTITIONS.name} ) as es USING (${SRC_ENTITY_SET_ID.name})) as to_be_deleted
+    USING (SELECT
+      ${SRC_ENTITY_SET_ID.name},
+      ${SRC_ENTITY_KEY_ID.name},
+      ${DST_ENTITY_SET_ID.name},
+      ${DST_ENTITY_KEY_ID.name},
+      ${EDGE_ENTITY_SET_ID.name},
+      ${EDGE_ENTITY_KEY_ID.name},
+      ${PARTITION.name},
+      ${PARTITIONS.name} 
+    FROM ${E.name} INNER JOIN (select ? as ${SRC_ENTITY_SET_ID.name},? as ${PARTITIONS.name} ) as es USING (${SRC_ENTITY_SET_ID.name})) as to_be_deleted
     WHERE
       ${E.name}.${PARTITION.name} = ? 
       AND ${E.name}.${SRC_ENTITY_SET_ID.name} = ?
       AND ${E.name}.${PARTITION.name}!=${getPartitioningSelector(E.name + "." + SRC_ENTITY_KEY_ID.name)} 
       AND to_be_deleted.${SRC_ENTITY_SET_ID.name} = ${E.name}.${SRC_ENTITY_SET_ID.name} 
+      AND to_be_deleted.${SRC_ENTITY_KEY_ID.name} = ${E.name}.${SRC_ENTITY_KEY_ID.name}
+      AND to_be_deleted.${DST_ENTITY_SET_ID.name} = ${E.name}.${DST_ENTITY_SET_ID.name}
+      AND to_be_deleted.${DST_ENTITY_KEY_ID.name} = ${E.name}.${DST_ENTITY_KEY_ID.name}
+      AND to_be_deleted.${EDGE_ENTITY_SET_ID.name} = ${E.name}.${EDGE_ENTITY_SET_ID.name}
+      AND to_be_deleted.${EDGE_ENTITY_KEY_ID.name} = ${E.name}.${EDGE_ENTITY_KEY_ID.name}
       AND to_be_deleted.${PARTITION.name} = ${E.name}.${PARTITION.name};
 """.trimIndent()
