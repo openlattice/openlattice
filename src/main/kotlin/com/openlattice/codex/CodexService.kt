@@ -29,6 +29,11 @@ import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.BasePostgresIterable
 import com.openlattice.postgres.streams.PreparedStatementHolderSupplier
 import com.openlattice.scheduling.ScheduledTask
+import com.openlattice.search.SearchService
+import com.openlattice.search.SortDefinition
+import com.openlattice.search.requests.Constraint
+import com.openlattice.search.requests.ConstraintGroup
+import com.openlattice.search.requests.SearchConstraints
 import com.openlattice.twilio.TwilioConfiguration
 import com.twilio.Twilio
 import com.twilio.rest.api.v2010.account.Message
@@ -66,7 +71,8 @@ class CodexService(
         val principalsManager: SecurePrincipalsManager,
         val organizations: HazelcastOrganizationService,
         val executor: ListeningExecutorService,
-        val hds: HikariDataSource
+        val hds: HikariDataSource,
+        val searchService: SearchService
 ) {
 
     companion object {
@@ -234,7 +240,7 @@ class CodexService(
             Range.greaterThan(formattedDateTime)
         }
 
-        var latestMessage = OffsetDateTime.MIN
+        var latestMessage = startDateTime
 
         listOf(true, false).forEach { isOutgoing ->
             val messageReader = Message
@@ -247,7 +253,7 @@ class CodexService(
             var isNotLastPage = true
             while (isNotLastPage) {
 
-                val latestDateForPage = integrateMessages(
+                val latestDateForPage = integrateMissingMessages(
                         organizationId,
                         page.records,
                         isOutgoing
@@ -255,8 +261,6 @@ class CodexService(
                 if (latestDateForPage.isAfter(latestMessage)) {
                     latestMessage = latestDateForPage
                 }
-
-                logger.info("Integrated page of ${page.records.size} messages.")
 
                 if (page.hasNextPage()) {
                     page = messageReader.nextPage(page)
@@ -283,29 +287,72 @@ class CodexService(
 
         val idsByEntityKey = entityKeyIdService.getEntityKeyIds(setOf(senderEntityKey, messageEntityKey, sentFromEntityKey))
 
-        dataGraphManager.createEntities(
+        val senderEntityKeyId = idsByEntityKey.getValue(senderEntityKey)
+        val messageEntityKeyId = idsByEntityKey.getValue(messageEntityKey)
+        val sentFromEntityKeyId = idsByEntityKey.getValue(sentFromEntityKey)
+
+        dataGraphManager.mergeEntities(
                 senderEntitySetId,
-                listOf(getSenderEntity(sender)),
+                mapOf(senderEntityKeyId to getSenderEntity(sender)),
                 getPropertyTypes(CodexConstants.AppType.PEOPLE)
         )
 
-        dataGraphManager.createEntities(
+        dataGraphManager.mergeEntities(
                 sentFromEntitySetId,
-                listOf(getAssociationEntity(formatDateTime(message.dateCreated))),
+                mapOf(sentFromEntityKeyId to getAssociationEntity(formatDateTime(message.dateCreated))),
                 getPropertyTypes(CodexConstants.AppType.SENT_FROM)
         )
 
         dataGraphManager.createAssociations(setOf(DataEdgeKey(
-                EntityDataKey(messageEntitySetId, idsByEntityKey.getValue(messageEntityKey)),
-                EntityDataKey(senderEntitySetId, idsByEntityKey.getValue(senderEntityKey)),
-                EntityDataKey(sentFromEntitySetId, idsByEntityKey.getValue(sentFromEntityKey))
+                EntityDataKey(messageEntitySetId, messageEntityKeyId),
+                EntityDataKey(senderEntitySetId, senderEntityKeyId),
+                EntityDataKey(sentFromEntitySetId, sentFromEntityKeyId)
         )))
 
-        integrateMessages(organizationId, listOf(message), isOutgoing = true)
+        integrateMissingMessages(organizationId, listOf(message), isOutgoing = true)
     }
 
-    fun integrateMessages(organizationId: UUID, messages: List<Message>, isOutgoing: Boolean): OffsetDateTime {
+    private fun filterToMissingMessages(messageEntitySetId: UUID, messages: List<Message>): List<Message> {
+
+        /* We filter out existing message SIDs by executing a search against elasticsearch. This is not 100% guaranteed
+         * to filter out *all* existing messages, but almost all incoming messages should be indexed directly as the
+         * number of entities written is under the batch index threshold, so the duplicate write case should be very
+         * rare, and it's not a big deal if we do end up rewriting a message on occasion.
+         */
+
+        val idType = CodexConstants.PropertyType.ID
+        val idPropertyTypeId = getPropertyTypeId(idType)
+
+        val messageIdConstraints = messages.map {
+            Constraint.simpleSearchConstraint(
+                    "entity.$idPropertyTypeId:\"${it.sid}\"",
+                    false
+            )
+        }
+
+        val searchConstraints = SearchConstraints(
+                arrayOf(messageEntitySetId),
+                0,
+                10_000,
+                mutableListOf(ConstraintGroup(messageIdConstraints)),
+                Optional.empty<SortDefinition>()
+        )
+
+        val existingMessageIds = searchService.executeSearch(
+                searchConstraints,
+                mapOf(messageEntitySetId to getPropertyTypes(CodexConstants.AppType.MESSAGES))
+        ).hits.flatMap { it.getOrDefault(idType.fqn, setOf()) }.map { it.toString() }.toSet()
+
+        return messages.filter { !existingMessageIds.contains(it.sid) }
+    }
+
+    fun integrateMissingMessages(organizationId: UUID, messages: List<Message>, isOutgoing: Boolean): OffsetDateTime {
         var latestDateTime = OffsetDateTime.MIN
+
+        if (messages.isEmpty()) {
+            return latestDateTime
+        }
+
         val associationAppType = if (isOutgoing) CodexConstants.AppType.SENT_TO else CodexConstants.AppType.SENT_FROM
 
         val messageEntitySetId = getEntitySetId(organizationId, CodexConstants.AppType.MESSAGES)
@@ -315,7 +362,8 @@ class CodexService(
         val entitiesByEntityKey = mutableMapOf<EntityKey, Map<UUID, Set<Any>>>()
         val edgesByEntityKey = mutableListOf<Triple<EntityKey, EntityKey, EntityKey>>()
 
-        messages.forEach {
+        val missingMessages = filterToMissingMessages(messageEntitySetId, messages)
+        missingMessages.forEach {
             val messageId = it.sid
             val phoneNumber = if (isOutgoing) it.to else it.from.toString()
             val dateTime = formatDateTime(it.dateCreated)
@@ -332,6 +380,11 @@ class CodexService(
             entitiesByEntityKey[contactEntityKey] = getContactEntity(phoneNumber)
 
             edgesByEntityKey.add(Triple(messageEntityKey, associationEntityKey, contactEntityKey))
+        }
+
+
+        if (entitiesByEntityKey.isEmpty()) {
+            return latestDateTime
         }
 
         val idsByEntityKey = entityKeyIdService.getEntityKeyIds(entitiesByEntityKey.keys)
@@ -354,6 +407,8 @@ class CodexService(
                 }.toSet()
         )
 
+        logger.info("Integrated page of ${missingMessages.size} messages for organization $organizationId.")
+
         return latestDateTime
     }
 
@@ -362,7 +417,7 @@ class CodexService(
         val messageId = request.getParameter(CodexConstants.Request.SID.parameter)
         val message = Message.fetcher(messageId).fetch()
 
-        integrateMessages(organizationId, listOf(message), isOutgoing = false)
+        integrateMissingMessages(organizationId, listOf(message), isOutgoing = false)
     }
 
     fun updateMessageStatus(organizationId: UUID, messageId: String, status: Message.Status) {
@@ -455,7 +510,7 @@ class CodexService(
                         "data" to retrieveMediaAsBaseSixtyFour(it.uri.toString()).get()))
             }
         }
-        
+
         return mapOf(
                 getPropertyTypeId(CodexConstants.PropertyType.ID) to setOf(message.sid),
                 getPropertyTypeId(CodexConstants.PropertyType.DATE_TIME) to setOf(dateTime),
