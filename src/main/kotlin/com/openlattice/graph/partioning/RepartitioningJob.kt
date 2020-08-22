@@ -140,6 +140,7 @@ class RepartitioningJob(
         try {
             connection.prepareStatement(deleteSql).use { deleteData ->
                 bind(deleteData)
+                deleteData.setObject(4, state.entitySetId)
                 logger.info(deleteData.toString())
                 deleteData.executeLargeUpdate()
             }
@@ -201,7 +202,6 @@ class RepartitioningJob(
         ps.setObject(1, state.entitySetId)
         ps.setArray(2, PostgresArrays.createIntArray(ps.connection, state.newPartitions))
         ps.setInt(3, partition)
-        ps.setObject(4, state.entitySetId)
     }
 
     private fun setPartitions(entitySetId: UUID, partitions: Set<Int>) {
