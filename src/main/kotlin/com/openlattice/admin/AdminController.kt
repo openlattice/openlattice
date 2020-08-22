@@ -19,6 +19,7 @@ import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EntitySetManager
 import com.openlattice.edm.PostgresEdmManager
 import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.jobs.JobUpdate
 import com.openlattice.notifications.sms.SmsEntitySetInformation
 import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.organizations.Organization
@@ -221,6 +222,16 @@ class AdminController : AdminApi, AuthorizingComponent {
     override fun getJob(@PathVariable(ID) jobId: UUID): Map<UUID,DistributableJob<*>> {
         ensureAdminAccess()
         return jobService.getJobs(listOf(jobId))
+    }
+
+    override fun updateJob(jobId: UUID, update: JobUpdate): Map<UUID, AbstractDistributedJob<*, *>> {
+        ensureAdminAccess()
+        val jobs = setOf(jobId)
+        jobService.updateJob( jobId, update.status )
+
+        if( update.reload ) jobService.reload(jobs, true)
+
+        return jobService.getJobs(jobs)
     }
 
     override fun getAuthorizationManager(): AuthorizationManager {
