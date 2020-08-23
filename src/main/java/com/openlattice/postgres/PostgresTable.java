@@ -42,8 +42,7 @@ import static com.openlattice.postgres.PostgresColumn.BIDIRECTIONAL;
 import static com.openlattice.postgres.PostgresColumn.CATEGORY;
 import static com.openlattice.postgres.PostgresColumn.CLASS_NAME;
 import static com.openlattice.postgres.PostgresColumn.CLASS_PROPERTIES;
-import static com.openlattice.postgres.PostgresColumn.CONFIG_TYPE_ID;
-import static com.openlattice.postgres.PostgresColumn.CONFIG_TYPE_IDS;
+import static com.openlattice.postgres.PostgresColumn.CONFIG_ID;
 import static com.openlattice.postgres.PostgresColumn.CONNECTION_TYPE;
 import static com.openlattice.postgres.PostgresColumn.CONTACTS;
 import static com.openlattice.postgres.PostgresColumn.CONTACT_INFO;
@@ -121,6 +120,7 @@ import static com.openlattice.postgres.PostgresColumn.QUERY;
 import static com.openlattice.postgres.PostgresColumn.QUERY_ID;
 import static com.openlattice.postgres.PostgresColumn.REASON;
 import static com.openlattice.postgres.PostgresColumn.REFRESH_RATE;
+import static com.openlattice.postgres.PostgresColumn.ROLES;
 import static com.openlattice.postgres.PostgresColumn.SCHEDULED_DATE;
 import static com.openlattice.postgres.PostgresColumn.SCHEMAS;
 import static com.openlattice.postgres.PostgresColumn.SCOPE;
@@ -128,6 +128,7 @@ import static com.openlattice.postgres.PostgresColumn.SCORE;
 import static com.openlattice.postgres.PostgresColumn.SEARCH_CONSTRAINTS;
 import static com.openlattice.postgres.PostgresColumn.SECURABLE_OBJECTID;
 import static com.openlattice.postgres.PostgresColumn.SECURABLE_OBJECT_TYPE;
+import static com.openlattice.postgres.PostgresColumn.SETTINGS;
 import static com.openlattice.postgres.PostgresColumn.SHARDS;
 import static com.openlattice.postgres.PostgresColumn.SHOW;
 import static com.openlattice.postgres.PostgresColumn.SRC;
@@ -163,15 +164,12 @@ public final class PostgresTable {
                     .primaryKey( NAME );
     public static final PostgresTableDefinition APPS                          =
             new PostgresTableDefinition( "apps" )
-                    .addColumns( ID, NAME, TITLE, DESCRIPTION, CONFIG_TYPE_IDS, URL );
+                    .addColumns( ID, NAME, TITLE, DESCRIPTION, ENTITY_TYPE_COLLECTION_ID, URL, ROLES, SETTINGS );
     public static final PostgresTableDefinition APP_CONFIGS                   =
             new PostgresTableDefinition( "app_configs" )
-                    .addColumns( APP_ID, ORGANIZATION_ID, CONFIG_TYPE_ID, PostgresColumn.PERMISSIONS, ENTITY_SET_ID )
-                    .primaryKey( APP_ID, ORGANIZATION_ID, CONFIG_TYPE_ID );
+                    .addColumns( APP_ID, ORGANIZATION_ID, CONFIG_ID, ENTITY_SET_COLLECTION_ID, ROLES, SETTINGS )
+                    .primaryKey( APP_ID, ORGANIZATION_ID );
     //.setUnique( NAMESPACE, NAME ); //Not allowed by postgres xl
-    public static final PostgresTableDefinition APP_TYPES                     =
-            new PostgresTableDefinition( "app_types" )
-                    .addColumns( ID, NAMESPACE, NAME, TITLE, DESCRIPTION, ENTITY_TYPE_ID );
     public static final PostgresTableDefinition ASSOCIATION_TYPES             =
             new PostgresTableDefinition( "association_types" )
                     .addColumns( ID, SRC, DST, BIDIRECTIONAL );

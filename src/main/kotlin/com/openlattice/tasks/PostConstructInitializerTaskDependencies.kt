@@ -70,5 +70,9 @@ class PostConstructInitializerTaskDependencies : HazelcastTaskDependencies {
         override fun isRunOnceAcrossCluster(): Boolean {
             return false
         }
+
+        override fun getDependency(): PostConstructInitializerTaskDependencies {
+            return super.getDependency()
+        }
     }
 }

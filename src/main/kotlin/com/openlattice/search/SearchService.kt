@@ -8,7 +8,6 @@ import com.google.common.eventbus.EventBus
 import com.google.common.eventbus.Subscribe
 import com.openlattice.IdConstants
 import com.openlattice.apps.App
-import com.openlattice.apps.AppType
 import com.openlattice.authorization.*
 import com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION
 import com.openlattice.authorization.securable.SecurableObjectType
@@ -375,12 +374,6 @@ class SearchService(
     }
 
     @Subscribe
-    fun createAppType(event: AppTypeCreatedEvent) {
-        val appType = event.appType
-        elasticsearchApi.saveSecurableObjectToElasticsearch(SecurableObjectType.AppType, appType)
-    }
-
-    @Subscribe
     fun deleteEntityType(event: EntityTypeDeletedEvent) {
         val entityTypeId = event.entityTypeId
         elasticsearchApi.deleteSecurableObjectFromElasticsearch(SecurableObjectType.EntityType, entityTypeId)
@@ -443,12 +436,6 @@ class SearchService(
     fun deleteApp(event: AppDeletedEvent) {
         val appId = event.appId
         elasticsearchApi.deleteSecurableObjectFromElasticsearch(SecurableObjectType.App, appId)
-    }
-
-    @Subscribe
-    fun deleteAppType(event: AppTypeDeletedEvent) {
-        val appTypeId = event.appTypeId
-        elasticsearchApi.deleteSecurableObjectFromElasticsearch(SecurableObjectType.AppType, appTypeId)
     }
 
     fun executeEntityTypeSearch(searchTerm: String, start: Int, maxHits: Int): SearchResult {
@@ -807,7 +794,7 @@ class SearchService(
     }
 
     @Timed
-    fun  executeEntityNeighborIdsSearch(
+    fun executeEntityNeighborIdsSearch(
             entitySetIds: Set<UUID>,
             filter: EntityNeighborsFilter,
             principals: Set<Principal>
@@ -896,7 +883,7 @@ class SearchService(
         if (linking) {
             val linkingIdsByEntitySetIds = entitySet
                     .linkedEntitySets
-                    .associateWith { Optional.of (entityKeyIds) }
+                    .associateWith { Optional.of(entityKeyIds) }
             val authorizedPropertiesOfNormalEntitySets = entitySet
                     .linkedEntitySets
                     .associateWith { authorizedPropertyTypes.getValue(entitySet.id) }
@@ -971,10 +958,6 @@ class SearchService(
 
     fun triggerAppIndex(apps: List<App>) {
         elasticsearchApi.triggerSecurableObjectIndex(SecurableObjectType.App, apps)
-    }
-
-    fun triggerAppTypeIndex(appTypes: List<AppType>) {
-        elasticsearchApi.triggerSecurableObjectIndex(SecurableObjectType.AppType, appTypes)
     }
 
     fun triggerAllOrganizationsIndex(allOrganizations: List<Organization>) {
