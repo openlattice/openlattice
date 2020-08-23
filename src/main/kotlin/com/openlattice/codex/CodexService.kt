@@ -345,7 +345,7 @@ class CodexService(
 
         val existingMessageIds = searchService.executeSearch(
                 searchConstraints,
-                mapOf(messageEntitySetId to getPropertyTypes(CodexConstants.AppType.MESSAGES))
+                mapOf(messageEntitySetId to getPropertyTypes(CodexConstants.CollectionTemplateType.MESSAGES))
         ).hits.flatMap { it.getOrDefault(idType.fqn, setOf()) }.map { it.toString() }.toSet()
 
         return messages.filter { !existingMessageIds.contains(it.sid) }
