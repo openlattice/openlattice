@@ -132,6 +132,10 @@ class HazelcastPrincipalService(
         return getFirstSecurablePrincipal(findPrincipal(p)).aclKey
     }
 
+    override fun lookup(p: MutableSet<Principal>): MutableMap<Principal, AclKey> {
+        return principals.entrySet(findPrincipals(p)).associate { it.value.principal to it.key }.toMutableMap()
+    }
+
     override fun lookupRole(principal: Principal): Role {
         require(principal.type == PrincipalType.ROLE) { "The provided principal is not a role" }
         return getFirstSecurablePrincipal(findPrincipal(principal)) as Role
