@@ -9,8 +9,6 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName
 import java.util.*
 import kotlin.collections.LinkedHashSet
 
-
-<<<<<<< HEAD
 val TEMPLATE_TYPES = LinkedHashSet(listOf(
         CollectionTemplateType(Optional.empty(), "app.contactinfogiven", "Contact Info Given", Optional.empty(), UUID.fromString("cf9b4d36-6f1a-4e6f-94f0-6458054fc567")),
         CollectionTemplateType(Optional.empty(), "app.sentfrom", "Sent From", Optional.empty(), UUID.fromString("cf9b4d36-6f1a-4e6f-94f0-6458054fc567")),
