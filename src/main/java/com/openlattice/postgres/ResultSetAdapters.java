@@ -97,7 +97,6 @@ import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.sql.Array;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
@@ -124,8 +123,7 @@ import static com.openlattice.postgres.PostgresColumn.CATEGORY;
 import static com.openlattice.postgres.PostgresColumn.CLASS_NAME;
 import static com.openlattice.postgres.PostgresColumn.CLASS_PROPERTIES;
 import static com.openlattice.postgres.PostgresColumn.COLUMN_NAME;
-import static com.openlattice.postgres.PostgresColumn.CONFIG_TYPE_ID;
-import static com.openlattice.postgres.PostgresColumn.CONFIG_TYPE_IDS;
+import static com.openlattice.postgres.PostgresColumn.CONFIG_ID;
 import static com.openlattice.postgres.PostgresColumn.CONNECTION_TYPE;
 import static com.openlattice.postgres.PostgresColumn.CONSTRAINT_TYPE;
 import static com.openlattice.postgres.PostgresColumn.CONTACTS;
@@ -233,11 +231,11 @@ import static com.openlattice.postgres.PostgresColumn.VERSIONS;
  */
 public final class ResultSetAdapters {
 
-    private static final Logger       logger  = LoggerFactory
+    private static final Logger         logger  = LoggerFactory
             .getLogger( ResultSetAdapters.class );
-    private static final Decoder      DECODER = Base64
+    private static final Base64.Decoder DECODER = Base64
             .getMimeDecoder();
-    private static final ObjectMapper                                         mapper               = ObjectMappers
+    private static final ObjectMapper   mapper  = ObjectMappers
             .newJsonMapper();
 
     private static final TypeReference<Map<String, Object>>                   alertMetadataTypeRef = new TypeReference<>() {
