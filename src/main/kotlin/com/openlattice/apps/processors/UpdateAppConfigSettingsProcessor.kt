@@ -4,7 +4,7 @@ import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcesso
 import com.openlattice.apps.AppConfigKey
 import com.openlattice.apps.AppTypeSetting
 
-class UpdateAppConfigSettingsProcessor(
+data class UpdateAppConfigSettingsProcessor(
         val settingsToAdd: Map<String, Any>,
         val settingsToRemove: Set<String>
 ) : AbstractRhizomeEntryProcessor<AppConfigKey, AppTypeSetting, AppTypeSetting>() {
@@ -16,21 +16,4 @@ class UpdateAppConfigSettingsProcessor(
         entry.setValue(config)
         return config
     }
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-
-        other as UpdateAppConfigSettingsProcessor
-
-        if (settingsToAdd != other.settingsToAdd) return false
-
-        return true
-    }
-
-    override fun hashCode(): Int {
-        return settingsToAdd.hashCode()
-    }
-
-
 }
