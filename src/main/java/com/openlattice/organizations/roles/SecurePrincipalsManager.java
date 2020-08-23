@@ -31,6 +31,7 @@ import com.openlattice.organization.roles.Role;
 import javax.annotation.Nonnull;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
