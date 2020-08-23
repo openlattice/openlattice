@@ -8,10 +8,10 @@ import org.apache.commons.lang3.StringUtils
 import java.util.*
 
 data class AppRole(
-        @JsonProperty(SerializationConstants.ID_FIELD) val id: UUID? = UUID.randomUUID(),
+        @JsonProperty(SerializationConstants.ID_FIELD) val id: UUID = UUID.randomUUID(),
         @JsonProperty(SerializationConstants.NAME_FIELD) val name: String,
         @JsonProperty(SerializationConstants.TITLE_FIELD) val title: String,
-        @JsonProperty(SerializationConstants.DESCRIPTION_FIELD) val description: String? = "",
+        @JsonProperty(SerializationConstants.DESCRIPTION_FIELD) val description: String = "",
         @JsonProperty(SerializationConstants.PERMISSIONS) var permissions: Map<Permission, Map<UUID, Optional<Set<UUID>>>>
 ) {
         init {

@@ -729,7 +729,8 @@ public final class TestDataFactory {
     }
 
     public static AppRole appRole() {
-        return new AppRole( null,
+        return new AppRole(
+                UUID.randomUUID(),
                 randomAlphanumeric( 5 ),
                 randomAlphanumeric( 5 ),
                 randomAlphanumeric( 5 ),
