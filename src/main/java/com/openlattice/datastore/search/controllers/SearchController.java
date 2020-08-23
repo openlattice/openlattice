@@ -22,6 +22,7 @@ package com.openlattice.datastore.search.controllers;
 
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.collect.*;
+import com.openlattice.apps.services.AppService;
 import com.openlattice.auditing.AuditEventType;
 import com.openlattice.auditing.AuditableEvent;
 import com.openlattice.auditing.AuditingComponent;
@@ -31,7 +32,6 @@ import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.authorization.util.AuthorizationUtilsKt;
 import com.openlattice.data.requests.NeighborEntityDetails;
 import com.openlattice.data.requests.NeighborEntityIds;
-import com.openlattice.apps.services.AppService;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.EntitySetManager;
 import com.openlattice.edm.EntitySet;
@@ -39,6 +39,7 @@ import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.Organization;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.search.SearchApi;
+import com.openlattice.search.SearchService;
 import com.openlattice.search.SortDefinition;
 import com.openlattice.search.requests.*;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -46,7 +47,11 @@ import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RestController;
 
 import javax.inject.Inject;
 import java.time.OffsetDateTime;
@@ -143,7 +148,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
 
         final LinkedHashSet<UUID> uniqueEntitySetIds = Sets.newLinkedHashSetWithExpectedSize( entitySetIds.length );
 
-        Collections.addAll(uniqueEntitySetIds, entitySetIds);
+        Collections.addAll( uniqueEntitySetIds, entitySetIds );
 
         Set<Principal> currentPrincipals = Principals.getCurrentPrincipals();
 
@@ -163,7 +168,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             results = searchService.executeSearch( searchConstraints, authorizedPropertyTypesByEntitySet );
         }
 
-        List<AuditableEvent> searchEvents = new ArrayList(entitySetIds.length);
+        List<AuditableEvent> searchEvents = new ArrayList( entitySetIds.length );
         for ( int i = 0; i < entitySetIds.length; i++ ) {
             searchEvents.add( new AuditableEvent(
                     spm.getCurrentUserId(),
