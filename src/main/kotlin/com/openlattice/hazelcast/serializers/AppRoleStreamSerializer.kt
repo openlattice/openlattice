@@ -3,6 +3,7 @@ package com.openlattice.hazelcast.serializers
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.apps.AppRole
 import com.openlattice.authorization.Permission
@@ -17,7 +18,7 @@ class AppRoleStreamSerializer : SelfRegisteringStreamSerializer<AppRole> {
         private val PERMISSIONS = Permission.values()
 
         fun serialize(out: ObjectDataOutput, `object`: AppRole) {
-            UUIDStreamSerializer.serialize(out, `object`.id)
+            UUIDStreamSerializerUtils.serialize(out, `object`.id)
             out.writeUTF(`object`.name)
             out.writeUTF(`object`.title)
             out.writeUTF(`object`.description)
@@ -27,8 +28,8 @@ class AppRoleStreamSerializer : SelfRegisteringStreamSerializer<AppRole> {
                 out.writeInt(it.key.ordinal)
                 out.writeInt(it.value.size)
 
-                it.value.forEach { entitySetId, propertyTypeIds ->
-                    UUIDStreamSerializer.serialize(out, entitySetId)
+                it.value.forEach { (entitySetId, propertyTypeIds) ->
+                    UUIDStreamSerializerUtils.serialize(out, entitySetId)
                     OptionalStreamSerializers.serialize(out, propertyTypeIds, SetStreamSerializers::fastUUIDSetSerialize)
                 }
             }
@@ -36,7 +37,7 @@ class AppRoleStreamSerializer : SelfRegisteringStreamSerializer<AppRole> {
 
         fun deserialize(`in`: ObjectDataInput): AppRole {
 
-            val id = UUIDStreamSerializer.deserialize(`in`)
+            val id = UUIDStreamSerializerUtils.deserialize(`in`)
             val name = `in`.readUTF()
             val title = `in`.readUTF()
             val description = `in`.readUTF()
@@ -52,7 +53,7 @@ class AppRoleStreamSerializer : SelfRegisteringStreamSerializer<AppRole> {
                 val childMap = HashMap<UUID, Optional<Set<UUID>>>(childMapSize)
 
                 for (j in 0 until childMapSize) {
-                    val entitySetId = UUIDStreamSerializer.deserialize(`in`)
+                    val entitySetId = UUIDStreamSerializerUtils.deserialize(`in`)
                     val propertyTypeIds: Optional<Set<UUID>> = OptionalStreamSerializers.deserialize(`in`, SetStreamSerializers::fastUUIDSetDeserialize)
 
                     childMap[entitySetId] = propertyTypeIds

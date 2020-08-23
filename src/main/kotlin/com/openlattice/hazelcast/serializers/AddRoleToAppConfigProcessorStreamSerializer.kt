@@ -2,6 +2,7 @@ package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.apps.processors.AddRoleToAppConfigProcessor
 import com.openlattice.hazelcast.StreamSerializerTypeIds
@@ -19,12 +20,12 @@ class AddRoleToAppConfigProcessorStreamSerializer : SelfRegisteringStreamSeriali
     }
 
     override fun write(out: ObjectDataOutput, `object`: AddRoleToAppConfigProcessor) {
-        UUIDStreamSerializer.serialize(out, `object`.roleId)
+        UUIDStreamSerializerUtils.serialize(out, `object`.roleId)
         AclKeyStreamSerializer.serialize(out, `object`.roleAclKey)
     }
 
     override fun read(`in`: ObjectDataInput): AddRoleToAppConfigProcessor {
-        val roleId = UUIDStreamSerializer.deserialize(`in`)
+        val roleId = UUIDStreamSerializerUtils.deserialize(`in`)
         val roleAclkey = AclKeyStreamSerializer.deserialize(`in`)
         return AddRoleToAppConfigProcessor(roleId, roleAclkey)
     }

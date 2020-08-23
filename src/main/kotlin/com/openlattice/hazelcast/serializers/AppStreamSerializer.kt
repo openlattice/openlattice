@@ -4,6 +4,7 @@ import com.dataloom.mappers.ObjectMappers
 import com.fasterxml.jackson.core.type.TypeReference
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
+import com.kryptnostic.rhizome.hazelcast.serializers.UUIDStreamSerializerUtils
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.apps.App
 import com.openlattice.hazelcast.StreamSerializerTypeIds
@@ -27,12 +28,12 @@ class AppStreamSerializer : SelfRegisteringStreamSerializer<App> {
     }
 
     override fun write(out: ObjectDataOutput, `object`: App) {
-        UUIDStreamSerializer.serialize(out, `object`.id)
+        UUIDStreamSerializerUtils.serialize(out, `object`.id)
         out.writeUTF(`object`.name)
         out.writeUTF(`object`.title)
         out.writeUTF(`object`.description)
         out.writeUTF(`object`.url)
-        UUIDStreamSerializer.serialize(out, `object`.entityTypeCollectionId)
+        UUIDStreamSerializerUtils.serialize(out, `object`.entityTypeCollectionId)
 
         out.writeInt(`object`.appRoles.size)
         `object`.appRoles.forEach { AppRoleStreamSerializer.serialize(out, it) }
@@ -40,12 +41,12 @@ class AppStreamSerializer : SelfRegisteringStreamSerializer<App> {
     }
 
     override fun read(`in`: ObjectDataInput): App {
-        val id = Optional.of(UUIDStreamSerializer.deserialize(`in`))
+        val id = Optional.of(UUIDStreamSerializerUtils.deserialize(`in`))
         val name = `in`.readUTF()
         val title = `in`.readUTF()
         val description = Optional.of(`in`.readUTF())
         val url = `in`.readUTF()
-        val entityTypeCollectionId = UUIDStreamSerializer.deserialize(`in`)
+        val entityTypeCollectionId = UUIDStreamSerializerUtils.deserialize(`in`)
 
         val numRoles = `in`.readInt()
         val appRoles = (0 until numRoles).map { AppRoleStreamSerializer.deserialize(`in`) }.toMutableSet()
