@@ -840,6 +840,15 @@ fun getPartitioningSelector(
         idColumn: String
 ) = "partitions[ 1 + ((array_length(partitions,1) + (('x'||right(${idColumn}::text,8))::bit(32)::int % array_length(partitions,1))) % array_length(partitions,1))]"
 
+/**
+ * 1. partitions
+ * 2. array length ( partitions )
+ * 3. array length ( partitions )
+ * 4. array length ( partitions )
+ */
+fun getDirectPartitioningSelector(
+        idColumn: String
+) = "(?)[ 1 + ((? + (('x'||right(${idColumn}::text,8))::bit(32)::int % ?)) % ?)]"
 
 private fun selectPropertyColumn(propertyType: PropertyType): String {
     val dataType = PostgresEdmTypeConverter.map(propertyType.datatype).sql()

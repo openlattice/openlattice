@@ -6,6 +6,7 @@ import com.geekbeast.rhizome.jobs.AbstractDistributedJob
 import com.geekbeast.rhizome.jobs.JobStatus
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.map.IMap
+import com.openlattice.data.storage.getDirectPartitioningSelector
 import com.openlattice.data.storage.getPartitioningSelector
 import com.openlattice.edm.EntitySet
 import com.openlattice.hazelcast.HazelcastMap
@@ -139,8 +140,7 @@ class RepartitioningJob(
     private fun delete(deleteSql: String): Long = hds.connection.use { connection ->
         try {
             connection.prepareStatement(deleteSql).use { deleteData ->
-                bind(deleteData)
-                deleteData.setObject(4, state.entitySetId)
+                bindForDelete(deleteData)
                 logger.info(deleteData.toString())
                 deleteData.executeLargeUpdate()
             }
@@ -197,11 +197,19 @@ class RepartitioningJob(
                 getCount(edgesNeedingMigrationCountSql, partition)
     }
 
-
     private fun bind(ps: PreparedStatement, partition: Int = currentlyMigratingPartition) {
         ps.setObject(1, state.entitySetId)
         ps.setArray(2, PostgresArrays.createIntArray(ps.connection, state.newPartitions))
         ps.setInt(3, partition)
+    }
+
+    private fun bindForDelete(ps: PreparedStatement, partition: Int = currentlyMigratingPartition) {
+        ps.setObject(1, state.entitySetId)
+        ps.setInt(2, partition)
+        ps.setArray(3, PostgresArrays.createIntArray(ps.connection, state.newPartitions))
+        ps.setInt(4, state.newPartitions.size)
+        ps.setInt(5, state.newPartitions.size)
+        ps.setInt(6, state.newPartitions.size)
     }
 
     private fun setPartitions(entitySetId: UUID, partitions: Set<Int>) {
@@ -375,71 +383,54 @@ INSERT INTO ${E.name} SELECT $REPARTITION_EDGES_COLUMNS
 /**
  * Computes the actual partition and compares it to current partition. If partitions do not match deletes the row.
  * 1. entity set id
- * 2. partitions (array)
- * 3. partition
- * 4. entity set id
+ * 2. partition
+ * 3. partitions
+ * 4. array length ( partitions )
+ * 5. array length ( partitions )
+ * 6. array length ( partitions )
  *
  */
 private val DELETE_DATA_SQL = """
 DELETE FROM ${DATA.name} 
-    USING (SELECT ${ID.name},${ENTITY_SET_ID.name},${PARTITION.name},${PARTITIONS.name} FROM ${DATA.name} INNER JOIN (select ? as ${ENTITY_SET_ID.name},? as ${PARTITIONS.name} ) as es USING (${ENTITY_SET_ID.name})) as to_be_deleted
-    WHERE 
-      ${DATA.name}.${PARTITION.name} = ?
-      AND ${DATA.name}.${ENTITY_SET_ID.name} = ?
-      AND ${DATA.name}.${PARTITION.name}!=${getPartitioningSelector(DATA.name + "." + ID.name)} 
-      AND to_be_deleted.${ID.name} = ${DATA.name}.${ID.name} 
-      AND to_be_deleted.${PARTITION.name} = ${DATA.name}.${PARTITION.name};  
+    WHERE
+      ${DATA.name}.${ENTITY_SET_ID.name} = ?
+      AND ${DATA.name}.${PARTITION.name} = ?
+      AND ${DATA.name}.${PARTITION.name}!=${getDirectPartitioningSelector(DATA.name + "." + ID.name)}
 """.trimIndent()
 
 /**
  * Computes the actual partition and compares it to current partition. If partitions do not match deletes the row.
  * 1. entity set id
- * 2. partitions (array)
- * 3. partition
- * 4. entity set id
+ * 2. partition
+ * 3. partitions
+ * 4. array length ( partitions )
+ * 5. array length ( partitions )
+ * 6. array length ( partitions )
  *
  */
 private val DELETE_IDS_SQL = """
-DELETE FROM ${IDS.name} 
-    USING (SELECT ${ID.name},${ENTITY_SET_ID.name},${PARTITION.name},${PARTITIONS.name} FROM ${IDS.name} INNER JOIN (select ? as ${ENTITY_SET_ID.name},? as ${PARTITIONS.name} ) as es USING (${ENTITY_SET_ID.name})) as to_be_deleted
-    WHERE 
-      ${IDS.name}.${PARTITION.name} = ?
-      AND ${IDS.name}.${ENTITY_SET_ID.name} = ?
-      AND ${IDS.name}.${PARTITION.name}!=${getPartitioningSelector(IDS.name + "." + ID.name)} 
-      AND to_be_deleted.${ID.name} = ${IDS.name}.${ID.name} 
-      AND to_be_deleted.${PARTITION.name} = ${IDS.name}.${PARTITION.name};  
+DELETE FROM ${IDS.name}
+    WHERE
+      ${IDS.name}.${ENTITY_SET_ID.name} = ?
+      AND ${IDS.name}.${PARTITION.name} = ?
+      AND ${IDS.name}.${PARTITION.name}!=${getDirectPartitioningSelector(IDS.name + "." + ID.name)}
 """.trimIndent()
 
 /**
  * Computes the actual partition and compares it to current partition. If partitions do not match deletes the row.
  *
  * 1. entity set id
- * 2. partitions (array)
- * 3. partition
- * 4. entity set id
+ * 2. partition
+ * 3. partitions
+ * 4. array length ( partitions )
+ * 5. array length ( partitions )
+ * 6. array length ( partitions )
  *
  */
 private val DELETE_EDGES_SQL = """
-DELETE FROM ${E.name} 
-    USING (SELECT
-      ${SRC_ENTITY_SET_ID.name},
-      ${SRC_ENTITY_KEY_ID.name},
-      ${DST_ENTITY_SET_ID.name},
-      ${DST_ENTITY_KEY_ID.name},
-      ${EDGE_ENTITY_SET_ID.name},
-      ${EDGE_ENTITY_KEY_ID.name},
-      ${PARTITION.name},
-      ${PARTITIONS.name} 
-    FROM ${E.name} INNER JOIN (select ? as ${SRC_ENTITY_SET_ID.name},? as ${PARTITIONS.name} ) as es USING (${SRC_ENTITY_SET_ID.name})) as to_be_deleted
+DELETE FROM ${E.name}
     WHERE
-      ${E.name}.${PARTITION.name} = ? 
-      AND ${E.name}.${SRC_ENTITY_SET_ID.name} = ?
-      AND ${E.name}.${PARTITION.name}!=${getPartitioningSelector(E.name + "." + SRC_ENTITY_KEY_ID.name)} 
-      AND to_be_deleted.${SRC_ENTITY_SET_ID.name} = ${E.name}.${SRC_ENTITY_SET_ID.name} 
-      AND to_be_deleted.${SRC_ENTITY_KEY_ID.name} = ${E.name}.${SRC_ENTITY_KEY_ID.name}
-      AND to_be_deleted.${DST_ENTITY_SET_ID.name} = ${E.name}.${DST_ENTITY_SET_ID.name}
-      AND to_be_deleted.${DST_ENTITY_KEY_ID.name} = ${E.name}.${DST_ENTITY_KEY_ID.name}
-      AND to_be_deleted.${EDGE_ENTITY_SET_ID.name} = ${E.name}.${EDGE_ENTITY_SET_ID.name}
-      AND to_be_deleted.${EDGE_ENTITY_KEY_ID.name} = ${E.name}.${EDGE_ENTITY_KEY_ID.name}
-      AND to_be_deleted.${PARTITION.name} = ${E.name}.${PARTITION.name};
+      ${E.name}.${SRC_ENTITY_SET_ID.name} = ?
+      AND ${E.name}.${PARTITION.name} = ? 
+      AND ${E.name}.${PARTITION.name}!=${getDirectPartitioningSelector(E.name + "." + SRC_ENTITY_KEY_ID.name)}
 """.trimIndent()
