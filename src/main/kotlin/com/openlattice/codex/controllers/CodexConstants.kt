@@ -11,6 +11,7 @@ class CodexConstants() {
 
     enum class CollectionTemplateType(val typeName: String) {
         PEOPLE("app.people"),
+        CLIENTS("app.clients"),
         MESSAGES("app.messages"),
         CONTACT_INFO("app.contactinformation"),
         SETTINGS("app.settings"),
