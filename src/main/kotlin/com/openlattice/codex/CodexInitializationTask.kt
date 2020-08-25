@@ -18,8 +18,7 @@ val TEMPLATE_TYPES = LinkedHashSet(listOf(
         CollectionTemplateType(Optional.empty(), "app.subjectof", "Subject Of", Optional.empty(), UUID.fromString("34aeaca4-d424-43cd-a3b4-f2032d583280")),
         CollectionTemplateType(Optional.empty(), "app.people", "People", Optional.empty(), UUID.fromString("31cf5595-3fe9-4d3e-a9cf-39355a4b8cab")),
         CollectionTemplateType(Optional.empty(), "app.messages", "Messages", Optional.empty(), UUID.fromString("8d0e38de-4302-4ec2-a1a7-f9159086e60e")),
-        CollectionTemplateType(Optional.empty(), "app.clients", "Clients", Optional.empty(), UUID.fromString("31cf5595-3fe9-4d3e-a9cf-39355a4b8cab")),
-        CollectionTemplateType(Optional.empty(), "app.messages", "Messages", Optional.empty(), UUID.fromString("8d0e38de-4302-4ec2-a1a7-f9159086e60e"))
+        CollectionTemplateType(Optional.empty(), "app.clients", "Clients", Optional.empty(), UUID.fromString("31cf5595-3fe9-4d3e-a9cf-39355a4b8cab"))
 ))
 
 private val ENTITY_TYPE_COLLECTION_NAME = FullQualifiedName("app.codex")
