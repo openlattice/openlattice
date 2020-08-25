@@ -106,6 +106,12 @@ class PostgresDataTables {
             val entitySetIdIndex = PostgresColumnsIndexDefinition(tableDefinition, ENTITY_SET_ID)
                     .name(quote(prefix + "_entity_set_id_idx"))
                     .ifNotExists()
+            val entitySetIdAndPartitionIndex = PostgresColumnsIndexDefinition(
+                    tableDefinition, ENTITY_SET_ID, PARTITION
+            )
+                    .name(quote(prefix + "_entity_set_id_partition_idx"))
+                    .ifNotExists()
+                    .desc()
             val idIndex = PostgresColumnsIndexDefinition(tableDefinition, ID_VALUE)
                     .name(quote(prefix + "_id_idx"))
                     .ifNotExists()
@@ -147,6 +153,7 @@ class PostgresDataTables {
                     idIndex,
                     originIdIndex,
                     entitySetIdIndex,
+                    entitySetIdAndPartitionIndex,
                     versionIndex,
                     lastWriteIndex,
                     propertyTypeIdIndex,

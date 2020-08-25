@@ -24,6 +24,7 @@ import com.openlattice.hazelcast.serializers.AppTypeSettingStreamSerializer;
 import com.openlattice.apps.AppTypeSetting;
 import com.openlattice.authorization.Permission;
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest;
+import com.openlattice.mapstores.TestDataFactory;
 
 import java.util.EnumSet;
 import java.util.UUID;
@@ -35,6 +36,6 @@ public class AppTypeSettingStreamSerializerTest
     }
 
     @Override protected AppTypeSetting createInput() {
-        return new AppTypeSetting( UUID.randomUUID(), EnumSet.of( Permission.READ, Permission.WRITE ) );
+        return TestDataFactory.appConfigSetting();
     }
 }

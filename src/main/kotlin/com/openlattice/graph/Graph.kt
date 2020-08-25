@@ -1326,10 +1326,10 @@ private fun buildSpineSql(
     }
 
     val edgeClause = buildEdgeFilteringClause(selfEntitySetIds, authorizedFilteredRanking, association, isDst)
-    val idSql = "SELECT ${PostgresColumn.ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${PostgresColumn.ID.name} as $SELF_ENTITY_KEY_ID, ${LINKING_ID.name} FROM ${ENTITY_KEY_IDS.name}"
+    val idSql = "SELECT ${PostgresColumn.ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${PostgresColumn.ID.name} as $SELF_ENTITY_KEY_ID, ${LINKING_ID.name} FROM ${IDS.name}"
     val spineSql = if (linked) {
         "SELECT edges.*, ${LINKING_ID.name} FROM (SELECT DISTINCT $baseEntityColumnsSql FROM edges WHERE $edgeClause) as edges " +
-                "LEFT JOIN ($idSql) as ${ENTITY_KEY_IDS.name} USING ($SELF_ENTITY_SET_ID,$SELF_ENTITY_KEY_ID)"
+                "LEFT JOIN ($idSql) as ${IDS.name} USING ($SELF_ENTITY_SET_ID,$SELF_ENTITY_KEY_ID)"
     } else {
         "SELECT DISTINCT $baseEntityColumnsSql FROM edges WHERE $edgeClause"
     }

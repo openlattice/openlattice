@@ -3,15 +3,16 @@ package transforms;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.openlattice.shuttle.dates.JavaDateTimeHelper;
+import com.openlattice.shuttle.dates.TimeZones;
 import com.openlattice.shuttle.transformations.Transformation;
 import com.openlattice.shuttle.util.Constants;
 
-import java.util.Optional;
 import java.util.TimeZone;
 
 public class DateTimeTransform extends Transformation<String> {
     private final String[] pattern;
     private final TimeZone timezone;
+    private final Boolean  shouldAddTimezone;
 
     /**
      * Represents a transformation from string to datetime.
@@ -22,26 +23,11 @@ public class DateTimeTransform extends Transformation<String> {
     @JsonCreator
     public DateTimeTransform(
             @JsonProperty( Constants.PATTERN ) String[] pattern,
-            @JsonProperty( Constants.TIMEZONE ) Optional<String> timezone
+            @JsonProperty( Constants.TIMEZONE ) String timezone
     ) {
         this.pattern = pattern;
-
-        if ( timezone.isPresent() ) {
-            String timezoneId = timezone.get();
-
-            this.timezone = TimeZone.getTimeZone( timezoneId );
-
-            if ( !this.timezone.getID().equals( timezoneId ) ) {
-                throw new IllegalArgumentException(
-                        "Invalid timezone id " + timezoneId + " requested for pattern " + pattern );
-            }
-
-        } else {
-            logger.info( "No timezone was specified -- using default timezone {} for patterns {}",
-                    Constants.DEFAULT_TIMEZONE,
-                    pattern );
-            this.timezone = Constants.DEFAULT_TIMEZONE;
-        }
+        this.timezone = TimeZones.checkTimezone( timezone );
+        this.shouldAddTimezone = timezone == null;
     }
 
     public DateTimeTransform(
@@ -49,7 +35,7 @@ public class DateTimeTransform extends Transformation<String> {
     ) {
         this(
                 pattern,
-                Optional.empty()
+                null
         );
     }
 
@@ -66,7 +52,7 @@ public class DateTimeTransform extends Transformation<String> {
     @Override
     public Object applyValue( String o ) {
         final JavaDateTimeHelper dtHelper = new JavaDateTimeHelper( this.timezone,
-                pattern );
+                this.pattern, this.shouldAddTimezone );
         Object out = dtHelper.parseDateTime( o );
         return out;
     }

@@ -31,6 +31,7 @@ import com.openlattice.organization.roles.Role;
 import javax.annotation.Nonnull;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -92,6 +93,8 @@ public interface SecurePrincipalsManager {
     Role getRole( UUID organizationId, UUID roleId );
 
     AclKey lookup( Principal p );
+
+    Map<Principal, AclKey> lookup( Set<Principal> principals );
 
     Role lookupRole( Principal principal );
 

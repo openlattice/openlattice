@@ -20,6 +20,12 @@
 
 package com.openlattice.shuttle.dates;
 
+import com.openlattice.shuttle.util.Constants;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.TimeZone;
 
 /**
@@ -30,8 +36,40 @@ public final class TimeZones {
     public static final TimeZone America_LosAngeles = TimeZone.getTimeZone( "America/Los_Angeles" );
     public static final TimeZone America_Chicago    = TimeZone.getTimeZone( "America/Chicago" );
     public static final TimeZone America_Denver     = TimeZone.getTimeZone( "America/Denver" );
+    public static final TimeZone UTC                = TimeZone.getTimeZone( "UTC" );
 
     private TimeZones() {
+    }
+
+    private static final Logger logger = LoggerFactory.getLogger( TimeZones.class );
+
+    /**
+     * Check whether provided timezone string is effectively a known timezone string.
+     * Rather than defaulting to a Timezone, if the timezone is invalid, we throw an error.
+     *
+     * @param timezoneString - String with Timezone
+     */
+    public static TimeZone checkTimezone( String timezoneString ) {
+        if ( timezoneString != null ) {
+            TimeZone timezone = TimeZone.getTimeZone( timezoneString );
+
+            if ( ! timezone.getID().equals( timezoneString ) ) {
+                throw new IllegalArgumentException(
+                        "Invalid timezone id " + timezoneString + " requested" );
+            }
+            return timezone;
+
+        }
+
+        return Constants.DEFAULT_TIMEZONE;
+    }
+
+    public static void checkTimezonesMatch( OffsetDateTime odt, ZoneId tzId ) {
+        if ( tzId != odt.getOffset() ) {
+            logger.error( "The reported ({}) and requested ({}) timezones are inconsistent.",
+                    tzId, odt.getOffset()
+            );
+        }
     }
 
 }
