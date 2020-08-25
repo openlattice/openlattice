@@ -2,11 +2,13 @@ package com.openlattice.search.renderers
 
 import com.google.common.collect.Maps
 import com.openlattice.data.requests.NeighborEntityDetails
+import com.openlattice.edm.EdmConstants
 import com.openlattice.mail.RenderableEmailRequest
 import com.openlattice.search.requests.PersistentSearch
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import java.time.OffsetDateTime
 import java.util.*
+
 
 private const val FROM_EMAIL = "courier@openlattice.com"
 private const val TEMPLATE_PATH = "mail/templates/shared/CAREIssueAlertTemplate.mustache"
@@ -23,7 +25,6 @@ private val CATEGORY_FQN = FullQualifiedName("ol.category")
 private val TITLE_FQN = FullQualifiedName("ol.title")
 private val COMPLETED_DATE_TIME_FQN = FullQualifiedName("date.completeddatetime")
 private val ENTRY_UPDATED_FQN = FullQualifiedName("general.entryupdated")
-private val OPENLATTICE_ID_FQN = FullQualifiedName("openlattice.@id")
 
 
 /* METADATA TAGS */
@@ -51,12 +52,12 @@ class CAREIssueAlertEmailRenderer {
 
     companion object {
 
-        private fun isMatchByEntitySetId(neighbor :NeighborEntityDetails, entitySetId: UUID, associationEntitySetId: Optional<UUID>): Boolean {
+        private fun isMatchByEntitySetId(neighbor: NeighborEntityDetails, entitySetId: UUID, associationEntitySetId: Optional<UUID>): Boolean {
             val isMatchingEntitySetId = neighbor.neighborEntitySet.isPresent && neighbor.neighborEntitySet.get().id == entitySetId
-            return when (associationEntitySetId.isPresent) {
-                (neighbor.associationEntitySet.id == associationEntitySetId.get()) && isMatchingEntitySetId -> isMatchingEntitySetId
-                else -> isMatchingEntitySetId
+            return if (associationEntitySetId.isPresent) {
+                (neighbor.associationEntitySet.id == associationEntitySetId.get()) && isMatchingEntitySetId
             }
+            else { isMatchingEntitySetId }
         }
 
         private fun getCombinedNeighbors(
@@ -74,10 +75,10 @@ class CAREIssueAlertEmailRenderer {
 
         private fun getPersonDetails(
                 neighbors: List<NeighborEntityDetails>, personEntitySetId: UUID
-        ): Map<String, Any> {
+        ): HashMap<String, String> {
             val combinedEntity = getCombinedNeighbors(neighbors, personEntitySetId, Optional.empty())
 
-            val tags = mutableMapOf<String, String>()
+            val tags = HashMap<String, String>(1)
 
             val firstName = (combinedEntity[FIRST_NAME_FQN] ?: emptySet()).joinToString("/")
             val lastName = (combinedEntity[LAST_NAME_FQN] ?: emptySet()).joinToString("/")
@@ -89,10 +90,10 @@ class CAREIssueAlertEmailRenderer {
 
         private fun getReporterDetails(
                 neighbors: List<NeighborEntityDetails>, staffEntitySetId: UUID, reporterEntitySetId: UUID
-        ): Map<String, Any> {
+        ): HashMap<String, String> {
             val combinedEntity = getCombinedNeighbors(neighbors, staffEntitySetId, Optional.of(reporterEntitySetId))
 
-            val tags = mutableMapOf<String, String>()
+            val tags = HashMap<String, String>(1)
 
             tags["reporter"] = (combinedEntity[PERSON_ID_FQN] ?: emptySet()).joinToString(", ")
 
@@ -101,10 +102,10 @@ class CAREIssueAlertEmailRenderer {
 
         private fun getAssigneeDetails(
                 neighbors: List<NeighborEntityDetails>, staffEntitySetId: UUID, assigneeEntitySetId: UUID
-        ): Map<String, Any> {
+        ): HashMap<String, String> {
             val combinedEntity = getCombinedNeighbors(neighbors, staffEntitySetId, Optional.of(assigneeEntitySetId))
 
-            val tags = mutableMapOf<String, String>()
+            val tags = HashMap<String, String>(1)
 
             tags["assignee"] = (combinedEntity[PERSON_ID_FQN] ?: emptySet()).joinToString(", ")
 
@@ -113,8 +114,8 @@ class CAREIssueAlertEmailRenderer {
 
         private fun getIssueDetails(
                 issue: Map<FullQualifiedName, Set<Any>>, timeZone: MessageFormatters.TimeZones
-        ): Map<String, Any> {
-            val tags = mutableMapOf<String, String>()
+        ): HashMap<String, String> {
+            val tags = HashMap<String, String>(8)
 
             val completedDateTime = (issue[COMPLETED_DATE_TIME_FQN] ?: emptySet()).map { OffsetDateTime.parse(it.toString()) }
             val createdDate = completedDateTime.joinToString(", ") { MessageFormatters.formatDate(it, timeZone) }
@@ -131,7 +132,7 @@ class CAREIssueAlertEmailRenderer {
             tags["description"] = (issue[DESCRIPTION_FQN] ?: emptySet()).joinToString(", ")
             tags["category"] = (issue[CATEGORY_FQN] ?: emptySet()).joinToString(", ")
             tags["priority"] = (issue[PRIORITY_FQN] ?: emptySet()).joinToString(", ")
-            tags["issueId"] = (issue[OPENLATTICE_ID_FQN] ?: emptySet()).joinToString(", ")
+            tags["issueId"] = (issue[EdmConstants.ID_FQN] ?: emptySet()).joinToString(", ")
 
             return tags
         }
@@ -143,7 +144,7 @@ class CAREIssueAlertEmailRenderer {
                 neighbors: List<NeighborEntityDetails>
         ): RenderableEmailRequest {
 
-            val templateObjects: MutableMap<String, Any> = Maps.newHashMap<String, Any>()
+            val templateObjects = mutableMapOf<String, Any>()
 
             val personEntitySetId = UUID.fromString(
                     persistentSearch.alertMetadata[PERSON_ENTITY_SET_ID_METADATA].toString()
