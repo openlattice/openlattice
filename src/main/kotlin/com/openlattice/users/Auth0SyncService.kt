@@ -11,7 +11,6 @@ import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.organizations.SortedPrincipalSet
 import com.openlattice.organizations.roles.SecurePrincipalsManager
-import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import java.util.*
 
@@ -21,7 +20,6 @@ import java.util.*
  */
 class Auth0SyncService(
         hazelcastInstance: HazelcastInstance,
-        private val hds: HikariDataSource,
         private val spm: SecurePrincipalsManager,
         private val orgService: HazelcastOrganizationService
 ) {

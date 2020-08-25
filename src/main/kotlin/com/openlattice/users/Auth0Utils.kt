@@ -16,6 +16,9 @@ import java.time.Instant
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 
+private const val SEARCH_ENGINE_VERSION = "v3"
+private const val MAX_PAGE_SIZE = 100
+
 val AUTH0_USER_FIELDS = listOf(
         APP_METADATA,
         EMAIL,
