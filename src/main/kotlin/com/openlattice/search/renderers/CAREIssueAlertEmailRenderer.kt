@@ -66,7 +66,7 @@ class CAREIssueAlertEmailRenderer {
             val entity = mutableMapOf<FullQualifiedName, MutableSet<Any>>()
             neighbors.filter { isMatchByEntitySetId(it, entitySetId, associationEntitySetId) }.forEach {
                 it.neighborDetails.get().forEach { (fqn, values) ->
-                    entity.getOrPut(fqn) { mutableSetOf() }.addAll(values)
+                    entity.getOrPut(fqn) { HashSet(values.size) }.addAll(values)
                 }
             }
 
