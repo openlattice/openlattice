@@ -846,7 +846,7 @@ fun getPartitioningSelector(
  *
  * It does this by converting the uuid to text, taking the right-most 8 characters, prepending an x so that it will be interpreted as hex,
  * casts it to 32 bit string, cast those 32 bits as an int, then uses the size of partition to compute the one-based index
- * in the array. We do the mod twice to make sure that it is the positive reminder. 
+ * in the array. We do the mod twice to make sure that it is the positive remainder.
  *
  * 1. partitions (array)
  * 2. array length ( partitions )
