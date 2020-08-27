@@ -75,66 +75,54 @@ class CAREIssueAlertEmailRenderer {
 
         private fun getPersonDetails(
                 neighbors: List<NeighborEntityDetails>, personEntitySetId: UUID
-        ): HashMap<String, String> {
+        ): Map<String, String> {
             val combinedEntity = getCombinedNeighbors(neighbors, personEntitySetId, Optional.empty())
-
-            val tags = HashMap<String, String>(1)
 
             val firstName = (combinedEntity[FIRST_NAME_FQN] ?: emptySet()).joinToString("/")
             val lastName = (combinedEntity[LAST_NAME_FQN] ?: emptySet()).joinToString("/")
             val middleName = (combinedEntity[MIDDLE_NAME_FQN] ?: emptySet()).joinToString("/")
-            tags["formattedName"] = "$lastName, $firstName $middleName"
 
-            return tags
+            return mapOf("formattedName" to "$lastName, $firstName $middleName")
         }
 
         private fun getReporterDetails(
                 neighbors: List<NeighborEntityDetails>, staffEntitySetId: UUID, reporterEntitySetId: UUID
-        ): HashMap<String, String> {
+        ): Map<String, String> {
             val combinedEntity = getCombinedNeighbors(neighbors, staffEntitySetId, Optional.of(reporterEntitySetId))
 
-            val tags = HashMap<String, String>(1)
-
-            tags["reporter"] = (combinedEntity[PERSON_ID_FQN] ?: emptySet()).joinToString(", ")
-
-            return tags
+            return mapOf("reporter" to (combinedEntity[PERSON_ID_FQN] ?: emptySet()).joinToString(", "))
         }
 
         private fun getAssigneeDetails(
                 neighbors: List<NeighborEntityDetails>, staffEntitySetId: UUID, assigneeEntitySetId: UUID
-        ): HashMap<String, String> {
+        ): Map<String, String> {
             val combinedEntity = getCombinedNeighbors(neighbors, staffEntitySetId, Optional.of(assigneeEntitySetId))
 
-            val tags = HashMap<String, String>(1)
-
-            tags["assignee"] = (combinedEntity[PERSON_ID_FQN] ?: emptySet()).joinToString(", ")
-
-            return tags
+            return mapOf("assignee" to (combinedEntity[PERSON_ID_FQN] ?: emptySet()).joinToString(", "))
         }
 
         private fun getIssueDetails(
                 issue: Map<FullQualifiedName, Set<Any>>, timeZone: MessageFormatters.TimeZones
-        ): HashMap<String, String> {
-            val tags = HashMap<String, String>(8)
+        ): Map<String, String> {
 
             val completedDateTime = (issue[COMPLETED_DATE_TIME_FQN] ?: emptySet()).map { OffsetDateTime.parse(it.toString()) }
             val createdDate = completedDateTime.joinToString(", ") { MessageFormatters.formatDate(it, timeZone) }
             val createdTime = completedDateTime.joinToString(", ") { MessageFormatters.formatTime(it, timeZone) }
-            tags["createdDateTime"] = "$createdDate $createdTime"
 
             val updatedDateTime = (issue[ENTRY_UPDATED_FQN] ?: emptySet()).map { OffsetDateTime.parse(it.toString()) }
             val updatedDate = updatedDateTime.joinToString(", ") { MessageFormatters.formatDate(it, timeZone) }
             val updatedTime = updatedDateTime.joinToString(", ") { MessageFormatters.formatTime(it, timeZone) }
-            tags["updatedDateTime"] = "$updatedDate $updatedTime"
 
-            tags["status"] = (issue[STATUS_FQN] ?: emptySet()).joinToString(", ")
-            tags["title"] = (issue[TITLE_FQN] ?: emptySet()).joinToString(", ")
-            tags["description"] = (issue[DESCRIPTION_FQN] ?: emptySet()).joinToString(", ")
-            tags["category"] = (issue[CATEGORY_FQN] ?: emptySet()).joinToString(", ")
-            tags["priority"] = (issue[PRIORITY_FQN] ?: emptySet()).joinToString(", ")
-            tags["issueId"] = (issue[EdmConstants.ID_FQN] ?: emptySet()).joinToString(", ")
-
-            return tags
+            return mapOf(
+                    "createdDateTime" to "$createdDate $createdTime",
+                    "updatedDateTime" to "$updatedDate $updatedTime",
+                    "status" to (issue[STATUS_FQN] ?: emptySet()).joinToString(", "),
+                    "title" to (issue[TITLE_FQN] ?: emptySet()).joinToString(", "),
+                    "description" to (issue[DESCRIPTION_FQN] ?: emptySet()).joinToString(", "),
+                    "category" to (issue[CATEGORY_FQN] ?: emptySet()).joinToString(", "),
+                    "priority" to (issue[PRIORITY_FQN] ?: emptySet()).joinToString(", "),
+                    "issueId" to (issue[EdmConstants.ID_FQN] ?: emptySet()).joinToString(", ")
+            )
         }
 
         fun renderEmail(
