@@ -373,6 +373,12 @@ class Assembler(
         return OrganizationIntegrationAccount(organizationUserId, credential)
     }
 
+    fun rollOrganizationIntegrationAccount(organizationId: UUID): OrganizationIntegrationAccount {
+        val organizationUserId = buildOrganizationUserId(organizationId)
+        val credential = dbCredentialService.rollUserCredential(organizationUserId)
+        return OrganizationIntegrationAccount(organizationUserId, credential)
+    }
+
     private fun getInternalEntitySetFlag(organizationId: UUID, entitySetId: UUID): Set<OrganizationEntitySetFlag> {
         return if (entitySets[entitySetId]?.organizationId == organizationId) {
             setOf(OrganizationEntitySetFlag.INTERNAL)
@@ -443,11 +449,6 @@ class Assembler(
                 entitySetAssemblyKey
         )
     }
-
-    fun rollOrganizationIntegrationAccount(organizationId: UUID): OrganizationIntegrationAccount {
-
-    }
-
 
     /**
      * This class is responsible for refreshing all entity set views at startup.
