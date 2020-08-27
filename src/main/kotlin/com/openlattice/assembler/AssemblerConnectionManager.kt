@@ -768,7 +768,7 @@ internal fun createUserIfNotExistsSql(dbUser: String, dbUserPassword: String): S
 }
 
 internal fun updateUserCredentialSql(dbUser: String, credential: String): String {
-    return "ALTER ROLE $dbUser WITH ENCRYPTED PASSWORD $credential"
+    return "ALTER ROLE $dbUser WITH ENCRYPTED PASSWORD '$credential'"
 }
 
 
