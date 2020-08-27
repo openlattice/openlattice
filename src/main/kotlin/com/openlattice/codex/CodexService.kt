@@ -92,11 +92,10 @@ class CodexService(
 
     val appConfigs: IMap<AppConfigKey, AppTypeSetting> = HazelcastMap.APP_CONFIGS.getMap(hazelcast)
 
-    val appId = reservationService.getId(CodexConstants.APP_NAME)
     val entityTypeCollectionId = reservationService.getId(CodexConstants.COLLECTION_FQN.fullQualifiedNameAsString)
-    val typesByFqn = collectionsManager.getEntityTypeCollection(entityTypeCollectionId).template.associateBy {
-        CodexConstants.CollectionTemplateType.values().first { ctt -> it.name == ctt.typeName }
-    }
+    val typesByFqn = collectionsManager.getEntityTypeCollection(entityTypeCollectionId).template.map {
+        CodexConstants.CollectionTemplateType.values().firstOrNull { ctt -> it.name == ctt.typeName } to it
+    }.filter { it.first != null }.toMap()
     val scheduledTasks: IMap<UUID, ScheduledTask> = HazelcastMap.SCHEDULED_TASKS.getMap(hazelcast)
     val codexMedia: IMap<UUID, Base64Media> = HazelcastMap.CODEX_MEDIA.getMap(hazelcast)
     val smsInformationMapstore = HazelcastMap.SMS_INFORMATION.getMap(hazelcast)

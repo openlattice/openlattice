@@ -11,14 +11,10 @@ class CodexConstants() {
 
     enum class CollectionTemplateType(val typeName: String) {
         PEOPLE("app.people"),
-        CLIENTS("app.clients"),
         MESSAGES("app.messages"),
         CONTACT_INFO("app.contactinformation"),
-        SETTINGS("app.settings"),
         SENT_FROM("app.sentfrom"),
-        SENT_TO("app.sentto"),
-        SUBJECT_OF("app.subjectof"),
-        CONTACT_INFO_GIVEN("app.contactinfogiven")
+        SENT_TO("app.sentto")
     }
 
     enum class PropertyType(val fqn: FullQualifiedName) {
