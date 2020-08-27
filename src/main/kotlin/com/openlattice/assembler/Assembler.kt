@@ -376,6 +376,7 @@ class Assembler(
     fun rollOrganizationIntegrationAccount(organizationId: UUID): OrganizationIntegrationAccount {
         val organizationUserId = buildOrganizationUserId(organizationId)
         val credential = dbCredentialService.rollUserCredential(organizationUserId)
+        acm.updateCredentialInDatabase(organizationId, organizationUserId, credential)
         return OrganizationIntegrationAccount(organizationUserId, credential)
     }
 
