@@ -444,6 +444,10 @@ class Assembler(
         )
     }
 
+    fun rollOrganizationIntegrationAccount(organizationId: UUID): OrganizationIntegrationAccount {
+
+    }
+
 
     /**
      * This class is responsible for refreshing all entity set views at startup.
