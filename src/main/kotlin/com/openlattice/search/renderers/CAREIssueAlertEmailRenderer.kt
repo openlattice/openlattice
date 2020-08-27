@@ -40,10 +40,9 @@ private const val REPORTED_ENTITY_SET_ID_METADATA = "reportedEntitySetId"
 * {
 *   "personEntitySetId": <UUID>,
 *   "staffEntitySetId": <UUID>,
-*   "assignedToEntitySetID": <UUID>,
-*   "reportedEntitySetID": <UUID>,
+*   "assignedToEntitySetId": <UUID>,
+*   "reportedEntitySetId": <UUID>,
 *   "timezone": <TimeZones>,
-*   "alertName": <String>,
 * }
 *
 */
@@ -112,6 +111,7 @@ class CAREIssueAlertEmailRenderer {
             val updatedDateTime = (issue[ENTRY_UPDATED_FQN] ?: emptySet()).map { OffsetDateTime.parse(it.toString()) }
             val updatedDate = updatedDateTime.joinToString(", ") { MessageFormatters.formatDate(it, timeZone) }
             val updatedTime = updatedDateTime.joinToString(", ") { MessageFormatters.formatTime(it, timeZone) }
+            val issueId = (issue[EdmConstants.ID_FQN] ?: emptySet()).joinToString(", ")
 
             return mapOf(
                     "createdDateTime" to "$createdDate $createdTime",
@@ -121,7 +121,7 @@ class CAREIssueAlertEmailRenderer {
                     "description" to (issue[DESCRIPTION_FQN] ?: emptySet()).joinToString(", "),
                     "category" to (issue[CATEGORY_FQN] ?: emptySet()).joinToString(", "),
                     "priority" to (issue[PRIORITY_FQN] ?: emptySet()).joinToString(", "),
-                    "issueId" to (issue[EdmConstants.ID_FQN] ?: emptySet()).joinToString(", ")
+                    "viewIssueTag" to "<a href=\"http://openlattice.com/issue/$issueId\">View issue</a>"
             )
         }
 
