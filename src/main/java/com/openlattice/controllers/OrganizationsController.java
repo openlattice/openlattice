@@ -156,6 +156,14 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
 
     @Timed
     @Override
+    @PatchMapping(value = ID_PATH + INTEGRATION, produces = MediaType=APPLICATION_JSON_VALUE)
+    public OrganizationIntegrationAccount rollOrganizationIntegrationAccount(  @PathVariable( ID ) UUID organizationId ) {
+        ensureOwner( organizationId )
+        return assembler.rollOrganizationIntegrationAccount(organizationId);
+    }
+
+    @Timed
+    @Override
     @GetMapping( value = ID_PATH + ENTITY_SETS, produces = MediaType.APPLICATION_JSON_VALUE )
     public Map<UUID, Set<OrganizationEntitySetFlag>> getOrganizationEntitySets(
             @PathVariable( ID ) UUID organizationId ) {
