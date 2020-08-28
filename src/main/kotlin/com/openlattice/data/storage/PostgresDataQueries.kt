@@ -831,7 +831,7 @@ fun selectPropertyTypesOfEntitySetColumnar(
  */
 fun getPartitioningSelector(
         idColumn: PostgresColumnDefinition
-) = getPartitioningSelector(idColumn.name) + Math.mo
+) = getPartitioningSelector(idColumn.name)
 
 /**
  * Partitioning selector requires an unambiguous data column called partitions to exist in the query to correcly compute partitions.
