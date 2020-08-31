@@ -4805,31 +4805,31 @@ paths:
               schema:
                 type: string
                 format: uuid
-  # /datastore/app/update/{appId}/role/{roleId}:
-  #   delete: 
-  #     summary: Delete an app role
-  #     operationId: deleteRoleFromApp
-  #     tags:
-  #       - app
-  #     parameters:
-  #       - name: appId
-  #         in: path
-  #         required: true
-  #         schema:
-  #           type: string
-  #           format: uuid
-  #       - name: roleId
-  #         in: path
-  #         required: true
-  #         schema:
-  #           type: string
-  #           format: uuid
-  #     security:
-  #       - openlattice_auth: []
-  #       - http_auth: []
-  #     responses:
-  #       "200":
-  #         description: Success
+  /datastore/app/update/{appId}/role/{roleId}:
+    delete: 
+      summary: Delete an app role
+      operationId: deleteRoleFromApp
+      tags:
+        - app
+      parameters:
+        - name: appId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: roleId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
   # /datastore/app/update/{appId}/{roleId}:
   #   post:
   #     summary: Update App Entity Set Permissions Configuration
