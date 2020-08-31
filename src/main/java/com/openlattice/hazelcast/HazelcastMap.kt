@@ -25,7 +25,6 @@ import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.map.IMap
 import com.openlattice.apps.App
 import com.openlattice.apps.AppConfigKey
-import com.openlattice.apps.AppType
 import com.openlattice.apps.AppTypeSetting
 import com.openlattice.assembler.EntitySetAssemblyKey
 import com.openlattice.assembler.MaterializedEntitySet
@@ -91,7 +90,6 @@ class HazelcastMap<K, V> internal constructor(val name: String) : TypedMapIdenti
         // When adding new entries to this list, please make sure to keep it sorted and keep the name in sync
         @JvmField val ACL_KEYS = HazelcastMap<String, UUID>("ACL_KEYS")
         @JvmField val APPS = HazelcastMap<UUID, App>("APPS")
-        @JvmField val APP_TYPES = HazelcastMap<UUID, AppType>("APP_TYPES")
         @JvmField val APP_CONFIGS = HazelcastMap<AppConfigKey, AppTypeSetting>("APP_CONFIGS")
         @JvmField val ASSEMBLIES = HazelcastMap<UUID, OrganizationAssembly>("ASSEMBLIES")
         @JvmField val ASSOCIATION_TYPES = HazelcastMap<UUID, AssociationType>("ASSOCIATION_TYPES")

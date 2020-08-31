@@ -111,6 +111,9 @@ public final class PostgresColumn {
     public static final PostgresColumnDefinition COMPONENT_TYPES                   =
             new PostgresColumnDefinition( COMPONENT_TYPES_FIELD, INTEGER )
                     .notNull();
+    public static final String                   CONFIG_ID_FIELD                   = "configId";
+    public static final PostgresColumnDefinition CONFIG_ID                         = new PostgresColumnDefinition(
+            CONFIG_ID_FIELD, UUID ).notNull().unique();
     public static final String                   CONFIG_TYPE_IDS_FIELD             = "config_type_ids";
     public static final PostgresColumnDefinition CONFIG_TYPE_IDS                   =
             new PostgresColumnDefinition( CONFIG_TYPE_IDS_FIELD, UUID_ARRAY );
@@ -428,6 +431,9 @@ public final class PostgresColumn {
     public static final String                   REFRESH_RATE_FIELD                = "refresh_rate";
     public static final PostgresColumnDefinition REFRESH_RATE                      =
             new PostgresColumnDefinition( REFRESH_RATE_FIELD, BIGINT );
+    public static final String                   ROLES_FIELD                       = "roles";
+    public static final PostgresColumnDefinition ROLES                             =
+            new PostgresColumnDefinition( ROLES_FIELD, JSONB ).notNull().withDefault( "'{}'" );
     public static final String                   SCHEDULED_DATE_FIELD              = "scheduled_date";
     public static final PostgresColumnDefinition SCHEDULED_DATE                    = new PostgresColumnDefinition(
             SCHEDULED_DATE_FIELD,
@@ -452,6 +458,10 @@ public final class PostgresColumn {
     public static final String                   SECURABLE_OBJECT_TYPE_FIELD       = "securable_object_type";
     public static final PostgresColumnDefinition SECURABLE_OBJECT_TYPE             =
             new PostgresColumnDefinition( SECURABLE_OBJECT_TYPE_FIELD, TEXT ).notNull();
+    public static final String                   SETTINGS_FIELD                    = "settings";
+    public static final PostgresColumnDefinition SETTINGS                          = new PostgresColumnDefinition(
+            SETTINGS_FIELD,
+            JSONB ).notNull().withDefault( "'{}'" );
     public static final String                   SHARDS_FIELD                      = "shards";
     public static final PostgresColumnDefinition SHARDS                            = new PostgresColumnDefinition(
             SHARDS_FIELD,

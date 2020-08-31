@@ -62,6 +62,10 @@ class CollectionsManager(
         return entityTypeCollections[id] ?: throw IllegalStateException("EntityTypeCollection $id does not exist")
     }
 
+    fun getEntityTypeCollections(ids: Set<UUID>): Map<UUID, EntityTypeCollection> {
+        return entityTypeCollections.getAll(ids)
+    }
+
     fun getEntitySetCollection(id: UUID): EntitySetCollection {
         val entitySetCollection = entitySetCollections[id]
                 ?: throw IllegalStateException("EntitySetCollection $id does not exist")
