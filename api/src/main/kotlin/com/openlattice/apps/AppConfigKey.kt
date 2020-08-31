@@ -10,6 +10,5 @@ import java.util.*
  */
 data class AppConfigKey(
         @JsonProperty(SerializationConstants.APP_ID) val appId: UUID,
-        @JsonProperty( SerializationConstants.ORGANIZATION_ID )  val organizationId: UUID,
-        @JsonProperty( SerializationConstants.APP_TYPE_ID ) val appTypeId: UUID
+        @JsonProperty( SerializationConstants.ORGANIZATION_ID )  val organizationId: UUID
 )

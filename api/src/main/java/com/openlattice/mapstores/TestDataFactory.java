@@ -25,6 +25,10 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.openlattice.IdConstants;
+import com.openlattice.apps.App;
+import com.openlattice.apps.AppConfigKey;
+import com.openlattice.apps.AppRole;
+import com.openlattice.apps.AppTypeSetting;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.AbstractSecurableType;
@@ -71,12 +75,12 @@ import org.apache.commons.text.CharacterPredicates;
 import org.apache.commons.text.RandomStringGenerator;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import org.jetbrains.annotations.NotNull;
 
 import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.jetbrains.annotations.NotNull;
 
 @SuppressFBWarnings( value = "SECPR", justification = "Only used for testing." )
 public final class TestDataFactory {
@@ -666,7 +670,7 @@ public final class TestDataFactory {
     }
 
     public static SearchConstraints simpleSearchConstraints() {
-        return SearchConstraints.simpleSearchConstraints( new UUID[]{ UUID.randomUUID() },
+        return SearchConstraints.simpleSearchConstraints( new UUID[] { UUID.randomUUID() },
                 r.nextInt( 1000 ),
                 r.nextInt( 1000 ),
                 randomAlphanumeric( 10 ) );
@@ -722,6 +726,49 @@ public final class TestDataFactory {
                         randomAlphanumeric( 5 ) ),
                 UUID.randomUUID()
         );
+    }
+
+    public static AppRole appRole() {
+        return new AppRole(
+                UUID.randomUUID(),
+                randomAlphanumeric( 5 ),
+                randomAlphanumeric( 5 ),
+                randomAlphanumeric( 5 ),
+                ImmutableMap.of( Permission.READ,
+                        ImmutableMap.of( UUID.randomUUID(),
+                                Optional.of( ImmutableSet
+                                        .of( UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID() ) ) ),
+                        Permission.WRITE,
+                        ImmutableMap.of( UUID.randomUUID(), Optional.empty() ) ) );
+    }
+
+    public static App app() {
+        return new App(
+                Optional.empty(),
+                randomAlphanumeric( 5 ),
+                randomAlphanumeric( 5 ),
+                Optional.of( randomAlphanumeric( 5 ) ),
+                randomAlphanumeric( 5 ),
+                UUID.randomUUID(),
+                ImmutableSet.of( appRole(), appRole(), appRole() ),
+                ImmutableMap.of( randomAlphanumeric( 5 ),
+                        randomAlphanumeric( 5 ),
+                        randomAlphanumeric( 5 ),
+                        false,
+                        randomAlphanumeric( 5 ),
+                        RandomUtils.nextInt( 0, 10000 ) ) );
+    }
+
+    public static AppConfigKey appConfigKey() {
+        return new AppConfigKey( UUID.randomUUID(), UUID.randomUUID() );
+    }
+
+    public static AppTypeSetting appConfigSetting() {
+        return new AppTypeSetting( UUID.randomUUID(),
+                UUID.randomUUID(),
+                ImmutableMap
+                        .of( UUID.randomUUID(), aclKey(), UUID.randomUUID(), aclKey(), UUID.randomUUID(), aclKey() ),
+                app().getDefaultSettings() );
     }
 
     public static OrganizationExternalDatabaseColumn organizationExternalDatabaseColumn() {
@@ -785,7 +832,7 @@ public final class TestDataFactory {
                 UUID.randomUUID(),
                 UUID.randomUUID(),
                 randomAlphabetic( 20 ),
-                ImmutableSet.of(randomAlphanumeric( 10 )),
+                ImmutableSet.of( randomAlphanumeric( 10 ) ),
                 randomAlphanumeric( 15 ),
                 base64Media(),
                 OffsetDateTime.now()

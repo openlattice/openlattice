@@ -32,7 +32,6 @@ public enum SecurableObjectType {
     AssociationType,
     Organization,
     App,
-    AppType,
     Principal,
     Role,
     Unknown,
