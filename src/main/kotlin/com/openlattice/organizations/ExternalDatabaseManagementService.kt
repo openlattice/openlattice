@@ -603,7 +603,7 @@ class ExternalDatabaseManagementService(
     /*INTERNAL SQL QUERIES*/
     private fun getCurrentTableAndColumnNamesSql(): String {
         return selectExpression + fromExpression + leftJoinColumnsExpression +
-                "WHERE information_schema.tables.table_schema='$MATERIALIZED_VIEWS_SCHEMA' " +
+                "WHERE information_schema.tables.table_schema=ANY('$MATERIALIZED_VIEWS_SCHEMA','$STAGING_SCHEMA') " +
                 "AND table_type='BASE TABLE'"
     }
 
