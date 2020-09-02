@@ -4848,10 +4848,33 @@ paths:
   #   delete:
   #     summary: Uninstall an app for an organization
   #     operationId: uninstallApp
-  # /datastore/app/config:
-  #   get:
-  #     summary: Get available app configurations
-  #     operationId: getAvailableAppConfigs
+  /datastore/app/config:
+    get:
+      summary: Get available app configurations
+      operationId: getAvailableAppConfigs
+      tags:
+        - app
+      parameters:
+        - name: appId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserAppConfig"
+                  
+      
   # /datastore/app/config/update/{appId}/{organizationId}:
   #   post:
   #     summary: Update the App Configuration Settings
@@ -6335,7 +6358,24 @@ components:
           type: array
           items:
             type: string
-
+    UserAppConfig:
+      type: object
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        entitySetCollectionId:
+          type: string
+          format: uuid
+        roles:
+          type: array
+          items:
+            type: string
+            format: uuid
+        settings:
+          type: object
+          additionalProperties:
+            type: object
 
 tags:
   - name: edm
