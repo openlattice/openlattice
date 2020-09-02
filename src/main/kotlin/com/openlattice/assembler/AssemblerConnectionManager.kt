@@ -191,7 +191,7 @@ class AssemblerConnectionManager(
                 statement.execute(
                         setSearchPathSql(
                                 assemblerConfiguration.server["username"].toString(),
-                                true,
+                                false,
                                 INTEGRATIONS_SCHEMA,
                                 MATERIALIZED_VIEWS_SCHEMA,
                                 PUBLIC_SCHEMA,
@@ -208,7 +208,7 @@ class AssemblerConnectionManager(
             //Allow usage and create on schema openlattice to organization user
             statement.execute(grantOrgUserPrivilegesOnSchemaSql(MATERIALIZED_VIEWS_SCHEMA, dbOrgUser))
             statement.execute(grantOrgUserPrivilegesOnSchemaSql(STAGING_SCHEMA, dbOrgUser))
-            statement.execute(setSearchPathSql(dbOrgUser, false, MATERIALIZED_VIEWS_SCHEMA, STAGING_SCHEMA))
+            statement.execute(setSearchPathSql(dbOrgUser, true, MATERIALIZED_VIEWS_SCHEMA, STAGING_SCHEMA))
         }
     }
 
@@ -616,21 +616,6 @@ class AssemblerConnectionManager(
         }
     }
 
-    fun dropUserIfExists(user: SecurablePrincipal) {
-        target.connection.use { connection ->
-            connection.createStatement().use { statement ->
-                //TODO: Go through every database and for old users clean them out.
-//                    logger.info("Attempting to drop owned by old name {}", user.name)
-//                    statement.execute(dropOwnedIfExistsSql(user.name))
-                logger.info("Attempting to drop user {}", user.name)
-                statement.execute(dropUserIfExistsSql(user.name)) //Clean out the old users.
-                dbCredentialService.deleteUserCredential(user.name)
-                //Don't allow users to access public schema which will contain foreign data wrapper tables.
-                logger.info("Revoking $PUBLIC_SCHEMA schema right from user {}", user)
-            }
-        }
-    }
-
     fun createRole(role: Role) {
         val dbRole = buildPostgresRoleName(role)
 
@@ -698,7 +683,7 @@ class AssemblerConnectionManager(
                 //Set the search path for the user
                 logger.info("Setting search_path to $MATERIALIZED_VIEWS_SCHEMA for users $userIds")
                 userIds.forEach { userId ->
-                    statement.addBatch(setSearchPathSql(userId, false, MATERIALIZED_VIEWS_SCHEMA, STAGING_SCHEMA))
+                    statement.addBatch(setSearchPathSql(userId, true, MATERIALIZED_VIEWS_SCHEMA, STAGING_SCHEMA))
                 }
                 statement.executeBatch()
             }
@@ -737,9 +722,9 @@ private fun grantOrgUserPrivilegesOnSchemaSql(schemaName: String, orgUserId: Str
     return "GRANT USAGE, CREATE ON SCHEMA $schemaName TO $orgUserId"
 }
 
-private fun setSearchPathSql(granteeId: String, isRole: Boolean, vararg schemas: String): String {
+private fun setSearchPathSql(granteeId: String, isUser: Boolean, vararg schemas: String): String {
     val schemasSql = schemas.joinToString()
-    val granteeType = if (isRole) "ROLE" else "USER"
+    val granteeType = if (isUser) "USER" else "ROLE"
     return "ALTER $granteeType $granteeId SET search_path TO $schemasSql"
 }
 
