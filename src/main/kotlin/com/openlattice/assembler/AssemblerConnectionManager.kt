@@ -208,7 +208,7 @@ class AssemblerConnectionManager(
             //Allow usage and create on schema openlattice to organization user
             statement.execute(grantOrgUserPrivilegesOnSchemaSql(MATERIALIZED_VIEWS_SCHEMA, dbOrgUser))
             statement.execute(grantOrgUserPrivilegesOnSchemaSql(STAGING_SCHEMA, dbOrgUser))
-            statement.execute(setSearchPathSql(dbOrgUser, false, MATERIALIZED_VIEWS_SCHEMA))
+            statement.execute(setSearchPathSql(dbOrgUser, false, MATERIALIZED_VIEWS_SCHEMA, STAGING_SCHEMA))
         }
     }
 
@@ -698,7 +698,7 @@ class AssemblerConnectionManager(
                 //Set the search path for the user
                 logger.info("Setting search_path to $MATERIALIZED_VIEWS_SCHEMA for users $userIds")
                 userIds.forEach { userId ->
-                    statement.addBatch(setSearchPathSql(userId, false, MATERIALIZED_VIEWS_SCHEMA))
+                    statement.addBatch(setSearchPathSql(userId, false, MATERIALIZED_VIEWS_SCHEMA, STAGING_SCHEMA))
                 }
                 statement.executeBatch()
             }
@@ -740,7 +740,7 @@ private fun grantOrgUserPrivilegesOnSchemaSql(schemaName: String, orgUserId: Str
 private fun setSearchPathSql(granteeId: String, isRole: Boolean, vararg schemas: String): String {
     val schemasSql = schemas.joinToString()
     val granteeType = if (isRole) "ROLE" else "USER"
-    return "ALTER $granteeType SET search_path TO $schemasSql"
+    return "ALTER $granteeType $granteeId SET search_path TO $schemasSql"
 }
 
 private fun revokePrivilegesOnDatabaseSql(dbName: String, usersSql: String): String {
