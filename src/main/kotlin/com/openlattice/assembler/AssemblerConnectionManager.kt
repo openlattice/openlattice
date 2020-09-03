@@ -99,10 +99,17 @@ class AssemblerConnectionManager(
     companion object {
         const val PUBLIC_ROLE = "public"
 
-        const val INTEGRATIONS_SCHEMA = "integrations"
-        const val MATERIALIZED_VIEWS_SCHEMA = "openlattice"
-        const val PUBLIC_SCHEMA = "public"
-        const val STAGING_SCHEMA = "staging"
+        @JvmStatic
+        val INTEGRATIONS_SCHEMA = "integrations"
+
+        @JvmStatic
+        val MATERIALIZED_VIEWS_SCHEMA = "openlattice"
+
+        @JvmStatic
+        val PUBLIC_SCHEMA = "public"
+
+        @JvmStatic
+        val STAGING_SCHEMA = "staging"
 
         @JvmStatic
         fun entitySetNameTableName(entitySetName: String): String {
