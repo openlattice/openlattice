@@ -782,6 +782,23 @@ internal fun createUserIfNotExistsSql(dbUser: String, dbUserPassword: String): S
             "\$do\$;"
 }
 
+internal fun dropOwnedIfExistsSql(dbUser: String): String {
+    return "DO\n" +
+            "\$do\$\n" +
+            "BEGIN\n" +
+            "   IF EXISTS (\n" +
+            "      SELECT\n" +
+            "      FROM   pg_catalog.pg_roles\n" +
+            "      WHERE  rolname = '$dbUser') THEN\n" +
+            "\n" +
+            "      DROP OWNED BY ${quote(
+                    dbUser
+            )} ;\n" +
+            "   END IF;\n" +
+            "END\n" +
+            "\$do\$;"
+}
+
 internal fun updateUserCredentialSql(dbUser: String, credential: String): String {
     return "ALTER ROLE $dbUser WITH ENCRYPTED PASSWORD '$credential'"
 }
