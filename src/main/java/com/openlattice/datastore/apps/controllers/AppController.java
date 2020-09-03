@@ -21,37 +21,28 @@
 package com.openlattice.datastore.apps.controllers;
 
 import com.codahale.metrics.annotation.Timed;
-import com.google.common.collect.ImmutableSet;
 import com.openlattice.apps.App;
 import com.openlattice.apps.AppApi;
-import com.openlattice.apps.AppConfig;
-import com.openlattice.apps.AppType;
+import com.openlattice.apps.AppInstallation;
+import com.openlattice.apps.AppRole;
+import com.openlattice.apps.UserAppConfig;
+import com.openlattice.apps.historical.HistoricalAppConfig;
+import com.openlattice.apps.services.AppService;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.authorization.AuthorizingComponent;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principals;
-import com.openlattice.authorization.securable.SecurableObjectType;
-import com.openlattice.authorization.util.AuthorizationUtilsKt;
-import com.openlattice.datastore.apps.services.AppService;
 import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.organizations.HazelcastOrganizationService;
-import com.openlattice.organizations.Organization;
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import javax.inject.Inject;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -81,17 +72,6 @@ public class AppController implements AppApi, AuthorizingComponent {
     @Timed
     @Override
     @RequestMapping(
-            path = TYPE_PATH,
-            method = RequestMethod.GET,
-            produces = MediaType.APPLICATION_JSON_VALUE )
-    @ResponseStatus( HttpStatus.OK )
-    public Iterable<AppType> getAppTypes() {
-        return appService.getAppTypes();
-    }
-
-    @Timed
-    @Override
-    @RequestMapping(
             method = RequestMethod.POST,
             consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE )
@@ -99,19 +79,6 @@ public class AppController implements AppApi, AuthorizingComponent {
     public UUID createApp( @RequestBody App app ) {
         ensureAdminAccess();
         return appService.createApp( app );
-    }
-
-    @Timed
-    @Override
-    @RequestMapping(
-            path = TYPE_PATH,
-            method = RequestMethod.POST,
-            consumes = MediaType.APPLICATION_JSON_VALUE,
-            produces = MediaType.APPLICATION_JSON_VALUE )
-    @ResponseStatus( HttpStatus.OK )
-    public UUID createAppType( @RequestBody AppType appType ) {
-        ensureAdminAccess();
-        return appService.createAppType( appType );
     }
 
     @Timed
@@ -132,42 +99,8 @@ public class AppController implements AppApi, AuthorizingComponent {
             method = RequestMethod.GET,
             produces = MediaType.APPLICATION_JSON_VALUE )
     @ResponseStatus( HttpStatus.OK )
-    public App getApp( @PathVariable( NAME ) String name ) {
+    public App getAppByName( @PathVariable( NAME ) String name ) {
         return appService.getApp( name );
-    }
-
-    @Timed
-    @Override
-    @RequestMapping(
-            path = TYPE_PATH + ID_PATH,
-            method = RequestMethod.GET,
-            produces = MediaType.APPLICATION_JSON_VALUE )
-    @ResponseStatus( HttpStatus.OK )
-    public AppType getAppType( @PathVariable( ID ) UUID id ) {
-        return appService.getAppType( id );
-    }
-
-    @Timed
-    @Override
-    @RequestMapping(
-            path = TYPE_PATH + LOOKUP_PATH + NAMESPACE_PATH + NAME_PATH,
-            method = RequestMethod.GET,
-            produces = MediaType.APPLICATION_JSON_VALUE )
-    @ResponseStatus( HttpStatus.OK )
-    public AppType getAppType( @PathVariable( NAMESPACE ) String namespace, @PathVariable( NAME ) String name ) {
-        return appService.getAppType( new FullQualifiedName( namespace, name ) );
-    }
-
-    @Timed
-    @Override
-    @RequestMapping(
-            path = TYPE_PATH + BULK_PATH,
-            method = RequestMethod.POST,
-            consumes = MediaType.APPLICATION_JSON_VALUE,
-            produces = MediaType.APPLICATION_JSON_VALUE )
-    @ResponseStatus( HttpStatus.OK )
-    public Map<UUID, AppType> getAppTypes( @RequestBody Set<UUID> appTypeIds ) {
-        return appService.getAppTypes( appTypeIds );
     }
 
     @Timed
@@ -184,26 +117,40 @@ public class AppController implements AppApi, AuthorizingComponent {
     @Timed
     @Override
     @RequestMapping(
-            path = TYPE_PATH + ID_PATH,
-            method = RequestMethod.DELETE )
+            path = UPDATE_PATH + ID_PATH + ROLE_PATH,
+            method = RequestMethod.POST )
     @ResponseStatus( HttpStatus.OK )
-    public void deleteAppType( @PathVariable( ID ) UUID id ) {
+    public UUID createAppRole( @PathVariable( ID ) UUID appId, @RequestBody AppRole role ) {
         ensureAdminAccess();
-        appService.deleteAppType( id );
+        return appService.createNewAppRole( appId, role );
     }
 
     @Timed
     @Override
     @RequestMapping(
-            path = INSTALL_PATH + ID_PATH + ORGANIZATION_ID_PATH + PREFIX_PATH,
-            method = RequestMethod.GET )
+            path = UPDATE_PATH + ID_PATH + ROLE_PATH + ROLE_ID_PATH,
+            method = RequestMethod.DELETE )
+    @ResponseStatus( HttpStatus.OK )
+    public void deleteRoleFromApp( @PathVariable( ID ) UUID appId, @PathVariable( ROLE_ID ) UUID roleId ) {
+        ensureAdminAccess();
+        appService.deleteRoleFromApp( appId, roleId );
+    }
+
+    @Timed
+    @Override
+    @RequestMapping(
+            path = INSTALL_PATH + ID_PATH + ORGANIZATION_ID_PATH,
+            method = RequestMethod.POST )
     @ResponseStatus( HttpStatus.OK )
     public void installApp(
             @PathVariable( ID ) UUID appId,
             @PathVariable( ORGANIZATION_ID ) UUID organizationId,
-            @PathVariable( PREFIX ) String prefix ) {
+            @RequestBody AppInstallation appInstallation ) {
         ensureOwnerAccess( new AclKey( organizationId ) );
-        appService.installApp( appId, organizationId, prefix, Principals.getCurrentUser() );
+        appService.installAppAndCreateEntitySetCollection( appId,
+                organizationId,
+                appInstallation,
+                Principals.getCurrentUser() );
     }
 
     @Timed
@@ -219,74 +166,38 @@ public class AppController implements AppApi, AuthorizingComponent {
         appService.uninstallApp( appId, organizationId );
     }
 
-    private Iterable<Organization> getAvailableOrgs() {
-        return getAccessibleObjects( SecurableObjectType.Organization,
-                EnumSet.of( Permission.READ ) )
-                .filter( Objects::nonNull )
-                .map( AuthorizationUtilsKt::getLastAclKeySafely )
-                .filter( Objects::nonNull )
-                .map( organizations::getOrganization )
-                .filter( Objects::nonNull )::iterator;
-    }
-
     @Timed
     @Override
     @RequestMapping(
             path = CONFIG_PATH + ID_PATH,
             method = RequestMethod.GET,
             produces = MediaType.APPLICATION_JSON_VALUE )
-    public List<AppConfig> getAvailableAppConfigs( @PathVariable( ID ) UUID appId ) {
-        Iterable<Organization> orgs = getAvailableOrgs();
-        return appService.getAvailableConfigs( appId, Principals.getCurrentPrincipals(), orgs );
+    public List<HistoricalAppConfig> getAvailableAppConfigsOld( @PathVariable( ID ) UUID appId ) {
+        return appService.getAvailableConfigsOld( appId, Principals.getCurrentPrincipals() );
     }
 
     @Timed
     @Override
     @RequestMapping(
-            path = UPDATE_PATH + ID_PATH + APP_TYPE_ID_PATH,
-            method = RequestMethod.POST )
-    public void addAppTypeToApp( @PathVariable( ID ) UUID appId, @PathVariable( APP_TYPE_ID ) UUID appTypeId ) {
-        ensureAdminAccess();
-        appService.addAppTypesToApp( appId, ImmutableSet.of( appTypeId ) );
+            path = CONFIG_PATH,
+            method = RequestMethod.GET,
+            produces = MediaType.APPLICATION_JSON_VALUE )
+    public List<UserAppConfig> getAvailableAppConfigs( @RequestParam( ID ) UUID appId ) {
+        return appService.getAvailableConfigs( appId, Principals.getCurrentPrincipals() );
     }
 
     @Timed
     @Override
     @RequestMapping(
-            path = UPDATE_PATH + ID_PATH + APP_TYPE_ID_PATH,
-            method = RequestMethod.DELETE )
-    public void removeAppTypeFromApp( @PathVariable( ID ) UUID appId, @PathVariable( APP_TYPE_ID ) UUID appTypeId ) {
-        ensureAdminAccess();
-        appService.removeAppTypesFromApp( appId, ImmutableSet.of( appTypeId ) );
-    }
-
-    @Timed
-    @Override
-    @RequestMapping(
-            path = UPDATE_PATH + ID_PATH + APP_ID_PATH + APP_TYPE_ID_PATH + ENTITY_SET_ID_PATH,
-            method = RequestMethod.GET )
-    public void updateAppEntitySetConfig(
-            @PathVariable( ID ) UUID organizationId,
-            @PathVariable( APP_ID ) UUID appId,
-            @PathVariable( APP_TYPE_ID ) UUID appTypeId,
-            @PathVariable( ENTITY_SET_ID ) UUID entitySetId ) {
-        ensureOwnerAccess( new AclKey( organizationId ) );
-        appService.updateAppConfigEntitySetId( organizationId, appId, appTypeId, entitySetId );
-    }
-
-    @Timed
-    @Override
-    @RequestMapping(
-            path = UPDATE_PATH + ID_PATH + APP_ID_PATH + APP_TYPE_ID_PATH,
+            path = UPDATE_PATH + ID_PATH + ROLE_ID_PATH,
             method = RequestMethod.POST,
             consumes = MediaType.APPLICATION_JSON_VALUE )
     public void updateAppEntitySetPermissionsConfig(
-            @PathVariable( ID ) UUID organizationId,
-            @PathVariable( APP_ID ) UUID appId,
-            @PathVariable( APP_TYPE_ID ) UUID appTypeId,
-            @RequestBody Set<Permission> permissions ) {
-        ensureOwnerAccess( new AclKey( organizationId ) );
-        appService.updateAppConfigPermissions( organizationId, appId, appTypeId, EnumSet.copyOf( permissions ) );
+            @PathVariable( ID ) UUID appId,
+            @PathVariable( ROLE_ID ) UUID roleId,
+            @RequestBody Map<Permission, Map<UUID, Optional<Set<UUID>>>> permissions ) {
+        ensureAdminAccess();
+        appService.updateAppRolePermissions( appId, roleId, permissions );
     }
 
     @Timed
@@ -305,14 +216,28 @@ public class AppController implements AppApi, AuthorizingComponent {
     @Timed
     @Override
     @RequestMapping(
-            path = TYPE_PATH + UPDATE_PATH + ID_PATH,
+            path = UPDATE_PATH + ID_PATH,
+            method = RequestMethod.PATCH,
+            consumes = MediaType.APPLICATION_JSON_VALUE )
+    public void updateDefaultAppSettings(
+            @PathVariable( ID ) UUID appId,
+            @RequestBody Map<String, Object> defaultSettings ) {
+        ensureAdminAccess();
+        appService.updateDefaultAppSettings( appId, defaultSettings );
+    }
+
+    @Timed
+    @Override
+    @RequestMapping(
+            path = CONFIG_PATH + UPDATE_PATH + ID_PATH + ORGANIZATION_ID_PATH,
             method = RequestMethod.POST,
             consumes = MediaType.APPLICATION_JSON_VALUE )
-    public void updateAppTypeMetadata(
-            @PathVariable( ID ) UUID appTypeId,
-            @RequestBody MetadataUpdate metadataUpdate ) {
-        ensureAdminAccess();
-        appService.updateAppTypeMetadata( appTypeId, metadataUpdate );
+    public void updateAppConfigSettings(
+            @PathVariable( ID ) UUID appId,
+            @PathVariable( ORGANIZATION_ID ) UUID organizationId,
+            @RequestBody Map<String, Object> newSettings ) {
+        ensureOwnerAccess( new AclKey( organizationId ) );
+        appService.updateAppConfigSettings( appId, organizationId, newSettings );
     }
 
     @Override

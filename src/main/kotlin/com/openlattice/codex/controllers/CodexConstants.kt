@@ -5,17 +5,16 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName
 class CodexConstants() {
 
     companion object {
+        val COLLECTION_FQN = FullQualifiedName("app.codex")
         const val APP_NAME = "codex"
     }
 
-    enum class AppType(val fqn: FullQualifiedName) {
-        PEOPLE(FullQualifiedName("app.people")),
-        MESSAGES(FullQualifiedName("app.messages")),
-        CONTACT_INFO(FullQualifiedName("app.contactinformation")),
-        SETTINGS(FullQualifiedName("app.settings")),
-        SENT_FROM(FullQualifiedName("app.sentfrom")),
-        SENT_TO(FullQualifiedName("app.sentto")),
-        SUBJECT_OF(FullQualifiedName("app.subjectof")),
+    enum class CollectionTemplateType(val typeName: String) {
+        PEOPLE("app.people"),
+        MESSAGES("app.messages"),
+        CONTACT_INFO("app.contactinformation"),
+        SENT_FROM("app.sentfrom"),
+        SENT_TO("app.sentto")
     }
 
     enum class PropertyType(val fqn: FullQualifiedName) {
