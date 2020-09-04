@@ -17,11 +17,12 @@ public interface AppApi {
     String CONTROLLER = "/app";
     String BASE       = SERVICE + CONTROLLER;
 
-    String INSTALL_PATH = "/install";
-    String CONFIG_PATH  = "/config";
-    String LOOKUP_PATH  = "/lookup";
-    String UPDATE_PATH  = "/update";
-    String ROLE_PATH    = "/role";
+    String INSTALL_PATH      = "/install";
+    String CONFIG_PATH       = "/config";
+    String LOOKUP_PATH       = "/lookup";
+    String ORGANIZATION_PATH = "/organization";
+    String UPDATE_PATH       = "/update";
+    String ROLE_PATH         = "/role";
 
     String ID              = "id";
     String ORGANIZATION_ID = "organizationId";
@@ -90,6 +91,9 @@ public interface AppApi {
 
     @GET( BASE + CONFIG_PATH )
     List<UserAppConfig> getAvailableAppConfigs( @Query( ID ) UUID appId );
+
+    @GET( BASE + ORGANIZATION_PATH + ORGANIZATION_ID_PATH )
+    Map<UUID, AppTypeSetting> getOrganizationAppsByAppId( @Query( ORGANIZATION_ID ) UUID organizationId );
 
     @POST( BASE + CONFIG_PATH + UPDATE_PATH + ID_PATH + ORGANIZATION_ID_PATH )
     void updateAppConfigSettings(
