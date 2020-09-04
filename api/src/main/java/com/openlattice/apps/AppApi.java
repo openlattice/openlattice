@@ -93,7 +93,7 @@ public interface AppApi {
     List<UserAppConfig> getAvailableAppConfigs( @Query( ID ) UUID appId );
 
     @GET( BASE + ORGANIZATION_PATH + ORGANIZATION_ID_PATH )
-    Map<UUID, AppTypeSetting> getOrganizationAppsByAppId( @Query( ORGANIZATION_ID ) UUID organizationId );
+    Map<UUID, AppTypeSetting> getOrganizationAppsByAppId( @Path( ORGANIZATION_ID ) UUID organizationId );
 
     @POST( BASE + CONFIG_PATH + UPDATE_PATH + ID_PATH + ORGANIZATION_ID_PATH )
     void updateAppConfigSettings(
