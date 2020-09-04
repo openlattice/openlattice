@@ -25,6 +25,7 @@ import com.openlattice.apps.App;
 import com.openlattice.apps.AppApi;
 import com.openlattice.apps.AppInstallation;
 import com.openlattice.apps.AppRole;
+import com.openlattice.apps.AppTypeSetting;
 import com.openlattice.apps.UserAppConfig;
 import com.openlattice.apps.historical.HistoricalAppConfig;
 import com.openlattice.apps.services.AppService;
@@ -184,6 +185,17 @@ public class AppController implements AppApi, AuthorizingComponent {
             produces = MediaType.APPLICATION_JSON_VALUE )
     public List<UserAppConfig> getAvailableAppConfigs( @RequestParam( ID ) UUID appId ) {
         return appService.getAvailableConfigs( appId, Principals.getCurrentPrincipals() );
+    }
+
+    @Timed
+    @Override
+    @RequestMapping(
+            path = ORGANIZATION_PATH + ORGANIZATION_ID_PATH,
+            method = RequestMethod.GET,
+            produces = MediaType.APPLICATION_JSON_VALUE )
+    public Map<UUID, AppTypeSetting> getOrganizationAppsByAppId( @RequestParam( ORGANIZATION_ID ) UUID organizationId ) {
+        ensureOwnerAccess( new AclKey( organizationId ) );
+        return appService.getOrganizationAppsByAppId( organizationId );
     }
 
     @Timed
