@@ -314,6 +314,12 @@ class AppService(
         }
     }
 
+    fun getOrganizationAppsByAppId(organizationId: UUID): Map<UUID, AppTypeSetting> {
+        return appConfigs
+                .entrySet(Predicates.equal(AppConfigMapstore.ORGANIZATION_ID, organizationId))
+                .associate { it.key.appId to it.value }
+    }
+
     fun getAvailableConfigs(appId: UUID, principals: Set<Principal>): List<UserAppConfig> {
 
         val principalAclKeys = principalsService.lookup(principals)
