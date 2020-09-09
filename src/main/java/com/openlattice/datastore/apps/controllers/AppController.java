@@ -252,6 +252,19 @@ public class AppController implements AppApi, AuthorizingComponent {
         appService.updateAppConfigSettings( appId, organizationId, newSettings );
     }
 
+    @Timed
+    @Override
+    @RequestMapping(
+            path = CONFIG_PATH + UPDATE_PATH + ID_PATH + ORGANIZATION_ID_PATH + ROLE_PATH,
+            method = RequestMethod.POST )
+    public void updateAppRoleMappingForOrganization(
+            @PathVariable( ID ) UUID appId,
+            @PathVariable( ORGANIZATION_ID ) UUID organizationId,
+            @RequestBody Map<UUID, AclKey> roleMappings ) {
+        ensureOwnerAccess( new AclKey( organizationId ) );
+        appService.updateAppConfigRoleMapping( appId, organizationId, roleMappings );
+    }
+
     @Override
     public AuthorizationManager getAuthorizationManager() {
         return authorizations;
